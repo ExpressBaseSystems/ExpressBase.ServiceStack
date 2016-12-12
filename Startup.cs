@@ -10,6 +10,7 @@ using ServiceStack.Host.Handlers;
 using ServiceStack.Logging;
 using ServiceStack.Mvc;
 using ServiceStack.OrmLite;
+using ServiceStack.ProtoBuf;
 
 namespace RazorRockstars.WebHost
 {
@@ -76,6 +77,7 @@ namespace RazorRockstars.WebHost
         public override void Configure(Container container)
         {
             Plugins.Add(new RazorFormat());
+            Plugins.Add(new ProtoBufFormat());
 
             container.Register<IDbConnectionFactory>(
                 new OrmLiteConnectionFactory(":memory:", SqliteDialect.Provider));
@@ -88,6 +90,8 @@ namespace RazorRockstars.WebHost
 
             //Also works but it's recommended to handle 404's by registering at end of .NET Core pipeline
             //this.CustomErrorHttpHandlers[HttpStatusCode.NotFound] = new RazorHandler("/notfound");
+
+            this.ContentTypes.Register(MimeTypes.ProtoBuf, (reqCtx, res, stream) => ProtoBuf.Serializer.NonGeneric.Serialize(stream, res), ProtoBuf.Serializer.NonGeneric.Deserialize);
 
             SetConfig(new HostConfig { DebugMode = true });
         }

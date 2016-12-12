@@ -3,8 +3,7 @@ using ServiceStack;
 using ServiceStack.DataAnnotations;
 using ServiceStack.OrmLite;
 using ServiceStack.Text;
-using ExpressBase.Common;
-using ExpressBase.Data;
+using System.Runtime.Serialization;
 
 namespace RazorRockstars
 {
@@ -33,32 +32,54 @@ namespace RazorRockstars
     [Route("/reset")]
     public class ResetRockstars { }
 
+    [DataContract]
     [Csv(CsvBehavior.FirstEnumerable)]
     public class RockstarsResponse
     {
+        [DataMember(Order = 1)]
         public int Total { get; set; }
+
+        [DataMember(Order = 2)]
         public int? Aged { get; set; }
+
+        [DataMember(Order = 3)]
         public List<Rockstar> Results { get; set; }
     }
 
+    [DataContract]
     [Csv(CsvBehavior.FirstEnumerable)]
     public class UsersResponse
     {
-        public string Text { get; set; }
+        [DataMember(Order = 1)]
+        public int Id { get; set; }
+
+        //[DataMember(Order = 2)]
+        //public EbDataTable Text { get; set; }
     }
 
     //Poco Data Model for OrmLite + SeedData 
+    [DataContract]
     [Route("/rockstars", "POST")]
     public class Rockstar
     {
+        [DataMember(Order =1)]
         [AutoIncrement]
         public int Id { get; set; }
+
+        [DataMember(Order = 2)]
         public string FirstName { get; set; }
+
+        [DataMember(Order = 3)]
         public string LastName { get; set; }
+
+        [DataMember(Order = 4)]
         public int? Age { get; set; }
+
+        [DataMember(Order = 5)]
         public bool Alive { get; set; }
 
-        public string Url => "/stars/{0}/{1}/".Fmt(Alive ? "alive" : "dead", LastName.ToLower());
+        [DataMember(Order = 6)]
+        public string Url { get; set; }
 
         public Rockstar() { }
         public Rockstar(int id, string firstName, string lastName, int age, bool alive)
@@ -68,6 +89,7 @@ namespace RazorRockstars
             LastName = lastName;
             Age = age;
             Alive = alive;
+            Url = "/stars/{0}/{1}/".Fmt(Alive ? "alive" : "dead", LastName.ToLower());
         }
     }
 
@@ -121,48 +143,49 @@ namespace RazorRockstars
         }
     }
 
-    [ClientCanSwapTemplates]
-    [DefaultView("Users")]
-    public class UsersService : Service
-    {
-        public object Get(SearchUsers request)
-        {
-            var e = LoadTestConfiguration();
-            DatabaseFactory df = new DatabaseFactory(e);
-            var dt = df.ObjectsDatabase.DoQuery("SELECT * FROM eb_users");
-            return new UsersResponse()
-            {
-                Text = JsonSerializer.SerializeToString(dt)
-            };
-        }
+    //[ClientCanSwapTemplates]
+    //[DefaultView("Users")]
+    //public class UsersService : Service
+    //{
+    //    public object Get(SearchUsers request)
+    //    {
+    //        var e = LoadTestConfiguration();
+    //        DatabaseFactory df = new DatabaseFactory(e);
+    //        var dt = df.ObjectsDatabase.DoQuery("SELECT * FROM eb_users");
+    //        return new UsersResponse()
+    //        {
+    //            Text = dt
+    //            //Text = JsonSerializer.SerializeToString(dt)
+    //        };
+    //    }
 
-        private void InitDb(string path)
-        {
-            EbConfiguration e = new EbConfiguration()
-            {
-                ClientID = "xyz0007",
-                ClientName = "XYZ Enterprises Ltd.",
-                LicenseKey = "00288-22558-25558",
-            };
+    //    private void InitDb(string path)
+    //    {
+    //        EbConfiguration e = new EbConfiguration()
+    //        {
+    //            ClientID = "xyz0007",
+    //            ClientName = "XYZ Enterprises Ltd.",
+    //            LicenseKey = "00288-22558-25558",
+    //        };
 
-            e.DatabaseConfigurations.Add(EbDatabases.EB_OBJECTS, new EbDatabaseConfiguration(EbDatabases.EB_OBJECTS, DatabaseVendors.PGSQL, "eb_objects", "localhost", 5432, "postgres", "infinity", 500));
-            e.DatabaseConfigurations.Add(EbDatabases.EB_DATA, new EbDatabaseConfiguration(EbDatabases.EB_DATA, DatabaseVendors.PGSQL, "eb_objects", "localhost", 5432, "postgres", "infinity", 500));
-            e.DatabaseConfigurations.Add(EbDatabases.EB_ATTACHMENTS, new EbDatabaseConfiguration(EbDatabases.EB_ATTACHMENTS, DatabaseVendors.PGSQL, "eb_objects", "localhost", 5432, "postgres", "infinity", 500));
-            e.DatabaseConfigurations.Add(EbDatabases.EB_LOGS, new EbDatabaseConfiguration(EbDatabases.EB_LOGS, DatabaseVendors.PGSQL, "eb_objects", "localhost", 5432, "postgres", "infinity", 500));
+    //        e.DatabaseConfigurations.Add(EbDatabases.EB_OBJECTS, new EbDatabaseConfiguration(EbDatabases.EB_OBJECTS, DatabaseVendors.PGSQL, "eb_objects", "localhost", 5432, "postgres", "infinity", 500));
+    //        e.DatabaseConfigurations.Add(EbDatabases.EB_DATA, new EbDatabaseConfiguration(EbDatabases.EB_DATA, DatabaseVendors.PGSQL, "eb_objects", "localhost", 5432, "postgres", "infinity", 500));
+    //        e.DatabaseConfigurations.Add(EbDatabases.EB_ATTACHMENTS, new EbDatabaseConfiguration(EbDatabases.EB_ATTACHMENTS, DatabaseVendors.PGSQL, "eb_objects", "localhost", 5432, "postgres", "infinity", 500));
+    //        e.DatabaseConfigurations.Add(EbDatabases.EB_LOGS, new EbDatabaseConfiguration(EbDatabases.EB_LOGS, DatabaseVendors.PGSQL, "eb_objects", "localhost", 5432, "postgres", "infinity", 500));
 
-            byte[] bytea = EbSerializers.ProtoBuf_Serialize(e);
-            EbFile.Bytea_ToFile(bytea, path);
-        }
+    //        byte[] bytea = EbSerializers.ProtoBuf_Serialize(e);
+    //        EbFile.Bytea_ToFile(bytea, path);
+    //    }
 
-        public static EbConfiguration ReadTestConfiguration(string path)
-        {
-            return EbSerializers.ProtoBuf_DeSerialize<EbConfiguration>(EbFile.Bytea_FromFile(path));
-        }
+    //    public static EbConfiguration ReadTestConfiguration(string path)
+    //    {
+    //        return EbSerializers.ProtoBuf_DeSerialize<EbConfiguration>(EbFile.Bytea_FromFile(path));
+    //    }
 
-        private EbConfiguration LoadTestConfiguration()
-        {
-            InitDb(@"D:\xyz1.conn");
-            return ReadTestConfiguration(@"D:\xyz1.conn");
-        }
-    }
+    //    private EbConfiguration LoadTestConfiguration()
+    //    {
+    //        InitDb(@"D:\xyz1.conn");
+    //        return ReadTestConfiguration(@"D:\xyz1.conn");
+    //    }
+    //}
 }
