@@ -72,16 +72,16 @@ namespace ExpressBase.ServiceStack
             List<Form> lf = new List<Form>();
             foreach (EbDataRow dr in dt.Rows)
             {
-                var _id = Convert.ToInt32((dr[0] as EbDataField).Value);
+                var _id = Convert.ToInt32(dr[0]);
                 bool bAddMe = (request.Id == 0) ? true : (request.Id > 0 && request.Id == _id);
 
                 if (bAddMe)
                 {
                     lf.Add(new Form
                     {
-                        Id = Convert.ToInt32((dr[0] as EbDataField).Value),
-                        Name = dr[1].Value.ToString(),
-                        Bytea = (dr[2] as EbDataField).Value as byte[]
+                        Id = Convert.ToInt32(dr[0]),
+                        Name = dr[1].ToString(),
+                        Bytea = dr[2] as byte[]
                     });
                 }
             }
