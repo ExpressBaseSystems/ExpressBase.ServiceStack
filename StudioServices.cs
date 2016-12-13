@@ -17,6 +17,13 @@ namespace ExpressBase.ServiceStack
         public int Id { get; set; }
     }
 
+    [Route("/forms2")]
+    [Route("/forms2/{Id}")]
+    public class Search2Forms : IReturn<FormResponse2>
+    {
+        public int Id { get; set; }
+    }
+
     [Route("/forms/delete/{Id}")]
     public class DeleteForm
     {
@@ -29,6 +36,14 @@ namespace ExpressBase.ServiceStack
     {
         [DataMember(Order = 1)]
         public List<Form> Forms { get; set; }
+    }
+
+    [DataContract]
+    [Csv(CsvBehavior.FirstEnumerable)]
+    public class FormResponse2
+    {
+        [DataMember(Order = 1)]
+        public EbDataTable Forms { get; set; }
     }
 
     [DataContract]
@@ -89,6 +104,24 @@ namespace ExpressBase.ServiceStack
             return new FormResponse
             {
                 Forms = lf
+            };
+        }
+
+        public object Get(Search2Forms request)
+        {
+            var e = LoadTestConfiguration();
+            DatabaseFactory df = new DatabaseFactory(e);
+            EbDataTable dt = null;
+            using (var con = df.ObjectsDatabase.GetNewConnection())
+            {
+                con.Open();
+                string qry = (request.Id > 0) ? string.Format("SELECT * FROM eb_objects WHERE id={0};", request.Id) : "SELECT * FROM eb_objects;";
+                dt = df.ObjectsDatabase.DoQuery(qry);
+            };
+
+            return new FormResponse2
+            {
+                Forms = dt
             };
         }
 
