@@ -1,0 +1,56 @@
+﻿
+@model ExpressBase.ServiceStack.Models.UserModel
+@{
+    ViewBag.Title = "Login";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+@using (Html.BeginForm())
+{
+    @Html.ValidationSummary(true, "Login failed. Check your login details.");
+
+    <form>
+        <div>
+            <fieldset>
+                <legend>Login</legend>
+                <div class="editor-label">
+                    @Html.LabelFor(u => u.UserName)
+                </div>
+                <div class="editor-field">
+                    @Html.TextBoxFor(u => u.UserName)
+                    @Html.ValidationMessageFor(u => u.UserName)
+                </div>
+                <div class="editor-label">
+                    @Html.LabelFor(u => u.Password)
+                </div>
+                <div class="editor-field">
+                    @Html.PasswordFor(u => u.Password)
+                    @Html.ValidationMessageFor(u => u.Password)
+                </div>
+                <div class="editor-label">
+                    @Html.CheckBoxFor(u => u.RememberMe)
+                    @Html.LabelFor(u => u.RememberMe)
+                </div>
+                <input type="submit" value="Log In" />
+            </fieldset>
+        </div>
+        @*<script src="https://www.google.com/recaptcha/api.js" async defer></script>
+        <div class="g-recaptcha" data-sitekey="6LfoKA8UAAAAAHmdkrO2G5QmT1X5WSeaBm1_-BP_"></div>*@
+        </form>
+            @*<div>
+             <div style="width: 302px; height: 22px; position: relative;">
+                 <div style="width: 302px; height: 422px; position: absolute;">
+                     <iframe src="https://www.google.com/recaptcha/api/fallback?k=6LfoKA8UAAAAAOPERF82ixOs9X97ZXG_RtEJ9NBM"
+                             frameborder="0" scrolling="no"
+                             style="width: 302px; height:422px; border-style: none;"></iframe>
+                 </div>
+             </div>
+             <div style="width: 300px; height: 60px; border-style: none;
+            bottom: 12px; left: 25px; margin: 0px; padding: 0px; right: 25px;
+            background: #f9f9f9; border: 1px solid #c1c1c1; border-radius: 3px;">
+                 <textarea id="g-recaptcha-response" name="g-recaptcha-response"
+                           class="g-recaptcha-response"
+                           style="width: 250px; height: 40px; border: 1px solid #c1c1c1;
+                   margin: 10px 25px; padding: 0px; resize: none;"></textarea>
+             </div>
+             </div>*@
+}
