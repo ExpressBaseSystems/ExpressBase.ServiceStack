@@ -11,6 +11,8 @@ using ServiceStack.Logging;
 using ServiceStack.Mvc;
 using ServiceStack.OrmLite;
 using ServiceStack.ProtoBuf;
+using ServiceStack.VirtualPath;
+using System;
 
 namespace RazorRockstars.WebHost
 {
@@ -59,7 +61,7 @@ namespace RazorRockstars.WebHost
             {
                 routes.MapRoute(
                     name: "default",
-                    template: "{controller=Home}/{action=Index}/{id?}");
+                    template: "{controller=User}/{action=Login}/{id?}");
             });
 
             app.Use(new RazorHandler("/notfound"));
@@ -78,6 +80,15 @@ namespace RazorRockstars.WebHost
         {
             Plugins.Add(new RazorFormat());
             Plugins.Add(new ProtoBufFormat());
+            //Plugins.Add(new RequestLogsFeature
+            //{
+            //    RequestLogger = new CsvRequestLogger(
+            //    files: new FileSystemVirtualPathProvider(this, Config.WebHostPhysicalPath),
+            //    requestLogsPattern: "requestlogs/{year}-{month}/{year}-{month}-{day}.csv",
+            //    errorLogsPattern: "requestlogs/{year}-{month}/{year}-{month}-{day}-errors.csv",
+            //    appendEvery: TimeSpan.FromSeconds(1)
+            //),
+            //});
 
             container.Register<IDbConnectionFactory>(
                 new OrmLiteConnectionFactory(":memory:", SqliteDialect.Provider));
@@ -93,7 +104,8 @@ namespace RazorRockstars.WebHost
 
             this.ContentTypes.Register(MimeTypes.ProtoBuf, (reqCtx, res, stream) => ProtoBuf.Serializer.NonGeneric.Serialize(stream, res), ProtoBuf.Serializer.NonGeneric.Deserialize);
 
-            SetConfig(new HostConfig { DebugMode = true });
+            SetConfig(new HostConfig { DebugMode = true, DefaultContentType = MimeTypes.Json });
+            //SetConfig(new HostConfig { DefaultContentType = MimeTypes.Json });
         }
     }
 }
