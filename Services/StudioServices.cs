@@ -35,7 +35,7 @@ namespace ExpressBase.ServiceStack
     public class FormResponse
     {
         [DataMember(Order = 1)]
-        public List<Form> Forms { get; set; }
+        public List<Form> Data { get; set; }
     }
 
     [DataContract]
@@ -103,7 +103,7 @@ namespace ExpressBase.ServiceStack
 
             return new FormResponse
             {
-                Forms = lf
+                Data = lf
             };
         }
 
