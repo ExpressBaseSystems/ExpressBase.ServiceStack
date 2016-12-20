@@ -80,15 +80,15 @@ namespace RazorRockstars.WebHost
         {
             Plugins.Add(new RazorFormat());
             Plugins.Add(new ProtoBufFormat());
-            Plugins.Add(new RequestLogsFeature
-            {
-                RequestLogger = new CsvRequestLogger(
-                files: new FileSystemVirtualPathProvider(this, Config.WebHostPhysicalPath),
-                requestLogsPattern: "requestlogs/{year}-{month}/{year}-{month}-{day}.csv",
-                errorLogsPattern: "requestlogs/{year}-{month}/{year}-{month}-{day}-errors.csv",
-                appendEvery: TimeSpan.FromSeconds(1)
-            ),
-            });
+            //Plugins.Add(new RequestLogsFeature
+            //{
+            //    RequestLogger = new CsvRequestLogger(
+            //    files: new FileSystemVirtualPathProvider(this, Config.WebHostPhysicalPath),
+            //    requestLogsPattern: "requestlogs/{year}-{month}/{year}-{month}-{day}.csv",
+            //    errorLogsPattern: "requestlogs/{year}-{month}/{year}-{month}-{day}-errors.csv",
+            //    appendEvery: TimeSpan.FromSeconds(1)
+            //),
+            //});
 
             container.Register<IDbConnectionFactory>(
                 new OrmLiteConnectionFactory(":memory:", SqliteDialect.Provider));

@@ -1,7 +1,10 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿
+using Microsoft.AspNetCore.Mvc;
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
+
 using System.Threading.Tasks;
 
 namespace ExpressBase.ServiceStack.Controllers
@@ -27,6 +30,7 @@ namespace ExpressBase.ServiceStack.Controllers
         [HttpPost]
         public async Task<IActionResult> Login(Models.UserModel user)
         {
+          
             if (ModelState.IsValid)
             {
                 if (await user.IsValid(user.UserName, user.Password))
@@ -42,6 +46,13 @@ namespace ExpressBase.ServiceStack.Controllers
 
             return View("Login");
         }
+        public ActionResult Register()
+        {
+            return View();
+        }
+       
+
+
     }
 
 }
