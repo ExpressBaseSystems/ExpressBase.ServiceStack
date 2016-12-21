@@ -11,8 +11,8 @@ using System.Text;
 
 namespace ExpressBase.ServiceStack
 {
-    [Route("/views")]
-    [Route("/views/{Id}")]
+    [Route("/viewst")]
+    [Route("/viewst/{Id}")]
     public class ViewRequest : IReturn<ViewResponse>
     {
         public int Id { get; set; }
@@ -27,7 +27,7 @@ namespace ExpressBase.ServiceStack
     }
 
     [DataContract]
-    [Route("/views", "POST")]
+    [Route("/viewst", "POST")]
     public class View
     {
         [DataMember(Order = 1)]
@@ -50,7 +50,7 @@ namespace ExpressBase.ServiceStack
     }
 
     [ClientCanSwapTemplates]
-    [DefaultView("ViewTests")]
+    [DefaultView("Viewst")]
     public class ViewService : Service
     {
         public object Get(ViewRequest request)

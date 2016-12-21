@@ -61,7 +61,7 @@ namespace RazorRockstars.WebHost
             {
                 routes.MapRoute(
                     name: "default",
-                    template: "{controller=User}/{action=Login}/{id?}");
+                    template: "{controller=Home}/{action=Index}/{id?}");
             });
 
             app.Use(new RazorHandler("/notfound"));
@@ -89,15 +89,6 @@ namespace RazorRockstars.WebHost
             //    appendEvery: TimeSpan.FromSeconds(1)
             //),
             //});
-
-            container.Register<IDbConnectionFactory>(
-                new OrmLiteConnectionFactory(":memory:", SqliteDialect.Provider));
-
-            using (var db = container.Resolve<IDbConnectionFactory>().Open())
-            {
-                db.CreateTableIfNotExists<Rockstar>();
-                db.InsertAll(RockstarsService.SeedData);
-            }
 
             //Also works but it's recommended to handle 404's by registering at end of .NET Core pipeline
             //this.CustomErrorHttpHandlers[HttpStatusCode.NotFound] = new RazorHandler("/notfound");
