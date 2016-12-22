@@ -33,8 +33,20 @@ namespace ExpressBase.ServiceStack
 
         public IActionResult Table()
         {
-
             return View();
         }
+
+        //[ValidateAntiForgeryToken]
+        public IActionResult RForm()
+        {
+            ViewBag.FormId = 89;
+            return View();
+        }
+
+        //public IActionResult Form(int id)
+        //{
+        //    ViewData["Id"] = id;
+        //    return View();
+        //}
     }
 }

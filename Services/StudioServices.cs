@@ -7,25 +7,13 @@ using System.Runtime.Serialization;
 using ExpressBase.Common;
 using ExpressBase.Data;
 using System;
+using ExpressBase.UI;
 
 namespace ExpressBase.ServiceStack
 {
-    [Route("/forms")]
-    [Route("/forms/{Id}")]
-    public class SearchForms : IReturn<FormResponse>
-    {
-        public int Id { get; set; }
-    }
-
-    [Route("/forms2")]
-    [Route("/forms2/{Id}")]
-    public class Search2Forms : IReturn<FormResponse2>
-    {
-        public int Id { get; set; }
-    }
-
-    [Route("/forms/delete/{Id}")]
-    public class DeleteForm
+    [Route("/form")]
+    [Route("/form/{Id}")]
+    public class FormRequest : IReturn<FormResponse>
     {
         public int Id { get; set; }
     }
@@ -35,19 +23,11 @@ namespace ExpressBase.ServiceStack
     public class FormResponse
     {
         [DataMember(Order = 1)]
-        public List<Form> Data { get; set; }
+        public List<Form> Forms { get; set; }
     }
 
     [DataContract]
-    [Csv(CsvBehavior.FirstEnumerable)]
-    public class FormResponse2
-    {
-        [DataMember(Order = 1)]
-        public EbDataTable Forms { get; set; }
-    }
-
-    [DataContract]
-    [Route("/forms", "POST")]
+    [Route("/form", "POST")]
     public class Form
     {
         [DataMember(Order = 1)]
@@ -60,20 +40,24 @@ namespace ExpressBase.ServiceStack
         [DataMember(Order = 4)]
         public byte[] Bytea { get; set; }
 
+        [DataMember(Order = 5)]
+        public EbObject EbObject { get; set; }
+
         public Form() { }
         public Form(int id, string name, byte[] bytea)
         {
             Id = id;
             this.Name = name;
             this.Bytea = bytea;
+            //this.EbControl = EbSerializers.ProtoBuf_DeSerialize<EbControl>(bytea);
         }
     }
 
     [ClientCanSwapTemplates]
-    [DefaultView("Forms")]
-    public class FormsService : Service
+    [DefaultView("Form")]
+    public class FormService : Service
     {
-        public object Get(SearchForms request)
+        public object Get(FormRequest request)
         {
             var e = LoadTestConfiguration();
             DatabaseFactory df = new DatabaseFactory(e);
@@ -81,57 +65,31 @@ namespace ExpressBase.ServiceStack
             using (var con = df.ObjectsDatabase.GetNewConnection())
             {
                 con.Open();
-                dt = df.ObjectsDatabase.DoQuery("SELECT * FROM eb_objects;");
+                string _where_clause = (request.Id > 0) ? string.Format("WHERE id={0}", request.Id) : string.Empty;
+                dt = df.ObjectsDatabase.DoQuery(string.Format("SELECT * FROM eb_objects {0};", _where_clause));
             };
 
-            List<Form> lf = new List<Form>();
+            List<Form> f = new List<Form>();
             foreach (EbDataRow dr in dt.Rows)
             {
-                var _id = Convert.ToInt32(dr[0]);
-                bool bAddMe = (request.Id == 0) ? true : (request.Id > 0 && request.Id == _id);
-
-                if (bAddMe)
+                var _form = (new Form
                 {
-                    lf.Add(new Form
-                    {
-                        Id = Convert.ToInt32(dr[0]),
-                        Name = dr[1].ToString(),
-                        Bytea = dr[2] as byte[]
-                    });
-                }
+                    Id = Convert.ToInt32(dr[0]),
+                    Name = dr[1].ToString(),
+                    Bytea = dr[2] as byte[],
+                    EbObject = (request.Id > 0) ? EbSerializers.ProtoBuf_DeSerialize<EbObject>(dr[2] as byte[]) : null
+                });
+
+                f.Add(_form);
             }
 
-            return new FormResponse
-            {
-                Data = lf
-            };
-        }
-
-        public object Get(Search2Forms request)
-        {
-            var e = LoadTestConfiguration();
-            DatabaseFactory df = new DatabaseFactory(e);
-            EbDataTable dt = null;
-            using (var con = df.ObjectsDatabase.GetNewConnection())
-            {
-                con.Open();
-                string qry = (request.Id > 0) ? string.Format("SELECT * FROM eb_objects WHERE id={0};", request.Id) : "SELECT * FROM eb_objects;";
-                dt = df.ObjectsDatabase.DoQuery(qry);
-            };
-
-            return new FormResponse2
-            {
-                Forms = dt
-            };
-        }
-
-        public object Any(DeleteForm request)
-        {
-            return Get(new SearchForms());
+            return new FormResponse { Forms = f };
         }
 
         public object Post(Form request)
         {
+            bool result = false;
+
             var e = LoadTestConfiguration();
             DatabaseFactory df = new DatabaseFactory(e);
             using (var con = df.ObjectsDatabase.GetNewConnection())
@@ -141,9 +99,10 @@ namespace ExpressBase.ServiceStack
                 cmd.Parameters.Add(df.ObjectsDatabase.GetNewParameter("object_name", System.Data.DbType.String, request.Name));
                 cmd.Parameters.Add(df.ObjectsDatabase.GetNewParameter("obj_bytea", System.Data.DbType.Binary, request.Bytea));
                 cmd.ExecuteNonQuery();
+                result = true;
             };
 
-            return Get(new SearchForms());
+            return result;
         }
 
         private void InitDb(string path)

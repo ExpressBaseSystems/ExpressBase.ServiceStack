@@ -33,7 +33,8 @@
     "ServiceStack.ProtoBuf.Core": "1.0.30",
     "ExpressBase.Common": "1.0.0",
     "ExpressBase.Data": "1.0.0",
-    "ExpressBase.Security": "1.0.0" },
+    "ExpressBase.Security": "1.0.0",
+    "ExpressBase.UI": "1.0.0" },
 
   "tools": {
     "BundlerMinifier.Core": "2.0.238",

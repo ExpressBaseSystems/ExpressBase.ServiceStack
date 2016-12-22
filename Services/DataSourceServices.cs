@@ -11,24 +11,48 @@ using System.Text;
 
 namespace ExpressBase.ServiceStack
 {
-    [Route("/viewst")]
-    [Route("/viewst/{Id}")]
-    public class ViewRequest : IReturn<ViewResponse>
+    [Route("/ds")]
+    [Route("/ds/data/{Id}")]
+    public class DataSourceDataRequest : IReturn<DataSourceDataResponse>
+    {
+        public int Id { get; set; }
+
+        public int Start { get; set; }
+
+        public int Length { get; set; }
+
+        public int Draw { get; set; }
+    }
+
+    [Route("/ds")]
+    [Route("/ds/columns/{Id}")]
+    public class DataSourceColumnsRequest : IReturn<DataSourceColumnsResponse>
     {
         public int Id { get; set; }
     }
 
     [DataContract]
     [Csv(CsvBehavior.FirstEnumerable)]
-    public class ViewResponse
+    public class DataSourceDataResponse
     {
         [DataMember(Order = 1)]
-        public EbDataTable Data { get; set; }
+        public RowColletion Data { get; set; }
+
+        [DataMember(Order = 2)]
+        public int Draw { get; set; }
     }
 
     [DataContract]
-    [Route("/viewst", "POST")]
-    public class View
+    [Csv(CsvBehavior.FirstEnumerable)]
+    public class DataSourceColumnsResponse
+    {
+        [DataMember(Order = 1)]
+        public ColumnColletion Columns { get; set; }
+    }
+
+    [DataContract]
+    [Route("/ds", "POST")]
+    public class EbDataSource
     {
         [DataMember(Order = 1)]
         [AutoIncrement]
@@ -40,20 +64,19 @@ namespace ExpressBase.ServiceStack
         [DataMember(Order = 3)]
         public string Sql { get; set; }
 
-        public View() { }
-        public View(int id, string name, string sql)
+        public EbDataSource() { }
+        public EbDataSource(string name, string sql)
         {
-            Id = id;
             this.Name = name;
             this.Sql = sql;
         }
     }
 
     [ClientCanSwapTemplates]
-    [DefaultView("Viewst")]
-    public class ViewService : Service
+    [DefaultView("ds")]
+    public class DataSourceService : Service
     {
-        public object Get(ViewRequest request)
+        public object Get(DataSourceDataRequest request)
         {
             string _sql = string.Format("SELECT obj_bytea FROM eb_objects WHERE id={0}", request.Id);
             
@@ -61,16 +84,58 @@ namespace ExpressBase.ServiceStack
             DatabaseFactory df = new DatabaseFactory(e);
             var dt = df.ObjectsDatabase.DoQuery(_sql);
 
-            var _view = EbSerializers.ProtoBuf_DeSerialize<View>((byte[])dt.Rows[0][0]);
-            var dt2 = df.ObjectsDatabase.DoQuery(_view.Sql);
+            DataSourceDataResponse dsresponse = null;
 
-            return new ViewResponse
+            if (dt.Rows.Count > 0)
             {
-                Data = dt2
-            };
+                var _ds = EbSerializers.ProtoBuf_DeSerialize<EbDataSource>((byte[])dt.Rows[0][0]);
+
+                if (_ds != null)
+                {
+                    string sql = (request.Length > 0)
+                        ? string.Format("SELECT * FROM ({0}) AAA LIMIT {1} OFFSET {2}", _ds.Sql.ReplaceAll(";", string.Empty), request.Length, request.Start)
+                        : _ds.Sql;
+                    var dt2 = df.ObjectsDatabase.DoQuery(sql);
+
+                    dsresponse = new DataSourceDataResponse
+                    {
+                        Draw = request.Draw,
+                        Data = dt2.Rows
+                    };
+                }
+            }
+
+            return dsresponse;
         }
 
-        public object Post(View request)
+        public object Get(DataSourceColumnsRequest request)
+        {
+            string _sql = string.Format("SELECT obj_bytea FROM eb_objects WHERE id={0}", request.Id);
+
+            var e = LoadTestConfiguration();
+            DatabaseFactory df = new DatabaseFactory(e);
+            var dt = df.ObjectsDatabase.DoQuery(_sql);
+
+            DataSourceColumnsResponse dsresponse = null;
+
+            if (dt.Rows.Count > 0)
+            {
+                var _ds = EbSerializers.ProtoBuf_DeSerialize<EbDataSource>((byte[])dt.Rows[0][0]);
+                if (_ds != null)
+                {
+                    var dt2 = df.ObjectsDatabase.DoQuery(string.Format("SELECT * FROM ({0}) AAA LIMIT 0", _ds.Sql.ReplaceAll(";", string.Empty)));
+
+                    dsresponse = new DataSourceColumnsResponse
+                    {
+                        Columns = dt2.Columns
+                    };
+                }
+            }
+
+            return dsresponse;
+        }
+
+        public object Post(EbDataSource ds)
         {
             try
             {
@@ -80,8 +145,8 @@ namespace ExpressBase.ServiceStack
                 {
                     con.Open();
                     var cmd = df.ObjectsDatabase.GetNewCommand(con, "INSERT INTO eb_objects (object_name, obj_bytea) VALUES (@object_name, @obj_bytea);");
-                    cmd.Parameters.Add(df.ObjectsDatabase.GetNewParameter("object_name", System.Data.DbType.String, request.Name));
-                    cmd.Parameters.Add(df.ObjectsDatabase.GetNewParameter("obj_bytea", System.Data.DbType.Binary, EbSerializers.ProtoBuf_Serialize(request)));
+                    cmd.Parameters.Add(df.ObjectsDatabase.GetNewParameter("object_name", System.Data.DbType.String, ds.Name));
+                    cmd.Parameters.Add(df.ObjectsDatabase.GetNewParameter("obj_bytea", System.Data.DbType.Binary, EbSerializers.ProtoBuf_Serialize(ds)));
                     cmd.ExecuteNonQuery();
                     return true;
                 };

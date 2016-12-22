@@ -1,0 +1,40 @@
+﻿@using ServiceStack;
+@using ExpressBase.UI;
+
+@{
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.13/css/jquery.dataTables.css">
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+    <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.10.13/js/jquery.dataTables.js"></script>
+    <script src="https://cdn.datatables.net/1.10.13/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/select/1.2.1/js/dataTables.select.min.js"></script>
+    <script src="https://cdn.datatables.net/select/1.2.1/css/select.dataTables.min.css"></script>
+    <script src="https://cdn.datatables.net/1.10.13/css/jquery.dataTables.min.css"></script>
+    <script src="https://editor.datatables.net/extensions/Editor/js/dataTables.editor.min.js"></script>
+    <script src="https://editor.datatables.net/extensions/Editor/css/editor.dataTables.min.css"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.4.0/Chart.bundle.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.4.0/Chart.js"></script>
+}
+
+@{ 
+
+    var id = Convert.ToInt32(ViewBag.FormId);
+
+    //var client = new ProtoBufServiceClient("http://localhost:53125/");
+    //var fr = client.Get<FormResponse>(new FormRequest { Id = id });
+
+    IServiceClient client = new JsonServiceClient("http://localhost:53125/").WithCache();
+    var fr = client.Get<FormResponse>(new FormRequest { Id = id });
+
+    var _form = fr.Forms[0].EbObject;
+    string html = string.Empty;
+    foreach (EbObject c in _form.Controls)
+    {
+        html += c.GetHtml();
+    }
+}
+
+<div id="tbl1" class="table_container">
+    @Html.Raw(html)
+</div>
+
