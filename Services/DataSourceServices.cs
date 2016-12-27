@@ -1,13 +1,10 @@
-﻿using System.Collections.Generic;
-using ServiceStack;
+﻿using ServiceStack;
 using ServiceStack.DataAnnotations;
-using ServiceStack.OrmLite;
 using ServiceStack.Text;
 using System.Runtime.Serialization;
 using ExpressBase.Common;
 using ExpressBase.Data;
 using System;
-using System.Text;
 
 namespace ExpressBase.ServiceStack
 {
@@ -36,10 +33,16 @@ namespace ExpressBase.ServiceStack
     public class DataSourceDataResponse
     {
         [DataMember(Order = 1)]
-        public RowColletion Data { get; set; }
+        public int Draw { get; set; }
 
         [DataMember(Order = 2)]
-        public int Draw { get; set; }
+        public int RecordsTotal { get; set; }
+
+        [DataMember(Order = 3)]
+        public int RecordsFiltered { get; set; }
+
+        [DataMember(Order = 4)]
+        public RowColletion Data { get; set; }
     }
 
     [DataContract]
@@ -78,11 +81,9 @@ namespace ExpressBase.ServiceStack
     {
         public object Get(DataSourceDataRequest request)
         {
-            string _sql = string.Format("SELECT obj_bytea FROM eb_objects WHERE id={0}", request.Id);
-            
             var e = LoadTestConfiguration();
             DatabaseFactory df = new DatabaseFactory(e);
-            var dt = df.ObjectsDatabase.DoQuery(_sql);
+            var dt = df.ObjectsDatabase.DoQuery(string.Format("SELECT obj_bytea FROM eb_objects WHERE id={0}", request.Id));
 
             DataSourceDataResponse dsresponse = null;
 
@@ -92,15 +93,29 @@ namespace ExpressBase.ServiceStack
 
                 if (_ds != null)
                 {
-                    string sql = (request.Length > 0)
-                        ? string.Format("SELECT * FROM ({0}) AAA LIMIT {1} OFFSET {2}", _ds.Sql.ReplaceAll(";", string.Empty), request.Length, request.Start)
-                        : _ds.Sql;
-                    var dt2 = df.ObjectsDatabase.DoQuery(sql);
+                    //string _sql_orig = _ds.Sql.ReplaceAll(";", string.Empty);
+                    //string _sql = string.Empty;
+
+                    //if (request.Length > 0)
+                    //{
+                    //    //_sql = string.Format("SELECT * FROM ({0}) AAA WHERE id>{1} ORDER BY id LIMIT {2}", _ds.Sql.ReplaceAll(";", string.Empty), ((request.Draw - 1) * request.Length), request.Length);
+                    //    _sql = string.Format("SELECT COUNT(*) FROM ({0}) AAA;", _sql_orig) + _sql;
+                    //}
+
+                    var parameters = new System.Data.Common.DbParameter[2] 
+                    {
+                        df.ObjectsDatabase.GetNewParameter("@limit", System.Data.DbType.Int32, request.Length),
+                        df.ObjectsDatabase.GetNewParameter("@last_id", System.Data.DbType.Int32, ((request.Draw - 1) * request.Length))
+                    };
+
+                    var _dataset = df.ObjectsDatabase.DoQueries(_ds.Sql, parameters);
 
                     dsresponse = new DataSourceDataResponse
                     {
                         Draw = request.Draw,
-                        Data = dt2.Rows
+                        Data = (_dataset.Tables.Count > 1) ? _dataset.Tables[1].Rows : _dataset.Tables[0].Rows,
+                        RecordsTotal = (_dataset.Tables.Count > 1) ? Convert.ToInt32(_dataset.Tables[0].Rows[0][0]) : _dataset.Tables[0].Rows.Count,
+                        RecordsFiltered = (_dataset.Tables.Count > 1) ? Convert.ToInt32(_dataset.Tables[0].Rows[0][0]) : _dataset.Tables[0].Rows.Count
                     };
                 }
             }
@@ -123,7 +138,13 @@ namespace ExpressBase.ServiceStack
                 var _ds = EbSerializers.ProtoBuf_DeSerialize<EbDataSource>((byte[])dt.Rows[0][0]);
                 if (_ds != null)
                 {
-                    var dt2 = df.ObjectsDatabase.DoQuery(string.Format("SELECT * FROM ({0}) AAA LIMIT 0", _ds.Sql.ReplaceAll(";", string.Empty)));
+                    var parameters = new System.Data.Common.DbParameter[2]
+                    {
+                        df.ObjectsDatabase.GetNewParameter("@limit", System.Data.DbType.Int32, 0),
+                        df.ObjectsDatabase.GetNewParameter("@last_id", System.Data.DbType.Int32, 0)
+                    };
+
+                    var dt2 = df.ObjectsDatabase.DoQuery(_ds.Sql.Substring(_ds.Sql.IndexOf(';') + 1), parameters);
 
                     dsresponse = new DataSourceColumnsResponse
                     {
@@ -165,10 +186,10 @@ namespace ExpressBase.ServiceStack
                 LicenseKey = "00288-22558-25558",
             };
 
-            e.DatabaseConfigurations.Add(EbDatabases.EB_OBJECTS, new EbDatabaseConfiguration(EbDatabases.EB_OBJECTS, DatabaseVendors.PGSQL, "eb_objects", "localhost", 5432, "postgres", "infinity", 500));
-            e.DatabaseConfigurations.Add(EbDatabases.EB_DATA, new EbDatabaseConfiguration(EbDatabases.EB_DATA, DatabaseVendors.PGSQL, "eb_objects", "localhost", 5432, "postgres", "infinity", 500));
-            e.DatabaseConfigurations.Add(EbDatabases.EB_ATTACHMENTS, new EbDatabaseConfiguration(EbDatabases.EB_ATTACHMENTS, DatabaseVendors.PGSQL, "eb_objects", "localhost", 5432, "postgres", "infinity", 500));
-            e.DatabaseConfigurations.Add(EbDatabases.EB_LOGS, new EbDatabaseConfiguration(EbDatabases.EB_LOGS, DatabaseVendors.PGSQL, "eb_objects", "localhost", 5432, "postgres", "infinity", 500));
+            e.DatabaseConfigurations.Add(EbDatabases.EB_OBJECTS, new EbDatabaseConfiguration(EbDatabases.EB_OBJECTS, DatabaseVendors.PGSQL, "AlArz2014", "localhost", 5432, "postgres", "infinity", 500));
+            e.DatabaseConfigurations.Add(EbDatabases.EB_DATA, new EbDatabaseConfiguration(EbDatabases.EB_DATA, DatabaseVendors.PGSQL, "AlArz2014", "localhost", 5432, "postgres", "infinity", 500));
+            e.DatabaseConfigurations.Add(EbDatabases.EB_ATTACHMENTS, new EbDatabaseConfiguration(EbDatabases.EB_ATTACHMENTS, DatabaseVendors.PGSQL, "AlArz2014", "localhost", 5432, "postgres", "infinity", 500));
+            e.DatabaseConfigurations.Add(EbDatabases.EB_LOGS, new EbDatabaseConfiguration(EbDatabases.EB_LOGS, DatabaseVendors.PGSQL, "AlArz2014", "localhost", 5432, "postgres", "infinity", 500));
 
             byte[] bytea = EbSerializers.ProtoBuf_Serialize(e);
             EbFile.Bytea_ToFile(bytea, path);

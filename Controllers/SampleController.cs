@@ -37,9 +37,9 @@ namespace ExpressBase.ServiceStack
         }
 
         //[ValidateAntiForgeryToken]
-        public IActionResult RForm()
+        public IActionResult RForm(int id)
         {
-            ViewBag.FormId = 89;
+            ViewBag.FormId = id;
             return View();
         }
 
