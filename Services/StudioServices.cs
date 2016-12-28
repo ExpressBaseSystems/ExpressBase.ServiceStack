@@ -8,6 +8,7 @@ using ExpressBase.Common;
 using ExpressBase.Data;
 using System;
 using ExpressBase.UI;
+using System.Data.Common;
 
 namespace ExpressBase.ServiceStack
 {
@@ -95,9 +96,21 @@ namespace ExpressBase.ServiceStack
             using (var con = df.ObjectsDatabase.GetNewConnection())
             {
                 con.Open();
-                var cmd = df.ObjectsDatabase.GetNewCommand(con, "INSERT INTO eb_objects (object_name, obj_bytea) VALUES (@object_name, @obj_bytea);");
-                cmd.Parameters.Add(df.ObjectsDatabase.GetNewParameter("object_name", System.Data.DbType.String, request.Name));
-                cmd.Parameters.Add(df.ObjectsDatabase.GetNewParameter("obj_bytea", System.Data.DbType.Binary, request.Bytea));
+                DbCommand cmd = null;
+
+                if (request.Id == 0)
+                {
+                    cmd = df.ObjectsDatabase.GetNewCommand(con, "INSERT INTO eb_objects (object_name, obj_bytea) VALUES (@object_name, @obj_bytea);");
+                }
+                else
+                {
+                    cmd = df.ObjectsDatabase.GetNewCommand(con, "UPDATE eb_objects SET object_name=@object_name, obj_bytea=@obj_bytea WHERE id=@id;");
+                    cmd.Parameters.Add(df.ObjectsDatabase.GetNewParameter("@id", System.Data.DbType.Int32, request.Id));
+                }
+
+                cmd.Parameters.Add(df.ObjectsDatabase.GetNewParameter("@object_name", System.Data.DbType.String, request.Name));
+                cmd.Parameters.Add(df.ObjectsDatabase.GetNewParameter("@obj_bytea", System.Data.DbType.Binary, request.Bytea));
+
                 cmd.ExecuteNonQuery();
                 result = true;
             };
