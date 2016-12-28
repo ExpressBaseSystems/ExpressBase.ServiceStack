@@ -20,6 +20,8 @@ namespace ExpressBase.ServiceStack
         public int Length { get; set; }
 
         public int Draw { get; set; }
+
+        public string Search { get; set; }
     }
 
     [Route("/ds")]
@@ -82,6 +84,9 @@ namespace ExpressBase.ServiceStack
     {
         public object Get(DataSourceDataRequest request)
         {
+            request.Search = base.Request.QueryString["search[value]"];
+            request.Search = string.IsNullOrEmpty(request.Search) ? "" : request.Search;
+
             var e = LoadTestConfiguration();
             DatabaseFactory df = new DatabaseFactory(e);
             var dt = df.ObjectsDatabase.DoQuery(string.Format("SELECT obj_bytea FROM eb_objects WHERE id={0}", request.Id));
@@ -103,10 +108,11 @@ namespace ExpressBase.ServiceStack
                     //    _sql = string.Format("SELECT COUNT(*) FROM ({0}) AAA;", _sql_orig) + _sql;
                     //}
 
-                    var parameters = new System.Data.Common.DbParameter[2] 
+                    var parameters = new System.Data.Common.DbParameter[3] 
                     {
                         df.ObjectsDatabase.GetNewParameter("@limit", System.Data.DbType.Int32, request.Length),
-                        df.ObjectsDatabase.GetNewParameter("@last_id", System.Data.DbType.Int32, ((request.Draw - 1) * request.Length))
+                        df.ObjectsDatabase.GetNewParameter("@last_id", System.Data.DbType.Int32, ((request.Draw - 1) * request.Length)),
+                        df.ObjectsDatabase.GetNewParameter("@search", System.Data.DbType.String, request.Search)
                     };
 
                     var _dataset = df.ObjectsDatabase.DoQueries(_ds.Sql, parameters);
@@ -139,10 +145,11 @@ namespace ExpressBase.ServiceStack
                 var _ds = EbSerializers.ProtoBuf_DeSerialize<EbDataSource>((byte[])dt.Rows[0][0]);
                 if (_ds != null)
                 {
-                    var parameters = new System.Data.Common.DbParameter[2]
+                    var parameters = new System.Data.Common.DbParameter[3]
                     {
                         df.ObjectsDatabase.GetNewParameter("@limit", System.Data.DbType.Int32, 0),
-                        df.ObjectsDatabase.GetNewParameter("@last_id", System.Data.DbType.Int32, 0)
+                        df.ObjectsDatabase.GetNewParameter("@last_id", System.Data.DbType.Int32, 0),
+                        df.ObjectsDatabase.GetNewParameter("@search", System.Data.DbType.String, string.Empty)
                     };
 
                     var dt2 = df.ObjectsDatabase.DoQuery(_ds.Sql.Substring(_ds.Sql.IndexOf(';') + 1), parameters);
