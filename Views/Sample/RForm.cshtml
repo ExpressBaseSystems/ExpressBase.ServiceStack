@@ -1,6 +1,6 @@
 ﻿@using ServiceStack;
 @using ExpressBase.UI;
-
+@using ExpressBase.Common;
 
 
 @{ 
@@ -12,13 +12,13 @@
     //var fr = client.Get<FormResponse>(new FormRequest { Id = id });
 
     IServiceClient client = new JsonServiceClient("http://localhost:53125/").WithCache();
-    var fr = client.Get<FormResponse>(new FormRequest { Id = id });
+    var fr = client.Get<EbObjectResponse>(new EbObjectRequest { Id = id });
 
-    if (fr.Forms.Count > 0)
+    if (fr.Data.Count > 0)
     {
-        var _form = fr.Forms[0].EbObject;
+        var _form = EbSerializers.ProtoBuf_DeSerialize<EbControl>(fr.Data[0].Bytea);
 
-        foreach (EbObject c in _form.Controls)
+        foreach (EbControl c in _form.Controls)
         {
             html += c.GetHtml();
         }
