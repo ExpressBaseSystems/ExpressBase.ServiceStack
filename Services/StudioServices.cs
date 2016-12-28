@@ -12,53 +12,11 @@ using System.Data.Common;
 
 namespace ExpressBase.ServiceStack
 {
-    [Route("/form")]
-    [Route("/form/{Id}")]
-    public class FormRequest : IReturn<FormResponse>
-    {
-        public int Id { get; set; }
-    }
-
-    [DataContract]
-    [Csv(CsvBehavior.FirstEnumerable)]
-    public class FormResponse
-    {
-        [DataMember(Order = 1)]
-        public List<Form> Forms { get; set; }
-    }
-
-    [DataContract]
-    [Route("/form", "POST")]
-    public class Form
-    {
-        [DataMember(Order = 1)]
-        [AutoIncrement]
-        public int Id { get; set; }
-
-        [DataMember(Order = 2)]
-        public string Name { get; set; }
-
-        [DataMember(Order = 4)]
-        public byte[] Bytea { get; set; }
-
-        [DataMember(Order = 5)]
-        public EbObject EbObject { get; set; }
-
-        public Form() { }
-        public Form(int id, string name, byte[] bytea)
-        {
-            Id = id;
-            this.Name = name;
-            this.Bytea = bytea;
-            //this.EbControl = EbSerializers.ProtoBuf_DeSerialize<EbControl>(bytea);
-        }
-    }
-
     [ClientCanSwapTemplates]
     [DefaultView("Form")]
-    public class FormService : Service
+    public class EbObjectService : Service
     {
-        public object Get(FormRequest request)
+        public object Get(EbObjectRequest request)
         {
             var e = LoadTestConfiguration();
             DatabaseFactory df = new DatabaseFactory(e);
@@ -67,27 +25,27 @@ namespace ExpressBase.ServiceStack
             {
                 con.Open();
                 string _where_clause = (request.Id > 0) ? string.Format("WHERE id={0}", request.Id) : string.Empty;
-                dt = df.ObjectsDatabase.DoQuery(string.Format("SELECT * FROM eb_objects {0};", _where_clause));
+                dt = df.ObjectsDatabase.DoQuery(string.Format("SELECT id, obj_name, obj_bytea, obj_type FROM eb_objects {0};", _where_clause));
             };
 
-            List<Form> f = new List<Form>();
+            List<EbObjectWrapper> f = new List<EbObjectWrapper>();
             foreach (EbDataRow dr in dt.Rows)
             {
-                var _form = (new Form
+                var _form = (new EbObjectWrapper
                 {
                     Id = Convert.ToInt32(dr[0]),
                     Name = dr[1].ToString(),
                     Bytea = dr[2] as byte[],
-                    EbObject = (request.Id > 0) ? EbSerializers.ProtoBuf_DeSerialize<EbObject>(dr[2] as byte[]) : null
+                    EbObjectType = (dr[3] == System.DBNull.Value || Convert.ToInt32(dr[3]) == 0) ? EbObjectType.Form : (EbObjectType)Convert.ToInt32(dr[3]),
                 });
 
                 f.Add(_form);
             }
 
-            return new FormResponse { Forms = f };
+            return new EbObjectResponse { Data = f };
         }
 
-        public object Post(Form request)
+        public object Post(EbObjectWrapper request)
         {
             bool result = false;
 
@@ -100,15 +58,16 @@ namespace ExpressBase.ServiceStack
 
                 if (request.Id == 0)
                 {
-                    cmd = df.ObjectsDatabase.GetNewCommand(con, "INSERT INTO eb_objects (object_name, obj_bytea) VALUES (@object_name, @obj_bytea);");
+                    cmd = df.ObjectsDatabase.GetNewCommand(con, "INSERT INTO eb_objects (obj_name, obj_bytea, obj_type) VALUES (@obj_name, @obj_bytea, @obj_type);");
+                    cmd.Parameters.Add(df.ObjectsDatabase.GetNewParameter("@obj_type", System.Data.DbType.Int32, (int)request.EbObjectType));
                 }
                 else
                 {
-                    cmd = df.ObjectsDatabase.GetNewCommand(con, "UPDATE eb_objects SET object_name=@object_name, obj_bytea=@obj_bytea WHERE id=@id;");
+                    cmd = df.ObjectsDatabase.GetNewCommand(con, "UPDATE eb_objects SET obj_name=@obj_name, obj_bytea=@obj_bytea WHERE id=@id;");
                     cmd.Parameters.Add(df.ObjectsDatabase.GetNewParameter("@id", System.Data.DbType.Int32, request.Id));
                 }
 
-                cmd.Parameters.Add(df.ObjectsDatabase.GetNewParameter("@object_name", System.Data.DbType.String, request.Name));
+                cmd.Parameters.Add(df.ObjectsDatabase.GetNewParameter("@obj_name", System.Data.DbType.String, request.Name));
                 cmd.Parameters.Add(df.ObjectsDatabase.GetNewParameter("@obj_bytea", System.Data.DbType.Binary, request.Bytea));
 
                 cmd.ExecuteNonQuery();
