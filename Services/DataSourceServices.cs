@@ -56,28 +56,6 @@ namespace ExpressBase.ServiceStack
         public ColumnColletion Columns { get; set; }
     }
 
-    //[DataContract]
-    //[Route("/ds", "POST")]
-    //public class EbDataSource
-    //{
-    //    [DataMember(Order = 1)]
-    //    [AutoIncrement]
-    //    public int Id { get; set; }
-
-    //    [DataMember(Order = 2)]
-    //    public string Name { get; set; }
-
-    //    [DataMember(Order = 3)]
-    //    public string Sql { get; set; }
-
-    //    public EbDataSource() { }
-    //    public EbDataSource(string name, string sql)
-    //    {
-    //        this.Name = name;
-    //        this.Sql = sql;
-    //    }
-    //}
-
     [ClientCanSwapTemplates]
     [DefaultView("ds")]
     public class DataSourceService : Service
@@ -163,27 +141,6 @@ namespace ExpressBase.ServiceStack
 
             return dsresponse;
         }
-
-        //public object Post(EbDataSource ds)
-        //{
-        //    try
-        //    {
-        //        var e = LoadTestConfiguration();
-        //        DatabaseFactory df = new DatabaseFactory(e);
-        //        using (var con = df.ObjectsDatabase.GetNewConnection())
-        //        {
-        //            con.Open();
-        //            var cmd = df.ObjectsDatabase.GetNewCommand(con, "INSERT INTO eb_objects (object_name, obj_bytea) VALUES (@object_name, @obj_bytea);");
-        //            cmd.Parameters.Add(df.ObjectsDatabase.GetNewParameter("object_name", System.Data.DbType.String, ds.Name));
-        //            cmd.Parameters.Add(df.ObjectsDatabase.GetNewParameter("obj_bytea", System.Data.DbType.Binary, EbSerializers.ProtoBuf_Serialize(ds)));
-        //            cmd.ExecuteNonQuery();
-        //            return true;
-        //        };
-        //    }
-        //    catch (Exception e) { }
-
-        //    return false;
-        //}
 
         private void InitDb(string path)
         {
