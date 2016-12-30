@@ -16,6 +16,7 @@
     if (fr.Data.Count > 0)
     {
         var _form = EbSerializers.ProtoBuf_DeSerialize<EbControl>(fr.Data[0].Bytea);
+        html += string.Format("<h2>{0}</h2>", _form.Label);
 
         foreach (EbControl c in _form.Controls)
         {
@@ -24,7 +25,6 @@
     }
 }
 
-<div>
-    @Html.Raw(html)
-</div>
+@Html.Raw(html)
+
 
