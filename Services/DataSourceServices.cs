@@ -157,7 +157,8 @@ namespace ExpressBase.ServiceStack
             e.DatabaseConfigurations.Add(EbDatabases.EB_LOGS, new EbDatabaseConfiguration(EbDatabases.EB_LOGS, DatabaseVendors.PGSQL, "AlArz2014", "localhost", 5432, "postgres", "infinity", 500));
 
             byte[] bytea = EbSerializers.ProtoBuf_Serialize(e);
-            EbFile.Bytea_ToFile(bytea, path);
+            if (!System.IO.File.Exists(path))
+                EbFile.Bytea_ToFile(bytea, path);
         }
 
         public static EbConfiguration ReadTestConfiguration(string path)
