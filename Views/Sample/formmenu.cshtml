@@ -1,0 +1,167 @@
+﻿@*
+    For more information on enabling MVC for empty projects, visit http://go.microsoft.com/fwlink/?LinkID=397860
+*@
+@{
+}
+@using ServiceStack;
+@using ExpressBase.UI;
+@{
+    string html = string.Empty;
+
+    var id = Convert.ToInt32(ViewBag.FormId);
+
+    //var client = new ProtoBufServiceClient("http://localhost:53125/");
+    //var fr = client.Get<FormResponse>(new FormRequest { Id = id });
+
+    IServiceClient client = new JsonServiceClient("http://localhost:53125/").WithCache();
+    var fr = client.Get<EbObjectResponse>(new EbObjectRequest { Id = 0 });
+
+}
+<style>
+    .dropbtn {
+        background-color: #222;
+        position: fixed;
+        color: white;
+        height: 45px;
+        width: 200px;
+        font-size: 16px;
+        border: none;
+        cursor: pointer;
+        display: block;
+    }
+
+        .dropbtn:hover, .dropbtn:focus {
+            background-color: #eee;
+        }
+
+    .dropdown {
+        position: absolute;
+        display: inline-block;
+    }
+
+    .dropdown-content {
+        position: fixed;
+        top: 55px;
+        height: 94%;
+        background-color: #f9f9f9;
+        min-width: 200px;
+        overflow: hidden;
+        overflow-y: auto;
+        margin-left: -110px;
+        box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+        visibility:visible;
+    }
+    
+    .menu-item{
+        background-color: #f9f9f9;
+        margin-left: 100px;
+        color: #333;
+        border-bottom: solid 1px #ddd;
+        margin:10px;
+        padding:5px;
+    }
+    .menu-item:hover {
+            background-color:cyan;
+        }
+
+    .dropdown-L2content {
+        display: none;
+        position: absolute;
+        background-color: #f9f9f9;
+        min-width: 200px;
+        margin-left: 160px;
+        overflow: auto;
+        box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    }
+
+    .Subdropdown1-content {
+        display: none;
+        position: relative;
+        background-color: #f9f9f9;
+        min-width: 160px;
+        margin-left: 320px;
+        overflow: auto;
+        box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    }
+
+
+    .dropdown-content button {
+        color: black;
+        background: none;
+        background-color: #F1F1F1;
+        width: 200px;
+        border-bottom: thick;
+        padding: 12px 16px;
+        text-decoration: none;
+        display: block;
+    }
+
+    .dropdown-L2content button {
+        color: black;
+        background: none;
+        width: 200px;
+        border-bottom: thin;
+        padding: 12px 16px;
+        text-decoration: none;
+        display: block;
+    }
+
+    .Subdropdown1-content button {
+        color: black;
+        background: none;
+        width: 200px;
+        border-bottom: thin;
+        padding: 12px 16px;
+        text-decoration: none;
+        display: block;
+    }
+
+
+    .dropdown a:hover {
+        background-color: #f1f1f1;
+
+    }
+
+    .show {
+        display: block;
+    }
+
+    ::-webkit-scrollbar {
+        width: 12px;
+    }
+
+    ::-webkit-scrollbar-track {
+        -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.3);
+        border-radius: 10px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        border-radius: 10px;
+        -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.5);
+    }
+</style>
+<div>
+    <nav>
+        <div class="dropdown" id="menu">
+            <button class="dropbtn navbar-fixed-top"  onclick="showMitems();">@Html.ActionLink("Forms", "formmenu", "Sample") &#8659; </button>
+                
+            <div id="divMenuItems"  class="dropdown-content">
+                   @{  foreach (var f in fr.Data)
+                       {
+                            string fname = f.Name;
+                                string formid = string.Format("rform/{0}", f.Id);
+                        <div class="menu-item">
+                            @Html.ActionLink(fname, formid, "Sample")
+                         </div>
+                        }
+                    }
+            </div>
+        </div>
+    </nav>
+</div>
+
+@*<script>
+    function showMitems() {
+        $('#divMenuItems').toggle(20, "swing", "show");
+    }
+</script>*@
