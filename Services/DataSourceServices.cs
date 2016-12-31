@@ -21,7 +21,11 @@ namespace ExpressBase.ServiceStack
 
         public int Draw { get; set; }
 
-        public string Search { get; set; }
+        public string SearchText { get; set; }
+
+        public string OrderByDirection { get; set; }
+
+        public string SelectedColumnName { get; set; }
     }
 
     [Route("/ds")]
@@ -29,6 +33,12 @@ namespace ExpressBase.ServiceStack
     public class DataSourceColumnsRequest : IReturn<DataSourceColumnsResponse>
     {
         public int Id { get; set; }
+
+        public string SearchText { get; set; }
+
+        public string OrderByDirection { get; set; }
+
+        public string SelectedColumnName { get; set; }
     }
 
     [DataContract]
@@ -62,8 +72,10 @@ namespace ExpressBase.ServiceStack
     {
         public object Get(DataSourceDataRequest request)
         {
-            request.Search = base.Request.QueryString["search[value]"];
-            request.Search = string.IsNullOrEmpty(request.Search) ? "" : request.Search;
+            request.SearchText = base.Request.QueryString["searchtext"];
+            request.SearchText = string.IsNullOrEmpty(request.SearchText) ? "" : request.SearchText; // @txtsearch
+            request.OrderByDirection = base.Request.QueryString["order[0][dir]"]; //@order_dir
+            request.SelectedColumnName = base.Request.QueryString["col"]; // @selcol
 
             var e = LoadTestConfiguration();
             DatabaseFactory df = new DatabaseFactory(e);
@@ -77,23 +89,17 @@ namespace ExpressBase.ServiceStack
 
                 if (_ds != null)
                 {
-                    //string _sql_orig = _ds.Sql.ReplaceAll(";", string.Empty);
-                    //string _sql = string.Empty;
+                    // NEED TO REWORK
+                    string _sql = _ds.Sql.Replace("@and_searchplaceholder", 
+                        (string.IsNullOrEmpty(request.SearchText)) ? string.Empty : string.Format("AND {0}::text LIKE '%{1}%'", request.SelectedColumnName, request.SearchText));
 
-                    //if (request.Length > 0)
-                    //{
-                    //    //_sql = string.Format("SELECT * FROM ({0}) AAA WHERE id>{1} ORDER BY id LIMIT {2}", _ds.Sql.ReplaceAll(";", string.Empty), ((request.Draw - 1) * request.Length), request.Length);
-                    //    _sql = string.Format("SELECT COUNT(*) FROM ({0}) AAA;", _sql_orig) + _sql;
-                    //}
-
-                    var parameters = new System.Data.Common.DbParameter[3] 
+                    var parameters = new System.Data.Common.DbParameter[2] 
                     {
                         df.ObjectsDatabase.GetNewParameter("@limit", System.Data.DbType.Int32, request.Length),
-                        df.ObjectsDatabase.GetNewParameter("@last_id", System.Data.DbType.Int32, ((request.Draw - 1) * request.Length)),
-                        df.ObjectsDatabase.GetNewParameter("@search", System.Data.DbType.String, request.Search)
+                        df.ObjectsDatabase.GetNewParameter("@last_id", System.Data.DbType.Int32, ((request.Draw - 1) * request.Length))
                     };
 
-                    var _dataset = df.ObjectsDatabase.DoQueries(_ds.Sql, parameters);
+                    var _dataset = df.ObjectsDatabase.DoQueries(_sql, parameters);
 
                     dsresponse = new DataSourceDataResponse
                     {
@@ -110,6 +116,11 @@ namespace ExpressBase.ServiceStack
 
         public object Get(DataSourceColumnsRequest request)
         {
+            request.SearchText = base.Request.QueryString["searchtext"];
+            request.SearchText = string.IsNullOrEmpty(request.SearchText) ? "" : request.SearchText; // @txtsearch
+            request.OrderByDirection = base.Request.QueryString["order[0][dir]"]; //@order_dir
+            request.SelectedColumnName = base.Request.QueryString["col"]; // @selcol
+
             string _sql = string.Format("SELECT obj_bytea FROM eb_objects WHERE id={0}", request.Id);
 
             var e = LoadTestConfiguration();
@@ -123,14 +134,16 @@ namespace ExpressBase.ServiceStack
                 var _ds = EbSerializers.ProtoBuf_DeSerialize<EbDataSource>((byte[])dt.Rows[0][0]);
                 if (_ds != null)
                 {
-                    var parameters = new System.Data.Common.DbParameter[3]
+                    _sql = _ds.Sql.Replace("@and_searchplaceholder", 
+                        (string.IsNullOrEmpty(request.SearchText)) ? string.Empty : string.Format("AND {0}::text LIKE '%{1}%'", request.SelectedColumnName, request.SearchText));
+
+                    var parameters = new System.Data.Common.DbParameter[2]
                     {
                         df.ObjectsDatabase.GetNewParameter("@limit", System.Data.DbType.Int32, 0),
-                        df.ObjectsDatabase.GetNewParameter("@last_id", System.Data.DbType.Int32, 0),
-                        df.ObjectsDatabase.GetNewParameter("@search", System.Data.DbType.String, string.Empty)
+                        df.ObjectsDatabase.GetNewParameter("@last_id", System.Data.DbType.Int32, 0)
                     };
 
-                    var dt2 = df.ObjectsDatabase.DoQuery(_ds.Sql.Substring(_ds.Sql.IndexOf(';') + 1), parameters);
+                    var dt2 = df.ObjectsDatabase.DoQuery(_sql.Substring(_sql.IndexOf(';') + 1), parameters);
 
                     dsresponse = new DataSourceColumnsResponse
                     {
