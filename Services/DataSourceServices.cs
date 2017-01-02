@@ -104,9 +104,9 @@ namespace ExpressBase.ServiceStack
                     dsresponse = new DataSourceDataResponse
                     {
                         Draw = request.Draw,
-                        Data = (_dataset.Tables.Count > 1) ? _dataset.Tables[1].Rows : _dataset.Tables[0].Rows,
-                        RecordsTotal = (_dataset.Tables.Count > 1) ? Convert.ToInt32(_dataset.Tables[0].Rows[0][0]) : _dataset.Tables[0].Rows.Count,
-                        RecordsFiltered = (_dataset.Tables.Count > 1) ? Convert.ToInt32(_dataset.Tables[0].Rows[0][0]) : _dataset.Tables[0].Rows.Count
+                        Data = _dataset.Tables[0].Rows,
+                        RecordsTotal = _dataset.Tables[0].Rows.Count,
+                        RecordsFiltered = _dataset.Tables[0].Rows.Count
                     };
                 }
             }
