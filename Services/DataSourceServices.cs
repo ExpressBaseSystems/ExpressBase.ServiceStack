@@ -104,9 +104,9 @@ namespace ExpressBase.ServiceStack
                     dsresponse = new DataSourceDataResponse
                     {
                         Draw = request.Draw,
-                        Data = (_dataset.Tables.Count > 1) ? _dataset.Tables[1].Rows : _dataset.Tables[0].Rows,
-                        RecordsTotal = (_dataset.Tables.Count > 1) ? Convert.ToInt32(_dataset.Tables[0].Rows[0][0]) : _dataset.Tables[0].Rows.Count,
-                        RecordsFiltered = (_dataset.Tables.Count > 1) ? Convert.ToInt32(_dataset.Tables[0].Rows[0][0]) : _dataset.Tables[0].Rows.Count
+                        Data = _dataset.Tables[0].Rows,
+                        RecordsTotal = _dataset.Tables[0].Rows.Count,
+                        RecordsFiltered = _dataset.Tables[0].Rows.Count
                     };
                 }
             }
@@ -116,43 +116,46 @@ namespace ExpressBase.ServiceStack
 
         public object Get(DataSourceColumnsRequest request)
         {
-            request.SearchText = base.Request.QueryString["searchtext"];
-            request.SearchText = string.IsNullOrEmpty(request.SearchText) ? "" : request.SearchText; // @txtsearch
-            request.OrderByDirection = base.Request.QueryString["order[0][dir]"]; //@order_dir
-            request.SelectedColumnName = base.Request.QueryString["col"]; // @selcol
-
-            string _sql = string.Format("SELECT obj_bytea FROM eb_objects WHERE id={0}", request.Id);
-
-            var e = LoadTestConfiguration();
-            DatabaseFactory df = new DatabaseFactory(e);
-            var dt = df.ObjectsDatabase.DoQuery(_sql);
-
-            DataSourceColumnsResponse dsresponse = null;
-
-            if (dt.Rows.Count > 0)
+            ColumnColletion columns = base.SessionBag.Get<ColumnColletion>(string.Format("ds_{0}_columns", request.Id));
+            if (columns == null)
             {
-                var _ds = EbSerializers.ProtoBuf_DeSerialize<EbDataSource>((byte[])dt.Rows[0][0]);
-                if (_ds != null)
-                {
-                    _sql = _ds.Sql.Replace("@and_searchplaceholder", 
-                        (string.IsNullOrEmpty(request.SearchText)) ? string.Empty : string.Format("AND {0}::text LIKE '%{1}%'", request.SelectedColumnName, request.SearchText));
+                request.SearchText = base.Request.QueryString["searchtext"];
+                request.SearchText = string.IsNullOrEmpty(request.SearchText) ? "" : request.SearchText; // @txtsearch
+                request.OrderByDirection = base.Request.QueryString["order[0][dir]"]; //@order_dir
+                request.SelectedColumnName = base.Request.QueryString["col"]; // @selcol
 
-                    var parameters = new System.Data.Common.DbParameter[2]
+                string _sql = string.Format("SELECT obj_bytea FROM eb_objects WHERE id={0}", request.Id);
+
+                var e = LoadTestConfiguration();
+                DatabaseFactory df = new DatabaseFactory(e);
+                var dt = df.ObjectsDatabase.DoQuery(_sql);
+
+                if (dt.Rows.Count > 0)
+                {
+                    var _ds = EbSerializers.ProtoBuf_DeSerialize<EbDataSource>((byte[])dt.Rows[0][0]);
+                    if (_ds != null)
                     {
+                        _sql = _ds.Sql.Replace("@and_searchplaceholder",
+                            (string.IsNullOrEmpty(request.SearchText)) ? string.Empty : string.Format("AND {0}::text LIKE '%{1}%'", request.SelectedColumnName, request.SearchText));
+
+                        var parameters = new System.Data.Common.DbParameter[2]
+                        {
                         df.ObjectsDatabase.GetNewParameter("@limit", System.Data.DbType.Int32, 0),
                         df.ObjectsDatabase.GetNewParameter("@last_id", System.Data.DbType.Int32, 0)
-                    };
+                        };
 
-                    var dt2 = df.ObjectsDatabase.DoQuery(_sql.Substring(_sql.IndexOf(';') + 1), parameters);
+                        var dt2 = df.ObjectsDatabase.DoQuery(_sql.Substring(_sql.IndexOf(';') + 1), parameters);
+                        columns = dt2.Columns;
 
-                    dsresponse = new DataSourceColumnsResponse
-                    {
-                        Columns = dt2.Columns
-                    };
+                        base.SessionBag.Set<ColumnColletion>(string.Format("ds_{0}_columns", request.Id), dt2.Columns);
+                    }
                 }
             }
 
-            return dsresponse;
+            return new DataSourceColumnsResponse
+            {
+                Columns = columns
+            };
         }
 
         private void InitDb(string path)

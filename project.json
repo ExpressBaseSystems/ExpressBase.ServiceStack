@@ -34,7 +34,9 @@
     "ExpressBase.Common": "1.0.0",
     "ExpressBase.Data": "1.0.0",
     "ExpressBase.Security": "1.0.0",
-    "ExpressBase.UI": "1.0.0" },
+    "ExpressBase.UI": "1.0.0",
+    "CacheManager.Core": "0.9.2",
+    "CacheManager.Microsoft.Extensions.Caching.Memory": "0.9.2" },
 
   "tools": {
     "BundlerMinifier.Core": "2.0.238",
