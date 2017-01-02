@@ -1,4 +1,5 @@
-﻿using Funq;
+﻿using CacheManager.Core;
+using Funq;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -20,7 +21,7 @@ namespace RazorRockstars.WebHost
     {
         public Startup(IHostingEnvironment env)
         {
-            var builder = new ConfigurationBuilder()
+            var builder = new Microsoft.Extensions.Configuration.ConfigurationBuilder()
                 .SetBasePath(env.ContentRootPath)
                 .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
                 .AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: true)
@@ -35,6 +36,7 @@ namespace RazorRockstars.WebHost
         {
             // Add framework services.
             services.AddMvc();
+            services.AddMemoryCache();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -65,6 +67,8 @@ namespace RazorRockstars.WebHost
             });
 
             app.Use(new RazorHandler("/notfound"));
+
+            //var manager = CacheFactory.Build<string>(p => p.WithMicrosoftMemoryCacheHandle());
 
             //Other examples of using built-in ServiceStack Handlers as middleware
             //app.Use(new StaticFileHandler("wwwroot/img/react-logo.png").Middleware);
