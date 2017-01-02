@@ -20,29 +20,6 @@
     var fr = client.Get<EbObjectResponse>(new EbObjectRequest { Id = 0 });
 
 }
-
-<body>
-    <div style="width:500px; height:1000px;"></div>
-</body>
-    <div>
-        <nav>
-            <div class="dropdown" id="menu">
-                <button style="font-weight:800" class="dropbtn navbar-fixed-top" onclick="showMitems();">@Html.ActionLink("Forms", "formmenu", "Sample") &#8659; </button>
-
-                <div id="divMenuItems" style="font-weight:700" class="dropdown-content">
-                    @{  foreach (var f in fr.Data)
-                        {
-                            string fname = f.Name;
-                            string formid = string.Format("rform/{0}", f.Id);
-                            <div class="menu-item">
-                                @Html.ActionLink(fname, formid, "Sample")
-                            </div>
-                        }
-                    }
-                </div>
-            </div>
-        </nav>
-    </div>
 <style>
     .dropbtn {
         background-color: darkturquoise;
@@ -62,6 +39,7 @@
         }
 
     .dropdown {
+    
         position: absolute;
         display: inline-block;
     }
@@ -69,28 +47,27 @@
     .dropdown-content {
         position: fixed;
         top: 55px;
-        height: 94%;
+        height: 73%;
         background-color: #f9f9f9;
         min-width: 200px;
         overflow: hidden;
         overflow-y: auto;
         margin-left: -110px;
         box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-        visibility: visible;
-        margin-top: 50px;
+        visibility:visible;
+         margin-top: 50px;
     }
-
-    .menu-item {
+    
+    .menu-item{
         background-color: #f9f9f9;
         margin-left: 100px;
         color: #333;
         border-bottom: solid 1px #ddd;
-        margin: 10px;
-        padding: 5px;
+        margin:10px;
+        padding:5px;
     }
-
-        .menu-item:hover {
-            background-color: cyan;
+    .menu-item:hover {
+            background-color:cyan;
         }
 
     .dropdown-L2content {
@@ -148,6 +125,7 @@
 
     .dropdown a:hover {
         background-color: #f1f1f1;
+
     }
 
     .show {
@@ -168,6 +146,28 @@
         -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.5);
     }
 </style>
+<body >
+    <div style="height:500px;width:1000px"></div>
+</body>
+    <div>
+        <nav>
+            <div class="dropdown" id="menu">
+                <button style="font-weight:800" class="dropbtn navbar-fixed-top" onclick="showMitems();">@Html.ActionLink("Forms", "formmenu", "Sample") &#8659; </button>
+
+                <div id="divMenuItems" style="font-weight:700" class="dropdown-content">
+                    @{  foreach (var f in fr.Data)
+                        {
+                            string fname = f.Name;
+                            string formid = string.Format("rform/{0}", f.Id);
+                            <div class="menu-item">
+                                @Html.ActionLink(fname, formid, "Sample")
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        </nav>
+    </div>
 
 
 

@@ -35,6 +35,10 @@ namespace ExpressBase.ServiceStack
         {
             return View();
         }
+        public IActionResult Masterhome()
+        {
+            return View();
+        }
 
         //[ValidateAntiForgeryToken]
         public IActionResult RForm(int id)
