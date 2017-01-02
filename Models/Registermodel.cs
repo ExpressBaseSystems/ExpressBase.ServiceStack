@@ -57,8 +57,6 @@ namespace ExpressBase.ServiceStack
         [Display(Name = "Alternateemail")]
         public string Alternateemail { get; set; }
 
-
-
         public async Task<bool> UserRegister(string uname, string password, string fname, string lname, string mname, DateTime DOB, string pphno, string sphno, string land, string extension, string locale, string aemail,IFormFile imgprofile)
         {
             byte[] img = ConvertToBytes(imgprofile);
