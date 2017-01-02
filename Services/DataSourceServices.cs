@@ -99,14 +99,14 @@ namespace ExpressBase.ServiceStack
                         df.ObjectsDatabase.GetNewParameter("@last_id", System.Data.DbType.Int32, ((request.Draw - 1) * request.Length))
                     };
 
-                    var _dataset = df.ObjectsDatabase.DoQueries(_sql, parameters);
+                    var _dataset = (request.Length > 0) ? df.ObjectsDatabase.DoQueries(_sql, parameters) : df.ObjectsDatabase.DoQueries(_sql);
 
                     dsresponse = new DataSourceDataResponse
                     {
                         Draw = request.Draw,
-                        Data = _dataset.Tables[0].Rows,
-                        RecordsTotal = _dataset.Tables[0].Rows.Count,
-                        RecordsFiltered = _dataset.Tables[0].Rows.Count
+                        Data = (request.Length > 0) ? _dataset.Tables[1].Rows : _dataset.Tables[0].Rows,
+                        RecordsTotal = (request.Length > 0) ? Convert.ToInt32(_dataset.Tables[0].Rows[0][0]) : _dataset.Tables[0].Rows.Count,
+                        RecordsFiltered = (request.Length > 0) ? Convert.ToInt32(_dataset.Tables[0].Rows[0][0]) : _dataset.Tables[0].Rows.Count
                     };
                 }
             }
@@ -140,11 +140,12 @@ namespace ExpressBase.ServiceStack
 
                         var parameters = new System.Data.Common.DbParameter[2]
                         {
-                        df.ObjectsDatabase.GetNewParameter("@limit", System.Data.DbType.Int32, 0),
-                        df.ObjectsDatabase.GetNewParameter("@last_id", System.Data.DbType.Int32, 0)
+                            df.ObjectsDatabase.GetNewParameter("@limit", System.Data.DbType.Int32, 0),
+                            df.ObjectsDatabase.GetNewParameter("@last_id", System.Data.DbType.Int32, 0)
                         };
 
-                        var dt2 = df.ObjectsDatabase.DoQuery(_sql.Substring(_sql.IndexOf(';') + 1), parameters);
+                        _sql = (_sql.IndexOf(";") > 0) ? _sql.Substring(_sql.IndexOf(";") + 1) : _sql;
+                        var dt2 = df.ObjectsDatabase.DoQuery(_sql, parameters);
                         columns = dt2.Columns;
 
                         base.SessionBag.Set<ColumnColletion>(string.Format("ds_{0}_columns", request.Id), dt2.Columns);
