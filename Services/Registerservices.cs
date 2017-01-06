@@ -1,9 +1,11 @@
 ﻿using ExpressBase.Common;
+using ExpressBase.Data;
 using ExpressBase.Security;
 using Microsoft.AspNetCore.Http;
 using ServiceStack;
 using System;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Linq;
 using System.Runtime.Serialization;
 using System.Threading.Tasks;
@@ -60,7 +62,21 @@ namespace ExpressBase.ServiceStack.Services
         [DataMember(Order = 1)]
         public bool Registereduser { get; set; }
     }
+    [DataContract]
 
+    [Route("/register/{Phnoprimary}", "GET")]
+    public class CheckIfUnique:IReturn<CheckIfUniqueResponse>
+    {
+        [DataMember(Order = 1)]
+        public string Phnoprimary { get; set; }
+    }
+
+    [DataContract]
+    public class CheckIfUniqueResponse
+    {
+        [DataMember(Order = 1)]
+        public bool uniqueno { get; set; }
+    }
     [ClientCanSwapTemplates]
     public class Registerservice : Service
     {
@@ -71,6 +87,32 @@ namespace ExpressBase.ServiceStack.Services
             {
                 Registereduser = u
             };
+        }
+        public bool Get(CheckIfUnique request)
+        {
+            bool result = true;
+            int i;
+            var e = LoadTestConfiguration();
+            DatabaseFactory df = new DatabaseFactory(e);
+            using (var con = df.ObjectsDatabase.GetNewConnection())
+            {
+                con.Open();
+                DbCommand cmd = null;
+                    cmd = df.ObjectsDatabase.GetNewCommand(con, "SELECT * FROM eb_users WHERE phnoprimary =@phnoprimary;");
+                    cmd.Parameters.Add(df.ObjectsDatabase.GetNewParameter("@phnoprimary", System.Data.DbType.String, request.Phnoprimary));
+                     i= cmd.ExecuteNonQuery();
+
+            };
+           if(i==1)
+            {
+                result = false;
+                return result;
+            }
+           else
+            {
+                return result;
+            }
+           
         }
 
         private void InitDb(string path)
@@ -102,4 +144,6 @@ namespace ExpressBase.ServiceStack.Services
             return ReadTestConfiguration(@"D:\xyz1.conn");
         }
     }
+
+
 }

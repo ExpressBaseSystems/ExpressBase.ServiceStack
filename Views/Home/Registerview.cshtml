@@ -11,7 +11,12 @@
 }))
 {
     <head>
-        <link class="jsbin" href="http://ajax.googleapis.com/ajax/libs/jqueryui/1/themes/base/jquery-ui.css" rel="stylesheet" type="text/css" />
+        <link href='http://fonts.googleapis.com/css?family=Source+Sans+Pro|Open+Sans+Condensed:300|Raleway' rel='stylesheet' type='text/css'>
+        @*<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script><!-- jQuery Library-->*@
+        <link rel="stylesheet" href="~/css/Pwd.css" /><!-- Include Your CSS file here-->
+        <script src="~/js/Pswrd.js"></script><!-- Include Your jQUery file here-->
+        <script src="~/js/mobile.js"></script><!-- Include Your jQUery file here-->
+        @* <link class="jsbin" href="http://ajax.googleapis.com/ajax/libs/jqueryui/1/themes/base/jquery-ui.css" rel="stylesheet" type="text/css" />*@
         <script class="jsbin" src="http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
         <script class="jsbin" src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.0/jquery-ui.min.js"></script>
         <meta charset=utf-8 />
@@ -23,138 +28,274 @@
         </style>
     </head>
     <form>
+        <div style="margin-left:10%; margin-top: 5%; background-color:#eeeeff; padding:30px; box-shadow: rgba(177,177,177,0.5) 10px 10px;">
+            <center><h2>Register Here</h2></center>
+        <div style="display:inline-block; margin-left: -18px;">
+        <table class="tbl">
+            <tr>
+                <td>
+                    <div class="editor-label">
+                        @Html.LabelFor(u => u.FirstName)
+                    </div>
+                </td>
+                <td>
+                    <div class="editor-field">
+                        @Html.TextBoxFor(u => u.FirstName)
+                        @Html.ValidationMessageFor(u => u.FirstName)
+                    </div>
+                </td>
+            </tr>
+            
+            <tr>
+                <td>
+                    <div class="editor-label">
+                        @Html.LabelFor(u => u.LastName)
+                    </div>
+                </td>
+                <td>
+                    <div class="editor-field">
+                        @Html.TextBoxFor(u => u.LastName)
+                        @Html.ValidationMessageFor(u => u.LastName)
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <div class="editor-label">
+                        @Html.LabelFor(u => u.MiddleName)
+                    </div>
+                </td>
+                <td>
+                    <div class="editor-field">
+                        @Html.TextBoxFor(u => u.MiddleName, new { @Value = "abc" })
+                        @*@Html.ValidationMessageFor(u => u.MiddleName)*@
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <div class="editor-label">
+                        @Html.LabelFor(u => u.dob)
+                    </div>
+                </td>
+                <td>
+                    <div class="editor-field">
+                        @Html.TextBoxFor(u => u.dob, new { id = "datepicker" })
+                        @Html.ValidationMessageFor(u => u.dob)
+                        <script>
+                    $(function () {
+                        $("#datepicker").datepicker();
+                    });
+                        </script>
+                    </div>
+                </td>
+            </tr>
+            
+            <tr>
+
+                <td>
+                    <div class="editor-label">
+                        @Html.LabelFor(u => u.Locale)
+                    </div>
+                </td>
+            <td>
+                <div class="editor-field">
+                    @Html.TextBoxFor(u => u.Locale)
+                    @Html.ValidationMessageFor(u => u.Locale)
+                </div> 
+            </td>
+            </tr>
+            <tr>
+                <td>
+                    <div class="editor-label">
+                        @Html.LabelFor(u => u.PhNoPrimary)
+                    </div>
+                </td>
+                <td>
+                    <div class="editor-field">
+                        @Html.TextBoxFor(u => u.PhNoPrimary, new { id = "mob" })
+                        @Html.ValidationMessageFor(u => u.PhNoPrimary)
+                        <span id="mobres"></span>
+                       
+
+
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <div class="editor-label">
+                        @Html.LabelFor(u => u.PhNoSecondary)
+                    </div>
+                </td>
+                <td>
+                    <div class="editor-field">
+                        @Html.TextBoxFor(u => u.PhNoSecondary)
+                        @*  @Html.ValidationMessageFor(u => u.PhNoSecondary)*@
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <div class="editor-label">
+                        @Html.LabelFor(u => u.Landline)
+                    </div>
+                </td>
+                <td>
+                    <div class="editor-field">
+                        @Html.TextBoxFor(u => u.Landline)
+                        @Html.ValidationMessageFor(u => u.Landline)
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <div class="editor-label">
+                        @Html.LabelFor(u => u.Extension)
+                    </div>
+                </td>
+                <td>
+                    <div class="editor-field">
+                        @Html.TextBoxFor(u => u.Extension)
+                        @Html.ValidationMessageFor(u => u.Extension)
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <div class="editor-label">
+                        @Html.LabelFor(u => u.Email)
+                    </div>
+                </td>
+                <td>
+                    <div class="editor-field">
+                        @Html.TextBoxFor(u => u.Email)
+                        @Html.ValidationMessageFor(u => u.Email)
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <div class="editor-label">
+                        @Html.LabelFor(u => u.Alternateemail)
+                    </div>
+                </td>
+                <td>
+                    <div class="editor-field">
+                        @Html.TextBoxFor(u => u.Alternateemail)
+                        @Html.ValidationMessageFor(u => u.Alternateemail)
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <div class="editor-label">
+                        @Html.LabelFor(u => u.Password)
+                    </div>
+                </td>
+                <td>
+                    <div id="register">
+                        <div class="editor-field">
+                            @Html.PasswordFor(u => u.Password, new { id = "password" })
+                            @Html.ValidationMessageFor(u => u.Password)
+                            <span id="result"></span>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <div class="editor-label">
+                        @Html.LabelFor(u => u.ConfirmPassword)
+                    </div>
+                </td>
+
+                <td>
+                    <div class="editor-field">
+                        @Html.PasswordFor(u => u.ConfirmPassword)
+                        @Html.ValidationMessageFor(u => u.ConfirmPassword)
+                    </div>
+                </td>
+            </tr>
+            </table>
+        </div>
+
         <div>
+            @Html.LabelFor(u => u.Profileimg)
+            @Html.TextBoxFor(u => u.Profileimg, new { type = "file", onchange = "readURL(this)" })
+            <img id="img" src="#" alt="your image1" />
+        </div>
 
+        <div id="divCaptcha">
+            <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+            <div class="g-recaptcha" data-sitekey="6LfoKA8UAAAAAHmdkrO2G5QmT1X5WSeaBm1_-BP_"></div>
+        </div>
+        </div>
+        <div style="margin-top: -70px;display: inline-block;float: right;margin-right: 25px;">
+            <input type="submit" value="Register" />
+        </div>
 
-            <div class="editor-label">
-                @Html.LabelFor(u => u.FirstName)
-            </div>
-            <div class="editor-field">
-                @Html.TextBoxFor(u => u.FirstName)
-                @Html.ValidationMessageFor(u => u.FirstName)
-
-            </div>
-            <div class="editor-label">
-                @Html.LabelFor(u => u.LastName)
-            </div>
-
-            <div class="editor-field">
-                @Html.TextBoxFor(u => u.LastName)
-                @Html.ValidationMessageFor(u => u.LastName)
-
-            </div>
-            <div class="editor-label">
-                @Html.LabelFor(u => u.MiddleName)
-            </div>
-            <div class="editor-field">
-                @Html.TextBoxFor(u => u.MiddleName)
-                @*@Html.ValidationMessageFor(u => u.MiddleName)*@
-            </div>
-            <div class="editor-label">
-                @Html.LabelFor(u => u.dob)
-            </div>
-            <div class="editor-field">
-                @Html.EditorFor(u => u.dob, new { @type = "date" })
-                @Html.ValidationMessageFor(u => u.dob)
-            </div>
-            <div>
-                @*@using (Html.BeginForm("Upload", "Picture", FormMethod.Post,
-                    new { enctype = "multipart/form-data" }))
-                      {
-                          <div>
-                              Upload an image: <input type="file" name="Imageupload" id="Imageupload" />
-                              <input type="submit" value="Upload" />
-                          </div> }*@
-                <div>
-                    @Html.LabelFor(u => u.Profileimg)
-                    @Html.TextBoxFor(u => u.Profileimg, new { type = "file", onchange = "readURL(this)" }) <img id="img" src="#" alt="your image1" />
-                   
-                    <script>
+        </form>
+        <script>
                         function readURL(input) {
                             if (input.files && input.files[0]) {
-                                 var reader = new FileReader();
-                                 reader.onload = function (e) {
-                                 $('#img')
-                                .attr('src', e.target.result)
-                                .width(200)
-                                .height(200);
+                                var reader = new FileReader();
+                                reader.onload = function (e) {
+                                    $('#img')
+                                   .attr('src', e.target.result)
+                                   .width(200)
+                                   .height(200);
                                 };
 
                                 reader.readAsDataURL(input.files[0]);
-                                }
-                              }</script>
-
-                </div>
-
-
-
-            </div>
-            <div class="editor-label">
-                @Html.LabelFor(u => u.Locale)
-            </div>
-            <div class="editor-field">
-                @Html.TextBoxFor(u => u.Locale)
-                @Html.ValidationMessageFor(u => u.Locale)
-            </div>
-            <div class="editor-label">
-                @Html.LabelFor(u => u.PhNoPrimary)
-            </div>
-            <div class="editor-field">
-                @Html.TextBoxFor(u => u.PhNoPrimary)
-                @Html.ValidationMessageFor(u => u.PhNoPrimary)
-            </div>
-            <div class="editor-label">
-                @Html.LabelFor(u => u.PhNoSecondary)
-            </div>
-            <div class="editor-field">
-                @Html.TextBoxFor(u => u.PhNoSecondary)
-                @*  @Html.ValidationMessageFor(u => u.PhNoSecondary)*@
-            </div>
-            <div class="editor-label">
-                @Html.LabelFor(u => u.Landline)
-            </div>
-            <div class="editor-field">
-                @Html.TextBoxFor(u => u.Landline)
-                @Html.ValidationMessageFor(u => u.Landline)
-            </div>
-            <div class="editor-label">
-                @Html.LabelFor(u => u.Extension)
-            </div>
-            <div class="editor-field">
-                @Html.TextBoxFor(u => u.Extension)
-                @Html.ValidationMessageFor(u => u.Extension)
-            </div>
-            <div class="editor-label">
-                @Html.LabelFor(u => u.Email)
-            </div>
-            <div class="editor-field">
-                @Html.TextBoxFor(u => u.Email)
-                @Html.ValidationMessageFor(u => u.Email)
-            </div>
-            <div class="editor-label">
-                @Html.LabelFor(u => u.Alternateemail)
-            </div>
-            <div class="editor-field">
-                @Html.TextBoxFor(u => u.Alternateemail)
-                @Html.ValidationMessageFor(u => u.Alternateemail)
-            </div>
-            <div class="editor-label">
-                @Html.LabelFor(u => u.Password)
-            </div>
-            <div class="editor-field">
-                @Html.PasswordFor(u => u.Password)
-                @Html.ValidationMessageFor(u => u.Password)
-            </div>
-            <div class="editor-label">
-                @Html.LabelFor(u => u.Password)
-            </div>
-            <div class="editor-field">
-                @Html.PasswordFor(u => u.Password)
-                @Html.ValidationMessageFor(u => u.Password)
-            </div>
-            <script src="https://www.google.com/recaptcha/api.js" async defer></script>
-            <div class="g-recaptcha" data-sitekey="6LfoKA8UAAAAAHmdkrO2G5QmT1X5WSeaBm1_-BP_"></div>
-            <input type="submit" value="Register" />
-        </div>
-    </form>
+                            }
+                        }
+        </script>
 }
+<style>
+     table{
+         margin:6px;
+     }
+    th, td {
+   margin:6px;
+   padding: 10px 10px 20px 10px;
+}
+input[type="submit"] {
+    background-color: #4C50AF;
+    border: none;
+    color: white;
+    padding: 12px 32px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+}
+
+input[type=submit]:hover {
+    background-color: #45a049;
+}
+input[type="text"] {
+    width:380px;
+    padding: 8px 20px;
+    display: inline-block;
+    border: 1px solid #ccc;
+    border-radius: 2px;
+    box-sizing: border-box;
+}
+input[type=submit]:hover {
+    background-color: #45a049;
+}
+input[type="password"] {
+    width:380px;
+    padding: 8px 20px;
+    display: inline-block;
+    border: 1px solid #ccc;
+    border-radius: 2px;
+    box-sizing: border-box;
+}
+    input[type="file"] {
+        display: block;
+        background-color: #eef;
+    }
+
+</style>

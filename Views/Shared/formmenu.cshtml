@@ -160,7 +160,9 @@
                             string fname = f.Name;
                             string formid = string.Format("rform/{0}", f.Id);
                             <div class="menu-item">
-                                @Html.ActionLink(fname, formid, "Sample")
+                                <a href="" onclick="window.open( form.url.value, 'windowName' ); return false" target="_blank">Submit</a>
+                              @*  <a href="@Url.Action(formid, "Sample")" target="_blank">@fname</a>*@
+                               @* @Html.ActionLink(fname, formid, "Sample")*@
                             </div>
                         }
                     }
