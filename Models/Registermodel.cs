@@ -9,6 +9,7 @@ using ExpressBase.ServiceStack.Services;
 using Microsoft.AspNetCore.Http;
 using System.IO;
 
+
 namespace ExpressBase.ServiceStack
 {
     public class Registermodel
@@ -85,9 +86,25 @@ namespace ExpressBase.ServiceStack
         public async Task<bool> UserRegister(string uname, string password, string fname, string lname, string mname, DateTime DOB, string pphno, string sphno, string land, string extension, string locale, string aemail,IFormFile imgprofile)
         {
             byte[] img = ConvertToBytes(imgprofile);
+          
+            Dictionary<int, object> dict = new Dictionary<int, object>();
+            dict.Add(2, uname);
+            dict.Add(3, password);
+            dict.Add(5, fname);
+            dict.Add(6, lname);
+            dict.Add(7, mname);
+            dict.Add(8, DOB.ToString());
+            dict.Add(9, pphno);
+            dict.Add(10, sphno);
+            dict.Add(11, land);
+            dict.Add(12, extension);
+            dict.Add(13, locale);
+            dict.Add(14, aemail);
+            //dict.Add(15, img);
+
             JsonServiceClient client = new JsonServiceClient("http://localhost:53125/");
-            RegisterationResponse res = await client.PostAsync<RegisterationResponse>(new Services.Register { Email = uname, Password = password, FirstName = fname, LastName = lname, MiddleName = mname, dob = DOB, Phnoprimary = pphno, Phnosecondary = sphno, Landline = land, Extension = extension, Locale = locale, Alternateemail = aemail, Profileimg = img});
-            return (res.Registereduser);        
+            return await client.PostAsync<bool>(new Services.Register { TableId = 157,Colvalues=dict});
+           
         }
         public static byte[] ConvertToBytes(IFormFile image)
         {

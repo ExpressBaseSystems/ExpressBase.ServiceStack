@@ -8,7 +8,7 @@ namespace ExpressBase.ServiceStack
 {
     public class EbTableColumn
     {
-        public int ColId { get; set; }
+        public int Id { get; set; }
         public string Name { get; set; } 
         public DbType Type { get; set; }
         public int TableId { get; set; }

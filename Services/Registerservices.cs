@@ -15,89 +15,70 @@ using System.Threading.Tasks;
 namespace ExpressBase.ServiceStack.Services
 {
     [DataContract]
-    [Route("/register", "POST")]
-    public class Register : IReturn<RegisterationResponse>
+    [Route("/insert", "POST")]
+    public class Register : IReturn<bool>
     {
-        [DataMember(Order = 1)]
-        public string Email { get; set; }
-
-        [DataMember(Order = 2)]
-        public string Password { get; set; }
-
-        [DataMember(Order = 3)]
-        public string FirstName { get; set; }
-
-        [DataMember(Order = 4)]
-        public string LastName { get; set; }
-
-        [DataMember(Order = 5)]
-        public string MiddleName { get; set; }
-
-        [DataMember(Order = 6)]
-        public DateTime dob { get; set; }
-
-        [DataMember(Order = 7)]
-        public string Phnoprimary { get; set; }
-
-        [DataMember(Order = 8)]
-        public string Phnosecondary { get; set; }
-
-        [DataMember(Order = 9)]
-        public string Landline { get; set; }
-
-        [DataMember(Order = 10)]
-        public string Extension { get; set; }
-
-        [DataMember(Order = 11)]
-        public string Locale { get; set; }
-
-        [DataMember(Order = 12)]
-        public string Alternateemail { get; set; }
-
-        [DataMember(Order = 13)]
-        public byte[] Profileimg { get; set; }
-    }
-
-    [DataContract]
-    public class RegisterationResponse
-    {
-        [DataMember(Order = 1)]
-        public bool Registereduser { get; set; }
-    }
-
-    [DataContract]
-    [Route("/register/{TableId}", "POST")]
-    public class CheckIfUnique : IReturn<CheckIfUniqueResponse>
-    {
-
+       
         [DataMember(Order = 0)]
-        public Dictionary<int, string> Colvalues { get; set; }
+        public Dictionary<int, object> Colvalues { get; set; }
 
         [DataMember(Order = 1)]
         public int TableId { get; set; }
-        //[DataMember(Order = 1)]
-        //public string ColumnName { get; set; }
-        //[DataMember(Order = 2)]
-        //public string ColumnValue { get; set; }
-
     }
+
+
     [DataContract]
-    public class CheckIfUniqueResponse
+    [Route("/uc/{TableId}", "POST")]
+    public class CheckIfUnique : IReturn<bool>
     {
+
+        [DataMember(Order = 0)]
+        public Dictionary<int, object> Colvalues { get; set; }
+
         [DataMember(Order = 1)]
-        public bool uniqueno { get; set; }
+        public int TableId { get; set; }
+
     }
 
     [ClientCanSwapTemplates]
     public class Registerservice : Service
     {
-        public RegisterationResponse Any(Register request)
+        public bool Any(Register request)
         {
-            bool u = User.Create(request.Email, request.Password, request.FirstName, request.LastName, request.MiddleName, request.dob, request.Phnoprimary, request.Phnosecondary, request.Landline, request.Extension, request.Locale, request.Alternateemail, request.Profileimg);
-            return new RegisterationResponse
+
+            List<string> _params = new List<string>(request.Colvalues.Count);
+            List<string> _values = new List<string>(request.Colvalues.Count);
+
+            var e = LoadTestConfiguration();
+            DatabaseFactory df = new DatabaseFactory(e);
+
+            LoadCache();
+
+
+            foreach (int key in request.Colvalues.Keys)
             {
-                Registereduser = u
-            };
+                _values.Add(string.Format("{0}", ccol[key].Name));
+                _params.Add(string.Format("@{0}", ccol[key].Name));
+            }
+               
+
+            string _sql = string.Format("INSERT INTO {0} ({1}) VALUES ({2})", tcol[request.TableId].Name, _values.ToArray().Join(","),_params.ToArray().Join(","));
+
+            //var dt = df.ObjectsDatabase.DoQuery(_sql);
+            using (var _con = df.ObjectsDatabase.GetNewConnection())
+            {
+                _con.Open();
+                var _cmd = df.ObjectsDatabase.GetNewCommand(_con, _sql);
+                foreach (KeyValuePair<int, object> dict in request.Colvalues)
+                {
+                    if (ccol.ContainsKey(dict.Key))
+
+                        _cmd.Parameters.Add(df.ObjectsDatabase.GetNewParameter(string.Format("@{0}", ccol[dict.Key].Name), ccol[dict.Key].Type, dict.Value));
+                }
+
+                return (Convert.ToInt32(_cmd.ExecuteScalar()) == 0);
+            }
+
         }
 
         private EbTableCollection tcol;
@@ -117,13 +98,11 @@ namespace ExpressBase.ServiceStack.Services
                 _whclause_sb.Add(string.Format("{0}=@{0}", ccol[key].Name));
 
             string _sql = string.Format("SELECT COUNT(*) FROM {0} WHERE {1}", tcol[request.TableId].Name, _whclause_sb.ToArray().Join(" AND "));
-
-            //var dt = df.ObjectsDatabase.DoQuery(_sql);
             using (var _con = df.ObjectsDatabase.GetNewConnection())
             {
                 _con.Open();
                 var _cmd = df.ObjectsDatabase.GetNewCommand(_con, _sql);
-                foreach (KeyValuePair<int, string> dict in request.Colvalues)
+                foreach (KeyValuePair<int, object> dict in request.Colvalues)
                 {
                     if (ccol.ContainsKey(dict.Key))
                         
@@ -186,13 +165,13 @@ namespace ExpressBase.ServiceStack.Services
             {
                 EbTableColumn ebtc = new EbTableColumn
                 {
-                    ColId = Convert.ToInt32(dr1[0]),
+                    Id = Convert.ToInt32(dr1[0]),
                     Name = dr1[1].ToString(),
                     Type = (DbType)(dr1[2])
                 };
-                if (!ccol.ContainsKey(ebtc.ColId))
+                if (!ccol.ContainsKey(ebtc.Id))
                 {
-                    ccol.Add(ebtc.ColId, ebtc);
+                    ccol.Add(ebtc.Id, ebtc);
                 }
             }
    

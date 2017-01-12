@@ -9,7 +9,7 @@
         
         var DataCollection = { 9: $('#mob').val() };
        
-        $.post('http://localhost:53125/register/TableId', { "TableId": 157, "Colvalues": JSON.stringify(DataCollection) },
+        $.post('http://localhost:53125/uc/TableId', { "TableId": 157, "Colvalues": JSON.stringify(DataCollection) },
         function (result) {
             if (result) {
                 document.getElementById('div5').innerHTML = "<img src='http://localhost:53125/images/CheckMark-24x32.png' width='32px'/>";
