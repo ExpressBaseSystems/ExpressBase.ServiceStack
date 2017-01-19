@@ -1,4 +1,5 @@
 ﻿/// <autosync enabled="true" />
+/// <reference path="js/dygraphplotters.js" />
 /// <reference path="js/mobile.js" />
 /// <reference path="js/pswrd.js" />
 /// <reference path="js/site.js" />
