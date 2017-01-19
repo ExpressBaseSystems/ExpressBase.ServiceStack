@@ -7,7 +7,7 @@ using System.Runtime.Serialization;
 using ExpressBase.Common;
 using ExpressBase.Data;
 using System;
-using ExpressBase.UI;
+using ExpressBase.Objects;
 using System.Data.Common;
 
 namespace ExpressBase.ServiceStack
@@ -108,4 +108,9 @@ namespace ExpressBase.ServiceStack
         }
     }
 }
+
+//INSERT INTO eb_objects (obj_name, obj_desc, obj_type) VALUES (@obj_name, @obj_desc, @obj_type);
+//INSERT INTO eb_objects_versions(eb_object_id, version, status, submitter_id, submitted_at, obj_bytea, md5_obj_bytea) VALUES(CURRVAL('eb_objects_id_seq'), @version, @status, @submitter_id, @submitted_at, @obj_bytea, @md5_obj_bytea);
+
+
 
