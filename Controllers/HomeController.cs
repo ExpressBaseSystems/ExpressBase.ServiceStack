@@ -19,6 +19,14 @@ namespace ExpressBase.ServiceStack
         {
             return View();
         }
+        public IActionResult About()
+        {
+            return View();
+        }
+        public IActionResult Contact()
+        {
+            return View();
+        }
         [HttpPost]
         public async Task<IActionResult> Loginuser(ExpressBase.ServiceStack.UserModel user)
         {
@@ -64,6 +72,7 @@ namespace ExpressBase.ServiceStack
             return RedirectToAction("Index", "Home");
              //View();
         }
+        [HttpGet]
         public ActionResult Registerview()
         {
             return View("Registerview");
@@ -75,12 +84,16 @@ namespace ExpressBase.ServiceStack
 
             if (ModelState.IsValid)
             {
-               
+                var errors = ModelState.Values.SelectMany(v => v.Errors);
                 Registermodel model = new Registermodel
                 {
                    Profileimg = Request.Form.Files["Imageupload"]
                  };
-              
+              if(user.MiddleName==null)
+                {
+                    user.MiddleName = "asdfgh";
+                }
+
                 if (await user.UserRegister(user.Email, user.Password, user.FirstName, user.LastName, user.MiddleName, user.dob, user.PhNoPrimary, user.PhNoSecondary, user.Landline, user.Extension, user.Locale, user.Alternateemail,user.Profileimg))
                 {
                     //FormsAuthentication.SetAuthCookie(user.UserName, user.RememberMe);

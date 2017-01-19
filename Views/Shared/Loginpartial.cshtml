@@ -22,22 +22,26 @@
         <div class="navbar-collapse collapse">
             <ul style="font-weight:800" class="nav navbar-nav">
                 <li><img class="pull-left" width="100px" height="50px" style="display:inline-block;wi" src="~/images/contact.png" /></li>
-                <li><a asp-area="" asp-controller="Home" asp-action="Index">Home</a></li>
+                
                 <li><a asp-area="" asp-controller="Home" asp-action="About">About</a></li>
                 <li><a asp-area="" asp-controller="Home" asp-action="Contact">Contact</a></li>
-                <li><a asp-area="" asp-controller="Home" asp-action="Registerview">Register</a></li>
+               
                          @{
-                          
+
 
                              if ((UserModel.IsLoggedIn) == 1)
                              {
+                                <li><a asp-area="" asp-controller="Sample" asp-action="formmenu">Home</a></li>
                                 <li><a asp-area="" asp-controller="Home" asp-action="logout">Logout</a></li>
+                                
                              }
-                            else
-                            {
+                             else
+                             {
+                                <li><a asp-area="" asp-controller="Home" asp-action="Index">Home</a></li>
                                 <li><a asp-area="" asp-controller="Home" asp-action="Loginuser">Login</a></li>
-                            }
-                            }
+                                <li><a asp-area="" asp-controller="Home" asp-action="Registerview">Register</a></li>
+                             }
+                        }
 
             </ul>
         </div>
