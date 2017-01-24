@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace ExpressBase.ServiceStack
 {
-    public class EbTableColumnCollection : Dictionary<int, EbTableColumn>
+    public class EbTableColumnCollection : Dictionary<string, EbTableColumn>
     {
        
     }
