@@ -49,12 +49,9 @@ namespace ExpressBase.ServiceStack
 
         public IActionResult formmenu()
         {
+            
             return View();
         }
-        //public IActionResult Form(int id)
-        //{
-        //    ViewData["Id"] = id;
-        //    return View();
-        //}
+       
     }
 }

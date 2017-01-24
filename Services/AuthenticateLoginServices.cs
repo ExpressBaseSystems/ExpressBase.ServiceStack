@@ -32,6 +32,7 @@ namespace ExpressBase.ServiceStack
     {
         public LoginResponse Any(Login request)
         {
+            LoadTestConfiguration();
             User u = User.GetDetails(request.UserName, request.Password);
             return new LoginResponse
             {

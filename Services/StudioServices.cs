@@ -7,7 +7,7 @@ using System.Runtime.Serialization;
 using ExpressBase.Common;
 using ExpressBase.Data;
 using System;
-using ExpressBase.UI;
+using ExpressBase.Objects;
 using System.Data.Common;
 
 namespace ExpressBase.ServiceStack
@@ -90,7 +90,6 @@ namespace ExpressBase.ServiceStack
             e.DatabaseConfigurations.Add(EbDatabases.EB_DATA, new EbDatabaseConfiguration(EbDatabases.EB_DATA, DatabaseVendors.PGSQL, "AlArz2014", "localhost", 5432, "postgres", "infinity", 500));
             e.DatabaseConfigurations.Add(EbDatabases.EB_ATTACHMENTS, new EbDatabaseConfiguration(EbDatabases.EB_ATTACHMENTS, DatabaseVendors.PGSQL, "AlArz2014", "localhost", 5432, "postgres", "infinity", 500));
             e.DatabaseConfigurations.Add(EbDatabases.EB_LOGS, new EbDatabaseConfiguration(EbDatabases.EB_LOGS, DatabaseVendors.PGSQL, "AlArz2014", "localhost", 5432, "postgres", "infinity", 500));
-
             byte[] bytea = EbSerializers.ProtoBuf_Serialize(e);
             if (!System.IO.File.Exists(path))
                 EbFile.Bytea_ToFile(bytea, path);

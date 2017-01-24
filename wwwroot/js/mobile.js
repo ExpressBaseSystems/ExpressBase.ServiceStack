@@ -7,7 +7,7 @@
     $('#mob').focusout(function () {
         var colval = $('#mob').val();
         
-        var DataCollection = { 9: $('#mob').val() };
+        var DataCollection = { 2854: $('#mob').val() };
        
         $.post('http://localhost:53125/uc/TableId', { "TableId": 157, "Colvalues": JSON.stringify(DataCollection) },
         function (result) {

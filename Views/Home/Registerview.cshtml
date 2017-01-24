@@ -36,12 +36,14 @@
                 <td>
                     <div class="editor-label">
                         @Html.LabelFor(u => u.FirstName)
+                        @Html.HiddenFor(u=>u.IsEdited)
                     </div>
                 </td>
                 <td>
                     <div class="editor-field">
                         @Html.TextBoxFor(u => u.FirstName)
                         @Html.ValidationMessageFor(u => u.FirstName)
+                        
                     </div>
                 </td>
             </tr>
@@ -80,7 +82,7 @@
                 </td>
                 <td>
                     <div class="editor-field">
-                        @Html.TextBoxFor(u => u.dob, new { id = "datepicker" })
+                        @Html.TextBoxFor(u => u.dob, new { id = "datepicker"})
                         @Html.ValidationMessageFor(u => u.dob)
                         <script>
                     $(function () {
@@ -127,7 +129,7 @@
             <tr>
                 <td>
                     <div class="editor-label">
-                        @Html.LabelFor(u => u.PhNoSecondary)
+                        @Html.LabelFor(u => u.PhNoSecondary) 
                     </div>
                 </td>
                 <td>
@@ -222,11 +224,11 @@
             </table>
         </div>
 
-        <div>
+        @*<div>
             @Html.LabelFor(u => u.Profileimg)
             @Html.TextBoxFor(u => u.Profileimg, new { type = "file", onchange = "readURL(this)" })
             <img id="img" src="#" alt="your image1" />
-        </div>
+        </div>*@
 
         <div id="divCaptcha">
             <script src="https://www.google.com/recaptcha/api.js" async defer></script>
