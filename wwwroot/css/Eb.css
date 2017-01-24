@@ -1,0 +1,76 @@
+﻿/*chart styles------------------------*/
+/*overridden styles----*/
+    .dygraph-axis-label-y{
+        font-size:12px;
+    }
+    .dygraph-axis-label-x{
+        font-size: 10px;
+    }
+    .dygraph-xlabel,.dygraph-ylabel{
+        color: rgba(25,0,25,0.5);
+    }
+/*--------------------*/
+.graph-container {
+    width:100%;
+    border:solid 1px #79e;
+    margin:1px;
+    height:27em;
+}
+.dygraph-divContainer{
+    width:100%;
+    overflow-x:auto;
+    height:25em;
+}
+.dygraph-Wrapper{
+    min-width:100%;
+}
+.graph-loadingdiv {
+    vertical-align:middle;
+    margin-left: calc(50% - 5px);
+    margin-top: 11.25em;
+    display: none;
+}
+.graph-headBox {
+    background-color:#79e;
+    height: 21px;
+}
+.graph-head {
+    display:inline-block;
+    font-family:'Times New Roman', Times, serif;
+    font-weight:bold;
+    font-size: 18px;
+    margin-left:5%   
+}
+.graph-optBox {
+    float:right;
+    margin-top: -0.5px;
+    margin-right: 5px;
+    display:inline-block;
+    vertical-align:central;
+}
+.graph-opt {
+    display:inline-block;
+    background-color:transparent;
+}
+.graph-optBox > button {
+    overflow: visible;
+    padding: 0px;
+    background: transparent;
+    border: none;
+}
+
+/*Data grid styles-----------*/
+.tbl-container {
+    width:100%;
+    height:auto;
+    border:solid 1px;
+    display:inline-block;
+    overflow-x:auto;
+}
+.tbl-loadingdiv {
+    vertical-align:middle;
+    margin: 5% 50%;
+    display: none;
+}
+
+
