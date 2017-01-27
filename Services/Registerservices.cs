@@ -11,6 +11,8 @@ using System.Linq;
 using System.Runtime.Serialization;
 using System.Text;
 using System.Threading.Tasks;
+using ServiceStack.Redis;
+using ExpressBase.Objects;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -18,7 +20,7 @@ namespace ExpressBase.ServiceStack.Services
     [Route("/insert", "POST")]
     public class Register : IReturn<bool>
     {
-       
+
         [DataMember(Order = 0)]
         public Dictionary<string, object> Colvalues { get; set; }
 
@@ -47,7 +49,7 @@ namespace ExpressBase.ServiceStack.Services
 
         [DataMember(Order = 1)]
         public int ColId { get; set; }
-         
+
     }
 
     [DataContract]
@@ -99,7 +101,7 @@ namespace ExpressBase.ServiceStack.Services
         //    }
         //    string _sql = string.Format("UPDATE {0} SET {1} WHERE id = {2} RETURNING id", tcol[request.TableId].Name, _values_sb.ToArray().Join(", "), request.colid);
 
-            
+
         //    using (var _con = df.ObjectsDatabase.GetNewConnection())
         //    {
         //        _con.Open();
@@ -125,43 +127,46 @@ namespace ExpressBase.ServiceStack.Services
         {
             var e = LoadTestConfiguration();
             DatabaseFactory df = new DatabaseFactory(e);
-            
+
             Dictionary<string, object> Colvalues = new Dictionary<string, object>();
 
             string sql = string.Format("select * from eb_users where id= {0} ", request.ColId);
             var dt = df.ObjectsDatabase.DoQuery(sql);
-            foreach(EbDataRow dr in dt.Rows)
+            foreach (EbDataRow dr in dt.Rows)
             {
                 foreach (EbDataColumn col in dt.Columns)
                     Colvalues.Add(col.ColumnName, dr[col.ColumnIndex]);
             }
             return new ViewResponse
             {
-                Viewvalues = Colvalues 
+                Viewvalues = Colvalues
             };
         }
 
         public bool Any(Register request)
         {
-
             List<string> _params = new List<string>(request.Colvalues.Count);
             List<string> _values = new List<string>(request.Colvalues.Count);
 
             var e = LoadTestConfiguration();
             DatabaseFactory df = new DatabaseFactory(e);
 
-            LoadCache();
+            using (var redisClient = new RedisClient("139.59.39.130", 6379, "Opera754$"))
+            {
+                tcol = redisClient.Get<EbTableCollection>("EbTableCollection");
+                ccol = redisClient.Get<EbTableColumnCollection>("EbTableColumnCollection");
+            }
 
             foreach (string key in request.Colvalues.Keys)
             {
-                if(ccol.ContainsKey(key))
+                if (ccol.ContainsKey(key))
                 {
                     _values.Add(string.Format("{0}", ccol[key].Name));
                     _params.Add(string.Format("@{0}", ccol[key].Name));
                 }
-                    
+
             }
-            string _sql = string.Format("INSERT INTO {0} ({1}) VALUES ({2})", tcol[request.TableId].Name, _values.ToArray().Join(","),_params.ToArray().Join(","));
+            string _sql = string.Format("INSERT INTO {0} ({1}) VALUES ({2})", tcol[request.TableId].Name, _values.ToArray().Join(","), _params.ToArray().Join(","));
 
             //var dt = df.ObjectsDatabase.DoQuery(_sql);
             using (var _con = df.ObjectsDatabase.GetNewConnection())
@@ -237,44 +242,5 @@ namespace ExpressBase.ServiceStack.Services
             InitDb(@"D:\xyz1.conn");
             return ReadTestConfiguration(@"D:\xyz1.conn");
         }
-
-        private void LoadCache()
-        {
-            tcol = new EbTableCollection();
-            ccol = new EbTableColumnCollection();
-
-            var e = LoadTestConfiguration();
-            DatabaseFactory df = new DatabaseFactory(e);
-            string sql = "SELECT id,tablename FROM eb_tables;" + "SELECT id,columnname,columntype FROM eb_tablecolumns;";
-            var dt1 = df.ObjectsDatabase.DoQueries(sql);
-            foreach (EbDataRow dr in dt1.Tables[0].Rows)
-            {
-                EbTable ebt = new EbTable
-                {
-                    Id = Convert.ToInt32(dr[0]),
-                    Name = dr[1].ToString()
-                };
-
-                tcol.Add(ebt.Id, ebt);
-            }
-            foreach(EbDataRow dr1 in dt1.Tables[1].Rows)
-            {
-               
-                EbTableColumn ebtc = new EbTableColumn
-                {
-                    Type = (DbType)(dr1[2]),
-                    Id = Convert.ToInt32(dr1[0]),
-                    Name = dr1[1].ToString(),
-                    
-
-            };
-                if (!ccol.ContainsKey(ebtc.Name))
-                {
-                    ccol.Add(ebtc.Name, ebtc);
-                }
-            }
-
-            }
-        }
     }
-
+}
