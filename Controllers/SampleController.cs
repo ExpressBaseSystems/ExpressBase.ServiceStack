@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using ServiceStack;
+using ServiceStack.Redis;
 
 // For more information on enabling MVC for empty projects, visit http://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -64,10 +65,18 @@ namespace ExpressBase.ServiceStack
         public IActionResult f()
         {
             var req = this.HttpContext.Request.Form;
+
+            var id = Convert.ToInt32(req["fId"]);
+
+            var redisClient = new RedisClient("139.59.39.130", 6379, "Opera754$");
+            Objects.EbForm _form = redisClient.Get<Objects.EbForm>(string.Format("form{0}", id));
+           
             EbModel ebmodel = new EbModel();
             foreach(var obj in req)
             {
-                if(obj.Key == "isUpdate")
+                var fobject = _form.GetControl(obj.Key);
+                
+                if (obj.Key == "isUpdate")
                 {
                     ebmodel.IsEdited = Convert.ToBoolean(obj.Value);
                 }
@@ -75,9 +84,9 @@ namespace ExpressBase.ServiceStack
                 {
                     ebmodel.FormId = Convert.ToInt32(obj.Value);
                 }
-                else
+                else if(!fobject.SkipPersist)
                 {
-                    ebmodel.PrimaryValues.Add(obj.Key, obj.Value);
+                        ebmodel.PrimaryValues.Add(obj.Key, obj.Value);                   
                 }
             }
            
@@ -104,8 +113,6 @@ namespace ExpressBase.ServiceStack
 
         private bool Update(EbModel udata)
         {
-           
-
             JsonServiceClient client = new JsonServiceClient("http://localhost:53125/");
             return client.Post<bool>(new Services.EditUser { TableId = 157, Colvalues = udata.PrimaryValues, colid = 2846 });
         }

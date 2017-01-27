@@ -234,8 +234,8 @@ namespace ExpressBase.ServiceStack.Services
 
         private EbConfiguration LoadTestConfiguration()
         {
-            InitDb(@"C:\xyz1.conn");
-            return ReadTestConfiguration(@"C:\xyz1.conn");
+            InitDb(@"D:\xyz1.conn");
+            return ReadTestConfiguration(@"D:\xyz1.conn");
         }
 
         private void LoadCache()

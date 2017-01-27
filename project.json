@@ -37,7 +37,8 @@
     "ExpressBase.Objects": "1.0.0",
     "CacheManager.Core": "0.9.2",
     "CacheManager.Microsoft.Extensions.Caching.Memory": "0.9.2",
-    "ExpressBase.Objects": "1.0.0" },
+    "ExpressBase.Objects": "1.0.0",
+    "ServiceStack.Redis.Core": "1.0.32" },
 
   "tools": {
     "BundlerMinifier.Core": "2.0.238",
