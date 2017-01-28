@@ -6,6 +6,7 @@ using ExpressBase.Common;
 using ExpressBase.Data;
 using System;
 using ExpressBase.Objects;
+using System.Collections.Generic;
 
 namespace ExpressBase.ServiceStack
 {
@@ -25,7 +26,9 @@ namespace ExpressBase.ServiceStack
 
         public string OrderByDirection { get; set; }
 
-        public string SelectedColumnName { get; set; }
+        public string OrderColumnName { get; set; }
+
+        public string SearchColumnName { get; set; }
     }
 
     [Route("/ds")]
@@ -73,10 +76,20 @@ namespace ExpressBase.ServiceStack
         public object Get(DataSourceDataRequest request)
         {
             request.SearchText = base.Request.QueryString["searchtext"];
-            request.SearchText = string.IsNullOrEmpty(request.SearchText) ? "" : request.SearchText; // @txtsearch
+            //request.SearchTextcollection = string.IsNullOrEmpty(request.SearchText) ? "" : request.SearchText; // @txtsearch
             request.OrderByDirection = base.Request.QueryString["order[0][dir]"]; //@order_dir
-            request.SelectedColumnName = base.Request.QueryString["col"]; // @selcol
+            request.SearchColumnName = base.Request.QueryString["search_col"]; // @search_col
+            request.OrderColumnName = base.Request.QueryString["order_col"]; // @order_col
 
+            List<string> searchColumn = new List<string>();
+            List<string> searchValue = new List<string>();
+            List<string> selectedValue = new List<string>();
+            if (!string.IsNullOrEmpty(request.SearchColumnName))
+                searchColumn = new List<string>(request.SearchColumnName.Split(','));
+            if (!string.IsNullOrEmpty(request.SearchText))
+                searchValue = new List<string>(request.SearchText.Split(','));
+            if (!string.IsNullOrEmpty(base.Request.QueryString["selectedvalue"]))
+                selectedValue = new List<string>(base.Request.QueryString["selectedvalue"].Split(','));
             var e = LoadTestConfiguration();
             DatabaseFactory df = new DatabaseFactory(e);
             var dt = df.ObjectsDatabase.DoQuery(string.Format("SELECT obj_bytea FROM eb_objects WHERE id={0}", request.Id));
@@ -90,13 +103,39 @@ namespace ExpressBase.ServiceStack
                 if (_ds != null)
                 {
                     // NEED TO REWORK
-                    string _sql = _ds.Sql.Replace("@and_searchplaceholder", 
-                        (string.IsNullOrEmpty(request.SearchText)) ? string.Empty : string.Format("AND {0}::text LIKE '%{1}%'", request.SelectedColumnName, request.SearchText));
+                    string _sql = string.Empty;
+                    if (searchColumn.Count == 0)
+                        _sql = _ds.Sql.Replace("@and_searchplaceholder", string.Empty);
+                    else
+                    {
+                        string _c = string.Empty;
+                        for (int j = 0; j < searchColumn.Count; j++)
+                        {
 
-                    var parameters = new System.Data.Common.DbParameter[2] 
+                            if (selectedValue[j] == "null")
+                                _c += string.Format("AND LOWER({0})::text LIKE LOWER('%{1}%') ", searchColumn[j], searchValue[j]);
+                            else if (selectedValue[j] == "B")
+                            {
+                                List<string> lst = new List<string>();
+                                lst = new List<string>(searchValue[j].Split('@'));
+                                if (Convert.ToInt32(lst[0]) < Convert.ToInt32(lst[1]))
+                                    _c += string.Format("AND {0} > '{1}' AND {0} < '{2}' ", searchColumn[j], lst[0], lst[1]);
+                                else
+                                    _c += string.Format("AND {0} > '{1}' AND {0} < '{2}' ", searchColumn[j], lst[1], lst[0]);
+                            }
+
+                            else
+                                _c += string.Format("AND {0} {1} '{2}' ", searchColumn[j], selectedValue[j], searchValue[j]);
+                        }
+                        _sql = _ds.Sql.Replace("@and_searchplaceholder", _c);
+                    }
+                    _sql = _sql.Replace("@orderbyplaceholder",
+                     (string.IsNullOrEmpty(request.OrderColumnName)) ? "id" : string.Format("{0} {1}", request.OrderColumnName, request.OrderByDirection));
+
+                    var parameters = new System.Data.Common.DbParameter[2]
                     {
                         df.ObjectsDatabase.GetNewParameter("@limit", System.Data.DbType.Int32, request.Length),
-                        df.ObjectsDatabase.GetNewParameter("@last_id", System.Data.DbType.Int32, ((request.Draw - 1) * request.Length))
+                        df.ObjectsDatabase.GetNewParameter("@last_id", System.Data.DbType.Int32, request.Start+1)
                     };
 
                     var _dataset = (request.Length > 0) ? df.ObjectsDatabase.DoQueries(_sql, parameters) : df.ObjectsDatabase.DoQueries(_sql);
@@ -138,6 +177,9 @@ namespace ExpressBase.ServiceStack
                         _sql = _ds.Sql.Replace("@and_searchplaceholder",
                             (string.IsNullOrEmpty(request.SearchText)) ? string.Empty : string.Format("AND {0}::text LIKE '%{1}%'", request.SelectedColumnName, request.SearchText));
 
+                        _sql = _sql.Replace("@orderbyplaceholder",
+                        (string.IsNullOrEmpty(request.SelectedColumnName)) ? "id" : string.Format("{0} {1}", request.SelectedColumnName, request.OrderByDirection));
+
                         var parameters = new System.Data.Common.DbParameter[2]
                         {
                             df.ObjectsDatabase.GetNewParameter("@limit", System.Data.DbType.Int32, 0),
@@ -168,10 +210,10 @@ namespace ExpressBase.ServiceStack
                 LicenseKey = "00288-22558-25558",
             };
 
-            e.DatabaseConfigurations.Add(EbDatabases.EB_OBJECTS, new EbDatabaseConfiguration(EbDatabases.EB_OBJECTS, DatabaseVendors.PGSQL, "AlArz2014", "localhost", 5432, "postgres", "infinity", 500));
-            e.DatabaseConfigurations.Add(EbDatabases.EB_DATA, new EbDatabaseConfiguration(EbDatabases.EB_DATA, DatabaseVendors.PGSQL, "AlArz2014", "localhost", 5432, "postgres", "infinity", 500));
-            e.DatabaseConfigurations.Add(EbDatabases.EB_ATTACHMENTS, new EbDatabaseConfiguration(EbDatabases.EB_ATTACHMENTS, DatabaseVendors.PGSQL, "AlArz2014", "localhost", 5432, "postgres", "infinity", 500));
-            e.DatabaseConfigurations.Add(EbDatabases.EB_LOGS, new EbDatabaseConfiguration(EbDatabases.EB_LOGS, DatabaseVendors.PGSQL, "AlArz2014", "localhost", 5432, "postgres", "infinity", 500));
+            e.DatabaseConfigurations.Add(EbDatabases.EB_OBJECTS, new EbDatabaseConfiguration(EbDatabases.EB_OBJECTS, DatabaseVendors.PGSQL, "AlArz2014", "139.59.41.0", 5432, "postgres", "infinity", 500));
+            e.DatabaseConfigurations.Add(EbDatabases.EB_DATA, new EbDatabaseConfiguration(EbDatabases.EB_DATA, DatabaseVendors.PGSQL, "AlArz2014", "139.59.41.0", 5432, "postgres", "infinity", 500));
+            e.DatabaseConfigurations.Add(EbDatabases.EB_ATTACHMENTS, new EbDatabaseConfiguration(EbDatabases.EB_ATTACHMENTS, DatabaseVendors.PGSQL, "AlArz2014", "139.59.41.0", 5432, "postgres", "infinity", 500));
+            e.DatabaseConfigurations.Add(EbDatabases.EB_LOGS, new EbDatabaseConfiguration(EbDatabases.EB_LOGS, DatabaseVendors.PGSQL, "AlArz2014", "139.59.41.0", 5432, "postgres", "infinity", 500));
             byte[] bytea = EbSerializers.ProtoBuf_Serialize(e);
             if (!System.IO.File.Exists(path))
                 EbFile.Bytea_ToFile(bytea, path);
@@ -184,8 +226,8 @@ namespace ExpressBase.ServiceStack
 
         private EbConfiguration LoadTestConfiguration()
         {
-            InitDb(@"G:\xyz1.conn");
-            return ReadTestConfiguration(@"G:\xyz1.conn");
+            InitDb(@"D:\xyz1.conn");
+            return ReadTestConfiguration(@"D:\xyz1.conn");
         }
     }
 }

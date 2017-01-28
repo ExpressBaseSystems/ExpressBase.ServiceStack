@@ -1,4 +1,5 @@
 ﻿/// <autosync enabled="true" />
+/// <reference path="js/colreorderwithresize.js" />
 /// <reference path="js/dygraphplotters.js" />
 /// <reference path="js/eb_validations.js" />
 /// <reference path="js/gridstack.js" />
