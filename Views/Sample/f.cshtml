@@ -36,8 +36,9 @@
     html += "<div> <form action='/sample/f' method='post'> <div style='position: fixed; z-index: 1; width:100%; top:0px; background-color:#6699bb;height:30px;'>";
     html += string.Format(@" <input type='text' style='visibility:hidden;' name='isUpdate' value='false' id='{0}' />
                                 <input type='text' style='visibility:hidden;' name='fId' value={1} id='{0}' />
+                                <input type='text' style='visibility:hidden;' name='TableId' value= {2} id='tableid' />
                                 <span style='font-size:20px;'>{0}</h3>
-                                <input type='submit' style='float:right;' value='Save'/></div>", _form.Label, id);
+                                <input type='submit' style='float:right;' value='Save'/></div>", _form.Label, id,_form.Table.Id);
 
     foreach (EbControl c in _form.Controls)
     {
