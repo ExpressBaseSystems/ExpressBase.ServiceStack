@@ -5,18 +5,25 @@ using System.Threading.Tasks;
 
 namespace ExpressBase.ServiceStack
 {
+   
     public class EbModel
     {
+       
         public int FormId { get; set; }
 
+        
         public int VersionId { get; set; }
 
+        
         public int TableId { get; set; }
 
+      
         public bool IsEdited { get; set; }
 
+        
         public Dictionary<string, object> PrimaryValues { get; set; }
 
+       
         public List<EbModelLine> Lines { get; set; }
 
         public bool IsVoid { get; set; }

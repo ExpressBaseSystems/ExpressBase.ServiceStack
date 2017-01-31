@@ -44,19 +44,28 @@ namespace ExpressBase.ServiceStack.Services
 
     [DataContract]
     [Route("/view/{ColId}", "GET")]
-    public class ViewUser : IReturn<ViewResponse>
+    public class View : IReturn<ViewResponse>
     {
 
         [DataMember(Order = 1)]
         public int ColId { get; set; }
 
+        [DataMember(Order = 2)]
+        public int TableId { get; set; }
+
+        [DataMember(Order = 3)]
+        public int FId { get; set; }
+
     }
 
     [DataContract]
     public class ViewResponse
-    {
+    { 
+        //[DataMember(Order = 1)]
+        //public EbDataSet ebdataset { get; set; }
+
         [DataMember(Order = 1)]
-        public Dictionary<string, object> Viewvalues { get; set; }
+        public EbForm ebform { get; set; }
     }
 
     [DataContract]
@@ -123,23 +132,19 @@ namespace ExpressBase.ServiceStack.Services
         //    }
         //}
 
-        public ViewResponse Any(ViewUser request)
+        public ViewResponse Any(View request)
         {
+            var redisClient = new RedisClient("139.59.39.130", 6379, "Opera754$");
+            tcol = redisClient.Get<EbTableCollection>("EbTableCollection");
+            Objects.EbForm _form = redisClient.Get<Objects.EbForm>(string.Format("form{0}", request.FId));
             var e = LoadTestConfiguration();
             DatabaseFactory df = new DatabaseFactory(e);
-
-            Dictionary<string, object> Colvalues = new Dictionary<string, object>();
-
-            string sql = string.Format("select * from eb_users where id= {0} ", request.ColId);
-            var dt = df.ObjectsDatabase.DoQuery(sql);
-            foreach (EbDataRow dr in dt.Rows)
-            {
-                foreach (EbDataColumn col in dt.Columns)
-                    Colvalues.Add(col.ColumnName, dr[col.ColumnIndex]);
-            }
+            string sql = string.Format("select * from {0} where id= {1} ",tcol[request.TableId].Name,request.ColId);
+            var ds = df.ObjectsDatabase.DoQueries(sql);
+            _form.SetData(ds);
             return new ViewResponse
             {
-                Viewvalues = Colvalues
+                ebform = _form
             };
         }
 
@@ -187,11 +192,10 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     _con.Open();
                     var _cmd = df.ObjectsDatabase.GetNewCommand(_con, _sql);
-                    foreach (KeyValuePair<string, object> dict in request.Colvalues)
+                    foreach (var key in request.Colvalues.Keys)
                     {
-                        if (ccol.ContainsKey(dict.Key))
-
-                            _cmd.Parameters.Add(df.ObjectsDatabase.GetNewParameter(string.Format("@{0}", dict.Key), ccol[dict.Key].Type, dict.Value));
+                        if (ccol.ContainsKey(key))
+                            _cmd.Parameters.Add(df.ObjectsDatabase.GetNewParameter(string.Format("@{0}", key), ccol[key].Type, request.Colvalues[key]));
                     }
 
                     return (Convert.ToInt32(_cmd.ExecuteScalar()) == 0);
@@ -241,10 +245,11 @@ namespace ExpressBase.ServiceStack.Services
                 ClientName = "XYZ Enterprises Ltd.",
                 LicenseKey = "00288-22558-25558",
             };
+
             e.DatabaseConfigurations.Add(EbDatabases.EB_OBJECTS, new EbDatabaseConfiguration(EbDatabases.EB_OBJECTS, DatabaseVendors.PGSQL, "AlArz2014", "localhost", 5432, "postgres", "infinity", 500));
             e.DatabaseConfigurations.Add(EbDatabases.EB_DATA, new EbDatabaseConfiguration(EbDatabases.EB_DATA, DatabaseVendors.PGSQL, "AlArz2014", "localhost", 5432, "postgres", "infinity", 500));
             e.DatabaseConfigurations.Add(EbDatabases.EB_ATTACHMENTS, new EbDatabaseConfiguration(EbDatabases.EB_ATTACHMENTS, DatabaseVendors.PGSQL, "AlArz2014", "localhost", 5432, "postgres", "infinity", 500));
-            e.DatabaseConfigurations.Add(EbDatabases.EB_LOGS, new EbDatabaseConfiguration(EbDatabases.EB_LOGS, DatabaseVendors.PGSQL, "AlArz2014", "localhost", 5432, "localhost", "infinity", 500));
+            e.DatabaseConfigurations.Add(EbDatabases.EB_LOGS, new EbDatabaseConfiguration(EbDatabases.EB_LOGS, DatabaseVendors.PGSQL, "AlArz2014", "localhost", 5432, "postgres", "infinity", 500));
 
             byte[] bytea = EbSerializers.ProtoBuf_Serialize(e);
             EbFile.Bytea_ToFile(bytea, path);
@@ -257,8 +262,8 @@ namespace ExpressBase.ServiceStack.Services
 
         private EbConfiguration LoadTestConfiguration()
         {
-            InitDb(@"D:\xyz1.conn");
-            return ReadTestConfiguration(@"D:\xyz1.conn");
+            InitDb(@"G:\xyz1.conn");
+            return ReadTestConfiguration(@"G:\xyz1.conn");
         }
     }
 }

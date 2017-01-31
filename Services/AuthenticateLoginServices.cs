@@ -65,8 +65,8 @@ namespace ExpressBase.ServiceStack
 
         private EbConfiguration LoadTestConfiguration()
         {
-            InitDb(@"D:\xyz1.conn");
-            return ReadTestConfiguration(@"D:\xyz1.conn");
+            InitDb(@"G:\xyz1.conn");
+            return ReadTestConfiguration(@"G:\xyz1.conn");
         }
     }
 }

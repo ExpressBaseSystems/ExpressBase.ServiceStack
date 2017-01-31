@@ -23,9 +23,12 @@
             <td>@dispdata.LastName</td>
             <td>@dispdata.MiddleName</td>
             <td>
-               
-               <a href="~/home/registerview?id=@dispdata.id">Edit</a>
+                @{ 
+                    ViewBag.uid = @dispdata.id;
+                }
+              
+               <a href="~/Sample/f?fid=4&id=@dispdata.id">Edit</a>
             </td>
         </tr>
-    }
+                    }
 </table>
