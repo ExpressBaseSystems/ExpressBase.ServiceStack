@@ -6,8 +6,11 @@
     string head = string.Empty;
     string html = string.Empty;
 
-    var id = Convert.ToInt32(ViewBag.FormId);
+    var fid = Convert.ToInt32(ViewBag.FormId);
+    var id = Convert.ToInt32(ViewBag.DataId);
     EbForm _form = ViewBag.EbForm;
+
+
 
     //var redisManager = new ServiceStack.Redis.PooledRedisClientManager("139.59.39.130","6379","");
     //ServiceStack.Redis.RedisClient redisClient = null;
@@ -35,11 +38,12 @@
     //}
 
     html += "<div> <form action='/sample/f' method='post'> <div style='position: fixed; z-index: 1; width:100%; top:0px; background-color:#6699bb;height:30px;'>";
-    html += string.Format(@" <input type='text' style='visibility:hidden;' name='isUpdate' value='false' id='{0}' />
+    html += string.Format(@" <input type='text' style='visibility:hidden;' name='isUpdate' value='{3}' id='{0}' />
                                 <input type='text' style='visibility:hidden;' name='fId' value={1} id='{0}' />
                                 <input type='text' style='visibility:hidden;' name='TableId' value= {2} id='tableid' />
+                                <input type='text' style='visibility:hidden;' name='DataId' value= {4} id='dataid' />
                                 <span style='font-size:20px;'>{0}</h3>
-                                <input type='submit' style='float:right;' value='Save'/></div>", _form.Label, id,_form.Table.Id);
+                                <input type='submit' style='float:right;' value='Save'/></div>", _form.Label, fid,_form.Table.Id,_form.IsUpdate,id);
 
     foreach (EbControl c in _form.Controls)
     {

@@ -80,14 +80,15 @@ namespace ExpressBase.ServiceStack
             {
                 _form = Common.EbSerializers.ProtoBuf_DeSerialize<EbForm>(fr.Data[0].Bytea);
                 _form.Init4Redis();
-                _form.IsEdited = true;
+                _form.IsUpdate = true;
                 redisClient.Set<EbForm>(string.Format("form{0}", fid), _form);
             }
                 string html = string.Empty;
                 var vr = client.Get<ViewResponse>(new View { TableId = _form.Table.Id, ColId = id,FId =fid });
-                
+                redisClient.Set<EbForm>("cacheform",vr.ebform);
                 ViewBag.EbForm = vr.ebform;
                 ViewBag.FormId = fid;
+                ViewBag.DataId = id;
                 return View();
             }
             else
@@ -96,10 +97,12 @@ namespace ExpressBase.ServiceStack
                 {
                     _form = Common.EbSerializers.ProtoBuf_DeSerialize<EbForm>(fr.Data[0].Bytea);
                     _form.Init4Redis();
+                    _form.IsUpdate = false;
                     redisClient.Set<EbForm>(string.Format("form{0}", fid), _form);
                 }
                 ViewBag.EbForm = _form;
                 ViewBag.FormId = fid;
+                ViewBag.DataId = id;
                 return View();
             }
         }
@@ -112,7 +115,7 @@ namespace ExpressBase.ServiceStack
             var fid = Convert.ToInt32(req["fId"]);
             var redisClient = new RedisClient("139.59.39.130", 6379, "Opera754$");
             Objects.EbForm _form = redisClient.Get<Objects.EbForm>(string.Format("form{0}", fid));
-            bool b= _form.IsEdited;
+            bool b= _form.IsUpdate;
 
             bool bStatus = Insert(req as FormCollection);
 
@@ -127,15 +130,8 @@ namespace ExpressBase.ServiceStack
         {
 
             JsonServiceClient client = new JsonServiceClient("http://localhost:53125/");
-            return client.Post<bool>(new Services.Register { TableId =Convert.ToInt32(udata["TableId"]) , Colvalues = udata.ToDictionary(dict => dict.Key, dict => (object)dict.Value) });
+            return client.Post<bool>(new Services.FormPersistRequest { TableId =Convert.ToInt32(udata["TableId"]) , Colvalues = udata.ToDictionary(dict => dict.Key, dict => (object)dict.Value) });
         }
-
-        private bool Update(EbModel udata)
-        {
-            JsonServiceClient client = new JsonServiceClient("http://localhost:53125/");
-            return client.Post<bool>(new Services.EditUser { TableId = 157, Colvalues = udata.PrimaryValues, colid = 2846 });
-        }
-
 
     }
 }

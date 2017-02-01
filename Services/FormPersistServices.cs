@@ -18,7 +18,7 @@ namespace ExpressBase.ServiceStack.Services
 {
     [DataContract]
     [Route("/insert", "POST")]
-    public class Register : IReturn<bool>
+    public class FormPersistRequest : IReturn<bool>
     {
 
         [DataMember(Order = 0)]
@@ -60,9 +60,8 @@ namespace ExpressBase.ServiceStack.Services
 
     [DataContract]
     public class ViewResponse
-    { 
-        //[DataMember(Order = 1)]
-        //public EbDataSet ebdataset { get; set; }
+    {
+     
 
         [DataMember(Order = 1)]
         public EbForm ebform { get; set; }
@@ -75,7 +74,7 @@ namespace ExpressBase.ServiceStack.Services
 
         [DataMember(Order = 0)]
         public int colid { get; set; }
-        //public Dictionary<int, object> Condvalues { get; set; }
+      
 
         [DataMember(Order = 1)]
         public Dictionary<string, object> Colvalues { get; set; }
@@ -92,46 +91,6 @@ namespace ExpressBase.ServiceStack.Services
         private EbTableCollection tcol;
         private EbTableColumnCollection ccol;
 
-        //public bool Post(EditUser request)
-        //{
-        //    List<string> _values_sb = new List<string>(request.Colvalues.Count);
-        //    List<string> _where_sb = new List<string>(request.Colvalues.Count);
-
-        //    var e = LoadTestConfiguration();
-        //    DatabaseFactory df = new DatabaseFactory(e);
-
-        //    LoadCache();
-
-
-        //    foreach (int key in request.Colvalues.Keys)
-        //    {
-        //        _values_sb.Add(string.Format("{0} = @{0}", ccol[key].Name));
-
-        //    }
-        //    string _sql = string.Format("UPDATE {0} SET {1} WHERE id = {2} RETURNING id", tcol[request.TableId].Name, _values_sb.ToArray().Join(", "), request.colid);
-
-
-        //    using (var _con = df.ObjectsDatabase.GetNewConnection())
-        //    {
-        //        _con.Open();
-        //        var _cmd = df.ObjectsDatabase.GetNewCommand(_con, _sql);
-        //        foreach (KeyValuePair<int, object> dict in request.Colvalues)
-        //        {
-        //            if (ccol.ContainsKey(dict.Key))
-
-        //                _cmd.Parameters.Add(df.ObjectsDatabase.GetNewParameter(string.Format("@{0}", ccol[dict.Key].Name), ccol[dict.Key].Type, dict.Value));
-        //        }
-
-
-
-        //        int result = Convert.ToInt32(_cmd.ExecuteNonQuery());
-        //        //string sql = string.Format("INSERT INTO eb_auditlog(tableid,dataid,operations) VALUES((SELECT id FROM eb_tables WHERE tablename={0}),{1},{2})", tcol[request.TableId].Name, result, 1);
-        //        //var cmd2 = df.ObjectsDatabase.GetNewCommand(_con, sql);
-        //        //cmd2.ExecuteNonQuery();
-        //        return (result > 0);
-        //    }
-        //}
-
         public ViewResponse Any(View request)
         {
             var redisClient = new RedisClient("139.59.39.130", 6379, "Opera754$");
@@ -139,7 +98,7 @@ namespace ExpressBase.ServiceStack.Services
             Objects.EbForm _form = redisClient.Get<Objects.EbForm>(string.Format("form{0}", request.FId));
             var e = LoadTestConfiguration();
             DatabaseFactory df = new DatabaseFactory(e);
-            string sql = string.Format("select * from {0} where id= {1} ",tcol[request.TableId].Name,request.ColId);
+            string sql = string.Format("select * from {0} where id= {1} ", tcol[request.TableId].Name, request.ColId);
             var ds = df.ObjectsDatabase.DoQueries(sql);
             _form.SetData(ds);
             return new ViewResponse
@@ -148,46 +107,100 @@ namespace ExpressBase.ServiceStack.Services
             };
         }
 
-        public bool Any(Register request)
+        public bool Any(FormPersistRequest request)
         {
-            bool bResult=false;
+            bool bResult = false;
+            bool uResult = true;
+            List<string> list = new List<string>();
+            Dictionary<string, object> dict = new Dictionary<string, object>();
+            var e = LoadTestConfiguration();
+            DatabaseFactory df = new DatabaseFactory(e);
             var redisClient = new RedisClient("139.59.39.130", 6379, "Opera754$");
-            Objects.EbForm _form = redisClient.Get<Objects.EbForm>(string.Format("form{0}", Convert.ToInt32(request.Colvalues["fId"])));
-            var uniquelist = _form.GetControlsByPropertyValue<bool>("Unique", true, Objects.EnumOperator.Equal);
-            foreach (EbControl control in uniquelist)
-            {
-                var chkifuq = new CheckIfUnique();
-                chkifuq.TableId = _form.Table.Id;
-                chkifuq.Colvalues = new Dictionary<string, object>();
-                chkifuq.Colvalues.Add(control.Name, request.Colvalues[control.Name]);
-                bResult = this.Post(chkifuq);
-                if (!bResult)
-                    break;
-            }
-
-            if(bResult)
-            {
-                List<string> _params = new List<string>(request.Colvalues.Count);
-                List<string> _values = new List<string>(request.Colvalues.Count);
-
-                var e = LoadTestConfiguration();
-                DatabaseFactory df = new DatabaseFactory(e);
-
-                tcol = redisClient.Get<EbTableCollection>("EbTableCollection");
-                ccol = redisClient.Get<EbTableColumnCollection>("EbTableColumnCollection");
-
-
+            tcol = redisClient.Get<EbTableCollection>("EbTableCollection");
+            ccol = redisClient.Get<EbTableColumnCollection>("EbTableColumnCollection");
+            
+            if (Convert.ToBoolean(request.Colvalues["isUpdate"]))
+                {
+                var _ebform = redisClient.Get<EbForm>("cacheform");
+                _ebform.Init4Redis();
+                var editunique = _ebform.GetControlsByPropertyValue<bool>("Unique", true, Objects.EnumOperator.Equal);
                 foreach (string key in request.Colvalues.Keys)
                 {
-                    if (ccol.ContainsKey(key))
+                    var control = _ebform.GetControl(key);
+
+                    if (control != null)
                     {
-                        _values.Add(string.Format("{0}", ccol[key].Name));
-                        _params.Add(string.Format("@{0}", ccol[key].Name));
+                        if ((control.GetData().ToString()) != (request.Colvalues[key].ToString()))
+                        {
+                            dict[key] = request.Colvalues[key].ToString();
+
+                        }
+                    }
+                    else
+                    {
+                        dict[key] = request.Colvalues[key].ToString();
                     }
 
                 }
+                uResult = Uniquetest(dict);
+                if (uResult)
+                {
+                    int result;
+                    List<string> _values_sb = new List<string>(list.Count);
+                    List<string> _where_sb = new List<string>(list.Count);
+
+                    foreach (string key in request.Colvalues.Keys)
+                    {
+                        foreach (KeyValuePair<string, object> element in dict)
+                        {
+                            if (request.Colvalues[key].ToString() == element.Value.ToString())
+                            {
+                                if (ccol.ContainsKey(element.Key))
+                                    _values_sb.Add(string.Format("{0} = @{0}", ccol[key].Name));
+                            }
+                        }
+                    }
+                    string _sql = string.Format("UPDATE {0} SET {1} WHERE id = {2} RETURNING id", tcol[request.TableId].Name, _values_sb.ToArray().Join(", "), request.Colvalues["DataId"]);
+
+                    using (var _con = df.ObjectsDatabase.GetNewConnection())
+                    {
+                        _con.Open();
+                        var _cmd = df.ObjectsDatabase.GetNewCommand(_con, _sql);
+                        foreach (KeyValuePair<string, object> element in dict)
+                        {
+                            var myKey = request.Colvalues.FirstOrDefault(x => x.Value == element.Value).Key;
+                            if (ccol.ContainsKey(myKey))
+
+                                _cmd.Parameters.Add(df.ObjectsDatabase.GetNewParameter(string.Format("@{0}", ccol[myKey].Name), ccol[myKey].Type, element.Value));
+                        }
+                        result = Convert.ToInt32(_cmd.ExecuteNonQuery());
+                    }
+                    if (result > 0)
+                        return true;
+                    else
+                        return false;
+                }
+            }
+            bResult = Uniquetest(request.Colvalues);
+            if (bResult)
+            {
+                List<string> _params = new List<string>(request.Colvalues.Count);
+                List<string> _values = new List<string>(request.Colvalues.Count);
+                Objects.EbForm _form = redisClient.Get<Objects.EbForm>(string.Format("form{0}", Convert.ToInt32(request.Colvalues["fId"])));
+                foreach (string key in request.Colvalues.Keys)
+                {
+                    var _control = _form.GetControl(key);
+                    if (_control != null && !_control.SkipPersist)
+                    {
+                        if (ccol.ContainsKey(key))
+                        {
+                            _values.Add(string.Format("{0}", ccol[key].Name));
+                            _params.Add(string.Format("@{0}", ccol[key].Name));
+                        }
+                    }
+                }
                 string _sql = string.Format("INSERT INTO {0} ({1}) VALUES ({2})", tcol[request.TableId].Name, _values.ToArray().Join(","), _params.ToArray().Join(","));
-                //var dt = df.ObjectsDatabase.DoQuery(_sql);
+               
                 using (var _con = df.ObjectsDatabase.GetNewConnection())
                 {
                     _con.Open();
@@ -201,13 +214,40 @@ namespace ExpressBase.ServiceStack.Services
                     return (Convert.ToInt32(_cmd.ExecuteScalar()) == 0);
                 }
             }
+            return uResult;
+
+        }
+
+        public bool Uniquetest(Dictionary<string, object> dict)
+        {
+            var redisClient = new RedisClient("139.59.39.130", 6379, "Opera754$");
+            bool bResult = false;
+            Objects.EbForm _form = redisClient.Get<Objects.EbForm>(string.Format("form{0}", Convert.ToInt32(dict["fId"])));
+            var uniquelist = _form.GetControlsByPropertyValue<bool>("Unique", true, Objects.EnumOperator.Equal);
+            foreach (EbControl control in uniquelist)
+            {
+                if (dict.ContainsKey(control.Name))
+                {
+                    var chkifuq = new CheckIfUnique();
+                    chkifuq.TableId = _form.Table.Id;
+                    chkifuq.Colvalues = new Dictionary<string, object>();
+                    chkifuq.Colvalues.Add(control.Name, dict[control.Name]);
+                    bResult = this.Post(chkifuq);
+                    if (!bResult)
+                        break;
+                }
+                else
+                {
+                    bResult = true;
+
+                }
+            }
             return bResult;
-            
         }
 
         public bool Post(CheckIfUnique request)
         {
-            // CIUinner(
+           
             List<string> _whclause_sb = new List<string>(request.Colvalues.Count);
             using (var redisClient = new RedisClient("139.59.39.130", 6379, "Opera754$"))
             {
