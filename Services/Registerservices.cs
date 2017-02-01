@@ -26,16 +26,16 @@ namespace ExpressBase.ServiceStack.Services
 
         [DataMember(Order = 1)]
         public int TableId { get; set; }
+
     }
 
 
     [DataContract]
-    [Route("/uc/{TableId}", "POST")]
+    [Route("/uc", "POST")]
     public class CheckIfUnique : IReturn<bool>
     {
-
         [DataMember(Order = 0)]
-        public Dictionary<int, object> Colvalues { get; set; }
+        public Dictionary<string, object> Colvalues { get; set; }
 
         [DataMember(Order = 1)]
         public int TableId { get; set; }
@@ -44,19 +44,28 @@ namespace ExpressBase.ServiceStack.Services
 
     [DataContract]
     [Route("/view/{ColId}", "GET")]
-    public class ViewUser : IReturn<ViewResponse>
+    public class View : IReturn<ViewResponse>
     {
 
         [DataMember(Order = 1)]
         public int ColId { get; set; }
 
+        [DataMember(Order = 2)]
+        public int TableId { get; set; }
+
+        [DataMember(Order = 3)]
+        public int FId { get; set; }
+
     }
 
     [DataContract]
     public class ViewResponse
-    {
+    { 
+        //[DataMember(Order = 1)]
+        //public EbDataSet ebdataset { get; set; }
+
         [DataMember(Order = 1)]
-        public Dictionary<string, object> Viewvalues { get; set; }
+        public EbForm ebform { get; set; }
     }
 
     [DataContract]
@@ -123,52 +132,95 @@ namespace ExpressBase.ServiceStack.Services
         //    }
         //}
 
-        public ViewResponse Any(ViewUser request)
+        public ViewResponse Any(View request)
         {
+            var redisClient = new RedisClient("139.59.39.130", 6379, "Opera754$");
+            tcol = redisClient.Get<EbTableCollection>("EbTableCollection");
+            Objects.EbForm _form = redisClient.Get<Objects.EbForm>(string.Format("form{0}", request.FId));
             var e = LoadTestConfiguration();
             DatabaseFactory df = new DatabaseFactory(e);
-
-            Dictionary<string, object> Colvalues = new Dictionary<string, object>();
-
-            string sql = string.Format("select * from eb_users where id= {0} ", request.ColId);
-            var dt = df.ObjectsDatabase.DoQuery(sql);
-            foreach (EbDataRow dr in dt.Rows)
-            {
-                foreach (EbDataColumn col in dt.Columns)
-                    Colvalues.Add(col.ColumnName, dr[col.ColumnIndex]);
-            }
+            string sql = string.Format("select * from {0} where id= {1} ",tcol[request.TableId].Name,request.ColId);
+            var ds = df.ObjectsDatabase.DoQueries(sql);
+            _form.SetData(ds);
             return new ViewResponse
             {
-                Viewvalues = Colvalues
+                ebform = _form
             };
         }
 
         public bool Any(Register request)
         {
-            List<string> _params = new List<string>(request.Colvalues.Count);
-            List<string> _values = new List<string>(request.Colvalues.Count);
+            bool bResult=false;
+            var redisClient = new RedisClient("139.59.39.130", 6379, "Opera754$");
+            Objects.EbForm _form = redisClient.Get<Objects.EbForm>(string.Format("form{0}", Convert.ToInt32(request.Colvalues["fId"])));
+            var uniquelist = _form.GetControlsByPropertyValue<bool>("Unique", true, Objects.EnumOperator.Equal);
+            foreach (EbControl control in uniquelist)
+            {
+                var chkifuq = new CheckIfUnique();
+                chkifuq.TableId = _form.Table.Id;
+                chkifuq.Colvalues = new Dictionary<string, object>();
+                chkifuq.Colvalues.Add(control.Name, request.Colvalues[control.Name]);
+                bResult = this.Post(chkifuq);
+                if (!bResult)
+                    break;
+            }
 
-            var e = LoadTestConfiguration();
-            DatabaseFactory df = new DatabaseFactory(e);
+            if(bResult)
+            {
+                List<string> _params = new List<string>(request.Colvalues.Count);
+                List<string> _values = new List<string>(request.Colvalues.Count);
 
+                var e = LoadTestConfiguration();
+                DatabaseFactory df = new DatabaseFactory(e);
+
+                tcol = redisClient.Get<EbTableCollection>("EbTableCollection");
+                ccol = redisClient.Get<EbTableColumnCollection>("EbTableColumnCollection");
+
+
+                foreach (string key in request.Colvalues.Keys)
+                {
+                    if (ccol.ContainsKey(key))
+                    {
+                        _values.Add(string.Format("{0}", ccol[key].Name));
+                        _params.Add(string.Format("@{0}", ccol[key].Name));
+                    }
+
+                }
+                string _sql = string.Format("INSERT INTO {0} ({1}) VALUES ({2})", tcol[request.TableId].Name, _values.ToArray().Join(","), _params.ToArray().Join(","));
+                //var dt = df.ObjectsDatabase.DoQuery(_sql);
+                using (var _con = df.ObjectsDatabase.GetNewConnection())
+                {
+                    _con.Open();
+                    var _cmd = df.ObjectsDatabase.GetNewCommand(_con, _sql);
+                    foreach (var key in request.Colvalues.Keys)
+                    {
+                        if (ccol.ContainsKey(key))
+                            _cmd.Parameters.Add(df.ObjectsDatabase.GetNewParameter(string.Format("@{0}", key), ccol[key].Type, request.Colvalues[key]));
+                    }
+
+                    return (Convert.ToInt32(_cmd.ExecuteScalar()) == 0);
+                }
+            }
+            return bResult;
+            
+        }
+
+        public bool Post(CheckIfUnique request)
+        {
+            // CIUinner(
+            List<string> _whclause_sb = new List<string>(request.Colvalues.Count);
             using (var redisClient = new RedisClient("139.59.39.130", 6379, "Opera754$"))
             {
                 tcol = redisClient.Get<EbTableCollection>("EbTableCollection");
                 ccol = redisClient.Get<EbTableColumnCollection>("EbTableColumnCollection");
             }
+            var e = LoadTestConfiguration();
+            DatabaseFactory df = new DatabaseFactory(e);
 
             foreach (string key in request.Colvalues.Keys)
-            {
-                if (ccol.ContainsKey(key))
-                {
-                    _values.Add(string.Format("{0}", ccol[key].Name));
-                    _params.Add(string.Format("@{0}", ccol[key].Name));
-                }
+                _whclause_sb.Add(string.Format("{0}=@{0}", ccol[key].Name));
 
-            }
-            string _sql = string.Format("INSERT INTO {0} ({1}) VALUES ({2})", tcol[request.TableId].Name, _values.ToArray().Join(","), _params.ToArray().Join(","));
-
-            //var dt = df.ObjectsDatabase.DoQuery(_sql);
+            string _sql = string.Format("SELECT COUNT(*) FROM {0} WHERE {1}", tcol[request.TableId].Name, _whclause_sb.ToArray().Join(" AND "));
             using (var _con = df.ObjectsDatabase.GetNewConnection())
             {
                 _con.Open();
@@ -177,42 +229,12 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     if (ccol.ContainsKey(dict.Key))
 
-                        _cmd.Parameters.Add(df.ObjectsDatabase.GetNewParameter(string.Format("@{0}", dict.Key), ccol[dict.Key].Type, dict.Value));
+                        _cmd.Parameters.Add(df.ObjectsDatabase.GetNewParameter(string.Format("@{0}", ccol[dict.Key].Name), ccol[dict.Key].Type, dict.Value));
                 }
 
                 return (Convert.ToInt32(_cmd.ExecuteScalar()) == 0);
             }
         }
-
-        //public bool Post(CheckIfUnique request)
-        //{
-        //    List<string> _whclause_sb = new List<string>(request.Colvalues.Count);
-
-        //    var e = LoadTestConfiguration();
-        //    DatabaseFactory df = new DatabaseFactory(e);
-
-        //    LoadCache();
-
-
-        //    foreach (int key in request.Colvalues.Keys)
-        //        _whclause_sb.Add(string.Format("{0}=@{0}", ccol[key].Name));
-
-        //    string _sql = string.Format("SELECT COUNT(*) FROM {0} WHERE {1}", tcol[request.TableId].Name, _whclause_sb.ToArray().Join(" AND "));
-        //    using (var _con = df.ObjectsDatabase.GetNewConnection())
-        //    {
-        //        _con.Open();
-        //        var _cmd = df.ObjectsDatabase.GetNewCommand(_con, _sql);
-        //        foreach (KeyValuePair<int, object> dict in request.Colvalues)
-        //        {
-        //            if (ccol.ContainsKey(dict.Key))
-
-        //                _cmd.Parameters.Add(df.ObjectsDatabase.GetNewParameter(string.Format("@{0}", ccol[dict.Key].Name), ccol[dict.Key].Type, dict.Value));
-        //        }
-
-        //        return (Convert.ToInt32(_cmd.ExecuteScalar()) == 0);
-        //    }
-        //}
-
 
 
         private void InitDb(string path)
@@ -223,6 +245,7 @@ namespace ExpressBase.ServiceStack.Services
                 ClientName = "XYZ Enterprises Ltd.",
                 LicenseKey = "00288-22558-25558",
             };
+
             e.DatabaseConfigurations.Add(EbDatabases.EB_OBJECTS, new EbDatabaseConfiguration(EbDatabases.EB_OBJECTS, DatabaseVendors.PGSQL, "AlArz2014", "localhost", 5432, "postgres", "infinity", 500));
             e.DatabaseConfigurations.Add(EbDatabases.EB_DATA, new EbDatabaseConfiguration(EbDatabases.EB_DATA, DatabaseVendors.PGSQL, "AlArz2014", "localhost", 5432, "postgres", "infinity", 500));
             e.DatabaseConfigurations.Add(EbDatabases.EB_ATTACHMENTS, new EbDatabaseConfiguration(EbDatabases.EB_ATTACHMENTS, DatabaseVendors.PGSQL, "AlArz2014", "localhost", 5432, "postgres", "infinity", 500));
@@ -239,8 +262,8 @@ namespace ExpressBase.ServiceStack.Services
 
         private EbConfiguration LoadTestConfiguration()
         {
-            InitDb(@"D:\xyz1.conn");
-            return ReadTestConfiguration(@"D:\xyz1.conn");
+            InitDb(@"G:\xyz1.conn");
+            return ReadTestConfiguration(@"G:\xyz1.conn");
         }
     }
 }

@@ -7,42 +7,46 @@
     string html = string.Empty;
 
     var id = Convert.ToInt32(ViewBag.FormId);
+    EbForm _form = ViewBag.EbForm;
 
     //var redisManager = new ServiceStack.Redis.PooledRedisClientManager("139.59.39.130","6379","");
-    ServiceStack.Redis.RedisClient redisClient = null;
-    try
-    {
-        redisClient = new ServiceStack.Redis.RedisClient("139.59.39.130", 6379, "Opera754$");
-    }
-    catch (Exception e)
-    {
+    //ServiceStack.Redis.RedisClient redisClient = null;
+    //try
+    //{
+    //    redisClient = new ServiceStack.Redis.RedisClient("139.59.39.130", 6379, "Opera754$");
+    //}
+    //catch (Exception e)
+    //{
 
-    }
-    EbForm _form = redisClient.Get<EbForm>(string.Format("form{0}", id));
+    //}
+    //EbForm _form = //redisClient.Get<EbForm>(string.Format("form{0}", id));
 
     // if (_form == null)
-    {
-        IServiceClient client = new JsonServiceClient("http://localhost:53125/").WithCache();
-        var fr = client.Get<EbObjectResponse>(new EbObjectRequest { Id = id });
-        if (fr.Data.Count > 0)
-        {
+    //{
+    //    IServiceClient client = new JsonServiceClient("http://localhost:53125/").WithCache();
+    //    var fr = client.Get<EbObjectResponse>(new EbObjectRequest { Id = id });
+    //    if (fr.Data.Count > 0)
+    //    {
 
-            _form = EbSerializers.ProtoBuf_DeSerialize<EbForm>(fr.Data[0].Bytea);
-            _form.Init4Redis();
-            redisClient.Set<EbForm>(string.Format("form{0}", id), _form);
-        }
-    }
+    //        _form = EbSerializers.ProtoBuf_DeSerialize<EbForm>(fr.Data[0].Bytea);
+    //        _form.Init4Redis();
+    //        redisClient.Set<EbForm>(string.Format("form{0}", id), _form);
+    //    }
+    //}
 
     html += "<div> <form action='/sample/f' method='post'> <div style='position: fixed; z-index: 1; width:100%; top:0px; background-color:#6699bb;height:30px;'>";
     html += string.Format(@" <input type='text' style='visibility:hidden;' name='isUpdate' value='false' id='{0}' />
                                 <input type='text' style='visibility:hidden;' name='fId' value={1} id='{0}' />
+                                <input type='text' style='visibility:hidden;' name='TableId' value= {2} id='tableid' />
                                 <span style='font-size:20px;'>{0}</h3>
-                                <input type='submit' style='float:right;' value='Save'/></div>", _form.Label, id);
+                                <input type='submit' style='float:right;' value='Save'/></div>", _form.Label, id,_form.Table.Id);
 
     foreach (EbControl c in _form.Controls)
     {
         head += c.GetHead();
         html += c.GetHtml();
+
+
     }
     html += "</form></div>";
 }

@@ -173,55 +173,56 @@ namespace ExpressBase.ServiceStack
         //    return client.Post<bool>(new Services.EditUser { TableId = 157, Colvalues = dict, colid = 2846 });
         //}
 
-        //public ActionResult Displaydata()
-        //{
-        //    var e = LoadTestConfiguration();
-        //    DatabaseFactory df = new DatabaseFactory(e);
+        public ActionResult Displaydata()
+        {
+            var e = LoadTestConfiguration();
+            DatabaseFactory df = new DatabaseFactory(e);
 
-        //    List<Displaydata> list1 = new List<Displaydata>();
-        //    string sql = "SELECT id,firstname,lastname,middlename FROM eb_users ";
-        //    var dt = df.ObjectsDatabase.DoQuery(sql);
+            List<Displaydata> list1 = new List<Displaydata>();
+            string sql = "SELECT id,firstname,lastname,middlename FROM eb_users ";
+            var dt = df.ObjectsDatabase.DoQuery(sql);
 
-        //    foreach (EbDataRow dr in dt.Rows)
-        //    {
-        //        Displaydata dspdata = new Displaydata();
-        //        dspdata.id = Convert.ToInt32(dr[0]);
-        //        dspdata.FirstName = dr[1].ToString();
-        //        dspdata.LastName = dr[2].ToString();
-        //        dspdata.MiddleName = dr[3].ToString();
-        //        list1.Add(dspdata);
-        //    }
+            foreach (EbDataRow dr in dt.Rows)
+            {
+                Displaydata dspdata = new Displaydata();
+                dspdata.id = Convert.ToInt32(dr[0]);
+                dspdata.FirstName = dr[1].ToString();
+                dspdata.LastName = dr[2].ToString();
+                dspdata.MiddleName = dr[3].ToString();
+                list1.Add(dspdata);
+               
+            }
+         
+            return View(list1);
+        }
 
-        //    return View(list1);
-        //}
+        private void InitDb(string path)
+        {
+            EbConfiguration e = new EbConfiguration()
+            {
+                ClientID = "xyz0007",
+                ClientName = "XYZ Enterprises Ltd.",
+                LicenseKey = "00288-22558-25558",
+            };
+            e.DatabaseConfigurations.Add(EbDatabases.EB_OBJECTS, new EbDatabaseConfiguration(EbDatabases.EB_OBJECTS, DatabaseVendors.PGSQL, "AlArz2014", "139.59.43.88", 5432, "postgres", "Opera754$", 500));
+            e.DatabaseConfigurations.Add(EbDatabases.EB_DATA, new EbDatabaseConfiguration(EbDatabases.EB_DATA, DatabaseVendors.PGSQL, "AlArz2014", "139.59.43.88", 5432, "postgres", "Opera754$", 500));
+            e.DatabaseConfigurations.Add(EbDatabases.EB_ATTACHMENTS, new EbDatabaseConfiguration(EbDatabases.EB_ATTACHMENTS, DatabaseVendors.PGSQL, "AlArz2014", "139.59.43.88", 5432, "postgres", "Opera754$", 500));
+            e.DatabaseConfigurations.Add(EbDatabases.EB_LOGS, new EbDatabaseConfiguration(EbDatabases.EB_LOGS, DatabaseVendors.PGSQL, "AlArz2014", "139.59.43.88", 5432, "postgres", "Opera754$", 500));
 
-        //private void InitDb(string path)
-        //{
-        //    EbConfiguration e = new EbConfiguration()
-        //    {
-        //        ClientID = "xyz0007",
-        //        ClientName = "XYZ Enterprises Ltd.",
-        //        LicenseKey = "00288-22558-25558",
-        //    };
-        //    e.DatabaseConfigurations.Add(EbDatabases.EB_OBJECTS, new EbDatabaseConfiguration(EbDatabases.EB_OBJECTS, DatabaseVendors.PGSQL, "AlArz2014", "139.59.43.88", 5432, "postgres", "Opera754$", 500));
-        //    e.DatabaseConfigurations.Add(EbDatabases.EB_DATA, new EbDatabaseConfiguration(EbDatabases.EB_DATA, DatabaseVendors.PGSQL, "AlArz2014", "139.59.43.88", 5432, "postgres", "Opera754$", 500));
-        //    e.DatabaseConfigurations.Add(EbDatabases.EB_ATTACHMENTS, new EbDatabaseConfiguration(EbDatabases.EB_ATTACHMENTS, DatabaseVendors.PGSQL, "AlArz2014", "139.59.43.88", 5432, "postgres", "Opera754$", 500));
-        //    e.DatabaseConfigurations.Add(EbDatabases.EB_LOGS, new EbDatabaseConfiguration(EbDatabases.EB_LOGS, DatabaseVendors.PGSQL, "AlArz2014", "139.59.43.88", 5432, "postgres", "Opera754$", 500));
+            byte[] bytea = EbSerializers.ProtoBuf_Serialize(e);
+            EbFile.Bytea_ToFile(bytea, path);
+        }
 
-        //    byte[] bytea = EbSerializers.ProtoBuf_Serialize(e);
-        //    EbFile.Bytea_ToFile(bytea, path);
-        //}
+        public static EbConfiguration ReadTestConfiguration(string path)
+        {
+            return EbSerializers.ProtoBuf_DeSerialize<EbConfiguration>(EbFile.Bytea_FromFile(path));
+        }
 
-        //public static EbConfiguration ReadTestConfiguration(string path)
-        //{
-        //    return EbSerializers.ProtoBuf_DeSerialize<EbConfiguration>(EbFile.Bytea_FromFile(path));
-        //}
-
-        //private EbConfiguration LoadTestConfiguration()
-        //{
-        //    InitDb(@"G:\xyz1.conn");
-        //    return ReadTestConfiguration(@"G:\xyz1.conn");
-        //}
+        private EbConfiguration LoadTestConfiguration()
+        {
+            InitDb(@"G:\xyz1.conn");
+            return ReadTestConfiguration(@"G:\xyz1.conn");
+        }
 
         [HttpGet]
         public ActionResult Registerview(int Id)

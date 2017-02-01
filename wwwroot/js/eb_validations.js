@@ -7,12 +7,13 @@
 }
 
 function isUnique(element) {
+    var tableid = document.getElementById("tableid").value;
     var ele = document.getElementById(element.id);
 
     if (ele.value.trim().length > 0) {
         var dict = "{" + element.id.toString() + ":" + ele.value.trim()  + "}";
 
-        $.post('http://localhost:53125/uc', { "TableId": 157, "Colvalues": dict },
+        $.post('http://localhost:53125/uc', { "TableId": tableid, "Colvalues": dict },
         function (result) {
             if (result) {
                 $(element).next().html("<img src='http://localhost:53125/images/CheckMark-24x32.png' width='22px'/>");
