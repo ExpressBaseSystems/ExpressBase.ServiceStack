@@ -88,7 +88,7 @@ namespace RazorRockstars.WebHost
                 EbTableCollection tcol = redisClient.Get<EbTableCollection>("EbTableCollection");
                 EbTableColumnCollection ccol = redisClient.Get<EbTableColumnCollection>("EbTableColumnCollection");
 
-                if (tcol == null || ccol == null)
+                //if (tcol == null || ccol == null)
                 {
                     tcol = new EbTableCollection();
                     ccol = new EbTableColumnCollection();
@@ -153,8 +153,8 @@ namespace RazorRockstars.WebHost
 
         private EbConfiguration LoadTestConfiguration()
         {
-            InitDb(@"D:\xyz1.conn");
-            return ReadTestConfiguration(@"D:\xyz1.conn");
+            InitDb(@"G:\xyz1.conn");
+            return ReadTestConfiguration(@"G:\xyz1.conn");
         }
     }
 

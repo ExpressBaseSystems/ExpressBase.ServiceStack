@@ -3,54 +3,74 @@
 @using ExpressBase.Common;
 
 @{
-    string head = string.Empty;
-    string html = string.Empty;
+        string head = string.Empty;
+        string html = string.Empty;
 
-    var fid = Convert.ToInt32(ViewBag.FormId);
-    var id = Convert.ToInt32(ViewBag.DataId);
-    EbForm _form = ViewBag.EbForm;
+        var fid = Convert.ToInt32(ViewBag.FormId);
+        var id = Convert.ToInt32(ViewBag.DataId);
+        EbForm _form = ViewBag.EbForm;
+        var frmcollection = ViewBag.formcollection;
 
 
 
-    //var redisManager = new ServiceStack.Redis.PooledRedisClientManager("139.59.39.130","6379","");
-    //ServiceStack.Redis.RedisClient redisClient = null;
-    //try
-    //{
-    //    redisClient = new ServiceStack.Redis.RedisClient("139.59.39.130", 6379, "Opera754$");
-    //}
-    //catch (Exception e)
-    //{
 
-    //}
-    //EbForm _form = //redisClient.Get<EbForm>(string.Format("form{0}", id));
 
-    // if (_form == null)
-    //{
-    //    IServiceClient client = new JsonServiceClient("http://localhost:53125/").WithCache();
-    //    var fr = client.Get<EbObjectResponse>(new EbObjectRequest { Id = id });
-    //    if (fr.Data.Count > 0)
-    //    {
+        //var redisManager = new ServiceStack.Redis.PooledRedisClientManager("139.59.39.130","6379","");
+        //ServiceStack.Redis.RedisClient redisClient = null;
+        //try
+        //{
+        //    redisClient = new ServiceStack.Redis.RedisClient("139.59.39.130", 6379, "Opera754$");
+        //}
+        //catch (Exception e)
+        //{
 
-    //        _form = EbSerializers.ProtoBuf_DeSerialize<EbForm>(fr.Data[0].Bytea);
-    //        _form.Init4Redis();
-    //        redisClient.Set<EbForm>(string.Format("form{0}", id), _form);
-    //    }
-    //}
+        //}
+        //EbForm _form = //redisClient.Get<EbForm>(string.Format("form{0}", id));
 
-    html += "<div> <form action='/sample/f' method='post'> <div style='position: fixed; z-index: 1; width:100%; top:0px; background-color:#6699bb;height:30px;'>";
-    html += string.Format(@" <input type='text' style='visibility:hidden;' name='isUpdate' value='{3}' id='{0}' />
-                                <input type='text' style='visibility:hidden;' name='fId' value={1} id='{0}' />
-                                <input type='text' style='visibility:hidden;' name='TableId' value= {2} id='tableid' />
-                                <input type='text' style='visibility:hidden;' name='DataId' value= {4} id='dataid' />
-                                <span style='font-size:20px;'>{0}</h3>
-                                <input type='submit' style='float:right;' value='Save'/></div>", _form.Label, fid,_form.Table.Id,_form.IsUpdate,id);
+        // if (_form == null)
+        //{
+        //    IServiceClient client = new JsonServiceClient("http://localhost:53125/").WithCache();
+        //    var fr = client.Get<EbObjectResponse>(new EbObjectRequest { Id = id });
+        //    if (fr.Data.Count > 0)
+        //    {
+
+        //        _form = EbSerializers.ProtoBuf_DeSerialize<EbForm>(fr.Data[0].Bytea);
+        //        _form.Init4Redis();
+        //        redisClient.Set<EbForm>(string.Format("form{0}", id), _form);
+        //    }
+        //}
+
+        html += "<div> <form id ='Form_0' method='post'> <div style='position: fixed; z-index: 1; width:100%; top:0px; background-color:#6699bb;height:30px;'>";
+        html += string.Format(@"<input type='text' style='visibility:hidden;' name='isUpdate' value='{3}' id='isUpdate'/>
+              <input type='text' style='visibility:hidden;' name='FId' value={1} id='FId'/>
+              <input type='text' style='visibility:hidden;' name='TableId' value={2} id='tableid'/>
+              <input type='text' style='visibility:hidden;' name='DataId' value= {4} id='dataid'/>
+              <span style='font-size:20px;'>{0}</h3>
+              <a href='' onclick=submitbutton() class='btn-toolbar btn-toolbar-light fa fa-floppy-o' id='button'></a>
+        ", _form.Label, fid, _form.Table.Id, _form.IsUpdate, id);
+        if (_form.IsUpdate)
+        {
+            html += @"<a href='' onclick=deletebutton() class='btn-toolbar btn-toolbar-light fa fa-trash' id='delbtn'></a>
+                  <a href='' class='btn-toolbar btn-toolbar-light fa fa-times' id='voidbtn'></a></div>
+                    <div id='myModal' class='modal'>
+                        <div class='modal-content'>
+	                       <div>
+                            Why do you want to delete this record??
+	                       </div>
+	                       <div>
+                           <textarea name='comments' rows='4' cols='20'></textarea>
+	                       <input type='button' value='Confirm' id='confirm'>
+	                       <input type='button' value='Cancel' id='cancel'>
+	                        </div>
+                        </div>
+                      </div>";
+
+    }
 
     foreach (EbControl c in _form.Controls)
     {
         head += c.GetHead();
         html += c.GetHtml();
-
-
     }
     html += "</form></div>";
 }

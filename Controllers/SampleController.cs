@@ -22,19 +22,19 @@ namespace ExpressBase.ServiceStack
             return View();
         }
 
-        
+
         public IActionResult GetData()
         {
 
-            
+
 
             return View();
         }
 
         public string sample()
         {
-            
-            return "{'name':'haii'}";       
+
+            return "{'name':'haii'}";
         }
 
         public IActionResult Table()
@@ -55,7 +55,7 @@ namespace ExpressBase.ServiceStack
 
         public IActionResult formmenu()
         {
-            
+
             return View();
         }
         //[HttpGet]
@@ -77,15 +77,15 @@ namespace ExpressBase.ServiceStack
             if (id > 0)
             {
                 if (fr.Data.Count > 0)
-            {
-                _form = Common.EbSerializers.ProtoBuf_DeSerialize<EbForm>(fr.Data[0].Bytea);
-                _form.Init4Redis();
-                _form.IsUpdate = true;
-                redisClient.Set<EbForm>(string.Format("form{0}", fid), _form);
-            }
+                {
+                    _form = Common.EbSerializers.ProtoBuf_DeSerialize<EbForm>(fr.Data[0].Bytea);
+                    _form.Init4Redis();
+                    _form.IsUpdate = true;
+                    redisClient.Set<EbForm>(string.Format("form{0}", fid), _form);
+                }
                 string html = string.Empty;
-                var vr = client.Get<ViewResponse>(new View { TableId = _form.Table.Id, ColId = id,FId =fid });
-                redisClient.Set<EbForm>("cacheform",vr.ebform);
+                var vr = client.Get<ViewResponse>(new View { TableId = _form.Table.Id, ColId = id, FId = fid });
+                redisClient.Set<EbForm>("cacheform", vr.ebform);
                 ViewBag.EbForm = vr.ebform;
                 ViewBag.FormId = fid;
                 ViewBag.DataId = id;
@@ -115,23 +115,24 @@ namespace ExpressBase.ServiceStack
             var fid = Convert.ToInt32(req["fId"]);
             var redisClient = new RedisClient("139.59.39.130", 6379, "Opera754$");
             Objects.EbForm _form = redisClient.Get<Objects.EbForm>(string.Format("form{0}", fid));
-            bool b= _form.IsUpdate;
+            bool b = _form.IsUpdate;
+            ViewBag.EbForm = _form;
+            ViewBag.FormId = fid;
+            ViewBag.formcollection = req as FormCollection;
+            //bool bStatus = Insert(req as FormCollection);
 
-            bool bStatus = Insert(req as FormCollection);
-
-            if (bStatus)
-                return RedirectToAction("masterhome", "Sample");
-            else
-                return RedirectToAction("Index", "Home");
+            //if (bStatus)
+            //    return RedirectToAction("masterhome", "Sample");
+            //else
+            //    return RedirectToAction("Index", "Home");
 
             return View();
         }
-        private bool Insert(IFormCollection udata)
-        {
-
-            JsonServiceClient client = new JsonServiceClient("http://localhost:53125/");
-            return client.Post<bool>(new Services.FormPersistRequest { TableId =Convert.ToInt32(udata["TableId"]) , Colvalues = udata.ToDictionary(dict => dict.Key, dict => (object)dict.Value) });
-        }
+        //private bool Insert(IFormCollection udata)
+        //{
+        //    JsonServiceClient client = new JsonServiceClient("http://localhost:53125/");
+        //    return client.Post<bool>(new Services.FormPersistRequest { TableId = Convert.ToInt32(udata["TableId"]), Colvalues = udata.ToDictionary(dict => dict.Key, dict => (object)dict.Value) });
+        //}
 
     }
 }

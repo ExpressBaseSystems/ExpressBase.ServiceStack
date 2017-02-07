@@ -179,7 +179,7 @@ namespace ExpressBase.ServiceStack
             DatabaseFactory df = new DatabaseFactory(e);
 
             List<Displaydata> list1 = new List<Displaydata>();
-            string sql = "SELECT id,firstname,lastname,middlename FROM eb_users ";
+            string sql = "SELECT id,firstname,lastname,middlename FROM eb_users WHERE eb_del='false' ";
             var dt = df.ObjectsDatabase.DoQuery(sql);
 
             foreach (EbDataRow dr in dt.Rows)
