@@ -3,7 +3,7 @@
 @reference : http://codepen.io/Akiletour/pen/emGOgd
 */
 .dataTables_wrapper .dataTables_processing{
-	position: fixed;
+	position: fixed!important;
 	top: 50%!important;
 	right: 0!important;
 	bottom: 0!important;

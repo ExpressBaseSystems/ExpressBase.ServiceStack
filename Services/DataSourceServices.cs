@@ -156,7 +156,7 @@ namespace ExpressBase.ServiceStack
         public object Get(DataSourceColumnsRequest request)
         {
             ColumnColletion columns = base.SessionBag.Get<ColumnColletion>(string.Format("ds_{0}_columns", request.Id));
-            if (columns == null)
+            //if (columns == null)
             {
                 request.SearchText = base.Request.QueryString["searchtext"];
                 request.SearchText = string.IsNullOrEmpty(request.SearchText) ? "" : request.SearchText; // @txtsearch
@@ -226,8 +226,8 @@ namespace ExpressBase.ServiceStack
 
         private EbConfiguration LoadTestConfiguration()
         {
-            InitDb(@"G:\xyz1.conn");
-            return ReadTestConfiguration(@"G:\xyz1.conn");
+            InitDb(@"C:\EbConn\xyz1.conn");
+            return ReadTestConfiguration(@"C:\EbConn\xyz1.conn");
         }
     }
 }

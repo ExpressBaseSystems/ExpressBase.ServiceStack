@@ -1,7 +1,9 @@
 ﻿/// <autosync enabled="true" />
 /// <reference path="js/colreorderwithresize.js" />
+/// <reference path="js/datatables.colresize.js" />
 /// <reference path="js/dygraphplotters.js" />
 /// <reference path="js/eb_validations.js" />
+/// <reference path="js/gridstack.jqueryui.min.js" />
 /// <reference path="js/gridstack.js" />
 /// <reference path="js/jquery mask plugin v1.14.9.js" />
 /// <reference path="js/jquery.datetimepicker.min.js" />
