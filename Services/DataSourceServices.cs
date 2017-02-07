@@ -156,7 +156,7 @@ namespace ExpressBase.ServiceStack
         public object Get(DataSourceColumnsRequest request)
         {
             ColumnColletion columns = base.SessionBag.Get<ColumnColletion>(string.Format("ds_{0}_columns", request.Id));
-            if (columns == null)
+            //if (columns == null)
             {
                 request.SearchText = base.Request.QueryString["searchtext"];
                 request.SearchText = string.IsNullOrEmpty(request.SearchText) ? "" : request.SearchText; // @txtsearch
