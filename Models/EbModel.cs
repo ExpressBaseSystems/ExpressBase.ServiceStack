@@ -23,6 +23,7 @@ namespace ExpressBase.ServiceStack
         
         public Dictionary<string, object> PrimaryValues { get; set; }
 
+        public string temp { get; set; }
        
         public List<EbModelLine> Lines { get; set; }
 
@@ -31,6 +32,8 @@ namespace ExpressBase.ServiceStack
         public bool IsLocked { get; set; }
 
         public bool IsDeleted { get; set; }
+
+        public bool RememberMe { get; set; }
 
         public EbModel()
         {
