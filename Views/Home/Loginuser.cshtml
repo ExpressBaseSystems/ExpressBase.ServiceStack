@@ -1,13 +1,11 @@
-﻿
-@model ExpressBase.ServiceStack.UserModel
-@{
-    ViewBag.Title = "Loginuser";
-    Layout = "~/Views/Shared/_Layout.cshtml";
-}
+﻿@*@model ExpressBase.ServiceStack.EbModel
+    @{
+        ViewBag.Title = "Loginuser";
+        Layout = "~/Views/Shared/_Layout.cshtml";
+    }*@
+
 @using (Html.BeginForm())
 {
-
-
     <form>
         <div style="margin-left:-10%;  background-color:white;width:1360px">
             <br>
@@ -25,45 +23,53 @@
                     <tr>
                         <td>
                             <div class="tdd">
-                                @Html.LabelFor(u => u.UserName)
+
+                                UserName
                             </div>
                         </td>
                         <td>
                             <div class="tdd">
+                                @{
+                                        string uname = ViewBag.cookie;
+                                        <input type="text" id="uname" name="uname" value="@uname" />
+                                  }
+                                
+                                
 
-                                @Html.TextBoxFor(u => u.UserName)
-                                @Html.ValidationMessageFor(u => u.UserName)
                             </div>
                         </td>
                     </tr>
                     <tr>
                         <td>
                             <div class="tdd">
-                                @Html.LabelFor(u => u.Password)
+
+                                Password
                             </div>
                         </td>
                         <td>
                             <div class="tdd">
-                                @Html.PasswordFor(u => u.Password)
-                                @Html.ValidationMessageFor(u => u.Password)
+                                <input type="password" id="pass" name="pass" />
+
                             </div>
                         </td>
                     </tr>
                 </table>
-                <script src="https://www.google.com/recaptcha/api.js" async defer></script>
-                <div class="g-recaptcha" data-sitekey="6LfoKA8UAAAAAHmdkrO2G5QmT1X5WSeaBm1_-BP_"></div>
+               
                 <div class="editor-label">
-                    @Html.CheckBoxFor(u => u.RememberMe)
-                    @Html.LabelFor(u => u.RememberMe)
+                    Remember me?
+                    <input type="checkbox" id="remember" name="remember" />
+                    @*@Html.CheckBoxFor(u => u.RememberMe)*@
+                    @* @Html.LabelFor(u => u.RememberMe)*@
                 </div>
                 <input type="image" src="~/images/step0001qqq.jpg" border="0" alt="Submit" />
-             
+
 
             </fieldset>
             <br><br><br><br>
         </div>
 
     </form>
+
     <style>
         .tdd {
             margin: 10px;
