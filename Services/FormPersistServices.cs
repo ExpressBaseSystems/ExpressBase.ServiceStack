@@ -65,7 +65,7 @@ namespace ExpressBase.ServiceStack.Services
     }
 
     [ClientCanSwapTemplates]
-    public class Registerservice : Service
+    public class Registerservice : EbBaseService
     {
         private EbTableCollection tcol;
         private EbTableColumnCollection ccol;
@@ -75,10 +75,8 @@ namespace ExpressBase.ServiceStack.Services
             var redisClient = new RedisClient("139.59.39.130", 6379, "Opera754$");
             tcol = redisClient.Get<EbTableCollection>("EbTableCollection");
             Objects.EbForm _form = redisClient.Get<Objects.EbForm>(string.Format("form{0}", request.FId));
-            var e = LoadTestConfiguration();
-            DatabaseFactory df = new DatabaseFactory(e);
             string sql = string.Format("select * from {0} where id= {1} AND eb_del='false' ", tcol[request.TableId].Name, request.ColId);
-            var ds = df.ObjectsDatabase.DoQueries(sql);
+            var ds = this.DatabaseFactory.ObjectsDB.DoQueries(sql);
             _form.SetData(ds);
             return new ViewResponse
             {
@@ -93,8 +91,7 @@ namespace ExpressBase.ServiceStack.Services
             List<string> list = new List<string>();
             Dictionary<string, object> dict = new Dictionary<string, object>();
             string upsql="";
-            var e = LoadTestConfiguration();
-            DatabaseFactory df = new DatabaseFactory(e);
+
             var redisClient = new RedisClient("139.59.39.130", 6379, "Opera754$");
             tcol = redisClient.Get<EbTableCollection>("EbTableCollection");
             ccol = redisClient.Get<EbTableColumnCollection>("EbTableColumnCollection");
@@ -155,16 +152,16 @@ namespace ExpressBase.ServiceStack.Services
                
                     upsql += string.Format("UPDATE {0} SET {1} WHERE id = {2} RETURNING id", tcol[request.TableId].Name, _values_sb.ToArray().Join(", "), request.Colvalues["DataId"]);
                   
-                    using (var _con = df.ObjectsDatabase.GetNewConnection())
+                    using (var _con = this.DatabaseFactory.ObjectsDB.GetNewConnection())
                     {
                         _con.Open();
-                        var _cmd = df.ObjectsDatabase.GetNewCommand(_con, upsql);
+                        var _cmd = this.DatabaseFactory.ObjectsDB.GetNewCommand(_con, upsql);
                         foreach (KeyValuePair<string, object> element in dict)
                         {
                             var myKey = request.Colvalues.FirstOrDefault(x => x.Value == element.Value).Key;
                             if (ccol.ContainsKey(myKey))
 
-                                _cmd.Parameters.Add(df.ObjectsDatabase.GetNewParameter(string.Format("@{0}", ccol[myKey].Name), ccol[myKey].Type, element.Value));
+                                _cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter(string.Format("@{0}", ccol[myKey].Name), ccol[myKey].Type, element.Value));
                         }
                         result = Convert.ToInt32(_cmd.ExecuteNonQuery());
                     }
@@ -204,15 +201,15 @@ namespace ExpressBase.ServiceStack.Services
                 string _sql = string.Format("INSERT INTO {0} ({1}) VALUES ({2});", tcol[request.TableId].Name, _values.ToArray().Join(","), _params.ToArray().Join(","));
                        _sql += string.Format("INSERT INTO eb_auditlog(tableid,dataid,eb_fid,operations,timestamp)VALUES({0},(SELECT currval('{1}_id_seq')),{2},{3},'{4}')", request.Colvalues["TableId"], tcol[request.TableId].Name, request.Colvalues["FId"], 0, DateTime.Now);
 
-                using (var _con = df.ObjectsDatabase.GetNewConnection())
+                using (var _con = this.DatabaseFactory.ObjectsDB.GetNewConnection())
                 {
                     _con.Open();
                     int DId;
-                    var _cmd = df.ObjectsDatabase.GetNewCommand(_con, _sql);
+                    var _cmd = this.DatabaseFactory.ObjectsDB.GetNewCommand(_con, _sql);
                     foreach (var key in request.Colvalues.Keys)
                     {
                         if (ccol.ContainsKey(key))
-                            _cmd.Parameters.Add(df.ObjectsDatabase.GetNewParameter(string.Format("@{0}", key), ccol[key].Type, request.Colvalues[key]));
+                            _cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter(string.Format("@{0}", key), ccol[key].Type, request.Colvalues[key]));
                     }
                     if ((DId = Convert.ToInt32(_cmd.ExecuteNonQuery())) != 0)
                     {
@@ -262,57 +259,24 @@ namespace ExpressBase.ServiceStack.Services
                 tcol = redisClient.Get<EbTableCollection>("EbTableCollection");
                 ccol = redisClient.Get<EbTableColumnCollection>("EbTableColumnCollection");
             }
-            var e = LoadTestConfiguration();
-            DatabaseFactory df = new DatabaseFactory(e);
 
             foreach (string key in request.Colvalues.Keys)
                 _whclause_sb.Add(string.Format("{0}=@{0}", ccol[key].Name));
 
             string _sql = string.Format("SELECT COUNT(*) FROM {0} WHERE {1}", tcol[request.TableId].Name, _whclause_sb.ToArray().Join(" AND "));
-            using (var _con = df.ObjectsDatabase.GetNewConnection())
+            using (var _con = this.DatabaseFactory.ObjectsDB.GetNewConnection())
             {
                 _con.Open();
-                var _cmd = df.ObjectsDatabase.GetNewCommand(_con, _sql);
+                var _cmd = this.DatabaseFactory.ObjectsDB.GetNewCommand(_con, _sql);
                 foreach (KeyValuePair<string, object> dict in request.Colvalues)
                 {
                     if (ccol.ContainsKey(dict.Key))
 
-                        _cmd.Parameters.Add(df.ObjectsDatabase.GetNewParameter(string.Format("@{0}", ccol[dict.Key].Name), ccol[dict.Key].Type, dict.Value));
+                        _cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter(string.Format("@{0}", ccol[dict.Key].Name), ccol[dict.Key].Type, dict.Value));
                 }
 
                 return (Convert.ToInt32(_cmd.ExecuteScalar()) == 0);
             }
         }
-
-
-        private void InitDb(string path)
-        {
-            EbConfiguration e = new EbConfiguration()
-            {
-                ClientID = "xyz0007",
-                ClientName = "XYZ Enterprises Ltd.",
-                LicenseKey = "00288-22558-25558",
-            };
-
-            e.DatabaseConfigurations.Add(EbDatabases.EB_OBJECTS, new EbDatabaseConfiguration(EbDatabases.EB_OBJECTS, DatabaseVendors.PGSQL, "AlArz2014", "localhost", 5432, "postgres", "infinity", 500));
-            e.DatabaseConfigurations.Add(EbDatabases.EB_DATA, new EbDatabaseConfiguration(EbDatabases.EB_DATA, DatabaseVendors.PGSQL, "AlArz2014", "localhost", 5432, "postgres", "infinity", 500));
-            e.DatabaseConfigurations.Add(EbDatabases.EB_ATTACHMENTS, new EbDatabaseConfiguration(EbDatabases.EB_ATTACHMENTS, DatabaseVendors.PGSQL, "AlArz2014", "localhost", 5432, "postgres", "infinity", 500));
-            e.DatabaseConfigurations.Add(EbDatabases.EB_LOGS, new EbDatabaseConfiguration(EbDatabases.EB_LOGS, DatabaseVendors.PGSQL, "AlArz2014", "localhost", 5432, "postgres", "infinity", 500));
-            byte[] bytea = EbSerializers.ProtoBuf_Serialize(e);
-            EbFile.Bytea_ToFile(bytea, path);
-        }
-
-        public static EbConfiguration ReadTestConfiguration(string path)
-        {
-            return EbSerializers.ProtoBuf_DeSerialize<EbConfiguration>(EbFile.Bytea_FromFile(path));
-        }
-
-        private EbConfiguration LoadTestConfiguration()
-        {
-            InitDb(@"G:\xyz1.conn");
-            return ReadTestConfiguration(@"G:\xyz1.conn");
-        }
-
-       
     }
 }

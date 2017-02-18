@@ -72,89 +72,11 @@ namespace RazorRockstars.WebHost
 
             app.Use(new RazorHandler("/notfound"));
 
-            this.LoadCache();
-
             //var manager = CacheFactory.Build<string>(p => p.WithMicrosoftMemoryCacheHandle());
 
             //Other examples of using built-in ServiceStack Handlers as middleware
             //app.Use(new StaticFileHandler("wwwroot/img/react-logo.png").Middleware);
             //app.Use(new RequestInfoHandler().Middleware);
-        }
-
-        private void LoadCache()
-        {
-            using (var redisClient = new RedisClient("139.59.39.130", 6379, "Opera754$"))
-            {
-                EbTableCollection tcol = redisClient.Get<EbTableCollection>("EbTableCollection");
-                EbTableColumnCollection ccol = redisClient.Get<EbTableColumnCollection>("EbTableColumnCollection");
-
-                //if (tcol == null || ccol == null)
-                {
-                    tcol = new EbTableCollection();
-                    ccol = new EbTableColumnCollection();
-
-                    var e = LoadTestConfiguration();
-                    DatabaseFactory df = new DatabaseFactory(e);
-                    string sql = "SELECT id,tablename FROM eb_tables;" + "SELECT id,columnname,columntype FROM eb_tablecolumns;";
-                    var dt1 = df.ObjectsDatabase.DoQueries(sql);
-
-                    foreach (EbDataRow dr in dt1.Tables[0].Rows)
-                    {
-                        EbTable ebt = new EbTable
-                        {
-                            Id = Convert.ToInt32(dr[0]),
-                            Name = dr[1].ToString()
-                        };
-
-                        tcol.Add(ebt.Id, ebt);
-                    }
-
-                    foreach (EbDataRow dr1 in dt1.Tables[1].Rows)
-                    {
-                        EbTableColumn ebtc = new EbTableColumn
-                        {
-                            Type = (DbType)(dr1[2]),
-                            Id = Convert.ToInt32(dr1[0]),
-                            Name = dr1[1].ToString(),
-                        };
-                        if (!ccol.ContainsKey(ebtc.Name))
-                        {
-                            ccol.Add(ebtc.Name, ebtc);
-                        }
-                    }
-
-                    redisClient.Set<EbTableCollection>("EbTableCollection", tcol);
-                    redisClient.Set<EbTableColumnCollection>("EbTableColumnCollection", ccol);
-                }
-            }
-        }
-
-        private void InitDb(string path)
-        {
-            EbConfiguration e = new EbConfiguration()
-            {
-                ClientID = "xyz0007",
-                ClientName = "XYZ Enterprises Ltd.",
-                LicenseKey = "00288-22558-25558",
-            };
-            e.DatabaseConfigurations.Add(EbDatabases.EB_OBJECTS, new EbDatabaseConfiguration(EbDatabases.EB_OBJECTS, DatabaseVendors.PGSQL, "AlArz2014", "localhost", 5432, "postgres", "infinity", 500));
-            e.DatabaseConfigurations.Add(EbDatabases.EB_DATA, new EbDatabaseConfiguration(EbDatabases.EB_DATA, DatabaseVendors.PGSQL, "AlArz2014", "localhost", 5432, "postgres", "infinity", 500));
-            e.DatabaseConfigurations.Add(EbDatabases.EB_ATTACHMENTS, new EbDatabaseConfiguration(EbDatabases.EB_ATTACHMENTS, DatabaseVendors.PGSQL, "AlArz2014", "localhost", 5432, "postgres", "infinity", 500));
-            e.DatabaseConfigurations.Add(EbDatabases.EB_LOGS, new EbDatabaseConfiguration(EbDatabases.EB_LOGS, DatabaseVendors.PGSQL, "AlArz2014", "localhost", 5432, "postgres", "infinity", 500));
-
-            byte[] bytea = EbSerializers.ProtoBuf_Serialize(e);
-            EbFile.Bytea_ToFile(bytea, path);
-        }
-
-        public static EbConfiguration ReadTestConfiguration(string path)
-        {
-            return EbSerializers.ProtoBuf_DeSerialize<EbConfiguration>(EbFile.Bytea_FromFile(path));
-        }
-
-        private EbConfiguration LoadTestConfiguration()
-        {
-            InitDb(@"G:\xyz1.conn");
-            return ReadTestConfiguration(@"G:\xyz1.conn");
         }
     }
 

@@ -7,6 +7,7 @@ using ExpressBase.Data;
 using System;
 using ExpressBase.Objects;
 using System.Collections.Generic;
+using ExpressBase.ServiceStack.Services;
 
 namespace ExpressBase.ServiceStack
 {
@@ -71,7 +72,7 @@ namespace ExpressBase.ServiceStack
 
     [ClientCanSwapTemplates]
     [DefaultView("ds")]
-    public class DataSourceService : Service
+    public class DataSourceService : EbBaseService
     {
         public object Get(DataSourceDataRequest request)
         {
@@ -90,9 +91,8 @@ namespace ExpressBase.ServiceStack
                 searchValue = new List<string>(request.SearchText.Split(','));
             if (!string.IsNullOrEmpty(base.Request.QueryString["selectedvalue"]))
                 selectedValue = new List<string>(base.Request.QueryString["selectedvalue"].Split(','));
-            var e = LoadTestConfiguration();
-            DatabaseFactory df = new DatabaseFactory(e);
-            var dt = df.ObjectsDatabase.DoQuery(string.Format("SELECT obj_bytea FROM eb_objects WHERE id={0}", request.Id));
+
+            var dt = this.DatabaseFactory.ObjectsDB.DoQuery(string.Format("SELECT obj_bytea FROM eb_objects WHERE id={0}", request.Id));
 
             DataSourceDataResponse dsresponse = null;
 
@@ -134,11 +134,11 @@ namespace ExpressBase.ServiceStack
 
                     var parameters = new System.Data.Common.DbParameter[2]
                     {
-                        df.ObjectsDatabase.GetNewParameter("@limit", System.Data.DbType.Int32, request.Length),
-                        df.ObjectsDatabase.GetNewParameter("@last_id", System.Data.DbType.Int32, request.Start+1)
+                        this.DatabaseFactory.ObjectsDB.GetNewParameter("@limit", System.Data.DbType.Int32, request.Length),
+                        this.DatabaseFactory.ObjectsDB.GetNewParameter("@last_id", System.Data.DbType.Int32, request.Start+1)
                     };
 
-                    var _dataset = (request.Length > 0) ? df.ObjectsDatabase.DoQueries(_sql, parameters) : df.ObjectsDatabase.DoQueries(_sql);
+                    var _dataset = (request.Length > 0) ? this.DatabaseFactory.ObjectsDB.DoQueries(_sql, parameters) : this.DatabaseFactory.ObjectsDB.DoQueries(_sql);
 
                     dsresponse = new DataSourceDataResponse
                     {
@@ -165,9 +165,7 @@ namespace ExpressBase.ServiceStack
 
                 string _sql = string.Format("SELECT obj_bytea FROM eb_objects WHERE id={0}", request.Id);
 
-                var e = LoadTestConfiguration();
-                DatabaseFactory df = new DatabaseFactory(e);
-                var dt = df.ObjectsDatabase.DoQuery(_sql);
+                var dt = this.DatabaseFactory.ObjectsDB.DoQuery(_sql);
 
                 if (dt.Rows.Count > 0)
                 {
@@ -182,12 +180,12 @@ namespace ExpressBase.ServiceStack
 
                         var parameters = new System.Data.Common.DbParameter[2]
                         {
-                            df.ObjectsDatabase.GetNewParameter("@limit", System.Data.DbType.Int32, 0),
-                            df.ObjectsDatabase.GetNewParameter("@last_id", System.Data.DbType.Int32, 0)
+                            this.DatabaseFactory.ObjectsDB.GetNewParameter("@limit", System.Data.DbType.Int32, 0),
+                            this.DatabaseFactory.ObjectsDB.GetNewParameter("@last_id", System.Data.DbType.Int32, 0)
                         };
 
                         _sql = (_sql.IndexOf(";") > 0) ? _sql.Substring(_sql.IndexOf(";") + 1) : _sql;
-                        var dt2 = df.ObjectsDatabase.DoQuery(_sql, parameters);
+                        var dt2 = this.DatabaseFactory.ObjectsDB.DoQuery(_sql, parameters);
                         columns = dt2.Columns;
 
                         base.SessionBag.Set<ColumnColletion>(string.Format("ds_{0}_columns", request.Id), dt2.Columns);
@@ -199,35 +197,6 @@ namespace ExpressBase.ServiceStack
             {
                 Columns = columns
             };
-        }
-
-        private void InitDb(string path)
-        {
-            EbConfiguration e = new EbConfiguration()
-            {
-                ClientID = "xyz0007",
-                ClientName = "XYZ Enterprises Ltd.",
-                LicenseKey = "00288-22558-25558",
-            };
-
-            e.DatabaseConfigurations.Add(EbDatabases.EB_OBJECTS, new EbDatabaseConfiguration(EbDatabases.EB_OBJECTS, DatabaseVendors.PGSQL, "AlArz2014", "localhost", 5432, "postgres", "infinity", 500));
-            e.DatabaseConfigurations.Add(EbDatabases.EB_DATA, new EbDatabaseConfiguration(EbDatabases.EB_DATA, DatabaseVendors.PGSQL, "AlArz2014", "localhost", 5432, "postgres", "infinity", 500));
-            e.DatabaseConfigurations.Add(EbDatabases.EB_ATTACHMENTS, new EbDatabaseConfiguration(EbDatabases.EB_ATTACHMENTS, DatabaseVendors.PGSQL, "AlArz2014", "localhost", 5432, "postgres", "infinity", 500));
-            e.DatabaseConfigurations.Add(EbDatabases.EB_LOGS, new EbDatabaseConfiguration(EbDatabases.EB_LOGS, DatabaseVendors.PGSQL, "AlArz2014", "localhost", 5432, "postgres", "infinity", 500));
-
-            byte[] bytea = EbSerializers.ProtoBuf_Serialize(e);
-            EbFile.Bytea_ToFile(bytea, path);
-        }
-
-        public static EbConfiguration ReadTestConfiguration(string path)
-        {
-            return EbSerializers.ProtoBuf_DeSerialize<EbConfiguration>(EbFile.Bytea_FromFile(path));
-        }
-
-        private EbConfiguration LoadTestConfiguration()
-        {
-            InitDb(@"C:\EbConn\xyz1.conn");
-            return ReadTestConfiguration(@"C:\EbConn\xyz1.conn");
         }
     }
 }
