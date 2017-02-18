@@ -32,7 +32,7 @@ namespace ExpressBase.ServiceStack
                     string key = string.Format("EbClientConf_{0}", this.ClientID);
 
                     conf = client.Get<EbClientConf>(key);
-                    //if (conf == null)
+                    if (conf == null)
                     {
                         string path = Directory.GetParent(System.IO.Directory.GetCurrentDirectory()).FullName;
                         var infraconf = EbSerializers.ProtoBuf_DeSerialize<EbInfraDBConf>(EbFile.Bytea_FromFile(Path.Combine(path, "EbInfra.conn")));
