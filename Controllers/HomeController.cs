@@ -32,46 +32,57 @@ namespace ExpressBase.ServiceStack
         //    return View();
         //}
         [HttpPost]
-        public async Task<IActionResult> Loginuser(ExpressBase.ServiceStack.UserModel user)
+        public IActionResult Loginuser()
         {
 
             if (ModelState.IsValid)
             {
-                if (await user.IsValid(user.UserName, user.Password))
+                var req = this.HttpContext.Request.Form;
+                if (req.ContainsKey("remember"))
                 {
-                    // UserModel.IsLoggedIn = 1;
-                    // TempData["name"] = "Test data";
-                    if (user.RememberMe)
-                    {
-                        CookieOptions options = new CookieOptions();
-                        options.Expires = DateTime.Now.AddDays(15);
-                        Response.Cookies.Append("UserName", user.UserName, options);
-
-                    }
+                    CookieOptions options = new CookieOptions();
+                    options.Expires = DateTime.Now.AddDays(15);
+                    Response.Cookies.Append("UserName", req["uname"], options);
+                }
+                JsonServiceClient client = new JsonServiceClient("http://localhost:53125/");
+                LoginResponse res = client.Post<LoginResponse>(new Login { UserName = req["uname"], Password = req["pass"] });
+                if (res.AuthenticatedUser != null)
+                {
 
                     return RedirectToAction("formmenu", "Sample");
-
-
-
                 }
-                else
-                {
-                    ModelState.AddModelError("", "Login data is incorrect!");
-                }
+                //if (await user.IsValid(user.PrimaryValues[""], user.PrimaryValues[""]);
+                //{
+                //    // UserModel.IsLoggedIn = 1;
+                //    // TempData["name"] = "Test data";
+                //    if (user.RememberMe)
+                //    {
+                //        CookieOptions options = new CookieOptions();
+                //        options.Expires = DateTime.Now.AddDays(15);
+                //        Response.Cookies.Append("UserName", user.UserName, options);
+
+                //    }
+            }
+            else
+            {
+                ModelState.AddModelError("", "Login data is incorrect!");
             }
 
-            return View("Loginuser");
+
+            return View();
         }
         [HttpGet]
-        public IActionResult Loginuser()
+        public IActionResult Loginuser(int i)
         {
-            UserModel model = new UserModel
-            {
-                RememberMe = true,
-                UserName = Request.Cookies["UserName"],
-            };
+            string uname = Request.Cookies["UserName"];
+            ViewBag.Cookie = uname;
+            //UserModel model = new UserModel
+            //{
+            //    RememberMe = true,
+            //    UserName = Request.Cookies["UserName"],
+            //};
 
-            return View(model);
+            return View();
         }
         //public IActionResult logout(ExpressBase.ServiceStack.UserModel user)
         //{
@@ -190,9 +201,9 @@ namespace ExpressBase.ServiceStack
         //        dspdata.LastName = dr[2].ToString();
         //        dspdata.MiddleName = dr[3].ToString();
         //        list1.Add(dspdata);
-               
+
         //    }
-         
+
         //    return View(list1);
         //}
 
