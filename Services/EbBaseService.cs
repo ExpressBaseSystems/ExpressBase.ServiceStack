@@ -14,7 +14,7 @@ namespace ExpressBase.ServiceStack
 {
     public class EbBaseService : Service
     {
-        internal Int64 ClientID {  get { return 100000001; } }
+        internal string ClientID {  get { return "eb-sureba-dev"; } }
 
         internal RedisClient RedisClient
         {
