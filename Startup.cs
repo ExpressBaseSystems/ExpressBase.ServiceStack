@@ -1,6 +1,4 @@
-﻿using ExpressBase.Common;
-using ExpressBase.Data;
-using ExpressBase.Objects;
+﻿suing ExpressBase.ServiceStack;
 using Funq;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -8,16 +6,11 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using ServiceStack;
-using ServiceStack.Data;
-using ServiceStack.Host.Handlers;
-using ServiceStack.Logging;
+using ServiceStack.Auth;
 using ServiceStack.Mvc;
-using ServiceStack.OrmLite;
 using ServiceStack.ProtoBuf;
 using ServiceStack.Redis;
-using ServiceStack.VirtualPath;
-using System;
-using System.Data;
+using System.Linq;
 
 namespace RazorRockstars.WebHost
 {
@@ -65,18 +58,18 @@ namespace RazorRockstars.WebHost
 
             app.UseMvc(routes =>
             {
-                routes.MapRoute(
-                    name: "default",
-                    template: "{controller=Home}/{action=Loginuser}/{id?}");
+                routes.MapRoute("login", "login/{*clientid}", defaults: new { controller = "External", action = "LoginTenantUser" });
+                routes.MapRoute("default", "{controller=Home}/{action=Contact}");
             });
 
+            //app.UseMvc(routes =>
+            //{
+            //    routes.MapRoute(
+            //        name: "default",
+            //        template: "{controller=External}/{action=LoginTenantUser}/{id?}");
+            //});
+
             app.Use(new RazorHandler("/notfound"));
-
-            //var manager = CacheFactory.Build<string>(p => p.WithMicrosoftMemoryCacheHandle());
-
-            //Other examples of using built-in ServiceStack Handlers as middleware
-            //app.Use(new StaticFileHandler("wwwroot/img/react-logo.png").Middleware);
-            //app.Use(new RequestInfoHandler().Middleware);
         }
     }
 
@@ -88,18 +81,42 @@ namespace RazorRockstars.WebHost
         {
             Plugins.Add(new RazorFormat());
             Plugins.Add(new ProtoBufFormat());
-            //Plugins.Add(new RequestLogsFeature
-            //{
-            //    RequestLogger = new CsvRequestLogger(
-            //    files: new FileSystemVirtualPathProvider(this, Config.WebHostPhysicalPath),
-            //    requestLogsPattern: "requestlogs/{year}-{month}/{year}-{month}-{day}.csv",
-            //    errorLogsPattern: "requestlogs/{year}-{month}/{year}-{month}-{day}-errors.csv",
-            //    appendEvery: TimeSpan.FromSeconds(1)
-            //),
-            //});
+
+            Plugins.Add(new AuthFeature(() => new CustomUserSession(),
+                new IAuthProvider[] {
+                    new MyJwtAuthProvider(AppSettings) {
+                        HashAlgorithm = "RS256",
+                        PrivateKeyXml = AppSettings.GetString("PrivateKeyXml"),
+                        RequireSecureConnection = false,
+                        CreatePayloadFilter = (payload,session) => {
+                            payload["iss"] = "eb-sec";
+                            payload["aud"] = "eb-web";
+                            payload["iat"] = ((System.Int32)session.CreatedAt.ToUniversalTime().Subtract(new System.DateTime(1970, 1, 1)).TotalSeconds).ToString();
+                            payload["exp"] = ((System.Int32)session.CreatedAt.AddHours(3).ToUniversalTime().Subtract(new System.DateTime(1970, 1, 1)).TotalSeconds).ToString();
+                            payload["uid"] = session.UserAuthId;
+                            payload["email"] = session.UserName;
+                            payload["ClientId"] = (session as CustomUserSession).ClientId;
+                        }
+                    },
+                    //new ApiKeyAuthProvider(AppSettings),        //Sign-in with API Key
+                    //new CredentialsAuthProvider(),              //Sign-in with UserName/Password credentials
+                    //new BasicAuthProvider(),                    //Sign-in with HTTP Basic Auth
+                    //new DigestAuthProvider(AppSettings),        //Sign-in with HTTP Digest Auth
+                    //new TwitterAuthProvider(AppSettings),       //Sign-in with Twitter
+                    //new FacebookAuthProvider(AppSettings),      //Sign-in with Facebook
+                    //new YahooOpenIdOAuthProvider(AppSettings),  //Sign-in with Yahoo OpenId
+                    //new OpenIdOAuthProvider(AppSettings),       //Sign-in with Custom OpenId
+                    //new GoogleOAuth2Provider(AppSettings),      //Sign-in with Google OAuth2 Provider
+                    //new LinkedInOAuth2Provider(AppSettings),    //Sign-in with LinkedIn OAuth2 Provider
+                    //new GithubAuthProvider(AppSettings),        //Sign-in with GitHub OAuth Provider
+                    //new YandexAuthProvider(AppSettings),        //Sign-in with Yandex OAuth Provider        
+                    //new VkAuthProvider(AppSettings),            //Sign-in with VK.com OAuth Provider 
+                }));
 
             //Also works but it's recommended to handle 404's by registering at end of .NET Core pipeline
             //this.CustomErrorHttpHandlers[HttpStatusCode.NotFound] = new RazorHandler("/notfound");
+
+            //container.RegisterAutoWired<TokenAuthorizationManager>().ReusedWithin(ReuseScope.Request);
 
             this.ContentTypes.Register(MimeTypes.ProtoBuf, (reqCtx, res, stream) => ProtoBuf.Serializer.NonGeneric.Serialize(stream, res), ProtoBuf.Serializer.NonGeneric.Deserialize);
 

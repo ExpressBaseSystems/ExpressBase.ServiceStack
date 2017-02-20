@@ -9,6 +9,7 @@ using ExpressBase.Data;
 using System;
 using ExpressBase.Objects;
 using System.Data.Common;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace ExpressBase.ServiceStack
 {
@@ -16,8 +17,19 @@ namespace ExpressBase.ServiceStack
     [DefaultView("Form")]
     public class EbObjectService : EbBaseService
     {
+        [Authenticate]
         public object Get(EbObjectRequest request)
         {
+            var jwtoken = new JwtSecurityToken(request.Token);
+            foreach (var c in jwtoken.Claims)
+            {
+                if (c.Type == "ClientId")
+                {
+                    base.ClientID = c.Value;
+                    break;
+                }
+            }
+
             EbDataTable dt = null;
             using (var con = this.DatabaseFactory.ObjectsDB.GetNewConnection())
             {

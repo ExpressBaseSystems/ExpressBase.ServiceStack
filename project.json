@@ -35,8 +35,8 @@
     "ExpressBase.Data": "1.0.0",
     "ExpressBase.Security": "1.0.0",
     "ExpressBase.Objects": "1.0.0",
-    "ExpressBase.Objects": "1.0.0",
-    "ServiceStack.Redis.Core": "1.0.32" },
+    "ServiceStack.Redis.Core": "1.0.32",
+    "System.IdentityModel.Tokens.Jwt": "5.0.0" },
 
   "tools": {
     "BundlerMinifier.Core": "2.0.238",

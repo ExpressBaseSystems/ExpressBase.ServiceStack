@@ -27,63 +27,7 @@ namespace ExpressBase.ServiceStack
         //{
         //    return View();
         //}
-        //public IActionResult Contact()
-        //{
-        //    return View();
-        //}
-        [HttpPost]
-        public IActionResult Loginuser()
-        {
-
-            if (ModelState.IsValid)
-            {
-                var req = this.HttpContext.Request.Form;
-                if (req.ContainsKey("remember"))
-                {
-                    CookieOptions options = new CookieOptions();
-                    options.Expires = DateTime.Now.AddDays(15);
-                    Response.Cookies.Append("UserName", req["uname"], options);
-                }
-                JsonServiceClient client = new JsonServiceClient("http://localhost:53125/");
-                LoginResponse res = client.Post<LoginResponse>(new Login { UserName = req["uname"], Password = req["pass"] });
-                if (res.AuthenticatedUser != null)
-                {
-
-                    return RedirectToAction("formmenu", "Sample");
-                }
-                //if (await user.IsValid(user.PrimaryValues[""], user.PrimaryValues[""]);
-                //{
-                //    // UserModel.IsLoggedIn = 1;
-                //    // TempData["name"] = "Test data";
-                //    if (user.RememberMe)
-                //    {
-                //        CookieOptions options = new CookieOptions();
-                //        options.Expires = DateTime.Now.AddDays(15);
-                //        Response.Cookies.Append("UserName", user.UserName, options);
-
-                //    }
-            }
-            else
-            {
-                ModelState.AddModelError("", "Login data is incorrect!");
-            }
-
-
-            return View();
-        }
-        [HttpGet]
-        public IActionResult Loginuser(int i)
-        {
-            string uname = Request.Cookies["UserName"];
-            ViewBag.Cookie = uname;
-            //UserModel model = new UserModel
-            //{
-            //    RememberMe = true,
-            //    UserName = Request.Cookies["UserName"],
-            //};
-
-            return View();
-        }
+        public IActionResult Contact() { return View(); }
         //public IActionResult logout(ExpressBase.ServiceStack.UserModel user)
         //{
         //    //UserModel.IsLoggedIn = 0;
@@ -244,8 +188,8 @@ namespace ExpressBase.ServiceStack
             //    {
             //        IsEdited = false
             //    };
-                return View("registerview");
-           
+            return View("registerview");
+
 
         }
     }
