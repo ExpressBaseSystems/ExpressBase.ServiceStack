@@ -39,7 +39,7 @@ namespace ExpressBase.ServiceStack
                         var infraconf = EbSerializers.ProtoBuf_DeSerialize<EbInfraDBConf>(EbFile.Bytea_FromFile(Path.Combine(path, "EbInfra.conn")));
 
                         var df = new DatabaseFactory(infraconf);
-                        var bytea = df.InfraDB_RO.DoQuery<byte[]>(string.Format("SELECT conf FROM eb_clients WHERE cid={0}", this.ClientID));
+                        var bytea = df.InfraDB_RO.DoQuery<byte[]>(string.Format("SELECT conf FROM eb_clients WHERE cid='{0}'", this.ClientID));
 
                         if (bytea == null)
                             throw new Exception("Unauthorized!");
