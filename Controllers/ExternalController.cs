@@ -28,7 +28,7 @@ namespace ExpressBase.ServiceStack.Controllers
                     provider = MyJwtAuthProvider.Name,
                     UserName = req["uname"],
                     Password = req["pass"],
-                    Meta = new Dictionary<string, string> { { "ClientId", req["clientid"] } },
+                    Meta = new Dictionary<string, string> { { "ClientId", req["clientid"] }, { "Login", "User" } },
                     UseTokenCookie = true
                 });
             }catch(WebServiceException wse)
@@ -46,7 +46,7 @@ namespace ExpressBase.ServiceStack.Controllers
             Response.Cookies.Append("Token", authResponse.BearerToken, options);
             if (req.ContainsKey("remember"))
                 Response.Cookies.Append("UserName", req["uname"], options);
-
+           
             return RedirectToAction("formmenu", "Sample");
         }
     }

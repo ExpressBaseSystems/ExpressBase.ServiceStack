@@ -192,5 +192,74 @@ namespace ExpressBase.ServiceStack
 
 
         }
+        [HttpGet]
+        public IActionResult SignupClient()
+        {
+
+            return View();
+        }
+
+        [HttpPost]
+        public IActionResult SignupClient(int i)
+        {
+
+            var req = this.HttpContext.Request.Form;
+
+            JsonServiceClient client = new JsonServiceClient("http://localhost:53125/");
+            if (client.Post<bool>(new Services.InfraRequest { Colvalues = req.ToDictionary(dict => dict.Key, dict => (object)dict.Value) })) ;
+            {
+                return RedirectToAction("LoginClient", "Home");
+            }
+
+            return View();
+        }
+        [HttpGet]
+        public IActionResult LoginClient()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        public IActionResult LoginClient(int i)
+        {
+            var req = this.HttpContext.Request.Form;
+            AuthenticateResponse authResponse = null;
+        
+
+            try
+            {
+                var authClient = new JsonServiceClient("http://localhost:53125/");
+                authResponse = authClient.Send(new Authenticate
+                {
+                    provider = MyJwtAuthProvider.Name,
+                    UserName = req["uname"],
+                    Password = req["pass"],
+                    Meta = new Dictionary<string, string> { { "ClientId", req["cid"] }, { "Login","Client"} },
+                    UseTokenCookie = true
+                });
+            }
+            catch (WebServiceException wse)
+            {
+                return View();
+            }
+
+            if (authResponse != null && authResponse.ResponseStatus != null
+                && authResponse.ResponseStatus.ErrorCode == "EbUnauthorized")
+                return View();
+
+            CookieOptions options = new CookieOptions();
+
+            Response.Cookies.Append("Token", authResponse.BearerToken, options);
+            if (req.ContainsKey("remember"))
+                Response.Cookies.Append("UserName", req["uname"], options);
+
+            return RedirectToAction("ClientDashboard", "Home");
+        }
+        [HttpGet]
+        public IActionResult ClientDashboard()
+        {
+
+            return View();
+        }
     }
 }

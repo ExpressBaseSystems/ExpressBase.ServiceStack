@@ -9,6 +9,9 @@ using System.Linq;
 using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using ServiceStack.Web;
+using System.IO;
+using ExpressBase.Data;
+using System.Data.Common;
 
 namespace ExpressBase.ServiceStack
 {
@@ -93,6 +96,7 @@ namespace ExpressBase.ServiceStack
     public class MyJwtAuthProvider : JwtAuthProvider
     {
         User _authUser = null;
+      
 
         public MyJwtAuthProvider(IAppSettings settings) : base(settings) { }
 
@@ -101,18 +105,34 @@ namespace ExpressBase.ServiceStack
             CustomUserSession mysession = session as CustomUserSession;
 
             AuthenticateResponse response = null;
+            if (request.Meta["Login"] == "Client")
+            {
+                string path = Directory.GetParent(System.IO.Directory.GetCurrentDirectory()).FullName;
+                var infraconf = EbSerializers.ProtoBuf_DeSerialize<EbInfraDBConf>(EbFile.Bytea_FromFile(Path.Combine(path, "EbInfra.conn")));
+                var df = new DatabaseFactory(infraconf);   
+                _authUser = InfraUser.GetDetails(df, request.UserName, request.Password);
+            }
+            else
+            {
+                EbBaseService bservice = new EbBaseService();
+                bservice.ClientID = request.Meta["ClientId"];
 
-            EbBaseService bservice = new EbBaseService();
-            bservice.ClientID = request.Meta["ClientId"];
-
-            _authUser = User.GetDetails(bservice.DatabaseFactory, request.UserName, request.Password);
-
+                _authUser = User.GetDetails(bservice.DatabaseFactory, request.UserName, request.Password);
+            }
             if (_authUser != null)
             {
                 mysession.IsAuthenticated = true;
                 mysession.UserAuthId = _authUser.Id.ToString();
                 mysession.UserName = _authUser.Uname;
-                mysession.ClientId = request.Meta["ClientId"];
+                if(request.Meta.ContainsKey("ClientId"))
+                {
+                    mysession.ClientId = request.Meta["ClientId"];
+                }
+                else
+                {
+                    mysession.ClientId = _authUser.Cid.ToString();
+                }
+                
 
                 response = new AuthenticateResponse
                 {
