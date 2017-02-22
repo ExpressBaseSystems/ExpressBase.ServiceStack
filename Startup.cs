@@ -1,4 +1,4 @@
-﻿suing ExpressBase.ServiceStack;
+﻿using ExpressBase.ServiceStack;
 using Funq;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
