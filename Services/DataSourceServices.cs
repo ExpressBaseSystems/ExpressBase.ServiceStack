@@ -84,6 +84,7 @@ namespace ExpressBase.ServiceStack
             List<string> searchColumn = new List<string>();
             List<string> searchValue = new List<string>();
             List<string> selectedValue = new List<string>();
+
             if (!string.IsNullOrEmpty(request.SearchColumnName))
                 searchColumn = new List<string>(request.SearchColumnName.Split(','));
             if (!string.IsNullOrEmpty(request.SearchText))
@@ -114,16 +115,6 @@ namespace ExpressBase.ServiceStack
 
                             if (selectedValue[j] == "null")
                                 _c += string.Format("AND LOWER({0})::text LIKE LOWER('%{1}%') ", searchColumn[j], searchValue[j]);
-                            else if (selectedValue[j] == "B")
-                            {
-                                List<string> lst = new List<string>();
-                                lst = new List<string>(searchValue[j].Split('@'));
-                                if (Convert.ToInt32(lst[0]) < Convert.ToInt32(lst[1]))
-                                    _c += string.Format("AND {0} > '{1}' AND {0} < '{2}' ", searchColumn[j], lst[0], lst[1]);
-                                else
-                                    _c += string.Format("AND {0} > '{1}' AND {0} < '{2}' ", searchColumn[j], lst[1], lst[0]);
-                            }
-
                             else
                                 _c += string.Format("AND {0} {1} '{2}' ", searchColumn[j], selectedValue[j], searchValue[j]);
                         }
@@ -135,7 +126,7 @@ namespace ExpressBase.ServiceStack
                     var parameters = new System.Data.Common.DbParameter[2]
                     {
                         df.ObjectsDatabase.GetNewParameter("@limit", System.Data.DbType.Int32, request.Length),
-                        df.ObjectsDatabase.GetNewParameter("@last_id", System.Data.DbType.Int32, request.Start+1)
+                        df.ObjectsDatabase.GetNewParameter("@last_id", System.Data.DbType.Int32, request.Start)
                     };
 
                     var _dataset = (request.Length > 0) ? df.ObjectsDatabase.DoQueries(_sql, parameters) : df.ObjectsDatabase.DoQueries(_sql);
@@ -199,35 +190,6 @@ namespace ExpressBase.ServiceStack
             {
                 Columns = columns
             };
-        }
-
-        private void InitDb(string path)
-        {
-            EbConfiguration e = new EbConfiguration()
-            {
-                ClientID = "xyz0007",
-                ClientName = "XYZ Enterprises Ltd.",
-                LicenseKey = "00288-22558-25558",
-            };
-
-            e.DatabaseConfigurations.Add(EbDatabases.EB_OBJECTS, new EbDatabaseConfiguration(EbDatabases.EB_OBJECTS, DatabaseVendors.PGSQL, "AlArz2014", "localhost", 5432, "postgres", "infinity", 500));
-            e.DatabaseConfigurations.Add(EbDatabases.EB_DATA, new EbDatabaseConfiguration(EbDatabases.EB_DATA, DatabaseVendors.PGSQL, "AlArz2014", "localhost", 5432, "postgres", "infinity", 500));
-            e.DatabaseConfigurations.Add(EbDatabases.EB_ATTACHMENTS, new EbDatabaseConfiguration(EbDatabases.EB_ATTACHMENTS, DatabaseVendors.PGSQL, "AlArz2014", "localhost", 5432, "postgres", "infinity", 500));
-            e.DatabaseConfigurations.Add(EbDatabases.EB_LOGS, new EbDatabaseConfiguration(EbDatabases.EB_LOGS, DatabaseVendors.PGSQL, "AlArz2014", "localhost", 5432, "postgres", "infinity", 500));
-
-            byte[] bytea = EbSerializers.ProtoBuf_Serialize(e);
-            EbFile.Bytea_ToFile(bytea, path);
-        }
-
-        public static EbConfiguration ReadTestConfiguration(string path)
-        {
-            return EbSerializers.ProtoBuf_DeSerialize<EbConfiguration>(EbFile.Bytea_FromFile(path));
-        }
-
-        private EbConfiguration LoadTestConfiguration()
-        {
-            InitDb(@"C:\EbConn\xyz1.conn");
-            return ReadTestConfiguration(@"C:\EbConn\xyz1.conn");
         }
     }
 }

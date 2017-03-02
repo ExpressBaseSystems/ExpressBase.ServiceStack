@@ -40,13 +40,13 @@
         //    }
         //}
 
-        html += "<div> <form id ='Form_0' method='post'> <div style='position: fixed; z-index: 1; width:100%; top:0px; background-color:#6699bb;height:30px;'>";
+        html += "<div> <form id ='Form_0' method='post'> <div>";
         html += string.Format(@"<input type='text' style='visibility:hidden;' name='isUpdate' value='{3}' id='isUpdate'/>
               <input type='text' style='visibility:hidden;' name='FId' value={1} id='FId'/>
               <input type='text' style='visibility:hidden;' name='TableId' value={2} id='tableid'/>
               <input type='text' style='visibility:hidden;' name='DataId' value= {4} id='dataid'/>
-              <span style='font-size:20px;'>{0}</h3>
-              <a href='' onclick=submitbutton() class='btn-toolbar btn-toolbar-light fa fa-floppy-o' id='button'></a>
+              <span>{0}</h3>
+              <a href='' onclick=submitbutton() class='btn-toolbar btn-toolbar-light fa fa-save' id='button'></a>
         ", _form.Label, fid, _form.Table.Id, _form.IsUpdate, id);
         if (_form.IsUpdate)
         {

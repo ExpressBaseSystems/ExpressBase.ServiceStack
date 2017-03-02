@@ -4,6 +4,7 @@
 */
 .dataTables_wrapper .dataTables_processing{
 	position: fixed!important;
+    z-index:1000!important;
 	top: 50%!important;
 	right: 0!important;
 	bottom: 0!important;
