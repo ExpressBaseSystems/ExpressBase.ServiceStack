@@ -37,4 +37,17 @@ $(document).ready(function () {
             return 'Strong'
         }
     }
+
+    $('#rpwd').keyup(function () {
+        var password = document.getElementById("password");
+        var confirm_password = document.getElementById("rpwd");
+       
+            if (password.value != confirm_password.value) {
+                $('#rresult').html("Passwords Don't Match");
+            } else {
+                $('#rresult').html("Passwords Match");
+            }
+        
+
+    })
 });

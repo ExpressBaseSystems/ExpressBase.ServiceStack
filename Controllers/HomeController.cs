@@ -27,52 +27,7 @@ namespace ExpressBase.ServiceStack
         //{
         //    return View();
         //}
-        //public IActionResult Contact()
-        //{
-        //    return View();
-        //}
-        [HttpPost]
-        public async Task<IActionResult> Loginuser(ExpressBase.ServiceStack.UserModel user)
-        {
-
-            if (ModelState.IsValid)
-            {
-                if (await user.IsValid(user.UserName, user.Password))
-                {
-                    // UserModel.IsLoggedIn = 1;
-                    // TempData["name"] = "Test data";
-                    if (user.RememberMe)
-                    {
-                        CookieOptions options = new CookieOptions();
-                        options.Expires = DateTime.Now.AddDays(15);
-                        Response.Cookies.Append("UserName", user.UserName, options);
-
-                    }
-
-                    return RedirectToAction("formmenu", "Sample");
-
-
-
-                }
-                else
-                {
-                    ModelState.AddModelError("", "Login data is incorrect!");
-                }
-            }
-
-            return View("Loginuser");
-        }
-        [HttpGet]
-        public IActionResult Loginuser()
-        {
-            UserModel model = new UserModel
-            {
-                RememberMe = true,
-                UserName = Request.Cookies["UserName"],
-            };
-
-            return View(model);
-        }
+        public IActionResult Contact() { return View(); }
         //public IActionResult logout(ExpressBase.ServiceStack.UserModel user)
         //{
         //    //UserModel.IsLoggedIn = 0;
@@ -173,56 +128,28 @@ namespace ExpressBase.ServiceStack
         //    return client.Post<bool>(new Services.EditUser { TableId = 157, Colvalues = dict, colid = 2846 });
         //}
 
-        public ActionResult Displaydata()
-        {
-            var e = LoadTestConfiguration();
-            DatabaseFactory df = new DatabaseFactory(e);
+        //public ActionResult Displaydata()
+        //{
+        //    var e = LoadTestConfiguration();
+        //    DatabaseFactory df = new DatabaseFactory(e);
 
-            List<Displaydata> list1 = new List<Displaydata>();
-            string sql = "SELECT id,firstname,lastname,middlename FROM eb_users WHERE eb_del='false' ";
-            var dt = df.ObjectsDatabase.DoQuery(sql);
+        //    List<Displaydata> list1 = new List<Displaydata>();
+        //    string sql = "SELECT id,firstname,lastname,middlename FROM eb_users WHERE eb_del='false' ";
+        //    var dt = df.ObjectsDB.DoQuery(sql);
 
-            foreach (EbDataRow dr in dt.Rows)
-            {
-                Displaydata dspdata = new Displaydata();
-                dspdata.id = Convert.ToInt32(dr[0]);
-                dspdata.FirstName = dr[1].ToString();
-                dspdata.LastName = dr[2].ToString();
-                dspdata.MiddleName = dr[3].ToString();
-                list1.Add(dspdata);
-               
-            }
-         
-            return View(list1);
-        }
+        //    foreach (EbDataRow dr in dt.Rows)
+        //    {
+        //        Displaydata dspdata = new Displaydata();
+        //        dspdata.id = Convert.ToInt32(dr[0]);
+        //        dspdata.FirstName = dr[1].ToString();
+        //        dspdata.LastName = dr[2].ToString();
+        //        dspdata.MiddleName = dr[3].ToString();
+        //        list1.Add(dspdata);
 
-        private void InitDb(string path)
-        {
-            EbConfiguration e = new EbConfiguration()
-            {
-                ClientID = "xyz0007",
-                ClientName = "XYZ Enterprises Ltd.",
-                LicenseKey = "00288-22558-25558",
-            };
-            e.DatabaseConfigurations.Add(EbDatabases.EB_OBJECTS, new EbDatabaseConfiguration(EbDatabases.EB_OBJECTS, DatabaseVendors.PGSQL, "AlArz2014", "139.59.43.88", 5432, "postgres", "Opera754$", 500));
-            e.DatabaseConfigurations.Add(EbDatabases.EB_DATA, new EbDatabaseConfiguration(EbDatabases.EB_DATA, DatabaseVendors.PGSQL, "AlArz2014", "139.59.43.88", 5432, "postgres", "Opera754$", 500));
-            e.DatabaseConfigurations.Add(EbDatabases.EB_ATTACHMENTS, new EbDatabaseConfiguration(EbDatabases.EB_ATTACHMENTS, DatabaseVendors.PGSQL, "AlArz2014", "139.59.43.88", 5432, "postgres", "Opera754$", 500));
-            e.DatabaseConfigurations.Add(EbDatabases.EB_LOGS, new EbDatabaseConfiguration(EbDatabases.EB_LOGS, DatabaseVendors.PGSQL, "AlArz2014", "139.59.43.88", 5432, "postgres", "Opera754$", 500));
+        //    }
 
-            byte[] bytea = EbSerializers.ProtoBuf_Serialize(e);
-            EbFile.Bytea_ToFile(bytea, path);
-        }
-
-        public static EbConfiguration ReadTestConfiguration(string path)
-        {
-            return EbSerializers.ProtoBuf_DeSerialize<EbConfiguration>(EbFile.Bytea_FromFile(path));
-        }
-
-        private EbConfiguration LoadTestConfiguration()
-        {
-            InitDb(@"G:\xyz1.conn");
-            return ReadTestConfiguration(@"G:\xyz1.conn");
-        }
+        //    return View(list1);
+        //}
 
         [HttpGet]
         public ActionResult Registerview(int Id)
@@ -261,9 +188,78 @@ namespace ExpressBase.ServiceStack
             //    {
             //        IsEdited = false
             //    };
-                return View("registerview");
-           
+            return View("registerview");
 
+
+        }
+        [HttpGet]
+        public IActionResult SignupClient()
+        {
+
+            return View();
+        }
+
+        [HttpPost]
+        public IActionResult SignupClient(int i)
+        {
+
+            var req = this.HttpContext.Request.Form;
+
+            JsonServiceClient client = new JsonServiceClient("http://localhost:53125/");
+            if (client.Post<bool>(new Services.InfraRequest { Colvalues = req.ToDictionary(dict => dict.Key, dict => (object)dict.Value) })) ;
+            {
+                return RedirectToAction("LoginClient", "Home");
+            }
+
+            return View();
+        }
+        [HttpGet]
+        public IActionResult LoginClient()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        public IActionResult LoginClient(int i)
+        {
+            var req = this.HttpContext.Request.Form;
+            AuthenticateResponse authResponse = null;
+        
+
+            try
+            {
+                var authClient = new JsonServiceClient("http://localhost:53125/");
+                authResponse = authClient.Send(new Authenticate
+                {
+                    provider = MyJwtAuthProvider.Name,
+                    UserName = req["uname"],
+                    Password = req["pass"],
+                    Meta = new Dictionary<string, string> { { "ClientId", req["cid"] }, { "Login","Client"} },
+                    UseTokenCookie = true
+                });
+            }
+            catch (WebServiceException wse)
+            {
+                return View();
+            }
+
+            if (authResponse != null && authResponse.ResponseStatus != null
+                && authResponse.ResponseStatus.ErrorCode == "EbUnauthorized")
+                return View();
+
+            CookieOptions options = new CookieOptions();
+
+            Response.Cookies.Append("Token", authResponse.BearerToken, options);
+            if (req.ContainsKey("remember"))
+                Response.Cookies.Append("UserName", req["uname"], options);
+
+            return RedirectToAction("ClientDashboard", "Home");
+        }
+        [HttpGet]
+        public IActionResult ClientDashboard()
+        {
+
+            return View();
         }
     }
 }

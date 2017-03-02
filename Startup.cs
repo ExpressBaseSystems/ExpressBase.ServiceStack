@@ -1,6 +1,4 @@
-﻿using ExpressBase.Common;
-using ExpressBase.Data;
-using ExpressBase.Objects;
+﻿using ExpressBase.ServiceStack;
 using Funq;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -8,16 +6,11 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using ServiceStack;
-using ServiceStack.Data;
-using ServiceStack.Host.Handlers;
-using ServiceStack.Logging;
+using ServiceStack.Auth;
 using ServiceStack.Mvc;
-using ServiceStack.OrmLite;
 using ServiceStack.ProtoBuf;
 using ServiceStack.Redis;
-using ServiceStack.VirtualPath;
-using System;
-using System.Data;
+using System.Linq;
 
 namespace RazorRockstars.WebHost
 {
@@ -65,96 +58,18 @@ namespace RazorRockstars.WebHost
 
             app.UseMvc(routes =>
             {
-                routes.MapRoute(
-                    name: "default",
-                    template: "{controller=Home}/{action=Loginuser}/{id?}");
+                routes.MapRoute("login", "login/{*clientid}", defaults: new { controller = "External", action = "LoginTenantUser" });
+                routes.MapRoute("default", "{controller=Home}/{action=Contact}");
             });
 
+            //app.UseMvc(routes =>
+            //{
+            //    routes.MapRoute(
+            //        name: "default",
+            //        template: "{controller=External}/{action=LoginTenantUser}/{id?}");
+            //});
+
             app.Use(new RazorHandler("/notfound"));
-
-            this.LoadCache();
-
-            //var manager = CacheFactory.Build<string>(p => p.WithMicrosoftMemoryCacheHandle());
-
-            //Other examples of using built-in ServiceStack Handlers as middleware
-            //app.Use(new StaticFileHandler("wwwroot/img/react-logo.png").Middleware);
-            //app.Use(new RequestInfoHandler().Middleware);
-        }
-
-        private void LoadCache()
-        {
-            using (var redisClient = new RedisClient("139.59.39.130", 6379, "Opera754$"))
-            {
-                EbTableCollection tcol = redisClient.Get<EbTableCollection>("EbTableCollection");
-                EbTableColumnCollection ccol = redisClient.Get<EbTableColumnCollection>("EbTableColumnCollection");
-
-                //if (tcol == null || ccol == null)
-                {
-                    tcol = new EbTableCollection();
-                    ccol = new EbTableColumnCollection();
-
-                    var e = LoadTestConfiguration();
-                    DatabaseFactory df = new DatabaseFactory(e);
-                    string sql = "SELECT id,tablename FROM eb_tables;" + "SELECT id,columnname,columntype FROM eb_tablecolumns;";
-                    var dt1 = df.ObjectsDatabase.DoQueries(sql);
-
-                    foreach (EbDataRow dr in dt1.Tables[0].Rows)
-                    {
-                        EbTable ebt = new EbTable
-                        {
-                            Id = Convert.ToInt32(dr[0]),
-                            Name = dr[1].ToString()
-                        };
-
-                        tcol.Add(ebt.Id, ebt);
-                    }
-
-                    foreach (EbDataRow dr1 in dt1.Tables[1].Rows)
-                    {
-                        EbTableColumn ebtc = new EbTableColumn
-                        {
-                            Type = (DbType)(dr1[2]),
-                            Id = Convert.ToInt32(dr1[0]),
-                            Name = dr1[1].ToString(),
-                        };
-                        if (!ccol.ContainsKey(ebtc.Name))
-                        {
-                            ccol.Add(ebtc.Name, ebtc);
-                        }
-                    }
-
-                    redisClient.Set<EbTableCollection>("EbTableCollection", tcol);
-                    redisClient.Set<EbTableColumnCollection>("EbTableColumnCollection", ccol);
-                }
-            }
-        }
-
-        private void InitDb(string path)
-        {
-            EbConfiguration e = new EbConfiguration()
-            {
-                ClientID = "xyz0007",
-                ClientName = "XYZ Enterprises Ltd.",
-                LicenseKey = "00288-22558-25558",
-            };
-            e.DatabaseConfigurations.Add(EbDatabases.EB_OBJECTS, new EbDatabaseConfiguration(EbDatabases.EB_OBJECTS, DatabaseVendors.PGSQL, "AlArz2014", "localhost", 5432, "postgres", "infinity", 500));
-            e.DatabaseConfigurations.Add(EbDatabases.EB_DATA, new EbDatabaseConfiguration(EbDatabases.EB_DATA, DatabaseVendors.PGSQL, "AlArz2014", "localhost", 5432, "postgres", "infinity", 500));
-            e.DatabaseConfigurations.Add(EbDatabases.EB_ATTACHMENTS, new EbDatabaseConfiguration(EbDatabases.EB_ATTACHMENTS, DatabaseVendors.PGSQL, "AlArz2014", "localhost", 5432, "postgres", "infinity", 500));
-            e.DatabaseConfigurations.Add(EbDatabases.EB_LOGS, new EbDatabaseConfiguration(EbDatabases.EB_LOGS, DatabaseVendors.PGSQL, "AlArz2014", "localhost", 5432, "postgres", "infinity", 500));
-
-            byte[] bytea = EbSerializers.ProtoBuf_Serialize(e);
-            EbFile.Bytea_ToFile(bytea, path);
-        }
-
-        public static EbConfiguration ReadTestConfiguration(string path)
-        {
-            return EbSerializers.ProtoBuf_DeSerialize<EbConfiguration>(EbFile.Bytea_FromFile(path));
-        }
-
-        private EbConfiguration LoadTestConfiguration()
-        {
-            InitDb(@"G:\xyz1.conn");
-            return ReadTestConfiguration(@"G:\xyz1.conn");
         }
     }
 
@@ -166,18 +81,42 @@ namespace RazorRockstars.WebHost
         {
             Plugins.Add(new RazorFormat());
             Plugins.Add(new ProtoBufFormat());
-            //Plugins.Add(new RequestLogsFeature
-            //{
-            //    RequestLogger = new CsvRequestLogger(
-            //    files: new FileSystemVirtualPathProvider(this, Config.WebHostPhysicalPath),
-            //    requestLogsPattern: "requestlogs/{year}-{month}/{year}-{month}-{day}.csv",
-            //    errorLogsPattern: "requestlogs/{year}-{month}/{year}-{month}-{day}-errors.csv",
-            //    appendEvery: TimeSpan.FromSeconds(1)
-            //),
-            //});
+
+            Plugins.Add(new AuthFeature(() => new CustomUserSession(),
+                new IAuthProvider[] {
+                    new MyJwtAuthProvider(AppSettings) {
+                        HashAlgorithm = "RS256",
+                        PrivateKeyXml = AppSettings.GetString("PrivateKeyXml"),
+                        RequireSecureConnection = false,
+                        CreatePayloadFilter = (payload,session) => {
+                            payload["iss"] = "eb-sec";
+                            payload["aud"] = "eb-web";
+                            payload["iat"] = ((System.Int32)session.CreatedAt.ToUniversalTime().Subtract(new System.DateTime(1970, 1, 1)).TotalSeconds).ToString();
+                            payload["exp"] = ((System.Int32)session.CreatedAt.AddHours(3).ToUniversalTime().Subtract(new System.DateTime(1970, 1, 1)).TotalSeconds).ToString();
+                            payload["uid"] = session.UserAuthId;
+                            payload["email"] = session.UserName;
+                            payload["ClientId"] = (session as CustomUserSession).ClientId;
+                        }
+                    },
+                    //new ApiKeyAuthProvider(AppSettings),        //Sign-in with API Key
+                    //new CredentialsAuthProvider(),              //Sign-in with UserName/Password credentials
+                    //new BasicAuthProvider(),                    //Sign-in with HTTP Basic Auth
+                    //new DigestAuthProvider(AppSettings),        //Sign-in with HTTP Digest Auth
+                    //new TwitterAuthProvider(AppSettings),       //Sign-in with Twitter
+                    //new FacebookAuthProvider(AppSettings),      //Sign-in with Facebook
+                    //new YahooOpenIdOAuthProvider(AppSettings),  //Sign-in with Yahoo OpenId
+                    //new OpenIdOAuthProvider(AppSettings),       //Sign-in with Custom OpenId
+                    //new GoogleOAuth2Provider(AppSettings),      //Sign-in with Google OAuth2 Provider
+                    //new LinkedInOAuth2Provider(AppSettings),    //Sign-in with LinkedIn OAuth2 Provider
+                    //new GithubAuthProvider(AppSettings),        //Sign-in with GitHub OAuth Provider
+                    //new YandexAuthProvider(AppSettings),        //Sign-in with Yandex OAuth Provider        
+                    //new VkAuthProvider(AppSettings),            //Sign-in with VK.com OAuth Provider 
+                }));
 
             //Also works but it's recommended to handle 404's by registering at end of .NET Core pipeline
             //this.CustomErrorHttpHandlers[HttpStatusCode.NotFound] = new RazorHandler("/notfound");
+
+            //container.RegisterAutoWired<TokenAuthorizationManager>().ReusedWithin(ReuseScope.Request);
 
             this.ContentTypes.Register(MimeTypes.ProtoBuf, (reqCtx, res, stream) => ProtoBuf.Serializer.NonGeneric.Serialize(stream, res), ProtoBuf.Serializer.NonGeneric.Deserialize);
 

@@ -1,0 +1,102 @@
+﻿@using (Html.BeginForm(FormMethod.Post, new { enctype= "application/x-www-form-urlencoded" }))
+{
+<div style="margin-left:-10%;  background-color:white;width:1360px">
+    <br><img width=350 style="display:inline-block;margin-left:36%;" src="~/images/EB_Logo11.png" />
+</div>
+<div align="center" style="background-color:aliceblue;margin-right:375px;margin-left:375px;box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.1), 0 6px 20px 0 rgba(0, 0, 0, 0.19);margin-top:15px;height:400px">
+    <fieldset>
+        <h3 style="display:inline-block;color:#337;  margin-left:auto;">LOGIN</h3>
+        <div style="color:red;height:15px">
+            @Html.ValidationSummary(true, "Login failed. Check your login details.");
+        </div>
+        <table style="margin-top:6%;">
+            <tr>
+                <td><div class="tdd">ClientId</div></td>
+                <td><div class="tdd"><input type="text" id="clientid" name="clientid" value="@ViewBag.ClientId"/></div></td>
+            </tr>
+            <tr>
+                <td><div class="tdd">UserName</div></td>
+                <td><div class="tdd">
+                        @{
+                                string uname = ViewBag.cookie;
+                                <input type="text" id="uname" name="uname" value="@uname" />
+                            }
+                    </div></td>
+            </tr>
+            <tr>
+                <td><div class="tdd">Password</div></td>
+                <td><div class="tdd"><input type="password" id="pass" name="pass" /></div></td>
+            </tr>
+        </table>
+               
+        <div class="editor-label">Remember me?<input type="checkbox" id="remember" name="remember" /></div>
+        <input type="image" src="~/images/step0001qqq.jpg" border="0" alt="Submit" />
+    </fieldset>
+    <br><br><br><br>
+</div>
+    <style>
+        .tdd {
+            margin: 10px;
+        }
+
+        input[type="text"] {
+            display: block;
+            margin: 0;
+            width: 102%;
+            font-family: sans-serif;
+            font-size: 18px;
+            box-shadow: none;
+            border-radius: none;
+        }
+
+            input[type="text"]:focus {
+                outline: none;
+            }
+
+        input[type="password"] {
+            display: block;
+            margin: 0;
+            width: 102%;
+            font-family: sans-serif;
+            font-size: 18px;
+            box-shadow: none;
+            border-radius: none;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+        }
+
+        input[type="submit"] {
+            background-color: #4C50AF; /* blue */
+            border: none;
+            color: white;
+            padding: 8px 42px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+        }
+
+            input[type="submit"]:hover {
+                background-color: #337; /* blue */
+            }
+    </style>
+    @*<div>
+         <div style="width: 302px; height: 22px; position: relative;">
+             <div style="width: 302px; height: 422px; position: absolute;">
+                 <iframe src="https://www.google.com/recaptcha/api/fallback?k=6LfoKA8UAAAAAOPERF82ixOs9X97ZXG_RtEJ9NBM"
+                         frameborder="0" scrolling="no"
+                         style="width: 302px; height:422px; border-style: none;"></iframe>
+             </div>
+         </div>
+         <div style="width: 300px; height: 60px; border-style: none;
+        bottom: 12px; left: 25px; margin: 0px; padding: 0px; right: 25px;
+        background: #f9f9f9; border: 1px solid #c1c1c1; border-radius: 3px;">
+             <textarea id="g-recaptcha-response" name="g-recaptcha-response"
+                       class="g-recaptcha-response"
+                       style="width: 250px; height: 40px; border: 1px solid #c1c1c1;
+               margin: 10px 25px; padding: 0px; resize: none;"></textarea>
+         </div>
+         </div>*@
+}

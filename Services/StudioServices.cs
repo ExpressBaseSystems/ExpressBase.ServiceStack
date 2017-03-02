@@ -9,23 +9,33 @@ using ExpressBase.Data;
 using System;
 using ExpressBase.Objects;
 using System.Data.Common;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace ExpressBase.ServiceStack
 {
     [ClientCanSwapTemplates]
     [DefaultView("Form")]
-    public class EbObjectService : Service
+    public class EbObjectService : EbBaseService
     {
+        [Authenticate]
         public object Get(EbObjectRequest request)
         {
-            var e = LoadTestConfiguration();
-            DatabaseFactory df = new DatabaseFactory(e);
+            //var jwtoken = new JwtSecurityToken(request.Token);
+            //foreach (var c in jwtoken.Claims)
+            //{
+            //    if (c.Type == "ClientId")
+            //    {
+            //        base.ClientID = c.Value;
+            //        break;
+            //    }
+            //}
+
             EbDataTable dt = null;
-            using (var con = df.ObjectsDatabase.GetNewConnection())
+            using (var con = this.DatabaseFactory.ObjectsDB.GetNewConnection())
             {
                 con.Open();
                 string _where_clause = (request.Id > 0) ? string.Format("WHERE id={0}", request.Id) : string.Empty;
-                dt = df.ObjectsDatabase.DoQuery(string.Format("SELECT id, obj_name, obj_bytea, obj_type FROM eb_objects {0};", _where_clause));
+                dt = this.DatabaseFactory.ObjectsDB.DoQuery(string.Format("SELECT id, obj_name, obj_bytea, obj_type FROM eb_objects {0};", _where_clause));
             };
 
             List<EbObjectWrapper> f = new List<EbObjectWrapper>();
@@ -49,61 +59,30 @@ namespace ExpressBase.ServiceStack
         {
             bool result = false;
 
-            var e = LoadTestConfiguration();
-            DatabaseFactory df = new DatabaseFactory(e);
-            using (var con = df.ObjectsDatabase.GetNewConnection())
+            using (var con = this.DatabaseFactory.ObjectsDB.GetNewConnection())
             {
                 con.Open();
                 DbCommand cmd = null;
 
                 if (request.Id == 0)
                 {
-                    cmd = df.ObjectsDatabase.GetNewCommand(con, "INSERT INTO eb_objects (obj_name, obj_bytea, obj_type) VALUES (@obj_name, @obj_bytea, @obj_type);");
-                    cmd.Parameters.Add(df.ObjectsDatabase.GetNewParameter("@obj_type", System.Data.DbType.Int32, (int)request.EbObjectType));
+                    cmd = this.DatabaseFactory.ObjectsDB.GetNewCommand(con, "INSERT INTO eb_objects (obj_name, obj_bytea, obj_type) VALUES (@obj_name, @obj_bytea, @obj_type);");
+                    cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_type", System.Data.DbType.Int32, (int)request.EbObjectType));
                 }
                 else
                 {
-                    cmd = df.ObjectsDatabase.GetNewCommand(con, "UPDATE eb_objects SET obj_name=@obj_name, obj_bytea=@obj_bytea WHERE id=@id;");
-                    cmd.Parameters.Add(df.ObjectsDatabase.GetNewParameter("@id", System.Data.DbType.Int32, request.Id));
+                    cmd = this.DatabaseFactory.ObjectsDB.GetNewCommand(con, "UPDATE eb_objects SET obj_name=@obj_name, obj_bytea=@obj_bytea WHERE id=@id;");
+                    cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.Int32, request.Id));
                 }
 
-                cmd.Parameters.Add(df.ObjectsDatabase.GetNewParameter("@obj_name", System.Data.DbType.String, request.Name));
-                cmd.Parameters.Add(df.ObjectsDatabase.GetNewParameter("@obj_bytea", System.Data.DbType.Binary, request.Bytea));
+                cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_name", System.Data.DbType.String, request.Name));
+                cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_bytea", System.Data.DbType.Binary, request.Bytea));
 
                 cmd.ExecuteNonQuery();
                 result = true;
             };
 
             return result;
-        }
-
-        private void InitDb(string path)
-        {
-            EbConfiguration e = new EbConfiguration()
-            {
-                ClientID = "xyz0007",
-                ClientName = "XYZ Enterprises Ltd.",
-                LicenseKey = "00288-22558-25558",
-            };
-
-            e.DatabaseConfigurations.Add(EbDatabases.EB_OBJECTS, new EbDatabaseConfiguration(EbDatabases.EB_OBJECTS, DatabaseVendors.PGSQL, "AlArz2014", "localhost", 5432, "postgres", "infinity", 500));
-            e.DatabaseConfigurations.Add(EbDatabases.EB_DATA, new EbDatabaseConfiguration(EbDatabases.EB_DATA, DatabaseVendors.PGSQL, "AlArz2014", "localhost", 5432, "postgres", "infinity", 500));
-            e.DatabaseConfigurations.Add(EbDatabases.EB_ATTACHMENTS, new EbDatabaseConfiguration(EbDatabases.EB_ATTACHMENTS, DatabaseVendors.PGSQL, "AlArz2014", "localhost", 5432, "postgres", "infinity", 500));
-            e.DatabaseConfigurations.Add(EbDatabases.EB_LOGS, new EbDatabaseConfiguration(EbDatabases.EB_LOGS, DatabaseVendors.PGSQL, "AlArz2014", "localhost", 5432, "postgres", "infinity", 500));
-
-            byte[] bytea = EbSerializers.ProtoBuf_Serialize(e);
-            EbFile.Bytea_ToFile(bytea, path);
-        }
-
-        public static EbConfiguration ReadTestConfiguration(string path)
-        {
-            return EbSerializers.ProtoBuf_DeSerialize<EbConfiguration>(EbFile.Bytea_FromFile(path));
-        }
-
-        private EbConfiguration LoadTestConfiguration()
-        {
-            InitDb(@"C:\EbConn\xyz1.conn");
-            return ReadTestConfiguration(@"C:\EbConn\xyz1.conn");
         }
     }
 }

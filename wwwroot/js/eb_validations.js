@@ -112,6 +112,26 @@ function submitbutton() {
     
 
 }
+
+function signinbutton()
+{
+    var form = $("#Form_0").serialize();
+   
+    var data1 = query_to_hash(form);
+    var tableid = document.getElementById("tableid").value;
+
+    $.post('http://localhost:53125/login', { "TableId": tableid, "Colvalues": data1 },
+
+       function (result) {
+
+           if (result) {
+               window.location.href = "http://localhost:53125/sample/masterhome.cshtml";
+           }
+           else {
+               auto_load("/sample/f", "#Form_0");
+           }
+       });
+}
 query_to_hash = function (queryString) {
     var j, q,t = "";
    
@@ -174,3 +194,4 @@ function auto_load(url, form) {
         }
     });
 }
+

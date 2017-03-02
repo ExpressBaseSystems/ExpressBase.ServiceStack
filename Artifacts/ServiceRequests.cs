@@ -11,5 +11,7 @@ namespace ExpressBase.ServiceStack
     public class EbObjectRequest : IReturn<EbObjectResponse>
     {
         public int Id { get; set; }
+
+        public string Token { get; set; }
     }
 }

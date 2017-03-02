@@ -17,7 +17,7 @@
     //var fr = client.Get<FormResponse>(new FormRequest { Id = id });
 
     IServiceClient client = new JsonServiceClient("http://localhost:53125/").WithCache();
-    var fr = client.Get<EbObjectResponse>(new EbObjectRequest { Id = 0 });
+    var fr = client.Get<EbObjectResponse>(new EbObjectRequest { Id = 0, Token = ViewBag.Token });
 
 }
 

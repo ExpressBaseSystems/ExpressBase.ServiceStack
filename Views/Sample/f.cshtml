@@ -3,54 +3,51 @@
 @using ExpressBase.Common;
 
 @{
-        string head = string.Empty;
-        string html = string.Empty;
+    string head = string.Empty;
+    string html = string.Empty;
 
-        var fid = Convert.ToInt32(ViewBag.FormId);
-        var id = Convert.ToInt32(ViewBag.DataId);
-        EbForm _form = ViewBag.EbForm;
-        var frmcollection = ViewBag.formcollection;
+    var fid = Convert.ToInt32(ViewBag.FormId);
+    var id = Convert.ToInt32(ViewBag.DataId);
+    EbForm _form = ViewBag.EbForm;
+    var frmcollection = ViewBag.formcollection;
 
+    //var redisManager = new ServiceStack.Redis.PooledRedisClientManager("139.59.39.130","6379","");
+    //ServiceStack.Redis.RedisClient redisClient = null;
+    //try
+    //{
+    //    redisClient = new ServiceStack.Redis.RedisClient("139.59.39.130", 6379, "Opera754$");
+    //}
+    //catch (Exception e)
+    //{
 
+    //}
+    //EbForm _form = //redisClient.Get<EbForm>(string.Format("form{0}", id));
 
+    // if (_form == null)
+    //{
+    //    IServiceClient client = new JsonServiceClient("http://localhost:53125/").WithCache();
+    //    var fr = client.Get<EbObjectResponse>(new EbObjectRequest { Id = id });
+    //    if (fr.Data.Count > 0)
+    //    {
 
+    //        _form = EbSerializers.ProtoBuf_DeSerialize<EbForm>(fr.Data[0].Bytea);
+    //        _form.Init4Redis();
+    //        redisClient.Set<EbForm>(string.Format("form{0}", id), _form);
+    //    }
+    //}
 
-        //var redisManager = new ServiceStack.Redis.PooledRedisClientManager("139.59.39.130","6379","");
-        //ServiceStack.Redis.RedisClient redisClient = null;
-        //try
-        //{
-        //    redisClient = new ServiceStack.Redis.RedisClient("139.59.39.130", 6379, "Opera754$");
-        //}
-        //catch (Exception e)
-        //{
-
-        //}
-        //EbForm _form = //redisClient.Get<EbForm>(string.Format("form{0}", id));
-
-        // if (_form == null)
-        //{
-        //    IServiceClient client = new JsonServiceClient("http://localhost:53125/").WithCache();
-        //    var fr = client.Get<EbObjectResponse>(new EbObjectRequest { Id = id });
-        //    if (fr.Data.Count > 0)
-        //    {
-
-        //        _form = EbSerializers.ProtoBuf_DeSerialize<EbForm>(fr.Data[0].Bytea);
-        //        _form.Init4Redis();
-        //        redisClient.Set<EbForm>(string.Format("form{0}", id), _form);
-        //    }
-        //}
-
-        html += "<div> <form id ='Form_0' method='post'> <div>";
-        html += string.Format(@"<input type='text' style='visibility:hidden;' name='isUpdate' value='{3}' id='isUpdate'/>
+    html += "<div> <form id ='Form_0' method='post'> <div class='temp'>";
+    html += string.Format(@"<input type='text' style='visibility:hidden;' name='isUpdate' value='{3}' id='isUpdate'/>
               <input type='text' style='visibility:hidden;' name='FId' value={1} id='FId'/>
               <input type='text' style='visibility:hidden;' name='TableId' value={2} id='tableid'/>
               <input type='text' style='visibility:hidden;' name='DataId' value= {4} id='dataid'/>
-              <span>{0}</h3>
-              <a href='' onclick=submitbutton() class='btn-toolbar btn-toolbar-light fa fa-save' id='button'></a>
+              <span style='font-size:20px;'>{0}</span>
+              <a href='' onclick=submitbutton() class='btn-toolbar btn-toolbar-warning fa fa-floppy-o fa-2x' id='button'></a>
+
         ", _form.Label, fid, _form.Table.Id, _form.IsUpdate, id);
-        if (_form.IsUpdate)
-        {
-            html += @"<a href='' onclick=deletebutton() class='btn-toolbar btn-toolbar-light fa fa-trash' id='delbtn'></a>
+    if (_form.IsUpdate)
+    {
+        html += @"<a href='' onclick=deletebutton() class='btn-toolbar btn-toolbar-light fa fa-trash' id='delbtn'></a>
                   <a href='' class='btn-toolbar btn-toolbar-light fa fa-times' id='voidbtn'></a></div>
                     <div id='myModal' class='modal'>
                         <div class='modal-content'>
@@ -66,7 +63,10 @@
                       </div>";
 
     }
-
+    else
+    {
+        html += "</div>";
+    }
     foreach (EbControl c in _form.Controls)
     {
         head += c.GetHead();
@@ -77,7 +77,7 @@
 
 @section EbHead {
     <script>
-        $(document).ready(function() {
+        $(document).ready(function () {
             @Html.Raw(head)
         });
     </script>

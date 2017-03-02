@@ -55,7 +55,7 @@ namespace ExpressBase.ServiceStack
 
         public IActionResult formmenu()
         {
-
+            ViewBag.Token = this.Request.Cookies["Token"];
             return View();
         }
         //[HttpGet]

@@ -7,6 +7,7 @@ using ExpressBase.Data;
 using System;
 using ExpressBase.Objects;
 using System.Collections.Generic;
+using ExpressBase.ServiceStack.Services;
 
 namespace ExpressBase.ServiceStack
 {
@@ -71,7 +72,7 @@ namespace ExpressBase.ServiceStack
 
     [ClientCanSwapTemplates]
     [DefaultView("ds")]
-    public class DataSourceService : Service
+    public class DataSourceService : EbBaseService
     {
         public object Get(DataSourceDataRequest request)
         {
@@ -91,9 +92,8 @@ namespace ExpressBase.ServiceStack
                 searchValue = new List<string>(request.SearchText.Split(','));
             if (!string.IsNullOrEmpty(base.Request.QueryString["selectedvalue"]))
                 selectedValue = new List<string>(base.Request.QueryString["selectedvalue"].Split(','));
-            var e = LoadTestConfiguration();
-            DatabaseFactory df = new DatabaseFactory(e);
-            var dt = df.ObjectsDatabase.DoQuery(string.Format("SELECT obj_bytea FROM eb_objects WHERE id={0}", request.Id));
+
+            var dt = this.DatabaseFactory.ObjectsDB.DoQuery(string.Format("SELECT obj_bytea FROM eb_objects WHERE id={0}", request.Id));
 
             DataSourceDataResponse dsresponse = null;
 
@@ -125,11 +125,11 @@ namespace ExpressBase.ServiceStack
 
                     var parameters = new System.Data.Common.DbParameter[2]
                     {
-                        df.ObjectsDatabase.GetNewParameter("@limit", System.Data.DbType.Int32, request.Length),
-                        df.ObjectsDatabase.GetNewParameter("@last_id", System.Data.DbType.Int32, request.Start)
+                        this.DatabaseFactory.ObjectsDB.GetNewParameter("@limit", System.Data.DbType.Int32, request.Length),
+                        this.DatabaseFactory.ObjectsDB.GetNewParameter("@last_id", System.Data.DbType.Int32, request.Start+1)
                     };
 
-                    var _dataset = (request.Length > 0) ? df.ObjectsDatabase.DoQueries(_sql, parameters) : df.ObjectsDatabase.DoQueries(_sql);
+                    var _dataset = (request.Length > 0) ? this.DatabaseFactory.ObjectsDB.DoQueries(_sql, parameters) : this.DatabaseFactory.ObjectsDB.DoQueries(_sql);
 
                     dsresponse = new DataSourceDataResponse
                     {
@@ -156,9 +156,7 @@ namespace ExpressBase.ServiceStack
 
                 string _sql = string.Format("SELECT obj_bytea FROM eb_objects WHERE id={0}", request.Id);
 
-                var e = LoadTestConfiguration();
-                DatabaseFactory df = new DatabaseFactory(e);
-                var dt = df.ObjectsDatabase.DoQuery(_sql);
+                var dt = this.DatabaseFactory.ObjectsDB.DoQuery(_sql);
 
                 if (dt.Rows.Count > 0)
                 {
@@ -173,12 +171,12 @@ namespace ExpressBase.ServiceStack
 
                         var parameters = new System.Data.Common.DbParameter[2]
                         {
-                            df.ObjectsDatabase.GetNewParameter("@limit", System.Data.DbType.Int32, 0),
-                            df.ObjectsDatabase.GetNewParameter("@last_id", System.Data.DbType.Int32, 0)
+                            this.DatabaseFactory.ObjectsDB.GetNewParameter("@limit", System.Data.DbType.Int32, 0),
+                            this.DatabaseFactory.ObjectsDB.GetNewParameter("@last_id", System.Data.DbType.Int32, 0)
                         };
 
                         _sql = (_sql.IndexOf(";") > 0) ? _sql.Substring(_sql.IndexOf(";") + 1) : _sql;
-                        var dt2 = df.ObjectsDatabase.DoQuery(_sql, parameters);
+                        var dt2 = this.DatabaseFactory.ObjectsDB.DoQuery(_sql, parameters);
                         columns = dt2.Columns;
 
                         base.SessionBag.Set<ColumnColletion>(string.Format("ds_{0}_columns", request.Id), dt2.Columns);
