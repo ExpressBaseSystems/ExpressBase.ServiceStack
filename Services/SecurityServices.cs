@@ -124,6 +124,7 @@ namespace ExpressBase.ServiceStack
                 mysession.IsAuthenticated = true;
                 mysession.UserAuthId = _authUser.Id.ToString();
                 mysession.UserName = _authUser.Uname;
+                mysession.FirstName = _authUser.Fname;
                 if(request.Meta.ContainsKey("ClientId"))
                 {
                     mysession.ClientId = request.Meta["ClientId"];

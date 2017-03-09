@@ -59,7 +59,7 @@ namespace RazorRockstars.WebHost
             app.UseMvc(routes =>
             {
                 routes.MapRoute("login", "login/{*clientid}", defaults: new { controller = "External", action = "LoginTenantUser" });
-                routes.MapRoute("default", "{controller=Home}/{action=Contact}");
+                routes.MapRoute("default", "{controller=Tenant}/{action=tenantsignup}");
             });
 
             //app.UseMvc(routes =>
@@ -96,6 +96,7 @@ namespace RazorRockstars.WebHost
                             payload["uid"] = session.UserAuthId;
                             payload["email"] = session.UserName;
                             payload["ClientId"] = (session as CustomUserSession).ClientId;
+                            payload["Fname"] =(session as CustomUserSession).FirstName; 
                         }
                     },
                     //new ApiKeyAuthProvider(AppSettings),        //Sign-in with API Key
