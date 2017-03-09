@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using ServiceStack;
 using ServiceStack.DataAnnotations;
-using ServiceStack.OrmLite;
 using ServiceStack.Text;
 using System.Runtime.Serialization;
 using ExpressBase.Common;
