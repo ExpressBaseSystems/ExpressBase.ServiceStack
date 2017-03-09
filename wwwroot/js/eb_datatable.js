@@ -85,12 +85,9 @@ function createFilterRowHeader(tableid, eb_filter_controls, scrolly)
 function createFooter(tableid, eb_footer_controls, scrolly, pos)
 {
     $('#'+tableid+'_btntotalpage').show();
-    $('#' + tableid + '_container tfoot').append($('#' + tableid + '_container thead tr').clone());
     if (pos === 1)
         $('#' + tableid + '_container tfoot tr:eq(' + pos + ')').hide();
     $('#' + tableid + '_container tfoot tr:eq(' + pos + ') th').each(function (idx) {
-        $(this).children().remove(); 
-        $(this).removeClass('sorting'); 
         $(this).html(eb_footer_controls[idx]);
     } );
 }
@@ -98,10 +95,10 @@ function createFooter(tableid, eb_footer_controls, scrolly, pos)
 function showOrHideAggrControl(objbtn, scrolly)
 {
     var tableid = $(objbtn).attr('data-table');
-    if ($('#' + tableid + '_container tfoot tr:eq(1)').is(':visible'))
-        $('#' + tableid + '_container tfoot tr:eq(1)').hide();
+    if ($('#' + tableid + '_container table:eq(2) tfoot tr:eq(1)').is(':visible'))
+        $('#' + tableid + '_container table:eq(2) tfoot tr:eq(1)').hide();
     else
-        $('#' + tableid + '_container tfoot tr:eq(1)').show();
+        $('#' + tableid + '_container table:eq(2) tfoot tr:eq(1)').show();
 }
 
 function showOrHideFilter(objbtn, scrolly)
@@ -111,6 +108,7 @@ function showOrHideFilter(objbtn, scrolly)
         $('#' + tableid + '_container thead tr:eq(1)').hide();
     else
         $('#' + tableid + '_container thead tr:eq(1)').show();
+    $('#' + tableid + '_tbl').DataTable().columns.adjust();
 }
 
 function updateAlSlct(objchk)
@@ -200,3 +198,5 @@ function colorRow(nRow, aData, iDisplayIndex, iDisplayIndexFull, columns)
         }
     });
 }
+
+
