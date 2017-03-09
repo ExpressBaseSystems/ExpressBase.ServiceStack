@@ -85,6 +85,7 @@ namespace ExpressBase.ServiceStack
             List<string> searchColumn = new List<string>();
             List<string> searchValue = new List<string>();
             List<string> selectedValue = new List<string>();
+
             if (!string.IsNullOrEmpty(request.SearchColumnName))
                 searchColumn = new List<string>(request.SearchColumnName.Split(','));
             if (!string.IsNullOrEmpty(request.SearchText))
@@ -114,16 +115,6 @@ namespace ExpressBase.ServiceStack
 
                             if (selectedValue[j] == "null")
                                 _c += string.Format("AND LOWER({0})::text LIKE LOWER('%{1}%') ", searchColumn[j], searchValue[j]);
-                            else if (selectedValue[j] == "B")
-                            {
-                                List<string> lst = new List<string>();
-                                lst = new List<string>(searchValue[j].Split('@'));
-                                if (Convert.ToInt32(lst[0]) < Convert.ToInt32(lst[1]))
-                                    _c += string.Format("AND {0} > '{1}' AND {0} < '{2}' ", searchColumn[j], lst[0], lst[1]);
-                                else
-                                    _c += string.Format("AND {0} > '{1}' AND {0} < '{2}' ", searchColumn[j], lst[1], lst[0]);
-                            }
-
                             else
                                 _c += string.Format("AND {0} {1} '{2}' ", searchColumn[j], selectedValue[j], searchValue[j]);
                         }
