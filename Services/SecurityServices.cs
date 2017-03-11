@@ -53,7 +53,7 @@ namespace ExpressBase.ServiceStack
 
         public string UserName { get; set; }
 
-        public string ClientId { get; set; }
+        public string CId { get; set; }
 
         public CustomUserSession()
         {
@@ -105,7 +105,7 @@ namespace ExpressBase.ServiceStack
             CustomUserSession mysession = session as CustomUserSession;
 
             AuthenticateResponse response = null;
-            if (request.Meta["Login"] == "Client")
+            if (string.IsNullOrEmpty(request.Meta["cid"]))
             {
                 string path = Directory.GetParent(System.IO.Directory.GetCurrentDirectory()).FullName;
                 var infraconf = EbSerializers.ProtoBuf_DeSerialize<EbInfraDBConf>(EbFile.Bytea_FromFile(Path.Combine(path, "EbInfra.conn")));
@@ -115,7 +115,7 @@ namespace ExpressBase.ServiceStack
             else
             {
                 EbBaseService bservice = new EbBaseService();
-                bservice.ClientID = request.Meta["ClientId"];
+                bservice.ClientID = request.Meta["cid"];
 
                 _authUser = User.GetDetails(bservice.DatabaseFactory, request.UserName, request.Password);
             }
@@ -125,14 +125,8 @@ namespace ExpressBase.ServiceStack
                 mysession.UserAuthId = _authUser.Id.ToString();
                 mysession.UserName = _authUser.Uname;
                 mysession.FirstName = _authUser.Fname;
-                if(request.Meta.ContainsKey("ClientId"))
-                {
-                    mysession.ClientId = request.Meta["ClientId"];
-                }
-                else
-                {
-                    mysession.ClientId = "";
-                }
+                mysession.CId = (request.Meta.ContainsKey("cid")) ? request.Meta["cid"] : string.Empty;
+
                 response = new AuthenticateResponse
                 {
                     UserId = _authUser.Id.ToString(),

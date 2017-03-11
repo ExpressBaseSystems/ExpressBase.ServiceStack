@@ -79,7 +79,7 @@ namespace ExpressBase.ServiceStack
                             payload["exp"] = ((System.Int32)session.CreatedAt.AddHours(3).ToUniversalTime().Subtract(new System.DateTime(1970, 1, 1)).TotalSeconds).ToString();
                             payload["uid"] = session.UserAuthId;
                             payload["email"] = session.UserName;
-                            payload["ClientId"] = (session as CustomUserSession).ClientId;
+                            payload["cid"] = (session as CustomUserSession).CId;
                             payload["Fname"] =(session as CustomUserSession).FirstName; 
                         }
                     },
