@@ -1,5 +1,4 @@
-﻿using ExpressBase.ServiceStack;
-using Funq;
+﻿using Funq;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -9,10 +8,8 @@ using ServiceStack;
 using ServiceStack.Auth;
 using ServiceStack.Mvc;
 using ServiceStack.ProtoBuf;
-using ServiceStack.Redis;
-using System.Linq;
 
-namespace RazorRockstars.WebHost
+namespace ExpressBase.ServiceStack
 {
     public class Startup
     {
@@ -55,19 +52,6 @@ namespace RazorRockstars.WebHost
             app.UseStaticFiles();
 
             app.UseServiceStack(new AppHost());
-
-            app.UseMvc(routes =>
-            {
-                routes.MapRoute("login", "login/{*clientid}", defaults: new { controller = "External", action = "LoginTenantUser" });
-                routes.MapRoute("default", "{controller=Tenant}/{action=tenantsignup}");
-            });
-
-            //app.UseMvc(routes =>
-            //{
-            //    routes.MapRoute(
-            //        name: "default",
-            //        template: "{controller=External}/{action=LoginTenantUser}/{id?}");
-            //});
 
             app.Use(new RazorHandler("/notfound"));
         }
