@@ -131,10 +131,8 @@ namespace ExpressBase.ServiceStack
                 }
                 else
                 {
-                    mysession.ClientId = _authUser.Cid.ToString();
+                    mysession.ClientId = "";
                 }
-                
-
                 response = new AuthenticateResponse
                 {
                     UserId = _authUser.Id.ToString(),
