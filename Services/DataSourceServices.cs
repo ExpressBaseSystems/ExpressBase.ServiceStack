@@ -8,6 +8,8 @@ using System;
 using ExpressBase.Objects;
 using System.Collections.Generic;
 using ExpressBase.ServiceStack.Services;
+using System.IdentityModel.Tokens.Jwt;
+
 
 namespace ExpressBase.ServiceStack
 {
@@ -30,6 +32,8 @@ namespace ExpressBase.ServiceStack
         public string OrderColumnName { get; set; }
 
         public string SearchColumnName { get; set; }
+
+        public string Token { get; set; }
     }
 
     [Route("/ds")]
@@ -43,6 +47,8 @@ namespace ExpressBase.ServiceStack
         public string OrderByDirection { get; set; }
 
         public string SelectedColumnName { get; set; }
+
+        public string Token { get; set; }
     }
 
     [DataContract]
@@ -76,6 +82,16 @@ namespace ExpressBase.ServiceStack
     {
         public object Get(DataSourceDataRequest request)
         {
+          
+            var jwtoken = new JwtSecurityToken(request.Token);
+            foreach (var c in jwtoken.Claims)
+            {
+                if (c.Type == "cid")
+                {
+                    base.ClientID = c.Value;
+                    break;
+                }
+            }
             request.SearchText = base.Request.QueryString["searchtext"];
             //request.SearchTextcollection = string.IsNullOrEmpty(request.SearchText) ? "" : request.SearchText; // @txtsearch
             request.OrderByDirection = base.Request.QueryString["order[0][dir]"]; //@order_dir
@@ -146,6 +162,16 @@ namespace ExpressBase.ServiceStack
 
         public object Get(DataSourceColumnsRequest request)
         {
+          
+            var jwtoken = new JwtSecurityToken(request.Token);
+            foreach (var c in jwtoken.Claims)
+            {
+                if (c.Type == "cid")
+                {
+                    base.ClientID = c.Value;
+                    break;
+                }
+            }
             ColumnColletion columns = base.SessionBag.Get<ColumnColletion>(string.Format("ds_{0}_columns", request.Id));
             //if (columns == null)
             {

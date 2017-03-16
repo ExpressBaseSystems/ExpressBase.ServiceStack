@@ -63,9 +63,11 @@ namespace ExpressBase.ServiceStack
 
         public override void Configure(Container container)
         {
-            Plugins.Add(new RazorFormat());
-            Plugins.Add(new ProtoBufFormat());
 
+            
+            this.Plugins.Add(new CorsFeature());
+            Plugins.Add(new ProtoBufFormat());
+           
             Plugins.Add(new AuthFeature(() => new CustomUserSession(),
                 new IAuthProvider[] {
                     new MyJwtAuthProvider(AppSettings) {
@@ -80,6 +82,7 @@ namespace ExpressBase.ServiceStack
                             payload["uid"] = session.UserAuthId;
                             payload["email"] = session.UserName;
                             payload["cid"] = (session as CustomUserSession).CId;
+                            payload["uid"] = (session as CustomUserSession).Uid.ToString();
                             payload["Fname"] =(session as CustomUserSession).FirstName; 
                         }
                     },
@@ -107,6 +110,8 @@ namespace ExpressBase.ServiceStack
 
             SetConfig(new HostConfig { DebugMode = true, DefaultContentType = MimeTypes.Json });
             //SetConfig(new HostConfig { DefaultContentType = MimeTypes.Json });
+
+           
         }
     }
 }

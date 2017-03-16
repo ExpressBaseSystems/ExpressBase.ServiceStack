@@ -12,6 +12,7 @@ using ServiceStack.Web;
 using System.IO;
 using ExpressBase.Data;
 using System.Data.Common;
+using ServiceStack.Redis;
 
 namespace ExpressBase.ServiceStack
 {
@@ -54,6 +55,8 @@ namespace ExpressBase.ServiceStack
         public string UserName { get; set; }
 
         public string CId { get; set; }
+
+        public int Uid { get; set; }
 
         public CustomUserSession()
         {
@@ -121,12 +124,14 @@ namespace ExpressBase.ServiceStack
             }
             if (_authUser != null)
             {
+                var redisClient = new RedisClient("139.59.39.130", 6379, "Opera754$");
+                redisClient.Set<User>("Loguser", _authUser);
                 mysession.IsAuthenticated = true;
                 mysession.UserAuthId = _authUser.Id.ToString();
                 mysession.UserName = _authUser.Uname;
                 mysession.FirstName = _authUser.Fname;
+                mysession.Uid = _authUser.Id;
                 mysession.CId = (request.Meta.ContainsKey("cid")) ? request.Meta["cid"] : string.Empty;
-
                 response = new AuthenticateResponse
                 {
                     UserId = _authUser.Id.ToString(),
