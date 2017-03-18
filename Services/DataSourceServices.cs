@@ -99,7 +99,7 @@ namespace ExpressBase.ServiceStack
 
             var datefrom = string.Empty;
             var dateto = string.Empty;
-            if (!string.IsNullOrEmpty(request.colvalues["from"]) && !string.IsNullOrEmpty(request.colvalues["to"]))
+            if (!(request.colvalues).IsNullOrEmpty())
             {
                 datefrom = request.colvalues["from"];
                 dateto = request.colvalues["to"];
