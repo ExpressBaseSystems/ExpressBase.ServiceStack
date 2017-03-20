@@ -108,30 +108,41 @@ namespace ExpressBase.ServiceStack
             CustomUserSession mysession = session as CustomUserSession;
 
             AuthenticateResponse response = null;
+            string profileimg="";
             if (string.IsNullOrEmpty(request.Meta["cid"]))
             {
                 string path = Directory.GetParent(System.IO.Directory.GetCurrentDirectory()).FullName;
                 var infraconf = EbSerializers.ProtoBuf_DeSerialize<EbInfraDBConf>(EbFile.Bytea_FromFile(Path.Combine(path, "EbInfra.conn")));
                 var df = new DatabaseFactory(infraconf);   
                 _authUser = InfraUser.GetDetails(df, request.UserName, request.Password);
+                
             }
             else
             {
                 EbBaseService bservice = new EbBaseService();
                 bservice.ClientID = request.Meta["cid"];
-
                 _authUser = User.GetDetails(bservice.DatabaseFactory, request.UserName, request.Password);
+                
             }
             if (_authUser != null)
             {
                 var redisClient = new RedisClient("139.59.39.130", 6379, "Opera754$");
-                redisClient.Set<User>("Loguser", _authUser);
-                mysession.IsAuthenticated = true;
                 mysession.UserAuthId = _authUser.Id.ToString();
                 mysession.UserName = _authUser.Uname;
                 mysession.FirstName = _authUser.Fname;
                 mysession.Uid = _authUser.Id;
-                mysession.CId = (request.Meta.ContainsKey("cid")) ? request.Meta["cid"] : string.Empty;
+                if(request.Meta.ContainsKey("cid"))
+                {
+                    mysession.CId = request.Meta["cid"];
+                    profileimg = string.Format("uid_{0}_cid_{1}_profileimage", _authUser.Id, request.Meta["cid"]);
+                }
+                else
+                {
+                    mysession.CId= string.Empty;
+                    profileimg = string.Format("uid_{0}_profileimage", _authUser.Id);
+
+                }
+                redisClient.Set<string>(profileimg, _authUser.Profileimg);
                 response = new AuthenticateResponse
                 {
                     UserId = _authUser.Id.ToString(),

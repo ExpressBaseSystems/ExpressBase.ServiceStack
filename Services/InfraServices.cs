@@ -53,7 +53,7 @@ namespace ExpressBase.ServiceStack.Services
     }
 
     [DataContract]
-    public class AccountRequest : IReturn<bool>
+    public class AccountRequest : IReturn<AccountResponse>
     {
         [DataMember(Order = 0)]
         public Dictionary<string, object> Colvalues { get; set; }
@@ -62,11 +62,18 @@ namespace ExpressBase.ServiceStack.Services
         public string op { get; set; }
 
         [DataMember(Order = 2)]
-        public int CId { get; set; }
+        public int TId { get; set; }
     }
 
     [DataContract]
-    public class GetAccount : IReturn<AccountResponse>
+    public class AccountResponse
+    {
+        [DataMember(Order = 1)]
+        public int id { get; set; }
+    }
+
+    [DataContract]
+    public class GetAccount : IReturn<GetAccountResponse>
     {
         [DataMember(Order = 0)]
         public int Uid { get; set; }
@@ -76,17 +83,17 @@ namespace ExpressBase.ServiceStack.Services
     }
 
     [DataContract]
-    public class AccountResponse
+    public class GetAccountResponse
     {
         [DataMember(Order = 1)]
-        public List<string> aclist { get; set; }
+        public Dictionary<int,string> dict { get; set; }
     }
 
     [DataContract]
     public class SendMail : IReturn<bool>
     {
         [DataMember(Order = 0)]
-        public Dictionary<string, object> Emailvals { get; set; }  
+        public Dictionary<string, object> Emailvals { get; set; }
     }
 
 
@@ -120,13 +127,13 @@ namespace ExpressBase.ServiceStack.Services
                 }
                 else if (request.ltype == "G+")
                 {
-                    
-                    var cmd = df.InfraDB.GetNewCommand(con, "INSERT INTO eb_tenants (cname,firstname,gender,socialid,prolink)VALUES(@cname, @firstname,@gender,@socialid,@prolink)ON CONFLICT(socialid) DO UPDATE SET cname=@cname RETURNING id");
+
+                    var cmd = df.InfraDB.GetNewCommand(con, "INSERT INTO eb_tenants (cname,firstname,gender,socialid,profileimg)VALUES(@cname, @firstname,@gender,@socialid,@profileimg)ON CONFLICT(socialid) DO UPDATE SET cname=@cname RETURNING id");
                     cmd.Parameters.Add(df.InfraDB.GetNewParameter("cname", System.Data.DbType.String, request.Colvalues["email"]));
                     cmd.Parameters.Add(df.InfraDB.GetNewParameter("firstname", System.Data.DbType.String, request.Colvalues["name"]));
                     cmd.Parameters.Add(df.InfraDB.GetNewParameter("gender", System.Data.DbType.String, request.Colvalues["gender"]));
                     cmd.Parameters.Add(df.InfraDB.GetNewParameter("socialid", System.Data.DbType.String, request.Colvalues["id"]));
-                    cmd.Parameters.Add(df.InfraDB.GetNewParameter("prolink", System.Data.DbType.String, request.Colvalues["picture"]));
+                    cmd.Parameters.Add(df.InfraDB.GetNewParameter("profileimg", System.Data.DbType.String, string.Format("<img src='{0}' class='img-circle navbar-right img-cir'>", request.Colvalues["picture"])));
 
 
                     InfraResponse res = new InfraResponse
@@ -152,11 +159,22 @@ namespace ExpressBase.ServiceStack.Services
                     };
                     return res;
                 }
-                else if(request.ltype=="imgupload")
+                else if (request.ltype == "imgupload")
                 {
-                    var cmd = df.InfraDB.GetNewCommand(con,"UPDATE eb_tenants SET profileimg=@profileimg WHERE id=@id RETURNING id");
-                    cmd.Parameters.Add(df.InfraDB.GetNewParameter("profileimg", System.Data.DbType.String, request.Colvalues["profileimg"]));
+                    var cmd = df.InfraDB.GetNewCommand(con, "UPDATE eb_tenants SET profileimg=@profileimg WHERE id=@id RETURNING id");
+                    cmd.Parameters.Add(df.InfraDB.GetNewParameter("profileimg", System.Data.DbType.String, string.Format("<img src='data:image/png;base64,{0}'class='img-circle navbar-right img-cir'/>", request.Colvalues["profileimg"])));
                     cmd.Parameters.Add(df.InfraDB.GetNewParameter("id", System.Data.DbType.Int64, request.Colvalues["id"]));
+                    InfraResponse res = new InfraResponse
+                    {
+                        id = Convert.ToInt32(cmd.ExecuteScalar())
+                    };
+                    return res;
+                }
+                else if (request.ltype == "accountimg")
+                {
+                    var cmd = df.InfraDB.GetNewCommand(con, "INSERT INTO eb_tenantaccount (profilelogo,tenantid) VALUES(@profilelogo,@tenantid) RETURNING tenantid");
+                    cmd.Parameters.Add(df.InfraDB.GetNewParameter("profilelogo", System.Data.DbType.String, string.Format("<img src='data:image/png;base64,{0}'class='img-circle navbar-right img-cir'/>", request.Colvalues["profilelogo"])));
+                    cmd.Parameters.Add(df.InfraDB.GetNewParameter("tenantid", System.Data.DbType.Int64, request.Colvalues["id"]));
                     InfraResponse res = new InfraResponse
                     {
                         id = Convert.ToInt32(cmd.ExecuteScalar())
@@ -257,38 +275,40 @@ namespace ExpressBase.ServiceStack.Services
         //    }
         //}
 
-        public bool Any(AccountRequest request)
+        public AccountResponse Any(AccountRequest request)
         {
+           
             string path = Directory.GetParent(System.IO.Directory.GetCurrentDirectory()).FullName;
             var infraconf = EbSerializers.ProtoBuf_DeSerialize<EbInfraDBConf>(EbFile.Bytea_FromFile(Path.Combine(path, "EbInfra.conn")));
             var df = new DatabaseFactory(infraconf);
             using (var con = df.InfraDB.GetNewConnection())
             {
                 con.Open();
-               
-                if(request.op=="insert")
-                {
 
-               
-                var cmd = df.InfraDB.GetNewCommand(con, "INSERT INTO eb_tenantaccount(accountname,cid,address,phone,email,website,tier,tenantname,tenantid)VALUES(@accountname,@cid,@address,@phone,@email,@website,@tier,@tenantname,@tenantid)");
-                cmd.Parameters.Add(df.InfraDB.GetNewParameter("accountname", System.Data.DbType.String, request.Colvalues["accountname"]));
-                cmd.Parameters.Add(df.InfraDB.GetNewParameter("cid", System.Data.DbType.String, request.Colvalues["cid"]));
-                cmd.Parameters.Add(df.InfraDB.GetNewParameter("address", System.Data.DbType.String, request.Colvalues["address"]));
-                cmd.Parameters.Add(df.InfraDB.GetNewParameter("phone", System.Data.DbType.String, request.Colvalues["phone"]));
-                cmd.Parameters.Add(df.InfraDB.GetNewParameter("email", System.Data.DbType.String, request.Colvalues["email"]));
-                cmd.Parameters.Add(df.InfraDB.GetNewParameter("website", System.Data.DbType.String, request.Colvalues["website"]));
-                cmd.Parameters.Add(df.InfraDB.GetNewParameter("tier", System.Data.DbType.String, request.Colvalues["tier"]));
-                cmd.Parameters.Add(df.InfraDB.GetNewParameter("tenantname", System.Data.DbType.String, request.Colvalues["tenantname"]));
-                cmd.Parameters.Add(df.InfraDB.GetNewParameter("tenantid", System.Data.DbType.Int64, request.Colvalues["tenantid"]));
-                return (Convert.ToInt32(cmd.ExecuteScalar()) >= 0);
+                if (request.op == "insert")
+                {
+                    var cmd = df.InfraDB.GetNewCommand(con, "UPDATE eb_tenantaccount SET accountname=@accountname,cid=@cid,address=@address,phone=@phone,email=@email,website=@website,tier=@tier,tenantname=@tenantname WHERE tenantid=@tenantid RETURNING id");
+                    cmd.Parameters.Add(df.InfraDB.GetNewParameter("accountname", System.Data.DbType.String, request.Colvalues["accountname"]));
+                    cmd.Parameters.Add(df.InfraDB.GetNewParameter("cid", System.Data.DbType.String, request.Colvalues["cid"]));
+                    cmd.Parameters.Add(df.InfraDB.GetNewParameter("address", System.Data.DbType.String, request.Colvalues["address"]));
+                    cmd.Parameters.Add(df.InfraDB.GetNewParameter("phone", System.Data.DbType.String, request.Colvalues["phone"]));
+                    cmd.Parameters.Add(df.InfraDB.GetNewParameter("email", System.Data.DbType.String, request.Colvalues["email"]));
+                    cmd.Parameters.Add(df.InfraDB.GetNewParameter("website", System.Data.DbType.String, request.Colvalues["website"]));
+                    cmd.Parameters.Add(df.InfraDB.GetNewParameter("tier", System.Data.DbType.String, request.Colvalues["tier"]));
+                    cmd.Parameters.Add(df.InfraDB.GetNewParameter("tenantname", System.Data.DbType.String, request.Colvalues["tenantname"]));
+                    cmd.Parameters.Add(df.InfraDB.GetNewParameter("tenantid", System.Data.DbType.Int64, request.Colvalues["tenantid"]));
+                    AccountResponse resp = new AccountResponse
+                    {
+                        id = Convert.ToInt32(cmd.ExecuteScalar())
+                    };
+                    return resp;
+
                 }
-                else if(request.op=="Dbcheck")
+                else if (request.op == "Dbcheck")
                 {
-                    string sql = string.Format("SELECT cid,cname FROM eb_tenants WHERE id={0}", request.CId);
+                    int uid = 0;
+                    string sql = string.Format("SELECT cid,accountname FROM eb_tenantaccount WHERE id={0}", request.Colvalues["acid"]);
                     var dt = df.InfraDB.DoQuery(sql);
-
-
-
                     //CREATE CLIENTDB CONN
                     EbClientConf e = new EbClientConf()
                     {
@@ -308,26 +328,37 @@ namespace ExpressBase.ServiceStack.Services
 
                     byte[] bytea2 = EbSerializers.ProtoBuf_Serialize(e);
                     var dbconf = EbSerializers.ProtoBuf_DeSerialize<EbClientConf>(bytea2);
-
                     var dbf = new DatabaseFactory(dbconf);
                     var _con = dbf.ObjectsDB.GetNewConnection();
                     try
                     {
                         _con.Open();
+                        var cmd = df.InfraDB.GetNewCommand(con, "UPDATE eb_tenants SET conf=@conf WHERE id=@id RETURNING id");
+                        cmd.Parameters.Add(df.InfraDB.GetNewParameter("conf", System.Data.DbType.Binary, bytea2));
+                        cmd.Parameters.Add(df.InfraDB.GetNewParameter("id", System.Data.DbType.Int64, Convert.ToInt32(request.Colvalues["acid"])));
+                        uid = Convert.ToInt32(cmd.ExecuteScalar());
                     }
-                    catch (Exception ex) { return false; }
-                    var cmd = df.InfraDB.GetNewCommand(con, "UPDATE eb_tenants SET conf=@conf WHERE id=@id;");
-                    cmd.Parameters.Add(df.InfraDB.GetNewParameter("conf", System.Data.DbType.Binary, bytea2));
-                    cmd.Parameters.Add(df.InfraDB.GetNewParameter("id", System.Data.DbType.Int64, Convert.ToInt32(request.Colvalues["id"])));
-                    cmd.ExecuteNonQuery();
-                    return true;
+                    catch (Exception ex)
+                    {
+
+                    }
+                    AccountResponse resp = new AccountResponse
+                    {
+                        id = uid
+                    };
+                    return resp;
                 }
                 else
                 {
-                    return false;
+                    AccountResponse resp = new AccountResponse
+                    {
+                        id = 0
+                    };
+                    return resp;
                 }
 
             }
+
         }
 
         //public bool Any(SendMail request)
@@ -383,49 +414,49 @@ namespace ExpressBase.ServiceStack.Services
 
         //    }
 
-        public AccountResponse Any(GetAccount request)
+        public GetAccountResponse Any(GetAccount request)
         {
             string path = Directory.GetParent(System.IO.Directory.GetCurrentDirectory()).FullName;
-            
+
             var infraconf = EbSerializers.ProtoBuf_DeSerialize<EbInfraDBConf>(EbFile.Bytea_FromFile(Path.Combine(path, "EbInfra.conn")));
             var df = new DatabaseFactory(infraconf);
             using (var con = df.InfraDB.GetNewConnection())
             {
                 con.Open();
-                if(request.restype=="img")
+                if (request.restype == "img")
                 {
-                    string sql = string.Format("SELECT profileimg FROM eb_tenants WHERE id={0}", request.Uid);
+                    string sql = string.Format("SELECT id,profileimg FROM eb_tenants WHERE id={0}", request.Uid);
                     var dt = df.InfraDB.DoQuery(sql);
-                    List<string> list = new List<string>();
+                    Dictionary<int, string> list = new Dictionary<int, string>();
                     foreach (EbDataRow dr in dt.Rows)
                     {
-                        list.Add(dr[0].ToString());
+                        list.Add(Convert.ToInt32(dr[0]),dr[1].ToString());
                     }
-                    AccountResponse resp = new AccountResponse()
+                    GetAccountResponse resp = new GetAccountResponse()
                     {
-                        aclist = list
+                        dict = list
                     };
                     return resp;
                 }
                 else
                 {
-                    string sql = string.Format("SELECT accountname FROM eb_tenantaccount WHERE tenantid={0}", request.Uid);
+                    string sql = string.Format("SELECT id,accountname FROM eb_tenantaccount WHERE tenantid={0}", request.Uid);
                     var dt = df.InfraDB.DoQuery(sql);
-                    List<string> list = new List<string>();
+                    Dictionary<int, string> list = new Dictionary<int, string>();
                     foreach (EbDataRow dr in dt.Rows)
                     {
-                        list.Add(dr[0].ToString());
+                        list.Add(Convert.ToInt32(dr[0]), dr[1].ToString());
                     }
-                    AccountResponse resp = new AccountResponse()
+                    GetAccountResponse resp = new GetAccountResponse()
                     {
-                        aclist = list
+                        dict = list
                     };
                     return resp;
                 }
-               
-                
+
+
             }
         }
-        
+
     }
 }
