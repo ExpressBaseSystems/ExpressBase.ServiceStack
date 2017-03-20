@@ -74,6 +74,7 @@ namespace ExpressBase.ServiceStack
                         HashAlgorithm = "RS256",
                         PrivateKeyXml = AppSettings.GetString("PrivateKeyXml"),
                         RequireSecureConnection = true,
+                        EncryptPayload = true,
                         CreatePayloadFilter = (payload,session) => {
                             payload["iss"] = "eb-sec";
                             payload["aud"] = "eb-web";
