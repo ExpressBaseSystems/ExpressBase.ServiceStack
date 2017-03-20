@@ -58,6 +58,19 @@ namespace ExpressBase.ServiceStack
 
         public int Uid { get; set; }
 
+        public string AuthProvider
+        {
+            get
+            {
+                throw new NotImplementedException();
+            }
+
+            set
+            {
+                throw new NotImplementedException();
+            }
+        }
+
         public CustomUserSession()
         {
             this.ProviderOAuthAccess = new List<IAuthTokens>();

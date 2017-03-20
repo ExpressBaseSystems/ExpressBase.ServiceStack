@@ -9,6 +9,7 @@ using System;
 using ExpressBase.Objects;
 using System.Data.Common;
 using System.IdentityModel.Tokens.Jwt;
+using ExpressBase.Objects.ServiceStack_Artifacts;
 
 namespace ExpressBase.ServiceStack
 {
