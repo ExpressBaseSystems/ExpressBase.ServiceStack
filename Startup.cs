@@ -71,10 +71,11 @@ namespace ExpressBase.ServiceStack
             Plugins.Add(new AuthFeature(() => new CustomUserSession(),
                 new IAuthProvider[] {
                     new MyJwtAuthProvider(AppSettings) {
-                        HashAlgorithm = "RS256",
-                        PrivateKeyXml = AppSettings.GetString("PrivateKeyXml"),
-                        RequireSecureConnection = true,
-                        EncryptPayload = true,
+                        //HashAlgorithm = "RS256",
+                        //PrivateKeyXml = AppSettings.GetString("PrivateKeyXml"),
+                        //RequireSecureConnection = true,
+                        //EncryptPayload = true,
+                        AuthKey = AesUtils.CreateKey(),
                         CreatePayloadFilter = (payload,session) => {
                             payload["iss"] = "eb-sec";
                             payload["aud"] = "eb-web";

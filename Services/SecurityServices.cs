@@ -112,9 +112,9 @@ namespace ExpressBase.ServiceStack
     public class MyJwtAuthProvider : JwtAuthProvider
     {
         User _authUser = null;
-      
+        IAppSettings AppSettings = null;
 
-        public MyJwtAuthProvider(IAppSettings settings) : base(settings) { }
+        public MyJwtAuthProvider(IAppSettings settings) : base(settings) { AppSettings = settings; }
 
         public override object Authenticate(IServiceBase authService, IAuthSession session, Authenticate request)
         {
@@ -122,6 +122,7 @@ namespace ExpressBase.ServiceStack
 
             AuthenticateResponse response = null;
             string profileimg="";
+            
             if (string.IsNullOrEmpty(request.Meta["cid"]))
             {
                 string path = Directory.GetParent(System.IO.Directory.GetCurrentDirectory()).FullName;
