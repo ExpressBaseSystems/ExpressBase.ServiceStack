@@ -73,7 +73,7 @@ namespace ExpressBase.ServiceStack
                     new MyJwtAuthProvider(AppSettings) {
                         HashAlgorithm = "RS256",
                         PrivateKeyXml = AppSettings.GetString("PrivateKeyXml"),
-                        RequireSecureConnection = false,
+                        RequireSecureConnection = true,
                         CreatePayloadFilter = (payload,session) => {
                             payload["iss"] = "eb-sec";
                             payload["aud"] = "eb-web";
