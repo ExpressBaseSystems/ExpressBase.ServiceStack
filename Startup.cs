@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using ServiceStack;
 using ServiceStack.Auth;
+using ServiceStack.Logging;
 using ServiceStack.Mvc;
 using ServiceStack.ProtoBuf;
 using ServiceStack.Redis;
@@ -64,8 +65,10 @@ namespace ExpressBase.ServiceStack
 
         public override void Configure(Container container)
         {
+            LogManager.LogFactory = new ConsoleLogFactory(debugEnabled: true);
+
             this.Plugins.Add(new CorsFeature());
-            Plugins.Add(new ProtoBufFormat());
+            this.Plugins.Add(new ProtoBufFormat());
            
             Plugins.Add(new AuthFeature(() => new CustomUserSession(),
                 new IAuthProvider[] {

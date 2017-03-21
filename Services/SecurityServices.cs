@@ -13,6 +13,7 @@ using System.IO;
 using ExpressBase.Data;
 using System.Data.Common;
 using ServiceStack.Redis;
+using ServiceStack.Logging;
 
 namespace ExpressBase.ServiceStack
 {
@@ -118,6 +119,7 @@ namespace ExpressBase.ServiceStack
 
         public override object Authenticate(IServiceBase authService, IAuthSession session, Authenticate request)
         {
+            ILog log = LogManager.GetLogger(GetType());
             CustomUserSession mysession = session as CustomUserSession;
             EbBaseService bservice = new EbBaseService();
 
@@ -130,16 +132,18 @@ namespace ExpressBase.ServiceStack
                 var infraconf = EbSerializers.ProtoBuf_DeSerialize<EbInfraDBConf>(EbFile.Bytea_FromFile(Path.Combine(path, "EbInfra.conn")));
                 var df = new DatabaseFactory(infraconf);   
                 _authUser = InfraUser.GetDetails(df, request.UserName, request.Password);
-                
+                log.Info("#Eb reached 1");
             }
             else
             {
                 bservice.ClientID = request.Meta["cid"];
                 _authUser = User.GetDetails(bservice.DatabaseFactory, request.UserName, request.Password);
-                
+                log.Info("#Eb reached 2");
+
             }
             if (_authUser != null)
             {
+                log.Info("#Eb reached 3");
                 var redisClient = bservice.RedisClient;
                 mysession.UserAuthId = _authUser.Id.ToString();
                 mysession.UserName = _authUser.Uname;
