@@ -17,18 +17,6 @@ namespace ExpressBase.ServiceStack
 {
     public class EbBaseService : Service
     {
-        //private string _redisServer;
-        //private int _redisPort;
-        //private string _redisPass;
-
-        //internal EbBaseService()
-        //{
-        //    IAppSettings appSettings = new AppSettings();
-        //    _redisServer = appSettings.Get<string>("RedisServer");
-        //    _redisPort = appSettings.Get<int>("RedisPort");
-        //    _redisPass = appSettings.Get<string>("RedisPassword");
-        //}
-
         internal string ClientID { get; set; }
 
         internal IRedisClient RedisClient

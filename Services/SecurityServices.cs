@@ -119,6 +119,7 @@ namespace ExpressBase.ServiceStack
         public override object Authenticate(IServiceBase authService, IAuthSession session, Authenticate request)
         {
             CustomUserSession mysession = session as CustomUserSession;
+            EbBaseService bservice = new EbBaseService();
 
             AuthenticateResponse response = null;
             string profileimg="";
@@ -133,14 +134,13 @@ namespace ExpressBase.ServiceStack
             }
             else
             {
-                EbBaseService bservice = new EbBaseService();
                 bservice.ClientID = request.Meta["cid"];
                 _authUser = User.GetDetails(bservice.DatabaseFactory, request.UserName, request.Password);
                 
             }
             if (_authUser != null)
             {
-                var redisClient = new RedisClient("139.59.39.130", 6379, "Opera754$");
+                var redisClient = bservice.RedisClient;
                 mysession.UserAuthId = _authUser.Id.ToString();
                 mysession.UserName = _authUser.Uname;
                 mysession.FirstName = _authUser.Fname;
