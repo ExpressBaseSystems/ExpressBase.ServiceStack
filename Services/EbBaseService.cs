@@ -10,16 +10,30 @@ using System.IO;
 using ExpressBase.Objects;
 using System.Data;
 using ServiceStack.Auth;
+using System.Configuration;
+using ServiceStack.Configuration;
 
 namespace ExpressBase.ServiceStack
 {
     public class EbBaseService : Service
     {
+        private string _redisServer;
+        private int _redisPort;
+        private string _redisPass;
+
+        internal EbBaseService()
+        {
+            IAppSettings appSettings = new AppSettings();
+            _redisServer = appSettings.Get<string>("RedisServer");
+            _redisPort = appSettings.Get<int>("RedisPort");
+            _redisPass = appSettings.Get<string>("RedisPassword");
+        }
+
         internal string ClientID { get; set; }
 
         internal RedisClient RedisClient
         {
-            get { return new RedisClient("139.59.39.130", 6379, "Opera754$"); }
+            get { return new RedisClient(_redisServer, _redisPort, _redisPass); }
         }
 
         internal DatabaseFactory DatabaseFactory
