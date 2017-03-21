@@ -17,23 +17,23 @@ namespace ExpressBase.ServiceStack
 {
     public class EbBaseService : Service
     {
-        private string _redisServer;
-        private int _redisPort;
-        private string _redisPass;
+        //private string _redisServer;
+        //private int _redisPort;
+        //private string _redisPass;
 
-        internal EbBaseService()
-        {
-            IAppSettings appSettings = new AppSettings();
-            _redisServer = appSettings.Get<string>("RedisServer");
-            _redisPort = appSettings.Get<int>("RedisPort");
-            _redisPass = appSettings.Get<string>("RedisPassword");
-        }
+        //internal EbBaseService()
+        //{
+        //    IAppSettings appSettings = new AppSettings();
+        //    _redisServer = appSettings.Get<string>("RedisServer");
+        //    _redisPort = appSettings.Get<int>("RedisPort");
+        //    _redisPass = appSettings.Get<string>("RedisPassword");
+        //}
 
         internal string ClientID { get; set; }
 
-        internal RedisClient RedisClient
+        internal IRedisClient RedisClient
         {
-            get { return new RedisClient(_redisServer, _redisPort, _redisPass); }
+            get { return base.Redis; }
         }
 
         internal DatabaseFactory DatabaseFactory

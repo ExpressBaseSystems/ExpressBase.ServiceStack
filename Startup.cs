@@ -8,6 +8,7 @@ using ServiceStack;
 using ServiceStack.Auth;
 using ServiceStack.Mvc;
 using ServiceStack.ProtoBuf;
+using ServiceStack.Redis;
 
 namespace ExpressBase.ServiceStack
 {
@@ -63,8 +64,6 @@ namespace ExpressBase.ServiceStack
 
         public override void Configure(Container container)
         {
-
-            
             this.Plugins.Add(new CorsFeature());
             Plugins.Add(new ProtoBufFormat());
            
@@ -114,7 +113,11 @@ namespace ExpressBase.ServiceStack
             SetConfig(new HostConfig { DebugMode = true, DefaultContentType = MimeTypes.Json });
             //SetConfig(new HostConfig { DefaultContentType = MimeTypes.Json });
 
-           
+            var redisConnectionString = string.Format("{0}@{1}:{2}",
+                AppSettings.Get<string>("RedisPassword"),
+                AppSettings.Get<string>("RedisServer"),
+                AppSettings.Get<int>("RedisPort"));
+            container.Register<IRedisClientsManager>(c => new RedisManagerPool(redisConnectionString));
         }
     }
 }
