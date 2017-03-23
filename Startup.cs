@@ -6,10 +6,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using ServiceStack;
 using ServiceStack.Auth;
+using ServiceStack.Configuration;
 using ServiceStack.Logging;
 using ServiceStack.Mvc;
 using ServiceStack.ProtoBuf;
 using ServiceStack.Redis;
+using System.IO;
 
 namespace ExpressBase.ServiceStack
 {
@@ -61,12 +63,19 @@ namespace ExpressBase.ServiceStack
 
     public class AppHost : AppHostBase
     {
+        public static EbLiveSettings EbLiveSettings { get; set; }
+
         public AppHost() : base("Test Razor", typeof(AppHost).GetAssembly()) { }
 
         public override void Configure(Container container)
         {
-            LogManager.LogFactory = new ConsoleLogFactory(debugEnabled: true);
+            var liveSettings = "appsettings.txt".MapHostAbsolutePath();
+            var appSettings = File.Exists(liveSettings)
+                ? (IAppSettings)new TextFileSettings(liveSettings) : new AppSettings();
+            EbLiveSettings = new EbLiveSettings(appSettings);
 
+            LogManager.LogFactory = new ConsoleLogFactory(debugEnabled: true);
+            //this.Plugins.Add(new RequestLogsFeature());
             this.Plugins.Add(new CorsFeature());
             this.Plugins.Add(new ProtoBufFormat());
            
@@ -74,7 +83,7 @@ namespace ExpressBase.ServiceStack
                 new IAuthProvider[] {
                     new MyJwtAuthProvider(AppSettings) {
                         //HashAlgorithm = "RS256",
-                        //PrivateKeyXml = AppSettings.GetString("PrivateKeyXml"),
+                        //PrivateKeyXml = EbLiveSettings.PrivateKeyXml,
                         //RequireSecureConnection = true,
                         //EncryptPayload = true,
                         AuthKey = AesUtils.CreateKey(),
@@ -110,16 +119,14 @@ namespace ExpressBase.ServiceStack
             //this.CustomErrorHttpHandlers[HttpStatusCode.NotFound] = new RazorHandler("/notfound");
 
             //container.RegisterAutoWired<TokenAuthorizationManager>().ReusedWithin(ReuseScope.Request);
-
+            
             this.ContentTypes.Register(MimeTypes.ProtoBuf, (reqCtx, res, stream) => ProtoBuf.Serializer.NonGeneric.Serialize(stream, res), ProtoBuf.Serializer.NonGeneric.Deserialize);
 
             SetConfig(new HostConfig { DebugMode = true, DefaultContentType = MimeTypes.Json });
             //SetConfig(new HostConfig { DefaultContentType = MimeTypes.Json });
 
             var redisConnectionString = string.Format("{0}@{1}:{2}",
-                AppSettings.Get<string>("RedisPassword"),
-                AppSettings.Get<string>("RedisServer"),
-                AppSettings.Get<int>("RedisPort"));
+                EbLiveSettings.RedisPassword, EbLiveSettings.RedisServer, EbLiveSettings.RedisPort);
             container.Register<IRedisClientsManager>(c => new RedisManagerPool(redisConnectionString));
         }
     }

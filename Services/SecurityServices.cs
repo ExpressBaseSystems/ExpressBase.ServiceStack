@@ -144,18 +144,20 @@ namespace ExpressBase.ServiceStack
             if (_authUser != null)
             {
                 log.Info("#Eb reached 3");
-                var redisClient = bservice.RedisClient;
+                var redisClient = (authService as AuthenticateService).Redis;
                 mysession.UserAuthId = _authUser.Id.ToString();
                 mysession.UserName = _authUser.Uname;
                 mysession.FirstName = _authUser.Fname;
                 mysession.Uid = _authUser.Id;
                 if(request.Meta.ContainsKey("cid"))
                 {
+                    log.Info("#Eb reached 4");
                     mysession.CId = request.Meta["cid"];
                     profileimg = string.Format("uid_{0}_cid_{1}_profileimage", _authUser.Id, request.Meta["cid"]);
                 }
                 else
                 {
+                    log.Info("#Eb reached 5");
                     mysession.CId= string.Empty;
                     profileimg = string.Format("uid_{0}_profileimage", _authUser.Id);
 
@@ -163,6 +165,7 @@ namespace ExpressBase.ServiceStack
                 redisClient.Set<string>(profileimg, _authUser.Profileimg);
                 response = new AuthenticateResponse
                 {
+
                     UserId = _authUser.Id.ToString(),
                     UserName = _authUser.Uname,
                     ReferrerUrl = string.Empty,

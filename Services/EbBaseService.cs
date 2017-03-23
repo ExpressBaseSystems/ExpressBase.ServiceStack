@@ -30,7 +30,7 @@ namespace ExpressBase.ServiceStack
             {
                 EbClientConf conf = null;
 
-                using (var client = this.RedisClient)
+                using (var client = this.Redis)
                 {
                     string key = string.Format("EbClientConf_{0}", this.ClientID);
 
@@ -57,7 +57,7 @@ namespace ExpressBase.ServiceStack
 
         private void LoadCache()
         {
-            using (var redisClient = new RedisClient("139.59.39.130", 6379, "Opera754$"))
+            using (var redisClient = this.Redis)
             {
                 EbTableCollection tcol = redisClient.Get<EbTableCollection>("EbTableCollection");
                 EbTableColumnCollection ccol = redisClient.Get<EbTableColumnCollection>("EbTableColumnCollection");
