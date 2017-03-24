@@ -21,7 +21,7 @@ namespace ExpressBase.ServiceStack
         {
             var builder = new Microsoft.Extensions.Configuration.ConfigurationBuilder()
                 .SetBasePath(env.ContentRootPath)
-                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true) 
                 .AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: true)
                 .AddEnvironmentVariables();
             Configuration = builder.Build();
@@ -42,7 +42,12 @@ namespace ExpressBase.ServiceStack
         {
             loggerFactory.AddConsole(Configuration.GetSection("Logging"));
             loggerFactory.AddDebug();
-
+            var redisserver = Configuration.GetValue<string>("EbRedisConfig:RedisServer");
+            var redispassword = Configuration.GetValue<string>("EbRedisConfig:RedisPassword");
+            var redisport = Configuration.GetValue<int>("EbRedisConfig:RedisPort");
+            var prikey = Configuration.GetValue<string>("JwtConfig:PrivateKeyXml");
+            var pubkey = Configuration.GetValue<string>("JwtConfig:PublicKeyXml");
+            EbLiveSettings ELive = new EbLiveSettings(redisserver, redispassword, redisport, prikey, pubkey);
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
@@ -55,27 +60,33 @@ namespace ExpressBase.ServiceStack
 
             app.UseStaticFiles();
 
-            app.UseServiceStack(new AppHost());
+            app.UseServiceStack(new AppHost() { EbLiveSettings= ELive });
 
             app.Use(new RazorHandler("/notfound"));
         }
+
+
     }
 
     public class AppHost : AppHostBase
     {
-        public static EbLiveSettings EbLiveSettings { get; set; }
+        public EbLiveSettings EbLiveSettings { get; set; }
 
         public AppHost() : base("Test Razor", typeof(AppHost).GetAssembly()) { }
 
+        public override void OnAfterConfigChanged()
+        {
+           
+            base.OnAfterConfigChanged();
+
+        }
+
         public override void Configure(Container container)
         {
-            var liveSettings = "appsettings.txt".MapHostAbsolutePath();
-            var appSettings = File.Exists(liveSettings)
-                ? (IAppSettings)new TextFileSettings(liveSettings) : new AppSettings();
-            EbLiveSettings = new EbLiveSettings(appSettings);
-
+            
+            var co = this.Config;
             LogManager.LogFactory = new ConsoleLogFactory(debugEnabled: true);
-            //this.Plugins.Add(new RequestLogsFeature());
+            
             this.Plugins.Add(new CorsFeature());
             this.Plugins.Add(new ProtoBufFormat());
            
@@ -126,7 +137,7 @@ namespace ExpressBase.ServiceStack
             //SetConfig(new HostConfig { DefaultContentType = MimeTypes.Json });
 
             var redisConnectionString = string.Format("{0}@{1}:{2}",
-                EbLiveSettings.RedisPassword, EbLiveSettings.RedisServer, EbLiveSettings.RedisPort);
+               EbLiveSettings.RedisPassword,EbLiveSettings.RedisServer, EbLiveSettings.RedisPort);
             container.Register<IRedisClientsManager>(c => new RedisManagerPool(redisConnectionString));
         }
     }

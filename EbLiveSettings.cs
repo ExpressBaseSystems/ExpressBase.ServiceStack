@@ -19,6 +19,15 @@ namespace ExpressBase.ServiceStack
 
         public string PublicKeyXml { get; set; }
 
+        public EbLiveSettings(string s,string pwd,int p,string prikey, string pubkey)
+        {
+            this.RedisServer = s;
+            this.RedisPassword = pwd;
+            this.RedisPort = p;
+            this.PrivateKeyXml = prikey;
+            this.PublicKeyXml = pubkey;
+        }
+
         public EbLiveSettings(IAppSettings appSettings)
         {
             this.RedisServer = appSettings.Get<string>("RedisServer", string.Empty);
