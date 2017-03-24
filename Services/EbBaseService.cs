@@ -19,11 +19,6 @@ namespace ExpressBase.ServiceStack
     {
         internal string ClientID { get; set; }
 
-        internal IRedisClient RedisClient
-        {
-            get { return base.Redis; }
-        }
-
         internal DatabaseFactory DatabaseFactory
         {
             get

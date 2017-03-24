@@ -1,19 +1,10 @@
 ﻿using ExpressBase.Common;
 using ExpressBase.Data;
 using ExpressBase.Objects.ServiceStack_Artifacts;
-using MailKit.Security;
-using MimeKit;
 using ServiceStack;
-using ServiceStack.Text;
-
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
-using System.Linq;
-using System.Runtime.Serialization;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ExpressBase.ServiceStack.Services
 {
