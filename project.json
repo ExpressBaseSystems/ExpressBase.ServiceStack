@@ -59,15 +59,12 @@
 
     "publishOptions": {
       "include": [
-        "wwwroot",
-        "**/*.cshtml",
         "appsettings.json",
         "web.config"
       ]
     },
 
     "scripts": {
-      "prepublish": [ "bower install", "dotnet bundle" ],
       "postpublish": [ "dotnet publish-iis --publish-folder %publish:OutputPath% --framework %publish:FullTargetFramework%" ]
     }
 }
