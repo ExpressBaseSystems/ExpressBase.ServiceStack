@@ -1,5 +1,4 @@
-﻿using ExpressBase.ServiceStack;
-using Funq;
+﻿using Funq;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -7,12 +6,14 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using ServiceStack;
 using ServiceStack.Auth;
+using ServiceStack.Configuration;
+using ServiceStack.Logging;
 using ServiceStack.Mvc;
 using ServiceStack.ProtoBuf;
 using ServiceStack.Redis;
-using System.Linq;
+using System.IO;
 
-namespace RazorRockstars.WebHost
+namespace ExpressBase.ServiceStack
 {
     public class Startup
     {
@@ -20,7 +21,7 @@ namespace RazorRockstars.WebHost
         {
             var builder = new Microsoft.Extensions.Configuration.ConfigurationBuilder()
                 .SetBasePath(env.ContentRootPath)
-                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true) 
                 .AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: true)
                 .AddEnvironmentVariables();
             Configuration = builder.Build();
@@ -41,7 +42,12 @@ namespace RazorRockstars.WebHost
         {
             loggerFactory.AddConsole(Configuration.GetSection("Logging"));
             loggerFactory.AddDebug();
-
+            var redisserver = Configuration.GetValue<string>("EbRedisConfig:RedisServer");
+            var redispassword = Configuration.GetValue<string>("EbRedisConfig:RedisPassword");
+            var redisport = Configuration.GetValue<int>("EbRedisConfig:RedisPort");
+            var prikey = Configuration.GetValue<string>("JwtConfig:PrivateKeyXml");
+            var pubkey = Configuration.GetValue<string>("JwtConfig:PublicKeyXml");
+            EbLiveSettings ELive = new EbLiveSettings(redisserver, redispassword, redisport, prikey, pubkey);
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
@@ -54,40 +60,44 @@ namespace RazorRockstars.WebHost
 
             app.UseStaticFiles();
 
-            app.UseServiceStack(new AppHost());
-
-            app.UseMvc(routes =>
-            {
-                routes.MapRoute("login", "login/{*clientid}", defaults: new { controller = "External", action = "LoginTenantUser" });
-                routes.MapRoute("default", "{controller=Home}/{action=Contact}");
-            });
-
-            //app.UseMvc(routes =>
-            //{
-            //    routes.MapRoute(
-            //        name: "default",
-            //        template: "{controller=External}/{action=LoginTenantUser}/{id?}");
-            //});
+            app.UseServiceStack(new AppHost() { EbLiveSettings= ELive });
 
             app.Use(new RazorHandler("/notfound"));
         }
+
+
     }
 
     public class AppHost : AppHostBase
     {
+        public EbLiveSettings EbLiveSettings { get; set; }
+
         public AppHost() : base("Test Razor", typeof(AppHost).GetAssembly()) { }
+
+        public override void OnAfterConfigChanged()
+        {
+           
+            base.OnAfterConfigChanged();
+
+        }
 
         public override void Configure(Container container)
         {
-            Plugins.Add(new RazorFormat());
-            Plugins.Add(new ProtoBufFormat());
-
+            
+            var co = this.Config;
+            LogManager.LogFactory = new ConsoleLogFactory(debugEnabled: true);
+            
+            this.Plugins.Add(new CorsFeature());
+            this.Plugins.Add(new ProtoBufFormat());
+           
             Plugins.Add(new AuthFeature(() => new CustomUserSession(),
                 new IAuthProvider[] {
                     new MyJwtAuthProvider(AppSettings) {
-                        HashAlgorithm = "RS256",
-                        PrivateKeyXml = AppSettings.GetString("PrivateKeyXml"),
-                        RequireSecureConnection = false,
+                        //HashAlgorithm = "RS256",
+                        //PrivateKeyXml = EbLiveSettings.PrivateKeyXml,
+                        //RequireSecureConnection = true,
+                        //EncryptPayload = true,
+                        AuthKey = AesUtils.CreateKey(),
                         CreatePayloadFilter = (payload,session) => {
                             payload["iss"] = "eb-sec";
                             payload["aud"] = "eb-web";
@@ -95,7 +105,10 @@ namespace RazorRockstars.WebHost
                             payload["exp"] = ((System.Int32)session.CreatedAt.AddHours(3).ToUniversalTime().Subtract(new System.DateTime(1970, 1, 1)).TotalSeconds).ToString();
                             payload["uid"] = session.UserAuthId;
                             payload["email"] = session.UserName;
-                            payload["ClientId"] = (session as CustomUserSession).ClientId;
+                            payload["cid"] = (session as CustomUserSession).CId;
+                            payload["uid"] = (session as CustomUserSession).Uid.ToString();
+                            payload["Fname"] =(session as CustomUserSession).FirstName;
+                   
                         }
                     },
                     //new ApiKeyAuthProvider(AppSettings),        //Sign-in with API Key
@@ -117,11 +130,15 @@ namespace RazorRockstars.WebHost
             //this.CustomErrorHttpHandlers[HttpStatusCode.NotFound] = new RazorHandler("/notfound");
 
             //container.RegisterAutoWired<TokenAuthorizationManager>().ReusedWithin(ReuseScope.Request);
-
+            
             this.ContentTypes.Register(MimeTypes.ProtoBuf, (reqCtx, res, stream) => ProtoBuf.Serializer.NonGeneric.Serialize(stream, res), ProtoBuf.Serializer.NonGeneric.Deserialize);
 
             SetConfig(new HostConfig { DebugMode = true, DefaultContentType = MimeTypes.Json });
             //SetConfig(new HostConfig { DefaultContentType = MimeTypes.Json });
+
+            var redisConnectionString = string.Format("redis://{0}@{1}:{2}?ssl=true",
+               EbLiveSettings.RedisPassword,EbLiveSettings.RedisServer, EbLiveSettings.RedisPort);
+            container.Register<IRedisClientsManager>(c => new RedisManagerPool(redisConnectionString));
         }
     }
 }

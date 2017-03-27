@@ -10,17 +10,14 @@ using System.IO;
 using ExpressBase.Objects;
 using System.Data;
 using ServiceStack.Auth;
+using System.Configuration;
+using ServiceStack.Configuration;
 
 namespace ExpressBase.ServiceStack
 {
     public class EbBaseService : Service
     {
-        internal string ClientID = "eb-bini-dev";//{ get; set; }
-
-        internal RedisClient RedisClient
-        {
-            get { return new RedisClient("139.59.39.130", 6379, "Opera754$"); }
-        }
+        internal string ClientID { get; set; }
 
         internal DatabaseFactory DatabaseFactory
         {
@@ -28,7 +25,7 @@ namespace ExpressBase.ServiceStack
             {
                 EbClientConf conf = null;
 
-                using (var client = this.RedisClient)
+                using (var client = this.Redis)
                 {
                     string key = string.Format("EbClientConf_{0}", this.ClientID);
 
@@ -39,7 +36,7 @@ namespace ExpressBase.ServiceStack
                         var infraconf = EbSerializers.ProtoBuf_DeSerialize<EbInfraDBConf>(EbFile.Bytea_FromFile(Path.Combine(path, "EbInfra.conn")));
 
                         var df = new DatabaseFactory(infraconf);
-                        var bytea = df.InfraDB_RO.DoQuery<byte[]>(string.Format("SELECT conf FROM eb_clients WHERE cid='{0}'", this.ClientID));
+                        var bytea = df.InfraDB_RO.DoQuery<byte[]>(string.Format("SELECT config FROM eb_tenantaccount WHERE cid='{0}'", this.ClientID));
 
                         if (bytea == null)
                             throw new Exception("Unauthorized!");
@@ -55,7 +52,7 @@ namespace ExpressBase.ServiceStack
 
         private void LoadCache()
         {
-            using (var redisClient = new RedisClient("139.59.39.130", 6379, "Opera754$"))
+            using (var redisClient = this.Redis)
             {
                 EbTableCollection tcol = redisClient.Get<EbTableCollection>("EbTableCollection");
                 EbTableColumnCollection ccol = redisClient.Get<EbTableColumnCollection>("EbTableColumnCollection");

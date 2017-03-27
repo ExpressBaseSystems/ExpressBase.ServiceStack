@@ -5,13 +5,10 @@ using ServiceStack.Auth;
 using ServiceStack.Configuration;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.Serialization;
-using System.Threading.Tasks;
 using ServiceStack.Web;
 using System.IO;
 using ExpressBase.Data;
-using System.Data.Common;
+using ServiceStack.Logging;
 
 namespace ExpressBase.ServiceStack
 {
@@ -53,7 +50,22 @@ namespace ExpressBase.ServiceStack
 
         public string UserName { get; set; }
 
-        public string ClientId { get; set; }
+        public string CId { get; set; }
+
+        public int Uid { get; set; }
+
+        public string AuthProvider
+        {
+            get
+            {
+                throw new NotImplementedException();
+            }
+
+            set
+            {
+                throw new NotImplementedException();
+            }
+        }
 
         public CustomUserSession()
         {
@@ -96,46 +108,59 @@ namespace ExpressBase.ServiceStack
     public class MyJwtAuthProvider : JwtAuthProvider
     {
         User _authUser = null;
-      
+        IAppSettings AppSettings = null;
 
-        public MyJwtAuthProvider(IAppSettings settings) : base(settings) { }
+        public MyJwtAuthProvider(IAppSettings settings) : base(settings) { AppSettings = settings; }
 
         public override object Authenticate(IServiceBase authService, IAuthSession session, Authenticate request)
         {
+            ILog log = LogManager.GetLogger(GetType());
             CustomUserSession mysession = session as CustomUserSession;
+            EbBaseService bservice = new EbBaseService();
 
             AuthenticateResponse response = null;
-            if (request.Meta["Login"] == "Client")
+            string profileimg="";
+            
+            if (string.IsNullOrEmpty(request.Meta["cid"]))
             {
                 string path = Directory.GetParent(System.IO.Directory.GetCurrentDirectory()).FullName;
                 var infraconf = EbSerializers.ProtoBuf_DeSerialize<EbInfraDBConf>(EbFile.Bytea_FromFile(Path.Combine(path, "EbInfra.conn")));
                 var df = new DatabaseFactory(infraconf);   
                 _authUser = InfraUser.GetDetails(df, request.UserName, request.Password);
+                log.Info("#Eb reached 1");
             }
             else
             {
-                EbBaseService bservice = new EbBaseService();
-                bservice.ClientID = request.Meta["ClientId"];
-
+                bservice.ClientID = request.Meta["cid"];
                 _authUser = User.GetDetails(bservice.DatabaseFactory, request.UserName, request.Password);
+                log.Info("#Eb reached 2");
+
             }
             if (_authUser != null)
             {
-                mysession.IsAuthenticated = true;
+                log.Info("#Eb reached 3");
+                var redisClient = (authService as AuthenticateService).Redis;
                 mysession.UserAuthId = _authUser.Id.ToString();
                 mysession.UserName = _authUser.Uname;
-                if(request.Meta.ContainsKey("ClientId"))
+                mysession.FirstName = _authUser.Fname;
+                mysession.Uid = _authUser.Id;
+                if(request.Meta.ContainsKey("cid"))
                 {
-                    mysession.ClientId = request.Meta["ClientId"];
+                    log.Info("#Eb reached 4");
+                    mysession.CId = request.Meta["cid"];
+                    profileimg = string.Format("uid_{0}_cid_{1}_profileimage", _authUser.Id, request.Meta["cid"]);
                 }
                 else
                 {
-                    mysession.ClientId = _authUser.Cid.ToString();
-                }
-                
+                    log.Info("#Eb reached 5");
+                    mysession.CId= string.Empty;
+                    profileimg = string.Format("uid_{0}_profileimage", _authUser.Id);
 
+                }
+                redisClient.Set<string>(profileimg, _authUser.Profileimg);
                 response = new AuthenticateResponse
                 {
+
                     UserId = _authUser.Id.ToString(),
                     UserName = _authUser.Uname,
                     ReferrerUrl = string.Empty,

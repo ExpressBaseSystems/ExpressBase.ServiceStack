@@ -16,12 +16,13 @@
     <SchemaVersion>2.0</SchemaVersion>
   </PropertyGroup>
   <ItemGroup>
-    <DnxInvisibleContent Include="bower.json" />
-    <DnxInvisibleContent Include=".bowerrc" />
-  </ItemGroup>
-  <ItemGroup>
     <DnxInvisibleFolder Include=".git\" />
     <DnxInvisibleFolder Include="Views\" />
   </ItemGroup>
   <Import Project="$(VSToolsPath)\DotNet.Web\Microsoft.DotNet.Web.targets" Condition="'$(VSToolsPath)' != ''" />
+  <ProjectExtensions>
+    <VisualStudio>
+      <UserProperties appsettings_1json__JSONSchema="http://json.schemastore.org/contribute" />
+    </VisualStudio>
+  </ProjectExtensions>
 </Project>

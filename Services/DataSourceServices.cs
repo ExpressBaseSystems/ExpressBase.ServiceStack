@@ -1,85 +1,30 @@
-﻿using ServiceStack;
-using ServiceStack.DataAnnotations;
-using ServiceStack.Text;
-using System.Runtime.Serialization;
-using ExpressBase.Common;
+﻿using ExpressBase.Common;
 using ExpressBase.Data;
-using System;
 using ExpressBase.Objects;
+using ExpressBase.Objects.ServiceStack_Artifacts;
+using ServiceStack;
+using System;
 using System.Collections.Generic;
-using ExpressBase.ServiceStack.Services;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace ExpressBase.ServiceStack
 {
-    [Route("/ds")]
-    [Route("/ds/data/{Id}")]
-    public class DataSourceDataRequest : IReturn<DataSourceDataResponse>
-    {
-        public int Id { get; set; }
-
-        public int Start { get; set; }
-
-        public int Length { get; set; }
-
-        public int Draw { get; set; }
-
-        public string SearchText { get; set; }
-
-        public string OrderByDirection { get; set; }
-
-        public string OrderColumnName { get; set; }
-
-        public string SearchColumnName { get; set; }
-
-        public Dictionary<string, string> colvalues { get; set; }
-    }
-
-    [Route("/ds")]
-    [Route("/ds/columns/{Id}")]
-    public class DataSourceColumnsRequest : IReturn<DataSourceColumnsResponse>
-    {
-        public int Id { get; set; }
-
-        public string SearchText { get; set; }
-
-        public string OrderByDirection { get; set; }
-
-        public string SelectedColumnName { get; set; }
-
-        public Dictionary<string,string> colvalues { get; set; }
-}
-
-    [DataContract]
-    [Csv(CsvBehavior.FirstEnumerable)]
-    public class DataSourceDataResponse
-    {
-        [DataMember(Order = 1)]
-        public int Draw { get; set; }
-
-        [DataMember(Order = 2)]
-        public int RecordsTotal { get; set; }
-
-        [DataMember(Order = 3)]
-        public int RecordsFiltered { get; set; }
-
-        [DataMember(Order = 4)]
-        public RowColletion Data { get; set; }
-    }
-
-    [DataContract]
-    [Csv(CsvBehavior.FirstEnumerable)]
-    public class DataSourceColumnsResponse
-    {
-        [DataMember(Order = 1)]
-        public ColumnColletion Columns { get; set; }
-    }
-
     [ClientCanSwapTemplates]
     [DefaultView("ds")]
     public class DataSourceService : EbBaseService
     {
         public object Get(DataSourceDataRequest request)
         {
+          
+            var jwtoken = new JwtSecurityToken(request.Token);
+            foreach (var c in jwtoken.Claims)
+            {
+                if (c.Type == "cid")
+                {
+                    base.ClientID = c.Value;
+                    break;
+                }
+            }
             request.SearchText = base.Request.QueryString["searchtext"];
             //request.SearchTextcollection = string.IsNullOrEmpty(request.SearchText) ? "" : request.SearchText; // @txtsearch
             request.OrderByDirection = base.Request.QueryString["order[0][dir]"]; //@order_dir
@@ -88,23 +33,14 @@ namespace ExpressBase.ServiceStack
 
             List<string> searchColumn = new List<string>();
             List<string> searchValue = new List<string>();
-            List<string> operatorValue = new List<string>();
+            List<string> selectedValue = new List<string>();
 
             if (!string.IsNullOrEmpty(request.SearchColumnName))
                 searchColumn = new List<string>(request.SearchColumnName.Split(','));
             if (!string.IsNullOrEmpty(request.SearchText))
                 searchValue = new List<string>(request.SearchText.Split(','));
             if (!string.IsNullOrEmpty(base.Request.QueryString["selectedvalue"]))
-                operatorValue = new List<string>(base.Request.QueryString["selectedvalue"].Split(','));
-
-            var datefrom = string.Empty;
-            var dateto = string.Empty;
-            if (!(request.colvalues).IsNullOrEmpty())
-            {
-                datefrom = request.colvalues["from"];
-                dateto = request.colvalues["to"];
-            }
-
+                selectedValue = new List<string>(base.Request.QueryString["selectedvalue"].Split(','));
 
             var dt = this.DatabaseFactory.ObjectsDB.DoQuery(string.Format("SELECT obj_bytea FROM eb_objects WHERE id={0}", request.Id));
 
@@ -126,41 +62,21 @@ namespace ExpressBase.ServiceStack
                         for (int j = 0; j < searchColumn.Count; j++)
                         {
 
-                            if (operatorValue[j] == "x*")
-                                _c += string.Format("AND LOWER({0})::text LIKE LOWER('{1}%') ", searchColumn[j], searchValue[j]);
-                            else if (operatorValue[j] == "*x")
-                                _c += string.Format("AND LOWER({0})::text LIKE LOWER('%{1}') ", searchColumn[j], searchValue[j]);
-                            else if (operatorValue[j] == "*x*")
+                            if (selectedValue[j] == "null")
                                 _c += string.Format("AND LOWER({0})::text LIKE LOWER('%{1}%') ", searchColumn[j], searchValue[j]);
-                            else if (operatorValue[j] == "=")
-                                _c += string.Format("AND LOWER({0})::text LIKE LOWER('{1}') ", searchColumn[j], searchValue[j]);
                             else
-                                _c += string.Format("AND {0} {1} '{2}' ", searchColumn[j], operatorValue[j], searchValue[j]);
+                                _c += string.Format("AND {0} {1} '{2}' ", searchColumn[j], selectedValue[j], searchValue[j]);
                         }
                         _sql = _ds.Sql.Replace("@and_searchplaceholder", _c);
                     }
                     _sql = _sql.Replace("@orderbyplaceholder",
                      (string.IsNullOrEmpty(request.OrderColumnName)) ? "id" : string.Format("{0} {1}", request.OrderColumnName, request.OrderByDirection));
 
-                    var parameters = new System.Data.Common.DbParameter[0];
-                    if (!string.IsNullOrEmpty(datefrom) && !string.IsNullOrEmpty(dateto))
+                    var parameters = new System.Data.Common.DbParameter[2]
                     {
-                        parameters = new System.Data.Common.DbParameter[4]
-                        {
-                                this.DatabaseFactory.ObjectsDB.GetNewParameter("@limit", System.Data.DbType.Int32, request.Length),
-                                this.DatabaseFactory.ObjectsDB.GetNewParameter("@last_id", System.Data.DbType.Int32, request.Start+1),
-                                this.DatabaseFactory.ObjectsDB.GetNewParameter("@date1", System.Data.DbType.DateTime, Convert.ToDateTime(datefrom)),
-                                this.DatabaseFactory.ObjectsDB.GetNewParameter("@date2", System.Data.DbType.DateTime, Convert.ToDateTime(dateto))
-                        };
-                    }
-                    else
-                    {
-                        parameters = new System.Data.Common.DbParameter[2]
-                            {
-                                this.DatabaseFactory.ObjectsDB.GetNewParameter("@limit", System.Data.DbType.Int32,request.Length),
-                                this.DatabaseFactory.ObjectsDB.GetNewParameter("@last_id", System.Data.DbType.Int32, request.Start+1),
-                            };
-                    }
+                        this.DatabaseFactory.ObjectsDB.GetNewParameter("@limit", System.Data.DbType.Int32, request.Length),
+                        this.DatabaseFactory.ObjectsDB.GetNewParameter("@last_id", System.Data.DbType.Int32, request.Start+1)
+                    };
 
                     var _dataset = (request.Length > 0) ? this.DatabaseFactory.ObjectsDB.DoQueries(_sql, parameters) : this.DatabaseFactory.ObjectsDB.DoQueries(_sql);
 
@@ -179,6 +95,16 @@ namespace ExpressBase.ServiceStack
 
         public object Get(DataSourceColumnsRequest request)
         {
+          
+            var jwtoken = new JwtSecurityToken(request.Token);
+            foreach (var c in jwtoken.Claims)
+            {
+                if (c.Type == "cid")
+                {
+                    base.ClientID = c.Value;
+                    break;
+                }
+            }
             ColumnColletion columns = base.SessionBag.Get<ColumnColletion>(string.Format("ds_{0}_columns", request.Id));
             //if (columns == null)
             {
@@ -186,14 +112,6 @@ namespace ExpressBase.ServiceStack
                 request.SearchText = string.IsNullOrEmpty(request.SearchText) ? "" : request.SearchText; // @txtsearch
                 request.OrderByDirection = base.Request.QueryString["order[0][dir]"]; //@order_dir
                 request.SelectedColumnName = base.Request.QueryString["col"]; // @selcol
-
-                var datefrom = string.Empty;
-                var dateto = string.Empty;
-                if (!request.colvalues.IsNullOrEmpty())
-                {
-                    datefrom = request.colvalues["from"];
-                    dateto = request.colvalues["to"];
-                }
 
                 string _sql = string.Format("SELECT obj_bytea FROM eb_objects WHERE id={0}", request.Id);
 
@@ -209,26 +127,12 @@ namespace ExpressBase.ServiceStack
 
                         _sql = _sql.Replace("@orderbyplaceholder",
                         (string.IsNullOrEmpty(request.SelectedColumnName)) ? "id" : string.Format("{0} {1}", request.SelectedColumnName, request.OrderByDirection));
-                        System.Data.Common.DbParameter[] parameters = null;
-                        if (!string.IsNullOrEmpty(datefrom) && !string.IsNullOrEmpty(dateto))
+
+                        var parameters = new System.Data.Common.DbParameter[2]
                         {
-                            parameters = new System.Data.Common.DbParameter[4]
-                            {
-                                this.DatabaseFactory.ObjectsDB.GetNewParameter("@limit", System.Data.DbType.Int32, 0),
-                                this.DatabaseFactory.ObjectsDB.GetNewParameter("@last_id", System.Data.DbType.Int32, 0),
-                                this.DatabaseFactory.ObjectsDB.GetNewParameter("@date1", System.Data.DbType.DateTime,Convert.ToDateTime(datefrom)),
-                                this.DatabaseFactory.ObjectsDB.GetNewParameter("@date2", System.Data.DbType.DateTime, Convert.ToDateTime(dateto))
-                            };
-                        }
-                        else
-                        {
-                            parameters = new System.Data.Common.DbParameter[2]
-                                {
-                                this.DatabaseFactory.ObjectsDB.GetNewParameter("@limit", System.Data.DbType.Int32, 0),
-                                this.DatabaseFactory.ObjectsDB.GetNewParameter("@last_id", System.Data.DbType.Int32, 0),
-                                };
-                        }    
-                            
+                            this.DatabaseFactory.ObjectsDB.GetNewParameter("@limit", System.Data.DbType.Int32, 0),
+                            this.DatabaseFactory.ObjectsDB.GetNewParameter("@last_id", System.Data.DbType.Int32, 0)
+                        };
 
                         _sql = (_sql.IndexOf(";") > 0) ? _sql.Substring(_sql.IndexOf(";") + 1) : _sql;
                         var dt2 = this.DatabaseFactory.ObjectsDB.DoQuery(_sql, parameters);

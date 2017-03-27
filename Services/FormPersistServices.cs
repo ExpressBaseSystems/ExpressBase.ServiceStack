@@ -13,57 +13,10 @@ using System.Text;
 using System.Threading.Tasks;
 using ServiceStack.Redis;
 using ExpressBase.Objects;
+using ExpressBase.Objects.ServiceStack_Artifacts;
 
 namespace ExpressBase.ServiceStack.Services
 {
-    [DataContract]
-    [Route("/insert", "POST")]
-    public class FormPersistRequest : IReturn<bool>
-    {
-
-        [DataMember(Order = 0)]
-        public Dictionary<string, object> Colvalues { get; set; }
-
-        [DataMember(Order = 1)]
-        public int TableId { get; set; }
-
-    }
-    [DataContract]
-    [Route("/uc", "POST")]
-    public class CheckIfUnique : IReturn<bool>
-    {
-        [DataMember(Order = 0)]
-        public Dictionary<string, object> Colvalues { get; set; }
-
-        [DataMember(Order = 1)]
-        public int TableId { get; set; }
-
-    }
-
-    [DataContract]
-    [Route("/view/{ColId}", "GET")]
-    public class View : IReturn<ViewResponse>
-    {
-
-        [DataMember(Order = 1)]
-        public int ColId { get; set; }
-
-        [DataMember(Order = 2)]
-        public int TableId { get; set; }
-
-        [DataMember(Order = 3)]
-        public int FId { get; set; }
-
-    }
-
-    [DataContract]
-    public class ViewResponse
-    {
-
-        [DataMember(Order = 1)]
-        public EbForm ebform { get; set; }
-    }
-
     [ClientCanSwapTemplates]
     public class Registerservice : EbBaseService
     {
@@ -72,9 +25,8 @@ namespace ExpressBase.ServiceStack.Services
 
         public ViewResponse Any(View request)
         {
-            var redisClient = new RedisClient("139.59.39.130", 6379, "Opera754$");
-            tcol = redisClient.Get<EbTableCollection>("EbTableCollection");
-            Objects.EbForm _form = redisClient.Get<Objects.EbForm>(string.Format("form{0}", request.FId));
+            tcol = this.Redis.Get<EbTableCollection>("EbTableCollection");
+            Objects.EbForm _form = this.Redis.Get<Objects.EbForm>(string.Format("form{0}", request.FId));
             string sql = string.Format("select * from {0} where id= {1} AND eb_del='false' ", tcol[request.TableId].Name, request.ColId);
             var ds = this.DatabaseFactory.ObjectsDB.DoQueries(sql);
             _form.SetData(ds);
@@ -92,14 +44,13 @@ namespace ExpressBase.ServiceStack.Services
             Dictionary<string, object> dict = new Dictionary<string, object>();
             string upsql="";
 
-            var redisClient = new RedisClient("139.59.39.130", 6379, "Opera754$");
-            tcol = redisClient.Get<EbTableCollection>("EbTableCollection");
-            ccol = redisClient.Get<EbTableColumnCollection>("EbTableColumnCollection");
+            tcol = this.Redis.Get<EbTableCollection>("EbTableCollection");
+            ccol = this.Redis.Get<EbTableColumnCollection>("EbTableColumnCollection");
             bResult = Uniquetest(request.Colvalues);
 
             if (Convert.ToBoolean(request.Colvalues["isUpdate"]))
             {
-                var _ebform = redisClient.Get<EbForm>("cacheform");
+                var _ebform = this.Redis.Get<EbForm>("cacheform");
                 _ebform.Init4Redis();
                 upsql += string.Format("INSERT INTO eb_auditlog(tableid, dataid, eb_fid, operations, timestamp)VALUES({0},{1},{2},{3},'{4}');", request.Colvalues["TableId"], request.Colvalues["DataId"], request.Colvalues["FId"], 1, DateTime.Now);
                 foreach (string key in request.Colvalues.Keys)
@@ -184,7 +135,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 List<string> _params = new List<string>(request.Colvalues.Count);
                 List<string> _values = new List<string>(request.Colvalues.Count);
-                Objects.EbForm _form = redisClient.Get<Objects.EbForm>(string.Format("form{0}", Convert.ToInt32(request.Colvalues["FId"])));
+                Objects.EbForm _form = this.Redis.Get<Objects.EbForm>(string.Format("form{0}", Convert.ToInt32(request.Colvalues["FId"])));
                 foreach (string key in request.Colvalues.Keys)
                 {
                     var _control = _form.GetControl(key);
@@ -225,9 +176,8 @@ namespace ExpressBase.ServiceStack.Services
 
         public bool Uniquetest(Dictionary<string, object> dict)
         {
-            var redisClient = new RedisClient("139.59.39.130", 6379, "Opera754$");
             bool bResult = false;
-            Objects.EbForm _form = redisClient.Get<Objects.EbForm>(string.Format("form{0}", Convert.ToInt32(dict["FId"])));
+            Objects.EbForm _form = this.Redis.Get<Objects.EbForm>(string.Format("form{0}", Convert.ToInt32(dict["FId"])));
             var uniquelist = _form.GetControlsByPropertyValue<bool>("Unique", true, Objects.EnumOperator.Equal);
             foreach (EbControl control in uniquelist)
             {
@@ -254,7 +204,7 @@ namespace ExpressBase.ServiceStack.Services
         {
 
             List<string> _whclause_sb = new List<string>(request.Colvalues.Count);
-            using (var redisClient = new RedisClient("139.59.39.130", 6379, "Opera754$"))
+            using (var redisClient = this.Redis)
             {
                 tcol = redisClient.Get<EbTableCollection>("EbTableCollection");
                 ccol = redisClient.Get<EbTableColumnCollection>("EbTableColumnCollection");
