@@ -59,6 +59,16 @@ namespace ExpressBase.ServiceStack
         {
             bool result = false;
 
+            var jwtoken = new JwtSecurityToken(request.Token);
+            foreach (var c in jwtoken.Claims)
+            {
+                if (c.Type == "cid")
+                {
+                    base.ClientID = c.Value;
+                    break;
+                }
+            }
+
             using (var con = this.DatabaseFactory.ObjectsDB.GetNewConnection())
             {
                 con.Open();
