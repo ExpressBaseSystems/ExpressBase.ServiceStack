@@ -6,12 +6,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using ServiceStack;
 using ServiceStack.Auth;
-using ServiceStack.Configuration;
 using ServiceStack.Logging;
-using ServiceStack.Mvc;
 using ServiceStack.ProtoBuf;
 using ServiceStack.Redis;
-using System.IO;
 
 namespace ExpressBase.ServiceStack
 {
@@ -33,8 +30,6 @@ namespace ExpressBase.ServiceStack
         public void ConfigureServices(IServiceCollection services)
         {
             // Add framework services.
-            services.AddMvc();
-            services.AddMemoryCache();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -61,8 +56,6 @@ namespace ExpressBase.ServiceStack
             app.UseStaticFiles();
 
             app.UseServiceStack(new AppHost() { EbLiveSettings= ELive });
-
-            app.Use(new RazorHandler("/notfound"));
         }
 
 

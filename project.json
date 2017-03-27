@@ -4,13 +4,10 @@
       "version": "1.1.1",
       "type": "platform"
     },
-    "Microsoft.Data.SQLite": "1.0.*",
     "ServiceStack.Text.Core": "1.0.*",
     "ServiceStack.Interfaces.Core": "1.0.*",
-    "ServiceStack.Client.Core": "1.0.*",
     "ServiceStack.Common.Core": "1.0.*",
     "ServiceStack.Core": "1.0.*",
-    "ServiceStack.Mvc.Core": "1.0.*",
     "ExpressBase.Common": "1.0.0",
     "ExpressBase.Data": "1.0.0",
     "ExpressBase.Security": "1.0.0",
@@ -33,7 +30,6 @@
   },
 
     "tools": {
-      "Microsoft.AspNetCore.Razor.Tools": "1.0.0-preview2-final",
       "Microsoft.AspNetCore.Server.IISIntegration.Tools": "1.0.0-preview2-final"
     },
 
