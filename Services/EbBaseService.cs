@@ -19,6 +19,17 @@ namespace ExpressBase.ServiceStack
     {
         internal string ClientID { get; set; }
 
+        internal static DatabaseFactory InfraDatabaseFactory
+        {
+            get
+            {
+                string path = Directory.GetParent(System.IO.Directory.GetCurrentDirectory()).FullName;
+                var infraconf = EbSerializers.ProtoBuf_DeSerialize<EbInfraDBConf>(EbFile.Bytea_FromFile(Path.Combine(path, "EbInfra.conn")));
+
+                return new DatabaseFactory(infraconf);
+            }
+        }
+
         internal DatabaseFactory DatabaseFactory
         {
             get
@@ -32,14 +43,10 @@ namespace ExpressBase.ServiceStack
                     conf = client.Get<EbClientConf>(key);
                     if (conf == null)
                     {
-                        string path = Directory.GetParent(System.IO.Directory.GetCurrentDirectory()).FullName;
-                        var infraconf = EbSerializers.ProtoBuf_DeSerialize<EbInfraDBConf>(EbFile.Bytea_FromFile(Path.Combine(path, "EbInfra.conn")));
-
-                        var df = new DatabaseFactory(infraconf);
-                        var bytea = df.InfraDB_RO.DoQuery<byte[]>(string.Format("SELECT config FROM eb_tenantaccount WHERE cid='{0}'", this.ClientID));
+                        var bytea = InfraDatabaseFactory.InfraDB_RO.DoQuery<byte[]>(string.Format("SELECT config FROM eb_tenantaccount WHERE cid='{0}'", this.ClientID));
 
                         if (bytea == null)
-                            throw new Exception("Unauthorized!");
+                            this.Response.ReturnAuthRequired();
                         conf = EbSerializers.ProtoBuf_DeSerialize<EbClientConf>(bytea);
 
                         client.Set<EbClientConf>(key, conf);

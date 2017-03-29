@@ -328,17 +328,14 @@ namespace ExpressBase.ServiceStack.Services
         public GetAccountResponse Any(GetAccount request)
         {
             base.ClientID = request.TenantAccountId;
-            string path = Directory.GetParent(System.IO.Directory.GetCurrentDirectory()).FullName;
 
-            var infraconf = EbSerializers.ProtoBuf_DeSerialize<EbInfraDBConf>(EbFile.Bytea_FromFile(Path.Combine(path, "EbInfra.conn")));
-            var df = new DatabaseFactory(infraconf);
-            using (var con = df.InfraDB.GetNewConnection())
+            using (var con = InfraDatabaseFactory.InfraDB.GetNewConnection())
             {
                 con.Open();
                 if (request.restype == "img")
                 {
                     string sql = string.Format("SELECT id,profileimg FROM eb_tenants WHERE id={0}", request.Uid);
-                    var dt = df.InfraDB.DoQuery(sql);
+                    var dt = InfraDatabaseFactory.InfraDB.DoQuery(sql);
                     Dictionary<int, string> list = new Dictionary<int, string>();
                     foreach (EbDataRow dr in dt.Rows)
                     {
@@ -353,7 +350,7 @@ namespace ExpressBase.ServiceStack.Services
                 else
                 {
                     string sql = string.Format("SELECT id,accountname FROM eb_tenantaccount WHERE tenantid={0}", request.Uid);
-                    var dt = df.InfraDB.DoQuery(sql);
+                    var dt = InfraDatabaseFactory.InfraDB.DoQuery(sql);
                     Dictionary<int, string> list = new Dictionary<int, string>();
                     foreach (EbDataRow dr in dt.Rows)
                     {
