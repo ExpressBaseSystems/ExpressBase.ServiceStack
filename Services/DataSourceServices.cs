@@ -15,16 +15,8 @@ namespace ExpressBase.ServiceStack
     {
         public object Get(DataSourceDataRequest request)
         {
-          
-            var jwtoken = new JwtSecurityToken(request.Token);
-            foreach (var c in jwtoken.Claims)
-            {
-                if (c.Type == "cid")
-                {
-                    base.ClientID = c.Value;
-                    break;
-                }
-            }
+            base.ClientID = request.TenantAccountId;
+
             request.SearchText = base.Request.QueryString["searchtext"];
             //request.SearchTextcollection = string.IsNullOrEmpty(request.SearchText) ? "" : request.SearchText; // @txtsearch
             request.OrderByDirection = base.Request.QueryString["order[0][dir]"]; //@order_dir
@@ -95,16 +87,8 @@ namespace ExpressBase.ServiceStack
 
         public object Get(DataSourceColumnsRequest request)
         {
-          
-            var jwtoken = new JwtSecurityToken(request.Token);
-            foreach (var c in jwtoken.Claims)
-            {
-                if (c.Type == "cid")
-                {
-                    base.ClientID = c.Value;
-                    break;
-                }
-            }
+            base.ClientID = request.TenantAccountId;
+
             ColumnColletion columns = base.SessionBag.Get<ColumnColletion>(string.Format("ds_{0}_columns", request.Id));
             //if (columns == null)
             {

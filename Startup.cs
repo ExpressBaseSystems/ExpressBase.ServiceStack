@@ -1,4 +1,5 @@
-﻿using Funq;
+﻿using ExpressBase.Objects.ServiceStack_Artifacts;
+using Funq;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -9,6 +10,7 @@ using ServiceStack.Auth;
 using ServiceStack.Logging;
 using ServiceStack.ProtoBuf;
 using ServiceStack.Redis;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace ExpressBase.ServiceStack
 {
@@ -132,6 +134,22 @@ namespace ExpressBase.ServiceStack
             var redisConnectionString = string.Format("redis://{0}@{1}:{2}?ssl=true",
                EbLiveSettings.RedisPassword,EbLiveSettings.RedisServer, EbLiveSettings.RedisPort);
             container.Register<IRedisClientsManager>(c => new RedisManagerPool(redisConnectionString));
+
+            //Add a request filter to check if the user has a session initialized
+            this.GlobalRequestFilters.Add((req, res, requestDto) => 
+            {
+                var jwtoken = new JwtSecurityToken((req as IEbSSRequest).Token);
+                if (jwtoken == null)
+                    res.ReturnAuthRequired();
+                foreach (var c in jwtoken.Claims)
+                {
+                    if (c.Type == "cid")
+                    {
+                        (req as IEbSSRequest).TenantAccountId = c.Value;
+                        break;
+                    }
+                }
+            });
         }
     }
 }
