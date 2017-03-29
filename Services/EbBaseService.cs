@@ -19,14 +19,18 @@ namespace ExpressBase.ServiceStack
     {
         internal string ClientID { get; set; }
 
+        private static DatabaseFactory _infraDf;
         internal static DatabaseFactory InfraDatabaseFactory
         {
             get
             {
-                string path = Directory.GetParent(System.IO.Directory.GetCurrentDirectory()).FullName;
-                var infraconf = EbSerializers.ProtoBuf_DeSerialize<EbInfraDBConf>(EbFile.Bytea_FromFile(Path.Combine(path, "EbInfra.conn")));
+                if (_infraDf == null)
+                {
+                    string path = Path.Combine(Directory.GetParent(System.IO.Directory.GetCurrentDirectory()).FullName, "EbInfra.conn");
+                    _infraDf = new DatabaseFactory(EbSerializers.ProtoBuf_DeSerialize<EbInfraDBConf>(EbFile.Bytea_FromFile(path)));
+                }
 
-                return new DatabaseFactory(infraconf);
+                return _infraDf;
             }
         }
 
