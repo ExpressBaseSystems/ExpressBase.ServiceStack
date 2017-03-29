@@ -20,15 +20,7 @@ namespace ExpressBase.ServiceStack
         [Authenticate]
         public object Get(EbObjectRequest request)
         {
-            var jwtoken = new JwtSecurityToken(request.Token);
-            foreach (var c in jwtoken.Claims)
-            {
-                if (c.Type == "cid")
-                {
-                    base.ClientID = c.Value;
-                    break;
-                }
-            }
+            base.ClientID = request.TenantAccountId;
 
             EbDataTable dt = null;
             using (var con = this.DatabaseFactory.ObjectsDB.GetNewConnection())
@@ -58,16 +50,7 @@ namespace ExpressBase.ServiceStack
         public object Post(EbObjectWrapper request)
         {
             bool result = false;
-
-            var jwtoken = new JwtSecurityToken(request.Token);
-            foreach (var c in jwtoken.Claims)
-            {
-                if (c.Type == "cid")
-                {
-                    base.ClientID = c.Value;
-                    break;
-                }
-            }
+            base.ClientID = request.TenantAccountId;
 
             using (var con = this.DatabaseFactory.ObjectsDB.GetNewConnection())
             {
