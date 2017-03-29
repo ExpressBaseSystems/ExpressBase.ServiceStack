@@ -327,6 +327,7 @@ namespace ExpressBase.ServiceStack.Services
 
         public GetAccountResponse Any(GetAccount request)
         {
+            base.ClientID = request.TenantAccountId;
             string path = Directory.GetParent(System.IO.Directory.GetCurrentDirectory()).FullName;
 
             var infraconf = EbSerializers.ProtoBuf_DeSerialize<EbInfraDBConf>(EbFile.Bytea_FromFile(Path.Combine(path, "EbInfra.conn")));
