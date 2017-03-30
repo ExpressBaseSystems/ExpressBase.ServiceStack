@@ -13,22 +13,20 @@ namespace ExpressBase.ServiceStack.Services
     {
         public InfraResponse Any(InfraRequest request)
         {
-            string path = Directory.GetParent(System.IO.Directory.GetCurrentDirectory()).FullName;
-            var infraconf = EbSerializers.ProtoBuf_DeSerialize<EbInfraDBConf>(EbFile.Bytea_FromFile(Path.Combine(path, "EbInfra.conn")));
-            var df = new DatabaseFactory(infraconf);
-            using (var con = df.InfraDB.GetNewConnection())
+           
+            using (var con = InfraDatabaseFactory.InfraDB.GetNewConnection())
             {
                 con.Open();
                 if (request.ltype == "fb")
                 {
 
                     //DateTime date = DateTime.ParseExact(request.Colvalues["birthday"].ToString(), "MM/dd/yyyy", CultureInfo.InvariantCulture);
-                    var cmd = df.InfraDB.GetNewCommand(con, "INSERT INTO eb_tenants (cname,firstname,gender,socialid) VALUES(@cname, @firstname,@gender,@socialid)ON CONFLICT(socialid) DO UPDATE SET cname=@cname RETURNING id ");
-                    cmd.Parameters.Add(df.InfraDB.GetNewParameter("cname", System.Data.DbType.String, request.Colvalues["email"]));
-                    cmd.Parameters.Add(df.InfraDB.GetNewParameter("firstname", System.Data.DbType.String, request.Colvalues["name"]));
+                    var cmd = InfraDatabaseFactory.InfraDB.GetNewCommand(con, "INSERT INTO eb_tenants (cname,firstname,gender,socialid) VALUES(@cname, @firstname,@gender,@socialid)ON CONFLICT(socialid) DO UPDATE SET cname=@cname RETURNING id ");
+                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("cname", System.Data.DbType.String, request.Colvalues["email"]));
+                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("firstname", System.Data.DbType.String, request.Colvalues["name"]));
                     //cmd.Parameters.Add(df.InfraDB.GetNewParameter("birthday", System.Data.DbType.DateTime, date));
-                    cmd.Parameters.Add(df.InfraDB.GetNewParameter("gender", System.Data.DbType.String, request.Colvalues["gender"]));
-                    cmd.Parameters.Add(df.InfraDB.GetNewParameter("socialid", System.Data.DbType.String, request.Colvalues["id"]));
+                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("gender", System.Data.DbType.String, request.Colvalues["gender"]));
+                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("socialid", System.Data.DbType.String, request.Colvalues["id"]));
 
                     InfraResponse res = new InfraResponse
                     {
@@ -39,12 +37,12 @@ namespace ExpressBase.ServiceStack.Services
                 else if (request.ltype == "G+")
                 {
 
-                    var cmd = df.InfraDB.GetNewCommand(con, "INSERT INTO eb_tenants (cname,firstname,gender,socialid,profileimg)VALUES(@cname, @firstname,@gender,@socialid,@profileimg)ON CONFLICT(socialid) DO UPDATE SET cname=@cname RETURNING id");
-                    cmd.Parameters.Add(df.InfraDB.GetNewParameter("cname", System.Data.DbType.String, request.Colvalues["email"]));
-                    cmd.Parameters.Add(df.InfraDB.GetNewParameter("firstname", System.Data.DbType.String, request.Colvalues["name"]));
-                    cmd.Parameters.Add(df.InfraDB.GetNewParameter("gender", System.Data.DbType.String, request.Colvalues["gender"]));
-                    cmd.Parameters.Add(df.InfraDB.GetNewParameter("socialid", System.Data.DbType.String, request.Colvalues["id"]));
-                    cmd.Parameters.Add(df.InfraDB.GetNewParameter("profileimg", System.Data.DbType.String, string.Format("<img src='{0}' class='img-circle navbar-right img-cir'>", request.Colvalues["picture"])));
+                    var cmd = InfraDatabaseFactory.InfraDB.GetNewCommand(con, "INSERT INTO eb_tenants (cname,firstname,gender,socialid,profileimg)VALUES(@cname, @firstname,@gender,@socialid,@profileimg)ON CONFLICT(socialid) DO UPDATE SET cname=@cname RETURNING id");
+                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("cname", System.Data.DbType.String, request.Colvalues["email"]));
+                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("firstname", System.Data.DbType.String, request.Colvalues["name"]));
+                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("gender", System.Data.DbType.String, request.Colvalues["gender"]));
+                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("socialid", System.Data.DbType.String, request.Colvalues["id"]));
+                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("profileimg", System.Data.DbType.String, string.Format("<img src='{0}' class='img-circle navbar-right img-cir'>", request.Colvalues["picture"])));
 
 
                     InfraResponse res = new InfraResponse
@@ -56,14 +54,14 @@ namespace ExpressBase.ServiceStack.Services
                 }
                 else if (request.ltype == "update")
                 {
-                    var cmd = df.InfraDB.GetNewCommand(con, "UPDATE eb_tenants SET company=@company,employees=@employees,country=@country,phone=@phone WHERE id=@id RETURNING id");
+                    var cmd = InfraDatabaseFactory.InfraDB.GetNewCommand(con, "UPDATE eb_tenants SET company=@company,employees=@employees,country=@country,phone=@phone WHERE id=@id RETURNING id");
 
 
-                    cmd.Parameters.Add(df.InfraDB.GetNewParameter("company", System.Data.DbType.String, request.Colvalues["company"]));
-                    cmd.Parameters.Add(df.InfraDB.GetNewParameter("employees", System.Data.DbType.String, request.Colvalues["employees"]));
-                    cmd.Parameters.Add(df.InfraDB.GetNewParameter("country", System.Data.DbType.String, request.Colvalues["country"]));
-                    cmd.Parameters.Add(df.InfraDB.GetNewParameter("phone", System.Data.DbType.String, request.Colvalues["phone"]));
-                    cmd.Parameters.Add(df.InfraDB.GetNewParameter("id", System.Data.DbType.Int64, request.Colvalues["id"]));
+                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("company", System.Data.DbType.String, request.Colvalues["company"]));
+                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("employees", System.Data.DbType.String, request.Colvalues["employees"]));
+                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("country", System.Data.DbType.String, request.Colvalues["country"]));
+                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("phone", System.Data.DbType.String, request.Colvalues["phone"]));
+                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("id", System.Data.DbType.Int64, request.Colvalues["id"]));
                     InfraResponse res = new InfraResponse
                     {
                         id = Convert.ToInt32(cmd.ExecuteScalar())
@@ -72,9 +70,9 @@ namespace ExpressBase.ServiceStack.Services
                 }
                 else if (request.ltype == "imgupload")
                 {
-                    var cmd = df.InfraDB.GetNewCommand(con, "UPDATE eb_tenants SET profileimg=@profileimg WHERE id=@id RETURNING id");
-                    cmd.Parameters.Add(df.InfraDB.GetNewParameter("profileimg", System.Data.DbType.String, string.Format("<img src='data:image/png;base64,{0}'class='img-circle navbar-right img-cir'/>", request.Colvalues["profileimg"])));
-                    cmd.Parameters.Add(df.InfraDB.GetNewParameter("id", System.Data.DbType.Int64, request.Colvalues["id"]));
+                    var cmd = InfraDatabaseFactory.InfraDB.GetNewCommand(con, "UPDATE eb_tenants SET profileimg=@profileimg WHERE id=@id RETURNING id");
+                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("profileimg", System.Data.DbType.String, string.Format("<img src='data:image/png;base64,{0}'class='img-circle navbar-right img-cir'/>", request.Colvalues["profileimg"])));
+                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("id", System.Data.DbType.Int64, request.Colvalues["id"]));
                     InfraResponse res = new InfraResponse
                     {
                         id = Convert.ToInt32(cmd.ExecuteScalar())
@@ -83,9 +81,9 @@ namespace ExpressBase.ServiceStack.Services
                 }
                 else if (request.ltype == "accountimg")
                 {
-                    var cmd = df.InfraDB.GetNewCommand(con, "INSERT INTO eb_tenantaccount (profilelogo,tenantid) VALUES(@profilelogo,@tenantid) RETURNING tenantid");
-                    cmd.Parameters.Add(df.InfraDB.GetNewParameter("profilelogo", System.Data.DbType.String, string.Format("<img src='data:image/png;base64,{0}'class='img-circle navbar-right img-cir'/>", request.Colvalues["profilelogo"])));
-                    cmd.Parameters.Add(df.InfraDB.GetNewParameter("tenantid", System.Data.DbType.Int64, request.Colvalues["id"]));
+                    var cmd = InfraDatabaseFactory.InfraDB.GetNewCommand(con, "INSERT INTO eb_tenantaccount (profilelogo,tenantid) VALUES(@profilelogo,@tenantid) RETURNING tenantid");
+                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("profilelogo", System.Data.DbType.String, string.Format("<img src='data:image/png;base64,{0}'class='img-circle navbar-right img-cir'/>", request.Colvalues["profilelogo"])));
+                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("tenantid", System.Data.DbType.Int64, request.Colvalues["id"]));
                     InfraResponse res = new InfraResponse
                     {
                         id = Convert.ToInt32(cmd.ExecuteScalar())
@@ -95,11 +93,11 @@ namespace ExpressBase.ServiceStack.Services
                 else
                 {
 
-                    var cmd = df.InfraDB.GetNewCommand(con, "INSERT INTO eb_tenants (cname,firstname,password) VALUES ( @cname, @firstname,@password) RETURNING id;");
+                    var cmd = InfraDatabaseFactory.InfraDB.GetNewCommand(con, "INSERT INTO eb_tenants (cname,firstname,password) VALUES ( @cname, @firstname,@password) RETURNING id;");
 
-                    cmd.Parameters.Add(df.InfraDB.GetNewParameter("cname", System.Data.DbType.String, request.Colvalues["email"]));
-                    cmd.Parameters.Add(df.InfraDB.GetNewParameter("firstname", System.Data.DbType.String, request.Colvalues["fullname"]));
-                    cmd.Parameters.Add(df.InfraDB.GetNewParameter("password", System.Data.DbType.String, request.Colvalues["password"]));
+                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("cname", System.Data.DbType.String, request.Colvalues["email"]));
+                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("firstname", System.Data.DbType.String, request.Colvalues["fullname"]));
+                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("password", System.Data.DbType.String, request.Colvalues["password"]));
 
                     InfraResponse res = new InfraResponse
                     {
@@ -189,25 +187,23 @@ namespace ExpressBase.ServiceStack.Services
         public AccountResponse Any(AccountRequest request)
         {
            
-            string path = Directory.GetParent(System.IO.Directory.GetCurrentDirectory()).FullName;
-            var infraconf = EbSerializers.ProtoBuf_DeSerialize<EbInfraDBConf>(EbFile.Bytea_FromFile(Path.Combine(path, "EbInfra.conn")));
-            var df = new DatabaseFactory(infraconf);
-            using (var con = df.InfraDB.GetNewConnection())
+           
+            using (var con = InfraDatabaseFactory.InfraDB.GetNewConnection())
             {
                 con.Open();
 
                 if (request.op == "insert")
                 {
-                    var cmd = df.InfraDB.GetNewCommand(con, "UPDATE eb_tenantaccount SET accountname=@accountname,cid=@cid,address=@address,phone=@phone,email=@email,website=@website,tier=@tier,tenantname=@tenantname WHERE tenantid=@tenantid RETURNING id");
-                    cmd.Parameters.Add(df.InfraDB.GetNewParameter("accountname", System.Data.DbType.String, request.Colvalues["accountname"]));
-                    cmd.Parameters.Add(df.InfraDB.GetNewParameter("cid", System.Data.DbType.String, request.Colvalues["cid"]));
-                    cmd.Parameters.Add(df.InfraDB.GetNewParameter("address", System.Data.DbType.String, request.Colvalues["address"]));
-                    cmd.Parameters.Add(df.InfraDB.GetNewParameter("phone", System.Data.DbType.String, request.Colvalues["phone"]));
-                    cmd.Parameters.Add(df.InfraDB.GetNewParameter("email", System.Data.DbType.String, request.Colvalues["email"]));
-                    cmd.Parameters.Add(df.InfraDB.GetNewParameter("website", System.Data.DbType.String, request.Colvalues["website"]));
-                    cmd.Parameters.Add(df.InfraDB.GetNewParameter("tier", System.Data.DbType.String, request.Colvalues["tier"]));
-                    cmd.Parameters.Add(df.InfraDB.GetNewParameter("tenantname", System.Data.DbType.String, request.Colvalues["tenantname"]));
-                    cmd.Parameters.Add(df.InfraDB.GetNewParameter("tenantid", System.Data.DbType.Int64, request.Colvalues["tenantid"]));
+                    var cmd = InfraDatabaseFactory.InfraDB.GetNewCommand(con, "UPDATE eb_tenantaccount SET accountname=@accountname,cid=@cid,address=@address,phone=@phone,email=@email,website=@website,tier=@tier,tenantname=@tenantname WHERE tenantid=@tenantid RETURNING id");
+                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("accountname", System.Data.DbType.String, request.Colvalues["accountname"]));
+                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("cid", System.Data.DbType.String, request.Colvalues["cid"]));
+                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("address", System.Data.DbType.String, request.Colvalues["address"]));
+                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("phone", System.Data.DbType.String, request.Colvalues["phone"]));
+                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("email", System.Data.DbType.String, request.Colvalues["email"]));
+                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("website", System.Data.DbType.String, request.Colvalues["website"]));
+                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("tier", System.Data.DbType.String, request.Colvalues["tier"]));
+                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("tenantname", System.Data.DbType.String, request.Colvalues["tenantname"]));
+                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("tenantid", System.Data.DbType.Int64, request.Colvalues["tenantid"]));
                     AccountResponse resp = new AccountResponse
                     {
                         id = Convert.ToInt32(cmd.ExecuteScalar())
@@ -219,7 +215,7 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     int uid = 0;
                     string sql = string.Format("SELECT cid,accountname FROM eb_tenantaccount WHERE id={0}", request.Colvalues["acid"]);
-                    var dt = df.InfraDB.DoQuery(sql);
+                    var dt = InfraDatabaseFactory.InfraDB.DoQuery(sql);
                     //CREATE CLIENTDB CONN
                     EbClientConf e = new EbClientConf()
                     {
@@ -244,9 +240,9 @@ namespace ExpressBase.ServiceStack.Services
                     try
                     {
                         _con.Open();
-                        var cmd = df.InfraDB.GetNewCommand(con, "UPDATE eb_tenants SET conf=@conf WHERE id=@id RETURNING id");
-                        cmd.Parameters.Add(df.InfraDB.GetNewParameter("conf", System.Data.DbType.Binary, bytea2));
-                        cmd.Parameters.Add(df.InfraDB.GetNewParameter("id", System.Data.DbType.Int64, Convert.ToInt32(request.Colvalues["acid"])));
+                        var cmd = InfraDatabaseFactory.InfraDB.GetNewCommand(con, "UPDATE eb_tenants SET conf=@conf WHERE id=@id RETURNING id");
+                        cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("conf", System.Data.DbType.Binary, bytea2));
+                        cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("id", System.Data.DbType.Int64, Convert.ToInt32(request.Colvalues["acid"])));
                         uid = Convert.ToInt32(cmd.ExecuteScalar());
                     }
                     catch (Exception ex)
@@ -328,17 +324,14 @@ namespace ExpressBase.ServiceStack.Services
         public GetAccountResponse Any(GetAccount request)
         {
             base.ClientID = request.TenantAccountId;
-            string path = Directory.GetParent(System.IO.Directory.GetCurrentDirectory()).FullName;
 
-            var infraconf = EbSerializers.ProtoBuf_DeSerialize<EbInfraDBConf>(EbFile.Bytea_FromFile(Path.Combine(path, "EbInfra.conn")));
-            var df = new DatabaseFactory(infraconf);
-            using (var con = df.InfraDB.GetNewConnection())
+            using (var con = InfraDatabaseFactory.InfraDB.GetNewConnection())
             {
                 con.Open();
                 if (request.restype == "img")
                 {
                     string sql = string.Format("SELECT id,profileimg FROM eb_tenants WHERE id={0}", request.Uid);
-                    var dt = df.InfraDB.DoQuery(sql);
+                    var dt = InfraDatabaseFactory.InfraDB.DoQuery(sql);
                     Dictionary<int, string> list = new Dictionary<int, string>();
                     foreach (EbDataRow dr in dt.Rows)
                     {
@@ -353,7 +346,7 @@ namespace ExpressBase.ServiceStack.Services
                 else
                 {
                     string sql = string.Format("SELECT id,accountname FROM eb_tenantaccount WHERE tenantid={0}", request.Uid);
-                    var dt = df.InfraDB.DoQuery(sql);
+                    var dt = InfraDatabaseFactory.InfraDB.DoQuery(sql);
                     Dictionary<int, string> list = new Dictionary<int, string>();
                     foreach (EbDataRow dr in dt.Rows)
                     {

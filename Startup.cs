@@ -135,6 +135,8 @@ namespace ExpressBase.ServiceStack
                EbLiveSettings.RedisPassword,EbLiveSettings.RedisServer, EbLiveSettings.RedisPort);
             container.Register<IRedisClientsManager>(c => new RedisManagerPool(redisConnectionString));
 
+            //EbBaseService.InfraDatabaseFactory.
+
             //Add a request filter to check if the user has a session initialized
             this.GlobalRequestFilters.Add((req, res, requestDto) => 
             {
