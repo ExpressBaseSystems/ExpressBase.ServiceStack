@@ -128,8 +128,8 @@ namespace ExpressBase.ServiceStack
             
             this.ContentTypes.Register(MimeTypes.ProtoBuf, (reqCtx, res, stream) => ProtoBuf.Serializer.NonGeneric.Serialize(stream, res), ProtoBuf.Serializer.NonGeneric.Deserialize);
 
-            SetConfig(new HostConfig { DebugMode = true, DefaultContentType = MimeTypes.Json });
-            //SetConfig(new HostConfig { DefaultContentType = MimeTypes.Json });
+            SetConfig(new HostConfig { DebugMode = true });
+            SetConfig(new HostConfig { DefaultContentType = MimeTypes.Json });
 
             var redisConnectionString = string.Format("redis://{0}@{1}:{2}?ssl=true",
                EbLiveSettings.RedisPassword,EbLiveSettings.RedisServer, EbLiveSettings.RedisPort);
