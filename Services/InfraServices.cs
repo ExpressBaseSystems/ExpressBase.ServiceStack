@@ -1,9 +1,11 @@
 ﻿using ExpressBase.Common;
 using ExpressBase.Data;
+using ExpressBase.Objects;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ServiceStack;
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.IO;
 
 namespace ExpressBase.ServiceStack.Services
@@ -13,7 +15,7 @@ namespace ExpressBase.ServiceStack.Services
     {
         public InfraResponse Any(InfraRequest request)
         {
-           
+            base.ClientID = request.TenantAccountId;
             using (var con = InfraDatabaseFactory.InfraDB.GetNewConnection())
             {
                 con.Open();
@@ -81,8 +83,8 @@ namespace ExpressBase.ServiceStack.Services
                 }
                 else if (request.ltype == "accountimg")
                 {
-                    var cmd = InfraDatabaseFactory.InfraDB.GetNewCommand(con, "INSERT INTO eb_tenantaccount (profilelogo,tenantid) VALUES(@profilelogo,@tenantid) RETURNING tenantid");
-                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("profilelogo", System.Data.DbType.String, string.Format("<img src='data:image/png;base64,{0}'class='img-circle navbar-right img-cir'/>", request.Colvalues["profilelogo"])));
+                    var cmd = InfraDatabaseFactory.InfraDB.GetNewCommand(con, "INSERT INTO eb_tenantaccount (profilelogo,tenantid) VALUES(@profilelogo,@tenantid) RETURNING id");
+                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("profilelogo", System.Data.DbType.String, string.Format("<img src='{0}' class='prologo img-circle'/>", request.Colvalues["proimg"])));
                     cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("tenantid", System.Data.DbType.Int64, request.Colvalues["id"]));
                     InfraResponse res = new InfraResponse
                     {
@@ -186,15 +188,15 @@ namespace ExpressBase.ServiceStack.Services
 
         public AccountResponse Any(AccountRequest request)
         {
-           
-           
+            base.ClientID = request.TenantAccountId;
+
             using (var con = InfraDatabaseFactory.InfraDB.GetNewConnection())
             {
                 con.Open();
 
                 if (request.op == "insert")
                 {
-                    var cmd = InfraDatabaseFactory.InfraDB.GetNewCommand(con, "UPDATE eb_tenantaccount SET accountname=@accountname,cid=@cid,address=@address,phone=@phone,email=@email,website=@website,tier=@tier,tenantname=@tenantname WHERE tenantid=@tenantid RETURNING id");
+                    var cmd = InfraDatabaseFactory.InfraDB.GetNewCommand(con, "UPDATE eb_tenantaccount SET accountname=@accountname,cid=@cid,address=@address,phone=@phone,email=@email,website=@website,tier=@tier,tenantname=@tenantname WHERE id=@id RETURNING id");
                     cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("accountname", System.Data.DbType.String, request.Colvalues["accountname"]));
                     cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("cid", System.Data.DbType.String, request.Colvalues["cid"]));
                     cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("address", System.Data.DbType.String, request.Colvalues["address"]));
@@ -203,7 +205,7 @@ namespace ExpressBase.ServiceStack.Services
                     cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("website", System.Data.DbType.String, request.Colvalues["website"]));
                     cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("tier", System.Data.DbType.String, request.Colvalues["tier"]));
                     cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("tenantname", System.Data.DbType.String, request.Colvalues["tenantname"]));
-                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("tenantid", System.Data.DbType.Int64, request.Colvalues["tenantid"]));
+                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("id", System.Data.DbType.Int64, request.Colvalues["tenantuserid"]));
                     AccountResponse resp = new AccountResponse
                     {
                         id = Convert.ToInt32(cmd.ExecuteScalar())
@@ -240,8 +242,8 @@ namespace ExpressBase.ServiceStack.Services
                     try
                     {
                         _con.Open();
-                        var cmd = InfraDatabaseFactory.InfraDB.GetNewCommand(con, "UPDATE eb_tenants SET conf=@conf WHERE id=@id RETURNING id");
-                        cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("conf", System.Data.DbType.Binary, bytea2));
+                        var cmd = InfraDatabaseFactory.InfraDB.GetNewCommand(con, "UPDATE eb_tenantaccount SET config=@config WHERE id=@id RETURNING id");
+                        cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("config", System.Data.DbType.Binary, bytea2));
                         cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("id", System.Data.DbType.Int64, Convert.ToInt32(request.Colvalues["acid"])));
                         uid = Convert.ToInt32(cmd.ExecuteScalar());
                     }
@@ -332,29 +334,46 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     string sql = string.Format("SELECT id,profileimg FROM eb_tenants WHERE id={0}", request.Uid);
                     var dt = InfraDatabaseFactory.InfraDB.DoQuery(sql);
-                    Dictionary<int, string> list = new Dictionary<int, string>();
+                    // Dictionary<int, string> list = new Dictionary<int, string>();
+                    List<List<object>> list = new List<List<object>>();
                     foreach (EbDataRow dr in dt.Rows)
                     {
-                        list.Add(Convert.ToInt32(dr[0]),dr[1].ToString());
+                        list.Add(new List<object> { Convert.ToInt32(dr[0]), dr[1].ToString() });
                     }
                     GetAccountResponse resp = new GetAccountResponse()
                     {
-                        dict = list
+                        returnlist = list
                     };
                     return resp;
                 }
-                else
+                else if (request.restype == "homeimg")
                 {
-                    string sql = string.Format("SELECT id,accountname FROM eb_tenantaccount WHERE tenantid={0}", request.Uid);
+                    string sql = string.Format("SELECT id,profileimg FROM eb_tenants WHERE cname={0}", request.Uname);
                     var dt = InfraDatabaseFactory.InfraDB.DoQuery(sql);
-                    Dictionary<int, string> list = new Dictionary<int, string>();
+                    List<List<object>> list = new List<List<object>>();
                     foreach (EbDataRow dr in dt.Rows)
                     {
-                        list.Add(Convert.ToInt32(dr[0]), dr[1].ToString());
+                        list.Add(new List<object> { Convert.ToInt32(dr[0]), dr[1].ToString() });
                     }
                     GetAccountResponse resp = new GetAccountResponse()
                     {
-                        dict = list
+                        returnlist = list
+                    };
+                    return resp;
+
+                }
+                else
+                {
+                    string sql = string.Format("SELECT id,accountname,profilelogo FROM eb_tenantaccount WHERE tenantid={0}", request.Uid);
+                    var dt = InfraDatabaseFactory.InfraDB.DoQuery(sql);
+                    List<List<object>> list = new List<List<object>>();
+                    foreach (EbDataRow dr in dt.Rows)
+                    {
+                        list.Add(new List<object> { Convert.ToInt32(dr[0]), dr[1].ToString(),dr[2].ToString() });
+                    }
+                    GetAccountResponse resp = new GetAccountResponse()
+                    {
+                        returnlist = list
                     };
                     return resp;
                 }
@@ -363,5 +382,40 @@ namespace ExpressBase.ServiceStack.Services
             }
         }
 
+        //public InfraDb_GENERIC_SELECTResponse Any(InfraDb_GENERIC_SELECTRequest req)
+        //{
+        //    using (var con = InfraDatabaseFactory.InfraDB.GetNewConnection())
+        //    {
+        //        var redisClient = this.Redis;
+        //        EbTableCollection tcol = redisClient.Get<EbTableCollection>("EbInfraTableCollection");
+        //        EbTableColumnCollection ccol = redisClient.Get<EbTableColumnCollection>("EbInfraTableColumnCollection");
+        //        con.Open();
+        //        var cmd = InfraDatabaseFactory.InfraDB.GetNewCommand(con, InfraDbSqlQueries["KEY1"]);
+        //        foreach (string key in req.Parameters.Keys)
+        //        {
+        //            cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter(
+        //                string.Format("@{0}", key), ccol[key].Type, req.Parameters[key]));
+
+        //            foreach (int colkey in ccol.Keys)
+        //            {
+        //                if (ccol[colkey].Name == key)
+        //                {
+        //                }
+        //            }
+        //        }
+
+        //        var dt = InfraDatabaseFactory.InfraDB.DoQuery(sql);
+        //        ListDictionary list = new ListDictionary();
+        //        foreach (EbDataRow dr in dt.Rows)
+        //        {
+        //            list.Add(Convert.ToInt32(dr[0]), dr[1].ToString());
+        //        }
+        //        GetAccountResponse resp = new GetAccountResponse()
+        //        {
+        //            ldict = list
+        //        };
+        //        return resp;
+        //    }
+        //}
     }
 }
