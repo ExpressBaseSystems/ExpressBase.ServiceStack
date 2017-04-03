@@ -140,7 +140,6 @@ namespace ExpressBase.ServiceStack
             {
                 log.Info("#Eb reached 3");
                 var redisClient = (authService as AuthenticateService).Redis;
-                mysession.UserAuthId = _authUser.Id.ToString();
                 mysession.UserName = _authUser.Uname;
                 mysession.FirstName = _authUser.Fname;
                 mysession.Uid = _authUser.Id;

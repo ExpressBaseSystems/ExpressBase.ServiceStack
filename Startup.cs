@@ -98,7 +98,6 @@ namespace ExpressBase.ServiceStack
                             payload["aud"] = "eb-web";
                             payload["iat"] = ((System.Int32)session.CreatedAt.ToUniversalTime().Subtract(new System.DateTime(1970, 1, 1)).TotalSeconds).ToString();
                             payload["exp"] = ((System.Int32)session.CreatedAt.AddHours(3).ToUniversalTime().Subtract(new System.DateTime(1970, 1, 1)).TotalSeconds).ToString();
-                            payload["uid"] = session.UserAuthId;
                             payload["email"] = session.UserName;
                             payload["cid"] = (session as CustomUserSession).CId;
                             payload["uid"] = (session as CustomUserSession).Uid.ToString();
