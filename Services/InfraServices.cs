@@ -3,6 +3,7 @@ using ExpressBase.Data;
 using ExpressBase.Objects;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ServiceStack;
+using ServiceStack.Logging;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -16,9 +17,11 @@ namespace ExpressBase.ServiceStack.Services
         public InfraResponse Any(InfraRequest request)
         {
             base.ClientID = request.TenantAccountId;
+            ILog log = LogManager.GetLogger(GetType());
             using (var con = InfraDatabaseFactory.InfraDB.GetNewConnection())
             {
                 con.Open();
+               
                 if (request.ltype == "fb")
                 {
 
@@ -83,6 +86,7 @@ namespace ExpressBase.ServiceStack.Services
                 }
                 else if (request.ltype == "accountimg")
                 {
+                    log.Info("#Eb account image insert 1");
                     var cmd = InfraDatabaseFactory.InfraDB.GetNewCommand(con, "INSERT INTO eb_tenantaccount (profilelogo,tenantid) VALUES(@profilelogo,@tenantid) RETURNING id");
                     cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("profilelogo", System.Data.DbType.String, string.Format("<img src='{0}' class='prologo img-circle'/>", request.Colvalues["proimg"])));
                     cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("tenantid", System.Data.DbType.Int64, request.Colvalues["id"]));
@@ -189,11 +193,11 @@ namespace ExpressBase.ServiceStack.Services
         public AccountResponse Any(AccountRequest request)
         {
             base.ClientID = request.TenantAccountId;
-
+            ILog log = LogManager.GetLogger(GetType());
             using (var con = InfraDatabaseFactory.InfraDB.GetNewConnection())
             {
                 con.Open();
-
+                log.Info("#Eb account insert 1");
                 if (request.op == "insert")
                 {
                     var cmd = InfraDatabaseFactory.InfraDB.GetNewCommand(con, "UPDATE eb_tenantaccount SET accountname=@accountname,cid=@cid,address=@address,phone=@phone,email=@email,website=@website,tier=@tier,tenantname=@tenantname WHERE id=@id RETURNING id");
