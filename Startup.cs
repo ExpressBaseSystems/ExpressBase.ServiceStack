@@ -139,7 +139,7 @@ namespace ExpressBase.ServiceStack
             //Add a request filter to check if the user has a session initialized
             this.GlobalRequestFilters.Add((req, res, requestDto) => 
             {
-                if (requestDto.GetType() != typeof(Authenticate))
+                if (requestDto.GetType() != typeof(Authenticate) && requestDto.GetType()!=typeof(InfraRequest))
                 {
                     var jwtoken = new JwtSecurityToken((requestDto as IEbSSRequest).Token);
                     if (jwtoken == null)

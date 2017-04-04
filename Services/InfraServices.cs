@@ -57,45 +57,7 @@ namespace ExpressBase.ServiceStack.Services
                     return res;
 
                 }
-                else if (request.ltype == "update")
-                {
-                    var cmd = InfraDatabaseFactory.InfraDB.GetNewCommand(con, "UPDATE eb_tenants SET company=@company,employees=@employees,country=@country,phone=@phone WHERE id=@id RETURNING id");
-
-
-                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("company", System.Data.DbType.String, request.Colvalues["company"]));
-                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("employees", System.Data.DbType.String, request.Colvalues["employees"]));
-                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("country", System.Data.DbType.String, request.Colvalues["country"]));
-                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("phone", System.Data.DbType.String, request.Colvalues["phone"]));
-                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("id", System.Data.DbType.Int64, request.Colvalues["id"]));
-                    InfraResponse res = new InfraResponse
-                    {
-                        id = Convert.ToInt32(cmd.ExecuteScalar())
-                    };
-                    return res;
-                }
-                else if (request.ltype == "imgupload")
-                {
-                    var cmd = InfraDatabaseFactory.InfraDB.GetNewCommand(con, "UPDATE eb_tenants SET profileimg=@profileimg WHERE id=@id RETURNING id");
-                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("profileimg", System.Data.DbType.String, string.Format("<img src='data:image/png;base64,{0}'class='img-circle navbar-right img-cir'/>", request.Colvalues["profileimg"])));
-                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("id", System.Data.DbType.Int64, request.Colvalues["id"]));
-                    InfraResponse res = new InfraResponse
-                    {
-                        id = Convert.ToInt32(cmd.ExecuteScalar())
-                    };
-                    return res;
-                }
-                else if (request.ltype == "accountimg")
-                {
-                    log.Info("#Eb account image insert 1");
-                    var cmd = InfraDatabaseFactory.InfraDB.GetNewCommand(con, "INSERT INTO eb_tenantaccount (profilelogo,tenantid) VALUES(@profilelogo,@tenantid) RETURNING id");
-                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("profilelogo", System.Data.DbType.String, string.Format("<img src='{0}' class='prologo img-circle'/>", request.Colvalues["proimg"])));
-                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("tenantid", System.Data.DbType.Int64, request.Colvalues["id"]));
-                    InfraResponse res = new InfraResponse
-                    {
-                        id = Convert.ToInt32(cmd.ExecuteScalar())
-                    };
-                    return res;
-                }
+                
                 else
                 {
 
@@ -190,7 +152,7 @@ namespace ExpressBase.ServiceStack.Services
         //    }
         //}
 
-        public AccountResponse Any(AccountRequest request)
+        public TokenRequiredUploadResponse Any(TokenRequiredUploadRequest request)
         {
             base.ClientID = request.TenantAccountId;
             ILog log = LogManager.GetLogger(GetType());
@@ -198,7 +160,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 con.Open();
                 log.Info("#Eb account insert 1");
-                if (request.op == "insert")
+                if (request.op == "insertaccount")
                 {
                     var cmd = InfraDatabaseFactory.InfraDB.GetNewCommand(con, "UPDATE eb_tenantaccount SET accountname=@accountname,cid=@cid,address=@address,phone=@phone,email=@email,website=@website,tier=@tier,tenantname=@tenantname WHERE id=@id RETURNING id");
                     cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("accountname", System.Data.DbType.String, request.Colvalues["accountname"]));
@@ -210,7 +172,7 @@ namespace ExpressBase.ServiceStack.Services
                     cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("tier", System.Data.DbType.String, request.Colvalues["tier"]));
                     cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("tenantname", System.Data.DbType.String, request.Colvalues["tenantname"]));
                     cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("id", System.Data.DbType.Int64, request.Colvalues["tenantuserid"]));
-                    AccountResponse resp = new AccountResponse
+                    TokenRequiredUploadResponse resp = new TokenRequiredUploadResponse
                     {
                         id = Convert.ToInt32(cmd.ExecuteScalar())
                     };
@@ -255,15 +217,54 @@ namespace ExpressBase.ServiceStack.Services
                     {
 
                     }
-                    AccountResponse resp = new AccountResponse
+                    TokenRequiredUploadResponse resp = new TokenRequiredUploadResponse
                     {
                         id = uid
                     };
                     return resp;
                 }
+                else if (request.op == "updatetenant")
+                {
+                    var cmd = InfraDatabaseFactory.InfraDB.GetNewCommand(con, "UPDATE eb_tenants SET company=@company,employees=@employees,country=@country,phone=@phone WHERE id=@id RETURNING id");
+
+
+                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("company", System.Data.DbType.String, request.Colvalues["company"]));
+                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("employees", System.Data.DbType.String, request.Colvalues["employees"]));
+                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("country", System.Data.DbType.String, request.Colvalues["country"]));
+                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("phone", System.Data.DbType.String, request.Colvalues["phone"]));
+                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("id", System.Data.DbType.Int64, request.Colvalues["id"]));
+                    TokenRequiredUploadResponse res = new TokenRequiredUploadResponse
+                    {
+                        id = Convert.ToInt32(cmd.ExecuteScalar())
+                    };
+                    return res;
+                }
+                else if (request.op == "tenantimgupload")
+                {
+                    var cmd = InfraDatabaseFactory.InfraDB.GetNewCommand(con, "UPDATE eb_tenants SET profileimg=@profileimg WHERE id=@id RETURNING id");
+                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("profileimg", System.Data.DbType.String, string.Format("<img src='data:image/png;base64,{0}'class='img-circle navbar-right img-cir'/>", request.Colvalues["profileimg"])));
+                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("id", System.Data.DbType.Int64, request.Colvalues["id"]));
+                    TokenRequiredUploadResponse res = new TokenRequiredUploadResponse
+                    {
+                        id = Convert.ToInt32(cmd.ExecuteScalar())
+                    };
+                    return res;
+                }
+                else if (request.op == "tenantaccountimg")
+                {
+                    log.Info("#Eb account image insert 1");
+                    var cmd = InfraDatabaseFactory.InfraDB.GetNewCommand(con, "INSERT INTO eb_tenantaccount (profilelogo,tenantid) VALUES(@profilelogo,@tenantid) RETURNING id");
+                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("profilelogo", System.Data.DbType.String, string.Format("<img src='{0}' class='prologo img-circle'/>", request.Colvalues["proimg"])));
+                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("tenantid", System.Data.DbType.Int64, request.Colvalues["id"]));
+                    TokenRequiredUploadResponse res = new TokenRequiredUploadResponse
+                    {
+                        id = Convert.ToInt32(cmd.ExecuteScalar())
+                    };
+                    return res;
+                }
                 else
                 {
-                    AccountResponse resp = new AccountResponse
+                    TokenRequiredUploadResponse resp = new TokenRequiredUploadResponse
                     {
                         id = 0
                     };
@@ -327,7 +328,7 @@ namespace ExpressBase.ServiceStack.Services
 
         //    }
 
-        public GetAccountResponse Any(GetAccount request)
+        public TokenRequiredSelectResponse Any(TokenRequiredSelectRequest request)
         {
             base.ClientID = request.TenantAccountId;
 
@@ -344,7 +345,7 @@ namespace ExpressBase.ServiceStack.Services
                     {
                         list.Add(new List<object> { Convert.ToInt32(dr[0]), dr[1].ToString() });
                     }
-                    GetAccountResponse resp = new GetAccountResponse()
+                    TokenRequiredSelectResponse resp = new TokenRequiredSelectResponse()
                     {
                         returnlist = list
                     };
@@ -359,7 +360,7 @@ namespace ExpressBase.ServiceStack.Services
                     {
                         list.Add(new List<object> { Convert.ToInt32(dr[0]), dr[1].ToString() });
                     }
-                    GetAccountResponse resp = new GetAccountResponse()
+                    TokenRequiredSelectResponse resp = new TokenRequiredSelectResponse()
                     {
                         returnlist = list
                     };
@@ -375,7 +376,7 @@ namespace ExpressBase.ServiceStack.Services
                     {
                         list.Add(new List<object> { Convert.ToInt32(dr[0]), dr[1].ToString(),dr[2].ToString() });
                     }
-                    GetAccountResponse resp = new GetAccountResponse()
+                    TokenRequiredSelectResponse resp = new TokenRequiredSelectResponse()
                     {
                         returnlist = list
                     };
