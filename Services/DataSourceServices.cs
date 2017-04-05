@@ -14,7 +14,7 @@ namespace ExpressBase.ServiceStack
     [DefaultView("ds")]
     public class DataSourceService : EbBaseService
     {
-        public object Get(DataSourceDataRequest request)
+        public object Any(DataSourceDataRequest request)
         {
             ILog log = LogManager.GetLogger(GetType());
             log.Info("data request");
@@ -102,7 +102,7 @@ namespace ExpressBase.ServiceStack
             return dsresponse;
         }
 
-        public object Get(DataSourceColumnsRequest request)
+        public object Any(DataSourceColumnsRequest request)
         {
             ILog log = LogManager.GetLogger(GetType());
             log.Info("column request");
