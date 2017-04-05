@@ -3,6 +3,7 @@ using ExpressBase.Data;
 using ExpressBase.Objects;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ServiceStack;
+using ServiceStack.Logging;
 using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
@@ -15,6 +16,8 @@ namespace ExpressBase.ServiceStack
     {
         public object Get(DataSourceDataRequest request)
         {
+            ILog log = LogManager.GetLogger(GetType());
+            log.Info("data request");
             base.ClientID = request.TenantAccountId;
 
             request.SearchText = base.Request.QueryString["searchtext"];
@@ -101,6 +104,9 @@ namespace ExpressBase.ServiceStack
 
         public object Get(DataSourceColumnsRequest request)
         {
+            ILog log = LogManager.GetLogger(GetType());
+            log.Info("column request");
+            log.Info(request.Params);
             base.ClientID = request.TenantAccountId;
 
             ColumnColletion columns = base.SessionBag.Get<ColumnColletion>(string.Format("ds_{0}_columns", request.Id));
@@ -144,7 +150,7 @@ namespace ExpressBase.ServiceStack
                         _sql = (_sql.IndexOf(";") > 0) ? _sql.Substring(_sql.IndexOf(";") + 1) : _sql;
                         var dt2 = this.DatabaseFactory.ObjectsDB.DoQuery(_sql, parameters.ToArray());
                         columns = dt2.Columns;
-
+                        log.Info(columns);
                         base.SessionBag.Set<ColumnColletion>(string.Format("ds_{0}_columns", request.Id), dt2.Columns);
                     }
                 }
