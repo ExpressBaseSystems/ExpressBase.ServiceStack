@@ -34,15 +34,6 @@ namespace ExpressBase.ServiceStack
             if (!string.IsNullOrEmpty(base.Request.QueryString["selectedvalue"]))
                 operatorValue = new List<string>(base.Request.QueryString["selectedvalue"].Split(','));
 
-            var datefrom = string.Empty;
-            var dateto = string.Empty;
-            if (!(request.colvalues).IsNullOrEmpty())
-            {
-                datefrom = request.colvalues["from"];
-                dateto = request.colvalues["to"];
-            }
-
-
             var dt = this.DatabaseFactory.ObjectsDB.DoQuery(string.Format("SELECT obj_bytea FROM eb_objects WHERE id={0}", request.Id));
 
             DataSourceDataResponse dsresponse = null;
@@ -79,27 +70,21 @@ namespace ExpressBase.ServiceStack
                     _sql = _sql.Replace("@orderbyplaceholder",
                      (string.IsNullOrEmpty(request.OrderColumnName)) ? "id" : string.Format("{0} {1}", request.OrderColumnName, request.OrderByDirection));
 
-                    var parameters = new System.Data.Common.DbParameter[0];
-                    if (!string.IsNullOrEmpty(datefrom) && !string.IsNullOrEmpty(dateto))
+                    var parameters = new List<System.Data.Common.DbParameter>();
                     {
-                        parameters = new System.Data.Common.DbParameter[4]
+                        parameters.AddRange(new System.Data.Common.DbParameter[]
                         {
                                 this.DatabaseFactory.ObjectsDB.GetNewParameter("@limit", System.Data.DbType.Int32, request.Length),
                                 this.DatabaseFactory.ObjectsDB.GetNewParameter("@last_id", System.Data.DbType.Int32, request.Start+1),
-                                this.DatabaseFactory.ObjectsDB.GetNewParameter("@date1", System.Data.DbType.DateTime, Convert.ToDateTime(datefrom)),
-                                this.DatabaseFactory.ObjectsDB.GetNewParameter("@date2", System.Data.DbType.DateTime, Convert.ToDateTime(dateto))
-                        };
-                    }
-                    else
-                    {
-                        parameters = new System.Data.Common.DbParameter[2]
-                            {
-                                this.DatabaseFactory.ObjectsDB.GetNewParameter("@limit", System.Data.DbType.Int32,request.Length),
-                                this.DatabaseFactory.ObjectsDB.GetNewParameter("@last_id", System.Data.DbType.Int32, request.Start+1),
-                            };
+                        });
+
+                        if (request.Params != null) {
+                            foreach (EbParam param in request.Params)
+                                parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter(string.Format("@{0}", param.Name), System.Data.DbType.Date, Convert.ToDateTime(param.Value)));
+                        }
                     }
 
-                    var _dataset = (request.Length > 0) ? this.DatabaseFactory.ObjectsDB.DoQueries(_sql, parameters) : this.DatabaseFactory.ObjectsDB.DoQueries(_sql);
+                    var _dataset = (request.Length > 0) ? this.DatabaseFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray()) : this.DatabaseFactory.ObjectsDB.DoQueries(_sql);
 
                     dsresponse = new DataSourceDataResponse
                     {
@@ -126,14 +111,6 @@ namespace ExpressBase.ServiceStack
                 request.OrderByDirection = base.Request.QueryString["order[0][dir]"]; //@order_dir
                 request.SelectedColumnName = base.Request.QueryString["col"]; // @selcol
 
-                var datefrom = string.Empty;
-                var dateto = string.Empty;
-                if (!request.colvalues.IsNullOrEmpty())
-                {
-                    datefrom = request.colvalues["from"];
-                    dateto = request.colvalues["to"];
-                }
-
                 string _sql = string.Format("SELECT obj_bytea FROM eb_objects WHERE id={0}", request.Id);
 
                 var dt = this.DatabaseFactory.ObjectsDB.DoQuery(_sql);
@@ -148,29 +125,24 @@ namespace ExpressBase.ServiceStack
 
                         _sql = _sql.Replace("@orderbyplaceholder",
                         (string.IsNullOrEmpty(request.SelectedColumnName)) ? "id" : string.Format("{0} {1}", request.SelectedColumnName, request.OrderByDirection));
-                        System.Data.Common.DbParameter[] parameters = null;
-                        if (!string.IsNullOrEmpty(datefrom) && !string.IsNullOrEmpty(dateto))
+
+                        var parameters = new List<System.Data.Common.DbParameter>();
                         {
-                            parameters = new System.Data.Common.DbParameter[4]
+                            parameters.AddRange(new System.Data.Common.DbParameter[]
                             {
                                 this.DatabaseFactory.ObjectsDB.GetNewParameter("@limit", System.Data.DbType.Int32, 0),
                                 this.DatabaseFactory.ObjectsDB.GetNewParameter("@last_id", System.Data.DbType.Int32, 0),
-                                this.DatabaseFactory.ObjectsDB.GetNewParameter("@date1", System.Data.DbType.DateTime,Convert.ToDateTime(datefrom)),
-                                this.DatabaseFactory.ObjectsDB.GetNewParameter("@date2", System.Data.DbType.DateTime, Convert.ToDateTime(dateto))
-                            };
-                        }
-                        else
-                        {
-                            parameters = new System.Data.Common.DbParameter[2]
-                                {
-                                this.DatabaseFactory.ObjectsDB.GetNewParameter("@limit", System.Data.DbType.Int32, 0),
-                                this.DatabaseFactory.ObjectsDB.GetNewParameter("@last_id", System.Data.DbType.Int32, 0),
-                                };
-                        }
+                            });
 
+                            if (request.Params != null)
+                            {
+                                foreach (EbParam param in request.Params)
+                                    parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter(string.Format("@{0}", param.Name), System.Data.DbType.Date, Convert.ToDateTime(param.Value)));
+                            }
+                        }
 
                         _sql = (_sql.IndexOf(";") > 0) ? _sql.Substring(_sql.IndexOf(";") + 1) : _sql;
-                        var dt2 = this.DatabaseFactory.ObjectsDB.DoQuery(_sql, parameters);
+                        var dt2 = this.DatabaseFactory.ObjectsDB.DoQuery(_sql, parameters.ToArray());
                         columns = dt2.Columns;
 
                         base.SessionBag.Set<ColumnColletion>(string.Format("ds_{0}_columns", request.Id), dt2.Columns);
