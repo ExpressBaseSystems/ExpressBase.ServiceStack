@@ -82,8 +82,8 @@ namespace ExpressBase.ServiceStack
                         });
 
                         if (request.Params != null) {
-                            foreach (EbParam param in request.Params)
-                                parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter(string.Format("@{0}", param.Name), System.Data.DbType.Date, Convert.ToDateTime(param.Value)));
+                            foreach (Dictionary<string, string> param in request.Params)
+                                parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter(string.Format("@{0}", param["name"]), System.Data.DbType.Date, Convert.ToDateTime(param["value"])));
                         }
                     }
 
@@ -142,8 +142,8 @@ namespace ExpressBase.ServiceStack
 
                             if (request.Params != null)
                             {
-                                foreach (EbParam param in request.Params)
-                                    parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter(string.Format("@{0}", param.Name), System.Data.DbType.Date, Convert.ToDateTime(param.Value)));
+                                foreach (Dictionary<string, string> param in request.Params)
+                                    parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter(string.Format("@{0}", param["name"]), System.Data.DbType.Date, Convert.ToDateTime(param["value"])));
                             }
                         }
 
