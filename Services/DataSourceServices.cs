@@ -83,7 +83,7 @@ namespace ExpressBase.ServiceStack
 
                         if (request.Params != null) {
                             foreach (Dictionary<string, string> param in request.Params)
-                                parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter(string.Format("@{0}", param["name"]), System.Data.DbType.Date, Convert.ToDateTime(param["value"])));
+                                parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter(string.Format("@{0}", param["name"]), (System.Data.DbType)Convert.ToInt32(param["type"]), param["value"]));
                         }
                     }
 
@@ -105,8 +105,7 @@ namespace ExpressBase.ServiceStack
         public object Any(DataSourceColumnsRequest request)
         {
             ILog log = LogManager.GetLogger(GetType());
-            log.Info("column request");
-            log.Info(request.Params);
+            log.Info("request.Params: " + request.Params.Count); // + " -> " + request.Params[1]["type"]
             base.ClientID = request.TenantAccountId;
 
             ColumnColletion columns = base.SessionBag.Get<ColumnColletion>(string.Format("ds_{0}_columns", request.Id));
@@ -143,15 +142,22 @@ namespace ExpressBase.ServiceStack
                             if (request.Params != null)
                             {
                                 foreach (Dictionary<string, string> param in request.Params)
-                                    parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter(string.Format("@{0}", param["name"]), System.Data.DbType.Date, Convert.ToDateTime(param["value"])));
+                                    parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter(string.Format("@{0}", param["name"]), (System.Data.DbType)Convert.ToInt32(param["type"]), param["value"]));
                             }
                         }
-
+                        log.Info("reached Here....");
                         _sql = (_sql.IndexOf(";") > 0) ? _sql.Substring(_sql.IndexOf(";") + 1) : _sql;
-                        var dt2 = this.DatabaseFactory.ObjectsDB.DoQuery(_sql, parameters.ToArray());
-                        columns = dt2.Columns;
-                        log.Info(columns);
-                        base.SessionBag.Set<ColumnColletion>(string.Format("ds_{0}_columns", request.Id), dt2.Columns);
+                        try
+                        {
+                            var dt2 = this.DatabaseFactory.ObjectsDB.DoQuery(_sql, parameters.ToArray());
+                            columns = dt2.Columns;
+                            log.Info(columns);
+                            base.SessionBag.Set<ColumnColletion>(string.Format("ds_{0}_columns", request.Id), dt2.Columns);
+                        }
+                        catch (Exception e)
+                        {
+                            log.Info("e.Message" + e.Message);
+                        }
                     }
                 }
             }
