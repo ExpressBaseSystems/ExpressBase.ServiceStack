@@ -19,23 +19,6 @@ namespace ExpressBase.ServiceStack
             this.Log.Info("data request");
             base.ClientID = request.TenantAccountId;
 
-            //request.SearchText = base.Request.QueryString["searchtext"];
-            ////request.SearchTextcollection = string.IsNullOrEmpty(request.SearchText) ? "" : request.SearchText; // @txtsearch
-            //request.OrderByDir = base.Request.QueryString["order[0][dir]"]; //@order_dir
-            //request.SearchCol = base.Request.QueryString["search_col"]; // @search_col
-            //request.OrderByCol = base.Request.QueryString["order_col"]; // @order_col
-
-            //List<string> searchColumn = new List<string>();
-            //List<string> searchValue = new List<string>();
-            //List<string> operatorValue = new List<string>();
-
-            //if (!string.IsNullOrEmpty(request.SearchColumnName))
-            //    searchColumn = new List<string>(request.SearchColumnName.Split(','));
-            //if (!string.IsNullOrEmpty(request.SearchText))
-            //    searchValue = new List<string>(request.SearchText.Split(','));
-            //if (!string.IsNullOrEmpty(base.Request.QueryString["selectedvalue"]))
-            //    operatorValue = new List<string>(base.Request.QueryString["selectedvalue"].Split(','));
-
             var dt = this.DatabaseFactory.ObjectsDB.DoQuery(string.Format("SELECT obj_bytea FROM eb_objects WHERE id={0}", request.Id));
 
             DataSourceDataResponse dsresponse = null;
@@ -73,7 +56,7 @@ namespace ExpressBase.ServiceStack
                 }
 
                 _sql = _sql.Replace("@orderbyplaceholder",
-                    (string.IsNullOrEmpty(request.OrderByCol)) ? "id" : string.Format("{0} {1}", request.OrderByCol, request.OrderByDir));
+                    (string.IsNullOrEmpty(request.OrderByCol)) ? "id" : string.Format("{0} {1}", request.OrderByCol, ((request.OrderByDir == 2) ? "DESC" : "ASC")));
                 
                 var parameters = new List<System.Data.Common.DbParameter>();
                 parameters.AddRange(new System.Data.Common.DbParameter[]
@@ -105,7 +88,8 @@ namespace ExpressBase.ServiceStack
         {
             base.ClientID = request.TenantAccountId;
 
-            ColumnColletion columns = this.Redis.Get<ColumnColletion>(string.Format("{0}_ds_{1}_columns", request.TenantAccountId, request.Id));
+            //ColumnColletion columns = this.Redis.Get<ColumnColletion>(string.Format("{0}_ds_{1}_columns", request.TenantAccountId, request.Id));
+            ColumnColletion columns = null;
             if (columns == null)
             {
                 request.SearchText = base.Request.QueryString["searchtext"];
