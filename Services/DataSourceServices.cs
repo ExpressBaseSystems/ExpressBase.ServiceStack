@@ -62,7 +62,7 @@ namespace ExpressBase.ServiceStack
                 parameters.AddRange(new System.Data.Common.DbParameter[]
                 {
                     this.DatabaseFactory.ObjectsDB.GetNewParameter("@limit", System.Data.DbType.Int32, request.Length),
-                    this.DatabaseFactory.ObjectsDB.GetNewParameter("@last_id", System.Data.DbType.Int32, request.Start+1),
+                    this.DatabaseFactory.ObjectsDB.GetNewParameter("@last_id", System.Data.DbType.Int32, request.Start),
                 });
 
                 if (request.Params != null) {
@@ -111,7 +111,7 @@ namespace ExpressBase.ServiceStack
 
                         _sql = _sql.Replace("@orderbyplaceholder",
                         (string.IsNullOrEmpty(request.SelectedColumnName)) ? "id" : string.Format("{0} {1}", request.SelectedColumnName, request.OrderByDirection));
-
+                        
                         var parameters = new List<System.Data.Common.DbParameter>();
                         parameters.AddRange(new System.Data.Common.DbParameter[]
                         {
