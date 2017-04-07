@@ -16,8 +16,7 @@ namespace ExpressBase.ServiceStack
     {
         public object Any(DataSourceDataRequest request)
         {
-            ILog log = LogManager.GetLogger(GetType());
-            log.Info("data request");
+            this.Log.Info("data request");
             base.ClientID = request.TenantAccountId;
 
             request.SearchText = base.Request.QueryString["searchtext"];
@@ -74,17 +73,15 @@ namespace ExpressBase.ServiceStack
                      (string.IsNullOrEmpty(request.OrderColumnName)) ? "id" : string.Format("{0} {1}", request.OrderColumnName, request.OrderByDirection));
 
                     var parameters = new List<System.Data.Common.DbParameter>();
+                    parameters.AddRange(new System.Data.Common.DbParameter[]
                     {
-                        parameters.AddRange(new System.Data.Common.DbParameter[]
-                        {
-                                this.DatabaseFactory.ObjectsDB.GetNewParameter("@limit", System.Data.DbType.Int32, request.Length),
-                                this.DatabaseFactory.ObjectsDB.GetNewParameter("@last_id", System.Data.DbType.Int32, request.Start+1),
-                        });
+                        this.DatabaseFactory.ObjectsDB.GetNewParameter("@limit", System.Data.DbType.Int32, request.Length),
+                        this.DatabaseFactory.ObjectsDB.GetNewParameter("@last_id", System.Data.DbType.Int32, request.Start+1),
+                    });
 
-                        if (request.Params != null) {
-                            foreach (Dictionary<string, string> param in request.Params)
-                                parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter(string.Format("@{0}", param["name"]), (System.Data.DbType)Convert.ToInt32(param["type"]), param["value"]));
-                        }
+                    if (request.Params != null) {
+                        foreach (Dictionary<string, string> param in request.Params)
+                            parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter(string.Format("@{0}", param["name"]), (System.Data.DbType)Convert.ToInt32(param["type"]), param["value"]));
                     }
 
                     var _dataset = (request.Length > 0) ? this.DatabaseFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray()) : this.DatabaseFactory.ObjectsDB.DoQueries(_sql);
@@ -104,12 +101,10 @@ namespace ExpressBase.ServiceStack
 
         public object Any(DataSourceColumnsRequest request)
         {
-            ILog log = LogManager.GetLogger(GetType());
-            log.Info("request.Params: " + request.Params.Count); // + " -> " + request.Params[1]["type"]
             base.ClientID = request.TenantAccountId;
 
-            ColumnColletion columns = base.SessionBag.Get<ColumnColletion>(string.Format("ds_{0}_columns", request.Id));
-            //if (columns == null)
+            ColumnColletion columns = this.Redis.Get<ColumnColletion>(string.Format("{0}_ds_{1}_columns", request.TenantAccountId, request.Id));
+            if (columns == null)
             {
                 request.SearchText = base.Request.QueryString["searchtext"];
                 request.SearchText = string.IsNullOrEmpty(request.SearchText) ? "" : request.SearchText; // @txtsearch
@@ -132,31 +127,30 @@ namespace ExpressBase.ServiceStack
                         (string.IsNullOrEmpty(request.SelectedColumnName)) ? "id" : string.Format("{0} {1}", request.SelectedColumnName, request.OrderByDirection));
 
                         var parameters = new List<System.Data.Common.DbParameter>();
+                        parameters.AddRange(new System.Data.Common.DbParameter[]
                         {
-                            parameters.AddRange(new System.Data.Common.DbParameter[]
-                            {
-                                this.DatabaseFactory.ObjectsDB.GetNewParameter("@limit", System.Data.DbType.Int32, 0),
-                                this.DatabaseFactory.ObjectsDB.GetNewParameter("@last_id", System.Data.DbType.Int32, 0),
-                            });
+                            this.DatabaseFactory.ObjectsDB.GetNewParameter("@limit", System.Data.DbType.Int32, 0),
+                            this.DatabaseFactory.ObjectsDB.GetNewParameter("@last_id", System.Data.DbType.Int32, 0),
+                        });
 
-                            if (request.Params != null)
-                            {
-                                foreach (Dictionary<string, string> param in request.Params)
-                                    parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter(string.Format("@{0}", param["name"]), (System.Data.DbType)Convert.ToInt32(param["type"]), param["value"]));
-                            }
+                        if (request.Params != null)
+                        {
+                            foreach (Dictionary<string, string> param in request.Params)
+                                parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter(string.Format("@{0}", param["name"]), (System.Data.DbType)Convert.ToInt32(param["type"]), param["value"]));
                         }
-                        log.Info("reached Here....");
+
+                        Log.Info("reached Here....");
                         _sql = (_sql.IndexOf(";") > 0) ? _sql.Substring(_sql.IndexOf(";") + 1) : _sql;
                         try
                         {
                             var dt2 = this.DatabaseFactory.ObjectsDB.DoQuery(_sql, parameters.ToArray());
                             columns = dt2.Columns;
-                            log.Info(columns);
-                            base.SessionBag.Set<ColumnColletion>(string.Format("ds_{0}_columns", request.Id), dt2.Columns);
+                            Log.Info(columns);
+                            this.Redis.Set<ColumnColletion>(string.Format("{0}_ds_{1}_columns", request.TenantAccountId, request.Id), columns);
                         }
                         catch (Exception e)
                         {
-                            log.Info("e.Message" + e.Message);
+                            Log.Info("e.Message" + e.Message);
                         }
                     }
                 }
