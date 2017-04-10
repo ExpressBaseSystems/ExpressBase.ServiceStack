@@ -147,8 +147,8 @@ namespace ExpressBase.ServiceStack
                 var redisClient = (authService as AuthenticateService).Redis;
                 mysession.UserName = _authUser.Uname;
                 mysession.FirstName = _authUser.Fname;
-                mysession.Uid = _authUser.Id;
-SetBearerTokenOnAuthenticateResponse profile image to redis                if(request.Meta.ContainsValue("cid"))
+                mysession.Uid = _authUser.Id;      
+               if(request.Meta.ContainsValue("cid"))
                 {
                     log.Info("#Eb reached 4");
                     mysession.CId = request.Meta["cid"];
