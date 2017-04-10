@@ -1,17 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using ServiceStack;
-using ServiceStack.Redis;
 using ExpressBase.Data;
 using ExpressBase.Common;
 using System.IO;
 using ExpressBase.Objects;
 using System.Data;
-using ServiceStack.Auth;
-using System.Configuration;
-using ServiceStack.Configuration;
+using ServiceStack.Logging;
 
 namespace ExpressBase.ServiceStack
 {
@@ -48,6 +43,8 @@ namespace ExpressBase.ServiceStack
                 return _infraDf;
             }
         }
+
+        internal ILog Log { get { return LogManager.GetLogger(GetType()); } }
 
         internal DatabaseFactory DatabaseFactory
         {
