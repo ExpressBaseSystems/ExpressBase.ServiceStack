@@ -56,15 +56,16 @@ namespace ExpressBase.ServiceStack
 
         public string AuthProvider
         {
-            get
-            {
-                throw new NotImplementedException();
-            }
+             get; set; 
+            //get
+            //{
+            //    throw new NotImplementedException();
+            //}
 
-            set
-            {
-                throw new NotImplementedException();
-            }
+            //set
+            //{
+            //    throw new NotImplementedException();
+            //}
         }
 
         public CustomUserSession()
@@ -86,10 +87,14 @@ namespace ExpressBase.ServiceStack
         {
             return true;
         }
-
+        
         public void OnAuthenticated(IServiceBase authService, IAuthSession session, IAuthTokens tokens, Dictionary<string, string> authInfo)
         {
-            throw new NotImplementedException();
+            Dictionary<string, string> dict = authInfo;
+
+           
+
+            // throw new NotImplementedException();
         }
 
         public void OnCreated(IRequest httpReq) { }
@@ -147,7 +152,7 @@ namespace ExpressBase.ServiceStack
                 {
                     log.Info("#Eb reached 4");
                     mysession.CId = request.Meta["cid"];
-                    profileimg = string.Format("uid_{0}_cid_{1}_profileimage", _authUser.Id, request.Meta["cid"]);
+                    profileimg = string.Format("cid_{0}_uid_{1}_pimg",request.Meta["cid"],_authUser.Id);
                 }
                 else
                 {

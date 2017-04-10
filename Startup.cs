@@ -105,19 +105,19 @@ namespace ExpressBase.ServiceStack
                    
                         }
                     },
-                    //new ApiKeyAuthProvider(AppSettings),        //Sign-in with API Key
-                    //new CredentialsAuthProvider(),              //Sign-in with UserName/Password credentials
-                    //new BasicAuthProvider(),                    //Sign-in with HTTP Basic Auth
-                    //new DigestAuthProvider(AppSettings),        //Sign-in with HTTP Digest Auth
-                    //new TwitterAuthProvider(AppSettings),       //Sign-in with Twitter
-                    //new FacebookAuthProvider(AppSettings),      //Sign-in with Facebook
+                    new ApiKeyAuthProvider(AppSettings),        //Sign-in with API Key
+                    new CredentialsAuthProvider(),              //Sign-in with UserName/Password credentials
+                    new BasicAuthProvider(),                    //Sign-in with HTTP Basic Auth
+                    new DigestAuthProvider(AppSettings),        //Sign-in with HTTP Digest Auth
+                    new TwitterAuthProvider(AppSettings),       //Sign-in with Twitter
+                    new FacebookAuthProvider(AppSettings),      //Sign-in with Facebook
                     //new YahooOpenIdOAuthProvider(AppSettings),  //Sign-in with Yahoo OpenId
                     //new OpenIdOAuthProvider(AppSettings),       //Sign-in with Custom OpenId
                     //new GoogleOAuth2Provider(AppSettings),      //Sign-in with Google OAuth2 Provider
                     //new LinkedInOAuth2Provider(AppSettings),    //Sign-in with LinkedIn OAuth2 Provider
-                    //new GithubAuthProvider(AppSettings),        //Sign-in with GitHub OAuth Provider
-                    //new YandexAuthProvider(AppSettings),        //Sign-in with Yandex OAuth Provider        
-                    //new VkAuthProvider(AppSettings),            //Sign-in with VK.com OAuth Provider 
+                    new GithubAuthProvider(AppSettings),        //Sign-in with GitHub OAuth Provider
+                    new YandexAuthProvider(AppSettings),        //Sign-in with Yandex OAuth Provider        
+                    new VkAuthProvider(AppSettings),            //Sign-in with VK.com OAuth Provider 
                 }));
 
             //Also works but it's recommended to handle 404's by registering at end of .NET Core pipeline
