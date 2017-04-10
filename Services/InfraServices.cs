@@ -21,7 +21,7 @@ namespace ExpressBase.ServiceStack.Services
             using (var con = InfraDatabaseFactory.InfraDB.GetNewConnection())
             {
                 con.Open();
-               
+
                 if (request.ltype == "fb")
                 {
 
@@ -57,7 +57,7 @@ namespace ExpressBase.ServiceStack.Services
                     return res;
 
                 }
-                
+
                 else
                 {
 
@@ -154,125 +154,148 @@ namespace ExpressBase.ServiceStack.Services
 
         public TokenRequiredUploadResponse Any(TokenRequiredUploadRequest request)
         {
-            base.ClientID = request.TenantAccountId;
+          
             ILog log = LogManager.GetLogger(GetType());
-            using (var con = InfraDatabaseFactory.InfraDB.GetNewConnection())
+
+            if (!string.IsNullOrEmpty(request.TenantAccountId))
             {
-                con.Open();
-                log.Info("#Eb account insert 1");
-                if (request.op == "insertaccount")
+                base.ClientID = request.TenantAccountId;
+                using (var con = base.DatabaseFactory.ObjectsDB.GetNewConnection())
                 {
-                    var cmd = InfraDatabaseFactory.InfraDB.GetNewCommand(con, "UPDATE eb_tenantaccount SET accountname=@accountname,cid=@cid,address=@address,phone=@phone,email=@email,website=@website,tier=@tier,tenantname=@tenantname WHERE id=@id RETURNING id");
-                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("accountname", System.Data.DbType.String, request.Colvalues["accountname"]));
-                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("cid", System.Data.DbType.String, request.Colvalues["cid"]));
-                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("address", System.Data.DbType.String, request.Colvalues["address"]));
-                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("phone", System.Data.DbType.String, request.Colvalues["phone"]));
-                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("email", System.Data.DbType.String, request.Colvalues["email"]));
-                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("website", System.Data.DbType.String, request.Colvalues["website"]));
-                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("tier", System.Data.DbType.String, request.Colvalues["tier"]));
-                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("tenantname", System.Data.DbType.String, request.Colvalues["tenantname"]));
-                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("id", System.Data.DbType.Int64, request.Colvalues["tenantuserid"]));
+                    con.Open();
+                    var cmd = base.DatabaseFactory.ObjectsDB.GetNewCommand(con, "UPDATE eb_users SET locale=@locale,timezone=@timezone,dateformat=@dateformat,numformat=@numformat,timezonefull=@timezonefull WHERE id=@id");
+                    cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("locale", System.Data.DbType.String, request.Colvalues["locale"]));
+                    cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("timezone", System.Data.DbType.String, request.Colvalues["timecode"]));
+                    cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("dateformat", System.Data.DbType.String, request.Colvalues["dateformat"]));
+                    cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("numformat", System.Data.DbType.String, request.Colvalues["numformat"]));
+                    cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("timezonefull", System.Data.DbType.String, request.Colvalues["timezone"]));
+                    cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("id", System.Data.DbType.Int64, request.Colvalues["uid"]));
                     TokenRequiredUploadResponse resp = new TokenRequiredUploadResponse
                     {
                         id = Convert.ToInt32(cmd.ExecuteScalar())
                     };
                     return resp;
-
                 }
-                else if (request.op == "Dbcheck")
-                {
-                    int uid = 0;
-                    string sql = string.Format("SELECT cid,accountname FROM eb_tenantaccount WHERE id={0}", request.Colvalues["acid"]);
-                    var dt = InfraDatabaseFactory.InfraDB.DoQuery(sql);
-                    //CREATE CLIENTDB CONN
-                    EbClientConf e = new EbClientConf()
-                    {
-                        ClientID = dt.Rows[0][0].ToString(),
-                        ClientName = dt.Rows[0][1].ToString(),
-                        EbClientTier = EbClientTiers.Unlimited
-                    };
-
-                    e.DatabaseConfigurations.Add(EbDatabaseTypes.EbOBJECTS, new EbDatabaseConfiguration(EbDatabaseTypes.EbOBJECTS, DatabaseVendors.PGSQL, request.Colvalues["dbname"].ToString(), request.Colvalues["sip"].ToString(), Convert.ToInt32(request.Colvalues["pnum"]), request.Colvalues["duname"].ToString(), request.Colvalues["pwd"].ToString(), Convert.ToInt32(request.Colvalues["tout"])));
-                    e.DatabaseConfigurations.Add(EbDatabaseTypes.EbDATA, new EbDatabaseConfiguration(EbDatabaseTypes.EbDATA, DatabaseVendors.PGSQL, request.Colvalues["dbname"].ToString(), request.Colvalues["sip"].ToString(), Convert.ToInt32(request.Colvalues["pnum"]), request.Colvalues["duname"].ToString(), request.Colvalues["pwd"].ToString(), Convert.ToInt32(request.Colvalues["tout"])));
-                    e.DatabaseConfigurations.Add(EbDatabaseTypes.EbFILES, new EbDatabaseConfiguration(EbDatabaseTypes.EbFILES, DatabaseVendors.PGSQL, request.Colvalues["dbname"].ToString(), request.Colvalues["sip"].ToString(), Convert.ToInt32(request.Colvalues["pnum"]), request.Colvalues["duname"].ToString(), request.Colvalues["pwd"].ToString(), Convert.ToInt32(request.Colvalues["tout"])));
-                    e.DatabaseConfigurations.Add(EbDatabaseTypes.EbLOGS, new EbDatabaseConfiguration(EbDatabaseTypes.EbLOGS, DatabaseVendors.PGSQL, request.Colvalues["dbname"].ToString(), request.Colvalues["sip"].ToString(), Convert.ToInt32(request.Colvalues["pnum"]), request.Colvalues["duname"].ToString(), request.Colvalues["pwd"].ToString(), Convert.ToInt32(request.Colvalues["tout"])));
-                    e.DatabaseConfigurations.Add(EbDatabaseTypes.EbOBJECTS_RO, new EbDatabaseConfiguration(EbDatabaseTypes.EbOBJECTS_RO, DatabaseVendors.PGSQL, request.Colvalues["dbname"].ToString(), request.Colvalues["sip"].ToString(), Convert.ToInt32(request.Colvalues["pnum"]), request.Colvalues["duname"].ToString(), request.Colvalues["pwd"].ToString(), Convert.ToInt32(request.Colvalues["tout"])));
-                    e.DatabaseConfigurations.Add(EbDatabaseTypes.EbDATA_RO, new EbDatabaseConfiguration(EbDatabaseTypes.EbDATA_RO, DatabaseVendors.PGSQL, request.Colvalues["dbname"].ToString(), request.Colvalues["sip"].ToString(), Convert.ToInt32(request.Colvalues["pnum"]), request.Colvalues["duname"].ToString(), request.Colvalues["pwd"].ToString(), Convert.ToInt32(request.Colvalues["tout"])));
-                    e.DatabaseConfigurations.Add(EbDatabaseTypes.EbFILES_RO, new EbDatabaseConfiguration(EbDatabaseTypes.EbFILES_RO, DatabaseVendors.PGSQL, request.Colvalues["dbname"].ToString(), request.Colvalues["sip"].ToString(), Convert.ToInt32(request.Colvalues["pnum"]), request.Colvalues["duname"].ToString(), request.Colvalues["pwd"].ToString(), Convert.ToInt32(request.Colvalues["tout"])));
-                    e.DatabaseConfigurations.Add(EbDatabaseTypes.EbLOGS_RO, new EbDatabaseConfiguration(EbDatabaseTypes.EbLOGS_RO, DatabaseVendors.PGSQL, request.Colvalues["dbname"].ToString(), request.Colvalues["sip"].ToString(), Convert.ToInt32(request.Colvalues["pnum"]), request.Colvalues["duname"].ToString(), request.Colvalues["pwd"].ToString(), Convert.ToInt32(request.Colvalues["tout"])));
-
-                    byte[] bytea2 = EbSerializers.ProtoBuf_Serialize(e);
-                    var dbconf = EbSerializers.ProtoBuf_DeSerialize<EbClientConf>(bytea2);
-                    var dbf = new DatabaseFactory(dbconf);
-                    var _con = dbf.ObjectsDB.GetNewConnection();
-                    try
-                    {
-                        _con.Open();
-                        var cmd = InfraDatabaseFactory.InfraDB.GetNewCommand(con, "UPDATE eb_tenantaccount SET config=@config WHERE id=@id RETURNING id");
-                        cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("config", System.Data.DbType.Binary, bytea2));
-                        cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("id", System.Data.DbType.Int64, Convert.ToInt32(request.Colvalues["acid"])));
-                        uid = Convert.ToInt32(cmd.ExecuteScalar());
-                    }
-                    catch (Exception ex)
-                    {
-
-                    }
-                    TokenRequiredUploadResponse resp = new TokenRequiredUploadResponse
-                    {
-                        id = uid
-                    };
-                    return resp;
-                }
-                else if (request.op == "updatetenant")
-                {
-                    var cmd = InfraDatabaseFactory.InfraDB.GetNewCommand(con, "UPDATE eb_tenants SET company=@company,employees=@employees,country=@country,phone=@phone WHERE id=@id RETURNING id");
-
-
-                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("company", System.Data.DbType.String, request.Colvalues["company"]));
-                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("employees", System.Data.DbType.String, request.Colvalues["employees"]));
-                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("country", System.Data.DbType.String, request.Colvalues["country"]));
-                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("phone", System.Data.DbType.String, request.Colvalues["phone"]));
-                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("id", System.Data.DbType.Int64, request.Colvalues["id"]));
-                    TokenRequiredUploadResponse res = new TokenRequiredUploadResponse
-                    {
-                        id = Convert.ToInt32(cmd.ExecuteScalar())
-                    };
-                    return res;
-                }
-                else if (request.op == "tenantimgupload")
-                {
-                    var cmd = InfraDatabaseFactory.InfraDB.GetNewCommand(con, "UPDATE eb_tenants SET profileimg=@profileimg WHERE id=@id RETURNING id");
-                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("profileimg", System.Data.DbType.String, string.Format("<img src='data:image/png;base64,{0}'class='img-circle navbar-right img-cir'/>", request.Colvalues["profileimg"])));
-                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("id", System.Data.DbType.Int64, request.Colvalues["id"]));
-                    TokenRequiredUploadResponse res = new TokenRequiredUploadResponse
-                    {
-                        id = Convert.ToInt32(cmd.ExecuteScalar())
-                    };
-                    return res;
-                }
-                else if (request.op == "tenantaccountimg")
-                {
-                    log.Info("#Eb account image insert 1");
-                    var cmd = InfraDatabaseFactory.InfraDB.GetNewCommand(con, "INSERT INTO eb_tenantaccount (profilelogo,tenantid) VALUES(@profilelogo,@tenantid) RETURNING id");
-                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("profilelogo", System.Data.DbType.String, string.Format("<img src='{0}' class='prologo img-circle'/>", request.Colvalues["proimg"])));
-                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("tenantid", System.Data.DbType.Int64, request.Colvalues["id"]));
-                    TokenRequiredUploadResponse res = new TokenRequiredUploadResponse
-                    {
-                        id = Convert.ToInt32(cmd.ExecuteScalar())
-                    };
-                    return res;
-                }
-                else
-                {
-                    TokenRequiredUploadResponse resp = new TokenRequiredUploadResponse
-                    {
-                        id = 0
-                    };
-                    return resp;
-                }
-
             }
+            else
+            {
+                using (var con = InfraDatabaseFactory.InfraDB.GetNewConnection())
+                {
+                    con.Open();
+                    log.Info("#Eb account insert 1");
+                    if (request.op == "insertaccount")
+                    {
+                        var cmd = InfraDatabaseFactory.InfraDB.GetNewCommand(con, "UPDATE eb_tenantaccount SET accountname=@accountname,cid=@cid,address=@address,phone=@phone,email=@email,website=@website,tier=@tier,tenantname=@tenantname WHERE id=@id RETURNING id");
+                        cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("accountname", System.Data.DbType.String, request.Colvalues["accountname"]));
+                        cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("cid", System.Data.DbType.String, request.Colvalues["cid"]));
+                        cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("address", System.Data.DbType.String, request.Colvalues["address"]));
+                        cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("phone", System.Data.DbType.String, request.Colvalues["phone"]));
+                        cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("email", System.Data.DbType.String, request.Colvalues["email"]));
+                        cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("website", System.Data.DbType.String, request.Colvalues["website"]));
+                        cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("tier", System.Data.DbType.String, request.Colvalues["tier"]));
+                        cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("tenantname", System.Data.DbType.String, request.Colvalues["tenantname"]));
+                        cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("id", System.Data.DbType.Int64, request.Colvalues["tenantuserid"]));
+                        TokenRequiredUploadResponse resp = new TokenRequiredUploadResponse
+                        {
+                            id = Convert.ToInt32(cmd.ExecuteScalar())
+                        };
+                        return resp;
 
+                    }
+                    else if (request.op == "Dbcheck")
+                    {
+                        int uid = 0;
+                        string sql = string.Format("SELECT cid,accountname FROM eb_tenantaccount WHERE id={0}", request.Colvalues["acid"]);
+                        var dt = InfraDatabaseFactory.InfraDB.DoQuery(sql);
+                        //CREATE CLIENTDB CONN
+                        EbClientConf e = new EbClientConf()
+                        {
+                            ClientID = dt.Rows[0][0].ToString(),
+                            ClientName = dt.Rows[0][1].ToString(),
+                            EbClientTier = EbClientTiers.Unlimited
+                        };
+
+                        e.DatabaseConfigurations.Add(EbDatabaseTypes.EbOBJECTS, new EbDatabaseConfiguration(EbDatabaseTypes.EbOBJECTS, DatabaseVendors.PGSQL, request.Colvalues["dbname"].ToString(), request.Colvalues["sip"].ToString(), Convert.ToInt32(request.Colvalues["pnum"]), request.Colvalues["duname"].ToString(), request.Colvalues["pwd"].ToString(), Convert.ToInt32(request.Colvalues["tout"])));
+                        e.DatabaseConfigurations.Add(EbDatabaseTypes.EbDATA, new EbDatabaseConfiguration(EbDatabaseTypes.EbDATA, DatabaseVendors.PGSQL, request.Colvalues["dbname"].ToString(), request.Colvalues["sip"].ToString(), Convert.ToInt32(request.Colvalues["pnum"]), request.Colvalues["duname"].ToString(), request.Colvalues["pwd"].ToString(), Convert.ToInt32(request.Colvalues["tout"])));
+                        e.DatabaseConfigurations.Add(EbDatabaseTypes.EbFILES, new EbDatabaseConfiguration(EbDatabaseTypes.EbFILES, DatabaseVendors.PGSQL, request.Colvalues["dbname"].ToString(), request.Colvalues["sip"].ToString(), Convert.ToInt32(request.Colvalues["pnum"]), request.Colvalues["duname"].ToString(), request.Colvalues["pwd"].ToString(), Convert.ToInt32(request.Colvalues["tout"])));
+                        e.DatabaseConfigurations.Add(EbDatabaseTypes.EbLOGS, new EbDatabaseConfiguration(EbDatabaseTypes.EbLOGS, DatabaseVendors.PGSQL, request.Colvalues["dbname"].ToString(), request.Colvalues["sip"].ToString(), Convert.ToInt32(request.Colvalues["pnum"]), request.Colvalues["duname"].ToString(), request.Colvalues["pwd"].ToString(), Convert.ToInt32(request.Colvalues["tout"])));
+                        e.DatabaseConfigurations.Add(EbDatabaseTypes.EbOBJECTS_RO, new EbDatabaseConfiguration(EbDatabaseTypes.EbOBJECTS_RO, DatabaseVendors.PGSQL, request.Colvalues["dbname"].ToString(), request.Colvalues["sip"].ToString(), Convert.ToInt32(request.Colvalues["pnum"]), request.Colvalues["duname"].ToString(), request.Colvalues["pwd"].ToString(), Convert.ToInt32(request.Colvalues["tout"])));
+                        e.DatabaseConfigurations.Add(EbDatabaseTypes.EbDATA_RO, new EbDatabaseConfiguration(EbDatabaseTypes.EbDATA_RO, DatabaseVendors.PGSQL, request.Colvalues["dbname"].ToString(), request.Colvalues["sip"].ToString(), Convert.ToInt32(request.Colvalues["pnum"]), request.Colvalues["duname"].ToString(), request.Colvalues["pwd"].ToString(), Convert.ToInt32(request.Colvalues["tout"])));
+                        e.DatabaseConfigurations.Add(EbDatabaseTypes.EbFILES_RO, new EbDatabaseConfiguration(EbDatabaseTypes.EbFILES_RO, DatabaseVendors.PGSQL, request.Colvalues["dbname"].ToString(), request.Colvalues["sip"].ToString(), Convert.ToInt32(request.Colvalues["pnum"]), request.Colvalues["duname"].ToString(), request.Colvalues["pwd"].ToString(), Convert.ToInt32(request.Colvalues["tout"])));
+                        e.DatabaseConfigurations.Add(EbDatabaseTypes.EbLOGS_RO, new EbDatabaseConfiguration(EbDatabaseTypes.EbLOGS_RO, DatabaseVendors.PGSQL, request.Colvalues["dbname"].ToString(), request.Colvalues["sip"].ToString(), Convert.ToInt32(request.Colvalues["pnum"]), request.Colvalues["duname"].ToString(), request.Colvalues["pwd"].ToString(), Convert.ToInt32(request.Colvalues["tout"])));
+
+                        byte[] bytea2 = EbSerializers.ProtoBuf_Serialize(e);
+                        var dbconf = EbSerializers.ProtoBuf_DeSerialize<EbClientConf>(bytea2);
+                        var dbf = new DatabaseFactory(dbconf);
+                        var _con = dbf.ObjectsDB.GetNewConnection();
+                        try
+                        {
+                            _con.Open();
+                            var cmd = InfraDatabaseFactory.InfraDB.GetNewCommand(con, "UPDATE eb_tenantaccount SET config=@config WHERE id=@id RETURNING id");
+                            cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("config", System.Data.DbType.Binary, bytea2));
+                            cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("id", System.Data.DbType.Int64, Convert.ToInt32(request.Colvalues["acid"])));
+                            uid = Convert.ToInt32(cmd.ExecuteScalar());
+                        }
+                        catch (Exception ex)
+                        {
+
+                        }
+                        TokenRequiredUploadResponse resp = new TokenRequiredUploadResponse
+                        {
+                            id = uid
+                        };
+                        return resp;
+                    }
+                    else if (request.op == "updatetenant")
+                    {
+                        var cmd = InfraDatabaseFactory.InfraDB.GetNewCommand(con, "UPDATE eb_tenants SET company=@company,employees=@employees,country=@country,phone=@phone WHERE id=@id RETURNING id");
+
+
+                        cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("company", System.Data.DbType.String, request.Colvalues["company"]));
+                        cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("employees", System.Data.DbType.String, request.Colvalues["employees"]));
+                        cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("country", System.Data.DbType.String, request.Colvalues["country"]));
+                        cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("phone", System.Data.DbType.String, request.Colvalues["phone"]));
+                        cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("id", System.Data.DbType.Int64, request.Colvalues["id"]));
+                        TokenRequiredUploadResponse res = new TokenRequiredUploadResponse
+                        {
+                            id = Convert.ToInt32(cmd.ExecuteScalar())
+                        };
+                        return res;
+                    }
+                    else if (request.op == "tenantimgupload")
+                    {
+                        var cmd = InfraDatabaseFactory.InfraDB.GetNewCommand(con, "UPDATE eb_tenants SET profileimg=@profileimg WHERE id=@id RETURNING id");
+                        cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("profileimg", System.Data.DbType.String, string.Format("<img src='data:image/png;base64,{0}'class='img-circle navbar-right img-cir'/>", request.Colvalues["profileimg"])));
+                        cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("id", System.Data.DbType.Int64, request.Colvalues["id"]));
+                        TokenRequiredUploadResponse res = new TokenRequiredUploadResponse
+                        {
+                            id = Convert.ToInt32(cmd.ExecuteScalar())
+                        };
+                        return res;
+                    }
+                    else if (request.op == "tenantaccountimg")
+                    {
+                        log.Info("#Eb account image insert 1");
+                        var cmd = InfraDatabaseFactory.InfraDB.GetNewCommand(con, "INSERT INTO eb_tenantaccount (profilelogo,tenantid) VALUES(@profilelogo,@tenantid) RETURNING id");
+                        cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("profilelogo", System.Data.DbType.String, string.Format("<img src='{0}' class='prologo img-circle'/>", request.Colvalues["proimg"])));
+                        cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("tenantid", System.Data.DbType.Int64, request.Colvalues["id"]));
+                        TokenRequiredUploadResponse res = new TokenRequiredUploadResponse
+                        {
+                            id = Convert.ToInt32(cmd.ExecuteScalar())
+                        };
+                        return res;
+                    }
+                    else
+                    {
+                        TokenRequiredUploadResponse resp = new TokenRequiredUploadResponse
+                        {
+                            id = 0
+                        };
+                        return resp;
+                    }
+
+                }
+            }
         }
 
         //public bool Any(SendMail request)
@@ -374,7 +397,7 @@ namespace ExpressBase.ServiceStack.Services
                     List<List<object>> list = new List<List<object>>();
                     foreach (EbDataRow dr in dt.Rows)
                     {
-                        list.Add(new List<object> { Convert.ToInt32(dr[0]), dr[1].ToString(),dr[2].ToString() });
+                        list.Add(new List<object> { Convert.ToInt32(dr[0]), dr[1].ToString(), dr[2].ToString() });
                     }
                     TokenRequiredSelectResponse resp = new TokenRequiredSelectResponse()
                     {
@@ -386,6 +409,7 @@ namespace ExpressBase.ServiceStack.Services
 
             }
         }
+
 
         //public InfraDb_GENERIC_SELECTResponse Any(InfraDb_GENERIC_SELECTRequest req)
         //{
@@ -423,4 +447,5 @@ namespace ExpressBase.ServiceStack.Services
         //    }
         //}
     }
+
 }
