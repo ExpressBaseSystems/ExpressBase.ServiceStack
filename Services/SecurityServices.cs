@@ -148,7 +148,7 @@ namespace ExpressBase.ServiceStack
                 mysession.UserName = _authUser.Uname;
                 mysession.FirstName = _authUser.Fname;
                 mysession.Uid = _authUser.Id;
-                if(request.Meta.ContainsKey("cid"))
+SetBearerTokenOnAuthenticateResponse profile image to redis                if(request.Meta.ContainsValue("cid"))
                 {
                     log.Info("#Eb reached 4");
                     mysession.CId = request.Meta["cid"];
@@ -158,7 +158,7 @@ namespace ExpressBase.ServiceStack
                 {
                     log.Info("#Eb reached 5");
                     mysession.CId= string.Empty;
-                    profileimg = string.Format("uid_{0}_profileimage", _authUser.Id);
+                    profileimg = string.Format("uid_{0}_pimg", _authUser.Id);
 
                 }
                 redisClient.Set<string>(profileimg, _authUser.Profileimg);
