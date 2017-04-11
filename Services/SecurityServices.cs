@@ -148,7 +148,7 @@ namespace ExpressBase.ServiceStack
                 mysession.UserName = _authUser.Uname;
                 mysession.FirstName = _authUser.Fname;
                 mysession.Uid = _authUser.Id;      
-               if(request.Meta.ContainsValue("cid"))
+               if(request.Meta.ContainsKey("cid"))
                 {
                     log.Info("#Eb reached 4");
                     mysession.CId = request.Meta["cid"];
