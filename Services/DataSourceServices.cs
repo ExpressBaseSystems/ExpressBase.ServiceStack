@@ -46,7 +46,7 @@ namespace ExpressBase.ServiceStack
                             else if (op == "*x*")
                                 _c += string.Format("AND LOWER({0})::text LIKE LOWER('%{1}%') ", col, val);
                             else if (op == "=")
-                                _c += string.Format("AND LOWER({0})::text LIKE LOWER('{1}') ", col, val);
+                                _c += string.Format("AND LOWER({0}::text) = LOWER('{1}') ", col, val);
                             else
                                 _c += string.Format("AND {0} {1} '{2}' ", col, op, val);
                         }
