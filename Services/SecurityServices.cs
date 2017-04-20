@@ -124,7 +124,7 @@ namespace ExpressBase.ServiceStack
             EbBaseService bservice = new EbBaseService();
 
             AuthenticateResponse response = null;
-            string profileimg="";
+           
             
             if (string.IsNullOrEmpty(request.Meta["cid"]))
             {
@@ -148,20 +148,20 @@ namespace ExpressBase.ServiceStack
                 mysession.UserName = _authUser.Uname;
                 mysession.FirstName = _authUser.Fname;
                 mysession.Uid = _authUser.Id;      
-               if(request.Meta.ContainsKey("cid"))
+               if(!string.IsNullOrEmpty(request.Meta["cid"]))
                 {
                     log.Info("#Eb reached 4");
                     mysession.CId = request.Meta["cid"];
-                    profileimg = string.Format("cid_{0}_uid_{1}_pimg",request.Meta["cid"],_authUser.Id);
+                   
                 }
                 else
                 {
                     log.Info("#Eb reached 5");
                     mysession.CId= string.Empty;
-                    profileimg = string.Format("uid_{0}_pimg", _authUser.Id);
+                   
 
                 }
-                redisClient.Set<string>(profileimg, _authUser.Profileimg);
+               
                 response = new AuthenticateResponse
                 {
 
