@@ -51,7 +51,7 @@ namespace ExpressBase.ServiceStack.Services
             if (Convert.ToBoolean(request.Colvalues["isUpdate"]))
             {
                 var _ebform = this.Redis.Get<EbForm>("cacheform");
-                _ebform.Init4Redis();
+                //_ebform.Init4Redis(this.Redis, this.cli);
                 upsql += string.Format("INSERT INTO eb_auditlog(tableid, dataid, eb_fid, operations, timestamp)VALUES({0},{1},{2},{3},'{4}');", request.Colvalues["TableId"], request.Colvalues["DataId"], request.Colvalues["FId"], 1, DateTime.Now);
                 foreach (string key in request.Colvalues.Keys)
                 {
