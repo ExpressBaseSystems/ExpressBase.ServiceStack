@@ -88,8 +88,7 @@ namespace ExpressBase.ServiceStack
         {
             base.ClientID = request.TenantAccountId;
 
-            //ColumnColletion columns = this.Redis.Get<ColumnColletion>(string.Format("{0}_ds_{1}_columns", request.TenantAccountId, request.Id));
-            ColumnColletion columns = null;
+            ColumnColletion columns = this.Redis.Get<ColumnColletion>(string.Format("{0}_ds_{1}_columns", request.TenantAccountId, request.Id));
             if (columns == null)
             {
                 request.SearchText = base.Request.QueryString["searchtext"];
