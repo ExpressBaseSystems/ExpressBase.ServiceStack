@@ -81,7 +81,7 @@ namespace ExpressBase.ServiceStack
                 };
             }
 
-            return dsresponse;
+            return this.Request.ToOptimizedResult<DataSourceDataResponse>(dsresponse);
         }
 
         public object Any(DataSourceColumnsRequest request)
