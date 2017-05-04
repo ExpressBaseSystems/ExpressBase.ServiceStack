@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
+using System.Net;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -154,7 +155,8 @@ namespace ExpressBase.ServiceStack.Services
 
         public TokenRequiredUploadResponse Any(TokenRequiredUploadRequest request)
         {
-          
+            TokenRequiredUploadResponse resp = null;
+
             ILog log = LogManager.GetLogger(GetType());
 
             if (!string.IsNullOrEmpty(request.TenantAccountId))
@@ -170,11 +172,11 @@ namespace ExpressBase.ServiceStack.Services
                     cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("numformat", System.Data.DbType.String, request.Colvalues["numformat"]));
                     cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("timezonefull", System.Data.DbType.String, request.Colvalues["timezone"]));
                     cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("id", System.Data.DbType.Int64, request.Colvalues["uid"]));
-                    TokenRequiredUploadResponse resp = new TokenRequiredUploadResponse
+                    resp = new TokenRequiredUploadResponse
                     {
                         id = Convert.ToInt32(cmd.ExecuteScalar())
+
                     };
-                    return resp;                   
                 }
             }
             else
@@ -185,7 +187,7 @@ namespace ExpressBase.ServiceStack.Services
                     log.Info("#Eb account insert 1");
                     if (request.Colvalues.ContainsKey("op") && request.Colvalues["op"].ToString() == "insertaccount")
                     {
-                        var cmd = InfraDatabaseFactory.InfraDB.GetNewCommand(con, "INSERT INTO eb_tenantaccount (accountname,cid,address,phone,email,website,tier,tenantname,createdat,validtill,profilelogo,tenantid)VALUES(@accountname,@cid,@address,@phone,@email,@website,@tier,@tenantname,now(),(now()+ interval '30' day),@profilelogo,@tenantid) RETURNING id");
+                        var cmd = InfraDatabaseFactory.InfraDB.GetNewCommand(con, "INSERT INTO eb_tenantaccount (accountname,cid,address,phone,email,website,tier,tenantname,createdat,validtill,profilelogo,tenantid)VALUES(@accountname,@cid,@address,@phone,@email,@website,@tier,@tenantname,now(),(now()+ interval '30' day),@profilelogo,@tenantid) ON CONFLICT(cid) DO UPDATE SET accountname=@accountname,address=@address,phone=@phone,email=@email,website=@website,tier=@tier,createdat=now(),validtill=(now()+ interval '30' day) RETURNING id ");
                         cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("accountname", System.Data.DbType.String, request.Colvalues["accountname"]));
                         cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("cid", System.Data.DbType.String, request.Colvalues["cid"]));
                         cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("address", System.Data.DbType.String, request.Colvalues["address"]));
@@ -196,18 +198,16 @@ namespace ExpressBase.ServiceStack.Services
                         cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("tenantname", System.Data.DbType.String, request.Colvalues["tenantname"]));
                         cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("profilelogo", System.Data.DbType.String, string.Format("<img src='{0}' class='prologo img-circle'/>", request.Colvalues["imgpro"])));
                         cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("tenantid", System.Data.DbType.Int64, request.Colvalues["tenantid"]));
-                        TokenRequiredUploadResponse resp = new TokenRequiredUploadResponse
+                        resp = new TokenRequiredUploadResponse
                         {
-                            id = Convert.ToInt32(cmd.ExecuteScalar()),
-                           
-                            
+                            id = Convert.ToInt32(cmd.ExecuteScalar())
                         };
                         base.Redis.Set<string>(string.Format("cid_{0}_uid_{1}_pimg", base.ClientID, resp.id), string.Format("<img src='{0}'class='img-circle img-cir'/>", request.Colvalues["imgpro"]));
-                        return resp;
 
                     }
-                    else if (request.Colvalues["dbcheck"].ToString() == "dbconfig")
+                    else if (request.Colvalues.ContainsKey("dbcheck") && request.Colvalues["dbcheck"].ToString() == "dbconfig")
                     {
+                        resp = new TokenRequiredUploadResponse();
                         int uid = 0;
                         string sql = string.Format("SELECT cid,accountname FROM eb_tenantaccount WHERE id={0}", request.Colvalues["acid"]);
                         var dt = InfraDatabaseFactory.InfraDB.DoQuery(sql);
@@ -223,32 +223,77 @@ namespace ExpressBase.ServiceStack.Services
                         e.DatabaseConfigurations.Add(EbDatabaseTypes.EbDATA, new EbDatabaseConfiguration(EbDatabaseTypes.EbDATA, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db_datarw"])), request.Colvalues["dbname_datarw"].ToString(), request.Colvalues["sip_datarw"].ToString(), Convert.ToInt32(request.Colvalues["pnum_datarw"]), request.Colvalues["duname_datarw"].ToString(), request.Colvalues["pwd_datarw"].ToString(), Convert.ToInt32(request.Colvalues["tout_datarw"])));
                         e.DatabaseConfigurations.Add(EbDatabaseTypes.EbFILES, new EbDatabaseConfiguration(EbDatabaseTypes.EbFILES, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db_filerw"])), request.Colvalues["dbname_filerw"].ToString(), request.Colvalues["sip_filerw"].ToString(), Convert.ToInt32(request.Colvalues["pnum_filerw"]), request.Colvalues["duname_filerw"].ToString(), request.Colvalues["pwd_filerw"].ToString(), Convert.ToInt32(request.Colvalues["tout_filerw"])));
                         e.DatabaseConfigurations.Add(EbDatabaseTypes.EbLOGS, new EbDatabaseConfiguration(EbDatabaseTypes.EbLOGS, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db_logrw"])), request.Colvalues["dbname_logrw"].ToString(), request.Colvalues["sip_logrw"].ToString(), Convert.ToInt32(request.Colvalues["pnum_logrw"]), request.Colvalues["duname_logrw"].ToString(), request.Colvalues["pwd_logrw"].ToString(), Convert.ToInt32(request.Colvalues["tout_logrw"])));
-                        e.DatabaseConfigurations.Add(EbDatabaseTypes.EbOBJECTS_RO, new EbDatabaseConfiguration(EbDatabaseTypes.EbOBJECTS_RO, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db_objro"])), request.Colvalues["dbname_objro"].ToString(), request.Colvalues["sip_objro"].ToString(), Convert.ToInt32(request.Colvalues["pnum_objro"]), request.Colvalues["duname_objro"].ToString(), request.Colvalues["pwd_objro"].ToString(), Convert.ToInt32(request.Colvalues["tout_objro"])));
-                        e.DatabaseConfigurations.Add(EbDatabaseTypes.EbDATA_RO, new EbDatabaseConfiguration(EbDatabaseTypes.EbDATA_RO, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db_dataro"])), request.Colvalues["dbname_dataro"].ToString(), request.Colvalues["sip_dataro"].ToString(), Convert.ToInt32(request.Colvalues["pnum_dataro"]), request.Colvalues["duname_dataro"].ToString(), request.Colvalues["pwd_dataro"].ToString(), Convert.ToInt32(request.Colvalues["tout_dataro"])));
-                        e.DatabaseConfigurations.Add(EbDatabaseTypes.EbFILES_RO, new EbDatabaseConfiguration(EbDatabaseTypes.EbFILES_RO, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db_filero"])), request.Colvalues["dbname_filero"].ToString(), request.Colvalues["sip_filero"].ToString(), Convert.ToInt32(request.Colvalues["pnum_filero"]), request.Colvalues["duname_filero"].ToString(), request.Colvalues["pwd_filero"].ToString(), Convert.ToInt32(request.Colvalues["tout_filero"])));
-                        e.DatabaseConfigurations.Add(EbDatabaseTypes.EbLOGS_RO, new EbDatabaseConfiguration(EbDatabaseTypes.EbLOGS_RO, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db_logro"])), request.Colvalues["dbname_logro"].ToString(), request.Colvalues["sip_logro"].ToString(), Convert.ToInt32(request.Colvalues["pnum_logro"]), request.Colvalues["duname_logro"].ToString(), request.Colvalues["pwd_logro"].ToString(), Convert.ToInt32(request.Colvalues["tout_logro"])));
+                        e.DatabaseConfigurations.Add(EbDatabaseTypes.EbOBJECTS_RO, new EbDatabaseConfiguration(EbDatabaseTypes.EbOBJECTS_RO, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db_objrw"])), request.Colvalues["dbname_objro"].ToString(), request.Colvalues["sip_objro"].ToString(), Convert.ToInt32(request.Colvalues["pnum_objro"]), request.Colvalues["duname_objro"].ToString(), request.Colvalues["pwd_objro"].ToString(), Convert.ToInt32(request.Colvalues["tout_objro"])));
+                        e.DatabaseConfigurations.Add(EbDatabaseTypes.EbDATA_RO, new EbDatabaseConfiguration(EbDatabaseTypes.EbDATA_RO, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db_datarw"])), request.Colvalues["dbname_dataro"].ToString(), request.Colvalues["sip_dataro"].ToString(), Convert.ToInt32(request.Colvalues["pnum_dataro"]), request.Colvalues["duname_dataro"].ToString(), request.Colvalues["pwd_dataro"].ToString(), Convert.ToInt32(request.Colvalues["tout_dataro"])));
+                        e.DatabaseConfigurations.Add(EbDatabaseTypes.EbFILES_RO, new EbDatabaseConfiguration(EbDatabaseTypes.EbFILES_RO, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db_filerw"])), request.Colvalues["dbname_filero"].ToString(), request.Colvalues["sip_filero"].ToString(), Convert.ToInt32(request.Colvalues["pnum_filero"]), request.Colvalues["duname_filero"].ToString(), request.Colvalues["pwd_filero"].ToString(), Convert.ToInt32(request.Colvalues["tout_filero"])));
+                        e.DatabaseConfigurations.Add(EbDatabaseTypes.EbLOGS_RO, new EbDatabaseConfiguration(EbDatabaseTypes.EbLOGS_RO, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db_logrw"])), request.Colvalues["dbname_logro"].ToString(), request.Colvalues["sip_logro"].ToString(), Convert.ToInt32(request.Colvalues["pnum_logro"]), request.Colvalues["duname_logro"].ToString(), request.Colvalues["pwd_logro"].ToString(), Convert.ToInt32(request.Colvalues["tout_logro"])));
 
                         byte[] bytea2 = EbSerializers.ProtoBuf_Serialize(e);
                         var dbconf = EbSerializers.ProtoBuf_DeSerialize<EbClientConf>(bytea2);
                         var dbf = new DatabaseFactory(dbconf);
-                        var _con = dbf.ObjectsDB.GetNewConnection();
+                        var _con_o1 = dbf.ObjectsDB.GetNewConnection();
+                        var _con_o2 = dbf.ObjectsDBRO.GetNewConnection();
+                        var _con_d1 = dbf.DataDB.GetNewConnection();
+                        var _con_d2 = dbf.DataDBRO.GetNewConnection();
+                        var _con_l1 = dbf.LogsDB.GetNewConnection();
+                        var _con_l2 = dbf.LogsDBRO.GetNewConnection();
+                        var _con_f1 = dbf.FilesDB.GetNewConnection();
+                        var _con_f2 = dbf.FilesDBRO.GetNewConnection();
+                        int i = 0;
                         try
                         {
-                            _con.Open();
+                            
+                            _con_o1.Open(); _con_o1.Close();
+                            i++;
+                            _con_o2.Open(); _con_o2.Close();
+                            i++;
+                            _con_d1.Open(); _con_d1.Close();
+                            i++;
+                            _con_d2.Open(); _con_d2.Close();
+                            i++;
+                            _con_l1.Open(); _con_l1.Close();
+                            i++;
+                            _con_l2.Open(); _con_l2.Close();
+                            i++;
+                            _con_f1.Open(); _con_f1.Close();
+                            i++;
+                            _con_f2.Open(); _con_f2.Close();
+                           
                             var cmd = InfraDatabaseFactory.InfraDB.GetNewCommand(con, "UPDATE eb_tenantaccount SET config=@config WHERE id=@id RETURNING id");
                             cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("config", System.Data.DbType.Binary, bytea2));
                             cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("id", System.Data.DbType.Int64, Convert.ToInt32(request.Colvalues["acid"])));
                             uid = Convert.ToInt32(cmd.ExecuteScalar());
+                            resp.id = uid;
                         }
                         catch (Exception ex)
-                        {
-
+                        {     
+                            if (i == 0)
+                                throw HttpError.NotFound("Error in objects"); 
+                            else if (i == 1)
+                                throw HttpError.NotFound("Error in objects read only");
+                           
+                            else if (i == 2)
+                                throw HttpError.NotFound("Error in data");
+                            
+                            else if (i == 3)
+                                throw HttpError.NotFound("Error in dara read only");
+                            
+                            else if (i == 4)
+                                throw HttpError.NotFound("Error in logs");
+                            
+                            else if (i == 5)
+                                throw HttpError.NotFound("Error in log read only");
+                            
+                            else if (i == 6)
+                                throw HttpError.NotFound("Error in files");
+                            
+                            else if (i == 7)
+                                throw HttpError.NotFound("Error in files reda only");
+                           
+                            else
+                                throw HttpError.NotFound("Success");
                         }
-                        TokenRequiredUploadResponse resp = new TokenRequiredUploadResponse
-                        {
-                            id = uid
-                        };
-                        return resp;
+
                     }
                     else if (request.op == "updatetenant")
                     {
@@ -260,24 +305,21 @@ namespace ExpressBase.ServiceStack.Services
                         cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("country", System.Data.DbType.String, request.Colvalues["country"]));
                         cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("phone", System.Data.DbType.String, request.Colvalues["phone"]));
                         cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("id", System.Data.DbType.Int64, request.Colvalues["id"]));
-                        TokenRequiredUploadResponse res = new TokenRequiredUploadResponse
+                        resp = new TokenRequiredUploadResponse
                         {
                             id = Convert.ToInt32(cmd.ExecuteScalar())
                         };
-                        return res;
                     }
                     else if (request.op == "tenantimgupload")
                     {
                         var cmd = InfraDatabaseFactory.InfraDB.GetNewCommand(con, "UPDATE eb_tenants SET profileimg=@profileimg WHERE id=@id RETURNING id");
                         cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("profileimg", System.Data.DbType.String, string.Format("<img src='{0}'class='img-circle img-cir'/>", request.Colvalues["proimg"])));
                         cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("id", System.Data.DbType.Int64, request.Colvalues["id"]));
-                        TokenRequiredUploadResponse res = new TokenRequiredUploadResponse
+                        resp = new TokenRequiredUploadResponse
                         {
                             id = Convert.ToInt32(cmd.ExecuteScalar())
                         };
-                        base.Redis.Set<string>(string.Format("uid_{0}_pimg", res.id), string.Format("<img src='{0}'class='img-circle img-cir'/>", request.Colvalues["proimg"]));
-
-                        return res;
+                        base.Redis.Set<string>(string.Format("uid_{0}_pimg", resp.id), string.Format("<img src='{0}'class='img-circle img-cir'/>", request.Colvalues["proimg"]));
                     }
                     else if (request.Colvalues.ContainsKey("edit") && request.Colvalues["edit"].ToString() == "edit")
                     {
@@ -291,25 +333,21 @@ namespace ExpressBase.ServiceStack.Services
                                 dict.Add(dc.ColumnName, dr[dc.ColumnName]);
                             }
                         }
-                        TokenRequiredUploadResponse resp = new TokenRequiredUploadResponse()
+                        resp = new TokenRequiredUploadResponse()
                         {
                             Data = dict
-
                         };
-                        return resp;
                     }
-
                     else
                     {
-                        TokenRequiredUploadResponse resp = new TokenRequiredUploadResponse
+                        resp = new TokenRequiredUploadResponse
                         {
                             id = 0
                         };
-                        return resp;
                     }
-
                 }
             }
+            return resp;
         }
 
         //public bool Any(SendMail request)
@@ -404,7 +442,7 @@ namespace ExpressBase.ServiceStack.Services
                     return resp;
 
                 }
-                
+
                 else
                 {
                     string sql = string.Format("SELECT id,accountname,profilelogo FROM eb_tenantaccount WHERE tenantid={0}", request.Uid);
