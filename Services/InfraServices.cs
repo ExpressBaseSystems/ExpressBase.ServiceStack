@@ -10,6 +10,7 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Net;
 using System.Reflection;
+using System.Runtime.Loader;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -137,8 +138,10 @@ namespace ExpressBase.ServiceStack.Services
                     {
                         resp = new TokenRequiredUploadResponse();
                         int uid = 0;
-                        string sql = string.Format("SELECT cid,accountname FROM eb_tenantaccount WHERE id={0}", request.Colvalues["acid"]);
+                        string sql = string.Format("SELECT cid,accountname,tenantid FROM eb_tenantaccount WHERE id={0}", request.Colvalues["acid"]);
                         var dt = InfraDatabaseFactory.InfraDB.DoQuery(sql);
+                       
+                        
                         //CREATE CLIENTDB CONN
                         EbClientConf e = new EbClientConf()
                         {
@@ -146,7 +149,8 @@ namespace ExpressBase.ServiceStack.Services
                             ClientName = dt.Rows[0][1].ToString(),
                             EbClientTier = EbClientTiers.Unlimited
                         };
-                        if (request.Colvalues.ContainsKey("dbtype") && request.Colvalues["dbtype"].ToString() == "1")
+
+                        if (request.Colvalues.ContainsKey("dbtype") && request.Colvalues["dbtype"].ToString() == "2")
                         {
                             e.DatabaseConfigurations.Add(EbDatabaseTypes.EbOBJECTS, new EbDatabaseConfiguration(EbDatabaseTypes.EbOBJECTS, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db_objrw"])), request.Colvalues["dbname_objrw"].ToString(), request.Colvalues["sip_objrw"].ToString(), Convert.ToInt32(request.Colvalues["pnum_objrw"]), request.Colvalues["duname_objrw"].ToString(), request.Colvalues["pwd_objrw"].ToString(), Convert.ToInt32(request.Colvalues["tout_objrw"])));
                             e.DatabaseConfigurations.Add(EbDatabaseTypes.EbDATA, new EbDatabaseConfiguration(EbDatabaseTypes.EbDATA, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db_datarw"])), request.Colvalues["dbname_datarw"].ToString(), request.Colvalues["sip_datarw"].ToString(), Convert.ToInt32(request.Colvalues["pnum_datarw"]), request.Colvalues["duname_datarw"].ToString(), request.Colvalues["pwd_datarw"].ToString(), Convert.ToInt32(request.Colvalues["tout_datarw"])));
@@ -168,10 +172,11 @@ namespace ExpressBase.ServiceStack.Services
                             e.DatabaseConfigurations.Add(EbDatabaseTypes.EbFILES_RO, new EbDatabaseConfiguration(EbDatabaseTypes.EbFILES_RO, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db"])), request.Colvalues["dbname"].ToString(), request.Colvalues["sip"].ToString(), Convert.ToInt32(request.Colvalues["pnum"]), request.Colvalues["duname"].ToString(), request.Colvalues["pwd"].ToString(), Convert.ToInt32(request.Colvalues["tout"])));
                             e.DatabaseConfigurations.Add(EbDatabaseTypes.EbLOGS_RO, new EbDatabaseConfiguration(EbDatabaseTypes.EbLOGS_RO, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db"])), request.Colvalues["dbname"].ToString(), request.Colvalues["sip"].ToString(), Convert.ToInt32(request.Colvalues["pnum"]), request.Colvalues["duname"].ToString(), request.Colvalues["pwd"].ToString(), Convert.ToInt32(request.Colvalues["tout"])));
                         }
+
+
                         byte[] bytea2 = EbSerializers.ProtoBuf_Serialize(e);
                         var dbconf = EbSerializers.ProtoBuf_DeSerialize<EbClientConf>(bytea2);
                         var dbf = new DatabaseFactory(dbconf);
-
                         var _con_d1 = dbf.DataDB.GetNewConnection();
                         var _con_d2 = dbf.DataDBRO.GetNewConnection();
                         var _con_o1 = dbf.ObjectsDB.GetNewConnection();
@@ -229,27 +234,13 @@ namespace ExpressBase.ServiceStack.Services
                             else
                                 throw HttpError.NotFound("Success");
                         }
-                        //try
-                        //{
-                        //    _con_d1.Open();
-                        //    string eb_users = File.ReadAllText(Path.Combine(Directory.GetParent(System.IO.Directory.GetCurrentDirectory()).FullName, "postgres_eb_users.sql"));
-                        //    File.ReadAllText(Path.Combine(Directory.GetParent(System.IO.Directory.GetCurrentDirectory()).FullName, "postgres_eb_users.sql"));
-                        //    var datacmd = dbf.DataDB.GetNewCommand(_con_d1, eb_users);
-                        //    datacmd.ExecuteNonQuery();
-                        //}
-                        //catch(Exception ex)
-                        //{
-                        //    throw HttpError.NotFound("Database Already in use");
-                        //}
 
-                        //_con_o1.Open();
-                        //string eb_objects = File.ReadAllText(Path.Combine(Directory.GetParent(System.IO.Directory.GetCurrentDirectory()).FullName, "eb_objects.sql"));
-                        //var objcmd = dbf.ObjectsDB.GetNewCommand(_con_o1, eb_objects);
-                        //objcmd.ExecuteNonQuery();
+                        var tenantdt = InfraDatabaseFactory.InfraDB.DoQuery(string.Format("SELECT cname,firstname,phone,password FROM eb_tenants WHERE id={0}", dt.Rows[0][2]));
+                        TableInserts(dbf, tenantdt);
 
-                        var cmd = InfraDatabaseFactory.InfraDB.GetNewCommand(con, "UPDATE eb_tenantaccount SET config=@config,dbtype=@dbtype WHERE id=@id RETURNING id");
+                        var cmd = InfraDatabaseFactory.InfraDB.GetNewCommand(con, "UPDATE eb_tenantaccount SET config=@config,dbconfigtype=@dbconfigtype WHERE id=@id RETURNING id");
                         cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("config", System.Data.DbType.Binary, bytea2));
-                        cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("dbtype", System.Data.DbType.String, request.Colvalues["dbtype"]));
+                        cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("dbconfigtype", System.Data.DbType.Int32, request.Colvalues["dbtype"]));
                         cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("id", System.Data.DbType.Int64, Convert.ToInt32(request.Colvalues["acid"])));
                         uid = Convert.ToInt32(cmd.ExecuteScalar());
                         resp.id = uid;
@@ -315,22 +306,22 @@ namespace ExpressBase.ServiceStack.Services
                             if (db_conf_type == 1)
                             {
 
-                                dbresults[Constants.CONF_VENDOR] = conf.DatabaseConfigurations[EbDatabaseTypes.EbDATA].DatabaseVendor;
+                                dbresults[Constants.CONF_VENDOR] = (int)conf.DatabaseConfigurations[EbDatabaseTypes.EbDATA].DatabaseVendor;
                                 dbresults[Constants.CONF_DBNAME] = conf.DatabaseConfigurations[EbDatabaseTypes.EbDATA].DatabaseName;
                                 dbresults[Constants.CONF_SIP] = conf.DatabaseConfigurations[EbDatabaseTypes.EbDATA].Server;
                                 dbresults[Constants.CONF_PORT] = conf.DatabaseConfigurations[EbDatabaseTypes.EbDATA].Port;
                                 dbresults[Constants.CONF_UNAME] = conf.DatabaseConfigurations[EbDatabaseTypes.EbDATA].UserName;
                                 dbresults[Constants.CONF_TOUT] = conf.DatabaseConfigurations[EbDatabaseTypes.EbDATA].Timeout;
-                                dbresults[Constants.CONF_PWD] = "123ABC!@#";
+                                dbresults[Constants.CONF_PWD] = conf.DatabaseConfigurations[EbDatabaseTypes.EbDATA].Password;
 
                             }
                             else
                             {
 
-                                dbresults[Constants.CONF_VENDOR_DATA] = conf.DatabaseConfigurations[EbDatabaseTypes.EbDATA].DatabaseVendor;
-                                dbresults[Constants.CONF_VENDOR_OBJ] = conf.DatabaseConfigurations[EbDatabaseTypes.EbOBJECTS].DatabaseVendor;
-                                dbresults[Constants.CONF_VENDOR_FILES] = conf.DatabaseConfigurations[EbDatabaseTypes.EbFILES].DatabaseVendor;
-                                dbresults[Constants.CONF_VENDOR_LOGS] = conf.DatabaseConfigurations[EbDatabaseTypes.EbLOGS].DatabaseVendor;
+                                dbresults[Constants.CONF_VENDOR_DATA] = (int)conf.DatabaseConfigurations[EbDatabaseTypes.EbDATA].DatabaseVendor;
+                                dbresults[Constants.CONF_VENDOR_OBJ] = (int)conf.DatabaseConfigurations[EbDatabaseTypes.EbOBJECTS].DatabaseVendor;
+                                dbresults[Constants.CONF_VENDOR_FILES] = (int)conf.DatabaseConfigurations[EbDatabaseTypes.EbFILES].DatabaseVendor;
+                                dbresults[Constants.CONF_VENDOR_LOGS] = (int)conf.DatabaseConfigurations[EbDatabaseTypes.EbLOGS].DatabaseVendor;
 
                                 dbresults[Constants.CONF_DBNAME_DATA_RW] = conf.DatabaseConfigurations[EbDatabaseTypes.EbDATA].DatabaseName;
                                 dbresults[Constants.CONF_DBNAME_OBJ_RW] = conf.DatabaseConfigurations[EbDatabaseTypes.EbOBJECTS].DatabaseName;
@@ -377,14 +368,14 @@ namespace ExpressBase.ServiceStack.Services
                                 dbresults[Constants.CONF_TOUT_FILES_RO] = conf.DatabaseConfigurations[EbDatabaseTypes.EbFILES_RO].Timeout;
                                 dbresults[Constants.CONF_TOUT_LOGS_RO] = conf.DatabaseConfigurations[EbDatabaseTypes.EbLOGS_RO].Timeout;
 
-                                dbresults[Constants.CONF_PWD_DATA_RW] = "123ABC!@#";
-                                dbresults[Constants.CONF_PWD_OBJ_RW] = "123ABC!@#";
-                                dbresults[Constants.CONF_PWD_FILES_RW] = "123ABC!@#";
-                                dbresults[Constants.CONF_PWD_LOGS_RW] = "123ABC!@#";
-                                dbresults[Constants.CONF_PWD_DATA_RO] = "123ABC!@#";
-                                dbresults[Constants.CONF_PWD_OBJ_RO] = "123ABC!@#";
-                                dbresults[Constants.CONF_PWD_FILES_RO] = "123ABC!@#";
-                                dbresults[Constants.CONF_PWD_LOGS_RO] = "123ABC!@#";
+                                dbresults[Constants.CONF_PWD_DATA_RW] = conf.DatabaseConfigurations[EbDatabaseTypes.EbDATA].Password;
+                                dbresults[Constants.CONF_PWD_OBJ_RW] = conf.DatabaseConfigurations[EbDatabaseTypes.EbOBJECTS].Password;
+                                dbresults[Constants.CONF_PWD_FILES_RW] = conf.DatabaseConfigurations[EbDatabaseTypes.EbFILES].Password;
+                                dbresults[Constants.CONF_PWD_LOGS_RW] = conf.DatabaseConfigurations[EbDatabaseTypes.EbLOGS].Password;
+                                dbresults[Constants.CONF_PWD_DATA_RO] = conf.DatabaseConfigurations[EbDatabaseTypes.EbDATA_RO].Password;
+                                dbresults[Constants.CONF_PWD_OBJ_RO] = conf.DatabaseConfigurations[EbDatabaseTypes.EbOBJECTS_RO].Password;
+                                dbresults[Constants.CONF_PWD_FILES_RO] = conf.DatabaseConfigurations[EbDatabaseTypes.EbFILES_RO].Password;
+                                dbresults[Constants.CONF_PWD_LOGS_RO] = conf.DatabaseConfigurations[EbDatabaseTypes.EbLOGS_RO].Password;
                             }
                             resp = new TokenRequiredUploadResponse
                             {
@@ -471,6 +462,62 @@ namespace ExpressBase.ServiceStack.Services
             }
         }
 
+
+        public void TableInserts(DatabaseFactory dbf,EbDataTable dt)
+        {
+            var _con_d1 = dbf.DataDB.GetNewConnection();
+            var _con_d2 = dbf.DataDBRO.GetNewConnection();
+            var _con_o1 = dbf.ObjectsDB.GetNewConnection();
+            var _con_o2 = dbf.ObjectsDBRO.GetNewConnection();
+            var _con_l1 = dbf.LogsDB.GetNewConnection();
+            var _con_l2 = dbf.LogsDBRO.GetNewConnection();
+            var _con_f1 = dbf.FilesDB.GetNewConnection();
+            var _con_f2 = dbf.FilesDBRO.GetNewConnection();
+            try
+            {
+
+                string jjj = dt.Rows[0][0].ToString();
+                string result;
+                var assembly = typeof(ExpressBase.Data.Resource).GetAssembly();
+                using (Stream stream = assembly.GetManifestResourceStream("ExpressBase.Data.SqlScripts.PostGreSql.DataDb.postgres_eb_users.sql"))
+                {
+                    using (StreamReader reader = new StreamReader(stream))
+                    {
+                        result = reader.ReadToEnd();
+                    }
+                    _con_d1.Open();
+                    var datacmd = dbf.DataDB.GetNewCommand(_con_d1, result);
+                    datacmd.ExecuteNonQuery();
+                  
+                    var cmd = dbf.DataDB.GetNewCommand(_con_d1, "INSERT INTO eb_users(email,pwd,fullname,phnoprimary) VALUES(@email,@pwd,@fullname,@phnoprimary); INSERT INTO eb_role2user(user_id,role_id) VALUES(1,3)");
+                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("email", System.Data.DbType.String, dt.Rows[0][0]));
+                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("pwd", System.Data.DbType.String, dt.Rows[0][3]));
+                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("fullname", System.Data.DbType.String, dt.Rows[0][1]));
+                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("phnoprimary", System.Data.DbType.String, dt.Rows[0][2]));
+                    cmd.ExecuteScalar();
+                    _con_d1.Close();
+                }
+               
+               
+
+                using (Stream stream = assembly.GetManifestResourceStream("ExpressBase.Data.SqlScripts.PostGreSql.ObjectsDb.postgres_eb_objects.sql"))
+                {
+                    using (StreamReader reader = new StreamReader(stream))
+                    {
+                        result = reader.ReadToEnd();
+                    }
+                    _con_o1.Open();
+                    var datacmd = dbf.ObjectsDB.GetNewCommand(_con_o1, result);
+                    datacmd.ExecuteNonQuery();
+                    _con_o1.Close();
+                }
+
+            }
+            catch (Exception ex)
+            {
+                throw HttpError.NotFound("Database Already in use");
+            }
+        }
 
         //public InfraDb_GENERIC_SELECTResponse Any(InfraDb_GENERIC_SELECTRequest req)
         //{
