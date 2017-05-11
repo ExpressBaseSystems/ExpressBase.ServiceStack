@@ -7,6 +7,7 @@ using ServiceStack.Logging;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Data.Common;
 using System.IO;
 using System.Net;
 using System.Reflection;
@@ -140,8 +141,8 @@ namespace ExpressBase.ServiceStack.Services
                         int uid = 0;
                         string sql = string.Format("SELECT cid,accountname,tenantid FROM eb_tenantaccount WHERE id={0}", request.Colvalues["acid"]);
                         var dt = InfraDatabaseFactory.InfraDB.DoQuery(sql);
-                       
-                        
+
+
                         //CREATE CLIENTDB CONN
                         EbClientConf e = new EbClientConf()
                         {
@@ -177,6 +178,9 @@ namespace ExpressBase.ServiceStack.Services
                         byte[] bytea2 = EbSerializers.ProtoBuf_Serialize(e);
                         var dbconf = EbSerializers.ProtoBuf_DeSerialize<EbClientConf>(bytea2);
                         var dbf = new DatabaseFactory(dbconf);
+                        DbTransaction _con_d1_trans = null;
+                        DbTransaction _con_o1_trans = null;
+
                         var _con_d1 = dbf.DataDB.GetNewConnection();
                         var _con_d2 = dbf.DataDBRO.GetNewConnection();
                         var _con_o1 = dbf.ObjectsDB.GetNewConnection();
@@ -188,11 +192,11 @@ namespace ExpressBase.ServiceStack.Services
                         int i = 0;
                         try
                         {
-                            _con_d1.Open(); _con_d1.Close();
+                            _con_d1.Open(); 
                             i++;
                             _con_d2.Open(); _con_d2.Close();
                             i++;
-                            _con_o1.Open(); _con_o1.Close();
+                            _con_o1.Open(); 
                             i++;
                             _con_o2.Open(); _con_o2.Close();
                             i++;
@@ -204,6 +208,9 @@ namespace ExpressBase.ServiceStack.Services
                             i++;
                             _con_f2.Open(); _con_f2.Close();
 
+                            _con_d1_trans = _con_d1.BeginTransaction();
+                            _con_o1_trans = _con_o1.BeginTransaction();
+                            
                         }
                         catch (Exception ex)
                         {
@@ -236,7 +243,31 @@ namespace ExpressBase.ServiceStack.Services
                         }
 
                         var tenantdt = InfraDatabaseFactory.InfraDB.DoQuery(string.Format("SELECT cname,firstname,phone,password FROM eb_tenants WHERE id={0}", dt.Rows[0][2]));
-                        TableInserts(dbf, tenantdt);
+                        try
+                        {
+                            TableInsertsDataDB(dbf, tenantdt, _con_d1);
+                            TableInsertObjectDB(dbf, _con_o1);
+                            _con_d1_trans.Commit();
+                            _con_o1_trans.Commit();
+                            _con_d1.Close();
+                            _con_o1.Close();
+
+                        }
+                        catch (Exception ex)
+                        {
+                            string error = null;
+
+                            if (_con_d1.State == System.Data.ConnectionState.Open)// || _con_o1.State == System.Data.ConnectionState.Open)
+                                error = "Database for data is already in use.Please connect a new database";
+                            else if (_con_o1.State == System.Data.ConnectionState.Open)
+                                error = "Database for objects is already in use.Please connect a new database";
+
+                            _con_d1_trans.Rollback();
+                            _con_o1_trans.Rollback();
+                            throw HttpError.NotFound(error);
+                        }
+
+
 
                         var cmd = InfraDatabaseFactory.InfraDB.GetNewCommand(con, "UPDATE eb_tenantaccount SET config=@config,dbconfigtype=@dbconfigtype WHERE id=@id RETURNING id");
                         cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("config", System.Data.DbType.Binary, bytea2));
@@ -294,7 +325,7 @@ namespace ExpressBase.ServiceStack.Services
                         Dictionary<string, object> dbresults = new Dictionary<string, object>();
                         var dt = InfraDatabaseFactory.InfraDB_RO.DoQuery(string.Format("SELECT dbconfigtype,config FROM eb_tenantaccount WHERE id={0}", request.Colvalues["id"]));
                         int db_conf_type = 0;
-                        
+
                         db_conf_type = Convert.ToInt32(dt.Rows[0][0]);
 
                         byte[] bytea = (dt.Rows[0][1] != DBNull.Value) ? (byte[])dt.Rows[0][1] : null;
@@ -463,60 +494,43 @@ namespace ExpressBase.ServiceStack.Services
         }
 
 
-        public void TableInserts(DatabaseFactory dbf,EbDataTable dt)
+        public void TableInsertsDataDB(DatabaseFactory dbf, EbDataTable dt, DbConnection _con_d1)
         {
-            var _con_d1 = dbf.DataDB.GetNewConnection();
-            var _con_d2 = dbf.DataDBRO.GetNewConnection();
-            var _con_o1 = dbf.ObjectsDB.GetNewConnection();
-            var _con_o2 = dbf.ObjectsDBRO.GetNewConnection();
-            var _con_l1 = dbf.LogsDB.GetNewConnection();
-            var _con_l2 = dbf.LogsDBRO.GetNewConnection();
-            var _con_f1 = dbf.FilesDB.GetNewConnection();
-            var _con_f2 = dbf.FilesDBRO.GetNewConnection();
-            try
+            string result;
+            var assembly = typeof(ExpressBase.Data.Resource).GetAssembly();
+            using (Stream stream = assembly.GetManifestResourceStream("ExpressBase.Data.SqlScripts.PostGreSql.DataDb.postgres_eb_users.sql"))
             {
-
-                string jjj = dt.Rows[0][0].ToString();
-                string result;
-                var assembly = typeof(ExpressBase.Data.Resource).GetAssembly();
-                using (Stream stream = assembly.GetManifestResourceStream("ExpressBase.Data.SqlScripts.PostGreSql.DataDb.postgres_eb_users.sql"))
+                using (StreamReader reader = new StreamReader(stream))
                 {
-                    using (StreamReader reader = new StreamReader(stream))
-                    {
-                        result = reader.ReadToEnd();
-                    }
-                    _con_d1.Open();
-                    var datacmd = dbf.DataDB.GetNewCommand(_con_d1, result);
-                    datacmd.ExecuteNonQuery();
-                  
-                    var cmd = dbf.DataDB.GetNewCommand(_con_d1, "INSERT INTO eb_users(email,pwd,fullname,phnoprimary) VALUES(@email,@pwd,@fullname,@phnoprimary); INSERT INTO eb_role2user(user_id,role_id) VALUES(1,3)");
-                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("email", System.Data.DbType.String, dt.Rows[0][0]));
-                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("pwd", System.Data.DbType.String, dt.Rows[0][3]));
-                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("fullname", System.Data.DbType.String, dt.Rows[0][1]));
-                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("phnoprimary", System.Data.DbType.String, dt.Rows[0][2]));
-                    cmd.ExecuteScalar();
-                    _con_d1.Close();
+                    result = reader.ReadToEnd();
                 }
-               
-               
+             
+                var datacmd = dbf.DataDB.GetNewCommand(_con_d1, result);
+                datacmd.ExecuteNonQuery();
+                var cmd = dbf.DataDB.GetNewCommand(_con_d1, "INSERT INTO eb_users(email,pwd,fullname,phnoprimary) VALUES(@email,@pwd,@fullname,@phnoprimary); INSERT INTO eb_role2user(user_id,role_id) VALUES(1,3)");
+                cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("email", System.Data.DbType.String, dt.Rows[0][0]));
+                cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("pwd", System.Data.DbType.String, dt.Rows[0][3]));
+                cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("fullname", System.Data.DbType.String, dt.Rows[0][1]));
+                cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("phnoprimary", System.Data.DbType.String, dt.Rows[0][2]));
+                cmd.ExecuteScalar();
+            }
 
-                using (Stream stream = assembly.GetManifestResourceStream("ExpressBase.Data.SqlScripts.PostGreSql.ObjectsDb.postgres_eb_objects.sql"))
+        }
+
+        public void TableInsertObjectDB(DatabaseFactory dbf,DbConnection _con_o1)
+        {
+            string result;
+            var assembly = typeof(ExpressBase.Data.Resource).GetAssembly();
+            using (Stream stream = assembly.GetManifestResourceStream("ExpressBase.Data.SqlScripts.PostGreSql.ObjectsDb.postgres_eb_objects.sql"))
+            {
+                using (StreamReader reader = new StreamReader(stream))
                 {
-                    using (StreamReader reader = new StreamReader(stream))
-                    {
-                        result = reader.ReadToEnd();
-                    }
-                    _con_o1.Open();
+                    result = reader.ReadToEnd();
+                }
                     var datacmd = dbf.ObjectsDB.GetNewCommand(_con_o1, result);
                     datacmd.ExecuteNonQuery();
-                    _con_o1.Close();
-                }
+            }
 
-            }
-            catch (Exception ex)
-            {
-                throw HttpError.NotFound("Database Already in use");
-            }
         }
 
         //public InfraDb_GENERIC_SELECTResponse Any(InfraDb_GENERIC_SELECTRequest req)
