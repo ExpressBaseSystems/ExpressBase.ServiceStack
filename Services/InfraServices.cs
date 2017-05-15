@@ -475,12 +475,12 @@ namespace ExpressBase.ServiceStack.Services
 
                 else
                 {
-                    string sql = string.Format("SELECT id,accountname,profilelogo FROM eb_tenantaccount WHERE tenantid={0}", request.Uid);
+                    string sql = string.Format("SELECT id,accountname,profilelogo,cid FROM eb_tenantaccount WHERE tenantid={0}", request.Uid);
                     var dt = InfraDatabaseFactory.InfraDB.DoQuery(sql);
                     List<List<object>> list = new List<List<object>>();
                     foreach (EbDataRow dr in dt.Rows)
                     {
-                        list.Add(new List<object> { Convert.ToInt32(dr[0]), dr[1].ToString(), dr[2].ToString() });
+                        list.Add(new List<object> { Convert.ToInt32(dr[0]), dr[1].ToString(), dr[2].ToString(), dr[3].ToString() });
                     }
                     TokenRequiredSelectResponse resp = new TokenRequiredSelectResponse()
                     {
