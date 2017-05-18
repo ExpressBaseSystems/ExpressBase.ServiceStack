@@ -146,7 +146,7 @@ namespace ExpressBase.ServiceStack
                         res.ReturnAuthRequired();
                     foreach (var c in jwtoken.Claims)
                     {
-                        if (c.Type == "cid")
+                        if (c.Type == "cid" && !string.IsNullOrEmpty(c.Value))
                         {
                             (requestDto as IEbSSRequest).TenantAccountId = c.Value;
                             break;

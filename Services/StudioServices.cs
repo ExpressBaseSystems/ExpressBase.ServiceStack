@@ -10,6 +10,7 @@ using ExpressBase.Objects;
 using System.Data.Common;
 using System.IdentityModel.Tokens.Jwt;
 using ExpressBase.Objects.ServiceStack_Artifacts;
+using ServiceStack.Logging;
 
 namespace ExpressBase.ServiceStack
 {
@@ -51,14 +52,15 @@ namespace ExpressBase.ServiceStack
         {
             bool result = false;
             base.ClientID = request.TenantAccountId;
-
+            ILog log = LogManager.GetLogger(GetType());
             using (var con = this.DatabaseFactory.ObjectsDB.GetNewConnection())
             {
                 con.Open();
                 DbCommand cmd = null;
-
+                log.Info("#DS insert 1");
                 if (request.Id == 0)
                 {
+                    log.Info("#DS insert 2");
                     cmd = this.DatabaseFactory.ObjectsDB.GetNewCommand(con, "INSERT INTO eb_objects (obj_name, obj_bytea, obj_type) VALUES (@obj_name, @obj_bytea, @obj_type);");
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_type", System.Data.DbType.Int32, (int)request.EbObjectType));
                 }
