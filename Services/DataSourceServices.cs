@@ -128,6 +128,7 @@ namespace ExpressBase.ServiceStack
                         _sql = (_sql.IndexOf(";") > 0) ? _sql.Substring(_sql.IndexOf(";") + 1) : _sql;
                         try
                         {
+                            Log.Info("_sql: " + _sql);
                             var dt2 = this.DatabaseFactory.ObjectsDB.DoQuery(_sql, parameters.ToArray());
                             columns = dt2.Columns;
                             Log.Info(columns);
