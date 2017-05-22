@@ -61,17 +61,24 @@ namespace ExpressBase.ServiceStack
                 if (request.Id == 0)
                 {
                     log.Info("#DS insert 2");
-                    cmd = this.DatabaseFactory.ObjectsDB.GetNewCommand(con, "INSERT INTO eb_objects (obj_name, obj_bytea, obj_type) VALUES (@obj_name, @obj_bytea, @obj_type);");
+                    cmd = this.DatabaseFactory.ObjectsDB.GetNewCommand(con, @"
+INSERT INTO eb_objects (obj_name, obj_bytea, obj_type,obj_last_ver_id,obj_status) VALUES (@obj_name, @obj_bytea, @obj_type,1,@obj_status);
+INSERT INTO eb_objects_ver (eb_objects_id,ver_num, obj_bytea,created_by_uid,created_at) VALUES (currval('eb_objects_id_seq'),1,@obj_bytea,@created_by_uid,now())");
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_type", System.Data.DbType.Int32, (int)request.EbObjectType));
                 }
                 else
                 {
-                    cmd = this.DatabaseFactory.ObjectsDB.GetNewCommand(con, "UPDATE eb_objects SET obj_name=@obj_name, obj_bytea=@obj_bytea WHERE id=@id;");
+                    cmd = this.DatabaseFactory.ObjectsDB.GetNewCommand(con, @"
+UPDATE eb_objects SET obj_name=@obj_name, obj_bytea=@obj_bytea, obj_last_ver_id=(SELECT max(ver_num)+1 FROM eb_objects_ver WHERE eb_objects_id=@id), obj_status=@obj_status WHERE id=@id; 
+INSERT INTO eb_objects_ver (eb_objects_id,ver_num,obj_bytea,obj_changelog,created_by_uid,created_at) VALUES (@id,(SELECT max(ver_num)+1 FROM eb_objects_ver WHERE eb_objects_id=@id),@obj_bytea,@obj_changelog,@created_by_uid,now())");
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.Int32, request.Id));
+                    cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_changelog", System.Data.DbType.Int32, request.ChangeLog));
                 }
 
                 cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_name", System.Data.DbType.String, request.Name));
                 cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_bytea", System.Data.DbType.Binary, request.Bytea));
+                cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_status", System.Data.DbType.Binary, request.Status));
+                cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@created_by_uid", System.Data.DbType.Binary, request.UserId));
 
                 cmd.ExecuteNonQuery();
                 result = true;

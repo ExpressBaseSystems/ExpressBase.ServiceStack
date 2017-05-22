@@ -1,4 +1,5 @@
-﻿using ExpressBase.Objects.ServiceStack_Artifacts;
+﻿using System;
+using ExpressBase.Objects.ServiceStack_Artifacts;
 using Funq;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -149,7 +150,10 @@ namespace ExpressBase.ServiceStack
                         if (c.Type == "cid" && !string.IsNullOrEmpty(c.Value))
                         {
                             (requestDto as IEbSSRequest).TenantAccountId = c.Value;
-                            break;
+                        }
+                        if (c.Type == "uid" && !string.IsNullOrEmpty(c.Value))
+                        {
+                            (requestDto as IEbSSRequest).UserId = Convert.ToInt32(c.Value);
                         }
                     }
                 }
