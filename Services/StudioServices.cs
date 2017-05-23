@@ -27,23 +27,37 @@ namespace ExpressBase.ServiceStack
             using (var con = this.DatabaseFactory.ObjectsDB.GetNewConnection())
             {
                 con.Open();
-                string _where_clause = (request.Id > 0) ? string.Format("WHERE id={0}", request.Id) : string.Empty;
-                dt = this.DatabaseFactory.ObjectsDB.DoQuery(string.Format("SELECT id, obj_name, obj_bytea, obj_type FROM eb_objects {0};", _where_clause));
+                string _obj_bytea  = (request.Id > 0) ? ", EO.obj_bytea" : string.Empty; 
+                string _where_clause_part1 = (request.Id > 0) ? string.Format("AND EO.id={0}", request.Id) : string.Empty;
+
+                dt = this.DatabaseFactory.ObjectsDB.DoQuery(string.Format(@"
+SELECT 
+    EO.id, EO.obj_name, EO.obj_type, EO.obj_last_ver_id, EO.obj_status,
+    EOV.id,EOV.eb_objects_id,EOV.ver_num, EOV.obj_changelog,EOV.created_by_uid, EOV.created_at {0}  
+FROM 
+    eb_objects EO
+INNER JOIN 
+    eb_objects_ver EOV
+ON 
+    EO.id = EOV.eb_objects_id {1}
+ORDER BY
+    EO.obj_type", _obj_bytea, _where_clause_part1));
             };
 
             List<EbObjectWrapper> f = new List<EbObjectWrapper>();
-            foreach (EbDataRow dr in dt.Rows)
-            {
-                var _form = (new EbObjectWrapper
+          
+                foreach (EbDataRow dr in dt.Rows)
                 {
-                    Id = Convert.ToInt32(dr[0]),
-                    Name = dr[1].ToString(),
-                    Bytea = dr[2] as byte[],
-                    EbObjectType = (dr[3] == System.DBNull.Value || Convert.ToInt32(dr[3]) == 0) ? EbObjectType.Form : (EbObjectType)Convert.ToInt32(dr[3]),
-                });
+                    var _form = (new EbObjectWrapper
+                    {
+                        Id = Convert.ToInt32(dr[0]),
+                        Name = dr[1].ToString(),
+                        EbObjectType = (EbObjectType)Convert.ToInt32(dr[2]),
+                        Bytea = (request.Id > 0) ? dr[11] as byte[]: null
+                    });
 
-                f.Add(_form);
-            }
+                    f.Add(_form);
+                }
 
             return new EbObjectResponse { Data = f };
         }
@@ -72,13 +86,13 @@ INSERT INTO eb_objects_ver (eb_objects_id,ver_num, obj_bytea,created_by_uid,crea
 UPDATE eb_objects SET obj_name=@obj_name, obj_bytea=@obj_bytea, obj_last_ver_id=(SELECT max(ver_num)+1 FROM eb_objects_ver WHERE eb_objects_id=@id), obj_status=@obj_status WHERE id=@id; 
 INSERT INTO eb_objects_ver (eb_objects_id,ver_num,obj_bytea,obj_changelog,created_by_uid,created_at) VALUES (@id,(SELECT max(ver_num)+1 FROM eb_objects_ver WHERE eb_objects_id=@id),@obj_bytea,@obj_changelog,@created_by_uid,now())");
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.Int32, request.Id));
-                    cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_changelog", System.Data.DbType.Int32, request.ChangeLog));
+                    cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_changelog", System.Data.DbType.String, request.ChangeLog));
                 }
 
                 cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_name", System.Data.DbType.String, request.Name));
                 cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_bytea", System.Data.DbType.Binary, request.Bytea));
-                cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_status", System.Data.DbType.Binary, request.Status));
-                cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@created_by_uid", System.Data.DbType.Binary, request.UserId));
+                cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_status", System.Data.DbType.Int32, request.Status));
+                cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@created_by_uid", System.Data.DbType.Int32, request.UserId));
 
                 cmd.ExecuteNonQuery();
                 result = true;
