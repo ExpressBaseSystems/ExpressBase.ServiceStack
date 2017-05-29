@@ -27,7 +27,7 @@ namespace ExpressBase.ServiceStack
             using (var con = this.DatabaseFactory.ObjectsDB.GetNewConnection())
             {
                 con.Open();
-                string _obj_bytea  = (request.Id > 0) ? ", EO.obj_bytea" : string.Empty; 
+                string _obj_bytea = (request.Id > 0) ? ", EO.obj_bytea" : string.Empty;
                 string _where_clause_part1 = (request.Id > 0) ? string.Format("AND EO.id={0}", request.Id) : string.Empty;
 
                 dt = this.DatabaseFactory.ObjectsDB.DoQuery(string.Format(@"
@@ -45,19 +45,19 @@ ORDER BY
             };
 
             List<EbObjectWrapper> f = new List<EbObjectWrapper>();
-          
-                foreach (EbDataRow dr in dt.Rows)
-                {
-                    var _form = (new EbObjectWrapper
-                    {
-                        Id = Convert.ToInt32(dr[0]),
-                        Name = dr[1].ToString(),
-                        EbObjectType = (EbObjectType)Convert.ToInt32(dr[2]),
-                        Bytea = (request.Id > 0) ? dr[11] as byte[]: null
-                    });
 
-                    f.Add(_form);
-                }
+            foreach (EbDataRow dr in dt.Rows)
+            {
+                var _form = (new EbObjectWrapper
+                {
+                    Id = Convert.ToInt32(dr[0]),
+                    Name = dr[1].ToString(),
+                    EbObjectType = (EbObjectType)Convert.ToInt32(dr[2]),
+                    Bytea = (request.Id > 0) ? dr[11] as byte[] : null
+                });
+
+                f.Add(_form);
+            }
 
             return new EbObjectResponse { Data = f };
         }
@@ -71,29 +71,30 @@ ORDER BY
             {
                 con.Open();
                 DbCommand cmd = null;
-                log.Info("#DS insert 1");
-                if (request.Id == 0)
+                log.Info("#DS insert 1 -- con open" );
+
+                if (request.Id > 0)
                 {
-                    log.Info("#DS insert 2");
-                    cmd = this.DatabaseFactory.ObjectsDB.GetNewCommand(con, @"
-INSERT INTO eb_objects (obj_name, obj_bytea, obj_type,obj_last_ver_id,obj_status) VALUES (@obj_name, @obj_bytea, @obj_type,1,@obj_status);
-INSERT INTO eb_objects_ver (eb_objects_id,ver_num, obj_bytea,created_by_uid,created_at) VALUES (currval('eb_objects_id_seq'),1,@obj_bytea,@created_by_uid,now())");
-                    cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_type", System.Data.DbType.Int32, (int)request.EbObjectType));
-                }
-                else
-                {
+                    log.Info("#DS insert 1 -- >0"+ request.Id);
                     cmd = this.DatabaseFactory.ObjectsDB.GetNewCommand(con, @"
 UPDATE eb_objects SET obj_name=@obj_name, obj_bytea=@obj_bytea, obj_last_ver_id=(SELECT max(ver_num)+1 FROM eb_objects_ver WHERE eb_objects_id=@id), obj_status=@obj_status WHERE id=@id; 
 INSERT INTO eb_objects_ver (eb_objects_id,ver_num,obj_bytea,obj_changelog,created_by_uid,created_at) VALUES (@id,(SELECT max(ver_num)+1 FROM eb_objects_ver WHERE eb_objects_id=@id),@obj_bytea,@obj_changelog,@created_by_uid,now())");
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.Int32, request.Id));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_changelog", System.Data.DbType.String, request.ChangeLog));
                 }
-
+                else
+                {
+                    log.Info("#DS insert 2 -- !>0");
+                    cmd = this.DatabaseFactory.ObjectsDB.GetNewCommand(con, @"
+INSERT INTO eb_objects (obj_name, obj_bytea, obj_type,obj_last_ver_id,obj_status) VALUES (@obj_name, @obj_bytea, @obj_type,1,@obj_status);
+INSERT INTO eb_objects_ver (eb_objects_id,ver_num, obj_bytea,created_by_uid,created_at) VALUES (currval('eb_objects_id_seq'),1,@obj_bytea,@created_by_uid,now())");
+                    cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_type", System.Data.DbType.Int32, (int)request.EbObjectType));
+                }
                 cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_name", System.Data.DbType.String, request.Name));
                 cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_bytea", System.Data.DbType.Binary, request.Bytea));
                 cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_status", System.Data.DbType.Int32, request.Status));
                 cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@created_by_uid", System.Data.DbType.Int32, request.UserId));
-
+                log.Info("#DS insert 2 -- before exec cmd");
                 cmd.ExecuteNonQuery();
                 result = true;
             };
