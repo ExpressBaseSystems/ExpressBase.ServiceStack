@@ -157,14 +157,11 @@ namespace ExpressBase.ServiceStack
                 else
                 {
                     log.Info("#Eb reached 5");
-                    mysession.CId= string.Empty;
-                   
-
+                    mysession.CId= string.Empty;                   
                 }
-               
+                              
                 response = new AuthenticateResponse
                 {
-
                     UserId = _authUser.Id.ToString(),
                     UserName = _authUser.Uname,
                     ReferrerUrl = string.Empty,

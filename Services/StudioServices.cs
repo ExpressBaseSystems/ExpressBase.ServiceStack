@@ -80,8 +80,8 @@ ORDER BY
                 {
                     log.Info("#DS insert 1 -- >0"+ request.Id);
                     cmd = this.DatabaseFactory.ObjectsDB.GetNewCommand(con, @"
-UPDATE eb_objects SET obj_name=@obj_name, obj_bytea=@obj_bytea, obj_last_ver_id=(SELECT max(ver_num)+1 FROM eb_objects_ver WHERE eb_objects_id=@id), obj_status=@obj_status WHERE id=@id; 
-INSERT INTO eb_objects_ver (eb_objects_id,ver_num,obj_bytea,obj_changelog,created_by_uid,created_at) VALUES (@id,(SELECT max(ver_num)+1 FROM eb_objects_ver WHERE eb_objects_id=@id),@obj_bytea,@obj_changelog,@created_by_uid,now())");
+UPDATE eb_objects SET obj_name=@obj_name,obj_desc=@obj_desc,obj_last_ver_id=(SELECT max(ver_num)+1 FROM eb_objects_ver WHERE eb_objects_id=@id), obj_cur_status=@obj_cur_status WHERE id=@id; 
+INSERT INTO eb_objects_ver (eb_objects_id,ver_num,obj_bytea,obj_changelog,commit_uid,commit_ts) VALUES (@id,(SELECT max(ver_num)+1 FROM eb_objects_ver WHERE eb_objects_id=@id),@obj_bytea,@obj_changelog,@commit_uid,now())");
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.Int32, request.Id));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_changelog", System.Data.DbType.String, request.ChangeLog));
                 }
@@ -89,14 +89,14 @@ INSERT INTO eb_objects_ver (eb_objects_id,ver_num,obj_bytea,obj_changelog,create
                 {
                     log.Info("#DS insert 2 -- !>0");
                     cmd = this.DatabaseFactory.ObjectsDB.GetNewCommand(con, @"
-INSERT INTO eb_objects (obj_name, obj_bytea, obj_type,obj_last_ver_id,obj_status) VALUES (@obj_name, @obj_bytea, @obj_type,1,@obj_status);
-INSERT INTO eb_objects_ver (eb_objects_id,ver_num, obj_bytea,created_by_uid,created_at) VALUES (currval('eb_objects_id_seq'),1,@obj_bytea,@created_by_uid,now())");
+INSERT INTO eb_objects (obj_name,obj_desc,obj_type,obj_last_ver_id,obj_cur_status) VALUES (@obj_name, @obj_desc, @obj_type,1,@obj_cur_status);
+INSERT INTO eb_objects_ver (eb_objects_id,ver_num, obj_bytea,commit_uid,commit_ts) VALUES (currval('eb_objects_id_seq'),1,@obj_bytea,@commit_uid,now())");
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_type", System.Data.DbType.Int32, (int)request.EbObjectType));
                 }
                 cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_name", System.Data.DbType.String, request.Name));
                 cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_bytea", System.Data.DbType.Binary, request.Bytea));
-                cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_status", System.Data.DbType.Int32, request.Status));
-                cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@created_by_uid", System.Data.DbType.Int32, request.UserId));
+                cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_cur_status", System.Data.DbType.Int32, request.Status));
+                cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@commit_uid", System.Data.DbType.Int32, request.UserId));
                 log.Info("#DS insert 2 -- before exec cmd");
                 cmd.ExecuteNonQuery();
                 result = true;
