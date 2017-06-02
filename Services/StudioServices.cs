@@ -32,8 +32,8 @@ namespace ExpressBase.ServiceStack
 
                 dt = this.DatabaseFactory.ObjectsDB.DoQuery(string.Format(@"
 SELECT 
-    EO.id, EO.obj_name, EO.obj_type, EO.obj_last_ver_id, EO.obj_status,
-    EOV.id,EOV.eb_objects_id,EOV.ver_num, EOV.obj_changelog,EOV.created_by_uid, EOV.created_at {0}  
+    EO.id, EO.obj_name, EO.obj_type, EO.obj_last_ver_id, EO.obj_cur_status,EO.obj_desc,
+    EOV.id,EOV.eb_objects_id,EOV.ver_num, EOV.obj_changelog,EOV.commit_ts, EOV.commit_ts {0}  
 FROM 
     eb_objects EO
 INNER JOIN 
@@ -53,7 +53,10 @@ ORDER BY
                     Id = Convert.ToInt32(dr[0]),
                     Name = dr[1].ToString(),
                     EbObjectType = (EbObjectType)Convert.ToInt32(dr[2]),
-                    Bytea = (request.Id > 0) ? dr[11] as byte[] : null
+                    Status = (ObjectLifeCycleStatus)dr[4],
+                    Description =dr[5].ToString(),
+                    VersionNumber = Convert.ToInt32(dr[8]),
+                    Bytea = (request.Id > 0) ? dr[12] as byte[] : null
                 });
 
                 f.Add(_form);
