@@ -9,6 +9,7 @@ using ServiceStack.Web;
 using System.IO;
 using ExpressBase.Data;
 using ServiceStack.Logging;
+using System.Runtime.Serialization;
 
 namespace ExpressBase.ServiceStack
 {
@@ -123,7 +124,7 @@ namespace ExpressBase.ServiceStack
             CustomUserSession mysession = session as CustomUserSession;
             EbBaseService bservice = new EbBaseService();
 
-            AuthenticateResponse response = null;
+            MyAuthenticateResponse response = null;
            
             
             if (string.IsNullOrEmpty(request.Meta["cid"]))
@@ -159,18 +160,19 @@ namespace ExpressBase.ServiceStack
                     log.Info("#Eb reached 5");
                     mysession.CId= string.Empty;                   
                 }
-                              
-                response = new AuthenticateResponse
-                {
+              
+                response = new MyAuthenticateResponse
+                {                  
                     UserId = _authUser.Id.ToString(),
                     UserName = _authUser.Uname,
                     ReferrerUrl = string.Empty,
                     BearerToken = base.CreateJwtBearerToken(mysession),
+                    User = _authUser ,
                 };
             }
             else
             {
-                response = new AuthenticateResponse
+                response = new MyAuthenticateResponse
                 {
                     ResponseStatus = new ResponseStatus("EbUnauthorized", "Eb Unauthorized Access")
                 };
@@ -178,5 +180,11 @@ namespace ExpressBase.ServiceStack
 
             return response;
         }
+    }
+    [DataContract]
+    public class MyAuthenticateResponse : AuthenticateResponse
+    {
+        [DataMember(Order =1)]
+        public User User { get; set; }
     }
 }
