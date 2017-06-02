@@ -28,7 +28,7 @@ namespace ExpressBase.ServiceStack
             {
                 con.Open();
                 string _obj_bytea = (request.Id > 0) ? ", EO.obj_bytea" : string.Empty;
-                string _where_clause_part1 = (request.Id > 0) ? string.Format("AND EO.id={0}", request.Id) : string.Empty;
+                string _where_clause_part1 = (request.Id > 0) ? string.Format("AND EO.id={0} AND EO.obj_last_ver_id =EOV.ver_num", request.Id) : string.Empty;
 
                 dt = this.DatabaseFactory.ObjectsDB.DoQuery(string.Format(@"
 SELECT 
@@ -54,7 +54,7 @@ ORDER BY
                     Name = dr[1].ToString(),
                     EbObjectType = (EbObjectType)Convert.ToInt32(dr[2]),
                     Status = (ObjectLifeCycleStatus)dr[4],
-                    Description =dr[5].ToString(),
+                    Description = dr[5].ToString(),
                     VersionNumber = Convert.ToInt32(dr[8]),
                     Bytea = (request.Id > 0) ? dr[12] as byte[] : null
                 });
@@ -67,39 +67,56 @@ ORDER BY
 
         public object Post(EbObjectWrapper request)
         {
+
+            ILog log = LogManager.GetLogger(GetType());
+            log.Info("#DS insert -- entered post");
             bool result = false;
             base.ClientID = request.TenantAccountId;
-            ILog log = LogManager.GetLogger(GetType());
             using (var con = this.DatabaseFactory.ObjectsDB.GetNewConnection())
             {
                 con.Open();
                 DbCommand cmd = null;
-                log.Info("#DS insert 1 -- con open" );
-
-                if (request.Id > 0)
+                log.Info("#DS insert 1 -- con open");
+                if (request.IsSave =="true")
                 {
-                    log.Info("#DS insert 1 -- >0"+ request.Id);
+                    log.Info("#DS insert -- con issave true");
                     cmd = this.DatabaseFactory.ObjectsDB.GetNewCommand(con, @"
-UPDATE eb_objects SET obj_name=@obj_name,obj_desc=@obj_desc,obj_last_ver_id=(SELECT max(ver_num)+1 FROM eb_objects_ver WHERE eb_objects_id=@id), obj_cur_status=@obj_cur_status WHERE id=@id; 
-INSERT INTO eb_objects_ver (eb_objects_id,ver_num,obj_bytea,obj_changelog,commit_uid,commit_ts) VALUES (@id,(SELECT max(ver_num)+1 FROM eb_objects_ver WHERE eb_objects_id=@id),@obj_bytea,@obj_changelog,@commit_uid,now())");
+UPDATE eb_objects_ver SET obj_bytea= @obj_bytea WHERE eb_objects_id = @id AND ver_num = @ver_num;");
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.Int32, request.Id));
-                    cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_changelog", System.Data.DbType.String, request.ChangeLog));
+                    cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@ver_num", System.Data.DbType.Int32, request.VersionNumber));
+                    log.Info("#DS insert 2 save -- before exec cmd");
+                    cmd.ExecuteNonQuery();
+                    result = true;
                 }
                 else
                 {
-                    log.Info("#DS insert 2 -- !>0");
-                    cmd = this.DatabaseFactory.ObjectsDB.GetNewCommand(con, @"
+                    if (request.Id > 0)
+                    {
+                        log.Info("#DS insert 1 -- >0" + request.Id);
+                        cmd = this.DatabaseFactory.ObjectsDB.GetNewCommand(con, @"
+UPDATE eb_objects SET obj_name=@obj_name,obj_desc=@obj_desc,obj_last_ver_id=(SELECT max(ver_num)+1 FROM eb_objects_ver WHERE eb_objects_id=@id), obj_cur_status=@obj_cur_status WHERE id=@id; 
+INSERT INTO eb_objects_ver (eb_objects_id,ver_num,obj_bytea,obj_changelog,commit_uid,commit_ts) VALUES (@id,(SELECT max(ver_num)+1 FROM eb_objects_ver WHERE eb_objects_id=@id),@obj_bytea,@obj_changelog,@commit_uid,now())");
+                        cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.Int32, request.Id));
+                        cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_changelog", System.Data.DbType.String, request.ChangeLog));
+                    }
+                    else
+                    {
+                        log.Info("#DS insert 2 -- !>0");
+                        cmd = this.DatabaseFactory.ObjectsDB.GetNewCommand(con, @"
 INSERT INTO eb_objects (obj_name,obj_desc,obj_type,obj_last_ver_id,obj_cur_status) VALUES (@obj_name, @obj_desc, @obj_type,1,@obj_cur_status);
 INSERT INTO eb_objects_ver (eb_objects_id,ver_num, obj_bytea,commit_uid,commit_ts) VALUES (currval('eb_objects_id_seq'),1,@obj_bytea,@commit_uid,now())");
-                    cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_type", System.Data.DbType.Int32, (int)request.EbObjectType));
+                        cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_type", System.Data.DbType.Int32, (int)request.EbObjectType));
+                    }
+                    cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_name", System.Data.DbType.String, request.Name));
+                    cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_desc", System.Data.DbType.String, request.Description));
+                    cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_bytea", System.Data.DbType.Binary, request.Bytea));
+                    cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_cur_status", System.Data.DbType.Int32, request.Status));
+                    cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@commit_uid", System.Data.DbType.Int32, request.UserId));
+                    log.Info("#DS insert 2 -- before exec cmd");
+                    cmd.ExecuteNonQuery();
+                    result = true;
                 }
-                cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_name", System.Data.DbType.String, request.Name));
-                cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_bytea", System.Data.DbType.Binary, request.Bytea));
-                cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_cur_status", System.Data.DbType.Int32, request.Status));
-                cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@commit_uid", System.Data.DbType.Int32, request.UserId));
-                log.Info("#DS insert 2 -- before exec cmd");
-                cmd.ExecuteNonQuery();
-                result = true;
+                
             };
 
             return result;
