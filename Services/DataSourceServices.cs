@@ -52,17 +52,17 @@ namespace ExpressBase.ServiceStack
                         }
                     }
 
-                    _sql = _ds.Sql.Replace("@and_searchplaceholder", _c);
+                    _sql = _ds.Sql.Replace("@and_search", _c);
                 }
 
-                _sql = _sql.Replace("@orderbyplaceholder",
+                _sql = _sql.Replace("@orderby",
                     (string.IsNullOrEmpty(request.OrderByCol)) ? "id" : string.Format("{0} {1}", request.OrderByCol, ((request.OrderByDir == 2) ? "DESC" : "ASC")));
                 
                 var parameters = new List<System.Data.Common.DbParameter>();
                 parameters.AddRange(new System.Data.Common.DbParameter[]
                 {
                     this.DatabaseFactory.ObjectsDB.GetNewParameter("@limit", System.Data.DbType.Int32, request.Length),
-                    this.DatabaseFactory.ObjectsDB.GetNewParameter("@last_id", System.Data.DbType.Int32, request.Start),
+                    this.DatabaseFactory.ObjectsDB.GetNewParameter("@offset", System.Data.DbType.Int32, request.Start),
                 });
 
                 if (request.Params != null) {
@@ -105,17 +105,17 @@ namespace ExpressBase.ServiceStack
                     var _ds = EbSerializers.ProtoBuf_DeSerialize<EbDataSource>((byte[])dt.Rows[0][0]);
                     if (_ds != null)
                     {
-                        _sql = _ds.Sql.Replace("@and_searchplaceholder",
+                        _sql = _ds.Sql.Replace("@and_search",
                             (string.IsNullOrEmpty(request.SearchText)) ? string.Empty : string.Format("AND {0}::text LIKE '%{1}%'", request.SelectedColumnName, request.SearchText));
 
-                        _sql = _sql.Replace("@orderbyplaceholder",
+                        _sql = _sql.Replace("@orderby",
                         (string.IsNullOrEmpty(request.SelectedColumnName)) ? "id" : string.Format("{0} {1}", request.SelectedColumnName, request.OrderByDirection));
                         
                         var parameters = new List<System.Data.Common.DbParameter>();
                         parameters.AddRange(new System.Data.Common.DbParameter[]
                         {
                             this.DatabaseFactory.ObjectsDB.GetNewParameter("@limit", System.Data.DbType.Int32, 0),
-                            this.DatabaseFactory.ObjectsDB.GetNewParameter("@last_id", System.Data.DbType.Int32, 0),
+                            this.DatabaseFactory.ObjectsDB.GetNewParameter("@offset", System.Data.DbType.Int32, 0),
                         });
 
                         if (request.Params != null)
