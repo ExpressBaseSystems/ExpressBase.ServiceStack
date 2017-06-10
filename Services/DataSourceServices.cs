@@ -19,7 +19,7 @@ namespace ExpressBase.ServiceStack
             this.Log.Info("data request");
             base.ClientID = request.TenantAccountId;
 
-            var dt = this.DatabaseFactory.ObjectsDB.DoQuery(string.Format("SELECT obj_bytea FROM eb_objects WHERE id={0}", request.Id));
+            var dt = this.DatabaseFactory.ObjectsDB.DoQuery(string.Format("SELECT obj_bytea FROM eb_objects_ver WHERE id={0}", request.Id));
 
             DataSourceDataResponse dsresponse = null;
 
@@ -54,10 +54,10 @@ namespace ExpressBase.ServiceStack
 
                     _sql = _ds.Sql.Replace("@and_search", _c);
                 }
-
+                this.Log.Info("search ok");
                 _sql = _sql.Replace("@orderby",
                     (string.IsNullOrEmpty(request.OrderByCol)) ? "id" : string.Format("{0} {1}", request.OrderByCol, ((request.OrderByDir == 2) ? "DESC" : "ASC")));
-                
+                this.Log.Info("order ok");
                 var parameters = new List<System.Data.Common.DbParameter>();
                 parameters.AddRange(new System.Data.Common.DbParameter[]
                 {
@@ -69,9 +69,9 @@ namespace ExpressBase.ServiceStack
                     foreach (Dictionary<string, string> param in request.Params)
                         parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter(string.Format("@{0}", param["name"]), (System.Data.DbType)Convert.ToInt32(param["type"]), param["value"]));
                 }
-
+                this.Log.Info("GO**********************"+ _sql);
                 var _dataset = (request.Length > 0) ? this.DatabaseFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray()) : this.DatabaseFactory.ObjectsDB.DoQueries(_sql);
-
+                this.Log.Info("data here");
                 dsresponse = new DataSourceDataResponse
                 {
                     Draw = request.Draw,
@@ -96,13 +96,14 @@ namespace ExpressBase.ServiceStack
                 request.OrderByDirection = base.Request.QueryString["order[0][dir]"]; //@order_dir
                 request.SelectedColumnName = base.Request.QueryString["col"]; // @selcol
 
-                string _sql = string.Format("SELECT obj_bytea FROM eb_objects WHERE id={0}", request.Id);
+                string _sql = string.Format("SELECT obj_bytea FROM eb_objects_ver WHERE id={0}", request.Id);
 
                 var dt = this.DatabaseFactory.ObjectsDB.DoQuery(_sql);
 
                 if (dt.Rows.Count > 0)
                 {
                     var _ds = EbSerializers.ProtoBuf_DeSerialize<EbDataSource>((byte[])dt.Rows[0][0]);
+                    Log.Info("sql********"+_ds.Sql);
                     if (_ds != null)
                     {
                         _sql = _ds.Sql.Replace("@and_search",
