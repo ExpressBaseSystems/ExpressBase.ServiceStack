@@ -102,7 +102,7 @@ namespace ExpressBase.ServiceStack
                             payload["email"] = session.UserName;
                             payload["cid"] = (session as CustomUserSession).CId;
                             payload["uid"] = (session as CustomUserSession).Uid.ToString();
-                            payload["Fname"] =(session as CustomUserSession).FirstName;
+                            //payload["Fname"] =(session as CustomUserSession).FirstName;
                    
                         }
                     },
