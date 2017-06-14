@@ -94,7 +94,7 @@ namespace ExpressBase.ServiceStack
                             payload["cid"] = (session as CustomUserSession).CId;
                             payload["uid"] = (session as CustomUserSession).Uid.ToString();
                         },
-                        ExpireTokensIn = TimeSpan.FromSeconds(90),
+                        ExpireTokensIn = TimeSpan.FromHours(12),
                         ExpireRefreshTokensIn = TimeSpan.FromHours(12),
                     }
                 }));
@@ -141,7 +141,9 @@ namespace ExpressBase.ServiceStack
             {
                 if (responseDto.GetResponseDto().GetType() != typeof(MyAuthenticateResponse) && responseDto.GetResponseDto().GetType() != typeof(GetAccessTokenResponse))
                 {
-                    (responseDto.GetResponseDto() as IEbSSResponse).Token = req.Authorization.Replace("Bearer ", string.Empty);
+                    IEbSSResponse respObj = responseDto.GetResponseDto() as IEbSSResponse;
+                    if (respObj != null)
+                        respObj.Token = req.Authorization.Replace("Bearer ", string.Empty);
                 }
             });
         }
