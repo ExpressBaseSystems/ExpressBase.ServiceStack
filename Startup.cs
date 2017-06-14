@@ -60,8 +60,6 @@ namespace ExpressBase.ServiceStack
 
             app.UseServiceStack(new AppHost() { EbLiveSettings= ELive });
         }
-
-
     }
 
     public class AppHost : AppHostBase
@@ -72,60 +70,38 @@ namespace ExpressBase.ServiceStack
 
         public override void OnAfterConfigChanged()
         {
-           
             base.OnAfterConfigChanged();
-
         }
 
         public override void Configure(Container container)
         {
-            
             var co = this.Config;
             LogManager.LogFactory = new ConsoleLogFactory(debugEnabled: true);
-            
-            this.Plugins.Add(new CorsFeature());
+
+            this.Plugins.Add(new CorsFeature(allowedHeaders: "Content-Type, Authorization"));
             this.Plugins.Add(new ProtoBufFormat());
            
             Plugins.Add(new AuthFeature(() => new CustomUserSession(),
                 new IAuthProvider[] {
                     new MyJwtAuthProvider(AppSettings) {
-                        //HashAlgorithm = "RS256",
-                        //PrivateKeyXml = EbLiveSettings.PrivateKeyXml,
+                        HashAlgorithm = "RS256",
+                        PrivateKeyXml = EbLiveSettings.PrivateKeyXml,
+                        PublicKeyXml = EbLiveSettings.PublicKeyXml,
                         //RequireSecureConnection = true,
                         //EncryptPayload = true,
-                        AuthKey = AesUtils.CreateKey(),
                         CreatePayloadFilter = (payload,session) => {
-                            payload["iss"] = "eb-sec";
-                            payload["aud"] = "eb-web";
-                            payload["iat"] = ((System.Int32)session.CreatedAt.ToUniversalTime().Subtract(new System.DateTime(1970, 1, 1)).TotalSeconds).ToString();
-                            payload["exp"] = ((System.Int32)session.CreatedAt.AddHours(3).ToUniversalTime().Subtract(new System.DateTime(1970, 1, 1)).TotalSeconds).ToString();
-                            payload["email"] = session.UserName;
+                            payload["sub"] = session.UserName;
                             payload["cid"] = (session as CustomUserSession).CId;
                             payload["uid"] = (session as CustomUserSession).Uid.ToString();
-                            //payload["Fname"] =(session as CustomUserSession).FirstName;
-                   
-                        }
-                    },
-                    new ApiKeyAuthProvider(AppSettings),        //Sign-in with API Key
-                    new CredentialsAuthProvider(),              //Sign-in with UserName/Password credentials
-                    new BasicAuthProvider(),                    //Sign-in with HTTP Basic Auth
-                    new DigestAuthProvider(AppSettings),        //Sign-in with HTTP Digest Auth
-                    new TwitterAuthProvider(AppSettings),       //Sign-in with Twitter
-                    new FacebookAuthProvider(AppSettings),      //Sign-in with Facebook
-                    //new YahooOpenIdOAuthProvider(AppSettings),  //Sign-in with Yahoo OpenId
-                    //new OpenIdOAuthProvider(AppSettings),       //Sign-in with Custom OpenId
-                    //new GoogleOAuth2Provider(AppSettings),      //Sign-in with Google OAuth2 Provider
-                    //new LinkedInOAuth2Provider(AppSettings),    //Sign-in with LinkedIn OAuth2 Provider
-                    new GithubAuthProvider(AppSettings),        //Sign-in with GitHub OAuth Provider
-                    new YandexAuthProvider(AppSettings),        //Sign-in with Yandex OAuth Provider        
-                    new VkAuthProvider(AppSettings),            //Sign-in with VK.com OAuth Provider 
+                        },
+                        ExpireTokensIn = TimeSpan.FromSeconds(90),
+                        ExpireRefreshTokensIn = TimeSpan.FromHours(12),
+                    }
                 }));
 
             //Also works but it's recommended to handle 404's by registering at end of .NET Core pipeline
             //this.CustomErrorHttpHandlers[HttpStatusCode.NotFound] = new RazorHandler("/notfound");
 
-            //container.RegisterAutoWired<TokenAuthorizationManager>().ReusedWithin(ReuseScope.Request);
-            
             this.ContentTypes.Register(MimeTypes.ProtoBuf, (reqCtx, res, stream) => ProtoBuf.Serializer.NonGeneric.Serialize(stream, res), ProtoBuf.Serializer.NonGeneric.Deserialize);
 
             SetConfig(new HostConfig { DebugMode = true });
@@ -135,12 +111,12 @@ namespace ExpressBase.ServiceStack
                EbLiveSettings.RedisPassword,EbLiveSettings.RedisServer, EbLiveSettings.RedisPort);
             container.Register<IRedisClientsManager>(c => new RedisManagerPool(redisConnectionString));
 
-            //EbBaseService.InfraDatabaseFactory.
+            container.Register<IUserAuthRepository>(c => new RedisAuthRepository(c.Resolve<IRedisClientsManager>()));
 
             //Add a request filter to check if the user has a session initialized
             this.GlobalRequestFilters.Add((req, res, requestDto) => 
             {
-                if (requestDto.GetType() != typeof(Authenticate) && requestDto.GetType()!=typeof(InfraRequest))
+                if (requestDto.GetType() != typeof(Authenticate) && requestDto.GetType() != typeof(GetAccessToken))
                 {
                     var jwtoken = new JwtSecurityToken((requestDto as IEbSSRequest).Token);
                     if (jwtoken == null)
@@ -150,12 +126,22 @@ namespace ExpressBase.ServiceStack
                         if (c.Type == "cid" && !string.IsNullOrEmpty(c.Value))
                         {
                             (requestDto as IEbSSRequest).TenantAccountId = c.Value;
+                            continue;
                         }
                         if (c.Type == "uid" && !string.IsNullOrEmpty(c.Value))
                         {
                             (requestDto as IEbSSRequest).UserId = Convert.ToInt32(c.Value);
+                            continue;
                         }
                     }
+                }
+            });
+
+            this.GlobalResponseFilters.Add((req, res, responseDto) =>
+            {
+                if (responseDto.GetResponseDto().GetType() != typeof(MyAuthenticateResponse) && responseDto.GetResponseDto().GetType() != typeof(GetAccessTokenResponse))
+                {
+                    (responseDto.GetResponseDto() as IEbSSResponse).Token = req.Authorization.Replace("Bearer ", string.Empty);
                 }
             });
         }

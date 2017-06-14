@@ -16,6 +16,7 @@ using System.Runtime.Loader;
 namespace ExpressBase.ServiceStack.Services
 {
     [ClientCanSwapTemplates]
+    [EnableCors]
     public class InfraServices : EbBaseService
     {
         public InfraResponse Any(InfraRequest request)
@@ -81,8 +82,7 @@ namespace ExpressBase.ServiceStack.Services
             }
         }
 
-
-
+        [Authenticate]
         public TokenRequiredUploadResponse Any(TokenRequiredUploadRequest request)
         {
             TokenRequiredUploadResponse resp = null;
@@ -433,6 +433,7 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
+        [Authenticate]
         public TokenRequiredSelectResponse Any(TokenRequiredSelectRequest request)
         {
             base.ClientID = request.TenantAccountId;
