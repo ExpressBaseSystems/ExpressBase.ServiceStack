@@ -12,6 +12,7 @@ using ServiceStack.Logging;
 using ServiceStack.ProtoBuf;
 using ServiceStack.Redis;
 using System.IdentityModel.Tokens.Jwt;
+using System.Collections.Generic;
 
 namespace ExpressBase.ServiceStack
 {
@@ -80,22 +81,36 @@ namespace ExpressBase.ServiceStack
 
             this.Plugins.Add(new CorsFeature(allowedHeaders: "Content-Type, Authorization"));
             this.Plugins.Add(new ProtoBufFormat());
-           
+
             Plugins.Add(new AuthFeature(() => new CustomUserSession(),
                 new IAuthProvider[] {
-                    new MyJwtAuthProvider(AppSettings) {
+                    new MyCredentialsAuthProvider(AppSettings)
+                    {
+                        PersistSession = true
+                    },
+                    new JwtAuthProvider(AppSettings) {
                         HashAlgorithm = "RS256",
                         PrivateKeyXml = EbLiveSettings.PrivateKeyXml,
                         PublicKeyXml = EbLiveSettings.PublicKeyXml,
-                        //RequireSecureConnection = true,
+#if (DEBUG)
+                        RequireSecureConnection = false,
                         //EncryptPayload = true,
-                        CreatePayloadFilter = (payload,session) => {
-                            payload["sub"] = session.UserName;
-                            payload["cid"] = (session as CustomUserSession).CId;
-                            payload["uid"] = (session as CustomUserSession).Uid.ToString();
+#endif 
+                        CreatePayloadFilter = (payload, session) => {
+                            payload["sub"] = (session as AuthUserSession).UserName;
+                            payload["cid"] = (session as AuthUserSession).Company;
+                            payload["uid"] = (session as AuthUserSession).UserAuthId;
                         },
-                        ExpireTokensIn = TimeSpan.FromHours(12),
+                        //PopulateSessionFilter = (session, obj, req) => {
+                        //    (session as AuthUserSession).Company = obj["cid"];
+                        //    (session as AuthUserSession).UserAuthId = obj["uid"];
+                        //    (session as AuthUserSession).UserName = obj["sub"];
+                        //},
+
+                        ExpireTokensIn = TimeSpan.FromSeconds(90),
                         ExpireRefreshTokensIn = TimeSpan.FromHours(12),
+                        PersistSession = true,
+                        SessionExpiry = TimeSpan.FromHours(12)
                     }
                 }));
 
@@ -139,11 +154,9 @@ namespace ExpressBase.ServiceStack
 
             this.GlobalResponseFilters.Add((req, res, responseDto) =>
             {
-                if (responseDto.GetResponseDto().GetType() != typeof(MyAuthenticateResponse) && responseDto.GetResponseDto().GetType() != typeof(GetAccessTokenResponse))
+                if (responseDto.GetResponseDto().GetType() != typeof(AuthenticateResponse) && responseDto.GetResponseDto().GetType() != typeof(GetAccessTokenResponse))
                 {
-                    IEbSSResponse respObj = responseDto.GetResponseDto() as IEbSSResponse;
-                    if (respObj != null)
-                        respObj.Token = req.Authorization.Replace("Bearer ", string.Empty);
+                    (responseDto.GetResponseDto() as IEbSSResponse).Token = req.Authorization.Replace("Bearer ", string.Empty);
                 }
             });
         }
