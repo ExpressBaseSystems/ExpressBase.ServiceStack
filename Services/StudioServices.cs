@@ -65,13 +65,14 @@ ORDER BY
             return new EbObjectResponse { Data = f };
         }
 
-        public object Post(EbObjectWrapper request)
+        public EbObjectWrapperResponse Post(EbObjectWrapper request)
         {
 
             ILog log = LogManager.GetLogger(GetType());
             log.Info("#DS insert -- entered post");
             bool result = false;
             base.ClientID = request.TenantAccountId;
+            EbObjectWrapperResponse res = new EbObjectWrapperResponse();
             using (var con = this.DatabaseFactory.ObjectsDB.GetNewConnection())
             {
                 con.Open();
@@ -99,7 +100,7 @@ INSERT INTO eb_objects_ver (eb_objects_id,ver_num,obj_bytea,obj_changelog,commit
                     {
                         log.Info("#DS insert 2 -- !>0");
                         cmd = this.DatabaseFactory.ObjectsDB.GetNewCommand(con, @"
-INSERT INTO eb_objects (obj_name,obj_desc,obj_type,obj_last_ver_id,obj_cur_status) VALUES (@obj_name, @obj_desc, @obj_type,1,@obj_cur_status);
+INSERT INTO eb_objects (obj_name,obj_desc,obj_type,obj_last_ver_id,obj_cur_status) VALUES (@obj_name, @obj_desc, @obj_type,1,@obj_cur_status) RETURNING id;
 INSERT INTO eb_objects_ver (eb_objects_id,ver_num, obj_bytea,commit_uid,commit_ts) VALUES (currval('eb_objects_id_seq'),1,@obj_bytea,@commit_uid,now())");
                         cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_type", System.Data.DbType.Int32, (int)request.EbObjectType));
                     }                   
@@ -111,11 +112,14 @@ INSERT INTO eb_objects_ver (eb_objects_id,ver_num, obj_bytea,commit_uid,commit_t
                 cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_cur_status", System.Data.DbType.Int32, request.Status));
                 cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@commit_uid", System.Data.DbType.Int32, request.UserId));
                 log.Info("#DS insert 2 -- before exec cmd");
-                cmd.ExecuteNonQuery();
-                result = true;
+
+
+                res.id = Convert.ToInt32(cmd.ExecuteScalar());
+              
+                return res;
             };
 
-            return result;
+           // return res;
         }
     }
 }
