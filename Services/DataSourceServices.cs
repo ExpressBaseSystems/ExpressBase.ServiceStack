@@ -19,14 +19,20 @@ namespace ExpressBase.ServiceStack
             this.Log.Info("data request");
             base.ClientID = request.TenantAccountId;
 
-            var dt = this.DatabaseFactory.ObjectsDB.DoQuery(string.Format("SELECT obj_bytea FROM eb_objects_ver WHERE id={0}", request.Id));
-
+            //var dt = this.DatabaseFactory.ObjectsDB.DoQuery(string.Format("SELECT obj_bytea FROM eb_objects_ver WHERE id={0}", request.Id));
+            var dt = this.DatabaseFactory.ObjectsDB.DoQuery(string.Format(@"
+                SELECT EOV.obj_bytea FROM eb_objects_ver EOV 
+                INNER JOIN eb_objects EO
+                ON EO.id = EOV.eb_objects_id  AND EO.obj_last_ver_id =EOV.ver_num AND EOV.eb_objects_id={0}", request.Id)
+                );
+            this.Log.Info("dt.Rows.Count *****" + dt.Rows.Count);
+            //this.Log.Info("ProtoBuf_DeSerialize *****" + EbSerializers.ProtoBuf_DeSerialize<EbDataSource>((byte[])dt.Rows[0][0]));
             DataSourceDataResponse dsresponse = null;
 
             if (dt.Rows.Count > 0)
             {
                 var _ds = EbSerializers.ProtoBuf_DeSerialize<EbDataSource>((byte[])dt.Rows[0][0]);
-
+                this.Log.Info("_ds *****" + _ds.Sql);
                 string _sql = string.Empty;
 
                 if (_ds != null)
@@ -71,7 +77,7 @@ namespace ExpressBase.ServiceStack
                 }
                 this.Log.Info("GO**********************"+ _sql);
                 var _dataset = (request.Length > 0) ? this.DatabaseFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray()) : this.DatabaseFactory.ObjectsDB.DoQueries(_sql);
-                this.Log.Info("data here");
+                this.Log.Info("data here" + _dataset.Tables[1].Rows);
                 dsresponse = new DataSourceDataResponse
                 {
                     Draw = request.Draw,
@@ -79,6 +85,7 @@ namespace ExpressBase.ServiceStack
                     RecordsTotal = (request.Length > 0) ? Convert.ToInt32(_dataset.Tables[0].Rows[0][0]) : _dataset.Tables[0].Rows.Count,
                     RecordsFiltered = (request.Length > 0) ? Convert.ToInt32(_dataset.Tables[0].Rows[0][0]) : _dataset.Tables[0].Rows.Count
                 };
+                this.Log.Info("dsresponse*****"+ dsresponse.Data);
             }
 
             return this.Request.ToOptimizedResult<DataSourceDataResponse>(dsresponse);
@@ -89,17 +96,26 @@ namespace ExpressBase.ServiceStack
             base.ClientID = request.TenantAccountId;
 
             ColumnColletion columns = this.Redis.Get<ColumnColletion>(string.Format("{0}_ds_{1}_columns", request.TenantAccountId, request.Id));
-            if (columns == null)
+            if (columns == null || columns.Count == 0)
             {
                 request.SearchText = base.Request.QueryString["searchtext"];
                 request.SearchText = string.IsNullOrEmpty(request.SearchText) ? "" : request.SearchText; // @txtsearch
                 request.OrderByDirection = base.Request.QueryString["order[0][dir]"]; //@order_dir
                 request.SelectedColumnName = base.Request.QueryString["col"]; // @selcol
 
-                string _sql = string.Format("SELECT obj_bytea FROM eb_objects_ver WHERE id={0}", request.Id);
+                //string _sql = string.Format("SELECT obj_bytea FROM eb_objects_ver WHERE id={0}", request.Id);
+                string _sql = string.Format(@"
+SELECT 
+    EOV.obj_bytea 
+FROM 
+    eb_objects_ver EOV, eb_objects EO 
+WHERE
+    EO.id = EOV.eb_objects_id AND 
+    EO.obj_last_ver_id = EOV.ver_num AND 
+    EO.id = {0}", request.Id);
 
                 var dt = this.DatabaseFactory.ObjectsDB.DoQuery(_sql);
-
+                Log.Info("dt.Rows.Count********" + dt.Rows.Count);
                 if (dt.Rows.Count > 0)
                 {
                     var _ds = EbSerializers.ProtoBuf_DeSerialize<EbDataSource>((byte[])dt.Rows[0][0]);
