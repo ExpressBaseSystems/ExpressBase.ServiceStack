@@ -154,9 +154,9 @@ namespace ExpressBase.ServiceStack
 
             this.GlobalResponseFilters.Add((req, res, responseDto) =>
             {
-                if (responseDto.GetResponseDto().GetType() != typeof(AuthenticateResponse) && responseDto.GetResponseDto().GetType() != typeof(GetAccessTokenResponse))
+                if (responseDto.GetResponseDto().GetType() != typeof(MyAuthenticateResponse) && responseDto.GetResponseDto().GetType() != typeof(GetAccessTokenResponse))
                 {
-                    (responseDto.GetResponseDto() as IEbSSResponse).Token = req.Authorization.Replace("Bearer ", string.Empty);
+                   // (responseDto.GetResponseDto() as IEbSSResponse).Token = req.Authorization.Replace("Bearer", string.Empty);
                 }
             });
         }

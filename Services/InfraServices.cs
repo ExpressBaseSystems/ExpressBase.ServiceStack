@@ -19,6 +19,7 @@ namespace ExpressBase.ServiceStack.Services
     [EnableCors]
     public class InfraServices : EbBaseService
     {
+        [Authenticate]
         public InfraResponse Any(InfraRequest request)
         {
             base.ClientID = request.TenantAccountId;
@@ -89,7 +90,7 @@ namespace ExpressBase.ServiceStack.Services
 
             ILog log = LogManager.GetLogger(GetType());
 
-            if (!string.IsNullOrEmpty(request.TenantAccountId))
+            if (request.TenantAccountId!="expressbase")
             {
                 base.ClientID = request.TenantAccountId;
                 using (var con = base.DatabaseFactory.ObjectsDB.GetNewConnection())
@@ -494,7 +495,7 @@ namespace ExpressBase.ServiceStack.Services
             }
         }
 
-
+        
         public void TableInsertsDataDB(DatabaseFactory dbf, EbDataTable dt, DbConnection _con_d1)
         {
             string result;

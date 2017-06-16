@@ -65,6 +65,7 @@ ORDER BY
             return new EbObjectResponse { Data = f };
         }
 
+        [Authenticate]
         public EbObjectWrapperResponse Post(EbObjectWrapper request)
         {
 

@@ -14,6 +14,7 @@ namespace ExpressBase.ServiceStack
     [DefaultView("ds")]
     public class DataSourceService : EbBaseService
     {
+        [Authenticate]
         public object Post(DataSourceDataRequest request)
         {
             this.Log.Info("data request");
@@ -91,7 +92,8 @@ namespace ExpressBase.ServiceStack
             return this.Request.ToOptimizedResult<DataSourceDataResponse>(dsresponse);
         }
 
-        public object Any(DataSourceColumnsRequest request)
+        [Authenticate]
+        public DataSourceColumnsResponse Any(DataSourceColumnsRequest request)
         {
             base.ClientID = request.TenantAccountId;
 

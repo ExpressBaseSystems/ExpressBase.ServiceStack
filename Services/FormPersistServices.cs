@@ -23,6 +23,7 @@ namespace ExpressBase.ServiceStack.Services
         private EbTableCollection tcol;
         private EbTableColumnCollection ccol;
 
+        [Authenticate]
         public ViewResponse Any(View request)
         {
             tcol = this.Redis.Get<EbTableCollection>("EbTableCollection");
@@ -36,6 +37,7 @@ namespace ExpressBase.ServiceStack.Services
             };
         }
 
+        [Authenticate]
         public bool Any(FormPersistRequest request)
         {
             bool bResult = false;
@@ -200,6 +202,7 @@ namespace ExpressBase.ServiceStack.Services
             return bResult;
         }
 
+        [Authenticate]
         public bool Post(CheckIfUnique request)
         {
 
