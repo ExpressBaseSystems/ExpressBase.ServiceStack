@@ -13,6 +13,7 @@ using ServiceStack.ProtoBuf;
 using ServiceStack.Redis;
 using System.IdentityModel.Tokens.Jwt;
 using System.Collections.Generic;
+using ExpressBase.ServiceStack.Auth0;
 
 namespace ExpressBase.ServiceStack
 {
@@ -111,7 +112,14 @@ namespace ExpressBase.ServiceStack
                         ExpireRefreshTokensIn = TimeSpan.FromHours(12),
                         PersistSession = true,
                         SessionExpiry = TimeSpan.FromHours(12)
-                    }
+                    },
+                    new MyFacebookAuthProvider(AppSettings)
+                    {
+                        AppId = "151550788692231",
+                        AppSecret = "94ec1a04342e5cf7e7a971f2eb7ad7bc",
+                        Permissions = new string[] { "email, public_profile" },
+                        SuccessRedirectUrlFilter = (authProvider, url) => "http://localhost:53431/tenant/tenantdashboard/"
+                    },
                 }));
 
             //Also works but it's recommended to handle 404's by registering at end of .NET Core pipeline
@@ -154,9 +162,12 @@ namespace ExpressBase.ServiceStack
 
             this.GlobalResponseFilters.Add((req, res, responseDto) =>
             {
-                if (responseDto.GetResponseDto().GetType() != typeof(MyAuthenticateResponse) && responseDto.GetResponseDto().GetType() != typeof(GetAccessTokenResponse))
+                if (responseDto.GetResponseDto() != null)
                 {
-                   // (responseDto.GetResponseDto() as IEbSSResponse).Token = req.Authorization.Replace("Bearer", string.Empty);
+                    if (responseDto.GetResponseDto().GetType() != typeof(MyAuthenticateResponse) && responseDto.GetResponseDto().GetType() != typeof(GetAccessTokenResponse))
+                    {
+                        // (responseDto.GetResponseDto() as IEbSSResponse).Token = req.Authorization.Replace("Bearer", string.Empty);
+                    }
                 }
             });
         }
