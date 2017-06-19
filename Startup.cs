@@ -85,6 +85,13 @@ namespace ExpressBase.ServiceStack
 
             Plugins.Add(new AuthFeature(() => new CustomUserSession(),
                 new IAuthProvider[] {
+                    new FacebookAuthProvider(AppSettings)
+                    {
+                        AppId = "151550788692231",
+                        AppSecret = "94ec1a04342e5cf7e7a971f2eb7ad7bc",
+                        Permissions = new string[] { "email, public_profile" },
+                        SuccessRedirectUrlFilter = (authProvider, url) => "http://localhost:53431/Ext/AboutUs",
+                    },
                     new MyCredentialsAuthProvider(AppSettings)
                     {
                         PersistSession = true
@@ -101,6 +108,7 @@ namespace ExpressBase.ServiceStack
                             payload["sub"] = (session as AuthUserSession).UserName;
                             payload["cid"] = (session as AuthUserSession).Company;
                             payload["uid"] = (session as AuthUserSession).UserAuthId;
+                            payload["wc"] = (session as CustomUserSession).WhichConsole;
                         },
                         //PopulateSessionFilter = (session, obj, req) => {
                         //    (session as AuthUserSession).Company = obj["cid"];
@@ -113,17 +121,13 @@ namespace ExpressBase.ServiceStack
                         PersistSession = true,
                         SessionExpiry = TimeSpan.FromHours(12)
                     },
-                    new MyFacebookAuthProvider(AppSettings)
-                    {
-                        AppId = "151550788692231",
-                        AppSecret = "94ec1a04342e5cf7e7a971f2eb7ad7bc",
-                        Permissions = new string[] { "email, public_profile" },
-                        SuccessRedirectUrlFilter = (authProvider, url) => "http://localhost:53431/tenant/tenantdashboard/"
-                    },
+                    
                 }));
 
             //Also works but it's recommended to handle 404's by registering at end of .NET Core pipeline
             //this.CustomErrorHttpHandlers[HttpStatusCode.NotFound] = new RazorHandler("/notfound");
+
+            Plugins.Add(new RegistrationFeature());
 
             this.ContentTypes.Register(MimeTypes.ProtoBuf, (reqCtx, res, stream) => ProtoBuf.Serializer.NonGeneric.Serialize(stream, res), ProtoBuf.Serializer.NonGeneric.Deserialize);
 
@@ -139,7 +143,7 @@ namespace ExpressBase.ServiceStack
             //Add a request filter to check if the user has a session initialized
             this.GlobalRequestFilters.Add((req, res, requestDto) => 
             {
-                if (requestDto.GetType() != typeof(Authenticate) && requestDto.GetType() != typeof(GetAccessToken))
+                if (requestDto.GetType() != typeof(Authenticate) && requestDto.GetType() != typeof(GetAccessToken) && requestDto.GetType() != typeof(InfraRequest))
                 {
                     var jwtoken = new JwtSecurityToken((requestDto as IEbSSRequest).Token);
                     if (jwtoken == null)
