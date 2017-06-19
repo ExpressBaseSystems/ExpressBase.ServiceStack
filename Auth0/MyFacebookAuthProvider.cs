@@ -14,31 +14,52 @@ namespace ExpressBase.ServiceStack.Auth0
     {
         public MyFacebookAuthProvider(IAppSettings settings) : base(settings) { }
 
-        public override IHttpResult OnAuthenticated(IServiceBase authService, IAuthSession session, IAuthTokens tokens, Dictionary<string, string> authInfo)
+        //public override IHttpResult OnAuthenticated(IServiceBase authService, IAuthSession session, IAuthTokens tokens, Dictionary<string, string> authInfo)
+        //{
+        //    //SuccessRedirectUrlFilter = (authProvider, url) => "http://localhost:53431/Tenant/TenantDashboard";
+        //    return base.OnAuthenticated(authService, session, tokens, authInfo);
+        //}
+
+        public override bool IsAuthorized(IAuthSession session, IAuthTokens tokens, Authenticate request = null)
         {
-            return base.OnAuthenticated(authService, session, tokens, authInfo);
+            request.UseTokenCookie = true;
+            return base.IsAuthorized(session, tokens, request);
         }
+
+        //public override void LoadUserOAuthProvider(IAuthSession authSession, IAuthTokens tokens)
+        //{
+        //    base.LoadUserOAuthProvider(authSession, tokens);
+        //}
 
         public override object Authenticate(IServiceBase authService, IAuthSession session, Authenticate request)
         {
-            var authResponse = base.Authenticate(authService, session, request);
-            //AuthenticateResponse authResponse = base.Authenticate(authService, session, request) as AuthenticateResponse;
+            var objret = base.Authenticate(authService, session, request);
 
-            var _customUserSession = authService.GetSession() as CustomUserSession;
-
-            //if (!string.IsNullOrEmpty(authResponse.SessionId) && _customUserSession != null)
+            if (!string.IsNullOrEmpty(session.Email))
             {
-                var x = new MyAuthenticateResponse
-                {
-                    UserId = _customUserSession.UserAuthId,
-                    UserName = _customUserSession.UserName,
-                    User = _customUserSession.User,
-                };
+                (session as CustomUserSession).Company = "expressbase";
+                (session as CustomUserSession).WhichConsole = "tc";
 
-                return x;
+                var jwtprovider = authService.TryResolve<JwtAuthProvider>();
+                string token = jwtprovider.CreateJwtBearerToken(session);
+                string rToken = jwtprovider.CreateJwtRefreshToken(session.UserAuthId);
+                
+                //using (var service = authService.ResolveService<ConvertSessionToTokenService>()) //In Process
+                //{
+                //    (session as CustomUserSession).Company = "expressbase";
+                //    var obj = service.Any(new ConvertSessionToToken()) as HttpResult;
+                //    token = obj.Cookies[0].Value;
+                //}
+
+                return authService.Redirect(SuccessRedirectUrlFilter(this, "http://localhost:53431/Tenant/AfterSignInSocial?Token=" + token + "&rToken=" + rToken));
             }
 
-            return authResponse;
+            return objret;
+        }
+
+        public override object Logout(IServiceBase service, Authenticate request)
+        {
+            return base.Logout(service, request);
         }
     }
 }

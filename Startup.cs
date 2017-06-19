@@ -80,48 +80,49 @@ namespace ExpressBase.ServiceStack
             var co = this.Config;
             LogManager.LogFactory = new ConsoleLogFactory(debugEnabled: true);
 
+            var jwtprovider = new JwtAuthProvider(AppSettings)
+            {
+                HashAlgorithm = "RS256",
+                PrivateKeyXml = EbLiveSettings.PrivateKeyXml,
+                PublicKeyXml = EbLiveSettings.PublicKeyXml,
+#if (DEBUG)
+                RequireSecureConnection = false,
+                //EncryptPayload = true,
+#endif
+                CreatePayloadFilter = (payload, session) => {
+                    payload["sub"] = (session as AuthUserSession).UserName;
+                    payload["cid"] = (session as AuthUserSession).Company;
+                    payload["uid"] = (session as AuthUserSession).UserAuthId;
+                    payload["wc"] = (session as CustomUserSession).WhichConsole;
+                },
+                //PopulateSessionFilter = (session, obj, req) => {
+                //    (session as AuthUserSession).Company = obj["cid"];
+                //    (session as AuthUserSession).UserAuthId = obj["uid"];
+                //    (session as AuthUserSession).UserName = obj["sub"];
+                //},
+
+                ExpireTokensIn = TimeSpan.FromSeconds(90),
+                ExpireRefreshTokensIn = TimeSpan.FromHours(12),
+                PersistSession = true,
+                SessionExpiry = TimeSpan.FromHours(12)
+            };
+
             this.Plugins.Add(new CorsFeature(allowedHeaders: "Content-Type, Authorization"));
             this.Plugins.Add(new ProtoBufFormat());
 
             Plugins.Add(new AuthFeature(() => new CustomUserSession(),
                 new IAuthProvider[] {
-                    new FacebookAuthProvider(AppSettings)
+                    new MyFacebookAuthProvider(AppSettings)
                     {
                         AppId = "151550788692231",
                         AppSecret = "94ec1a04342e5cf7e7a971f2eb7ad7bc",
-                        Permissions = new string[] { "email, public_profile" },
-                        SuccessRedirectUrlFilter = (authProvider, url) => "http://localhost:53431/Ext/AboutUs",
+                        Permissions = new string[] { "email, public_profile" }
                     },
                     new MyCredentialsAuthProvider(AppSettings)
                     {
                         PersistSession = true
                     },
-                    new JwtAuthProvider(AppSettings) {
-                        HashAlgorithm = "RS256",
-                        PrivateKeyXml = EbLiveSettings.PrivateKeyXml,
-                        PublicKeyXml = EbLiveSettings.PublicKeyXml,
-#if (DEBUG)
-                        RequireSecureConnection = false,
-                        //EncryptPayload = true,
-#endif 
-                        CreatePayloadFilter = (payload, session) => {
-                            payload["sub"] = (session as AuthUserSession).UserName;
-                            payload["cid"] = (session as AuthUserSession).Company;
-                            payload["uid"] = (session as AuthUserSession).UserAuthId;
-                            payload["wc"] = (session as CustomUserSession).WhichConsole;
-                        },
-                        //PopulateSessionFilter = (session, obj, req) => {
-                        //    (session as AuthUserSession).Company = obj["cid"];
-                        //    (session as AuthUserSession).UserAuthId = obj["uid"];
-                        //    (session as AuthUserSession).UserName = obj["sub"];
-                        //},
-
-                        ExpireTokensIn = TimeSpan.FromSeconds(90),
-                        ExpireRefreshTokensIn = TimeSpan.FromHours(12),
-                        PersistSession = true,
-                        SessionExpiry = TimeSpan.FromHours(12)
-                    },
-                    
+                    jwtprovider,
                 }));
 
             //Also works but it's recommended to handle 404's by registering at end of .NET Core pipeline
@@ -139,6 +140,8 @@ namespace ExpressBase.ServiceStack
             container.Register<IRedisClientsManager>(c => new RedisManagerPool(redisConnectionString));
 
             container.Register<IUserAuthRepository>(c => new RedisAuthRepository(c.Resolve<IRedisClientsManager>()));
+
+            container.Register<JwtAuthProvider>(jwtprovider);
 
             //Add a request filter to check if the user has a session initialized
             this.GlobalRequestFilters.Add((req, res, requestDto) => 
