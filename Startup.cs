@@ -14,6 +14,9 @@ using ServiceStack.Redis;
 using System.IdentityModel.Tokens.Jwt;
 using System.Collections.Generic;
 using ExpressBase.ServiceStack.Auth0;
+using System.IO;
+using ExpressBase.Common;
+using ExpressBase.Data;
 
 namespace ExpressBase.ServiceStack
 {
@@ -142,6 +145,9 @@ namespace ExpressBase.ServiceStack
             container.Register<IUserAuthRepository>(c => new RedisAuthRepository(c.Resolve<IRedisClientsManager>()));
 
             container.Register<JwtAuthProvider>(jwtprovider);
+
+            string path = Path.Combine(Directory.GetParent(System.IO.Directory.GetCurrentDirectory()).FullName, "EbInfra.conn");
+            container.Register<DatabaseFactory>(new DatabaseFactory(EbSerializers.ProtoBuf_DeSerialize<EbInfraDBConf>(EbFile.Bytea_FromFile(path))));
 
             //Add a request filter to check if the user has a session initialized
             this.GlobalRequestFilters.Add((req, res, requestDto) => 
