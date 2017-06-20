@@ -20,7 +20,7 @@ namespace ExpressBase.ServiceStack.Services
     public class InfraServices : EbBaseService
     {
         [Authenticate]
-        public InfraResponse Any(InfraRequest request)
+        public async System.Threading.Tasks.Task<InfraResponse> Any(InfraRequest request)
         {
             base.ClientID = request.TenantAccountId;
             ILog log = LogManager.GetLogger(GetType());
@@ -28,24 +28,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 con.Open();
 
-                if (request.ltype == "fb")
-                {
-
-                    //DateTime date = DateTime.ParseExact(request.Colvalues["birthday"].ToString(), "MM/dd/yyyy", CultureInfo.InvariantCulture);
-                    var cmd = InfraDatabaseFactory.InfraDB.GetNewCommand(con, "INSERT INTO eb_tenants (cname,firstname,gender,socialid) VALUES(@cname, @firstname,@gender,@socialid)ON CONFLICT(socialid) DO UPDATE SET cname=@cname RETURNING id ");
-                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("cname", System.Data.DbType.String, request.Colvalues["email"]));
-                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("firstname", System.Data.DbType.String, request.Colvalues["name"]));
-                    //cmd.Parameters.Add(df.InfraDB.GetNewParameter("birthday", System.Data.DbType.DateTime, date));
-                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("gender", System.Data.DbType.String, request.Colvalues["gender"]));
-                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("socialid", System.Data.DbType.String, request.Colvalues["id"]));
-
-                    InfraResponse res = new InfraResponse
-                    {
-                        id = Convert.ToInt32(cmd.ExecuteScalar())
-                    };
-                    return res;
-                }
-                else if (request.ltype == "G+")
+              if (request.ltype == "G+")
                 {
 
                     var cmd = InfraDatabaseFactory.InfraDB.GetNewCommand(con, "INSERT INTO eb_tenants (cname,firstname,gender,socialid,profileimg)VALUES(@cname, @firstname,@gender,@socialid,@profileimg)ON CONFLICT(socialid) DO UPDATE SET cname=@cname RETURNING id");
@@ -68,7 +51,6 @@ namespace ExpressBase.ServiceStack.Services
                 {
 
                     var cmd = InfraDatabaseFactory.InfraDB.GetNewCommand(con, "INSERT INTO eb_tenants (cname,password) VALUES ( @cname,@password) RETURNING id;");
-
                     cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("cname", System.Data.DbType.String, request.Colvalues["email"]));
                     cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("password", System.Data.DbType.String, request.Colvalues["password"]));
 
@@ -76,6 +58,11 @@ namespace ExpressBase.ServiceStack.Services
                     {
                         id = Convert.ToInt32(cmd.ExecuteScalar())
                     };
+                    if (res.id > 0)
+                    {
+                        await base.ResolveService<EmailServices>().Any(new EmailServicesRequest { To = request.Colvalues["email"].ToString(), Message = "XXXX", Subject = "YYYY" });
+
+                    }
                     return res;
 
                 }
