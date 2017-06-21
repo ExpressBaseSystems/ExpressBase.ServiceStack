@@ -18,22 +18,60 @@ namespace ExpressBase.ServiceStack
     [DefaultView("Form")]
     public class EbObjectService : EbBaseService
     {
+        ILog log = LogManager.GetLogger(GetType());        
         [Authenticate]
         public object Get(EbObjectRequest request)
         {
             base.ClientID = request.TenantAccountId;
 
             EbDataTable dt = null;
-            using (var con = this.DatabaseFactory.ObjectsDB.GetNewConnection())
-            {
-                con.Open();
-                string _obj_bytea = (request.Id > 0) ? ", EOV.obj_bytea" : string.Empty;
-                string _where_clause_part1 = (request.Id > 0) ? string.Format("AND EO.id={0} ", request.Id) : string.Empty;
+            List<EbObjectWrapper> f = new List<EbObjectWrapper>();
 
-                dt = this.DatabaseFactory.ObjectsDB.DoQuery(string.Format(@"
+            if (request.GetAllVer == true)
+            {
+                log.Info("#DS get -- entered GetAllVer == true");
+                using (var con = this.DatabaseFactory.ObjectsDB.GetNewConnection())
+                {
+                    con.Open();
+                    string _where_clause = (request.Id > 0) ? string.Format("WHERE eb_objects_id={0} ", request.Id) : string.Empty;
+
+                    dt = this.DatabaseFactory.ObjectsDB.DoQuery(string.Format(@"
+SELECT 
+    id,ver_num, obj_changelog, commit_ts, commit_uid {0}  
+FROM 
+    eb_objects_ver 
+{0}
+ORDER BY
+    ver_num", _where_clause));
+                };
+                foreach (EbDataRow dr in dt.Rows)
+                {
+                    var _form = (new EbObjectWrapper
+                    {
+                        Id = Convert.ToInt32(dr[0]),
+                        VersionNumber = Convert.ToInt32(dr[1]),
+                        ChangeLog = dr[2].ToString(),
+                        CommitTs =Convert.ToDateTime(dr[3]),
+                        CommitUid=Convert.ToInt32(dr[4])
+                        // ,Bytea = (request.Id > 0) ? dr[12] as byte[] : null
+                    });
+
+                    f.Add(_form);
+                }
+            }
+            else
+            {
+                using (var con = this.DatabaseFactory.ObjectsDB.GetNewConnection())
+                {
+                    con.Open();
+
+                    string _obj_bytea = (request.Id > 0) ? ", EOV.obj_bytea" : string.Empty;
+                    string _where_clause_part1 = (request.Id > 0) ? string.Format("AND EO.id={0} ", request.Id) : string.Empty;
+
+                    dt = this.DatabaseFactory.ObjectsDB.DoQuery(string.Format(@"
 SELECT 
     EO.id, EO.obj_name, EO.obj_type, EO.obj_last_ver_id, EO.obj_cur_status,EO.obj_desc,
-    EOV.id,EOV.eb_objects_id,EOV.ver_num, EOV.obj_changelog,EOV.commit_ts, EOV.commit_ts {0}  
+    EOV.id,EOV.eb_objects_id,EOV.ver_num, EOV.obj_changelog,EOV.commit_ts, EOV.commit_uid {0}  
 FROM 
     eb_objects EO
 INNER JOIN 
@@ -42,26 +80,24 @@ ON
     EO.id = EOV.eb_objects_id {1} AND EO.obj_last_ver_id =EOV.ver_num
 ORDER BY
     EO.obj_type", _obj_bytea, _where_clause_part1));
-            };
+                };
 
-            List<EbObjectWrapper> f = new List<EbObjectWrapper>();
-
-            foreach (EbDataRow dr in dt.Rows)
-            {
-                var _form = (new EbObjectWrapper
+                foreach (EbDataRow dr in dt.Rows)
                 {
-                    Id = Convert.ToInt32(dr[0]),
-                    Name = dr[1].ToString(),
-                    EbObjectType = (EbObjectType)Convert.ToInt32(dr[2]),
-                    Status = (ObjectLifeCycleStatus)dr[4],
-                    Description = dr[5].ToString(),
-                    VersionNumber = Convert.ToInt32(dr[8]),
-                    Bytea = (request.Id > 0) ? dr[12] as byte[] : null
-                });
+                    var _form = (new EbObjectWrapper
+                    {
+                        Id = Convert.ToInt32(dr[0]),
+                        Name = dr[1].ToString(),
+                        EbObjectType = (EbObjectType)Convert.ToInt32(dr[2]),
+                        Status = (ObjectLifeCycleStatus)dr[4],
+                        Description = dr[5].ToString(),
+                        VersionNumber = Convert.ToInt32(dr[8]),
+                        Bytea = (request.Id > 0) ? dr[12] as byte[] : null
+                    });
 
-                f.Add(_form);
+                    f.Add(_form);
+                }
             }
-
             return new EbObjectResponse { Data = f };
         }
 
@@ -79,13 +115,13 @@ ORDER BY
                 con.Open();
                 DbCommand cmd = null;
                 log.Info("#DS insert 1 -- con open");
-                if (request.IsSave =="true")
+                if (request.IsSave == "true")
                 {
                     log.Info("#DS insert -- con issave true");
                     cmd = this.DatabaseFactory.ObjectsDB.GetNewCommand(con, @"
 UPDATE eb_objects SET  obj_name=@obj_name, obj_desc=@obj_desc WHERE id=@id;
 UPDATE eb_objects_ver SET obj_bytea= @obj_bytea WHERE eb_objects_id = @id AND ver_num = @ver_num;");
-                    cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@ver_num", System.Data.DbType.Int32, request.VersionNumber));          
+                    cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@ver_num", System.Data.DbType.Int32, request.VersionNumber));
                 }
                 else
                 {
@@ -104,7 +140,7 @@ INSERT INTO eb_objects_ver (eb_objects_id,ver_num,obj_bytea,obj_changelog,commit
 INSERT INTO eb_objects (obj_name,obj_desc,obj_type,obj_last_ver_id,obj_cur_status) VALUES (@obj_name, @obj_desc, @obj_type,1,@obj_cur_status) RETURNING id;
 INSERT INTO eb_objects_ver (eb_objects_id,ver_num, obj_bytea,commit_uid,commit_ts) VALUES (currval('eb_objects_id_seq'),1,@obj_bytea,@commit_uid,now())");
                         cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_type", System.Data.DbType.Int32, (int)request.EbObjectType));
-                    }                   
+                    }
                 }
                 cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.Int32, request.Id));
                 cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_name", System.Data.DbType.String, request.Name));
@@ -116,11 +152,11 @@ INSERT INTO eb_objects_ver (eb_objects_id,ver_num, obj_bytea,commit_uid,commit_t
 
 
                 res.id = Convert.ToInt32(cmd.ExecuteScalar());
-              
+
                 return res;
             };
 
-           // return res;
+            // return res;
         }
     }
 }
