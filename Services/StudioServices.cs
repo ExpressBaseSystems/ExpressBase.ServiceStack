@@ -18,7 +18,7 @@ namespace ExpressBase.ServiceStack
     [DefaultView("Form")]
     public class EbObjectService : EbBaseService
     {
-        ILog log = LogManager.GetLogger(GetType());        
+       
         [Authenticate]
         public object Get(EbObjectRequest request)
         {
@@ -29,6 +29,7 @@ namespace ExpressBase.ServiceStack
 
             if (request.GetAllVer == true)
             {
+                ILog log = LogManager.GetLogger(GetType());
                 log.Info("#DS get -- entered GetAllVer == true");
                 using (var con = this.DatabaseFactory.ObjectsDB.GetNewConnection())
                 {
@@ -44,6 +45,7 @@ FROM
 ORDER BY
     ver_num", _where_clause));
                 };
+                log.Info("+++++++++dt =" + dt+ "+++++++++Id =" +request.Id);
                 foreach (EbDataRow dr in dt.Rows)
                 {
                     var _form = (new EbObjectWrapper
@@ -58,6 +60,7 @@ ORDER BY
 
                     f.Add(_form);
                 }
+                log.Info("+++++++++f =" + f);
             }
             else
             {
