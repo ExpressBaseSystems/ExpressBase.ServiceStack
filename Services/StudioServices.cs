@@ -38,7 +38,7 @@ namespace ExpressBase.ServiceStack
 
                     dt = this.DatabaseFactory.ObjectsDB.DoQuery(string.Format(@"
 SELECT 
-    id,ver_num, obj_changelog, commit_ts, commit_uid {0}  
+    id,ver_num, obj_changelog, commit_ts, commit_uid
 FROM 
     eb_objects_ver 
 {0}
