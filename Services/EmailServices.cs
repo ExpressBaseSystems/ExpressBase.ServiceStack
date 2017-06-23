@@ -27,7 +27,7 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     client.LocalDomain = "www.expressbase.com";
                     await client.ConnectAsync("smtp.gmail.com", 465, true).ConfigureAwait(false); 
-                    await client.AuthenticateAsync(new System.Net.NetworkCredential() { UserName = "binimvarghese@gmail.com", Password = "nibibininini" }).ConfigureAwait(false);
+                    await client.AuthenticateAsync(new System.Net.NetworkCredential() { UserName = "expressbasesystems@gmail.com", Password = "ebsystems" }).ConfigureAwait(false);
                     await client.SendAsync(emailMessage).ConfigureAwait(false);
                     await client.DisconnectAsync(true).ConfigureAwait(false);
                 }
