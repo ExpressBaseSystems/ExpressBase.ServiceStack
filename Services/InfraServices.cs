@@ -19,55 +19,55 @@ namespace ExpressBase.ServiceStack.Services
     [EnableCors]
     public class InfraServices : EbBaseService
     {
-        [Authenticate]
-        public async System.Threading.Tasks.Task<InfraResponse> Any(InfraRequest request)
-        {
-            base.ClientID = request.TenantAccountId;
-            ILog log = LogManager.GetLogger(GetType());
-            using (var con = InfraDatabaseFactory.InfraDB.GetNewConnection())
-            {
-                con.Open();
+        //[Authenticate]
+        //public async System.Threading.Tasks.Task<InfraResponse> Any(InfraRequest request)
+        //{
+        //    base.ClientID = request.TenantAccountId;
+        //    ILog log = LogManager.GetLogger(GetType());
+        //    using (var con = InfraDatabaseFactory.InfraDB.GetNewConnection())
+        //    {
+        //        con.Open();
 
-              if (request.ltype == "G+")
-                {
+        //      if (request.ltype == "G+")
+        //        {
 
-                    var cmd = InfraDatabaseFactory.InfraDB.GetNewCommand(con, "INSERT INTO eb_tenants (cname,firstname,gender,socialid,profileimg)VALUES(@cname, @firstname,@gender,@socialid,@profileimg)ON CONFLICT(socialid) DO UPDATE SET cname=@cname RETURNING id");
-                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("cname", System.Data.DbType.String, request.Colvalues["email"]));
-                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("firstname", System.Data.DbType.String, request.Colvalues["name"]));
-                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("gender", System.Data.DbType.String, request.Colvalues["gender"]));
-                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("socialid", System.Data.DbType.String, request.Colvalues["id"]));
-                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("profileimg", System.Data.DbType.String, string.Format("<img src='{0}' class='img-circle navbar-right img-cir'>", request.Colvalues["picture"])));
+        //            var cmd = InfraDatabaseFactory.InfraDB.GetNewCommand(con, "INSERT INTO eb_tenants (cname,firstname,gender,socialid,profileimg)VALUES(@cname, @firstname,@gender,@socialid,@profileimg)ON CONFLICT(socialid) DO UPDATE SET cname=@cname RETURNING id");
+        //            cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("cname", System.Data.DbType.String, request.Colvalues["email"]));
+        //            cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("firstname", System.Data.DbType.String, request.Colvalues["name"]));
+        //            cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("gender", System.Data.DbType.String, request.Colvalues["gender"]));
+        //            cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("socialid", System.Data.DbType.String, request.Colvalues["id"]));
+        //            cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("profileimg", System.Data.DbType.String, string.Format("<img src='{0}' class='img-circle navbar-right img-cir'>", request.Colvalues["picture"])));
 
 
-                    InfraResponse res = new InfraResponse
-                    {
-                        id = Convert.ToInt32(cmd.ExecuteScalar())
-                    };
-                    return res;
+        //            InfraResponse res = new InfraResponse
+        //            {
+        //                id = Convert.ToInt32(cmd.ExecuteScalar())
+        //            };
+        //            return res;
 
-                }
+        //        }
 
-                else
-                {
+        //        else
+        //        {
 
-                    var cmd = InfraDatabaseFactory.InfraDB.GetNewCommand(con, "INSERT INTO eb_tenants (cname,password) VALUES ( @cname,@password) RETURNING id;");
-                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("cname", System.Data.DbType.String, request.Colvalues["email"]));
-                    cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("password", System.Data.DbType.String, request.Colvalues["password"]));
+        //            var cmd = InfraDatabaseFactory.InfraDB.GetNewCommand(con, "INSERT INTO eb_tenants (cname,password,u_token) VALUES ( @cname,@password,md5( @cname || now())) RETURNING u_token;");
+        //            cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("cname", System.Data.DbType.String, request.Colvalues["email"]));
+        //            cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("password", System.Data.DbType.String, request.Colvalues["password"]));
 
-                    InfraResponse res = new InfraResponse
-                    {
-                        id = Convert.ToInt32(cmd.ExecuteScalar())
-                    };
-                    if (res.id > 0)
-                    {
-                        await base.ResolveService<EmailServices>().Any(new EmailServicesRequest { To = request.Colvalues["email"].ToString(), Message = "XXXX", Subject = "YYYY" });
+        //            InfraResponse res = new InfraResponse
+        //            {
+        //                u_token = cmd.ExecuteScalar().ToString()
+        //            };
+        //            if (!string.IsNullOrEmpty(res.u_token))
+        //            {
+        //                await base.ResolveService<EmailServices>().Any(new EmailServicesRequest { To = request.Colvalues["email"].ToString(), Message = "XXXX", Subject = "YYYY" });
 
-                    }
-                    return res;
+        //            }
+        //            return res;
 
-                }
-            }
-        }
+        //        }
+        //    }
+        //}
 
         [Authenticate]
         public TokenRequiredUploadResponse Any(TokenRequiredUploadRequest request)
