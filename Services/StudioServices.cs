@@ -26,10 +26,9 @@ namespace ExpressBase.ServiceStack
 
             EbDataTable dt = null;
             List<EbObjectWrapper> f = new List<EbObjectWrapper>();
-
+            ILog log = LogManager.GetLogger(GetType());
             if (request.GetAllVer == true)
-            {
-                ILog log = LogManager.GetLogger(GetType());
+            {             
                 log.Info("#DS get -- entered GetAllVer == true");
                 using (var con = this.DatabaseFactory.ObjectsDB.GetNewConnection())
                 {
@@ -38,14 +37,19 @@ namespace ExpressBase.ServiceStack
 
                     dt = this.DatabaseFactory.ObjectsDB.DoQuery(string.Format(@"
 SELECT 
-    id,ver_num, obj_changelog, commit_ts, commit_uid
+    EOV.id, EOV.ver_num, EOV.obj_changelog, EOV.commit_ts,
+    EU.firstname
 FROM 
-    eb_objects_ver 
+    eb_objects_ver EOV
+INNER JOIN 
+    eb_users EU
+ON
+EOV.commit_uid = EU.id 
 {0}
 ORDER BY
     ver_num", _where_clause));
-                };
-                log.Info("+++++++++dt =" + dt+ "+++++++++Id =" +request.Id);
+                    log.Info("_where_clause" + _where_clause);
+                };              
                 foreach (EbDataRow dr in dt.Rows)
                 {
                     var _form = (new EbObjectWrapper
@@ -54,13 +58,40 @@ ORDER BY
                         VersionNumber = Convert.ToInt32(dr[1]),
                         ChangeLog = dr[2].ToString(),
                         CommitTs =Convert.ToDateTime(dr[3]),
-                        CommitUid=Convert.ToInt32(dr[4])
+                        CommitUname=dr[4].ToString()
                         // ,Bytea = (request.Id > 0) ? dr[12] as byte[] : null
+                    });
+                    log.Info("******dr**** =" + dr + "+++++++++Id =" + request.Id );
+                    f.Add(_form);
+                }
+                log.Info("+++++++++f =" + f);
+            }
+            else if (request.GetParticularVer == true)
+            {
+                using (var con = this.DatabaseFactory.ObjectsDB.GetNewConnection())
+                {
+                    con.Open();
+                    log.Info("+++++++++con open GetParticularVer == true)");
+                    // string _where_clause = (request.Id > 0) ? string.Format("WHERE id={0} ", request.Id) : string.Empty;
+                    string _where_clause = string.Format("WHERE id={0} ", request.Id);
+                    dt = this.DatabaseFactory.ObjectsDB.DoQuery(string.Format(@"
+SELECT 
+    obj_bytea
+FROM 
+    eb_objects_ver
+{0}", _where_clause));
+                };
+                log.Info("+++++++++con open GetParticularVer == true dt=)+dt"+ dt);
+                foreach (EbDataRow dr in dt.Rows)
+                {
+                    var _form = (new EbObjectWrapper
+                    {
+                        // Bytea = (request.Id > 0) ? dr[12] as byte[] : null
+                        Bytea = dr[0] as byte[] 
                     });
 
                     f.Add(_form);
                 }
-                log.Info("+++++++++f =" + f);
             }
             else
             {
@@ -70,7 +101,6 @@ ORDER BY
 
                     string _obj_bytea = (request.Id > 0) ? ", EOV.obj_bytea" : string.Empty;
                     string _where_clause_part1 = (request.Id > 0) ? string.Format("AND EO.id={0} ", request.Id) : string.Empty;
-
                     dt = this.DatabaseFactory.ObjectsDB.DoQuery(string.Format(@"
 SELECT 
     EO.id, EO.obj_name, EO.obj_type, EO.obj_last_ver_id, EO.obj_cur_status,EO.obj_desc,
