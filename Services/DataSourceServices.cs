@@ -78,7 +78,7 @@ namespace ExpressBase.ServiceStack
                 }
                 this.Log.Info("GO**********************"+ _sql);
                 var _dataset = (request.Length > 0) ? this.DatabaseFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray()) : this.DatabaseFactory.ObjectsDB.DoQueries(_sql);
-                this.Log.Info("data here" + _dataset.Tables[1].Rows);
+                this.Log.Info(">>>>>> _dataset.Tables.Count: " + _dataset.Tables.Count);
                 dsresponse = new DataSourceDataResponse
                 {
                     Draw = request.Draw,

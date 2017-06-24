@@ -121,7 +121,7 @@ namespace ExpressBase.ServiceStack
                         AppSecret = "94ec1a04342e5cf7e7a971f2eb7ad7bc",
                         Permissions = new string[] { "email, public_profile" }
                     },
-                    new MyCredentialsAuthProvider(AppSettings)
+                    new CustomUserSession.MyCredentialsAuthProvider(AppSettings)
                     {
                         PersistSession = true
                     },
@@ -131,7 +131,8 @@ namespace ExpressBase.ServiceStack
             //Also works but it's recommended to handle 404's by registering at end of .NET Core pipeline
             //this.CustomErrorHttpHandlers[HttpStatusCode.NotFound] = new RazorHandler("/notfound");
 
-            Plugins.Add(new RegistrationFeature());
+            Plugins.Add(new EbRegistrationFeature());
+
 
             this.ContentTypes.Register(MimeTypes.ProtoBuf, (reqCtx, res, stream) => ProtoBuf.Serializer.NonGeneric.Serialize(stream, res), ProtoBuf.Serializer.NonGeneric.Deserialize);
 
@@ -140,6 +141,7 @@ namespace ExpressBase.ServiceStack
 
             var redisConnectionString = string.Format("redis://{0}@{1}:{2}?ssl=true",
                EbLiveSettings.RedisPassword,EbLiveSettings.RedisServer, EbLiveSettings.RedisPort);
+
             container.Register<IRedisClientsManager>(c => new RedisManagerPool(redisConnectionString));
 
             container.Register<IUserAuthRepository>(c => new RedisAuthRepository(c.Resolve<IRedisClientsManager>()));
@@ -152,7 +154,7 @@ namespace ExpressBase.ServiceStack
             //Add a request filter to check if the user has a session initialized
             this.GlobalRequestFilters.Add((req, res, requestDto) => 
             {
-                if (requestDto.GetType() != typeof(Authenticate) && requestDto.GetType() != typeof(GetAccessToken) && requestDto.GetType() != typeof(InfraRequest))
+                if (requestDto.GetType() != typeof(Authenticate) && requestDto.GetType() != typeof(GetAccessToken) && requestDto.GetType() != typeof(EmailServicesRequest) && requestDto.GetType() != typeof(Register))
                 {
                     var jwtoken = new JwtSecurityToken((requestDto as IEbSSRequest).Token);
                     if (jwtoken == null)
