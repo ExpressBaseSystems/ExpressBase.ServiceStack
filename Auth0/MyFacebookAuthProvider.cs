@@ -27,12 +27,12 @@ namespace ExpressBase.ServiceStack.Auth0
                     con.Open();
                     var cmd = _InfraDb.GetNewCommand(con, "INSERT INTO eb_tenants (cname,firstname,socialid,prolink) VALUES(@cname, @firstname,@socialid,@prolink) ON CONFLICT(socialid) DO UPDATE SET cname=@cname RETURNING id");
                     cmd.Parameters.Add(_InfraDb.GetNewParameter("cname", System.Data.DbType.String, session.ProviderOAuthAccess[0].Email));
-                    cmd.Parameters.Add(_InfraDb.GetNewParameter("firstname", System.Data.DbType.String, session.ProviderOAuthAccess[0].UserName));
-                    cmd.Parameters.Add(_InfraDb.GetNewParameter("socialid", System.Data.DbType.String, session.UserName));
+                    cmd.Parameters.Add(_InfraDb.GetNewParameter("firstname", System.Data.DbType.String, session.ProviderOAuthAccess[0].DisplayName));
+                    cmd.Parameters.Add(_InfraDb.GetNewParameter("socialid", System.Data.DbType.String, session.ProviderOAuthAccess[0].UserName));
                     cmd.Parameters.Add(_InfraDb.GetNewParameter("prolink", System.Data.DbType.String, session.ProviderOAuthAccess[0].Items["profileUrl"]));
                     cmd.ExecuteNonQuery();
                 }
-
+                
                 (session as CustomUserSession).Company = "expressbase";
                 (session as CustomUserSession).WhichConsole = "tc";
              
