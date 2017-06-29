@@ -121,6 +121,25 @@ namespace ExpressBase.ServiceStack
                         AppSecret = "94ec1a04342e5cf7e7a971f2eb7ad7bc",
                         Permissions = new string[] { "email, public_profile" }
                     },
+
+                    new MyTwitterAuthProvider(AppSettings)
+                    {
+                        ConsumerKey = "L0ryLVB5hCXy3qHUnyKiYezUk",
+                        ConsumerSecret = "61zVZ96nwJb7sadM7v8RMd1Te6jGUHvFcfjaz7vIUdZLXl0cwD",
+                        CallbackUrl = "https://localhost:44377/auth/twitter",
+                        
+                      //  RequestTokenUrl= "https://api.twitter.com/oauth/authenticate",
+                        
+                    },
+
+                    new MyGithubAuthProvider(AppSettings)
+                    {
+                    ClientId="07f639367f3e7f066ab9",
+                    ClientSecret="7ba2e0662f9dd9d3b7817ebf0adecc00e8ab5b6a",
+                    RedirectUrl ="https://localhost:44377/"
+
+                    },
+
                     new CustomUserSession.MyCredentialsAuthProvider(AppSettings)
                     {
                         PersistSession = true

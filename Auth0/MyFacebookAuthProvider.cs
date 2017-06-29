@@ -18,25 +18,24 @@ namespace ExpressBase.ServiceStack.Auth0
         public override object Authenticate(IServiceBase authService, IAuthSession session, Authenticate request)
         {
             var objret = base.Authenticate(authService, session, request);
-           
+
             if (!string.IsNullOrEmpty(session.FirstName))
             {
                 var _InfraDb = authService.TryResolve<DatabaseFactory>().InfraDB;
                 using (var con = _InfraDb.GetNewConnection())
                 {
                     con.Open();
-                    var cmd = _InfraDb.GetNewCommand(con, "INSERT INTO eb_tenants (cname,firstname,socialid,prolink) VALUES(@cname, @firstname,@socialid,@prolink) ON CONFLICT(socialid) DO UPDATE SET cname=@cname RETURNING id");
+                    var cmd = _InfraDb.GetNewCommand(con, "INSERT INTO eb_tenants (cname,firstname,socialid,prolink) VALUES(@cname, @firstname,@socialid,@prolink) ON CONFLICT(socialid) DO UPDATE SET loginattempts = eb_tenants.loginattempts + EXCLUDED.loginattempts RETURNING eb_tenants.loginattempts");
                     cmd.Parameters.Add(_InfraDb.GetNewParameter("cname", System.Data.DbType.String, session.ProviderOAuthAccess[0].Email));
-                    cmd.Parameters.Add(_InfraDb.GetNewParameter("firstname", System.Data.DbType.String, session.ProviderOAuthAccess[0].UserName));
-                    cmd.Parameters.Add(_InfraDb.GetNewParameter("socialid", System.Data.DbType.String, session.UserName));
+                    cmd.Parameters.Add(_InfraDb.GetNewParameter("firstname", System.Data.DbType.String, session.ProviderOAuthAccess[0].DisplayName));
+                    cmd.Parameters.Add(_InfraDb.GetNewParameter("socialid", System.Data.DbType.String, session.ProviderOAuthAccess[0].UserName));
                     cmd.Parameters.Add(_InfraDb.GetNewParameter("prolink", System.Data.DbType.String, session.ProviderOAuthAccess[0].Items["profileUrl"]));
-                    cmd.ExecuteNonQuery();
-                }
+                    int logatmp = Convert.ToInt32(cmd.ExecuteScalar());
 
-                (session as CustomUserSession).Company = "expressbase";
-                (session as CustomUserSession).WhichConsole = "tc";
-             
-                return authService.Redirect(SuccessRedirectUrlFilter(this, "http://localhost:53431/Ext/AfterSignInSocial?email="+session.Email+ "&socialId=" + session.UserName+ "&provider="+session.AuthProvider+ "&providerToken="+ session.ProviderOAuthAccess[0].AccessTokenSecret));
+                    //(session as CustomUserSession).Company = "expressbase";
+                    //(session as CustomUserSession).WhichConsole = "tc";
+                    return authService.Redirect(SuccessRedirectUrlFilter(this, "http://localhost:53431/Ext/AfterSignInSocial?email=" + session.ProviderOAuthAccess[0].Email + "&socialId=" + session.ProviderOAuthAccess[0].UserName + "&provider=" + session.AuthProvider + "&providerToken=" + session.ProviderOAuthAccess[0].AccessTokenSecret + "&lg=" + logatmp));
+                }
             }
 
             return objret;
