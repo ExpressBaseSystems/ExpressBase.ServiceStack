@@ -163,7 +163,7 @@ namespace ExpressBase.ServiceStack
 
             container.Register<IRedisClientsManager>(c => new RedisManagerPool(redisConnectionString));
 
-            container.Register<IUserAuthRepository>(c => new RedisAuthRepository(c.Resolve<IRedisClientsManager>()));
+            container.Register<IUserAuthRepository>(c => new EbRedisAuthRepository(c.Resolve<IRedisClientsManager>()));
 
             container.Register<JwtAuthProvider>(jwtprovider);
 

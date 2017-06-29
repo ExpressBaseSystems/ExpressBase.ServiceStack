@@ -1,4 +1,5 @@
 ﻿using ExpressBase.Data;
+using ExpressBase.Objects.ServiceStack_Artifacts;
 using ServiceStack;
 using ServiceStack.Auth;
 using ServiceStack.FluentValidation;
@@ -32,7 +33,7 @@ namespace ExpressBase.ServiceStack.Auth0
     public class EbRegisterServices : RegisterService
     {
         public new object Post(Register request)
-        {
+        { 
             var response = base.Post(request) as RegisterResponse;
             var _InfraDb = base.TryResolve<DatabaseFactory>().InfraDB as IDatabase;
             DbParameter[] parameters = {
@@ -41,8 +42,15 @@ namespace ExpressBase.ServiceStack.Auth0
             };
             EbDataTable dt = _InfraDb.DoQuery("INSERT INTO eb_tenants (cname,password,u_token) VALUES ( @cname,@password,md5( @cname || now())) RETURNING id,u_token;", parameters);
 
-            response.UserId = dt.Rows[0][0].ToString();
+            //var authRepo = HostContext.AppHost.GetAuthRepository(base.Request);
+            //authRepo.DeleteUserAuth(response.UserId);                               // we dont want servicestack authuser.id in redis
+            //var existingUser1 = authRepo.GetUserAuth(base.GetSession(), null);
+            //var existingUser2 = authRepo.GetUserAuth(base.GetSession(), null);
+            //existingUser2.Id = Convert.ToInt32(dt.Rows[0][0]);
+            //authRepo.UpdateUserAuth(existingUser1, existingUser2, request.Password);
+
             response.UserName = dt.Rows[0][1].ToString();
+            response.UserId = dt.Rows[0][0].ToString();
             return response;
         }
     }
