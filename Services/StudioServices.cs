@@ -47,7 +47,7 @@ ON
 EOV.commit_uid = EU.id 
 {0}
 ORDER BY
-    ver_num", _where_clause));
+    ver_num DESC", _where_clause));
                     log.Info("_where_clause" + _where_clause);
                 };              
                 foreach (EbDataRow dr in dt.Rows)
@@ -61,10 +61,8 @@ ORDER BY
                         CommitUname=dr[4].ToString()
                         // ,Bytea = (request.Id > 0) ? dr[12] as byte[] : null
                     });
-                    log.Info("******dr**** =" + dr + "+++++++++Id =" + request.Id );
                     f.Add(_form);
                 }
-                log.Info("+++++++++f =" + f);
             }
             else if (request.GetParticularVer == true)
             {
@@ -80,8 +78,7 @@ SELECT
 FROM 
     eb_objects_ver
 {0}", _where_clause));
-                };
-                log.Info("+++++++++con open GetParticularVer == true dt=)+dt"+ dt);
+                };              
                 foreach (EbDataRow dr in dt.Rows)
                 {
                     var _form = (new EbObjectWrapper
@@ -89,7 +86,6 @@ FROM
                         // Bytea = (request.Id > 0) ? dr[12] as byte[] : null
                         Bytea = dr[0] as byte[] 
                     });
-
                     f.Add(_form);
                 }
             }
