@@ -267,29 +267,23 @@ namespace ExpressBase.ServiceStack.Services
                     }
                     else if (request.op == "updatetenant")
                     {
-                        var cmd = InfraDatabaseFactory.InfraDB.GetNewCommand(con, "UPDATE eb_tenants SET company=@company,employees=@employees,country=@country,phone=@phone WHERE id=@id RETURNING id");
+                        var cmd = InfraDatabaseFactory.InfraDB.GetNewCommand(con, "UPDATE eb_tenants SET firstname=@firstname,company=@company,employees=@employees,designation=@designation,phone=@phone,profileimg=@profileimg WHERE id=@id RETURNING id");
 
-                        cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("company", System.Data.DbType.String, request.Colvalues["company"]));
-                        cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("employees", System.Data.DbType.String, request.Colvalues["employees"]));
-                        cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("country", System.Data.DbType.String, request.Colvalues["country"]));
-                        cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("phone", System.Data.DbType.String, request.Colvalues["phone"]));
-                        cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("id", System.Data.DbType.Int64, request.Colvalues["id"]));
+                        cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("firstname", System.Data.DbType.String, request.Colvalues["Name"]));
+                        cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("company", System.Data.DbType.String, request.Colvalues["Company"]));
+                        cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("employees", System.Data.DbType.String, request.Colvalues["Employees"]));
+                        cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("designation", System.Data.DbType.String, request.Colvalues["Designation"]));
+                        cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("phone", System.Data.DbType.String, request.Colvalues["Phone"]));
+                        cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("id", System.Data.DbType.Int64, request.UserId));
+                        cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("profileimg", System.Data.DbType.String, string.Format("<img src='{0}'/>", request.Colvalues["proimg"])));
                         resp = new TokenRequiredUploadResponse
                         {
                             id = Convert.ToInt32(cmd.ExecuteScalar())
                         };
+
+                        //base.Redis.Set<string>(string.Format("uid_{0}_pimg", resp.id), string.Format("<img src='{0}'class='img-circle img-cir'/>", request.Colvalues["proimg"]));
                     }
-                    else if (request.op == "tenantimgupload")
-                    {
-                        var cmd = InfraDatabaseFactory.InfraDB.GetNewCommand(con, "UPDATE eb_tenants SET profileimg=@profileimg WHERE id=@id RETURNING id");
-                        cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("profileimg", System.Data.DbType.String, string.Format("<img src='{0}'class='img-circle img-cir'/>", request.Colvalues["proimg"])));
-                        cmd.Parameters.Add(InfraDatabaseFactory.InfraDB.GetNewParameter("id", System.Data.DbType.Int64, request.Colvalues["id"]));
-                        resp = new TokenRequiredUploadResponse
-                        {
-                            id = Convert.ToInt32(cmd.ExecuteScalar())
-                        };
-                        base.Redis.Set<string>(string.Format("uid_{0}_pimg", resp.id), string.Format("<img src='{0}'class='img-circle img-cir'/>", request.Colvalues["proimg"]));
-                    }
+                   
                     else if (request.Colvalues.ContainsKey("edit") && request.Colvalues["edit"].ToString() == "edit")
                     {
                         Dictionary<string, object> dict = new Dictionary<string, object>();
