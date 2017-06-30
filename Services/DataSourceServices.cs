@@ -14,7 +14,8 @@ namespace ExpressBase.ServiceStack
     [DefaultView("ds")]
     public class DataSourceService : EbBaseService
     {
-        [Authenticate][CompressResponse]
+        [Authenticate]
+        [CompressResponse]
         public DataSourceDataResponse Post(DataSourceDataRequest request)
         {
             this.Log.Info("data request");
@@ -72,11 +73,12 @@ namespace ExpressBase.ServiceStack
                     this.DatabaseFactory.ObjectsDB.GetNewParameter("@offset", System.Data.DbType.Int32, request.Start),
                 });
 
-                if (request.Params != null) {
+                if (request.Params != null)
+                {
                     foreach (Dictionary<string, string> param in request.Params)
                         parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter(string.Format("@{0}", param["name"]), (System.Data.DbType)Convert.ToInt32(param["type"]), param["value"]));
                 }
-                this.Log.Info("GO**********************"+ _sql);
+                this.Log.Info("GO**********************" + _sql);
                 var _dataset = (request.Length > 0) ? this.DatabaseFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray()) : this.DatabaseFactory.ObjectsDB.DoQueries(_sql);
                 this.Log.Info(">>>>>> _dataset.Tables.Count: " + _dataset.Tables.Count);
                 dsresponse = new DataSourceDataResponse
@@ -86,7 +88,7 @@ namespace ExpressBase.ServiceStack
                     RecordsTotal = (request.Length > 0) ? Convert.ToInt32(_dataset.Tables[0].Rows[0][0]) : _dataset.Tables[0].Rows.Count,
                     RecordsFiltered = (request.Length > 0) ? Convert.ToInt32(_dataset.Tables[0].Rows[0][0]) : _dataset.Tables[0].Rows.Count
                 };
-                this.Log.Info("dsresponse*****"+ dsresponse.Data);
+                this.Log.Info("dsresponse*****" + dsresponse.Data);
             }
 
             //return this.Request.ToOptimizedResult<DataSourceDataResponse>(dsresponse);
@@ -98,17 +100,17 @@ namespace ExpressBase.ServiceStack
         public DataSourceColumnsResponse Any(DataSourceColumnsRequest request)
         {
             base.ClientID = request.TenantAccountId;
+            ColumnColletion columns = null;
+            //ColumnColletion columns = this.Redis.Get<ColumnColletion>(string.Format("{0}_ds_{1}_columns", request.TenantAccountId, request.Id));
+            //if (columns == null || columns.Count == 0)
+            //{
+            request.SearchText = base.Request.QueryString["searchtext"];
+            request.SearchText = string.IsNullOrEmpty(request.SearchText) ? "" : request.SearchText; // @txtsearch
+            request.OrderByDirection = base.Request.QueryString["order[0][dir]"]; //@order_dir
+            request.SelectedColumnName = base.Request.QueryString["col"]; // @selcol
 
-            ColumnColletion columns = this.Redis.Get<ColumnColletion>(string.Format("{0}_ds_{1}_columns", request.TenantAccountId, request.Id));
-            if (columns == null || columns.Count == 0)
-            {
-                request.SearchText = base.Request.QueryString["searchtext"];
-                request.SearchText = string.IsNullOrEmpty(request.SearchText) ? "" : request.SearchText; // @txtsearch
-                request.OrderByDirection = base.Request.QueryString["order[0][dir]"]; //@order_dir
-                request.SelectedColumnName = base.Request.QueryString["col"]; // @selcol
-
-                //string _sql = string.Format("SELECT obj_bytea FROM eb_objects_ver WHERE id={0}", request.Id);
-                string _sql = string.Format(@"
+            //string _sql = string.Format("SELECT obj_bytea FROM eb_objects_ver WHERE id={0}", request.Id);
+            string _sql = string.Format(@"
 SELECT 
     EOV.obj_bytea 
 FROM 
@@ -118,50 +120,53 @@ WHERE
     EO.obj_last_ver_id = EOV.ver_num AND 
     EO.id = {0}", request.Id);
 
-                var dt = this.DatabaseFactory.ObjectsDB.DoQuery(_sql);
-                Log.Info("dt.Rows.Count********" + dt.Rows.Count);
-                if (dt.Rows.Count > 0)
+            var dt = this.DatabaseFactory.ObjectsDB.DoQuery(_sql);
+            Log.Info("dt.Rows.Count********" + dt.Rows.Count);
+            if (dt.Rows.Count > 0)
+            {
+                var _ds = EbSerializers.ProtoBuf_DeSerialize<EbDataSource>((byte[])dt.Rows[0][0]);
+                Log.Info("sql********" + _ds.Sql);
+                if (_ds != null)
                 {
-                    var _ds = EbSerializers.ProtoBuf_DeSerialize<EbDataSource>((byte[])dt.Rows[0][0]);
-                    Log.Info("sql********"+_ds.Sql);
-                    if (_ds != null)
-                    {
-                        _sql = _ds.Sql.Replace("@and_search",
-                            (string.IsNullOrEmpty(request.SearchText)) ? string.Empty : string.Format("AND {0}::text LIKE '%{1}%'", request.SelectedColumnName, request.SearchText));
+                    _sql = _ds.Sql.Replace("@and_search",
+                        (string.IsNullOrEmpty(request.SearchText)) ? string.Empty : string.Format("AND {0}::text LIKE '%{1}%'", request.SelectedColumnName, request.SearchText));
 
-                        _sql = _sql.Replace("@orderby",
-                        (string.IsNullOrEmpty(request.SelectedColumnName)) ? "id" : string.Format("{0} {1}", request.SelectedColumnName, request.OrderByDirection));
-                        
-                        var parameters = new List<System.Data.Common.DbParameter>();
-                        parameters.AddRange(new System.Data.Common.DbParameter[]
-                        {
+                    _sql = _sql.Replace("@orderby",
+                    (string.IsNullOrEmpty(request.SelectedColumnName)) ? "id" : string.Format("{0} {1}", request.SelectedColumnName, request.OrderByDirection));
+
+                    var parameters = new List<System.Data.Common.DbParameter>();
+                    parameters.AddRange(new System.Data.Common.DbParameter[]
+                    {
                             this.DatabaseFactory.ObjectsDB.GetNewParameter("@limit", System.Data.DbType.Int32, 0),
                             this.DatabaseFactory.ObjectsDB.GetNewParameter("@offset", System.Data.DbType.Int32, 0),
-                        });
+                    });
 
-                        if (request.Params != null)
-                        {
-                            foreach (Dictionary<string, string> param in request.Params)
-                                parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter(string.Format("@{0}", param["name"]), (System.Data.DbType)Convert.ToInt32(param["type"]), param["value"]));
-                        }
+                    if (request.Params != null)
+                    {
+                        foreach (Dictionary<string, string> param in request.Params)
+                            parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter(string.Format("@{0}", param["name"]), (System.Data.DbType)Convert.ToInt32(param["type"]), param["value"]));
+                    }
 
-                        Log.Info("reached Here....");
-                        _sql = (_sql.IndexOf(";") > 0) ? _sql.Substring(_sql.IndexOf(";") + 1) : _sql;
-                        try
-                        {
-                            Log.Info("_sql: " + _sql);
-                            var dt2 = this.DatabaseFactory.ObjectsDB.DoQuery(_sql, parameters.ToArray());
-                            columns = dt2.Columns;
-                            Log.Info(columns);
-                            this.Redis.Set<ColumnColletion>(string.Format("{0}_ds_{1}_columns", request.TenantAccountId, request.Id), columns);
-                        }
-                        catch (Exception e)
-                        {
-                            Log.Info("e.Message" + e.Message);
-                        }
+                    Log.Info("reached Here....");
+                    _sql = (_sql.IndexOf(";") > 0) ? _sql.Substring(_sql.IndexOf(";") + 1) : _sql;
+                    try
+                    {
+                        Log.Info("_sql: " + _sql);
+                        var dt2 = this.DatabaseFactory.ObjectsDB.DoQuery(_sql, parameters.ToArray());
+                        columns = dt2.Columns;
+                        Log.Info(columns);
+                        this.Redis.Set<ColumnColletion>(string.Format("{0}_ds_{1}_columns", request.TenantAccountId, request.Id), columns);
+                    }
+                    catch (Exception e)
+                    {
+                        Log.Info("e.Message" + e.Message);
+                        columns = this.Redis.Get<ColumnColletion>(string.Format("{0}_ds_{1}_columns", request.TenantAccountId, request.Id));
+                        if (columns != null || columns.Count > 0)
+                            this.Redis.Remove(string.Format("{0}_ds_{1}_columns", request.TenantAccountId, request.Id));
                     }
                 }
             }
+            // }
 
             return new DataSourceColumnsResponse
             {
