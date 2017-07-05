@@ -48,15 +48,15 @@ namespace ExpressBase.ServiceStack.Auth0
                 //var userId = newUser.Id.ToString(CultureInfo.InvariantCulture);
                 //redis.SetEntryInHash(IndexEmailToUserId, newUser.Email, userId);
 
-                redis.Store(newUser);
+                redis.Set<IUserAuth>(string.Format("{0}_{1}",newUser.Email,newUser.DisplayName), newUser);
 
                 return newUser;
             }
         }
 
-       new public IUserAuth UpdateUserAuth(IUserAuth existingUser, IUserAuth newUser, string password)
+         new public IUserAuth UpdateUserAuth(IUserAuth existingUser, IUserAuth newUser, string password)
         {
-            newUser.ValidateNewUser(password);
+           // newUser.ValidateNewUser(password);
 
             using (var redis = this.Factory.GetClient())
             {
@@ -91,7 +91,7 @@ namespace ExpressBase.ServiceStack.Auth0
                 newUser.CreatedDate = existingUser.CreatedDate;
                 newUser.ModifiedDate = DateTime.UtcNow;
 
-              //  var userId = newUser.Id.ToString(CultureInfo.InvariantCulture);
+                //  var userId = newUser.Id.ToString(CultureInfo.InvariantCulture);
                 //if (!newUser.UserName.IsNullOrEmpty())
                 //{
                 //    redis.SetEntryInHash(IndexUserNameToUserId, newUser.UserName, userId);
@@ -101,7 +101,7 @@ namespace ExpressBase.ServiceStack.Auth0
                 //    redis.SetEntryInHash(IndexEmailToUserId, newUser.Email, userId);
                 //}
 
-                redis.Store(newUser);
+                redis.Set<IUserAuth>(string.Format("{0}_{1}", newUser.Email, newUser.DisplayName), newUser);
 
                 return newUser;
             }
