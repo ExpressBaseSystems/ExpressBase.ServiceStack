@@ -1,14 +1,9 @@
 ﻿using System.Collections.Generic;
 using ServiceStack;
-using ServiceStack.DataAnnotations;
-using ServiceStack.Text;
-using System.Runtime.Serialization;
-using ExpressBase.Common;
 using ExpressBase.Data;
 using System;
 using ExpressBase.Objects;
 using System.Data.Common;
-using System.IdentityModel.Tokens.Jwt;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ServiceStack.Logging;
 
@@ -18,102 +13,97 @@ namespace ExpressBase.ServiceStack
     [DefaultView("Form")]
     public class EbObjectService : EbBaseService
     {
-       
+        private const string Query1 = @"
+SELECT 
+    EOV.id, EOV.ver_num, EOV.obj_changelog, EOV.commit_ts, EU.firstname
+FROM 
+    eb_objects_ver EOV, eb_users EU
+WHERE
+    EOV.commit_uid = EU.id AND
+    EOV.eb_objects_id=@id
+ORDER BY
+    ver_num DESC";
+
+        private const string Query2 = "SELECT obj_bytea FROM eb_objects_ver WHERE id=@id";
+
+        private const string Query3 = @"
+SELECT 
+    EO.id, EO.obj_name, EO.obj_type, EO.obj_last_ver_id, EO.obj_cur_status,EO.obj_desc,
+    EOV.id,EOV.eb_objects_id,EOV.ver_num, EOV.obj_changelog,EOV.commit_ts, EOV.commit_uid, EOV.obj_bytea
+FROM 
+    eb_objects EO, eb_objects_ver EOV
+WHERE
+    EO.id = EOV.eb_objects_id AND EO.id=@id AND EO.obj_last_ver_id=EOV.ver_num
+ORDER BY
+    EO.obj_type";
+
+        private const string Query4 = @"
+SELECT 
+    EO.id, EO.obj_name, EO.obj_type, EO.obj_last_ver_id, EO.obj_cur_status,EO.obj_desc,
+    EOV.id,EOV.eb_objects_id,EOV.ver_num, EOV.obj_changelog,EOV.commit_ts, EOV.commit_uid
+FROM 
+    eb_objects EO, eb_objects_ver EOV
+WHERE
+    EO.id = EOV.eb_objects_id AND EO.id=@id AND EO.obj_last_ver_id=EOV.ver_num AND
+    EO.obj_type=@type
+ORDER BY
+    EO.obj_type";
+
         [Authenticate]
+        [CompressResponse]
         public object Get(EbObjectRequest request)
         {
             base.ClientID = request.TenantAccountId;
 
-            EbDataTable dt = null;
             List<EbObjectWrapper> f = new List<EbObjectWrapper>();
             ILog log = LogManager.GetLogger(GetType());
-            if (request.GetAllVer == true)
-            {             
-                log.Info("#DS get -- entered GetAllVer == true");
-                using (var con = this.DatabaseFactory.ObjectsDB.GetNewConnection())
-                {
-                    con.Open();
-                    string _where_clause = (request.Id > 0) ? string.Format("WHERE eb_objects_id={0} ", request.Id) : string.Empty;
+            List<System.Data.Common.DbParameter> parameters = new List<System.Data.Common.DbParameter>();
 
-                    dt = this.DatabaseFactory.ObjectsDB.DoQuery(string.Format(@"
-SELECT 
-    EOV.id, EOV.ver_num, EOV.obj_changelog, EOV.commit_ts,
-    EU.firstname
-FROM 
-    eb_objects_ver EOV
-INNER JOIN 
-    eb_users EU
-ON
-EOV.commit_uid = EU.id 
-{0}
-ORDER BY
-    ver_num DESC", _where_clause));
-                    log.Info("_where_clause" + _where_clause);
-                };              
+            // Fetch all version without bytea
+            if (request.Id > 0 && request.VersionId < Int32.MaxValue)
+            {             
+                parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.Int32, request.Id));
+                var dt = this.DatabaseFactory.ObjectsDB.DoQuery(Query1, parameters.ToArray());
+
                 foreach (EbDataRow dr in dt.Rows)
                 {
-                    var _form = (new EbObjectWrapper
+                    var _ebObject = (new EbObjectWrapper
                     {
                         Id = Convert.ToInt32(dr[0]),
                         VersionNumber = Convert.ToInt32(dr[1]),
                         ChangeLog = dr[2].ToString(),
                         CommitTs =Convert.ToDateTime(dr[3]),
                         CommitUname=dr[4].ToString()
-                        // ,Bytea = (request.Id > 0) ? dr[12] as byte[] : null
                     });
-                    f.Add(_form);
+                    f.Add(_ebObject);
                 }
             }
-            else if (request.GetParticularVer == true)
+
+            // Fetch particular version with Bytea
+            if (request.VersionId > 0 && request.VersionId < Int32.MaxValue)
             {
-                using (var con = this.DatabaseFactory.ObjectsDB.GetNewConnection())
-                {
-                    con.Open();
-                    log.Info("+++++++++con open GetParticularVer == true)");
-                    // string _where_clause = (request.Id > 0) ? string.Format("WHERE id={0} ", request.Id) : string.Empty;
-                    string _where_clause = string.Format("WHERE id={0} ", request.Id);
-                    dt = this.DatabaseFactory.ObjectsDB.DoQuery(string.Format(@"
-SELECT 
-    obj_bytea
-FROM 
-    eb_objects_ver
-{0}", _where_clause));
-                };              
+                parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.Int32, request.VersionId));
+                var dt = this.DatabaseFactory.ObjectsDB.DoQuery(Query1, parameters.ToArray());
+           
                 foreach (EbDataRow dr in dt.Rows)
                 {
-                    var _form = (new EbObjectWrapper
+                    var _ebObject = (new EbObjectWrapper
                     {
-                        // Bytea = (request.Id > 0) ? dr[12] as byte[] : null
                         Bytea = dr[0] as byte[] 
                     });
-                    f.Add(_form);
+                    f.Add(_ebObject);
                 }
             }
-            else
-            {
-                using (var con = this.DatabaseFactory.ObjectsDB.GetNewConnection())
-                {
-                    con.Open();
 
-                    string _obj_bytea = (request.Id > 0) ? ", EOV.obj_bytea" : string.Empty;
-                    string _where_clause_part1 = (request.Id > 0) ? string.Format("AND EO.id={0} ", request.Id) : string.Empty;
-                    dt = this.DatabaseFactory.ObjectsDB.DoQuery(string.Format(@"
-SELECT 
-    EO.id, EO.obj_name, EO.obj_type, EO.obj_last_ver_id, EO.obj_cur_status,EO.obj_desc,
-    EOV.id,EOV.eb_objects_id,EOV.ver_num, EOV.obj_changelog,EOV.commit_ts, EOV.commit_uid {0}  
-FROM 
-    eb_objects EO
-INNER JOIN 
-    eb_objects_ver EOV
-ON 
-    EO.id = EOV.eb_objects_id {1} AND EO.obj_last_ver_id =EOV.ver_num
-ORDER BY
-    EO.obj_type", _obj_bytea, _where_clause_part1));
-                };
+            // Fetch latest version with bytea
+            if (request.Id > 0 && request.VersionId == Int32.MaxValue)
+            {
+                parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.Int32, request.Id));
+                var dt = this.DatabaseFactory.ObjectsDB.DoQuery(Query3, parameters.ToArray());
 
                 foreach (EbDataRow dr in dt.Rows)
                 {
-                    var _form = (new EbObjectWrapper
+                    var _ebObject = (new EbObjectWrapper
                     {
                         Id = Convert.ToInt32(dr[0]),
                         Name = dr[1].ToString(),
@@ -124,16 +114,39 @@ ORDER BY
                         Bytea = (request.Id > 0) ? dr[12] as byte[] : null
                     });
 
-                    f.Add(_form);
+                    f.Add(_ebObject);
                 }
             }
+
+            // Get All latest of this Object Type without Bytea
+            if (request.Id == 0 && request.VersionId == Int32.MaxValue)
+            {
+                parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.Int32, request.Id));
+                parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@type", System.Data.DbType.Int32, request.EbObjectType));
+                var dt = this.DatabaseFactory.ObjectsDB.DoQuery(Query4, parameters.ToArray());
+
+                foreach (EbDataRow dr in dt.Rows)
+                {
+                    var _ebObject = (new EbObjectWrapper
+                    {
+                        Id = Convert.ToInt32(dr[0]),
+                        Name = dr[1].ToString(),
+                        EbObjectType = (EbObjectType)Convert.ToInt32(dr[2]),
+                        Status = (ObjectLifeCycleStatus)dr[4],
+                        Description = dr[5].ToString(),
+                        VersionNumber = Convert.ToInt32(dr[8])
+                    });
+
+                    f.Add(_ebObject);
+                }
+            }
+
             return new EbObjectResponse { Data = f };
         }
 
         [Authenticate]
         public EbObjectWrapperResponse Post(EbObjectWrapper request)
         {
-
             ILog log = LogManager.GetLogger(GetType());
             log.Info("#DS insert -- entered post");
             bool result = false;
