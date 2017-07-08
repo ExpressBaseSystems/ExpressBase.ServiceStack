@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Data.Common;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Runtime.Loader;
@@ -69,6 +70,19 @@ namespace ExpressBase.ServiceStack.Services
         //    }
         //}
 
+        private string GeneratePassword()
+        {
+            string strPwdchar = "abcdefghijklmnopqrstuvwxyz0123456789#+@&$ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            string strPwd = "";
+            Random rnd = new Random();
+            for (int i = 0; i <= 7; i++)
+            {
+                int iRandom = rnd.Next(0, strPwdchar.Length - 1);
+                strPwd += strPwdchar.Substring(iRandom, 1);
+            }
+            return strPwd;
+        }
+
         [Authenticate]
         public TokenRequiredUploadResponse Any(TokenRequiredUploadRequest request)
         {
@@ -76,24 +90,45 @@ namespace ExpressBase.ServiceStack.Services
 
             ILog log = LogManager.GetLogger(GetType());
 
-            if (request.TenantAccountId!="expressbase")
+            if (request.TenantAccountId != "expressbase")
             {
                 base.ClientID = request.TenantAccountId;
                 using (var con = base.DatabaseFactory.ObjectsDB.GetNewConnection())
                 {
                     con.Open();
-                    var cmd = base.DatabaseFactory.ObjectsDB.GetNewCommand(con, "UPDATE eb_users SET locale=@locale,timezone=@timezone,dateformat=@dateformat,numformat=@numformat,timezonefull=@timezonefull WHERE id=@id");
-                    cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("locale", System.Data.DbType.String, request.Colvalues["locale"]));
-                    cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("timezone", System.Data.DbType.String, request.Colvalues["timecode"]));
-                    cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("dateformat", System.Data.DbType.String, request.Colvalues["dateformat"]));
-                    cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("numformat", System.Data.DbType.String, request.Colvalues["numformat"]));
-                    cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("timezonefull", System.Data.DbType.String, request.Colvalues["timezone"]));
-                    cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("id", System.Data.DbType.Int64, request.Colvalues["uid"]));
-                    resp = new TokenRequiredUploadResponse
+                    if (request.op == "createuser")
                     {
-                        id = Convert.ToInt32(cmd.ExecuteScalar())
+                        string sql = "INSERT INTO eb_users (firstname,email,pwd) VALUES (@firstname,@email,@pwd) RETURNING id,pwd;";
+                        sql += "INSERT INTO eb_role2user (role_id,user_id) SELECT id, (CURRVAL('eb_users_id_seq')) FROM UNNEST(@roles) AS id";
+                        DbParameter[] parameters = { base.DatabaseFactory.ObjectsDB.GetNewParameter("firstname", System.Data.DbType.String, request.Colvalues["firstname"]),
+                            base.DatabaseFactory.ObjectsDB.GetNewParameter("email", System.Data.DbType.String, request.Colvalues["email"]),
+                            base.DatabaseFactory.ObjectsDB.GetNewParameter("roles", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer, request.Colvalues["roles"].ToString().Split(',').Select(n => Convert.ToInt32(n)).ToArray()),
+                            base.DatabaseFactory.ObjectsDB.GetNewParameter("pwd", System.Data.DbType.String,string.IsNullOrEmpty(request.Colvalues["pwd"].ToString())? GeneratePassword() :request.Colvalues["pwd"] )};
 
-                    };
+                        EbDataSet dt = base.DatabaseFactory.ObjectsDB.DoQueries(sql, parameters);
+
+                        if (!request.Colvalues.ContainsKey("pwd"))
+                        {
+                            //send mail
+                        }
+
+                    }
+                    else
+                    {
+                        var cmd = base.DatabaseFactory.ObjectsDB.GetNewCommand(con, "UPDATE eb_users SET locale=@locale,timezone=@timezone,dateformat=@dateformat,numformat=@numformat,timezonefull=@timezonefull WHERE id=@id");
+                        cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("locale", System.Data.DbType.String, request.Colvalues["locale"]));
+                        cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("timezone", System.Data.DbType.String, request.Colvalues["timecode"]));
+                        cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("dateformat", System.Data.DbType.String, request.Colvalues["dateformat"]));
+                        cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("numformat", System.Data.DbType.String, request.Colvalues["numformat"]));
+                        cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("timezonefull", System.Data.DbType.String, request.Colvalues["timezone"]));
+                        cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("id", System.Data.DbType.Int64, request.Colvalues["uid"]));
+                        resp = new TokenRequiredUploadResponse
+                        {
+                            id = Convert.ToInt32(cmd.ExecuteScalar())
+
+                        };
+                    }
+
                 }
             }
             else
@@ -179,11 +214,11 @@ namespace ExpressBase.ServiceStack.Services
                         int i = 0;
                         try
                         {
-                            _con_d1.Open(); 
+                            _con_d1.Open();
                             i++;
                             _con_d2.Open(); _con_d2.Close();
                             i++;
-                            _con_o1.Open(); 
+                            _con_o1.Open();
                             i++;
                             _con_o2.Open(); _con_o2.Close();
                             i++;
@@ -197,7 +232,7 @@ namespace ExpressBase.ServiceStack.Services
 
                             _con_d1_trans = _con_d1.BeginTransaction();
                             _con_o1_trans = _con_o1.BeginTransaction();
-                            
+
                         }
                         catch (Exception ex)
                         {
@@ -283,7 +318,7 @@ namespace ExpressBase.ServiceStack.Services
 
                         //base.Redis.Set<string>(string.Format("uid_{0}_pimg", resp.id), string.Format("<img src='{0}'class='img-circle img-cir'/>", request.Colvalues["proimg"]));
                     }
-                   
+
                     else if (request.Colvalues.ContainsKey("edit") && request.Colvalues["edit"].ToString() == "edit")
                     {
                         Dictionary<string, object> dict = new Dictionary<string, object>();
@@ -417,65 +452,83 @@ namespace ExpressBase.ServiceStack.Services
         [Authenticate]
         public TokenRequiredSelectResponse Any(TokenRequiredSelectRequest request)
         {
-            base.ClientID = request.TenantAccountId;
-
-            using (var con = InfraDatabaseFactory.InfraDB.GetNewConnection())
+            if (request.TenantAccountId != "expressbase")
             {
-                con.Open();
-                if (request.restype == "img")
+                base.ClientID = request.TenantAccountId;
+                TokenRequiredSelectResponse resp = new TokenRequiredSelectResponse();
+                if (request.restype == "roles")
                 {
-                    string sql = string.Format("SELECT id,profileimg FROM eb_tenants WHERE id={0}", request.Uid);
-                    var dt = InfraDatabaseFactory.InfraDB.DoQuery(sql);
-                    // Dictionary<int, string> list = new Dictionary<int, string>();
-                    List<List<object>> list = new List<List<object>>();
+                    string sql = string.Format("SELECT id,role_name FROM eb_roles");
+                    var dt = base.DatabaseFactory.ObjectsDB.DoQuery(sql);
+                    Dictionary<string, object> returndata = new Dictionary<string, object>();
                     foreach (EbDataRow dr in dt.Rows)
                     {
-                        list.Add(new List<object> { Convert.ToInt32(dr[0]), dr[1].ToString() });
+                        returndata[dr[0].ToString()] = dr[1].ToString();
                     }
-                    TokenRequiredSelectResponse resp = new TokenRequiredSelectResponse()
-                    {
-                        returnlist = list
-                    };
-                    return resp;
+                    resp.Data = returndata;
                 }
-                else if (request.restype == "homeimg")
+                return resp;
+            }
+            else
+            {
+                using (var con = InfraDatabaseFactory.InfraDB.GetNewConnection())
                 {
-                    string sql = string.Format("SELECT id,profileimg FROM eb_tenants WHERE cname={0}", request.Uname);
-                    var dt = InfraDatabaseFactory.InfraDB.DoQuery(sql);
-                    List<List<object>> list = new List<List<object>>();
-                    foreach (EbDataRow dr in dt.Rows)
+                    con.Open();
+                    if (request.restype == "img")
                     {
-                        list.Add(new List<object> { Convert.ToInt32(dr[0]), dr[1].ToString() });
+                        string sql = string.Format("SELECT id,profileimg FROM eb_tenants WHERE id={0}", request.Uid);
+                        var dt = InfraDatabaseFactory.InfraDB.DoQuery(sql);
+                        // Dictionary<int, string> list = new Dictionary<int, string>();
+                        List<List<object>> list = new List<List<object>>();
+                        foreach (EbDataRow dr in dt.Rows)
+                        {
+                            list.Add(new List<object> { Convert.ToInt32(dr[0]), dr[1].ToString() });
+                        }
+                        TokenRequiredSelectResponse resp = new TokenRequiredSelectResponse()
+                        {
+                            returnlist = list
+                        };
+                        return resp;
                     }
-                    TokenRequiredSelectResponse resp = new TokenRequiredSelectResponse()
+
+                    else if (request.restype == "homeimg")
                     {
-                        returnlist = list
-                    };
-                    return resp;
+                        string sql = string.Format("SELECT id,profileimg FROM eb_tenants WHERE cname={0}", request.Uname);
+                        var dt = InfraDatabaseFactory.InfraDB.DoQuery(sql);
+                        List<List<object>> list = new List<List<object>>();
+                        foreach (EbDataRow dr in dt.Rows)
+                        {
+                            list.Add(new List<object> { Convert.ToInt32(dr[0]), dr[1].ToString() });
+                        }
+                        TokenRequiredSelectResponse resp = new TokenRequiredSelectResponse()
+                        {
+                            returnlist = list
+                        };
+                        return resp;
+
+                    }
+
+                    else
+                    {
+                        string sql = string.Format("SELECT id,accountname,profilelogo,cid,createdat FROM eb_tenantaccount WHERE tenantid={0}", request.Uid);
+                        var dt = InfraDatabaseFactory.InfraDB.DoQuery(sql);
+                        List<List<object>> list = new List<List<object>>();
+                        foreach (EbDataRow dr in dt.Rows)
+                        {
+                            list.Add(new List<object> { Convert.ToInt32(dr[0]), dr[1].ToString(), dr[2].ToString(), dr[3].ToString(), dr[4] });
+                        }
+                        TokenRequiredSelectResponse resp = new TokenRequiredSelectResponse()
+                        {
+                            returnlist = list
+                        };
+                        return resp;
+                    }
 
                 }
-
-                else
-                {
-                    string sql = string.Format("SELECT id,accountname,profilelogo,cid,createdat FROM eb_tenantaccount WHERE tenantid={0}", request.Uid);
-                    var dt = InfraDatabaseFactory.InfraDB.DoQuery(sql);
-                    List<List<object>> list = new List<List<object>>();
-                    foreach (EbDataRow dr in dt.Rows)
-                    {
-                        list.Add(new List<object> { Convert.ToInt32(dr[0]), dr[1].ToString(), dr[2].ToString(), dr[3].ToString(),dr[4] });
-                    }
-                    TokenRequiredSelectResponse resp = new TokenRequiredSelectResponse()
-                    {
-                        returnlist = list
-                    };
-                    return resp;
-                }
-
-
             }
         }
 
-        
+
         public void TableInsertsDataDB(DatabaseFactory dbf, EbDataTable dt, DbConnection _con_d1)
         {
             string result;
@@ -486,7 +539,7 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     result = reader.ReadToEnd();
                 }
-             
+
                 var datacmd = dbf.DataDB.GetNewCommand(_con_d1, result);
                 datacmd.ExecuteNonQuery();
                 var cmd = dbf.DataDB.GetNewCommand(_con_d1, "INSERT INTO eb_users(email,pwd,fullname,phnoprimary) VALUES(@email,@pwd,@fullname,@phnoprimary); INSERT INTO eb_role2user(user_id,role_id) VALUES(1,3)");
@@ -499,7 +552,7 @@ namespace ExpressBase.ServiceStack.Services
 
         }
 
-        public void TableInsertObjectDB(DatabaseFactory dbf,DbConnection _con_o1)
+        public void TableInsertObjectDB(DatabaseFactory dbf, DbConnection _con_o1)
         {
             string result;
             var assembly = typeof(ExpressBase.Data.Resource).GetAssembly();
@@ -509,9 +562,9 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     result = reader.ReadToEnd();
                 }
-                    var datacmd = dbf.ObjectsDB.GetNewCommand(_con_o1, result);
-                    datacmd.ExecuteNonQuery();
-            }          
+                var datacmd = dbf.ObjectsDB.GetNewCommand(_con_o1, result);
+                datacmd.ExecuteNonQuery();
+            }
 
         }
 
