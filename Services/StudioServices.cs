@@ -64,7 +64,7 @@ ORDER BY
             List<System.Data.Common.DbParameter> parameters = new List<System.Data.Common.DbParameter>();
 
             // Fetch all version without bytea
-            if (request.Id > 0 && request.VersionId < Int32.MaxValue)
+            if (request.Id > 0 && request.VersionId == Int32.MaxValue)
             {             
                 parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.Int32, request.Id));
                 var dt = this.DatabaseFactory.ObjectsDB.DoQuery(Query1, parameters.ToArray());
