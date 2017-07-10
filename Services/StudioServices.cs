@@ -46,10 +46,10 @@ SELECT
 FROM 
     eb_objects EO, eb_objects_ver EOV
 WHERE
-    EO.id = EOV.eb_objects_id AND EO.id=@id AND EO.obj_last_ver_id=EOV.ver_num AND
+    EO.id = EOV.eb_objects_id AND EO.obj_last_ver_id=EOV.ver_num AND
     EO.obj_type=@type
 ORDER BY
-    EO.obj_type";
+    EO.obj_name";
 
         #endregion
 
@@ -125,7 +125,6 @@ ORDER BY
             // Get All latest of this Object Type without Bytea
             if (request.Id == 0 && request.VersionId == Int32.MaxValue)
             {
-                parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.Int32, request.Id));
                 parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@type", System.Data.DbType.Int32, request.EbObjectType));
                 var dt = this.DatabaseFactory.ObjectsDB.DoQuery(Query4, parameters.ToArray());
 
