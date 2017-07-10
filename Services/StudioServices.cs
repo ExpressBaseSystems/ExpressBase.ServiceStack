@@ -87,7 +87,7 @@ ORDER BY
             if (request.VersionId > 0 && request.VersionId < Int32.MaxValue)
             {
                 parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.Int32, request.VersionId));
-                var dt = this.DatabaseFactory.ObjectsDB.DoQuery(Query1, parameters.ToArray());
+                var dt = this.DatabaseFactory.ObjectsDB.DoQuery(Query2, parameters.ToArray());
            
                 foreach (EbDataRow dr in dt.Rows)
                 {
