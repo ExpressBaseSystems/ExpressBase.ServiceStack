@@ -107,9 +107,12 @@ namespace ExpressBase.ServiceStack.Services
 
                         EbDataSet dt = base.DatabaseFactory.ObjectsDB.DoQueries(sql, parameters);
 
-                        if (!request.Colvalues.ContainsKey("pwd"))
+                        if (string.IsNullOrEmpty(request.Colvalues["pwd"].ToString()))
                         {
-                            //send mail
+                            using (var service = base.ResolveService<EmailServices>())
+                            {
+                                service.Any(new EmailServicesRequest() { To = request.Colvalues["email"].ToString(), Subject = "New User", Message = string.Format("You are invited to join as user. Log in {0}.localhost:53431 using Username: {1} and Password : {2}", request.TenantAccountId, request.Colvalues["email"].ToString(),dt.Tables[0].Rows[0][1]) });
+                            }
                         }
 
                     }
