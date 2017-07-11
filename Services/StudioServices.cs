@@ -153,7 +153,7 @@ ORDER BY
 INSERT INTO eb_objects 
     (obj_name, obj_desc, obj_type, obj_last_ver_id, obj_cur_status) 
 VALUES
-    (@obj_name, @obj_desc, @obj_type, 1, @obj_cur_status) RETURNING id;
+    (@obj_name, @obj_desc, @obj_type, 1, @obj_cur_status)  RETURNING id;
 
 INSERT INTO eb_objects_ver
     (eb_objects_id, ver_num, obj_bytea, commit_uid, commit_ts) 
@@ -183,7 +183,7 @@ WHERE
 INSERT INTO eb_objects_ver
     (eb_objects_id, ver_num, obj_bytea) 
 VALUES
-    (@id, (SELECT MAX(ver_num)+1 FROM eb_objects_ver WHERE eb_objects_id=@id), @obj_bytea);";
+    (@id, (SELECT MAX(ver_num)+1 FROM eb_objects_ver WHERE eb_objects_id=@id), @obj_bytea) RETURNING id";
 
         private const string Query_Save = @"
 UPDATE eb_objects SET obj_name=@obj_name, obj_desc=@obj_desc WHERE id=@id;
