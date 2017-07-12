@@ -201,7 +201,7 @@ VALUES
 INSERT INTO eb_objects_ver
     (eb_objects_id, ver_num, obj_bytea) 
 VALUES
-    (CURRVAL('eb_objects_id_seq'), 2, @obj_bytea);";
+    (CURRVAL('eb_objects_id_seq'), -1, @obj_bytea);";
 
         private const string Query_SubsequentCommit = @"
 UPDATE eb_objects 
@@ -214,18 +214,18 @@ WHERE
 
 UPDATE eb_objects_ver
 SET
-    obj_bytea=@obj_bytea, obj_changelog=@obj_changelog, commit_uid=@commit_uid, commit_ts=NOW()
+    obj_bytea=@obj_bytea, obj_changelog=@obj_changelog, ver_num=(SELECT MAX(ver_num)+1 FROM eb_objects_ver WHERE eb_objects_id=@id)+1, commit_uid=@commit_uid, commit_ts=NOW()
 WHERE
-    eb_objects_id=@id AND commit_uid IS NULL;
+    eb_objects_id=@id AND commit_uid IS NULL AND ver_num=-1;
 
 INSERT INTO eb_objects_ver
     (eb_objects_id, ver_num, obj_bytea) 
 VALUES
-    (@id, (SELECT MAX(ver_num)+1 FROM eb_objects_ver WHERE eb_objects_id=@id), @obj_bytea) RETURNING id";
+    (@id, -1, @obj_bytea) RETURNING id";
 
         private const string Query_Save = @"
 UPDATE eb_objects SET obj_name=@obj_name, obj_desc=@obj_desc WHERE id=@id;
-UPDATE eb_objects_ver SET obj_bytea=@obj_bytea WHERE eb_objects_id=@id AND commit_uid IS NULL;";
+UPDATE eb_objects_ver SET obj_bytea=@obj_bytea WHERE eb_objects_id=@id AND commit_uid IS NULL AND ver_num=-1;";
 
         #endregion
 
