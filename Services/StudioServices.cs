@@ -38,7 +38,7 @@ SELECT
 FROM 
     eb_objects EO, eb_objects_ver EOV
 WHERE
-    EO.id = EOV.eb_objects_id AND EO.id=@id AND EOV.ver_num = EO.obj_last_ver_id + 1 AND EOV.commit_uid IS NULL
+    EO.id = EOV.eb_objects_id AND EO.id=@id AND EOV.ver_num = -1 AND EOV.commit_uid IS NULL
 ORDER BY
     EO.obj_type";
 
@@ -129,7 +129,7 @@ ORDER BY
                         EbObjectType = (EbObjectType)Convert.ToInt32(dr[2]),
                         Status = (ObjectLifeCycleStatus)dr[4],
                         Description = dr[5].ToString(),
-                        VersionNumber = Convert.ToInt32(dr[8]),
+                        //VersionNumber = Convert.ToInt32(dr[8]),
                         Bytea = (request.Id > 0) ? dr[12] as byte[] : null
                     });
 
