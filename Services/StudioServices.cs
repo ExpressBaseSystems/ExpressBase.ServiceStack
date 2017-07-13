@@ -58,7 +58,7 @@ ORDER BY
         private const string Query5 = @"
 SELECT 
     EO.id, EO.obj_name, EO.obj_type, EO.obj_last_ver_id, EO.obj_cur_status,EO.obj_desc,
-    EOV.id, EOV.eb_objects_id, EOV.ver_num, EOV.obj_changelog,EOV.commit_ts, EOV.commit_uid
+    EOV.id, EOV.eb_objects_id, EOV.ver_num, EOV.obj_changelog,EOV.commit_ts, EOV.commit_uid,
     EU.firstname
 FROM 
     eb_objects EO, eb_objects_ver EOV,eb_users EU
