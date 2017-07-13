@@ -58,11 +58,12 @@ ORDER BY
         private const string Query5 = @"
 SELECT 
     EO.id, EO.obj_name, EO.obj_type, EO.obj_last_ver_id, EO.obj_cur_status,EO.obj_desc,
-    EOV.id,EOV.eb_objects_id,EOV.ver_num, EOV.obj_changelog,EOV.commit_ts, EOV.commit_uid
+    EOV.id, EOV.eb_objects_id, EOV.ver_num, EOV.obj_changelog,EOV.commit_ts, EOV.commit_uid
+    EU.firstname
 FROM 
-    eb_objects EO, eb_objects_ver EOV
+    eb_objects EO, eb_objects_ver EOV,eb_users EU
 WHERE
-    EO.id = EOV.eb_objects_id AND EO.obj_last_ver_id=EOV.ver_num AND EO.obj_type=@type AND EOV.commit_uid IS NOT NULL
+    EO.id = EOV.eb_objects_id AND EO.obj_last_ver_id=EOV.ver_num AND EO.obj_type=@type AND EOV.commit_uid IS NOT NULL AND  EOV.commit_uid = EU.id
 ORDER BY
     EO.obj_name";
 
@@ -80,7 +81,7 @@ ORDER BY
 
             // Fetch all version without bytea of a particular Object
             if (request.Id > 0 && request.VersionId == 0)
-            {             
+            {
                 parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.Int32, request.Id));
                 var dt = this.DatabaseFactory.ObjectsDB.DoQuery(Query1, parameters.ToArray());
 
@@ -91,8 +92,8 @@ ORDER BY
                         Id = Convert.ToInt32(dr[0]),
                         VersionNumber = Convert.ToInt32(dr[1]),
                         ChangeLog = dr[2].ToString(),
-                        CommitTs =Convert.ToDateTime(dr[3]),
-                        CommitUname=dr[4].ToString()
+                        CommitTs = Convert.ToDateTime(dr[3]),
+                        CommitUname = dr[4].ToString()
                     });
                     f.Add(_ebObject);
                 }
@@ -103,12 +104,12 @@ ORDER BY
             {
                 parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.Int32, request.VersionId));
                 var dt = this.DatabaseFactory.ObjectsDB.DoQuery(Query2, parameters.ToArray());
-           
+
                 foreach (EbDataRow dr in dt.Rows)
                 {
                     var _ebObject = (new EbObjectWrapper
                     {
-                        Bytea = dr[0] as byte[] 
+                        Bytea = dr[0] as byte[]
                     });
                     f.Add(_ebObject);
                 }
@@ -175,7 +176,9 @@ ORDER BY
                         EbObjectType = (EbObjectType)Convert.ToInt32(dr[2]),
                         Status = (ObjectLifeCycleStatus)dr[4],
                         Description = dr[5].ToString(),
-                        VersionNumber = Convert.ToInt32(dr[8])
+                        VersionNumber = Convert.ToInt32(dr[8]),
+                        CommitTs = Convert.ToDateTime(dr[10]),
+                        CommitUname = dr[12].ToString(),
                     });
 
                     f.Add(_ebObject);
@@ -214,7 +217,7 @@ WHERE
 
 UPDATE eb_objects_ver
 SET
-    obj_bytea=@obj_bytea, obj_changelog=@obj_changelog, ver_num=(SELECT MAX(ver_num)+1 FROM eb_objects_ver WHERE eb_objects_id=@id)+1, commit_uid=@commit_uid, commit_ts=NOW()
+    obj_bytea=@obj_bytea, obj_changelog=@obj_changelog, ver_num=(SELECT MAX(ver_num)+1 FROM eb_objects_ver WHERE eb_objects_id=@id), commit_uid=@commit_uid, commit_ts=NOW()
 WHERE
     eb_objects_id=@id AND commit_uid IS NULL AND ver_num=-1;
 
