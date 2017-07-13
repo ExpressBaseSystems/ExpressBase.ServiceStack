@@ -130,7 +130,7 @@ ORDER BY
                         EbObjectType = (EbObjectType)Convert.ToInt32(dr[2]),
                         Status = (ObjectLifeCycleStatus)dr[4],
                         Description = dr[5].ToString(),
-                        //VersionNumber = Convert.ToInt32(dr[8]),
+                        VersionNumber = Convert.ToInt32(dr[3]),
                         Bytea = (request.Id > 0) ? dr[12] as byte[] : null
                     });
 
