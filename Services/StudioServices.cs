@@ -213,7 +213,7 @@ SET
     obj_last_ver_id=(SELECT MAX(ver_num)+1 FROM eb_objects_ver WHERE eb_objects_id=@id), 
     obj_cur_status=@obj_cur_status 
 WHERE 
-    id=@id; 
+    id=@id RETURNING id; 
 
 UPDATE eb_objects_ver
 SET
@@ -224,7 +224,7 @@ WHERE
 INSERT INTO eb_objects_ver
     (eb_objects_id, ver_num, obj_bytea) 
 VALUES
-    (@id, -1, @obj_bytea) RETURNING id";
+    (@id, -1, @obj_bytea)";
 
         private const string Query_Save = @"
 UPDATE eb_objects SET obj_name=@obj_name, obj_desc=@obj_desc WHERE id=@id;
