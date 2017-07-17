@@ -204,7 +204,13 @@ VALUES
 INSERT INTO eb_objects_ver
     (eb_objects_id, ver_num, obj_bytea) 
 VALUES
-    (CURRVAL('eb_objects_id_seq'), -1, @obj_bytea);";
+    (CURRVAL('eb_objects_id_seq'), -1, @obj_bytea);
+
+INSERT INTO eb_objects_relations
+    (dominant,dependant)
+VALUES
+    (UNNEST(@relations),CURRVAL('eb_objects_id_seq'))
+";
 
         private const string Query_SubsequentCommit = @"
 UPDATE eb_objects 
@@ -256,7 +262,8 @@ UPDATE eb_objects_ver SET obj_bytea=@obj_bytea WHERE eb_objects_id=@id AND commi
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_bytea", System.Data.DbType.Binary, request.Bytea));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_cur_status", System.Data.DbType.Int32, ObjectLifeCycleStatus.Development));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@commit_uid", System.Data.DbType.Int32, request.UserId));
-                }
+                    cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("@relations", NpgsqlTypes.NpgsqlDbType.Array, request.Relations.Split(',').ToArray()));
+                    }
 
                 // Subsequent COMMIT
                 if (!request.IsSave && request.Id > 0)
