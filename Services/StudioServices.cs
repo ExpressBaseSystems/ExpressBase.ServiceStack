@@ -80,6 +80,26 @@ ORDER BY
             ILog log = LogManager.GetLogger(GetType());
             List<System.Data.Common.DbParameter> parameters = new List<System.Data.Common.DbParameter>();
 
+            //Fetch ebobjects relations
+
+            if(request.DominantId > 0)
+            {
+                parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@dominant", System.Data.DbType.Int32, request.DominantId));
+                parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@type", System.Data.DbType.Int32, request.EbObjectType));
+                var dt = this.DatabaseFactory.ObjectsDB.DoQuery(GetObjectRelations, parameters.ToArray());
+                foreach (EbDataRow dr in dt.Rows)
+                {
+                    var _ebObject = (new EbObjectWrapper
+                    {
+                        Id = Convert.ToInt32(dr[0]),
+                        Name = dr[1].ToString(),                       
+                        Description = dr[2].ToString()                      
+                    });
+
+                    f.Add(_ebObject);
+                }
+
+            }
             // Fetch all version without bytea of a particular Object
             if (request.Id > 0 && request.VersionId == 0)
             {
@@ -236,6 +256,16 @@ VALUES
         private const string Query_Save = @"
 UPDATE eb_objects SET obj_name=@obj_name, obj_desc=@obj_desc WHERE id=@id;
 UPDATE eb_objects_ver SET obj_bytea=@obj_bytea WHERE eb_objects_id=@id AND commit_uid IS NULL AND ver_num=-1;";
+
+
+        private const string GetObjectRelations = @"
+SELECT 
+	id, obj_name, obj_desc 
+FROM 
+	eb_objects 
+WHERE 
+	id = ANY (SELECT dependant FROM eb_objects_relations WHERE dominant=@dominant) AND 
+    obj_type=@type";
 
         #endregion
 
