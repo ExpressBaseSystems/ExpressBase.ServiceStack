@@ -89,14 +89,13 @@ ORDER BY
                 var dt = this.DatabaseFactory.ObjectsDB.DoQuery(GetObjectRelations, parameters.ToArray());
                 foreach (EbDataRow dr in dt.Rows)
                 {
-                    var _ebObject = (new EbObjectWrapper
-                    {
-                        Id = Convert.ToInt32(dr[0]),
-                        Name = dr[1].ToString(),                       
-                        Description = dr[2].ToString()                      
-                    });
+                    var _ebObject = new EbObjectWrapper();
 
-                    f.Add(_ebObject);
+                    _ebObject.Id = Convert.ToInt32(dr[0]);
+                    _ebObject.Name = dr[1].ToString();
+                    _ebObject.Description = dr[2].ToString();
+                   
+                        f.Add(_ebObject);
                 }
 
             }
