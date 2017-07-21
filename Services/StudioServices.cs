@@ -7,6 +7,7 @@ using System.Data.Common;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ServiceStack.Logging;
 using System.Linq;
+using ExpressBase.Common;
 
 namespace ExpressBase.ServiceStack
 {
@@ -317,7 +318,12 @@ WHERE
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_desc", System.Data.DbType.String, request.Description));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_bytea", System.Data.DbType.Binary, request.Bytea));
                 }
-         
+
+                if (request.NeedRun)
+                {
+                    var code = EbSerializers.ProtoBuf_DeSerialize<EbSqlFunction>(request.Bytea).Sql;
+                    cmd = this.DatabaseFactory.ObjectsDB.GetNewCommand(con, code);
+                }
                 return new EbObjectSaveOrCommitResponse() { Id = Convert.ToInt32(cmd.ExecuteScalar()) };
             };
         }
