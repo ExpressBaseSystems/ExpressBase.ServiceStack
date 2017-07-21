@@ -116,6 +116,23 @@ namespace ExpressBase.ServiceStack.Services
                         }
 
                     }
+                    else if(request.op == "saveroles")
+                    {
+                        string sql = "INSERT INTO eb_roles (role_name) VALUES (@role_name) RETURNING id;";
+                        sql += @"
+INSERT INTO eb_role2permission 
+    (permissionname, role_id, createdby, createdat, obj_id, op_id) 
+SELECT 
+    permissionname, CURRVAL('eb_roles_id_seq'), @createdby, NOW(), 
+    split_part(permissionname,'_',2)::int,
+    split_part(permissionname,'_',1)::int 
+FROM UNNEST(@permission) AS permissionname";
+                        DbParameter[] parameters = { base.DatabaseFactory.ObjectsDB.GetNewParameter("role_name", System.Data.DbType.String, request.Colvalues["role_name"]),
+                            base.DatabaseFactory.ObjectsDB.GetNewParameter("createdby", System.Data.DbType.Int32, request.UserId),
+                            base.DatabaseFactory.ObjectsDB.GetNewParameter("permission", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text, request.Colvalues["permission"].ToString().Replace("[","").Replace("]","").Split(',').Select(n => n.ToString()).ToArray()) };
+                           
+                        EbDataSet dt = base.DatabaseFactory.ObjectsDB.DoQueries(sql, parameters);
+                    }
                     else
                     {
                         var cmd = base.DatabaseFactory.ObjectsDB.GetNewCommand(con, "UPDATE eb_users SET locale=@locale,timezone=@timezone,dateformat=@dateformat,numformat=@numformat,timezonefull=@timezonefull WHERE id=@id");
