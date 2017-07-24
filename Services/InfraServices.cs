@@ -132,6 +132,11 @@ FROM UNNEST(@permission) AS permissionname";
                             base.DatabaseFactory.ObjectsDB.GetNewParameter("permission", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text, request.Colvalues["permission"].ToString().Replace("[","").Replace("]","").Split(',').Select(n => n.ToString()).ToArray()) };
                            
                         EbDataSet dt = base.DatabaseFactory.ObjectsDB.DoQueries(sql, parameters);
+
+                        resp = new TokenRequiredUploadResponse
+                        {
+                            id = Convert.ToInt32(dt.Tables[0].Rows[0][0])
+                        };
                     }
                     else
                     {
@@ -474,20 +479,44 @@ FROM UNNEST(@permission) AS permissionname";
         {
             if (request.TenantAccountId != "expressbase")
             {
+
                 base.ClientID = request.TenantAccountId;
-                TokenRequiredSelectResponse resp = new TokenRequiredSelectResponse();
-                if (request.restype == "roles")
+                using (var con = base.DatabaseFactory.ObjectsDB.GetNewConnection())
                 {
-                    string sql = string.Format("SELECT id,role_name FROM eb_roles");
-                    var dt = base.DatabaseFactory.ObjectsDB.DoQuery(sql);
-                    Dictionary<string, object> returndata = new Dictionary<string, object>();
-                    foreach (EbDataRow dr in dt.Rows)
+                    con.Open();
+                    TokenRequiredSelectResponse resp = new TokenRequiredSelectResponse();
+                    if (request.restype == "roles")
                     {
-                        returndata[dr[0].ToString()] = dr[1].ToString();
+                        string sql = string.Format("SELECT id,role_name FROM eb_roles");
+                        var dt = base.DatabaseFactory.ObjectsDB.DoQuery(sql);
+                        Dictionary<string, object> returndata = new Dictionary<string, object>();
+                        foreach (EbDataRow dr in dt.Rows)
+                        {
+                            returndata[dr[0].ToString()] = dr[1].ToString();
+                        }
+                        resp.Data = returndata;
                     }
-                    resp.Data = returndata;
+                    else if (request.restype == "getpermissions")
+                    {
+                        // ROLE HIERARCHY TO BE IMPLEMENTED
+
+                        string sql = @"
+                SELECT role_name FROM eb_roles WHERE id = @id;
+                SELECT permissionname,obj_id,op_id FROM eb_role2permission WHERE role_id = @id";
+
+                        DbParameter[] parameters = { base.DatabaseFactory.ObjectsDB.GetNewParameter("id", System.Data.DbType.Int32, request.id) };
+
+                        var ds = base.DatabaseFactory.ObjectsDB.DoQueries(sql, parameters);
+                        List<string> _lstPermissions = new List<string>();
+
+                        foreach (var dr in ds.Tables[1].Rows)
+                            _lstPermissions.Add(dr[0].ToString());
+
+                        resp.Permissions = _lstPermissions;
+                    }
+
+                    return resp;
                 }
-                return resp;
             }
             else
             {
@@ -510,6 +539,7 @@ FROM UNNEST(@permission) AS permissionname";
                         };
                         return resp;
                     }
+                    
 
                     else if (request.restype == "homeimg")
                     {
