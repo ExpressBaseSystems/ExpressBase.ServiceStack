@@ -69,6 +69,8 @@ WHERE
 ORDER BY
     EO.obj_name";
 
+        private const string Query6 = @"
+SELECT @function_name";
         #endregion
 
         [Authenticate]
@@ -204,6 +206,12 @@ ORDER BY
 
                     f.Add(_ebObject);
                 }
+            }
+
+
+            if (request.IsTest)
+            {                
+               // Query6
             }
 
             return new EbObjectResponse { Data = f };
