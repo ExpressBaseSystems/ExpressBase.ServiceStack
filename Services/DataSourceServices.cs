@@ -86,8 +86,9 @@ namespace ExpressBase.ServiceStack
                         parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter(string.Format("@{0}", param["name"]), (System.Data.DbType)Convert.ToInt32(param["type"]), param["value"]));
                 }
                 this.Log.Info("GO**********************" + _sql);
-                var _dataset = (request.Length > 0) ? this.DatabaseFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray()) : this.DatabaseFactory.ObjectsDB.DoQueries(_sql);
-                this.Log.Info(">>>>>> _dataset.Tables.Count: " + _dataset.Tables.Count);
+                var _dataset = this.DatabaseFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray());
+                this.Log.Info(">>>>>> _dataset.Tables.Count: " + _dataset.Tables.Count + ", " + _dataset.ToJson());
+
                 dsresponse = new DataSourceDataResponse
                 {
                     Draw = request.Draw,
