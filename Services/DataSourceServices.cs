@@ -26,7 +26,14 @@ namespace ExpressBase.ServiceStack
                 SELECT EOV.obj_bytea FROM eb_objects_ver EOV 
                 INNER JOIN eb_objects EO
                 ON EO.id = EOV.eb_objects_id  AND EO.obj_last_ver_id =EOV.ver_num AND EOV.eb_objects_id={0}", request.Id)
-                );
+               );
+
+            //var dt = this.DatabaseFactory.ObjectsDB.DoQuery(string.Format(@"
+            //    SELECT EOV.obj_bytea FROM eb_objects_ver EOV 
+            //    INNER JOIN eb_objects EO
+            //    ON EO.id = EOV.eb_objects_id  AND EOV.ver_num={0} AND EOV.eb_objects_id={1}", request.VersionId, request.Id)
+            //    );
+
             this.Log.Info("dt.Rows.Count *****" + dt.Rows.Count);
             //this.Log.Info("ProtoBuf_DeSerialize *****" + EbSerializers.ProtoBuf_DeSerialize<EbDataSource>((byte[])dt.Rows[0][0]));
             DataSourceDataResponse dsresponse = null;

@@ -107,11 +107,37 @@ namespace ExpressBase.ServiceStack.Services
 
                         EbDataSet dt = base.DatabaseFactory.ObjectsDB.DoQueries(sql, parameters);
 
-                        if (!request.Colvalues.ContainsKey("pwd"))
+                        if (string.IsNullOrEmpty(request.Colvalues["pwd"].ToString()))
                         {
-                            //send mail
+                            using (var service = base.ResolveService<EmailServices>())
+                            {
+                                service.Any(new EmailServicesRequest() { To = request.Colvalues["email"].ToString(), Subject = "New User", Message = string.Format("You are invited to join as user. Log in {0}.localhost:53431 using Username: {1} and Password : {2}", request.TenantAccountId, request.Colvalues["email"].ToString(),dt.Tables[0].Rows[0][1]) });
+                            }
                         }
 
+                    }
+                    else if(request.op == "saveroles")
+                    {
+                        string sql = "INSERT INTO eb_roles (role_name,applicationid) VALUES (@role_name,@applicationid) RETURNING id;";
+                        sql += @"
+INSERT INTO eb_role2permission 
+    (permissionname, role_id, createdby, createdat, obj_id, op_id) 
+SELECT 
+    permissionname, CURRVAL('eb_roles_id_seq'), @createdby, NOW(), 
+    split_part(permissionname,'_',2)::int,
+    split_part(permissionname,'_',1)::int 
+FROM UNNEST(@permission) AS permissionname";
+                        DbParameter[] parameters = { base.DatabaseFactory.ObjectsDB.GetNewParameter("role_name", System.Data.DbType.String, request.Colvalues["role_name"]),
+                            base.DatabaseFactory.ObjectsDB.GetNewParameter("applicationid", System.Data.DbType.Int32, request.Colvalues["applicationid"]),
+                            base.DatabaseFactory.ObjectsDB.GetNewParameter("createdby", System.Data.DbType.Int32, request.UserId),
+                            base.DatabaseFactory.ObjectsDB.GetNewParameter("permission", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text, request.Colvalues["permission"].ToString().Replace("[","").Replace("]","").Split(',').Select(n => n.ToString()).ToArray()) };
+                           
+                        EbDataSet dt = base.DatabaseFactory.ObjectsDB.DoQueries(sql, parameters);
+
+                        resp = new TokenRequiredUploadResponse
+                        {
+                            id = Convert.ToInt32(dt.Tables[0].Rows[0][0])
+                        };
                     }
                     else
                     {
@@ -454,20 +480,60 @@ namespace ExpressBase.ServiceStack.Services
         {
             if (request.TenantAccountId != "expressbase")
             {
+
                 base.ClientID = request.TenantAccountId;
-                TokenRequiredSelectResponse resp = new TokenRequiredSelectResponse();
-                if (request.restype == "roles")
+                using (var con = base.DatabaseFactory.ObjectsDB.GetNewConnection())
                 {
-                    string sql = string.Format("SELECT id,role_name FROM eb_roles");
-                    var dt = base.DatabaseFactory.ObjectsDB.DoQuery(sql);
-                    Dictionary<string, object> returndata = new Dictionary<string, object>();
-                    foreach (EbDataRow dr in dt.Rows)
+                    con.Open();
+                    TokenRequiredSelectResponse resp = new TokenRequiredSelectResponse();
+                    if (request.restype == "roles")
                     {
-                        returndata[dr[0].ToString()] = dr[1].ToString();
+                        string sql = string.Format("SELECT id,role_name FROM eb_roles");
+                        var dt = base.DatabaseFactory.ObjectsDB.DoQuery(sql);
+                        Dictionary<string, object> returndata = new Dictionary<string, object>();
+                        foreach (EbDataRow dr in dt.Rows)
+                        {
+                            returndata[dr[0].ToString()] = dr[1].ToString();
+                        }
+                        resp.Data = returndata;
                     }
-                    resp.Data = returndata;
+                    else if (request.restype == "getpermissions")
+                    {
+                        // ROLE HIERARCHY TO BE IMPLEMENTED
+
+                        string sql = @"
+                SELECT role_name,applicationid FROM eb_roles WHERE id = @id;
+                SELECT permissionname,obj_id,op_id FROM eb_role2permission WHERE role_id = @id;
+                SELECT obj_name FROM eb_objects WHERE id IN(SELECT applicationid FROM eb_roles WHERE id = @id)";
+
+                
+
+                        DbParameter[] parameters = { base.DatabaseFactory.ObjectsDB.GetNewParameter("id", System.Data.DbType.Int32, request.id) };
+
+                        var ds = base.DatabaseFactory.ObjectsDB.DoQueries(sql, parameters);
+                        List<string> _lstPermissions = new List<string>();
+
+                        foreach (var dr in ds.Tables[1].Rows)
+                            _lstPermissions.Add(dr[0].ToString());
+
+                        resp.Permissions = _lstPermissions;
+                        Dictionary<string, object> result = new Dictionary<string, object>();
+                        foreach (var dr in ds.Tables[0].Rows)
+                        {
+
+                            result.Add("rolename", dr[0].ToString());
+                            result.Add("applicationid",Convert.ToInt32(dr[1]));
+                        }
+                            
+
+                        foreach (var dr in ds.Tables[2].Rows)
+                            result.Add("applicationname", dr[0].ToString());
+
+                        resp.Data = result;
+                    }
+
+                    return resp;
                 }
-                return resp;
             }
             else
             {
@@ -490,6 +556,7 @@ namespace ExpressBase.ServiceStack.Services
                         };
                         return resp;
                     }
+                    
 
                     else if (request.restype == "homeimg")
                     {
