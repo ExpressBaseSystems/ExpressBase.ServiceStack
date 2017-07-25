@@ -161,7 +161,7 @@ WHERE
                     {
                         Log.Info("e.Message" + e.Message);
                         columns = this.Redis.Get<ColumnColletion>(string.Format("{0}_ds_{1}_columns", request.TenantAccountId, request.Id));
-                        if (columns != null || columns.Count > 0)
+                        if (columns != null && columns.Count > 0)
                             this.Redis.Remove(string.Format("{0}_ds_{1}_columns", request.TenantAccountId, request.Id));
                     }
                 }
