@@ -241,6 +241,24 @@ VALUES
     (UNNEST(@relations),CURRVAL('eb_objects_id_seq'))
 ";
 
+
+        private const string Query_FirstCommit_without_rel = @"
+INSERT INTO eb_objects 
+    (obj_name, obj_desc, obj_type, obj_last_ver_id, obj_cur_status) 
+VALUES
+    (@obj_name, @obj_desc, @obj_type, 1, @obj_cur_status)  RETURNING id;
+
+INSERT INTO eb_objects_ver
+    (eb_objects_id, ver_num, obj_bytea, commit_uid, commit_ts) 
+VALUES
+    (CURRVAL('eb_objects_id_seq'), 1, @obj_bytea, @commit_uid, NOW());
+
+INSERT INTO eb_objects_ver
+    (eb_objects_id, ver_num, obj_bytea) 
+VALUES
+    (CURRVAL('eb_objects_id_seq'), -1, @obj_bytea);
+";
+
         private const string Query_SubsequentCommit = @"
 UPDATE eb_objects 
 SET 
@@ -294,14 +312,22 @@ WHERE
                 // First COMMIT
                 if (!request.IsSave && request.Id == 0)
                 {
-                    cmd = this.DatabaseFactory.ObjectsDB.GetNewCommand(con, Query_FirstCommit);
+                    if (request.Relations == null)
+                    {
+                        cmd = this.DatabaseFactory.ObjectsDB.GetNewCommand(con, Query_FirstCommit_without_rel);
+                    }
+                    else
+                    {
+                        cmd = this.DatabaseFactory.ObjectsDB.GetNewCommand(con, Query_FirstCommit);
+                        cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("@relations", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer, request.Relations.Split(',').Select(n => Convert.ToInt32(n)).ToArray()));
+                    }
+                   
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_type", System.Data.DbType.Int32, (int)request.EbObjectType));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_name", System.Data.DbType.String, request.Name));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_desc", System.Data.DbType.String, request.Description));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_bytea", System.Data.DbType.Binary, request.Bytea));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_cur_status", System.Data.DbType.Int32, ObjectLifeCycleStatus.Development));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@commit_uid", System.Data.DbType.Int32, request.UserId));
-                    cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("@relations", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer, request.Relations.Split(',').Select(n => Convert.ToInt32(n)).ToArray()));
                     }
 
                 // Subsequent COMMIT
