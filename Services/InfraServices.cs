@@ -118,16 +118,19 @@ namespace ExpressBase.ServiceStack.Services
                     }
                     else if(request.op == "saveroles")
                     {
-                        string sql = "INSERT INTO eb_roles (role_name,applicationid) VALUES (@role_name,@applicationid) RETURNING id;";
-                        sql += @"
-INSERT INTO eb_role2permission 
-    (permissionname, role_id, createdby, createdat, obj_id, op_id) 
-SELECT 
-    permissionname, CURRVAL('eb_roles_id_seq'), @createdby, NOW(), 
-    split_part(permissionname,'_',2)::int,
-    split_part(permissionname,'_',1)::int 
-FROM UNNEST(@permission) AS permissionname";
-                        DbParameter[] parameters = { base.DatabaseFactory.ObjectsDB.GetNewParameter("role_name", System.Data.DbType.String, request.Colvalues["role_name"]),
+                        
+
+                        string sql = string.Empty; 
+
+                        if (Convert.ToInt32(request.Colvalues["roleid"]) > 0)
+                            sql = "SELECT eb_create_or_update_role(@applicationid,@role_name,@description,@createdby,@permission,@role_id)";
+                        else
+                            sql = "SELECT eb_create_or_update_role(@applicationid,@role_name,@description,@createdby,@permission)";
+
+                        DbParameter[] parameters = {
+                            base.DatabaseFactory.ObjectsDB.GetNewParameter("role_id", System.Data.DbType.Int32, request.Colvalues["roleid"]),
+                            base.DatabaseFactory.ObjectsDB.GetNewParameter("description", System.Data.DbType.String, request.Colvalues["Description"]),
+                            base.DatabaseFactory.ObjectsDB.GetNewParameter("role_name", System.Data.DbType.String, request.Colvalues["role_name"]),
                             base.DatabaseFactory.ObjectsDB.GetNewParameter("applicationid", System.Data.DbType.Int32, request.Colvalues["applicationid"]),
                             base.DatabaseFactory.ObjectsDB.GetNewParameter("createdby", System.Data.DbType.Int32, request.UserId),
                             base.DatabaseFactory.ObjectsDB.GetNewParameter("permission", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text, request.Colvalues["permission"].ToString().Replace("[","").Replace("]","").Split(',').Select(n => n.ToString()).ToArray()) };
@@ -502,7 +505,7 @@ FROM UNNEST(@permission) AS permissionname";
                         // ROLE HIERARCHY TO BE IMPLEMENTED
 
                         string sql = @"
-                SELECT role_name,applicationid FROM eb_roles WHERE id = @id;
+                SELECT role_name,applicationid,description FROM eb_roles WHERE id = @id;
                 SELECT permissionname,obj_id,op_id FROM eb_role2permission WHERE role_id = @id;
                 SELECT obj_name FROM eb_objects WHERE id IN(SELECT applicationid FROM eb_roles WHERE id = @id)";
 
@@ -523,6 +526,7 @@ FROM UNNEST(@permission) AS permissionname";
 
                             result.Add("rolename", dr[0].ToString());
                             result.Add("applicationid",Convert.ToInt32(dr[1]));
+                            result.Add("description", dr[2].ToString());
                         }
                             
 
