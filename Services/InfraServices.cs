@@ -111,37 +111,55 @@ namespace ExpressBase.ServiceStack.Services
                         {
                             using (var service = base.ResolveService<EmailServices>())
                             {
-                                service.Any(new EmailServicesRequest() { To = request.Colvalues["email"].ToString(), Subject = "New User", Message = string.Format("You are invited to join as user. Log in {0}.localhost:53431 using Username: {1} and Password : {2}", request.TenantAccountId, request.Colvalues["email"].ToString(),dt.Tables[0].Rows[0][1]) });
+                                service.Any(new EmailServicesRequest() { To = request.Colvalues["email"].ToString(), Subject = "New User", Message = string.Format("You are invited to join as user. Log in {0}.localhost:53431 using Username: {1} and Password : {2}", request.TenantAccountId, request.Colvalues["email"].ToString(), dt.Tables[0].Rows[0][1]) });
                             }
                         }
 
                     }
-                    else if(request.op == "saveroles")
+                    else if (request.op == "saveroles")
                     {
-                        
 
-                        string sql = string.Empty; 
+
+                        string sql = string.Empty;
 
                         if (Convert.ToInt32(request.Colvalues["roleid"]) > 0)
                             sql = "SELECT eb_create_or_update_role(@applicationid,@role_name,@description,@createdby,@permission,@role_id)";
                         else
                             sql = "SELECT eb_create_or_update_role(@applicationid,@role_name,@description,@createdby,@permission)";
 
-                        DbParameter[] parameters = {
-                            base.DatabaseFactory.ObjectsDB.GetNewParameter("role_id", System.Data.DbType.Int32, request.Colvalues["roleid"]),
-                            base.DatabaseFactory.ObjectsDB.GetNewParameter("description", System.Data.DbType.String, request.Colvalues["Description"]),
-                            base.DatabaseFactory.ObjectsDB.GetNewParameter("role_name", System.Data.DbType.String, request.Colvalues["role_name"]),
-                            base.DatabaseFactory.ObjectsDB.GetNewParameter("applicationid", System.Data.DbType.Int32, request.Colvalues["applicationid"]),
-                            base.DatabaseFactory.ObjectsDB.GetNewParameter("createdby", System.Data.DbType.Int32, request.UserId),
-                            base.DatabaseFactory.ObjectsDB.GetNewParameter("permission", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text, request.Colvalues["permission"].ToString().Replace("[","").Replace("]","").Split(',').Select(n => n.ToString()).ToArray()) };
-                           
-                        EbDataSet dt = base.DatabaseFactory.ObjectsDB.DoQueries(sql, parameters);
-
+                    
+                        var cmd = base.DatabaseFactory.ObjectsDB.GetNewCommand(con, sql);
+                        cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("role_id", System.Data.DbType.Int32, request.Colvalues["roleid"]));
+                        cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("description", System.Data.DbType.String, request.Colvalues["Description"]));
+                        cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("role_name", System.Data.DbType.String, request.Colvalues["role_name"]));
+                        cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("applicationid", System.Data.DbType.Int32, request.Colvalues["applicationid"]));
+                        cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("createdby", System.Data.DbType.Int32, request.UserId));
+                        cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("permission", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text, request.Colvalues["permission"].ToString().Replace("[", "").Replace("]", "").Split(',').Select(n => n.ToString()).ToArray()));
                         resp = new TokenRequiredUploadResponse
                         {
-                            id = Convert.ToInt32(dt.Tables[0].Rows[0][0])
+                            id = Convert.ToInt32(cmd.ExecuteScalar())
+
                         };
+                      
                     }
+                    else if (request.op == "role2role")
+                    {
+
+                        string sql =  "SELECT eb_create_or_update_role2role(@role_id,@createdby,@dependants)";
+
+                        var cmd = base.DatabaseFactory.ObjectsDB.GetNewCommand(con, sql);
+                        cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("role_id", System.Data.DbType.Int32, request.Colvalues["roleid"]));
+                        cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("createdby", System.Data.DbType.Int32, request.UserId));
+                        cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("dependants", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer, request.Colvalues["dependants"].ToString().Replace("[", "").Replace("]", "").Split(',').Select(n =>Convert.ToInt32(n)).ToArray()));
+                        resp = new TokenRequiredUploadResponse
+                        {
+                            id = Convert.ToInt32(cmd.ExecuteScalar())
+
+                        };
+
+
+                    }
+
                     else
                     {
                         var cmd = base.DatabaseFactory.ObjectsDB.GetNewCommand(con, "UPDATE eb_users SET locale=@locale,timezone=@timezone,dateformat=@dateformat,numformat=@numformat,timezonefull=@timezonefull WHERE id=@id");
@@ -491,12 +509,34 @@ namespace ExpressBase.ServiceStack.Services
                     TokenRequiredSelectResponse resp = new TokenRequiredSelectResponse();
                     if (request.restype == "roles")
                     {
-                        string sql = string.Format("SELECT id,role_name FROM eb_roles");
-                        var dt = base.DatabaseFactory.ObjectsDB.DoQuery(sql);
+                        string sql = string.Empty;
+                        if (request.id > 0)
+                            sql = @"
+                                   SELECT id,role_name FROM eb_roles WHERE id != @id AND applicationid= @applicationid;
+                                   SELECT role2_id FROM eb_role2role WHERE role1_id = @id AND eb_del = FALSE"; //check sql properly
+                        else
+                            sql = "SELECT id,role_name FROM eb_roles"; 
+
+                        DbParameter[] parameters = {
+                            base.DatabaseFactory.ObjectsDB.GetNewParameter("id", System.Data.DbType.Int32, request.id),
+                        base.DatabaseFactory.ObjectsDB.GetNewParameter("applicationid", System.Data.DbType.Int32,(request.id > 0)? request.Colvalues["applicationid"] : 0)};
+
+                        var dt = base.DatabaseFactory.ObjectsDB.DoQueries(sql,parameters);
+
                         Dictionary<string, object> returndata = new Dictionary<string, object>();
-                        foreach (EbDataRow dr in dt.Rows)
+                        List<int> subroles = new List<int>();
+                        foreach (EbDataRow dr in dt.Tables[0].Rows)
                         {
                             returndata[dr[0].ToString()] = dr[1].ToString();
+                        }
+                        
+                        if(dt.Tables.Count > 1)
+                        {
+                            foreach (EbDataRow dr in dt.Tables[1].Rows)
+                            {
+                                subroles.Add(Convert.ToInt32(dr[0]));
+                            }
+                            returndata.Add("roles", subroles);
                         }
                         resp.Data = returndata;
                     }
@@ -506,7 +546,7 @@ namespace ExpressBase.ServiceStack.Services
 
                         string sql = @"
                 SELECT role_name,applicationid,description FROM eb_roles WHERE id = @id;
-                SELECT permissionname,obj_id,op_id FROM eb_role2permission WHERE role_id = @id;
+                SELECT permissionname,obj_id,op_id FROM eb_role2permission WHERE role_id = @id AND eb_del = FALSE;
                 SELECT obj_name FROM eb_objects WHERE id IN(SELECT applicationid FROM eb_roles WHERE id = @id)";
 
                 
