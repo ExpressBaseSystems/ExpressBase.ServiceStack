@@ -159,6 +159,23 @@ namespace ExpressBase.ServiceStack.Services
 
 
                     }
+                    else if (request.op == "role2user")
+                    {
+
+                        string sql = "SELECT eb_create_or_update_role2user(@role_id,@createdby,@users)";
+
+                        var cmd = base.DatabaseFactory.ObjectsDB.GetNewCommand(con, sql);
+                        cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("role_id", System.Data.DbType.Int32, request.Colvalues["roleid"]));
+                        cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("createdby", System.Data.DbType.Int32, request.UserId));
+                        cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("users", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer, request.Colvalues["users"].ToString().Replace("[", "").Replace("]", "").Split(',').Select(n => Convert.ToInt32(n)).ToArray()));
+                        resp = new TokenRequiredUploadResponse
+                        {
+                            id = Convert.ToInt32(cmd.ExecuteScalar())
+
+                        };
+
+
+                    }
 
                     else
                     {
@@ -574,6 +591,39 @@ namespace ExpressBase.ServiceStack.Services
                             result.Add("applicationname", dr[0].ToString());
 
                         resp.Data = result;
+                    }
+
+                    else if (request.restype == "getusers")
+                    {
+                        string sql = string.Empty;
+                        if (request.id > 0)
+                            sql = @"
+                                   SELECT id,firstname FROM eb_users WHERE id != @id;
+                                   SELECT user_id FROM eb_role2user WHERE role_id = @roleid AND eb_del = FALSE";
+                        else
+                            sql = "SELECT id,firstname FROM eb_users WHERE id != @id";
+
+                        DbParameter[] parameters = { base.DatabaseFactory.ObjectsDB.GetNewParameter("id", System.Data.DbType.Int32, request.UserId),
+                                                    base.DatabaseFactory.ObjectsDB.GetNewParameter("id", System.Data.DbType.Int32, request.id )};
+
+                        var dt = base.DatabaseFactory.ObjectsDB.DoQueries(sql, parameters);
+
+                        Dictionary<string, object> returndata = new Dictionary<string, object>();
+                        List<int> users = new List<int>();
+                        foreach (EbDataRow dr in dt.Tables[0].Rows)
+                        {
+                            returndata[dr[0].ToString()] = dr[1].ToString();
+                        }
+
+                        if (dt.Tables.Count > 1)
+                        {
+                            foreach (EbDataRow dr in dt.Tables[1].Rows)
+                            {
+                                users.Add(Convert.ToInt32(dr[0]));
+                            }
+                            returndata.Add("users", users);
+                        }
+                        resp.Data = returndata;
                     }
 
                     return resp;
