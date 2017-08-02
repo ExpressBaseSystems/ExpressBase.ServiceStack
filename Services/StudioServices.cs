@@ -36,7 +36,7 @@ ORDER BY
         private const string Query3 = @"
 SELECT 
     EO.id, EO.obj_name, EO.obj_type, EO.obj_last_ver_id, EO.obj_cur_status,EO.obj_desc,
-    EOV.id,EOV.eb_objects_id,EOV.ver_num, EOV.obj_changelog,EOV.commit_ts, EOV.commit_uid, EOV.obj_bytea
+    EOV.id,EOV.eb_objects_id,EOV.ver_num, EOV.obj_changelog,EOV.commit_ts, EOV.commit_uid, EOV.obj_bytea, EOV.obj_json
 FROM 
     eb_objects EO, eb_objects_ver EOV
 WHERE
@@ -154,7 +154,8 @@ SELECT @function_name";
                         Status = (ObjectLifeCycleStatus)dr[4],
                         Description = dr[5].ToString(),
                         VersionNumber = Convert.ToInt32(dr[3]),
-                        Bytea = (request.Id > 0) ? dr[12] as byte[] : null
+                        Bytea = (request.Id > 0) ? dr[12] as byte[] : null,
+                        Json = (request.Id > 0) ? dr[13].ToString() : null,
                     });
 
                     f.Add(_ebObject);
@@ -226,14 +227,14 @@ VALUES
     (@obj_name, @obj_desc, @obj_type, 1, @obj_cur_status)  RETURNING id;
 
 INSERT INTO eb_objects_ver
-    (eb_objects_id, ver_num, obj_bytea, commit_uid, commit_ts) 
+    (eb_objects_id, ver_num, obj_bytea, commit_uid, commit_ts, obj_json) 
 VALUES
-    (CURRVAL('eb_objects_id_seq'), 1, @obj_bytea, @commit_uid, NOW());
+    (CURRVAL('eb_objects_id_seq'), 1, @obj_bytea, @commit_uid, NOW(), @obj_json);
 
 INSERT INTO eb_objects_ver
-    (eb_objects_id, ver_num, obj_bytea) 
+    (eb_objects_id, ver_num, obj_bytea, obj_json) 
 VALUES
-    (CURRVAL('eb_objects_id_seq'), -1, @obj_bytea);
+    (CURRVAL('eb_objects_id_seq'), -1, @obj_bytea, @obj_json);
 
 INSERT INTO eb_objects_relations
     (dominant,dependant)
@@ -249,14 +250,14 @@ VALUES
     (@obj_name, @obj_desc, @obj_type, 1, @obj_cur_status)  RETURNING id;
 
 INSERT INTO eb_objects_ver
-    (eb_objects_id, ver_num, obj_bytea, commit_uid, commit_ts) 
+    (eb_objects_id, ver_num, obj_bytea, commit_uid, commit_ts , obj_json) 
 VALUES
-    (CURRVAL('eb_objects_id_seq'), 1, @obj_bytea, @commit_uid, NOW());
+    (CURRVAL('eb_objects_id_seq'), 1, @obj_bytea, @commit_uid, NOW(), @obj_json);
 
 INSERT INTO eb_objects_ver
-    (eb_objects_id, ver_num, obj_bytea) 
+    (eb_objects_id, ver_num, obj_bytea, obj_json) 
 VALUES
-    (CURRVAL('eb_objects_id_seq'), -1, @obj_bytea);
+    (CURRVAL('eb_objects_id_seq'), -1, @obj_bytea, @obj_json);
 ";
 
         private const string Query_SubsequentCommit = @"
@@ -326,6 +327,7 @@ WHERE
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_name", System.Data.DbType.String, request.Name));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_desc", System.Data.DbType.String, request.Description));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_bytea", System.Data.DbType.Binary, request.Bytea));
+                    cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_json", NpgsqlTypes.NpgsqlDbType.Json, request.Json));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_cur_status", System.Data.DbType.Int32, ObjectLifeCycleStatus.Development));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@commit_uid", System.Data.DbType.Int32, request.UserId));
                     }
