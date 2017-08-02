@@ -604,7 +604,7 @@ namespace ExpressBase.ServiceStack.Services
                             sql = "SELECT id,firstname FROM eb_users WHERE id != @id";
 
                         DbParameter[] parameters = { base.DatabaseFactory.ObjectsDB.GetNewParameter("id", System.Data.DbType.Int32, request.UserId),
-                                                    base.DatabaseFactory.ObjectsDB.GetNewParameter("id", System.Data.DbType.Int32, request.id )};
+                                                    base.DatabaseFactory.ObjectsDB.GetNewParameter("roleid", System.Data.DbType.Int32, request.id )};
 
                         var dt = base.DatabaseFactory.ObjectsDB.DoQueries(sql, parameters);
 
