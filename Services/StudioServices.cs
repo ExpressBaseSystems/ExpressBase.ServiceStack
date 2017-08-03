@@ -17,7 +17,7 @@ namespace ExpressBase.ServiceStack
     {
         #region Get EbObject Queries
 
-        // Fetch all version without bytea of a particular Object
+        // Fetch all version without json of a particular Object
         private const string Query1 = @"
 SELECT 
     EOV.id, EOV.ver_num, EOV.obj_changelog, EOV.commit_ts, EU.firstname
@@ -29,14 +29,14 @@ WHERE
 ORDER BY
     ver_num DESC";
 
-        // Fetch particular version with Bytea of a particular Object
-        private const string Query2 = "SELECT obj_bytea FROM eb_objects_ver WHERE id=@id";
+        // Fetch particular version with json of a particular Object
+        private const string Query2 = "SELECT obj_json FROM eb_objects_ver WHERE id=@id";
 
-        // Fetch latest non-committed version with bytea - for EDIT
+        // Fetch latest non-committed version with json - for EDIT
         private const string Query3 = @"
 SELECT 
     EO.id, EO.obj_name, EO.obj_type, EO.obj_last_ver_id, EO.obj_cur_status,EO.obj_desc,
-    EOV.id,EOV.eb_objects_id,EOV.ver_num, EOV.obj_changelog,EOV.commit_ts, EOV.commit_uid, EOV.obj_bytea
+    EOV.id,EOV.eb_objects_id,EOV.ver_num, EOV.obj_changelog,EOV.commit_ts, EOV.commit_uid, EOV.obj_json
 FROM 
     eb_objects EO, eb_objects_ver EOV
 WHERE
@@ -44,11 +44,11 @@ WHERE
 ORDER BY
     EO.obj_type";
 
-        // Fetch latest committed version with bytea - for Execute/Run/Consume
+        // Fetch latest committed version with json - for Execute/Run/Consume
         private const string Query4 = @"
 SELECT 
     EO.id, EO.obj_name, EO.obj_type, EO.obj_last_ver_id, EO.obj_cur_status,EO.obj_desc,
-    EOV.id,EOV.eb_objects_id,EOV.ver_num, EOV.obj_changelog,EOV.commit_ts, EOV.commit_uid, EOV.obj_bytea
+    EOV.id,EOV.eb_objects_id,EOV.ver_num, EOV.obj_changelog,EOV.commit_ts, EOV.commit_uid, EOV.obj_json
 FROM 
     eb_objects EO, eb_objects_ver EOV
 WHERE
@@ -56,7 +56,7 @@ WHERE
 ORDER BY
     EO.obj_type";
 
-        // Get All latest committed versions of this Object Type without Bytea
+        // Get All latest committed versions of this Object Type without json
         private const string Query5 = @"
 SELECT 
     EO.id, EO.obj_name, EO.obj_type, EO.obj_last_ver_id, EO.obj_cur_status,EO.obj_desc,
@@ -102,7 +102,7 @@ SELECT @function_name";
                 }
 
             }
-            // Fetch all version without bytea of a particular Object
+            // Fetch all version without json of a particular Object
             if (request.Id > 0 && request.VersionId == 0)
             {
                 parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.Int32, request.Id));
@@ -122,7 +122,7 @@ SELECT @function_name";
                 }
             }
 
-            // Fetch particular version with Bytea of a particular Object
+            // Fetch particular version with json of a particular Object
             if (request.VersionId > 0 && request.VersionId < Int32.MaxValue)
             {
                 parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.Int32, request.VersionId));
@@ -132,13 +132,13 @@ SELECT @function_name";
                 {
                     var _ebObject = (new EbObjectWrapper
                     {
-                        Bytea = dr[0] as byte[]
+                        Json = dr[0].ToString()
                     });
                     f.Add(_ebObject);
                 }
             }
 
-            // Fetch latest non-committed version with bytea - for EDIT of a particular Object
+            // Fetch latest non-committed version with json - for EDIT of a particular Object
             if (request.Id > 0 && request.VersionId < 0)
             {
                 parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.Int32, request.Id));
@@ -154,14 +154,14 @@ SELECT @function_name";
                         Status = (ObjectLifeCycleStatus)dr[4],
                         Description = dr[5].ToString(),
                         VersionNumber = Convert.ToInt32(dr[3]),
-                        Bytea = (request.Id > 0) ? dr[12] as byte[] : null
+                        Json = (request.Id > 0) ? dr[12].ToString() : null
                     });
 
                     f.Add(_ebObject);
                 }
             }
 
-            // Fetch latest committed version with bytea - for Execute/Run/Consume a particular Object
+            // Fetch latest committed version with json - for Execute/Run/Consume a particular Object
             if (request.Id > 0 && request.VersionId == Int32.MaxValue)
             {
                 parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.Int32, request.Id));
@@ -177,14 +177,14 @@ SELECT @function_name";
                         Status = (ObjectLifeCycleStatus)dr[4],
                         Description = dr[5].ToString(),
                         VersionNumber = Convert.ToInt32(dr[8]),
-                        Bytea = (request.Id > 0) ? dr[12] as byte[] : null
+                        Json = (request.Id > 0) ? dr[12].ToString() : null
                     });
 
                     f.Add(_ebObject);
                 }
             }
 
-            // Get All latest committed versions of this Object Type without Bytea
+            // Get All latest committed versions of this Object Type without json
             if (request.Id == 0 && request.VersionId == Int32.MaxValue)
             {
                 parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@type", System.Data.DbType.Int32, request.EbObjectType));
