@@ -176,60 +176,60 @@ namespace ExpressBase.ServiceStack.Services
 
         //}
 
-        public bool Uniquetest(Dictionary<string, object> dict)
-        {
-            bool bResult = false;
-            Objects.EbForm _form = this.Redis.Get<Objects.EbForm>(string.Format("form{0}", Convert.ToInt32(dict["FId"])));
-            var uniquelist = _form.GetControlsByPropertyValue<bool>("Unique", true, Objects.EnumOperator.Equal);
-            foreach (EbControl control in uniquelist)
-            {
-                if (dict.ContainsKey(control.Name))
-                {
-                    var chkifuq = new CheckIfUnique();
-                    chkifuq.TableId = _form.Table.Id;
-                    chkifuq.Colvalues = new Dictionary<string, object>();
-                    chkifuq.Colvalues.Add(control.Name, dict[control.Name]);
-                    bResult = this.Post(chkifuq);
-                    if (!bResult)
-                        break;
-                }
-                else
-                {
-                    bResult = true;
+        //public bool Uniquetest(Dictionary<string, object> dict)
+        //{
+        //    bool bResult = false;
+        //    Objects.EbForm _form = this.Redis.Get<Objects.EbForm>(string.Format("form{0}", Convert.ToInt32(dict["FId"])));
+        //    var uniquelist = _form.GetControlsByPropertyValue<bool>("Unique", true, Objects.EnumOperator.Equal);
+        //    foreach (EbControl control in uniquelist)
+        //    {
+        //        if (dict.ContainsKey(control.Name))
+        //        {
+        //            var chkifuq = new CheckIfUnique();
+        //            chkifuq.TableId = _form.Table.Id;
+        //            chkifuq.Colvalues = new Dictionary<string, object>();
+        //            chkifuq.Colvalues.Add(control.Name, dict[control.Name]);
+        //            bResult = this.Post(chkifuq);
+        //            if (!bResult)
+        //                break;
+        //        }
+        //        else
+        //        {
+        //            bResult = true;
 
-                }
-            }
-            return bResult;
-        }
+        //        }
+        //    }
+        //    return bResult;
+        //}
 
-        [Authenticate]
-        public bool Post(CheckIfUnique request)
-        {
+        //[Authenticate]
+        //public bool Post(CheckIfUnique request)
+        //{
 
-            List<string> _whclause_sb = new List<string>(request.Colvalues.Count);
-            using (var redisClient = this.Redis)
-            {
-                tcol = redisClient.Get<EbTableCollection>("EbTableCollection");
-                ccol = redisClient.Get<EbTableColumnCollection>("EbTableColumnCollection");
-            }
+        //    List<string> _whclause_sb = new List<string>(request.Colvalues.Count);
+        //    using (var redisClient = this.Redis)
+        //    {
+        //        tcol = redisClient.Get<EbTableCollection>("EbTableCollection");
+        //        ccol = redisClient.Get<EbTableColumnCollection>("EbTableColumnCollection");
+        //    }
 
-            foreach (string key in request.Colvalues.Keys)
-                _whclause_sb.Add(string.Format("{0}=@{0}", ccol[key].Name));
+        //    foreach (string key in request.Colvalues.Keys)
+        //        _whclause_sb.Add(string.Format("{0}=@{0}", ccol[key].Name));
 
-            string _sql = string.Format("SELECT COUNT(*) FROM {0} WHERE {1}", tcol[request.TableId].Name, _whclause_sb.ToArray().Join(" AND "));
-            using (var _con = this.DatabaseFactory.ObjectsDB.GetNewConnection())
-            {
-                _con.Open();
-                var _cmd = this.DatabaseFactory.ObjectsDB.GetNewCommand(_con, _sql);
-                foreach (KeyValuePair<string, object> dict in request.Colvalues)
-                {
-                    if (ccol.ContainsKey(dict.Key))
+        //    string _sql = string.Format("SELECT COUNT(*) FROM {0} WHERE {1}", tcol[request.TableId].Name, _whclause_sb.ToArray().Join(" AND "));
+        //    using (var _con = this.DatabaseFactory.ObjectsDB.GetNewConnection())
+        //    {
+        //        _con.Open();
+        //        var _cmd = this.DatabaseFactory.ObjectsDB.GetNewCommand(_con, _sql);
+        //        foreach (KeyValuePair<string, object> dict in request.Colvalues)
+        //        {
+        //            if (ccol.ContainsKey(dict.Key))
 
-                        _cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter(string.Format("@{0}", ccol[dict.Key].Name), ccol[dict.Key].Type, dict.Value));
-                }
+        //                _cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter(string.Format("@{0}", ccol[dict.Key].Name), ccol[dict.Key].Type, dict.Value));
+        //        }
 
-                return (Convert.ToInt32(_cmd.ExecuteScalar()) == 0);
-            }
-        }
+        //        return (Convert.ToInt32(_cmd.ExecuteScalar()) == 0);
+        //    }
+        //}
     }
 }
