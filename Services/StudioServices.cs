@@ -226,14 +226,14 @@ VALUES
     (@obj_name, @obj_desc, @obj_type, 1, @obj_cur_status)  RETURNING id;
 
 INSERT INTO eb_objects_ver
-    (eb_objects_id, ver_num, obj_bytea, commit_uid, commit_ts, obj_json) 
+    (eb_objects_id, ver_num, obj_json, commit_uid, commit_ts) 
 VALUES
-    (CURRVAL('eb_objects_id_seq'), 1, @obj_bytea, @commit_uid, NOW(), @obj_json);
+    (CURRVAL('eb_objects_id_seq'), 1, @obj_json, @commit_uid, NOW());
 
 INSERT INTO eb_objects_ver
-    (eb_objects_id, ver_num, obj_bytea, obj_json) 
+    (eb_objects_id, ver_num, obj_json) 
 VALUES
-    (CURRVAL('eb_objects_id_seq'), -1, @obj_bytea, @obj_json);
+    (CURRVAL('eb_objects_id_seq'), -1, @obj_json);
 
 INSERT INTO eb_objects_relations
     (dominant,dependant)
@@ -249,14 +249,14 @@ VALUES
     (@obj_name, @obj_desc, @obj_type, 1, @obj_cur_status)  RETURNING id;
 
 INSERT INTO eb_objects_ver
-    (eb_objects_id, ver_num, obj_bytea, commit_uid, commit_ts , obj_json) 
+    (eb_objects_id, ver_num, obj_json, commit_uid, commit_ts ) 
 VALUES
-    (CURRVAL('eb_objects_id_seq'), 1, @obj_bytea, @commit_uid, NOW(), @obj_json);
+    (CURRVAL('eb_objects_id_seq'), 1, @obj_json, @commit_uid, NOW() );
 
 INSERT INTO eb_objects_ver
-    (eb_objects_id, ver_num, obj_bytea, obj_json) 
+    (eb_objects_id, ver_num, obj_json ) 
 VALUES
-    (CURRVAL('eb_objects_id_seq'), -1, @obj_bytea, @obj_json);
+    (CURRVAL('eb_objects_id_seq'), -1, @obj_json );
 ";
 
         private const string Query_SubsequentCommit = @"
@@ -270,18 +270,18 @@ WHERE
 
 UPDATE eb_objects_ver
 SET
-    obj_bytea=@obj_bytea, obj_changelog=@obj_changelog, ver_num=(SELECT MAX(ver_num)+1 FROM eb_objects_ver WHERE eb_objects_id=@id), commit_uid=@commit_uid, commit_ts=NOW()
+    obj_json=@obj_json, obj_changelog=@obj_changelog, ver_num=(SELECT MAX(ver_num)+1 FROM eb_objects_ver WHERE eb_objects_id=@id), commit_uid=@commit_uid, commit_ts=NOW()
 WHERE
     eb_objects_id=@id AND commit_uid IS NULL AND ver_num=-1;
 
 INSERT INTO eb_objects_ver
-    (eb_objects_id, ver_num, obj_bytea) 
+    (eb_objects_id, ver_num, obj_json) 
 VALUES
-    (@id, -1, @obj_bytea)";
+    (@id, -1, @obj_json)";
 
         private const string Query_Save = @"
 UPDATE eb_objects SET obj_name=@obj_name, obj_desc=@obj_desc WHERE id=@id;
-UPDATE eb_objects_ver SET obj_bytea=@obj_bytea WHERE eb_objects_id=@id AND commit_uid IS NULL AND ver_num=-1;";
+UPDATE eb_objects_ver SET obj_json=@obj_json WHERE eb_objects_id=@id AND commit_uid IS NULL AND ver_num=-1;";
 
 
         private const string GetObjectRelations = @"
@@ -325,7 +325,6 @@ WHERE
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_type", System.Data.DbType.Int32, (int)request.EbObjectType));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_name", System.Data.DbType.String, request.Name));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_desc", System.Data.DbType.String, request.Description));
-                    cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_bytea", System.Data.DbType.Binary, request.Bytea));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_json", NpgsqlTypes.NpgsqlDbType.Json, request.Json));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_cur_status", System.Data.DbType.Int32, ObjectLifeCycleStatus.Development));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@commit_uid", System.Data.DbType.Int32, request.UserId));
@@ -338,7 +337,7 @@ WHERE
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.Int32, request.Id));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_name", System.Data.DbType.String, request.Name));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_desc", System.Data.DbType.String, request.Description));
-                    cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_bytea", System.Data.DbType.Binary, request.Bytea));
+                    cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_json", NpgsqlTypes.NpgsqlDbType.Json, request.Json));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_cur_status", System.Data.DbType.Int32, ObjectLifeCycleStatus.Development));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_changelog", System.Data.DbType.String, request.ChangeLog));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@commit_uid", System.Data.DbType.Int32, request.UserId));
@@ -351,12 +350,12 @@ WHERE
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.Int32, request.Id));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_name", System.Data.DbType.String, request.Name));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_desc", System.Data.DbType.String, request.Description));
-                    cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_bytea", System.Data.DbType.Binary, request.Bytea));
+                    cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_json", NpgsqlTypes.NpgsqlDbType.Json, request.Json));
                 }
 
                 if (request.NeedRun)
                 {
-                    var code = EbSerializers.ProtoBuf_DeSerialize<EbSqlFunction>(request.Bytea).Sql;
+                    var code = EbSerializers.Json_Deserialize<EbSqlFunction>(request.Json).Sql;
                     cmd = this.DatabaseFactory.ObjectsDB.GetNewCommand(con, code);
                 }
                 return new EbObjectSaveOrCommitResponse() { Id = Convert.ToInt32(cmd.ExecuteScalar()) };
