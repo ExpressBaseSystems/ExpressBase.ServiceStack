@@ -23,7 +23,7 @@ namespace ExpressBase.ServiceStack
 
             //var dt = this.DatabaseFactory.ObjectsDB.DoQuery(string.Format("SELECT obj_bytea FROM eb_objects_ver WHERE id={0}", request.Id));
             var dt = this.DatabaseFactory.ObjectsDB.DoQuery(string.Format(@"
-                SELECT EOV.obj_bytea FROM eb_objects_ver EOV 
+                SELECT EOV.obj_json FROM eb_objects_ver EOV 
                 INNER JOIN eb_objects EO
                 ON EO.id = EOV.eb_objects_id  AND EO.obj_last_ver_id =EOV.ver_num AND EOV.eb_objects_id={0}", request.Id)
                );
@@ -40,7 +40,7 @@ namespace ExpressBase.ServiceStack
 
             if (dt.Rows.Count > 0)
             {
-                var _ds = EbSerializers.ProtoBuf_DeSerialize<EbDataSource>((byte[])dt.Rows[0][0]);
+                var _ds = EbSerializers.Json_Deserialize<EbDataSource>(dt.Rows[0][0].ToString());
                 this.Log.Info("_ds *****" + _ds.Sql);
                 string _sql = string.Empty;
 
@@ -133,7 +133,7 @@ namespace ExpressBase.ServiceStack
                 // getting DATASOURCE needs to be changed LIVE/DEV/TEST scenarios
                 string _sql_4dsBytea = string.Format(@"
 SELECT 
-    EOV.obj_bytea 
+    EOV.obj_json 
 FROM 
     eb_objects_ver EOV, eb_objects EO 
 WHERE
@@ -145,7 +145,7 @@ WHERE
 
                 if (dt.Rows.Count > 0)
                 {
-                    var _ds = EbSerializers.ProtoBuf_DeSerialize<EbDataSource>((byte[])dt.Rows[0][0]);
+                    var _ds = EbSerializers.Json_Deserialize<EbDataSource>(dt.Rows[0][0].ToString());
                     if (_ds != null)
                     {
                         Log.Info(">>>>>>>>>>>>>>>>>>>>>>>> dscolumns Sql: " + _ds.Sql);
