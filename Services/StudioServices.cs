@@ -312,28 +312,24 @@ WHERE
                 // First COMMIT
                 if (!request.IsSave && request.Id == 0)
                 {
-                    if (request.Relations == null)
-                    {
-                        cmd = this.DatabaseFactory.ObjectsDB.GetNewCommand(con, Query_FirstCommit_without_rel);
-                    }
-                    else
-                    {
-                        cmd = this.DatabaseFactory.ObjectsDB.GetNewCommand(con, Query_FirstCommit);
-                        cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("@relations", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer, request.Relations.Split(',').Select(n => Convert.ToInt32(n)).ToArray()));
-                    }
-                   
+                    string sql = "SELECT eb_objects_first_commit(@obj_name, @obj_desc, @obj_type, @obj_cur_status, @obj_json, @commit_uid, @src_pid, @cur_pid, @relations, @isversioned);";
+                    cmd = this.DatabaseFactory.ObjectsDB.GetNewCommand(con, sql);
+                    cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("@relations", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer,(request.Relations != null)? request.Relations.Split(',').Select(n => Convert.ToInt32(n)).ToArray(): null));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_type", System.Data.DbType.Int32, (int)request.EbObjectType));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_name", System.Data.DbType.String, request.Name));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_desc", System.Data.DbType.String, request.Description));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_json", NpgsqlTypes.NpgsqlDbType.Json, request.Json));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_cur_status", System.Data.DbType.Int32, ObjectLifeCycleStatus.Development));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@commit_uid", System.Data.DbType.Int32, request.UserId));
-                    }
-
-                // Subsequent COMMIT
-                if (!request.IsSave && request.Id > 0)
+                    cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@src_pid", System.Data.DbType.String, request.TenantAccountId));
+                    cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@cur_pid", System.Data.DbType.String, request.TenantAccountId));
+                    cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@isversioned", System.Data.DbType.Boolean, request.IsVersioned));
+                }
+                else
                 {
-                    cmd = this.DatabaseFactory.ObjectsDB.GetNewCommand(con, Query_SubsequentCommit);
+                    string sql = "SELECT eb_objects_subsequentcommit_save(@obj_name, @obj_desc, @obj_cur_status, @id, @obj_json, @obj_changelog, @issave, @commit_uid, @obj_type, @src_pid, @cur_pid )";
+                    cmd = this.DatabaseFactory.ObjectsDB.GetNewCommand(con, sql);
+
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.Int32, request.Id));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_name", System.Data.DbType.String, request.Name));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_desc", System.Data.DbType.String, request.Description));
@@ -341,17 +337,54 @@ WHERE
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_cur_status", System.Data.DbType.Int32, ObjectLifeCycleStatus.Development));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_changelog", System.Data.DbType.String, request.ChangeLog));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@commit_uid", System.Data.DbType.Int32, request.UserId));
+                    cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_type", System.Data.DbType.Int32, (int)request.EbObjectType));
+                    cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@issave", System.Data.DbType.Boolean, request.IsSave));
+                    cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@src_pid", System.Data.DbType.String, request.TenantAccountId));
+                    cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@cur_pid", System.Data.DbType.String, request.TenantAccountId));
                 }
 
-                // SAVE
-                if (request.IsSave)
-                {
-                    cmd = this.DatabaseFactory.ObjectsDB.GetNewCommand(con, Query_Save);
-                    cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.Int32, request.Id));
-                    cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_name", System.Data.DbType.String, request.Name));
-                    cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_desc", System.Data.DbType.String, request.Description));
-                    cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_json", NpgsqlTypes.NpgsqlDbType.Json, request.Json));
-                }
+                // if (!request.IsSave && request.Id == 0)
+                // {
+                //     if (request.Relations == null)
+                //     {
+                //         cmd = this.DatabaseFactory.ObjectsDB.GetNewCommand(con, Query_FirstCommit_without_rel);
+                //     }
+                //     else
+                //     {
+                //         cmd = this.DatabaseFactory.ObjectsDB.GetNewCommand(con, Query_FirstCommit);
+                //         cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("@relations", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer, request.Relations.Split(',').Select(n => Convert.ToInt32(n)).ToArray()));
+                //     }
+
+                //     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_type", System.Data.DbType.Int32, (int)request.EbObjectType));
+                //     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_name", System.Data.DbType.String, request.Name));
+                //     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_desc", System.Data.DbType.String, request.Description));
+                //     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_json", NpgsqlTypes.NpgsqlDbType.Json, request.Json));
+                //     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_cur_status", System.Data.DbType.Int32, ObjectLifeCycleStatus.Development));
+                //     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@commit_uid", System.Data.DbType.Int32, request.UserId));
+                //}
+
+                // // Subsequent COMMIT
+                // if (!request.IsSave && request.Id > 0)
+                // {
+                //     cmd = this.DatabaseFactory.ObjectsDB.GetNewCommand(con, Query_SubsequentCommit);
+                //     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.Int32, request.Id));
+                //     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_name", System.Data.DbType.String, request.Name));
+                //     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_desc", System.Data.DbType.String, request.Description));
+                //     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_json", NpgsqlTypes.NpgsqlDbType.Json, request.Json));
+                //     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_cur_status", System.Data.DbType.Int32, ObjectLifeCycleStatus.Development));
+                //     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_changelog", System.Data.DbType.String, request.ChangeLog));
+                //     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@commit_uid", System.Data.DbType.Int32, request.UserId));
+                // }
+
+                // // SAVE
+                // if (request.IsSave)
+                // {
+                //     cmd = this.DatabaseFactory.ObjectsDB.GetNewCommand(con, Query_Save);
+                //     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.Int32, request.Id));
+                //     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_name", System.Data.DbType.String, request.Name));
+                //     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_desc", System.Data.DbType.String, request.Description));
+                //     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_json", NpgsqlTypes.NpgsqlDbType.Json, request.Json));
+                // }
 
                 if (request.NeedRun)
                 {
