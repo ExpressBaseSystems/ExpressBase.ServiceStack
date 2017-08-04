@@ -312,7 +312,7 @@ WHERE
                 // First COMMIT
                 if (!request.IsSave && request.Id == 0)
                 {
-                    if (request.Relations == null)
+                    if (request.Relations == "")
                     {
                         cmd = this.DatabaseFactory.ObjectsDB.GetNewCommand(con, Query_FirstCommit_without_rel);
                     }
