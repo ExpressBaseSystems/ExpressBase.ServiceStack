@@ -302,6 +302,7 @@ WHERE
 
             ILog log = LogManager.GetLogger(GetType());
             log.Info("#DS insert -- entered post");
+            request.IsVersioned=!Enum.IsDefined(typeof(EbObjectTypesNonVer), (int)request.EbObjectType);
 
             using (var con = this.DatabaseFactory.ObjectsDB.GetNewConnection())
             {
@@ -314,7 +315,8 @@ WHERE
                 {
                     string sql = "SELECT eb_objects_first_commit(@obj_name, @obj_desc, @obj_type, @obj_cur_status, @obj_json, @commit_uid, @src_pid, @cur_pid, @relations, @isversioned);";
                     cmd = this.DatabaseFactory.ObjectsDB.GetNewCommand(con, sql);
-                    cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("@relations", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer,(request.Relations != null)? request.Relations.Split(',').Select(n => Convert.ToInt32(n)).ToArray(): null));
+                    string[] arr = { };
+                    cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("@relations", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text,(request.Relations != null)? request.Relations.Split(',').Select(n => n.ToString()).ToArray() : arr));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_type", System.Data.DbType.Int32, (int)request.EbObjectType));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_name", System.Data.DbType.String, request.Name));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_desc", System.Data.DbType.String, request.Description));
