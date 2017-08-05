@@ -44,6 +44,18 @@ WHERE
 ORDER BY
     EO.obj_type";
 
+        // Fetch with json- for nonversioned - for EDIT
+        private const string Query7 = @"
+SELECT 
+    EO.id, EO.obj_name, EO.obj_type, EO.obj_last_ver_id, EO.obj_cur_status,EO.obj_desc,
+    EOV.id,EOV.eb_objects_id,EOV.ver_num, EOV.obj_changelog,EOV.commit_ts, EOV.commit_uid, EOV.obj_json, EOV.refid
+FROM 
+    eb_objects EO, eb_objects_ver EOV
+WHERE
+    EO.id = EOV.eb_objects_id AND EO.id=@id
+ORDER BY
+    EO.obj_type";
+
         // Fetch latest committed version with json - for Execute/Run/Consume
         private const string Query4 = @"
 SELECT 
@@ -82,6 +94,7 @@ SELECT @function_name";
             List<EbObjectWrapper> f = new List<EbObjectWrapper>();
             ILog log = LogManager.GetLogger(GetType());
             List<System.Data.Common.DbParameter> parameters = new List<System.Data.Common.DbParameter>();
+             var isVersioned=!Enum.IsDefined(typeof(EbObjectTypesNonVer), (int)request.EbObjectType);
 
             //Fetch ebobjects relations
 
@@ -103,7 +116,7 @@ SELECT @function_name";
 
             }
             // Fetch all version without json of a particular Object
-            if (request.Id > 0 && request.VersionId == 0)
+            if (request.Id > 0 && request.VersionId == 0 && isVersioned)
             {
                 parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.Int32, request.Id));
                 var dt = this.DatabaseFactory.ObjectsDB.DoQuery(Query1, parameters.ToArray());
@@ -144,6 +157,30 @@ SELECT @function_name";
             {
                 parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.Int32, request.Id));
                 var dt = this.DatabaseFactory.ObjectsDB.DoQuery(Query3, parameters.ToArray());
+
+                foreach (EbDataRow dr in dt.Rows)
+                {
+                    var _ebObject = (new EbObjectWrapper
+                    {
+                        Id = Convert.ToInt32(dr[0]),
+                        Name = dr[1].ToString(),
+                        EbObjectType = (EbObjectType)Convert.ToInt32(dr[2]),
+                        Status = (ObjectLifeCycleStatus)dr[4],
+                        Description = dr[5].ToString(),
+                        VersionNumber = Convert.ToInt32(dr[3]),
+                        Json = (request.Id > 0) ? dr[12].ToString() : null,
+                        RefId = dr[13].ToString()
+                    });
+
+                    f.Add(_ebObject);
+                }
+            }
+
+            // Fetch with json- for nonversioned - for EDIT
+            if (request.Id > 0 && !isVersioned)
+            {
+                parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.Int32, request.Id));
+                var dt = this.DatabaseFactory.ObjectsDB.DoQuery(Query7, parameters.ToArray());
 
                 foreach (EbDataRow dr in dt.Rows)
                 {
@@ -306,7 +343,7 @@ WHERE
 
             ILog log = LogManager.GetLogger(GetType());
             log.Info("#DS insert -- entered post");
-            request.IsVersioned=!Enum.IsDefined(typeof(EbObjectTypesNonVer), (int)request.EbObjectType);
+            var isVersioned=!Enum.IsDefined(typeof(EbObjectTypesNonVer), (int)request.EbObjectType);
 
             using (var con = this.DatabaseFactory.ObjectsDB.GetNewConnection())
             {
@@ -329,11 +366,11 @@ WHERE
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@src_pid", System.Data.DbType.String, request.TenantAccountId));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@cur_pid", System.Data.DbType.String, request.TenantAccountId));
                     cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("@relations", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text, (request.Relations != null) ? request.Relations.Split(',').Select(n => n.ToString()).ToArray() : arr));
-                    cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@isversioned", System.Data.DbType.Boolean, request.IsVersioned));
+                    cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@isversioned", System.Data.DbType.Boolean, isVersioned));
                 }
                 else
                 {
-                    string sql = "SELECT eb_objects_subsequentcommit_save(@id, @obj_name, @obj_desc, @obj_type, @obj_cur_status, @obj_json, @obj_changelog, @issave, @commit_uid, @src_pid, @cur_pid, @relations, @isversioned )";
+                    string sql = "SELECT eb_objects_subsequentcommit_save(@id, @obj_name, @obj_desc, @obj_type, @obj_cur_status, @obj_json, @obj_changelog, @issave, @commit_uid, @src_pid, @cur_pid, @relations , @isversioned)";
                     cmd = this.DatabaseFactory.ObjectsDB.GetNewCommand(con, sql);
 
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.Int32, request.Id));
@@ -348,7 +385,7 @@ WHERE
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@src_pid", System.Data.DbType.String, request.TenantAccountId));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@cur_pid", System.Data.DbType.String, request.TenantAccountId));
                     cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("@relations", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text, (request.Relations != null) ? request.Relations.Split(',').Select(n => n.ToString()).ToArray() : arr));
-                    cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@isversioned", System.Data.DbType.Boolean, request.IsVersioned));
+                    cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@isversioned", System.Data.DbType.Boolean, isVersioned));
                 }
 
                 // if (!request.IsSave && request.Id == 0)
