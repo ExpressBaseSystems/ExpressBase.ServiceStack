@@ -20,7 +20,7 @@ namespace ExpressBase.ServiceStack
         // Fetch all version without json of a particular Object
         private const string Query1 = @"
 SELECT 
-    EOV.id, EOV.ver_num, EOV.obj_changelog, EOV.commit_ts, EU.firstname
+    EOV.id, EOV.ver_num, EOV.obj_changelog, EOV.commit_ts, EOV.refid, EU.firstname
 FROM 
     eb_objects_ver EOV, eb_users EU
 WHERE
@@ -36,7 +36,7 @@ ORDER BY
         private const string Query3 = @"
 SELECT 
     EO.id, EO.obj_name, EO.obj_type, EO.obj_last_ver_id, EO.obj_cur_status,EO.obj_desc,
-    EOV.id,EOV.eb_objects_id,EOV.ver_num, EOV.obj_changelog,EOV.commit_ts, EOV.commit_uid, EOV.obj_json
+    EOV.id,EOV.eb_objects_id,EOV.ver_num, EOV.obj_changelog,EOV.commit_ts, EOV.commit_uid, EOV.obj_json, EOV.refid
 FROM 
     eb_objects EO, eb_objects_ver EOV
 WHERE
@@ -48,7 +48,7 @@ ORDER BY
         private const string Query4 = @"
 SELECT 
     EO.id, EO.obj_name, EO.obj_type, EO.obj_last_ver_id, EO.obj_cur_status,EO.obj_desc,
-    EOV.id,EOV.eb_objects_id,EOV.ver_num, EOV.obj_changelog,EOV.commit_ts, EOV.commit_uid, EOV.obj_json
+    EOV.id,EOV.eb_objects_id,EOV.ver_num, EOV.obj_changelog,EOV.commit_ts, EOV.commit_uid, EOV.obj_json, EOV.refid
 FROM 
     eb_objects EO, eb_objects_ver EOV
 WHERE
@@ -60,7 +60,7 @@ ORDER BY
         private const string Query5 = @"
 SELECT 
     EO.id, EO.obj_name, EO.obj_type, EO.obj_last_ver_id, EO.obj_cur_status,EO.obj_desc,
-    EOV.id, EOV.eb_objects_id, EOV.ver_num, EOV.obj_changelog,EOV.commit_ts, EOV.commit_uid,
+    EOV.id, EOV.eb_objects_id, EOV.ver_num, EOV.obj_changelog,EOV.commit_ts, EOV.commit_uid, EOV.refid,
     EU.firstname
 FROM 
     eb_objects EO, eb_objects_ver EOV,eb_users EU
@@ -116,7 +116,8 @@ SELECT @function_name";
                         VersionNumber = Convert.ToInt32(dr[1]),
                         ChangeLog = dr[2].ToString(),
                         CommitTs = Convert.ToDateTime(dr[3]),
-                        CommitUname = dr[4].ToString()
+                        RefId = dr[4].ToString(),
+                        CommitUname = dr[5].ToString()
                     });
                     f.Add(_ebObject);
                 }
@@ -154,7 +155,8 @@ SELECT @function_name";
                         Status = (ObjectLifeCycleStatus)dr[4],
                         Description = dr[5].ToString(),
                         VersionNumber = Convert.ToInt32(dr[3]),
-                        Json = (request.Id > 0) ? dr[12].ToString() : null
+                        Json = (request.Id > 0) ? dr[12].ToString() : null,
+                        RefId = dr[13].ToString()
                     });
 
                     f.Add(_ebObject);
@@ -177,7 +179,8 @@ SELECT @function_name";
                         Status = (ObjectLifeCycleStatus)dr[4],
                         Description = dr[5].ToString(),
                         VersionNumber = Convert.ToInt32(dr[8]),
-                        Json = (request.Id > 0) ? dr[12].ToString() : null
+                        Json = (request.Id > 0) ? dr[12].ToString() : null,
+                        RefId = dr[13].ToString()
                     });
 
                     f.Add(_ebObject);
@@ -201,7 +204,8 @@ SELECT @function_name";
                         Description = dr[5].ToString(),
                         VersionNumber = Convert.ToInt32(dr[8]),
                         CommitTs = Convert.ToDateTime(dr[10]),
-                        CommitUname = dr[12].ToString(),
+                        RefId= dr[12].ToString(),
+                        CommitUname = dr[13].ToString(),
                     });
 
                     f.Add(_ebObject);
@@ -309,40 +313,42 @@ WHERE
                 con.Open();
                 DbCommand cmd = null;            
                 log.Info("#DS insert 1 -- con open");
+                string[] arr = { };
 
                 // First COMMIT
                 if (!request.IsSave && request.Id == 0)
                 {
                     string sql = "SELECT eb_objects_first_commit(@obj_name, @obj_desc, @obj_type, @obj_cur_status, @obj_json, @commit_uid, @src_pid, @cur_pid, @relations, @isversioned);";
                     cmd = this.DatabaseFactory.ObjectsDB.GetNewCommand(con, sql);
-                    string[] arr = { };
-                    cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("@relations", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text,(request.Relations != null)? request.Relations.Split(',').Select(n => n.ToString()).ToArray() : arr));
-                    cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_type", System.Data.DbType.Int32, (int)request.EbObjectType));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_name", System.Data.DbType.String, request.Name));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_desc", System.Data.DbType.String, request.Description));
-                    cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_json", NpgsqlTypes.NpgsqlDbType.Json, request.Json));
+                    cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_type", System.Data.DbType.Int32, (int)request.EbObjectType));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_cur_status", System.Data.DbType.Int32, ObjectLifeCycleStatus.Development));
+                    cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_json", NpgsqlTypes.NpgsqlDbType.Json, request.Json));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@commit_uid", System.Data.DbType.Int32, request.UserId));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@src_pid", System.Data.DbType.String, request.TenantAccountId));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@cur_pid", System.Data.DbType.String, request.TenantAccountId));
+                    cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("@relations", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text, (request.Relations != null) ? request.Relations.Split(',').Select(n => n.ToString()).ToArray() : arr));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@isversioned", System.Data.DbType.Boolean, request.IsVersioned));
                 }
                 else
                 {
-                    string sql = "SELECT eb_objects_subsequentcommit_save(@obj_name, @obj_desc, @obj_cur_status, @id, @obj_json, @obj_changelog, @issave, @commit_uid, @obj_type, @src_pid, @cur_pid )";
+                    string sql = "SELECT eb_objects_subsequentcommit_save(@id, @obj_name, @obj_desc, @obj_type, @obj_cur_status, @obj_json, @obj_changelog, @issave, @commit_uid, @src_pid, @cur_pid, @relations, @isversioned )";
                     cmd = this.DatabaseFactory.ObjectsDB.GetNewCommand(con, sql);
 
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.Int32, request.Id));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_name", System.Data.DbType.String, request.Name));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_desc", System.Data.DbType.String, request.Description));
-                    cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_json", NpgsqlTypes.NpgsqlDbType.Json, request.Json));
+                    cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_type", System.Data.DbType.Int32, (int)request.EbObjectType));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_cur_status", System.Data.DbType.Int32, ObjectLifeCycleStatus.Development));
+                    cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_json", NpgsqlTypes.NpgsqlDbType.Json, request.Json));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_changelog", System.Data.DbType.String, request.ChangeLog));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@commit_uid", System.Data.DbType.Int32, request.UserId));
-                    cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_type", System.Data.DbType.Int32, (int)request.EbObjectType));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@issave", System.Data.DbType.Boolean, request.IsSave));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@src_pid", System.Data.DbType.String, request.TenantAccountId));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@cur_pid", System.Data.DbType.String, request.TenantAccountId));
+                    cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("@relations", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text, (request.Relations != null) ? request.Relations.Split(',').Select(n => n.ToString()).ToArray() : arr));
+                    cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@isversioned", System.Data.DbType.Boolean, request.IsVersioned));
                 }
 
                 // if (!request.IsSave && request.Id == 0)
