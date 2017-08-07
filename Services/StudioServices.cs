@@ -94,13 +94,13 @@ SELECT @function_name";
             List<EbObjectWrapper> f = new List<EbObjectWrapper>();
             ILog log = LogManager.GetLogger(GetType());
             List<System.Data.Common.DbParameter> parameters = new List<System.Data.Common.DbParameter>();
-             var isVersioned=!Enum.IsDefined(typeof(EbObjectTypesNonVer), (int)request.EbObjectType);
+            var isVersioned = !Enum.IsDefined(typeof(EbObjectTypesNonVer), (int)request.EbObjectType);
 
             //Fetch ebobjects relations
 
-            if(request.DominantId > 0)
+            if (!string.IsNullOrEmpty(request.DominantId))
             {
-                parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@dominant", System.Data.DbType.Int32, request.DominantId));
+                parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@dominant", System.Data.DbType.String, request.DominantId));
                 parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@type", System.Data.DbType.Int32, request.EbObjectType));
                 var dt = this.DatabaseFactory.ObjectsDB.DoQuery(GetObjectRelations, parameters.ToArray());
                 foreach (EbDataRow dr in dt.Rows)
@@ -110,8 +110,8 @@ SELECT @function_name";
                     _ebObject.Id = Convert.ToInt32(dr[0]);
                     _ebObject.Name = dr[1].ToString();
                     _ebObject.Description = dr[2].ToString();
-                   
-                        f.Add(_ebObject);
+
+                    f.Add(_ebObject);
                 }
 
             }
@@ -241,7 +241,7 @@ SELECT @function_name";
                         Description = dr[5].ToString(),
                         VersionNumber = Convert.ToInt32(dr[8]),
                         CommitTs = Convert.ToDateTime(dr[10]),
-                        RefId= dr[12].ToString(),
+                        RefId = dr[12].ToString(),
                         CommitUname = dr[13].ToString(),
                     });
 
@@ -251,8 +251,8 @@ SELECT @function_name";
 
 
             if (request.IsTest)
-            {                
-               // Query6
+            {
+                // Query6
             }
 
             return new EbObjectResponse { Data = f };
@@ -331,7 +331,7 @@ SELECT
 FROM 
 	eb_objects 
 WHERE 
-	id = ANY (SELECT dependant FROM eb_objects_relations WHERE dominant=@dominant) AND 
+	id = ANY (SELECT eb_objects_id FROM eb_objects_ver WHERE refid IN(SELECT dependant FROM eb_objects_relations WHERE dominant=@dominant)) AND 
     obj_type=@type";
 
         #endregion
@@ -343,12 +343,12 @@ WHERE
 
             ILog log = LogManager.GetLogger(GetType());
             log.Info("#DS insert -- entered post");
-            var isVersioned=!Enum.IsDefined(typeof(EbObjectTypesNonVer), (int)request.EbObjectType);
+            var isVersioned = !Enum.IsDefined(typeof(EbObjectTypesNonVer), (int)request.EbObjectType);
 
             using (var con = this.DatabaseFactory.ObjectsDB.GetNewConnection())
             {
                 con.Open();
-                DbCommand cmd = null;            
+                DbCommand cmd = null;
                 log.Info("#DS insert 1 -- con open");
                 string[] arr = { };
 
