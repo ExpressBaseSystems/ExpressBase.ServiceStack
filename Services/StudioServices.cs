@@ -8,6 +8,7 @@ using ExpressBase.Objects.ServiceStack_Artifacts;
 using ServiceStack.Logging;
 using System.Linq;
 using ExpressBase.Common;
+using ExpressBase.Objects.ObjectContainers;
 
 namespace ExpressBase.ServiceStack
 {
@@ -40,7 +41,7 @@ SELECT
 FROM 
     eb_objects EO, eb_objects_ver EOV
 WHERE
-    EO.id = EOV.eb_objects_id AND EO.id=@id AND EOV.ver_num = -1 AND EOV.commit_uid IS NULL
+    EO.id = EOV.eb_objects_id AND EOV.refid=@refid AND EOV.ver_num = -1 AND EOV.commit_uid IS NULL
 ORDER BY
     EO.obj_type";
 
@@ -64,11 +65,11 @@ SELECT
 FROM 
     eb_objects EO, eb_objects_ver EOV
 WHERE
-    EO.id = EOV.eb_objects_id AND EO.id=@id AND EOV.ver_num = EO.obj_last_ver_id AND EOV.commit_uid IS NOT NULL
+    EO.id = EOV.eb_objects_id AND EOV.refid=@refid
 ORDER BY
     EO.obj_type";
 
-        // Get All latest committed versions of this Object Type without json
+        // Get All latest versions of this Object Type without json
         private const string Query5 = @"
 SELECT 
     EO.id, EO.obj_name, EO.obj_type, EO.obj_last_ver_id, EO.obj_cur_status,EO.obj_desc,
@@ -77,7 +78,7 @@ SELECT
 FROM 
     eb_objects EO, eb_objects_ver EOV,eb_users EU
 WHERE
-    EO.id = EOV.eb_objects_id AND EO.obj_last_ver_id=EOV.ver_num AND EO.obj_type=@type AND EOV.commit_uid IS NOT NULL AND  EOV.commit_uid = EU.id
+    EO.id = EOV.eb_objects_id AND EOV.ver_num=-1 AND EO.obj_type=@type
 ORDER BY
     EO.obj_name";
 
@@ -116,9 +117,9 @@ SELECT @function_name";
 
             }
             // Fetch all version without json of a particular Object
-            if (request.Id > 0 && request.VersionId == 0 && isVersioned)
+            if (!string.IsNullOrEmpty(request.RefId) && request.VersionId == 0 && isVersioned)
             {
-                parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.Int32, request.Id));
+                parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@refid", System.Data.DbType.String, request.RefId));
                 var dt = this.DatabaseFactory.ObjectsDB.DoQuery(Query1, parameters.ToArray());
 
                 foreach (EbDataRow dr in dt.Rows)
@@ -139,7 +140,7 @@ SELECT @function_name";
             // Fetch particular version with json of a particular Object
             if (request.VersionId > 0 && request.VersionId < Int32.MaxValue)
             {
-                parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.Int32, request.VersionId));
+                parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@refid", System.Data.DbType.String, request.RefId));
                 var dt = this.DatabaseFactory.ObjectsDB.DoQuery(Query2, parameters.ToArray());
 
                 foreach (EbDataRow dr in dt.Rows)
@@ -153,9 +154,9 @@ SELECT @function_name";
             }
 
             // Fetch latest non-committed version with json - for EDIT of a particular Object
-            if (request.Id > 0 && request.VersionId < 0)
+            if (!string.IsNullOrEmpty(request.RefId) && request.VersionId < 0)
             {
-                parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.Int32, request.Id));
+                parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@refid", System.Data.DbType.String, request.RefId));
                 var dt = this.DatabaseFactory.ObjectsDB.DoQuery(Query3, parameters.ToArray());
 
                 foreach (EbDataRow dr in dt.Rows)
@@ -168,7 +169,7 @@ SELECT @function_name";
                         Status = (ObjectLifeCycleStatus)dr[4],
                         Description = dr[5].ToString(),
                         VersionNumber = Convert.ToInt32(dr[3]),
-                        Json = (request.Id > 0) ? dr[12].ToString() : null,
+                        Json = (!string.IsNullOrEmpty(request.RefId)) ? dr[12].ToString() : null,
                         RefId = dr[13].ToString()
                     });
 
@@ -177,7 +178,7 @@ SELECT @function_name";
             }
 
             // Fetch with json- for nonversioned - for EDIT
-            if (request.Id > 0 && !isVersioned)
+            if (!string.IsNullOrEmpty(request.RefId) && !isVersioned)
             {
                 parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.Int32, request.Id));
                 var dt = this.DatabaseFactory.ObjectsDB.DoQuery(Query7, parameters.ToArray());
@@ -192,7 +193,7 @@ SELECT @function_name";
                         Status = (ObjectLifeCycleStatus)dr[4],
                         Description = dr[5].ToString(),
                         VersionNumber = Convert.ToInt32(dr[3]),
-                        Json = (request.Id > 0) ? dr[12].ToString() : null,
+                        Json = (!string.IsNullOrEmpty(request.RefId)) ? dr[12].ToString() : null,
                         RefId = dr[13].ToString()
                     });
 
@@ -201,9 +202,9 @@ SELECT @function_name";
             }
 
             // Fetch latest committed version with json - for Execute/Run/Consume a particular Object
-            if (request.Id > 0 && request.VersionId == Int32.MaxValue)
+            if (!string.IsNullOrEmpty(request.RefId) && request.VersionId == Int32.MaxValue)
             {
-                parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.Int32, request.Id));
+                parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@refid", System.Data.DbType.String, request.RefId));
                 var dt = this.DatabaseFactory.ObjectsDB.DoQuery(Query4, parameters.ToArray());
 
                 foreach (EbDataRow dr in dt.Rows)
@@ -216,7 +217,7 @@ SELECT @function_name";
                         Status = (ObjectLifeCycleStatus)dr[4],
                         Description = dr[5].ToString(),
                         VersionNumber = Convert.ToInt32(dr[8]),
-                        Json = (request.Id > 0) ? dr[12].ToString() : null,
+                        Json = (!string.IsNullOrEmpty(request.RefId)) ? dr[12].ToString() : null,
                         RefId = dr[13].ToString()
                     });
 
@@ -225,7 +226,7 @@ SELECT @function_name";
             }
 
             // Get All latest committed versions of this Object Type without json
-            if (request.Id == 0 && request.VersionId == Int32.MaxValue)
+            if (string.IsNullOrEmpty(request.RefId) && request.VersionId == Int32.MaxValue)
             {
                 parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@type", System.Data.DbType.Int32, request.EbObjectType));
                 var dt = this.DatabaseFactory.ObjectsDB.DoQuery(Query5, parameters.ToArray());
@@ -357,6 +358,7 @@ WHERE
                 {
                     string sql = "SELECT eb_objects_first_commit(@obj_name, @obj_desc, @obj_type, @obj_cur_status, @obj_json, @commit_uid, @src_pid, @cur_pid, @relations, @isversioned);";
                     cmd = this.DatabaseFactory.ObjectsDB.GetNewCommand(con, sql);
+
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_name", System.Data.DbType.String, request.Name));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_desc", System.Data.DbType.String, request.Description));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_type", System.Data.DbType.Int32, (int)request.EbObjectType));
@@ -436,7 +438,17 @@ WHERE
                     var code = EbSerializers.Json_Deserialize<EbSqlFunction>(request.Json).Sql;
                     cmd = this.DatabaseFactory.ObjectsDB.GetNewCommand(con, code);
                 }
-                return new EbObjectSaveOrCommitResponse() { RefId = (cmd.ExecuteScalar().ToString())/*, Id =Convert.ToInt32(cmd.ExecuteScalar())*/ };
+
+                string refId = cmd.ExecuteScalar().ToString();
+
+                if (request.EbObjectType == (int)EbObjectType.DataVisualization)
+                    this.Redis.Set<EbDataVisualization>(refId, request.EbObject as EbDataVisualization);
+                if (request.EbObjectType == (int)EbObjectType.DataSource)
+                    this.Redis.Set<EbDataSource>(refId, request.EbObject as EbDataSource);
+                if (request.EbObjectType == (int)EbObjectType.FilterDialog)
+                    this.Redis.Set<EbFilterDialog>(refId, request.EbObject as EbFilterDialog);
+
+                return new EbObjectSaveOrCommitResponse() { RefId = refId };
             };
         }
     }

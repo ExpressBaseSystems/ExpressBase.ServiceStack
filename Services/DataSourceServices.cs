@@ -22,11 +22,11 @@ namespace ExpressBase.ServiceStack
             base.ClientID = request.TenantAccountId;
 
             //var dt = this.DatabaseFactory.ObjectsDB.DoQuery(string.Format("SELECT obj_bytea FROM eb_objects_ver WHERE id={0}", request.Id));
-            var dt = this.DatabaseFactory.ObjectsDB.DoQuery(string.Format(@"
-                SELECT EOV.obj_json FROM eb_objects_ver EOV 
-                INNER JOIN eb_objects EO
-                ON EO.id = EOV.eb_objects_id  AND EO.obj_last_ver_id =EOV.ver_num AND EOV.eb_objects_id={0}", request.Id)
-               );
+            //var dt = this.DatabaseFactory.ObjectsDB.DoQuery(string.Format(@"
+            //    SELECT EOV.obj_json FROM eb_objects_ver EOV 
+            //    INNER JOIN eb_objects EO
+            //    ON EO.id = EOV.eb_objects_id  AND EO.obj_last_ver_id =EOV.ver_num AND EOV.eb_objects_id={0}", request.RefId)
+            //   );
 
             //var dt = this.DatabaseFactory.ObjectsDB.DoQuery(string.Format(@"
             //    SELECT EOV.obj_bytea FROM eb_objects_ver EOV 
@@ -34,13 +34,13 @@ namespace ExpressBase.ServiceStack
             //    ON EO.id = EOV.eb_objects_id  AND EOV.ver_num={0} AND EOV.eb_objects_id={1}", request.VersionId, request.Id)
             //    );
 
-            this.Log.Info("dt.Rows.Count *****" + dt.Rows.Count);
+            //this.Log.Info("dt.Rows.Count *****" + dt.Rows.Count);
             //this.Log.Info("ProtoBuf_DeSerialize *****" + EbSerializers.ProtoBuf_DeSerialize<EbDataSource>((byte[])dt.Rows[0][0]));
             DataSourceDataResponse dsresponse = null;
 
-            if (dt.Rows.Count > 0)
-            {
-                var _ds = EbSerializers.Json_Deserialize<EbDataSource>(dt.Rows[0][0].ToString());
+            //if (dt.Rows.Count > 0)
+            //{
+                var _ds = this.Redis.Get<EbDataSource>(request.RefId); //EbSerializers.Json_Deserialize<EbDataSource>(dt.Rows[0][0].ToString());
                 this.Log.Info("_ds *****" + _ds.SqlDecoded());
                 string _sql = string.Empty;
 
@@ -109,7 +109,7 @@ namespace ExpressBase.ServiceStack
                     RecordsFiltered = _recordsFiltered
                 };
                 this.Log.Info("dsresponse*****" + dsresponse.Data);
-            }
+            //}
 
             //return this.Request.ToOptimizedResult<DataSourceDataResponse>(dsresponse);
             return dsresponse;
@@ -120,7 +120,7 @@ namespace ExpressBase.ServiceStack
         public DataSourceColumnsResponse Any(DataSourceColumnsRequest request)
         {
             base.ClientID = request.TenantAccountId;
-            string _dsRedisKey = string.Format("{0}_ds_{1}_columns", request.TenantAccountId, request.Id);
+            string _dsRedisKey = string.Format("{0}_columns", request.RefId);
 
             EbDataSet _dataset = null;
             bool _isPaged = false;
@@ -128,61 +128,60 @@ namespace ExpressBase.ServiceStack
 
             if (resp == null || resp.Columns == null || resp.Columns.Count == 0)
             {
-                resp = new DataSourceColumnsResponse();
+                //                resp = new DataSourceColumnsResponse();
 
-                // getting DATASOURCE needs to be changed LIVE/DEV/TEST scenarios
-                string _sql_4dsBytea = string.Format(@"
-SELECT 
-    EOV.obj_json 
-FROM 
-    eb_objects_ver EOV, eb_objects EO 
-WHERE
-    EO.id = EOV.eb_objects_id AND 
-    EO.obj_last_ver_id = EOV.ver_num AND 
-    EO.id = {0}", request.Id);
+                //                // getting DATASOURCE needs to be changed LIVE/DEV/TEST scenarios
+                //                string _sql_4dsBytea = string.Format(@"
+                //SELECT 
+                //    EOV.obj_json 
+                //FROM 
+                //    eb_objects_ver EOV, eb_objects EO 
+                //WHERE
+                //    EO.id = EOV.eb_objects_id AND 
+                //    EO.obj_last_ver_id = EOV.ver_num AND 
+                //    EO.id = {0}", request.Id);
 
-                var dt = this.DatabaseFactory.ObjectsDB.DoQuery(_sql_4dsBytea);
+                //                var dt = this.DatabaseFactory.ObjectsDB.DoQuery(_sql_4dsBytea);
 
-                if (dt.Rows.Count > 0)
+                //if (dt.Rows.Count > 0)
+                //{
+                var _ds = this.Redis.Get<EbDataSource>(request.RefId); // EbSerializers.Json_Deserialize<EbDataSource>(dt.Rows[0][0].ToString());
+                if (_ds != null)
                 {
-                    var _ds = EbSerializers.Json_Deserialize<EbDataSource>(dt.Rows[0][0].ToString());
-                    if (_ds != null)
+                    Log.Info(">>>>>>>>>>>>>>>>>>>>>>>> dscolumns Sql: " + _ds.SqlDecoded());
+
+                    string _sql = _ds.SqlDecoded().Replace("@and_search", string.Empty).Replace("@orderby", "1");
+                    _isPaged = (_sql.ToLower().Contains("@offset") && _sql.ToLower().Contains("@limit"));
+
+                    var parameters = new List<System.Data.Common.DbParameter>();
+                    if (_isPaged)
                     {
-                        Log.Info(">>>>>>>>>>>>>>>>>>>>>>>> dscolumns Sql: " + _ds.SqlDecoded());
-
-                        string _sql = _ds.SqlDecoded().Replace("@and_search", string.Empty).Replace("@orderby", "1");
-                        _isPaged = (_sql.ToLower().Contains("@offset") && _sql.ToLower().Contains("@limit"));
-
-                        var parameters = new List<System.Data.Common.DbParameter>();
-                        if (_isPaged)
+                        parameters.AddRange(new System.Data.Common.DbParameter[]
                         {
-                            parameters.AddRange(new System.Data.Common.DbParameter[]
-                            {
-                                this.DatabaseFactory.ObjectsDB.GetNewParameter("@limit", System.Data.DbType.Int32, 0),
-                                this.DatabaseFactory.ObjectsDB.GetNewParameter("@offset", System.Data.DbType.Int32, 0)
-                            });
-                        }
+                            this.DatabaseFactory.ObjectsDB.GetNewParameter("@limit", System.Data.DbType.Int32, 0),
+                            this.DatabaseFactory.ObjectsDB.GetNewParameter("@offset", System.Data.DbType.Int32, 0)
+                        });
+                    }
 
-                        if (request.Params != null)
-                        {
-                            foreach (Dictionary<string, string> param in request.Params)
-                                parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter(string.Format("@{0}", param["name"]), (System.Data.DbType)Convert.ToInt32(param["type"]), param["value"]));
-                        }
+                    if (request.Params != null)
+                    {
+                        foreach (Dictionary<string, string> param in request.Params)
+                            parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter(string.Format("@{0}", param["name"]), (System.Data.DbType)Convert.ToInt32(param["type"]), param["value"]));
+                    }
 
-                        Log.Info(">>>>>>>>>>>>>>>>>>>>>>>> dscolumns Parameters Added");
+                    Log.Info(">>>>>>>>>>>>>>>>>>>>>>>> dscolumns Parameters Added");
 
-                        try
-                        {
-                            _dataset = this.DatabaseFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray());
-                            resp.Columns = (_dataset.Tables.Count > 1) ? _dataset.Tables[1].Columns : _dataset.Tables[0].Columns;
-                            resp.IsPaged = _isPaged;
-                            this.Redis.Set<DataSourceColumnsResponse>(_dsRedisKey, resp);
-                        }
-                        catch (Exception e)
-                        {
-                            Log.Info(">>>>>>>>>>>>>>>>>>>>>>>> dscolumns e.Message: " + e.Message);
-                            this.Redis.Remove(_dsRedisKey);
-                        }
+                    try
+                    {
+                        _dataset = this.DatabaseFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray());
+                        resp.Columns = (_dataset.Tables.Count > 1) ? _dataset.Tables[1].Columns : _dataset.Tables[0].Columns;
+                        resp.IsPaged = _isPaged;
+                        this.Redis.Set<DataSourceColumnsResponse>(_dsRedisKey, resp);
+                    }
+                    catch (Exception e)
+                    {
+                        Log.Info(">>>>>>>>>>>>>>>>>>>>>>>> dscolumns e.Message: " + e.Message);
+                        this.Redis.Remove(_dsRedisKey);
                     }
                 }
             }
