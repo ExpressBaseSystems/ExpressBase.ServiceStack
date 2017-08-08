@@ -436,7 +436,7 @@ WHERE
                     var code = EbSerializers.Json_Deserialize<EbSqlFunction>(request.Json).Sql;
                     cmd = this.DatabaseFactory.ObjectsDB.GetNewCommand(con, code);
                 }
-                return new EbObjectSaveOrCommitResponse() { Id = Convert.ToInt32(cmd.ExecuteScalar()) };
+                return new EbObjectSaveOrCommitResponse() { RefId = (cmd.ExecuteScalar().ToString())/*, Id =Convert.ToInt32(cmd.ExecuteScalar())*/ };
             };
         }
     }
