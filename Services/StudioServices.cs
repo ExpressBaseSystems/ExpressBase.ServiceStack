@@ -354,7 +354,7 @@ WHERE
                 string[] arr = { };
 
                 // First COMMIT
-                if (!request.IsSave && request.Id == 0)
+                if (!request.IsSave && string.IsNullOrEmpty(request.RefId))
                 {
                     string sql = "SELECT eb_objects_first_commit(@obj_name, @obj_desc, @obj_type, @obj_cur_status, @obj_json, @commit_uid, @src_pid, @cur_pid, @relations, @isversioned);";
                     cmd = this.DatabaseFactory.ObjectsDB.GetNewCommand(con, sql);
@@ -372,10 +372,10 @@ WHERE
                 }
                 else
                 {
-                    string sql = "SELECT eb_objects_subsequentcommit_save(@id, @obj_name, @obj_desc, @obj_type, @obj_cur_status, @obj_json, @obj_changelog, @issave, @commit_uid, @src_pid, @cur_pid, @relations , @isversioned)";
+                    string sql = "SELECT eb_objects_subsequentcommit_save2(@id, @obj_name, @obj_desc, @obj_type, @obj_cur_status, @obj_json, @obj_changelog, @issave, @commit_uid, @src_pid, @cur_pid, @relations , @isversioned)";
                     cmd = this.DatabaseFactory.ObjectsDB.GetNewCommand(con, sql);
 
-                    cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.Int32, request.Id));
+                    cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.String, request.RefId));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_name", System.Data.DbType.String, request.Name));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_desc", System.Data.DbType.String, request.Description));
                     cmd.Parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter("@obj_type", System.Data.DbType.Int32, (int)request.EbObjectType));
