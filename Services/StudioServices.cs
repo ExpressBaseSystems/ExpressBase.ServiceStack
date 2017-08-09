@@ -76,7 +76,11 @@ SELECT
     EOV.id, EOV.eb_objects_id, EOV.ver_num, EOV.obj_changelog,EOV.commit_ts, EOV.commit_uid, EOV.refid,
     EU.firstname
 FROM 
-    eb_objects EO, eb_objects_ver EOV,eb_users EU
+    eb_objects EO, eb_objects_ver EOV
+LEFT JOIN
+	eb_users EU
+ON 
+	EOV.commit_uid=EU.id
 WHERE
     EO.id = EOV.eb_objects_id AND EOV.ver_num=-1 AND EO.obj_type=@type
 ORDER BY
