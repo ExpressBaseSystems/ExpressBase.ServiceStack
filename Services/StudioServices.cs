@@ -82,7 +82,7 @@ LEFT JOIN
 ON 
 	EOV.commit_uid=EU.id
 WHERE
-    EO.id = EOV.eb_objects_id AND EOV.ver_num=-1 AND EO.obj_type=@type
+    EO.id = EOV.eb_objects_id AND EOV.ver_num=1 AND EO.obj_type=@type
 ORDER BY
     EO.obj_name";
 

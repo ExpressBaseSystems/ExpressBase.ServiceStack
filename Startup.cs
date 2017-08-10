@@ -175,9 +175,11 @@ namespace ExpressBase.ServiceStack
             {
                 if (requestDto.GetType() != typeof(Authenticate) && requestDto.GetType() != typeof(GetAccessToken) && requestDto.GetType() != typeof(EmailServicesRequest) && requestDto.GetType() != typeof(Register))
                 {
-                    var jwtoken = new JwtSecurityToken((requestDto as IEbSSRequest).Token);
-                    if (jwtoken == null)
+                    var auth = req.Headers[HttpHeaders.Authorization];
+                    if (string.IsNullOrEmpty(auth))
                         res.ReturnAuthRequired();
+
+                    var jwtoken = new JwtSecurityToken(auth.Replace("Bearer", string.Empty).Trim());
                     foreach (var c in jwtoken.Claims)
                     {
                         if (c.Type == "cid" && !string.IsNullOrEmpty(c.Value))
