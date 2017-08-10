@@ -26,7 +26,7 @@ FROM
     eb_objects_ver EOV, eb_users EU
 WHERE
     EOV.commit_uid = EU.id AND
-    EOV.eb_objects_id=@id
+    EOV.eb_objects_id=(SELECT eb_objects_id FROM eb_objects_ver WHERE refid=@refid)
 ORDER BY
     ver_num DESC";
 
