@@ -8,6 +8,7 @@ using ServiceStack;
 using ServiceStack.Web;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ExpressBase.Data;
+using ServiceStack.Text;
 
 namespace ExpressBase.ServiceStack.Auth0
 {
@@ -41,5 +42,46 @@ namespace ExpressBase.ServiceStack.Auth0
             return objret;
         }
 
+    }
+
+    public class MyJwtAuthProvider : JwtAuthProvider
+    {
+        public MyJwtAuthProvider(IAppSettings settings) : base(settings) { }
+
+        public override object Authenticate(IServiceBase authService, IAuthSession session, Authenticate request)
+        {
+            return base.Authenticate(authService, session, request);
+        }
+
+        public override string CreateOrMergeAuthSession(IAuthSession session, IAuthTokens tokens)
+        {
+            return base.CreateOrMergeAuthSession(session, tokens);
+        }
+
+        public override IHttpResult OnAuthenticated(IServiceBase authService, IAuthSession session, IAuthTokens tokens, Dictionary<string, string> authInfo)
+        {
+            return base.OnAuthenticated(authService, session, tokens, authInfo);
+        }
+
+        public override void OnSaveUserAuth(IServiceBase authService, IAuthSession session)
+        {
+            base.OnSaveUserAuth(authService, session);
+        }
+
+        public override void Init(IAppSettings appSettings = null)
+        {
+            base.Init(appSettings);
+        }
+
+        public override bool IsAuthorized(IAuthSession session, IAuthTokens tokens, Authenticate request = null)
+        {
+            return base.IsAuthorized(session, tokens, request);
+        }
+
+        public override string GetKeyId()
+        {
+            return base.GetKeyId();
+        }
+       
     }
 }

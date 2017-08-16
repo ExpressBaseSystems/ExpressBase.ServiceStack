@@ -18,8 +18,11 @@ namespace ExpressBase.ServiceStack.Services
 {
     [ClientCanSwapTemplates]
     [EnableCors]
+    [Authenticate]
     public class InfraServices : EbBaseService
     {
+        public InfraServices(IMultiTenantDbFactory _dbf, IDatabaseFactory _idbf): base(_dbf, _idbf) { }
+
         //[Authenticate]
         //public async System.Threading.Tasks.Task<InfraResponse> Any(InfraRequest request)
         //{
@@ -83,7 +86,7 @@ namespace ExpressBase.ServiceStack.Services
             return strPwd;
         }
 
-        [Authenticate]
+       
         public TokenRequiredUploadResponse Any(TokenRequiredUploadRequest request)
         {
             TokenRequiredUploadResponse resp = null;
@@ -92,20 +95,20 @@ namespace ExpressBase.ServiceStack.Services
 
             if (request.TenantAccountId != "expressbase")
             {
-                base.ClientID = request.TenantAccountId;
-                using (var con = base.DatabaseFactory.ObjectsDB.GetNewConnection())
+                //base.ClientID = request.TenantAccountId;
+                using (var con = this.TenantDbFactory.ObjectsDB.GetNewConnection())
                 {
                     con.Open();
                     if (request.op == "createuser")
                     {
                         string sql = "INSERT INTO eb_users (firstname,email,pwd) VALUES (@firstname,@email,@pwd) RETURNING id,pwd;";
                         sql += "INSERT INTO eb_role2user (role_id,user_id) SELECT id, (CURRVAL('eb_users_id_seq')) FROM UNNEST(@roles) AS id";
-                        DbParameter[] parameters = { base.DatabaseFactory.ObjectsDB.GetNewParameter("firstname", System.Data.DbType.String, request.Colvalues["firstname"]),
-                            base.DatabaseFactory.ObjectsDB.GetNewParameter("email", System.Data.DbType.String, request.Colvalues["email"]),
-                            base.DatabaseFactory.ObjectsDB.GetNewParameter("roles", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer, request.Colvalues["roles"].ToString().Split(',').Select(n => Convert.ToInt32(n)).ToArray()),
-                            base.DatabaseFactory.ObjectsDB.GetNewParameter("pwd", System.Data.DbType.String,string.IsNullOrEmpty(request.Colvalues["pwd"].ToString())? GeneratePassword() :request.Colvalues["pwd"] )};
+                        DbParameter[] parameters = { this.TenantDbFactory.ObjectsDB.GetNewParameter("firstname", System.Data.DbType.String, request.Colvalues["firstname"]),
+                            this.TenantDbFactory.ObjectsDB.GetNewParameter("email", System.Data.DbType.String, request.Colvalues["email"]),
+                            this.TenantDbFactory.ObjectsDB.GetNewParameter("roles", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer, request.Colvalues["roles"].ToString().Split(',').Select(n => Convert.ToInt32(n)).ToArray()),
+                            this.TenantDbFactory.ObjectsDB.GetNewParameter("pwd", System.Data.DbType.String,string.IsNullOrEmpty(request.Colvalues["pwd"].ToString())? GeneratePassword() :request.Colvalues["pwd"] )};
 
-                        EbDataSet dt = base.DatabaseFactory.ObjectsDB.DoQueries(sql, parameters);
+                        EbDataSet dt = this.TenantDbFactory.ObjectsDB.DoQueries(sql, parameters);
 
                         if (string.IsNullOrEmpty(request.Colvalues["pwd"].ToString()))
                         {
@@ -119,15 +122,15 @@ namespace ExpressBase.ServiceStack.Services
                     else if (request.op == "rbac_roles")
                     {
                         string sql = "SELECT eb_create_or_update_rbac_manageroles(@role_id, @applicationid, @createdby, @role_name, @description, @users, @dependants,@permission );";
-                        var cmd = base.DatabaseFactory.ObjectsDB.GetNewCommand(con, sql);
-                        cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("role_id", System.Data.DbType.Int32, request.Colvalues["roleid"]));
-                        cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("description", System.Data.DbType.String, request.Colvalues["Description"]));
-                        cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("role_name", System.Data.DbType.String, request.Colvalues["role_name"]));
-                        cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("applicationid", System.Data.DbType.Int32, request.Colvalues["applicationid"]));
-                        cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("createdby", System.Data.DbType.Int32, request.UserId));
-                        cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("permission", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text, request.Colvalues["permission"].ToString().Replace("[", "").Replace("]", "").Split(',').Select(n => n.ToString()).ToArray()));
-                        cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("dependants", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer,(request.Colvalues["dependants"] != null) ? request.Colvalues["dependants"].ToString().Replace("[", "").Replace("]", "").Split(',').Select(n => Convert.ToInt32(n)).ToArray() : null));
-                        cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("users", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer,(request.Colvalues["users"] != null)? request.Colvalues["users"].ToString().Split(',').Select(n => Convert.ToInt32(n)).ToArray(): null));
+                        var cmd = this.TenantDbFactory.ObjectsDB.GetNewCommand(con, sql);
+                        cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("role_id", System.Data.DbType.Int32, request.Colvalues["roleid"]));
+                        cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("description", System.Data.DbType.String, request.Colvalues["Description"]));
+                        cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("role_name", System.Data.DbType.String, request.Colvalues["role_name"]));
+                        cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("applicationid", System.Data.DbType.Int32, request.Colvalues["applicationid"]));
+                        cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("createdby", System.Data.DbType.Int32, request.UserId));
+                        cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("permission", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text, request.Colvalues["permission"].ToString().Replace("[", "").Replace("]", "").Split(',').Select(n => n.ToString()).ToArray()));
+                        cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("dependants", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer,(request.Colvalues["dependants"] != null) ? request.Colvalues["dependants"].ToString().Replace("[", "").Replace("]", "").Split(',').Select(n => Convert.ToInt32(n)).ToArray() : null));
+                        cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("users", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer,(request.Colvalues["users"] != null)? request.Colvalues["users"].ToString().Split(',').Select(n => Convert.ToInt32(n)).ToArray(): null));
                         resp = new TokenRequiredUploadResponse
                         {
                             id = Convert.ToInt32(cmd.ExecuteScalar())
@@ -144,13 +147,13 @@ namespace ExpressBase.ServiceStack.Services
                             sql = "SELECT eb_create_or_update_role(@applicationid,@role_name,@description,@createdby,@permission)";
 
 
-                        var cmd = base.DatabaseFactory.ObjectsDB.GetNewCommand(con, sql);
-                        cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("role_id", System.Data.DbType.Int32, request.Colvalues["roleid"]));
-                        cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("description", System.Data.DbType.String, request.Colvalues["Description"]));
-                        cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("role_name", System.Data.DbType.String, request.Colvalues["role_name"]));
-                        cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("applicationid", System.Data.DbType.Int32, request.Colvalues["applicationid"]));
-                        cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("createdby", System.Data.DbType.Int32, request.UserId));
-                        cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("permission", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text, request.Colvalues["permission"].ToString().Replace("[", "").Replace("]", "").Split(',').Select(n => n.ToString()).ToArray()));
+                        var cmd = this.TenantDbFactory.ObjectsDB.GetNewCommand(con, sql);
+                        cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("role_id", System.Data.DbType.Int32, request.Colvalues["roleid"]));
+                        cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("description", System.Data.DbType.String, request.Colvalues["Description"]));
+                        cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("role_name", System.Data.DbType.String, request.Colvalues["role_name"]));
+                        cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("applicationid", System.Data.DbType.Int32, request.Colvalues["applicationid"]));
+                        cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("createdby", System.Data.DbType.Int32, request.UserId));
+                        cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("permission", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text, request.Colvalues["permission"].ToString().Replace("[", "").Replace("]", "").Split(',').Select(n => n.ToString()).ToArray()));
                        
                         resp = new TokenRequiredUploadResponse
                         {
@@ -164,10 +167,10 @@ namespace ExpressBase.ServiceStack.Services
 
                         string sql = "SELECT eb_create_or_update_role2role(@role_id,@createdby,@dependants)";
 
-                        var cmd = base.DatabaseFactory.ObjectsDB.GetNewCommand(con, sql);
-                        cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("role_id", System.Data.DbType.Int32, request.Colvalues["roleid"]));
-                        cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("createdby", System.Data.DbType.Int32, request.UserId));
-                        cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("dependants", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer, request.Colvalues["dependants"].ToString().Replace("[", "").Replace("]", "").Split(',').Select(n => Convert.ToInt32(n)).ToArray()));
+                        var cmd = this.TenantDbFactory.ObjectsDB.GetNewCommand(con, sql);
+                        cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("role_id", System.Data.DbType.Int32, request.Colvalues["roleid"]));
+                        cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("createdby", System.Data.DbType.Int32, request.UserId));
+                        cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("dependants", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer, request.Colvalues["dependants"].ToString().Replace("[", "").Replace("]", "").Split(',').Select(n => Convert.ToInt32(n)).ToArray()));
                         resp = new TokenRequiredUploadResponse
                         {
                             id = Convert.ToInt32(cmd.ExecuteScalar())
@@ -181,10 +184,10 @@ namespace ExpressBase.ServiceStack.Services
 
                         string sql = "SELECT eb_create_or_update_role2user(@role_id,@createdby,@users)";
 
-                        var cmd = base.DatabaseFactory.ObjectsDB.GetNewCommand(con, sql);
-                        cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("role_id", System.Data.DbType.Int32, request.Colvalues["roleid"]));
-                        cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("createdby", System.Data.DbType.Int32, request.UserId));
-                        cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("users", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer, request.Colvalues["users"].ToString().Split(',').Select(n => Convert.ToInt32(n)).ToArray()));
+                        var cmd = this.TenantDbFactory.ObjectsDB.GetNewCommand(con, sql);
+                        cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("role_id", System.Data.DbType.Int32, request.Colvalues["roleid"]));
+                        cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("createdby", System.Data.DbType.Int32, request.UserId));
+                        cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("users", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer, request.Colvalues["users"].ToString().Split(',').Select(n => Convert.ToInt32(n)).ToArray()));
                         resp = new TokenRequiredUploadResponse
                         {
                             id = Convert.ToInt32(cmd.ExecuteScalar())
@@ -196,13 +199,13 @@ namespace ExpressBase.ServiceStack.Services
 
                     else
                     {
-                        var cmd = base.DatabaseFactory.ObjectsDB.GetNewCommand(con, "UPDATE eb_users SET locale=@locale,timezone=@timezone,dateformat=@dateformat,numformat=@numformat,timezonefull=@timezonefull WHERE id=@id");
-                        cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("locale", System.Data.DbType.String, request.Colvalues["locale"]));
-                        cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("timezone", System.Data.DbType.String, request.Colvalues["timecode"]));
-                        cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("dateformat", System.Data.DbType.String, request.Colvalues["dateformat"]));
-                        cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("numformat", System.Data.DbType.String, request.Colvalues["numformat"]));
-                        cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("timezonefull", System.Data.DbType.String, request.Colvalues["timezone"]));
-                        cmd.Parameters.Add(base.DatabaseFactory.ObjectsDB.GetNewParameter("id", System.Data.DbType.Int64, request.Colvalues["uid"]));
+                        var cmd = this.TenantDbFactory.ObjectsDB.GetNewCommand(con, "UPDATE eb_users SET locale=@locale,timezone=@timezone,dateformat=@dateformat,numformat=@numformat,timezonefull=@timezonefull WHERE id=@id");
+                        cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("locale", System.Data.DbType.String, request.Colvalues["locale"]));
+                        cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("timezone", System.Data.DbType.String, request.Colvalues["timecode"]));
+                        cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("dateformat", System.Data.DbType.String, request.Colvalues["dateformat"]));
+                        cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("numformat", System.Data.DbType.String, request.Colvalues["numformat"]));
+                        cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("timezonefull", System.Data.DbType.String, request.Colvalues["timezone"]));
+                        cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("id", System.Data.DbType.Int64, request.Colvalues["uid"]));
                         resp = new TokenRequiredUploadResponse
                         {
                             id = Convert.ToInt32(cmd.ExecuteScalar())
@@ -235,7 +238,7 @@ namespace ExpressBase.ServiceStack.Services
                         {
                             id = Convert.ToInt32(cmd.ExecuteScalar())
                         };
-                        base.Redis.Set<string>(string.Format("cid_{0}_uid_{1}_pimg", base.ClientID, resp.id), string.Format("<img src='{0}'class='img-circle img-cir'/>", request.Colvalues["imgpro"]));
+                        base.Redis.Set<string>(string.Format("cid_{0}_uid_{1}_pimg", request.Colvalues["cid"], resp.id), string.Format("<img src='{0}'class='img-circle img-cir'/>", request.Colvalues["imgpro"]));
 
                     }
                     else if (request.Colvalues.ContainsKey("dbcheck") && request.Colvalues["dbcheck"].ToString() == "dbconfig")
@@ -530,14 +533,12 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
-        [Authenticate]
+       
         public TokenRequiredSelectResponse Any(TokenRequiredSelectRequest request)
         {
-            if (request.TenantAccountId != "expressbase")
+            if (!string.IsNullOrEmpty(request.TenantAccountId) && request.TenantAccountId != "expressbase")
             {
-
-                base.ClientID = request.TenantAccountId;
-                using (var con = base.DatabaseFactory.ObjectsDB.GetNewConnection())
+                using (var con = this.TenantDbFactory.ObjectsDB.GetNewConnection())
                 {
                     con.Open();
                     TokenRequiredSelectResponse resp = new TokenRequiredSelectResponse();
@@ -552,10 +553,10 @@ namespace ExpressBase.ServiceStack.Services
                             sql = "SELECT id,role_name FROM eb_roles"; 
 
                         DbParameter[] parameters = {
-                            base.DatabaseFactory.ObjectsDB.GetNewParameter("id", System.Data.DbType.Int32, request.id),
-                        base.DatabaseFactory.ObjectsDB.GetNewParameter("applicationid", System.Data.DbType.Int32,(request.id > 0)? request.Colvalues["applicationid"] : 0)};
+                            this.TenantDbFactory.ObjectsDB.GetNewParameter("id", System.Data.DbType.Int32, request.id),
+                        this.TenantDbFactory.ObjectsDB.GetNewParameter("applicationid", System.Data.DbType.Int32,(request.id > 0)? request.Colvalues["applicationid"] : 0)};
 
-                        var dt = base.DatabaseFactory.ObjectsDB.DoQueries(sql,parameters);
+                        var dt = this.TenantDbFactory.ObjectsDB.DoQueries(sql,parameters);
 
                         Dictionary<string, object> returndata = new Dictionary<string, object>();
                         List<int> subroles = new List<int>();
@@ -586,9 +587,9 @@ namespace ExpressBase.ServiceStack.Services
 
                 
 
-                        DbParameter[] parameters = { base.DatabaseFactory.ObjectsDB.GetNewParameter("id", System.Data.DbType.Int32, request.id) };
+                        DbParameter[] parameters = { this.TenantDbFactory.ObjectsDB.GetNewParameter("id", System.Data.DbType.Int32, request.id) };
 
-                        var ds = base.DatabaseFactory.ObjectsDB.DoQueries(sql, parameters);
+                        var ds = this.TenantDbFactory.ObjectsDB.DoQueries(sql, parameters);
                         List<string> _lstPermissions = new List<string>();
 
                         foreach (var dr in ds.Tables[1].Rows)
@@ -625,11 +626,11 @@ namespace ExpressBase.ServiceStack.Services
                         else
                             sql = "SELECT id,firstname FROM eb_users WHERE id != @id AND firstname ~* @searchtext";
 
-                        DbParameter[] parameters = { base.DatabaseFactory.ObjectsDB.GetNewParameter("id", System.Data.DbType.Int32, request.UserId),
-                                                    base.DatabaseFactory.ObjectsDB.GetNewParameter("roleid", System.Data.DbType.Int32, request.id),
-                                                    base.DatabaseFactory.ObjectsDB.GetNewParameter("searchtext", System.Data.DbType.String,request.Colvalues["searchtext"]) };
+                        DbParameter[] parameters = { this.TenantDbFactory.ObjectsDB.GetNewParameter("id", System.Data.DbType.Int32, request.UserId),
+                                                    this.TenantDbFactory.ObjectsDB.GetNewParameter("roleid", System.Data.DbType.Int32, request.id),
+                                                    this.TenantDbFactory.ObjectsDB.GetNewParameter("searchtext", System.Data.DbType.String,request.Colvalues["searchtext"]) };
 
-                        var dt = base.DatabaseFactory.ObjectsDB.DoQueries(sql, parameters);
+                        var dt = this.TenantDbFactory.ObjectsDB.DoQueries(sql, parameters);
 
                         Dictionary<string, object> returndata = new Dictionary<string, object>();
                         List<int> users = new List<int>();
@@ -717,7 +718,7 @@ namespace ExpressBase.ServiceStack.Services
         public void TableInsertsDataDB(DatabaseFactory dbf, EbDataTable dt, DbConnection _con_d1)
         {
             string result;
-            var assembly = typeof(ExpressBase.Data.Resource).GetAssembly();
+            var assembly = typeof(ExpressBase.Common.Resource).GetAssembly();
             using (Stream stream = assembly.GetManifestResourceStream("ExpressBase.Data.SqlScripts.PostGreSql.DataDb.postgres_eb_users.sql"))
             {
                 using (StreamReader reader = new StreamReader(stream))
@@ -740,7 +741,7 @@ namespace ExpressBase.ServiceStack.Services
         public void TableInsertObjectDB(DatabaseFactory dbf, DbConnection _con_o1)
         {
             string result;
-            var assembly = typeof(ExpressBase.Data.Resource).GetAssembly();
+            var assembly = typeof(ExpressBase.Common.Resource).GetAssembly();
             using (Stream stream = assembly.GetManifestResourceStream("ExpressBase.Data.SqlScripts.PostGreSql.ObjectsDb.postgres_eb_objects.sql"))
             {
                 using (StreamReader reader = new StreamReader(stream))

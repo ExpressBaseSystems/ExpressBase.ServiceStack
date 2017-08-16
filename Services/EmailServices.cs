@@ -1,4 +1,6 @@
-﻿using ExpressBase.Objects.ServiceStack_Artifacts;
+﻿using ExpressBase.Common;
+using ExpressBase.Data;
+using ExpressBase.Objects.ServiceStack_Artifacts;
 using MailKit.Net.Smtp;
 using MailKit.Security;
 using MimeKit;
@@ -10,9 +12,11 @@ using System.Threading.Tasks;
 
 namespace ExpressBase.ServiceStack.Services
 {
+    [Authenticate]
     public class EmailServices : EbBaseService
     {
-        [Authenticate]
+        public EmailServices(IMultiTenantDbFactory _dbf, IDatabaseFactory _idbf) : base(_dbf, _idbf) { }
+
         public async Task<EmailServicesResponse> Any(EmailServicesRequest request)
         {
             var emailMessage = new MimeMessage();

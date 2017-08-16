@@ -17,6 +17,8 @@ using ExpressBase.ServiceStack.Auth0;
 using System.IO;
 using ExpressBase.Common;
 using ExpressBase.Data;
+using ServiceStack.Web;
+using ServiceStack.Data;
 
 namespace ExpressBase.ServiceStack
 {
@@ -83,7 +85,7 @@ namespace ExpressBase.ServiceStack
             var co = this.Config;
             LogManager.LogFactory = new ConsoleLogFactory(debugEnabled: true);
 
-            var jwtprovider = new JwtAuthProvider(AppSettings)
+            var jwtprovider = new MyJwtAuthProvider(AppSettings)
             {
                 HashAlgorithm = "RS256",
                 PrivateKeyXml = EbLiveSettings.PrivateKeyXml,
@@ -93,16 +95,11 @@ namespace ExpressBase.ServiceStack
                 //EncryptPayload = true,
 #endif
                 CreatePayloadFilter = (payload, session) => {
-                    payload["sub"] = (session as AuthUserSession).UserName;
-                    payload["cid"] = (session as AuthUserSession).Company;
-                    payload["uid"] = (session as AuthUserSession).UserAuthId;
+                    payload["sub"] = (session as CustomUserSession).UserAuthId;
+                    payload["cid"] = (session as CustomUserSession).CId;
+                    payload["uid"] = (session as CustomUserSession).Uid.ToString();
                     payload["wc"] = (session as CustomUserSession).WhichConsole;
                 },
-                //PopulateSessionFilter = (session, obj, req) => {
-                //    (session as AuthUserSession).Company = obj["cid"];
-                //    (session as AuthUserSession).UserAuthId = obj["uid"];
-                //    (session as AuthUserSession).UserName = obj["sub"];
-                //},
 
                 ExpireTokensIn = TimeSpan.FromSeconds(90),
                 ExpireRefreshTokensIn = TimeSpan.FromHours(12),
@@ -167,30 +164,39 @@ namespace ExpressBase.ServiceStack
 
             container.Register<JwtAuthProvider>(jwtprovider);
 
-            string path = Path.Combine(Directory.GetParent(System.IO.Directory.GetCurrentDirectory()).FullName, "EbInfra.conn");
-            container.Register<DatabaseFactory>(new DatabaseFactory(EbSerializers.ProtoBuf_DeSerialize<EbInfraDBConf>(EbFile.Bytea_FromFile(path))));
+            container.Register<IDatabaseFactory>(c => new InfraDbFactory(EbSerializers.ProtoBuf_DeSerialize<EbInfraDBConf>(EbFile.Bytea_FromFile(Path.Combine(Directory.GetParent(System.IO.Directory.GetCurrentDirectory()).FullName, "EbInfra.conn"))))).ReusedWithin(ReuseScope.Container);
+            container.Register<IMultiTenantDbFactory>(c => new MultiTenantDbFactory(c)).ReusedWithin(ReuseScope.Request);
 
             //Add a request filter to check if the user has a session initialized
-            this.GlobalRequestFilters.Add((req, res, requestDto) => 
+            this.GlobalRequestFilters.Add((req, res, requestDto) =>
             {
-                if (requestDto.GetType() != typeof(Authenticate) && requestDto.GetType() != typeof(GetAccessToken) && requestDto.GetType() != typeof(EmailServicesRequest) && requestDto.GetType() != typeof(Register))
+                if (requestDto.GetType() == typeof(Authenticate))
+                {
+                    RequestContext.Instance.Items.Add("TenantAccountId", (requestDto as Authenticate).Meta["cid"]);
+                }
+
+                if (requestDto != null && requestDto.GetType() != typeof(Authenticate) && requestDto.GetType() != typeof(GetAccessToken) && requestDto.GetType() != typeof(EmailServicesRequest) && requestDto.GetType() != typeof(Register))
                 {
                     var auth = req.Headers[HttpHeaders.Authorization];
                     if (string.IsNullOrEmpty(auth))
                         res.ReturnAuthRequired();
-
-                    var jwtoken = new JwtSecurityToken(auth.Replace("Bearer", string.Empty).Trim());
-                    foreach (var c in jwtoken.Claims)
+                    else
                     {
-                        if (c.Type == "cid" && !string.IsNullOrEmpty(c.Value))
+                        var jwtoken = new JwtSecurityToken(auth.Replace("Bearer", string.Empty).Trim());
+                        foreach (var c in jwtoken.Claims)
                         {
-                            (requestDto as IEbSSRequest).TenantAccountId = c.Value;
-                            continue;
-                        }
-                        if (c.Type == "uid" && !string.IsNullOrEmpty(c.Value))
-                        {
-                            (requestDto as IEbSSRequest).UserId = Convert.ToInt32(c.Value);
-                            continue;
+                            if (c.Type == "cid" && !string.IsNullOrEmpty(c.Value))
+                            {
+                                RequestContext.Instance.Items.Add("TenantAccountId", c.Value);
+                                (requestDto as IEbSSRequest).TenantAccountId = c.Value;
+                                continue;
+                            }
+                            if (c.Type == "uid" && !string.IsNullOrEmpty(c.Value))
+                            {
+                                RequestContext.Instance.Items.Add("UserId", Convert.ToInt32(c.Value));
+                                (requestDto as IEbSSRequest).UserId = Convert.ToInt32(c.Value);
+                                continue;
+                            }
                         }
                     }
                 }
@@ -200,9 +206,9 @@ namespace ExpressBase.ServiceStack
             {
                 if (responseDto.GetResponseDto() != null)
                 {
-                    if (responseDto.GetResponseDto().GetType() != typeof(MyAuthenticateResponse) && responseDto.GetResponseDto().GetType() != typeof(GetAccessTokenResponse))
+                    if (responseDto.GetResponseDto().GetType() == typeof(GetAccessTokenResponse))
                     {
-                        // (responseDto.GetResponseDto() as IEbSSResponse).Token = req.Authorization.Replace("Bearer", string.Empty);
+                        res.SetSessionCookie("Token", (res.Dto as GetAccessTokenResponse).AccessToken);
                     }
                 }
             });

@@ -12,14 +12,15 @@ namespace ExpressBase.ServiceStack
 {
     [ClientCanSwapTemplates]
     [DefaultView("ds")]
+    [Authenticate]
     public class DataSourceService : EbBaseService
     {
-        [Authenticate]
+        public DataSourceService(IMultiTenantDbFactory _dbf, IDatabaseFactory _idbf) : base(_dbf, _idbf) { }
+        
         [CompressResponse]
         public DataSourceDataResponse Post(DataSourceDataRequest request)
         {
             this.Log.Info("data request");
-            base.ClientID = request.TenantAccountId;
 
             //var dt = this.DatabaseFactory.ObjectsDB.DoQuery(string.Format("SELECT obj_bytea FROM eb_objects_ver WHERE id={0}", request.Id));
             //var dt = this.DatabaseFactory.ObjectsDB.DoQuery(string.Format(@"
@@ -76,17 +77,17 @@ namespace ExpressBase.ServiceStack
                 var parameters = new List<System.Data.Common.DbParameter>();
                 parameters.AddRange(new System.Data.Common.DbParameter[]
                 {
-                    this.DatabaseFactory.ObjectsDB.GetNewParameter("@limit", System.Data.DbType.Int32, request.Length),
-                    this.DatabaseFactory.ObjectsDB.GetNewParameter("@offset", System.Data.DbType.Int32, request.Start),
+                    this.TenantDbFactory.ObjectsDB.GetNewParameter("@limit", System.Data.DbType.Int32, request.Length),
+                    this.TenantDbFactory.ObjectsDB.GetNewParameter("@offset", System.Data.DbType.Int32, request.Start),
                 });
 
                 if (request.Params != null)
                 {
                     foreach (Dictionary<string, string> param in request.Params)
-                        parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter(string.Format("@{0}", param["name"]), (System.Data.DbType)Convert.ToInt32(param["type"]), param["value"]));
+                        parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter(string.Format("@{0}", param["name"]), (System.Data.DbType)Convert.ToInt32(param["type"]), param["value"]));
                 }
                 this.Log.Info("GO**********************" + _sql);
-                var _dataset = this.DatabaseFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray());
+                var _dataset = this.TenantDbFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray());
                 this.Log.Info(">>>>>> _dataset.Tables.Count: " + _dataset.Tables.Count + ", " + _dataset.ToJson());
 
                 //-- 
@@ -115,11 +116,10 @@ namespace ExpressBase.ServiceStack
             return dsresponse;
         }
 
-        [Authenticate]
+      
         [CompressResponse]
         public DataSourceColumnsResponse Any(DataSourceColumnsRequest request)
         {
-            base.ClientID = request.TenantAccountId;
             string _dsRedisKey = string.Format("{0}_columns", request.RefId);
 
             EbDataSet _dataset = null;
@@ -158,22 +158,22 @@ namespace ExpressBase.ServiceStack
                     {
                         parameters.AddRange(new System.Data.Common.DbParameter[]
                         {
-                            this.DatabaseFactory.ObjectsDB.GetNewParameter("@limit", System.Data.DbType.Int32, 0),
-                            this.DatabaseFactory.ObjectsDB.GetNewParameter("@offset", System.Data.DbType.Int32, 0)
+                            this.TenantDbFactory.ObjectsDB.GetNewParameter("@limit", System.Data.DbType.Int32, 0),
+                            this.TenantDbFactory.ObjectsDB.GetNewParameter("@offset", System.Data.DbType.Int32, 0)
                         });
                     }
 
                     if (request.Params != null)
                     {
                         foreach (Dictionary<string, string> param in request.Params)
-                            parameters.Add(this.DatabaseFactory.ObjectsDB.GetNewParameter(string.Format("@{0}", param["name"]), (System.Data.DbType)Convert.ToInt32(param["type"]), param["value"]));
+                            parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter(string.Format("@{0}", param["name"]), (System.Data.DbType)Convert.ToInt32(param["type"]), param["value"]));
                     }
 
                     Log.Info(">>>>>>>>>>>>>>>>>>>>>>>> dscolumns Parameters Added");
 
                     try
                     {
-                        _dataset = this.DatabaseFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray());
+                        _dataset = this.TenantDbFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray());
                         resp.Columns = (_dataset.Tables.Count > 1) ? _dataset.Tables[1].Columns : _dataset.Tables[0].Columns;
                         resp.IsPaged = _isPaged;
                         this.Redis.Set<DataSourceColumnsResponse>(_dsRedisKey, resp);
