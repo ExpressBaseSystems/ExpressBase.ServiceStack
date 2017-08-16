@@ -401,6 +401,7 @@ namespace ServiceStack.Auth
             var userId = jwtPayload["sub"];
 
             var userAuth = (userRepo as EbRedisAuthRepository).GetUserAuth(userId);
+
             if (userAuth == null)
                 throw HttpError.NotFound(ErrorMessages.UserNotExists);
 
@@ -413,7 +414,7 @@ namespace ServiceStack.Auth
             //var session = this.SessionAs<CustomUserSession>();
             (session as CustomUserSession).CId = (userAuth as User).CId;
             (session as CustomUserSession).UserAuthId = userId;
-            (session as CustomUserSession).Uid = userAuth.Id;
+            (session as CustomUserSession).Uid = (userAuth as User).UserId;
             (session as CustomUserSession).WhichConsole = "uc";
 
             //jwtAuthProvider.PopulateSession(userRepo, userAuth, session);
