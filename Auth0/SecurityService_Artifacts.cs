@@ -32,6 +32,7 @@ namespace ExpressBase.Objects.ServiceStack_Artifacts
 
         [DataMember(Order = 4)]
         public string WhichConsole { get; set; }
+      
 
         public override bool IsAuthorized(string provider)
         {
@@ -213,8 +214,8 @@ namespace ExpressBase.Objects.ServiceStack_Artifacts
                     CustomUserSession session = authService.GetSession(false) as CustomUserSession;
                     var redisClient = authService.TryResolve<IRedisClientsManager>().GetClient();
                     session.CId = cid;
-                    _authUser.CId = cid;
-                    session.Uid = _authUser.Id;
+                    _authUser.CId = cid;              
+                    session.Uid = _authUser.UserId;
                     session.Email = UserName;
                     session.IsAuthenticated = true;
                     session.User = _authUser;
