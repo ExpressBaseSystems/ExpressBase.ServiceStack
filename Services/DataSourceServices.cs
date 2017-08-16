@@ -121,14 +121,13 @@ namespace ExpressBase.ServiceStack
         {
             base.ClientID = request.TenantAccountId;
             string _dsRedisKey = string.Format("{0}_columns", request.RefId);
-
             EbDataSet _dataset = null;
             bool _isPaged = false;
             DataSourceColumnsResponse resp = this.Redis.Get<DataSourceColumnsResponse>(_dsRedisKey);
 
             if (resp == null || resp.Columns == null || resp.Columns.Count == 0)
             {
-                //                resp = new DataSourceColumnsResponse();
+                resp = new DataSourceColumnsResponse();
 
                 //                // getting DATASOURCE needs to be changed LIVE/DEV/TEST scenarios
                 //                string _sql_4dsBytea = string.Format(@"
