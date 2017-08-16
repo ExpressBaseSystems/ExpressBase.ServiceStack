@@ -107,7 +107,7 @@ namespace ExpressBase.ServiceStack
                 SessionExpiry = TimeSpan.FromHours(12)
             };
 
-            this.Plugins.Add(new CorsFeature(allowedHeaders: "Content-Type, Authorization"));
+            this.Plugins.Add(new CorsFeature(allowedHeaders: "Content-Type, Authorization, Access-Control-Allow-Origin, Access-Control-Allow-Credentials"));
             this.Plugins.Add(new ProtoBufFormat());
 
             Plugins.Add(new AuthFeature(() => new CustomUserSession(),
