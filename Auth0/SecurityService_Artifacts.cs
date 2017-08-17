@@ -219,6 +219,8 @@ namespace ExpressBase.Objects.ServiceStack_Artifacts
                     session.Email = UserName;
                     session.IsAuthenticated = true;
                     session.User = _authUser;
+                    session.WhichConsole = request.Meta["wc"];
+                    _authUser.wc = request.Meta["wc"];
                     session.UserAuthId = string.Format("{0}-{1}", cid, _authUser.Email);
 
                     var authRepo = HostContext.AppHost.GetAuthRepository(authService.Request);

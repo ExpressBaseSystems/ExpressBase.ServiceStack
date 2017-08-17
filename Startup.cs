@@ -19,6 +19,7 @@ using ExpressBase.Common;
 using ExpressBase.Data;
 using ServiceStack.Web;
 using ServiceStack.Data;
+using Microsoft.AspNetCore.Http;
 
 namespace ExpressBase.ServiceStack
 {
@@ -209,6 +210,8 @@ namespace ExpressBase.ServiceStack
                     if (responseDto.GetResponseDto().GetType() == typeof(GetAccessTokenResponse))
                     {
                         res.SetSessionCookie("Token", (res.Dto as GetAccessTokenResponse).AccessToken);
+
+                       
                     }
                 }
             });

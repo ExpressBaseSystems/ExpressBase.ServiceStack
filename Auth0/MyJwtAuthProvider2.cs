@@ -415,7 +415,7 @@ namespace ServiceStack.Auth
             (session as CustomUserSession).CId = (userAuth as User).CId;
             (session as CustomUserSession).UserAuthId = userId;
             (session as CustomUserSession).Uid = (userAuth as User).UserId;
-            (session as CustomUserSession).WhichConsole = "uc";
+            (session as CustomUserSession).WhichConsole = (userAuth as User).wc;
 
             //jwtAuthProvider.PopulateSession(userRepo, userAuth, session);
 
