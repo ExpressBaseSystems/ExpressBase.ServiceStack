@@ -49,7 +49,7 @@ namespace ExpressBase.ServiceStack.Auth0
                 //var userId = newUser.Id.ToString(CultureInfo.InvariantCulture);
                 //redis.SetEntryInHash(IndexEmailToUserId, newUser.Email, userId);
 
-                redis.Set<IUserAuth>(string.Format("{0}-{1}", (newUser as User).CId, newUser.Email), newUser);
+                redis.Set<IUserAuth>(string.Format("{0}-{1}-{2}", (newUser as User).CId, newUser.Email,(newUser as User).wc), newUser);
 
                 return newUser;
             }
@@ -102,7 +102,7 @@ namespace ExpressBase.ServiceStack.Auth0
                 //    redis.SetEntryInHash(IndexEmailToUserId, newUser.Email, userId);
                 //}
 
-                redis.Set<IUserAuth>(string.Format("{0}-{1}", (newUser as User).CId, newUser.Email), newUser);
+                redis.Set<IUserAuth>(string.Format("{0}-{1}-{2}", (newUser as User).CId, newUser.Email, (newUser as User).wc), newUser);
 
                 return newUser;
             }

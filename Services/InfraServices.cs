@@ -138,66 +138,7 @@ namespace ExpressBase.ServiceStack.Services
                             id = Convert.ToInt32(cmd.ExecuteScalar())
 
                         };
-                    }
-                    else if (request.op == "saveroles")
-                    {
-                        string sql = string.Empty;
-
-                        if (Convert.ToInt32(request.Colvalues["roleid"]) > 0)
-                            sql = "SELECT eb_create_or_update_role(@applicationid,@role_name,@description,@createdby,@permission,@role_id)";
-                        else
-                            sql = "SELECT eb_create_or_update_role(@applicationid,@role_name,@description,@createdby,@permission)";
-
-
-                        var cmd = this.TenantDbFactory.ObjectsDB.GetNewCommand(con, sql);
-                        cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("role_id", System.Data.DbType.Int32, request.Colvalues["roleid"]));
-                        cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("description", System.Data.DbType.String, request.Colvalues["Description"]));
-                        cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("role_name", System.Data.DbType.String, request.Colvalues["role_name"]));
-                        cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("applicationid", System.Data.DbType.Int32, request.Colvalues["applicationid"]));
-                        cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("createdby", System.Data.DbType.Int32, request.UserId));
-                        cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("permission", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text, request.Colvalues["permission"].ToString().Replace("[", "").Replace("]", "").Split(',').Select(n => n.ToString()).ToArray()));
-                       
-                        resp = new TokenRequiredUploadResponse
-                        {
-                            id = Convert.ToInt32(cmd.ExecuteScalar())
-
-                        };
-
-                    }
-                    else if (request.op == "role2role")
-                    {
-
-                        string sql = "SELECT eb_create_or_update_role2role(@role_id,@createdby,@dependants)";
-
-                        var cmd = this.TenantDbFactory.ObjectsDB.GetNewCommand(con, sql);
-                        cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("role_id", System.Data.DbType.Int32, request.Colvalues["roleid"]));
-                        cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("createdby", System.Data.DbType.Int32, request.UserId));
-                        cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("dependants", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer, request.Colvalues["dependants"].ToString().Replace("[", "").Replace("]", "").Split(',').Select(n => Convert.ToInt32(n)).ToArray()));
-                        resp = new TokenRequiredUploadResponse
-                        {
-                            id = Convert.ToInt32(cmd.ExecuteScalar())
-
-                        };
-
-
-                    }
-                    else if (request.op == "role2user")
-                    {
-
-                        string sql = "SELECT eb_create_or_update_role2user(@role_id,@createdby,@users)";
-
-                        var cmd = this.TenantDbFactory.ObjectsDB.GetNewCommand(con, sql);
-                        cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("role_id", System.Data.DbType.Int32, request.Colvalues["roleid"]));
-                        cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("createdby", System.Data.DbType.Int32, request.UserId));
-                        cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("users", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer, request.Colvalues["users"].ToString().Split(',').Select(n => Convert.ToInt32(n)).ToArray()));
-                        resp = new TokenRequiredUploadResponse
-                        {
-                            id = Convert.ToInt32(cmd.ExecuteScalar())
-
-                        };
-
-
-                    }
+                    }                                            
 
                     else
                     {
@@ -544,7 +485,7 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     con.Open();
                     TokenRequiredSelectResponse resp = new TokenRequiredSelectResponse();
-                    if (request.restype == "roles")
+                    if (request.restype == "subroles")
                     {
                         string sql = string.Empty;
                         if (request.id > 0)
@@ -552,11 +493,11 @@ namespace ExpressBase.ServiceStack.Services
                                    SELECT id,role_name FROM eb_roles WHERE id != @id AND applicationid= @applicationid;
                                    SELECT role2_id FROM eb_role2role WHERE role1_id = @id AND eb_del = FALSE"; //check sql properly
                         else
-                            sql = "SELECT id,role_name FROM eb_roles"; 
+                            sql = "SELECT id,role_name FROM eb_roles WHERE applicationid= @applicationid"; 
 
                         DbParameter[] parameters = {
                             this.TenantDbFactory.ObjectsDB.GetNewParameter("id", System.Data.DbType.Int32, request.id),
-                        this.TenantDbFactory.ObjectsDB.GetNewParameter("applicationid", System.Data.DbType.Int32,(request.id > 0)? request.Colvalues["applicationid"] : 0)};
+                        this.TenantDbFactory.ObjectsDB.GetNewParameter("applicationid", System.Data.DbType.Int32,request.Colvalues["applicationid"])};
 
                         var dt = this.TenantDbFactory.ObjectsDB.DoQueries(sql,parameters);
 
@@ -575,6 +516,19 @@ namespace ExpressBase.ServiceStack.Services
                             }
                             returndata.Add("roles", subroles);
                         }
+                        resp.Data = returndata;
+                    }
+
+                    else if (request.restype == "roles")
+                    {
+                        string sql = "SELECT id,role_name FROM eb_roles";                      
+                        var dt = this.TenantDbFactory.ObjectsDB.DoQueries(sql);
+
+                        Dictionary<string, object> returndata = new Dictionary<string, object>();                       
+                        foreach (EbDataRow dr in dt.Tables[0].Rows)
+                        {
+                            returndata[dr[0].ToString()] = dr[1].ToString();
+                        }                        
                         resp.Data = returndata;
                     }
                     else if (request.restype == "getpermissions")
@@ -616,7 +570,18 @@ namespace ExpressBase.ServiceStack.Services
 
                         resp.Data = result;
                     }
+                    else if(request.restype == "users")
+                    {
+                        string sql = "SELECT id,firstname FROM eb_users";
+                        var dt = this.TenantDbFactory.ObjectsDB.DoQueries(sql);
 
+                        Dictionary<string, object> returndata = new Dictionary<string, object>();
+                        foreach (EbDataRow dr in dt.Tables[0].Rows)
+                        {
+                            returndata[dr[0].ToString()] = dr[1].ToString();
+                        }
+                        resp.Data = returndata;
+                    }
                     else if (request.restype == "getusers")
                     {
                         string sql = string.Empty;
@@ -632,7 +597,7 @@ namespace ExpressBase.ServiceStack.Services
                                                     this.TenantDbFactory.ObjectsDB.GetNewParameter("roleid", System.Data.DbType.Int32, request.id),
                                                     this.TenantDbFactory.ObjectsDB.GetNewParameter("searchtext", System.Data.DbType.String,request.Colvalues["searchtext"]) };
 
-                        var dt = this.TenantDbFactory.ObjectsDB.DoQueries(sql, parameters);
+                       var dt = this.TenantDbFactory.ObjectsDB.DoQueries(sql, parameters);
 
                         Dictionary<string, object> returndata = new Dictionary<string, object>();
                         List<int> users = new List<int>();

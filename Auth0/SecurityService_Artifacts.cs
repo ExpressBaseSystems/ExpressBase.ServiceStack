@@ -221,10 +221,10 @@ namespace ExpressBase.Objects.ServiceStack_Artifacts
                     session.User = _authUser;
                     session.WhichConsole = request.Meta["wc"];
                     _authUser.wc = request.Meta["wc"];
-                    session.UserAuthId = string.Format("{0}-{1}", cid, _authUser.Email);
+                    session.UserAuthId = string.Format("{0}-{1}-{2}", cid, _authUser.Email, request.Meta["wc"]);
 
                     var authRepo = HostContext.AppHost.GetAuthRepository(authService.Request);
-                    var existingUser = (authRepo as EbRedisAuthRepository).GetUserAuth(string.Format("{0}-{1}", cid, _authUser.Email));
+                    var existingUser = (authRepo as EbRedisAuthRepository).GetUserAuth(string.Format("{0}-{1}-{2}", cid, _authUser.Email, request.Meta["wc"]));
                     //if (existingUser != null)
                         (authRepo as EbRedisAuthRepository).UpdateUserAuth(existingUser, _authUser);
                         //redisClient.Set<IUserAuth>(string.Format("{0}-{1}", cid, _authUser.Email), _authUser);
