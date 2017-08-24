@@ -9,6 +9,7 @@ using ServiceStack.Logging;
 using System.Linq;
 using ExpressBase.Common;
 using ExpressBase.Objects.ObjectContainers;
+using ExpressBase.Common.Objects;
 
 namespace ExpressBase.ServiceStack
 {
