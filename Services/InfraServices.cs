@@ -21,7 +21,7 @@ namespace ExpressBase.ServiceStack.Services
     [Authenticate]
     public class InfraServices : EbBaseService
     {
-        public InfraServices(IMultiTenantDbFactory _dbf, IDatabaseFactory _idbf): base(_dbf, _idbf) { }
+        public InfraServices(IMultiTenantDbFactory _dbf, IDatabaseFactory _idbf) : base(_dbf, _idbf) { }
 
         //[Authenticate]
         //public async System.Threading.Tasks.Task<InfraResponse> Any(InfraRequest request)
@@ -129,17 +129,46 @@ namespace ExpressBase.ServiceStack.Services
                         cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("role_name", System.Data.DbType.String, request.Colvalues["role_name"]));
                         cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("applicationid", System.Data.DbType.Int32, request.Colvalues["applicationid"]));
                         cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("createdby", System.Data.DbType.Int32, request.UserId));
-                        cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("permission", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text, (request.Colvalues["permission"].ToString() != string.Empty) ? request.Colvalues["permission"].ToString().Replace("[", "").Replace("]", "").Split(',').Select(n => n.ToString()).ToArray(): new string[] { }));
+                        cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("permission", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text, (request.Colvalues["permission"].ToString() != string.Empty) ? request.Colvalues["permission"].ToString().Replace("[", "").Replace("]", "").Split(',').Select(n => n.ToString()).ToArray() : new string[] { }));
                         cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("users", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer, (request.Colvalues["users"].ToString() != string.Empty) ? request.Colvalues["users"].ToString().Split(',').Select(n => Convert.ToInt32(n)).ToArray() : emptyarr));
-                        cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("dependants", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer,(request.Colvalues["dependants"].ToString() != string.Empty) ? request.Colvalues["dependants"].ToString().Replace("[", "").Replace("]", "").Split(',').Select(n => Convert.ToInt32(n)).ToArray() : emptyarr));
-                        
+                        cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("dependants", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer, (request.Colvalues["dependants"].ToString() != string.Empty) ? request.Colvalues["dependants"].ToString().Replace("[", "").Replace("]", "").Split(',').Select(n => Convert.ToInt32(n)).ToArray() : emptyarr));
+
                         resp = new TokenRequiredUploadResponse
                         {
                             id = Convert.ToInt32(cmd.ExecuteScalar())
 
                         };
-                    }                                            
+                    }
 
+                    else if (request.op == "usergroups")
+                    {
+                        string sql = "";
+                        if(request.Id > 0)
+                        {
+                            sql = @"UPDATE eb_usergroup SET name = @name,description = @description WHERE id = @id;
+                                INSERT INTO eb_user2usergroup(userid,groupid) SELECT uid,(CURRVAL('eb_usergroup_id_seq')) FROM  UNNEST(@users) as uid except 
+                                SELECT UNNEST(array(SELECT userid from eb_user2usergroup WHERE groupid = @id AND eb_del = FALSE));
+                                UPDATE eb_user2usergroup SET eb_del = true WHERE userid IN(
+                                SELECT UNNEST(array(SELECT userid from eb_user2usergroup WHERE groupid = @id AND eb_del = FALSE)) except SELECT UNNEST(@users))"; /// check query for mistakes
+                        }
+                        else
+                        {
+                            sql = @"INSERT INTO eb_usergroup (name,description) VALUES (@name,@description) RETURNING id;
+                                       INSERT INTO eb_user2usergroup (userid,groupid) SELECT id, (CURRVAL('eb_usergroup_id_seq')) FROM UNNEST(@users) AS id";
+                        }
+                        
+                        var cmd = this.TenantDbFactory.ObjectsDB.GetNewCommand(con, sql);
+                        int[] emptyarr = new int[] { };
+                        cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("name", System.Data.DbType.String, request.Colvalues["groupname"]));
+                        cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("description", System.Data.DbType.String, request.Colvalues["description"]));                        
+                        cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("users", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer, (request.Colvalues["userlist"].ToString() != string.Empty) ? request.Colvalues["userlist"].ToString().Split(',').Select(n => Convert.ToInt32(n)).ToArray() : emptyarr));
+                        cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("id", System.Data.DbType.Int32, request.Id));
+                        resp = new TokenRequiredUploadResponse
+                        {
+                            id = Convert.ToInt32(cmd.ExecuteScalar())
+
+                        };
+                    }
                     else
                     {
                         var cmd = this.TenantDbFactory.ObjectsDB.GetNewCommand(con, "UPDATE eb_users SET locale=@locale,timezone=@timezone,dateformat=@dateformat,numformat=@numformat,timezonefull=@timezonefull WHERE id=@id");
@@ -476,7 +505,7 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
-       
+
         public TokenRequiredSelectResponse Any(TokenRequiredSelectRequest request)
         {
             if (!string.IsNullOrEmpty(request.TenantAccountId) && request.TenantAccountId != "expressbase")
@@ -493,13 +522,13 @@ namespace ExpressBase.ServiceStack.Services
                                    SELECT id,role_name FROM eb_roles WHERE id != @id AND applicationid= @applicationid;
                                    SELECT role2_id FROM eb_role2role WHERE role1_id = @id AND eb_del = FALSE"; //check sql properly
                         else
-                            sql = "SELECT id,role_name FROM eb_roles WHERE applicationid= @applicationid"; 
+                            sql = "SELECT id,role_name FROM eb_roles WHERE applicationid= @applicationid";
 
                         DbParameter[] parameters = {
                             this.TenantDbFactory.ObjectsDB.GetNewParameter("id", System.Data.DbType.Int32, request.id),
                         this.TenantDbFactory.ObjectsDB.GetNewParameter("applicationid", System.Data.DbType.Int32,request.Colvalues["applicationid"])};
 
-                        var dt = this.TenantDbFactory.ObjectsDB.DoQueries(sql,parameters);
+                        var dt = this.TenantDbFactory.ObjectsDB.DoQueries(sql, parameters);
 
                         Dictionary<string, object> returndata = new Dictionary<string, object>();
                         List<int> subroles = new List<int>();
@@ -507,8 +536,8 @@ namespace ExpressBase.ServiceStack.Services
                         {
                             returndata[dr[0].ToString()] = dr[1].ToString();
                         }
-                        
-                        if(dt.Tables.Count > 1)
+
+                        if (dt.Tables.Count > 1)
                         {
                             foreach (EbDataRow dr in dt.Tables[1].Rows)
                             {
@@ -521,14 +550,14 @@ namespace ExpressBase.ServiceStack.Services
 
                     else if (request.restype == "roles")
                     {
-                        string sql = "SELECT id,role_name FROM eb_roles";                      
+                        string sql = "SELECT id,role_name FROM eb_roles";
                         var dt = this.TenantDbFactory.ObjectsDB.DoQueries(sql);
 
-                        Dictionary<string, object> returndata = new Dictionary<string, object>();                       
+                        Dictionary<string, object> returndata = new Dictionary<string, object>();
                         foreach (EbDataRow dr in dt.Tables[0].Rows)
                         {
                             returndata[dr[0].ToString()] = dr[1].ToString();
-                        }                        
+                        }
                         resp.Data = returndata;
                     }
                     else if (request.restype == "getpermissions")
@@ -541,7 +570,7 @@ namespace ExpressBase.ServiceStack.Services
                 SELECT obj_name FROM eb_objects WHERE id IN(SELECT applicationid FROM eb_roles WHERE id = @id);
                 SELECT refid FROM eb_objects_ver WHERE eb_objects_id IN(SELECT applicationid FROM eb_roles WHERE id = @id)";
 
-                
+
 
                         DbParameter[] parameters = { this.TenantDbFactory.ObjectsDB.GetNewParameter("id", System.Data.DbType.Int32, request.id) };
 
@@ -557,10 +586,10 @@ namespace ExpressBase.ServiceStack.Services
                         {
 
                             result.Add("rolename", dr[0].ToString());
-                            result.Add("applicationid",Convert.ToInt32(dr[1]));
+                            result.Add("applicationid", Convert.ToInt32(dr[1]));
                             result.Add("description", dr[2].ToString());
                         }
-                            
+
 
                         foreach (var dr in ds.Tables[2].Rows)
                             result.Add("applicationname", dr[0].ToString());
@@ -570,9 +599,46 @@ namespace ExpressBase.ServiceStack.Services
 
                         resp.Data = result;
                     }
-                    else if(request.restype == "users")
+                    else if (request.restype == "users")
                     {
-                        string sql = "SELECT id,firstname FROM eb_users";
+                        string sql = "SELECT id,firstname FROM eb_users WHERE firstname ~* @searchtext";
+
+                        DbParameter[] parameters = {this.TenantDbFactory.ObjectsDB.GetNewParameter("searchtext", System.Data.DbType.String,(request.Colvalues != null)?request.Colvalues["searchtext"]:string.Empty) };
+
+                        var dt = this.TenantDbFactory.ObjectsDB.DoQueries(sql,parameters);
+
+                        Dictionary<string, object> returndata = new Dictionary<string, object>();
+                        foreach (EbDataRow dr in dt.Tables[0].Rows)
+                        {
+                            returndata[dr[0].ToString()] = dr[1].ToString();
+                        }
+                        resp.Data = returndata;
+                    }
+                    else if (request.restype == "getroleusers")
+                    {
+                        string sql = @"
+                                  SELECT id,firstname FROM eb_users WHERE id IN(SELECT user_id FROM eb_role2user WHERE role_id = @roleid AND eb_del = FALSE)";
+                                
+                       
+                        DbParameter[] parameters = { this.TenantDbFactory.ObjectsDB.GetNewParameter("id", System.Data.DbType.Int32, request.UserId),
+                                                    this.TenantDbFactory.ObjectsDB.GetNewParameter("roleid", System.Data.DbType.Int32, request.id)};
+
+                        var dt = this.TenantDbFactory.ObjectsDB.DoQuery(sql, parameters);
+
+                        Dictionary<string, object> returndata = new Dictionary<string, object>();
+                
+                        foreach (EbDataRow dr in dt.Rows)
+                        {
+                            returndata[dr[0].ToString()] = dr[1].ToString();
+                        }                      
+                        resp.Data = returndata;
+                    }
+                    else if (request.restype == "usergroup")
+                    {
+                        string sql = @"
+                                  SELECT id,name FROM eb_usergroup";
+
+
                         var dt = this.TenantDbFactory.ObjectsDB.DoQueries(sql);
 
                         Dictionary<string, object> returndata = new Dictionary<string, object>();
@@ -582,41 +648,36 @@ namespace ExpressBase.ServiceStack.Services
                         }
                         resp.Data = returndata;
                     }
-                    else if (request.restype == "getusers")
+                    else if (request.restype == "usergroupedit")
                     {
-                        string sql = string.Empty;
-                        //string searchtext = .ToString() + "%";
-                          if (request.id > 0)
-                            sql = @"
-                                   SELECT id,firstname FROM eb_users WHERE id != @id AND firstname ~* @searchtext;
-                                   SELECT user_id FROM eb_role2user WHERE role_id = @roleid AND eb_del = FALSE";
-                        else
-                            sql = "SELECT id,firstname FROM eb_users WHERE id != @id AND firstname ~* @searchtext";
+                        string sql = @"
+                                  SELECT id,name,description FROM eb_usergroup WHERE id = @id;
+                                  SELECT id,firstname FROM eb_users WHERE id IN(SELECT userid FROM eb_user2usergroup WHERE groupid = @id)";
 
-                        DbParameter[] parameters = { this.TenantDbFactory.ObjectsDB.GetNewParameter("id", System.Data.DbType.Int32, request.UserId),
-                                                    this.TenantDbFactory.ObjectsDB.GetNewParameter("roleid", System.Data.DbType.Int32, request.id),
-                                                    this.TenantDbFactory.ObjectsDB.GetNewParameter("searchtext", System.Data.DbType.String,request.Colvalues["searchtext"]) };
 
-                       var dt = this.TenantDbFactory.ObjectsDB.DoQueries(sql, parameters);
+                        DbParameter[] parameters = { this.TenantDbFactory.ObjectsDB.GetNewParameter("id", System.Data.DbType.Int32, request.id) };
 
-                        Dictionary<string, object> returndata = new Dictionary<string, object>();
-                        List<int> users = new List<int>();
-                        foreach (EbDataRow dr in dt.Tables[0].Rows)
+                        var ds = this.TenantDbFactory.ObjectsDB.DoQueries(sql, parameters);
+
+                        Dictionary<string, object> result = new Dictionary<string, object>();
+                        foreach (var dr in ds.Tables[0].Rows)
                         {
-                            returndata[dr[0].ToString()] = dr[1].ToString();
+
+                            result.Add("name", dr[1].ToString());
+                            result.Add("description", dr[2].ToString());
                         }
-
-                        if (dt.Tables.Count > 1)
+                        List<int> users = new List<int>();
+                        if (ds.Tables.Count > 1)
                         {
-                            foreach (EbDataRow dr in dt.Tables[1].Rows)
+                            foreach (EbDataRow dr in ds.Tables[1].Rows)
                             {
                                 users.Add(Convert.ToInt32(dr[0]));
+                                result.Add(dr[0].ToString(), dr[1]);
                             }
-                            returndata.Add("users", users);
+                            result.Add("userslist", users);
                         }
-                        resp.Data = returndata;
+                        resp.Data = result;
                     }
-                   
 
                     return resp;
                 }
@@ -642,7 +703,7 @@ namespace ExpressBase.ServiceStack.Services
                         };
                         return resp;
                     }
-                    
+
 
                     else if (request.restype == "homeimg")
                     {
