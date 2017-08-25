@@ -5,6 +5,7 @@ using ServiceStack;
 using ServiceStack.Auth;
 using ServiceStack.Configuration;
 using ServiceStack.Web;
+using ExpressBase.Common;
 
 namespace ExpressBase.ServiceStack
 {

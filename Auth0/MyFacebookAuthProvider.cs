@@ -9,6 +9,7 @@ using ServiceStack.Web;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ExpressBase.Data;
 using ServiceStack.Text;
+using ExpressBase.Common;
 
 namespace ExpressBase.ServiceStack.Auth0
 {
