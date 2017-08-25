@@ -18,7 +18,7 @@ namespace ExpressBase.ServiceStack
         public DataSourceService(IMultiTenantDbFactory _dbf, IDatabaseFactory _idbf) : base(_dbf, _idbf) { }
         
         [CompressResponse]
-        public DataSourceDataResponse Post(DataSourceDataRequest request)
+        public DataSourceDataResponse Any(DataSourceDataRequest request)
         {
             this.Log.Info("data request");
 
@@ -128,7 +128,7 @@ namespace ExpressBase.ServiceStack
             if (resp == null || resp.Columns == null || resp.Columns.Count == 0)
             {
                 resp = new DataSourceColumnsResponse();
-
+                resp.Columns = new List<ColumnColletion>();
                 //                // getting DATASOURCE needs to be changed LIVE/DEV/TEST scenarios
                 //                string _sql_4dsBytea = string.Format(@"
                 //SELECT 
@@ -173,7 +173,10 @@ namespace ExpressBase.ServiceStack
                     try
                     {
                         _dataset = this.TenantDbFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray());
-                        resp.Columns = (_dataset.Tables.Count > 1) ? _dataset.Tables[1].Columns : _dataset.Tables[0].Columns;
+
+                        foreach (var dt in _dataset.Tables)
+                            resp.Columns.Add(dt.Columns);
+
                         resp.IsPaged = _isPaged;
                         this.Redis.Set<DataSourceColumnsResponse>(_dsRedisKey, resp);
                     }
