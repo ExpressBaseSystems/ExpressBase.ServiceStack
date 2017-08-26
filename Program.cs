@@ -15,6 +15,7 @@ namespace ExpressBase.ServiceStack
                 .UseKestrel()
                 .UseContentRoot(Directory.GetCurrentDirectory())
                 .UseIISIntegration()
+                .UseUrls(urls: "http://localhost:8000/")
                 .UseStartup<Startup>()
                 .Build();
 

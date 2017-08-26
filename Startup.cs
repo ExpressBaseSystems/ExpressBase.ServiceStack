@@ -9,7 +9,6 @@ using Microsoft.Extensions.Logging;
 using ServiceStack;
 using ServiceStack.Auth;
 using ServiceStack.Logging;
-using ServiceStack.ProtoBuf;
 using ServiceStack.Redis;
 using System.IdentityModel.Tokens.Jwt;
 using System.Collections.Generic;
@@ -20,6 +19,7 @@ using ExpressBase.Data;
 using ServiceStack.Web;
 using ServiceStack.Data;
 using Microsoft.AspNetCore.Http;
+using ServiceStack.ProtoBuf;
 
 namespace ExpressBase.ServiceStack
 {
