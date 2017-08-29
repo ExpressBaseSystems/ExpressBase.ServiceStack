@@ -11,15 +11,12 @@ using ServiceStack.Auth;
 using ServiceStack.Logging;
 using ServiceStack.Redis;
 using System.IdentityModel.Tokens.Jwt;
-using System.Collections.Generic;
 using ExpressBase.ServiceStack.Auth0;
 using System.IO;
 using ExpressBase.Common;
-using ExpressBase.Data;
-using ServiceStack.Web;
-using ServiceStack.Data;
-using Microsoft.AspNetCore.Http;
 using ServiceStack.ProtoBuf;
+using ServiceStack.Messaging.Redis;
+using ExpressBase.Objects.Objects.MQRelated;
 
 namespace ExpressBase.ServiceStack
 {
@@ -167,6 +164,17 @@ namespace ExpressBase.ServiceStack
 
             container.Register<IDatabaseFactory>(c => new InfraDbFactory(EbSerializers.ProtoBuf_DeSerialize<EbInfraDBConf>(EbFile.Bytea_FromFile(Path.Combine(Directory.GetParent(System.IO.Directory.GetCurrentDirectory()).FullName, "EbInfra.conn"))))).ReusedWithin(ReuseScope.Container);
             container.Register<IMultiTenantDbFactory>(c => new MultiTenantDbFactory(c)).ReusedWithin(ReuseScope.Request);
+
+            var redisConnectionStringMq = string.Format("redis://{0}@{1}:{2}?ssl=true&db=1",
+               EbLiveSettings.RedisPassword, EbLiveSettings.RedisServer, EbLiveSettings.RedisPort);
+
+            //container.Register<IRedisClientsManager>(c => new RedisManagerPool(redisConnectionStringMq));
+
+            //Message Queue
+            var redisFactory = new PooledRedisClientManager(redisConnectionStringMq);
+            var mqHost = new RedisMqServer(redisFactory, retryCount: 2);
+            mqHost.RegisterHandler<EmailRequest>(base.ExecuteMessage);
+            mqHost.Start();
 
             //Add a request filter to check if the user has a session initialized
             this.GlobalRequestFilters.Add((req, res, requestDto) =>
