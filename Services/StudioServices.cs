@@ -322,11 +322,13 @@ WHERE
             {
                 if (request.EbObjectType == (int)EbObjectType.DataVisualization)
                     _eb_object = EbSerializers.Json_Deserialize<EbDataVisualization>(request.Json);
-                if (request.EbObjectType == (int)EbObjectType.DataSource)
+                else if (request.EbObjectType == (int)EbObjectType.DataSource)
                     _eb_object = EbSerializers.Json_Deserialize<EbDataSource>(request.Json);
-                if (request.EbObjectType == (int)EbObjectType.FilterDialog)
+                else if (request.EbObjectType == (int)EbObjectType.FilterDialog)
                     _eb_object = EbSerializers.Json_Deserialize<EbFilterDialog>(request.Json);
 
+                if (_eb_object!=null)
+                { 
                 using (var con = this.TenantDbFactory.ObjectsDB.GetNewConnection())
                 {
                     con.Open();
@@ -356,6 +358,7 @@ WHERE
                         this.Redis.Set<EbDataSource>(refId, _eb_object as EbDataSource);
                     if (request.EbObjectType == (int)EbObjectType.FilterDialog)
                         this.Redis.Set<EbFilterDialog>(refId, _eb_object as EbFilterDialog);
+                }
                 }
             }
             catch (Exception e)
