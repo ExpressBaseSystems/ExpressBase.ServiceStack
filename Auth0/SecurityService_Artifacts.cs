@@ -169,8 +169,8 @@ namespace ExpressBase.Objects.ServiceStack_Artifacts
 
             public override bool TryAuthenticate(IServiceBase authService, string UserName, string password)
             {
-                var TenantDbFactory = authService.ResolveService<IMultiTenantDbFactory>() as MultiTenantDbFactory;
-                var InfraDbFactory = authService.TryResolve<IDatabaseFactory>() as InfraDbFactory;
+                var TenantDbFactory = authService.ResolveService<ITenantDbFactory>() as TenantDbFactory;
+                var InfraDbFactory = authService.TryResolve<IInfraDbFactory>() as InfraDbFactory;
                 var _InfraDb = InfraDbFactory.InfraDB as IDatabase;
 
                 ILog log = LogManager.GetLogger(GetType());

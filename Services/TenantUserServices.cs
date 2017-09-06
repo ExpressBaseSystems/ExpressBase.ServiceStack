@@ -10,7 +10,7 @@ namespace ExpressBase.ServiceStack.Services
 {
     public class TenantUserServices : EbBaseService
     {
-        public TenantUserServices(IMultiTenantDbFactory _dbf, IDatabaseFactory _idbf) : base(_dbf, _idbf) { }
+        public TenantUserServices(ITenantDbFactory _dbf, IInfraDbFactory _idbf) : base(_dbf, _idbf) { }
 
         private string GeneratePassword()
         {

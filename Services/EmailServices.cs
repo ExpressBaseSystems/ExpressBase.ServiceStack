@@ -15,7 +15,7 @@ namespace ExpressBase.ServiceStack.Services
     [Authenticate]
     public class EmailServices : EbBaseService
     {
-        public EmailServices(IMultiTenantDbFactory _dbf, IDatabaseFactory _idbf) : base(_dbf, _idbf) { }
+        public EmailServices(ITenantDbFactory _dbf, IInfraDbFactory _idbf) : base(_dbf, _idbf) { }
 
         public async Task<EmailServicesResponse> Any(EmailServicesRequest request)
         {

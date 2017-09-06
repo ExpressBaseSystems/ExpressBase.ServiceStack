@@ -17,7 +17,7 @@ namespace ExpressBase.ServiceStack
 
             if (!string.IsNullOrEmpty(session.ProviderOAuthAccess[0].Email))
             {
-                var _InfraDb = authService.TryResolve<DatabaseFactory>().InfraDB;
+                var _InfraDb = authService.TryResolve<InfraDbFactory>().InfraDB;
                 using (var con = _InfraDb.GetNewConnection())
                 {
                     con.Open();

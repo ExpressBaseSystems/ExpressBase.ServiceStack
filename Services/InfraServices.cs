@@ -21,7 +21,7 @@ namespace ExpressBase.ServiceStack.Services
     [Authenticate]
     public class InfraServices : EbBaseService
     {
-        public InfraServices(IMultiTenantDbFactory _dbf, IDatabaseFactory _idbf) : base(_dbf, _idbf) { }
+        public InfraServices(ITenantDbFactory _dbf, IInfraDbFactory _idbf) : base(_dbf, _idbf) { }
 
         public CreateAccountResponse Post(CreateAccountRequest request)
         {
@@ -117,8 +117,6 @@ namespace ExpressBase.ServiceStack.Services
                         //e.DatabaseConfigurations.Add(EbConnectionTypes.EbLOGS, new EbDatabaseConfiguration(EbConnectionTypes.EbLOGS, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db_logrw"])), request.Colvalues["dbname_logrw"].ToString(), request.Colvalues["sip_logrw"].ToString(), Convert.ToInt32(request.Colvalues["pnum_logrw"]), request.Colvalues["duname_logrw"].ToString(), request.Colvalues["pwd_logrw"].ToString(), Convert.ToInt32(request.Colvalues["tout_logrw"])));
                         //e.DatabaseConfigurations.Add(EbConnectionTypes.EbOBJECTS_RO, new EbDatabaseConfiguration(EbConnectionTypes.EbOBJECTS_RO, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db_objrw"])), request.Colvalues["dbname_objro"].ToString(), request.Colvalues["sip_objro"].ToString(), Convert.ToInt32(request.Colvalues["pnum_objro"]), request.Colvalues["duname_objro"].ToString(), request.Colvalues["pwd_objro"].ToString(), Convert.ToInt32(request.Colvalues["tout_objro"])));
                         e.DatabaseConfigurations.Add(EbConnectionTypes.EbDATA_RO, new EbDatabaseConfiguration(EbConnectionTypes.EbDATA_RO, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db_datarw"])), request.Colvalues["dbname_dataro"].ToString(), request.Colvalues["sip_dataro"].ToString(), Convert.ToInt32(request.Colvalues["pnum_dataro"]), request.Colvalues["duname_dataro"].ToString(), request.Colvalues["pwd_dataro"].ToString(), Convert.ToInt32(request.Colvalues["tout_dataro"])));
-                        e.DatabaseConfigurations.Add(EbConnectionTypes.EbFILES_RO, new EbDatabaseConfiguration(EbConnectionTypes.EbFILES_RO, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db_filerw"])), request.Colvalues["dbname_filero"].ToString(), request.Colvalues["sip_filero"].ToString(), Convert.ToInt32(request.Colvalues["pnum_filero"]), request.Colvalues["duname_filero"].ToString(), request.Colvalues["pwd_filero"].ToString(), Convert.ToInt32(request.Colvalues["tout_filero"])));
-                      //  e.DatabaseConfigurations.Add(EbConnectionTypes.EbLOGS_RO, new EbDatabaseConfiguration(EbConnectionTypes.EbLOGS_RO, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db_logrw"])), request.Colvalues["dbname_logro"].ToString(), request.Colvalues["sip_logro"].ToString(), Convert.ToInt32(request.Colvalues["pnum_logro"]), request.Colvalues["duname_logro"].ToString(), request.Colvalues["pwd_logro"].ToString(), Convert.ToInt32(request.Colvalues["tout_logro"])));
                     }
                     else
                     {
@@ -128,25 +126,19 @@ namespace ExpressBase.ServiceStack.Services
                        // e.DatabaseConfigurations.Add(EbConnectionTypes.EbLOGS, new EbDatabaseConfiguration(EbConnectionTypes.EbLOGS, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db"])), request.Colvalues["dbname"].ToString(), request.Colvalues["sip"].ToString(), Convert.ToInt32(request.Colvalues["pnum"]), request.Colvalues["duname"].ToString(), request.Colvalues["pwd"].ToString(), Convert.ToInt32(request.Colvalues["tout"])));
                       //  e.DatabaseConfigurations.Add(EbConnectionTypes.EbOBJECTS_RO, new EbDatabaseConfiguration(EbConnectionTypes.EbOBJECTS_RO, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db"])), request.Colvalues["dbname"].ToString(), request.Colvalues["sip"].ToString(), Convert.ToInt32(request.Colvalues["pnum"]), request.Colvalues["duname"].ToString(), request.Colvalues["pwd"].ToString(), Convert.ToInt32(request.Colvalues["tout"])));
                         e.DatabaseConfigurations.Add(EbConnectionTypes.EbDATA_RO, new EbDatabaseConfiguration(EbConnectionTypes.EbDATA_RO, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db"])), request.Colvalues["dbname"].ToString(), request.Colvalues["sip"].ToString(), Convert.ToInt32(request.Colvalues["pnum"]), request.Colvalues["duname"].ToString(), request.Colvalues["pwd"].ToString(), Convert.ToInt32(request.Colvalues["tout"])));
-                        e.DatabaseConfigurations.Add(EbConnectionTypes.EbFILES_RO, new EbDatabaseConfiguration(EbConnectionTypes.EbFILES_RO, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db"])), request.Colvalues["dbname"].ToString(), request.Colvalues["sip"].ToString(), Convert.ToInt32(request.Colvalues["pnum"]), request.Colvalues["duname"].ToString(), request.Colvalues["pwd"].ToString(), Convert.ToInt32(request.Colvalues["tout"])));
-                        //e.DatabaseConfigurations.Add(EbConnectionTypes.EbLOGS_RO, new EbDatabaseConfiguration(EbConnectionTypes.EbLOGS_RO, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db"])), request.Colvalues["dbname"].ToString(), request.Colvalues["sip"].ToString(), Convert.ToInt32(request.Colvalues["pnum"]), request.Colvalues["duname"].ToString(), request.Colvalues["pwd"].ToString(), Convert.ToInt32(request.Colvalues["tout"])));
                     }
 
 
                     byte[] bytea2 = EbSerializers.ProtoBuf_Serialize(e);
                     var dbconf = EbSerializers.ProtoBuf_DeSerialize<EbClientConf>(bytea2);
-                    var dbf = new DatabaseFactory(dbconf);
+                    var dbf = new TenantDbFactory(dbconf);
                     DbTransaction _con_d1_trans = null;
                     DbTransaction _con_o1_trans = null;
 
                     var _con_d1 = dbf.DataDB.GetNewConnection();
                     var _con_d2 = dbf.DataDBRO.GetNewConnection();
                     var _con_o1 = dbf.ObjectsDB.GetNewConnection();
-                    var _con_o2 = dbf.ObjectsDBRO.GetNewConnection();
-                    var _con_l1 = dbf.LogsDB.GetNewConnection();
-                    var _con_l2 = dbf.LogsDBRO.GetNewConnection();
                     var _con_f1 = dbf.FilesDB.GetNewConnection();
-                    var _con_f2 = dbf.FilesDBRO.GetNewConnection();
                     int i = 0;
                     try
                     {
@@ -156,15 +148,7 @@ namespace ExpressBase.ServiceStack.Services
                         i++;
                         _con_o1.Open();
                         i++;
-                        _con_o2.Open(); _con_o2.Close();
-                        i++;
-                        _con_l1.Open(); _con_l1.Close();
-                        i++;
-                        _con_l2.Open(); _con_l2.Close();
-                        i++;
                         _con_f1.Open(); _con_f1.Close();
-                        i++;
-                        _con_f2.Open(); _con_f2.Close();
 
                         _con_d1_trans = _con_d1.BeginTransaction();
                         _con_o1_trans = _con_o1.BeginTransaction();
@@ -243,7 +227,7 @@ namespace ExpressBase.ServiceStack.Services
             using (var con = InfraDatabaseFactory.InfraDB.GetNewConnection())
             {
                 Dictionary<string, object> dbresults = new Dictionary<string, object>();
-                var dt = InfraDatabaseFactory.InfraDB_RO.DoQuery(string.Format("SELECT dbconfigtype,config FROM eb_tenantaccount WHERE id={0}", request.Colvalues["id"]));
+                var dt = InfraDatabaseFactory.InfraDB.DoQuery(string.Format("SELECT dbconfigtype,config FROM eb_tenantaccount WHERE id={0}", request.Colvalues["id"]));
                 int db_conf_type = 0;
 
                 db_conf_type = Convert.ToInt32(dt.Rows[0][0]);
@@ -280,8 +264,6 @@ namespace ExpressBase.ServiceStack.Services
                        // dbresults[Constants.CONF_DBNAME_LOGS_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbLOGS].DatabaseName;
                         dbresults[Constants.CONF_DBNAME_DATA_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbDATA_RO].DatabaseName;
                        // dbresults[Constants.CONF_DBNAME_OBJ_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbOBJECTS_RO].DatabaseName;
-                        dbresults[Constants.CONF_DBNAME_FILES_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbFILES_RO].DatabaseName;
-                       // dbresults[Constants.CONF_DBNAME_LOGS_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbLOGS_RO].DatabaseName;
 
                         dbresults[Constants.CONF_SIP_DATA_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbDATA].Server;
                         dbresults[Constants.CONF_SIP_OBJ_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbOBJECTS].Server;
@@ -289,8 +271,6 @@ namespace ExpressBase.ServiceStack.Services
                         //dbresults[Constants.CONF_SIP_LOGS_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbLOGS].Server;
                         dbresults[Constants.CONF_SIP_DATA_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbDATA_RO].Server;
                         //dbresults[Constants.CONF_SIP_OBJ_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbOBJECTS_RO].Server;
-                        dbresults[Constants.CONF_SIP_FILES_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbFILES_RO].Server;
-                        //dbresults[Constants.CONF_SIP_LOGS_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbLOGS_RO].Server;
 
                         dbresults[Constants.CONF_PORT_DATA_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbDATA].Port;
                         dbresults[Constants.CONF_PORT_OBJ_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbOBJECTS].Port;
@@ -298,8 +278,6 @@ namespace ExpressBase.ServiceStack.Services
                         //dbresults[Constants.CONF_PORT_LOGS_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbLOGS].Port;
                         dbresults[Constants.CONF_PORT_DATA_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbDATA_RO].Port;
                         //dbresults[Constants.CONF_PORT_OBJ_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbOBJECTS_RO].Port;
-                        dbresults[Constants.CONF_PORT_FILES_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbFILES_RO].Port;
-                        //dbresults[Constants.CONF_PORT_LOGS_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbLOGS_RO].Port;
 
                         dbresults[Constants.CONF_UNAME_DATA_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbDATA].UserName;
                         dbresults[Constants.CONF_UNAME_OBJ_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbOBJECTS].UserName;
@@ -307,8 +285,6 @@ namespace ExpressBase.ServiceStack.Services
                         //dbresults[Constants.CONF_UNAME_LOGS_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbLOGS].UserName;
                         dbresults[Constants.CONF_UNAME_DATA_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbDATA_RO].UserName;
                         //dbresults[Constants.CONF_UNAME_OBJ_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbOBJECTS_RO].UserName;
-                        dbresults[Constants.CONF_UNAME_FILES_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbFILES_RO].UserName;
-                        //dbresults[Constants.CONF_UNAME_LOGS_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbLOGS_RO].UserName;
 
                         dbresults[Constants.CONF_TOUT_DATA_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbDATA].Timeout;
                         dbresults[Constants.CONF_TOUT_OBJ_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbOBJECTS].Timeout;
@@ -316,8 +292,6 @@ namespace ExpressBase.ServiceStack.Services
                         //dbresults[Constants.CONF_TOUT_LOGS_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbLOGS].Timeout;
                         dbresults[Constants.CONF_TOUT_DATA_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbDATA_RO].Timeout;
                         //dbresults[Constants.CONF_TOUT_OBJ_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbOBJECTS_RO].Timeout;
-                        dbresults[Constants.CONF_TOUT_FILES_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbFILES_RO].Timeout;
-                        //dbresults[Constants.CONF_TOUT_LOGS_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbLOGS_RO].Timeout;
 
                         dbresults[Constants.CONF_PWD_DATA_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbDATA].Password;
                         dbresults[Constants.CONF_PWD_OBJ_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbOBJECTS].Password;
@@ -325,8 +299,6 @@ namespace ExpressBase.ServiceStack.Services
                         //dbresults[Constants.CONF_PWD_LOGS_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbLOGS].Password;
                         dbresults[Constants.CONF_PWD_DATA_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbDATA_RO].Password;
                         //dbresults[Constants.CONF_PWD_OBJ_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbOBJECTS_RO].Password;
-                        dbresults[Constants.CONF_PWD_FILES_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbFILES_RO].Password;
-                        //dbresults[Constants.CONF_PWD_LOGS_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbLOGS_RO].Password;
                     }
                     resp = new EditDBConfigResponse
                     {
@@ -1004,7 +976,7 @@ namespace ExpressBase.ServiceStack.Services
         }
 
 
-        public void TableInsertsDataDB(DatabaseFactory dbf, EbDataTable dt, DbConnection _con_d1)
+        public void TableInsertsDataDB(TenantDbFactory dbf, EbDataTable dt, DbConnection _con_d1)
         {
             string result;
             var assembly = typeof(ExpressBase.Common.Resource).GetAssembly();
@@ -1027,7 +999,7 @@ namespace ExpressBase.ServiceStack.Services
 
         }
 
-        public void TableInsertObjectDB(DatabaseFactory dbf, DbConnection _con_o1)
+        public void TableInsertObjectDB(TenantDbFactory dbf, DbConnection _con_o1)
         {
             string result;
             var assembly = typeof(ExpressBase.Common.Resource).GetAssembly();
