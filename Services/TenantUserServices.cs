@@ -72,7 +72,7 @@ namespace ExpressBase.ServiceStack.Services
                 }
                 resp = new CreateUserResponse
                 {
-                    id = Convert.ToInt32(dt.Tables[0].Rows[0])
+                    id = Convert.ToInt32(dt.Tables[0].Rows[0][0])
 
                 };
             } 

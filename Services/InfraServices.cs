@@ -111,25 +111,25 @@ namespace ExpressBase.ServiceStack.Services
 
                     if (request.Colvalues.ContainsKey("dbtype") && request.Colvalues["dbtype"].ToString() == "2")
                     {
-                        e.DatabaseConfigurations.Add(EbDatabaseTypes.EbOBJECTS, new EbDatabaseConfiguration(EbDatabaseTypes.EbOBJECTS, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db_objrw"])), request.Colvalues["dbname_objrw"].ToString(), request.Colvalues["sip_objrw"].ToString(), Convert.ToInt32(request.Colvalues["pnum_objrw"]), request.Colvalues["duname_objrw"].ToString(), request.Colvalues["pwd_objrw"].ToString(), Convert.ToInt32(request.Colvalues["tout_objrw"])));
-                        e.DatabaseConfigurations.Add(EbDatabaseTypes.EbDATA, new EbDatabaseConfiguration(EbDatabaseTypes.EbDATA, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db_datarw"])), request.Colvalues["dbname_datarw"].ToString(), request.Colvalues["sip_datarw"].ToString(), Convert.ToInt32(request.Colvalues["pnum_datarw"]), request.Colvalues["duname_datarw"].ToString(), request.Colvalues["pwd_datarw"].ToString(), Convert.ToInt32(request.Colvalues["tout_datarw"])));
-                        e.DatabaseConfigurations.Add(EbDatabaseTypes.EbFILES, new EbDatabaseConfiguration(EbDatabaseTypes.EbFILES, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db_filerw"])), request.Colvalues["dbname_filerw"].ToString(), request.Colvalues["sip_filerw"].ToString(), Convert.ToInt32(request.Colvalues["pnum_filerw"]), request.Colvalues["duname_filerw"].ToString(), request.Colvalues["pwd_filerw"].ToString(), Convert.ToInt32(request.Colvalues["tout_filerw"])));
-                        e.DatabaseConfigurations.Add(EbDatabaseTypes.EbLOGS, new EbDatabaseConfiguration(EbDatabaseTypes.EbLOGS, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db_logrw"])), request.Colvalues["dbname_logrw"].ToString(), request.Colvalues["sip_logrw"].ToString(), Convert.ToInt32(request.Colvalues["pnum_logrw"]), request.Colvalues["duname_logrw"].ToString(), request.Colvalues["pwd_logrw"].ToString(), Convert.ToInt32(request.Colvalues["tout_logrw"])));
-                        e.DatabaseConfigurations.Add(EbDatabaseTypes.EbOBJECTS_RO, new EbDatabaseConfiguration(EbDatabaseTypes.EbOBJECTS_RO, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db_objrw"])), request.Colvalues["dbname_objro"].ToString(), request.Colvalues["sip_objro"].ToString(), Convert.ToInt32(request.Colvalues["pnum_objro"]), request.Colvalues["duname_objro"].ToString(), request.Colvalues["pwd_objro"].ToString(), Convert.ToInt32(request.Colvalues["tout_objro"])));
-                        e.DatabaseConfigurations.Add(EbDatabaseTypes.EbDATA_RO, new EbDatabaseConfiguration(EbDatabaseTypes.EbDATA_RO, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db_datarw"])), request.Colvalues["dbname_dataro"].ToString(), request.Colvalues["sip_dataro"].ToString(), Convert.ToInt32(request.Colvalues["pnum_dataro"]), request.Colvalues["duname_dataro"].ToString(), request.Colvalues["pwd_dataro"].ToString(), Convert.ToInt32(request.Colvalues["tout_dataro"])));
-                        e.DatabaseConfigurations.Add(EbDatabaseTypes.EbFILES_RO, new EbDatabaseConfiguration(EbDatabaseTypes.EbFILES_RO, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db_filerw"])), request.Colvalues["dbname_filero"].ToString(), request.Colvalues["sip_filero"].ToString(), Convert.ToInt32(request.Colvalues["pnum_filero"]), request.Colvalues["duname_filero"].ToString(), request.Colvalues["pwd_filero"].ToString(), Convert.ToInt32(request.Colvalues["tout_filero"])));
-                        e.DatabaseConfigurations.Add(EbDatabaseTypes.EbLOGS_RO, new EbDatabaseConfiguration(EbDatabaseTypes.EbLOGS_RO, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db_logrw"])), request.Colvalues["dbname_logro"].ToString(), request.Colvalues["sip_logro"].ToString(), Convert.ToInt32(request.Colvalues["pnum_logro"]), request.Colvalues["duname_logro"].ToString(), request.Colvalues["pwd_logro"].ToString(), Convert.ToInt32(request.Colvalues["tout_logro"])));
+                        e.DatabaseConfigurations.Add(EbConnectionTypes.EbOBJECTS, new EbDatabaseConfiguration(EbConnectionTypes.EbOBJECTS, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db_objrw"])), request.Colvalues["dbname_objrw"].ToString(), request.Colvalues["sip_objrw"].ToString(), Convert.ToInt32(request.Colvalues["pnum_objrw"]), request.Colvalues["duname_objrw"].ToString(), request.Colvalues["pwd_objrw"].ToString(), Convert.ToInt32(request.Colvalues["tout_objrw"])));
+                        e.DatabaseConfigurations.Add(EbConnectionTypes.EbDATA, new EbDatabaseConfiguration(EbConnectionTypes.EbDATA, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db_datarw"])), request.Colvalues["dbname_datarw"].ToString(), request.Colvalues["sip_datarw"].ToString(), Convert.ToInt32(request.Colvalues["pnum_datarw"]), request.Colvalues["duname_datarw"].ToString(), request.Colvalues["pwd_datarw"].ToString(), Convert.ToInt32(request.Colvalues["tout_datarw"])));
+                        e.DatabaseConfigurations.Add(EbConnectionTypes.EbFILES, new EbDatabaseConfiguration(EbConnectionTypes.EbFILES, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db_filerw"])), request.Colvalues["dbname_filerw"].ToString(), request.Colvalues["sip_filerw"].ToString(), Convert.ToInt32(request.Colvalues["pnum_filerw"]), request.Colvalues["duname_filerw"].ToString(), request.Colvalues["pwd_filerw"].ToString(), Convert.ToInt32(request.Colvalues["tout_filerw"])));
+                        //e.DatabaseConfigurations.Add(EbConnectionTypes.EbLOGS, new EbDatabaseConfiguration(EbConnectionTypes.EbLOGS, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db_logrw"])), request.Colvalues["dbname_logrw"].ToString(), request.Colvalues["sip_logrw"].ToString(), Convert.ToInt32(request.Colvalues["pnum_logrw"]), request.Colvalues["duname_logrw"].ToString(), request.Colvalues["pwd_logrw"].ToString(), Convert.ToInt32(request.Colvalues["tout_logrw"])));
+                        //e.DatabaseConfigurations.Add(EbConnectionTypes.EbOBJECTS_RO, new EbDatabaseConfiguration(EbConnectionTypes.EbOBJECTS_RO, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db_objrw"])), request.Colvalues["dbname_objro"].ToString(), request.Colvalues["sip_objro"].ToString(), Convert.ToInt32(request.Colvalues["pnum_objro"]), request.Colvalues["duname_objro"].ToString(), request.Colvalues["pwd_objro"].ToString(), Convert.ToInt32(request.Colvalues["tout_objro"])));
+                        e.DatabaseConfigurations.Add(EbConnectionTypes.EbDATA_RO, new EbDatabaseConfiguration(EbConnectionTypes.EbDATA_RO, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db_datarw"])), request.Colvalues["dbname_dataro"].ToString(), request.Colvalues["sip_dataro"].ToString(), Convert.ToInt32(request.Colvalues["pnum_dataro"]), request.Colvalues["duname_dataro"].ToString(), request.Colvalues["pwd_dataro"].ToString(), Convert.ToInt32(request.Colvalues["tout_dataro"])));
+                        e.DatabaseConfigurations.Add(EbConnectionTypes.EbFILES_RO, new EbDatabaseConfiguration(EbConnectionTypes.EbFILES_RO, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db_filerw"])), request.Colvalues["dbname_filero"].ToString(), request.Colvalues["sip_filero"].ToString(), Convert.ToInt32(request.Colvalues["pnum_filero"]), request.Colvalues["duname_filero"].ToString(), request.Colvalues["pwd_filero"].ToString(), Convert.ToInt32(request.Colvalues["tout_filero"])));
+                      //  e.DatabaseConfigurations.Add(EbConnectionTypes.EbLOGS_RO, new EbDatabaseConfiguration(EbConnectionTypes.EbLOGS_RO, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db_logrw"])), request.Colvalues["dbname_logro"].ToString(), request.Colvalues["sip_logro"].ToString(), Convert.ToInt32(request.Colvalues["pnum_logro"]), request.Colvalues["duname_logro"].ToString(), request.Colvalues["pwd_logro"].ToString(), Convert.ToInt32(request.Colvalues["tout_logro"])));
                     }
                     else
                     {
-                        e.DatabaseConfigurations.Add(EbDatabaseTypes.EbOBJECTS, new EbDatabaseConfiguration(EbDatabaseTypes.EbOBJECTS, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db"])), request.Colvalues["dbname"].ToString(), request.Colvalues["sip"].ToString(), Convert.ToInt32(request.Colvalues["pnum"]), request.Colvalues["duname"].ToString(), request.Colvalues["pwd"].ToString(), Convert.ToInt32(request.Colvalues["tout"])));
-                        e.DatabaseConfigurations.Add(EbDatabaseTypes.EbDATA, new EbDatabaseConfiguration(EbDatabaseTypes.EbDATA, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db"])), request.Colvalues["dbname"].ToString(), request.Colvalues["sip"].ToString(), Convert.ToInt32(request.Colvalues["pnum"]), request.Colvalues["duname"].ToString(), request.Colvalues["pwd"].ToString(), Convert.ToInt32(request.Colvalues["tout"])));
-                        e.DatabaseConfigurations.Add(EbDatabaseTypes.EbFILES, new EbDatabaseConfiguration(EbDatabaseTypes.EbFILES, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db"])), request.Colvalues["dbname"].ToString(), request.Colvalues["sip"].ToString(), Convert.ToInt32(request.Colvalues["pnum"]), request.Colvalues["duname"].ToString(), request.Colvalues["pwd"].ToString(), Convert.ToInt32(request.Colvalues["tout"])));
-                        e.DatabaseConfigurations.Add(EbDatabaseTypes.EbLOGS, new EbDatabaseConfiguration(EbDatabaseTypes.EbLOGS, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db"])), request.Colvalues["dbname"].ToString(), request.Colvalues["sip"].ToString(), Convert.ToInt32(request.Colvalues["pnum"]), request.Colvalues["duname"].ToString(), request.Colvalues["pwd"].ToString(), Convert.ToInt32(request.Colvalues["tout"])));
-                        e.DatabaseConfigurations.Add(EbDatabaseTypes.EbOBJECTS_RO, new EbDatabaseConfiguration(EbDatabaseTypes.EbOBJECTS_RO, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db"])), request.Colvalues["dbname"].ToString(), request.Colvalues["sip"].ToString(), Convert.ToInt32(request.Colvalues["pnum"]), request.Colvalues["duname"].ToString(), request.Colvalues["pwd"].ToString(), Convert.ToInt32(request.Colvalues["tout"])));
-                        e.DatabaseConfigurations.Add(EbDatabaseTypes.EbDATA_RO, new EbDatabaseConfiguration(EbDatabaseTypes.EbDATA_RO, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db"])), request.Colvalues["dbname"].ToString(), request.Colvalues["sip"].ToString(), Convert.ToInt32(request.Colvalues["pnum"]), request.Colvalues["duname"].ToString(), request.Colvalues["pwd"].ToString(), Convert.ToInt32(request.Colvalues["tout"])));
-                        e.DatabaseConfigurations.Add(EbDatabaseTypes.EbFILES_RO, new EbDatabaseConfiguration(EbDatabaseTypes.EbFILES_RO, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db"])), request.Colvalues["dbname"].ToString(), request.Colvalues["sip"].ToString(), Convert.ToInt32(request.Colvalues["pnum"]), request.Colvalues["duname"].ToString(), request.Colvalues["pwd"].ToString(), Convert.ToInt32(request.Colvalues["tout"])));
-                        e.DatabaseConfigurations.Add(EbDatabaseTypes.EbLOGS_RO, new EbDatabaseConfiguration(EbDatabaseTypes.EbLOGS_RO, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db"])), request.Colvalues["dbname"].ToString(), request.Colvalues["sip"].ToString(), Convert.ToInt32(request.Colvalues["pnum"]), request.Colvalues["duname"].ToString(), request.Colvalues["pwd"].ToString(), Convert.ToInt32(request.Colvalues["tout"])));
+                        e.DatabaseConfigurations.Add(EbConnectionTypes.EbOBJECTS, new EbDatabaseConfiguration(EbConnectionTypes.EbOBJECTS, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db"])), request.Colvalues["dbname"].ToString(), request.Colvalues["sip"].ToString(), Convert.ToInt32(request.Colvalues["pnum"]), request.Colvalues["duname"].ToString(), request.Colvalues["pwd"].ToString(), Convert.ToInt32(request.Colvalues["tout"])));
+                        e.DatabaseConfigurations.Add(EbConnectionTypes.EbDATA, new EbDatabaseConfiguration(EbConnectionTypes.EbDATA, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db"])), request.Colvalues["dbname"].ToString(), request.Colvalues["sip"].ToString(), Convert.ToInt32(request.Colvalues["pnum"]), request.Colvalues["duname"].ToString(), request.Colvalues["pwd"].ToString(), Convert.ToInt32(request.Colvalues["tout"])));
+                        e.DatabaseConfigurations.Add(EbConnectionTypes.EbFILES, new EbDatabaseConfiguration(EbConnectionTypes.EbFILES, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db"])), request.Colvalues["dbname"].ToString(), request.Colvalues["sip"].ToString(), Convert.ToInt32(request.Colvalues["pnum"]), request.Colvalues["duname"].ToString(), request.Colvalues["pwd"].ToString(), Convert.ToInt32(request.Colvalues["tout"])));
+                       // e.DatabaseConfigurations.Add(EbConnectionTypes.EbLOGS, new EbDatabaseConfiguration(EbConnectionTypes.EbLOGS, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db"])), request.Colvalues["dbname"].ToString(), request.Colvalues["sip"].ToString(), Convert.ToInt32(request.Colvalues["pnum"]), request.Colvalues["duname"].ToString(), request.Colvalues["pwd"].ToString(), Convert.ToInt32(request.Colvalues["tout"])));
+                      //  e.DatabaseConfigurations.Add(EbConnectionTypes.EbOBJECTS_RO, new EbDatabaseConfiguration(EbConnectionTypes.EbOBJECTS_RO, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db"])), request.Colvalues["dbname"].ToString(), request.Colvalues["sip"].ToString(), Convert.ToInt32(request.Colvalues["pnum"]), request.Colvalues["duname"].ToString(), request.Colvalues["pwd"].ToString(), Convert.ToInt32(request.Colvalues["tout"])));
+                        e.DatabaseConfigurations.Add(EbConnectionTypes.EbDATA_RO, new EbDatabaseConfiguration(EbConnectionTypes.EbDATA_RO, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db"])), request.Colvalues["dbname"].ToString(), request.Colvalues["sip"].ToString(), Convert.ToInt32(request.Colvalues["pnum"]), request.Colvalues["duname"].ToString(), request.Colvalues["pwd"].ToString(), Convert.ToInt32(request.Colvalues["tout"])));
+                        e.DatabaseConfigurations.Add(EbConnectionTypes.EbFILES_RO, new EbDatabaseConfiguration(EbConnectionTypes.EbFILES_RO, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db"])), request.Colvalues["dbname"].ToString(), request.Colvalues["sip"].ToString(), Convert.ToInt32(request.Colvalues["pnum"]), request.Colvalues["duname"].ToString(), request.Colvalues["pwd"].ToString(), Convert.ToInt32(request.Colvalues["tout"])));
+                        //e.DatabaseConfigurations.Add(EbConnectionTypes.EbLOGS_RO, new EbDatabaseConfiguration(EbConnectionTypes.EbLOGS_RO, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db"])), request.Colvalues["dbname"].ToString(), request.Colvalues["sip"].ToString(), Convert.ToInt32(request.Colvalues["pnum"]), request.Colvalues["duname"].ToString(), request.Colvalues["pwd"].ToString(), Convert.ToInt32(request.Colvalues["tout"])));
                     }
 
 
@@ -257,76 +257,76 @@ namespace ExpressBase.ServiceStack.Services
                     if (db_conf_type == 1)
                     {
 
-                        dbresults[Constants.CONF_VENDOR] = (int)conf.DatabaseConfigurations[EbDatabaseTypes.EbDATA].DatabaseVendor;
-                        dbresults[Constants.CONF_DBNAME] = conf.DatabaseConfigurations[EbDatabaseTypes.EbDATA].DatabaseName;
-                        dbresults[Constants.CONF_SIP] = conf.DatabaseConfigurations[EbDatabaseTypes.EbDATA].Server;
-                        dbresults[Constants.CONF_PORT] = conf.DatabaseConfigurations[EbDatabaseTypes.EbDATA].Port;
-                        dbresults[Constants.CONF_UNAME] = conf.DatabaseConfigurations[EbDatabaseTypes.EbDATA].UserName;
-                        dbresults[Constants.CONF_TOUT] = conf.DatabaseConfigurations[EbDatabaseTypes.EbDATA].Timeout;
-                        dbresults[Constants.CONF_PWD] = conf.DatabaseConfigurations[EbDatabaseTypes.EbDATA].Password;
+                        dbresults[Constants.CONF_VENDOR] = (int)conf.DatabaseConfigurations[EbConnectionTypes.EbDATA].DatabaseVendor;
+                        dbresults[Constants.CONF_DBNAME] = conf.DatabaseConfigurations[EbConnectionTypes.EbDATA].DatabaseName;
+                        dbresults[Constants.CONF_SIP] = conf.DatabaseConfigurations[EbConnectionTypes.EbDATA].Server;
+                        dbresults[Constants.CONF_PORT] = conf.DatabaseConfigurations[EbConnectionTypes.EbDATA].Port;
+                        dbresults[Constants.CONF_UNAME] = conf.DatabaseConfigurations[EbConnectionTypes.EbDATA].UserName;
+                        dbresults[Constants.CONF_TOUT] = conf.DatabaseConfigurations[EbConnectionTypes.EbDATA].Timeout;
+                        dbresults[Constants.CONF_PWD] = conf.DatabaseConfigurations[EbConnectionTypes.EbDATA].Password;
 
                     }
                     else
                     {
 
-                        dbresults[Constants.CONF_VENDOR_DATA] = (int)conf.DatabaseConfigurations[EbDatabaseTypes.EbDATA].DatabaseVendor;
-                        dbresults[Constants.CONF_VENDOR_OBJ] = (int)conf.DatabaseConfigurations[EbDatabaseTypes.EbOBJECTS].DatabaseVendor;
-                        dbresults[Constants.CONF_VENDOR_FILES] = (int)conf.DatabaseConfigurations[EbDatabaseTypes.EbFILES].DatabaseVendor;
-                        dbresults[Constants.CONF_VENDOR_LOGS] = (int)conf.DatabaseConfigurations[EbDatabaseTypes.EbLOGS].DatabaseVendor;
+                        dbresults[Constants.CONF_VENDOR_DATA] = (int)conf.DatabaseConfigurations[EbConnectionTypes.EbDATA].DatabaseVendor;
+                        dbresults[Constants.CONF_VENDOR_OBJ] = (int)conf.DatabaseConfigurations[EbConnectionTypes.EbOBJECTS].DatabaseVendor;
+                        dbresults[Constants.CONF_VENDOR_FILES] = (int)conf.DatabaseConfigurations[EbConnectionTypes.EbFILES].DatabaseVendor;
+                       // dbresults[Constants.CONF_VENDOR_LOGS] = (int)conf.DatabaseConfigurations[EbConnectionTypes.EbLOGS].DatabaseVendor;
 
-                        dbresults[Constants.CONF_DBNAME_DATA_RW] = conf.DatabaseConfigurations[EbDatabaseTypes.EbDATA].DatabaseName;
-                        dbresults[Constants.CONF_DBNAME_OBJ_RW] = conf.DatabaseConfigurations[EbDatabaseTypes.EbOBJECTS].DatabaseName;
-                        dbresults[Constants.CONF_DBNAME_FILES_RW] = conf.DatabaseConfigurations[EbDatabaseTypes.EbFILES].DatabaseName;
-                        dbresults[Constants.CONF_DBNAME_LOGS_RW] = conf.DatabaseConfigurations[EbDatabaseTypes.EbLOGS].DatabaseName;
-                        dbresults[Constants.CONF_DBNAME_DATA_RO] = conf.DatabaseConfigurations[EbDatabaseTypes.EbDATA_RO].DatabaseName;
-                        dbresults[Constants.CONF_DBNAME_OBJ_RO] = conf.DatabaseConfigurations[EbDatabaseTypes.EbOBJECTS_RO].DatabaseName;
-                        dbresults[Constants.CONF_DBNAME_FILES_RO] = conf.DatabaseConfigurations[EbDatabaseTypes.EbFILES_RO].DatabaseName;
-                        dbresults[Constants.CONF_DBNAME_LOGS_RO] = conf.DatabaseConfigurations[EbDatabaseTypes.EbLOGS_RO].DatabaseName;
+                        dbresults[Constants.CONF_DBNAME_DATA_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbDATA].DatabaseName;
+                        dbresults[Constants.CONF_DBNAME_OBJ_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbOBJECTS].DatabaseName;
+                        dbresults[Constants.CONF_DBNAME_FILES_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbFILES].DatabaseName;
+                       // dbresults[Constants.CONF_DBNAME_LOGS_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbLOGS].DatabaseName;
+                        dbresults[Constants.CONF_DBNAME_DATA_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbDATA_RO].DatabaseName;
+                       // dbresults[Constants.CONF_DBNAME_OBJ_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbOBJECTS_RO].DatabaseName;
+                        dbresults[Constants.CONF_DBNAME_FILES_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbFILES_RO].DatabaseName;
+                       // dbresults[Constants.CONF_DBNAME_LOGS_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbLOGS_RO].DatabaseName;
 
-                        dbresults[Constants.CONF_SIP_DATA_RW] = conf.DatabaseConfigurations[EbDatabaseTypes.EbDATA].Server;
-                        dbresults[Constants.CONF_SIP_OBJ_RW] = conf.DatabaseConfigurations[EbDatabaseTypes.EbOBJECTS].Server;
-                        dbresults[Constants.CONF_SIP_FILES_RW] = conf.DatabaseConfigurations[EbDatabaseTypes.EbFILES].Server;
-                        dbresults[Constants.CONF_SIP_LOGS_RW] = conf.DatabaseConfigurations[EbDatabaseTypes.EbLOGS].Server;
-                        dbresults[Constants.CONF_SIP_DATA_RO] = conf.DatabaseConfigurations[EbDatabaseTypes.EbDATA_RO].Server;
-                        dbresults[Constants.CONF_SIP_OBJ_RO] = conf.DatabaseConfigurations[EbDatabaseTypes.EbOBJECTS_RO].Server;
-                        dbresults[Constants.CONF_SIP_FILES_RO] = conf.DatabaseConfigurations[EbDatabaseTypes.EbFILES_RO].Server;
-                        dbresults[Constants.CONF_SIP_LOGS_RO] = conf.DatabaseConfigurations[EbDatabaseTypes.EbLOGS_RO].Server;
+                        dbresults[Constants.CONF_SIP_DATA_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbDATA].Server;
+                        dbresults[Constants.CONF_SIP_OBJ_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbOBJECTS].Server;
+                        dbresults[Constants.CONF_SIP_FILES_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbFILES].Server;
+                        //dbresults[Constants.CONF_SIP_LOGS_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbLOGS].Server;
+                        dbresults[Constants.CONF_SIP_DATA_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbDATA_RO].Server;
+                        //dbresults[Constants.CONF_SIP_OBJ_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbOBJECTS_RO].Server;
+                        dbresults[Constants.CONF_SIP_FILES_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbFILES_RO].Server;
+                        //dbresults[Constants.CONF_SIP_LOGS_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbLOGS_RO].Server;
 
-                        dbresults[Constants.CONF_PORT_DATA_RW] = conf.DatabaseConfigurations[EbDatabaseTypes.EbDATA].Port;
-                        dbresults[Constants.CONF_PORT_OBJ_RW] = conf.DatabaseConfigurations[EbDatabaseTypes.EbOBJECTS].Port;
-                        dbresults[Constants.CONF_PORT_FILES_RW] = conf.DatabaseConfigurations[EbDatabaseTypes.EbFILES].Port;
-                        dbresults[Constants.CONF_PORT_LOGS_RW] = conf.DatabaseConfigurations[EbDatabaseTypes.EbLOGS].Port;
-                        dbresults[Constants.CONF_PORT_DATA_RO] = conf.DatabaseConfigurations[EbDatabaseTypes.EbDATA_RO].Port;
-                        dbresults[Constants.CONF_PORT_OBJ_RO] = conf.DatabaseConfigurations[EbDatabaseTypes.EbOBJECTS_RO].Port;
-                        dbresults[Constants.CONF_PORT_FILES_RO] = conf.DatabaseConfigurations[EbDatabaseTypes.EbFILES_RO].Port;
-                        dbresults[Constants.CONF_PORT_LOGS_RO] = conf.DatabaseConfigurations[EbDatabaseTypes.EbLOGS_RO].Port;
+                        dbresults[Constants.CONF_PORT_DATA_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbDATA].Port;
+                        dbresults[Constants.CONF_PORT_OBJ_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbOBJECTS].Port;
+                        dbresults[Constants.CONF_PORT_FILES_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbFILES].Port;
+                        //dbresults[Constants.CONF_PORT_LOGS_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbLOGS].Port;
+                        dbresults[Constants.CONF_PORT_DATA_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbDATA_RO].Port;
+                        //dbresults[Constants.CONF_PORT_OBJ_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbOBJECTS_RO].Port;
+                        dbresults[Constants.CONF_PORT_FILES_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbFILES_RO].Port;
+                        //dbresults[Constants.CONF_PORT_LOGS_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbLOGS_RO].Port;
 
-                        dbresults[Constants.CONF_UNAME_DATA_RW] = conf.DatabaseConfigurations[EbDatabaseTypes.EbDATA].UserName;
-                        dbresults[Constants.CONF_UNAME_OBJ_RW] = conf.DatabaseConfigurations[EbDatabaseTypes.EbOBJECTS].UserName;
-                        dbresults[Constants.CONF_UNAME_FILES_RW] = conf.DatabaseConfigurations[EbDatabaseTypes.EbFILES].UserName;
-                        dbresults[Constants.CONF_UNAME_LOGS_RW] = conf.DatabaseConfigurations[EbDatabaseTypes.EbLOGS].UserName;
-                        dbresults[Constants.CONF_UNAME_DATA_RO] = conf.DatabaseConfigurations[EbDatabaseTypes.EbDATA_RO].UserName;
-                        dbresults[Constants.CONF_UNAME_OBJ_RO] = conf.DatabaseConfigurations[EbDatabaseTypes.EbOBJECTS_RO].UserName;
-                        dbresults[Constants.CONF_UNAME_FILES_RO] = conf.DatabaseConfigurations[EbDatabaseTypes.EbFILES_RO].UserName;
-                        dbresults[Constants.CONF_UNAME_LOGS_RO] = conf.DatabaseConfigurations[EbDatabaseTypes.EbLOGS_RO].UserName;
+                        dbresults[Constants.CONF_UNAME_DATA_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbDATA].UserName;
+                        dbresults[Constants.CONF_UNAME_OBJ_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbOBJECTS].UserName;
+                        dbresults[Constants.CONF_UNAME_FILES_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbFILES].UserName;
+                        //dbresults[Constants.CONF_UNAME_LOGS_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbLOGS].UserName;
+                        dbresults[Constants.CONF_UNAME_DATA_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbDATA_RO].UserName;
+                        //dbresults[Constants.CONF_UNAME_OBJ_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbOBJECTS_RO].UserName;
+                        dbresults[Constants.CONF_UNAME_FILES_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbFILES_RO].UserName;
+                        //dbresults[Constants.CONF_UNAME_LOGS_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbLOGS_RO].UserName;
 
-                        dbresults[Constants.CONF_TOUT_DATA_RW] = conf.DatabaseConfigurations[EbDatabaseTypes.EbDATA].Timeout;
-                        dbresults[Constants.CONF_TOUT_OBJ_RW] = conf.DatabaseConfigurations[EbDatabaseTypes.EbOBJECTS].Timeout;
-                        dbresults[Constants.CONF_TOUT_FILES_RW] = conf.DatabaseConfigurations[EbDatabaseTypes.EbFILES].Timeout;
-                        dbresults[Constants.CONF_TOUT_LOGS_RW] = conf.DatabaseConfigurations[EbDatabaseTypes.EbLOGS].Timeout;
-                        dbresults[Constants.CONF_TOUT_DATA_RO] = conf.DatabaseConfigurations[EbDatabaseTypes.EbDATA_RO].Timeout;
-                        dbresults[Constants.CONF_TOUT_OBJ_RO] = conf.DatabaseConfigurations[EbDatabaseTypes.EbOBJECTS_RO].Timeout;
-                        dbresults[Constants.CONF_TOUT_FILES_RO] = conf.DatabaseConfigurations[EbDatabaseTypes.EbFILES_RO].Timeout;
-                        dbresults[Constants.CONF_TOUT_LOGS_RO] = conf.DatabaseConfigurations[EbDatabaseTypes.EbLOGS_RO].Timeout;
+                        dbresults[Constants.CONF_TOUT_DATA_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbDATA].Timeout;
+                        dbresults[Constants.CONF_TOUT_OBJ_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbOBJECTS].Timeout;
+                        dbresults[Constants.CONF_TOUT_FILES_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbFILES].Timeout;
+                        //dbresults[Constants.CONF_TOUT_LOGS_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbLOGS].Timeout;
+                        dbresults[Constants.CONF_TOUT_DATA_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbDATA_RO].Timeout;
+                        //dbresults[Constants.CONF_TOUT_OBJ_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbOBJECTS_RO].Timeout;
+                        dbresults[Constants.CONF_TOUT_FILES_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbFILES_RO].Timeout;
+                        //dbresults[Constants.CONF_TOUT_LOGS_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbLOGS_RO].Timeout;
 
-                        dbresults[Constants.CONF_PWD_DATA_RW] = conf.DatabaseConfigurations[EbDatabaseTypes.EbDATA].Password;
-                        dbresults[Constants.CONF_PWD_OBJ_RW] = conf.DatabaseConfigurations[EbDatabaseTypes.EbOBJECTS].Password;
-                        dbresults[Constants.CONF_PWD_FILES_RW] = conf.DatabaseConfigurations[EbDatabaseTypes.EbFILES].Password;
-                        dbresults[Constants.CONF_PWD_LOGS_RW] = conf.DatabaseConfigurations[EbDatabaseTypes.EbLOGS].Password;
-                        dbresults[Constants.CONF_PWD_DATA_RO] = conf.DatabaseConfigurations[EbDatabaseTypes.EbDATA_RO].Password;
-                        dbresults[Constants.CONF_PWD_OBJ_RO] = conf.DatabaseConfigurations[EbDatabaseTypes.EbOBJECTS_RO].Password;
-                        dbresults[Constants.CONF_PWD_FILES_RO] = conf.DatabaseConfigurations[EbDatabaseTypes.EbFILES_RO].Password;
-                        dbresults[Constants.CONF_PWD_LOGS_RO] = conf.DatabaseConfigurations[EbDatabaseTypes.EbLOGS_RO].Password;
+                        dbresults[Constants.CONF_PWD_DATA_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbDATA].Password;
+                        dbresults[Constants.CONF_PWD_OBJ_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbOBJECTS].Password;
+                        dbresults[Constants.CONF_PWD_FILES_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbFILES].Password;
+                        //dbresults[Constants.CONF_PWD_LOGS_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbLOGS].Password;
+                        dbresults[Constants.CONF_PWD_DATA_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbDATA_RO].Password;
+                        //dbresults[Constants.CONF_PWD_OBJ_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbOBJECTS_RO].Password;
+                        dbresults[Constants.CONF_PWD_FILES_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbFILES_RO].Password;
+                        //dbresults[Constants.CONF_PWD_LOGS_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbLOGS_RO].Password;
                     }
                     resp = new EditDBConfigResponse
                     {
@@ -490,25 +490,25 @@ namespace ExpressBase.ServiceStack.Services
 
         //                if (request.Colvalues.ContainsKey("dbtype") && request.Colvalues["dbtype"].ToString() == "2")
         //                {
-        //                    e.DatabaseConfigurations.Add(EbDatabaseTypes.EbOBJECTS, new EbDatabaseConfiguration(EbDatabaseTypes.EbOBJECTS, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db_objrw"])), request.Colvalues["dbname_objrw"].ToString(), request.Colvalues["sip_objrw"].ToString(), Convert.ToInt32(request.Colvalues["pnum_objrw"]), request.Colvalues["duname_objrw"].ToString(), request.Colvalues["pwd_objrw"].ToString(), Convert.ToInt32(request.Colvalues["tout_objrw"])));
-        //                    e.DatabaseConfigurations.Add(EbDatabaseTypes.EbDATA, new EbDatabaseConfiguration(EbDatabaseTypes.EbDATA, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db_datarw"])), request.Colvalues["dbname_datarw"].ToString(), request.Colvalues["sip_datarw"].ToString(), Convert.ToInt32(request.Colvalues["pnum_datarw"]), request.Colvalues["duname_datarw"].ToString(), request.Colvalues["pwd_datarw"].ToString(), Convert.ToInt32(request.Colvalues["tout_datarw"])));
-        //                    e.DatabaseConfigurations.Add(EbDatabaseTypes.EbFILES, new EbDatabaseConfiguration(EbDatabaseTypes.EbFILES, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db_filerw"])), request.Colvalues["dbname_filerw"].ToString(), request.Colvalues["sip_filerw"].ToString(), Convert.ToInt32(request.Colvalues["pnum_filerw"]), request.Colvalues["duname_filerw"].ToString(), request.Colvalues["pwd_filerw"].ToString(), Convert.ToInt32(request.Colvalues["tout_filerw"])));
-        //                    e.DatabaseConfigurations.Add(EbDatabaseTypes.EbLOGS, new EbDatabaseConfiguration(EbDatabaseTypes.EbLOGS, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db_logrw"])), request.Colvalues["dbname_logrw"].ToString(), request.Colvalues["sip_logrw"].ToString(), Convert.ToInt32(request.Colvalues["pnum_logrw"]), request.Colvalues["duname_logrw"].ToString(), request.Colvalues["pwd_logrw"].ToString(), Convert.ToInt32(request.Colvalues["tout_logrw"])));
-        //                    e.DatabaseConfigurations.Add(EbDatabaseTypes.EbOBJECTS_RO, new EbDatabaseConfiguration(EbDatabaseTypes.EbOBJECTS_RO, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db_objrw"])), request.Colvalues["dbname_objro"].ToString(), request.Colvalues["sip_objro"].ToString(), Convert.ToInt32(request.Colvalues["pnum_objro"]), request.Colvalues["duname_objro"].ToString(), request.Colvalues["pwd_objro"].ToString(), Convert.ToInt32(request.Colvalues["tout_objro"])));
-        //                    e.DatabaseConfigurations.Add(EbDatabaseTypes.EbDATA_RO, new EbDatabaseConfiguration(EbDatabaseTypes.EbDATA_RO, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db_datarw"])), request.Colvalues["dbname_dataro"].ToString(), request.Colvalues["sip_dataro"].ToString(), Convert.ToInt32(request.Colvalues["pnum_dataro"]), request.Colvalues["duname_dataro"].ToString(), request.Colvalues["pwd_dataro"].ToString(), Convert.ToInt32(request.Colvalues["tout_dataro"])));
-        //                    e.DatabaseConfigurations.Add(EbDatabaseTypes.EbFILES_RO, new EbDatabaseConfiguration(EbDatabaseTypes.EbFILES_RO, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db_filerw"])), request.Colvalues["dbname_filero"].ToString(), request.Colvalues["sip_filero"].ToString(), Convert.ToInt32(request.Colvalues["pnum_filero"]), request.Colvalues["duname_filero"].ToString(), request.Colvalues["pwd_filero"].ToString(), Convert.ToInt32(request.Colvalues["tout_filero"])));
-        //                    e.DatabaseConfigurations.Add(EbDatabaseTypes.EbLOGS_RO, new EbDatabaseConfiguration(EbDatabaseTypes.EbLOGS_RO, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db_logrw"])), request.Colvalues["dbname_logro"].ToString(), request.Colvalues["sip_logro"].ToString(), Convert.ToInt32(request.Colvalues["pnum_logro"]), request.Colvalues["duname_logro"].ToString(), request.Colvalues["pwd_logro"].ToString(), Convert.ToInt32(request.Colvalues["tout_logro"])));
+        //                    e.DatabaseConfigurations.Add(EbConnectionTypes.EbOBJECTS, new EbDatabaseConfiguration(EbConnectionTypes.EbOBJECTS, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db_objrw"])), request.Colvalues["dbname_objrw"].ToString(), request.Colvalues["sip_objrw"].ToString(), Convert.ToInt32(request.Colvalues["pnum_objrw"]), request.Colvalues["duname_objrw"].ToString(), request.Colvalues["pwd_objrw"].ToString(), Convert.ToInt32(request.Colvalues["tout_objrw"])));
+        //                    e.DatabaseConfigurations.Add(EbConnectionTypes.EbDATA, new EbDatabaseConfiguration(EbConnectionTypes.EbDATA, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db_datarw"])), request.Colvalues["dbname_datarw"].ToString(), request.Colvalues["sip_datarw"].ToString(), Convert.ToInt32(request.Colvalues["pnum_datarw"]), request.Colvalues["duname_datarw"].ToString(), request.Colvalues["pwd_datarw"].ToString(), Convert.ToInt32(request.Colvalues["tout_datarw"])));
+        //                    e.DatabaseConfigurations.Add(EbConnectionTypes.EbFILES, new EbDatabaseConfiguration(EbConnectionTypes.EbFILES, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db_filerw"])), request.Colvalues["dbname_filerw"].ToString(), request.Colvalues["sip_filerw"].ToString(), Convert.ToInt32(request.Colvalues["pnum_filerw"]), request.Colvalues["duname_filerw"].ToString(), request.Colvalues["pwd_filerw"].ToString(), Convert.ToInt32(request.Colvalues["tout_filerw"])));
+        //                    e.DatabaseConfigurations.Add(EbConnectionTypes.EbLOGS, new EbDatabaseConfiguration(EbConnectionTypes.EbLOGS, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db_logrw"])), request.Colvalues["dbname_logrw"].ToString(), request.Colvalues["sip_logrw"].ToString(), Convert.ToInt32(request.Colvalues["pnum_logrw"]), request.Colvalues["duname_logrw"].ToString(), request.Colvalues["pwd_logrw"].ToString(), Convert.ToInt32(request.Colvalues["tout_logrw"])));
+        //                    e.DatabaseConfigurations.Add(EbConnectionTypes.EbOBJECTS_RO, new EbDatabaseConfiguration(EbConnectionTypes.EbOBJECTS_RO, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db_objrw"])), request.Colvalues["dbname_objro"].ToString(), request.Colvalues["sip_objro"].ToString(), Convert.ToInt32(request.Colvalues["pnum_objro"]), request.Colvalues["duname_objro"].ToString(), request.Colvalues["pwd_objro"].ToString(), Convert.ToInt32(request.Colvalues["tout_objro"])));
+        //                    e.DatabaseConfigurations.Add(EbConnectionTypes.EbDATA_RO, new EbDatabaseConfiguration(EbConnectionTypes.EbDATA_RO, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db_datarw"])), request.Colvalues["dbname_dataro"].ToString(), request.Colvalues["sip_dataro"].ToString(), Convert.ToInt32(request.Colvalues["pnum_dataro"]), request.Colvalues["duname_dataro"].ToString(), request.Colvalues["pwd_dataro"].ToString(), Convert.ToInt32(request.Colvalues["tout_dataro"])));
+        //                    e.DatabaseConfigurations.Add(EbConnectionTypes.EbFILES_RO, new EbDatabaseConfiguration(EbConnectionTypes.EbFILES_RO, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db_filerw"])), request.Colvalues["dbname_filero"].ToString(), request.Colvalues["sip_filero"].ToString(), Convert.ToInt32(request.Colvalues["pnum_filero"]), request.Colvalues["duname_filero"].ToString(), request.Colvalues["pwd_filero"].ToString(), Convert.ToInt32(request.Colvalues["tout_filero"])));
+        //                    e.DatabaseConfigurations.Add(EbConnectionTypes.EbLOGS_RO, new EbDatabaseConfiguration(EbConnectionTypes.EbLOGS_RO, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db_logrw"])), request.Colvalues["dbname_logro"].ToString(), request.Colvalues["sip_logro"].ToString(), Convert.ToInt32(request.Colvalues["pnum_logro"]), request.Colvalues["duname_logro"].ToString(), request.Colvalues["pwd_logro"].ToString(), Convert.ToInt32(request.Colvalues["tout_logro"])));
         //                }
         //                else
         //                {
-        //                    e.DatabaseConfigurations.Add(EbDatabaseTypes.EbOBJECTS, new EbDatabaseConfiguration(EbDatabaseTypes.EbOBJECTS, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db"])), request.Colvalues["dbname"].ToString(), request.Colvalues["sip"].ToString(), Convert.ToInt32(request.Colvalues["pnum"]), request.Colvalues["duname"].ToString(), request.Colvalues["pwd"].ToString(), Convert.ToInt32(request.Colvalues["tout"])));
-        //                    e.DatabaseConfigurations.Add(EbDatabaseTypes.EbDATA, new EbDatabaseConfiguration(EbDatabaseTypes.EbDATA, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db"])), request.Colvalues["dbname"].ToString(), request.Colvalues["sip"].ToString(), Convert.ToInt32(request.Colvalues["pnum"]), request.Colvalues["duname"].ToString(), request.Colvalues["pwd"].ToString(), Convert.ToInt32(request.Colvalues["tout"])));
-        //                    e.DatabaseConfigurations.Add(EbDatabaseTypes.EbFILES, new EbDatabaseConfiguration(EbDatabaseTypes.EbFILES, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db"])), request.Colvalues["dbname"].ToString(), request.Colvalues["sip"].ToString(), Convert.ToInt32(request.Colvalues["pnum"]), request.Colvalues["duname"].ToString(), request.Colvalues["pwd"].ToString(), Convert.ToInt32(request.Colvalues["tout"])));
-        //                    e.DatabaseConfigurations.Add(EbDatabaseTypes.EbLOGS, new EbDatabaseConfiguration(EbDatabaseTypes.EbLOGS, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db"])), request.Colvalues["dbname"].ToString(), request.Colvalues["sip"].ToString(), Convert.ToInt32(request.Colvalues["pnum"]), request.Colvalues["duname"].ToString(), request.Colvalues["pwd"].ToString(), Convert.ToInt32(request.Colvalues["tout"])));
-        //                    e.DatabaseConfigurations.Add(EbDatabaseTypes.EbOBJECTS_RO, new EbDatabaseConfiguration(EbDatabaseTypes.EbOBJECTS_RO, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db"])), request.Colvalues["dbname"].ToString(), request.Colvalues["sip"].ToString(), Convert.ToInt32(request.Colvalues["pnum"]), request.Colvalues["duname"].ToString(), request.Colvalues["pwd"].ToString(), Convert.ToInt32(request.Colvalues["tout"])));
-        //                    e.DatabaseConfigurations.Add(EbDatabaseTypes.EbDATA_RO, new EbDatabaseConfiguration(EbDatabaseTypes.EbDATA_RO, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db"])), request.Colvalues["dbname"].ToString(), request.Colvalues["sip"].ToString(), Convert.ToInt32(request.Colvalues["pnum"]), request.Colvalues["duname"].ToString(), request.Colvalues["pwd"].ToString(), Convert.ToInt32(request.Colvalues["tout"])));
-        //                    e.DatabaseConfigurations.Add(EbDatabaseTypes.EbFILES_RO, new EbDatabaseConfiguration(EbDatabaseTypes.EbFILES_RO, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db"])), request.Colvalues["dbname"].ToString(), request.Colvalues["sip"].ToString(), Convert.ToInt32(request.Colvalues["pnum"]), request.Colvalues["duname"].ToString(), request.Colvalues["pwd"].ToString(), Convert.ToInt32(request.Colvalues["tout"])));
-        //                    e.DatabaseConfigurations.Add(EbDatabaseTypes.EbLOGS_RO, new EbDatabaseConfiguration(EbDatabaseTypes.EbLOGS_RO, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db"])), request.Colvalues["dbname"].ToString(), request.Colvalues["sip"].ToString(), Convert.ToInt32(request.Colvalues["pnum"]), request.Colvalues["duname"].ToString(), request.Colvalues["pwd"].ToString(), Convert.ToInt32(request.Colvalues["tout"])));
+        //                    e.DatabaseConfigurations.Add(EbConnectionTypes.EbOBJECTS, new EbDatabaseConfiguration(EbConnectionTypes.EbOBJECTS, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db"])), request.Colvalues["dbname"].ToString(), request.Colvalues["sip"].ToString(), Convert.ToInt32(request.Colvalues["pnum"]), request.Colvalues["duname"].ToString(), request.Colvalues["pwd"].ToString(), Convert.ToInt32(request.Colvalues["tout"])));
+        //                    e.DatabaseConfigurations.Add(EbConnectionTypes.EbDATA, new EbDatabaseConfiguration(EbConnectionTypes.EbDATA, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db"])), request.Colvalues["dbname"].ToString(), request.Colvalues["sip"].ToString(), Convert.ToInt32(request.Colvalues["pnum"]), request.Colvalues["duname"].ToString(), request.Colvalues["pwd"].ToString(), Convert.ToInt32(request.Colvalues["tout"])));
+        //                    e.DatabaseConfigurations.Add(EbConnectionTypes.EbFILES, new EbDatabaseConfiguration(EbConnectionTypes.EbFILES, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db"])), request.Colvalues["dbname"].ToString(), request.Colvalues["sip"].ToString(), Convert.ToInt32(request.Colvalues["pnum"]), request.Colvalues["duname"].ToString(), request.Colvalues["pwd"].ToString(), Convert.ToInt32(request.Colvalues["tout"])));
+        //                    e.DatabaseConfigurations.Add(EbConnectionTypes.EbLOGS, new EbDatabaseConfiguration(EbConnectionTypes.EbLOGS, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db"])), request.Colvalues["dbname"].ToString(), request.Colvalues["sip"].ToString(), Convert.ToInt32(request.Colvalues["pnum"]), request.Colvalues["duname"].ToString(), request.Colvalues["pwd"].ToString(), Convert.ToInt32(request.Colvalues["tout"])));
+        //                    e.DatabaseConfigurations.Add(EbConnectionTypes.EbOBJECTS_RO, new EbDatabaseConfiguration(EbConnectionTypes.EbOBJECTS_RO, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db"])), request.Colvalues["dbname"].ToString(), request.Colvalues["sip"].ToString(), Convert.ToInt32(request.Colvalues["pnum"]), request.Colvalues["duname"].ToString(), request.Colvalues["pwd"].ToString(), Convert.ToInt32(request.Colvalues["tout"])));
+        //                    e.DatabaseConfigurations.Add(EbConnectionTypes.EbDATA_RO, new EbDatabaseConfiguration(EbConnectionTypes.EbDATA_RO, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db"])), request.Colvalues["dbname"].ToString(), request.Colvalues["sip"].ToString(), Convert.ToInt32(request.Colvalues["pnum"]), request.Colvalues["duname"].ToString(), request.Colvalues["pwd"].ToString(), Convert.ToInt32(request.Colvalues["tout"])));
+        //                    e.DatabaseConfigurations.Add(EbConnectionTypes.EbFILES_RO, new EbDatabaseConfiguration(EbConnectionTypes.EbFILES_RO, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db"])), request.Colvalues["dbname"].ToString(), request.Colvalues["sip"].ToString(), Convert.ToInt32(request.Colvalues["pnum"]), request.Colvalues["duname"].ToString(), request.Colvalues["pwd"].ToString(), Convert.ToInt32(request.Colvalues["tout"])));
+        //                    e.DatabaseConfigurations.Add(EbConnectionTypes.EbLOGS_RO, new EbDatabaseConfiguration(EbConnectionTypes.EbLOGS_RO, (DatabaseVendors)(Convert.ToInt32(request.Colvalues["db"])), request.Colvalues["dbname"].ToString(), request.Colvalues["sip"].ToString(), Convert.ToInt32(request.Colvalues["pnum"]), request.Colvalues["duname"].ToString(), request.Colvalues["pwd"].ToString(), Convert.ToInt32(request.Colvalues["tout"])));
         //                }
 
 
@@ -670,76 +670,76 @@ namespace ExpressBase.ServiceStack.Services
         //                    if (db_conf_type == 1)
         //                    {
 
-        //                        dbresults[Constants.CONF_VENDOR] = (int)conf.DatabaseConfigurations[EbDatabaseTypes.EbDATA].DatabaseVendor;
-        //                        dbresults[Constants.CONF_DBNAME] = conf.DatabaseConfigurations[EbDatabaseTypes.EbDATA].DatabaseName;
-        //                        dbresults[Constants.CONF_SIP] = conf.DatabaseConfigurations[EbDatabaseTypes.EbDATA].Server;
-        //                        dbresults[Constants.CONF_PORT] = conf.DatabaseConfigurations[EbDatabaseTypes.EbDATA].Port;
-        //                        dbresults[Constants.CONF_UNAME] = conf.DatabaseConfigurations[EbDatabaseTypes.EbDATA].UserName;
-        //                        dbresults[Constants.CONF_TOUT] = conf.DatabaseConfigurations[EbDatabaseTypes.EbDATA].Timeout;
-        //                        dbresults[Constants.CONF_PWD] = conf.DatabaseConfigurations[EbDatabaseTypes.EbDATA].Password;
+        //                        dbresults[Constants.CONF_VENDOR] = (int)conf.DatabaseConfigurations[EbConnectionTypes.EbDATA].DatabaseVendor;
+        //                        dbresults[Constants.CONF_DBNAME] = conf.DatabaseConfigurations[EbConnectionTypes.EbDATA].DatabaseName;
+        //                        dbresults[Constants.CONF_SIP] = conf.DatabaseConfigurations[EbConnectionTypes.EbDATA].Server;
+        //                        dbresults[Constants.CONF_PORT] = conf.DatabaseConfigurations[EbConnectionTypes.EbDATA].Port;
+        //                        dbresults[Constants.CONF_UNAME] = conf.DatabaseConfigurations[EbConnectionTypes.EbDATA].UserName;
+        //                        dbresults[Constants.CONF_TOUT] = conf.DatabaseConfigurations[EbConnectionTypes.EbDATA].Timeout;
+        //                        dbresults[Constants.CONF_PWD] = conf.DatabaseConfigurations[EbConnectionTypes.EbDATA].Password;
 
         //                    }
         //                    else
         //                    {
 
-        //                        dbresults[Constants.CONF_VENDOR_DATA] = (int)conf.DatabaseConfigurations[EbDatabaseTypes.EbDATA].DatabaseVendor;
-        //                        dbresults[Constants.CONF_VENDOR_OBJ] = (int)conf.DatabaseConfigurations[EbDatabaseTypes.EbOBJECTS].DatabaseVendor;
-        //                        dbresults[Constants.CONF_VENDOR_FILES] = (int)conf.DatabaseConfigurations[EbDatabaseTypes.EbFILES].DatabaseVendor;
-        //                        dbresults[Constants.CONF_VENDOR_LOGS] = (int)conf.DatabaseConfigurations[EbDatabaseTypes.EbLOGS].DatabaseVendor;
+        //                        dbresults[Constants.CONF_VENDOR_DATA] = (int)conf.DatabaseConfigurations[EbConnectionTypes.EbDATA].DatabaseVendor;
+        //                        dbresults[Constants.CONF_VENDOR_OBJ] = (int)conf.DatabaseConfigurations[EbConnectionTypes.EbOBJECTS].DatabaseVendor;
+        //                        dbresults[Constants.CONF_VENDOR_FILES] = (int)conf.DatabaseConfigurations[EbConnectionTypes.EbFILES].DatabaseVendor;
+        //                        dbresults[Constants.CONF_VENDOR_LOGS] = (int)conf.DatabaseConfigurations[EbConnectionTypes.EbLOGS].DatabaseVendor;
 
-        //                        dbresults[Constants.CONF_DBNAME_DATA_RW] = conf.DatabaseConfigurations[EbDatabaseTypes.EbDATA].DatabaseName;
-        //                        dbresults[Constants.CONF_DBNAME_OBJ_RW] = conf.DatabaseConfigurations[EbDatabaseTypes.EbOBJECTS].DatabaseName;
-        //                        dbresults[Constants.CONF_DBNAME_FILES_RW] = conf.DatabaseConfigurations[EbDatabaseTypes.EbFILES].DatabaseName;
-        //                        dbresults[Constants.CONF_DBNAME_LOGS_RW] = conf.DatabaseConfigurations[EbDatabaseTypes.EbLOGS].DatabaseName;
-        //                        dbresults[Constants.CONF_DBNAME_DATA_RO] = conf.DatabaseConfigurations[EbDatabaseTypes.EbDATA_RO].DatabaseName;
-        //                        dbresults[Constants.CONF_DBNAME_OBJ_RO] = conf.DatabaseConfigurations[EbDatabaseTypes.EbOBJECTS_RO].DatabaseName;
-        //                        dbresults[Constants.CONF_DBNAME_FILES_RO] = conf.DatabaseConfigurations[EbDatabaseTypes.EbFILES_RO].DatabaseName;
-        //                        dbresults[Constants.CONF_DBNAME_LOGS_RO] = conf.DatabaseConfigurations[EbDatabaseTypes.EbLOGS_RO].DatabaseName;
+        //                        dbresults[Constants.CONF_DBNAME_DATA_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbDATA].DatabaseName;
+        //                        dbresults[Constants.CONF_DBNAME_OBJ_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbOBJECTS].DatabaseName;
+        //                        dbresults[Constants.CONF_DBNAME_FILES_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbFILES].DatabaseName;
+        //                        dbresults[Constants.CONF_DBNAME_LOGS_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbLOGS].DatabaseName;
+        //                        dbresults[Constants.CONF_DBNAME_DATA_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbDATA_RO].DatabaseName;
+        //                        dbresults[Constants.CONF_DBNAME_OBJ_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbOBJECTS_RO].DatabaseName;
+        //                        dbresults[Constants.CONF_DBNAME_FILES_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbFILES_RO].DatabaseName;
+        //                        dbresults[Constants.CONF_DBNAME_LOGS_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbLOGS_RO].DatabaseName;
 
-        //                        dbresults[Constants.CONF_SIP_DATA_RW] = conf.DatabaseConfigurations[EbDatabaseTypes.EbDATA].Server;
-        //                        dbresults[Constants.CONF_SIP_OBJ_RW] = conf.DatabaseConfigurations[EbDatabaseTypes.EbOBJECTS].Server;
-        //                        dbresults[Constants.CONF_SIP_FILES_RW] = conf.DatabaseConfigurations[EbDatabaseTypes.EbFILES].Server;
-        //                        dbresults[Constants.CONF_SIP_LOGS_RW] = conf.DatabaseConfigurations[EbDatabaseTypes.EbLOGS].Server;
-        //                        dbresults[Constants.CONF_SIP_DATA_RO] = conf.DatabaseConfigurations[EbDatabaseTypes.EbDATA_RO].Server;
-        //                        dbresults[Constants.CONF_SIP_OBJ_RO] = conf.DatabaseConfigurations[EbDatabaseTypes.EbOBJECTS_RO].Server;
-        //                        dbresults[Constants.CONF_SIP_FILES_RO] = conf.DatabaseConfigurations[EbDatabaseTypes.EbFILES_RO].Server;
-        //                        dbresults[Constants.CONF_SIP_LOGS_RO] = conf.DatabaseConfigurations[EbDatabaseTypes.EbLOGS_RO].Server;
+        //                        dbresults[Constants.CONF_SIP_DATA_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbDATA].Server;
+        //                        dbresults[Constants.CONF_SIP_OBJ_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbOBJECTS].Server;
+        //                        dbresults[Constants.CONF_SIP_FILES_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbFILES].Server;
+        //                        dbresults[Constants.CONF_SIP_LOGS_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbLOGS].Server;
+        //                        dbresults[Constants.CONF_SIP_DATA_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbDATA_RO].Server;
+        //                        dbresults[Constants.CONF_SIP_OBJ_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbOBJECTS_RO].Server;
+        //                        dbresults[Constants.CONF_SIP_FILES_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbFILES_RO].Server;
+        //                        dbresults[Constants.CONF_SIP_LOGS_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbLOGS_RO].Server;
 
-        //                        dbresults[Constants.CONF_PORT_DATA_RW] = conf.DatabaseConfigurations[EbDatabaseTypes.EbDATA].Port;
-        //                        dbresults[Constants.CONF_PORT_OBJ_RW] = conf.DatabaseConfigurations[EbDatabaseTypes.EbOBJECTS].Port;
-        //                        dbresults[Constants.CONF_PORT_FILES_RW] = conf.DatabaseConfigurations[EbDatabaseTypes.EbFILES].Port;
-        //                        dbresults[Constants.CONF_PORT_LOGS_RW] = conf.DatabaseConfigurations[EbDatabaseTypes.EbLOGS].Port;
-        //                        dbresults[Constants.CONF_PORT_DATA_RO] = conf.DatabaseConfigurations[EbDatabaseTypes.EbDATA_RO].Port;
-        //                        dbresults[Constants.CONF_PORT_OBJ_RO] = conf.DatabaseConfigurations[EbDatabaseTypes.EbOBJECTS_RO].Port;
-        //                        dbresults[Constants.CONF_PORT_FILES_RO] = conf.DatabaseConfigurations[EbDatabaseTypes.EbFILES_RO].Port;
-        //                        dbresults[Constants.CONF_PORT_LOGS_RO] = conf.DatabaseConfigurations[EbDatabaseTypes.EbLOGS_RO].Port;
+        //                        dbresults[Constants.CONF_PORT_DATA_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbDATA].Port;
+        //                        dbresults[Constants.CONF_PORT_OBJ_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbOBJECTS].Port;
+        //                        dbresults[Constants.CONF_PORT_FILES_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbFILES].Port;
+        //                        dbresults[Constants.CONF_PORT_LOGS_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbLOGS].Port;
+        //                        dbresults[Constants.CONF_PORT_DATA_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbDATA_RO].Port;
+        //                        dbresults[Constants.CONF_PORT_OBJ_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbOBJECTS_RO].Port;
+        //                        dbresults[Constants.CONF_PORT_FILES_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbFILES_RO].Port;
+        //                        dbresults[Constants.CONF_PORT_LOGS_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbLOGS_RO].Port;
 
-        //                        dbresults[Constants.CONF_UNAME_DATA_RW] = conf.DatabaseConfigurations[EbDatabaseTypes.EbDATA].UserName;
-        //                        dbresults[Constants.CONF_UNAME_OBJ_RW] = conf.DatabaseConfigurations[EbDatabaseTypes.EbOBJECTS].UserName;
-        //                        dbresults[Constants.CONF_UNAME_FILES_RW] = conf.DatabaseConfigurations[EbDatabaseTypes.EbFILES].UserName;
-        //                        dbresults[Constants.CONF_UNAME_LOGS_RW] = conf.DatabaseConfigurations[EbDatabaseTypes.EbLOGS].UserName;
-        //                        dbresults[Constants.CONF_UNAME_DATA_RO] = conf.DatabaseConfigurations[EbDatabaseTypes.EbDATA_RO].UserName;
-        //                        dbresults[Constants.CONF_UNAME_OBJ_RO] = conf.DatabaseConfigurations[EbDatabaseTypes.EbOBJECTS_RO].UserName;
-        //                        dbresults[Constants.CONF_UNAME_FILES_RO] = conf.DatabaseConfigurations[EbDatabaseTypes.EbFILES_RO].UserName;
-        //                        dbresults[Constants.CONF_UNAME_LOGS_RO] = conf.DatabaseConfigurations[EbDatabaseTypes.EbLOGS_RO].UserName;
+        //                        dbresults[Constants.CONF_UNAME_DATA_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbDATA].UserName;
+        //                        dbresults[Constants.CONF_UNAME_OBJ_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbOBJECTS].UserName;
+        //                        dbresults[Constants.CONF_UNAME_FILES_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbFILES].UserName;
+        //                        dbresults[Constants.CONF_UNAME_LOGS_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbLOGS].UserName;
+        //                        dbresults[Constants.CONF_UNAME_DATA_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbDATA_RO].UserName;
+        //                        dbresults[Constants.CONF_UNAME_OBJ_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbOBJECTS_RO].UserName;
+        //                        dbresults[Constants.CONF_UNAME_FILES_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbFILES_RO].UserName;
+        //                        dbresults[Constants.CONF_UNAME_LOGS_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbLOGS_RO].UserName;
 
-        //                        dbresults[Constants.CONF_TOUT_DATA_RW] = conf.DatabaseConfigurations[EbDatabaseTypes.EbDATA].Timeout;
-        //                        dbresults[Constants.CONF_TOUT_OBJ_RW] = conf.DatabaseConfigurations[EbDatabaseTypes.EbOBJECTS].Timeout;
-        //                        dbresults[Constants.CONF_TOUT_FILES_RW] = conf.DatabaseConfigurations[EbDatabaseTypes.EbFILES].Timeout;
-        //                        dbresults[Constants.CONF_TOUT_LOGS_RW] = conf.DatabaseConfigurations[EbDatabaseTypes.EbLOGS].Timeout;
-        //                        dbresults[Constants.CONF_TOUT_DATA_RO] = conf.DatabaseConfigurations[EbDatabaseTypes.EbDATA_RO].Timeout;
-        //                        dbresults[Constants.CONF_TOUT_OBJ_RO] = conf.DatabaseConfigurations[EbDatabaseTypes.EbOBJECTS_RO].Timeout;
-        //                        dbresults[Constants.CONF_TOUT_FILES_RO] = conf.DatabaseConfigurations[EbDatabaseTypes.EbFILES_RO].Timeout;
-        //                        dbresults[Constants.CONF_TOUT_LOGS_RO] = conf.DatabaseConfigurations[EbDatabaseTypes.EbLOGS_RO].Timeout;
+        //                        dbresults[Constants.CONF_TOUT_DATA_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbDATA].Timeout;
+        //                        dbresults[Constants.CONF_TOUT_OBJ_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbOBJECTS].Timeout;
+        //                        dbresults[Constants.CONF_TOUT_FILES_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbFILES].Timeout;
+        //                        dbresults[Constants.CONF_TOUT_LOGS_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbLOGS].Timeout;
+        //                        dbresults[Constants.CONF_TOUT_DATA_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbDATA_RO].Timeout;
+        //                        dbresults[Constants.CONF_TOUT_OBJ_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbOBJECTS_RO].Timeout;
+        //                        dbresults[Constants.CONF_TOUT_FILES_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbFILES_RO].Timeout;
+        //                        dbresults[Constants.CONF_TOUT_LOGS_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbLOGS_RO].Timeout;
 
-        //                        dbresults[Constants.CONF_PWD_DATA_RW] = conf.DatabaseConfigurations[EbDatabaseTypes.EbDATA].Password;
-        //                        dbresults[Constants.CONF_PWD_OBJ_RW] = conf.DatabaseConfigurations[EbDatabaseTypes.EbOBJECTS].Password;
-        //                        dbresults[Constants.CONF_PWD_FILES_RW] = conf.DatabaseConfigurations[EbDatabaseTypes.EbFILES].Password;
-        //                        dbresults[Constants.CONF_PWD_LOGS_RW] = conf.DatabaseConfigurations[EbDatabaseTypes.EbLOGS].Password;
-        //                        dbresults[Constants.CONF_PWD_DATA_RO] = conf.DatabaseConfigurations[EbDatabaseTypes.EbDATA_RO].Password;
-        //                        dbresults[Constants.CONF_PWD_OBJ_RO] = conf.DatabaseConfigurations[EbDatabaseTypes.EbOBJECTS_RO].Password;
-        //                        dbresults[Constants.CONF_PWD_FILES_RO] = conf.DatabaseConfigurations[EbDatabaseTypes.EbFILES_RO].Password;
-        //                        dbresults[Constants.CONF_PWD_LOGS_RO] = conf.DatabaseConfigurations[EbDatabaseTypes.EbLOGS_RO].Password;
+        //                        dbresults[Constants.CONF_PWD_DATA_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbDATA].Password;
+        //                        dbresults[Constants.CONF_PWD_OBJ_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbOBJECTS].Password;
+        //                        dbresults[Constants.CONF_PWD_FILES_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbFILES].Password;
+        //                        dbresults[Constants.CONF_PWD_LOGS_RW] = conf.DatabaseConfigurations[EbConnectionTypes.EbLOGS].Password;
+        //                        dbresults[Constants.CONF_PWD_DATA_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbDATA_RO].Password;
+        //                        dbresults[Constants.CONF_PWD_OBJ_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbOBJECTS_RO].Password;
+        //                        dbresults[Constants.CONF_PWD_FILES_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbFILES_RO].Password;
+        //                        dbresults[Constants.CONF_PWD_LOGS_RO] = conf.DatabaseConfigurations[EbConnectionTypes.EbLOGS_RO].Password;
         //                    }
         //                    resp = new TokenRequiredUploadResponse
         //                    {
