@@ -10,6 +10,7 @@ using System.Linq;
 using ExpressBase.Common;
 using ExpressBase.Objects.ObjectContainers;
 using ExpressBase.Common.Objects;
+using ExpressBase.Common.Data;
 
 namespace ExpressBase.ServiceStack
 {

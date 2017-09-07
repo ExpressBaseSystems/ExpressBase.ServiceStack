@@ -17,6 +17,9 @@ using ExpressBase.Common;
 using ServiceStack.ProtoBuf;
 using ServiceStack.Messaging.Redis;
 using ExpressBase.Objects.Objects.MQRelated;
+using ExpressBase.Objects.Objects.TenantConnectionsRelated;
+using ServiceStack.Messaging;
+using ExpressBase.Common.Data;
 
 namespace ExpressBase.ServiceStack
 {
@@ -135,7 +138,7 @@ namespace ExpressBase.ServiceStack
 
                     },
 
-                    new CustomUserSession.MyCredentialsAuthProvider(AppSettings)
+                    new MyCredentialsAuthProvider(AppSettings)
                     {
                         PersistSession = true
                     },
@@ -146,8 +149,7 @@ namespace ExpressBase.ServiceStack
             //this.CustomErrorHttpHandlers[HttpStatusCode.NotFound] = new RazorHandler("/notfound");
 
             Plugins.Add(new EbRegistrationFeature());
-
-
+            
             this.ContentTypes.Register(MimeTypes.ProtoBuf, (reqCtx, res, stream) => ProtoBuf.Serializer.NonGeneric.Serialize(stream, res), ProtoBuf.Serializer.NonGeneric.Deserialize);
 
             SetConfig(new HostConfig { DebugMode = true });
@@ -162,19 +164,27 @@ namespace ExpressBase.ServiceStack
 
             container.Register<JwtAuthProvider>(jwtprovider);
 
-            //container.Register<IInfraDbFactory>(c => new InfraDbFactory(EbSerializers.ProtoBuf_DeSerialize<EbInfraConnections>(EbFile.Bytea_FromFile(Path.Combine(Directory.GetParent(System.IO.Directory.GetCurrentDirectory()).FullName, "EbInfra.conn"))))).ReusedWithin(ReuseScope.Container);
             container.Register<ITenantDbFactory>(c => new TenantDbFactory(c)).ReusedWithin(ReuseScope.Request);
 
-            var redisConnectionStringMq = string.Format("redis://{0}@{1}:{2}?ssl=true&db=1",
-               EbLiveSettings.RedisPassword, EbLiveSettings.RedisServer, EbLiveSettings.RedisPort);
-
-            //container.Register<IRedisClientsManager>(c => new RedisManagerPool(redisConnectionStringMq));
-
             //Message Queue
+            var redisConnectionStringMq = string.Format("redis://{0}@{1}:{2}?ssl=true&db=1", 
+                EbLiveSettings.RedisPassword, EbLiveSettings.RedisServer, EbLiveSettings.RedisPort);
+
             var redisFactory = new PooledRedisClientManager(redisConnectionStringMq);
             var mqHost = new RedisMqServer(redisFactory, retryCount: 2);
             mqHost.RegisterHandler<EmailRequest>(base.ExecuteMessage);
+            mqHost.RegisterHandler<RefreshSolutionConnectionsRequests>(base.ExecuteMessage);
             mqHost.Start();
+
+            container.AddScoped<IMessageQueueClient, RedisMessageQueueClient>(serviceProvider =>
+            {
+                return mqHost.CreateMessageQueueClient() as RedisMessageQueueClient;
+            });
+
+            container.AddScoped<IMessageProducer, RedisMessageProducer>(serviceProvider =>
+            {
+                return mqHost.CreateMessageProducer() as RedisMessageProducer;
+            });
 
             //Add a request filter to check if the user has a session initialized
             this.GlobalRequestFilters.Add((req, res, requestDto) =>
