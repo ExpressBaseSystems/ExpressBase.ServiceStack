@@ -16,7 +16,7 @@ namespace ExpressBase.ServiceStack.MQServices
     [Restrict(InternalOnly = true)]
     public class RefreshSolutionConnections: EbBaseService
     {
-        public RefreshSolutionConnections(IMessageQueueClient _mqc, IMessageProducer _mqp) : base(_dbf, _mqc, _mqp) { }
+        public RefreshSolutionConnections(IMessageQueueClient _mqc, IMessageProducer _mqp) : base(_mqc, _mqp) { }
 
         public bool Post(RefreshSolutionConnectionsRequests req)
         {

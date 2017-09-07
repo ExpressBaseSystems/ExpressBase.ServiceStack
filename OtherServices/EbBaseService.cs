@@ -26,6 +26,12 @@ namespace ExpressBase.Objects.ServiceStack_Artifacts
             this.TenantDbFactory = _dbf as TenantDbFactory;
         }
 
+        public EbBaseService(IMessageQueueClient _mqc, IMessageProducer _mqp)
+        {
+            this.MessageQueueClient = _mqc as RedisMessageQueueClient;
+            this.MessageProducer2 = _mqp as RedisMessageProducer;
+        }
+
         public EbBaseService(ITenantDbFactory _dbf, IMessageQueueClient _mqc, IMessageProducer _mqp)
         {
             this.TenantDbFactory = _dbf as TenantDbFactory;
