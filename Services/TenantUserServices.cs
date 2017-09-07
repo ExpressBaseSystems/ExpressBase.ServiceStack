@@ -36,15 +36,15 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     sql = @"UPDATE eb_users SET firstname= @firstname,email= @email WHERE id = @id RETURNING id;
                             
-                            INSERT INTO eb_role2user(role_id,user_id,createdby,createdat) SELECT rid,@id,@userid,NOW() FROM UNNEST(array(SELECT unnest(@roles) except 
-                                        SELECT UNNEST(array(SELECT role_id from eb_role2user WHERE user_id = @id AND eb_del = FALSE)))) as rid;
-                            UPDATE eb_role2user SET eb_del = true,revokedby = @userid,revokedat =NOW() WHERE role_id IN(
-                                        SELECT UNNEST(array(SELECT role_id from eb_role2user WHERE user_id = @id AND eb_del = FALSE)) except SELECT UNNEST(@roles));
-                           
-                            INSERT INTO eb_user2usergroup(userid,groupid,createdby,createdat) SELECT gid,@id,@userid,NOW() FROM UNNEST(array(SELECT unnest(@group) except 
-                                        SELECT UNNEST(array(SELECT groupid from eb_user2usergroup WHERE userid = @id AND eb_del = FALSE)))) as rid;
-                            UPDATE eb_user2usergroup SET eb_del = true,revokedby = @userid,revokedat =NOW() WHERE groupid IN(
-                                        SELECT UNNEST(array(SELECT groupid from eb_user2usergroup WHERE user_id = @id AND eb_del = FALSE)) except SELECT UNNEST(@group)); ";
+                           INSERT INTO eb_role2user(role_id,user_id,createdby,createdat) SELECT rid,@id,@userid,NOW() FROM UNNEST(array(SELECT unnest(@roles) except 
+                                SELECT UNNEST(array(SELECT role_id from eb_role2user WHERE user_id = @id AND eb_del = FALSE)))) as rid;
+                           UPDATE eb_role2user SET eb_del = true,revokedby = @userid,revokedat =NOW() WHERE role_id IN(
+                                SELECT UNNEST(array(SELECT role_id from eb_role2user WHERE user_id = @id AND eb_del = FALSE)) except SELECT UNNEST(@roles));
+
+                           INSERT INTO eb_user2usergroup(userid,groupid,createdby,createdat) SELECT @id,gid,@userid,NOW() FROM UNNEST(array(SELECT unnest(@group) except 
+                                SELECT UNNEST(array(SELECT groupid from eb_user2usergroup WHERE userid = @id AND eb_del = FALSE)))) as gid;
+                           UPDATE eb_user2usergroup SET eb_del = true,revokedby = @userid,revokedat =NOW() WHERE groupid IN(
+                                SELECT UNNEST(array(SELECT groupid from eb_user2usergroup WHERE userid = @id AND eb_del = FALSE)) except SELECT UNNEST(@group));";
                 }
                 else
                 {
@@ -63,7 +63,7 @@ namespace ExpressBase.ServiceStack.Services
 
                 EbDataSet dt = this.TenantDbFactory.ObjectsDB.DoQueries(sql, parameters);
 
-                if (string.IsNullOrEmpty(request.Colvalues["pwd"].ToString()))
+                if (string.IsNullOrEmpty(request.Colvalues["pwd"].ToString()) && request.Id < 0)
                 {
                     using (var service = base.ResolveService<EmailServices>())
                     {
