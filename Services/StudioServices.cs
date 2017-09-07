@@ -18,7 +18,7 @@ namespace ExpressBase.ServiceStack
     [Authenticate]
     public class EbObjectService : EbBaseService
     {
-        public EbObjectService(ITenantDbFactory _dbf, IInfraDbFactory _idbf) : base(_dbf, _idbf) { }
+        public EbObjectService(ITenantDbFactory _dbf) : base(_dbf) { }
 
         #region Get EbObject Queries
 

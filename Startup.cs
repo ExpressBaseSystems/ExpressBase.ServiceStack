@@ -162,7 +162,7 @@ namespace ExpressBase.ServiceStack
 
             container.Register<JwtAuthProvider>(jwtprovider);
 
-            container.Register<IInfraDbFactory>(c => new InfraDbFactory(EbSerializers.ProtoBuf_DeSerialize<EbInfraDBConf>(EbFile.Bytea_FromFile(Path.Combine(Directory.GetParent(System.IO.Directory.GetCurrentDirectory()).FullName, "EbInfra.conn"))))).ReusedWithin(ReuseScope.Container);
+            //container.Register<IInfraDbFactory>(c => new InfraDbFactory(EbSerializers.ProtoBuf_DeSerialize<EbInfraConnections>(EbFile.Bytea_FromFile(Path.Combine(Directory.GetParent(System.IO.Directory.GetCurrentDirectory()).FullName, "EbInfra.conn"))))).ReusedWithin(ReuseScope.Container);
             container.Register<ITenantDbFactory>(c => new TenantDbFactory(c)).ReusedWithin(ReuseScope.Request);
 
             var redisConnectionStringMq = string.Format("redis://{0}@{1}:{2}?ssl=true&db=1",

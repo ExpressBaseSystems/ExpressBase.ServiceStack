@@ -15,7 +15,7 @@ namespace ExpressBase.ServiceStack
     [Authenticate]
     public class DataSourceService : EbBaseService
     {
-        public DataSourceService(ITenantDbFactory _dbf, IInfraDbFactory _idbf) : base(_dbf, _idbf) { }
+        public DataSourceService(ITenantDbFactory _dbf) : base(_dbf) { }
         
         [CompressResponse]
         public DataSourceDataResponse Any(DataSourceDataRequest request)

@@ -163,15 +163,11 @@ namespace ExpressBase.Objects.ServiceStack_Artifacts
         {
             private RedisClient Redis { get; set; }
 
-            private InfraDbFactory InfraFactory { get; set; }
-
             public MyCredentialsAuthProvider(IAppSettings settings) : base(settings) { }
 
             public override bool TryAuthenticate(IServiceBase authService, string UserName, string password)
             {
                 var TenantDbFactory = authService.ResolveService<ITenantDbFactory>() as TenantDbFactory;
-                var InfraDbFactory = authService.TryResolve<IInfraDbFactory>() as InfraDbFactory;
-                var _InfraDb = InfraDbFactory.InfraDB as IDatabase;
 
                 ILog log = LogManager.GetLogger(GetType());
 
@@ -190,14 +186,14 @@ namespace ExpressBase.Objects.ServiceStack_Artifacts
                 if (request.Meta.ContainsKey("signup_tok"))
                 {
                     cid = "expressbase";
-                    _authUser = User.GetInfraVerifiedUser(_InfraDb, UserName, request.Meta["signup_tok"]);
+                    _authUser = User.GetInfraVerifiedUser(TenantDbFactory.DataDB, UserName, request.Meta["signup_tok"]);
                 }
                 else
                 {
                     if (cid == "expressbase")
                     {
                         log.Info("for tenant login");
-                        _authUser = (string.IsNullOrEmpty(socialId)) ? User.GetInfraUser(_InfraDb, UserName, password) : User.GetInfraUserViaSocial(_InfraDb, UserName, socialId);
+                        _authUser = (string.IsNullOrEmpty(socialId)) ? User.GetInfraUser(TenantDbFactory.DataDB, UserName, password) : User.GetInfraUserViaSocial(TenantDbFactory.DataDB, UserName, socialId);
                         log.Info("#Eb reached 1");
                     }
                     else

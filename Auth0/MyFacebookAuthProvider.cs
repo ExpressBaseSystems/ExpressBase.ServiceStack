@@ -23,7 +23,7 @@ namespace ExpressBase.ServiceStack.Auth0
 
             if (!string.IsNullOrEmpty(session.FirstName))
             {
-                var _InfraDb = authService.TryResolve<InfraDbFactory>().InfraDB;
+                var _InfraDb = authService.TryResolve<TenantDbFactory>().DataDB;
                 using (var con = _InfraDb.GetNewConnection())
                 {
                     con.Open();
