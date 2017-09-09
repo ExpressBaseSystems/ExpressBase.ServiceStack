@@ -10,6 +10,7 @@ using System.Linq;
 using ExpressBase.Common;
 using ExpressBase.Objects.ObjectContainers;
 using ExpressBase.Common.Objects;
+using ExpressBase.Common.Data;
 
 namespace ExpressBase.ServiceStack
 {
@@ -18,7 +19,7 @@ namespace ExpressBase.ServiceStack
     [Authenticate]
     public class EbObjectService : EbBaseService
     {
-        public EbObjectService(IMultiTenantDbFactory _dbf, IDatabaseFactory _idbf) : base(_dbf, _idbf) { }
+        public EbObjectService(ITenantDbFactory _dbf) : base(_dbf) { }
 
         #region Get EbObject Queries
 

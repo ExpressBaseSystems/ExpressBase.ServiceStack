@@ -1,4 +1,5 @@
 ﻿using ExpressBase.Common;
+using ExpressBase.Common.Data;
 using ExpressBase.Data;
 using ExpressBase.Objects;
 using ExpressBase.Objects.ServiceStack_Artifacts;
@@ -15,7 +16,7 @@ namespace ExpressBase.ServiceStack
     [Authenticate]
     public class DataSourceService : EbBaseService
     {
-        public DataSourceService(IMultiTenantDbFactory _dbf, IDatabaseFactory _idbf) : base(_dbf, _idbf) { }
+        public DataSourceService(ITenantDbFactory _dbf) : base(_dbf) { }
         
         [CompressResponse]
         public DataSourceDataResponse Any(DataSourceDataRequest request)

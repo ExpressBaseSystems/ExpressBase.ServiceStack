@@ -1,4 +1,5 @@
 ﻿using ExpressBase.Common;
+using ExpressBase.Common.Data;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using System;
 using System.Collections.Generic;
@@ -10,7 +11,7 @@ namespace ExpressBase.ServiceStack.Services
 {
     public class TenantUserServices : EbBaseService
     {
-        public TenantUserServices(IMultiTenantDbFactory _dbf, IDatabaseFactory _idbf) : base(_dbf, _idbf) { }
+        public TenantUserServices(ITenantDbFactory _dbf) : base(_dbf) { }
 
         private string GeneratePassword()
         {
@@ -36,15 +37,15 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     sql = @"UPDATE eb_users SET firstname= @firstname,email= @email WHERE id = @id RETURNING id;
                             
-                            INSERT INTO eb_role2user(role_id,user_id,createdby,createdat) SELECT rid,@id,@userid,NOW() FROM UNNEST(array(SELECT unnest(@roles) except 
-                                        SELECT UNNEST(array(SELECT role_id from eb_role2user WHERE user_id = @id AND eb_del = FALSE)))) as rid;
-                            UPDATE eb_role2user SET eb_del = true,revokedby = @userid,revokedat =NOW() WHERE role_id IN(
-                                        SELECT UNNEST(array(SELECT role_id from eb_role2user WHERE user_id = @id AND eb_del = FALSE)) except SELECT UNNEST(@roles));
-                           
-                            INSERT INTO eb_user2usergroup(userid,groupid,createdby,createdat) SELECT gid,@id,@userid,NOW() FROM UNNEST(array(SELECT unnest(@group) except 
-                                        SELECT UNNEST(array(SELECT groupid from eb_user2usergroup WHERE userid = @id AND eb_del = FALSE)))) as rid;
-                            UPDATE eb_user2usergroup SET eb_del = true,revokedby = @userid,revokedat =NOW() WHERE groupid IN(
-                                        SELECT UNNEST(array(SELECT groupid from eb_user2usergroup WHERE user_id = @id AND eb_del = FALSE)) except SELECT UNNEST(@group)); ";
+                           INSERT INTO eb_role2user(role_id,user_id,createdby,createdat) SELECT rid,@id,@userid,NOW() FROM UNNEST(array(SELECT unnest(@roles) except 
+                                SELECT UNNEST(array(SELECT role_id from eb_role2user WHERE user_id = @id AND eb_del = FALSE)))) as rid;
+                           UPDATE eb_role2user SET eb_del = true,revokedby = @userid,revokedat =NOW() WHERE role_id IN(
+                                SELECT UNNEST(array(SELECT role_id from eb_role2user WHERE user_id = @id AND eb_del = FALSE)) except SELECT UNNEST(@roles));
+
+                           INSERT INTO eb_user2usergroup(userid,groupid,createdby,createdat) SELECT @id,gid,@userid,NOW() FROM UNNEST(array(SELECT unnest(@group) except 
+                                SELECT UNNEST(array(SELECT groupid from eb_user2usergroup WHERE userid = @id AND eb_del = FALSE)))) as gid;
+                           UPDATE eb_user2usergroup SET eb_del = true,revokedby = @userid,revokedat =NOW() WHERE groupid IN(
+                                SELECT UNNEST(array(SELECT groupid from eb_user2usergroup WHERE userid = @id AND eb_del = FALSE)) except SELECT UNNEST(@group));";
                 }
                 else
                 {
@@ -63,7 +64,7 @@ namespace ExpressBase.ServiceStack.Services
 
                 EbDataSet dt = this.TenantDbFactory.ObjectsDB.DoQueries(sql, parameters);
 
-                if (string.IsNullOrEmpty(request.Colvalues["pwd"].ToString()))
+                if (string.IsNullOrEmpty(request.Colvalues["pwd"].ToString()) && request.Id < 0)
                 {
                     using (var service = base.ResolveService<EmailServices>())
                     {
@@ -72,7 +73,7 @@ namespace ExpressBase.ServiceStack.Services
                 }
                 resp = new CreateUserResponse
                 {
-                    id = Convert.ToInt32(dt.Tables[0].Rows[0])
+                    id = Convert.ToInt32(dt.Tables[0].Rows[0][0])
 
                 };
             } 
@@ -111,7 +112,7 @@ namespace ExpressBase.ServiceStack.Services
                 string sql = string.Empty;
                 if (request.id > 0)
                     sql = @"SELECT id, role_name FROM eb_roles;
-                             SELECT id, role_name FROM eb_roles WHERE id IN(SELECT role_id FROM eb_role2user WHERE user_id = @id ) AND eb_del = FALSE";
+                             SELECT id, role_name FROM eb_roles WHERE id IN(SELECT role_id FROM eb_role2user WHERE user_id = @id AND eb_del = FALSE)";
                 else
                     sql = "SELECT id,role_name FROM eb_roles";
 

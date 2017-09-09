@@ -1,4 +1,5 @@
 ﻿using ExpressBase.Common;
+using ExpressBase.Common.Data;
 using ExpressBase.Data;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using MailKit.Net.Smtp;
@@ -15,7 +16,7 @@ namespace ExpressBase.ServiceStack.Services
     [Authenticate]
     public class EmailServices : EbBaseService
     {
-        public EmailServices(IMultiTenantDbFactory _dbf, IDatabaseFactory _idbf) : base(_dbf, _idbf) { }
+        public EmailServices(ITenantDbFactory _dbf) : base(_dbf) { }
 
         public async Task<EmailServicesResponse> Any(EmailServicesRequest request)
         {

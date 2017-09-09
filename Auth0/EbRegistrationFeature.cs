@@ -36,7 +36,7 @@ namespace ExpressBase.ServiceStack.Auth0
         public new object Post(Register request)
         { 
             var response = base.Post(request) as RegisterResponse;
-            var _InfraDb = base.TryResolve<DatabaseFactory>().InfraDB as IDatabase;
+            var _InfraDb = base.TryResolve<TenantDbFactory>().DataDB as IDatabase;
             DbParameter[] parameters = {
                 _InfraDb.GetNewParameter("cname", System.Data.DbType.String, request.Email),
                 _InfraDb.GetNewParameter("password", System.Data.DbType.String, request.Password)
