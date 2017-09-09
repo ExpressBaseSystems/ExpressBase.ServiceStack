@@ -315,7 +315,6 @@ WHERE
             string refId = null;
             ILog log = LogManager.GetLogger(GetType());
             log.Info("#DS insert -- entered post");
-            var isVersioned = !Enum.IsDefined(typeof(EbObjectTypesNonVer), (int)request.EbObjectType);
 
             EbObject _eb_object = null;
             try
@@ -336,7 +335,7 @@ WHERE
                     log.Info("#DS insert 1 -- con open");
                     string[] arr = { };
 
-                    string sql = "SELECT eb_objects_first_commit(@obj_name, @obj_desc, @obj_type, @obj_cur_status, @obj_json, @commit_uid, @src_pid, @cur_pid, @relations, @isversioned);";
+                    string sql = "SELECT eb_objects_first_commit(@obj_name, @obj_desc, @obj_type, @obj_cur_status, @obj_json, @commit_uid, @src_pid, @cur_pid, @relations);";
                     cmd = this.TenantDbFactory.ObjectsDB.GetNewCommand(con, sql);
 
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_name", System.Data.DbType.String, _eb_object.Name));
@@ -348,7 +347,6 @@ WHERE
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@src_pid", System.Data.DbType.String, request.TenantAccountId));
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@cur_pid", System.Data.DbType.String, request.TenantAccountId));
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@relations", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text, (request.Relations != null) ? request.Relations.Split(',').Select(n => n.ToString()).ToArray() : arr));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@isversioned", System.Data.DbType.Boolean, isVersioned));
 
                     refId = cmd.ExecuteScalar().ToString();
 
@@ -374,7 +372,6 @@ WHERE
             string refId = null;
             ILog log = LogManager.GetLogger(GetType());
             log.Info("#DS insert -- entered post");
-            var isVersioned = !Enum.IsDefined(typeof(EbObjectTypesNonVer), (int)request.EbObjectType);
 
             EbObject _eb_object = null;
             try
@@ -394,7 +391,7 @@ WHERE
                     log.Info("#DS insert 1 -- con open");
                     string[] arr = { };
 
-                    string sql = "SELECT eb_objects_subsequentcommit_save2(@id, @obj_name, @obj_desc, @obj_type, @obj_cur_status, @obj_json, @obj_changelog, @issave, @commit_uid, @src_pid, @cur_pid, @relations , @isversioned)";
+                    string sql = "SELECT eb_objects_subsequentcommit_save2(@id, @obj_name, @obj_desc, @obj_type, @obj_cur_status, @obj_json, @obj_changelog, @issave, @commit_uid, @src_pid, @cur_pid, @relations)";
                     cmd = this.TenantDbFactory.ObjectsDB.GetNewCommand(con, sql);
 
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.String, request.RefId));
@@ -409,8 +406,7 @@ WHERE
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@src_pid", System.Data.DbType.String, request.TenantAccountId));
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@cur_pid", System.Data.DbType.String, request.TenantAccountId));
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@relations", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text, (request.Relations != null) ? request.Relations.Split(',').Select(n => n.ToString()).ToArray() : arr));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@isversioned", System.Data.DbType.Boolean, isVersioned));
-
+                   
                     refId = cmd.ExecuteScalar().ToString();
 
                     if (request.EbObjectType == (int)EbObjectType.DataVisualization)
