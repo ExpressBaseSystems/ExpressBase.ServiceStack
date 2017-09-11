@@ -9,6 +9,7 @@ using ServiceStack.Redis;
 using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
+using System.Text;
 
 namespace ExpressBase.ServiceStack
 {
@@ -37,9 +38,7 @@ namespace ExpressBase.ServiceStack
 
             if (_dV.EbDataSource != null)
             {
-                this.Log.Info("_ds *****" + _dV.EbDataSource.SqlDecoded());
-
-                string _c = string.Empty;
+                StringBuilder _sb = new StringBuilder();
 
                 if (request.TFilters != null)
                 {
@@ -48,24 +47,26 @@ namespace ExpressBase.ServiceStack
                         var op = _dic["o"]; var col = _dic["c"]; var val = _dic["v"];
 
                         if (op == "x*")
-                            _c += string.Format("AND LOWER({0})::text LIKE LOWER('{1}%') ", col, val);
+                            _sb.Append(string.Format("LOWER({0})::text LIKE LOWER('{1}%') ", col, val));
                         else if (op == "*x")
-                            _c += string.Format("AND LOWER({0})::text LIKE LOWER('%{1}') ", col, val);
+                            _sb.Append(string.Format("LOWER({0})::text LIKE LOWER('%{1}') ", col, val));
                         else if (op == "*x*")
-                            _c += string.Format("AND LOWER({0})::text LIKE LOWER('%{1}%') ", col, val);
+                            _sb.Append(string.Format("LOWER({0})::text LIKE LOWER('%{1}%') ", col, val));
                         else if (op == "=")
-                            _c += string.Format("AND LOWER({0}::text) = LOWER('{1}') ", col, val);
+                            _sb.Append(string.Format("LOWER({0}::text) = LOWER('{1}') ", col, val));
                         else
-                            _c += string.Format("AND {0} {1} '{2}' ", col, op, val);
+                            _sb.Append(string.Format("{0} {1} '{2}' ", col, op, val));
                     }
                 }
 
-                _sql = _dV.EbDataSource.SqlDecoded().Replace("@and_search", _c);
+                var __innerSqls = _dV.EbDataSource.SqlDecoded().Split(";");
+                string _innerDataSql = (__innerSqls.Length > 1) ? __innerSqls[1] : __innerSqls[0];
+                string _orderby = (string.IsNullOrEmpty(request.OrderByCol)) ? "1" : string.Format("{0} {1}", request.OrderByCol, ((request.OrderByDir == 2) ? "DESC" : "ASC"));
+                _sql = string.Format("SELECT * FROM ({0}) __OUTER99 WHERE {1} ORDER BY {2}", _innerDataSql, string.Join(" AND ", _sb), _orderby);
+                //_sql = string.Format("WITH __OUTER99 AS ({0}) SELECT * FROM __OUTER99 WHERE {1} ORDER BY {2}", _innerDataSql, string.Join(" AND ", _sb), _orderby);
+
+                this.Log.Info("_ds *****" + _sql);
             }
-            this.Log.Info("search ok");
-            _sql = _sql.Replace("@orderby",
-                (string.IsNullOrEmpty(request.OrderByCol)) ? "id" : string.Format("{0} {1}", request.OrderByCol, ((request.OrderByDir == 2) ? "DESC" : "ASC")));
-            this.Log.Info("order ok");
 
             var parameters = new List<System.Data.Common.DbParameter>();
             bool _isPaged = (_sql.ToLower().Contains("@offset") && _sql.ToLower().Contains("@limit"));
@@ -73,8 +74,8 @@ namespace ExpressBase.ServiceStack
             {
                 parameters.AddRange(new System.Data.Common.DbParameter[]
                 {
-                this.TenantDbFactory.ObjectsDB.GetNewParameter("@limit", System.Data.DbType.Int32, request.Length),
-                this.TenantDbFactory.ObjectsDB.GetNewParameter("@offset", System.Data.DbType.Int32, request.Start),
+                    this.TenantDbFactory.ObjectsDB.GetNewParameter("@limit", System.Data.DbType.Int32, request.Length),
+                    this.TenantDbFactory.ObjectsDB.GetNewParameter("@offset", System.Data.DbType.Int32, request.Start),
                 });
             }
 
