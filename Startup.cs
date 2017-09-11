@@ -102,7 +102,7 @@ namespace ExpressBase.ServiceStack
                     payload["wc"] = (session as CustomUserSession).WhichConsole;
                 },
 
-                ExpireTokensIn = TimeSpan.FromSeconds(90),
+                ExpireTokensIn = TimeSpan.FromHours(10),
                 ExpireRefreshTokensIn = TimeSpan.FromHours(12),
                 PersistSession = true,
                 SessionExpiry = TimeSpan.FromHours(12)
@@ -209,13 +209,26 @@ namespace ExpressBase.ServiceStack
                             if (c.Type == "cid" && !string.IsNullOrEmpty(c.Value))
                             {
                                 RequestContext.Instance.Items.Add("TenantAccountId", c.Value);
-                                (requestDto as IEbSSRequest).TenantAccountId = c.Value;
+                                if (requestDto is IEbSSRequest)
+                                    (requestDto as IEbSSRequest).TenantAccountId = c.Value;
+                                if (requestDto is EbServiceStackRequest)
+                                    (requestDto as EbServiceStackRequest).TenantAccountId = c.Value;
                                 continue;
                             }
                             if (c.Type == "uid" && !string.IsNullOrEmpty(c.Value))
                             {
                                 RequestContext.Instance.Items.Add("UserId", Convert.ToInt32(c.Value));
-                                (requestDto as IEbSSRequest).UserId = Convert.ToInt32(c.Value);
+                                if (requestDto is IEbSSRequest)
+                                    (requestDto as IEbSSRequest).UserId = Convert.ToInt32(c.Value);
+                                if (requestDto is EbServiceStackRequest)
+                                    (requestDto as EbServiceStackRequest).UserId = Convert.ToInt32(c.Value);
+                                continue;
+                            }
+                            if (c.Type == "wc" && !string.IsNullOrEmpty(c.Value))
+                            {
+                                RequestContext.Instance.Items.Add("wc", c.Value);
+                                if (requestDto is EbServiceStackRequest)
+                                    (requestDto as EbServiceStackRequest).WhichConsole = c.Value.ToString();
                                 continue;
                             }
                         }
