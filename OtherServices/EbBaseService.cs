@@ -21,6 +21,8 @@ namespace ExpressBase.Objects.ServiceStack_Artifacts
         protected RedisMessageQueueClient MessageQueueClient { get; private set; }
         protected RedisMessageProducer MessageProducer2 { get; private set; }
 
+        public EbBaseService() { }
+
         public EbBaseService(ITenantDbFactory _dbf)
         {
             this.TenantDbFactory = _dbf as TenantDbFactory;
