@@ -174,6 +174,8 @@ namespace ExpressBase.ServiceStack
             var mqHost = new RedisMqServer(redisFactory, retryCount: 2);
             mqHost.RegisterHandler<EmailRequest>(base.ExecuteMessage);
             mqHost.RegisterHandler<RefreshSolutionConnectionsRequests>(base.ExecuteMessage);
+            mqHost.RegisterHandler<UploadFileMqRequest>(base.ExecuteMessage, 5);
+
             mqHost.Start();
 
             container.AddScoped<IMessageQueueClient, RedisMessageQueueClient>(serviceProvider =>

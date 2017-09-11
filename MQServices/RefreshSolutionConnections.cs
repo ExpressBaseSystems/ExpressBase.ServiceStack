@@ -16,8 +16,6 @@ namespace ExpressBase.ServiceStack.MQServices
     [Restrict(InternalOnly = true)]
     public class RefreshSolutionConnections: EbBaseService
     {
-        public RefreshSolutionConnections(IMessageQueueClient _mqc, IMessageProducer _mqp) : base(_mqc, _mqp) { }
-
         public bool Post(RefreshSolutionConnectionsRequests req)
         {
             using (var con = new TenantDbFactory(req.TenantAccountId, this.Redis).DataDB.GetNewConnection() as Npgsql.NpgsqlConnection)

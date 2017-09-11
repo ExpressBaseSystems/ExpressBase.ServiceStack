@@ -112,7 +112,7 @@ namespace ExpressBase.ServiceStack.Services
                 string sql = string.Empty;
                 if (request.id > 0)
                     sql = @"SELECT id, role_name FROM eb_roles;
-                             SELECT id, role_name FROM eb_roles WHERE id IN(SELECT role_id FROM eb_role2user WHERE user_id = @id ) AND eb_del = FALSE";
+                             SELECT id, role_name FROM eb_roles WHERE id IN(SELECT role_id FROM eb_role2user WHERE user_id = @id AND eb_del = FALSE)";
                 else
                     sql = "SELECT id,role_name FROM eb_roles";
 
