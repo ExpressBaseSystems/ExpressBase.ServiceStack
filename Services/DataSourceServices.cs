@@ -76,11 +76,16 @@ namespace ExpressBase.ServiceStack
                     (string.IsNullOrEmpty(request.OrderByCol)) ? "id" : string.Format("{0} {1}", request.OrderByCol, ((request.OrderByDir == 2) ? "DESC" : "ASC")));
                 this.Log.Info("order ok");
                 var parameters = new List<System.Data.Common.DbParameter>();
-                parameters.AddRange(new System.Data.Common.DbParameter[]
+
+                bool _isPaged = (_sql.ToLower().Contains("@offset") && _sql.ToLower().Contains("@limit"));
+                if (_isPaged)
                 {
-                    this.TenantDbFactory.ObjectsDB.GetNewParameter("@limit", System.Data.DbType.Int32, request.Length),
-                    this.TenantDbFactory.ObjectsDB.GetNewParameter("@offset", System.Data.DbType.Int32, request.Start),
-                });
+                    parameters.AddRange(new System.Data.Common.DbParameter[]
+                        {
+                            this.TenantDbFactory.ObjectsDB.GetNewParameter("@limit", System.Data.DbType.Int32, request.Length),
+                            this.TenantDbFactory.ObjectsDB.GetNewParameter("@offset", System.Data.DbType.Int32, request.Start),
+                        });
+                }
 
                 if (request.Params != null)
                 {
@@ -92,7 +97,6 @@ namespace ExpressBase.ServiceStack
                 this.Log.Info(">>>>>> _dataset.Tables.Count: " + _dataset.Tables.Count + ", " + _dataset.ToJson());
 
                 //-- 
-                bool _isPaged = (_sql.ToLower().Contains("@offset") && _sql.ToLower().Contains("@limit"));
                 int _recordsTotal = 0, _recordsFiltered = 0;
                 if (_isPaged)
                 {

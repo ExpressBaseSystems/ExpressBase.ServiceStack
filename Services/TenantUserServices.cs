@@ -1,5 +1,6 @@
 ﻿using ExpressBase.Common;
 using ExpressBase.Common.Data;
+using ExpressBase.Common.Extensions;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using System;
 using System.Collections.Generic;
@@ -58,7 +59,7 @@ namespace ExpressBase.ServiceStack.Services
                             this.TenantDbFactory.ObjectsDB.GetNewParameter("email", System.Data.DbType.String, request.Colvalues["email"]),
                             this.TenantDbFactory.ObjectsDB.GetNewParameter("roles", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer,(request.Colvalues["roles"].ToString() != string.Empty? request.Colvalues["roles"].ToString().Split(',').Select(n => Convert.ToInt32(n)).ToArray():emptyarr)),
                             this.TenantDbFactory.ObjectsDB.GetNewParameter("group", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer,(request.Colvalues["group"].ToString() != string.Empty? request.Colvalues["group"].ToString().Split(',').Select(n => Convert.ToInt32(n)).ToArray():emptyarr)),
-                            this.TenantDbFactory.ObjectsDB.GetNewParameter("pwd", System.Data.DbType.String,string.IsNullOrEmpty(request.Colvalues["pwd"].ToString())? GeneratePassword() :request.Colvalues["pwd"] ),
+                            this.TenantDbFactory.ObjectsDB.GetNewParameter("pwd", System.Data.DbType.String,string.IsNullOrEmpty(request.Colvalues["pwd"].ToString())? GeneratePassword() : (request.Colvalues["pwd"].ToString() + request.Colvalues["email"].ToString()).ToMD5Hash()),
                             this.TenantDbFactory.ObjectsDB.GetNewParameter("userid", System.Data.DbType.Int32, request.UserId),
                              this.TenantDbFactory.ObjectsDB.GetNewParameter("id", System.Data.DbType.Int32, request.Id)};
 
