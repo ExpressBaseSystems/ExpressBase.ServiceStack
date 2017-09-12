@@ -81,6 +81,22 @@ ORDER BY
 
         private const string Query6 = @"
 SELECT @function_name";
+
+        private const string Query_AllVerList = @"
+SELECT 
+    EO.id, EO.obj_name, EO.obj_type, EO.obj_last_ver_id, EO.obj_cur_status,EO.obj_desc,
+    EOV.id, EOV.eb_objects_id, EOV.ver_num, EOV.obj_changelog,EOV.commit_ts, EOV.commit_uid, EOV.refid,
+    EU.firstname
+FROM 
+    eb_objects EO, eb_objects_ver EOV
+LEFT JOIN
+	eb_users EU
+ON 
+	EOV.commit_uid=EU.id
+WHERE
+    EO.id = EOV.eb_objects_id  AND EO.obj_type=@type
+ORDER BY
+    EO.obj_name";
         #endregion
 
         List<EbObjectWrapper> f = new List<EbObjectWrapper>();
@@ -209,6 +225,50 @@ SELECT @function_name";
         }
 
         [CompressResponse]
+        public object Get(EbObjectObjLisAllVerRequest request)
+        { // Get All latest committed versions of this Object Type without json
+            parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@type", System.Data.DbType.Int32, request.EbObjectType));
+            var dt = this.TenantDbFactory.ObjectsDB.DoQuery(Query_AllVerList, parameters.ToArray());
+            Dictionary<string, List<EbObjectWrapper>> f_dict = new Dictionary<string, List<EbObjectWrapper>>();
+      
+            int count = 0;
+            foreach (EbDataRow dr in dt.Rows)
+            {
+                count++;
+                if (count <= dt.Rows.Count-1)
+                {
+                    var id = Convert.ToInt32(dr[0]);
+                    var _ebObject = (new EbObjectWrapper
+                    {
+                        Id = Convert.ToInt32(dr[0]),
+                        Name = dr[1].ToString(),
+                        Status = (ObjectLifeCycleStatus)dr[4],
+                        VersionNumber = Convert.ToInt32(dr[8]),
+                        RefId = dr[12].ToString(),
+                    });
+                    f.Add(_ebObject);
+                    var dr1 = dt.Rows[count];
+                    if (Convert.ToInt32(dr1[0]) != id)
+                    {
+                        f_dict.Add(dr[1].ToString(), f);
+                        f.Clear();
+                    }
+                }
+            }
+            //foreach (var dict_item in f_dict)
+            //{
+            //    foreach (var list_item in dict_item)
+            //    {
+            //        var x = EbSerializers.Json_Serialize(list_item);
+            //        f_dict_json.Add(list_item.Key, x);
+            //    }
+            //}
+              //  var y= EbSerializers.Json_Serialize(f_dict_json);
+            return new EbObjectObjListAllVerResponse { Data = f_dict };
+        }
+
+
+        [CompressResponse]
         public object Get(EbObjectRelationsRequest request)
         { //Fetch ebobjects relations
 
@@ -230,7 +290,7 @@ SELECT @function_name";
             return new EbObjectRelationsResponse { Data = f };
         }
         [CompressResponse]
-        
+
 
         #region SaveOrCommit Queries
 
@@ -327,37 +387,37 @@ WHERE
                 else if (request.EbObjectType == (int)EbObjectType.FilterDialog)
                     _eb_object = EbSerializers.Json_Deserialize<EbFilterDialog>(request.Json);
 
-                if (_eb_object!=null)
-                { 
-                using (var con = this.TenantDbFactory.ObjectsDB.GetNewConnection())
+                if (_eb_object != null)
                 {
-                    con.Open();
-                    DbCommand cmd = null;
-                    log.Info("#DS insert 1 -- con open");
-                    string[] arr = { };
+                    using (var con = this.TenantDbFactory.ObjectsDB.GetNewConnection())
+                    {
+                        con.Open();
+                        DbCommand cmd = null;
+                        log.Info("#DS insert 1 -- con open");
+                        string[] arr = { };
 
-                    string sql = "SELECT eb_objects_first_commit(@obj_name, @obj_desc, @obj_type, @obj_cur_status, @obj_json, @commit_uid, @src_pid, @cur_pid, @relations);";
-                    cmd = this.TenantDbFactory.ObjectsDB.GetNewCommand(con, sql);
+                        string sql = "SELECT eb_objects_first_commit(@obj_name, @obj_desc, @obj_type, @obj_cur_status, @obj_json, @commit_uid, @src_pid, @cur_pid, @relations);";
+                        cmd = this.TenantDbFactory.ObjectsDB.GetNewCommand(con, sql);
 
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_name", System.Data.DbType.String, _eb_object.Name));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_desc", System.Data.DbType.String, (!string.IsNullOrEmpty(request.Description)) ? request.Description : string.Empty));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_type", System.Data.DbType.Int32, (int)request.EbObjectType));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_cur_status", System.Data.DbType.Int32, ObjectLifeCycleStatus.Development));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_json", NpgsqlTypes.NpgsqlDbType.Json, request.Json));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@commit_uid", System.Data.DbType.Int32, request.UserId));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@src_pid", System.Data.DbType.String, request.TenantAccountId));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@cur_pid", System.Data.DbType.String, request.TenantAccountId));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@relations", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text, (request.Relations != null) ? request.Relations.Split(',').Select(n => n.ToString()).ToArray() : arr));
+                        cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_name", System.Data.DbType.String, _eb_object.Name));
+                        cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_desc", System.Data.DbType.String, (!string.IsNullOrEmpty(request.Description)) ? request.Description : string.Empty));
+                        cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_type", System.Data.DbType.Int32, (int)request.EbObjectType));
+                        cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_cur_status", System.Data.DbType.Int32, ObjectLifeCycleStatus.Development));
+                        cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_json", NpgsqlTypes.NpgsqlDbType.Json, request.Json));
+                        cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@commit_uid", System.Data.DbType.Int32, request.UserId));
+                        cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@src_pid", System.Data.DbType.String, request.TenantAccountId));
+                        cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@cur_pid", System.Data.DbType.String, request.TenantAccountId));
+                        cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@relations", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text, (request.Relations != null) ? request.Relations.Split(',').Select(n => n.ToString()).ToArray() : arr));
 
-                    refId = cmd.ExecuteScalar().ToString();
+                        refId = cmd.ExecuteScalar().ToString();
 
-                    if (request.EbObjectType == (int)EbObjectType.DataVisualization)
-                        this.Redis.Set<EbDataVisualization>(refId, _eb_object as EbDataVisualization);
-                    if (request.EbObjectType == (int)EbObjectType.DataSource)
-                        this.Redis.Set<EbDataSource>(refId, _eb_object as EbDataSource);
-                    if (request.EbObjectType == (int)EbObjectType.FilterDialog)
-                        this.Redis.Set<EbFilterDialog>(refId, _eb_object as EbFilterDialog);
-                }
+                        if (request.EbObjectType == (int)EbObjectType.DataVisualization)
+                            this.Redis.Set<EbDataVisualization>(refId, _eb_object as EbDataVisualization);
+                        if (request.EbObjectType == (int)EbObjectType.DataSource)
+                            this.Redis.Set<EbDataSource>(refId, _eb_object as EbDataSource);
+                        if (request.EbObjectType == (int)EbObjectType.FilterDialog)
+                            this.Redis.Set<EbFilterDialog>(refId, _eb_object as EbFilterDialog);
+                    }
                 }
             }
             catch (Exception e)
@@ -407,7 +467,7 @@ WHERE
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@src_pid", System.Data.DbType.String, request.TenantAccountId));
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@cur_pid", System.Data.DbType.String, request.TenantAccountId));
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@relations", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text, (request.Relations != null) ? request.Relations.Split(',').Select(n => n.ToString()).ToArray() : arr));
-                   
+
                     refId = cmd.ExecuteScalar().ToString();
 
                     if (request.EbObjectType == (int)EbObjectType.DataVisualization)
@@ -416,7 +476,7 @@ WHERE
                         this.Redis.Set<EbDataSource>(refId, _eb_object as EbDataSource);
                     if (request.EbObjectType == (int)EbObjectType.FilterDialog)
                         this.Redis.Set<EbFilterDialog>(refId, _eb_object as EbFilterDialog);
-                
+
                 }
             }
             catch (Exception e)
