@@ -229,41 +229,27 @@ ORDER BY
         { // Get All latest committed versions of this Object Type without json
             parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@type", System.Data.DbType.Int32, request.EbObjectType));
             var dt = this.TenantDbFactory.ObjectsDB.DoQuery(Query_AllVerList, parameters.ToArray());
+
             Dictionary<string, List<EbObjectWrapper>> f_dict = new Dictionary<string, List<EbObjectWrapper>>();
-      
-            int count = 0;
+            List<EbObjectWrapper> f_list = null;
             foreach (EbDataRow dr in dt.Rows)
             {
-                count++;
-                if (count <= dt.Rows.Count-1)
+                string _nameKey = dr[1].ToString();
+                if (!f_dict.ContainsKey(_nameKey))
                 {
-                    var id = Convert.ToInt32(dr[0]);
-                    var _ebObject = (new EbObjectWrapper
-                    {
-                        Id = Convert.ToInt32(dr[0]),
-                        Name = dr[1].ToString(),
-                        Status = (ObjectLifeCycleStatus)dr[4],
-                        VersionNumber = Convert.ToInt32(dr[8]),
-                        RefId = dr[12].ToString(),
-                    });
-                    f.Add(_ebObject);
-                    var dr1 = dt.Rows[count];
-                    if (Convert.ToInt32(dr1[0]) != id)
-                    {
-                        f_dict.Add(dr[1].ToString(), f);
-                        f.Clear();
-                    }
+                    f_list = new List<EbObjectWrapper>();
+                    f_dict.Add(_nameKey, f_list);
                 }
+
+                f_list.Add(new EbObjectWrapper
+                {
+                    Id = Convert.ToInt32(dr[0]),
+                    Name = dr[1].ToString(),
+                    Status = (ObjectLifeCycleStatus)dr[4],
+                    VersionNumber = Convert.ToInt32(dr[8]),
+                    RefId = dr[12].ToString(),
+                });
             }
-            //foreach (var dict_item in f_dict)
-            //{
-            //    foreach (var list_item in dict_item)
-            //    {
-            //        var x = EbSerializers.Json_Serialize(list_item);
-            //        f_dict_json.Add(list_item.Key, x);
-            //    }
-            //}
-              //  var y= EbSerializers.Json_Serialize(f_dict_json);
             return new EbObjectObjListAllVerResponse { Data = f_dict };
         }
 
