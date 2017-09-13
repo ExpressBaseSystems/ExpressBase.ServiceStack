@@ -245,6 +245,7 @@ ORDER BY
                 {
                     Id = Convert.ToInt32(dr[0]),
                     Name = dr[1].ToString(),
+                    EbObjectType= (EbObjectType)Convert.ToInt32(dr[2]),
                     Status = (ObjectLifeCycleStatus)dr[4],
                     VersionNumber = Convert.ToInt32(dr[8]),
                     RefId = dr[12].ToString(),
