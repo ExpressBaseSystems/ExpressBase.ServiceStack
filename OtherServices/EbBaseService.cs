@@ -11,6 +11,7 @@ using ServiceStack.Web;
 using ServiceStack.Messaging;
 using ExpressBase.ServiceStack;
 using ExpressBase.Common.Data;
+using ServiceStack.RabbitMq;
 
 namespace ExpressBase.Objects.ServiceStack_Artifacts
 {
@@ -18,8 +19,10 @@ namespace ExpressBase.Objects.ServiceStack_Artifacts
     {
         protected TenantDbFactory TenantDbFactory { get; private set; }
 
-        protected RedisMessageQueueClient MessageQueueClient { get; private set; }
-        protected RedisMessageProducer MessageProducer2 { get; private set; }
+        //protected RedisMessageQueueClient MessageQueueClient { get; private set; }
+        //protected RedisMessageProducer MessageProducer2 { get; private set; }
+        protected RabbitMqProducer MessageProducer3 { get; private set; }
+        protected RabbitMqQueueClient MessageQueueClient { get; private set; }
 
         public EbBaseService() { }
 
@@ -28,18 +31,44 @@ namespace ExpressBase.Objects.ServiceStack_Artifacts
             this.TenantDbFactory = _dbf as TenantDbFactory;
         }
 
-        public EbBaseService(IMessageQueueClient _mqc, IMessageProducer _mqp)
-        {
-            this.MessageQueueClient = _mqc as RedisMessageQueueClient;
-            this.MessageProducer2 = _mqp as RedisMessageProducer;
-        }
-
-        public EbBaseService(ITenantDbFactory _dbf, IMessageQueueClient _mqc, IMessageProducer _mqp)
+        public EbBaseService(ITenantDbFactory _dbf, IMessageProducer _mqp)
         {
             this.TenantDbFactory = _dbf as TenantDbFactory;
-            this.MessageQueueClient = _mqc as RedisMessageQueueClient;
-            this.MessageProducer2 = _mqp as RedisMessageProducer;
+            this.MessageProducer3 = _mqp as RabbitMqProducer;
         }
+
+        public EbBaseService(ITenantDbFactory _dbf, IMessageProducer _mqp, IMessageQueueClient _mqc)
+        {
+            this.TenantDbFactory = _dbf as TenantDbFactory;
+            this.MessageProducer3 = _mqp as RabbitMqProducer;
+            this.MessageQueueClient = _mqc as RabbitMqQueueClient;
+        }
+
+
+        //public EbBaseService(IMessageQueueClient _mqc, IMessageProducer _mqp)
+        //{
+        //    this.MessageQueueClient = _mqc as RedisMessageQueueClient;
+        //    this.MessageProducer2 = _mqp as RedisMessageProducer;
+        //}
+
+        public EbBaseService(IMessageProducer _mqp)
+        {
+
+            this.MessageProducer3 = _mqp as RabbitMqProducer;
+        }
+
+        public EbBaseService(IMessageProducer _mqp, IMessageQueueClient _mqc)
+        {
+
+            this.MessageProducer3 = _mqp as RabbitMqProducer;
+            this.MessageQueueClient = _mqc as RabbitMqQueueClient;
+        }
+        //public EbBaseService(ITenantDbFactory _dbf, IMessageQueueClient _mqc, IMessageProducer _mqp)
+        //{
+        //    this.TenantDbFactory = _dbf as TenantDbFactory;
+        //    this.MessageQueueClient = _mqc as RedisMessageQueueClient;
+        //    this.MessageProducer2 = _mqp as RedisMessageProducer;
+        //}
 
         private static Dictionary<string, string> _infraDbSqlQueries;
         public static Dictionary<string, string> InfraDbSqlQueries
@@ -94,7 +123,7 @@ namespace ExpressBase.Objects.ServiceStack_Artifacts
         //                        TableId = Convert.ToInt32(dr1[3])
         //                    };
         //                    ccol.Add(ebtc.Name, ebtc);
-                            
+
         //                }
 
         //                redisClient.Set<EbTableCollection>(string.Format("EbTableCollection_{0}", this.ClientID), tcol);
@@ -134,7 +163,7 @@ namespace ExpressBase.Objects.ServiceStack_Artifacts
         //                        Name = dr1[1].ToString(),
         //                    };
         //                   ccol.Add(ebtc.Name, ebtc);
-                           
+
         //                }
 
         //                redisClient.Set<EbTableCollection>("EbInfraTableCollection", tcol);

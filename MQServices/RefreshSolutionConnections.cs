@@ -4,17 +4,13 @@ using ExpressBase.Common.Data;
 using ExpressBase.Objects.Objects.TenantConnectionsRelated;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ServiceStack;
-using ServiceStack.Messaging;
 using System;
-using System.Collections.Generic;
 using System.Data;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace ExpressBase.ServiceStack.MQServices
 {
     [Restrict(InternalOnly = true)]
-    public class RefreshSolutionConnections: EbBaseService
+    public class RefreshSolutionConnections : EbBaseService
     {
         public bool Post(RefreshSolutionConnectionsRequests req)
         {
@@ -39,7 +35,7 @@ namespace ExpressBase.ServiceStack.MQServices
                         else if (dr["con_type"].ToString() == EbConnectionTypes.EbOBJECTS.ToString())
                             cons.ObjectsDbConnection = EbSerializers.Json_Deserialize<EbObjectsDbConnection>(dr["con_obj"].ToString());
                         else if (dr["con_type"].ToString() == EbConnectionTypes.EbFILES.ToString())
-                            cons.EbFilesDbConnection = EbSerializers.Json_Deserialize<EbFilesDbConnection>(dr["con_obj"].ToString());
+                            cons.FilesDbConnection = EbSerializers.Json_Deserialize<EbFilesDbConnection>(dr["con_obj"].ToString());
                         else if (dr["con_type"].ToString() == EbConnectionTypes.EbLOGS.ToString())
                             cons.LogsDbConnection = EbSerializers.Json_Deserialize<EbLogsDbConnection>(dr["con_obj"].ToString());
                         else if (dr["con_type"].ToString() == EbConnectionTypes.Email.ToString())
