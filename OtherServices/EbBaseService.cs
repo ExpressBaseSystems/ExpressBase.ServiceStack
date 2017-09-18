@@ -12,12 +12,16 @@ using ServiceStack.Messaging;
 using ExpressBase.ServiceStack;
 using ExpressBase.Common.Data;
 using ServiceStack.RabbitMq;
+using System.Net.Http;
+using RestSharp;
 
 namespace ExpressBase.Objects.ServiceStack_Artifacts
 {
     public class EbBaseService : Service
     {
         protected TenantDbFactory TenantDbFactory { get; private set; }
+
+        protected  RestClient RestClient  { get; private set; }
 
         //protected RedisMessageQueueClient MessageQueueClient { get; private set; }
         //protected RedisMessageProducer MessageProducer2 { get; private set; }
@@ -29,6 +33,26 @@ namespace ExpressBase.Objects.ServiceStack_Artifacts
         public EbBaseService(ITenantDbFactory _dbf)
         {
             this.TenantDbFactory = _dbf as TenantDbFactory;
+        }
+
+        public EbBaseService(IMessageProducer _mqp)
+        {
+
+            this.MessageProducer3 = _mqp as RabbitMqProducer;
+        }
+
+        public EbBaseService(IMessageProducer _mqp, RestSharp.IRestClient _rest)
+        {
+            
+            this.MessageProducer3 = _mqp as RabbitMqProducer;
+            this.RestClient = _rest as RestClient;
+        }
+
+        public EbBaseService(IMessageProducer _mqp, IMessageQueueClient _mqc)
+        {
+
+            this.MessageProducer3 = _mqp as RabbitMqProducer;
+            this.MessageQueueClient = _mqc as RabbitMqQueueClient;
         }
 
         public EbBaseService(ITenantDbFactory _dbf, IMessageProducer _mqp)
@@ -51,18 +75,7 @@ namespace ExpressBase.Objects.ServiceStack_Artifacts
         //    this.MessageProducer2 = _mqp as RedisMessageProducer;
         //}
 
-        public EbBaseService(IMessageProducer _mqp)
-        {
-
-            this.MessageProducer3 = _mqp as RabbitMqProducer;
-        }
-
-        public EbBaseService(IMessageProducer _mqp, IMessageQueueClient _mqc)
-        {
-
-            this.MessageProducer3 = _mqp as RabbitMqProducer;
-            this.MessageQueueClient = _mqc as RabbitMqQueueClient;
-        }
+        
         //public EbBaseService(ITenantDbFactory _dbf, IMessageQueueClient _mqc, IMessageProducer _mqp)
         //{
         //    this.TenantDbFactory = _dbf as TenantDbFactory;
