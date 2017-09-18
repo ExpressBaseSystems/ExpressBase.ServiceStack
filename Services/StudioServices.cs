@@ -473,6 +473,231 @@ WHERE
             return new EbObjectSubsequentCommitResponse() { RefId = refId };
         }
 
+        public EbObject_CommitResponse Post(EbObject_CommitRequest request)
+        {
+            string refId = null;
+            ILog log = LogManager.GetLogger(GetType());
+            log.Info("#DS insert -- entered post");
+           
+            try
+            {
+               
+                using (var con = this.TenantDbFactory.ObjectsDB.GetNewConnection())
+                {
+                    con.Open();
+                    DbCommand cmd = null;
+                    log.Info("#DS insert 1 -- con open");
+                    string[] arr = { };
+
+                    string sql = "SELECT eb_objects_commit(@id, @obj_name, @obj_desc, @obj_type, @obj_json, @obj_changelog,  @commit_uid, @src_pid, @cur_pid, @relations)";
+                    cmd = this.TenantDbFactory.ObjectsDB.GetNewCommand(con, sql);
+                   
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.String, request.RefId));
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_name", System.Data.DbType.String, request.Name));
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_type", System.Data.DbType.Int32, (int)request.EbObjectType));
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_desc", System.Data.DbType.String, (!string.IsNullOrEmpty(request.Description)) ? request.Description : string.Empty));
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_json", NpgsqlTypes.NpgsqlDbType.Json, request.Json));
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_changelog", System.Data.DbType.String, request.ChangeLog));
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@commit_uid", System.Data.DbType.Int32, request.UserId));
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@src_pid", System.Data.DbType.String, request.TenantAccountId));
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@cur_pid", System.Data.DbType.String, request.TenantAccountId));
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@relations", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text, (request.Relations != null) ? request.Relations.Split(',').Select(n => n.ToString()).ToArray() : arr));
+
+                    refId = cmd.ExecuteScalar().ToString();
+                }
+            }
+            catch (Exception e)
+            {
+
+            }
+            return new EbObject_CommitResponse() { RefId = refId };
+        }
+
+        public EbObject_SaveResponse Post(EbObject_SaveRequest request)
+        {
+            string refId = null;
+            ILog log = LogManager.GetLogger(GetType());
+            log.Info("#DS insert -- entered post");
+
+            try
+            {
+
+                using (var con = this.TenantDbFactory.ObjectsDB.GetNewConnection())
+                {
+                    con.Open();
+                    DbCommand cmd = null;
+                    log.Info("#DS insert 1 -- con open");
+                    string[] arr = { };
+
+                    string sql = "SELECT eb_objects_save(@id, @obj_name, @obj_desc, @obj_type, @obj_json, @commit_uid, @src_pid, @cur_pid, @relations)";
+                    cmd = this.TenantDbFactory.ObjectsDB.GetNewCommand(con, sql);
+                  
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.String, request.RefId));
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_name", System.Data.DbType.String, request.Name));
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_type", System.Data.DbType.Int32, (int)request.EbObjectType));
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_desc", System.Data.DbType.String, (!string.IsNullOrEmpty(request.Description)) ? request.Description : string.Empty));
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_json", NpgsqlTypes.NpgsqlDbType.Json, request.Json));
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@commit_uid", System.Data.DbType.Int32, request.UserId));
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@src_pid", System.Data.DbType.String, request.TenantAccountId));
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@cur_pid", System.Data.DbType.String, request.TenantAccountId));
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@relations", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text, (request.Relations != null) ? request.Relations.Split(',').Select(n => n.ToString()).ToArray() : arr));
+                   
+                    refId = cmd.ExecuteScalar().ToString();
+                }
+            }
+            catch (Exception e)
+            {
+
+            }
+            return new EbObject_SaveResponse() { RefId = refId };
+        }
+
+        public EbObject_Create_New_ObjectResponse Post(EbObject_Create_New_ObjectRequest request)
+        {
+            string refId = null;
+            ILog log = LogManager.GetLogger(GetType());
+            log.Info("#DS insert -- entered post");
+
+            try
+            {
+                using (var con = this.TenantDbFactory.ObjectsDB.GetNewConnection())
+                {
+                    con.Open();
+                    DbCommand cmd = null;
+                    log.Info("#DS insert 1 -- con open");
+                    string[] arr = { };
+
+                    string sql = "SELECT eb_objects_create_new_object(@obj_name, @obj_desc, @obj_type, @obj_cur_status, @obj_json, @commit_uid, @src_pid, @cur_pid, @relations)";
+                    cmd = this.TenantDbFactory.ObjectsDB.GetNewCommand(con, sql);
+
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_name", System.Data.DbType.String, request.Name));
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_type", System.Data.DbType.Int32, (int)request.EbObjectType));
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_desc", System.Data.DbType.String, (!string.IsNullOrEmpty(request.Description)) ? request.Description : string.Empty));
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_cur_status", System.Data.DbType.Int32, ObjectLifeCycleStatus.Development));//request.Status
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_json", NpgsqlTypes.NpgsqlDbType.Json, request.Json));
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@commit_uid", System.Data.DbType.Int32, request.UserId));
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@src_pid", System.Data.DbType.String, request.TenantAccountId));
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@cur_pid", System.Data.DbType.String, request.TenantAccountId));
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@relations", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text, (request.Relations != null) ? request.Relations.Split(',').Select(n => n.ToString()).ToArray() : arr));
+                 
+                    refId = cmd.ExecuteScalar().ToString();
+                }
+            }
+            catch (Exception e)
+            {
+
+            }
+            return new EbObject_Create_New_ObjectResponse() { RefId = refId };
+        }
+
+        public EbObject_Create_Major_VersionResponse Post(EbObject_Create_Major_VersionRequest request)
+        {
+            string refId = null;
+            ILog log = LogManager.GetLogger(GetType());
+            log.Info("#DS insert -- entered post");
+
+            try
+            {
+                
+                using (var con = this.TenantDbFactory.ObjectsDB.GetNewConnection())
+                {
+                    con.Open();
+                    DbCommand cmd = null;
+                    log.Info("#DS insert 1 -- con open");
+                    string[] arr = { };
+
+                    string sql = "SELECT eb_objects_create_major_version(@id, @obj_type, @commit_uid, @src_pid, @cur_pid, @relations)";
+                    cmd = this.TenantDbFactory.ObjectsDB.GetNewCommand(con, sql);
+
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.String, request.RefId));
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_type", System.Data.DbType.Int32, (int)request.EbObjectType));
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@commit_uid", System.Data.DbType.Int32, request.UserId));
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@src_pid", System.Data.DbType.String, request.TenantAccountId));
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@cur_pid", System.Data.DbType.String, request.TenantAccountId));
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@relations", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text, (request.Relations != null) ? request.Relations.Split(',').Select(n => n.ToString()).ToArray() : arr));
+               
+                    refId = cmd.ExecuteScalar().ToString();
+
+                }
+            }
+            catch (Exception e)
+            {
+
+
+            }
+            return new EbObject_Create_Major_VersionResponse() { RefId = refId };
+        }
+
+        public EbObject_Create_Minor_VersionResponse Post(EbObject_Create_Minor_VersionRequest request)
+        {
+            string refId = null;
+            ILog log = LogManager.GetLogger(GetType());
+            log.Info("#DS insert -- entered post");
+
+            try
+            {
+                using (var con = this.TenantDbFactory.ObjectsDB.GetNewConnection())
+                {
+                    con.Open();
+                    DbCommand cmd = null;
+                    log.Info("#DS insert 1 -- con open");
+                    string[] arr = { };
+
+                    string sql = "SELECT eb_objects_create_minor_version(@id, @obj_type, @commit_uid, @src_pid, @cur_pid, @relations)";
+                    cmd = this.TenantDbFactory.ObjectsDB.GetNewCommand(con, sql);
+
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.String, request.RefId));
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_type", System.Data.DbType.Int32, (int)request.EbObjectType));
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@commit_uid", System.Data.DbType.Int32, request.UserId));
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@src_pid", System.Data.DbType.String, request.TenantAccountId));
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@cur_pid", System.Data.DbType.String, request.TenantAccountId));
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@relations", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text, (request.Relations != null) ? request.Relations.Split(',').Select(n => n.ToString()).ToArray() : arr));
+                 
+                    refId = cmd.ExecuteScalar().ToString();
+                }
+            }
+            catch (Exception e)
+            {
+
+            }
+            return new EbObject_Create_Minor_VersionResponse() { RefId = refId };
+        }
+
+        public EbObject_Create_Patch_VersionResponse Post(EbObject_Create_Patch_VersionRequest request)
+        {
+            string refId = null;
+            ILog log = LogManager.GetLogger(GetType());
+            log.Info("#DS insert -- entered post");
+
+            try
+            {
+                using (var con = this.TenantDbFactory.ObjectsDB.GetNewConnection())
+                {
+                    con.Open();
+                    DbCommand cmd = null;
+                    log.Info("#DS insert 1 -- con open");
+                    string[] arr = { };
+
+                    string sql = "SELECT eb_objects_create_patch_version(@id, @obj_type, @commit_uid, @src_pid, @cur_pid, @relations)";
+                    cmd = this.TenantDbFactory.ObjectsDB.GetNewCommand(con, sql);
+
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.String, request.RefId));
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_type", System.Data.DbType.Int32, (int)request.EbObjectType));
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@commit_uid", System.Data.DbType.Int32, request.UserId));
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@src_pid", System.Data.DbType.String, request.TenantAccountId));
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@cur_pid", System.Data.DbType.String, request.TenantAccountId));
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@relations", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text, (request.Relations != null) ? request.Relations.Split(',').Select(n => n.ToString()).ToArray() : arr));
+
+                    refId = cmd.ExecuteScalar().ToString();
+                }
+            }
+            catch (Exception e)
+            {
+
+            }
+            return new EbObject_Create_Patch_VersionResponse() { RefId = refId };
+        }
+
         public EbObjectRunSqlFunctionResponse Post(EbObjectRunSqlFunctionRequest request)
         {
             ILog log = LogManager.GetLogger(GetType());

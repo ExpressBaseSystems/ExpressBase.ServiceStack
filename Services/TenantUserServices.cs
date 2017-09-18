@@ -228,6 +228,35 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         } //adding user preference like timezone
 
+        public EditUserPreferenceResponse Post(EditUserPreferenceRequest request)
+        {
+            EditUserPreferenceResponse resp = new EditUserPreferenceResponse();
+            using (var con = this.TenantDbFactory.ObjectsDB.GetNewConnection())
+            {
+                string sql = "SELECT dateformat,timezone,numformat,timezoneabbre,timezonefull,locale FROM eb_users WHERE id = @id;";
+                DbParameter[] parameters = { this.TenantDbFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.Int32, request.UserId) };
+
+                var ds = this.TenantDbFactory.ObjectsDB.DoQuery(sql, parameters);
+
+                Dictionary<string, object> result = new Dictionary<string, object>();
+                if (ds.Rows.Count > 0)
+                {
+                    foreach (var dr in ds.Rows)
+                    {
+
+                        result.Add("dateformat", dr[0].ToString());
+                        result.Add("timezone", dr[1].ToString());
+                        result.Add("numformat", dr[2].ToString());
+                        result.Add("timezoneabbre", dr[3].ToString());
+                        result.Add("timezonefull", dr[4].ToString());
+                        result.Add("locale", dr[5].ToString());
+                    }
+                }
+                resp.Data = result;
+            }
+            return resp;
+        }
+
         public GetSubRolesResponse Any(GetSubRolesRequest request)
         {
             GetSubRolesResponse resp = new GetSubRolesResponse();

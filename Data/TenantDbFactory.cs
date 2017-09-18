@@ -29,8 +29,12 @@ namespace ExpressBase.ServiceStack
 
         private RedisClient Redis { get; set; }
 
+        private string TenantId { get; set; }
+
         internal TenantDbFactory(string tenantId, IRedisClient redis)
         {
+            this.TenantId = tenantId;
+
             if (tenantId != null)
             {
                 _config = redis.Get<EbSolutionConnections>(string.Format("EbSolutionConnections_{0}", tenantId));
@@ -44,11 +48,11 @@ namespace ExpressBase.ServiceStack
         {
             this.Redis = c.Resolve<IRedisClientsManager>().GetClient() as RedisClient;
 
-            var tenantId = HostContext.RequestContext.Items["TenantAccountId"];
+            this.TenantId = HostContext.RequestContext.Items["TenantAccountId"].ToString();
 
-            if (tenantId != null)
+            if (this.TenantId != null)
             {
-                _config = this.Redis.Get<EbSolutionConnections>(string.Format("EbSolutionConnections_{0}", tenantId));
+                _config = this.Redis.Get<EbSolutionConnections>(string.Format("EbSolutionConnections_{0}", this.TenantId));
 
                 InitDatabases();
             }
@@ -68,7 +72,7 @@ namespace ExpressBase.ServiceStack
             if (_config.DataDbConnection.DatabaseVendor == DatabaseVendors.PGSQL)
                 DataDBRO = new PGSQLDatabase(_config.DataDbConnection);
 
-            FilesDB = new MongoDBDatabase(_config.EbFilesDbConnection);
+            FilesDB = new MongoDBDatabase(this.TenantId, _config.FilesDbConnection);
 
             LogsDB = new PGSQLDatabase(_config.LogsDbConnection);
         }

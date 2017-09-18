@@ -12,6 +12,7 @@
   <ItemGroup>
     <PackageReference Include="FOSS.ServiceStack.Core" Version="1.0.43" />
     <PackageReference Include="FOSS.ServiceStack.ProtoBuf.Core" Version="1.0.43" />
+    <PackageReference Include="FOSS.ServiceStack.RabbitMq.Core" Version="1.0.43" />
     <PackageReference Include="FOSS.ServiceStack.Server.Core" Version="1.0.43" />
     <PackageReference Include="Microsoft.AspNetCore.All" Version="2.0.0" />
   </ItemGroup>

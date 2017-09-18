@@ -20,6 +20,7 @@ using ExpressBase.Objects.Objects.MQRelated;
 using ExpressBase.Objects.Objects.TenantConnectionsRelated;
 using ServiceStack.Messaging;
 using ExpressBase.Common.Data;
+using ServiceStack.RabbitMq;
 
 namespace ExpressBase.ServiceStack
 {
@@ -29,7 +30,7 @@ namespace ExpressBase.ServiceStack
         {
             var builder = new Microsoft.Extensions.Configuration.ConfigurationBuilder()
                 .SetBasePath(env.ContentRootPath)
-                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true) 
+                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
                 .AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: true)
                 .AddEnvironmentVariables();
             Configuration = builder.Build();
@@ -53,7 +54,12 @@ namespace ExpressBase.ServiceStack
             var redisport = Configuration.GetValue<int>("EbRedisConfig:RedisPort");
             var prikey = Configuration.GetValue<string>("JwtConfig:PrivateKeyXml");
             var pubkey = Configuration.GetValue<string>("JwtConfig:PublicKeyXml");
-            EbLiveSettings ELive = new EbLiveSettings(redisserver, redispassword, redisport, prikey, pubkey);
+            var rabbituser = Configuration.GetValue<string>("EbRabbitMqConfig:RabbitUser");
+            var rabbitpassword = Configuration.GetValue<string>("EbRabbitMqConfig:RabbitPassword");
+            var rabbithost = Configuration.GetValue<string>("EbRabbitMqConfig:RabbitHost");
+            var rabbitport = Configuration.GetValue<int>("EbRabbitMqConfig:RabbitPort");
+            var rabbitvhost = Configuration.GetValue<string>("EbRabbitMqConfig:RabbitVHost");
+            EbLiveSettings ELive = new EbLiveSettings(redisserver, redispassword, redisport, prikey, pubkey, rabbituser, rabbitpassword, rabbithost, rabbitport, rabbitvhost);
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
@@ -66,7 +72,7 @@ namespace ExpressBase.ServiceStack
 
             app.UseStaticFiles();
 
-            app.UseServiceStack(new AppHost() { EbLiveSettings= ELive });
+            app.UseServiceStack(new AppHost() { EbLiveSettings = ELive });
         }
     }
 
@@ -95,7 +101,8 @@ namespace ExpressBase.ServiceStack
                 RequireSecureConnection = false,
                 //EncryptPayload = true,
 #endif
-                CreatePayloadFilter = (payload, session) => {
+                CreatePayloadFilter = (payload, session) =>
+                {
                     payload["sub"] = (session as CustomUserSession).UserAuthId;
                     payload["cid"] = (session as CustomUserSession).CId;
                     payload["uid"] = (session as CustomUserSession).Uid.ToString();
@@ -149,14 +156,14 @@ namespace ExpressBase.ServiceStack
             //this.CustomErrorHttpHandlers[HttpStatusCode.NotFound] = new RazorHandler("/notfound");
 
             Plugins.Add(new EbRegistrationFeature());
-            
+
             this.ContentTypes.Register(MimeTypes.ProtoBuf, (reqCtx, res, stream) => ProtoBuf.Serializer.NonGeneric.Serialize(stream, res), ProtoBuf.Serializer.NonGeneric.Deserialize);
 
             SetConfig(new HostConfig { DebugMode = true });
             SetConfig(new HostConfig { DefaultContentType = MimeTypes.Json });
 
             var redisConnectionString = string.Format("redis://{0}@{1}:{2}?ssl=true",
-               EbLiveSettings.RedisPassword,EbLiveSettings.RedisServer, EbLiveSettings.RedisPort);
+               EbLiveSettings.RedisPassword, EbLiveSettings.RedisServer, EbLiveSettings.RedisPort);
 
             container.Register<IRedisClientsManager>(c => new RedisManagerPool(redisConnectionString));
 
@@ -167,25 +174,50 @@ namespace ExpressBase.ServiceStack
             container.Register<ITenantDbFactory>(c => new TenantDbFactory(c)).ReusedWithin(ReuseScope.Request);
 
             //Message Queue
-            var redisConnectionStringMq = string.Format("redis://{0}@{1}:{2}?ssl=true&db=1", 
-                EbLiveSettings.RedisPassword, EbLiveSettings.RedisServer, EbLiveSettings.RedisPort);
+            //var redisConnectionStringMq = string.Format("redis://{0}@{1}:{2}?ssl=true&db=1",
+            //    EbLiveSettings.RedisPassword, EbLiveSettings.RedisServer, EbLiveSettings.RedisPort);
 
-            var redisFactory = new PooledRedisClientManager(redisConnectionStringMq);
-            var mqHost = new RedisMqServer(redisFactory, retryCount: 2);
-            mqHost.RegisterHandler<EmailRequest>(base.ExecuteMessage);
-            mqHost.RegisterHandler<RefreshSolutionConnectionsRequests>(base.ExecuteMessage);
-            mqHost.RegisterHandler<UploadFileMqRequest>(base.ExecuteMessage, 5);
+            //var redisFactory = new PooledRedisClientManager(redisConnectionStringMq);
+            //var mqHost = new RedisMqServer(redisFactory, retryCount: 2);
+            //mqHost.RegisterHandler<EmailRequest>(base.ExecuteMessage);
+            //mqHost.RegisterHandler<RefreshSolutionConnectionsRequests>(base.ExecuteMessage);
+            //mqHost.RegisterHandler<UploadFileMqRequest>(base.ExecuteMessage, 5);
 
-            mqHost.Start();
+            //mqHost.Start();
 
-            container.AddScoped<IMessageQueueClient, RedisMessageQueueClient>(serviceProvider =>
+            RabbitMqMessageFactory rabitFactory = new RabbitMqMessageFactory();
+            rabitFactory.ConnectionFactory.UserName = EbLiveSettings.RabbitUser;
+            rabitFactory.ConnectionFactory.Password = EbLiveSettings.RabbitPassword;
+            rabitFactory.ConnectionFactory.HostName = EbLiveSettings.RabbitHost;
+            rabitFactory.ConnectionFactory.Port = EbLiveSettings.RabbitPort;
+            rabitFactory.ConnectionFactory.VirtualHost = EbLiveSettings.RabbitVHost;
+
+            //rabitFactory.ConnectionFactory.Uri = "amqp://user:2nuGqFcd7uI5@13.84.189.113:5672/MessageQueue";
+            var mqServer = new RabbitMqServer(rabitFactory);
+            mqServer.RetryCount = 1;
+            mqServer.RegisterHandler<EmailRequest>(base.ExecuteMessage);
+            mqServer.RegisterHandler<RefreshSolutionConnectionsRequests>(base.ExecuteMessage);
+            mqServer.RegisterHandler<UploadFileMqRequest>(base.ExecuteMessage, 5);
+            mqServer.Start();
+
+
+
+
+
+
+            //container.AddScoped<IMessageProducer, RedisMessageProducer>(serviceProvider =>
+            //{
+            //    return mqHost.CreateMessageProducer() as RedisMessageProducer;
+            //});
+
+            container.AddScoped<IMessageProducer, RabbitMqProducer>(serviceProvider =>
             {
-                return mqHost.CreateMessageQueueClient() as RedisMessageQueueClient;
+                return mqServer.CreateMessageProducer() as RabbitMqProducer;
             });
 
-            container.AddScoped<IMessageProducer, RedisMessageProducer>(serviceProvider =>
+            container.AddScoped<IMessageQueueClient, RabbitMqQueueClient>(serviceProvider =>
             {
-                return mqHost.CreateMessageProducer() as RedisMessageProducer;
+                return mqServer.CreateMessageQueueClient() as RabbitMqQueueClient;
             });
 
             //Add a request filter to check if the user has a session initialized
@@ -244,7 +276,7 @@ namespace ExpressBase.ServiceStack
                     {
                         res.SetSessionCookie("Token", (res.Dto as GetAccessTokenResponse).AccessToken);
 
-                       
+
                     }
                 }
             });
