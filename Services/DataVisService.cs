@@ -25,12 +25,12 @@ namespace ExpressBase.ServiceStack
 
             DataSourceDataResponse dsresponse = null;
 
-            EbDataVisualization _dV = null;
+            EbDataVisualizationSet _dV = null;
 
             if (request.WhichConsole == "uc")
-                _dV = this.Redis.Get<EbDataVisualization>(request.RefId + request.UserId.ToString());
+                _dV = this.Redis.Get<EbDataVisualizationSet>(request.RefId + request.UserId.ToString());
             else //dc
-                _dV = this.Redis.Get<EbDataVisualization>(request.RefId);
+                _dV = this.Redis.Get<EbDataVisualizationSet>(request.RefId);
 
             _dV.AfterRedisGet(this.Redis as RedisClient);
 
@@ -85,7 +85,7 @@ namespace ExpressBase.ServiceStack
                     parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter(string.Format("@{0}", param["name"]), (System.Data.DbType)Convert.ToInt32(param["type"]), param["value"]));
             }
 
-            var _dataset = _dV.DoQueries4DataVis(_sql, this.TenantDbFactory, parameters.ToArray());
+            var _dataset = _dV.Visualizations[_dV.DeafaultVisualizationIndex].DoQueries4DataVis(_sql, this.TenantDbFactory, parameters.ToArray());
 
             //-- 
             int _recordsTotal = 0, _recordsFiltered = 0;
