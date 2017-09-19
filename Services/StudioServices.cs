@@ -373,6 +373,8 @@ WHERE
                     _eb_object = EbSerializers.Json_Deserialize<EbDataSource>(request.Json);
                 else if (request.EbObjectType == (int)EbObjectType.FilterDialog)
                     _eb_object = EbSerializers.Json_Deserialize<EbFilterDialog>(request.Json);
+                else if (request.EbObjectType == (int)EbObjectType.WebForm)
+                    _eb_object = EbSerializers.Json_Deserialize<EbForm>(request.Json);
 
                 if (_eb_object != null)
                 {
@@ -386,7 +388,7 @@ WHERE
                         string sql = "SELECT eb_objects_first_commit(@obj_name, @obj_desc, @obj_type, @obj_cur_status, @obj_json, @commit_uid, @src_pid, @cur_pid, @relations);";
                         cmd = this.TenantDbFactory.ObjectsDB.GetNewCommand(con, sql);
 
-                        cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_name", System.Data.DbType.String, _eb_object.Name));
+                        cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_name", System.Data.DbType.String, request.Name));
                         cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_desc", System.Data.DbType.String, (!string.IsNullOrEmpty(request.Description)) ? request.Description : string.Empty));
                         cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_type", System.Data.DbType.Int32, (int)request.EbObjectType));
                         cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_cur_status", System.Data.DbType.Int32, ObjectLifeCycleStatus.Development));
