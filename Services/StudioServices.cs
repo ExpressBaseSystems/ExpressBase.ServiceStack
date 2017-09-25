@@ -11,6 +11,9 @@ using ExpressBase.Common;
 using ExpressBase.Objects.ObjectContainers;
 using ExpressBase.Common.Objects;
 using ExpressBase.Common.Data;
+using ExpressBase.Objects.Objects;
+using Newtonsoft.Json;
+using ExpressBase.Common.JsonConverters;
 
 namespace ExpressBase.ServiceStack
 {
@@ -375,6 +378,8 @@ WHERE
                     _eb_object = EbSerializers.Json_Deserialize<EbFilterDialog>(request.Json);
                 else if (request.EbObjectType == (int)EbObjectType.WebForm)
                     _eb_object = EbSerializers.Json_Deserialize<EbForm>(request.Json);
+                else if (request.EbObjectType == (int)EbObjectType.EmailBuilder)
+                    _eb_object = JsonConvert.DeserializeObject<EbEmailBuilder>(request.Json, new Base64Converter()); //EbSerializers.Json_Deserialize<EbEmailBuilder>(request.Json);
 
                 if (_eb_object != null)
                 {
