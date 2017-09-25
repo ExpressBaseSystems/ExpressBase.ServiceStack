@@ -1,4 +1,6 @@
-﻿using ExpressBase.Objects.ServiceStack_Artifacts;
+﻿using ExpressBase.Common;
+using ExpressBase.Objects.Objects.TenantConnectionsRelated;
+using ExpressBase.Objects.ServiceStack_Artifacts;
 using Newtonsoft.Json;
 using RestSharp;
 using ServiceStack;
@@ -7,6 +9,7 @@ using ServiceStack.Pcl;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Data.Common;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -22,11 +25,25 @@ namespace ExpressBase.ServiceStack.MQServices
         [Authenticate]
         public void Post(SlackPostRequest request)
         {
-            request.Payload.Token = "xoxp-108334113943-221049390612-242151291554-546c2c932b2d4abfcb662579d3a2b4e0";
 
             try
             {
-                this.MessageProducer3.Publish(new SlackPostMqRequest { Payload = request.Payload , PostType = request.PostType});
+                this.MessageProducer3.Publish(new SlackPostMqRequest { Payload = request.Payload, PostType = request.PostType, TenantAccountId = request.TenantAccountId, UserId = request.UserId });
+                //return true;
+            }
+            catch (Exception e)
+            {
+                //return false;
+            }
+        }
+
+        [Authenticate]
+        public void Post(SlackAuthRequest request)
+        {
+            try
+            {
+
+                this.MessageProducer3.Publish(new SlackAuthMqRequest { IsNew = request.IsNew, SlackJson = request.SlackJson, TenantAccountId = request.TenantAccountId, UserId = request.UserId });
                 //return true;
             }
             catch (Exception e)
@@ -38,26 +55,84 @@ namespace ExpressBase.ServiceStack.MQServices
         [Restrict(InternalOnly = true)]
         public class SlackServiceInternal : EbBaseService
         {
-            public  string Post(SlackPostMqRequest req)
+            public string Post(SlackAuthMqRequest req)
             {
-                if (req.PostType == 1)
+                if (req.IsNew)
                 {
-                    var client = new RestClient("https://slack.com");
+                    TenantDbFactory dbFactory = new TenantDbFactory(req.TenantAccountId, this.Redis);
 
+                    try
+                    {
+                        string sql = "UPDATE eb_users SET slackjson = @slackjson WHERE id = @id RETURNING id";
+
+                        var id = dbFactory.DataDB.DoQuery<Int32>(sql, new DbParameter[] {
+                            dbFactory.DataDB.GetNewParameter("slackjson", NpgsqlTypes.NpgsqlDbType.Json,EbSerializers.Json_Serialize(req.SlackJson)),
+                            dbFactory.DataDB.GetNewParameter("id", System.Data.DbType.Int32, req.UserId)
+                        });
+                    }
+
+                    catch (Exception e)
+                    {
+                        return null;
+                    }
+                }
+                else
+                {
+
+                }
+                return null;
+            }
+
+            public string Post(SlackPostMqRequest req)
+            {
+                TenantDbFactory dbFactory = new TenantDbFactory(req.TenantAccountId, this.Redis);
+
+                string sql = "SELECT slackjson FROM eb_users WHERE id = @id";
+                
+                var dt = dbFactory.DataDB.DoQuery(sql, new DbParameter[] { dbFactory.DataDB.GetNewParameter("id", System.Data.DbType.Int32, req.UserId) });
+                var json = dt.Rows[0][0];
+                SlackJson slackJson = JsonConvert.DeserializeObject<SlackJson>(json.ToString());
+
+                var client = new RestClient("https://slack.com");
+
+                if (req.PostType == 1) {
                     var request = new RestRequest("api/files.upload", Method.POST);
-                    request.AddParameter("token", req.Payload.Token);
+
+                    request.AddParameter("token", slackJson.AccessToken);
+                    request.AddParameter("user_id", slackJson.UserId);
+                    request.AddParameter("team_id", slackJson.TeamId);
                     request.AddParameter("channels", req.Payload.Channel);
                     if (!string.IsNullOrEmpty(req.Payload.Text))
-                        request.AddParameter("text", req.Payload.Text);
+                        request.AddParameter("content", req.Payload.Text);
 
                     if (req.Payload.SlackFile != null && req.Payload.SlackFile.FileByte != null && req.Payload.SlackFile.FileByte.Length > 0)
                         request.AddFile("file", req.Payload.SlackFile.FileByte, req.Payload.SlackFile.FileName, contentType: "multipart/form-data");
 
                     //Execute the request
                     var res = client.ExecuteAsyncPost(request, SlackCallBack, "POST");
+
                 }
-                
+                else if (req.PostType == 0)
+                {
+                    var request = new RestRequest("api/chat.postMessage", Method.POST);
+
+                    request.AddParameter("token", slackJson.AccessToken);
+                    request.AddParameter("user_id", slackJson.UserId);
+                    request.AddParameter("team_id", slackJson.TeamId);
+                    request.AddParameter("channels", req.Payload.Channel);
+                    if (!string.IsNullOrEmpty(req.Payload.Text))
+                        request.AddParameter("text", req.Payload.Text);
+
+                    //Execute the request
+                    var res = client.ExecuteAsyncPost(request, SlackCallBack, "POST");
+                }
+
                 return null;
+            }
+
+            private void AuthRes(IRestResponse arg1, RestRequestAsyncHandle arg2)
+            {
+
             }
 
             private void SlackCallBack(IRestResponse arg1, RestRequestAsyncHandle arg2)
@@ -68,6 +143,7 @@ namespace ExpressBase.ServiceStack.MQServices
         }
     }
 }
+
 
 
 //To a take Screenshot of a div (Javascript)

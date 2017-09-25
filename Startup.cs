@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using RestSharp;
 using ServiceStack;
 using ServiceStack.Auth;
 using ServiceStack.Logging;
@@ -196,6 +197,8 @@ namespace ExpressBase.ServiceStack
             mqServer.RegisterHandler<RefreshSolutionConnectionsRequests>(base.ExecuteMessage);
             mqServer.RegisterHandler<UploadFileMqRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<SlackPostMqRequest>(base.ExecuteMessage);
+            mqServer.RegisterHandler<SlackAuthMqRequest>(base.ExecuteMessage);
+
             mqServer.Start();
 
             container.AddScoped<IMessageProducer, RabbitMqProducer>(serviceProvider =>
