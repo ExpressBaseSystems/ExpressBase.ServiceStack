@@ -41,10 +41,8 @@ namespace ExpressBase.Objects.ServiceStack_Artifacts
             this.MessageProducer3 = _mqp as RabbitMqProducer;
         }
 
-        public EbBaseService(IMessageProducer _mqp, RestSharp.IRestClient _rest)
+        public EbBaseService(RestSharp.IRestClient _rest)
         {
-            
-            this.MessageProducer3 = _mqp as RabbitMqProducer;
             this.RestClient = _rest as RestClient;
         }
 
