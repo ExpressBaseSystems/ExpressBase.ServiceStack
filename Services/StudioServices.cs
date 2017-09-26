@@ -26,14 +26,14 @@ namespace ExpressBase.ServiceStack
         // Fetch all version without json of a particular Object
         private const string Query1 = @"
 SELECT 
-    EOV.id, EOV.ver_num, EOV.obj_changelog, EOV.commit_ts, EOV.refid, EU.firstname
+    EOV.id, EOV.version_num, EOV.obj_changelog, EOV.commit_ts, EOV.refid, EU.firstname
 FROM 
     eb_objects_ver EOV, eb_users EU
 WHERE
     EOV.commit_uid = EU.id AND
     EOV.eb_objects_id=(SELECT eb_objects_id FROM eb_objects_ver WHERE refid=@refid)
 ORDER BY
-    ver_num DESC";
+    EOV.id DESC";
 
         // Fetch particular version with json of a particular Object
         private const string Query2 = "SELECT obj_json FROM eb_objects_ver WHERE refid=@refid";
@@ -42,7 +42,7 @@ ORDER BY
         private const string Query3 = @"
 SELECT 
     EO.id, EO.obj_name, EO.obj_type, EO.obj_last_ver_id, EO.obj_cur_status,EO.obj_desc,
-    EOV.id,EOV.eb_objects_id,EOV.ver_num, EOV.obj_changelog,EOV.commit_ts, EOV.commit_uid, EOV.obj_json, EOV.refid
+    EOV.id,EOV.eb_objects_id,EOV.version_num, EOV.obj_changelog,EOV.commit_ts, EOV.commit_uid, EOV.obj_json, EOV.refid
 FROM 
     eb_objects EO, eb_objects_ver EOV
 WHERE
@@ -54,7 +54,7 @@ ORDER BY
         private const string Query4 = @"
 SELECT 
     EO.id, EO.obj_name, EO.obj_type, EO.obj_last_ver_id, EO.obj_cur_status,EO.obj_desc,
-    EOV.id,EOV.eb_objects_id,EOV.ver_num, EOV.obj_changelog,EOV.commit_ts, EOV.commit_uid, EOV.obj_json, EOV.refid
+    EOV.id,EOV.eb_objects_id,EOV.version_num, EOV.obj_changelog,EOV.commit_ts, EOV.commit_uid, EOV.obj_json, EOV.refid
 FROM 
     eb_objects EO, eb_objects_ver EOV
 WHERE
@@ -66,7 +66,7 @@ ORDER BY
         private const string Query5 = @"
 SELECT 
     EO.id, EO.obj_name, EO.obj_type, EO.obj_last_ver_id, EO.obj_cur_status,EO.obj_desc,
-    EOV.id, EOV.eb_objects_id, EOV.ver_num, EOV.obj_changelog,EOV.commit_ts, EOV.commit_uid, EOV.refid,
+    EOV.id, EOV.eb_objects_id, EOV.version_num, EOV.obj_changelog,EOV.commit_ts, EOV.commit_uid, EOV.refid,
     EU.firstname
 FROM 
     eb_objects EO, eb_objects_ver EOV
@@ -85,7 +85,7 @@ SELECT @function_name";
         private const string Query_AllVerList = @"
 SELECT 
     EO.id, EO.obj_name, EO.obj_type, EO.obj_last_ver_id, EO.obj_cur_status,EO.obj_desc,
-    EOV.id, EOV.eb_objects_id, EOV.ver_num, EOV.obj_changelog,EOV.commit_ts, EOV.commit_uid, EOV.refid,
+    EOV.id, EOV.eb_objects_id, EOV.version_num, EOV.obj_changelog, EOV.commit_ts, EOV.commit_uid, EOV.refid,
     EU.firstname
 FROM 
     eb_objects EO, eb_objects_ver EOV
@@ -97,6 +97,18 @@ WHERE
     EO.id = EOV.eb_objects_id  AND EO.obj_type=@type
 ORDER BY
     EO.obj_name";
+
+        private const string Query_ObjectList = @"SELECT 
+    id, obj_name, obj_type, obj_cur_status, obj_desc  
+FROM 
+    eb_objects
+WHERE
+    obj_type=@type
+ORDER BY
+    obj_name";
+
+
+
         #endregion
 
         List<EbObjectWrapper> f = new List<EbObjectWrapper>();
@@ -115,7 +127,7 @@ ORDER BY
                 var _ebObject = (new EbObjectWrapper
                 {
                     Id = Convert.ToInt32(dr[0]),
-                    VersionNumber = Convert.ToInt32(dr[1]),
+                    VersionNumber = dr[1].ToString(),
                     ChangeLog = dr[2].ToString(),
                     CommitTs = Convert.ToDateTime(dr[3]),
                     RefId = dr[4].ToString(),
@@ -162,7 +174,7 @@ ORDER BY
                     EbObjectType = (EbObjectType)Convert.ToInt32(dr[2]),
                     Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[4]),
                     Description = dr[5].ToString(),
-                    VersionNumber = Convert.ToInt32(dr[3]),
+                    VersionNumber = dr[3].ToString(),
                     Json = (!string.IsNullOrEmpty(request.RefId)) ? dr[12].ToString() : null,
                     RefId = dr[13].ToString()
                 });
@@ -188,7 +200,7 @@ ORDER BY
                     EbObjectType = (EbObjectType)Convert.ToInt32(dr[2]),
                     Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[4]),
                     Description = dr[5].ToString(),
-                    VersionNumber = Convert.ToInt32(dr[8]),
+                    VersionNumber = dr[8].ToString(),
                     Json = (!string.IsNullOrEmpty(request.RefId)) ? dr[12].ToString() : null,
                     RefId = dr[13].ToString()
                 });
@@ -213,7 +225,7 @@ ORDER BY
                     EbObjectType = (EbObjectType)Convert.ToInt32(dr[2]),
                     Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[4]),
                     Description = dr[5].ToString(),
-                    VersionNumber = Convert.ToInt32(dr[8]),
+                    VersionNumber = dr[8].ToString(),
                     CommitTs = Convert.ToDateTime(dr[10]),
                     RefId = dr[12].ToString(),
                     CommitUname = dr[13].ToString(),
@@ -223,6 +235,29 @@ ORDER BY
             }
             return new EbObjectObjListResponse { Data = f };
         }
+
+        [CompressResponse]
+        public object Get(EbObjectListRequest request)
+        { // Get All latest committed versions of this Object Type without json
+            parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@type", System.Data.DbType.Int32, request.EbObjectType));
+            var dt = this.TenantDbFactory.ObjectsDB.DoQuery(Query_ObjectList, parameters.ToArray());
+
+            foreach (EbDataRow dr in dt.Rows)
+            {
+                var _ebObject = (new EbObjectWrapper
+                {
+                    Id = Convert.ToInt32(dr[0]),
+                    Name = dr[1].ToString(),
+                    EbObjectType = (EbObjectType)Convert.ToInt32(dr[2]),
+                    Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[3]),
+                    Description = dr[4].ToString()
+                });
+
+                f.Add(_ebObject);
+            }
+            return new EbObjectListResponse { Data = f };
+        }
+
 
         [CompressResponse]
         public object Get(EbObjectObjLisAllVerRequest request)
@@ -245,9 +280,9 @@ ORDER BY
                 {
                     Id = Convert.ToInt32(dr[0]),
                     Name = dr[1].ToString(),
-                    EbObjectType= (EbObjectType)Convert.ToInt32(dr[2]),
-                    Status = Enum.GetName(typeof(ObjectLifeCycleStatus),dr[4]),
-                    VersionNumber = Convert.ToInt32(dr[8]),
+                    EbObjectType = (EbObjectType)Convert.ToInt32(dr[2]),
+                    Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[4]),
+                    VersionNumber = dr[8].ToString(),
                     RefId = dr[12].ToString(),
                 });
             }
@@ -276,8 +311,40 @@ ORDER BY
 
             return new EbObjectRelationsResponse { Data = f };
         }
-        [CompressResponse]
 
+        //Get the version to open ion edit mode
+        [CompressResponse]
+        public object Get(EbObjectExploreObjectRequest request)
+        {
+            parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.Int32, request.Id));
+            var dt = this.TenantDbFactory.ObjectsDB.DoQuery("SELECT * FROM public.eb_objects_exploreobject(@id)", parameters.ToArray());
+
+            foreach (EbDataRow dr in dt.Rows)
+            {
+                var _ebObject = (new EbObjectWrapper
+                {
+                    Id = Convert.ToInt32(dr[0]),
+                    Name = dr[1].ToString(),
+                    EbObjectType = (EbObjectType)Convert.ToInt32(dr[2]),
+                    Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[3]),
+                    Description = dr[4].ToString(),
+                    ChangeLog = dr[5].ToString(),
+                    CommitTs = Convert.ToDateTime(dr[6]),
+                    CommitUname = dr[7].ToString(),
+                    RefId = dr[8].ToString(),
+                    VersionNumber = dr[9].ToString(),
+                    WorkingMode = Convert.ToBoolean(dr[10]),
+                    Json_wc = dr[12].ToString(),
+                    Json_lc = dr[13].ToString(),
+                    Wc_All = dr[11] as string[],
+                    MajorVersionNumber = Convert.ToInt32(dr[14]),
+                    MinorVersionNumber = Convert.ToInt32(dr[15]),
+                    PatchVersionNumber = Convert.ToInt32(dr[16])
+                });
+                f.Add(_ebObject);
+            }
+            return new EbObjectExploreObjectResponse { Data = f };
+        }
 
         #region SaveOrCommit Queries
 
@@ -478,10 +545,10 @@ WHERE
             string refId = null;
             ILog log = LogManager.GetLogger(GetType());
             log.Info("#DS insert -- entered post");
-           
+
             try
             {
-               
+
                 using (var con = this.TenantDbFactory.ObjectsDB.GetNewConnection())
                 {
                     con.Open();
@@ -491,7 +558,7 @@ WHERE
 
                     string sql = "SELECT eb_objects_commit(@id, @obj_name, @obj_desc, @obj_type, @obj_json, @obj_changelog,  @commit_uid, @src_pid, @cur_pid, @relations)";
                     cmd = this.TenantDbFactory.ObjectsDB.GetNewCommand(con, sql);
-                   
+
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.String, request.RefId));
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_name", System.Data.DbType.String, request.Name));
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_type", System.Data.DbType.Int32, (int)request.EbObjectType));
@@ -531,7 +598,7 @@ WHERE
 
                     string sql = "SELECT eb_objects_save(@id, @obj_name, @obj_desc, @obj_type, @obj_json, @commit_uid, @src_pid, @cur_pid, @relations)";
                     cmd = this.TenantDbFactory.ObjectsDB.GetNewCommand(con, sql);
-                  
+
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.String, request.RefId));
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_name", System.Data.DbType.String, request.Name));
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_type", System.Data.DbType.Int32, (int)request.EbObjectType));
@@ -541,7 +608,7 @@ WHERE
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@src_pid", System.Data.DbType.String, request.TenantAccountId));
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@cur_pid", System.Data.DbType.String, request.TenantAccountId));
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@relations", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text, (request.Relations != null) ? request.Relations.Split(',').Select(n => n.ToString()).ToArray() : arr));
-                   
+
                     refId = cmd.ExecuteScalar().ToString();
                 }
             }
@@ -567,7 +634,7 @@ WHERE
                     log.Info("#DS insert 1 -- con open");
                     string[] arr = { };
 
-                    string sql = "SELECT eb_objects_create_new_object(@obj_name, @obj_desc, @obj_type, @obj_cur_status, @obj_json, @commit_uid, @src_pid, @cur_pid, @relations)";
+                    string sql = "SELECT eb_objects_create_new_object(@obj_name, @obj_desc, @obj_type, @obj_cur_status, @obj_json, @commit_uid, @src_pid, @cur_pid, @relations, @issave)";
                     cmd = this.TenantDbFactory.ObjectsDB.GetNewCommand(con, sql);
 
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_name", System.Data.DbType.String, request.Name));
@@ -579,7 +646,8 @@ WHERE
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@src_pid", System.Data.DbType.String, request.TenantAccountId));
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@cur_pid", System.Data.DbType.String, request.TenantAccountId));
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@relations", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text, (request.Relations != null) ? request.Relations.Split(',').Select(n => n.ToString()).ToArray() : arr));
-                 
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@issave", System.Data.DbType.Boolean, request.IsSave));
+
                     refId = cmd.ExecuteScalar().ToString();
                 }
             }
@@ -598,7 +666,7 @@ WHERE
 
             try
             {
-                
+
                 using (var con = this.TenantDbFactory.ObjectsDB.GetNewConnection())
                 {
                     con.Open();
@@ -615,7 +683,7 @@ WHERE
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@src_pid", System.Data.DbType.String, request.TenantAccountId));
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@cur_pid", System.Data.DbType.String, request.TenantAccountId));
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@relations", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text, (request.Relations != null) ? request.Relations.Split(',').Select(n => n.ToString()).ToArray() : arr));
-               
+
                     refId = cmd.ExecuteScalar().ToString();
 
                 }
@@ -652,7 +720,7 @@ WHERE
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@src_pid", System.Data.DbType.String, request.TenantAccountId));
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@cur_pid", System.Data.DbType.String, request.TenantAccountId));
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@relations", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text, (request.Relations != null) ? request.Relations.Split(',').Select(n => n.ToString()).ToArray() : arr));
-                 
+
                     refId = cmd.ExecuteScalar().ToString();
                 }
             }
