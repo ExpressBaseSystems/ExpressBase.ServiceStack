@@ -379,7 +379,7 @@ WHERE
                 else if (request.EbObjectType == (int)EbObjectType.WebForm)
                     _eb_object = EbSerializers.Json_Deserialize<EbForm>(request.Json);
                 else if (request.EbObjectType == (int)EbObjectType.EmailBuilder)
-                    _eb_object = JsonConvert.DeserializeObject<EbEmailBuilder>(request.Json, new Base64Converter()); //EbSerializers.Json_Deserialize<EbEmailBuilder>(request.Json);
+                    _eb_object = EbSerializers.Json_Deserialize<EbEmailBuilder>(request.Json);
 
                 if (_eb_object != null)
                 {
