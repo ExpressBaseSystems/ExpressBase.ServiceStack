@@ -25,16 +25,16 @@ namespace ExpressBase.ServiceStack
 
             DataSourceDataResponse dsresponse = null;
 
-            EbDataVisualizationSet _dV = null;
+            EbDataVisualization _dV = request.EbDataVisualization;
 
-            if (request.WhichConsole == "uc")
-                _dV = this.Redis.Get<EbDataVisualizationSet>(request.RefId + request.UserId.ToString());
-            else //dc
-                _dV = this.Redis.Get<EbDataVisualizationSet>(request.RefId);
+            //if (request.WhichConsole == "uc")
+            //    _dVSet = this.Redis.Get<EbDataVisualizationSet>(request.RefId + request.UserId.ToString());
+            //else //dc
+            //    _dVSet = this.Redis.Get<EbDataVisualizationSet>(request.RefId);
 
             _dV.AfterRedisGet(this.Redis as RedisClient);
 
-            string _sql = string.Empty;
+            string _sql = null;
 
             if (_dV.EbDataSource != null)
             {
@@ -59,11 +59,10 @@ namespace ExpressBase.ServiceStack
                     }
                 }
 
-                var __innerSqls = _dV.EbDataSource.SqlDecoded().Split(";");
-                string _innerDataSql = (__innerSqls.Length > 1) ? __innerSqls[1] : __innerSqls[0];
+                string __innerSql = _dV.EbDataSource.SqlDecoded();
+                string _where = (_sb.Length > 0) ? "WHERE " + string.Join(" AND ", _sb) : string.Empty;
                 string _orderby = (string.IsNullOrEmpty(request.OrderByCol)) ? "1" : string.Format("{0} {1}", request.OrderByCol, ((request.OrderByDir == 2) ? "DESC" : "ASC"));
-                _sql = string.Format("SELECT * FROM ({0}) __OUTER99 WHERE {1} ORDER BY {2}", _innerDataSql, string.Join(" AND ", _sb), _orderby);
-                //_sql = string.Format("WITH __OUTER99 AS ({0}) SELECT * FROM __OUTER99 WHERE {1} ORDER BY {2}", _innerDataSql, string.Join(" AND ", _sb), _orderby);
+                _sql = string.Format("WITH __OUTER99 AS ({0}) SELECT * FROM __OUTER99 {1} {2}", __innerSql, _where, _orderby);
 
                 this.Log.Info("_ds *****" + _sql);
             }
@@ -85,7 +84,7 @@ namespace ExpressBase.ServiceStack
                     parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter(string.Format("@{0}", param["name"]), (System.Data.DbType)Convert.ToInt32(param["type"]), param["value"]));
             }
 
-            var _dataset = _dV.Visualizations[_dV.DeafaultVisualizationIndex].DoQueries4DataVis(_sql, this.TenantDbFactory, parameters.ToArray());
+            var _dataset = _dV.DoQueries4DataVis(_sql, this.TenantDbFactory, parameters.ToArray());
 
             //-- 
             int _recordsTotal = 0, _recordsFiltered = 0;
@@ -113,7 +112,7 @@ namespace ExpressBase.ServiceStack
         [CompressResponse]
         public DataSourceColumnsResponse Any(DataVisColumnsRequest request)
         {
-            var _dV = this.Redis.Get<EbDataVisualization>(request.RefId);
+            EbDataVisualization _dV = request.EbDataVisualization;
             _dV.AfterRedisGet(this.Redis as RedisClient);
             var _ds = _dV.EbDataSource;
 

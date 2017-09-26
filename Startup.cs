@@ -1,26 +1,24 @@
-﻿using System;
+﻿using ExpressBase.Common.Data;
+using ExpressBase.Objects.Objects.MQRelated;
+using ExpressBase.Objects.Objects.TenantConnectionsRelated;
 using ExpressBase.Objects.ServiceStack_Artifacts;
+using ExpressBase.ServiceStack.Auth0;
 using Funq;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using RestSharp;
 using ServiceStack;
 using ServiceStack.Auth;
 using ServiceStack.Logging;
-using ServiceStack.Redis;
-using System.IdentityModel.Tokens.Jwt;
-using ExpressBase.ServiceStack.Auth0;
-using System.IO;
-using ExpressBase.Common;
-using ServiceStack.ProtoBuf;
-using ServiceStack.Messaging.Redis;
-using ExpressBase.Objects.Objects.MQRelated;
-using ExpressBase.Objects.Objects.TenantConnectionsRelated;
 using ServiceStack.Messaging;
-using ExpressBase.Common.Data;
+using ServiceStack.ProtoBuf;
 using ServiceStack.RabbitMq;
+using ServiceStack.Redis;
+using System;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace ExpressBase.ServiceStack
 {
@@ -197,18 +195,11 @@ namespace ExpressBase.ServiceStack
             mqServer.RetryCount = 1;
             mqServer.RegisterHandler<EmailRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<RefreshSolutionConnectionsRequests>(base.ExecuteMessage);
-            mqServer.RegisterHandler<UploadFileMqRequest>(base.ExecuteMessage, 5);
+            mqServer.RegisterHandler<UploadFileMqRequest>(base.ExecuteMessage);
+            mqServer.RegisterHandler<SlackPostMqRequest>(base.ExecuteMessage);
+            mqServer.RegisterHandler<SlackAuthMqRequest>(base.ExecuteMessage);
+
             mqServer.Start();
-
-
-
-
-
-
-            //container.AddScoped<IMessageProducer, RedisMessageProducer>(serviceProvider =>
-            //{
-            //    return mqHost.CreateMessageProducer() as RedisMessageProducer;
-            //});
 
             container.AddScoped<IMessageProducer, RabbitMqProducer>(serviceProvider =>
             {
