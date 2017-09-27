@@ -56,8 +56,8 @@ ORDER BY
         // Fetch latest committed version with json - for Execute/Run/Consume
         private const string Query4 = @"
 SELECT 
-    EO.id, EO.obj_name, EO.obj_type, EO.obj_last_ver_id, EO.obj_cur_status,EO.obj_desc,
-    EOV.id,EOV.eb_objects_id,EOV.version_num, EOV.obj_changelog,EOV.commit_ts, EOV.commit_uid, EOV.obj_json, EOV.refid
+    EO.id, EO.obj_name, EO.obj_type, EO.obj_cur_status, EO.obj_desc,
+    EOV.id, EOV.eb_objects_id, EOV.version_num, EOV.obj_changelog, EOV.commit_ts, EOV.commit_uid, EOV.obj_json, EOV.refid
 FROM 
     eb_objects EO, eb_objects_ver EOV
 WHERE
@@ -68,7 +68,7 @@ ORDER BY
         // Get All latest versions of this Object Type without json
         private const string Query5 = @"
 SELECT 
-    EO.id, EO.obj_name, EO.obj_type, EO.obj_last_ver_id, EO.obj_cur_status,EO.obj_desc,
+    EO.id, EO.obj_name, EO.obj_type, EO.obj_cur_status,EO.obj_desc,
     EOV.id, EOV.eb_objects_id, EOV.version_num, EOV.obj_changelog,EOV.commit_ts, EOV.commit_uid, EOV.refid,
     EU.firstname
 FROM 
@@ -78,7 +78,7 @@ LEFT JOIN
 ON 
 	EOV.commit_uid=EU.id
 WHERE
-    EO.id = EOV.eb_objects_id AND EOV.ver_num=EO.obj_last_ver_id AND EO.obj_type=@type
+    EO.id = EOV.eb_objects_id AND EO.obj_type=@type
 ORDER BY
     EO.obj_name";
 
@@ -87,7 +87,7 @@ SELECT @function_name";
 
         private const string Query_AllVerList = @"
 SELECT 
-    EO.id, EO.obj_name, EO.obj_type, EO.obj_last_ver_id, EO.obj_cur_status,EO.obj_desc,
+    EO.id, EO.obj_name, EO.obj_type, EO.obj_cur_status,EO.obj_desc,
     EOV.id, EOV.eb_objects_id, EOV.version_num, EOV.obj_changelog, EOV.commit_ts, EOV.commit_uid, EOV.refid,
     EU.firstname
 FROM 
@@ -175,7 +175,7 @@ ORDER BY
                     Id = Convert.ToInt32(dr[0]),
                     Name = dr[1].ToString(),
                     EbObjectType = (EbObjectType)Convert.ToInt32(dr[2]),
-                    Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[43]),
+                    Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[3]),
                     Description = dr[4].ToString(),
                     VersionNumber = dr[7].ToString(),
                     Json = (!string.IsNullOrEmpty(request.RefId)) ? dr[11].ToString() : null,
@@ -224,14 +224,14 @@ ORDER BY
                 var _ebObject = (new EbObjectWrapper
                 {
                     Id = Convert.ToInt32(dr[0]),
-                    Name = dr[1].ToString(),
+                    Name = dr[1].ToString()+ dr[7].ToString(),
                     EbObjectType = (EbObjectType)Convert.ToInt32(dr[2]),
-                    Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[4]),
-                    Description = dr[5].ToString(),
-                    VersionNumber = dr[8].ToString(),
-                    CommitTs = Convert.ToDateTime(dr[10]),
-                    RefId = dr[12].ToString(),
-                    CommitUname = dr[13].ToString(),
+                    Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[3]),
+                    Description = dr[4].ToString(),
+                    VersionNumber = dr[7].ToString(),
+                    CommitTs = Convert.ToDateTime(dr[9]),
+                    RefId = dr[11].ToString(),
+                    CommitUname = dr[12].ToString(),
                 });
 
                 f.Add(_ebObject);
@@ -284,9 +284,9 @@ ORDER BY
                     Id = Convert.ToInt32(dr[0]),
                     Name = dr[1].ToString(),
                     EbObjectType = (EbObjectType)Convert.ToInt32(dr[2]),
-                    Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[4]),
-                    VersionNumber = dr[8].ToString(),
-                    RefId = dr[12].ToString(),
+                    Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[3]),
+                    VersionNumber = dr[7].ToString(),
+                    RefId = dr[11].ToString(),
                 });
             }
             return new EbObjectObjListAllVerResponse { Data = f_dict };
