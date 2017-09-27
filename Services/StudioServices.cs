@@ -44,7 +44,7 @@ ORDER BY
         // Fetch latest non-committed version with json - for EDIT
         private const string Query3 = @"
 SELECT 
-    EO.id, EO.obj_name, EO.obj_type, EO.obj_last_ver_id, EO.obj_cur_status,EO.obj_desc,
+    EO.id, EO.obj_name, EO.obj_type, EO.obj_cur_status,EO.obj_desc,
     EOV.id,EOV.eb_objects_id,EOV.version_num, EOV.obj_changelog,EOV.commit_ts, EOV.commit_uid, EOV.obj_json, EOV.refid
 FROM 
     eb_objects EO, eb_objects_ver EOV
@@ -175,11 +175,11 @@ ORDER BY
                     Id = Convert.ToInt32(dr[0]),
                     Name = dr[1].ToString(),
                     EbObjectType = (EbObjectType)Convert.ToInt32(dr[2]),
-                    Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[4]),
-                    Description = dr[5].ToString(),
-                    VersionNumber = dr[3].ToString(),
-                    Json = (!string.IsNullOrEmpty(request.RefId)) ? dr[12].ToString() : null,
-                    RefId = dr[13].ToString()
+                    Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[43]),
+                    Description = dr[4].ToString(),
+                    VersionNumber = dr[7].ToString(),
+                    Json = (!string.IsNullOrEmpty(request.RefId)) ? dr[11].ToString() : null,
+                    RefId = dr[12].ToString()
                 });
 
                 f.Add(_ebObject);
