@@ -1,29 +1,65 @@
 ﻿using ExpressBase.Objects.ServiceStack_Artifacts;
+using MongoDB.Bson;
 using ServiceStack;
 using ServiceStack.Messaging;
 using System;
+using System.Collections;
+using System.Collections.Generic;
 
 namespace ExpressBase.ServiceStack.MQServices
 {
     public class FileService : EbBaseService
     {
-        //public FileService(IMessageQueueClient _mqc, IMessageProducer _mqp) : base(_mqc, _mqp) { }
         public FileService(IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_mqp, _mqc) { }
 
         [Authenticate]
-        public bool Post(UploadFileRequest request)
+        public string Post(UploadFileRequest request)
         {
-            try
+            if (request.IsAsync)
             {
-                this.MessageProducer3.Publish(new UploadFileMqRequest { FileName = request.FileName, ByteArray = request.ByteArray, TenantAccountId = request.TenantAccountId });
-                return true;
+                try
+                {
+                    this.MessageProducer3.Publish(new UploadFileMqRequest { FileName = request.FileName, ByteArray = request.ByteArray, TenantAccountId = request.TenantAccountId });
+                    return "Successfully Uploaded to MQ";
+                }
+                catch (Exception e)
+                {
+                    return "Failed to Uplaod to MQ";
+                }
             }
-            catch (Exception e)
+            else
             {
-                return false;
+                request.MetaData = new MongoDB.Bson.BsonDocument();
+
+                request.MetaData.Add(request.metaDataPair as IDictionary);
+
+                return (new TenantDbFactory(request.TenantAccountId, this.Redis)).FilesDB.UploadFile(request.FileName, request.ByteArray, request.MetaData).ToString();
+            }
+        }
+
+        [Authenticate]
+        public byte[] Post(DownloadFileRequest request)
+        {
+            return (new TenantDbFactory(request.TenantAccountId, this.Redis)).FilesDB.DownloadFile(request.ObjectId);
+        }
+
+        [Authenticate]
+        public FindFilesByTagResponse Post(FindFilesByTagRequest request)
+        {
+            var filesList = (new TenantDbFactory(request.TenantAccountId, this.Redis)).FilesDB.FindFilesByTags(request.Filter);
+
+            FindFilesByTagResponse Response = new FindFilesByTagResponse();
+
+            Response.FileList = new List<FileInfo>();
+
+            foreach (var element in filesList)
+            {
+                Response.FileList.Add(new FileInfo { ObjectId = element.Id.ToString(), MetaData = new BsonDocument(element.Metadata) });
             }
 
+            return Response;
         }
+
         [Restrict(InternalOnly = true)]
         public class FileServiceInternal : EbBaseService
         {
@@ -33,13 +69,5 @@ namespace ExpressBase.ServiceStack.MQServices
                 return null;
             }
         }
-
-        [Authenticate]
-        public byte[] Post(DownloadFileRequest request)
-        {
-            return (new TenantDbFactory(request.TenantAccountId, this.Redis)).FilesDB.DownloadFile(request.ObjectId);
-        }
     }
-
-
 }

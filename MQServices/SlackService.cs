@@ -117,9 +117,9 @@ namespace ExpressBase.ServiceStack.MQServices
                     var request = new RestRequest("api/chat.postMessage", Method.POST);
 
                     request.AddParameter("token", slackJson.AccessToken);
+                    request.AddParameter("channels", req.Payload.Channel);
                     request.AddParameter("user_id", slackJson.UserId);
                     request.AddParameter("team_id", slackJson.TeamId);
-                    request.AddParameter("channels", req.Payload.Channel);
                     if (!string.IsNullOrEmpty(req.Payload.Text))
                         request.AddParameter("text", req.Payload.Text);
 
