@@ -22,13 +22,13 @@ namespace ExpressBase.ServiceStack.MQServices
         {
             request.MetaData = new MongoDB.Bson.BsonDocument();
 
-            request.MetaData.Add(request.metaDataPair as IDictionary);
+            request.MetaData.Add(request.MetaDataPair as IDictionary);
 
             if (request.IsAsync)
             {
                 try
                 {
-                    this.MessageProducer3.Publish(new UploadFileMqRequestTest { FileName = request.FileName, ByteArray = request.ByteArray, TenantAccountId = request.TenantAccountId, MetaData = new BsonDocument(request.MetaData) });
+                    this.MessageProducer3.Publish(new UploadFileMqRequest { FileName = request.FileName, ByteArray = request.ByteArray, TenantAccountId = request.TenantAccountId, MetaData = new BsonDocument(request.MetaData) });
                     return "Successfully Uploaded to MQ";
                 }
                 catch (Exception e)
