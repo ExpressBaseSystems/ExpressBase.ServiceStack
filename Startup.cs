@@ -196,6 +196,7 @@ namespace ExpressBase.ServiceStack
             mqServer.RegisterHandler<EmailRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<RefreshSolutionConnectionsRequests>(base.ExecuteMessage);
             mqServer.RegisterHandler<UploadFileMqRequest>(base.ExecuteMessage);
+            mqServer.RegisterHandler<ImageResizeMqRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<SlackPostMqRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<SlackAuthMqRequest>(base.ExecuteMessage);
 
