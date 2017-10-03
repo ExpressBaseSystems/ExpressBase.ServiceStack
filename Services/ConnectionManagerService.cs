@@ -14,18 +14,28 @@ namespace ExpressBase.ServiceStack.Services
         {
             GetConnectionsResponse resp = new GetConnectionsResponse();
 
-            EbSolutionConnections dummy = this.Redis.Get<EbSolutionConnections>(string.Format("EbSolutionConnections_{0}_test", req.TenantAccountId));
+            EbSolutionConnections dummy = this.Redis.Get<EbSolutionConnections>(string.Format("EbSolutionConnections_{0}", req.TenantAccountId));
 
-            dummy.DataDbConnection.Password = "EBDummyPassword";
-            dummy.ObjectsDbConnection.Password = "EBDummyPassword";
+            resp.EBSolutionConnections = dummy;
+
+            if (resp.EBSolutionConnections.DataDbConnection != null)
+                resp.EBSolutionConnections.DataDbConnection.Password = "EBDummyPassword";
+
+            if (resp.EBSolutionConnections.ObjectsDbConnection != null)
+                resp.EBSolutionConnections.ObjectsDbConnection.Password = "EBDummyPassword";
+
+            if (resp.EBSolutionConnections.EmailConnection != null)
+                resp.EBSolutionConnections.EmailConnection.Password = "EBDummyPassword";
+            //dummy.DataDbConnection.Password = "EBDummyPassword";
+            //dummy.ObjectsDbConnection.Password = "EBDummyPassword";
             //dummy.EmailConnection.Password = "EBDummyPassword";
 
             //if (resp.EBSolutionConnections.EbTier == (EbTiers)Enum.Parse(typeof(EbTiers), "Unlimited"))
             //if (resp.EBSolutionConnections.EbTier == null)
             //{
-            resp.EBSolutionConnections.DataDbConnection = new EbDataDbConnection{ DatabaseName = dummy.DataDbConnection.DatabaseName };
-            resp.EBSolutionConnections.DataDbConnection = dummy.DataDbConnection;
-            resp.EBSolutionConnections.ObjectsDbConnection = dummy.ObjectsDbConnection;
+            //resp.EBSolutionConnections.DataDbConnection = new EbDataDbConnection{ DatabaseName = dummy.DataDbConnection.DatabaseName };
+            //resp.EBSolutionConnections.DataDbConnection = dummy.DataDbConnection;
+            //resp.EBSolutionConnections.ObjectsDbConnection = dummy.ObjectsDbConnection;
             //resp.EBSolutionConnections.EmailConnection = dummy.EmailConnection;
             //}
             return resp;
