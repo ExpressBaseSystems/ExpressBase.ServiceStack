@@ -333,7 +333,7 @@ ORDER BY
                     Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[3]),
                     Description = dr[4].ToString(),
                     ChangeLog = dr[5].ToString(),
-                    CommitTs = Convert.ToDateTime(dr[6]),
+                    CommitTs = Convert.ToDateTime((dr[6].ToString())==""?DateTime.MinValue: dr[6]),
                     CommitUname = dr[7].ToString(),
                     RefId = dr[8].ToString(),
                     VersionNumber = dr[9].ToString(),
