@@ -35,7 +35,7 @@ namespace ExpressBase.ServiceStack.Auth0
     {
         public new object Post(Register request)
         { 
-            var response = base.Post(request) as RegisterResponse;
+            var response = new RegisterResponse(); //test purpose
             var _InfraDb = base.TryResolve<TenantDbFactory>().DataDB as IDatabase;
             DbParameter[] parameters = {
                 _InfraDb.GetNewParameter("cname", System.Data.DbType.String, request.Email),
