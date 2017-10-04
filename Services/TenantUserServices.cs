@@ -67,9 +67,9 @@ namespace ExpressBase.ServiceStack.Services
 
                 if (string.IsNullOrEmpty(request.Colvalues["pwd"].ToString()) && request.Id < 0)
                 {
-                    using (var service = base.ResolveService<EmailServices>())
+                    using (var service = base.ResolveService<EmailService>())
                     {
-                        service.Any(new EmailServicesRequest() { To = request.Colvalues["email"].ToString(), Subject = "New User", Message = string.Format("You are invited to join as user. Log in {0}.localhost:53431 using Username: {1} and Password : {2}", request.TenantAccountId, request.Colvalues["email"].ToString(), dt.Tables[0].Rows[0][1]) });
+                        service.Post(new EmailServicesRequest() { To = request.Colvalues["email"].ToString(), Subject = "New User", Message = string.Format("You are invited to join as user. Log in {0}.localhost:53431 using Username: {1} and Password : {2}", request.TenantAccountId, request.Colvalues["email"].ToString(), dt.Tables[0].Rows[0][1]) });
                     }
                 }
                 resp = new CreateUserResponse

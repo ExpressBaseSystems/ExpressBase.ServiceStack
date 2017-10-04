@@ -193,7 +193,7 @@ namespace ExpressBase.ServiceStack
             //rabitFactory.ConnectionFactory.Uri = "amqp://user:2nuGqFcd7uI5@13.84.189.113:5672/MessageQueue";
             var mqServer = new RabbitMqServer(rabitFactory);
             mqServer.RetryCount = 1;
-            mqServer.RegisterHandler<EmailRequest>(base.ExecuteMessage);
+            mqServer.RegisterHandler<EmailServicesMqRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<RefreshSolutionConnectionsRequests>(base.ExecuteMessage);
             mqServer.RegisterHandler<UploadFileMqRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<ImageResizeMqRequest>(base.ExecuteMessage);

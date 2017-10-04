@@ -1,5 +1,6 @@
 ﻿
 using ExpressBase.Common;
+using ExpressBase.Common.Data;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ServiceStack;
 using ServiceStack.Auth;
@@ -36,12 +37,12 @@ namespace ExpressBase.ServiceStack.Auth0
         public new object Post(Register request)
         { 
             var response = new RegisterResponse(); //test purpose
-            var _InfraDb = base.TryResolve<TenantDbFactory>().DataDB as IDatabase;
+            var _InfraDb = base.ResolveService<ITenantDbFactory>() as TenantDbFactory;
             DbParameter[] parameters = {
-                _InfraDb.GetNewParameter("cname", System.Data.DbType.String, request.Email),
-                _InfraDb.GetNewParameter("password", System.Data.DbType.String, request.Password)
+                _InfraDb.DataDB.GetNewParameter("email", System.Data.DbType.String, request.Email),
+                _InfraDb.DataDB.GetNewParameter("pwd", System.Data.DbType.String, request.Password)
             };
-            EbDataTable dt = _InfraDb.DoQuery("INSERT INTO eb_tenants (cname,password,u_token) VALUES ( @cname,@password,md5( @cname || now())) RETURNING id,u_token;", parameters);
+            EbDataTable dt = _InfraDb.DataDB.DoQuery("INSERT INTO eb_users (email,pwd,u_token) VALUES ( @email,@pwd,md5( @email || now())) RETURNING id,u_token;", parameters);
 
             //var authRepo = HostContext.AppHost.GetAuthRepository(base.Request);
             //authRepo.DeleteUserAuth(response.UserId);                               // we dont want servicestack authuser.id in redis

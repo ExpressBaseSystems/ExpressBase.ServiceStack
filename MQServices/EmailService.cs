@@ -4,11 +4,32 @@ using ServiceStack;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using System;
 using System.Threading.Tasks;
+using ServiceStack.Messaging;
 
 namespace ExpressBase.ServiceStack
 {
-    public class EmailService : Service
+    public class EmailService : EbBaseService
     {
+        public EmailService(IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_mqp, _mqc) { }
+
+        [Authenticate]
+        public string Post(EmailServicesRequest request)
+        {   
+                try
+                {
+                    this.MessageProducer3.Publish(new EmailServicesMqRequest { From = request.From, Message = request.Message, TenantAccountId = request.TenantAccountId, Subject = request.Subject, To = request.To, UserId = request.UserId });
+                    return "Success";
+                }
+                catch (Exception e)
+                {
+                    return "Failed";
+                }          
+        }
+    }
+
+    public class EmailServiceInternal : EbBaseService
+    {
+        public EmailServiceInternal(IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_mqp, _mqc) { }
         public async Task<object> PostAsync(EmailServicesMqRequest request)
         {
 
@@ -36,4 +57,5 @@ namespace ExpressBase.ServiceStack
             return null;
         }
     }
+
 }
