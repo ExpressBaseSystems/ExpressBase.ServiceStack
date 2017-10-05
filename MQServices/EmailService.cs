@@ -25,37 +25,38 @@ namespace ExpressBase.ServiceStack
                     return "Failed";
                 }          
         }
-    }
-
-    public class EmailServiceInternal : EbBaseService
-    {
-        public EmailServiceInternal(IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_mqp, _mqc) { }
-        public async Task<object> PostAsync(EmailServicesMqRequest request)
+        public class EmailServiceInternal : EbBaseService
         {
-
-            var emailMessage = new MimeMessage();
-
-            emailMessage.From.Add(new MailboxAddress("EXPRESSbase", "info@expressbase.com"));
-            emailMessage.To.Add(new MailboxAddress("", request.To));
-            emailMessage.Subject = request.Subject;
-            emailMessage.Body = new TextPart("plain") { Text = request.Message };
-            try
+            public EmailServiceInternal(IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_mqp, _mqc) { }
+            public string Post(EmailServicesMqRequest request)
             {
-                using (var client = new SmtpClient())
+
+                var emailMessage = new MimeMessage();
+
+                emailMessage.From.Add(new MailboxAddress("EXPRESSbase", "info@expressbase.com"));
+                emailMessage.To.Add(new MailboxAddress("", request.To));
+                emailMessage.Subject = request.Subject;
+                emailMessage.Body = new TextPart("plain") { Text = request.Message };
+                try
                 {
-                    client.LocalDomain = "www.expressbase.com";
-                    await client.ConnectAsync("smtp.gmail.com", 465, true).ConfigureAwait(false);
-                    await client.AuthenticateAsync(new System.Net.NetworkCredential() { UserName = "expressbasesystems@gmail.com", Password = "ebsystems" }).ConfigureAwait(false);
-                    await client.SendAsync(emailMessage).ConfigureAwait(false);
-                    await client.DisconnectAsync(true).ConfigureAwait(false);
+                    using (var client = new SmtpClient())
+                    {
+                        client.LocalDomain = "www.expressbase.com";
+                        client.Connect("smtp.gmail.com", 465, true);
+                        client.Authenticate(new System.Net.NetworkCredential() { UserName = "expressbasesystems@gmail.com", Password = "ebsystems" });
+                        client.Send(emailMessage);
+                        client.Disconnect(true);
+                    }
                 }
+                catch (Exception e)
+                {
+                    return e.Message;
+                }
+                return null;
             }
-            catch (Exception e)
-            {
-                return e;
-            }
-            return null;
         }
     }
+
+   
 
 }
