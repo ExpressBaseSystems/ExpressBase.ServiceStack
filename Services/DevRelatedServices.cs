@@ -21,7 +21,7 @@ namespace ExpressBase.ServiceStack
                 string sql = "";
                 if (request.id > 0)
                 {
-                    sql = "SELECT id, applicationname FROM eb_applications WHERE id = @ id";
+                    sql = "SELECT * FROM eb_applications WHERE id = @id";
                     
                 }
                 else
@@ -32,13 +32,19 @@ namespace ExpressBase.ServiceStack
 
                 var dt = this.TenantDbFactory.ObjectsDB.DoQuery(sql, parameters);
 
-                Dictionary<int, object> Dict = new Dictionary<int, object>();
-
-                foreach (var dr in dt.Rows)
+                Dictionary<string, object> Dict = new Dictionary<string, object>();
+                if (dt.Rows.Count > 1)
                 {
-                    Dict.Add(Convert.ToInt32(dr[0]), dr[1]);
+                    foreach (var dr in dt.Rows)
+                    {
+                        Dict.Add(dr[0].ToString(), dr[1]);
+                    }
                 }
-
+                else
+                {
+                    Dict.Add("applicationname", dt.Rows[0][1]);
+                    Dict.Add("description", dt.Rows[0][2]);
+                }
                 resp.Data = Dict;
 
             }
@@ -51,10 +57,19 @@ namespace ExpressBase.ServiceStack
             {
                if(!string.IsNullOrEmpty(request.Colvalues["applicationname"].ToString()))
                 {
-                    string sql = "INSERT INTO eb_applications (applicationname, description) VALUES (@applicationname, @description) RETURNING id";
-
+                    string sql = "";
+                    if (request.Id > 0)
+                    {
+                         sql = "UPDATE eb_applications SET applicationname = @applicationname, description= @description WHERE id = @id RETURNING id";
+                    }
+                    else
+                    {
+                         sql = "INSERT INTO eb_applications (applicationname, description) VALUES (@applicationname, @description) RETURNING id";
+                    }
+                    
                     DbParameter[] parameters = { this.TenantDbFactory.ObjectsDB.GetNewParameter("applicationname", System.Data.DbType.String, request.Colvalues["applicationname"]),
-                            this.TenantDbFactory.ObjectsDB.GetNewParameter("description", System.Data.DbType.String, request.Colvalues["description"])
+                            this.TenantDbFactory.ObjectsDB.GetNewParameter("description", System.Data.DbType.String, request.Colvalues["description"]),
+                            this.TenantDbFactory.ObjectsDB.GetNewParameter("id", System.Data.DbType.Int32, request.Id)
                             };
 
                     var dt = this.TenantDbFactory.ObjectsDB.DoQuery(sql, parameters);
