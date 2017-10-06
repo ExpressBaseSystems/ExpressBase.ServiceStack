@@ -48,7 +48,7 @@ namespace ExpressBase.ServiceStack
         {
             this.Redis = c.Resolve<IRedisClientsManager>().GetClient() as RedisClient;
 
-            this.TenantId = HostContext.RequestContext.Items["TenantAccountId"].ToString();
+            this.TenantId = (HostContext.RequestContext.Items.Contains("TenantAccountId")) ? HostContext.RequestContext.Items["TenantAccountId"].ToString() : "expressbase"; // check the security issue
 
             if (this.TenantId != null)
             {
