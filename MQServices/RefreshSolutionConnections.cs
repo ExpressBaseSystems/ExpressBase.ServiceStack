@@ -1,7 +1,6 @@
 ﻿using ExpressBase.Common;
 using ExpressBase.Common.Connections;
 using ExpressBase.Common.Data;
-using ExpressBase.Objects.Objects.TenantConnectionsRelated;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ServiceStack;
 using System;
@@ -12,7 +11,7 @@ namespace ExpressBase.ServiceStack.MQServices
     [Restrict(InternalOnly = true)]
     public class RefreshSolutionConnections : EbBaseService
     {
-        public bool Post(RefreshSolutionConnectionsRequests req)
+        public bool Post(RefreshSolutionConnectionsMqRequest req)
         {
             using (var con = new TenantDbFactory(req.TenantAccountId, this.Redis).DataDB.GetNewConnection() as Npgsql.NpgsqlConnection)
             {
@@ -38,7 +37,7 @@ namespace ExpressBase.ServiceStack.MQServices
                             cons.FilesDbConnection = EbSerializers.Json_Deserialize<EbFilesDbConnection>(dr["con_obj"].ToString());
                         else if (dr["con_type"].ToString() == EbConnectionTypes.EbLOGS.ToString())
                             cons.LogsDbConnection = EbSerializers.Json_Deserialize<EbLogsDbConnection>(dr["con_obj"].ToString());
-                        else if (dr["con_type"].ToString() == EbConnectionTypes.Email.ToString())
+                        else if (dr["con_type"].ToString() == EbConnectionTypes.SMTP.ToString())
                             cons.EmailConnection = EbSerializers.Json_Deserialize<SMTPConnection>(dr["con_obj"].ToString());
 
                         // ... More to come

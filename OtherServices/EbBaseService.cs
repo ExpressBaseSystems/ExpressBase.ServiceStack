@@ -22,11 +22,12 @@ namespace ExpressBase.Objects.ServiceStack_Artifacts
         protected TenantDbFactory TenantDbFactory { get; private set; }
 
         protected  RestClient RestClient  { get; private set; }
-
-        //protected RedisMessageQueueClient MessageQueueClient { get; private set; }
-        //protected RedisMessageProducer MessageProducer2 { get; private set; }
+        
         protected RabbitMqProducer MessageProducer3 { get; private set; }
+
         protected RabbitMqQueueClient MessageQueueClient { get; private set; }
+
+        protected RedisServerEvents ServerEvents { get; private set; }
 
         public EbBaseService() { }
 
@@ -53,6 +54,13 @@ namespace ExpressBase.Objects.ServiceStack_Artifacts
             this.MessageQueueClient = _mqc as RabbitMqQueueClient;
         }
 
+        public EbBaseService(IMessageProducer _mqp, IMessageQueueClient _mqc, IServerEvents _se)
+        {
+            this.MessageProducer3 = _mqp as RabbitMqProducer;
+            this.MessageQueueClient = _mqc as RabbitMqQueueClient;
+            this.ServerEvents = _se as RedisServerEvents;
+        }
+
         public EbBaseService(ITenantDbFactory _dbf, IMessageProducer _mqp)
         {
             this.TenantDbFactory = _dbf as TenantDbFactory;
@@ -65,23 +73,9 @@ namespace ExpressBase.Objects.ServiceStack_Artifacts
             this.MessageProducer3 = _mqp as RabbitMqProducer;
             this.MessageQueueClient = _mqc as RabbitMqQueueClient;
         }
-
-
-        //public EbBaseService(IMessageQueueClient _mqc, IMessageProducer _mqp)
-        //{
-        //    this.MessageQueueClient = _mqc as RedisMessageQueueClient;
-        //    this.MessageProducer2 = _mqp as RedisMessageProducer;
-        //}
-
         
-        //public EbBaseService(ITenantDbFactory _dbf, IMessageQueueClient _mqc, IMessageProducer _mqp)
-        //{
-        //    this.TenantDbFactory = _dbf as TenantDbFactory;
-        //    this.MessageQueueClient = _mqc as RedisMessageQueueClient;
-        //    this.MessageProducer2 = _mqp as RedisMessageProducer;
-        //}
-
         private static Dictionary<string, string> _infraDbSqlQueries;
+
         public static Dictionary<string, string> InfraDbSqlQueries
         {
             get
