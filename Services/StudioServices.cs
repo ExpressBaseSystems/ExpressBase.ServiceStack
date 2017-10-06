@@ -111,7 +111,13 @@ WHERE
 ORDER BY
     obj_name";
 
-
+        private const string Query_StatusHistory = @"
+SELECT 
+    eb_obj_ver_id, status, uid, ts, changelog 
+FROM
+    eb_objects_status EOS, eb_objects_ver EOV
+WHERE
+    eb_obj_ver_id = EOV.id AND EOV.refid = @refid";
 
         #endregion
 
@@ -225,7 +231,7 @@ ORDER BY
                 var _ebObject = (new EbObjectWrapper
                 {
                     Id = Convert.ToInt32(dr[0]),
-                    Name = dr[1].ToString()+ dr[7].ToString(),
+                    Name = dr[1].ToString() + dr[7].ToString(),
                     EbObjectType = (EbObjectType)Convert.ToInt32(dr[2]),
                     Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[3]),
                     Description = dr[4].ToString(),
@@ -333,7 +339,7 @@ ORDER BY
                     Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[3]),
                     Description = dr[4].ToString(),
                     ChangeLog = dr[5].ToString(),
-                    CommitTs = Convert.ToDateTime((dr[6].ToString())==""?DateTime.MinValue: dr[6]),
+                    CommitTs = Convert.ToDateTime((dr[6].ToString()) == "" ? DateTime.MinValue : dr[6]),
                     CommitUname = dr[7].ToString(),
                     RefId = dr[8].ToString(),
                     VersionNumber = dr[9].ToString(),
@@ -350,6 +356,26 @@ ORDER BY
             return new EbObjectExploreObjectResponse { Data = f };
         }
 
+        [CompressResponse]
+        public object Get(EbObjectStatusHistoryRequest request)
+        { // Get All latest committed versions of this Object Type without json
+            parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@refid", System.Data.DbType.String, request.RefId));
+            var dt = this.TenantDbFactory.ObjectsDB.DoQuery(Query_StatusHistory, parameters.ToArray());
+
+            foreach (EbDataRow dr in dt.Rows)
+            {
+                var _ebObject = (new EbObjectWrapper
+                {
+                    Id = Convert.ToInt32(dr[0]),
+                    Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[1]),
+                    CommitUname = dr[2].ToString(),
+                    CommitTs = Convert.ToDateTime(dr[3]),
+                    ChangeLog = dr[4].ToString()
+                });
+                f.Add(_ebObject);
+            }
+            return new EbObjectStatusHistoryResponse { Data = f };
+        }
         #region SaveOrCommit Queries
 
         private const string Query_FirstCommit = @"
@@ -794,6 +820,35 @@ WHERE
 
                 return new EbObjectRunSqlFunctionResponse() { RefId = refId };
             };
+        }
+
+        public void Post(EbObjectChangeStatusRequest request)
+        {
+            ILog log = LogManager.GetLogger(GetType());
+            log.Info("#DS Change status");
+
+            try
+            {
+                using (var con = this.TenantDbFactory.ObjectsDB.GetNewConnection())
+                {
+                    con.Open();
+                    DbCommand cmd = null;
+                    log.Info("#DS insert 1 -- con open");
+
+                    string sql = "SELECT eb_objects_change_status(@id, @status, @commit_uid, @obj_changelog)";
+                    cmd = this.TenantDbFactory.ObjectsDB.GetNewCommand(con, sql);
+
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.String, request.RefId));
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@status", System.Data.DbType.Int32, (int) request.Status));
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@commit_uid", System.Data.DbType.Int32, request.UserId));
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_changelog", System.Data.DbType.String, request.ChangeLog));
+                    cmd.ExecuteScalar();
+                }
+            }
+            catch (Exception e)
+            {
+
+            }
         }
     }
 }
