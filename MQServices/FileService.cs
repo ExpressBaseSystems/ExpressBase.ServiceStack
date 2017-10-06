@@ -15,7 +15,7 @@ namespace ExpressBase.ServiceStack.MQServices
 {
     public class FileService : EbBaseService
     {
-        public FileService(IMessageProducer _mqp, IMessageQueueClient _mqc, IServerEvents _se) : base(_mqp, _mqc, _se) { }
+        public FileService(IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_mqp, _mqc) { }
 
         //[Route("/event-stream/null")]
         //public void Post(UploadFileControllerResponse request)
@@ -26,20 +26,19 @@ namespace ExpressBase.ServiceStack.MQServices
         [Authenticate]
         public string Post(UploadFileRequest request)
         {
+            request.IsAsync = false;
             if (request.MetaData == null && request.MetaDataPair != null)
             {
+                request.MetaData = new BsonDocument();
 
-                request.MetaData = new MongoDB.Bson.BsonDocument();
-
-                request.MetaData.Add(request.MetaDataPair as IDictionary);
+                request.MetaData.AddRange(request.MetaDataPair as IDictionary);
             }
-
 
             if (request.IsAsync)
             {
                 try
                 {
-                    this.MessageProducer3.Publish(new UploadFileMqRequest { FileName = request.FileName, ByteArray = request.ByteArray, TenantAccountId = request.TenantAccountId, MetaData = new BsonDocument(request.MetaData) , UserId = request.UserId});
+                    this.MessageProducer3.Publish(new UploadFileMqRequest { FileName = request.FileName, ByteArray = request.ByteArray, TenantAccountId = request.TenantAccountId, MetaData = new BsonDocument(request.MetaData), UserId = request.UserId });
                     return "Successfully Uploaded to MQ";
                 }
                 catch (Exception e)
@@ -47,7 +46,8 @@ namespace ExpressBase.ServiceStack.MQServices
                     return "Failed to Uplaod to MQ";
                 }
             }
-            else
+
+            else if (!request.IsAsync)
             {
                 string Id = (new TenantDbFactory(request.TenantAccountId, this.Redis)).FilesDB.UploadFile(request.FileName, request.ByteArray, request.MetaData).ToString();
 
@@ -55,12 +55,31 @@ namespace ExpressBase.ServiceStack.MQServices
 
                 return Id;
             }
+
+            return "Uploading Failed check the data";
         }
 
         [Authenticate]
         public byte[] Post(DownloadFileRequest request)
         {
-            return (new TenantDbFactory(request.TenantAccountId, this.Redis)).FilesDB.DownloadFile(request.ObjectId);
+            var FileNameParts = request.FileName.Substring(0, request.FileName.IndexOf('.'))?.Split('_');
+            if (FileNameParts.Length == 1)
+            {
+                if (FileNameParts[0] != null)
+                {
+                    return (new TenantDbFactory(request.TenantAccountId, this.Redis)).FilesDB.DownloadFile(new ObjectId(FileNameParts[0]));
+                }
+                else { return (new byte[0]);}
+            }
+
+            else if (FileNameParts.Length == 2 || FileNameParts[0] != null)
+            {
+                return (new TenantDbFactory(request.TenantAccountId, this.Redis)).FilesDB.DownloadFile(request.FileName);
+            }
+            else
+            {
+                return (new byte[0]);
+            }
         }
 
         [Authenticate]
@@ -83,7 +102,7 @@ namespace ExpressBase.ServiceStack.MQServices
         [Restrict(InternalOnly = true)]
         public class FileServiceInternal : EbBaseService
         {
-            public FileServiceInternal(IMessageProducer _mqp, IMessageQueueClient _mqc, IServerEvents _se) : base(_mqp, _mqc, _se) { }
+            public FileServiceInternal(IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_mqp, _mqc) { }
 
             readonly List<string> ImageSizes = new[] { "100x100", "360x360", "640x640" }.ToList();
 
@@ -92,13 +111,14 @@ namespace ExpressBase.ServiceStack.MQServices
                 try
                 {
                     var id = (new TenantDbFactory(request.TenantAccountId, this.Redis)).FilesDB.UploadFile(request.FileName, request.ByteArray, request.MetaData);
-                    
+
                     //this.ServerEvents.NotifyUserId(request.UserId.ToString(), "FileUpload", new UploadFileControllerResponse { objId = id.ToString(), Uploaded = "OK"});
                 }
-                catch (Exception e) {
+                catch (Exception e)
+                {
 
                 }
-                
+
                 return null;
             }
 
@@ -108,7 +128,6 @@ namespace ExpressBase.ServiceStack.MQServices
 
                 ms.Position = 0;
 
-                var fileName = request.ObjectId + ".png";
                 try
                 {
                     using (Image img = Image.FromStream(ms))
@@ -117,15 +136,18 @@ namespace ExpressBase.ServiceStack.MQServices
                         {
                             UploadFileMqRequest uploadFileRequest = new UploadFileMqRequest();
 
-                            var filename = request.FileName.Split('.');
+                            uploadFileRequest.FileName = request.ObjectId + "_" + size + ".png";
 
-                            uploadFileRequest.FileName = fileName[0] + size + ".png";
                             uploadFileRequest.MetaData = new BsonDocument(request.MetaData);
+
                             uploadFileRequest.TenantAccountId = request.TenantAccountId;
+
                             uploadFileRequest.UserId = request.UserId;
 
                             var parts = size?.Split('x');
+
                             int width = img.Width;
+
                             int height = img.Height;
 
                             if (parts != null && parts.Length > 0)
@@ -140,6 +162,7 @@ namespace ExpressBase.ServiceStack.MQServices
                             ImgStream.Read(request.ImageByte, 0, request.ImageByte.Length);
 
                             uploadFileRequest.ByteArray = request.ImageByte;
+
                             this.MessageProducer3.Publish(uploadFileRequest);
                         }
                     }
