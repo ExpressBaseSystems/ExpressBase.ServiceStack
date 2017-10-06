@@ -1,6 +1,4 @@
 ﻿using ExpressBase.Common.Data;
-using ExpressBase.Objects.Objects.MQRelated;
-using ExpressBase.Objects.Objects.TenantConnectionsRelated;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ExpressBase.ServiceStack.Auth0;
 using Funq;
@@ -9,7 +7,6 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using RestSharp;
 using ServiceStack;
 using ServiceStack.Auth;
 using ServiceStack.Logging;
@@ -171,6 +168,11 @@ namespace ExpressBase.ServiceStack
 
             container.Register<ITenantDbFactory>(c => new TenantDbFactory(c)).ReusedWithin(ReuseScope.Request);
 
+            //container.Register<IServerEvents>(c => new RedisServerEvents(c.Resolve<IRedisClientsManager>())); 
+
+            //container.Resolve<IServerEvents>().Start();
+
+
             //Message Queue
             //var redisConnectionStringMq = string.Format("redis://{0}@{1}:{2}?ssl=true&db=1",
             //    EbLiveSettings.RedisPassword, EbLiveSettings.RedisServer, EbLiveSettings.RedisPort);
@@ -194,7 +196,7 @@ namespace ExpressBase.ServiceStack
             var mqServer = new RabbitMqServer(rabitFactory);
             mqServer.RetryCount = 1;
             mqServer.RegisterHandler<EmailServicesMqRequest>(base.ExecuteMessage);
-            mqServer.RegisterHandler<RefreshSolutionConnectionsRequests>(base.ExecuteMessage);
+            mqServer.RegisterHandler<RefreshSolutionConnectionsMqRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<UploadFileMqRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<ImageResizeMqRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<SlackPostMqRequest>(base.ExecuteMessage);
@@ -211,6 +213,8 @@ namespace ExpressBase.ServiceStack
             {
                 return mqServer.CreateMessageQueueClient() as RabbitMqQueueClient;
             });
+
+
 
             //Add a request filter to check if the user has a session initialized
             this.GlobalRequestFilters.Add((req, res, requestDto) =>

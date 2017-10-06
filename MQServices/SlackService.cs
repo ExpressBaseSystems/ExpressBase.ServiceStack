@@ -1,20 +1,11 @@
 ﻿using ExpressBase.Common;
-using ExpressBase.Objects.Objects.TenantConnectionsRelated;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using Newtonsoft.Json;
 using RestSharp;
 using ServiceStack;
 using ServiceStack.Messaging;
-using ServiceStack.Pcl;
 using System;
-using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.Data.Common;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ExpressBase.ServiceStack.MQServices
 {
@@ -57,10 +48,10 @@ namespace ExpressBase.ServiceStack.MQServices
         {
             public string Post(SlackAuthMqRequest req)
             {
+                TenantDbFactory dbFactory = new TenantDbFactory(req.TenantAccountId, this.Redis);
+
                 if (req.IsNew)
                 {
-                    TenantDbFactory dbFactory = new TenantDbFactory(req.TenantAccountId, this.Redis);
-
                     try
                     {
                         string sql = "UPDATE eb_users SET slackjson = @slackjson WHERE id = @id RETURNING id";

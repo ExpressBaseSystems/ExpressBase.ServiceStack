@@ -15,20 +15,31 @@ namespace ExpressBase.ServiceStack.MQServices
 {
     public class FileService : EbBaseService
     {
-        public FileService(IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_mqp, _mqc) { }
+        public FileService(IMessageProducer _mqp, IMessageQueueClient _mqc, IServerEvents _se) : base(_mqp, _mqc, _se) { }
+
+        //[Route("/event-stream/null")]
+        //public void Post(UploadFileControllerResponse request)
+        //{
+
+        //}
 
         [Authenticate]
         public string Post(UploadFileRequest request)
         {
-            request.MetaData = new MongoDB.Bson.BsonDocument();
+            if (request.MetaData == null && request.MetaDataPair != null)
+            {
 
-            request.MetaData.Add(request.MetaDataPair as IDictionary);
+                request.MetaData = new MongoDB.Bson.BsonDocument();
+
+                request.MetaData.Add(request.MetaDataPair as IDictionary);
+            }
+
 
             if (request.IsAsync)
             {
                 try
                 {
-                    this.MessageProducer3.Publish(new UploadFileMqRequest { FileName = request.FileName, ByteArray = request.ByteArray, TenantAccountId = request.TenantAccountId, MetaData = new BsonDocument(request.MetaData) });
+                    this.MessageProducer3.Publish(new UploadFileMqRequest { FileName = request.FileName, ByteArray = request.ByteArray, TenantAccountId = request.TenantAccountId, MetaData = new BsonDocument(request.MetaData) , UserId = request.UserId});
                     return "Successfully Uploaded to MQ";
                 }
                 catch (Exception e)
@@ -72,20 +83,27 @@ namespace ExpressBase.ServiceStack.MQServices
         [Restrict(InternalOnly = true)]
         public class FileServiceInternal : EbBaseService
         {
-            public FileServiceInternal(IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_mqp, _mqc) { }
+            public FileServiceInternal(IMessageProducer _mqp, IMessageQueueClient _mqc, IServerEvents _se) : base(_mqp, _mqc, _se) { }
 
-            readonly List<string> ImageSizes = new[] { "320x480", "640x960", "640x1136", "768x1024", "1536x2048" }.ToList();
+            readonly List<string> ImageSizes = new[] { "100x100", "360x360", "640x640" }.ToList();
 
             public string Post(UploadFileMqRequest request)
             {
-                var id = (new TenantDbFactory(request.TenantAccountId, this.Redis)).FilesDB.UploadFile(request.FileName, request.ByteArray, request.MetaData);
+                try
+                {
+                    var id = (new TenantDbFactory(request.TenantAccountId, this.Redis)).FilesDB.UploadFile(request.FileName, request.ByteArray, request.MetaData);
+                    
+                    //this.ServerEvents.NotifyUserId(request.UserId.ToString(), "FileUpload", new UploadFileControllerResponse { objId = id.ToString(), Uploaded = "OK"});
+                }
+                catch (Exception e) {
+
+                }
+                
                 return null;
             }
 
             public string Post(ImageResizeMqRequest request)
             {
-                
-
                 MemoryStream ms = new MemoryStream(request.ImageByte);
 
                 ms.Position = 0;
@@ -98,8 +116,10 @@ namespace ExpressBase.ServiceStack.MQServices
                         foreach (string size in ImageSizes)
                         {
                             UploadFileMqRequest uploadFileRequest = new UploadFileMqRequest();
-                            
-                            uploadFileRequest.FileName = size +"_"+ request.FileName;
+
+                            var filename = request.FileName.Split('.');
+
+                            uploadFileRequest.FileName = fileName[0] + size + ".png";
                             uploadFileRequest.MetaData = new BsonDocument(request.MetaData);
                             uploadFileRequest.TenantAccountId = request.TenantAccountId;
                             uploadFileRequest.UserId = request.UserId;

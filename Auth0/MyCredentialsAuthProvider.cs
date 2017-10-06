@@ -31,7 +31,6 @@ namespace ExpressBase.ServiceStack.Auth0
 
             var request = authService.Request.Dto as Authenticate;
 
-
             var cid = request.Meta.ContainsKey("cid") ? request.Meta["cid"] : string.Empty;
             var socialId = request.Meta.ContainsKey("socialId") ? request.Meta["socialId"] : string.Empty;
 
@@ -44,18 +43,18 @@ namespace ExpressBase.ServiceStack.Auth0
             }
             else
             {
-                if (cid == "expressbase")
-                {
-                    log.Info("for tenant login");
-                    _authUser = (string.IsNullOrEmpty(socialId)) ? User.GetInfraUser(TenantDbFactory.DataDB, UserName, password) : User.GetInfraUserViaSocial(TenantDbFactory.DataDB, UserName, socialId);
-                    log.Info("#Eb reached 1");
-                }
-                else
-                {
-                    log.Info("for user login");
+                //if (cid == "expressbase")
+                //{
+                //    log.Info("for tenant login");
+                //    _authUser = (string.IsNullOrEmpty(socialId)) ? User.GetInfraUser(TenantDbFactory.DataDB, UserName, password) : User.GetInfraUserViaSocial(TenantDbFactory.DataDB, UserName, socialId);
+                //    log.Info("#Eb reached 1");
+                //}
+                //else
+                //{
+                    //log.Info("for user login");
                     _authUser = User.GetDetails(TenantDbFactory.DataDB, UserName, password);
                     log.Info("#Eb reached 2");
-                }
+                //}
             }
 
             if (_authUser != null)
