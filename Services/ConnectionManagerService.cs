@@ -32,19 +32,19 @@ namespace ExpressBase.ServiceStack.Services
                 if (resp.EBSolutionConnections.ObjectsDbConnection != null)
                     resp.EBSolutionConnections.ObjectsDbConnection.Password = "EBDummyPassword";
 
-                if (resp.EBSolutionConnections.EmailConnection != null)
-                    resp.EBSolutionConnections.EmailConnection.Password = "EBDummyPassword";
+                if (resp.EBSolutionConnections.SMTPConnection != null)
+                    resp.EBSolutionConnections.SMTPConnection.Password = "EBDummyPassword";
             }
 
             else if (req.ConnectionType == (int)EbConnectionTypes.SMTP)
             {
                 EbSolutionConnections dummy = this.Redis.Get<EbSolutionConnections>(string.Format("EbSolutionConnections_{0}", req.TenantAccountId));
 
-                resp.EBSolutionConnections.EmailConnection = new SMTPConnection();
-                resp.EBSolutionConnections.EmailConnection = dummy.EmailConnection;
+                resp.EBSolutionConnections.SMTPConnection = new SMTPConnection();
+                resp.EBSolutionConnections.SMTPConnection = dummy.SMTPConnection;
 
-                if (resp.EBSolutionConnections.EmailConnection != null)
-                    resp.EBSolutionConnections.EmailConnection.Password = "EBDummyPassword";
+                if (resp.EBSolutionConnections.SMTPConnection != null)
+                    resp.EBSolutionConnections.SMTPConnection.Password = "EBDummyPassword";
             }
 
             else if (req.ConnectionType == (int)EbConnectionTypes.EbDATA)
@@ -98,26 +98,33 @@ namespace ExpressBase.ServiceStack.Services
                             this.TenantDbFactory.DataDB.GetNewParameter("solution_id", System.Data.DbType.String, request.TenantAccountId),
                             this.TenantDbFactory.DataDB.GetNewParameter("nick_name", System.Data.DbType.String, request.SMTPConnection.NickName),
                             this.TenantDbFactory.DataDB.GetNewParameter("con_obj", NpgsqlTypes.NpgsqlDbType.Json,EbSerializers.Json_Serialize(request.SMTPConnection) )};
-                    var iCount = TenantDbFactory.DataDB.DoNonQuery(sql, parameters);
+                    var iCount = TenantDbFactory.DataDB.DoNonQuery(sql, parameters);   
+                }
+
+                base.MessageProducer3.Publish(new RefreshSolutionConnectionsMqRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
+            }
+
+            else if (!request.IsNew)
+            {
+                EbSolutionConnections CurrentConnections = this.Redis.Get<EbSolutionConnections>(string.Format("EbSolutionConnections_{0}", request.TenantAccountId));
+
+                if (request.SMTPConnection.Password == "EBDummyPassword") { request.SMTPConnection.Password = CurrentConnections.SMTPConnection.Password; }
+
+                if (request.SMTPConnection.ToJson() != CurrentConnections.SMTPConnection.ToJson())
+                {
+                    //    using (var con = TenantDbFactory.DataDB.GetNewConnection())
+                    //    {
+                    //        string sql = "INSERT INTO eb_connections (con_type, solution_id, nick_name, con_obj) VALUES (@con_type, @solution_id, @nick_name, @con_obj)";
+                    //        DbParameter[] parameters = { this.TenantDbFactory.DataDB.GetNewParameter("con_type", System.Data.DbType.String, EbConnectionTypes.SMTP),
+                    //            this.TenantDbFactory.DataDB.GetNewParameter("solution_id", System.Data.DbType.String, request.TenantAccountId),
+                    //            this.TenantDbFactory.DataDB.GetNewParameter("nick_name", System.Data.DbType.String, request.SMTPConnection.NickName),
+                    //            this.TenantDbFactory.DataDB.GetNewParameter("con_obj", NpgsqlTypes.NpgsqlDbType.Json,EbSerializers.Json_Serialize(request.SMTPConnection) )};
+                    //        var iCount = TenantDbFactory.DataDB.DoNonQuery(sql, parameters);
 
                     base.MessageProducer3.Publish(new RefreshSolutionConnectionsMqRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
                 }
             }
 
-            //else if (!request.IsNew)
-            //{
-            //    using (var con = TenantDbFactory.DataDB.GetNewConnection())
-            //    {
-            //        string sql = "INSERT INTO eb_connections (con_type, solution_id, nick_name, con_obj) VALUES (@con_type, @solution_id, @nick_name, @con_obj)";
-            //        DbParameter[] parameters = { this.TenantDbFactory.DataDB.GetNewParameter("con_type", System.Data.DbType.String, EbConnectionTypes.SMTP),
-            //                this.TenantDbFactory.DataDB.GetNewParameter("solution_id", System.Data.DbType.String, request.TenantAccountId),
-            //                this.TenantDbFactory.DataDB.GetNewParameter("nick_name", System.Data.DbType.String, request.SMTPConnection.NickName),
-            //                this.TenantDbFactory.DataDB.GetNewParameter("con_obj", NpgsqlTypes.NpgsqlDbType.Json,EbSerializers.Json_Serialize(request.SMTPConnection) )};
-            //        var iCount = TenantDbFactory.DataDB.DoNonQuery(sql, parameters);
-
-            //        base.MessageProducer3.Publish(new RefreshSolutionConnectionsMqRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
-            //    }
-            //}
         }
 
         [Authenticate]
@@ -135,25 +142,32 @@ namespace ExpressBase.ServiceStack.Services
                             this.TenantDbFactory.DataDB.GetNewParameter("nick_name", System.Data.DbType.String, request.DataDBConnection.DatabaseName),
                             this.TenantDbFactory.DataDB.GetNewParameter("con_obj", NpgsqlTypes.NpgsqlDbType.Json,EbSerializers.Json_Serialize(request.DataDBConnection) )};
                     var iCount = TenantDbFactory.DataDB.DoNonQuery(sql, parameters);
+                }
+
+                base.MessageProducer3.Publish(new RefreshSolutionConnectionsMqRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
+            }
+
+            else if (!request.IsNew)
+            {
+                EbSolutionConnections CurrentConnections = this.Redis.Get<EbSolutionConnections>(string.Format("EbSolutionConnections_{0}", request.TenantAccountId));
+
+                if (request.DataDBConnection.Password == "EBDummyPassword") { request.DataDBConnection.Password = CurrentConnections.DataDbConnection.Password; }
+
+                if (request.DataDBConnection.ToJson() != CurrentConnections.DataDbConnection.ToJson())
+                {
+                    //using (var con = TenantDbFactory.DataDB.GetNewConnection())
+                    //{
+                    //    string sql = "INSERT INTO eb_connections (con_type, solution_id, nick_name, con_obj) VALUES (@con_type, @solution_id, @nick_name, @con_obj)";
+                    //    DbParameter[] parameters = { this.TenantDbFactory.DataDB.GetNewParameter("con_type", System.Data.DbType.String, EbConnectionTypes.EbDATA),
+                    //        this.TenantDbFactory.DataDB.GetNewParameter("solution_id", System.Data.DbType.String, request.TenantAccountId),
+                    //        this.TenantDbFactory.DataDB.GetNewParameter("nick_name", System.Data.DbType.String, request.DataDBConnection.DatabaseName),
+                    //        this.TenantDbFactory.DataDB.GetNewParameter("con_obj", NpgsqlTypes.NpgsqlDbType.Json,EbSerializers.Json_Serialize(request.DataDBConnection) )};
+                    //    var iCount = TenantDbFactory.DataDB.DoNonQuery(sql, parameters);
+                    //}
 
                     base.MessageProducer3.Publish(new RefreshSolutionConnectionsMqRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
                 }
             }
-
-            //else if (!request.IsNew)
-            //{
-            //using (var con = TenantDbFactory.DataDB.GetNewConnection())
-            //{
-            //    string sql = "INSERT INTO eb_connections (con_type, solution_id, nick_name, con_obj) VALUES (@con_type, @solution_id, @nick_name, @con_obj)";
-            //    DbParameter[] parameters = { this.TenantDbFactory.DataDB.GetNewParameter("con_type", System.Data.DbType.String, EbConnectionTypes.EbDATA),
-            //                this.TenantDbFactory.DataDB.GetNewParameter("solution_id", System.Data.DbType.String, request.TenantAccountId),
-            //                this.TenantDbFactory.DataDB.GetNewParameter("nick_name", System.Data.DbType.String, request.DataDBConnection.DatabaseName),
-            //                this.TenantDbFactory.DataDB.GetNewParameter("con_obj", NpgsqlTypes.NpgsqlDbType.Json,EbSerializers.Json_Serialize(request.DataDBConnection) )};
-            //    var iCount = TenantDbFactory.DataDB.DoNonQuery(sql, parameters);
-
-            //    base.MessageProducer3.Publish(new RefreshSolutionConnectionsMqRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
-            //}
-            //}
         }
 
         [Authenticate]
@@ -170,10 +184,30 @@ namespace ExpressBase.ServiceStack.Services
                             this.TenantDbFactory.DataDB.GetNewParameter("solution_id", System.Data.DbType.String, request.TenantAccountId),
                             this.TenantDbFactory.DataDB.GetNewParameter("con_obj", NpgsqlTypes.NpgsqlDbType.Json,EbSerializers.Json_Serialize(request.FilesDBConnection) )};
                     var iCount = TenantDbFactory.DataDB.DoNonQuery(sql, parameters);
+                }
+                base.MessageProducer3.Publish(new RefreshSolutionConnectionsMqRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
+            }
+
+            else if (!request.IsNew)
+            {
+                EbSolutionConnections CurrentConnections = this.Redis.Get<EbSolutionConnections>(string.Format("EbSolutionConnections_{0}", request.TenantAccountId));
+
+                if (request.FilesDBConnection.ToJson() != CurrentConnections.FilesDbConnection.ToJson())
+                {
+                    //using (var con = TenantDbFactory.DataDB.GetNewConnection())
+                    //{
+                    //    string sql = "INSERT INTO eb_connections (con_type, solution_id, nick_name, con_obj) VALUES (@con_type, @solution_id, @nick_name, @con_obj)";
+                    //    DbParameter[] parameters = { this.TenantDbFactory.DataDB.GetNewParameter("con_type", System.Data.DbType.String, EbConnectionTypes.EbDATA),
+                    //        this.TenantDbFactory.DataDB.GetNewParameter("solution_id", System.Data.DbType.String, request.TenantAccountId),
+                    //        this.TenantDbFactory.DataDB.GetNewParameter("nick_name", System.Data.DbType.String, request.DataDBConnection.DatabaseName),
+                    //        this.TenantDbFactory.DataDB.GetNewParameter("con_obj", NpgsqlTypes.NpgsqlDbType.Json,EbSerializers.Json_Serialize(request.DataDBConnection) )};
+                    //    var iCount = TenantDbFactory.DataDB.DoNonQuery(sql, parameters);
+                    //}
 
                     base.MessageProducer3.Publish(new RefreshSolutionConnectionsMqRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
                 }
             }
+
 
         }
 
