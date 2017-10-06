@@ -1,6 +1,7 @@
 ﻿
 using ExpressBase.Common;
 using ExpressBase.Common.Data;
+using ExpressBase.Common.Extensions;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ServiceStack;
 using ServiceStack.Auth;
@@ -40,7 +41,7 @@ namespace ExpressBase.ServiceStack.Auth0
             var _InfraDb = base.ResolveService<ITenantDbFactory>() as TenantDbFactory;
             DbParameter[] parameters = {
                 _InfraDb.DataDB.GetNewParameter("email", System.Data.DbType.String, request.Email),
-                _InfraDb.DataDB.GetNewParameter("pwd", System.Data.DbType.String, request.Password)
+                _InfraDb.DataDB.GetNewParameter("pwd", System.Data.DbType.String,(request.Password + request.Email).ToMD5Hash())
             };
             EbDataTable dt = _InfraDb.DataDB.DoQuery("INSERT INTO eb_users (email,pwd,u_token) VALUES ( @email,@pwd,md5( @email || now())) RETURNING id,u_token;", parameters);
 
