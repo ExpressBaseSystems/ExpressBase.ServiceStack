@@ -5,10 +5,9 @@ using ServiceStack.Messaging;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.IO;
-using ServiceStack.Text;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.IO;
 using System.Linq;
 
 namespace ExpressBase.ServiceStack.MQServices
@@ -111,9 +110,7 @@ namespace ExpressBase.ServiceStack.MQServices
                 try
                 {
                     var id = (new TenantDbFactory(request.TenantAccountId, this.Redis)).FilesDB.UploadFile(request.FileName, request.ByteArray, request.MetaData);
-
-                    //this.ServerEvents.NotifyUserId(request.UserId.ToString(), "FileUpload", new UploadFileControllerResponse { objId = id.ToString(), Uploaded = "OK"});
-                }
+}
                 catch (Exception e)
                 {
 
@@ -138,7 +135,9 @@ namespace ExpressBase.ServiceStack.MQServices
 
                             uploadFileRequest.FileName = request.ObjectId + "_" + size + ".png";
 
-                            uploadFileRequest.MetaData = new BsonDocument(request.MetaData);
+                            uploadFileRequest.MetaData = new BsonDocument();
+
+                            uploadFileRequest.MetaData = request.MetaData;
 
                             uploadFileRequest.TenantAccountId = request.TenantAccountId;
 

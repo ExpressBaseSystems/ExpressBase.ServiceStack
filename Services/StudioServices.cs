@@ -119,9 +119,17 @@ FROM
 WHERE
     eb_obj_ver_id = EOV.id AND EOV.refid = @refid";
 
+        private const string FetchLiveversionQuery = @"
+SELECT
+    EO.id, EO.obj_name, EO.obj_type, EO.obj_desc,
+    EOV.id, EOV.eb_objects_id, EOV.version_num, EOV.obj_changelog, EOV.commit_ts, EOV.commit_uid, EOV.obj_json, EOV.refid, EOS.status
+FROM
+    eb_objects_ver EOV, eb_objects_status EOS, eb_objects EO
+WHERE
+    EO.id = @id AND EOV.eb_objects_id = @id AND EOS.status = 3 AND EOS.eb_obj_ver_id = EOV.id";
         #endregion
 
-        List<EbObjectWrapper> f = new List<EbObjectWrapper>();
+       List<EbObjectWrapper> f = new List<EbObjectWrapper>();
         List<System.Data.Common.DbParameter> parameters = new List<System.Data.Common.DbParameter>();
 
         [CompressResponse]
@@ -376,6 +384,26 @@ WHERE
             }
             return new EbObjectStatusHistoryResponse { Data = f };
         }
+
+        [CompressResponse]
+        public object Get(EbObjectFetchLiveVersionRequest request)
+        {  // Fetch particular version with json of a particular Object
+
+            ILog log = LogManager.GetLogger(GetType());
+            parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.Int32, request.Id));
+            var dt = this.TenantDbFactory.ObjectsDB.DoQuery(FetchLiveversionQuery, parameters.ToArray());
+
+            foreach (EbDataRow dr in dt.Rows)
+            {
+                var _ebObject = (new EbObjectWrapper
+                {
+                    Json = dr[0].ToString()
+                });
+                f.Add(_ebObject);
+            }
+            return new EbObjectFetchLiveVersionResponse { Data = f };
+        }
+
         #region SaveOrCommit Queries
 
         private const string Query_FirstCommit = @"
