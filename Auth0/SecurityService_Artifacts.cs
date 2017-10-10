@@ -119,7 +119,7 @@ namespace ExpressBase.Objects.ServiceStack_Artifacts
             //Populate all matching fields from this session to your own custom User table
             var user = session.ConvertTo<User>();
             user.Id = (session as CustomUserSession).Uid;
-            user.ImageStr = !session.Email.IsNullOrEmpty()
+            user.Proimg = !session.Email.IsNullOrEmpty()
                 ? CreateGravatarUrl(session.Email, 64)
                 : null;
 
