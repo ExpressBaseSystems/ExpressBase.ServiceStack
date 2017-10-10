@@ -4,7 +4,6 @@ using ExpressBase.Common.Data;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ServiceStack;
 using ServiceStack.Messaging;
-using System;
 using System.Data.Common;
 
 namespace ExpressBase.ServiceStack.Services
@@ -68,19 +67,7 @@ namespace ExpressBase.ServiceStack.Services
                 if (resp.EBSolutionConnections.DataDbConnection != null)
                     resp.EBSolutionConnections.SMSConnection.Password = "EBDummyPassword";
             }
-
-            //dummy.DataDbConnection.Password = "EBDummyPassword";
-            //dummy.ObjectsDbConnection.Password = "EBDummyPassword";
-            //dummy.EmailConnection.Password = "EBDummyPassword";
-
-            //if (resp.EBSolutionConnections.EbTier == (EbTiers)Enum.Parse(typeof(EbTiers), "Unlimited"))
-            //if (resp.EBSolutionConnections.EbTier == null)
-            //{
-            //resp.EBSolutionConnections.DataDbConnection = new EbDataDbConnection{ DatabaseName = dummy.DataDbConnection.DatabaseName };
-            //resp.EBSolutionConnections.DataDbConnection = dummy.DataDbConnection;
-            //resp.EBSolutionConnections.ObjectsDbConnection = dummy.ObjectsDbConnection;
-            //resp.EBSolutionConnections.EmailConnection = dummy.EmailConnection;
-            //}
+            
             return resp;
         }
 
@@ -89,42 +76,9 @@ namespace ExpressBase.ServiceStack.Services
         {
             TenantDbFactory dbFactory = new TenantDbFactory(request.TenantAccountId, this.Redis);
 
-            if (request.IsNew)
-            {
-                using (var con = TenantDbFactory.DataDB.GetNewConnection())
-                {
-                    string sql = "INSERT INTO eb_connections (con_type, solution_id, nick_name, con_obj) VALUES (@con_type, @solution_id, @nick_name, @con_obj)";
-                    DbParameter[] parameters = { this.TenantDbFactory.DataDB.GetNewParameter("con_type", System.Data.DbType.String, EbConnectionTypes.SMTP),
-                            this.TenantDbFactory.DataDB.GetNewParameter("solution_id", System.Data.DbType.String, request.TenantAccountId),
-                            this.TenantDbFactory.DataDB.GetNewParameter("nick_name", System.Data.DbType.String, request.SMTPConnection.NickName),
-                            this.TenantDbFactory.DataDB.GetNewParameter("con_obj", NpgsqlTypes.NpgsqlDbType.Json,EbSerializers.Json_Serialize(request.SMTPConnection) )};
-                    var iCount = TenantDbFactory.DataDB.DoNonQuery(sql, parameters);   
-                }
+            request.SMTPConnection.Persist(request.TenantAccountId, dbFactory, request.IsNew);
 
-                base.MessageProducer3.Publish(new RefreshSolutionConnectionsMqRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
-            }
-
-            else if (!request.IsNew)
-            {
-                EbSolutionConnections CurrentConnections = this.Redis.Get<EbSolutionConnections>(string.Format("EbSolutionConnections_{0}", request.TenantAccountId));
-
-                if (request.SMTPConnection.Password == "EBDummyPassword") { request.SMTPConnection.Password = CurrentConnections.SMTPConnection.Password; }
-
-                if (request.SMTPConnection.ToJson() != CurrentConnections.SMTPConnection.ToJson())
-                {
-                    //    using (var con = TenantDbFactory.DataDB.GetNewConnection())
-                    //    {
-                    //        string sql = "INSERT INTO eb_connections (con_type, solution_id, nick_name, con_obj) VALUES (@con_type, @solution_id, @nick_name, @con_obj)";
-                    //        DbParameter[] parameters = { this.TenantDbFactory.DataDB.GetNewParameter("con_type", System.Data.DbType.String, EbConnectionTypes.SMTP),
-                    //            this.TenantDbFactory.DataDB.GetNewParameter("solution_id", System.Data.DbType.String, request.TenantAccountId),
-                    //            this.TenantDbFactory.DataDB.GetNewParameter("nick_name", System.Data.DbType.String, request.SMTPConnection.NickName),
-                    //            this.TenantDbFactory.DataDB.GetNewParameter("con_obj", NpgsqlTypes.NpgsqlDbType.Json,EbSerializers.Json_Serialize(request.SMTPConnection) )};
-                    //        var iCount = TenantDbFactory.DataDB.DoNonQuery(sql, parameters);
-
-                    base.MessageProducer3.Publish(new RefreshSolutionConnectionsMqRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
-                }
-            }
-
+            base.MessageProducer3.Publish(new RefreshSolutionConnectionsMqRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
         }
 
         [Authenticate]
@@ -132,42 +86,9 @@ namespace ExpressBase.ServiceStack.Services
         {
             TenantDbFactory dbFactory = new TenantDbFactory(request.TenantAccountId, this.Redis);
 
-            if (request.IsNew)
-            {
-                using (var con = TenantDbFactory.DataDB.GetNewConnection())
-                {
-                    string sql = "INSERT INTO eb_connections (con_type, solution_id, nick_name, con_obj) VALUES (@con_type, @solution_id, @nick_name, @con_obj)";
-                    DbParameter[] parameters = { this.TenantDbFactory.DataDB.GetNewParameter("con_type", System.Data.DbType.String, EbConnectionTypes.EbDATA),
-                            this.TenantDbFactory.DataDB.GetNewParameter("solution_id", System.Data.DbType.String, request.TenantAccountId),
-                            this.TenantDbFactory.DataDB.GetNewParameter("nick_name", System.Data.DbType.String, request.DataDBConnection.DatabaseName),
-                            this.TenantDbFactory.DataDB.GetNewParameter("con_obj", NpgsqlTypes.NpgsqlDbType.Json,EbSerializers.Json_Serialize(request.DataDBConnection) )};
-                    var iCount = TenantDbFactory.DataDB.DoNonQuery(sql, parameters);
-                }
+            request.DataDBConnection.Persist(request.TenantAccountId, dbFactory, request.IsNew);
 
-                base.MessageProducer3.Publish(new RefreshSolutionConnectionsMqRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
-            }
-
-            else if (!request.IsNew)
-            {
-                EbSolutionConnections CurrentConnections = this.Redis.Get<EbSolutionConnections>(string.Format("EbSolutionConnections_{0}", request.TenantAccountId));
-
-                if (request.DataDBConnection.Password == "EBDummyPassword") { request.DataDBConnection.Password = CurrentConnections.DataDbConnection.Password; }
-
-                if (request.DataDBConnection.ToJson() != CurrentConnections.DataDbConnection.ToJson())
-                {
-                    //using (var con = TenantDbFactory.DataDB.GetNewConnection())
-                    //{
-                    //    string sql = "INSERT INTO eb_connections (con_type, solution_id, nick_name, con_obj) VALUES (@con_type, @solution_id, @nick_name, @con_obj)";
-                    //    DbParameter[] parameters = { this.TenantDbFactory.DataDB.GetNewParameter("con_type", System.Data.DbType.String, EbConnectionTypes.EbDATA),
-                    //        this.TenantDbFactory.DataDB.GetNewParameter("solution_id", System.Data.DbType.String, request.TenantAccountId),
-                    //        this.TenantDbFactory.DataDB.GetNewParameter("nick_name", System.Data.DbType.String, request.DataDBConnection.DatabaseName),
-                    //        this.TenantDbFactory.DataDB.GetNewParameter("con_obj", NpgsqlTypes.NpgsqlDbType.Json,EbSerializers.Json_Serialize(request.DataDBConnection) )};
-                    //    var iCount = TenantDbFactory.DataDB.DoNonQuery(sql, parameters);
-                    //}
-
-                    base.MessageProducer3.Publish(new RefreshSolutionConnectionsMqRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
-                }
-            }
+            base.MessageProducer3.Publish(new RefreshSolutionConnectionsMqRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
         }
 
         [Authenticate]
@@ -175,46 +96,19 @@ namespace ExpressBase.ServiceStack.Services
         {
             TenantDbFactory dbFactory = new TenantDbFactory(request.TenantAccountId, this.Redis);
 
-            if (request.IsNew)
-            {
-                using (var con = TenantDbFactory.DataDB.GetNewConnection())
-                {
-                    string sql = "INSERT INTO eb_connections (con_type, solution_id, con_obj) VALUES (@con_type, @solution_id, @con_obj)";
-                    DbParameter[] parameters = { this.TenantDbFactory.DataDB.GetNewParameter("con_type", System.Data.DbType.String, EbConnectionTypes.EbFILES),
-                            this.TenantDbFactory.DataDB.GetNewParameter("solution_id", System.Data.DbType.String, request.TenantAccountId),
-                            this.TenantDbFactory.DataDB.GetNewParameter("con_obj", NpgsqlTypes.NpgsqlDbType.Json,EbSerializers.Json_Serialize(request.FilesDBConnection) )};
-                    var iCount = TenantDbFactory.DataDB.DoNonQuery(sql, parameters);
-                }
-                base.MessageProducer3.Publish(new RefreshSolutionConnectionsMqRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
-            }
+            request.FilesDBConnection.Persist(request.TenantAccountId, dbFactory, request.IsNew);
 
-            else if (!request.IsNew)
-            {
-                EbSolutionConnections CurrentConnections = this.Redis.Get<EbSolutionConnections>(string.Format("EbSolutionConnections_{0}", request.TenantAccountId));
-
-                if (request.FilesDBConnection.ToJson() != CurrentConnections.FilesDbConnection.ToJson())
-                {
-                    //using (var con = TenantDbFactory.DataDB.GetNewConnection())
-                    //{
-                    //    string sql = "INSERT INTO eb_connections (con_type, solution_id, nick_name, con_obj) VALUES (@con_type, @solution_id, @nick_name, @con_obj)";
-                    //    DbParameter[] parameters = { this.TenantDbFactory.DataDB.GetNewParameter("con_type", System.Data.DbType.String, EbConnectionTypes.EbDATA),
-                    //        this.TenantDbFactory.DataDB.GetNewParameter("solution_id", System.Data.DbType.String, request.TenantAccountId),
-                    //        this.TenantDbFactory.DataDB.GetNewParameter("nick_name", System.Data.DbType.String, request.DataDBConnection.DatabaseName),
-                    //        this.TenantDbFactory.DataDB.GetNewParameter("con_obj", NpgsqlTypes.NpgsqlDbType.Json,EbSerializers.Json_Serialize(request.DataDBConnection) )};
-                    //    var iCount = TenantDbFactory.DataDB.DoNonQuery(sql, parameters);
-                    //}
-
-                    base.MessageProducer3.Publish(new RefreshSolutionConnectionsMqRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
-                }
-            }
-
-
+            base.MessageProducer3.Publish(new RefreshSolutionConnectionsMqRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
         }
 
         [Authenticate]
         public void Post(ChangeSMSConnectionRequest request)
         {
-        }
+            TenantDbFactory dbFactory = new TenantDbFactory(request.TenantAccountId, this.Redis);
 
+            request.SMSConnection.Persist(request.TenantAccountId, dbFactory, request.IsNew);
+
+            base.MessageProducer3.Publish(new RefreshSolutionConnectionsMqRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
+        }
     }
 }
