@@ -40,7 +40,7 @@ ORDER BY
     EOV.id DESC";
 
         // Fetch particular version with json of a particular Object
-        private const string Query2 = "SELECT obj_json FROM eb_objects_ver WHERE refid=@refid";
+        private const string Query2 = "SELECT obj_json, version_num FROM eb_objects_ver WHERE refid=@refid";
 
         // Fetch latest non-committed version with json - for EDIT
         private const string Query3 = @"
@@ -107,7 +107,7 @@ LEFT JOIN
 ON 
 	EOV.commit_uid=EU.id
 WHERE
-    EO.id = EOV.eb_objects_id  AND EO.obj_type=@type
+    EO.id = EOV.eb_objects_id  AND EO.obj_type=@type AND EOV.working_mode <> true
 ORDER BY
     EO.obj_name";
 
@@ -177,7 +177,8 @@ WHERE
             {
                 var _ebObject = (new EbObjectWrapper
                 {
-                    Json = dr[0].ToString()
+                    Json = dr[0].ToString(),
+                    VersionNumber = dr[1].ToString()
                 });
                 f.Add(_ebObject);
             }
