@@ -86,6 +86,15 @@ ORDER BY
         private const string Query6 = @"
 SELECT @function_name";
 
+        private const string GetObjectRelations = @"
+SELECT 
+	id, obj_name, obj_desc 
+FROM 
+	eb_objects 
+WHERE 
+	id = ANY (SELECT eb_objects_id FROM eb_objects_ver WHERE refid IN(SELECT dependant FROM eb_objects_relations WHERE dominant=@dominant)) AND 
+    obj_type=@type";
+
         private const string Query_AllVerList = @"
 SELECT 
     EO.id, EO.obj_name, EO.obj_type, EO.obj_cur_status,EO.obj_desc,
@@ -113,11 +122,11 @@ ORDER BY
 
         private const string Query_StatusHistory = @"
 SELECT 
-    eb_obj_ver_id, status, uid, ts, changelog 
+    EOS.eb_obj_ver_id, EOS.status, EU.firstname, EOS.ts, EOS.changelog, EU.profileimg   
 FROM
-    eb_objects_status EOS, eb_objects_ver EOV
+    eb_objects_status EOS, eb_objects_ver EOV, eb_users EU
 WHERE
-    eb_obj_ver_id = EOV.id AND EOV.refid = @refid";
+    eb_obj_ver_id = EOV.id AND EOV.refid = @refid AND EOV.commit_uid=EU.id";
 
         private const string FetchLiveversionQuery = @"
 SELECT
@@ -357,7 +366,8 @@ WHERE
                     Wc_All = dr[11] as string[],
                     MajorVersionNumber = Convert.ToInt32(dr[14]),
                     MinorVersionNumber = Convert.ToInt32(dr[15]),
-                    PatchVersionNumber = Convert.ToInt32(dr[16])
+                    PatchVersionNumber = Convert.ToInt32(dr[16]),
+                    Tags = dr[17].ToString()
                 });
                 f.Add(_ebObject);
             }
@@ -378,7 +388,8 @@ WHERE
                     Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[1]),
                     CommitUname = dr[2].ToString(),
                     CommitTs = Convert.ToDateTime(dr[3]),
-                    ChangeLog = dr[4].ToString()
+                    ChangeLog = dr[4].ToString(),
+                    ProfileImage  = dr[5].ToString()
                 });
                 f.Add(_ebObject);
             }
@@ -406,79 +417,7 @@ WHERE
 
         #region SaveOrCommit Queries
 
-        private const string Query_FirstCommit = @"
-INSERT INTO eb_objects 
-    (obj_name, obj_desc, obj_type, obj_last_ver_id, obj_cur_status) 
-VALUES
-    (@obj_name, @obj_desc, @obj_type, 1, @obj_cur_status)  RETURNING id;
-
-INSERT INTO eb_objects_ver
-    (eb_objects_id, ver_num, obj_json, commit_uid, commit_ts) 
-VALUES
-    (CURRVAL('eb_objects_id_seq'), 1, @obj_json, @commit_uid, NOW());
-
-INSERT INTO eb_objects_ver
-    (eb_objects_id, ver_num, obj_json) 
-VALUES
-    (CURRVAL('eb_objects_id_seq'), -1, @obj_json);
-
-INSERT INTO eb_objects_relations
-    (dominant,dependant)
-VALUES
-    (UNNEST(@relations),CURRVAL('eb_objects_id_seq'))
-";
-
-
-        private const string Query_FirstCommit_without_rel = @"
-INSERT INTO eb_objects 
-    (obj_name, obj_desc, obj_type, obj_last_ver_id, obj_cur_status) 
-VALUES
-    (@obj_name, @obj_desc, @obj_type, 1, @obj_cur_status)  RETURNING id;
-
-INSERT INTO eb_objects_ver
-    (eb_objects_id, ver_num, obj_json, commit_uid, commit_ts ) 
-VALUES
-    (CURRVAL('eb_objects_id_seq'), 1, @obj_json, @commit_uid, NOW() );
-
-INSERT INTO eb_objects_ver
-    (eb_objects_id, ver_num, obj_json ) 
-VALUES
-    (CURRVAL('eb_objects_id_seq'), -1, @obj_json );
-";
-
-        private const string Query_SubsequentCommit = @"
-UPDATE eb_objects 
-SET 
-    obj_name=@obj_name, obj_desc=@obj_desc, 
-    obj_last_ver_id=(SELECT MAX(ver_num)+1 FROM eb_objects_ver WHERE eb_objects_id=@id), 
-    obj_cur_status=@obj_cur_status 
-WHERE 
-    id=@id RETURNING id; 
-
-UPDATE eb_objects_ver
-SET
-    obj_json=@obj_json, obj_changelog=@obj_changelog, ver_num=(SELECT MAX(ver_num)+1 FROM eb_objects_ver WHERE eb_objects_id=@id), commit_uid=@commit_uid, commit_ts=NOW()
-WHERE
-    eb_objects_id=@id AND commit_uid IS NULL AND ver_num=-1;
-
-INSERT INTO eb_objects_ver
-    (eb_objects_id, ver_num, obj_json) 
-VALUES
-    (@id, -1, @obj_json)";
-
-        private const string Query_Save = @"
-UPDATE eb_objects SET obj_name=@obj_name, obj_desc=@obj_desc WHERE id=@id;
-UPDATE eb_objects_ver SET obj_json=@obj_json WHERE eb_objects_id=@id AND commit_uid IS NULL AND ver_num=-1;";
-
-
-        private const string GetObjectRelations = @"
-SELECT 
-	id, obj_name, obj_desc 
-FROM 
-	eb_objects 
-WHERE 
-	id = ANY (SELECT eb_objects_id FROM eb_objects_ver WHERE refid IN(SELECT dependant FROM eb_objects_relations WHERE dominant=@dominant)) AND 
-    obj_type=@type";
+        
 
         #endregion
 
@@ -621,7 +560,7 @@ WHERE
                     log.Info("#DS insert 1 -- con open");
                     string[] arr = { };
 
-                    string sql = "SELECT eb_objects_commit(@id, @obj_name, @obj_desc, @obj_type, @obj_json, @obj_changelog,  @commit_uid, @src_pid, @cur_pid, @relations)";
+                    string sql = "SELECT eb_objects_commit(@id, @obj_name, @obj_desc, @obj_type, @obj_json, @obj_changelog,  @commit_uid, @src_pid, @cur_pid, @relations, @tags)";
                     cmd = this.TenantDbFactory.ObjectsDB.GetNewCommand(con, sql);
 
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.String, request.RefId));
@@ -634,6 +573,7 @@ WHERE
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@src_pid", System.Data.DbType.String, request.TenantAccountId));
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@cur_pid", System.Data.DbType.String, request.TenantAccountId));
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@relations", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text, (request.Relations != null) ? request.Relations.Split(',').Select(n => n.ToString()).ToArray() : arr));
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@tags", System.Data.DbType.String, request.Tags));
 
                     refId = cmd.ExecuteScalar().ToString();
                 }
@@ -661,7 +601,7 @@ WHERE
                     log.Info("#DS insert 1 -- con open");
                     string[] arr = { };
 
-                    string sql = "SELECT eb_objects_save(@id, @obj_name, @obj_desc, @obj_type, @obj_json, @commit_uid, @src_pid, @cur_pid, @relations)";
+                    string sql = "SELECT eb_objects_save(@id, @obj_name, @obj_desc, @obj_type, @obj_json, @commit_uid, @src_pid, @cur_pid, @relations, @tags)";
                     cmd = this.TenantDbFactory.ObjectsDB.GetNewCommand(con, sql);
 
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.String, request.RefId));
@@ -673,6 +613,7 @@ WHERE
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@src_pid", System.Data.DbType.String, request.TenantAccountId));
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@cur_pid", System.Data.DbType.String, request.TenantAccountId));
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@relations", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text, (request.Relations != null) ? request.Relations.Split(',').Select(n => n.ToString()).ToArray() : arr));
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@tags", System.Data.DbType.String, request.Tags));
 
                     refId = cmd.ExecuteScalar().ToString();
                 }
@@ -699,7 +640,7 @@ WHERE
                     log.Info("#DS insert 1 -- con open");
                     string[] arr = { };
 
-                    string sql = "SELECT eb_objects_create_new_object(@obj_name, @obj_desc, @obj_type, @obj_cur_status, @obj_json, @commit_uid, @src_pid, @cur_pid, @relations, @issave)";
+                    string sql = "SELECT eb_objects_create_new_object(@obj_name, @obj_desc, @obj_type, @obj_cur_status, @obj_json, @commit_uid, @src_pid, @cur_pid, @relations, @issave, @tags)";
                     cmd = this.TenantDbFactory.ObjectsDB.GetNewCommand(con, sql);
 
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_name", System.Data.DbType.String, request.Name));
@@ -712,6 +653,7 @@ WHERE
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@cur_pid", System.Data.DbType.String, request.TenantAccountId));
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@relations", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text, (request.Relations != null) ? request.Relations.Split(',').Select(n => n.ToString()).ToArray() : arr));
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@issave", System.Data.DbType.Boolean, request.IsSave));
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@tags", System.Data.DbType.String, request.Tags));
 
                     refId = cmd.ExecuteScalar().ToString();
                 }
