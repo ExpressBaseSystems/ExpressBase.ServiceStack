@@ -29,22 +29,23 @@ namespace ExpressBase.ServiceStack.Services
             CreateAccountResponse resp;
             using (var con = TenantDbFactory.DataDB.GetNewConnection())
             {
+                con.Open();
                 if (request.op == "updatetenant")
                 {
-                    var cmd = TenantDbFactory.DataDB.GetNewCommand(con, "UPDATE eb_tenants SET firstname=@firstname,company=@company,employees=@employees,designation=@designation,phone=@phone,profileimg=@profileimg WHERE id=@id RETURNING id");
+                    var cmd = TenantDbFactory.DataDB.GetNewCommand(con, "UPDATE eb_users SET firstname=@firstname,company=@company,employees=@employees,designation=@designation,phnoprimary=@phnoprimary,profileimg=@profileimg WHERE id=@id RETURNING id");
 
                     cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("firstname", System.Data.DbType.String, request.Colvalues["Name"]));
                     cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("company", System.Data.DbType.String, request.Colvalues["Company"]));
                     cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("employees", System.Data.DbType.String, request.Colvalues["Employees"]));
                     cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("designation", System.Data.DbType.String, request.Colvalues["Designation"]));
-                    cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("phone", System.Data.DbType.String, request.Colvalues["Phone"]));
+                    cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("phnoprimary", System.Data.DbType.String, request.Colvalues["Phone"]));
                     cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("id", System.Data.DbType.Int64, request.UserId));
-                    cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("profileimg", System.Data.DbType.String, string.Format("<img src='{0}'/>", request.Colvalues["proimg"])));
+                    cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("profileimg", System.Data.DbType.String, request.Colvalues["Imgsrc"]));
                     resp = new CreateAccountResponse
                     {
                         id = Convert.ToInt32(cmd.ExecuteScalar())
                     };
-                    //base.Redis.Set<string>(string.Format("uid_{0}_pimg", resp.id), string.Format("<img src='{0}'class='img-circle img-cir'/>", request.Colvalues["proimg"]));
+                    base.Redis.Set<string>(string.Format("uid_{0}_solutionid_{1}_pimg", resp.id, request.TenantAccountId), request.Colvalues["Imgsrc"].ToString());
                 }
                 else
                 {
