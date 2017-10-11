@@ -124,20 +124,19 @@ namespace ExpressBase.ServiceStack
 
                     new MyTwitterAuthProvider(AppSettings)
                     {
-                        ConsumerKey = "L0ryLVB5hCXy3qHUnyKiYezUk",
-                        ConsumerSecret = "61zVZ96nwJb7sadM7v8RMd1Te6jGUHvFcfjaz7vIUdZLXl0cwD",
-                        CallbackUrl = "https://localhost:44377/auth/twitter",
+                        ConsumerKey = "6G9gaYo7DMx1OHYRAcpmkPfvu",
+                        ConsumerSecret = "Jx8uUIPeo5D0agjUnqkKHGQ4o6zTrwze9EcLtjDlOgLnuBaf9x",
+                       // CallbackUrl = "http://localhost:8000/auth/twitter",
                         
-                      //  RequestTokenUrl= "https://api.twitter.com/oauth/authenticate",
+                       // RequestTokenUrl= "https://api.twitter.com/oauth/authenticate",
                         
                     },
 
                     new MyGithubAuthProvider(AppSettings)
                     {
-                    ClientId="07f639367f3e7f066ab9",
-                    ClientSecret="7ba2e0662f9dd9d3b7817ebf0adecc00e8ab5b6a",
-                    RedirectUrl ="https://localhost:44377/"
-
+                    ClientId="4504eefeb8f027c810dd",
+                    ClientSecret="d9c1c956a9fddd089798e0031851e93a8d0e5cc6",
+                    RedirectUrl ="http://localhost:8000/"
                     },
 
                     new MyCredentialsAuthProvider(AppSettings)
@@ -221,7 +220,8 @@ namespace ExpressBase.ServiceStack
             {
                 if (requestDto.GetType() == typeof(Authenticate))
                 {
-                    RequestContext.Instance.Items.Add("TenantAccountId", (requestDto as Authenticate).Meta["cid"]);
+                    string TenantId = (requestDto as Authenticate).Meta != null? (requestDto as Authenticate).Meta["cid"] : "expressbase";
+                    RequestContext.Instance.Items.Add("TenantAccountId", TenantId);
                 }
 
                 if (requestDto != null && requestDto.GetType() != typeof(Authenticate) && requestDto.GetType() != typeof(GetAccessToken) && requestDto.GetType() != typeof(EmailServicesRequest) && requestDto.GetType() != typeof(Register))
