@@ -74,41 +74,41 @@ namespace ExpressBase.ServiceStack.Services
         [Authenticate]
         public void Post(ChangeSMTPConnectionRequest request)
         {
-            TenantDbFactory dbFactory = new TenantDbFactory(request.TenantAccountId, this.Redis);
+            TenantDbFactory dbFactory = new TenantDbFactory("expressbase", this.Redis);
 
             request.SMTPConnection.Persist(request.TenantAccountId, dbFactory, request.IsNew);
 
-            base.MessageProducer3.Publish(new RefreshSolutionConnectionsMqRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
+            base.MessageProducer3.Publish(new RefreshSolutionConnectionsMqRequestTest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
         }
 
         [Authenticate]
         public void Post(ChangeDataDBConnectionRequest request)
         {
-            TenantDbFactory dbFactory = new TenantDbFactory(request.TenantAccountId, this.Redis);
+            TenantDbFactory dbFactory = new TenantDbFactory("expressbase", this.Redis);
 
             request.DataDBConnection.Persist(request.TenantAccountId, dbFactory, request.IsNew);
 
-            base.MessageProducer3.Publish(new RefreshSolutionConnectionsMqRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
+            base.MessageProducer3.Publish(new RefreshSolutionConnectionsMqRequestTest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
         }
 
         [Authenticate]
         public void Post(ChangeFilesDBConnectionRequest request)
         {
-            TenantDbFactory dbFactory = new TenantDbFactory(request.TenantAccountId, this.Redis);
+            TenantDbFactory dbFactory = new TenantDbFactory("expressbase", this.Redis);
 
             request.FilesDBConnection.Persist(request.TenantAccountId, dbFactory, request.IsNew);
 
-            base.MessageProducer3.Publish(new RefreshSolutionConnectionsMqRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
+            base.MessageProducer3.Publish(new RefreshSolutionConnectionsMqRequestTest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
         }
 
         [Authenticate]
         public void Post(ChangeSMSConnectionRequest request)
         {
-            TenantDbFactory dbFactory = new TenantDbFactory(request.TenantAccountId, this.Redis);
+            TenantDbFactory dbFactory = new TenantDbFactory("expressbase", this.Redis);
 
             request.SMSConnection.Persist(request.TenantAccountId, dbFactory, request.IsNew);
 
-            base.MessageProducer3.Publish(new RefreshSolutionConnectionsMqRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
+            base.MessageProducer3.Publish(new RefreshSolutionConnectionsMqRequestTest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
         }
     }
 }

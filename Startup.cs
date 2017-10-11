@@ -195,11 +195,11 @@ namespace ExpressBase.ServiceStack
             var mqServer = new RabbitMqServer(rabitFactory);
             mqServer.RetryCount = 1;
             //mqServer.RegisterHandler<EmailServicesMqRequest>(base.ExecuteMessage);
-            //mqServer.RegisterHandler<RefreshSolutionConnectionsMqRequest>(base.ExecuteMessage);
-            //mqServer.RegisterHandler<UploadFileMqRequest>(base.ExecuteMessage);
+            //mqServer.RegisterHandler<RefreshSolutionConnectionsMqRequestTest>(base.ExecuteMessage);
+            //mqServer.RegisterHandler<UploadFileMqRequestTest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<ImageResizeMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<SlackPostMqRequest>(base.ExecuteMessage);
-            //mqServer.RegisterHandler<SlackAuthMqRequest>(base.ExecuteMessage);
+            ////mqServer.RegisterHandler<SlackAuthMqRequest>(base.ExecuteMessage);
 
             mqServer.Start();
 
@@ -220,7 +220,7 @@ namespace ExpressBase.ServiceStack
             {
                 if (requestDto.GetType() == typeof(Authenticate))
                 {
-                    string TenantId = (requestDto as Authenticate).Meta != null? (requestDto as Authenticate).Meta["cid"] : "expressbase";
+                    string TenantId = (requestDto as Authenticate).Meta != null ? (requestDto as Authenticate).Meta["cid"] : "expressbase";
                     RequestContext.Instance.Items.Add("TenantAccountId", TenantId);
                 }
 
