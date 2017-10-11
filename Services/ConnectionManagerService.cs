@@ -78,7 +78,7 @@ namespace ExpressBase.ServiceStack.Services
 
             request.SMTPConnection.Persist(request.TenantAccountId, dbFactory, request.IsNew);
 
-            base.MessageProducer3.Publish(new RefreshSolutionConnectionsMqRequestTest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
+            base.MessageProducer3.Publish(new RefreshSolutionConnectionsMqRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
         }
 
         [Authenticate]
@@ -88,7 +88,7 @@ namespace ExpressBase.ServiceStack.Services
 
             request.DataDBConnection.Persist(request.TenantAccountId, dbFactory, request.IsNew);
 
-            base.MessageProducer3.Publish(new RefreshSolutionConnectionsMqRequestTest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
+            base.MessageProducer3.Publish(new RefreshSolutionConnectionsMqRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
         }
 
         [Authenticate]
@@ -98,7 +98,7 @@ namespace ExpressBase.ServiceStack.Services
 
             request.FilesDBConnection.Persist(request.TenantAccountId, dbFactory, request.IsNew);
 
-            base.MessageProducer3.Publish(new RefreshSolutionConnectionsMqRequestTest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
+            base.MessageProducer3.Publish(new RefreshSolutionConnectionsMqRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
         }
 
         [Authenticate]
@@ -108,7 +108,7 @@ namespace ExpressBase.ServiceStack.Services
 
             request.SMSConnection.Persist(request.TenantAccountId, dbFactory, request.IsNew);
 
-            base.MessageProducer3.Publish(new RefreshSolutionConnectionsMqRequestTest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
+            base.MessageProducer3.Publish(new RefreshSolutionConnectionsMqRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
         }
     }
 }
