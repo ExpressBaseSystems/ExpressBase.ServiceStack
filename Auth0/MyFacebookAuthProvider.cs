@@ -29,11 +29,11 @@ namespace ExpressBase.ServiceStack.Auth0
                 using (var con = _InfraDb.DataDB.GetNewConnection())
                 {
                     con.Open();
-                    var cmd = _InfraDb.DataDB.GetNewCommand(con, "INSERT INTO eb_users (email,firstname,socialid,prolink) VALUES(@email, @firstname,@socialid,@prolink) ON CONFLICT(socialid) DO UPDATE SET loginattempts = eb_users.loginattempts + EXCLUDED.loginattempts RETURNING eb_users.loginattempts");
+                    var cmd = _InfraDb.DataDB.GetNewCommand(con, "INSERT INTO eb_users (email,firstname,socialid,profileimg) VALUES(@email, @firstname,@socialid,@profileimg) ON CONFLICT(socialid) DO UPDATE SET loginattempts = eb_users.loginattempts + EXCLUDED.loginattempts RETURNING eb_users.loginattempts");
                     cmd.Parameters.Add(_InfraDb.DataDB.GetNewParameter("email", System.Data.DbType.String, session.ProviderOAuthAccess[0].Email));
                     cmd.Parameters.Add(_InfraDb.DataDB.GetNewParameter("firstname", System.Data.DbType.String, session.ProviderOAuthAccess[0].DisplayName));
                     cmd.Parameters.Add(_InfraDb.DataDB.GetNewParameter("socialid", System.Data.DbType.String, session.ProviderOAuthAccess[0].UserName));
-                    cmd.Parameters.Add(_InfraDb.DataDB.GetNewParameter("prolink", System.Data.DbType.String, session.ProviderOAuthAccess[0].Items["profileUrl"]));
+                    cmd.Parameters.Add(_InfraDb.DataDB.GetNewParameter("profileimg", System.Data.DbType.String, session.ProviderOAuthAccess[0].Items["profileUrl"]));
                     int logatmp = Convert.ToInt32(cmd.ExecuteScalar());
 
                     //(session as CustomUserSession).Company = "expressbase";
