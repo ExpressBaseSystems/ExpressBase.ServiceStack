@@ -27,7 +27,13 @@ namespace ExpressBase.ServiceStack.MQServices
             string bucketName = "files";
 
             if (Enum.IsDefined(typeof(ImageTypes), request.FileDetails.FileType.ToString()))
+            {
                 bucketName = "images_original";
+                if (request.FileDetails.FileName.StartsWith("dp"))
+                {
+                    bucketName = "user_dp";
+                }
+            }
 
 
             if (Enum.IsDefined(typeof(DocTypes), request.FileDetails.FileType.ToString()))
@@ -129,7 +135,7 @@ namespace ExpressBase.ServiceStack.MQServices
                 {
                 }
             }
-            else if (FileNameParts.Length == 3 || FileNameParts[0].ToLower() == "dp")
+            else if (request.FileDetails.FileName.StartsWith("dp"))
             {
                 if (Enum.IsDefined(typeof(ImageTypes), request.FileDetails.FileType.ToString()))
                     bucketName = "dp_images";
@@ -180,6 +186,9 @@ namespace ExpressBase.ServiceStack.MQServices
         public string Post(UploadImageRequest request)
         {
             string bucketName = "images_original";
+            if (request.ImageInfo.FileName.StartsWith("dp"))
+                bucketName = "dp_images";
+
             EbSolutionConnections SolutionConnections = this.Redis.Get<EbSolutionConnections>(string.Format("EbSolutionConnections_{0}", request.TenantAccountId));
 
             if (request.IsAsync)
@@ -243,12 +252,11 @@ namespace ExpressBase.ServiceStack.MQServices
 
             readonly List<string> ImageSizes = new[] { "small", "medium", "large" }.ToList();
 
-            public ImageResizeMqRequest Post(UploadFileMqRequest request)
+            public string Post(UploadFileMqRequest request)
             {
                 try
                 {
-                    string Id = (new TenantDbFactory(request.TenantAccountId, this.Redis)).
-                        FilesDB.UploadFile(
+                    string Id = (new TenantDbFactory(request.TenantAccountId, this.Redis)).FilesDB.UploadFile(
                         request.FileDetails.FileName,
                         request.FileDetails.MetaDataDictionary,
                         request.FileByte,
@@ -256,13 +264,12 @@ namespace ExpressBase.ServiceStack.MQServices
                         ).
                         ToString();
 
-                    if (request.BucketName == "images_original")
-                        return new ImageResizeMqRequest
+                    if (request.BucketName == "images_original" || (request.BucketName == "dp_images" && request.BucketName.Contains("actual")))
+                        this.MessageProducer3.Publish(new ImageResizeMqRequest
                         {
                             ImageInfo = new FileMeta
                             {
                                 ObjectId = Id,
-                                FileName = request.FileDetails.FileName,
                                 MetaDataDictionary = (request.FileDetails.MetaDataDictionary != null) ?
                                 request.FileDetails.MetaDataDictionary :
                                 new Dictionary<String, List<string>>() { }
@@ -270,7 +277,7 @@ namespace ExpressBase.ServiceStack.MQServices
                             ImageByte = request.FileByte,
                             TenantAccountId = request.TenantAccountId,
                             UserId = request.UserId
-                        };
+                        });
                     else return null;
                 }
                 catch (Exception e)
@@ -300,6 +307,7 @@ namespace ExpressBase.ServiceStack.MQServices
                             {
                                 pixels = 50;
                                 uploadFileRequest.BucketName = "images_small";
+                                
                             }
                             else if (size == "medium")
                             {
@@ -318,16 +326,31 @@ namespace ExpressBase.ServiceStack.MQServices
                             request.ImageByte = new byte[ImgStream.Length];
                             ImgStream.Read(request.ImageByte, 0, request.ImageByte.Length);
 
+                            if (request.ImageInfo.FileName.StartsWith("dp"))
+                            {
+                                uploadFileRequest.BucketName = "dp_images";
+                                uploadFileRequest.FileDetails = new FileMeta()
+                                {
+                                    FileName = String.Format("dp_{0}_{1}.{2}", request.UserId, size , "jpg"),
+                                    MetaDataDictionary = (request.ImageInfo.MetaDataDictionary != null) ?
+                                        request.ImageInfo.MetaDataDictionary :
+                                        new Dictionary<String, List<string>>() { }
+                                };
+                            }
+                            else
+                            {
+                                uploadFileRequest.FileDetails = new FileMeta()
+                                {
+                                    FileName = request.ImageInfo.ObjectId + "_" + size + ".png",
+                                    MetaDataDictionary = (request.ImageInfo.MetaDataDictionary != null) ?
+                                        request.ImageInfo.MetaDataDictionary :
+                                        new Dictionary<String, List<string>>() { }
+
+                                };
+                            }
                             uploadFileRequest.FileByte = request.ImageByte;
 
-                            uploadFileRequest.FileDetails = new FileMeta()
-                            {
-                                FileName = request.ImageInfo.ObjectId + "_" + size + ".png",
-                                MetaDataDictionary = (request.ImageInfo.MetaDataDictionary != null) ?
-                                request.ImageInfo.MetaDataDictionary :
-                                new Dictionary<String, List<string>>() { }
-
-                            };
+                            
 
                             this.MessageProducer3.Publish(uploadFileRequest);
                         }
