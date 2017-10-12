@@ -107,7 +107,7 @@ LEFT JOIN
 ON 
 	EOV.commit_uid=EU.id
 WHERE
-    EO.id = EOV.eb_objects_id  AND EO.obj_type=@type AND EOV.working_mode <> true
+    EO.id = EOV.eb_objects_id  AND EO.obj_type=@type AND COALESCE(EOV.working_mode, FALSE) <> true
 ORDER BY
     EO.obj_name";
 
