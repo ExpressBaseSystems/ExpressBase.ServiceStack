@@ -19,12 +19,6 @@ namespace ExpressBase.ServiceStack.MQServices
     {
         public FileService(IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_mqp, _mqc) { }
 
-        //[Route("/event-stream/null")]
-        //public void Post(UploadFileControllerResponse request)
-        //{
-
-        //}
-
         [Authenticate]
         public string Post(UploadFileRequest request)
         {
@@ -188,7 +182,7 @@ namespace ExpressBase.ServiceStack.MQServices
             {
                 try
                 {
-                    this.MessageProducer3.Publish(new UploadFileMqRequestTest
+                    this.MessageProducer3.Publish(new UploadFileMqRequest
                     {
                         FileDetails = new FileMeta
                         {
@@ -243,7 +237,7 @@ namespace ExpressBase.ServiceStack.MQServices
 
             public string Post(UploadFileMqRequest request)
             {
-                
+
                 try
                 {
                     string Id = (new TenantDbFactory(request.TenantAccountId, this.Redis)).
@@ -271,7 +265,6 @@ namespace ExpressBase.ServiceStack.MQServices
                 }
                 catch (Exception e)
                 {
-
                 }
                 return null;
             }
@@ -279,9 +272,6 @@ namespace ExpressBase.ServiceStack.MQServices
             public string Post(ImageResizeMqRequest request)
             {
                 UploadFileMqRequest uploadFileRequest = new UploadFileMqRequest();
-                uploadFileRequest.FileDetails = new FileMeta();
-                uploadFileRequest.FileDetails.MetaDataDictionary = new Dictionary<string,List<string>>();
-
                 uploadFileRequest.TenantAccountId = request.TenantAccountId;
                 uploadFileRequest.UserId = request.UserId;
 
@@ -319,7 +309,13 @@ namespace ExpressBase.ServiceStack.MQServices
                             ImgStream.Read(request.ImageByte, 0, request.ImageByte.Length);
 
                             uploadFileRequest.FileByte = request.ImageByte;
-                            uploadFileRequest.FileDetails.FileName = request.ImageInfo.ObjectId + "_" + size + ".png";
+
+                            uploadFileRequest.FileDetails = new FileMeta()
+                            {
+                                FileName = request.ImageInfo.ObjectId + "_" + size + ".png",
+                                MetaDataDictionary = request.ImageInfo.MetaDataDictionary
+                                
+                            };
 
                             this.MessageProducer3.Publish(uploadFileRequest);
                         }
