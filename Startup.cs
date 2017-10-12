@@ -149,8 +149,6 @@ namespace ExpressBase.ServiceStack
             //Also works but it's recommended to handle 404's by registering at end of .NET Core pipeline
             //this.CustomErrorHttpHandlers[HttpStatusCode.NotFound] = new RazorHandler("/notfound");
 
-            Plugins.Add(new EbRegistrationFeature());
-
             this.ContentTypes.Register(MimeTypes.ProtoBuf, (reqCtx, res, stream) => ProtoBuf.Serializer.NonGeneric.Serialize(stream, res), ProtoBuf.Serializer.NonGeneric.Deserialize);
 
             SetConfig(new HostConfig { DebugMode = true });
@@ -194,7 +192,7 @@ namespace ExpressBase.ServiceStack
             //rabitFactory.ConnectionFactory.Uri = "amqp://user:2nuGqFcd7uI5@13.84.189.113:5672/MessageQueue";
             var mqServer = new RabbitMqServer(rabitFactory);
             mqServer.RetryCount = 1;
-            //mqServer.RegisterHandler<EmailServicesMqRequest>(base.ExecuteMessage);
+           //mqServer.RegisterHandler<EmailServicesMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<RefreshSolutionConnectionsMqRequestTest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<UploadFileMqRequestTest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<ImageResizeMqRequest>(base.ExecuteMessage);
@@ -224,7 +222,7 @@ namespace ExpressBase.ServiceStack
                     RequestContext.Instance.Items.Add("TenantAccountId", TenantId);
                 }
 
-                if (requestDto != null && requestDto.GetType() != typeof(Authenticate) && requestDto.GetType() != typeof(GetAccessToken) && requestDto.GetType() != typeof(EmailServicesRequest) && requestDto.GetType() != typeof(Register))
+                if (requestDto != null && requestDto.GetType() != typeof(Authenticate) && requestDto.GetType() != typeof(GetAccessToken) && requestDto.GetType() != typeof(EmailServicesRequest) && requestDto.GetType() != typeof(RegisterRequest))
                 {
                     var auth = req.Headers[HttpHeaders.Authorization];
                     if (string.IsNullOrEmpty(auth))
