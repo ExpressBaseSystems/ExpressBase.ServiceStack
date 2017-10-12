@@ -26,11 +26,11 @@ namespace ExpressBase.ServiceStack.MQServices
 
             string bucketName = "files";
 
-            if (Enum.IsDefined(typeof(ImageTypes), request.FileDetails.ContentType.ToString()))
+            if (Enum.IsDefined(typeof(ImageTypes), request.FileDetails.FileType.ToString()))
                 bucketName = "images_original";
 
 
-            if (Enum.IsDefined(typeof(DocTypes), request.FileDetails.ContentType.ToString()))
+            if (Enum.IsDefined(typeof(DocTypes), request.FileDetails.FileType.ToString()))
                 bucketName = "docs";
 
             if (request.IsAsync)
@@ -42,7 +42,9 @@ namespace ExpressBase.ServiceStack.MQServices
                         FileDetails = new FileMeta
                         {
                             FileName = request.FileDetails.FileName,
-                            MetaDataDictionary = request.FileDetails.MetaDataDictionary
+                            MetaDataDictionary = (request.FileDetails.MetaDataDictionary != null) ?
+                            request.FileDetails.MetaDataDictionary :
+                            new Dictionary<String, List<string>>() { },
                         },
                         FileByte = request.FileByte,
                         BucketName = bucketName,
@@ -67,14 +69,16 @@ namespace ExpressBase.ServiceStack.MQServices
                     bucketName
                     ).ToString();
 
-                if (Enum.IsDefined(typeof(ImageTypes), request.FileDetails.ContentType.ToString()))
+                if (Enum.IsDefined(typeof(ImageTypes), request.FileDetails.FileType.ToString()))
                     this.MessageProducer3.Publish(new ImageResizeMqRequest
                     {
                         ImageInfo = new FileMeta
                         {
                             ObjectId = Id,
                             FileName = request.FileDetails.FileName,
-                            MetaDataDictionary = request.FileDetails.MetaDataDictionary
+                            MetaDataDictionary = (request.FileDetails.MetaDataDictionary != null) ?
+                            request.FileDetails.MetaDataDictionary :
+                            new Dictionary<String, List<string>>() { }
                         },
                         ImageByte = request.FileByte,
                         TenantAccountId = request.TenantAccountId,
@@ -97,10 +101,10 @@ namespace ExpressBase.ServiceStack.MQServices
 
             if (FileNameParts.Length == 1)
             {
-                if (Enum.IsDefined(typeof(ImageTypes), request.FileDetails.ContentType.ToString()))
+                if (Enum.IsDefined(typeof(ImageTypes), request.FileDetails.FileType.ToString()))
                     bucketName = "images_original";
 
-                if (Enum.IsDefined(typeof(DocTypes), request.FileDetails.ContentType.ToString()))
+                if (Enum.IsDefined(typeof(DocTypes), request.FileDetails.FileType.ToString()))
                     bucketName = "docs";
 
                 if (bucketName == string.Empty)
@@ -112,7 +116,7 @@ namespace ExpressBase.ServiceStack.MQServices
             }
             else if (FileNameParts.Length == 2)
             {
-                if (Enum.IsDefined(typeof(ImageTypes), request.FileDetails.ContentType.ToString()))
+                if (Enum.IsDefined(typeof(ImageTypes), request.FileDetails.FileType.ToString()))
                 {
                     if (FileNameParts[1] == "small")
                         bucketName = "images_small";
@@ -127,7 +131,7 @@ namespace ExpressBase.ServiceStack.MQServices
             }
             else if (FileNameParts.Length == 3 || FileNameParts[0].ToLower() == "dp")
             {
-                if (Enum.IsDefined(typeof(ImageTypes), request.FileDetails.ContentType.ToString()))
+                if (Enum.IsDefined(typeof(ImageTypes), request.FileDetails.FileType.ToString()))
                     bucketName = "dp_images";
             }
 
@@ -164,7 +168,7 @@ namespace ExpressBase.ServiceStack.MQServices
                     {
                         ObjectId = file.Id.ToString(),
                         FileName = file.Filename,
-                        ContentType = (FileTypes)intType,
+                        FileType = (FileTypes)intType,
                         Length = file.Length,
                         UploadDateTime = file.UploadDateTime
                     });
@@ -175,7 +179,7 @@ namespace ExpressBase.ServiceStack.MQServices
         [Authenticate]
         public string Post(UploadImageRequest request)
         {
-            string bucketName = "images_orignal";
+            string bucketName = "images_original";
             EbSolutionConnections SolutionConnections = this.Redis.Get<EbSolutionConnections>(string.Format("EbSolutionConnections_{0}", request.TenantAccountId));
 
             if (request.IsAsync)
@@ -187,7 +191,9 @@ namespace ExpressBase.ServiceStack.MQServices
                         FileDetails = new FileMeta
                         {
                             FileName = request.ImageInfo.FileName,
-                            MetaDataDictionary = request.ImageInfo.MetaDataDictionary
+                            MetaDataDictionary = (request.ImageInfo.MetaDataDictionary != null) ?
+                            request.ImageInfo.MetaDataDictionary :
+                            new Dictionary<String, List<string>>() { },
                         },
                         FileByte = request.ImageByte,
                         BucketName = bucketName,
@@ -216,7 +222,9 @@ namespace ExpressBase.ServiceStack.MQServices
                     {
                         ObjectId = Id,
                         FileName = request.ImageInfo.FileName,
-                        MetaDataDictionary = request.ImageInfo.MetaDataDictionary
+                        MetaDataDictionary = (request.ImageInfo.MetaDataDictionary != null) ?
+                            request.ImageInfo.MetaDataDictionary :
+                            new Dictionary<String, List<string>>() { }
                     },
                     ImageByte = request.ImageByte,
                     TenantAccountId = request.TenantAccountId,
@@ -237,7 +245,6 @@ namespace ExpressBase.ServiceStack.MQServices
 
             public string Post(UploadFileMqRequest request)
             {
-
                 try
                 {
                     string Id = (new TenantDbFactory(request.TenantAccountId, this.Redis)).
@@ -256,7 +263,9 @@ namespace ExpressBase.ServiceStack.MQServices
                             {
                                 ObjectId = Id,
                                 FileName = request.FileDetails.FileName,
-                                MetaDataDictionary = request.FileDetails.MetaDataDictionary
+                                MetaDataDictionary = (request.FileDetails.MetaDataDictionary != null) ?
+                                request.FileDetails.MetaDataDictionary :
+                                new Dictionary<String, List<string>>() { }
                             },
                             ImageByte = request.FileByte,
                             TenantAccountId = request.TenantAccountId,
@@ -313,8 +322,10 @@ namespace ExpressBase.ServiceStack.MQServices
                             uploadFileRequest.FileDetails = new FileMeta()
                             {
                                 FileName = request.ImageInfo.ObjectId + "_" + size + ".png",
-                                MetaDataDictionary = request.ImageInfo.MetaDataDictionary
-                                
+                                MetaDataDictionary = (request.ImageInfo.MetaDataDictionary != null) ?
+                                request.ImageInfo.MetaDataDictionary :
+                                new Dictionary<String, List<string>>() { }
+
                             };
 
                             this.MessageProducer3.Publish(uploadFileRequest);
@@ -322,7 +333,8 @@ namespace ExpressBase.ServiceStack.MQServices
                     }
                 }
                 catch (Exception e)
-                { }
+                {
+                }
                 return null;
             }
 
