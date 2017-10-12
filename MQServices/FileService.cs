@@ -243,7 +243,7 @@ namespace ExpressBase.ServiceStack.MQServices
 
             readonly List<string> ImageSizes = new[] { "small", "medium", "large" }.ToList();
 
-            public string Post(UploadFileMqRequest request)
+            public ImageResizeMqRequest Post(UploadFileMqRequest request)
             {
                 try
                 {
@@ -257,7 +257,7 @@ namespace ExpressBase.ServiceStack.MQServices
                         ToString();
 
                     if (request.BucketName == "images_original")
-                        this.MessageProducer3.Publish(new ImageResizeMqRequest
+                        return new ImageResizeMqRequest
                         {
                             ImageInfo = new FileMeta
                             {
@@ -270,7 +270,8 @@ namespace ExpressBase.ServiceStack.MQServices
                             ImageByte = request.FileByte,
                             TenantAccountId = request.TenantAccountId,
                             UserId = request.UserId
-                        });
+                        };
+                    else return null;
                 }
                 catch (Exception e)
                 {
