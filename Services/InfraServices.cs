@@ -97,7 +97,7 @@ namespace ExpressBase.ServiceStack.Services
         //    DataBaseConfigResponse resp = new DataBaseConfigResponse();
         //    using (var con = InfraDatabaseFactory.InfraDB.GetNewConnection())
         //    {
-               
+
         //            int uid = 0;
         //            string sql = string.Format("SELECT cid,accountname,tenantid FROM eb_tenantaccount WHERE id={0}", request.Colvalues["acid"]);
         //            var dt = InfraDatabaseFactory.InfraDB.DoQuery(sql);
@@ -739,8 +739,8 @@ namespace ExpressBase.ServiceStack.Services
         //    return resp;
         //}
 
-                                        
-      
+
+
         public TokenRequiredSelectResponse Any(TokenRequiredSelectRequest request)
         {
             //if (!string.IsNullOrEmpty(request.TenantAccountId) && request.TenantAccountId != "expressbase")
@@ -853,15 +853,15 @@ namespace ExpressBase.ServiceStack.Services
             //        {
             //            string sql = @"
             //                      SELECT id,firstname FROM eb_users WHERE id IN(SELECT user_id FROM eb_role2user WHERE role_id = @roleid AND eb_del = FALSE)";
-                                
-                       
+
+
             //            DbParameter[] parameters = { this.TenantDbFactory.ObjectsDB.GetNewParameter("id", System.Data.DbType.Int32, request.UserId),
             //                                        this.TenantDbFactory.ObjectsDB.GetNewParameter("roleid", System.Data.DbType.Int32, request.id)};
 
             //            var dt = this.TenantDbFactory.ObjectsDB.DoQuery(sql, parameters);
 
             //            Dictionary<string, object> returndata = new Dictionary<string, object>();
-                
+
             //            foreach (EbDataRow dr in dt.Rows)
             //            {
             //                returndata[dr[0].ToString()] = dr[1].ToString();
@@ -1013,6 +1013,25 @@ namespace ExpressBase.ServiceStack.Services
                 }
                 var datacmd = dbf.ObjectsDB.GetNewCommand(_con_o1, result);
                 datacmd.ExecuteNonQuery();
+            }
+
+        }
+
+        public bool Any(UniqueRequest request)
+        {
+
+            string sql = "SELECT id FROM eb_users WHERE email ~* @email";
+
+            DbParameter[] parameters = { this.TenantDbFactory.ObjectsDB.GetNewParameter("email", System.Data.DbType.String, (request.Colvalues != null) ? request.Colvalues["email"] : string.Empty) };
+
+            var dt = this.TenantDbFactory.ObjectsDB.DoQuery(sql, parameters);
+            if (dt.Rows.Count > 0)
+            {
+                return true;
+            }
+            else
+            {
+                return false;
             }
 
         }
