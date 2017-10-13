@@ -220,7 +220,7 @@ namespace ExpressBase.ServiceStack
                     RequestContext.Instance.Items.Add("TenantAccountId", TenantId);
                 }
 
-                if (requestDto != null && requestDto.GetType() != typeof(Authenticate) && requestDto.GetType() != typeof(GetAccessToken) && requestDto.GetType() != typeof(EmailServicesRequest) && requestDto.GetType() != typeof(RegisterRequest))
+                if (requestDto != null && requestDto.GetType() != typeof(Authenticate) && requestDto.GetType() != typeof(GetAccessToken) && requestDto.GetType() != typeof(UniqueRequest) && requestDto.GetType() != typeof(EmailServicesRequest) && requestDto.GetType() != typeof(RegisterRequest))
                 {
                     var auth = req.Headers[HttpHeaders.Authorization];
                     if (string.IsNullOrEmpty(auth))
