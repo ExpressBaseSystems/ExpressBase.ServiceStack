@@ -2,22 +2,20 @@ using ExpressBase.Common;
 using ExpressBase.Common.Data;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using MongoDB.Bson;
-using MongoDB.Driver.GridFS;
 using ServiceStack;
 using ServiceStack.Messaging;
 using System;
-using System.Collections;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
-using System.Linq;
 
 namespace ExpressBase.ServiceStack.MQServices
 {
     public class FileService : EbBaseService
     {
-        public FileService(IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_mqp, _mqc) { }
+        public FileService(ITenantDbFactory _tdb, IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_tdb, _mqp, _mqc) { }
 
         [Authenticate]
         public string Post(UploadFileRequest request)
@@ -31,13 +29,9 @@ namespace ExpressBase.ServiceStack.MQServices
                 bucketName = "images_original";
                 if (request.FileDetails.FileName.StartsWith("dp"))
                 {
-                    bucketName = "user_dp";
+                    bucketName = "dp_images";
                 }
             }
-
-
-            if (Enum.IsDefined(typeof(DocTypes), request.FileDetails.FileType.ToString()))
-                bucketName = "docs";
 
             if (request.IsAsync)
             {
@@ -51,6 +45,7 @@ namespace ExpressBase.ServiceStack.MQServices
                             MetaDataDictionary = (request.FileDetails.MetaDataDictionary != null) ?
                             request.FileDetails.MetaDataDictionary :
                             new Dictionary<String, List<string>>() { },
+                            Length = request.FileDetails.Length
                         },
                         FileByte = request.FileByte,
                         BucketName = bucketName,
@@ -68,12 +63,31 @@ namespace ExpressBase.ServiceStack.MQServices
 
             else if (!request.IsAsync)
             {
-                string Id = (new TenantDbFactory(request.TenantAccountId, this.Redis)).FilesDB.UploadFile(
+                string Id = this.TenantDbFactory.FilesDB.UploadFile(
                     request.FileDetails.FileName,
-                    request.FileDetails.MetaDataDictionary,
+                    (request.FileDetails.MetaDataDictionary != null) ?
+                            request.FileDetails.MetaDataDictionary :
+                            new Dictionary<String, List<string>>() { },
                     request.FileByte,
-                    bucketName
-                    ).ToString();
+                    bucketName)
+                    .ToString();
+
+                this.MessageProducer3.Publish(new FileMetaPersistMqRequest
+                {
+                    FileDetails = new FileMeta
+                    {
+                        ObjectId = Id,
+                        FileName = request.FileDetails.FileName,
+                        MetaDataDictionary = (request.FileDetails.MetaDataDictionary != null) ?
+                            request.FileDetails.MetaDataDictionary :
+                            new Dictionary<String, List<string>>() { },
+                        Length = request.FileByte.Length,
+                        FileType = request.FileDetails.FileType
+                    },
+                    BucketName = bucketName,
+                    TenantAccountId = request.TenantAccountId,
+                    UserId = request.UserId
+                });
 
                 if (Enum.IsDefined(typeof(ImageTypes), request.FileDetails.FileType.ToString()))
                     this.MessageProducer3.Publish(new ImageResizeMqRequest
@@ -110,9 +124,6 @@ namespace ExpressBase.ServiceStack.MQServices
                 if (Enum.IsDefined(typeof(ImageTypes), request.FileDetails.FileType.ToString()))
                     bucketName = "images_original";
 
-                if (Enum.IsDefined(typeof(DocTypes), request.FileDetails.FileType.ToString()))
-                    bucketName = "docs";
-
                 if (bucketName == string.Empty)
                     bucketName = "files";
 
@@ -143,7 +154,7 @@ namespace ExpressBase.ServiceStack.MQServices
 
             if (bucketName != string.Empty)
             {
-                return (new TenantDbFactory(request.TenantAccountId, this.Redis)).FilesDB.DownloadFile(request.FileDetails.FileName, bucketName);
+                return (this.TenantDbFactory.FilesDB.DownloadFile(request.FileDetails.FileName, bucketName));
             }
             else { return (new byte[0]); }
         }
@@ -151,35 +162,13 @@ namespace ExpressBase.ServiceStack.MQServices
         [Authenticate]
         public List<FileMeta> Post(FindFilesByTagRequest request)
         {
-            List<FileMeta> FileList = new List<FileMeta>();
-
-            List<GridFSFileInfo> filesList = (new TenantDbFactory(request.TenantAccountId, this.Redis)).FilesDB.FindFilesByTags(request.Filter, request.BucketName);
-
-            foreach (GridFSFileInfo file in filesList)
-            {
-                string stringType = file.Filename.Split('.')[1];
-                int intType = 0;
-
-                foreach (FileTypes type in Enum.GetValues(typeof(ImageTypes)))
-                {
-                    if (type.ToString() == stringType)
-                    {
-                        intType = (int)type;
-                        break;
-                    }
-                }
-
-                FileList.Add(
-                    new FileMeta
-                    {
-                        ObjectId = file.Id.ToString(),
-                        FileName = file.Filename,
-                        FileType = (FileTypes)intType,
-                        Length = file.Length,
-                        UploadDateTime = file.UploadDateTime
-                    });
-            }
-            return FileList;
+            string sql = "SELECT * FROM eb_files WHERE (tags ~* 'Unni') RETURNING (id)";
+            //DbParameter[] parameters =
+            //    {
+            //            this.TenantDbFactory.ObjectsDB.GetNewParameter("tag", System.Data.DbType.String, request.Tags[0])
+            //        };
+            var iCount = this.TenantDbFactory.ObjectsDB.DoQuery(sql);
+            return null;
         }
 
         [Authenticate]
@@ -225,6 +214,22 @@ namespace ExpressBase.ServiceStack.MQServices
                     bucketName
                     ).ToString();
 
+                this.MessageProducer3.Publish(new FileMetaPersistMqRequest
+                {
+                    FileDetails = new FileMeta
+                    {
+                        ObjectId = Id,
+                        FileName = request.ImageInfo.FileName,
+                        MetaDataDictionary = (request.ImageInfo.MetaDataDictionary != null) ?
+                            request.ImageInfo.MetaDataDictionary :
+                            new Dictionary<String, List<string>>() { },
+                        Length = request.ImageByte.Length,
+                        FileType = request.ImageInfo.FileType
+                    },
+                    BucketName = bucketName,
+                    TenantAccountId = request.TenantAccountId,
+                    UserId = request.UserId
+                });
                 this.MessageProducer3.Publish(new ImageResizeMqRequest
                 {
                     ImageInfo = new FileMeta
@@ -250,26 +255,43 @@ namespace ExpressBase.ServiceStack.MQServices
         {
             public FileServiceInternal(IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_mqp, _mqc) { }
 
-            readonly List<string> ImageSizes = new[] { "small", "medium", "large" }.ToList();
-
             public string Post(UploadFileMqRequest request)
             {
                 try
                 {
                     string Id = (new TenantDbFactory(request.TenantAccountId, this.Redis)).FilesDB.UploadFile(
                         request.FileDetails.FileName,
-                        request.FileDetails.MetaDataDictionary,
+                        (request.FileDetails.MetaDataDictionary.Count != 0) ?
+                            request.FileDetails.MetaDataDictionary :
+                            new Dictionary<String, List<string>>() { },
                         request.FileByte,
                         request.BucketName
                         ).
                         ToString();
 
+                    this.MessageProducer3.Publish(new FileMetaPersistMqRequest
+                    {
+                        FileDetails = new FileMeta
+                        {
+                            ObjectId = Id,
+                            FileName = request.FileDetails.FileName,
+                            MetaDataDictionary = (request.FileDetails.MetaDataDictionary != null) ?
+                            request.FileDetails.MetaDataDictionary :
+                            new Dictionary<String, List<string>>() { },
+                            Length = request.FileByte.Length,
+                            FileType = request.FileDetails.FileType
+                        },
+                        BucketName = request.BucketName,
+                        TenantAccountId = request.TenantAccountId,
+                        UserId = request.UserId
+                    });
                     if (request.BucketName == "images_original" || (request.BucketName == "dp_images" && request.BucketName.Contains("actual")))
                         this.MessageProducer3.Publish(new ImageResizeMqRequest
                         {
                             ImageInfo = new FileMeta
                             {
                                 ObjectId = Id,
+                                FileName = request.FileDetails.FileName,
                                 MetaDataDictionary = (request.FileDetails.MetaDataDictionary != null) ?
                                 request.FileDetails.MetaDataDictionary :
                                 new Dictionary<String, List<string>>() { }
@@ -299,66 +321,81 @@ namespace ExpressBase.ServiceStack.MQServices
                 {
                     using (Image img = Image.FromStream(ms))
                     {
-                        foreach (string size in ImageSizes)
+                        if (request.ImageInfo.FileName.StartsWith("dp"))
                         {
-                            int pixels;
-
-                            if (size == "small")
+                            foreach (string size in Enum.GetNames(typeof(DPSizes)))
                             {
-                                pixels = 50;
-                                uploadFileRequest.BucketName = "images_small";
-                                
-                            }
-                            else if (size == "medium")
-                            {
-                                pixels = 150;
-                                uploadFileRequest.BucketName = "images_medium";
-                            }
-                            else if (size == "large")
-                            {
-                                pixels = 640;
-                                uploadFileRequest.BucketName = "images_large";
-                            }
-                            else break;
+                                Stream ImgStream = Resize(img, (int)((DPSizes)Enum.Parse(typeof(DPSizes), size)), (int)((DPSizes)Enum.Parse(typeof(DPSizes), size)));
+                                request.ImageByte = new byte[ImgStream.Length];
+                                ImgStream.Read(request.ImageByte, 0, request.ImageByte.Length);
 
-                            var ImgStream = Resize(img, pixels, pixels);
-
-                            request.ImageByte = new byte[ImgStream.Length];
-                            ImgStream.Read(request.ImageByte, 0, request.ImageByte.Length);
-
-                            if (request.ImageInfo.FileName.StartsWith("dp"))
-                            {
+                                uploadFileRequest.FileByte = request.ImageByte;
                                 uploadFileRequest.BucketName = "dp_images";
                                 uploadFileRequest.FileDetails = new FileMeta()
                                 {
-                                    FileName = String.Format("dp_{0}_{1}.{2}", request.UserId, size , "jpg"),
+                                    FileName = String.Format("dp_{0}_{1}.{2}", request.UserId, size, "jpg"),
                                     MetaDataDictionary = (request.ImageInfo.MetaDataDictionary != null) ?
                                         request.ImageInfo.MetaDataDictionary :
-                                        new Dictionary<String, List<string>>() { }
+                                        new Dictionary<String, List<string>>() { },
+                                    FileType = "jpg"
                                 };
+                                this.MessageProducer3.Publish(uploadFileRequest);
                             }
-                            else
+                        }
+                        else
+                        {
+                            foreach (string size in Enum.GetNames(typeof(ImageSizes)))
                             {
+                                Stream ImgStream = Resize(img, (int)((ImageSizes)Enum.Parse(typeof(ImageSizes), size)), (int)((ImageSizes)Enum.Parse(typeof(ImageSizes), size)));
+
+                                request.ImageByte = new byte[ImgStream.Length];
+                                ImgStream.Read(request.ImageByte, 0, request.ImageByte.Length);
+
                                 uploadFileRequest.FileDetails = new FileMeta()
                                 {
                                     FileName = request.ImageInfo.ObjectId + "_" + size + ".png",
                                     MetaDataDictionary = (request.ImageInfo.MetaDataDictionary != null) ?
                                         request.ImageInfo.MetaDataDictionary :
-                                        new Dictionary<String, List<string>>() { }
+                                        new Dictionary<String, List<string>>() { },
+                                    FileType = "png"
 
                                 };
+                                uploadFileRequest.FileByte = request.ImageByte;
+                                uploadFileRequest.BucketName = string.Format("images_{0}", size);
+
+                                this.MessageProducer3.Publish(uploadFileRequest);
                             }
-                            uploadFileRequest.FileByte = request.ImageByte;
-
-                            
-
-                            this.MessageProducer3.Publish(uploadFileRequest);
                         }
                     }
                 }
                 catch (Exception e)
                 {
                 }
+                return null;
+            }
+
+            public string Post(FileMetaPersistMqRequest request)
+            {
+                string tag = string.Empty;
+                if (request.FileDetails.MetaDataDictionary.Count != 0)
+                    foreach (var items in request.FileDetails.MetaDataDictionary)
+                    {
+                        tag = string.Join(",", items.Value);
+                    }
+                TenantDbFactory tenantDbFactory = new TenantDbFactory(request.TenantAccountId, this.Redis);
+
+                string sql = "INSERT INTO eb_files(userid, objid, length, filetype, tags, bucketname, uploaddatetime) VALUES(@userid, @objid, @length, @filetype,@tags,@bucketname, CURRENT_TIMESTAMP) RETURNING id";
+                DbParameter[] parameters =
+                    {
+                        tenantDbFactory.ObjectsDB.GetNewParameter("userid", System.Data.DbType.Int32, request.UserId),
+                        tenantDbFactory.ObjectsDB.GetNewParameter("objid",System.Data.DbType.String, request.FileDetails.ObjectId),
+                        tenantDbFactory.ObjectsDB.GetNewParameter("length",System.Data.DbType.Int64, request.FileDetails.Length),
+                        tenantDbFactory.ObjectsDB.GetNewParameter("filetype",System.Data.DbType.String, request.FileDetails.FileType),
+                        tenantDbFactory.ObjectsDB.GetNewParameter("tags",System.Data.DbType.String, tag),
+                        tenantDbFactory.ObjectsDB.GetNewParameter("bucketname",System.Data.DbType.String, request.BucketName)
+                    };
+                var iCount = tenantDbFactory.ObjectsDB.DoQuery(sql, parameters);
+
                 return null;
             }
 
@@ -385,3 +422,31 @@ namespace ExpressBase.ServiceStack.MQServices
         }
     }
 }
+//List<FileMeta> FileList = new List<FileMeta>();
+
+//List<GridFSFileInfo> filesList = (new TenantDbFactory(request.TenantAccountId, this.Redis)).FilesDB.FindFilesByTags(request.Filter, request.BucketName);
+
+//            foreach (GridFSFileInfo file in filesList)
+//            {
+//                string stringType = file.Filename.Split('.')[1];
+//int intType = 0;
+
+//                foreach (FileTypes type in Enum.GetValues(typeof(ImageTypes)))
+//                {
+//                    if (type.ToString() == stringType)
+//                    {
+//                        intType = (int) type;
+//                        break;
+//                    }
+//                }
+
+//                FileList.Add(
+//                    new FileMeta
+//                    {
+//                        ObjectId = file.Id.ToString(),
+//                        FileName = file.Filename,
+//                        FileType = (FileTypes) intType,
+//                        Length = file.Length,
+//                        UploadDateTime = file.UploadDateTime
+//                    });
+//            }

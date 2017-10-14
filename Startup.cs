@@ -165,23 +165,6 @@ namespace ExpressBase.ServiceStack
 
             container.Register<ITenantDbFactory>(c => new TenantDbFactory(c)).ReusedWithin(ReuseScope.Request);
 
-            //container.Register<IServerEvents>(c => new RedisServerEvents(c.Resolve<IRedisClientsManager>())); 
-
-            //container.Resolve<IServerEvents>().Start();
-
-
-            //Message Queue
-            //var redisConnectionStringMq = string.Format("redis://{0}@{1}:{2}?ssl=true&db=1",
-            //    EbLiveSettings.RedisPassword, EbLiveSettings.RedisServer, EbLiveSettings.RedisPort);
-
-            //var redisFactory = new PooledRedisClientManager(redisConnectionStringMq);
-            //var mqHost = new RedisMqServer(redisFactory, retryCount: 2);
-            //mqHost.RegisterHandler<EmailRequest>(base.ExecuteMessage);
-            //mqHost.RegisterHandler<RefreshSolutionConnectionsRequests>(base.ExecuteMessage);
-            //mqHost.RegisterHandler<UploadFileMqRequest>(base.ExecuteMessage, 5);
-
-            //mqHost.Start();
-
             RabbitMqMessageFactory rabitFactory = new RabbitMqMessageFactory();
             rabitFactory.ConnectionFactory.UserName = EbLiveSettings.RabbitUser;
             rabitFactory.ConnectionFactory.Password = EbLiveSettings.RabbitPassword;
@@ -189,13 +172,13 @@ namespace ExpressBase.ServiceStack
             rabitFactory.ConnectionFactory.Port = EbLiveSettings.RabbitPort;
             rabitFactory.ConnectionFactory.VirtualHost = EbLiveSettings.RabbitVHost;
 
-            //rabitFactory.ConnectionFactory.Uri = "amqp://user:2nuGqFcd7uI5@13.84.189.113:5672/MessageQueue";
             var mqServer = new RabbitMqServer(rabitFactory);
             mqServer.RetryCount = 1;
             //mqServer.RegisterHandler<EmailServicesMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<RefreshSolutionConnectionsMqRequestTest>(base.ExecuteMessage);
-            //mqServer.RegisterHandler<UploadFileMqRequestTest>(base.ExecuteMessage);
-            //mqServer.RegisterHandler<ImageResizeMqRequestTest>(base.ExecuteMessage);
+            //mqServer.RegisterHandler<UploadFileMqRequest>(base.ExecuteMessage);
+            //mqServer.RegisterHandler<ImageResizeMqRequest>(base.ExecuteMessage);
+            //mqServer.RegisterHandler<FileMetaPersistMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<SlackPostMqRequest>(base.ExecuteMessage);
             ////mqServer.RegisterHandler<SlackAuthMqRequest>(base.ExecuteMessage);
 
@@ -220,7 +203,7 @@ namespace ExpressBase.ServiceStack
                     RequestContext.Instance.Items.Add("TenantAccountId", TenantId);
                 }
 
-                if (requestDto != null && requestDto.GetType() != typeof(Authenticate) && requestDto.GetType() != typeof(GetAccessToken) && requestDto.GetType() != typeof(EmailServicesRequest) && requestDto.GetType() != typeof(RegisterRequest))
+                if (requestDto != null && requestDto.GetType() != typeof(Authenticate) && requestDto.GetType() != typeof(GetAccessToken) && requestDto.GetType() != typeof(UniqueRequest) && requestDto.GetType() != typeof(EmailServicesRequest) && requestDto.GetType() != typeof(RegisterRequest))
                 {
                     var auth = req.Headers[HttpHeaders.Authorization];
                     if (string.IsNullOrEmpty(auth))
