@@ -6,6 +6,7 @@ using ServiceStack;
 using ServiceStack.Messaging;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Data.Common;
 using System.Drawing;
 using System.Drawing.Imaging;
@@ -162,13 +163,40 @@ namespace ExpressBase.ServiceStack.MQServices
         [Authenticate]
         public List<FileMeta> Post(FindFilesByTagRequest request)
         {
-            string sql = "SELECT * FROM eb_files WHERE (tags ~* 'Unni') RETURNING (id)";
-            //DbParameter[] parameters =
-            //    {
-            //            this.TenantDbFactory.ObjectsDB.GetNewParameter("tag", System.Data.DbType.String, request.Tags[0])
-            //        };
-            var iCount = this.TenantDbFactory.ObjectsDB.DoQuery(sql);
-            return null;
+            List<FileMeta> FileList = new List<FileMeta>();
+            using (var con = this.TenantDbFactory.DataDB.GetNewConnection() as Npgsql.NpgsqlConnection)
+            {
+                try
+                {
+                    con.Open();
+
+                    string sql = @"SELECT 	id, userid, objid, length, tags, bucketname, filetype, uploaddatetime, eb_del FROM public.eb_files WHERE regexp_split_to_array(tags, ',') @> @tags AND eb_del = false;";
+                    //string sql = @"SELECT objid, filetype, length, tags, uploaddatetime  FROM eb_files WHERE tags ~  @tags AND eb_del = false";
+                    DataTable dt = new DataTable();
+                    
+
+                    var ada = new Npgsql.NpgsqlDataAdapter(sql, con);
+                    ada.SelectCommand.Parameters.Add(new Npgsql.NpgsqlParameter("tags", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text) { Value =  request.Tags});
+                    ada.Fill(dt);
+
+                    foreach (DataRow dr in dt.Rows)
+                    {
+                        FileList.Add(
+                            new FileMeta()
+                            {
+                                ObjectId = dr["objid"].ToString(),
+                                FileType = dr["filetype"].ToString(),
+                                Length = (Int64)dr["length"],
+                                UploadDateTime = (DateTime)dr["uploaddatetime"]
+                            });
+                    }
+                    return FileList;
+                }
+                catch (Exception e)
+                {
+                    return null;
+                }
+            }
         }
 
         [Authenticate]
@@ -422,31 +450,3 @@ namespace ExpressBase.ServiceStack.MQServices
         }
     }
 }
-//List<FileMeta> FileList = new List<FileMeta>();
-
-//List<GridFSFileInfo> filesList = (new TenantDbFactory(request.TenantAccountId, this.Redis)).FilesDB.FindFilesByTags(request.Filter, request.BucketName);
-
-//            foreach (GridFSFileInfo file in filesList)
-//            {
-//                string stringType = file.Filename.Split('.')[1];
-//int intType = 0;
-
-//                foreach (FileTypes type in Enum.GetValues(typeof(ImageTypes)))
-//                {
-//                    if (type.ToString() == stringType)
-//                    {
-//                        intType = (int) type;
-//                        break;
-//                    }
-//                }
-
-//                FileList.Add(
-//                    new FileMeta
-//                    {
-//                        ObjectId = file.Id.ToString(),
-//                        FileName = file.Filename,
-//                        FileType = (FileTypes) intType,
-//                        Length = file.Length,
-//                        UploadDateTime = file.UploadDateTime
-//                    });
-//            }

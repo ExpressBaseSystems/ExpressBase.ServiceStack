@@ -176,9 +176,9 @@ namespace ExpressBase.ServiceStack
             mqServer.RetryCount = 1;
             //mqServer.RegisterHandler<EmailServicesMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<RefreshSolutionConnectionsMqRequestTest>(base.ExecuteMessage);
-            //mqServer.RegisterHandler<UploadFileMqRequest>(base.ExecuteMessage);
-            //mqServer.RegisterHandler<ImageResizeMqRequest>(base.ExecuteMessage);
-            //mqServer.RegisterHandler<FileMetaPersistMqRequest>(base.ExecuteMessage);
+            //mqServer.RegisterHandler<UploadFileMqRequestTest>(base.ExecuteMessage);
+            //mqServer.RegisterHandler<ImageResizeMqRequestTest>(base.ExecuteMessage);
+            //mqServer.RegisterHandler<FileMetaPersistMqRequestTest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<SlackPostMqRequest>(base.ExecuteMessage);
             ////mqServer.RegisterHandler<SlackAuthMqRequest>(base.ExecuteMessage);
 
