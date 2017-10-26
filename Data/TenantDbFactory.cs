@@ -5,6 +5,7 @@ using ExpressBase.Common.Data.MongoDB;
 using ExpressBase.Data;
 using Funq;
 using ServiceStack;
+using ServiceStack.Logging;
 using ServiceStack.Redis;
 using System;
 using System.Collections.Generic;
@@ -35,10 +36,13 @@ namespace ExpressBase.ServiceStack
         {
             this.TenantId = tenantId;
 
+            ILog log = LogManager.GetLogger(GetType());
+
+            log.Info("tdbfact"+ tenantId);
             if (tenantId != null)
             {
                 _config = redis.Get<EbSolutionConnections>(string.Format("EbSolutionConnections_{0}", tenantId));
-
+                log.Info("tdbfact" + _config.ToString());
                 InitDatabases();
             }
         }

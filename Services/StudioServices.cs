@@ -44,11 +44,12 @@ ORDER BY
 SELECT
     obj_json, version_num, status
 FROM
-    eb_objects_ver EOV ,eb_objects_status EOS
+    eb_objects_ver EOV, eb_objects_status EOS
 WHERE
-    EOV.refid=@refid
-    AND EOS.eb_obj_ver_id = EOV.id
-    AND EOS.id = (SELECT MAX(EOS.id) FROM eb_objects_status EOS WHERE EOS.eb_obj_ver_id = EOV.id)";
+    EOV.refid=@refid AND EOS.eb_obj_ver_id = EOV.id
+ORDER BY
+	EOS.id DESC 
+LIMIT 1";
 
         // Fetch latest non-committed version with json - for EDIT
         private const string Query3 = @"

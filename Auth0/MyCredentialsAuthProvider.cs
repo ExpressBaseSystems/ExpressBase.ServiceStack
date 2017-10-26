@@ -21,11 +21,13 @@ namespace ExpressBase.ServiceStack.Auth0
 
         public override bool TryAuthenticate(IServiceBase authService, string UserName, string password)
         {
-            var TenantDbFactory = authService.ResolveService<ITenantDbFactory>() as TenantDbFactory;
-
             ILog log = LogManager.GetLogger(GetType());
 
-            log.Info("In TryAuthenticate method");
+            log.Info("In TryAuthenticate method1");
+            var TenantDbFactory = authService.ResolveService<ITenantDbFactory>() as TenantDbFactory;
+
+           
+            log.Info("In TryAuthenticate method2");
 
             User _authUser = null;
 
@@ -85,18 +87,23 @@ namespace ExpressBase.ServiceStack.Auth0
 
         public override object Authenticate(IServiceBase authService, IAuthSession session, Authenticate request)
         {
-            AuthenticateResponse authResponse = base.Authenticate(authService, session, request) as AuthenticateResponse;
+            ILog log = LogManager.GetLogger(GetType());
 
+            log.Info("In Authenticate method1");
+            AuthenticateResponse authResponse = base.Authenticate(authService, session, request) as AuthenticateResponse;
+            log.Info("In Authenticate method2");
             var _customUserSession = authService.GetSession() as CustomUserSession;
             _customUserSession.WhichConsole = request.Meta.ContainsKey("wc") ? request.Meta["wc"] : string.Empty;
 
             if (!string.IsNullOrEmpty(authResponse.SessionId) && _customUserSession != null)
             {
+                log.Info("In Authenticate method3");
                 return new MyAuthenticateResponse
                 {
                     UserId = _customUserSession.UserAuthId,
                     UserName = _customUserSession.UserName,
                     User = _customUserSession.User,
+                    
                 };
             }
 

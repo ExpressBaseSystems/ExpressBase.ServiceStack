@@ -197,9 +197,15 @@ namespace ExpressBase.ServiceStack
             //Add a request filter to check if the user has a session initialized
             this.GlobalRequestFilters.Add((req, res, requestDto) =>
             {
+                ILog log = LogManager.GetLogger(GetType());
+
+                log.Info("In GlobalRequestFilters");
+
                 if (requestDto.GetType() == typeof(Authenticate))
                 {
+                    log.Info("In Authenticate");
                     string TenantId = (requestDto as Authenticate).Meta != null ? (requestDto as Authenticate).Meta["cid"] : "expressbase";
+                    log.Info(TenantId);
                     RequestContext.Instance.Items.Add("TenantAccountId", TenantId);
                 }
 
