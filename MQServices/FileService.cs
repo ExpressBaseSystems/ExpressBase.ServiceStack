@@ -169,14 +169,10 @@ namespace ExpressBase.ServiceStack.MQServices
                 try
                 {
                     con.Open();
-
-                    string sql = @"SELECT 	id, userid, objid, length, tags, bucketname, filetype, uploaddatetime, eb_del FROM public.eb_files WHERE regexp_split_to_array(tags, ',') @> @tags AND eb_del = false;";
-                    //string sql = @"SELECT objid, filetype, length, tags, uploaddatetime  FROM eb_files WHERE tags ~  @tags AND eb_del = false";
+                    string sql = @"SELECT id, userid, objid, length, tags, bucketname, filetype, uploaddatetime, eb_del FROM public.eb_files WHERE regexp_split_to_array(tags, ',') @> @tags AND COALESCE(eb_del, FALSE)=FALSE;";
                     DataTable dt = new DataTable();
-                    
-
                     var ada = new Npgsql.NpgsqlDataAdapter(sql, con);
-                    ada.SelectCommand.Parameters.Add(new Npgsql.NpgsqlParameter("tags", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text) { Value =  request.Tags});
+                      ada.SelectCommand.Parameters.Add(new Npgsql.NpgsqlParameter("tags", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text) { Value =  request.Tags});
                     ada.Fill(dt);
 
                     foreach (DataRow dr in dt.Rows)
@@ -276,6 +272,19 @@ namespace ExpressBase.ServiceStack.MQServices
             }
 
             return "Uploading Failed check the data";
+        }
+
+        [Authenticate]
+        public void Post(DeleteFileRequest request)
+        {
+            this.MessageProducer3.Publish(new DeleteFileMqRequest()
+            {
+                FileDetails = new FileMeta()
+                {
+                    FileName = request.FileDetails.FileName,
+                    ObjectId = request.FileDetails.ObjectId
+                }
+            });
         }
 
         [Restrict(InternalOnly = true)]
