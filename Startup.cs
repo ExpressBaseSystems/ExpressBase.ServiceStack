@@ -200,52 +200,70 @@ namespace ExpressBase.ServiceStack
                 ILog log = LogManager.GetLogger(GetType());
 
                 log.Info("In GlobalRequestFilters");
+                try
+                {
 
+               
                 if (requestDto.GetType() == typeof(Authenticate))
                 {
                     log.Info("In Authenticate");
+                    
                     string TenantId = (requestDto as Authenticate).Meta != null ? (requestDto as Authenticate).Meta["cid"] : "expressbase";
                     log.Info(TenantId);
                     RequestContext.Instance.Items.Add("TenantAccountId", TenantId);
                 }
-
-                if (requestDto != null && requestDto.GetType() != typeof(Authenticate) && requestDto.GetType() != typeof(GetAccessToken) && requestDto.GetType() != typeof(UniqueRequest) && requestDto.GetType() != typeof(EmailServicesRequest) && requestDto.GetType() != typeof(RegisterRequest))
+                }catch(Exception e)
                 {
-                    var auth = req.Headers[HttpHeaders.Authorization];
-                    if (string.IsNullOrEmpty(auth))
-                        res.ReturnAuthRequired();
-                    else
+                    log.Info("ErrorStackTrace..........." + e.StackTrace);
+                    log.Info("ErrorMessage..........." + e.Message);
+                    log.Info("InnerException..........." + e.InnerException);
+                }
+                try
+                {
+                    if (requestDto != null && requestDto.GetType() != typeof(Authenticate) && requestDto.GetType() != typeof(GetAccessToken) && requestDto.GetType() != typeof(UniqueRequest) && requestDto.GetType() != typeof(EmailServicesRequest) && requestDto.GetType() != typeof(RegisterRequest))
                     {
-                        var jwtoken = new JwtSecurityToken(auth.Replace("Bearer", string.Empty).Trim());
-                        foreach (var c in jwtoken.Claims)
+                        var auth = req.Headers[HttpHeaders.Authorization];
+                        if (string.IsNullOrEmpty(auth))
+                            res.ReturnAuthRequired();
+                        else
                         {
-                            if (c.Type == "cid" && !string.IsNullOrEmpty(c.Value))
+                            var jwtoken = new JwtSecurityToken(auth.Replace("Bearer", string.Empty).Trim());
+                            foreach (var c in jwtoken.Claims)
                             {
-                                RequestContext.Instance.Items.Add("TenantAccountId", c.Value);
-                                if (requestDto is IEbSSRequest)
-                                    (requestDto as IEbSSRequest).TenantAccountId = c.Value;
-                                if (requestDto is EbServiceStackRequest)
-                                    (requestDto as EbServiceStackRequest).TenantAccountId = c.Value;
-                                continue;
-                            }
-                            if (c.Type == "uid" && !string.IsNullOrEmpty(c.Value))
-                            {
-                                RequestContext.Instance.Items.Add("UserId", Convert.ToInt32(c.Value));
-                                if (requestDto is IEbSSRequest)
-                                    (requestDto as IEbSSRequest).UserId = Convert.ToInt32(c.Value);
-                                if (requestDto is EbServiceStackRequest)
-                                    (requestDto as EbServiceStackRequest).UserId = Convert.ToInt32(c.Value);
-                                continue;
-                            }
-                            if (c.Type == "wc" && !string.IsNullOrEmpty(c.Value))
-                            {
-                                RequestContext.Instance.Items.Add("wc", c.Value);
-                                if (requestDto is EbServiceStackRequest)
-                                    (requestDto as EbServiceStackRequest).WhichConsole = c.Value.ToString();
-                                continue;
+                                if (c.Type == "cid" && !string.IsNullOrEmpty(c.Value))
+                                {
+                                    RequestContext.Instance.Items.Add("TenantAccountId", c.Value);
+                                    if (requestDto is IEbSSRequest)
+                                        (requestDto as IEbSSRequest).TenantAccountId = c.Value;
+                                    if (requestDto is EbServiceStackRequest)
+                                        (requestDto as EbServiceStackRequest).TenantAccountId = c.Value;
+                                    continue;
+                                }
+                                if (c.Type == "uid" && !string.IsNullOrEmpty(c.Value))
+                                {
+                                    RequestContext.Instance.Items.Add("UserId", Convert.ToInt32(c.Value));
+                                    if (requestDto is IEbSSRequest)
+                                        (requestDto as IEbSSRequest).UserId = Convert.ToInt32(c.Value);
+                                    if (requestDto is EbServiceStackRequest)
+                                        (requestDto as EbServiceStackRequest).UserId = Convert.ToInt32(c.Value);
+                                    continue;
+                                }
+                                if (c.Type == "wc" && !string.IsNullOrEmpty(c.Value))
+                                {
+                                    RequestContext.Instance.Items.Add("wc", c.Value);
+                                    if (requestDto is EbServiceStackRequest)
+                                        (requestDto as EbServiceStackRequest).WhichConsole = c.Value.ToString();
+                                    continue;
+                                }
                             }
                         }
                     }
+                }
+                catch(Exception e)
+                {
+                    log.Info("ErrorStackTraceNontokenServices..........." + e.StackTrace);
+                    log.Info("ErrorMessageNontokenServices..........." + e.Message);
+                    log.Info("InnerExceptionNontokenServices..........." + e.InnerException);
                 }
             });
 

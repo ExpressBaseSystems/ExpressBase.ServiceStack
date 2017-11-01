@@ -14,8 +14,7 @@ namespace ExpressBase.ServiceStack
             var host = new WebHostBuilder()
                 .UseKestrel()
                 .UseContentRoot(Directory.GetCurrentDirectory())
-                .UseIISIntegration()
-                .UseUrls(urls: "http://localhost:8000/")
+                .UseUrls(urls: "http://*:8000/")
                 .UseStartup<Startup>()
                 .Build();
 
