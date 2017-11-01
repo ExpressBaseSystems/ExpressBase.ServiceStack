@@ -1016,21 +1016,27 @@ namespace ExpressBase.ServiceStack.Services
             }
 
         }
-
+            
         public bool Any(UniqueRequest request)
         {
+            ILog log = LogManager.GetLogger(GetType());
+
+            log.Info("..................InUnique service");
 
             string sql = "SELECT id FROM eb_users WHERE email ~* @email";
 
+          
             DbParameter[] parameters = { this.TenantDbFactory.ObjectsDB.GetNewParameter("email", System.Data.DbType.String, (request.Colvalues != null) ? request.Colvalues["email"] : string.Empty) };
 
             var dt = this.TenantDbFactory.ObjectsDB.DoQuery(sql, parameters);
             if (dt.Rows.Count > 0)
             {
+                log.Info("...................InUnique service2222222");
                 return true;
             }
             else
             {
+                log.Info("...................InUnique service3333333");
                 return false;
             }
 
