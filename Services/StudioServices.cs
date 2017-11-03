@@ -731,6 +731,8 @@ WHERE
                 return Convert.ToInt32(EbObjectType.WebForm);
             else if (obj is EbReport)
                 return Convert.ToInt32(EbObjectType.Report);
+            else if (obj is EbFilterDialog)
+                return Convert.ToInt32(EbObjectType.FilterDialog);
             else
                 return -1;
         }
