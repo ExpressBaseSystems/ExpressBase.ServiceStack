@@ -727,7 +727,7 @@ WHERE
                 return Convert.ToInt32(EbObjectType.TableVisualization);
             else if (obj is EbChartVisualization)
                 return Convert.ToInt32(EbObjectType.ChartVisualization);
-            else if (obj is EbForm)
+            else if (obj is EbWebForm)
                 return Convert.ToInt32(EbObjectType.WebForm);
             else if (obj is EbReport)
                 return Convert.ToInt32(EbObjectType.Report);
