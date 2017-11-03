@@ -113,7 +113,7 @@ namespace ExpressBase.ServiceStack.MQServices
         }
 
         [Authenticate]
-        public byte[] Post(DownloadFileRequest request)
+        public byte[] Any(DownloadFileRequest request)
         {
             string bucketName = string.Empty;
             ObjectId objectId;
