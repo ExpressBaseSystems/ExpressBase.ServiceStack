@@ -470,6 +470,10 @@ WHERE
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@app_id", System.Data.DbType.Int32, request.AppId));
 
                     refId = cmd.ExecuteScalar().ToString();
+                    if (obj is EbFilterDialog)
+                    {
+                        this.Redis.Set<EbFilterDialog>(refId, obj);
+                    }
                 }
             }
             catch (Exception e)
@@ -512,6 +516,10 @@ WHERE
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@app_id", System.Data.DbType.Int32, request.AppId));
 
                     refId = cmd.ExecuteScalar().ToString();
+                    if (obj is EbFilterDialog)
+                    {
+                        this.Redis.Set<EbFilterDialog>(refId, obj);
+                    }
                 }
             }
             catch (Exception e)
@@ -524,6 +532,7 @@ WHERE
         public EbObject_Create_New_ObjectResponse Post(EbObject_Create_New_ObjectRequest request)
         {
             var obj = EbSerializers.Json_Deserialize(request.Json);
+            var _type = obj.GetType();
             string refId = null;
             ILog log = LogManager.GetLogger(GetType());
             log.Info("#DS insert -- entered post");
@@ -554,6 +563,10 @@ WHERE
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@app_id", System.Data.DbType.Int32, request.AppId));
 
                     refId = cmd.ExecuteScalar().ToString();
+                    if(obj is EbFilterDialog)
+                    {
+                        this.Redis.Set<EbFilterDialog>(refId, obj);
+                    }
                 }
             }
             catch (Exception e)
