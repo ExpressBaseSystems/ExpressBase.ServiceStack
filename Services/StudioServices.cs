@@ -472,7 +472,7 @@ WHERE
                     refId = cmd.ExecuteScalar().ToString();
                     if (obj is EbFilterDialog)
                     {
-                        this.Redis.Set<EbFilterDialog>(refId, obj);
+                        this.Redis.Set<EbFilterDialog>(refId, (EbFilterDialog)obj);
                     }
                 }
             }
@@ -518,7 +518,7 @@ WHERE
                     refId = cmd.ExecuteScalar().ToString();
                     if (obj is EbFilterDialog)
                     {
-                        this.Redis.Set<EbFilterDialog>(refId, obj);
+                        this.Redis.Set<EbFilterDialog>(refId, (EbFilterDialog)obj);
                     }
                 }
             }
@@ -531,7 +531,7 @@ WHERE
 
         public EbObject_Create_New_ObjectResponse Post(EbObject_Create_New_ObjectRequest request)
         {
-            var obj = EbSerializers.Json_Deserialize(request.Json);
+            dynamic obj = EbSerializers.Json_Deserialize(request.Json);
             var _type = obj.GetType();
             string refId = null;
             ILog log = LogManager.GetLogger(GetType());
@@ -565,7 +565,7 @@ WHERE
                     refId = cmd.ExecuteScalar().ToString();
                     if(obj is EbFilterDialog)
                     {
-                        this.Redis.Set<EbFilterDialog>(refId, obj);
+                        this.Redis.Set<EbFilterDialog>(refId, (EbFilterDialog)obj);
                     }
                 }
             }
