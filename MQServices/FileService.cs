@@ -113,7 +113,7 @@ namespace ExpressBase.ServiceStack.MQServices
         }
 
         [Authenticate]
-        public byte[] Post(DownloadFileRequest request)
+        public byte[] Any(DownloadFileRequest request)
         {
             string bucketName = string.Empty;
             ObjectId objectId;
@@ -196,7 +196,7 @@ namespace ExpressBase.ServiceStack.MQServices
         }
 
         [Authenticate]
-        public string Post(UploadImageRequest request)
+        public string Any(UploadImageRequest request)
         {
             string bucketName = "images_original";
             if (request.ImageInfo.FileName.StartsWith("dp"))
