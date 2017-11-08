@@ -149,7 +149,7 @@ WHERE
     EO.id = @id AND EOV.eb_objects_id = @id AND EOS.status = 3 AND EOS.eb_obj_ver_id = EOV.id";
         #endregion
 
-       List<EbObjectWrapper> f = new List<EbObjectWrapper>();
+        List<EbObjectWrapper> f = new List<EbObjectWrapper>();
         List<System.Data.Common.DbParameter> parameters = new List<System.Data.Common.DbParameter>();
 
         [CompressResponse]
@@ -403,7 +403,7 @@ WHERE
                     CommitUname = dr[2].ToString(),
                     CommitTs = Convert.ToDateTime(dr[3]),
                     ChangeLog = dr[4].ToString(),
-                    ProfileImage  = dr[5].ToString()
+                    ProfileImage = dr[5].ToString()
                 });
                 f.Add(_ebObject);
             }
@@ -431,7 +431,7 @@ WHERE
 
         #region SaveOrCommit Queries
 
-        
+
 
         #endregion
 
@@ -470,10 +470,7 @@ WHERE
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@app_id", System.Data.DbType.Int32, request.AppId));
 
                     refId = cmd.ExecuteScalar().ToString();
-                    if (obj is EbFilterDialog)
-                    {
-                        this.Redis.Set<EbFilterDialog>(refId, (EbFilterDialog)obj);
-                    }
+                    SetRedis(obj, refId);
                 }
             }
             catch (Exception e)
@@ -516,10 +513,7 @@ WHERE
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@app_id", System.Data.DbType.Int32, request.AppId));
 
                     refId = cmd.ExecuteScalar().ToString();
-                    if (obj is EbFilterDialog)
-                    {
-                        this.Redis.Set<EbFilterDialog>(refId, (EbFilterDialog)obj);
-                    }
+                    SetRedis(obj, refId);
                 }
             }
             catch (Exception e)
@@ -563,10 +557,7 @@ WHERE
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@app_id", System.Data.DbType.Int32, request.AppId));
 
                     refId = cmd.ExecuteScalar().ToString();
-                    if(obj is EbFilterDialog)
-                    {
-                        this.Redis.Set<EbFilterDialog>(refId, (EbFilterDialog)obj);
-                    }
+                    SetRedis(obj, refId);
                 }
             }
             catch (Exception e)
@@ -720,7 +711,7 @@ WHERE
                     cmd = this.TenantDbFactory.ObjectsDB.GetNewCommand(con, sql);
 
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.String, request.RefId));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@status", System.Data.DbType.Int32, (int) request.Status));
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@status", System.Data.DbType.Int32, (int)request.Status));
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@commit_uid", System.Data.DbType.Int32, request.UserId));
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_changelog", System.Data.DbType.String, request.ChangeLog));
                     cmd.ExecuteScalar();
@@ -748,6 +739,44 @@ WHERE
                 return Convert.ToInt32(EbObjectType.FilterDialog);
             else
                 return -1;
+        }
+        public void SetRedis(object obj, string refId)
+        {
+            if (obj is EbFilterDialog)
+            {
+                this.Redis.Set<EbFilterDialog>(refId, (EbFilterDialog)obj);
+
+            }
+            else if (obj is EbDataSource)
+            {
+                this.Redis.Set<EbDataSource>(refId, (EbDataSource)obj);
+
+            }
+            else if (obj is EbChart)
+            {
+                this.Redis.Set<EbChart>(refId, (EbChart)obj);
+
+            }
+            else if (obj is EbTable)
+            {
+                this.Redis.Set<EbTable>(refId, (EbTable)obj);
+
+            }
+            else if (obj is EbWebForm)
+            {
+                this.Redis.Set<EbWebForm>(refId, (EbWebForm)obj);
+
+            }
+            else if (obj is EbReport)
+            {
+                this.Redis.Set<EbReport>(refId, (EbReport)obj);
+
+            }
+            else if (obj is EbEmailTemplate)
+            {
+                this.Redis.Set<EbEmailTemplate>(refId, (EbEmailTemplate)obj);
+
+            }
         }
     }
 }

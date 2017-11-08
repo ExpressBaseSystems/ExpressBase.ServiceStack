@@ -43,7 +43,7 @@ namespace ExpressBase.ServiceStack
             //if (dt.Rows.Count > 0)
             //{
                 var _ds = this.Redis.Get<EbDataSource>(request.RefId); //EbSerializers.Json_Deserialize<EbDataSource>(dt.Rows[0][0].ToString());
-                this.Log.Info("_ds *****" + _ds.SqlDecoded());
+                this.Log.Info("_ds *****" + _ds/*.SqlDecoded()*/);
                 string _sql = string.Empty;
 
                 if (_ds != null)
@@ -69,7 +69,7 @@ namespace ExpressBase.ServiceStack
                         }
                     }
 
-                    _sql = _ds.SqlDecoded().Replace("@and_search", _c);
+                    _sql = _ds.Sql/*Decoded()*/.Replace("@and_search", _c);
                 }
                 this.Log.Info("search ok");
                 _sql = _sql.Replace("@orderby",
@@ -152,9 +152,9 @@ namespace ExpressBase.ServiceStack
                 var _ds = this.Redis.Get<EbDataSource>(request.RefId); // EbSerializers.Json_Deserialize<EbDataSource>(dt.Rows[0][0].ToString());
                 if (_ds != null)
                 {
-                    Log.Info(">>>>>>>>>>>>>>>>>>>>>>>> dscolumns Sql: " + _ds.SqlDecoded());
+                    Log.Info(">>>>>>>>>>>>>>>>>>>>>>>> dscolumns Sql: " /*+ _ds.SqlDecoded()*/);
 
-                    string _sql = _ds.SqlDecoded().Replace("@and_search", string.Empty).Replace("@orderby", "1");
+                    string _sql = _ds.Sql/*Decoded()*/.Replace("@and_search", string.Empty).Replace("@orderby", "1");
                     _isPaged = (_sql.ToLower().Contains("@offset") && _sql.ToLower().Contains("@limit"));
 
                     var parameters = new List<System.Data.Common.DbParameter>();
