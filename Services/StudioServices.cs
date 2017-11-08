@@ -97,12 +97,13 @@ SELECT @function_name";
 
         private const string GetObjectRelations = @"
 SELECT 
-	id, obj_name, obj_desc 
+	EO.obj_name, EOV.refid, EOV.version_num, EO.obj_type
 FROM 
-	eb_objects 
+	eb_objects EO, eb_objects_ver EOV
 WHERE 
-	id = ANY (SELECT eb_objects_id FROM eb_objects_ver WHERE refid IN(SELECT dependant FROM eb_objects_relations WHERE dominant=@dominant)) AND 
-    obj_type=@type";
+	EO.id = ANY (SELECT eb_objects_id FROM eb_objects_ver WHERE refid IN(SELECT dependant FROM eb_objects_relations WHERE dominant=@dominant))
+    AND EOV.refid =ANY(SELECT dependant FROM eb_objects_relations WHERE dominant=@dominant)
+    AND EO.id =EOV.eb_objects_id";
 
         private const string Query_AllVerList = @"
 SELECT 
@@ -336,15 +337,15 @@ WHERE
 
             ILog log = LogManager.GetLogger(GetType());
             parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@dominant", System.Data.DbType.String, request.DominantId));
-            parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@type", System.Data.DbType.Int32, request.EbObjectType));
             var dt = this.TenantDbFactory.ObjectsDB.DoQuery(GetObjectRelations, parameters.ToArray());
             foreach (EbDataRow dr in dt.Rows)
             {
                 var _ebObject = new EbObjectWrapper();
-
-                _ebObject.Id = Convert.ToInt32(dr[0]);
-                _ebObject.Name = dr[1].ToString();
-                _ebObject.Description = dr[2].ToString();
+               
+                _ebObject.Name = dr[0].ToString();
+                _ebObject.RefId = dr[1].ToString();
+                _ebObject.VersionNumber = dr[2].ToString();
+                _ebObject.EbObjectType = (EbObjectType)Convert.ToInt32(dr[3]);
 
                 f.Add(_ebObject);
             }
