@@ -92,6 +92,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             return resp;
         }
+       
         //public DataBaseConfigResponse Post(DataBaseConfigRequest request)
         //{
         //    DataBaseConfigResponse resp = new DataBaseConfigResponse();
@@ -938,9 +939,7 @@ namespace ExpressBase.ServiceStack.Services
                         };
                         return resp;
                     }
-
-
-                    else if (request.restype == "homeimg")
+                    else
                     {
                         string sql = string.Format("SELECT id,profileimg FROM eb_tenants WHERE cname={0}", request.Uname);
                         var dt = TenantDbFactory.DataDB.DoQuery(sql);
@@ -956,23 +955,7 @@ namespace ExpressBase.ServiceStack.Services
                         return resp;
 
                     }
-
-                    else
-                    {
-                        string sql = string.Format("SELECT id,accountname,profilelogo,cid,createdat FROM eb_tenantaccount WHERE tenantid={0}", request.Uid);
-                        var dt = TenantDbFactory.DataDB.DoQuery(sql);
-                        List<List<object>> list = new List<List<object>>();
-                        foreach (EbDataRow dr in dt.Rows)
-                        {
-                            list.Add(new List<object> { Convert.ToInt32(dr[0]), dr[1].ToString(), dr[2].ToString(), dr[3].ToString(), dr[4] });
-                        }
-                        TokenRequiredSelectResponse resp = new TokenRequiredSelectResponse()
-                        {
-                            returnlist = list
-                        };
-                        return resp;
-                    }
-
+                  
                 }
             }
         }
@@ -1040,6 +1023,22 @@ namespace ExpressBase.ServiceStack.Services
                 return false;
             }
 
+        }
+
+        public GetAccountResponse Any(GetAccountRequest request)
+        {
+            string sql = string.Format("SELECT id,solutionname,profilelogo,solutionid,createdat FROM eb_solutions WHERE tenantid={0}", request.UserId);
+            var dt = TenantDbFactory.DataDB.DoQuery(sql);
+            List<List<object>> list = new List<List<object>>();
+            foreach (EbDataRow dr in dt.Rows)
+            {
+                list.Add(new List<object> { Convert.ToInt32(dr[0]), dr[1].ToString(), dr[2].ToString(), dr[3].ToString(), dr[4] });
+            }
+            GetAccountResponse resp = new GetAccountResponse()
+            {
+                returnlist = list
+            };
+            return resp;
         }
 
         //public InfraDb_GENERIC_SELECTResponse Any(InfraDb_GENERIC_SELECTRequest req)
