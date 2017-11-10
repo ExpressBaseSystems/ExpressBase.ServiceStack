@@ -119,8 +119,12 @@ namespace ExpressBase.ServiceStack.MQServices
             ObjectId objectId;
             var FileNameParts = request.FileDetails.FileName.Substring(0, request.FileDetails.FileName.IndexOf('.'))?.Split('_');
             // 3 cases = > 1. ObjectId.(fileextension), 2. ObjectId_(size).(imageextionsion), 3. dp_(userid)_(size).(imageextension)
-
-            if (FileNameParts.Length == 1)
+            if (request.FileDetails.FileName.StartsWith("dp"))
+            {
+                if (Enum.IsDefined(typeof(ImageTypes), request.FileDetails.FileType.ToString()))
+                    bucketName = "dp_images";
+            }
+            else if (FileNameParts.Length == 1)
             {
                 if (Enum.IsDefined(typeof(ImageTypes), request.FileDetails.FileType.ToString()))
                     bucketName = "images_original";
@@ -147,11 +151,7 @@ namespace ExpressBase.ServiceStack.MQServices
                 {
                 }
             }
-            else if (request.FileDetails.FileName.StartsWith("dp"))
-            {
-                if (Enum.IsDefined(typeof(ImageTypes), request.FileDetails.FileType.ToString()))
-                    bucketName = "dp_images";
-            }
+            
 
             if (bucketName != string.Empty)
             {
@@ -370,11 +370,11 @@ namespace ExpressBase.ServiceStack.MQServices
                                 uploadFileRequest.BucketName = "dp_images";
                                 uploadFileRequest.FileDetails = new FileMeta()
                                 {
-                                    FileName = String.Format("dp_{0}_{1}.{2}", request.UserId, size, "jpg"),
+                                    FileName = request.ImageInfo.FileName,
                                     MetaDataDictionary = (request.ImageInfo.MetaDataDictionary != null) ?
                                         request.ImageInfo.MetaDataDictionary :
                                         new Dictionary<String, List<string>>() { },
-                                    FileType = "jpg"
+                                    FileType = request.ImageInfo.FileType
                                 };
                                 this.MessageProducer3.Publish(uploadFileRequest);
                             }
