@@ -322,7 +322,7 @@ namespace ExpressBase.ServiceStack.MQServices
                         TenantAccountId = request.TenantAccountId,
                         UserId = request.UserId
                     });
-                    if (request.BucketName == "images_original" || (request.BucketName == "dp_images" && request.BucketName.Contains("actual")))
+                    if (request.BucketName == "images_original" || (request.BucketName == "dp_images" && request.FileDetails.FileName.Split('_').Length == 2))
                         this.MessageProducer3.Publish(new ImageResizeMqRequest
                         {
                             ImageInfo = new FileMeta
