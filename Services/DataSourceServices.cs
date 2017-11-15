@@ -87,7 +87,7 @@ namespace ExpressBase.ServiceStack
                         });
                 }
 
-                if (request.Params != null)
+                if (request.Params != null && request.Params.Count != 0)
                 {
                     foreach (Dictionary<string, string> param in request.Params)
                         parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter(string.Format("@{0}", param["name"]), (System.Data.DbType)Convert.ToInt32(param["type"]), param["value"]));

@@ -382,11 +382,54 @@ WHERE
                     MinorVersionNumber = Convert.ToInt32(dr[15]),
                     PatchVersionNumber = Convert.ToInt32(dr[16]),
                     Tags = dr[17].ToString(),
-                    AppId = Convert.ToInt32(dr[18])
-                });
+                    AppId = Convert.ToInt32(dr[18]),
+                    Dashboard_Tiles = new EbObjectWrapper_Dashboard{
+                        LastCommitedVersionRefid = dr[19].ToString(),
+                        LastCommitedVersionNumber = dr[20].ToString(),
+                        LastCommitedVersionCommit_ts = Convert.ToDateTime((dr[21].ToString()) == "" ? DateTime.MinValue : dr[21]),
+                        LastCommitedVersion_Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[22]),
+                        LastCommitedby_Name= dr[23].ToString(),
+                        LastCommitedby_Id = Convert.ToInt32(dr[24]),
+                        LiveVersionRefid = dr[25].ToString(),
+                        LiveVersionNumber= dr[26].ToString(),
+                        LiveVersionCommit_ts = Convert.ToDateTime((dr[27].ToString()) == "" ? DateTime.MinValue : dr[27]),
+                        LiveVersion_Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[28]),
+                        LiveVersionCommitby_Name = dr[29].ToString(),
+                        LiveVersionCommitby_Id  = Convert.ToInt32(dr[30])
+                    }
+                    
+
+            });
                 f.Add(_ebObject);
             }
             return new EbObjectExploreObjectResponse { Data = f };
+        }
+
+        [CompressResponse]
+        public object Get(EbObjectUpdateDashboardRequest request)
+        {
+            parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@refid", System.Data.DbType.String, request.Refid));
+            var dt = this.TenantDbFactory.ObjectsDB.DoQuery("SELECT * FROM public.eb_objects_update_Dashboard(@refid)", parameters.ToArray());
+
+            foreach (EbDataRow dr in dt.Rows)
+            {
+                var _ebObject = (new EbObjectWrapper
+                {   
+                    Name = dr[0].ToString(),
+                    Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[1]),
+                    RefId = request.Refid,
+                    VersionNumber = dr[2].ToString(),
+                    WorkingMode = Convert.ToBoolean(dr[3]),
+                    Wc_All = dr[4] as string[],
+                    MajorVersionNumber = Convert.ToInt32(dr[5]),
+                    MinorVersionNumber = Convert.ToInt32(dr[6]),
+                    PatchVersionNumber = Convert.ToInt32(dr[7]),
+                    Tags = dr[8].ToString(),
+                    AppId = Convert.ToInt32(dr[9])
+                });
+                f.Add(_ebObject);
+            }
+            return new EbObjectUpdateDashboardResponse { Data = f };
         }
 
         [CompressResponse]
