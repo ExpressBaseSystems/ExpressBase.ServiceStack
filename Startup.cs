@@ -36,6 +36,10 @@ namespace ExpressBase.ServiceStack
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            services.AddDataProtection(opts =>
+             {
+                opts.ApplicationDiscriminator = "expreaabase.servicestack";
+                           });
             // Add framework services.
         }
 
