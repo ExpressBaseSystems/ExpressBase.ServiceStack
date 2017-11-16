@@ -13,7 +13,7 @@ namespace ExpressBase.ServiceStack.MQServices
     {
         public bool Post(RefreshSolutionConnectionsMqRequest req)
         {
-            using (var con = new TenantDbFactory(req.TenantAccountId, this.Redis).DataDB.GetNewConnection() as Npgsql.NpgsqlConnection)
+            using (var con = new TenantDbFactory("expressbase", this.Redis).DataDB.GetNewConnection() as Npgsql.NpgsqlConnection)
             {
                 try
                 {

@@ -30,7 +30,7 @@ namespace ExpressBase.ServiceStack
         // Fetch all version without json of a particular Object
         private const string Query1 = @"
 SELECT 
-    EOV.id, EOV.version_num, EOV.obj_changelog, EOV.commit_ts, EOV.refid, EU.firstname
+    EOV.id, EOV.version_num, EOV.obj_changelog, EOV.commit_ts, EOV.refid, EOV.commit_uid, EU.firstname
 FROM 
     eb_objects_ver EOV, eb_users EU
 WHERE
@@ -132,7 +132,7 @@ ORDER BY
 
         private const string Query_StatusHistory = @"
 SELECT 
-    EOS.eb_obj_ver_id, EOS.status, EU.firstname, EOS.ts, EOS.changelog, EU.profileimg   
+    EOS.eb_obj_ver_id, EOS.status, EU.firstname, EOS.ts, EOS.changelog, EOV.commit_uid   
 FROM
     eb_objects_status EOS, eb_objects_ver EOV, eb_users EU
 WHERE
@@ -170,7 +170,8 @@ WHERE
                     ChangeLog = dr[2].ToString(),
                     CommitTs = Convert.ToDateTime(dr[3]),
                     RefId = dr[4].ToString(),
-                    CommitUname = dr[5].ToString()
+                    CommitUId = Convert.ToInt32(dr[5]),
+                    CommitUname = dr[6].ToString()
                 });
                 f.Add(_ebObject);
             }
@@ -377,13 +378,13 @@ WHERE
                     WorkingMode = Convert.ToBoolean(dr[10]),
                     Json_wc = dr[12].ToString(),
                     Json_lc = dr[13].ToString(),
-                    Wc_All = dr[11] as string[],
-                    MajorVersionNumber = Convert.ToInt32(dr[14]),
-                    MinorVersionNumber = Convert.ToInt32(dr[15]),
-                    PatchVersionNumber = Convert.ToInt32(dr[16]),
+                    Wc_All = dr[11] as string[],                    
                     Tags = dr[17].ToString(),
                     AppId = Convert.ToInt32(dr[18]),
                     Dashboard_Tiles = new EbObjectWrapper_Dashboard{
+                        MajorVersionNumber = Convert.ToInt32(dr[14]),
+                        MinorVersionNumber = Convert.ToInt32(dr[15]),
+                        PatchVersionNumber = Convert.ToInt32(dr[16]),
                         LastCommitedVersionRefid = dr[19].ToString(),
                         LastCommitedVersionNumber = dr[20].ToString(),
                         LastCommitedVersionCommit_ts = Convert.ToDateTime((dr[21].ToString()) == "" ? DateTime.MinValue : dr[21]),
@@ -395,7 +396,10 @@ WHERE
                         LiveVersionCommit_ts = Convert.ToDateTime((dr[27].ToString()) == "" ? DateTime.MinValue : dr[27]),
                         LiveVersion_Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[28]),
                         LiveVersionCommitby_Name = dr[29].ToString(),
-                        LiveVersionCommitby_Id  = Convert.ToInt32(dr[30])
+                        LiveVersionCommitby_Id  = Convert.ToInt32(dr[30]),
+                        OwnerUid = Convert.ToInt32(dr[31]),                        
+                        OwnerTs = Convert.ToDateTime((dr[32].ToString()) == "" ? DateTime.MinValue : dr[32]),
+                        OwnerName = dr[33].ToString()
                     }
                     
 
@@ -414,18 +418,36 @@ WHERE
             foreach (EbDataRow dr in dt.Rows)
             {
                 var _ebObject = (new EbObjectWrapper
-                {   
+                {
                     Name = dr[0].ToString(),
                     Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[1]),
                     RefId = request.Refid,
                     VersionNumber = dr[2].ToString(),
                     WorkingMode = Convert.ToBoolean(dr[3]),
                     Wc_All = dr[4] as string[],
-                    MajorVersionNumber = Convert.ToInt32(dr[5]),
-                    MinorVersionNumber = Convert.ToInt32(dr[6]),
-                    PatchVersionNumber = Convert.ToInt32(dr[7]),
                     Tags = dr[8].ToString(),
-                    AppId = Convert.ToInt32(dr[9])
+                    AppId = Convert.ToInt32(dr[9]),
+                    Dashboard_Tiles = new EbObjectWrapper_Dashboard
+                    {
+                        MajorVersionNumber = Convert.ToInt32(dr[5]),
+                        MinorVersionNumber = Convert.ToInt32(dr[6]),
+                        PatchVersionNumber = Convert.ToInt32(dr[7]),
+                        LastCommitedVersionRefid = dr[10].ToString(),
+                        LastCommitedVersionNumber = dr[11].ToString(),
+                        LastCommitedVersionCommit_ts = Convert.ToDateTime((dr[12].ToString()) == "" ? DateTime.MinValue : dr[12]),
+                        LastCommitedVersion_Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[13]),
+                        LastCommitedby_Name = dr[14].ToString(),
+                        LastCommitedby_Id = Convert.ToInt32(dr[15]),
+                        LiveVersionRefid = dr[16].ToString(),
+                        LiveVersionNumber = dr[17].ToString(),
+                        LiveVersionCommit_ts = Convert.ToDateTime((dr[18].ToString()) == "" ? DateTime.MinValue : dr[18]),
+                        LiveVersion_Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[19]),
+                        LiveVersionCommitby_Name = dr[20].ToString(),
+                        LiveVersionCommitby_Id = Convert.ToInt32(dr[21]),
+                        OwnerUid = Convert.ToInt32(dr[22]),
+                        OwnerTs = Convert.ToDateTime((dr[23].ToString()) == "" ? DateTime.MinValue : dr[23]),
+                        OwnerName = dr[24].ToString()
+                    }
                 });
                 f.Add(_ebObject);
             }
@@ -447,7 +469,7 @@ WHERE
                     CommitUname = dr[2].ToString(),
                     CommitTs = Convert.ToDateTime(dr[3]),
                     ChangeLog = dr[4].ToString(),
-                    ProfileImage = dr[5].ToString()
+                    CommitUId = Convert.ToInt32(dr[5])
                 });
                 f.Add(_ebObject);
             }
