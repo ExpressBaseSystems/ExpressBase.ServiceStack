@@ -499,5 +499,27 @@ namespace ExpressBase.ServiceStack.Services
             }
             return resp;
         }
+
+        public GetApplicationObjectsResponse Any(GetApplicationObjectsRequest request)
+        {
+            GetApplicationObjectsResponse resp = new GetApplicationObjectsResponse();
+            using (var con = this.TenantDbFactory.ObjectsDB.GetNewConnection())
+            {
+                con.Open();
+                string sql = "SELECT id,obj_name FROM eb_objects WHERE applicationid = @applicationid AND obj_type = @obj_type ;";
+                DbParameter[] parameters = { this.TenantDbFactory.ObjectsDB.GetNewParameter("applicationid", System.Data.DbType.Int32, request.Id),
+                    this.TenantDbFactory.ObjectsDB.GetNewParameter("obj_type", System.Data.DbType.Int32, request.objtype) };
+
+                var dt = this.TenantDbFactory.ObjectsDB.DoQueries(sql, parameters);
+
+                Dictionary<string, object> returndata = new Dictionary<string, object>();
+                foreach (EbDataRow dr in dt.Tables[0].Rows)
+                {
+                    returndata[dr[0].ToString()] = dr[1].ToString();
+                }
+                resp.Data = returndata;
+            }
+            return resp;
+        }
     }
 }

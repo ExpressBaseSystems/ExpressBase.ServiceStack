@@ -33,7 +33,7 @@ namespace ExpressBase.ServiceStack
 
                     //(session as CustomUserSession).Company = "expressbase";
                     //(session as CustomUserSession).WhichConsole = "tc";
-                    return authService.Redirect(SuccessRedirectUrlFilter(this, "http://localhost:5000/Ext/AfterSignInSocial?email=" + session.ProviderOAuthAccess[0].Email + "&socialId=" + session.ProviderOAuthAccess[0].UserId + "&provider=" + session.AuthProvider + "&providerToken=" + session.ProviderOAuthAccess[0].AccessTokenSecret + "&lg=" + logatmp));
+                    return authService.Redirect(SuccessRedirectUrlFilter(this, "http://expressbase.com/Ext/AfterSignInSocial?email=" + session.ProviderOAuthAccess[0].Email + "&socialId=" + session.ProviderOAuthAccess[0].UserId + "&provider=" + session.AuthProvider + "&providerToken=" + session.ProviderOAuthAccess[0].AccessTokenSecret + "&lg=" + logatmp));
                 }
             }
 
