@@ -325,9 +325,8 @@ namespace ExpressBase.ServiceStack.Services
                 string sql = @"
                 SELECT role_name,applicationid,description FROM eb_roles WHERE id = @id;
                 SELECT permissionname,obj_id,op_id FROM eb_role2permission WHERE role_id = @id AND eb_del = FALSE;
-                SELECT obj_name FROM eb_objects WHERE id IN(SELECT applicationid FROM eb_roles WHERE id = @id);
-                SELECT refid FROM eb_objects_ver WHERE eb_objects_id IN(SELECT applicationid FROM eb_roles WHERE id = @id)";
-
+                SELECT applicationname FROM eb_applications WHERE id IN(SELECT applicationid FROM eb_roles WHERE id = @id);";
+               
 
 
                 DbParameter[] parameters = { this.TenantDbFactory.ObjectsDB.GetNewParameter("id", System.Data.DbType.Int32, request.id) };
@@ -347,13 +346,8 @@ namespace ExpressBase.ServiceStack.Services
                     result.Add("applicationid", Convert.ToInt32(dr[1]));
                     result.Add("description", dr[2].ToString());
                 }
-
-
                 foreach (var dr in ds.Tables[2].Rows)
                     result.Add("applicationname", dr[0].ToString());
-
-                foreach (var dr in ds.Tables[3].Rows)
-                    result.Add("dominantrefid", dr[0].ToString());
 
                 resp.Data = result;
             }
