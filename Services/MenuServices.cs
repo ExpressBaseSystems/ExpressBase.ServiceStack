@@ -1,5 +1,6 @@
 ﻿using ExpressBase.Common;
 using ExpressBase.Common.Data;
+using ExpressBase.Common.Objects;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using System;
 using System.Collections.Generic;
@@ -17,11 +18,13 @@ namespace ExpressBase.ServiceStack.Services
         public object Get(SidebarUserRequest request)
         {
             var Query1 = @"
+SELECT id, applicationname
+FROM eb_applications;
 SELECT
-    EO.id, EO.obj_name,
-    EOV.version_num, EOV.refid, APP.applicationname, APP.id as appid
+    EO.id, EO.obj_type, EO.obj_name,
+    EOV.version_num, EOV.refid, EO.applicationid
 FROM
-    eb_objects EO, eb_objects_ver EOV, eb_objects_status EOS ,eb_applications APP
+    eb_objects EO, eb_objects_ver EOV, eb_objects_status EOS
 WHERE
     EO.id = EOV.eb_objects_id 
 AND 
@@ -29,31 +32,46 @@ AND
 AND 
     EO.id = ANY('@Ids')  
 AND 
-    EOS.status = 3 
-AND 
-    APP.id = EO.applicationid";
+    EOS.status = 3 ;";
 
             //parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@Ids", System.Data.DbType.String, request.Ids));
-            var dt = this.TenantDbFactory.ObjectsDB.DoQuery(Query1.Replace("@Ids", request.Ids));
+            var ds = this.TenantDbFactory.ObjectsDB.DoQueries(Query1.Replace("@Ids", request.Ids));
 
-            Dictionary<string, AppWrap> _Coll = new Dictionary<string, AppWrap>();
-            foreach (EbDataRow dr in dt.Rows)
+            Dictionary<int, AppObject> appColl = new Dictionary<int, AppObject>();
+            foreach (EbDataRow dr in ds.Tables[0].Rows)
             {
-                string appName = dr[4].ToString();
-                if (!_Coll.Keys.Contains<string>(appName))
-                    _Coll.Add(appName, new AppWrap { AppName = appName, Objects = new List<ObjWrap>() });
+                var id = Convert.ToInt32(dr[0]);
+                if (!appColl.Keys.Contains<int>(id))
+                    appColl.Add(id, new AppObject { AppName = dr[1].ToString() });
+            }
 
-                _Coll[appName].Objects.Add(new ObjWrap
+            Dictionary<int, AppWrap> _Coll = new Dictionary<int, AppWrap>();
+
+            foreach (EbDataRow dr in ds.Tables[1].Rows)
+            {
+                var appid = Convert.ToInt32(dr[5]);
+
+                if (!_Coll.Keys.Contains<int>(appid))
+                    _Coll.Add(appid, new AppWrap {  Types =new Dictionary<int, TypeWrap>() });
+
+                Dictionary<int, TypeWrap> _types = new Dictionary<int, TypeWrap>();
+                var typeId = Convert.ToInt32(dr[1]);
+
+                if (!_Coll[appid].Types.Keys.Contains<int>(typeId))
+                    _Coll[appid].Types.Add(typeId, new TypeWrap {Objects = new List<ObjWrap>() });
+
+                _Coll[appid].Types[typeId].Objects.Add(new ObjWrap
                 {
                     Id = Convert.ToInt32(dr[0]),
-                    ObjName = dr[1].ToString(),
-                    VersionNumber = dr[2].ToString(),
-                    Refid = dr[3].ToString(),
+                    EbObjectType = (EbObjectType)Convert.ToInt32(dr[1]),
+                    ObjName = dr[2].ToString(),
+                    VersionNumber = dr[3].ToString(),
+                    Refid = dr[4].ToString(),
                     AppId = Convert.ToInt32(dr[5])
                 });
             }
 
-            return new SidebarUserResponse { Data = _Coll };
+            return new SidebarUserResponse { Data = _Coll, AppList = appColl };
         }
     }
 }
