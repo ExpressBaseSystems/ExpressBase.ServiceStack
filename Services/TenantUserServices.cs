@@ -500,7 +500,17 @@ namespace ExpressBase.ServiceStack.Services
             using (var con = this.TenantDbFactory.ObjectsDB.GetNewConnection())
             {
                 con.Open();
-                string sql = "SELECT id,obj_name FROM eb_objects WHERE applicationid = @applicationid AND obj_type = @obj_type ;";
+                string sql = @" SELECT 
+                                    EO.id,EO.obj_name
+                                FROM 
+                                    eb_objects EO, eb_objects_ver EOV, eb_objects_status EOS 
+                                WHERE
+                                    EO.id = EOV.eb_objects_id AND EOV.id = EOS.eb_obj_ver_id AND EOS.status = 3 
+                                AND 
+                                    EOS.id = (SELECT EOS.id FROM eb_objects_status EOS, eb_objects_ver EOV
+                                WHERE 
+                                    EOS.eb_obj_ver_id = EOV.id AND EO.id = EOV.eb_objects_id ORDER BY EOS.id DESC LIMIT 1) 
+                                AND EO.applicationid = @applicationid AND EO.obj_type = @obj_type";
                 DbParameter[] parameters = { this.TenantDbFactory.ObjectsDB.GetNewParameter("applicationid", System.Data.DbType.Int32, request.Id),
                     this.TenantDbFactory.ObjectsDB.GetNewParameter("obj_type", System.Data.DbType.Int32, request.objtype) };
 

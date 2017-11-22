@@ -803,6 +803,8 @@ WHERE
                 return Convert.ToInt32(EbObjectType.Report);
             else if (obj is EbFilterDialog)
                 return Convert.ToInt32(EbObjectType.FilterDialog);
+            else if (obj is EbEmailTemplate)
+                return Convert.ToInt32(EbObjectType.EmailBuilder);
             else
                 return -1;
         }
