@@ -19,17 +19,17 @@ namespace ExpressBase.ServiceStack.Auth0
             var _InfraDb = base.ResolveService<ITenantDbFactory>() as TenantDbFactory;
 
             DbParameter[] parameters = {
-                _InfraDb.DataDB.GetNewParameter("email", System.Data.DbType.String, request.Email),
-                _InfraDb.DataDB.GetNewParameter("pwd", System.Data.DbType.String, (request.Password + request.Email).ToMD5Hash())
+                _InfraDb.DataDB.GetNewParameter("email", System.Data.DbType.String, request.Email)
+               // _InfraDb.DataDB.GetNewParameter("pwd", System.Data.DbType.String, (request.Password + request.Email).ToMD5Hash())
             };
 
-            EbDataTable dt = _InfraDb.DataDB.DoQuery("INSERT INTO eb_users (email, pwd, u_token) VALUES ( @email, @pwd, md5( @email || now())) RETURNING id, u_token;", parameters);
+            EbDataTable dt = _InfraDb.DataDB.DoQuery("INSERT INTO eb_users (email, u_token) VALUES ( @email, md5( @email || now())) RETURNING id, u_token;", parameters);
             
             if (dt.Rows.Count > 0)
             {
                 try
                 {
-                    base.MessageProducer3.Publish(new EmailServicesMqRequest { Message = string.Format("http://localhost:5000/Ext/VerificationStatus?signup_tok={0}&email={1}", dt.Rows[0][1].ToString(), request.Email), TenantAccountId = request.TenantAccountId, Subject = "EXPRESSbase Signup Confirmation", To = request.Email, UserId =Convert.ToInt32(dt.Rows[0][0]) });
+                    base.MessageProducer3.Publish(new EmailServicesMqRequest { Message = string.Format("http://expressbase.com/Ext/VerificationStatus?signup_tok={0}&email={1}", dt.Rows[0][1].ToString(), request.Email), TenantAccountId = request.TenantAccountId, Subject = "EXPRESSbase Signup Confirmation", To = request.Email, UserId =Convert.ToInt32(dt.Rows[0][0]) });
                     response.UserName = dt.Rows[0][1].ToString();
                     response.UserId = dt.Rows[0][0].ToString();
                 }
