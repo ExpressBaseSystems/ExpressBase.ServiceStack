@@ -54,7 +54,7 @@ namespace ExpressBase.ServiceStack.Auth0
                 //else
                 //{
                     //log.Info("for user login");
-                    _authUser = (string.IsNullOrEmpty(socialId)) ? User.GetDetails(TenantDbFactory.DataDB, UserName, password) : User.GetInfraUserViaSocial(TenantDbFactory.DataDB, UserName, socialId);
+                    _authUser = (string.IsNullOrEmpty(socialId)) ? User.GetDetails(TenantDbFactory.DataDB, UserName, password) : User.GetInfraUserViaSocial(TenantDbFactory.DataDB, socialId);
                 log.Info("#Eb reached 2");
                 //}
             }
