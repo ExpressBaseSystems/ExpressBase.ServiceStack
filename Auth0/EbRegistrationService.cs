@@ -6,6 +6,7 @@ using ServiceStack;
 using ServiceStack.Messaging;
 using System;
 using System.Data.Common;
+using static ExpressBase.ServiceStack.EmailService;
 
 namespace ExpressBase.ServiceStack.Auth0
 {
@@ -29,7 +30,9 @@ namespace ExpressBase.ServiceStack.Auth0
             {
                 try
                 {
-                    base.MessageProducer3.Publish(new EmailServicesMqRequest { Message = string.Format("http://expressbase.com/Ext/VerificationStatus?signup_tok={0}&email={1}", dt.Rows[0][1].ToString(), request.Email), TenantAccountId = request.TenantAccountId, Subject = "EXPRESSbase Signup Confirmation", To = request.Email, UserId =Convert.ToInt32(dt.Rows[0][0]) });
+                    var myService = base.ResolveService<EmailServiceInternal>();
+                    myService.Post(new EmailServicesMqRequest() { refid = "eb_roby_dev-eb_roby_dev-15-894-1611", TenantAccountId = request.TenantAccountId, Subject = "EXPRESSbase Signup Confirmation", To = request.Email, UserId = Convert.ToInt32(dt.Rows[0][0]) });
+                   // base.MessageProducer3.Publish(new EmailServicesMqRequest { refid = "eb_roby_dev-eb_roby_dev-15-894-1611", TenantAccountId = request.TenantAccountId, Subject = "EXPRESSbase Signup Confirmation", To = request.Email, UserId =Convert.ToInt32(dt.Rows[0][0]) });
                     response.UserName = dt.Rows[0][1].ToString();
                     response.UserId = dt.Rows[0][0].ToString();
                 }

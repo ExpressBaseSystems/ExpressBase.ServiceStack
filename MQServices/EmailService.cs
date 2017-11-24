@@ -17,13 +17,14 @@ namespace ExpressBase.ServiceStack
             public EmailServiceInternal(IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_mqp, _mqc) { }
             public string Post(EmailServicesMqRequest request)
             {
+                var myService = base.ResolveService<EbObjectService>();
+                var res = myService.Get(new EbObjectParticularVersionRequest() { RefId = request.refid });
 
                 var emailMessage = new MimeMessage();
-
                 emailMessage.From.Add(new MailboxAddress("EXPRESSbase", "info@expressbase.com"));
                 emailMessage.To.Add(new MailboxAddress("", request.To));
                 emailMessage.Subject = request.Subject;
-                emailMessage.Body = new TextPart("plain") { Text = request.Message };
+                emailMessage.Body = new TextPart("plain") { Text = request.refid };
                 try
                 {
                     using (var client = new SmtpClient())
