@@ -33,14 +33,14 @@ namespace ExpressBase.ServiceStack
                 var dt = this.TenantDbFactory.ObjectsDB.DoQuery(sql, parameters);
 
                 Dictionary<string, object> Dict = new Dictionary<string, object>();
-                if (dt.Rows.Count > 1)
+                if (dt.Rows.Count == 1)
                 {
                     foreach (var dr in dt.Rows)
                     {
                         Dict.Add(dr[0].ToString(), dr[1]);
                     }
                 }
-                else
+                else if (dt.Rows.Count > 1)
                 {
                     Dict.Add("applicationname", dt.Rows[0][1]);
                     Dict.Add("description", dt.Rows[0][2]);
