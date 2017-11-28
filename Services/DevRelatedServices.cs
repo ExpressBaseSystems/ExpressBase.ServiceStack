@@ -42,8 +42,8 @@ namespace ExpressBase.ServiceStack
                 }
                 else if (dt.Rows.Count == 1)
                 {
-                    Dict.Add("applicationname", dt.Rows[0][1]);
-                    Dict.Add("description", dt.Rows[0][2]);
+                    Dict.Add("applicationname", dt.Rows[0][0]);
+                    Dict.Add("description", dt.Rows[0][1]);
                 }
                 resp.Data = Dict;
 

@@ -9,6 +9,9 @@ using ExpressBase.Objects.EmailRelated;
 using ExpressBase.Common;
 using ExpressBase.Objects;
 using ExpressBase.Common.Data;
+using System.Text;
+using System.Collections.Generic;
+using System.Text.RegularExpressions;
 
 namespace ExpressBase.ServiceStack
 {
@@ -25,6 +28,7 @@ namespace ExpressBase.ServiceStack
 
             public string Post(EmailServicesMqRequest request)
             {
+                
                 var _InfraDb = base.ResolveService<ITenantDbFactory>() as TenantDbFactory;
                 var myService = base.ResolveService<EbObjectService>();
                 var res =(EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = request.refid });
@@ -34,6 +38,7 @@ namespace ExpressBase.ServiceStack
                      ebEmailTemplate = EbSerializers.Json_Deserialize(element.Json);
                 }
 
+               
 
                 var myDs = base.ResolveService<EbObjectService>();
                 var myDsres = (EbObjectParticularVersionResponse)myDs.Get(new EbObjectParticularVersionRequest() { RefId = ebEmailTemplate.DataSourceRefId });
@@ -44,20 +49,27 @@ namespace ExpressBase.ServiceStack
                     ebDataSource = EbSerializers.Json_Deserialize(element.Json);
                 }
                 var ds = _InfraDb.ObjectsDB.DoQueries(ebDataSource.Sql);
-
-                foreach(var table in ds.Tables)
+                var pattern = @"\{{(.*?)\}}";
+                var matches = Regex.Matches(ebEmailTemplate.Body, pattern);
+                Dictionary<string, object> dict = new Dictionary<string, object>();
+                foreach (Match m in matches)
                 {
-                    foreach(var col in table.Columns)
+                    string str = Regex.Replace(m.Value, "[{}]", "");
+                    foreach(var dt in ds.Tables)
                     {
-
+                        string colname = dt.Rows[0][str.Split('.')[1]].ToString();
+                        ebEmailTemplate.Body = ebEmailTemplate.Body.Replace(m.Value, colname);
                     }
+                    
                 }
+
+              
 
                 var emailMessage = new MimeMessage();
                 emailMessage.From.Add(new MailboxAddress("EXPRESSbase", "info@expressbase.com"));
                 emailMessage.To.Add(new MailboxAddress("", request.To));
                 emailMessage.Subject = request.Subject;
-                emailMessage.Body = new TextPart("plain") { Text = request.refid };
+                emailMessage.Body = new TextPart("plain") { Text = ebEmailTemplate.Body };
                 try
                 {
                     using (var client = new SmtpClient())
