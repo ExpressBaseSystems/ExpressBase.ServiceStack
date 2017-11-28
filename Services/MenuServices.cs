@@ -80,6 +80,7 @@ AND
         public object Get(SidebarDevRequest request)
         {
             var Query1 = @"
+SELECT id, applicationname FROM eb_applications;
 SELECT
     EO.id, EO.obj_type, EO.obj_name,EO.obj_desc
 FROM
@@ -87,11 +88,20 @@ FROM
 ORDER BY EO.obj_type";
 
             //parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@Ids", System.Data.DbType.String, request.Ids));
-            var dt = this.TenantDbFactory.ObjectsDB.DoQuery(Query1);
+            var ds = this.TenantDbFactory.ObjectsDB.DoQueries(Query1);
+
+            Dictionary<int, AppObject> appColl = new Dictionary<int, AppObject>();
+
+            foreach (EbDataRow dr in ds.Tables[0].Rows)
+            {
+                var id = Convert.ToInt32(dr[0]);
+                if (!appColl.Keys.Contains<int>(id))
+                    appColl.Add(id, new AppObject { AppName = dr[1].ToString() });
+            }
 
             Dictionary<int, TypeWrap> _types = new Dictionary<int, TypeWrap>();
 
-            foreach (EbDataRow dr in dt.Rows)
+            foreach (EbDataRow dr in ds.Tables[1].Rows)
             {
                 
                 var typeId = Convert.ToInt32(dr[1]);
@@ -110,7 +120,7 @@ ORDER BY EO.obj_type";
                 });
             }
 
-            return new SidebarDevResponse{ Data = _types };
+            return new SidebarDevResponse{ Data = _types, AppList = appColl };
         }
     }
 }
