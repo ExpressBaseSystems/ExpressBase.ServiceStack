@@ -1,5 +1,6 @@
 ﻿using ExpressBase.Common;
 using ExpressBase.Common.Data;
+using ExpressBase.Common.Extensions;
 using ExpressBase.Data;
 using ExpressBase.Objects;
 using ExpressBase.Objects.ServiceStack_Artifacts;
@@ -32,20 +33,37 @@ namespace ExpressBase.ServiceStack.Services
                 con.Open();
                 if (request.op == "updatetenant")
                 {
-                    var cmd = TenantDbFactory.DataDB.GetNewCommand(con, "UPDATE eb_users SET firstname=@firstname,company=@company,employees=@employees,designation=@designation,phnoprimary=@phnoprimary,profileimg=@profileimg WHERE id=@id RETURNING id");
+                    string sql = "UPDATE eb_users SET firstname=@firstname,company=@company,employees=@employees,designation=@designation,phnoprimary=@phnoprimary,pwd = @pwd WHERE email=@email RETURNING id,email";
+                    DbParameter[] parameters = { this.TenantDbFactory.DataDB.GetNewParameter("firstname", System.Data.DbType.String, request.Colvalues["Name"]),
+                        this.TenantDbFactory.DataDB.GetNewParameter("company", System.Data.DbType.String, request.Colvalues["Company"]),
+                        this.TenantDbFactory.DataDB.GetNewParameter("employees", System.Data.DbType.String, request.Colvalues["Employees"]),
+                        this.TenantDbFactory.DataDB.GetNewParameter("designation", System.Data.DbType.String, request.Colvalues["Designation"]),
+                        this.TenantDbFactory.DataDB.GetNewParameter("pwd", System.Data.DbType.String, (request.Colvalues["password"].ToString() + request.Colvalues["email"].ToString()).ToMD5Hash()),
+                        this.TenantDbFactory.DataDB.GetNewParameter("phnoprimary", System.Data.DbType.String, request.Colvalues["Phone"]),
+                        this.TenantDbFactory.DataDB.GetNewParameter("email", System.Data.DbType.String, request.Colvalues["email"])
 
-                    cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("firstname", System.Data.DbType.String, request.Colvalues["Name"]));
-                    cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("company", System.Data.DbType.String, request.Colvalues["Company"]));
-                    cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("employees", System.Data.DbType.String, request.Colvalues["Employees"]));
-                    cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("designation", System.Data.DbType.String, request.Colvalues["Designation"]));
-                    cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("phnoprimary", System.Data.DbType.String, request.Colvalues["Phone"]));
-                    cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("id", System.Data.DbType.Int64, request.UserId));
-                    cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("profileimg", System.Data.DbType.String, request.Colvalues["Imgsrc"]));
-                    resp = new CreateAccountResponse
-                    {
-                        id = Convert.ToInt32(cmd.ExecuteScalar())
                     };
-                    base.Redis.Set<string>(string.Format("uid_{0}_solutionid_{1}_pimg", resp.id, request.TenantAccountId), request.Colvalues["Imgsrc"].ToString());
+
+                    var ds = this.TenantDbFactory.ObjectsDB.DoQuery(sql, parameters);
+                    resp = new CreateAccountResponse()
+                    {
+                        id = Convert.ToInt32(ds.Rows[0][0]),
+                        email = ds.Rows[0][1].ToString()
+                    };
+                    //var cmd = TenantDbFactory.DataDB.GetNewCommand(con, "UPDATE eb_users SET firstname=@firstname,company=@company,employees=@employees,designation=@designation,phnoprimary=@phnoprimary,password = @password WHERE id=@id RETURNING id,email");
+
+                    //cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("firstname", System.Data.DbType.String, request.Colvalues["Name"]));
+                    //cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("company", System.Data.DbType.String, request.Colvalues["Company"]));
+                    //cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("employees", System.Data.DbType.String, request.Colvalues["Employees"]));
+                    //cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("designation", System.Data.DbType.String, request.Colvalues["Designation"]));
+                    //cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("phnoprimary", System.Data.DbType.String, request.Colvalues["Phone"]));
+                    //cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("id", System.Data.DbType.Int64, request.UserId));
+                    //cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("profileimg", System.Data.DbType.String, request.Colvalues["Imgsrc"]));
+                    //resp = new CreateAccountResponse
+                    //{
+                    //    id = Convert.ToInt32(cmd.ExecuteScalar())
+                    //};
+                    //base.Redis.Set<string>(string.Format("uid_{0}_solutionid_{1}_pimg", resp.id, request.TenantAccountId), request.Colvalues["Imgsrc"].ToString());
                 }
                 else
                 {

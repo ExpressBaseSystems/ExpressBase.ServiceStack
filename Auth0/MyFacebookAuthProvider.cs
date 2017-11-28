@@ -38,7 +38,7 @@ namespace ExpressBase.ServiceStack.Auth0
 
                     //(session as CustomUserSession).Company = "expressbase";
                     //(session as CustomUserSession).WhichConsole = "tc";
-                    return authService.Redirect(SuccessRedirectUrlFilter(this, "http://localhost:5000/Ext/AfterSignInSocial?email=" + session.ProviderOAuthAccess[0].Email + "&socialId=" + session.ProviderOAuthAccess[0].UserName + "&provider=" + session.AuthProvider + "&providerToken=" + session.ProviderOAuthAccess[0].AccessTokenSecret + "&lg=" + logatmp));
+                    return authService.Redirect(SuccessRedirectUrlFilter(this, "http://expressbase.com/Ext/AfterSignInSocial?email=" + session.ProviderOAuthAccess[0].Email + "&socialId=" + session.ProviderOAuthAccess[0].UserName + "&provider=" + session.AuthProvider + "&providerToken=" + session.ProviderOAuthAccess[0].AccessTokenSecret + "&lg=" + logatmp));
                 }
             }
 
@@ -66,10 +66,10 @@ namespace ExpressBase.ServiceStack.Auth0
             return base.OnAuthenticated(authService, session, tokens, authInfo);
         }
 
-        public override void OnSaveUserAuth(IServiceBase authService, IAuthSession session)
-        {
-            base.OnSaveUserAuth(authService, session);
-        }
+        //public override void OnSaveUserAuth(IServiceBase authService, IAuthSession session)
+        //{
+        //    base.OnSaveUserAuth(authService, session);
+        //}
 
         public override void Init(IAppSettings appSettings = null)
         {
@@ -81,10 +81,10 @@ namespace ExpressBase.ServiceStack.Auth0
             return base.IsAuthorized(session, tokens, request);
         }
 
-        public override string GetKeyId()
-        {
-            return base.GetKeyId();
-        }
+        //public override string GetKeyId()
+        //{
+        //    return base.GetKeyId();
+        //}
        
     }
 }

@@ -40,7 +40,7 @@ namespace ExpressBase.ServiceStack
                         Dict.Add(dr[0].ToString(), dr[1]);
                     }
                 }
-                else
+                else if (dt.Rows.Count == 1)
                 {
                     Dict.Add("applicationname", dt.Rows[0][1]);
                     Dict.Add("description", dt.Rows[0][2]);

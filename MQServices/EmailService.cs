@@ -5,6 +5,8 @@ using ExpressBase.Objects.ServiceStack_Artifacts;
 using System;
 using System.Threading.Tasks;
 using ServiceStack.Messaging;
+using ExpressBase.Objects.EmailRelated;
+using ExpressBase.Common;
 
 namespace ExpressBase.ServiceStack
 {
@@ -17,13 +19,22 @@ namespace ExpressBase.ServiceStack
             public EmailServiceInternal(IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_mqp, _mqc) { }
             public string Post(EmailServicesMqRequest request)
             {
+                var myService = base.ResolveService<EbObjectService>();
+                var res =(EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = request.refid });
+                EbEmailTemplate ebEmailTemplate = new EbEmailTemplate();
+                foreach (var element in res.Data)
+                {
+                     ebEmailTemplate = EbSerializers.Json_Deserialize(element.Json);
+                }
+                var myDs = base.ResolveService<EbObjectService>();
+                var myDsres = (EbObjectParticularVersionResponse)myDs.Get(new EbObjectParticularVersionRequest() { RefId = ebEmailTemplate.DataSourceRefId });
+               // get sql from ebdatasource and render the sql 
 
                 var emailMessage = new MimeMessage();
-
                 emailMessage.From.Add(new MailboxAddress("EXPRESSbase", "info@expressbase.com"));
                 emailMessage.To.Add(new MailboxAddress("", request.To));
                 emailMessage.Subject = request.Subject;
-                emailMessage.Body = new TextPart("plain") { Text = request.Message };
+                emailMessage.Body = new TextPart("plain") { Text = request.refid };
                 try
                 {
                     using (var client = new SmtpClient())
