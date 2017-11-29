@@ -82,7 +82,7 @@ AND
             var Query1 = @"
 SELECT id, applicationname FROM eb_applications;
 SELECT
-    EO.id, EO.obj_type, EO.obj_name,EO.obj_desc
+    EO.id, EO.obj_type, EO.obj_name,EO.obj_desc,EO.applicationid
 FROM
     eb_objects EO
 ORDER BY EO.obj_type";
@@ -115,7 +115,8 @@ ORDER BY EO.obj_type";
                     EbObjectType = (EbObjectType)dr[1],
                     ObjName = dr[2].ToString(),
                     Description = dr[3].ToString(),
-                    EbType = ((EbObjectType)dr[1]).ToString()
+                    EbType = ((EbObjectType)dr[1]).ToString(),
+                    AppId = Convert.ToInt32(dr[4])
 
                 });
             }
