@@ -61,15 +61,12 @@ namespace ExpressBase.ServiceStack
                         ebEmailTemplate.Body = ebEmailTemplate.Body.Replace(m.Value, colname);
                     }
                     
-                }
-
-              
-
+                }           
                 var emailMessage = new MimeMessage();
                 emailMessage.From.Add(new MailboxAddress("EXPRESSbase", "info@expressbase.com"));
                 emailMessage.To.Add(new MailboxAddress("", request.To));
-                emailMessage.Subject = request.Subject;
-                emailMessage.Body = new TextPart("plain") { Text = ebEmailTemplate.Body };
+                emailMessage.Subject = ebEmailTemplate.Subject;
+                emailMessage.Body = new TextPart("html") { Text = ebEmailTemplate.Body };
                 try
                 {
                     using (var client = new SmtpClient())
