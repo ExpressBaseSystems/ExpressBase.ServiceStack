@@ -25,10 +25,11 @@ namespace ExpressBase.ServiceStack
                 {
                     con.Open();
                     DbCommand cmd = null;
-                    string sql = "SELECT * FROM eb_createbot(@solid, @name, @url, @welcome_msg, @uid, @botid)";
+                    string sql = "SELECT * FROM eb_createbot(@solid, @name, @fullname, @url, @welcome_msg, @uid, @botid)";
                     cmd = this.TenantDbFactory.ObjectsDB.GetNewCommand(con, sql);
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@solid", System.Data.DbType.String, request.SolutionId));
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@name", System.Data.DbType.String, request.BotName));
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@fullname", System.Data.DbType.String, request.FullName));
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@url", System.Data.DbType.String, request.WebURL));
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@welcome_msg", System.Data.DbType.String, request.WelcomeMsg));
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@uid", System.Data.DbType.Int32, request.UserId));
