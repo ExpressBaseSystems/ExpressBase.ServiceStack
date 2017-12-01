@@ -15,11 +15,10 @@
 
   <ItemGroup>
     <PackageReference Include="CoreCompat.System.Drawing" Version="1.0.0-beta006" />
-    <PackageReference Include="FOSS.ServiceStack.Core" Version="1.0.43" />
-    <PackageReference Include="FOSS.ServiceStack.ProtoBuf.Core" Version="1.0.43" />
-    <PackageReference Include="FOSS.ServiceStack.RabbitMq.Core" Version="1.0.43" />
-    <PackageReference Include="FOSS.ServiceStack.Server.Core" Version="1.0.43" />
-    <PackageReference Include="Microsoft.AspNetCore.All" Version="2.0.0" />
+    <PackageReference Include="FOSS.ServiceStack.ProtoBuf.Core" Version="2.0.0" />
+    <PackageReference Include="FOSS.ServiceStack.RabbitMq.Core" Version="2.0.0" />
+    <PackageReference Include="FOSS.ServiceStack.Server.Core" Version="2.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.All" Version="2.0.3" />
     <PackageReference Include="RestSharp.NetCore" Version="105.2.3" />
   </ItemGroup>
 
