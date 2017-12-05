@@ -1,5 +1,6 @@
 ﻿using ExpressBase.Common;
 using ExpressBase.Common.Data;
+using ExpressBase.Objects.ObjectContainers;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ServiceStack;
 using System;
@@ -15,6 +16,38 @@ namespace ExpressBase.ServiceStack
     public class ChatbotServices : EbBaseService
     {
         public ChatbotServices(ITenantDbFactory _dbf) : base(_dbf) { }
+
+
+        public GetBotForm4UserResponse Get(GetBotForm4UserRequest request)
+        {
+            var Query1 = @"
+SELECT
+    
+    EOV.obj_json
+FROM
+    eb_objects EO, eb_objects_ver EOV, eb_objects_status EOS
+WHERE
+    EO.id = EOV.eb_objects_id 
+AND 
+    EOS.eb_obj_ver_id = EOV.id 
+AND 
+    EO.id = ANY('@Ids')  
+AND 
+    EOS.status = 3 
+ AND
+    EO.obj_type = 18;;";
+            EbDataTable table = this.TenantDbFactory.ObjectsDB.DoQuery(Query1.Replace("@Ids", request.BotFormIds));
+            GetBotForm4UserResponse resp = new GetBotForm4UserResponse();
+            foreach(EbDataRow row in table.Rows)
+            {
+                var form = EbSerializers.Json_Deserialize(row[0].ToString());
+                resp.BotForms.Add(form);
+            }
+            //int _id = Convert.ToInt32(request.BotFormIds);
+            //var myService = base.ResolveService<EbObjectService>();
+            //var res = (EbObjectFetchLiveVersionResponse)myService.Get(new EbObjectFetchLiveVersionRequest() { Id = _id });
+            return resp;
+        }
 
         public CreateBotResponse Post(CreateBotRequest request)
         {
@@ -33,7 +66,7 @@ namespace ExpressBase.ServiceStack
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@url", System.Data.DbType.String, request.WebURL));
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@welcome_msg", System.Data.DbType.String, request.WelcomeMsg));
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@uid", System.Data.DbType.Int32, request.UserId));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@botid", System.Data.DbType.Int32, (request.BotId != null)? request.BotId : "0"));
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@botid", System.Data.DbType.Int32, (request.BotId != null) ? request.BotId : "0"));
 
                     botid = cmd.ExecuteScalar().ToString();
                 }
