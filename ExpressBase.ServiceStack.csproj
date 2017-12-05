@@ -5,12 +5,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="Services\EmailServices.cs" />
+    <Content Include="robots.txt">
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>
     <Folder Include="Properties\" />
-    <Folder Include="wwwroot\" />
   </ItemGroup>
 
   <ItemGroup>
@@ -18,7 +19,7 @@
     <PackageReference Include="FOSS.ServiceStack.ProtoBuf.Core" Version="2.0.0" />
     <PackageReference Include="FOSS.ServiceStack.RabbitMq.Core" Version="2.0.0" />
     <PackageReference Include="FOSS.ServiceStack.Server.Core" Version="2.0.0" />
-    <PackageReference Include="Microsoft.AspNetCore.All" Version="2.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.All" Version="2.0.3" />
     <PackageReference Include="RestSharp.NetCore" Version="105.2.3" />
   </ItemGroup>
 
