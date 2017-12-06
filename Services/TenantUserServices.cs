@@ -2,6 +2,7 @@
 using ExpressBase.Common.Data;
 using ExpressBase.Common.Extensions;
 using ExpressBase.Objects.ServiceStack_Artifacts;
+using ExpressBase.Security.Core;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
@@ -84,23 +85,65 @@ namespace ExpressBase.ServiceStack.Services
         public GetUserEditResponse Any(GetUserEditRequest request)
         {
             GetUserEditResponse resp = new GetUserEditResponse();
-            using (var con = this.TenantDbFactory.ObjectsDB.GetNewConnection())
-            {
-                con.Open();
-                string sql = "SELECT firstname,email FROM eb_users WHERE id = @id;";
-                DbParameter[] parameters = { this.TenantDbFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.Int32, request.Id) };
 
-                var ds = this.TenantDbFactory.ObjectsDB.DoQueries(sql, parameters);
+			string sql = null;
+			if (request.Id > 0)
+			{
+				sql = @"SELECT id, role_name, description FROM eb_roles ORDER BY role_name;
+                        SELECT id, name FROM eb_usergroup ORDER BY name;
+						SELECT firstname,email FROM eb_users WHERE id = @id;
+						SELECT role_id FROM eb_role2user WHERE user_id = @id AND eb_del = FALSE ORDER BY role_name;
+						SELECT groupid FROM eb_user2usergroup WHERE userid = @id AND eb_del = FALSE ORDER BY name;";
+			}
+			else
+			{
+				sql = @"SELECT id, role_name, description FROM eb_roles ORDER BY role_name;
+                        SELECT id, name,description FROM eb_usergroup ORDER BY name";
+			}
 
-                Dictionary<string, object> result = new Dictionary<string, object>();
-                foreach (var dr in ds.Tables[0].Rows)
-                {
+			DbParameter[] parameters = { this.TenantDbFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.Int32, request.Id) };
+			var ds = this.TenantDbFactory.ObjectsDB.DoQueries(sql, parameters);
 
-                    result.Add("name", dr[0].ToString());
-                    result.Add("email", dr[1].ToString());
-                }
-                resp.Data = result;
-            }
+			resp.Roles = new List<EbRole>();
+			foreach (var dr in ds.Tables[0].Rows)
+			{ 						
+				resp.Roles.Add(new EbRole
+				{
+					Id = Convert.ToInt32(dr[0]),
+					Name = dr[1].ToString(),
+					Description = dr[2].ToString()
+				});
+			}
+
+			resp.EbUserGroups = new List<EbUserGroups>();
+			foreach (var dr in ds.Tables[1].Rows)
+			{
+				resp.EbUserGroups.Add(new EbUserGroups
+				{
+					Id = Convert.ToInt32(dr[0]),
+					Name = dr[1].ToString(),
+					Description = dr[2].ToString()
+				});
+			}
+
+			if (request.Id > 0)
+			{
+				resp.UserData = new Dictionary<string, object>();
+				foreach (var dr in ds.Tables[2].Rows)
+				{
+					resp.UserData.Add("name", dr[0].ToString());
+					resp.UserData.Add("email", dr[1].ToString());
+				}
+
+				resp.UserRoles = new List<int>();
+				foreach (var dr in ds.Tables[3].Rows)
+					resp.UserRoles.Add(Convert.ToInt32(dr[0]));
+
+				resp.UserGroups = new List<int>();
+				foreach (var dr in ds.Tables[4].Rows)
+					resp.UserGroups.Add(Convert.ToInt32(dr[0]));
+			}
+
             return resp;
         }
 
@@ -112,10 +155,10 @@ namespace ExpressBase.ServiceStack.Services
                 con.Open();
                 string sql = string.Empty;
                 if (request.id > 0)
-                    sql = @"SELECT id, role_name FROM eb_roles;
-                             SELECT id, role_name FROM eb_roles WHERE id IN(SELECT role_id FROM eb_role2user WHERE user_id = @id AND eb_del = FALSE)";
+                    sql = @"SELECT id, role_name, description FROM eb_roles;
+                             SELECT id, role_name, description FROM eb_roles WHERE id IN(SELECT role_id FROM eb_role2user WHERE user_id = @id AND eb_del = FALSE)";
                 else
-                    sql = "SELECT id,role_name FROM eb_roles";
+                    sql = "SELECT id,role_name, description FROM eb_roles";
 
                 DbParameter[] parameters = {
                             this.TenantDbFactory.ObjectsDB.GetNewParameter("id", System.Data.DbType.Int32, request.id)};
@@ -126,7 +169,10 @@ namespace ExpressBase.ServiceStack.Services
                 List<int> subroles = new List<int>();
                 foreach (EbDataRow dr in dt.Tables[0].Rows)
                 {
-                    returndata[dr[0].ToString()] = dr[1].ToString();
+					List<string> list = new List<string>();
+					list.Add(dr[1].ToString());
+					list.Add(dr[2].ToString());
+                    returndata[dr[0].ToString()] = list;
                 }
 
                 if (dt.Tables.Count > 1)
