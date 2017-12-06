@@ -805,6 +805,8 @@ WHERE
                 return Convert.ToInt32(EbObjectType.FilterDialog);
             else if (obj is EbEmailTemplate)
                 return Convert.ToInt32(EbObjectType.EmailBuilder);
+            else if (obj is EbBotForm)
+                return Convert.ToInt32(EbObjectType.BotForm);
             else
                 return -1;
         }
@@ -813,37 +815,34 @@ WHERE
             if (obj is EbFilterDialog)
             {
                 this.Redis.Set<EbFilterDialog>(refId, (EbFilterDialog)obj);
-
             }
             else if (obj is EbDataSource)
             {
                 this.Redis.Set<EbDataSource>(refId, (EbDataSource)obj);
-
             }
             else if (obj is EbChart)
             {
                 this.Redis.Set<EbChart>(refId, (EbChart)obj);
-
             }
             else if (obj is EbTable)
             {
                 this.Redis.Set<EbTable>(refId, (EbTable)obj);
-
             }
             else if (obj is EbWebForm)
             {
                 this.Redis.Set<EbWebForm>(refId, (EbWebForm)obj);
-
             }
             else if (obj is EbReport)
             {
                 this.Redis.Set<EbReport>(refId, (EbReport)obj);
-
+            }
+            else if (obj is EbBotForm)
+            {
+                this.Redis.Set<EbBotForm>(refId, (EbBotForm)obj);
             }
             else if (obj is EbEmailTemplate)
             {
                 this.Redis.Set<EbEmailTemplate>(refId, (EbEmailTemplate)obj);
-
             }
         }
     }

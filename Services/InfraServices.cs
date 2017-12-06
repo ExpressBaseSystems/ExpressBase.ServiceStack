@@ -33,14 +33,14 @@ namespace ExpressBase.ServiceStack.Services
                 con.Open();
                 if (request.op == "updatetenant")
                 {
-                    string sql = "UPDATE eb_users SET firstname=@firstname,company=@company,employees=@employees,designation=@designation,phnoprimary=@phnoprimary,pwd = @pwd WHERE email=@email RETURNING id,email";
+                    string sql = "UPDATE eb_users SET firstname=@firstname,company=@company,employees=@employees,designation=@designation,country=@country,pwd = @pwd WHERE email=@email RETURNING id,email";
                     DbParameter[] parameters = { this.TenantDbFactory.DataDB.GetNewParameter("firstname", System.Data.DbType.String, request.Colvalues["Name"]),
                         this.TenantDbFactory.DataDB.GetNewParameter("company", System.Data.DbType.String, request.Colvalues["Company"]),
                         this.TenantDbFactory.DataDB.GetNewParameter("employees", System.Data.DbType.String, request.Colvalues["Employees"]),
                         this.TenantDbFactory.DataDB.GetNewParameter("designation", System.Data.DbType.String, request.Colvalues["Designation"]),
-                        this.TenantDbFactory.DataDB.GetNewParameter("pwd", System.Data.DbType.String, (request.Colvalues["password"].ToString() + request.Colvalues["email"].ToString()).ToMD5Hash()),
-                        this.TenantDbFactory.DataDB.GetNewParameter("phnoprimary", System.Data.DbType.String, request.Colvalues["Phone"]),
-                        this.TenantDbFactory.DataDB.GetNewParameter("email", System.Data.DbType.String, request.Colvalues["email"])
+                        this.TenantDbFactory.DataDB.GetNewParameter("country", System.Data.DbType.String, request.Colvalues["Country"]),
+                        this.TenantDbFactory.DataDB.GetNewParameter("pwd", System.Data.DbType.String, (request.Colvalues["Password"].ToString() + request.Colvalues["Email"].ToString()).ToMD5Hash()),                      
+                        this.TenantDbFactory.DataDB.GetNewParameter("email", System.Data.DbType.String, request.Colvalues["Email"])
 
                     };
 
