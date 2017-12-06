@@ -67,7 +67,7 @@ namespace ExpressBase.ServiceStack.Auth0
                 session.CId = cid;
                 _authUser.CId = cid;
                 session.Uid = _authUser.UserId;
-                session.Email = UserName;
+                session.Email = _authUser.Email;
                 session.IsAuthenticated = true;
                 session.User = _authUser;
                 session.WhichConsole = request.Meta["wc"];
