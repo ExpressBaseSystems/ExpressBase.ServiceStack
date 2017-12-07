@@ -88,6 +88,23 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
+        public object  Get(GetProductPlanRequest request)
+        {
+            string sql = "select * from eb_product_plans;";
+            var dt = this.TenantDbFactory.ObjectsDB.DoQuery(sql);
+            Dictionary<int, List<ProductPlan>> coll = new Dictionary<int, List<ProductPlan>>();
+            foreach(EbDataRow dr in dt.Rows)
+            {
+                var id =Convert.ToInt32(dr[1]);
+                ProductPlan pp = new ProductPlan { plan = dr[2].ToString(), amount = Convert.ToDecimal(dr[3]) };
+                if (!coll.ContainsKey(id)) 
+                    coll.Add(id, new List<ProductPlan>());
+                coll[id].Add(pp);
+            }
+
+            return new GetProductPlanResponse {Plans= coll };
+        }
+
         public EditAccountResponse Post(EditAccountRequest request)
         {
             EditAccountResponse resp;
