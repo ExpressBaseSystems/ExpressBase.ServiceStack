@@ -21,27 +21,24 @@ namespace ExpressBase.ServiceStack
         public GetBotForm4UserResponse Get(GetBotForm4UserRequest request)
         {
             var Query1 = @"
-SELECT
-    
-    EOV.obj_json
-FROM
-    eb_objects EO, eb_objects_ver EOV, eb_objects_status EOS
-WHERE
-    EO.id = EOV.eb_objects_id 
-AND 
-    EOS.eb_obj_ver_id = EOV.id 
-AND 
-    EO.id = ANY('@Ids')  
-AND 
-    EOS.status = 3 
- AND
-    EO.obj_type = 18;;";
+                            SELECT    
+                                    EOV.refid, EO.obj_name
+                            FROM
+                                    eb_objects EO, eb_objects_ver EOV, eb_objects_status EOS
+                            WHERE
+                                     EO.id = EOV.eb_objects_id  AND 
+                                     EOS.eb_obj_ver_id = EOV.id AND 
+                                     EO.id = ANY('@Ids') AND 
+                                     EOS.status = 3 AND
+                                     EO.obj_type = 18;
+                        ";
             EbDataTable table = this.TenantDbFactory.ObjectsDB.DoQuery(Query1.Replace("@Ids", request.BotFormIds));
             GetBotForm4UserResponse resp = new GetBotForm4UserResponse();
-            foreach(EbDataRow row in table.Rows)
+            foreach (EbDataRow row in table.Rows)
             {
-                var form = EbSerializers.Json_Deserialize(row[0].ToString());
-                resp.BotForms.Add(form);
+                string formRefid = row[0].ToString();
+                string formName = row[1].ToString();
+                resp.BotForms.Add(formRefid, formName);
             }
             //int _id = Convert.ToInt32(request.BotFormIds);
             //var myService = base.ResolveService<EbObjectService>();
