@@ -421,17 +421,17 @@ namespace ExpressBase.ServiceStack.MQServices
                     }
                 TenantDbFactory tenantDbFactory = new TenantDbFactory(request.TenantAccountId, this.Redis);
 
-                string sql = "INSERT INTO eb_files(userid, objid, length, filetype, tags, bucketname, uploaddatetime) VALUES(@userid, @objid, @length, @filetype,@tags,@bucketname, CURRENT_TIMESTAMP) RETURNING id";
+                string sql = "INSERT INTO eb_files(userid, objid, length, filetype, tags, bucketname, uploaddatetime) VALUES(@userid, @objid, @length, @filetype, @tags, @bucketname, CURRENT_TIMESTAMP) RETURNING id";
                 DbParameter[] parameters =
                     {
-                        tenantDbFactory.ObjectsDB.GetNewParameter("userid", System.Data.DbType.Int32, request.UserId),
-                        tenantDbFactory.ObjectsDB.GetNewParameter("objid",System.Data.DbType.String, request.FileDetails.ObjectId),
-                        tenantDbFactory.ObjectsDB.GetNewParameter("length",System.Data.DbType.Int64, request.FileDetails.Length),
-                        tenantDbFactory.ObjectsDB.GetNewParameter("filetype",System.Data.DbType.String, request.FileDetails.FileType),
-                        tenantDbFactory.ObjectsDB.GetNewParameter("tags",System.Data.DbType.String, tag),
-                        tenantDbFactory.ObjectsDB.GetNewParameter("bucketname",System.Data.DbType.String, request.BucketName)
+                        tenantDbFactory.DataDB.GetNewParameter("userid", System.Data.DbType.Int32, request.UserId),
+                        tenantDbFactory.DataDB.GetNewParameter("objid",System.Data.DbType.String, request.FileDetails.ObjectId),
+                        tenantDbFactory.DataDB.GetNewParameter("length",System.Data.DbType.Int64, request.FileDetails.Length),
+                        tenantDbFactory.DataDB.GetNewParameter("filetype",System.Data.DbType.String, request.FileDetails.FileType),
+                        tenantDbFactory.DataDB.GetNewParameter("tags",System.Data.DbType.String, tag),
+                        tenantDbFactory.DataDB.GetNewParameter("bucketname",System.Data.DbType.String, request.BucketName)
                     };
-                var iCount = tenantDbFactory.ObjectsDB.DoQuery(sql, parameters);
+                var iCount = tenantDbFactory.DataDB.DoQuery(sql, parameters);
 
                 return null;
             }
