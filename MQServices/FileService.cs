@@ -421,7 +421,7 @@ namespace ExpressBase.ServiceStack.MQServices
                     }
                 TenantDbFactory tenantDbFactory = new TenantDbFactory(request.TenantAccountId, this.Redis);
 
-                string sql = "INSERT INTO eb_files(userid, objid, length, filetype, tags, bucketname, uploaddatetime) VALUES(@userid, @objid, @length, @filetype,@tags,@bucketname, CURRENT_TIMESTAMP) RETURNING id";
+                string sql = "INSERT INTO eb_files(userid, objid, length, filetype, tags, bucketname, uploaddatetime) VALUES(@userid, @objid, @length, @filetype, @tags, @bucketname, CURRENT_TIMESTAMP) RETURNING id";
                 DbParameter[] parameters =
                     {
                         tenantDbFactory.DataDB.GetNewParameter("userid", System.Data.DbType.Int32, request.UserId),

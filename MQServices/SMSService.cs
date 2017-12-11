@@ -49,8 +49,8 @@ namespace ExpressBase.ServiceStack.MQServices
                         logMqRequest.SMSSentStatus.To = Info.Value;
                     if (Info.Key == "From")
                         logMqRequest.SMSSentStatus.From = Info.Value;
-                    if (Info.Key == "MessageId")
-                        logMqRequest.SMSSentStatus.MessageId = Info.Value;
+                    if (Info.Key == "Uri")
+                        logMqRequest.SMSSentStatus.Uri = Info.Value;
                     if (Info.Key == "Body")
                         logMqRequest.SMSSentStatus.Body = Info.Value;
                     if (Info.Key == "Status")
@@ -61,6 +61,7 @@ namespace ExpressBase.ServiceStack.MQServices
                         logMqRequest.SMSSentStatus.ErrorMessage = Info.Value;
                 }
                 logMqRequest.UserId = req.UserId;
+                logMqRequest.TenantAccountId = req.TenantAccountId;
 
                 this.MessageProducer3.Publish(logMqRequest);
                 return null;
@@ -70,22 +71,19 @@ namespace ExpressBase.ServiceStack.MQServices
             {
                 TenantDbFactory tenantDbFactory = new TenantDbFactory(request.TenantAccountId, this.Redis);
 
-                string sql = "INSERT INTO logs_sms(message_id, to, from, message_body, status, sent_time, receive_time, error_message, user_id, context_id) VALUES (@message_id, @to, @from, @message_body, @status, @sent_time, @receive_time, @error_message, @user_id, @context_id) RETURNING id";
+                string sql = "INSERT INTO logs_sms(uri, send_to, send_from, message_body, status, error_message, user_id, context_id) VALUES (@uri, @to, @from, @message_body, @status, @error_message, @user_id, @context_id) RETURNING id";
 
-
-
-                DbParameter[] parameters =
+                DbParameter[] parameters = 
                         {
-                        tenantDbFactory.DataDB.GetNewParameter("message_id", System.Data.DbType.String, !(string.IsNullOrEmpty(request.SMSSentStatus.MessageId))?request.SMSSentStatus.MessageId:string.Empty),
-                        
-                        tenantDbFactory.DataDB.GetNewParameter("to",System.Data.DbType.String, !(string.IsNullOrEmpty(request.SMSSentStatus.To))?request.SMSSentStatus.To:string.Empty),
-                        tenantDbFactory.DataDB.GetNewParameter("from",System.Data.DbType.String, !(string.IsNullOrEmpty(request.SMSSentStatus.From))?request.SMSSentStatus.From:string.Empty),
-                        tenantDbFactory.DataDB.GetNewParameter("message_body",System.Data.DbType.String, !(string.IsNullOrEmpty(request.SMSSentStatus.Body))?request.SMSSentStatus.Body:string.Empty),
-                        tenantDbFactory.DataDB.GetNewParameter("status",System.Data.DbType.String, !(string.IsNullOrEmpty(request.SMSSentStatus.Status))?request.SMSSentStatus.Status:string.Empty),
+                        tenantDbFactory.DataDB.GetNewParameter("uri", System.Data.DbType.String, string.IsNullOrEmpty(request.SMSSentStatus.Uri)?string.Empty:request.SMSSentStatus.Uri),
+                        tenantDbFactory.DataDB.GetNewParameter("to",System.Data.DbType.String, request.SMSSentStatus.To),
+                        tenantDbFactory.DataDB.GetNewParameter("from",System.Data.DbType.String, request.SMSSentStatus.From),
+                        tenantDbFactory.DataDB.GetNewParameter("message_body",System.Data.DbType.String, string.IsNullOrEmpty(request.SMSSentStatus.Body)?string.Empty:request.SMSSentStatus.Body),
+                        tenantDbFactory.DataDB.GetNewParameter("status",System.Data.DbType.String, string.IsNullOrEmpty(request.SMSSentStatus.Status)?string.Empty:request.SMSSentStatus.Status),
                         //tenantDbFactory.DataDB.GetNewParameter("sent_time",System.Data.DbType.DateTime, request.SMSSentStatus.SentTime),
-                        tenantDbFactory.DataDB.GetNewParameter("error_message",System.Data.DbType.String, !(string.IsNullOrEmpty(request.SMSSentStatus.ErrorMessage))?request.SMSSentStatus.ErrorMessage:string.Empty),
-                        tenantDbFactory.DataDB.GetNewParameter("user_id",System.Data.DbType.Int32, request.UserId)
-                        //tenantDbFactory.DataDB.GetNewParameter("context_id",System.Data.DbType.Int32, request.ContextId)
+                        tenantDbFactory.DataDB.GetNewParameter("error_message",System.Data.DbType.String, string.IsNullOrEmpty(request.SMSSentStatus.ErrorMessage)?string.Empty:request.SMSSentStatus.ErrorMessage),
+                        tenantDbFactory.DataDB.GetNewParameter("user_id",System.Data.DbType.Int32, request.UserId),
+                        tenantDbFactory.DataDB.GetNewParameter("context_id",System.Data.DbType.Int32, string.IsNullOrEmpty(request.ContextId.ToString())?request.UserId:request.ContextId)
                         };
                 var iCount = tenantDbFactory.DataDB.DoQuery(sql, parameters);
 
