@@ -96,7 +96,7 @@ namespace ExpressBase.ServiceStack.Services
             foreach (EbDataRow dr in dt.Rows)
             {
                 var id = Convert.ToInt32(dr[1]);
-                ProductPlan pp = new ProductPlan { plan = dr[2].ToString(), amount = Convert.ToDecimal(dr[3]) };
+                ProductPlan pp = new ProductPlan { Plan = dr[2].ToString(), Amount = Convert.ToDecimal(dr[3]) , EvalDays = Convert.ToInt32(dr[4]) };
                 if (!coll.ContainsKey(id))
                     coll.Add(id, new List<ProductPlan>());
                 coll[id].Add(pp);
