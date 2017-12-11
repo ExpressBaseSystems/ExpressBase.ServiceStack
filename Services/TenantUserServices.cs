@@ -62,7 +62,7 @@ namespace ExpressBase.ServiceStack.Services
                             this.TenantDbFactory.ObjectsDB.GetNewParameter("group", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer,(request.Colvalues["group"].ToString() != string.Empty? request.Colvalues["group"].ToString().Split(',').Select(n => Convert.ToInt32(n)).ToArray():emptyarr)),
                             this.TenantDbFactory.ObjectsDB.GetNewParameter("pwd", System.Data.DbType.String,string.IsNullOrEmpty(request.Colvalues["pwd"].ToString())? GeneratePassword() : (request.Colvalues["pwd"].ToString() + request.Colvalues["email"].ToString()).ToMD5Hash()),
                             this.TenantDbFactory.ObjectsDB.GetNewParameter("userid", System.Data.DbType.Int32, request.UserId),
-                             this.TenantDbFactory.ObjectsDB.GetNewParameter("id", System.Data.DbType.Int32, request.Id)};
+                            this.TenantDbFactory.ObjectsDB.GetNewParameter("id", System.Data.DbType.Int32, request.Id)};
 
                 EbDataSet dt = this.TenantDbFactory.ObjectsDB.DoQueries(sql, parameters);
 
@@ -85,15 +85,14 @@ namespace ExpressBase.ServiceStack.Services
         public GetUserEditResponse Any(GetUserEditRequest request)
         {
             GetUserEditResponse resp = new GetUserEditResponse();
-
 			string sql = null;
 			if (request.Id > 0)
 			{
 				sql = @"SELECT id, role_name, description FROM eb_roles ORDER BY role_name;
-                        SELECT id, name FROM eb_usergroup ORDER BY name;
+                        SELECT id, name,description FROM eb_usergroup ORDER BY name;
 						SELECT firstname,email FROM eb_users WHERE id = @id;
-						SELECT role_id FROM eb_role2user WHERE user_id = @id AND eb_del = FALSE ORDER BY role_name;
-						SELECT groupid FROM eb_user2usergroup WHERE userid = @id AND eb_del = FALSE ORDER BY name;";
+						SELECT role_id FROM eb_role2user WHERE user_id = @id AND eb_del = FALSE;
+						SELECT groupid FROM eb_user2usergroup WHERE userid = @id AND eb_del = FALSE;";
 			}
 			else
 			{
@@ -123,6 +122,7 @@ namespace ExpressBase.ServiceStack.Services
 					Id = Convert.ToInt32(dr[0]),
 					Name = dr[1].ToString(),
 					Description = dr[2].ToString()
+
 				});
 			}
 
