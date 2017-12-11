@@ -39,7 +39,7 @@ namespace ExpressBase.ServiceStack.Services
                         this.TenantDbFactory.DataDB.GetNewParameter("employees", System.Data.DbType.String, request.Colvalues["Employees"]),
                         this.TenantDbFactory.DataDB.GetNewParameter("designation", System.Data.DbType.String, request.Colvalues["Designation"]),
                         this.TenantDbFactory.DataDB.GetNewParameter("country", System.Data.DbType.String, request.Colvalues["Country"]),
-                        this.TenantDbFactory.DataDB.GetNewParameter("pwd", System.Data.DbType.String, (request.Colvalues["Password"].ToString() + request.Colvalues["Email"].ToString()).ToMD5Hash()),                      
+                        this.TenantDbFactory.DataDB.GetNewParameter("pwd", System.Data.DbType.String, (request.Colvalues["Password"].ToString() + request.Colvalues["Email"].ToString()).ToMD5Hash()),
                         this.TenantDbFactory.DataDB.GetNewParameter("email", System.Data.DbType.String, request.Colvalues["Email"])
 
                     };
@@ -88,21 +88,40 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
-        public object  Get(GetProductPlanRequest request)
+        public object Get(GetProductPlanRequest request)
         {
             string sql = "select * from eb_product_plans;";
             var dt = this.TenantDbFactory.ObjectsDB.DoQuery(sql);
             Dictionary<int, List<ProductPlan>> coll = new Dictionary<int, List<ProductPlan>>();
-            foreach(EbDataRow dr in dt.Rows)
+            foreach (EbDataRow dr in dt.Rows)
             {
-                var id =Convert.ToInt32(dr[1]);
+                var id = Convert.ToInt32(dr[1]);
                 ProductPlan pp = new ProductPlan { plan = dr[2].ToString(), amount = Convert.ToDecimal(dr[3]) };
-                if (!coll.ContainsKey(id)) 
+                if (!coll.ContainsKey(id))
                     coll.Add(id, new List<ProductPlan>());
                 coll[id].Add(pp);
             }
 
-            return new GetProductPlanResponse {Plans= coll };
+            return new GetProductPlanResponse { Plans = coll };
+        }
+
+        public CreateSolutionResponse Post(CreateSolutionRequest request)
+        {
+            using (var con = TenantDbFactory.DataDB.GetNewConnection())
+            {
+                con.Open();
+                string sql = "select * from eb_subscription_persist( @sname,@i_sid,@e_sid,@tenant_id,@descript,@js); ";
+                var cmd = TenantDbFactory.DataDB.GetNewCommand(con, sql);
+                cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("@sname", System.Data.DbType.String, request.SolutionName));
+                cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("@i_sid", System.Data.DbType.String, request.IsolutionId));
+                cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("@e_sid", System.Data.DbType.String, request.EsolutionId));
+                cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("@tenant_id", System.Data.DbType.String, request.TenantAccountId));
+                cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("@descript", System.Data.DbType.String, request.Description));
+                cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("@js", System.Data.DbType.String, request.Subscription));
+                cmd.ExecuteNonQuery();
+            }
+
+            return new CreateSolutionResponse { };
         }
 
         public EditAccountResponse Post(EditAccountRequest request)
@@ -127,7 +146,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             return resp;
         }
-       
+
         //public DataBaseConfigResponse Post(DataBaseConfigRequest request)
         //{
         //    DataBaseConfigResponse resp = new DataBaseConfigResponse();
@@ -990,7 +1009,7 @@ namespace ExpressBase.ServiceStack.Services
                         return resp;
 
                     }
-                  
+
                 }
             }
         }
@@ -1034,25 +1053,25 @@ namespace ExpressBase.ServiceStack.Services
             }
 
         }
-            
+
         public bool Any(UniqueRequest request)
         {
             ILog log = LogManager.GetLogger(GetType());
-        
+
             string sql = "SELECT id FROM eb_users WHERE email ~* @email";
 
-          
+
             DbParameter[] parameters = { this.TenantDbFactory.ObjectsDB.GetNewParameter("email", System.Data.DbType.String, request.email) };
 
             var dt = this.TenantDbFactory.ObjectsDB.DoQuery(sql, parameters);
             if (dt.Rows.Count > 0)
             {
-               
+
                 return true;
             }
             else
             {
-               
+
                 return false;
             }
 

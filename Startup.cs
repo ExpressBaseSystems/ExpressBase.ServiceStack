@@ -178,8 +178,11 @@ namespace ExpressBase.ServiceStack
 
             var mqServer = new RabbitMqServer(rabitFactory);
             mqServer.RetryCount = 1;
-            //mqServer.RegisterHandler<EmailServicesMqRequest>(base.ExecuteMessage);
-            //mqServer.RegisterHandler<RefreshSolutionConnectionsMqRequestTest>(base.ExecuteMessage);
+            mqServer.RegisterHandler<SMSSentMqRequest>(base.ExecuteMessage);
+            //mqServer.RegisterHandler<RefreshSolutionConnectionsMqRequest>(base.ExecuteMessage);
+            mqServer.RegisterHandler<SMSStatusLogMqRequest>(base.ExecuteMessage);
+
+            
             //mqServer.RegisterHandler<UploadFileMqRequestTest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<ImageResizeMqRequestTest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<FileMetaPersistMqRequestTest>(base.ExecuteMessage);

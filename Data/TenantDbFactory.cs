@@ -2,6 +2,8 @@
 using ExpressBase.Common.Connections;
 using ExpressBase.Common.Data;
 using ExpressBase.Common.Data.MongoDB;
+using ExpressBase.Common.Messaging;
+using ExpressBase.Common.Messaging.Twilio;
 using ExpressBase.Data;
 using Funq;
 using ServiceStack;
@@ -25,6 +27,8 @@ namespace ExpressBase.ServiceStack
         public INoSQLDatabase FilesDB { get; private set; }
 
         public IDatabase LogsDB { get; private set; }
+
+        public ISMSService SMSService { get; private set; }
 
         private EbSolutionConnections _config { get; set; }
 
@@ -79,6 +83,9 @@ namespace ExpressBase.ServiceStack
             FilesDB = new MongoDBDatabase(this.TenantId, _config.FilesDbConnection);
 
             LogsDB = new PGSQLDatabase(_config.LogsDbConnection);
+
+            if(_config.SMSConnection != null )
+                SMSService = new TwilioService(_config.SMSConnection);
         }
     }
 }
