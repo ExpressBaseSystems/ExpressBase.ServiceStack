@@ -39,7 +39,8 @@ namespace ExpressBase.ServiceStack.MQServices
                             cons.LogsDbConnection = EbSerializers.Json_Deserialize<EbLogsDbConnection>(dr["con_obj"].ToString());
                         else if (dr["con_type"].ToString() == EbConnectionTypes.SMTP.ToString())
                             cons.SMTPConnection = EbSerializers.Json_Deserialize<SMTPConnection>(dr["con_obj"].ToString());
-
+                        else if (dr["con_type"].ToString() == EbConnectionTypes.SMS.ToString())
+                            cons.SMSConnection = EbSerializers.Json_Deserialize<SMSConnection>(dr["con_obj"].ToString());
                         // ... More to come
                     }
 
