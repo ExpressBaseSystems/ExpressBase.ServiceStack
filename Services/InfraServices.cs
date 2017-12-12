@@ -90,19 +90,27 @@ namespace ExpressBase.ServiceStack.Services
 
         public object Get(GetProductPlanRequest request)
         {
-            string sql = "select * from eb_product_plans;";
-            var dt = this.TenantDbFactory.ObjectsDB.DoQuery(sql);
+            GetProductPlanResponse getProductPlanResponse = new GetProductPlanResponse();
+            string sql = @"SELECT * FROM eb_product_plans;
+                            SELECT * FROM eb_random_sid();";
+            var ds = this.TenantDbFactory.ObjectsDB.DoQueries(sql);
             Dictionary<int, List<ProductPlan>> coll = new Dictionary<int, List<ProductPlan>>();
-            foreach (EbDataRow dr in dt.Rows)
+
+            foreach (EbDataRow dr in ds.Tables[0].Rows)
             {
                 var id = Convert.ToInt32(dr[1]);
-                ProductPlan pp = new ProductPlan { Plan = dr[2].ToString(), Amount = Convert.ToDecimal(dr[3]) , EvalDays = Convert.ToInt32(dr[4]) };
+                ProductPlan pp = new ProductPlan { Plan = dr[2].ToString(), Amount = Convert.ToDecimal(dr[3]), EvalDays = Convert.ToInt32(dr[4]) };
                 if (!coll.ContainsKey(id))
                     coll.Add(id, new List<ProductPlan>());
                 coll[id].Add(pp);
             }
+            if(ds.Tables[1].Rows.Count > 0)
+            {
+                getProductPlanResponse.Sid = ds.Tables[1].Rows[0][0].ToString();
+            }
+            getProductPlanResponse.Plans = coll;
 
-            return new GetProductPlanResponse { Plans = coll };
+            return getProductPlanResponse;
         }
 
         public CreateSolutionResponse Post(CreateSolutionRequest request)
@@ -118,13 +126,14 @@ namespace ExpressBase.ServiceStack.Services
                 cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("@tenant_id", System.Data.DbType.String, request.TenantAccountId));
                 cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("@descript", System.Data.DbType.String, request.Description));
                 cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("@js", System.Data.DbType.String, request.Subscription));
-                cmd.ExecuteNonQuery();
-            }
 
-            return new CreateSolutionResponse { };
+
+
+                return new CreateSolutionResponse { Solnid = Convert.ToInt32(cmd.ExecuteScalar()) };
         }
+    }
 
-        public EditAccountResponse Post(EditAccountRequest request)
+    public EditAccountResponse Post(EditAccountRequest request)
         {
             EditAccountResponse resp;
             using (var con = TenantDbFactory.DataDB.GetNewConnection())
