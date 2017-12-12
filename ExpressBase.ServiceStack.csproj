@@ -15,7 +15,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="CoreCompat.System.Drawing" Version="1.0.0-beta006" />
     <PackageReference Include="FOSS.ServiceStack.ProtoBuf.Core" Version="1.0.43" />
     <PackageReference Include="FOSS.ServiceStack.RabbitMq.Core" Version="1.0.43" />
     <PackageReference Include="FOSS.ServiceStack.Server.Core" Version="1.0.43" />
