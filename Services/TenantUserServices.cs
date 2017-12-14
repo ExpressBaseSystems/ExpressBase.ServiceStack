@@ -35,32 +35,25 @@ namespace ExpressBase.ServiceStack.Services
             using (var con = this.TenantDbFactory.ObjectsDB.GetNewConnection())
             {
                 con.Open();
+				string password = "";
+				
                 if (request.Id > 0)
                 {
-                    sql = @"UPDATE eb_users SET firstname= @firstname,email= @email WHERE id = @id RETURNING id;
-                            
-                           INSERT INTO eb_role2user(role_id,user_id,createdby,createdat) SELECT rid,@id,@userid,NOW() FROM UNNEST(array(SELECT unnest(@roles) except 
-                                SELECT UNNEST(array(SELECT role_id from eb_role2user WHERE user_id = @id AND eb_del = FALSE)))) as rid;
-                           UPDATE eb_role2user SET eb_del = true,revokedby = @userid,revokedat =NOW() WHERE role_id IN(
-                                SELECT UNNEST(array(SELECT role_id from eb_role2user WHERE user_id = @id AND eb_del = FALSE)) except SELECT UNNEST(@roles));
+					sql = "SELECT * FROM eb_createormodifyuserandroles(@userid,@id,@firstname,@email,@pwd,@roles,@group);";
 
-                           INSERT INTO eb_user2usergroup(userid,groupid,createdby,createdat) SELECT @id,gid,@userid,NOW() FROM UNNEST(array(SELECT unnest(@group) except 
-                                SELECT UNNEST(array(SELECT groupid from eb_user2usergroup WHERE userid = @id AND eb_del = FALSE)))) as gid;
-                           UPDATE eb_user2usergroup SET eb_del = true,revokedby = @userid,revokedat =NOW() WHERE groupid IN(
-                                SELECT UNNEST(array(SELECT groupid from eb_user2usergroup WHERE userid = @id AND eb_del = FALSE)) except SELECT UNNEST(@group));";
-                }
+				}
                 else
                 {
-                    sql = @"INSERT INTO eb_users (firstname,email,pwd) VALUES (@firstname,@email,@pwd) RETURNING id,pwd;
-                INSERT INTO eb_role2user (role_id,user_id,createdby,createdat) SELECT id, (CURRVAL('eb_users_id_seq')),@userid,NOW() FROM UNNEST(@roles) AS id;
-                 INSERT INTO eb_user2usergroup(userid,groupid,createdby,createdat) SELECT (CURRVAL('eb_users_id_seq')), gid,@userid,NOW() FROM UNNEST(@group) AS gid";
-                }
-                int[] emptyarr = new int[] { };
+					password = string.IsNullOrEmpty(request.Colvalues["pwd"].ToString()) ? GeneratePassword() : (request.Colvalues["pwd"].ToString() + request.Colvalues["email"].ToString()).ToMD5Hash();
+					sql = "SELECT * FROM eb_createormodifyuserandroles(@userid,@id,@firstname,@email,@pwd,@roles,@group);";
+
+				}
+				int[] emptyarr = new int[] { };
                 DbParameter[] parameters = { this.TenantDbFactory.ObjectsDB.GetNewParameter("firstname", System.Data.DbType.String, request.Colvalues["firstname"]),
                             this.TenantDbFactory.ObjectsDB.GetNewParameter("email", System.Data.DbType.String, request.Colvalues["email"]),
                             this.TenantDbFactory.ObjectsDB.GetNewParameter("roles", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer,(request.Colvalues["roles"].ToString() != string.Empty? request.Colvalues["roles"].ToString().Split(',').Select(n => Convert.ToInt32(n)).ToArray():emptyarr)),
                             this.TenantDbFactory.ObjectsDB.GetNewParameter("group", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer,(request.Colvalues["group"].ToString() != string.Empty? request.Colvalues["group"].ToString().Split(',').Select(n => Convert.ToInt32(n)).ToArray():emptyarr)),
-                            this.TenantDbFactory.ObjectsDB.GetNewParameter("pwd", System.Data.DbType.String,string.IsNullOrEmpty(request.Colvalues["pwd"].ToString())? GeneratePassword() : (request.Colvalues["pwd"].ToString() + request.Colvalues["email"].ToString()).ToMD5Hash()),
+                            this.TenantDbFactory.ObjectsDB.GetNewParameter("pwd", System.Data.DbType.String,password),
                             this.TenantDbFactory.ObjectsDB.GetNewParameter("userid", System.Data.DbType.Int32, request.UserId),
                             this.TenantDbFactory.ObjectsDB.GetNewParameter("id", System.Data.DbType.Int32, request.Id)};
 
