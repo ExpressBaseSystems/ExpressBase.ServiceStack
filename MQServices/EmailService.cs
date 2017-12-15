@@ -49,16 +49,19 @@ namespace ExpressBase.ServiceStack
                     ebDataSource = EbSerializers.Json_Deserialize(element.Json);
                 }
                 var ds = _InfraDb.ObjectsDB.DoQueries(ebDataSource.Sql);
-                var pattern = @"\{{(.*?)\}}";
-                var matches = Regex.Matches(ebEmailTemplate.Body, pattern);
-                Dictionary<string, object> dict = new Dictionary<string, object>();
-                foreach (Match m in matches)
+                //var pattern = @"\{{(.*?)\}}";
+                //var matches = Regex.Matches(ebEmailTemplate.Body, pattern);
+                //Dictionary<string, object> dict = new Dictionary<string, object>();
+                foreach (var dscol in ebEmailTemplate.DsColumnsCollection)
                 {
-                    string str = Regex.Replace(m.Value, "[{}]", "");
-                    foreach(var dt in ds.Tables)
+                    string str = dscol.Title.Replace("{{", "").Replace("}}","");
+
+
+                    foreach (var dt in ds.Tables)
                     {
+
                         string colname = dt.Rows[0][str.Split('.')[1]].ToString();
-                        ebEmailTemplate.Body = ebEmailTemplate.Body.Replace(m.Value, colname);
+                        ebEmailTemplate.Body = ebEmailTemplate.Body.Replace(dscol.Title, colname);
                     }
                     
                 }           
