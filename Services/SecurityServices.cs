@@ -52,39 +52,35 @@ namespace ExpressBase.ServiceStack.Services
 		{
 			string query = null;
 			List<DbParameter> parameters = new List<DbParameter>();
-			query = string.Format(@"SELECT id, applicationname FROM eb_applications and eb_del = FALSE;
+			query = string.Format(@"SELECT id, applicationname FROM eb_applications where eb_del = FALSE;
 									SELECT EO.id, EO.obj_name, EO.obj_type, EO.applicationid
 										FROM eb_objects EO, eb_objects_ver EOV, eb_objects_status EOS 
-										WHERE EO.id = EOV.eb_objects_id 
-										AND EOV.id = EOS.eb_obj_ver_id AND EOS.status = 3;");
+										WHERE EO.id = EOV.eb_objects_id AND EOV.id = EOS.eb_obj_ver_id AND EOS.status = 3 AND EO.applicationid > 0;");
 			if (request.id > 0)
 			{
 				query += string.Format(@"SELECT role_name,applicationid,description FROM eb_roles WHERE id = @id;
 										SELECT permissionname,obj_id,op_id FROM eb_role2permission WHERE role_id = @id AND eb_del = FALSE;
-										SELECT A.applicationname, A.description FROM eb_applications A, eb_roles R WHERE A.id=R.applicationid AND R.id=@id AND eb_del = FALSE ");
+										SELECT A.applicationname, A.description FROM eb_applications A, eb_roles R WHERE A.id = R.applicationid AND R.id = @id AND A.eb_del = FALSE;");
 				parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.Int32, request.id));
 			}
 			var ds = this.TenantDbFactory.ObjectsDB.DoQueries(query, parameters.ToArray());
 
 			//PROCESSED RESULT
 			ApplicationCollection _applicationCollection = new ApplicationCollection(ds.Tables[0], ds.Tables[1]);
-
 			//---------------
 			Dictionary<string, object> RoleInfo = new Dictionary<string, object>();
 			List<string> Permission = new List<string>();
 			if (request.id > 0)
 			{
-				
-				RoleInfo.Add("RoleName", ds.Tables[2].Rows[0].ToString());
-				RoleInfo.Add("AppId", Convert.ToInt32(ds.Tables[2].Rows[1]));
-				RoleInfo.Add("RoleDescription", ds.Tables[0].Rows[2].ToString());
-				RoleInfo.Add("AppName", ds.Tables[4].Rows[0].ToString());
-				RoleInfo.Add("AppDescription", ds.Tables[4].Rows[1].ToString());
-				
+				RoleInfo.Add("RoleName", ds.Tables[2].Rows[0][0].ToString());
+				RoleInfo.Add("AppId", Convert.ToInt32(ds.Tables[2].Rows[0][1]));
+				RoleInfo.Add("RoleDescription", ds.Tables[2].Rows[0][2].ToString());
+				RoleInfo.Add("AppName", ds.Tables[4].Rows[0][0].ToString());
+				RoleInfo.Add("AppDescription", ds.Tables[4].Rows[0][1].ToString());
 				foreach (var dr in ds.Tables[3].Rows)
 					Permission.Add(dr[0].ToString());
 			}
-			return new GetManageRolesResponse() {AppCollection = _applicationCollection, SelectedRoleInfo = RoleInfo, PermissionList = Permission };
+			return new GetManageRolesResponse() { ApplicationCollection = _applicationCollection, SelectedRoleInfo = RoleInfo, PermissionList = Permission };
 		} 
 
 		public GetObjectAndPermissionResponse Any(GetObjectAndPermissionRequest request)
@@ -104,7 +100,6 @@ namespace ExpressBase.ServiceStack.Services
 								AND eb_del = FALSE;");
 				parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.Int32, request.RoleId));
 			}
-
 			
 			parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@applicationid", System.Data.DbType.Int32, request.AppId));
 			var dt = this.TenantDbFactory.ObjectsDB.DoQueries(query, parameters.ToArray());
