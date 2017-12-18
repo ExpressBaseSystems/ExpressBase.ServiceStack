@@ -15,6 +15,7 @@ using ExpressBase.Objects.Objects;
 using Newtonsoft.Json;
 using ExpressBase.Common.JsonConverters;
 using ExpressBase.Objects.EmailRelated;
+using System.Globalization;
 
 namespace ExpressBase.ServiceStack
 {
@@ -168,7 +169,7 @@ WHERE
                     Id = Convert.ToInt32(dr[0]),
                     VersionNumber = dr[1].ToString(),
                     ChangeLog = dr[2].ToString(),
-                    CommitTs = Convert.ToDateTime(dr[3]),
+                    CommitTs = Convert.ToDateTime((dr[3].ToString()) == "" ? DateTime.MinValue : dr[3]),
                     RefId = dr[4].ToString(),
                     CommitUId = Convert.ToInt32(dr[5]),
                     CommitUname = dr[6].ToString()
@@ -268,7 +269,7 @@ WHERE
                     Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[3]),
                     Description = dr[4].ToString(),
                     VersionNumber = dr[7].ToString(),
-                    CommitTs = Convert.ToDateTime(dr[9]),
+                    CommitTs = Convert.ToDateTime((dr[9].ToString()) == "" ? DateTime.MinValue : dr[9]),
                     RefId = dr[11].ToString(),
                     CommitUname = dr[12].ToString(),
                 });
@@ -467,13 +468,14 @@ WHERE
                     Id = Convert.ToInt32(dr[0]),
                     Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[1]),
                     CommitUname = dr[2].ToString(),
-                    CommitTs = Convert.ToDateTime(dr[3]),
+                    CommitTs = Convert.ToDateTime((dr[3].ToString()) == "" ? DateTime.MinValue : dr[3]),
                     ChangeLog = dr[4].ToString(),
                     CommitUId = Convert.ToInt32(dr[5])
                 });
                 f.Add(_ebObject);
             }
             return new EbObjectStatusHistoryResponse { Data = f };
+            //
         }
 
         [CompressResponse]
