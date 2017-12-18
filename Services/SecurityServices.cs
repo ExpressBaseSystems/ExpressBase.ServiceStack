@@ -52,8 +52,8 @@ namespace ExpressBase.ServiceStack.Services
 		{
 			string query = null;
 			List<DbParameter> parameters = new List<DbParameter>();
-			query = string.Format(@"SELECT id, applicationname FROM eb_applications where eb_del = FALSE;
-									SELECT EO.id, EO.obj_name, EO.obj_type, EO.applicationid
+			query = string.Format(@"SELECT id, applicationname FROM eb_applications where eb_del = FALSE ORDER BY applicationname;
+									SELECT DISTINCT EO.id, EO.obj_name, EO.obj_type, EO.applicationid
 										FROM eb_objects EO, eb_objects_ver EOV, eb_objects_status EOS 
 										WHERE EO.id = EOV.eb_objects_id AND EOV.id = EOS.eb_obj_ver_id AND EOS.status = 3 AND EO.applicationid > 0;");
 			if (request.id > 0)
@@ -67,6 +67,7 @@ namespace ExpressBase.ServiceStack.Services
 
 			//PROCESSED RESULT
 			ApplicationCollection _applicationCollection = new ApplicationCollection(ds.Tables[0], ds.Tables[1]);
+
 			//---------------
 			Dictionary<string, object> RoleInfo = new Dictionary<string, object>();
 			List<string> Permission = new List<string>();
