@@ -104,14 +104,20 @@ namespace ExpressBase.ServiceStack.Services
                     coll.Add(id, new List<ProductPlan>());
                 coll[id].Add(pp);
             }
-            if(ds.Tables[1].Rows.Count > 0)
-            {
-                getProductPlanResponse.Sid = ds.Tables[1].Rows[0][0].ToString();
-            }
             getProductPlanResponse.Plans = coll;
 
             return getProductPlanResponse;
         }
+
+        public AutoGenSolIdResponse Get(AutoGenSolIdRequest request)
+        {
+            AutoGenSolIdResponse resp = new AutoGenSolIdResponse();
+            string sql ="SELECT * FROM eb_random_sid();";
+            var ds = this.TenantDbFactory.ObjectsDB.DoQuery(sql);
+            resp.Sid = ds.Rows[0][0].ToString();
+            return resp;
+        }
+
 
         public CreateSolutionResponse Post(CreateSolutionRequest request)
         {
