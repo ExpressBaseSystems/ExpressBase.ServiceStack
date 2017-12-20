@@ -17,7 +17,7 @@ namespace ExpressBase.ServiceStack
     public class DataSourceService : EbBaseService
     {
         public DataSourceService(ITenantDbFactory _dbf) : base(_dbf) { }
-        
+
         [CompressResponse]
         public DataSourceDataResponse Any(DataSourceDataRequest request)
         {
@@ -42,86 +42,90 @@ namespace ExpressBase.ServiceStack
 
             //if (dt.Rows.Count > 0)
             //{
-                var _ds = this.Redis.Get<EbDataSource>(request.RefId); //EbSerializers.Json_Deserialize<EbDataSource>(dt.Rows[0][0].ToString());
-                this.Log.Info("_ds *****" + _ds/*.SqlDecoded()*/);
-                string _sql = string.Empty;
+            var _ds = this.Redis.Get<EbDataSource>(request.RefId); //EbSerializers.Json_Deserialize<EbDataSource>(dt.Rows[0][0].ToString());
+            this.Log.Info("_ds *****" + _ds/*.SqlDecoded()*/);
+            string _sql = string.Empty;
 
-                if (_ds != null)
+            if (_ds != null)
+            {
+                string _c = string.Empty;
+
+                if (request.TFilters != null)
                 {
-                    string _c = string.Empty;
-
-                    if (request.TFilters != null)
+                    foreach (Dictionary<string, string> _dic in request.TFilters)
                     {
-                        foreach (Dictionary<string, string> _dic in request.TFilters)
-                        {
-                            var op = _dic["o"]; var col = _dic["c"]; var val = _dic["v"];
+                        var op = _dic["o"]; var col = _dic["c"]; var val = _dic["v"];
 
-                            if (op == "x*")
-                                _c += string.Format("AND LOWER({0})::text LIKE LOWER('{1}%') ", col, val);
-                            else if (op == "*x")
-                                _c += string.Format("AND LOWER({0})::text LIKE LOWER('%{1}') ", col, val);
-                            else if (op == "*x*")
-                                _c += string.Format("AND LOWER({0})::text LIKE LOWER('%{1}%') ", col, val);
-                            else if (op == "=")
-                                _c += string.Format("AND LOWER({0}::text) = LOWER('{1}') ", col, val);
-                            else
-                                _c += string.Format("AND {0} {1} '{2}' ", col, op, val);
-                        }
+                        if (op == "x*")
+                            _c += string.Format("AND LOWER({0})::text LIKE LOWER('{1}%') ", col, val);
+                        else if (op == "*x")
+                            _c += string.Format("AND LOWER({0})::text LIKE LOWER('%{1}') ", col, val);
+                        else if (op == "*x*")
+                            _c += string.Format("AND LOWER({0})::text LIKE LOWER('%{1}%') ", col, val);
+                        else if (op == "=")
+                            _c += string.Format("AND LOWER({0}::text) = LOWER('{1}') ", col, val);
+                        else
+                            _c += string.Format("AND {0} {1} '{2}' ", col, op, val);
                     }
-
-                    _sql = _ds.Sql/*Decoded()*/.Replace("@and_search", _c);
                 }
-                this.Log.Info("search ok");
-                _sql = _sql.Replace("@orderby",
-                    (string.IsNullOrEmpty(request.OrderByCol)) ? "id" : string.Format("{0} {1}", request.OrderByCol, ((request.OrderByDir == 2) ? "DESC" : "ASC")));
-                this.Log.Info("order ok");
-                var parameters = new List<System.Data.Common.DbParameter>();
 
-                bool _isPaged = (_sql.ToLower().Contains("@offset") && _sql.ToLower().Contains("@limit"));
-                if (_isPaged)
-                {
-                    parameters.AddRange(new System.Data.Common.DbParameter[]
-                        {
+                _sql = _ds.Sql/*Decoded()*/.Replace("@and_search", _c);
+            }
+            this.Log.Info("search ok");
+            _sql = _sql.Replace("@orderby",
+                (string.IsNullOrEmpty(request.OrderByCol)) ? "id" : string.Format("{0} {1}", request.OrderByCol, ((request.OrderByDir == 2) ? "DESC" : "ASC")));
+            this.Log.Info("order ok");
+            var parameters = new List<System.Data.Common.DbParameter>();
+
+            bool _isPaged = (_sql.ToLower().Contains("@offset") && _sql.ToLower().Contains("@limit"));
+            if (_isPaged)
+            {
+                parameters.AddRange(new System.Data.Common.DbParameter[]
+                    {
                             this.TenantDbFactory.ObjectsDB.GetNewParameter("@limit", System.Data.DbType.Int32, request.Length),
                             this.TenantDbFactory.ObjectsDB.GetNewParameter("@offset", System.Data.DbType.Int32, request.Start),
-                        });
-                }
+                    });
+            }
 
-                if (request.Params != null && request.Params.Count != 0)
-                {
-                    foreach (Dictionary<string, string> param in request.Params)
-                        parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter(string.Format("@{0}", param["name"]), (System.Data.DbType)Convert.ToInt32(param["type"]), param["value"]));
-                }
-                this.Log.Info("GO**********************" + _sql);
-                var _dataset = this.TenantDbFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray());
-                this.Log.Info(">>>>>> _dataset.Tables.Count: " + _dataset.Tables.Count + ", " + _dataset.ToJson());
+            if (request.Params != null && request.Params.Count != 0)
+            {
+                foreach (Dictionary<string, string> param in request.Params)
+                    parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter(string.Format("@{0}", param["name"]), (System.Data.DbType)Convert.ToInt32(param["type"]), param["value"]));
+            }
+            else
+            {
+                    _sql = _sql.Replace("@id", "0");
+            }
+            this.Log.Info("GO**********************" + _sql);
+            var _dataset = this.TenantDbFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray());
+            this.Log.Info(">>>>>> _dataset.Tables.Count: " + _dataset.Tables.Count + ", " + _dataset.ToJson());
 
-                //-- 
-                int _recordsTotal = 0, _recordsFiltered = 0;
-                if (_isPaged)
-                {
-                    Int32.TryParse(_dataset.Tables[0].Rows[0][0].ToString(), out _recordsTotal);
-                    Int32.TryParse(_dataset.Tables[0].Rows[0][0].ToString(), out _recordsFiltered);
-                }
-                _recordsTotal = (_recordsTotal > 0) ? _recordsTotal : _dataset.Tables[0].Rows.Count;
-                _recordsFiltered = (_recordsFiltered > 0) ? _recordsFiltered : _dataset.Tables[0].Rows.Count;
-                //-- 
+            //-- 
+            int _recordsTotal = 0, _recordsFiltered = 0;
+            if (_isPaged)
+            {
+                Int32.TryParse(_dataset.Tables[0].Rows[0][0].ToString(), out _recordsTotal);
+                Int32.TryParse(_dataset.Tables[0].Rows[0][0].ToString(), out _recordsFiltered);
+            }
+            _recordsTotal = (_recordsTotal > 0) ? _recordsTotal : _dataset.Tables[0].Rows.Count;
+            _recordsFiltered = (_recordsFiltered > 0) ? _recordsFiltered : _dataset.Tables[0].Rows.Count;
+            //-- 
 
-                dsresponse = new DataSourceDataResponse
-                {
-                    Draw = request.Draw,
-                    Data = (_dataset.Tables.Count > 1) ? _dataset.Tables[1].Rows : _dataset.Tables[0].Rows,
-                    RecordsTotal = _recordsTotal,
-                    RecordsFiltered = _recordsFiltered
-                };
-                this.Log.Info("dsresponse*****" + dsresponse.Data);
+            dsresponse = new DataSourceDataResponse
+            {
+                Draw = request.Draw,
+                Data = (_dataset.Tables.Count > 1) ? _dataset.Tables[1].Rows : _dataset.Tables[0].Rows,
+                RecordsTotal = _recordsTotal,
+                RecordsFiltered = _recordsFiltered
+            };
+            this.Log.Info("dsresponse*****" + dsresponse.Data);
             //}
 
             //return this.Request.ToOptimizedResult<DataSourceDataResponse>(dsresponse);
             return dsresponse;
         }
 
-      
+
         [CompressResponse]
         public DataSourceColumnsResponse Any(DataSourceColumnsRequest request)
         {
@@ -172,7 +176,10 @@ namespace ExpressBase.ServiceStack
                         foreach (Dictionary<string, string> param in request.Params)
                             parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter(string.Format("@{0}", param["name"]), (System.Data.DbType)Convert.ToInt32(param["type"]), param["value"]));
                     }
-
+                    else
+                    {
+                            _sql = _sql.Replace("@id", "0");
+                    }
                     Log.Info(">>>>>>>>>>>>>>>>>>>>>>>> dscolumns Parameters Added");
 
                     try
