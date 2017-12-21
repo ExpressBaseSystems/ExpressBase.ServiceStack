@@ -26,7 +26,6 @@ namespace ExpressBase.ServiceStack.Auth0
             log.Info("In TryAuthenticate method1");
             var TenantDbFactory = authService.ResolveService<ITenantDbFactory>() as TenantDbFactory;
 
-           
             log.Info("In TryAuthenticate method2");
 
             User _authUser = null;
@@ -79,14 +78,13 @@ namespace ExpressBase.ServiceStack.Auth0
                 //if (existingUser != null)
                 (authRepo as EbRedisAuthRepository).UpdateUserAuth(existingUser, _authUser);
                 //redisClient.Set<IUserAuth>(string.Format("{0}-{1}", cid, _authUser.Email), _authUser);
-
             }
 
             return (_authUser != null);
         }
 
         public override object Authenticate(IServiceBase authService, IAuthSession session, Authenticate request)
-        {
+            {
             ILog log = LogManager.GetLogger(GetType());
 
             log.Info("In Authenticate method1");
@@ -102,10 +100,10 @@ namespace ExpressBase.ServiceStack.Auth0
                 {
                     UserId = _customUserSession.UserAuthId,
                     UserName = _customUserSession.UserName,
-                    User = _customUserSession.User,
-                    
-                };
+                    User = _customUserSession.User
+            };
             }
+            
 
             return authResponse;
         }

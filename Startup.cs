@@ -15,6 +15,7 @@ using ServiceStack.ProtoBuf;
 using ServiceStack.RabbitMq;
 using ServiceStack.Redis;
 using System;
+using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 
 namespace ExpressBase.ServiceStack
@@ -38,8 +39,8 @@ namespace ExpressBase.ServiceStack
         {
             services.AddDataProtection(opts =>
              {
-                opts.ApplicationDiscriminator = "expreaabase.servicestack";
-                           });
+                 opts.ApplicationDiscriminator = "expressbase.servicestack";
+             });
             // Add framework services.
         }
 
@@ -79,6 +80,8 @@ namespace ExpressBase.ServiceStack
     {
         public EbLiveSettings EbLiveSettings { get; set; }
 
+        private PooledRedisClientManager RedisBusPool { get; set; }
+
         public AppHost() : base("Test Razor", typeof(AppHost).GetAssembly()) { }
 
         public override void OnAfterConfigChanged()
@@ -91,7 +94,7 @@ namespace ExpressBase.ServiceStack
             var co = this.Config;
             LogManager.LogFactory = new ConsoleLogFactory(debugEnabled: true);
 
-            var jwtprovider = new MyJwtAuthProvider(AppSettings)
+            var jwtprovider = new JwtAuthProvider(AppSettings)
             {
                 HashAlgorithm = "RS256",
                 PrivateKeyXml = EbLiveSettings.PrivateKeyXml,
@@ -110,6 +113,15 @@ namespace ExpressBase.ServiceStack
 
                 ExpireTokensIn = TimeSpan.FromHours(10),
                 ExpireRefreshTokensIn = TimeSpan.FromHours(12),
+                PersistSession = true,
+                SessionExpiry = TimeSpan.FromHours(12)
+            };
+            var apikeyauthprovider = new ApiKeyAuthProvider(AppSettings)
+            {
+#if (DEBUG)
+                RequireSecureConnection = false,
+                //EncryptPayload = true,
+#endif
                 PersistSession = true,
                 SessionExpiry = TimeSpan.FromHours(12)
             };
@@ -147,7 +159,10 @@ namespace ExpressBase.ServiceStack
                     {
                         PersistSession = true
                     },
+
                     jwtprovider,
+                    apikeyauthprovider
+
                 }));
 
             //Also works but it's recommended to handle 404's by registering at end of .NET Core pipeline
@@ -161,11 +176,17 @@ namespace ExpressBase.ServiceStack
             var redisConnectionString = string.Format("redis://{0}@{1}:{2}?ssl=true",
                EbLiveSettings.RedisPassword, EbLiveSettings.RedisServer, EbLiveSettings.RedisPort);
 
+            RedisBusPool = new PooledRedisClientManager(redisConnectionString);
+
+            container.Register<IAuthRepository>(c => new RedisAuthRepository(RedisBusPool));
+
+            container.Register<IUserAuthRepository>(c => new RedisAuthRepository(RedisBusPool));
+
             container.Register<IRedisClientsManager>(c => new RedisManagerPool(redisConnectionString));
 
-            container.Register<IUserAuthRepository>(c => new EbRedisAuthRepository(c.Resolve<IRedisClientsManager>()));
-
             container.Register<JwtAuthProvider>(jwtprovider);
+
+            container.Register<ApiKeyAuthProvider>(apikeyauthprovider);
 
             container.Register<ITenantDbFactory>(c => new TenantDbFactory(c)).ReusedWithin(ReuseScope.Request);
 
@@ -198,7 +219,7 @@ namespace ExpressBase.ServiceStack
             {
                 return mqServer.CreateMessageQueueClient() as RabbitMqQueueClient;
             });
-            
+
             //Add a request filter to check if the user has a session initialized
             this.GlobalRequestFilters.Add((req, res, requestDto) =>
             {
@@ -207,17 +228,16 @@ namespace ExpressBase.ServiceStack
                 log.Info("In GlobalRequestFilters");
                 try
                 {
+                    if (requestDto.GetType() == typeof(Authenticate))
+                    {
+                        log.Info("In Authenticate");
 
-               
-                if (requestDto.GetType() == typeof(Authenticate))
-                {
-                    log.Info("In Authenticate");
-                    
-                    string TenantId = (requestDto as Authenticate).Meta != null ? (requestDto as Authenticate).Meta["cid"] : "expressbase";
-                    log.Info(TenantId);
-                    RequestContext.Instance.Items.Add("TenantAccountId", TenantId);
+                        string TenantId = (requestDto as Authenticate).Meta != null ? (requestDto as Authenticate).Meta["cid"] : "expressbase";
+                        log.Info(TenantId);
+                        RequestContext.Instance.Items.Add("TenantAccountId", TenantId);
+                    }
                 }
-                }catch(Exception e)
+                catch (Exception e)
                 {
                     log.Info("ErrorStackTrace..........." + e.StackTrace);
                     log.Info("ErrorMessage..........." + e.Message);
@@ -225,7 +245,7 @@ namespace ExpressBase.ServiceStack
                 }
                 try
                 {
-                    if (requestDto != null && requestDto.GetType() != typeof(Authenticate) && requestDto.GetType() != typeof(GetAccessToken) && requestDto.GetType() != typeof(UniqueRequest) && requestDto.GetType() != typeof(CreateAccountRequest)&& requestDto.GetType() != typeof(EmailServicesRequest) && requestDto.GetType() != typeof(RegisterRequest))
+                    if (requestDto != null && requestDto.GetType() != typeof(Authenticate) && requestDto.GetType() != typeof(GetAccessToken) && requestDto.GetType() != typeof(UniqueRequest) && requestDto.GetType() != typeof(CreateAccountRequest) && requestDto.GetType() != typeof(EmailServicesRequest) && requestDto.GetType() != typeof(RegisterRequest))
                     {
                         var auth = req.Headers[HttpHeaders.Authorization];
                         if (string.IsNullOrEmpty(auth))
@@ -264,7 +284,7 @@ namespace ExpressBase.ServiceStack
                         }
                     }
                 }
-                catch(Exception e)
+                catch (Exception e)
                 {
                     log.Info("ErrorStackTraceNontokenServices..........." + e.StackTrace);
                     log.Info("ErrorMessageNontokenServices..........." + e.Message);
@@ -279,11 +299,37 @@ namespace ExpressBase.ServiceStack
                     if (responseDto.GetResponseDto().GetType() == typeof(GetAccessTokenResponse))
                     {
                         res.SetSessionCookie("Token", (res.Dto as GetAccessTokenResponse).AccessToken);
-
-
                     }
                 }
             });
+
+            this.GlobalRequestFilters.Add((req, res, requestDto) =>
+            {
+                if (req.RawUrl.Contains("smscallback"))
+                {
+                    req.Headers.Add("BearerToken", "");
+                    
+                }
+            });
+            //AfterInitCallbacks.Add(host =>
+            //{
+
+            //    var authProvider = (ApiKeyAuthProvider)AuthenticateService.GetAuthProvider(ApiKeyAuthProvider.Name);
+            //    var authRepo = (IManageApiKeys)host.TryResolve<IAuthRepository>();
+            //    var userRepo = (IUserAuthRepository)host.TryResolve<IUserAuthRepository>();
+
+            //    try
+            //    {
+            //        IEnumerable<ApiKey> keys = authProvider.GenerateNewApiKeys("62");
+            //        authRepo.StoreAll(keys);
+
+            //    }
+            //    catch (Exception e)
+            //    {
+            //        throw;
+            //    }
+
+            //});
         }
     }
 }

@@ -29,6 +29,18 @@ namespace ExpressBase.ServiceStack.MQServices
             }
         }
 
+        [Route("/callback/{apikey}")]
+        public class String : IReturn<IReturnVoid>
+        {
+            public String apikey { get; set; }
+        }
+
+        
+        public void Any(SMSService.String apikey)
+        {
+
+        }
+
         [Restrict(InternalOnly = true)]
         public class SMSServiceInternal : EbBaseService
         {
