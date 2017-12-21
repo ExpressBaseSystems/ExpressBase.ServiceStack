@@ -199,6 +199,7 @@ namespace ExpressBase.ServiceStack
 
             var mqServer = new RabbitMqServer(rabitFactory);
             mqServer.RetryCount = 1;
+           // mqServer.RegisterHandler<EmailServicesMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<SMSSentMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<RefreshSolutionConnectionsMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<SMSStatusLogMqRequest>(base.ExecuteMessage);
@@ -245,7 +246,7 @@ namespace ExpressBase.ServiceStack
                 }
                 try
                 {
-                    if (requestDto != null && requestDto.GetType() != typeof(Authenticate) && requestDto.GetType() != typeof(GetAccessToken) && requestDto.GetType() != typeof(UniqueRequest) && requestDto.GetType() != typeof(CreateAccountRequest) && requestDto.GetType() != typeof(EmailServicesRequest) && requestDto.GetType() != typeof(RegisterRequest))
+                    if (requestDto != null && requestDto.GetType() != typeof(Authenticate) && requestDto.GetType() != typeof(GetAccessToken) && requestDto.GetType() != typeof(UniqueRequest) && requestDto.GetType() != typeof(CreateAccountRequest)&& requestDto.GetType() != typeof(EmailServicesRequest) && requestDto.GetType() != typeof(RegisterRequest) && requestDto.GetType() != typeof(AutoGenSolIdRequest))
                     {
                         var auth = req.Headers[HttpHeaders.Authorization];
                         if (string.IsNullOrEmpty(auth))

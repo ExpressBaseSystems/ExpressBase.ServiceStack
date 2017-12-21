@@ -12,6 +12,7 @@ using ExpressBase.Common.Data;
 using System.Text;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
+using System.Data.Common;
 
 namespace ExpressBase.ServiceStack
 {
@@ -48,17 +49,21 @@ namespace ExpressBase.ServiceStack
                 {
                     ebDataSource = EbSerializers.Json_Deserialize(element.Json);
                 }
-                var ds = _InfraDb.ObjectsDB.DoQueries(ebDataSource.Sql);
-                var pattern = @"\{{(.*?)\}}";
-                var matches = Regex.Matches(ebEmailTemplate.Body, pattern);
-                Dictionary<string, object> dict = new Dictionary<string, object>();
-                foreach (Match m in matches)
+                DbParameter[] parameters = { _InfraDb.ObjectsDB.GetNewParameter("id", System.Data.DbType.Int32, 1)}; //change 1 by request.id
+                var ds = _InfraDb.ObjectsDB.DoQueries(ebDataSource.Sql,parameters);
+                //var pattern = @"\{{(.*?)\}}";
+                //var matches = Regex.Matches(ebEmailTemplate.Body, pattern);
+                //Dictionary<string, object> dict = new Dictionary<string, object>();
+                foreach (var dscol in ebEmailTemplate.DsColumnsCollection)
                 {
-                    string str = Regex.Replace(m.Value, "[{}]", "");
-                    foreach(var dt in ds.Tables)
+                    string str = dscol.Title.Replace("{{", "").Replace("}}","");
+
+
+                    foreach (var dt in ds.Tables)
                     {
+
                         string colname = dt.Rows[0][str.Split('.')[1]].ToString();
-                        ebEmailTemplate.Body = ebEmailTemplate.Body.Replace(m.Value, colname);
+                        ebEmailTemplate.Body = ebEmailTemplate.Body.Replace(dscol.Title, colname);
                     }
                     
                 }           
@@ -70,7 +75,7 @@ namespace ExpressBase.ServiceStack
                 try
                 {
                     using (var client = new SmtpClient())
-                    {
+                    {// after completing connection manager implementation..take all credentials from connection object
                         client.LocalDomain = "www.expressbase.com";
                         client.Connect("smtp.gmail.com", 465, true);
                         client.Authenticate(new System.Net.NetworkCredential() { UserName = "expressbasesystems@gmail.com", Password = "ebsystems" });

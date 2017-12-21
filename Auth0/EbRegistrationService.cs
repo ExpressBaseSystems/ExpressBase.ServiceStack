@@ -31,8 +31,8 @@ namespace ExpressBase.ServiceStack.Auth0
                 try
                 {
                     var myService = base.ResolveService<EmailServiceInternal>();
-                    myService.Post(new EmailServicesMqRequest() { refid = "expressbase-expressbase-15-5-5", TenantAccountId = request.TenantAccountId, Subject = "EXPRESSbase Signup Confirmation", To = request.Email, UserId = Convert.ToInt32(dt.Rows[0][0]) });
-                   // base.MessageProducer3.Publish(new EmailServicesMqRequest { refid = "eb_roby_dev-eb_roby_dev-15-894-1611", TenantAccountId = request.TenantAccountId, Subject = "EXPRESSbase Signup Confirmation", To = request.Email, UserId =Convert.ToInt32(dt.Rows[0][0]) });
+                    myService.Post(new EmailServicesMqRequest() { refid = "expressbase-expressbase-15-26-26", TenantAccountId = request.TenantAccountId, newuserid = Convert.ToInt32(dt.Rows[0][0]), To = request.Email, UserId = Convert.ToInt32(dt.Rows[0][0]) });
+                    //base.MessageProducer3.Publish(new EmailServicesMqRequest { refid = "expressbase-expressbase-15-26-26", TenantAccountId = request.TenantAccountId, newuserid = Convert.ToInt32(dt.Rows[0][0]), To = request.Email, UserId = Convert.ToInt32(dt.Rows[0][0]) });
                     response.UserName = dt.Rows[0][1].ToString();
                     response.UserId = dt.Rows[0][0].ToString();
                 }
