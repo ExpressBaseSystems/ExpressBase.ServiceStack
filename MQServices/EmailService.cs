@@ -12,6 +12,7 @@ using ExpressBase.Common.Data;
 using System.Text;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
+using System.Data.Common;
 
 namespace ExpressBase.ServiceStack
 {
@@ -48,7 +49,8 @@ namespace ExpressBase.ServiceStack
                 {
                     ebDataSource = EbSerializers.Json_Deserialize(element.Json);
                 }
-                var ds = _InfraDb.ObjectsDB.DoQueries(ebDataSource.Sql);
+                DbParameter[] parameters = { _InfraDb.ObjectsDB.GetNewParameter("id", System.Data.DbType.Int32, 1)}; //change 1 by request.id
+                var ds = _InfraDb.ObjectsDB.DoQueries(ebDataSource.Sql,parameters);
                 //var pattern = @"\{{(.*?)\}}";
                 //var matches = Regex.Matches(ebEmailTemplate.Body, pattern);
                 //Dictionary<string, object> dict = new Dictionary<string, object>();
@@ -73,7 +75,7 @@ namespace ExpressBase.ServiceStack
                 try
                 {
                     using (var client = new SmtpClient())
-                    {
+                    {// after completing connection manager implementation..take all credentials from connection object
                         client.LocalDomain = "www.expressbase.com";
                         client.Connect("smtp.gmail.com", 465, true);
                         client.Authenticate(new System.Net.NetworkCredential() { UserName = "expressbasesystems@gmail.com", Password = "ebsystems" });
