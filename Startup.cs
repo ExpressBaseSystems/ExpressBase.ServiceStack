@@ -176,17 +176,19 @@ namespace ExpressBase.ServiceStack
             var redisConnectionString = string.Format("redis://{0}@{1}:{2}?ssl=true",
                EbLiveSettings.RedisPassword, EbLiveSettings.RedisServer, EbLiveSettings.RedisPort);
 
-            RedisBusPool = new PooledRedisClientManager(redisConnectionString);
-
-            container.Register<IAuthRepository>(c => new RedisAuthRepository(RedisBusPool));
-
-            container.Register<IUserAuthRepository>(c => new RedisAuthRepository(RedisBusPool));
+            //RedisBusPool = new PooledRedisClientManager(redisConnectionString);
 
             container.Register<IRedisClientsManager>(c => new RedisManagerPool(redisConnectionString));
 
+            //container.Register<IAuthRepository>(c => new RedisAuthRepository(RedisBusPool));
+
+            container.Register<IUserAuthRepository>(c => new EbRedisAuthRepository(c.Resolve<IRedisClientsManager>()));
+
+            
+
             container.Register<JwtAuthProvider>(jwtprovider);
 
-            container.Register<ApiKeyAuthProvider>(apikeyauthprovider);
+            //container.Register<ApiKeyAuthProvider>(apikeyauthprovider);
 
             container.Register<ITenantDbFactory>(c => new TenantDbFactory(c)).ReusedWithin(ReuseScope.Request);
 
