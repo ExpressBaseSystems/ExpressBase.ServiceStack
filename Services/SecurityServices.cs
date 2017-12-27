@@ -30,7 +30,7 @@ namespace ExpressBase.ServiceStack.Services
 										SELECT permissionname,obj_id,op_id FROM eb_role2permission WHERE role_id = @id AND eb_del = FALSE;
 										SELECT A.applicationname, A.description FROM eb_applications A, eb_roles R WHERE A.id = R.applicationid AND R.id = @id AND A.eb_del = FALSE;
 
-										SELECT A.id, A.firstname, B.id FROM eb_users A, eb_role2user B
+										SELECT A.id, A.firstname, A.email, B.id FROM eb_users A, eb_role2user B
 											WHERE A.id = B.user_id AND A.eb_del = FALSE AND B.eb_del = FALSE AND B.role_id = @id");
 				parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.Int32, request.id));
 			}
@@ -69,10 +69,31 @@ namespace ExpressBase.ServiceStack.Services
 					Permission.Add(dr[0].ToString());
 				foreach (EbDataRow dr in ds.Tables[7].Rows)
 				{
-					_usersList.Add(new Eb_Users() { Id = Convert.ToInt32(dr[0]), Name= dr[1].ToString(), Role_Id= Convert.ToInt32(dr[2]) });
+					_usersList.Add(new Eb_Users() { Id = Convert.ToInt32(dr[0]), Name= dr[1].ToString(),Email= dr[2].ToString(), Role2User_Id= Convert.ToInt32(dr[3]) });
 				}
 			}
 			return new GetManageRolesResponse() { ApplicationCollection = _applicationCollection, SelectedRoleInfo = RoleInfo, PermissionList = Permission, RoleList = _roleList, Role2RoleList = _r2rList, UsersList = _usersList };
+		}
+
+
+
+		public GetUserDetailsResponse Any(GetUserDetailsRequest request)
+		{
+			string query = null;
+			List<DbParameter> parameters = new List<DbParameter>();
+			query = string.Format(@"SELECT id, firstname, email FROM eb_users
+									WHERE LOWER(firstname) LIKE LOWER(@NAME) AND eb_del = FALSE ORDER BY firstname ASC"); 
+			parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@NAME", System.Data.DbType.String, (request.SearchText + "%")));
+			var ds = this.TenantDbFactory.ObjectsDB.DoQueries(query, parameters.ToArray());
+			List<Eb_Users> _usersList = new List<Eb_Users>();
+			if (ds.Tables.Count > 0)
+			{
+				foreach (EbDataRow dr in ds.Tables[0].Rows)
+				{
+					_usersList.Add(new Eb_Users() { Id = Convert.ToInt32(dr[0]), Name = dr[1].ToString(), Email = dr[2].ToString()});
+				}
+			}
+			return new GetUserDetailsResponse() { UserList = _usersList };
 		}
 
 
