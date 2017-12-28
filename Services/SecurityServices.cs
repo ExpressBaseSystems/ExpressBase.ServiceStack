@@ -22,7 +22,7 @@ namespace ExpressBase.ServiceStack.Services
 										FROM eb_objects EO, eb_objects_ver EOV, eb_objects_status EOS 
 										WHERE EO.id = EOV.eb_objects_id AND EOV.id = EOS.eb_obj_ver_id AND EOS.status = 3 AND EO.applicationid > 0;
 									
-									SELECT id, role_name, description, applicationid FROM eb_roles ORDER BY role_name;
+									SELECT id, role_name, description, applicationid FROM eb_roles WHERE id <> @id ORDER BY role_name;
 									SELECT id, role1_id, role2_id FROM eb_role2role WHERE eb_del = FALSE;");//if db_ok then append to 3rd query "WHERE eb_del=FALSE" 
 			if (request.id > 0)
 			{
@@ -32,8 +32,8 @@ namespace ExpressBase.ServiceStack.Services
 
 										SELECT A.id, A.firstname, A.email, B.id FROM eb_users A, eb_role2user B
 											WHERE A.id = B.user_id AND A.eb_del = FALSE AND B.eb_del = FALSE AND B.role_id = @id");
-				parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.Int32, request.id));
 			}
+			parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.Int32, request.id));
 			var ds = this.TenantDbFactory.ObjectsDB.DoQueries(query, parameters.ToArray());
 			ApplicationCollection _applicationCollection = null;
 			List<Eb_RoleObject> _roleList = new List<Eb_RoleObject>();
