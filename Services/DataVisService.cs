@@ -1,5 +1,6 @@
 ﻿using ExpressBase.Common;
 using ExpressBase.Common.Data;
+using ExpressBase.Common.Objects;
 using ExpressBase.Data;
 using ExpressBase.Objects;
 using ExpressBase.Objects.ServiceStack_Artifacts;
@@ -171,6 +172,32 @@ namespace ExpressBase.ServiceStack
             }
 
             return resp;
+        }
+
+        public object Any(EbObjectWithRelatedDVRequest request)
+        {
+            EbDataVisualization dsobj = null;
+            var myService = base.ResolveService<EbObjectService>();
+            var res = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = request.Refid });
+            dsobj = EbSerializers.Json_Deserialize(res.Data[0].Json);
+            dsobj.Status = res.Data[0].Status;
+            dsobj.VersionNumber = res.Data[0].VersionNumber;
+
+            List<EbObjectWrapper> dvList = new List<EbObjectWrapper>();
+            if (request.Refid != null)
+            {
+                var resultlist = (EbObjectRelationsResponse)myService.Get(new EbObjectRelationsRequest { DominantId = dsobj.DataSourceRefId });
+                var rlist = resultlist.Data;
+                foreach (var element in rlist)
+                {
+                    if (element.EbObjectType == EbObjectType.TableVisualization || element.EbObjectType == EbObjectType.ChartVisualization)
+                    {
+                        dvList.Add(element);
+                    }
+                }
+
+            }
+            return new EbObjectWithRelatedDVResponse { Dsobj = dsobj, DvList = dvList };
         }
     }
 }

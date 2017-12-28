@@ -336,7 +336,7 @@ WHERE
         [CompressResponse]
         public object Get(EbObjectRelationsRequest request)
         { //Fetch ebobjects relations
-
+            parameters = new List<System.Data.Common.DbParameter>(); 
             ILog log = LogManager.GetLogger(GetType());
             parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@dominant", System.Data.DbType.String, request.DominantId));
             var dt = this.TenantDbFactory.ObjectsDB.DoQuery(GetObjectRelations, parameters.ToArray());
