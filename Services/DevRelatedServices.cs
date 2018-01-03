@@ -55,7 +55,7 @@ namespace ExpressBase.ServiceStack
             CreateApplicationResponse resp;
             using (var con = TenantDbFactory.DataDB.GetNewConnection())
             {
-               if(!string.IsNullOrEmpty(request.Colvalues["applicationname"].ToString()))
+               if(!string.IsNullOrEmpty(request.Colvalues["AppName"].ToString()))
                 {
                     string sql = "";
                     if (request.Id > 0)
@@ -64,12 +64,13 @@ namespace ExpressBase.ServiceStack
                     }
                     else
                     {
-                         sql = "INSERT INTO eb_applications (applicationname, description) VALUES (@applicationname, @description) RETURNING id";
+                         sql = "INSERT INTO eb_applications (application_name,application_type, description,solution_id,) VALUES (@applicationname,@apptype, @description,@solutionid) RETURNING id";
                     }
                     
-                    DbParameter[] parameters = { this.TenantDbFactory.ObjectsDB.GetNewParameter("applicationname", System.Data.DbType.String, request.Colvalues["applicationname"]),
-                            this.TenantDbFactory.ObjectsDB.GetNewParameter("description", System.Data.DbType.String, request.Colvalues["description"]),
-                            this.TenantDbFactory.ObjectsDB.GetNewParameter("id", System.Data.DbType.Int32, request.Id)
+                    DbParameter[] parameters = { this.TenantDbFactory.ObjectsDB.GetNewParameter("applicationname", System.Data.DbType.String, request.Colvalues["AppName"]),
+                            this.TenantDbFactory.ObjectsDB.GetNewParameter("apptype", System.Data.DbType.String, request.Colvalues["AppType"]),
+                            this.TenantDbFactory.ObjectsDB.GetNewParameter("description", System.Data.DbType.String, request.Colvalues["Desc"]),
+                            this.TenantDbFactory.ObjectsDB.GetNewParameter("solutionid", System.Data.DbType.String, request.Colvalues["Isid"])                           
                             };
 
                     var dt = this.TenantDbFactory.ObjectsDB.DoQuery(sql, parameters);
