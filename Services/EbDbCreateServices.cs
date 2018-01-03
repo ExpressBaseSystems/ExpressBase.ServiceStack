@@ -139,7 +139,8 @@ namespace ExpressBase.ServiceStack.Services
                     cmdtxt1.ExecuteNonQuery();
                 }
             }
-            catch (Exception e) {
+            catch (Exception e)
+            {
                 return false;
             }
             return true;
