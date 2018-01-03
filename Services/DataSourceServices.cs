@@ -154,6 +154,14 @@ namespace ExpressBase.ServiceStack
                 //if (dt.Rows.Count > 0)
                 //{
                 var _ds = this.Redis.Get<EbDataSource>(request.RefId); // EbSerializers.Json_Deserialize<EbDataSource>(dt.Rows[0][0].ToString());
+                if(_ds == null)
+                {
+                    var myService = base.ResolveService<EbObjectService>();
+                    var result = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = request.RefId });
+                    _ds = EbSerializers.Json_Deserialize(result.Data[0].Json);
+                    Redis.Set<EbDataSource>(request.RefId, _ds);
+                  
+                }
                 if (_ds != null)
                 {
                     Log.Info(">>>>>>>>>>>>>>>>>>>>>>>> dscolumns Sql: " /*+ _ds.SqlDecoded()*/);
