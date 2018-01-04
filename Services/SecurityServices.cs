@@ -6,13 +6,196 @@ using ExpressBase.Objects.ServiceStack_Artifacts;
 using ExpressBase.Common.Data;
 using System.Data.Common;
 using ExpressBase.Common;
+using ExpressBase.Security.Core;
+using ExpressBase.Common.Extensions;
 
 namespace ExpressBase.ServiceStack.Services
 {
     public class SecurityServices : EbBaseService
 	{
 		public SecurityServices(ITenantDbFactory _dbf) : base(_dbf) { }
-		
+
+		//----MANAGE USER START---------------------------------
+		public GetManageUserResponse Any(GetManageUserRequest request)
+		{
+			GetManageUserResponse resp = new GetManageUserResponse();
+			string sql = null;
+			if (request.Id > 0)
+			{
+				sql = @"SELECT id, role_name, description FROM eb_roles ORDER BY role_name;
+                        SELECT id, name,description FROM eb_usergroup ORDER BY name;
+						SELECT firstname,email FROM eb_users WHERE id = @id;
+						SELECT role_id FROM eb_role2user WHERE user_id = @id AND eb_del = FALSE;
+						SELECT groupid FROM eb_user2usergroup WHERE userid = @id AND eb_del = FALSE;";
+			}
+			else
+			{
+				sql = @"SELECT id, role_name, description FROM eb_roles ORDER BY role_name;
+                        SELECT id, name,description FROM eb_usergroup ORDER BY name";
+			}
+
+			DbParameter[] parameters = { this.TenantDbFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.Int32, request.Id) };
+			var ds = this.TenantDbFactory.ObjectsDB.DoQueries(sql, parameters);
+
+			resp.Roles = new List<EbRole>();
+			foreach (var dr in ds.Tables[0].Rows)
+			{
+				resp.Roles.Add(new EbRole
+				{
+					Id = Convert.ToInt32(dr[0]),
+					Name = dr[1].ToString(),
+					Description = dr[2].ToString()
+				});
+			}
+
+			resp.EbUserGroups = new List<EbUserGroups>();
+			foreach (var dr in ds.Tables[1].Rows)
+			{
+				resp.EbUserGroups.Add(new EbUserGroups
+				{
+					Id = Convert.ToInt32(dr[0]),
+					Name = dr[1].ToString(),
+					Description = dr[2].ToString()
+
+				});
+			}
+
+			if (request.Id > 0)
+			{
+				resp.UserData = new Dictionary<string, object>();
+				foreach (var dr in ds.Tables[2].Rows)
+				{
+					resp.UserData.Add("name", dr[0].ToString());
+					resp.UserData.Add("email", dr[1].ToString());
+				}
+
+				resp.UserRoles = new List<int>();
+				foreach (var dr in ds.Tables[3].Rows)
+					resp.UserRoles.Add(Convert.ToInt32(dr[0]));
+
+				resp.UserGroups = new List<int>();
+				foreach (var dr in ds.Tables[4].Rows)
+					resp.UserGroups.Add(Convert.ToInt32(dr[0]));
+			}
+
+			return resp;
+		}
+
+		private string GeneratePassword()
+		{
+			string strPwdchar = "abcdefghijklmnopqrstuvwxyz0123456789#+@&$ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+			string strPwd = "";
+			Random rnd = new Random();
+			for (int i = 0; i <= 7; i++)
+			{
+				int iRandom = rnd.Next(0, strPwdchar.Length - 1);
+				strPwd += strPwdchar.Substring(iRandom, 1);
+			}
+			return strPwd;
+		}
+
+		public SaveUserResponse Post(SaveUserRequest request)
+		{
+			SaveUserResponse resp;
+			string sql = "";
+			using (var con = this.TenantDbFactory.ObjectsDB.GetNewConnection())
+			{
+				con.Open();
+				string password = "";
+
+				if (request.Id > 0)
+				{
+					sql = "SELECT * FROM eb_createormodifyuserandroles(@userid,@id,@firstname,@email,@pwd,@roles,@group);";
+
+				}
+				else
+				{
+					password = string.IsNullOrEmpty(request.Colvalues["pwd"].ToString()) ? GeneratePassword() : (request.Colvalues["pwd"].ToString() + request.Colvalues["email"].ToString()).ToMD5Hash();
+					sql = "SELECT * FROM eb_createormodifyuserandroles(@userid,@id,@firstname,@email,@pwd,@roles,@group);";
+
+				}
+				int[] emptyarr = new int[] { };
+				DbParameter[] parameters = { this.TenantDbFactory.ObjectsDB.GetNewParameter("firstname", System.Data.DbType.String, request.Colvalues["firstname"]),
+							this.TenantDbFactory.ObjectsDB.GetNewParameter("email", System.Data.DbType.String, request.Colvalues["email"]),
+							this.TenantDbFactory.ObjectsDB.GetNewParameter("roles", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer,(request.Colvalues["roles"].ToString() != string.Empty? request.Colvalues["roles"].ToString().Split(',').Select(n => Convert.ToInt32(n)).ToArray():emptyarr)),
+							this.TenantDbFactory.ObjectsDB.GetNewParameter("group", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer,(request.Colvalues["group"].ToString() != string.Empty? request.Colvalues["group"].ToString().Split(',').Select(n => Convert.ToInt32(n)).ToArray():emptyarr)),
+							this.TenantDbFactory.ObjectsDB.GetNewParameter("pwd", System.Data.DbType.String,password),
+							this.TenantDbFactory.ObjectsDB.GetNewParameter("userid", System.Data.DbType.Int32, request.UserId),
+							this.TenantDbFactory.ObjectsDB.GetNewParameter("id", System.Data.DbType.Int32, request.Id)};
+
+				EbDataSet dt = this.TenantDbFactory.ObjectsDB.DoQueries(sql, parameters);
+
+				if (string.IsNullOrEmpty(request.Colvalues["pwd"].ToString()) && request.Id < 0)
+				{
+					using (var service = base.ResolveService<EmailService>())
+					{
+						//  service.Post(new EmailServicesRequest() { To = request.Colvalues["email"].ToString(), Subject = "New User", Message = string.Format("You are invited to join as user. Log in {0}.localhost:53431 using Username: {1} and Password : {2}", request.TenantAccountId, request.Colvalues["email"].ToString(), dt.Tables[0].Rows[0][1]) });
+					}
+				}
+				resp = new SaveUserResponse
+				{
+					id = Convert.ToInt32(dt.Tables[0].Rows[0][0])
+
+				};
+			}
+			return resp;
+		}
+
+		//------MANAGE USER GROUP START------------------------------
+
+		public GetManageUserGroupResponse Any(GetManageUserGroupRequest request)
+		{
+			GetManageUserGroupResponse resp = new GetManageUserGroupResponse();
+			using (var con = this.TenantDbFactory.ObjectsDB.GetNewConnection())
+			{
+				con.Open();
+				string sql = "";
+				if (request.id > 0)
+				{
+					sql = @"SELECT id,name,description FROM eb_usergroup WHERE id = @id;
+                           SELECT id,firstname FROM eb_users WHERE id IN(SELECT userid FROM eb_user2usergroup WHERE groupid = @id AND eb_del = FALSE)";
+
+
+					DbParameter[] parameters = { this.TenantDbFactory.ObjectsDB.GetNewParameter("id", System.Data.DbType.Int32, request.id) };
+
+					var ds = this.TenantDbFactory.ObjectsDB.DoQueries(sql, parameters);
+					Dictionary<string, object> result = new Dictionary<string, object>();
+					foreach (var dr in ds.Tables[0].Rows)
+					{
+
+						result.Add("name", dr[1].ToString());
+						result.Add("description", dr[2].ToString());
+					}
+					List<int> users = new List<int>();
+					if (ds.Tables.Count > 1)
+					{
+						foreach (EbDataRow dr in ds.Tables[1].Rows)
+						{
+							users.Add(Convert.ToInt32(dr[0]));
+							result.Add(dr[0].ToString(), dr[1]);
+						}
+						result.Add("userslist", users);
+					}
+					resp.Data = result;
+				}
+				else
+				{
+					sql = "SELECT id,name FROM eb_usergroup";
+					var dt = this.TenantDbFactory.ObjectsDB.DoQueries(sql);
+
+					Dictionary<string, object> returndata = new Dictionary<string, object>();
+					foreach (EbDataRow dr in dt.Tables[0].Rows)
+					{
+						returndata[dr[0].ToString()] = dr[1].ToString();
+					}
+					resp.Data = returndata;
+				}
+
+			}
+			return resp;
+		}
+
+		//----MANAGE ROLES START---------------------------------------
 		public GetManageRolesResponse Any(GetManageRolesRequest request)
 		{
 			string query = null;
@@ -74,16 +257,14 @@ namespace ExpressBase.ServiceStack.Services
 			}
 			return new GetManageRolesResponse() { ApplicationCollection = _applicationCollection, SelectedRoleInfo = RoleInfo, PermissionList = Permission, RoleList = _roleList, Role2RoleList = _r2rList, UsersList = _usersList };
 		}
-
-
-
+		
 		public GetUserDetailsResponse Any(GetUserDetailsRequest request)
 		{
 			string query = null;
 			List<DbParameter> parameters = new List<DbParameter>();
 			query = string.Format(@"SELECT id, firstname, email FROM eb_users
 									WHERE LOWER(firstname) LIKE LOWER(@NAME) AND eb_del = FALSE ORDER BY firstname ASC"); 
-			parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@NAME", System.Data.DbType.String, (request.SearchText + "%")));
+			parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@NAME", System.Data.DbType.String, ("%" + request.SearchText + "%")));
 			var ds = this.TenantDbFactory.ObjectsDB.DoQueries(query, parameters.ToArray());
 			List<Eb_Users> _usersList = new List<Eb_Users>();
 			if (ds.Tables.Count > 0)
@@ -95,9 +276,7 @@ namespace ExpressBase.ServiceStack.Services
 			}
 			return new GetUserDetailsResponse() { UserList = _usersList };
 		}
-
-
-
+		
 		public SaveRoleResponse Post(SaveRoleRequest request)
 		{
 			SaveRoleResponse resp;
@@ -123,60 +302,7 @@ namespace ExpressBase.ServiceStack.Services
 			}
 			return resp;
 		}
-
-
-
-		//public GetObjectAndPermissionResponse Any(GetObjectAndPermissionRequest request)
-		//{
-		//	GetObjectAndPermissionResponse resp = new GetObjectAndPermissionResponse();
-		//	string query= string.Format(@"SELECT EO.id, EO.obj_name, EO.obj_type
-		//						FROM eb_objects EO, eb_objects_ver EOV, eb_objects_status EOS 
-  //                              WHERE EO.id = EOV.eb_objects_id 
-		//							AND EOV.id = EOS.eb_obj_ver_id 
-		//							AND EOS.status = 3 
-		//							AND EO.applicationid = @applicationid;
-		//					");
-		//	
-		//	List<DbParameter> parameters = new List<DbParameter>();
-		//	if (request.RoleId > 0)
-		//	{
-		//		query += string.Format(@"SELECT permissionname, obj_id, op_id FROM eb_role2permission 
-		//							WHERE role_id = @id AND eb_del = FALSE;
-		//				");				
-		//		parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.Int32, request.RoleId));
-		//	}
-			
-		//	parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@applicationid", System.Data.DbType.Int32, request.AppId));
-		//	var dt = this.TenantDbFactory.ObjectsDB.DoQueries(query, parameters.ToArray());
-		//	Dictionary<int, List<Eb_Object>> dlist = new Dictionary<int, List<Eb_Object>>();
-		//	List<Eb_Object> objlist = new List<Eb_Object>();
-
-		//	foreach (EbDataRow dr in dt.Tables[0].Rows)
-		//	{
-		//		var ob_id = Convert.ToInt32(dr[0]);
-		//		var ob_name = dr[1].ToString();
-		//		var ob_type = Convert.ToInt32(dr[2]);
-
-		//		Eb_Object obj = new Eb_Object() { Obj_Id = ob_id, Obj_Name = ob_name };
-
-		//		if (!dlist.Keys.Contains<int> (ob_type))
-		//			dlist.Add(ob_type, new List<Eb_Object>());
-		//		dlist[ob_type].Add(obj);
-				
-		//	}
-		//	resp.Data = dlist;
-		//	if (dt.Tables.Count > 2)
-		//	{
-		//		List<string> lstPermissions = new List<string>();
-		//		foreach (EbDataRow dr in dt.Tables[1].Rows)
-		//		{
-		//			lstPermissions.Add(dr[0].ToString());
-		//		}
-		//		resp.Permissions = lstPermissions;
-		//	}
-
-		//	return resp;
-		//}
+		
 	}	
 
 }
