@@ -52,7 +52,7 @@ namespace ExpressBase.ServiceStack
         }
         public CreateApplicationResponse Post(CreateApplicationRequest request)
         {
-            string DbName = request.Colvalues["Isid"].ToString();
+            string DbName = request.Colvalues["Isid"].ToString();            
             CreateApplicationResponse resp;
             using (var con = TenantDbFactory.DataDB.GetNewConnection(DbName.ToLower()))
             {
@@ -67,19 +67,17 @@ namespace ExpressBase.ServiceStack
                     }
                     else
                     {
-                         sql = "INSERT INTO eb_applications (application_name,application_type, description) VALUES (@applicationname,@apptype, @description) RETURNING id";
+                         sql = "INSERT INTO eb_applications (application_name,application_type, description,app_icon) VALUES (@applicationname,@apptype, @description,@appicon) RETURNING id";
                     }
                     var cmd = TenantDbFactory.DataDB.GetNewCommand(con, sql);
                     cmd.Parameters.Add(TenantDbFactory.ObjectsDB.GetNewParameter("applicationname", System.Data.DbType.String, request.Colvalues["AppName"]));
                     cmd.Parameters.Add(TenantDbFactory.ObjectsDB.GetNewParameter("apptype", System.Data.DbType.String, request.Colvalues["AppType"]));
                     cmd.Parameters.Add(TenantDbFactory.ObjectsDB.GetNewParameter("description", System.Data.DbType.String, request.Colvalues["Desc"]));
-
-                    cmd.ExecuteNonQuery();
-                    //TenantDbFactory.DataDB.GetNewCommand(con, sql);
-                    //var dt = TenantDbFactory.DataDB.DoQuery(sql, parameters);
+                    cmd.Parameters.Add(TenantDbFactory.ObjectsDB.GetNewParameter("appicon", System.Data.DbType.String, request.Colvalues["AppIcon"]));
+                    var res = cmd.ExecuteScalar();
                     resp = new CreateApplicationResponse()
                     {
-                        id = 0
+                        id = 1
                     };
                 }
                 else
