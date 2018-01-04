@@ -52,10 +52,13 @@ namespace ExpressBase.ServiceStack
         }
         public CreateApplicationResponse Post(CreateApplicationRequest request)
         {
+            string DbName = request.Colvalues["Isid"].ToString();            
             CreateApplicationResponse resp;
-            using (var con = TenantDbFactory.DataDB.GetNewConnection())
+            using (var con = TenantDbFactory.DataDB.GetNewConnection(DbName.ToLower()))
             {
-               if(!string.IsNullOrEmpty(request.Colvalues["AppName"].ToString()))
+                con.Open();
+
+                if (!string.IsNullOrEmpty(request.Colvalues["AppName"].ToString()))
                 {
                     string sql = "";
                     if (request.Id > 0)
@@ -64,23 +67,20 @@ namespace ExpressBase.ServiceStack
                     }
                     else
                     {
-                         sql = "INSERT INTO eb_applications (application_name,application_type, description,solution_id,) VALUES (@applicationname,@apptype, @description,@solutionid) RETURNING id";
+                         sql = "INSERT INTO eb_applications (application_name,application_type, description,app_icon) VALUES (@applicationname,@apptype, @description,@appicon) RETURNING id";
                     }
-                    
-                    DbParameter[] parameters = { this.TenantDbFactory.ObjectsDB.GetNewParameter("applicationname", System.Data.DbType.String, request.Colvalues["AppName"]),
-                            this.TenantDbFactory.ObjectsDB.GetNewParameter("apptype", System.Data.DbType.String, request.Colvalues["AppType"]),
-                            this.TenantDbFactory.ObjectsDB.GetNewParameter("description", System.Data.DbType.String, request.Colvalues["Desc"]),
-                            this.TenantDbFactory.ObjectsDB.GetNewParameter("solutionid", System.Data.DbType.String, request.Colvalues["Isid"])                           
-                            };
-
-                    var dt = this.TenantDbFactory.ObjectsDB.DoQuery(sql, parameters);
-
+                    var cmd = TenantDbFactory.DataDB.GetNewCommand(con, sql);
+                    cmd.Parameters.Add(TenantDbFactory.ObjectsDB.GetNewParameter("applicationname", System.Data.DbType.String, request.Colvalues["AppName"]));
+                    cmd.Parameters.Add(TenantDbFactory.ObjectsDB.GetNewParameter("apptype", System.Data.DbType.String, request.Colvalues["AppType"]));
+                    cmd.Parameters.Add(TenantDbFactory.ObjectsDB.GetNewParameter("description", System.Data.DbType.String, request.Colvalues["Desc"]));
+                    cmd.Parameters.Add(TenantDbFactory.ObjectsDB.GetNewParameter("appicon", System.Data.DbType.String, request.Colvalues["AppIcon"]));
+                    var res = cmd.ExecuteScalar();
                     resp = new CreateApplicationResponse()
                     {
-                        id = Convert.ToInt32(dt.Rows[0][0])
+                        id = 1
                     };
                 }
-               else
+                else
                 {
                     resp = new CreateApplicationResponse()
                     {
