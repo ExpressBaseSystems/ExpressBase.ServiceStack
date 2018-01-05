@@ -49,49 +49,6 @@ namespace ExpressBase.ServiceStack
 
             }
             return resp;
-        }
-        public CreateApplicationResponse Post(CreateApplicationRequest request)
-        {
-            string DbName = request.Colvalues["Isid"].ToString();            
-            CreateApplicationResponse resp;
-            using (var con = TenantDbFactory.DataDB.GetNewConnection(DbName.ToLower()))
-            {
-                con.Open();
-
-                if (!string.IsNullOrEmpty(request.Colvalues["AppName"].ToString()))
-                {
-                    string sql = "";
-                    if (request.Id > 0)
-                    {
-                         sql = "UPDATE eb_applications SET applicationname = @applicationname, description= @description WHERE id = @id RETURNING id";
-                    }
-                    else
-                    {
-                         sql = "INSERT INTO eb_applications (application_name,application_type, description,app_icon) VALUES (@applicationname,@apptype, @description,@appicon) RETURNING id";
-                    }
-                    var cmd = TenantDbFactory.DataDB.GetNewCommand(con, sql);
-                    cmd.Parameters.Add(TenantDbFactory.ObjectsDB.GetNewParameter("applicationname", System.Data.DbType.String, request.Colvalues["AppName"]));
-                    cmd.Parameters.Add(TenantDbFactory.ObjectsDB.GetNewParameter("apptype", System.Data.DbType.String, request.Colvalues["AppType"]));
-                    cmd.Parameters.Add(TenantDbFactory.ObjectsDB.GetNewParameter("description", System.Data.DbType.String, request.Colvalues["Desc"]));
-                    cmd.Parameters.Add(TenantDbFactory.ObjectsDB.GetNewParameter("appicon", System.Data.DbType.String, request.Colvalues["AppIcon"]));
-                    var res = cmd.ExecuteScalar();
-                    resp = new CreateApplicationResponse()
-                    {
-                        id = 1
-                    };
-                }
-                else
-                {
-                    resp = new CreateApplicationResponse()
-                    {
-                        id = 0
-                    };
-                }
-               
-
-            }
-            return resp;
-        }
-
+        }        
     }
 }

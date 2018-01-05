@@ -112,7 +112,7 @@ namespace ExpressBase.ServiceStack.Services
         public AutoGenSolIdResponse Get(AutoGenSolIdRequest request)
         {
             AutoGenSolIdResponse resp = new AutoGenSolIdResponse();
-            string sql ="SELECT * FROM eb_random_sid();";
+            string sql = "SELECT * FROM eb_random_sid();";
             var ds = this.TenantDbFactory.ObjectsDB.DoQuery(sql);
             resp.Sid = ds.Rows[0][0].ToString();
             return resp;
@@ -132,14 +132,43 @@ namespace ExpressBase.ServiceStack.Services
                 cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("@tenant_id", System.Data.DbType.String, request.TenantAccountId));
                 cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("@descript", System.Data.DbType.String, request.Description));
                 cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("@js", System.Data.DbType.String, request.Subscription));
-
-
-
                 return new CreateSolutionResponse { Solnid = Convert.ToInt32(cmd.ExecuteScalar()) };
-        }
-    }
+            }
 
-    public EditAccountResponse Post(EditAccountRequest request)
+        }
+
+        public CreateApplicationResponse Post(CreateApplicationRequest request)
+        {
+
+           string DbName = request.Colvalues["Sid"].ToString();
+            CreateApplicationResponse resp;
+            using (var con = TenantDbFactory.DataDB.GetNewConnection(DbName.ToLower()))
+            {
+                con.Open();
+
+                if (!string.IsNullOrEmpty(request.Colvalues["AppName"].ToString()))
+                {
+                    string sql = "";
+                    //if (request.Id > 0)                   
+                    //    sql = "UPDATE eb_applications SET applicationname = @applicationname, description= @description WHERE id = @id RETURNING id";
+                    //else
+                        sql = "INSERT INTO eb_applications (application_name,application_type, description,app_icon) VALUES (@applicationname,@apptype, @description,@appicon) RETURNING id";
+
+                    var cmd = TenantDbFactory.DataDB.GetNewCommand(con, sql);
+                    cmd.Parameters.Add(TenantDbFactory.ObjectsDB.GetNewParameter("applicationname", System.Data.DbType.String, request.Colvalues["AppName"]));
+                    cmd.Parameters.Add(TenantDbFactory.ObjectsDB.GetNewParameter("apptype", System.Data.DbType.String, request.Colvalues["AppType"]));
+                    cmd.Parameters.Add(TenantDbFactory.ObjectsDB.GetNewParameter("description", System.Data.DbType.String, request.Colvalues["DescApp"]));
+                    cmd.Parameters.Add(TenantDbFactory.ObjectsDB.GetNewParameter("appicon", System.Data.DbType.String, request.Colvalues["AppIcon"]));
+                    var res = cmd.ExecuteScalar();
+                    resp = new CreateApplicationResponse(){ id = 1 };
+                }
+                else
+                    resp = new CreateApplicationResponse(){ id = 0 };
+            }
+            return resp;
+        }
+
+        public EditAccountResponse Post(EditAccountRequest request)
         {
             EditAccountResponse resp;
             using (var con = TenantDbFactory.DataDB.GetNewConnection())
