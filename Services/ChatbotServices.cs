@@ -30,7 +30,11 @@ namespace ExpressBase.ServiceStack
                                      EOS.eb_obj_ver_id = EOV.id AND 
                                      EO.id = ANY('@Ids') AND 
                                      EOS.status = 3 AND
-                                     EO.obj_type = 18;
+                                     (
+                                        EO.obj_type = 16 OR
+                                        EO.obj_type = 17 OR
+                                        EO.obj_type = 18
+                                     );
                         ";
             EbDataTable table = this.TenantDbFactory.ObjectsDB.DoQuery(Query1.Replace("@Ids", request.BotFormIds));
             GetBotForm4UserResponse resp = new GetBotForm4UserResponse();
