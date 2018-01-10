@@ -115,6 +115,7 @@ namespace ExpressBase.ServiceStack.Services
                 cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("@js", System.Data.DbType.String, request.Colvalues["Subscription"]));
                 return new CreateSolutionResponse { Solnid = Convert.ToInt32(cmd.ExecuteScalar()) };
             }
+
         }
 
         public CreateApplicationResponse Post(CreateApplicationRequest request)
