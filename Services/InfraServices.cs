@@ -28,7 +28,7 @@ namespace ExpressBase.ServiceStack.Services
         public CreateAccountResponse Post(CreateAccountRequest request)
         {
             CreateAccountResponse resp;
-            using (var con = TenantDbFactory.DataDB.GetNewConnection())
+            using (var con = (!string.IsNullOrEmpty(request.DbName)) ? TenantDbFactory.DataDB.GetNewConnection(request.DbName.ToLower()) : TenantDbFactory.DataDB.GetNewConnection())
             {
                 con.Open();
                 if (request.op == "updatetenant")
@@ -43,46 +43,27 @@ namespace ExpressBase.ServiceStack.Services
                         this.TenantDbFactory.DataDB.GetNewParameter("email", System.Data.DbType.String, request.Colvalues["Email"])
 
                     };
-
                     var ds = this.TenantDbFactory.ObjectsDB.DoQuery(sql, parameters);
                     resp = new CreateAccountResponse()
                     {
                         id = Convert.ToInt32(ds.Rows[0][0]),
                         email = ds.Rows[0][1].ToString()
-                    };
-                    //var cmd = TenantDbFactory.DataDB.GetNewCommand(con, "UPDATE eb_users SET firstname=@firstname,company=@company,employees=@employees,designation=@designation,phnoprimary=@phnoprimary,password = @password WHERE id=@id RETURNING id,email");
-
-                    //cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("firstname", System.Data.DbType.String, request.Colvalues["Name"]));
-                    //cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("company", System.Data.DbType.String, request.Colvalues["Company"]));
-                    //cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("employees", System.Data.DbType.String, request.Colvalues["Employees"]));
-                    //cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("designation", System.Data.DbType.String, request.Colvalues["Designation"]));
-                    //cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("phnoprimary", System.Data.DbType.String, request.Colvalues["Phone"]));
-                    //cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("id", System.Data.DbType.Int64, request.UserId));
-                    //cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("profileimg", System.Data.DbType.String, request.Colvalues["Imgsrc"]));
-                    //resp = new CreateAccountResponse
-                    //{
-                    //    id = Convert.ToInt32(cmd.ExecuteScalar())
-                    //};
-                    //base.Redis.Set<string>(string.Format("uid_{0}_solutionid_{1}_pimg", resp.id, request.TenantAccountId), request.Colvalues["Imgsrc"].ToString());
+                    };                    
                 }
                 else
                 {
-                    var cmd = TenantDbFactory.DataDB.GetNewCommand(con, "INSERT INTO eb_tenantaccount (accountname,cid,address,phone,email,website,tier,tenantname,createdat,validtill,profilelogo,tenantid)VALUES(@accountname,@cid,@address,@phone,@email,@website,@tier,@tenantname,now(),(now()+ interval '30' day),@profilelogo,@tenantid) ON CONFLICT(cid) DO UPDATE SET accountname=@accountname,address=@address,phone=@phone,email=@email,website=@website,tier=@tier,createdat=now(),validtill=(now()+ interval '30' day) RETURNING id ");
-                    cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("accountname", System.Data.DbType.String, request.Colvalues["accountname"]));
-                    cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("cid", System.Data.DbType.String, request.Colvalues["cid"]));
-                    cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("address", System.Data.DbType.String, request.Colvalues["address"]));
-                    cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("phone", System.Data.DbType.String, request.Colvalues["phone"]));
-                    cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("email", System.Data.DbType.String, request.Colvalues["email"]));
-                    cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("website", System.Data.DbType.String, request.Colvalues["website"]));
-                    cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("tier", System.Data.DbType.String, request.Colvalues["tier"]));
-                    cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("tenantname", System.Data.DbType.String, request.Colvalues["tenantname"]));
-                    cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("profilelogo", System.Data.DbType.String, string.Format("<img src='{0}'/>", request.Colvalues["imgpro"])));
-                    cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("tenantid", System.Data.DbType.Int64, request.Colvalues["tenantid"]));
+                    var cmd = TenantDbFactory.DataDB.GetNewCommand(con, "INSERT INTO eb_users (firstname,company,employees,designation,country,pwd,email) values(@firstname,@company,@employees,@designation,@country,@pwd,@email)");
+                    cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("firstname", System.Data.DbType.String, request.Colvalues["Name"]));
+                    cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("company", System.Data.DbType.String, request.Colvalues["Company"]));
+                    cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("employees", System.Data.DbType.String, request.Colvalues["Employees"]));
+                    cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("designation", System.Data.DbType.String, request.Colvalues["Designation"]));
+                    cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("country", System.Data.DbType.String, request.Colvalues["Country"]));
+                    cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("pwd", System.Data.DbType.String, (request.Colvalues["Password"].ToString() + request.Colvalues["Email"].ToString()).ToMD5Hash()));
+                    cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("email", System.Data.DbType.String, request.Colvalues["Email"]));
                     resp = new CreateAccountResponse
                     {
                         id = Convert.ToInt32(cmd.ExecuteScalar())
-                    };
-                    base.Redis.Set<string>(string.Format("cid_{0}_uid_{1}_pimg", request.Colvalues["cid"], resp.id), string.Format("<img src='{0}'class='img-circle img-cir'/>", request.Colvalues["imgpro"]));
+                    };                    
                 }
             }
             return resp;
@@ -126,12 +107,12 @@ namespace ExpressBase.ServiceStack.Services
                 con.Open();
                 string sql = "select * from eb_subscription_persist( @sname,@i_sid,@e_sid,@tenant_id,@descript,@js); ";
                 var cmd = TenantDbFactory.DataDB.GetNewCommand(con, sql);
-                cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("@sname", System.Data.DbType.String, request.SolutionName));
-                cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("@i_sid", System.Data.DbType.String, request.IsolutionId));
-                cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("@e_sid", System.Data.DbType.String, request.EsolutionId));
-                cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("@tenant_id", System.Data.DbType.String, request.TenantAccountId));
-                cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("@descript", System.Data.DbType.String, request.Description));
-                cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("@js", System.Data.DbType.String, request.Subscription));
+                cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("@sname", System.Data.DbType.String, request.Colvalues["Sname"]));
+                cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("@i_sid", System.Data.DbType.String, request.Colvalues["Isid"]));
+                cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("@e_sid", System.Data.DbType.String, request.Colvalues["Esid"]));
+                cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("@tenant_id", System.Data.DbType.Int32, request.UserId));
+                cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("@descript", System.Data.DbType.String, request.Colvalues["Desc"]));
+                cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("@js", System.Data.DbType.String, request.Colvalues["Subscription"]));
                 return new CreateSolutionResponse { Solnid = Convert.ToInt32(cmd.ExecuteScalar()) };
             }
 
@@ -165,6 +146,27 @@ namespace ExpressBase.ServiceStack.Services
                 else
                     resp = new CreateApplicationResponse(){ id = 0 };
             }
+            return resp;
+        }
+
+        public GetSolutionResponse Get(GetSolutionRequest request)
+        {
+            List<EbSolutionsWrapper> temp = new List<EbSolutionsWrapper>();
+            string sql = string.Format("SELECT * FROM eb_solutions WHERE tenant_id={0}", request.UserId);
+            var dt = TenantDbFactory.DataDB.DoQuery(sql);
+            foreach (EbDataRow dr in dt.Rows)
+            {
+                var _ebSolutions = (new EbSolutionsWrapper
+                {
+                    SolutionName = dr[6].ToString(),
+                    Description = dr[2].ToString(),
+                    DateCreated = dr[1].ToString(),
+                    IsolutionId = dr[4].ToString(),
+                    EsolutionId = dr[5].ToString()
+                });
+                temp.Add(_ebSolutions);
+            }
+            GetSolutionResponse resp = new GetSolutionResponse() { Data = temp };
             return resp;
         }
 
