@@ -182,6 +182,13 @@ namespace ExpressBase.ServiceStack
             dsobj = EbSerializers.Json_Deserialize(res.Data[0].Json);
             dsobj.Status = res.Data[0].Status;
             dsobj.VersionNumber = res.Data[0].VersionNumber;
+            var _Tags = res.Data[0].Tags;
+            var arr = _Tags.Split(",");
+            foreach (var item in arr)
+                _Tags = "'" + item + "',";
+            _Tags = _Tags.Remove(_Tags.Length - 1);
+            _Tags = _Tags.Remove(_Tags.Length - 1);
+            _Tags = _Tags.Remove(0,1);
 
             List<EbObjectWrapper> dvList = new List<EbObjectWrapper>();
             if (request.Refid != null)
@@ -197,7 +204,22 @@ namespace ExpressBase.ServiceStack
                 }
 
             }
-            return new EbObjectWithRelatedDVResponse { Dsobj = dsobj, DvList = dvList };
+
+            List<EbObjectWrapper> dvTaggedList = new List<EbObjectWrapper>();
+            if (request.Refid != null)
+            {
+                var resultlist = (EbObjectTaggedResponse)myService.Get(new EbObjectTaggedRequest { Tags = _Tags });
+                var rlist = resultlist.Data;
+                foreach (var element in rlist)
+                {
+                    if (element.EbObjectType == EbObjectType.TableVisualization || element.EbObjectType == EbObjectType.ChartVisualization)
+                    {
+                        dvTaggedList.Add(element);
+                    }
+                }
+
+            }
+            return new EbObjectWithRelatedDVResponse { Dsobj = dsobj, DvList = dvList, DvTaggedList = dvTaggedList };
         }
     }
 }
