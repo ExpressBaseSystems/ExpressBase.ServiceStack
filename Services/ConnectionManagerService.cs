@@ -23,6 +23,68 @@ namespace ExpressBase.ServiceStack.Services
         }
 
         [Authenticate]
+        public void Post(InitialSolutionConnectionsRequest request)
+        {
+            EbSolutionConnections infraConnections = this.Redis.Get<EbSolutionConnections>(string.Format("EbSolutionConnections_{0}", "expressbase"));
+
+            infraConnections.DataDbConnection.DatabaseName = request.SolutionId.ToLower();
+            infraConnections.DataDbConnection.IsDefault = true;
+            infraConnections.DataDbConnection.NickName = request.SolutionId + "_Initial";
+
+            infraConnections.ObjectsDbConnection.DatabaseName = request.SolutionId.ToLower();
+            infraConnections.ObjectsDbConnection.IsDefault = true;
+            infraConnections.ObjectsDbConnection.NickName = request.SolutionId + "_Initial";
+
+            infraConnections.FilesDbConnection.IsDefault = true;
+            infraConnections.FilesDbConnection.NickName = request.SolutionId + "_Initial";
+
+            infraConnections.DataDbConnection.Persist(request.SolutionId.ToLower(), this.TenantDbFactory, true);
+            infraConnections.ObjectsDbConnection.Persist(request.SolutionId.ToLower(), this.TenantDbFactory, true);
+            infraConnections.FilesDbConnection.Persist(request.SolutionId.ToLower(), this.TenantDbFactory, true);
+
+            this.Redis.Set<EbSolutionConnections>(string.Format("EbSolutionConnections_{0}", request.SolutionId.ToLower()), infraConnections);
+
+            //EbDataDbConnection ebDataDbConnection = new EbDataDbConnection
+            //{
+            //    IsDefault = true,
+            //    NickName = request.SolutionId + "_Initial",
+            //    DatabaseVendor = infraConnections.DataDbConnection.DatabaseVendor,
+            //    Port = infraConnections.DataDbConnection.Port,
+            //    Server = infraConnections.DataDbConnection.Server,
+            //    Timeout = infraConnections.DataDbConnection.Timeout,
+            //    DatabaseName = request.SolutionId,
+            //    UserName = infraConnections.DataDbConnection.UserName,
+            //    Password = infraConnections.DataDbConnection.Password
+            //};
+
+            //EbObjectsDbConnection ebObjectDbConnection = new EbObjectsDbConnection
+            //{
+            //    IsDefault = true,
+            //    NickName = request.SolutionId + "_Initial",
+            //    DatabaseVendor = infraConnections.ObjectsDbConnection.DatabaseVendor,
+            //    Port = infraConnections.ObjectsDbConnection.Port,
+            //    Server = infraConnections.ObjectsDbConnection.Server,
+            //    Timeout = infraConnections.ObjectsDbConnection.Timeout,
+            //    DatabaseName = request.SolutionId,
+            //    UserName = infraConnections.ObjectsDbConnection.UserName,
+            //    Password = infraConnections.ObjectsDbConnection.Password
+            //};
+
+            //EbFilesDbConnection ebFileDbConnection = new EbFilesDbConnection
+            //{
+            //    IsDefault = true,
+            //    NickName = request.SolutionId + "_Initial",
+            //    FilesDB_url = infraConnections.FilesDbConnection.FilesDB_url,
+            //};
+
+            //ebDataDbConnection.Persist(request.SolutionId, this.TenantDbFactory, true);
+            //ebObjectDbConnection.Persist(request.SolutionId, this.TenantDbFactory, true);
+            //ebFileDbConnection.Persist(request.SolutionId, this.TenantDbFactory, true);
+
+            //base.MessageProducer3.Publish(new RefreshSolutionConnectionsMqRequest() { TenantAccountId = request.SolutionId, UserId = request.UserId });
+        }
+
+        [Authenticate]
         public void Post(ChangeSMTPConnectionRequest request)
         {
             TenantDbFactory dbFactory = new TenantDbFactory("expressbase", this.Redis);

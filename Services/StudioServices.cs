@@ -16,6 +16,7 @@ using Newtonsoft.Json;
 using ExpressBase.Common.JsonConverters;
 using ExpressBase.Objects.EmailRelated;
 using System.Globalization;
+using System.Text.RegularExpressions;
 
 namespace ExpressBase.ServiceStack
 {
@@ -345,14 +346,14 @@ WHERE
         [CompressResponse]
         public object Get(EbObjectRelationsRequest request)
         { //Fetch ebobjects relations
-            parameters = new List<System.Data.Common.DbParameter>(); 
+            parameters = new List<System.Data.Common.DbParameter>();
             ILog log = LogManager.GetLogger(GetType());
             parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@dominant", System.Data.DbType.String, request.DominantId));
             var dt = this.TenantDbFactory.ObjectsDB.DoQuery(GetObjectRelations, parameters.ToArray());
             foreach (EbDataRow dr in dt.Rows)
             {
                 var _ebObject = new EbObjectWrapper();
-               
+
                 _ebObject.Name = dr[0].ToString();
                 _ebObject.RefId = dr[1].ToString();
                 _ebObject.VersionNumber = dr[2].ToString();
@@ -413,10 +414,11 @@ WHERE
                     WorkingMode = Convert.ToBoolean(dr[10]),
                     Json_wc = dr[12].ToString(),
                     Json_lc = dr[13].ToString(),
-                    Wc_All = dr[11] as string[],                    
+                    Wc_All = dr[11] as string[],
                     Tags = dr[17].ToString(),
-                    AppId = Convert.ToInt32(dr[18]),
-                    Dashboard_Tiles = new EbObjectWrapper_Dashboard{
+                    Apps = dr[18].ToString(),
+                    Dashboard_Tiles = new EbObjectWrapper_Dashboard
+                    {
                         MajorVersionNumber = Convert.ToInt32(dr[14]),
                         MinorVersionNumber = Convert.ToInt32(dr[15]),
                         PatchVersionNumber = Convert.ToInt32(dr[16]),
@@ -424,21 +426,21 @@ WHERE
                         LastCommitedVersionNumber = dr[20].ToString(),
                         LastCommitedVersionCommit_ts = Convert.ToDateTime((dr[21].ToString()) == "" ? DateTime.MinValue : dr[21]),
                         LastCommitedVersion_Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[22]),
-                        LastCommitedby_Name= dr[23].ToString(),
+                        LastCommitedby_Name = dr[23].ToString(),
                         LastCommitedby_Id = Convert.ToInt32(dr[24]),
                         LiveVersionRefid = dr[25].ToString(),
-                        LiveVersionNumber= dr[26].ToString(),
+                        LiveVersionNumber = dr[26].ToString(),
                         LiveVersionCommit_ts = Convert.ToDateTime((dr[27].ToString()) == "" ? DateTime.MinValue : dr[27]),
                         LiveVersion_Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[28]),
                         LiveVersionCommitby_Name = dr[29].ToString(),
-                        LiveVersionCommitby_Id  = Convert.ToInt32(dr[30]),
-                        OwnerUid = Convert.ToInt32(dr[31]),                        
+                        LiveVersionCommitby_Id = Convert.ToInt32(dr[30]),
+                        OwnerUid = Convert.ToInt32(dr[31]),
                         OwnerTs = Convert.ToDateTime((dr[32].ToString()) == "" ? DateTime.MinValue : dr[32]),
                         OwnerName = dr[33].ToString()
                     }
-                    
 
-            });
+
+                });
                 f.Add(_ebObject);
             }
             return new EbObjectExploreObjectResponse { Data = f };
@@ -461,7 +463,7 @@ WHERE
                     WorkingMode = Convert.ToBoolean(dr[3]),
                     Wc_All = dr[4] as string[],
                     Tags = dr[8].ToString(),
-                    AppId = Convert.ToInt32(dr[9]),
+                    Apps = dr[9].ToString(),
                     Dashboard_Tiles = new EbObjectWrapper_Dashboard
                     {
                         MajorVersionNumber = Convert.ToInt32(dr[5]),
@@ -569,7 +571,8 @@ WHERE
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@cur_pid", System.Data.DbType.String, request.TenantAccountId));
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@relations", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text, (request.Relations != null) ? request.Relations.Split(',').Select(n => n.ToString()).ToArray() : arr));
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@tags", System.Data.DbType.String, (!string.IsNullOrEmpty(request.Tags)) ? request.Tags : string.Empty));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@app_id", System.Data.DbType.Int32, request.AppId));
+                    // cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@app_id", System.Data.DbType.Int32, request.AppId));
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@app_id", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer, SetAppId(request.Apps)));
 
                     refId = cmd.ExecuteScalar().ToString();
                     SetRedis(obj, refId);
@@ -612,7 +615,8 @@ WHERE
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@cur_pid", System.Data.DbType.String, request.TenantAccountId));
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@relations", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text, (request.Relations != null) ? request.Relations.Split(',').Select(n => n.ToString()).ToArray() : arr));
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@tags", System.Data.DbType.String, (!string.IsNullOrEmpty(request.Tags)) ? request.Tags : string.Empty));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@app_id", System.Data.DbType.Int32, request.AppId));
+                    // cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@app_id", System.Data.DbType.Int32, request.AppId));
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@app_id", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer, SetAppId(request.Apps)));
 
                     refId = cmd.ExecuteScalar().ToString();
                     SetRedis(obj, refId);
@@ -656,7 +660,8 @@ WHERE
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@relations", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text, (request.Relations != null) ? request.Relations.Split(',').Select(n => n.ToString()).ToArray() : arr));
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@issave", System.Data.DbType.Boolean, request.IsSave));
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@tags", System.Data.DbType.String, (!string.IsNullOrEmpty(request.Tags)) ? request.Tags : string.Empty));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@app_id", System.Data.DbType.Int32, request.AppId));
+                    //cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@app_id", System.Data.DbType.Int32, request.AppId));
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@app_id", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer, SetAppId(request.Apps)));
 
                     refId = cmd.ExecuteScalar().ToString();
                     SetRedis(obj, refId);
@@ -880,6 +885,29 @@ WHERE
             {
                 this.Redis.Set<EbEmailTemplate>(refId, (EbEmailTemplate)obj);
             }
+        }
+
+        public int[] SetAppId(string _apps)
+        {
+            int[] appids; 
+            int counter = 0;
+            var myService = base.ResolveService<DevRelatedServices>();
+            Dictionary<string, object> res = ((GetApplicationResponse)myService.Get(new GetApplicationRequest())).Data;
+            List<string> applist = _apps.Split(',').ToList();
+            appids = new int[applist.Count];
+            foreach (string s in applist)
+            {
+                foreach (var x in res)
+                {
+                    if (s == Regex.Unescape(x.Value.ToString()).Replace("\n",
+"").Replace("\t", "").Replace("\r", ""))
+                    {
+                        appids[counter] = Convert.ToInt32(x.Key);
+                        counter++;
+                    }
+                }
+            }
+            return appids;
         }
     }
 }

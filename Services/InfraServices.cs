@@ -110,11 +110,12 @@ namespace ExpressBase.ServiceStack.Services
                 cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("@sname", System.Data.DbType.String, request.Colvalues["Sname"]));
                 cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("@i_sid", System.Data.DbType.String, request.Colvalues["Isid"]));
                 cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("@e_sid", System.Data.DbType.String, request.Colvalues["Esid"]));
-                cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("@tenant_id", System.Data.DbType.Int32, request.TenanantId));
+                cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("@tenant_id", System.Data.DbType.Int32, request.UserId));
                 cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("@descript", System.Data.DbType.String, request.Colvalues["Desc"]));
                 cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("@js", System.Data.DbType.String, request.Colvalues["Subscription"]));
                 return new CreateSolutionResponse { Solnid = Convert.ToInt32(cmd.ExecuteScalar()) };
             }
+
         }
 
         public CreateApplicationResponse Post(CreateApplicationRequest request)
@@ -145,6 +146,27 @@ namespace ExpressBase.ServiceStack.Services
                 else
                     resp = new CreateApplicationResponse(){ id = 0 };
             }
+            return resp;
+        }
+
+        public GetSolutionResponse Get(GetSolutionRequest request)
+        {
+            List<EbSolutionsWrapper> temp = new List<EbSolutionsWrapper>();
+            string sql = string.Format("SELECT * FROM eb_solutions WHERE tenant_id={0}", request.UserId);
+            var dt = TenantDbFactory.DataDB.DoQuery(sql);
+            foreach (EbDataRow dr in dt.Rows)
+            {
+                var _ebSolutions = (new EbSolutionsWrapper
+                {
+                    SolutionName = dr[6].ToString(),
+                    Description = dr[2].ToString(),
+                    DateCreated = dr[1].ToString(),
+                    IsolutionId = dr[4].ToString(),
+                    EsolutionId = dr[5].ToString()
+                });
+                temp.Add(_ebSolutions);
+            }
+            GetSolutionResponse resp = new GetSolutionResponse() { Data = temp };
             return resp;
         }
 

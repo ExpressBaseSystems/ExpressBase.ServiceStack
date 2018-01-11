@@ -19,21 +19,16 @@ namespace ExpressBase.ServiceStack.Services
 		public GetManageUserResponse Any(GetManageUserRequest request)
 		{
 			GetManageUserResponse resp = new GetManageUserResponse();
-			string sql = null;
+			string sql = @"SELECT id, role_name, description FROM eb_roles ORDER BY role_name;
+                        SELECT id, name,description FROM eb_usergroup ORDER BY name;
+						SELECT id, role1_id, role2_id FROM eb_role2role WHERE eb_del = FALSE;";
 			if (request.Id > 0)
 			{
-				sql = @"SELECT id, role_name, description FROM eb_roles ORDER BY role_name;
-                        SELECT id, name,description FROM eb_usergroup ORDER BY name;
-						SELECT firstname,email FROM eb_users WHERE id = @id;
+				sql = @"SELECT firstname,email FROM eb_users WHERE id = @id;
 						SELECT role_id FROM eb_role2user WHERE user_id = @id AND eb_del = FALSE;
 						SELECT groupid FROM eb_user2usergroup WHERE userid = @id AND eb_del = FALSE;";
 			}
-			else
-			{
-				sql = @"SELECT id, role_name, description FROM eb_roles ORDER BY role_name;
-                        SELECT id, name,description FROM eb_usergroup ORDER BY name";
-			}
-
+			
 			DbParameter[] parameters = { this.TenantDbFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.Int32, request.Id) };
 			var ds = this.TenantDbFactory.ObjectsDB.DoQueries(sql, parameters);
 
@@ -60,21 +55,28 @@ namespace ExpressBase.ServiceStack.Services
 				});
 			}
 
+			resp.Role2RoleList = new List<Eb_RoleToRole>();
+			foreach (EbDataRow dr in ds.Tables[2].Rows)
+			{
+				resp.Role2RoleList.Add(new Eb_RoleToRole() { Id = Convert.ToInt32(dr[0]), Dominant = Convert.ToInt32(dr[1]), Dependent = Convert.ToInt32(dr[2]) });
+			}
+
+
 			if (request.Id > 0)
 			{
 				resp.UserData = new Dictionary<string, object>();
-				foreach (var dr in ds.Tables[2].Rows)
+				foreach (var dr in ds.Tables[3].Rows)
 				{
 					resp.UserData.Add("name", dr[0].ToString());
 					resp.UserData.Add("email", dr[1].ToString());
 				}
 
 				resp.UserRoles = new List<int>();
-				foreach (var dr in ds.Tables[3].Rows)
+				foreach (var dr in ds.Tables[4].Rows)
 					resp.UserRoles.Add(Convert.ToInt32(dr[0]));
 
 				resp.UserGroups = new List<int>();
-				foreach (var dr in ds.Tables[4].Rows)
+				foreach (var dr in ds.Tables[5].Rows)
 					resp.UserGroups.Add(Convert.ToInt32(dr[0]));
 			}
 
@@ -200,11 +202,16 @@ namespace ExpressBase.ServiceStack.Services
 		{
 			string query = null;
 			List<DbParameter> parameters = new List<DbParameter>();
+			//SELECT DISTINCT EO.id, EO.obj_name, EO.obj_type, EO.applicationid
+			//FROM eb_objects EO, eb_objects_ver EOV, eb_objects_status EOS
+			//WHERE EO.id = EOV.eb_objects_id AND EOV.id = EOS.eb_obj_ver_id AND EOS.status = 3 AND EO.applicationid > 0;
 			query = string.Format(@"SELECT id, applicationname FROM eb_applications where eb_del = FALSE ORDER BY applicationname;
-									SELECT DISTINCT EO.id, EO.obj_name, EO.obj_type, EO.applicationid
-										FROM eb_objects EO, eb_objects_ver EOV, eb_objects_status EOS 
-										WHERE EO.id = EOV.eb_objects_id AND EOV.id = EOS.eb_obj_ver_id AND EOS.status = 3 AND EO.applicationid > 0;
-									
+
+									SELECT DISTINCT EO.id, EO.obj_name, EO.obj_type, EO2A.app_id
+									FROM eb_objects EO, eb_objects_ver EOV, eb_objects_status EOS, eb_objects2application EO2A 
+									WHERE EO.id = EOV.eb_objects_id AND EOV.id = EOS.eb_obj_ver_id AND EOS.status = 3 
+									AND EO.id = EO2A.obj_id AND EO2A.eb_del = 'false';
+
 									SELECT id, role_name, description, applicationid FROM eb_roles WHERE id <> @id ORDER BY role_name;
 									SELECT id, role1_id, role2_id FROM eb_role2role WHERE eb_del = FALSE;");//if db_ok then append to 3rd query "WHERE eb_del=FALSE" 
 			if (request.id > 0)
