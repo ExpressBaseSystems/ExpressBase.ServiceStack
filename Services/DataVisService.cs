@@ -191,7 +191,7 @@ namespace ExpressBase.ServiceStack
             _Tags = _Tags.Remove(0,1);
 
             List<EbObjectWrapper> dvList = new List<EbObjectWrapper>();
-            if (request.Refid != null)
+            if (request.DsRefid != dsobj.DataSourceRefId)
             {
                 var resultlist = (EbObjectRelationsResponse)myService.Get(new EbObjectRelationsRequest { DominantId = dsobj.DataSourceRefId });
                 var rlist = resultlist.Data;
@@ -219,6 +219,7 @@ namespace ExpressBase.ServiceStack
                 }
 
             }
+
             return new EbObjectWithRelatedDVResponse { Dsobj = dsobj, DvList = dvList, DvTaggedList = dvTaggedList };
         }
     }
