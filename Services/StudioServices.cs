@@ -107,13 +107,25 @@ WHERE
     AND EOV.refid =ANY(SELECT dependant FROM eb_objects_relations WHERE dominant=@dominant)
     AND EO.id =EOV.eb_objects_id";
 
+        private const string GetLiveObjectRelations = @"
+SELECT 
+	EO.obj_name, EOV.refid, EOV.version_num, EO.obj_type,EOS.status
+FROM 
+	eb_objects EO, eb_objects_ver EOV,eb_objects_status EOS
+WHERE 
+	EO.id = ANY (SELECT eb_objects_id FROM eb_objects_ver WHERE refid IN(SELECT dependant FROM eb_objects_relations
+                          WHERE dominant=@dominant))
+    AND EOV.refid =ANY(SELECT dependant FROM eb_objects_relations WHERE dominant=@dominant)    
+    AND EO.id =EOV.eb_objects_id  AND EOS.eb_obj_ver_id = EOV.id AND EOS.status = 3 AND EO.obj_type IN(16 ,17)";
+
         private const string GetTaggedObjects = @"
 SELECT 
-	EO.obj_name, EOV.refid, EOV.version_num, EO.obj_type
+	EO.obj_name, EOV.refid, EOV.version_num, EO.obj_type,EOS.status
 FROM 
-	eb_objects EO, eb_objects_ver EOV
+	eb_objects EO, eb_objects_ver EOV,eb_objects_status EOS
 WHERE 
-	EO.obj_tags IN(@tags) AND EO.id =EOV.eb_objects_id";
+	EO.obj_tags IN(@tags) AND EO.id =EOV.eb_objects_id
+    AND EOS.eb_obj_ver_id = EOV.id AND EOS.status = 3 AND EO.obj_type IN(16 ,17)";
 
         private const string Query_AllVerList = @"
 SELECT 
@@ -349,7 +361,7 @@ WHERE
             parameters = new List<System.Data.Common.DbParameter>();
             ILog log = LogManager.GetLogger(GetType());
             parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@dominant", System.Data.DbType.String, request.DominantId));
-            var dt = this.TenantDbFactory.ObjectsDB.DoQuery(GetObjectRelations, parameters.ToArray());
+            var dt = this.TenantDbFactory.ObjectsDB.DoQuery(GetLiveObjectRelations, parameters.ToArray());
             foreach (EbDataRow dr in dt.Rows)
             {
                 var _ebObject = new EbObjectWrapper();
