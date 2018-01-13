@@ -170,6 +170,12 @@ FROM
     eb_objects_ver EOV, eb_objects_status EOS, eb_objects EO
 WHERE
     EO.id = @id AND EOV.eb_objects_id = @id AND EOS.status = 3 AND EOS.eb_obj_ver_id = EOV.id";
+
+        private const string GetAllTags = @"
+SELECT distinct(tags)
+FROM (SELECT unnest(string_to_array(obj_tags, ',')) AS tags
+	  FROM eb_objects)
+AS tags";
         #endregion
 
         List<EbObjectWrapper> f = new List<EbObjectWrapper>();
@@ -543,6 +549,21 @@ WHERE
             return new EbObjectFetchLiveVersionResponse { Data = f };
         }
 
+        [CompressResponse]
+        public object Get(EbObjectGetAllTagsRequest request)
+        {
+            string s ="";
+            ILog log = LogManager.GetLogger(GetType());
+            var dt = this.TenantDbFactory.ObjectsDB.DoQuery(GetAllTags);
+            foreach (EbDataRow dr in dt.Rows)
+            {
+                s+=dr[0].ToString()+",";
+            }
+
+            return new EbObjectGetAllTagsResponse { Data = s };
+        }
+
+
         #region SaveOrCommit Queries
 
 
@@ -899,7 +920,7 @@ WHERE
 
         public int[] SetAppId(string _apps)
         {
-            int[] appids; 
+            int[] appids;
             int counter = 0;
             var myService = base.ResolveService<DevRelatedServices>();
             Dictionary<string, object> res = ((GetApplicationResponse)myService.Get(new GetApplicationRequest())).Data;
@@ -909,7 +930,7 @@ WHERE
             {
                 foreach (var x in res)
                 {
-                    if (s == Regex.Unescape(x.Value.ToString()).Replace("\n","").Replace("\t", "").Replace("\r", ""))
+                    if (s == Regex.Unescape(x.Value.ToString()).Replace("\n", "").Replace("\t", "").Replace("\r", ""))
                     {
                         appids[counter] = Convert.ToInt32(x.Key);
                         counter++;
