@@ -27,22 +27,22 @@ namespace ExpressBase.ServiceStack.Services
         {
             EbSolutionConnections infraConnections = this.Redis.Get<EbSolutionConnections>(string.Format("EbSolutionConnections_{0}", "expressbase"));
 
-            infraConnections.DataDbConnection.DatabaseName = request.SolutionId.ToLower();
+            infraConnections.DataDbConnection.DatabaseName = request.SolutionId;
             infraConnections.DataDbConnection.IsDefault = true;
             infraConnections.DataDbConnection.NickName = request.SolutionId + "_Initial";
 
-            infraConnections.ObjectsDbConnection.DatabaseName = request.SolutionId.ToLower();
+            infraConnections.ObjectsDbConnection.DatabaseName = request.SolutionId;
             infraConnections.ObjectsDbConnection.IsDefault = true;
             infraConnections.ObjectsDbConnection.NickName = request.SolutionId + "_Initial";
 
             infraConnections.FilesDbConnection.IsDefault = true;
             infraConnections.FilesDbConnection.NickName = request.SolutionId + "_Initial";
 
-            infraConnections.DataDbConnection.Persist(request.SolutionId.ToLower(), this.TenantDbFactory, true);
-            infraConnections.ObjectsDbConnection.Persist(request.SolutionId.ToLower(), this.TenantDbFactory, true);
-            infraConnections.FilesDbConnection.Persist(request.SolutionId.ToLower(), this.TenantDbFactory, true);
+            infraConnections.DataDbConnection.Persist(request.SolutionId, this.TenantDbFactory, true);
+            infraConnections.ObjectsDbConnection.Persist(request.SolutionId, this.TenantDbFactory, true);
+            infraConnections.FilesDbConnection.Persist(request.SolutionId, this.TenantDbFactory, true);
 
-            this.Redis.Set<EbSolutionConnections>(string.Format("EbSolutionConnections_{0}", request.SolutionId.ToLower()), infraConnections);
+            this.Redis.Set<EbSolutionConnections>(string.Format("EbSolutionConnections_{0}", request.SolutionId), infraConnections);
 
             //EbDataDbConnection ebDataDbConnection = new EbDataDbConnection
             //{
