@@ -202,11 +202,16 @@ namespace ExpressBase.ServiceStack.Services
 		{
 			string query = null;
 			List<DbParameter> parameters = new List<DbParameter>();
+			//SELECT DISTINCT EO.id, EO.obj_name, EO.obj_type, EO.applicationid
+			//FROM eb_objects EO, eb_objects_ver EOV, eb_objects_status EOS
+			//WHERE EO.id = EOV.eb_objects_id AND EOV.id = EOS.eb_obj_ver_id AND EOS.status = 3 AND EO.applicationid > 0;
 			query = string.Format(@"SELECT id, applicationname FROM eb_applications where eb_del = FALSE ORDER BY applicationname;
-									SELECT DISTINCT EO.id, EO.obj_name, EO.obj_type, EO.applicationid
-										FROM eb_objects EO, eb_objects_ver EOV, eb_objects_status EOS 
-										WHERE EO.id = EOV.eb_objects_id AND EOV.id = EOS.eb_obj_ver_id AND EOS.status = 3 AND EO.applicationid > 0;
-									
+
+									SELECT DISTINCT EO.id, EO.obj_name, EO.obj_type, EO2A.app_id
+									FROM eb_objects EO, eb_objects_ver EOV, eb_objects_status EOS, eb_objects2application EO2A 
+									WHERE EO.id = EOV.eb_objects_id AND EOV.id = EOS.eb_obj_ver_id AND EOS.status = 3 
+									AND EO.id = EO2A.obj_id AND EO2A.eb_del = 'false';
+
 									SELECT id, role_name, description, applicationid FROM eb_roles WHERE id <> @id ORDER BY role_name;
 									SELECT id, role1_id, role2_id FROM eb_role2role WHERE eb_del = FALSE;");//if db_ok then append to 3rd query "WHERE eb_del=FALSE" 
 			if (request.id > 0)

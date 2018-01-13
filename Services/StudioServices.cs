@@ -44,11 +44,11 @@ ORDER BY
         // Fetch particular version with json of a particular Object
         private const string Query2 = @"
 SELECT
-    obj_json, version_num, status
+    obj_json, version_num, status, EO.obj_tags
 FROM
-    eb_objects_ver EOV, eb_objects_status EOS
+    eb_objects_ver EOV, eb_objects_status EOS, eb_objects EO
 WHERE
-    EOV.refid=@refid AND EOS.eb_obj_ver_id = EOV.id
+    EOV.refid=@refid AND EOS.eb_obj_ver_id = EOV.id AND EO.id=EOV.eb_objects_id
 ORDER BY
 	EOS.id DESC 
 LIMIT 1";
@@ -106,6 +106,26 @@ WHERE
 	EO.id = ANY (SELECT eb_objects_id FROM eb_objects_ver WHERE refid IN(SELECT dependant FROM eb_objects_relations WHERE dominant=@dominant))
     AND EOV.refid =ANY(SELECT dependant FROM eb_objects_relations WHERE dominant=@dominant)
     AND EO.id =EOV.eb_objects_id";
+
+        private const string GetLiveObjectRelations = @"
+SELECT 
+	EO.obj_name, EOV.refid, EOV.version_num, EO.obj_type,EOS.status
+FROM 
+	eb_objects EO, eb_objects_ver EOV,eb_objects_status EOS
+WHERE 
+	EO.id = ANY (SELECT eb_objects_id FROM eb_objects_ver WHERE refid IN(SELECT dependant FROM eb_objects_relations
+                          WHERE dominant=@dominant))
+    AND EOV.refid =ANY(SELECT dependant FROM eb_objects_relations WHERE dominant=@dominant)    
+    AND EO.id =EOV.eb_objects_id  AND EOS.eb_obj_ver_id = EOV.id AND EOS.status = 3 AND EO.obj_type IN(16 ,17)";
+
+        private const string GetTaggedObjects = @"
+SELECT 
+	EO.obj_name, EOV.refid, EOV.version_num, EO.obj_type,EOS.status
+FROM 
+	eb_objects EO, eb_objects_ver EOV,eb_objects_status EOS
+WHERE 
+	EO.obj_tags IN(@tags) AND EO.id =EOV.eb_objects_id
+    AND EOS.eb_obj_ver_id = EOV.id AND EOS.status = 3 AND EO.obj_type IN(16 ,17)";
 
         private const string Query_AllVerList = @"
 SELECT 
@@ -195,6 +215,7 @@ WHERE
                     Json = dr[0].ToString(),
                     VersionNumber = dr[1].ToString(),
                     Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[2]),
+                    Tags = dr[3].ToString()
                 });
                 f.Add(_ebObject);
             }
@@ -340,7 +361,7 @@ WHERE
             parameters = new List<System.Data.Common.DbParameter>();
             ILog log = LogManager.GetLogger(GetType());
             parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@dominant", System.Data.DbType.String, request.DominantId));
-            var dt = this.TenantDbFactory.ObjectsDB.DoQuery(GetObjectRelations, parameters.ToArray());
+            var dt = this.TenantDbFactory.ObjectsDB.DoQuery(GetLiveObjectRelations, parameters.ToArray());
             foreach (EbDataRow dr in dt.Rows)
             {
                 var _ebObject = new EbObjectWrapper();
@@ -354,6 +375,31 @@ WHERE
             }
 
             return new EbObjectRelationsResponse { Data = f };
+        }
+
+        //Get Tagged Objects
+
+        [CompressResponse]
+        public object Get(EbObjectTaggedRequest request)
+        { //
+            f = new List<EbObjectWrapper>();
+            parameters = new List<System.Data.Common.DbParameter>();
+            ILog log = LogManager.GetLogger(GetType());
+            parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@tags", System.Data.DbType.String, request.Tags));
+            var dt = this.TenantDbFactory.ObjectsDB.DoQuery(GetTaggedObjects, parameters.ToArray());
+            foreach (EbDataRow dr in dt.Rows)
+            {
+                var _ebObject = new EbObjectWrapper();
+
+                _ebObject.Name = dr[0].ToString();
+                _ebObject.RefId = dr[1].ToString();
+                _ebObject.VersionNumber = dr[2].ToString();
+                _ebObject.EbObjectType = (EbObjectType)Convert.ToInt32(dr[3]);
+
+                f.Add(_ebObject);
+            }
+
+            return new EbObjectTaggedResponse { Data = f };
         }
 
         //Get the version to open ion edit mode
