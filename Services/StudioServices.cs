@@ -381,7 +381,7 @@ WHERE
                     Json_wc = dr[12].ToString(),
                     Json_lc = dr[13].ToString(),
                     Wc_All = dr[11] as string[],
-                    Tags = dr[17].ToString(),
+                    Tags = dr[17].ToString().Replace("\n", "").Replace("\t", "").Replace("\r", ""),
                     Apps = dr[18].ToString(),
                     Dashboard_Tiles = new EbObjectWrapper_Dashboard
                     {
@@ -404,8 +404,6 @@ WHERE
                         OwnerTs = Convert.ToDateTime((dr[32].ToString()) == "" ? DateTime.MinValue : dr[32]),
                         OwnerName = dr[33].ToString()
                     }
-
-
                 });
                 f.Add(_ebObject);
             }
@@ -429,7 +427,7 @@ WHERE
                     WorkingMode = Convert.ToBoolean(dr[3]),
                     Wc_All = dr[4] as string[],
                     Tags = dr[8].ToString(),
-                    Apps = dr[9].ToString(),
+                    Apps = dr[9].ToString().Replace("\n", "").Replace("\t", "").Replace("\r", ""),
                     Dashboard_Tiles = new EbObjectWrapper_Dashboard
                     {
                         MajorVersionNumber = Convert.ToInt32(dr[5]),
@@ -865,8 +863,7 @@ WHERE
             {
                 foreach (var x in res)
                 {
-                    if (s == Regex.Unescape(x.Value.ToString()).Replace("\n",
-"").Replace("\t", "").Replace("\r", ""))
+                    if (s == Regex.Unescape(x.Value.ToString()).Replace("\n","").Replace("\t", "").Replace("\r", ""))
                     {
                         appids[counter] = Convert.ToInt32(x.Key);
                         counter++;
