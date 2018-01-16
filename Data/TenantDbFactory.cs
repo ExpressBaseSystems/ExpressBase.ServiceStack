@@ -85,14 +85,15 @@ namespace ExpressBase.ServiceStack
             if (_config.DataDbConnection != null && _config.DataDbConnection.DatabaseVendor == DatabaseVendors.PGSQL)
                 DataDBRO = new PGSQLDatabase(_config.DataDbConnection);
             else if (_config.DataDbConnection != null && _config.DataDbConnection.DatabaseVendor == DatabaseVendors.ORACLE)
-                DataDBRO = new OracleDB(_config.DataDbConnection); 
-
-            FilesDB = new MongoDBDatabase(this.TenantId, _config.FilesDbConnection);
+                DataDBRO = new OracleDB(_config.DataDbConnection);
 
             if(_config.LogsDbConnection != null &&  _config.LogsDbConnection.DatabaseVendor == DatabaseVendors.PGSQL)
                 LogsDB = new PGSQLDatabase(_config.LogsDbConnection);
             else if (_config.LogsDbConnection != null && _config.DataDbConnection.DatabaseVendor == DatabaseVendors.ORACLE)
                 LogsDB = new OracleDB(_config.LogsDbConnection);
+
+            if (_config.FilesDbConnection != null)
+                FilesDB = new MongoDBDatabase(this.TenantId, _config.FilesDbConnection);
 
             if (_config.SMSConnection != null )
                 SMSService = new TwilioService(_config.SMSConnection);
