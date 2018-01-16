@@ -15,6 +15,32 @@ namespace ExpressBase.ServiceStack.Services
 	{
 		public SecurityServices(ITenantDbFactory _dbf) : base(_dbf) { }
 
+		//------COMMON LIST-------------------------------------
+
+		public GetUsersResponse1 Any(GetUsersRequest1 request)
+		{
+			GetUsersResponse1 resp = new GetUsersResponse1();
+			using (var con = this.TenantDbFactory.ObjectsDB.GetNewConnection())
+			{
+				con.Open();
+				string sql = "SELECT id,firstname FROM eb_users WHERE firstname ~* @searchtext";
+
+				DbParameter[] parameters = { this.TenantDbFactory.ObjectsDB.GetNewParameter("searchtext", System.Data.DbType.String, (request.Colvalues != null) ? request.Colvalues["searchtext"] : string.Empty) };
+
+				var dt = this.TenantDbFactory.ObjectsDB.DoQueries(sql, parameters);
+
+				Dictionary<string, object> returndata = new Dictionary<string, object>();
+				foreach (EbDataRow dr in dt.Tables[0].Rows)
+				{
+					returndata[dr[0].ToString()] = dr[1].ToString();
+				}
+				resp.Data = returndata;
+			}
+			return resp;
+		} //for user search
+
+
+
 		//----MANAGE USER START---------------------------------
 		public GetManageUserResponse Any(GetManageUserRequest request)
 		{
@@ -24,7 +50,7 @@ namespace ExpressBase.ServiceStack.Services
 						SELECT id, role1_id, role2_id FROM eb_role2role WHERE eb_del = FALSE;";
 			if (request.Id > 0)
 			{
-				sql += @"SELECT firstname,email,socialid FROM eb_users WHERE id = @id;
+				sql += @"SELECT firstname,email,socialid,socialname FROM eb_users WHERE id = @id;
 						SELECT role_id FROM eb_role2user WHERE user_id = @id AND eb_del = FALSE;
 						SELECT groupid FROM eb_user2usergroup WHERE userid = @id AND eb_del = FALSE;";
 			}
@@ -70,6 +96,7 @@ namespace ExpressBase.ServiceStack.Services
 					resp.UserData.Add("name", dr[0].ToString());
 					resp.UserData.Add("email", dr[1].ToString());
 					resp.UserData.Add("socialid", dr[2].ToString());
+					resp.UserData.Add("socialname", dr[3].ToString());
 				}
 
 				resp.UserRoles = new List<int>();
@@ -108,13 +135,13 @@ namespace ExpressBase.ServiceStack.Services
 
 				if (request.Id > 0)
 				{
-					sql = "SELECT * FROM eb_createormodifyuserandroles(@userid,@id,@firstname,@email,@pwd,@roles,@group);";
+					sql = "SELECT * FROM eb_createormodifyuserandroles(@userid,@id,@firstname,@email,@pwd,@socialid,@socialname,@roles,@group);";
 
 				}
 				else
 				{
 					password = string.IsNullOrEmpty(request.Colvalues["pwd"].ToString()) ? GeneratePassword() : (request.Colvalues["pwd"].ToString() + request.Colvalues["email"].ToString()).ToMD5Hash();
-					sql = "SELECT * FROM eb_createormodifyuserandroles(@userid,@id,@firstname,@email,@pwd,@roles,@group);";
+					sql = "SELECT * FROM eb_createormodifyuserandroles(@userid,@id,@firstname,@email,@pwd,@socialid,@socialname,@roles,@group);";
 
 				}
 				int[] emptyarr = new int[] { };
@@ -123,6 +150,8 @@ namespace ExpressBase.ServiceStack.Services
 							this.TenantDbFactory.ObjectsDB.GetNewParameter("roles", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer,(request.Colvalues["roles"].ToString() != string.Empty? request.Colvalues["roles"].ToString().Split(',').Select(n => Convert.ToInt32(n)).ToArray():emptyarr)),
 							this.TenantDbFactory.ObjectsDB.GetNewParameter("group", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer,(request.Colvalues["group"].ToString() != string.Empty? request.Colvalues["group"].ToString().Split(',').Select(n => Convert.ToInt32(n)).ToArray():emptyarr)),
 							this.TenantDbFactory.ObjectsDB.GetNewParameter("pwd", System.Data.DbType.String,password),
+							this.TenantDbFactory.ObjectsDB.GetNewParameter("socialid", System.Data.DbType.String, request.Colvalues["socialid"]),
+							this.TenantDbFactory.ObjectsDB.GetNewParameter("socialname", System.Data.DbType.String, request.Colvalues["socialname"]),
 							this.TenantDbFactory.ObjectsDB.GetNewParameter("userid", System.Data.DbType.Int32, request.UserId),
 							this.TenantDbFactory.ObjectsDB.GetNewParameter("id", System.Data.DbType.Int32, request.Id)};
 
