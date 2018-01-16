@@ -433,8 +433,8 @@ AS tags";
                     Json_wc = dr[12].ToString(),
                     Json_lc = dr[13].ToString(),
                     Wc_All = dr[11] as string[],
-                    Tags = dr[17].ToString().Replace("\n", "").Replace("\t", "").Replace("\r", ""),
-                    Apps = dr[18].ToString(),
+                    Tags = dr[17].ToString(),
+                    Apps = dr[18].ToString().Replace("\n", "").Replace("\t", "").Replace("\r", ""),
                     Dashboard_Tiles = new EbObjectWrapper_Dashboard
                     {
                         MajorVersionNumber = Convert.ToInt32(dr[14]),
@@ -592,7 +592,7 @@ AS tags";
                     cmd = this.TenantDbFactory.ObjectsDB.GetNewCommand(con, sql);
 
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.String, request.RefId));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_name", System.Data.DbType.String, request.Name));
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_name", System.Data.DbType.String, request.Name.Replace("\n", "").Replace("\t", "").Replace("\r", "")));
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_type", System.Data.DbType.Int32, GetObjectType(obj)));
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_desc", System.Data.DbType.String, (!string.IsNullOrEmpty(request.Description)) ? request.Description : string.Empty));
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_json", NpgsqlTypes.NpgsqlDbType.Json, request.Json));
@@ -637,7 +637,7 @@ AS tags";
                     cmd = this.TenantDbFactory.ObjectsDB.GetNewCommand(con, sql);
 
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.String, request.RefId));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_name", System.Data.DbType.String, request.Name));
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_name", System.Data.DbType.String, request.Name.Replace("\n", "").Replace("\t", "").Replace("\r", "")));
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_type", System.Data.DbType.Int32, GetObjectType(obj)));
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_desc", System.Data.DbType.String, (!string.IsNullOrEmpty(request.Description)) ? request.Description : string.Empty));
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_json", NpgsqlTypes.NpgsqlDbType.Json, request.Json));
@@ -680,7 +680,7 @@ AS tags";
                     string sql = "SELECT eb_objects_create_new_object(@obj_name, @obj_desc, @obj_type, @obj_cur_status, @obj_json::json, @commit_uid, @src_pid, @cur_pid, @relations, @issave, @tags, @app_id)";
                     cmd = this.TenantDbFactory.ObjectsDB.GetNewCommand(con, sql);
 
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_name", System.Data.DbType.String, request.Name));
+                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_name", System.Data.DbType.String, request.Name.Replace("\n", "").Replace("\t", "").Replace("\r", "")));
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_type", System.Data.DbType.Int32, GetObjectType(obj)));
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_desc", System.Data.DbType.String, (!string.IsNullOrEmpty(request.Description)) ? request.Description : string.Empty));
                     cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_cur_status", System.Data.DbType.Int32, ObjectLifeCycleStatus.Dev));//request.Status
