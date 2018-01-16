@@ -2,6 +2,7 @@
 using ExpressBase.Common.Connections;
 using ExpressBase.Common.Data;
 using ExpressBase.Common.Data.MongoDB;
+using ExpressBase.Common.Data.OracleDB;
 using ExpressBase.Common.Messaging;
 using ExpressBase.Common.Messaging.Twilio;
 using ExpressBase.Data;
@@ -70,21 +71,30 @@ namespace ExpressBase.ServiceStack
         {
             // CHECK IF CONNECTION IS LIVE
 
-            if (_config.ObjectsDbConnection.DatabaseVendor == DatabaseVendors.PGSQL)
+            if (_config.ObjectsDbConnection != null && _config.ObjectsDbConnection.DatabaseVendor == DatabaseVendors.PGSQL)
                 ObjectsDB = new PGSQLDatabase(_config.ObjectsDbConnection);
+           else if(_config.ObjectsDbConnection != null && _config.ObjectsDbConnection.DatabaseVendor == DatabaseVendors.ORACLE)
+                ObjectsDB = new OracleDB(_config.ObjectsDbConnection);
 
-            if (_config.DataDbConnection.DatabaseVendor == DatabaseVendors.PGSQL)
+            if (_config.DataDbConnection != null && _config.DataDbConnection.DatabaseVendor == DatabaseVendors.PGSQL)
                 DataDB = new PGSQLDatabase(_config.DataDbConnection);
+            else if(_config.DataDbConnection != null && _config.DataDbConnection.DatabaseVendor == DatabaseVendors.ORACLE)
+                DataDB = new OracleDB(_config.DataDbConnection); 
 
             //To be Done
-            if (_config.DataDbConnection.DatabaseVendor == DatabaseVendors.PGSQL)
+            if (_config.DataDbConnection != null && _config.DataDbConnection.DatabaseVendor == DatabaseVendors.PGSQL)
                 DataDBRO = new PGSQLDatabase(_config.DataDbConnection);
+            else if (_config.DataDbConnection != null && _config.DataDbConnection.DatabaseVendor == DatabaseVendors.ORACLE)
+                DataDBRO = new OracleDB(_config.DataDbConnection); 
 
             FilesDB = new MongoDBDatabase(this.TenantId, _config.FilesDbConnection);
 
-            LogsDB = new PGSQLDatabase(_config.LogsDbConnection);
+            if(_config.LogsDbConnection != null &&  _config.LogsDbConnection.DatabaseVendor == DatabaseVendors.PGSQL)
+                LogsDB = new PGSQLDatabase(_config.LogsDbConnection);
+            else if (_config.LogsDbConnection != null && _config.DataDbConnection.DatabaseVendor == DatabaseVendors.ORACLE)
+                LogsDB = new OracleDB(_config.LogsDbConnection);
 
-            if(_config.SMSConnection != null )
+            if (_config.SMSConnection != null )
                 SMSService = new TwilioService(_config.SMSConnection);
         }
     }
