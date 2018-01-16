@@ -170,6 +170,22 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
+        public GetSolutioInfoResponse Get(GetSolutioInfoRequest request)
+        {
+            string sql = string.Format("SELECT * FROM eb_solutions WHERE isolution_id={0}", request.TenantAccountId);
+            var dt = TenantDbFactory.DataDB.DoQuery(sql);
+           
+                //EbSolutionsWrapper _ebSolutions = new EbSolutionsWrapper
+                //{
+                //    SolutionName = dt[0][6].ToString(),
+                //    Description = dr[2].ToString(),
+                //    DateCreated = dr[1].ToString(),                   
+                //    EsolutionId = dr[5].ToString()
+                //};              
+            //GetSolutioInfoResponse resp = new GetSolutioInfoResponse() { Data = temp };           
+            return null;
+        }
+
         public EditAccountResponse Post(EditAccountRequest request)
         {
             EditAccountResponse resp;
