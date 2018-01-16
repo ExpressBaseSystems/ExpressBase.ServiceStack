@@ -16,6 +16,13 @@ namespace ExpressBase.ServiceStack.Services
         {
             OracleDB ordb = new OracleDB();
             DbConnection con = ordb.GetNewConnection();
+            con.Open();
+            string sql = "INSERT INTO testtb (name) VALUES ('BINI')";
+
+            var cmd = ordb.GetNewCommand(con, sql);
+            cmd.ExecuteNonQuery();
+
+            
             return null;
         }
     }
