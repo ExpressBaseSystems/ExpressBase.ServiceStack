@@ -164,11 +164,17 @@ namespace ExpressBase.ServiceStack.Services
                 cmdtxt3.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("socialid", System.Data.DbType.String, rslt.Rows[0][3]));
                 cmdtxt3.ExecuteNonQuery();
 
+                //.....select tenant id from eb_users tbl of client....
+                string sql3 = "SELECT max(id) FROM eb_users;";
+                //var id= TenantDbFactory.DataDB.DoQuery(sql3);
+                DbCommand cmd = this.TenantDbFactory.ObjectsDB.GetNewCommand(con, sql3);
+                var id = cmd.ExecuteScalar().ToString();
+
                 //.......add role to tenant as a/c owner
                 string sql4 = "";
                 foreach (var role in Enum.GetValues(typeof(SystemRoles)))
                 {
-                    sql4 += string.Format("INSERT INTO eb_role2user(role_id,user_id,createdat) VALUES ({0},{1},now());", (int)role, request.UserId);
+                    sql4 += string.Format("INSERT INTO eb_role2user(role_id,user_id,createdat) VALUES ({0},{1},now());", (int)role, id);
                 }
                 var cmdtxt5 = TenantDbFactory.DataDB.GetNewCommand(con, sql4);
                 cmdtxt5.ExecuteNonQuery();
