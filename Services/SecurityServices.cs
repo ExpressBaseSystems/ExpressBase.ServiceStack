@@ -23,16 +23,16 @@ namespace ExpressBase.ServiceStack.Services
 			using (var con = this.TenantDbFactory.ObjectsDB.GetNewConnection())
 			{
 				con.Open();
-				string sql = "SELECT id,firstname FROM eb_users WHERE firstname ~* @searchtext";
+				string sql = "SELECT id,firstname,email FROM eb_users WHERE firstname ~* @searchtext";
 
 				DbParameter[] parameters = { this.TenantDbFactory.ObjectsDB.GetNewParameter("searchtext", System.Data.DbType.String, (request.Colvalues != null) ? request.Colvalues["searchtext"] : string.Empty) };
 
 				var dt = this.TenantDbFactory.ObjectsDB.DoQueries(sql, parameters);
 
-				Dictionary<string, object> returndata = new Dictionary<string, object>();
+				List<Eb_User_ForCommonList> returndata = new List<Eb_User_ForCommonList>();
 				foreach (EbDataRow dr in dt.Tables[0].Rows)
 				{
-					returndata[dr[0].ToString()] = dr[1].ToString();
+					returndata.Add(new Eb_User_ForCommonList {Id = Convert.ToInt32(dr[0]), Name = dr[1].ToString(), Email = dr[2].ToString() });
 				}
 				resp.Data = returndata;
 			}
