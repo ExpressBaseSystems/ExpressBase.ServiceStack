@@ -141,7 +141,7 @@ namespace ExpressBase.ServiceStack.Services
                     cmd.Parameters.Add(TenantDbFactory.ObjectsDB.GetNewParameter("description", System.Data.DbType.String, request.Colvalues["DescApp"]));
                     cmd.Parameters.Add(TenantDbFactory.ObjectsDB.GetNewParameter("appicon", System.Data.DbType.String, request.Colvalues["AppIcon"]));
                     var res = cmd.ExecuteScalar();
-                    resp = new CreateApplicationResponse(){ id = 1 };
+                    resp = new CreateApplicationResponse(){ id = Convert.ToInt32(res) };
                 }
                 else
                     resp = new CreateApplicationResponse(){ id = 0 };
@@ -167,6 +167,23 @@ namespace ExpressBase.ServiceStack.Services
                 temp.Add(_ebSolutions);
             }
             GetSolutionResponse resp = new GetSolutionResponse() { Data = temp };
+            return resp;
+        }
+
+        public GetSolutioInfoResponse Get(GetSolutioInfoRequest request)
+        {
+            TenantDbFactory dbFactory = new TenantDbFactory("expressbase", this.Redis);
+            string sql = string.Format("SELECT * FROM eb_solutions WHERE isolution_id='{0}'", request.TenantAccountId);
+            var dt = dbFactory.DataDB.DoQuery(sql);
+            EbSolutionsWrapper _ebSolutions = new EbSolutionsWrapper
+            {
+                SolutionName = dt.Rows[0][6].ToString(),
+                Description = dt.Rows[0][2].ToString(),
+                DateCreated = dt.Rows[0][1].ToString(),
+                EsolutionId = dt.Rows[0][5].ToString()
+            };
+            GetSolutioInfoResponse resp = new GetSolutioInfoResponse() { Data = _ebSolutions };
+
             return resp;
         }
 
