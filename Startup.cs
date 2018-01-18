@@ -116,15 +116,15 @@ namespace ExpressBase.ServiceStack
                 PersistSession = true,
                 SessionExpiry = TimeSpan.FromHours(12)
             };
-            var apikeyauthprovider = new ApiKeyAuthProvider(AppSettings)
-            {
-#if (DEBUG)
-                RequireSecureConnection = false,
-                //EncryptPayload = true,
-#endif
-                PersistSession = true,
-                SessionExpiry = TimeSpan.FromHours(12)
-            };
+//            var apikeyauthprovider = new ApiKeyAuthProvider(AppSettings)
+//            {
+//#if (DEBUG)
+//                RequireSecureConnection = false,
+//                //EncryptPayload = true,
+//#endif
+//                PersistSession = true,
+//                SessionExpiry = TimeSpan.FromHours(12)
+//            };
 
             this.Plugins.Add(new CorsFeature(allowedHeaders: "Content-Type, Authorization, Access-Control-Allow-Origin, Access-Control-Allow-Credentials"));
             this.Plugins.Add(new ProtoBufFormat());
@@ -161,7 +161,7 @@ namespace ExpressBase.ServiceStack
                     },
 
                     jwtprovider,
-                    apikeyauthprovider
+                    //apikeyauthprovider
 
                 }));
 
