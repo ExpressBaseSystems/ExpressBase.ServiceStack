@@ -15,8 +15,7 @@ namespace ExpressBase.ServiceStack.Services
         [Authenticate]
         public GetConnectionsResponse Post(GetConnectionsRequest req)
         {
-            GetConnectionsResponse resp = new GetConnectionsResponse();
-
+            GetConnectionsResponse resp = new GetConnectionsResponse();           
             resp.EBSolutionConnections = this.Redis.Get<EbSolutionConnections>(string.Format("EbSolutionConnections_{0}", req.TenantAccountId));
             
             return resp;

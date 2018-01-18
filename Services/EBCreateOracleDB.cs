@@ -8,49 +8,20 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace ExpressBase.ServiceStack.Services
+namespace ExpressBase.ServiceStack
 {
-    public class EbDbCreateServices : EbBaseService
+    public class EBCreateOracleDB : EbBaseService
     {
 
-        public EbDbCreateServices(ITenantDbFactory _dbf) : base(_dbf) { }
+        public EBCreateOracleDB(ITenantDbFactory _dbf) : base(_dbf) { }
 
-        public EbDbCreateResponse Any(EbDbCreateRequest request)
+
+        public bool Any(EbCreateOracleDBRequest request)
         {
-            bool rslt;
-            using (var con = TenantDbFactory.DataDB.GetNewConnection())
-            {
-                try
-                {
-                    con.Open();
-                    string sql = string.Format("CREATE DATABASE {0};", request.dbName);
-                    var cmd = TenantDbFactory.DataDB.GetNewCommand(con, sql);
-                    cmd.ExecuteNonQuery();
 
 
-                    rslt = DbOperations(request);
-                }
-
-                catch (Exception e)
-                {
-                    if (e.Data["Code"].ToString() == "42P04")
-                    {
-
-                        rslt = DbOperations(request);
-                    }
-                    else
-                    {
-                        return new EbDbCreateResponse() { resp = false };
-                    }
-                }
-            }
-            return new EbDbCreateResponse() { resp = rslt };
-        }
-
-        public bool DbOperations(EbDbCreateRequest request)
-        {
             bool rtn;
-            using (var con1 = TenantDbFactory.DataDB.GetNewConnection(request.dbName.ToLower()))
+            using (var con1 = TenantDbFactory.DataDB.GetNewConnection())
             {
                 con1.Open();
 
@@ -60,43 +31,35 @@ namespace ExpressBase.ServiceStack.Services
                 //......*********USER TABLE******************.......
 
                 //.......create user table sequence...............
-                string path = "ExpressBase.Common.SqlScripts.PostGreSql.DataDb.Alter_Eb_User_Sequences.sql";
-                bool b1 = CreateOrAlter_Structure(request, con1, path);
+                string path = "ExpressBase.Common.SqlScripts.PostGreSql.DataDb.Alter_Eb_User_SequencesOracle.sql";
+                bool b1 = CreateOrAlter_Structure(con1, path);
 
                 //.........create user table........................
-                path = "ExpressBase.Common.SqlScripts.PostGreSql.DataDb.Create_Eb_User.sql";
-                bool b2 = CreateOrAlter_Structure(request, con1, path);
-
-                //.......create user table index...............
-                path = "ExpressBase.Common.SqlScripts.PostGreSql.DataDb.Create_Eb_User_Indexes.sql";
-                bool b3 = CreateOrAlter_Structure(request, con1, path);
+                path = "ExpressBase.Common.SqlScripts.PostGreSql.DataDb.Create_Eb_UserOracle.sql";
+                bool b2 = CreateOrAlter_Structure(con1, path);
 
                 //.......create user table Functions...............
-                path = "ExpressBase.Common.SqlScripts.PostGreSql.DataDb.Create_Eb_User_Functions.sql";
-                bool b4 = CreateOrAlter_Structure(request, con1, path);
+                path = "ExpressBase.Common.SqlScripts.PostGreSql.DataDb.Create_Eb_User_FunctionsOracle.sql";
+                bool b3 = CreateOrAlter_Structure(con1, path);
 
                 //...........*************OBJECT TABLE***************...........
 
                 //...........create object table sequences...........
-                path = "ExpressBase.Common.SqlScripts.PostGreSql.ObjectsDb.Alter_Eb_Object_Sequences.sql";
-                bool b5 = CreateOrAlter_Structure(request, con1, path);
+                path = "ExpressBase.Common.SqlScripts.PostGreSql.ObjectsDb.Alter_Eb_Object_SequencesOracle.sql";
+                bool b4 = CreateOrAlter_Structure(con1, path);
 
                 //.......create object tables..............
-                path = "ExpressBase.Common.SqlScripts.PostGreSql.ObjectsDb.Create_Eb_Objects.sql";
-                bool b6 = CreateOrAlter_Structure(request, con1, path);
-
-                //.......create object table index...........
-                path = "ExpressBase.Common.SqlScripts.PostGreSql.ObjectsDb.Create_Eb_Object_Indexes.sql";
-                bool b7 = CreateOrAlter_Structure(request, con1, path);
+                path = "ExpressBase.Common.SqlScripts.PostGreSql.ObjectsDb.Create_Eb_ObjectsOracle.sql";
+                bool b5 = CreateOrAlter_Structure(con1, path);
 
                 //.......create object table functions...........
-                path = "ExpressBase.Common.SqlScripts.PostGreSql.ObjectsDb.Create_Eb_Object_Functions.sql";
-                bool b8 = CreateOrAlter_Structure(request, con1, path);
+                path = "ExpressBase.Common.SqlScripts.PostGreSql.ObjectsDb.Create_Eb_Object_FunctionsOracle.sql";
+                bool b6 = CreateOrAlter_Structure(con1, path);
 
                 //.....insert into user tables.........
-                bool b9 = InsertIntoTables(request, con1);
+                bool b7 = InsertIntoTables(request, con1);
 
-                if (b1 & b2 & b3 & b4 & b5 & b6 & b7 & b8 & b9)
+                if (b1 & b2 & b3 & b4 & b5 & b6 & b7)
                 {
                     con_trans.Commit();
                     rtn = true;
@@ -106,20 +69,21 @@ namespace ExpressBase.ServiceStack.Services
                     con_trans.Rollback();
                     rtn = false;
                 }
-                    //con_trans.Commit();
-                    // b = true;
+                //con_trans.Commit();
+                // b = true;
 
-                    //}
-                    //catch (Exception e)
-                    //{
-                    //    con_trans.Rollback();
-                    //    return false;
-                    //}
+                //}
+                //catch (Exception e)
+                //{
+                //    con_trans.Rollback();
+                //    return false;
+                //}
             }
             return rtn;
-        }
 
-        public bool CreateOrAlter_Structure(EbDbCreateRequest request, DbConnection con, string path)
+
+        }
+        public bool CreateOrAlter_Structure(DbConnection con, string path)
         {
 
             try
@@ -146,7 +110,7 @@ namespace ExpressBase.ServiceStack.Services
             return true;
         }
 
-        public bool InsertIntoTables(EbDbCreateRequest request, DbConnection con)
+        public bool InsertIntoTables(EbCreateOracleDBRequest request, DbConnection con)
         {
             try
             {
@@ -182,5 +146,6 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception e) { return false; }
             return true;
         }
+
     }
 }
