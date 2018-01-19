@@ -50,7 +50,7 @@ namespace ExpressBase.ServiceStack.Services
 						SELECT id, role1_id, role2_id FROM eb_role2role WHERE eb_del = FALSE;";
 			if (request.Id > 0)
 			{
-				sql += @"SELECT fullname,nickname,email,alternateemail,dob,sex,phnoprimary,phnosecondary,landline,phextension,fbid,fbname,status
+				sql += @"SELECT fullname,nickname,email,alternateemail,dob,sex,phnoprimary,phnosecondary,landline,phextension,fbid,fbname,statusid,hide
 						FROM eb_users WHERE id = @id;
 						SELECT role_id FROM eb_role2user WHERE user_id = @id AND eb_del = FALSE;
 						SELECT groupid FROM eb_user2usergroup WHERE userid = @id AND eb_del = FALSE;";
@@ -107,7 +107,8 @@ namespace ExpressBase.ServiceStack.Services
 					resp.UserData.Add("phextension", dr[9].ToString());
 					resp.UserData.Add("fbid", dr[10].ToString());
 					resp.UserData.Add("fbname", dr[11].ToString());
-					resp.UserData.Add("status", dr[12].ToString());
+					resp.UserData.Add("statusid", dr[12].ToString());
+					resp.UserData.Add("hide", dr[13].ToString());
 				}
 
 				resp.UserRoles = new List<int>();
@@ -146,35 +147,54 @@ namespace ExpressBase.ServiceStack.Services
 
 				if (request.Id > 0)
 				{
-					sql = "SELECT * FROM eb_createormodifyuserandroles(@userid,@id,@firstname,@email,@pwd,@socialid,@socialname,@roles,@group);";
+					sql = "SELECT * FROM eb_createormodifyuserandroles(@userid,@id,@fullname,@nickname,@email,@pwd,@dob,@sex,@alternateemail,@phprimary,@phsecondary,@phlandphone,@extension,@fbid,@fbname,@roles,@group);";
 
 				}
 				else
 				{
-					password = string.IsNullOrEmpty(request.Colvalues["pwd"].ToString()) ? GeneratePassword() : (request.Colvalues["pwd"].ToString() + request.Colvalues["email"].ToString()).ToMD5Hash();
-					sql = "SELECT * FROM eb_createormodifyuserandroles(@userid,@id,@firstname,@email,@pwd,@socialid,@socialname,@roles,@group);";
+					//password = string.IsNullOrEmpty(request.Colvalues["pwd"].ToString()) ? GeneratePassword() : (request.Colvalues["pwd"].ToString() + request.Colvalues["email"].ToString()).ToMD5Hash();
+					password = GeneratePassword();
+					sql = "SELECT * FROM eb_createormodifyuserandroles(@userid,@id,@fullname,@nickname,@email,@pwd,@dob,@sex,@alternateemail,@phprimary,@phsecondary,@phlandphone,@extension,@fbid,@fbname,@roles,@group);";
 
 				}
 				int[] emptyarr = new int[] { };
-				DbParameter[] parameters = { this.TenantDbFactory.ObjectsDB.GetNewParameter("firstname", System.Data.DbType.String, request.Colvalues["firstname"]),
-							this.TenantDbFactory.ObjectsDB.GetNewParameter("email", System.Data.DbType.String, request.Colvalues["email"]),
-							this.TenantDbFactory.ObjectsDB.GetNewParameter("roles", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer,(request.Colvalues["roles"].ToString() != string.Empty? request.Colvalues["roles"].ToString().Split(',').Select(n => Convert.ToInt32(n)).ToArray():emptyarr)),
-							this.TenantDbFactory.ObjectsDB.GetNewParameter("group", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer,(request.Colvalues["group"].ToString() != string.Empty? request.Colvalues["group"].ToString().Split(',').Select(n => Convert.ToInt32(n)).ToArray():emptyarr)),
-							this.TenantDbFactory.ObjectsDB.GetNewParameter("pwd", System.Data.DbType.String,password),
-							this.TenantDbFactory.ObjectsDB.GetNewParameter("socialid", System.Data.DbType.String, request.Colvalues["socialid"]),
-							this.TenantDbFactory.ObjectsDB.GetNewParameter("socialname", System.Data.DbType.String, request.Colvalues["socialname"]),
-							this.TenantDbFactory.ObjectsDB.GetNewParameter("userid", System.Data.DbType.Int32, request.UserId),
-							this.TenantDbFactory.ObjectsDB.GetNewParameter("id", System.Data.DbType.Int32, request.Id)};
-
-				//EbDataSet dt = this.TenantDbFactory.ObjectsDB.DoQueries(sql, parameters);
-
-				if (string.IsNullOrEmpty(request.Colvalues["pwd"].ToString()) && request.Id < 0)
-				{
-					using (var service = base.ResolveService<EmailService>())
+				DbParameter[] parameters = 
 					{
-						//  service.Post(new EmailServicesRequest() { To = request.Colvalues["email"].ToString(), Subject = "New User", Message = string.Format("You are invited to join as user. Log in {0}.localhost:53431 using Username: {1} and Password : {2}", request.TenantAccountId, request.Colvalues["email"].ToString(), dt.Tables[0].Rows[0][1]) });
-					}
+						this.TenantDbFactory.ObjectsDB.GetNewParameter("userid", System.Data.DbType.Int32, request.UserId),
+						this.TenantDbFactory.ObjectsDB.GetNewParameter("id", System.Data.DbType.Int32, request.Id),
+						this.TenantDbFactory.ObjectsDB.GetNewParameter("fullname", System.Data.DbType.String, request.FullName),
+						this.TenantDbFactory.ObjectsDB.GetNewParameter("nickname", System.Data.DbType.String, request.NickName),
+						this.TenantDbFactory.ObjectsDB.GetNewParameter("email", System.Data.DbType.String, request.EmailParimary),
+						this.TenantDbFactory.ObjectsDB.GetNewParameter("pwd", System.Data.DbType.String,password),
+						this.TenantDbFactory.ObjectsDB.GetNewParameter("dob", System.Data.DbType.String, request.DateOfBirth),
+						this.TenantDbFactory.ObjectsDB.GetNewParameter("sex", System.Data.DbType.String, request.Sex),
+						this.TenantDbFactory.ObjectsDB.GetNewParameter("alternateemail", System.Data.DbType.String, request.EmailSecondary),
+						this.TenantDbFactory.ObjectsDB.GetNewParameter("phprimary", System.Data.DbType.String, request.PhonePrimary),
+						this.TenantDbFactory.ObjectsDB.GetNewParameter("phsecondary", System.Data.DbType.String, request.PhoneSecondary),
+						this.TenantDbFactory.ObjectsDB.GetNewParameter("phlandphone", System.Data.DbType.String, request.LandPhone),
+						this.TenantDbFactory.ObjectsDB.GetNewParameter("extension", System.Data.DbType.String, request.PhoneExtension),
+						this.TenantDbFactory.ObjectsDB.GetNewParameter("fbid", System.Data.DbType.String, request.FbId),
+						this.TenantDbFactory.ObjectsDB.GetNewParameter("fbname", System.Data.DbType.String, request.FbName),
+						this.TenantDbFactory.ObjectsDB.GetNewParameter("roles", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer,(request.Roles != string.Empty? request.Roles.Split(',').Select(n => Convert.ToInt32(n)).ToArray():emptyarr)),
+						this.TenantDbFactory.ObjectsDB.GetNewParameter("group", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer,(request.UserGroups != string.Empty? request.UserGroups.Split(',').Select(n => Convert.ToInt32(n)).ToArray():emptyarr))
+					};
+				try
+				{
+					EbDataSet dt = this.TenantDbFactory.ObjectsDB.DoQueries(sql, parameters);
 				}
+				catch (Exception e)
+				{
+					var i = 0;
+				}
+				
+
+				//if (string.IsNullOrEmpty(request.Colvalues["pwd"].ToString()) && request.Id < 0)
+				//{
+				//	using (var service = base.ResolveService<EmailService>())
+				//	{
+				//		//  service.Post(new EmailServicesRequest() { To = request.Colvalues["email"].ToString(), Subject = "New User", Message = string.Format("You are invited to join as user. Log in {0}.localhost:53431 using Username: {1} and Password : {2}", request.TenantAccountId, request.Colvalues["email"].ToString(), dt.Tables[0].Rows[0][1]) });
+				//	}
+				//}
 				resp = new SaveUserResponse
 				{
 					//id = Convert.ToInt32(dt.Tables[0].Rows[0][0])
