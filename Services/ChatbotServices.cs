@@ -18,6 +18,70 @@ namespace ExpressBase.ServiceStack
         public ChatbotServices(ITenantDbFactory _dbf) : base(_dbf) { }
 
 
+        public GetAppListResponse Get(AppListRequest request)
+        {
+            string Query1 = @"
+                            SELECT
+                                    applicationname, application_type, id
+                            FROM    
+                                    eb_applications;
+                        ";
+            var table = this.TenantDbFactory.ObjectsDB.DoQuery(Query1);
+            GetAppListResponse resp = new GetAppListResponse();
+            foreach (EbDataRow row in table.Rows)
+            {
+                string appName = row[0].ToString();
+                string appType = row[1].ToString();
+                string appId = row[2].ToString();
+                if (!resp.AppList.ContainsKey(appType))
+                {
+                    List<string> list = new List<string>();
+                    list.Add(appName);
+                    list.Add(appId);
+                    resp.AppList.Add(appType, list);
+
+                }
+                else
+                {
+                    resp.AppList[appType].Add(appName);
+                    resp.AppList[appType].Add(appId);
+                }
+            }
+            //int _id = Convert.ToInt32(request.BotFormIds);
+            //var myService = base.ResolveService<EbObjectService>();
+            //var res = (EbObjectFetchLiveVersionResponse)myService.Get(new EbObjectFetchLiveVersionRequest() { Id = _id });
+            return resp;
+        }
+
+
+        public GetBotDetailsResponse Get(BotDetailsRequest request)
+        {
+            var Query1 = @"
+SELECT 
+	name, 
+	url, 
+	welcome_msg, 
+	fullname, 
+	botid
+    
+FROM 
+	eb_bots 
+WHERE 
+	app_id = @appid;";
+            EbDataTable table = this.TenantDbFactory.ObjectsDB.DoQuery(Query1.Replace("@appid", request.AppId.ToString()));
+            GetBotDetailsResponse resp = new GetBotDetailsResponse();
+            foreach (EbDataRow row in table.Rows)
+            {
+                resp.Name = row[0].ToString();
+                resp.Url= row[1].ToString();
+                resp.WelcomeMsg= row[2].ToString();
+                resp.FullName = row[3].ToString();
+                resp.BotId = row[4].ToString();
+            }
+            return resp;
+        }
+
+
         public GetBotForm4UserResponse Get(GetBotForm4UserRequest request)
         {
             var Query1 = @"
