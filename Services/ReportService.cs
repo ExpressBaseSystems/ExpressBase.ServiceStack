@@ -64,9 +64,8 @@ namespace ExpressBase.ServiceStack
             //DrawDetail();
             d.Close();
             ms1.Position = 0;//important
-            Console.WriteLine(">>>>>>> Len: " + ms1.Length + "\n");
             return new ReportRenderResponse{ MemoryStream = new MemorystreamWrapper(ms1) };
-          //return new FileStreamResult(ms1, "application/pdf");
+         
         }
         public void GetWatermarkImages()
         {
