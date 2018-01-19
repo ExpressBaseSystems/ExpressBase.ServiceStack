@@ -50,11 +50,12 @@ namespace ExpressBase.ServiceStack.Services
 						SELECT id, role1_id, role2_id FROM eb_role2role WHERE eb_del = FALSE;";
 			if (request.Id > 0)
 			{
-				sql += @"SELECT firstname,email,socialid,socialname FROM eb_users WHERE id = @id;
+				sql += @"SELECT fullname,nickname,email,alternateemail,dob,sex,phnoprimary,phnosecondary,landline,phextension,fbid,fbname,status
+						FROM eb_users WHERE id = @id;
 						SELECT role_id FROM eb_role2user WHERE user_id = @id AND eb_del = FALSE;
 						SELECT groupid FROM eb_user2usergroup WHERE userid = @id AND eb_del = FALSE;";
 			}
-			
+			//SELECT firstname, email, socialid, socialname FROM eb_users WHERE id = @id;	old 4th query
 			DbParameter[] parameters = { this.TenantDbFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.Int32, request.Id) };
 			var ds = this.TenantDbFactory.ObjectsDB.DoQueries(sql, parameters);
 
@@ -90,13 +91,23 @@ namespace ExpressBase.ServiceStack.Services
 
 			if (request.Id > 0)
 			{
-				resp.UserData = new Dictionary<string, object>();
+				resp.UserData = new Dictionary<string, string>();
 				foreach (var dr in ds.Tables[3].Rows)
 				{
-					resp.UserData.Add("name", dr[0].ToString());
-					resp.UserData.Add("email", dr[1].ToString());
-					resp.UserData.Add("socialid", dr[2].ToString());
-					resp.UserData.Add("socialname", dr[3].ToString());
+					resp.UserData.Add("id", request.Id.ToString());
+					resp.UserData.Add("fullname", dr[0].ToString());
+					resp.UserData.Add("nickname", dr[1].ToString());
+					resp.UserData.Add("email", dr[2].ToString());
+					resp.UserData.Add("alternateemail", dr[3].ToString());
+					resp.UserData.Add("dob", dr[4].ToString());
+					resp.UserData.Add("sex", dr[5].ToString());
+					resp.UserData.Add("phnoprimary", dr[6].ToString());
+					resp.UserData.Add("phnosecondary", dr[7].ToString());
+					resp.UserData.Add("landline", dr[8].ToString());
+					resp.UserData.Add("phextension", dr[9].ToString());
+					resp.UserData.Add("fbid", dr[10].ToString());
+					resp.UserData.Add("fbname", dr[11].ToString());
+					resp.UserData.Add("status", dr[12].ToString());
 				}
 
 				resp.UserRoles = new List<int>();
@@ -155,7 +166,7 @@ namespace ExpressBase.ServiceStack.Services
 							this.TenantDbFactory.ObjectsDB.GetNewParameter("userid", System.Data.DbType.Int32, request.UserId),
 							this.TenantDbFactory.ObjectsDB.GetNewParameter("id", System.Data.DbType.Int32, request.Id)};
 
-				EbDataSet dt = this.TenantDbFactory.ObjectsDB.DoQueries(sql, parameters);
+				//EbDataSet dt = this.TenantDbFactory.ObjectsDB.DoQueries(sql, parameters);
 
 				if (string.IsNullOrEmpty(request.Colvalues["pwd"].ToString()) && request.Id < 0)
 				{
@@ -166,7 +177,7 @@ namespace ExpressBase.ServiceStack.Services
 				}
 				resp = new SaveUserResponse
 				{
-					id = Convert.ToInt32(dt.Tables[0].Rows[0][0])
+					//id = Convert.ToInt32(dt.Tables[0].Rows[0][0])
 
 				};
 			}

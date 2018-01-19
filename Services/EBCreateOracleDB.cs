@@ -31,35 +31,44 @@ namespace ExpressBase.ServiceStack
                 //......*********USER TABLE******************.......
 
                 //.......create user table sequence...............
-                string path = "ExpressBase.Common.SqlScripts.PostGreSql.DataDb.Alter_Eb_User_SequencesOracle.sql";
+                string path = "ExpressBase.Common.SqlScripts.Oracle.DataDb.Alter_Eb_User_SequencesOracle.sql";
                 bool b1 = CreateOrAlter_Structure(con1, path);
 
                 //.........create user table........................
-                path = "ExpressBase.Common.SqlScripts.PostGreSql.DataDb.Create_Eb_UserOracle.sql";
+                path = "ExpressBase.Common.SqlScripts.Orcale.DataDb.Create_Eb_UserOracle.sql";
                 bool b2 = CreateOrAlter_Structure(con1, path);
 
-                //.......create user table Functions...............
-                path = "ExpressBase.Common.SqlScripts.PostGreSql.DataDb.Create_Eb_User_FunctionsOracle.sql";
+                //....create trigger for auto increment sequence..........
+
+                path = "ExpressBase.Common.SqlScripts.Oracle.DataDb.Create_Eb_user_TriggerOracle.sql";
                 bool b3 = CreateOrAlter_Structure(con1, path);
+
+                //.......create user table Functions...............
+                path = "ExpressBase.Common.SqlScripts.Orcale.DataDb.Create_Eb_User_FunctionsOracle.sql";
+                bool b4 = CreateOrAlter_Structure(con1, path);
 
                 //...........*************OBJECT TABLE***************...........
 
                 //...........create object table sequences...........
-                path = "ExpressBase.Common.SqlScripts.PostGreSql.ObjectsDb.Alter_Eb_Object_SequencesOracle.sql";
-                bool b4 = CreateOrAlter_Structure(con1, path);
-
-                //.......create object tables..............
-                path = "ExpressBase.Common.SqlScripts.PostGreSql.ObjectsDb.Create_Eb_ObjectsOracle.sql";
+                path = "ExpressBase.Common.SqlScripts.Oracle.ObjectsDb.Alter_Eb_Object_SequencesOracle.sql";
                 bool b5 = CreateOrAlter_Structure(con1, path);
 
-                //.......create object table functions...........
-                path = "ExpressBase.Common.SqlScripts.PostGreSql.ObjectsDb.Create_Eb_Object_FunctionsOracle.sql";
+                //.......create object tables..............
+                path = "ExpressBase.Common.SqlScripts.Oracle.ObjectsDb.Create_Eb_ObjectsOracle.sql";
                 bool b6 = CreateOrAlter_Structure(con1, path);
 
-                //.....insert into user tables.........
-                bool b7 = InsertIntoTables(request, con1);
+                //....create trigger for auto increment sequence..........
+                path = "ExpressBase.Common.SqlScripts.Oracle.ObjectsDb.Create_Eb_Object_TriggerOracle.sql";
+                bool b7 = CreateOrAlter_Structure(con1, path);
 
-                if (b1 & b2 & b3 & b4 & b5 & b6 & b7)
+                //.......create object table functions...........
+                path = "ExpressBase.Common.SqlScripts.Oracle.ObjectsDb.Create_Eb_Object_FunctionsOracle.sql";
+                bool b8 = CreateOrAlter_Structure(con1, path);
+
+                //.....insert into user tables.........
+                bool b9 = InsertIntoTables(request, con1);
+
+                if (b1 & b2 & b3 & b4 & b5 & b6 & b7 & b8 & b9)
                 {
                     con_trans.Commit();
                     rtn = true;

@@ -18,6 +18,42 @@ namespace ExpressBase.ServiceStack
         public ChatbotServices(ITenantDbFactory _dbf) : base(_dbf) { }
 
 
+        public GetAppListResponse Get(AppListRequest request)
+        {
+            string Query1 = @"
+                            SELECT
+                                    applicationname, application_type, id
+                            FROM    
+                                    eb_applications;
+                        ";
+            var table = this.TenantDbFactory.ObjectsDB.DoQuery(Query1);
+            GetAppListResponse resp = new GetAppListResponse();
+            foreach (EbDataRow row in table.Rows)
+            {
+                string appName = row[0].ToString();
+                string appType = row[1].ToString();
+                string appId = row[2].ToString();
+                if (!resp.AppList.ContainsKey(appType))
+                {
+                    List<string> list = new List<string>();
+                    list.Add(appName);
+                    list.Add(appId);
+                    resp.AppList.Add(appType, list);
+
+                }
+                else
+                {
+                    resp.AppList[appType].Add(appName);
+                    resp.AppList[appType].Add(appId);
+                }
+            }
+            //int _id = Convert.ToInt32(request.BotFormIds);
+            //var myService = base.ResolveService<EbObjectService>();
+            //var res = (EbObjectFetchLiveVersionResponse)myService.Get(new EbObjectFetchLiveVersionRequest() { Id = _id });
+            return resp;
+        }
+
+
         public GetBotForm4UserResponse Get(GetBotForm4UserRequest request)
         {
             var Query1 = @"
