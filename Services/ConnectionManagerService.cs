@@ -37,9 +37,9 @@ namespace ExpressBase.ServiceStack.Services
             infraConnections.FilesDbConnection.IsDefault = true;
             infraConnections.FilesDbConnection.NickName = request.SolutionId + "_Initial";
 
-            infraConnections.DataDbConnection.Persist(request.SolutionId, this.TenantDbFactory, true);
-            infraConnections.ObjectsDbConnection.Persist(request.SolutionId, this.TenantDbFactory, true);
-            infraConnections.FilesDbConnection.Persist(request.SolutionId, this.TenantDbFactory, true);
+            infraConnections.DataDbConnection.Persist(request.SolutionId, this.TenantDbFactory, true, request.UserId);
+            infraConnections.ObjectsDbConnection.Persist(request.SolutionId, this.TenantDbFactory, true, request.UserId);
+            infraConnections.FilesDbConnection.Persist(request.SolutionId, this.TenantDbFactory, true, request.UserId);
 
             this.Redis.Set<EbSolutionConnections>(string.Format("EbSolutionConnections_{0}", request.SolutionId), infraConnections);
 
@@ -88,7 +88,7 @@ namespace ExpressBase.ServiceStack.Services
         {
             TenantDbFactory dbFactory = new TenantDbFactory("expressbase", this.Redis);
 
-            request.SMTPConnection.Persist(request.TenantAccountId, dbFactory, request.IsNew);
+            request.SMTPConnection.Persist(request.TenantAccountId, dbFactory, request.IsNew, request.UserId);
 
             base.MessageProducer3.Publish(new RefreshSolutionConnectionsMqRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
         }
@@ -98,7 +98,7 @@ namespace ExpressBase.ServiceStack.Services
         {
             TenantDbFactory dbFactory = new TenantDbFactory("expressbase", this.Redis);
 
-            request.DataDBConnection.Persist(request.TenantAccountId, dbFactory, request.IsNew);
+            request.DataDBConnection.Persist(request.TenantAccountId, dbFactory, request.IsNew, request.UserId);
 
             base.MessageProducer3.Publish(new RefreshSolutionConnectionsMqRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
         }
@@ -108,7 +108,7 @@ namespace ExpressBase.ServiceStack.Services
         {
             TenantDbFactory dbFactory = new TenantDbFactory("expressbase", this.Redis);
 
-            request.ObjectsDBConnection.Persist(request.TenantAccountId, dbFactory, request.IsNew);
+            request.ObjectsDBConnection.Persist(request.TenantAccountId, dbFactory, request.IsNew, request.UserId);
 
             base.MessageProducer3.Publish(new RefreshSolutionConnectionsMqRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
         }
@@ -118,7 +118,7 @@ namespace ExpressBase.ServiceStack.Services
         {
             TenantDbFactory dbFactory = new TenantDbFactory("expressbase", this.Redis);
 
-            request.FilesDBConnection.Persist(request.TenantAccountId, dbFactory, request.IsNew);
+            request.FilesDBConnection.Persist(request.TenantAccountId, dbFactory, request.IsNew, request.UserId);
 
             base.MessageProducer3.Publish(new RefreshSolutionConnectionsMqRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
         }
@@ -128,7 +128,7 @@ namespace ExpressBase.ServiceStack.Services
         {
             TenantDbFactory dbFactory = new TenantDbFactory("expressbase", this.Redis);
 
-            request.SMSConnection.Persist(request.TenantAccountId, dbFactory, request.IsNew);
+            request.SMSConnection.Persist(request.TenantAccountId, dbFactory, request.IsNew, request.UserId);
 
             base.MessageProducer3.Publish(new RefreshSolutionConnectionsMqRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
         }
