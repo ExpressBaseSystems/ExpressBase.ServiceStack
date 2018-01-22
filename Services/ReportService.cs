@@ -38,9 +38,11 @@ namespace ExpressBase.ServiceStack
         private float detailprintingtop = 0;
 
         public ReportService(ITenantDbFactory _dbf) : base(_dbf) { }
+
         public ReportRenderResponse Get(ReportRenderRequest request)
         {
             var myObjectservice = base.ResolveService<EbObjectService>();
+
             var resultlist = (EbObjectParticularVersionResponse)myObjectservice.Get(new EbObjectParticularVersionRequest { RefId = request.Refid });
             Report = EbSerializers.Json_Deserialize<EbReport>(resultlist.Data[0].Json);
             Report.IsLastpage = false;
@@ -51,29 +53,29 @@ namespace ExpressBase.ServiceStack
             {
                 cresp = this.Redis.Get<DataSourceColumnsResponse>(string.Format("{0}_columns", Report.DataSourceRefId));
                 if (cresp.IsNull)
-                    cresp = (DataSourceColumnsResponse)myDataSourceservice.Any(new DataSourceColumnsRequest { RefId = Report.DataSourceRefId });
+                    cresp = myDataSourceservice.Any(new DataSourceColumnsRequest { RefId = Report.DataSourceRefId });
 
                 Report.DataColumns = (cresp.Columns.Count > 1) ? cresp.Columns[1] : cresp.Columns[0];
 
-                dresp = (DataSourceDataResponse)myDataSourceservice.Any(new DataSourceDataRequest { RefId = Report.DataSourceRefId, Draw = 1, Start = 0, Length = 100 });
+                dresp = myDataSourceservice.Any(new DataSourceDataRequest { RefId = Report.DataSourceRefId, Draw = 1, Start = 0, Length = 100 });
                 Report.DataRow = dresp.Data;
             }
-            iTextSharp.text.Rectangle rec = new iTextSharp.text.Rectangle(Report.Width, Report.Height);
+            Rectangle rec = new Rectangle(Report.Width, Report.Height);
             d = new Document(rec);
             ms1 = new MemoryStream();
             writer = PdfWriter.GetInstance(d, ms1);
             writer.Open();
             d.Open();
-            //   writer.PageEvent = new HeaderFooter(this);
+            writer.PageEvent = new HeaderFooter(this);
             writer.CloseStream = true;//important
             canvas = writer.DirectContent;
             Report.PageNumber = writer.PageNumber;
             Report.InitializeSummaryFields();
             GetWatermarkImages();
-            iTextSharp.text.Font link = FontFactory.GetFont("Arial", 12, iTextSharp.text.Font.UNDERLINE, BaseColor.DarkGray);
-            Anchor anchor = new Anchor("xyz", link);
-            anchor.Reference = "http://eb_roby_dev.localhost:5000/ReportRender?refid=eb_roby_dev-eb_roby_dev-3-1127-1854?tab=" + JsonConvert.SerializeObject(Report.DataRow[Report.SerialNumber - 1]);
-            d.Add(anchor);
+            //iTextSharp.text.Font link = FontFactory.GetFont("Arial", 12, iTextSharp.text.Font.UNDERLINE, BaseColor.DarkGray);
+            // Anchor anchor = new Anchor("xyz", link);
+            //anchor.Reference = "http://eb_roby_dev.localhost:5000/ReportRender?refid=eb_roby_dev-eb_roby_dev-3-1127-1854?tab=" + JsonConvert.SerializeObject(Report.DataRow[Report.SerialNumber - 1]);
+            // d.Add(anchor);
             d.NewPage();
 
             DrawReportHeader();
@@ -107,6 +109,7 @@ namespace ExpressBase.ServiceStack
                 }
             }
         }
+
         public void DrawReportHeader()
         {
             rh_Yposition = 0;
@@ -262,5 +265,25 @@ namespace ExpressBase.ServiceStack
             }
         }
 
+    }
+
+    public partial class HeaderFooter : PdfPageEventHelper
+    {
+        private ReportService ReportService { get; set; }
+        public override void OnStartPage(PdfWriter writer, Document document)
+        {
+        }
+        public override void OnEndPage(PdfWriter writer, Document d)
+        {
+            ReportService.DrawPageHeader();
+            ReportService.DrawPageFooter();
+            if (ReportService.Report.IsLastpage == true) ReportService.DrawReportFooter();
+            ReportService.Report.DrawWaterMark(ReportService.pdfReader, d, writer);
+        }
+
+        public HeaderFooter(ReportService _c) : base()
+        {
+            this.ReportService = _c;
+        }
     }
 }
