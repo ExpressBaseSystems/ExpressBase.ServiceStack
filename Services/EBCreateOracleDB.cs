@@ -1,6 +1,7 @@
 ﻿using ExpressBase.Common;
 using ExpressBase.Common.Data;
 using ExpressBase.Objects.ServiceStack_Artifacts;
+using ServiceStack.Logging;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
@@ -19,11 +20,13 @@ namespace ExpressBase.ServiceStack
         public bool Any(EbCreateOracleDBRequest request)
         {
 
-
+            ILog log = LogManager.GetLogger(GetType());
             bool rtn;
             using (var con1 = TenantDbFactory.DataDB.GetNewConnection())
             {
+                log.Info("Connection");
                 con1.Open();
+                log.Info(".............." + con1 + "Connection Opened");
 
                 var con_trans = con1.BeginTransaction();
                 //try
@@ -32,38 +35,38 @@ namespace ExpressBase.ServiceStack
 
                 //.......create user table sequence...............
                 string path = "ExpressBase.Common.SqlScripts.Oracle.DataDb.Alter_Eb_User_SequencesOracle.sql";
-                bool b1 = CreateOrAlter_Structure(con1, path);
+                bool b1 = CreateOrAlter_Structure(con1, path, con_trans);
 
                 //.........create user table........................
                 path = "ExpressBase.Common.SqlScripts.Orcale.DataDb.Create_Eb_UserOracle.sql";
-                bool b2 = CreateOrAlter_Structure(con1, path);
+                bool b2 = CreateOrAlter_Structure(con1, path, con_trans);
 
                 //....create trigger for auto increment sequence..........
 
                 path = "ExpressBase.Common.SqlScripts.Oracle.DataDb.Create_Eb_user_TriggerOracle.sql";
-                bool b3 = CreateOrAlter_Structure(con1, path);
+                bool b3 = CreateOrAlter_Structure(con1, path, con_trans);
 
                 //.......create user table Functions...............
                 path = "ExpressBase.Common.SqlScripts.Orcale.DataDb.Create_Eb_User_FunctionsOracle.sql";
-                bool b4 = CreateOrAlter_Structure(con1, path);
+                bool b4 = CreateOrAlter_Structure(con1, path, con_trans);
 
                 //...........*************OBJECT TABLE***************...........
 
                 //...........create object table sequences...........
                 path = "ExpressBase.Common.SqlScripts.Oracle.ObjectsDb.Alter_Eb_Object_SequencesOracle.sql";
-                bool b5 = CreateOrAlter_Structure(con1, path);
+                bool b5 = CreateOrAlter_Structure(con1, path, con_trans);
 
                 //.......create object tables..............
                 path = "ExpressBase.Common.SqlScripts.Oracle.ObjectsDb.Create_Eb_ObjectsOracle.sql";
-                bool b6 = CreateOrAlter_Structure(con1, path);
+                bool b6 = CreateOrAlter_Structure(con1, path, con_trans);
 
                 //....create trigger for auto increment sequence..........
                 path = "ExpressBase.Common.SqlScripts.Oracle.ObjectsDb.Create_Eb_Object_TriggerOracle.sql";
-                bool b7 = CreateOrAlter_Structure(con1, path);
+                bool b7 = CreateOrAlter_Structure(con1, path, con_trans);
 
                 //.......create object table functions...........
                 path = "ExpressBase.Common.SqlScripts.Oracle.ObjectsDb.Create_Eb_Object_FunctionsOracle.sql";
-                bool b8 = CreateOrAlter_Structure(con1, path);
+                bool b8 = CreateOrAlter_Structure(con1, path, con_trans);
 
                 //.....insert into user tables.........
                 bool b9 = InsertIntoTables(request, con1);
@@ -92,7 +95,7 @@ namespace ExpressBase.ServiceStack
 
 
         }
-        public bool CreateOrAlter_Structure(DbConnection con, string path)
+        public bool CreateOrAlter_Structure(DbConnection con, string path,DbTransaction con_trans)
         {
 
             try
@@ -108,7 +111,7 @@ namespace ExpressBase.ServiceStack
                     {
                         result = reader.ReadToEnd();
                     }
-                    var cmdtxt1 = TenantDbFactory.DataDB.GetNewCommand(con, result);
+                    var cmdtxt1 = TenantDbFactory.DataDB.GetNewCommand(con, result, con_trans);
                     cmdtxt1.ExecuteNonQuery();
                 }
             }
