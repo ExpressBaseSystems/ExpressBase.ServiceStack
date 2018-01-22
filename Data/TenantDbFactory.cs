@@ -92,8 +92,8 @@ namespace ExpressBase.ServiceStack
             else if (_config.LogsDbConnection != null && _config.DataDbConnection.DatabaseVendor == DatabaseVendors.ORACLE)
                 LogsDB = new OracleDB(_config.LogsDbConnection);
 
-            if (_config.FilesDbConnection != null)
-                FilesDB = new MongoDBDatabase(this.TenantId, _config.FilesDbConnection);
+            //if (_config.FilesDbConnection != null)
+            //    FilesDB = new MongoDBDatabase(this.TenantId, _config.FilesDbConnection);
 
             if (_config.SMSConnection != null )
                 SMSService = new TwilioService(_config.SMSConnection);
