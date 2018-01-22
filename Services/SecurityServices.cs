@@ -99,7 +99,7 @@ namespace ExpressBase.ServiceStack.Services
 					resp.UserData.Add("nickname", dr[1].ToString());
 					resp.UserData.Add("email", dr[2].ToString());
 					resp.UserData.Add("alternateemail", dr[3].ToString());
-					resp.UserData.Add("dob", dr[4].ToString());
+					resp.UserData.Add("dob", dr[4].ToString().Substring(0, 10));
 					resp.UserData.Add("sex", dr[5].ToString());
 					resp.UserData.Add("phnoprimary", dr[6].ToString());
 					resp.UserData.Add("phnosecondary", dr[7].ToString());
@@ -136,6 +136,22 @@ namespace ExpressBase.ServiceStack.Services
 			return strPwd;
 		}
 
+		public bool Any(UniqueCheckRequest request)
+		{
+			
+			string sql = "SELECT id FROM eb_users WHERE email LIKE @email";
+			DbParameter[] parameters = { this.TenantDbFactory.ObjectsDB.GetNewParameter("email", System.Data.DbType.String, request.email) };
+			var dt = this.TenantDbFactory.ObjectsDB.DoQuery(sql, parameters);
+			if (dt.Rows.Count > 0)
+			{
+				return true;
+			}
+			else
+			{
+				return false;
+			}
+		}
+
 		public SaveUserResponse Post(SaveUserRequest request)
 		{
 			SaveUserResponse resp;
@@ -147,14 +163,14 @@ namespace ExpressBase.ServiceStack.Services
 
 				if (request.Id > 0)
 				{
-					sql = "SELECT * FROM eb_createormodifyuserandroles(@userid,@id,@fullname,@nickname,@email,@pwd,@dob,@sex,@alternateemail,@phprimary,@phsecondary,@phlandphone,@extension,@fbid,@fbname,@roles,@group);";
+					sql = "SELECT * FROM eb_createormodifyuserandroles(@userid,@id,@fullname,@nickname,@email,@pwd,@dob,@sex,@alternateemail,@phprimary,@phsecondary,@phlandphone,@extension,@fbid,@fbname,@roles,@group,@statusid,@hide);";
 
 				}
 				else
 				{
 					//password = string.IsNullOrEmpty(request.Colvalues["pwd"].ToString()) ? GeneratePassword() : (request.Colvalues["pwd"].ToString() + request.Colvalues["email"].ToString()).ToMD5Hash();
 					password = GeneratePassword();
-					sql = "SELECT * FROM eb_createormodifyuserandroles(@userid,@id,@fullname,@nickname,@email,@pwd,@dob,@sex,@alternateemail,@phprimary,@phsecondary,@phlandphone,@extension,@fbid,@fbname,@roles,@group);";
+					sql = "SELECT * FROM eb_createormodifyuserandroles(@userid,@id,@fullname,@nickname,@email,@pwd,@dob,@sex,@alternateemail,@phprimary,@phsecondary,@phlandphone,@extension,@fbid,@fbname,@roles,@group,@statusid,@hide);";
 
 				}
 				int[] emptyarr = new int[] { };
@@ -164,9 +180,9 @@ namespace ExpressBase.ServiceStack.Services
 						this.TenantDbFactory.ObjectsDB.GetNewParameter("id", System.Data.DbType.Int32, request.Id),
 						this.TenantDbFactory.ObjectsDB.GetNewParameter("fullname", System.Data.DbType.String, request.FullName),
 						this.TenantDbFactory.ObjectsDB.GetNewParameter("nickname", System.Data.DbType.String, request.NickName),
-						this.TenantDbFactory.ObjectsDB.GetNewParameter("email", System.Data.DbType.String, request.EmailParimary),
+						this.TenantDbFactory.ObjectsDB.GetNewParameter("email", System.Data.DbType.String, request.EmailPrimary),
 						this.TenantDbFactory.ObjectsDB.GetNewParameter("pwd", System.Data.DbType.String,password),
-						this.TenantDbFactory.ObjectsDB.GetNewParameter("dob", System.Data.DbType.String, request.DateOfBirth),
+						this.TenantDbFactory.ObjectsDB.GetNewParameter("dob", System.Data.DbType.Date, request.DateOfBirth),
 						this.TenantDbFactory.ObjectsDB.GetNewParameter("sex", System.Data.DbType.String, request.Sex),
 						this.TenantDbFactory.ObjectsDB.GetNewParameter("alternateemail", System.Data.DbType.String, request.EmailSecondary),
 						this.TenantDbFactory.ObjectsDB.GetNewParameter("phprimary", System.Data.DbType.String, request.PhonePrimary),
@@ -176,16 +192,13 @@ namespace ExpressBase.ServiceStack.Services
 						this.TenantDbFactory.ObjectsDB.GetNewParameter("fbid", System.Data.DbType.String, request.FbId),
 						this.TenantDbFactory.ObjectsDB.GetNewParameter("fbname", System.Data.DbType.String, request.FbName),
 						this.TenantDbFactory.ObjectsDB.GetNewParameter("roles", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer,(request.Roles != string.Empty? request.Roles.Split(',').Select(n => Convert.ToInt32(n)).ToArray():emptyarr)),
-						this.TenantDbFactory.ObjectsDB.GetNewParameter("group", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer,(request.UserGroups != string.Empty? request.UserGroups.Split(',').Select(n => Convert.ToInt32(n)).ToArray():emptyarr))
+						this.TenantDbFactory.ObjectsDB.GetNewParameter("group", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer,(request.UserGroups != string.Empty? request.UserGroups.Split(',').Select(n => Convert.ToInt32(n)).ToArray():emptyarr)),
+						this.TenantDbFactory.ObjectsDB.GetNewParameter("statusid", System.Data.DbType.Int32, Convert.ToInt32(request.StatusId)),
+						this.TenantDbFactory.ObjectsDB.GetNewParameter("hide", System.Data.DbType.String, request.Hide)
 					};
-				try
-				{
-					EbDataSet dt = this.TenantDbFactory.ObjectsDB.DoQueries(sql, parameters);
-				}
-				catch (Exception e)
-				{
-					var i = 0;
-				}
+				
+				EbDataSet dt = this.TenantDbFactory.ObjectsDB.DoQueries(sql, parameters);
+				
 				
 
 				//if (string.IsNullOrEmpty(request.Colvalues["pwd"].ToString()) && request.Id < 0)
@@ -197,7 +210,7 @@ namespace ExpressBase.ServiceStack.Services
 				//}
 				resp = new SaveUserResponse
 				{
-					//id = Convert.ToInt32(dt.Tables[0].Rows[0][0])
+					id = Convert.ToInt32(dt.Tables[0].Rows[0][0])
 
 				};
 			}
