@@ -4,6 +4,7 @@ using ExpressBase.Common.Data;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ServiceStack;
 using ServiceStack.Messaging;
+using System;
 using System.Data.Common;
 
 namespace ExpressBase.ServiceStack.Services
@@ -95,14 +96,8 @@ namespace ExpressBase.ServiceStack.Services
 
         [Authenticate]
         public void Post(ChangeDataDBConnectionRequest request)
-        {
-            IDatabase DataDB;
-            TenantDbFactory dbFactory = new TenantDbFactory("expressbase", this.Redis);
-            if (request.DataDBConnection != null && request.DataDBConnection.DatabaseVendor == DatabaseVendors.PGSQL)
-            {
-                DataDB = new PGSQLDatabase(request.DataDBConnection);
-                DataDB.DoQuery("select * from eb_users");
-            }
+        {           
+            TenantDbFactory dbFactory = new TenantDbFactory("expressbase", this.Redis);            
             request.DataDBConnection.Persist(request.TenantAccountId, dbFactory, request.IsNew, request.UserId);
 
             base.MessageProducer3.Publish(new RefreshSolutionConnectionsMqRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
@@ -134,6 +129,24 @@ namespace ExpressBase.ServiceStack.Services
             request.SMSConnection.Persist(request.TenantAccountId, dbFactory, request.IsNew, request.UserId);
 
             base.MessageProducer3.Publish(new RefreshSolutionConnectionsMqRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
+        }
+        public bool Post(TestConnectionRequest request)
+        {
+            bool res = true;
+            if (request.DataDBConnection.DatabaseVendor == DatabaseVendors.PGSQL)
+            {
+                IDatabase DataDB;
+                DataDB = new PGSQLDatabase(request.DataDBConnection);
+                try
+                {
+                    DataDB.DoQuery("select * from eb_users");
+                }
+               catch(Exception e)
+                {
+                    res = false;
+                }
+            }
+            return res;
         }
     }
 }
