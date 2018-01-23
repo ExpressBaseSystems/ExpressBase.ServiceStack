@@ -22,9 +22,9 @@ SELECT id, applicationname
 FROM eb_applications;
 SELECT
     EO.id, EO.obj_type, EO.obj_name,
-    EOV.version_num, EOV.refid, EO.applicationid,EO.obj_desc
+    EOV.version_num, EOV.refid, EO2A.app_id,EO.obj_desc
 FROM
-    eb_objects EO, eb_objects_ver EOV, eb_objects_status EOS
+    eb_objects EO, eb_objects_ver EOV, eb_objects_status EOS, eb_objects2application EO2A 
 WHERE
     EO.id = EOV.eb_objects_id 
 AND 
@@ -32,7 +32,9 @@ AND
 AND 
     EO.id = ANY('@Ids')  
 AND 
-    EOS.status = 3 ;";
+    EOS.status = 3 
+AND EO.id = EO2A.obj_id 
+AND EO2A.eb_del = 'false';";
 
             //parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@Ids", System.Data.DbType.String, request.Ids));
             var ds = this.TenantDbFactory.ObjectsDB.DoQueries(Query1.Replace("@Ids", request.Ids));
