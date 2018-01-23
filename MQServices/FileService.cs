@@ -1,5 +1,7 @@
 using ExpressBase.Common;
 using ExpressBase.Common.Data;
+using ExpressBase.Common.EbServiceStack;
+using ExpressBase.Common.EbServiceStack.ReqNRes;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using MongoDB.Bson;
 using ServiceStack;
@@ -14,7 +16,7 @@ using System.IO;
 
 namespace ExpressBase.ServiceStack.MQServices
 {
-    public class FileService : EbBaseService
+    public class FileService : EbBaseService, IEbFileService
     {
         public FileService(ITenantDbFactory _tdb, IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_tdb, _mqp, _mqc) { }
 
