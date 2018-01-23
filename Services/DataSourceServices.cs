@@ -60,7 +60,7 @@ namespace ExpressBase.ServiceStack
 
             bool _isPaged = (_sql.ToLower().Contains("@offset") && _sql.ToLower().Contains("@limit"));
 
-            var parameters = DataHelper.GetParams(this.TenantDbFactory, _isPaged, request.Params);
+            var parameters = DataHelper.GetParams(this.TenantDbFactory, _isPaged, request.Params, request.Length, request.Start);
             if (request.Params == null)
                 _sql = _sql.Replace("@id", "0");
 
@@ -116,7 +116,7 @@ namespace ExpressBase.ServiceStack
                     string _sql = _ds.Sql/*Decoded()*/.Replace("@and_search", string.Empty).Replace("@orderby", "1");
                     _isPaged = (_sql.ToLower().Contains("@offset") && _sql.ToLower().Contains("@limit"));
 
-                    var parameters = DataHelper.GetParams(this.TenantDbFactory, _isPaged, request.Params);
+                    var parameters = DataHelper.GetParams(this.TenantDbFactory, _isPaged, request.Params, 0, 0);
                     if (request.Params == null)
                         _sql = _sql.Replace("@id", "0");
 
