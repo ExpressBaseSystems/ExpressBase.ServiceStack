@@ -33,7 +33,9 @@ namespace ExpressBase.ServiceStack.Services
                 con.Open();
                 if (request.op == "updatetenant")
                 {
-                    string sql = "UPDATE eb_users SET firstname=@firstname,company=@company,employees=@employees,designation=@designation,country=@country,pwd = @pwd WHERE email=@email RETURNING id,email";
+                    //string sql = "UPDATE eb_users SET firstname=@firstname,company=@company,employees=@employees,designation=@designation,country=@country,pwd = @pwd WHERE email=@email RETURNING id,email;" +
+                    //    "INSERT INTO eb_role2user()";
+                    string sql = "SELECT * FROM eb_tenantprofile_setup(@firstname,@company,@employees,@designation,@country,@pwd,@email)";
                     DbParameter[] parameters = { this.TenantDbFactory.DataDB.GetNewParameter("firstname", System.Data.DbType.String, request.Colvalues["Name"]),
                         this.TenantDbFactory.DataDB.GetNewParameter("company", System.Data.DbType.String, request.Colvalues["Company"]),
                         this.TenantDbFactory.DataDB.GetNewParameter("employees", System.Data.DbType.String, request.Colvalues["Employees"]),
@@ -46,9 +48,9 @@ namespace ExpressBase.ServiceStack.Services
                     var ds = this.TenantDbFactory.ObjectsDB.DoQuery(sql, parameters);
                     resp = new CreateAccountResponse()
                     {
-                        id = Convert.ToInt32(ds.Rows[0][0]),
-                        email = ds.Rows[0][1].ToString()
-                    };                    
+                        id = Convert.ToInt32(ds.Rows[0][0])
+                    };
+                    
                 }
                 else
                 {
