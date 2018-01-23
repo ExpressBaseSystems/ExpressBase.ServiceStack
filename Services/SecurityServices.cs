@@ -39,6 +39,50 @@ namespace ExpressBase.ServiceStack.Services
 			return resp;
 		} //for user search
 
+		public GetUserGroupResponse1 Any(GetUserGroupRequest1 request)
+		{
+			GetUserGroupResponse1 resp = new GetUserGroupResponse1();
+			using (var con = this.TenantDbFactory.ObjectsDB.GetNewConnection())
+			{
+				con.Open();
+				string sql = "SELECT id,name,description FROM eb_usergroup WHERE name ~* @searchtext";
+
+				DbParameter[] parameters = { this.TenantDbFactory.ObjectsDB.GetNewParameter("searchtext", System.Data.DbType.String, (request.Colvalues != null) ? request.Colvalues["searchtext"] : string.Empty) };
+
+				var dt = this.TenantDbFactory.ObjectsDB.DoQueries(sql, parameters);
+
+				List<Eb_UserGroup_ForCommonList> returndata = new List<Eb_UserGroup_ForCommonList>();
+				foreach (EbDataRow dr in dt.Tables[0].Rows)
+				{
+					returndata.Add(new Eb_UserGroup_ForCommonList { Id = Convert.ToInt32(dr[0]), Name = dr[1].ToString(), Description = dr[2].ToString() });
+				}
+				resp.Data = returndata;
+			}
+			return resp;
+		} //for usergroup search
+
+		public GetRolesResponse1 Any(GetRolesRequest1 request)
+		{
+			GetRolesResponse1 resp = new GetRolesResponse1();
+			using (var con = this.TenantDbFactory.ObjectsDB.GetNewConnection())
+			{
+				con.Open();
+				string sql = "SELECT id,role_name,description FROM eb_roles WHERE role_name ~* @searchtext";
+
+				DbParameter[] parameters = { this.TenantDbFactory.ObjectsDB.GetNewParameter("searchtext", System.Data.DbType.String, (request.Colvalues != null) ? request.Colvalues["searchtext"] : string.Empty) };
+
+				var dt = this.TenantDbFactory.ObjectsDB.DoQueries(sql, parameters);
+
+				List<Eb_Roles_ForCommonList> returndata = new List<Eb_Roles_ForCommonList>();
+				foreach (EbDataRow dr in dt.Tables[0].Rows)
+				{
+					returndata.Add(new Eb_Roles_ForCommonList { Id = Convert.ToInt32(dr[0]), Name = dr[1].ToString(), Description = dr[2].ToString() });
+				}
+				resp.Data = returndata;
+			}
+			return resp;
+		} //for roles search
+
 
 
 		//----MANAGE USER START---------------------------------
