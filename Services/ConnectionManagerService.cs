@@ -96,8 +96,13 @@ namespace ExpressBase.ServiceStack.Services
         [Authenticate]
         public void Post(ChangeDataDBConnectionRequest request)
         {
+            IDatabase DataDB;
             TenantDbFactory dbFactory = new TenantDbFactory("expressbase", this.Redis);
-
+            if (request.DataDBConnection != null && request.DataDBConnection.DatabaseVendor == DatabaseVendors.PGSQL)
+            {
+                DataDB = new PGSQLDatabase(request.DataDBConnection);
+                DataDB.DoQuery("select * from eb_users");
+            }
             request.DataDBConnection.Persist(request.TenantAccountId, dbFactory, request.IsNew, request.UserId);
 
             base.MessageProducer3.Publish(new RefreshSolutionConnectionsMqRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
@@ -107,9 +112,7 @@ namespace ExpressBase.ServiceStack.Services
         public void Post(ChangeObjectsDBConnectionRequest request)
         {
             TenantDbFactory dbFactory = new TenantDbFactory("expressbase", this.Redis);
-
             request.ObjectsDBConnection.Persist(request.TenantAccountId, dbFactory, request.IsNew, request.UserId);
-
             base.MessageProducer3.Publish(new RefreshSolutionConnectionsMqRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
         }
 
