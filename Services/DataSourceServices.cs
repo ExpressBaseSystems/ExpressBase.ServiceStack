@@ -7,6 +7,7 @@ using ServiceStack;
 using ServiceStack.Logging;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.IdentityModel.Tokens.Jwt;
 
 namespace ExpressBase.ServiceStack
@@ -23,27 +24,9 @@ namespace ExpressBase.ServiceStack
         {
             this.Log.Info("data request");
 
-            //var dt = this.DatabaseFactory.ObjectsDB.DoQuery(string.Format("SELECT obj_bytea FROM eb_objects_ver WHERE id={0}", request.Id));
-            //var dt = this.DatabaseFactory.ObjectsDB.DoQuery(string.Format(@"
-            //    SELECT EOV.obj_json FROM eb_objects_ver EOV 
-            //    INNER JOIN eb_objects EO
-            //    ON EO.id = EOV.eb_objects_id  AND EO.obj_last_ver_id =EOV.ver_num AND EOV.eb_objects_id={0}", request.RefId)
-            //   );
-
-            //var dt = this.DatabaseFactory.ObjectsDB.DoQuery(string.Format(@"
-            //    SELECT EOV.obj_bytea FROM eb_objects_ver EOV 
-            //    INNER JOIN eb_objects EO
-            //    ON EO.id = EOV.eb_objects_id  AND EOV.ver_num={0} AND EOV.eb_objects_id={1}", request.VersionId, request.Id)
-            //    );
-
-            //this.Log.Info("dt.Rows.Count *****" + dt.Rows.Count);
-            //this.Log.Info("ProtoBuf_DeSerialize *****" + EbSerializers.ProtoBuf_DeSerialize<EbDataSource>((byte[])dt.Rows[0][0]));
             DataSourceDataResponse dsresponse = null;
 
-            //if (dt.Rows.Count > 0)
-            //{
-            var _ds = this.Redis.Get<EbDataSource>(request.RefId); //EbSerializers.Json_Deserialize<EbDataSource>(dt.Rows[0][0].ToString());
-            this.Log.Info("_ds *****" + _ds/*.SqlDecoded()*/);
+            var _ds = this.Redis.Get<EbDataSource>(request.RefId);
             string _sql = string.Empty;
 
             if (_ds != null)
@@ -69,36 +52,19 @@ namespace ExpressBase.ServiceStack
                     }
                 }
 
-                _sql = _ds.Sql/*Decoded()*/.Replace("@and_search", _c);
+                _sql = _ds.Sql.Replace("@and_search", _c);
             }
-            this.Log.Info("search ok");
+
             _sql = _sql.Replace("@orderby",
                 (string.IsNullOrEmpty(request.OrderByCol)) ? "id" : string.Format("{0} {1}", request.OrderByCol, ((request.OrderByDir == 2) ? "DESC" : "ASC")));
-            this.Log.Info("order ok");
-            var parameters = new List<System.Data.Common.DbParameter>();
 
             bool _isPaged = (_sql.ToLower().Contains("@offset") && _sql.ToLower().Contains("@limit"));
-            if (_isPaged)
-            {
-                parameters.AddRange(new System.Data.Common.DbParameter[]
-                    {
-                            this.TenantDbFactory.ObjectsDB.GetNewParameter("@limit", System.Data.DbType.Int32, request.Length),
-                            this.TenantDbFactory.ObjectsDB.GetNewParameter("@offset", System.Data.DbType.Int32, request.Start),
-                    });
-            }
 
-            if (request.Params != null && request.Params.Count != 0)
-            {
-                foreach (Dictionary<string, string> param in request.Params)
-                    parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter(string.Format("@{0}", param["name"]), (System.Data.DbType)Convert.ToInt32(param["type"]), param["value"]));
-            }
-            else
-            {
-                    _sql = _sql.Replace("@id", "0");
-            }
-            this.Log.Info("GO**********************" + _sql);
-            var _dataset = this.TenantDbFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray());
-            this.Log.Info(">>>>>> _dataset.Tables.Count: " + _dataset.Tables.Count + ", " + _dataset.ToJson());
+            var parameters = DataHelper.GetParams(this.TenantDbFactory, _isPaged, request.Params);
+            if (request.Params == null)
+                _sql = _sql.Replace("@id", "0");
+
+            var _dataset = this.TenantDbFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray<System.Data.Common.DbParameter>());
 
             //-- 
             int _recordsTotal = 0, _recordsFiltered = 0;
@@ -119,12 +85,9 @@ namespace ExpressBase.ServiceStack
                 RecordsFiltered = _recordsFiltered
             };
             this.Log.Info("dsresponse*****" + dsresponse.Data);
-            //}
 
-            //return this.Request.ToOptimizedResult<DataSourceDataResponse>(dsresponse);
             return dsresponse;
         }
-
 
         [CompressResponse]
         public DataSourceColumnsResponse Any(DataSourceColumnsRequest request)
@@ -138,61 +101,28 @@ namespace ExpressBase.ServiceStack
             {
                 resp = new DataSourceColumnsResponse();
                 resp.Columns = new List<ColumnColletion>();
-                //                // getting DATASOURCE needs to be changed LIVE/DEV/TEST scenarios
-                //                string _sql_4dsBytea = string.Format(@"
-                //SELECT 
-                //    EOV.obj_json 
-                //FROM 
-                //    eb_objects_ver EOV, eb_objects EO 
-                //WHERE
-                //    EO.id = EOV.eb_objects_id AND 
-                //    EO.obj_last_ver_id = EOV.ver_num AND 
-                //    EO.id = {0}", request.Id);
 
-                //                var dt = this.DatabaseFactory.ObjectsDB.DoQuery(_sql_4dsBytea);
-
-                //if (dt.Rows.Count > 0)
-                //{
-                var _ds = this.Redis.Get<EbDataSource>(request.RefId); // EbSerializers.Json_Deserialize<EbDataSource>(dt.Rows[0][0].ToString());
+                var _ds = this.Redis.Get<EbDataSource>(request.RefId);
                 if(_ds == null)
                 {
                     var myService = base.ResolveService<EbObjectService>();
                     var result = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = request.RefId });
                     _ds = EbSerializers.Json_Deserialize(result.Data[0].Json);
                     Redis.Set<EbDataSource>(request.RefId, _ds);
-                  
                 }
+
                 if (_ds != null)
                 {
-                    Log.Info(">>>>>>>>>>>>>>>>>>>>>>>> dscolumns Sql: " /*+ _ds.SqlDecoded()*/);
-
                     string _sql = _ds.Sql/*Decoded()*/.Replace("@and_search", string.Empty).Replace("@orderby", "1");
                     _isPaged = (_sql.ToLower().Contains("@offset") && _sql.ToLower().Contains("@limit"));
 
-                    var parameters = new List<System.Data.Common.DbParameter>();
-                    if (_isPaged)
-                    {
-                        parameters.AddRange(new System.Data.Common.DbParameter[]
-                        {
-                            this.TenantDbFactory.ObjectsDB.GetNewParameter("@limit", System.Data.DbType.Int32, 0),
-                            this.TenantDbFactory.ObjectsDB.GetNewParameter("@offset", System.Data.DbType.Int32, 0)
-                        });
-                    }
-
-                    if (request.Params != null)
-                    {
-                        foreach (Dictionary<string, string> param in request.Params)
-                            parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter(string.Format("@{0}", param["name"]), (System.Data.DbType)Convert.ToInt32(param["type"]), param["value"]));
-                    }
-                    else
-                    {
-                            _sql = _sql.Replace("@id", "0");
-                    }
-                    Log.Info(">>>>>>>>>>>>>>>>>>>>>>>> dscolumns Parameters Added");
+                    var parameters = DataHelper.GetParams(this.TenantDbFactory, _isPaged, request.Params);
+                    if (request.Params == null)
+                        _sql = _sql.Replace("@id", "0");
 
                     try
                     {
-                        _dataset = this.TenantDbFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray());
+                        _dataset = this.TenantDbFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray<System.Data.Common.DbParameter>());
 
                         foreach (var dt in _dataset.Tables)
                             resp.Columns.Add(dt.Columns);

@@ -28,17 +28,18 @@ namespace ExpressBase.ServiceStack
 
         public ReportRenderResponse Get(ReportRenderRequest request)
         {
+            //-- Get REPORT object and Init 
             var myObjectservice = base.ResolveService<EbObjectService>();
-            var resultlist = (EbObjectParticularVersionResponse)myObjectservice.Get(new EbObjectParticularVersionRequest { RefId = request.Refid });
-
+            EbObjectParticularVersionResponse resultlist = myObjectservice.Get(new EbObjectParticularVersionRequest { RefId = request.Refid }) as EbObjectParticularVersionResponse;
             Report = EbSerializers.Json_Deserialize<EbReport>(resultlist.Data[0].Json);
             Report.ReportService = this;
             Report.FileService = base.ResolveService<FileService>();
             Report.SolutionId = request.TenantAccountId;
-
             Report.IsLastpage = false;
             Report.watermarkImages = new Dictionary<string, byte[]>();
             Report.WaterMarkList = new List<object>();
+            //-- END REPORT object INIT
+
             var myDataSourceservice = base.ResolveService<DataSourceService>();
             if (Report.DataSourceRefId != string.Empty)
             {
@@ -49,6 +50,7 @@ namespace ExpressBase.ServiceStack
                 dresp = myDataSourceservice.Any(new DataSourceDataRequest { RefId = Report.DataSourceRefId, Draw = 1, Start = 0, Length = 100 });
                 Report.DataRow = dresp.Data;
             }
+
             Rectangle rec = new Rectangle(Report.Width, Report.Height);
             Report.Doc = new Document(rec);
             Report.Ms1 = new MemoryStream();
