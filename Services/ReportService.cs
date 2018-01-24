@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -43,13 +44,16 @@ namespace ExpressBase.ServiceStack
             var myDataSourceservice = base.ResolveService<DataSourceService>();
             if (Report.DataSourceRefId != string.Empty)
             {
-                cresp = this.Redis.Get<DataSourceColumnsResponse>(string.Format("{0}_columns", Report.DataSourceRefId));
-                if (cresp.IsNull)
-                    cresp = myDataSourceservice.Any(new DataSourceColumnsRequest { RefId = Report.DataSourceRefId });
-                Report.DataColumns = (cresp.Columns.Count > 1) ? cresp.Columns[1] : cresp.Columns[0];
-                dresp = myDataSourceservice.Any(new DataSourceDataRequest { RefId = Report.DataSourceRefId, Draw = 1, Start = 0, Length = 100 });
-                Report.DataRow = dresp.Data;
+                //cresp = this.Redis.Get<DataSourceColumnsResponse>(string.Format("{0}_columns", Report.DataSourceRefId));
+                //if (cresp.IsNull)
+                //    cresp = myDataSourceservice.Any(new DataSourceColumnsRequest { RefId = Report.DataSourceRefId });
+                //Report.DataColumns = (cresp.Columns.Count > 1) ? cresp.Columns[1] : cresp.Columns[0];
+                dresp = myDataSourceservice.Any(new DataSourceDataRequest444 { RefId = Report.DataSourceRefId, Draw = 1, Start = 0, Length = 100 });
+                Report.DataSet = dresp.DataSet;
+                //Report.DataRow = dresp.Data;
             }
+
+
 
             Rectangle rec = new Rectangle(Report.Width, Report.Height);
             Report.Doc = new Document(rec);
@@ -73,10 +77,13 @@ namespace ExpressBase.ServiceStack
             Report.DrawDetail();
             Report.Doc.Close();
             Report.Ms1.Position = 0;//important
+            Report.DataSet.Tables.Clear();
+            Report.DataSet.Dispose();
             return new ReportRenderResponse { StreamWrapper = new MemorystreamWrapper(Report.Ms1) };
 
         }
-        public void GetWatermarkImages()
+
+        private void GetWatermarkImages()
         {
             var myFileService = base.ResolveService<FileService>();
             byte[] fileByte = null;
@@ -100,7 +107,6 @@ namespace ExpressBase.ServiceStack
                 }
             }
         }
-
     }
 
     public partial class HeaderFooter : PdfPageEventHelper
