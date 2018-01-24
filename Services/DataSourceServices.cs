@@ -9,6 +9,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.IdentityModel.Tokens.Jwt;
+using System.Data;
+using Npgsql;
 
 namespace ExpressBase.ServiceStack
 {
@@ -88,6 +90,96 @@ namespace ExpressBase.ServiceStack
 
             return dsresponse;
         }
+
+        [CompressResponse]
+        public DataSourceDataResponse Any(DataSourceDataRequest444 request)
+        {
+            this.Log.Info("data request");
+
+            DataSourceDataResponse dsresponse = null;
+
+            var _ds = this.Redis.Get<EbDataSource>(request.RefId);
+            string _sql = string.Empty;
+
+            if (_ds != null)
+            {
+                string _c = string.Empty;
+
+                if (request.TFilters != null)
+                {
+                    foreach (Dictionary<string, string> _dic in request.TFilters)
+                    {
+                        var op = _dic["o"]; var col = _dic["c"]; var val = _dic["v"];
+
+                        if (op == "x*")
+                            _c += string.Format("AND LOWER({0})::text LIKE LOWER('{1}%') ", col, val);
+                        else if (op == "*x")
+                            _c += string.Format("AND LOWER({0})::text LIKE LOWER('%{1}') ", col, val);
+                        else if (op == "*x*")
+                            _c += string.Format("AND LOWER({0})::text LIKE LOWER('%{1}%') ", col, val);
+                        else if (op == "=")
+                            _c += string.Format("AND LOWER({0}::text) = LOWER('{1}') ", col, val);
+                        else
+                            _c += string.Format("AND {0} {1} '{2}' ", col, op, val);
+                    }
+                }
+
+                _sql = _ds.Sql.Replace("@and_search", _c);
+            }
+
+            _sql = _sql.Replace("@orderby",
+                (string.IsNullOrEmpty(request.OrderByCol)) ? "id" : string.Format("{0} {1}", request.OrderByCol, ((request.OrderByDir == 2) ? "DESC" : "ASC")));
+
+            bool _isPaged = (_sql.ToLower().Contains("@offset") && _sql.ToLower().Contains("@limit"));
+
+            var parameters = DataHelper.GetParams(this.TenantDbFactory, _isPaged, request.Params, request.Length, request.Start).ToArray<System.Data.Common.DbParameter>();
+            if (request.Params == null)
+                _sql = _sql.Replace("@id", "0");
+
+            //var _dataset = this.TenantDbFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray<System.Data.Common.DbParameter>());
+
+            DataSet _dataset = new DataSet();
+            using (var con = this.TenantDbFactory.ObjectsDB.GetNewConnection() as NpgsqlConnection)
+            {
+                try
+                {
+                    con.Open();
+
+                    using (NpgsqlDataAdapter ada = new NpgsqlDataAdapter(_sql, con))
+                    {
+                        if (parameters != null && parameters.Length > 0)
+                            ada.SelectCommand.Parameters.AddRange(parameters);
+
+                        ada.Fill(_dataset);
+                    }
+                }
+                catch (Npgsql.NpgsqlException npgse) { }
+            }
+
+            //-- 
+            int _recordsTotal = 0, _recordsFiltered = 0;
+            if (_isPaged)
+            {
+                Int32.TryParse(_dataset.Tables[0].Rows[0][0].ToString(), out _recordsTotal);
+                Int32.TryParse(_dataset.Tables[0].Rows[0][0].ToString(), out _recordsFiltered);
+            }
+            _recordsTotal = (_recordsTotal > 0) ? _recordsTotal : _dataset.Tables[0].Rows.Count;
+            _recordsFiltered = (_recordsFiltered > 0) ? _recordsFiltered : _dataset.Tables[0].Rows.Count;
+            //-- 
+
+            dsresponse = new DataSourceDataResponse
+            {
+                Draw = request.Draw,
+                //Data = (_dataset.Tables.Count > 1) ? _dataset.Tables[1].Rows : _dataset.Tables[0].Rows,
+                DataSet = _dataset,
+                RecordsTotal = _recordsTotal,
+                RecordsFiltered = _recordsFiltered
+            };
+            this.Log.Info("dsresponse*****" + dsresponse.Data);
+
+            return dsresponse;
+        }
+
 
         [CompressResponse]
         public DataSourceColumnsResponse Any(DataSourceColumnsRequest request)
