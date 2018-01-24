@@ -122,9 +122,9 @@ WHERE
 SELECT 
 	EO.obj_name, EOV.refid, EOV.version_num, EO.obj_type,EOS.status
 FROM 
-	eb_objects EO, eb_objects_ver EOV,eb_objects_status EOS
+	eb_objects EO, eb_objects_ver EOV,eb_objects_status EOS,unnest(string_to_array(EO.obj_tags, ',')) Tags
 WHERE 
-	EO.obj_tags IN(@tags) AND EO.id =EOV.eb_objects_id
+	Tags IN(@tags) AND EO.id =EOV.eb_objects_id
     AND EOS.eb_obj_ver_id = EOV.id AND EOS.status = 3 AND EO.obj_type IN(16 ,17)";
 
         private const string Query_AllVerList = @"
