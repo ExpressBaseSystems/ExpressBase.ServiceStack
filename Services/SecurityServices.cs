@@ -67,7 +67,7 @@ namespace ExpressBase.ServiceStack.Services
 			using (var con = this.TenantDbFactory.ObjectsDB.GetNewConnection())
 			{
 				con.Open();
-				string sql = "SELECT id,role_name,description FROM eb_roles WHERE role_name ~* @searchtext";
+				string sql = "SELECT R.id,R.role_name,R.description,A.applicationname FROM eb_roles R, eb_applications A WHERE R.applicationid = A.id AND R.role_name ~* @searchtext";
 
 				DbParameter[] parameters = { this.TenantDbFactory.ObjectsDB.GetNewParameter("searchtext", System.Data.DbType.String, (request.Colvalues != null) ? request.Colvalues["searchtext"] : string.Empty) };
 
@@ -76,7 +76,7 @@ namespace ExpressBase.ServiceStack.Services
 				List<Eb_Roles_ForCommonList> returndata = new List<Eb_Roles_ForCommonList>();
 				foreach (EbDataRow dr in dt.Tables[0].Rows)
 				{
-					returndata.Add(new Eb_Roles_ForCommonList { Id = Convert.ToInt32(dr[0]), Name = dr[1].ToString(), Description = dr[2].ToString() });
+					returndata.Add(new Eb_Roles_ForCommonList { Id = Convert.ToInt32(dr[0]), Name = dr[1].ToString(), Description = dr[2].ToString(),Application_Name = dr[3].ToString() });
 				}
 				resp.Data = returndata;
 			}
@@ -265,54 +265,77 @@ namespace ExpressBase.ServiceStack.Services
 
 		public GetManageUserGroupResponse Any(GetManageUserGroupRequest request)
 		{
-			GetManageUserGroupResponse resp = new GetManageUserGroupResponse();
-			using (var con = this.TenantDbFactory.ObjectsDB.GetNewConnection())
+			List<DbParameter> parameters = new List<DbParameter>();
+			List<Eb_Users> _usersList = new List<Eb_Users>();
+			Dictionary<string, object> _userGroupInfo = new Dictionary<string, object>();
+			if (request.id > 0)
 			{
-				con.Open();
-				string sql = "";
-				if (request.id > 0)
+				string query = @"SELECT id,name,description FROM eb_usergroup WHERE id = @id;
+							SELECT U.id,U.firstname,U.email FROM eb_users U, eb_user2usergroup G WHERE G.groupid = @id AND U.id=G.userid AND G.eb_del = FALSE;";
+				parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.Int32, request.id));
+				var ds = this.TenantDbFactory.ObjectsDB.DoQueries(query, parameters.ToArray());
+				if (ds.Tables.Count > 0)
 				{
-					sql = @"SELECT id,name,description FROM eb_usergroup WHERE id = @id;
-                           SELECT id,firstname FROM eb_users WHERE id IN(SELECT userid FROM eb_user2usergroup WHERE groupid = @id AND eb_del = FALSE)";
-
-
-					DbParameter[] parameters = { this.TenantDbFactory.ObjectsDB.GetNewParameter("id", System.Data.DbType.Int32, request.id) };
-
-					var ds = this.TenantDbFactory.ObjectsDB.DoQueries(sql, parameters);
-					Dictionary<string, object> result = new Dictionary<string, object>();
-					foreach (var dr in ds.Tables[0].Rows)
+					_userGroupInfo.Add("id", Convert.ToInt32(ds.Tables[0].Rows[0][0]));
+					_userGroupInfo.Add("name", ds.Tables[0].Rows[0][1].ToString());
+					_userGroupInfo.Add("description", ds.Tables[0].Rows[0][2].ToString());
+					foreach (EbDataRow dr in ds.Tables[1].Rows)
 					{
-
-						result.Add("name", dr[1].ToString());
-						result.Add("description", dr[2].ToString());
+						_usersList.Add(new Eb_Users() { Id = Convert.ToInt32(dr[0]), Name = dr[1].ToString(), Email = dr[2].ToString() });
 					}
-					List<int> users = new List<int>();
-					if (ds.Tables.Count > 1)
-					{
-						foreach (EbDataRow dr in ds.Tables[1].Rows)
-						{
-							users.Add(Convert.ToInt32(dr[0]));
-							result.Add(dr[0].ToString(), dr[1]);
-						}
-						result.Add("userslist", users);
-					}
-					resp.Data = result;
 				}
-				else
-				{
-					sql = "SELECT id,name FROM eb_usergroup";
-					var dt = this.TenantDbFactory.ObjectsDB.DoQueries(sql);
-
-					Dictionary<string, object> returndata = new Dictionary<string, object>();
-					foreach (EbDataRow dr in dt.Tables[0].Rows)
-					{
-						returndata[dr[0].ToString()] = dr[1].ToString();
-					}
-					resp.Data = returndata;
-				}
-
 			}
-			return resp;
+			else
+				_userGroupInfo.Add("id", 0);
+
+			return new GetManageUserGroupResponse() { SelectedUserGroupInfo = _userGroupInfo, UsersList = _usersList };
+			//using (var con = this.TenantDbFactory.ObjectsDB.GetNewConnection())
+			//{
+			//	con.Open();
+			//	string sql = "";
+			//	if (request.id > 0)
+			//	{
+			//		sql = @"SELECT id,name,description FROM eb_usergroup WHERE id = @id;
+			//                        SELECT id,firstname FROM eb_users WHERE id IN(SELECT userid FROM eb_user2usergroup WHERE groupid = @id AND eb_del = FALSE)";
+
+
+			//		DbParameter[] parameters = { this.TenantDbFactory.ObjectsDB.GetNewParameter("id", System.Data.DbType.Int32, request.id) };
+
+			//		var ds = this.TenantDbFactory.ObjectsDB.DoQueries(sql, parameters);
+			//		Dictionary<string, object> result = new Dictionary<string, object>();
+			//		foreach (var dr in ds.Tables[0].Rows)
+			//		{
+
+			//			result.Add("name", dr[1].ToString());
+			//			result.Add("description", dr[2].ToString());
+			//		}
+			//		List<int> users = new List<int>();
+			//		if (ds.Tables.Count > 1)
+			//		{
+			//			foreach (EbDataRow dr in ds.Tables[1].Rows)
+			//			{
+			//				users.Add(Convert.ToInt32(dr[0]));
+			//				result.Add(dr[0].ToString(), dr[1]);
+			//			}
+			//			result.Add("userslist", users);
+			//		}
+			//		resp.Data = result;
+			//	}
+			//	else
+			//	{
+			//		sql = "SELECT id,name FROM eb_usergroup";
+			//		var dt = this.TenantDbFactory.ObjectsDB.DoQueries(sql);
+
+			//		Dictionary<string, object> returndata = new Dictionary<string, object>();
+			//		foreach (EbDataRow dr in dt.Tables[0].Rows)
+			//		{
+			//			returndata[dr[0].ToString()] = dr[1].ToString();
+			//		}
+			//		resp.Data = returndata;
+			//	}
+
+			//}
+			//return resp;
 		}
 
 		//----MANAGE ROLES START---------------------------------------
