@@ -174,7 +174,7 @@ namespace ExpressBase.ServiceStack
             SetConfig(new HostConfig { DebugMode = true });
             SetConfig(new HostConfig { DefaultContentType = MimeTypes.Json });
 
-            var redisConnectionString = string.Format("redis://{0}@{1}:{2}?ssl=true",
+            var redisConnectionString = string.Format("redis://{0}@{1}:{2}",
                EbLiveSettings.RedisPassword, EbLiveSettings.RedisServer, EbLiveSettings.RedisPort);
 
             //RedisBusPool = new PooledRedisClientManager(redisConnectionString);
