@@ -1119,27 +1119,19 @@ namespace ExpressBase.ServiceStack.Services
 
         }
 
-        public bool Any(UniqueRequest request)
+        public UniqueRequestResponse Any(UniqueRequest request)
         {
+            UniqueRequestResponse res = new UniqueRequestResponse();
             ILog log = LogManager.GetLogger(GetType());
-
             string sql = "SELECT id FROM eb_users WHERE email ~* @email";
-
-
             DbParameter[] parameters = { this.TenantDbFactory.ObjectsDB.GetNewParameter("email", System.Data.DbType.String, request.email) };
-
             var dt = this.TenantDbFactory.ObjectsDB.DoQuery(sql, parameters);
             if (dt.Rows.Count > 0)
-            {
-
-                return true;
-            }
+                res.isUniq = false;
             else
-            {
-
-                return false;
-            }
-
+                res.isUniq = true;
+           
+            return res;
         }
 
         public GetAccountResponse Any(GetAccountRequest request)
