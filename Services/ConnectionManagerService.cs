@@ -1,6 +1,7 @@
 ﻿using ExpressBase.Common;
 using ExpressBase.Common.Connections;
 using ExpressBase.Common.Data;
+using ExpressBase.Common.Data.MongoDB;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ServiceStack;
 using ServiceStack.Messaging;
@@ -130,21 +131,40 @@ namespace ExpressBase.ServiceStack.Services
 
             base.MessageProducer3.Publish(new RefreshSolutionConnectionsMqRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
         }
-        public bool Post(TestConnectionRequest request)
+
+        public TestConnectionResponse Post(TestConnectionRequest request)
         {
-            bool res = true;
+            TestConnectionResponse res = new TestConnectionResponse() { ConnectionStatus= true };
+
+            IDatabase DataDB = null;
             if (request.DataDBConnection.DatabaseVendor == DatabaseVendors.PGSQL)
-            {
-                IDatabase DataDB;
                 DataDB = new PGSQLDatabase(request.DataDBConnection);
-                try
-                {
-                    DataDB.DoQuery("select * from eb_users");
-                }
-               catch(Exception e)
-                {
-                    res = false;
-                }
+            else if (request.DataDBConnection.DatabaseVendor == DatabaseVendors.ORACLE)
+                DataDB = new OracleDB(request.DataDBConnection);
+
+            try
+            {
+                DataDB.DoNonQuery("CREATE TABLE eb_testConnection(id integer,connection_status text)");
+            }
+            catch(Exception e)
+            {
+                res.ConnectionStatus = false;
+            }
+            
+            return res;
+        }
+
+        public TestFileDbconnectionResponse Post(TestFileDbconnectionRequest request)
+        {
+            TestFileDbconnectionResponse res = new TestFileDbconnectionResponse();
+            try
+            {
+                MongoDBDatabase mongo = new MongoDBDatabase(request.UserId.ToString(), request.FilesDBConnection);
+                res.ConnectionStatus = true;
+            }
+            catch(Exception e)
+            {
+                res.ConnectionStatus = false;
             }
             return res;
         }
