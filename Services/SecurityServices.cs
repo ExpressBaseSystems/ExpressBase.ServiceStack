@@ -67,7 +67,13 @@ namespace ExpressBase.ServiceStack.Services
 			using (var con = this.TenantDbFactory.ObjectsDB.GetNewConnection())
 			{
 				con.Open();
-				string sql = "SELECT R.id,R.role_name,R.description,A.applicationname FROM eb_roles R, eb_applications A WHERE R.applicationid = A.id AND R.role_name ~* @searchtext";
+				string sql = @"SELECT R.id,R.role_name,R.description,A.applicationname,
+									(SELECT COUNT(role1_id) FROM eb_role2role WHERE role1_id=R.id AND eb_del=false) AS subrole_count,
+									(SELECT COUNT(user_id) FROM eb_role2user WHERE role_id=R.id AND eb_del=false) AS user_count,
+									(SELECT COUNT(distinct permissionname) FROM eb_role2permission RP, eb_objects2application OA WHERE role_id = R.id AND app_id=A.id AND RP.obj_id=OA.obj_id AND RP.eb_del = FALSE AND OA.eb_del = FALSE) AS permission_count
+								FROM eb_roles R, eb_applications A
+								WHERE R.applicationid = A.id AND R.role_name ~* @searchtext";
+				//string sql = "SELECT R.id,R.role_name,R.description,A.applicationname FROM eb_roles R, eb_applications A WHERE R.applicationid = A.id AND R.role_name ~* @searchtext";
 
 				DbParameter[] parameters = { this.TenantDbFactory.ObjectsDB.GetNewParameter("searchtext", System.Data.DbType.String, (request.Colvalues != null) ? request.Colvalues["searchtext"] : string.Empty) };
 
@@ -76,7 +82,7 @@ namespace ExpressBase.ServiceStack.Services
 				List<Eb_Roles_ForCommonList> returndata = new List<Eb_Roles_ForCommonList>();
 				foreach (EbDataRow dr in dt.Tables[0].Rows)
 				{
-					returndata.Add(new Eb_Roles_ForCommonList { Id = Convert.ToInt32(dr[0]), Name = dr[1].ToString(), Description = dr[2].ToString(),Application_Name = dr[3].ToString() });
+					returndata.Add(new Eb_Roles_ForCommonList { Id = Convert.ToInt32(dr[0]), Name = dr[1].ToString(), Description = dr[2].ToString(),Application_Name = dr[3].ToString(), SubRole_Count = Convert.ToInt32(dr[4]), User_Count = Convert.ToInt32(dr[5]), Permission_Count = Convert.ToInt32(dr[6]) });
 				}
 				resp.Data = returndata;
 			}
@@ -338,11 +344,50 @@ namespace ExpressBase.ServiceStack.Services
 			//return resp;
 		}
 
+		public SaveUserGroupResponse Post(SaveUserGroupRequest request)
+		{
+			SaveUserGroupResponse resp;
+			string sql = "SELECT * FROM eb_createormodifyusergroup(@userid,@id,@name,@description,@users);";
+			using (var con = this.TenantDbFactory.ObjectsDB.GetNewConnection())
+			{
+				con.Open();
+				
+				int[] emptyarr = new int[] { };
+				DbParameter[] parameters =
+					{
+						this.TenantDbFactory.ObjectsDB.GetNewParameter("userid", System.Data.DbType.Int32, request.UserId),
+						this.TenantDbFactory.ObjectsDB.GetNewParameter("id", System.Data.DbType.Int32, request.Id),
+						this.TenantDbFactory.ObjectsDB.GetNewParameter("name", System.Data.DbType.String, request.Name),
+						this.TenantDbFactory.ObjectsDB.GetNewParameter("description", System.Data.DbType.String, request.Description),
+						this.TenantDbFactory.ObjectsDB.GetNewParameter("users", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer,(request.Users != string.Empty? request.Users.Split(',').Select(n => Convert.ToInt32(n)).ToArray():emptyarr))
+					};
+
+				EbDataSet dt = this.TenantDbFactory.ObjectsDB.DoQueries(sql, parameters);
+
+
+
+				//if (string.IsNullOrEmpty(request.Colvalues["pwd"].ToString()) && request.Id < 0)
+				//{
+				//	using (var service = base.ResolveService<EmailService>())
+				//	{
+				//		//  service.Post(new EmailServicesRequest() { To = request.Colvalues["email"].ToString(), Subject = "New User", Message = string.Format("You are invited to join as user. Log in {0}.localhost:53431 using Username: {1} and Password : {2}", request.TenantAccountId, request.Colvalues["email"].ToString(), dt.Tables[0].Rows[0][1]) });
+				//	}
+				//}
+				resp = new SaveUserGroupResponse
+				{
+					id = Convert.ToInt32(dt.Tables[0].Rows[0][0])
+
+				};
+			}
+			return resp;
+		}
+
 		//----MANAGE ROLES START---------------------------------------
 		public GetManageRolesResponse Any(GetManageRolesRequest request)
 		{
 			string query = null;
 			List<DbParameter> parameters = new List<DbParameter>();
+			//old query
 			//SELECT DISTINCT EO.id, EO.obj_name, EO.obj_type, EO.applicationid
 			//FROM eb_objects EO, eb_objects_ver EOV, eb_objects_status EOS
 			//WHERE EO.id = EOV.eb_objects_id AND EOV.id = EOS.eb_obj_ver_id AND EOS.status = 3 AND EO.applicationid > 0;
