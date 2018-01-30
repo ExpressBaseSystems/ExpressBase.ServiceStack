@@ -62,7 +62,8 @@ SELECT
 	url, 
 	welcome_msg, 
 	fullname, 
-	botid
+	botid,
+    id
     
 FROM 
 	eb_bots 
@@ -77,6 +78,7 @@ WHERE
                 resp.WelcomeMsg = row[2].ToString();
                 resp.FullName = row[3].ToString();
                 resp.BotId = row[4].ToString();
+                resp.Id = Convert.ToInt32(row[5]);
             }
             return resp;
         }
