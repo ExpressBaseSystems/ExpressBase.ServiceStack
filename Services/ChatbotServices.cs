@@ -54,32 +54,34 @@ namespace ExpressBase.ServiceStack
         }
 
 
-//        public GetBotDetailsResponse Get(BotDetailsRequest request)
-//        {
-//            var Query1 = @"
-//SELECT 
-//	name, 
-//	url, 
-//	welcome_msg, 
-//	fullname, 
-//	botid
+        public GetBotDetailsResponse Get(BotDetailsRequest request)
+        {
+            var Query1 = @"
+SELECT 
+	name, 
+	url, 
+	welcome_msg, 
+	fullname, 
+	botid,
+    id
     
-//FROM 
-//	eb_bots 
-//WHERE 
-//	app_id = @appid;";
-//            EbDataTable table = this.TenantDbFactory.ObjectsDB.DoQuery(Query1.Replace("@appid", request.AppId.ToString()));
-//            GetBotDetailsResponse resp = new GetBotDetailsResponse();
-//            foreach (EbDataRow row in table.Rows)
-//            {
-//                resp.Name = row[0].ToString();
-//                resp.Url= row[1].ToString();
-//                resp.WelcomeMsg= row[2].ToString();
-//                resp.FullName = row[3].ToString();
-//                resp.BotId = row[4].ToString();
-//            }
-//            return resp;
-//        }
+FROM 
+	eb_bots 
+WHERE 
+	app_id = @appid;";
+            EbDataTable table = this.TenantDbFactory.ObjectsDB.DoQuery(Query1.Replace("@appid", request.AppId.ToString()));
+            GetBotDetailsResponse resp = new GetBotDetailsResponse();
+            foreach (EbDataRow row in table.Rows)
+            {
+                resp.Name = row[0].ToString();
+                resp.Url = row[1].ToString();
+                resp.WelcomeMsg = row[2].ToString();
+                resp.FullName = row[3].ToString();
+                resp.BotId = row[4].ToString();
+                resp.Id = Convert.ToInt32(row[5]);
+            }
+            return resp;
+        }
 
 
         public GetBotForm4UserResponse Get(GetBotForm4UserRequest request)
