@@ -1,6 +1,5 @@
 ﻿using ExpressBase.Common;
 using ExpressBase.Common.Data;
-using ExpressBase.Objects.ObjectContainers;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ServiceStack;
 using System;
@@ -69,7 +68,7 @@ FROM
 	eb_bots 
 WHERE 
 	app_id = @appid;";
-            EbDataTable table = this.TenantDbFactory.ObjectsDB.DoQuery(Query1.Replace("@appid", request.AppId.ToString()));
+            EbDataTable table = this.EbConnectionFactory.ObjectsDB.DoQuery(Query1.Replace("@appid", request.AppId.ToString()));
             GetBotDetailsResponse resp = new GetBotDetailsResponse();
             foreach (EbDataRow row in table.Rows)
             {

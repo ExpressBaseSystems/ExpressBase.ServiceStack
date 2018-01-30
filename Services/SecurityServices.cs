@@ -348,21 +348,21 @@ namespace ExpressBase.ServiceStack.Services
 		{
 			SaveUserGroupResponse resp;
 			string sql = "SELECT * FROM eb_createormodifyusergroup(@userid,@id,@name,@description,@users);";
-			using (var con = this.TenantDbFactory.ObjectsDB.GetNewConnection())
+			using (var con = this.EbConnectionFactory.ObjectsDB.GetNewConnection())
 			{
 				con.Open();
 				
 				int[] emptyarr = new int[] { };
 				DbParameter[] parameters =
 					{
-						this.TenantDbFactory.ObjectsDB.GetNewParameter("userid", System.Data.DbType.Int32, request.UserId),
-						this.TenantDbFactory.ObjectsDB.GetNewParameter("id", System.Data.DbType.Int32, request.Id),
-						this.TenantDbFactory.ObjectsDB.GetNewParameter("name", System.Data.DbType.String, request.Name),
-						this.TenantDbFactory.ObjectsDB.GetNewParameter("description", System.Data.DbType.String, request.Description),
-						this.TenantDbFactory.ObjectsDB.GetNewParameter("users", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer,(request.Users != string.Empty? request.Users.Split(',').Select(n => Convert.ToInt32(n)).ToArray():emptyarr))
+						this.EbConnectionFactory.ObjectsDB.GetNewParameter("userid", System.Data.DbType.Int32, request.UserId),
+						this.EbConnectionFactory.ObjectsDB.GetNewParameter("id", System.Data.DbType.Int32, request.Id),
+						this.EbConnectionFactory.ObjectsDB.GetNewParameter("name", System.Data.DbType.String, request.Name),
+						this.EbConnectionFactory.ObjectsDB.GetNewParameter("description", System.Data.DbType.String, request.Description),
+						this.EbConnectionFactory.ObjectsDB.GetNewParameter("users", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer,(request.Users != string.Empty? request.Users.Split(',').Select(n => Convert.ToInt32(n)).ToArray():emptyarr))
 					};
 
-				EbDataSet dt = this.TenantDbFactory.ObjectsDB.DoQueries(sql, parameters);
+				EbDataSet dt = this.EbConnectionFactory.ObjectsDB.DoQueries(sql, parameters);
 
 
 
