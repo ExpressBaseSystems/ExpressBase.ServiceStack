@@ -25,7 +25,7 @@ namespace ExpressBase.ServiceStack.Auth0
 
             if (!string.IsNullOrEmpty(session.FirstName))
             {
-                var _InfraDb = authService.ResolveService<ITenantDbFactory>() as TenantDbFactory;
+                var _InfraDb = authService.ResolveService<IEbConnectionFactory>() as EbConnectionFactory;
                 using (var con = _InfraDb.DataDB.GetNewConnection())
                 {
                     con.Open();

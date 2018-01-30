@@ -13,13 +13,13 @@ namespace ExpressBase.ServiceStack
     [Authenticate]
     public class GoogleMapServices : EbBaseService
     {
-        public GoogleMapServices(ITenantDbFactory _dbf) : base(_dbf) { }
+        public GoogleMapServices(IEbConnectionFactory _dbf) : base(_dbf) { }
 
         public GoogleMapResponse Any(GoogleMapRequest request)
         {
             List<EbGoogleData> f = new List<EbGoogleData>();
             var _sql = "select * from eb_google_map;";
-            var dt = this.TenantDbFactory.ObjectsDB.DoQuery(_sql);
+            var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(_sql);
             foreach (EbDataRow dr in dt.Rows)
             {
                 var _ebObject = (new EbGoogleData

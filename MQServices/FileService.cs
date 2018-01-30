@@ -18,12 +18,12 @@ namespace ExpressBase.ServiceStack.MQServices
 {
     public class FileService : EbBaseService, IEbFileService
     {
-        public FileService(ITenantDbFactory _tdb, IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_tdb, _mqp, _mqc) { }
+        public FileService(IEbConnectionFactory _tdb, IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_tdb, _mqp, _mqc) { }
 
         [Authenticate]
         public string Post(UploadFileRequest request)
         {
-            EbSolutionConnections SolutionConnections = this.Redis.Get<EbSolutionConnections>(string.Format("EbSolutionConnections_{0}", request.TenantAccountId));
+            EbConnections SolutionConnections = this.Redis.Get<EbConnections>(string.Format("EbSolutionConnections_{0}", request.TenantAccountId));
 
             string bucketName = "files";
 
@@ -66,7 +66,7 @@ namespace ExpressBase.ServiceStack.MQServices
 
             else if (!request.IsAsync)
             {
-                string Id = this.TenantDbFactory.FilesDB.UploadFile(
+                string Id = this.EbConnectionFactory.FilesDB.UploadFile(
                     request.FileDetails.FileName,
                     (request.FileDetails.MetaDataDictionary != null) ?
                             request.FileDetails.MetaDataDictionary :
@@ -136,7 +136,7 @@ namespace ExpressBase.ServiceStack.MQServices
 
                 objectId = new ObjectId(FileNameParts[0]);
 
-                return (new TenantDbFactory(request.TenantAccountId, this.Redis)).FilesDB.DownloadFile(new ObjectId(FileNameParts[0]), bucketName);
+                return (new EbConnectionFactory(request.TenantAccountId, this.Redis)).FilesDB.DownloadFile(new ObjectId(FileNameParts[0]), bucketName);
             }
             else if (FileNameParts.Length == 2)
             {
@@ -157,7 +157,7 @@ namespace ExpressBase.ServiceStack.MQServices
 
             if (bucketName != string.Empty)
             {
-                return (this.TenantDbFactory.FilesDB.DownloadFile(request.FileDetails.FileName, bucketName));
+                return (this.EbConnectionFactory.FilesDB.DownloadFile(request.FileDetails.FileName, bucketName));
             }
             else { return (new byte[0]); }
         }
@@ -166,7 +166,7 @@ namespace ExpressBase.ServiceStack.MQServices
         public List<FileMeta> Post(FindFilesByTagRequest request)
         {
             List<FileMeta> FileList = new List<FileMeta>();
-            using (var con = this.TenantDbFactory.DataDB.GetNewConnection() as Npgsql.NpgsqlConnection)
+            using (var con = this.EbConnectionFactory.DataDB.GetNewConnection() as Npgsql.NpgsqlConnection)
             {
                 try
                 {
@@ -204,7 +204,7 @@ namespace ExpressBase.ServiceStack.MQServices
             if (request.ImageInfo.FileName.StartsWith("dp"))
                 bucketName = "dp_images";
 
-            EbSolutionConnections SolutionConnections = this.Redis.Get<EbSolutionConnections>(string.Format("EbSolutionConnections_{0}", request.TenantAccountId));
+            EbConnections SolutionConnections = this.Redis.Get<EbConnections>(string.Format("EbSolutionConnections_{0}", request.TenantAccountId));
 
             if (request.IsAsync)
             {
@@ -233,7 +233,7 @@ namespace ExpressBase.ServiceStack.MQServices
             }
             else if (!request.IsAsync)
             {
-                string Id = (new TenantDbFactory(request.TenantAccountId, this.Redis)).FilesDB.UploadFile(
+                string Id = (new EbConnectionFactory(request.TenantAccountId, this.Redis)).FilesDB.UploadFile(
                     request.ImageInfo.FileName,
                     request.ImageInfo.MetaDataDictionary,
                     request.ImageByte,
@@ -298,7 +298,7 @@ namespace ExpressBase.ServiceStack.MQServices
             {
                 try
                 {
-                    string Id = (new TenantDbFactory(request.TenantAccountId, this.Redis)).FilesDB.UploadFile(
+                    string Id = (new EbConnectionFactory(request.TenantAccountId, this.Redis)).FilesDB.UploadFile(
                         request.FileDetails.FileName,
                         (request.FileDetails.MetaDataDictionary.Count != 0) ?
                             request.FileDetails.MetaDataDictionary :
@@ -421,7 +421,7 @@ namespace ExpressBase.ServiceStack.MQServices
                     {
                         tag = string.Join(",", items.Value);
                     }
-                TenantDbFactory tenantDbFactory = new TenantDbFactory(request.TenantAccountId, this.Redis);
+                EbConnectionFactory tenantDbFactory = new EbConnectionFactory(request.TenantAccountId, this.Redis);
 
                 string sql = "INSERT INTO eb_files(userid, objid, length, filetype, tags, bucketname, uploaddatetime) VALUES(@userid, @objid, @length, @filetype, @tags, @bucketname, CURRENT_TIMESTAMP) RETURNING id";
                 DbParameter[] parameters =

@@ -14,7 +14,7 @@ namespace ExpressBase.ServiceStack.Services
 {
     public class ExcelUploadService : EbBaseService
     {
-        public ExcelUploadService(ITenantDbFactory _dbf) : base(_dbf) { }
+        public ExcelUploadService(IEbConnectionFactory _dbf) : base(_dbf) { }
 
         [CompressResponse]
 
@@ -22,8 +22,8 @@ namespace ExpressBase.ServiceStack.Services
         public CheckTblResponse Any(CheckTblRequest request)
         {
             string qry = "SELECT EXISTS (SELECT 1 FROM   information_schema.tables WHERE  table_schema = 'public' AND table_name = @tbl); ";
-            DbParameter[] parameter = { this.TenantDbFactory.ObjectsDB.GetNewParameter("@tbl", System.Data.DbType.String, request.tblName.ToLower()) };
-            var rslt = this.TenantDbFactory.ObjectsDB.DoQuery(qry, parameter);
+            DbParameter[] parameter = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("@tbl", System.Data.DbType.String, request.tblName.ToLower()) };
+            var rslt = this.EbConnectionFactory.ObjectsDB.DoQuery(qry, parameter);
             CheckTblResponse response = new CheckTblResponse();
             response.msg = rslt.Rows[0];
             return response;
@@ -41,7 +41,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             query = query.Remove(query.LastIndexOf(','));
             query += "); ";
-            this.TenantDbFactory.ObjectsDB.DoNonQuery(query);
+            this.EbConnectionFactory.ObjectsDB.DoNonQuery(query);
             return new CreateTblResponse();
         }
 
@@ -76,14 +76,14 @@ namespace ExpressBase.ServiceStack.Services
                     var item = dr.ItemArray[i];
 
                     sql += "@item" + iter2 + ",";
-                    parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@item" + iter2, dbtype(dict[dt.Columns[i].ToString()]), item));
+                    parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@item" + iter2, dbtype(dict[dt.Columns[i].ToString()]), item));
                     iter2++;
                 }
                 sql = sql.Remove(sql.LastIndexOf(','));
                 sql += "); ";
 
             }
-            this.TenantDbFactory.ObjectsDB.DoNonQuery(sql, parameters.ToArray());
+            this.EbConnectionFactory.ObjectsDB.DoNonQuery(sql, parameters.ToArray());
             return new InsertIntoTblResponse();
         }
 
@@ -227,7 +227,7 @@ namespace ExpressBase.ServiceStack.Services
             string query = query1 + query2;
 
 
-            this.TenantDbFactory.ObjectsDB.DoNonQuery(query);
+            this.EbConnectionFactory.ObjectsDB.DoNonQuery(query);
 
 
             return new ExcelCreateTableResponse();
@@ -238,7 +238,7 @@ namespace ExpressBase.ServiceStack.Services
         {
             string qry = string.Format("SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname != 'pg_catalog' AND schemaname != 'information_schema' ORDER BY tablename asc;");
 
-            var rslt = this.TenantDbFactory.ObjectsDB.DoQuery(qry);
+            var rslt = this.EbConnectionFactory.ObjectsDB.DoQuery(qry);
 
             List<String> tbl_name = new List<string>();
             foreach (EbDataRow dr in rslt.Rows)
@@ -259,7 +259,7 @@ namespace ExpressBase.ServiceStack.Services
             string qry = string.Format("select column_name,data_type from INFORMATION_SCHEMA.COLUMNS where table_name='") + request.tblName + string.Format("';");
 
             //DataTable rslt = new DataTable();
-            var rslt = this.TenantDbFactory.ObjectsDB.DoQuery(qry);
+            var rslt = this.EbConnectionFactory.ObjectsDB.DoQuery(qry);
 
             return new DBColumnResponse { tbl = rslt };
         }

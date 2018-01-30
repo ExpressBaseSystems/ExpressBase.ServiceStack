@@ -17,7 +17,7 @@ namespace ExpressBase.ServiceStack
     [Authenticate]
     public class DataVisService : EbBaseService
     {
-        public DataVisService(ITenantDbFactory _dbf) : base(_dbf) { }
+        public DataVisService(IEbConnectionFactory _dbf) : base(_dbf) { }
         
         [CompressResponse]
         public DataSourceDataResponse Any(DataVisDataRequest request)
@@ -74,18 +74,18 @@ namespace ExpressBase.ServiceStack
             {
                 parameters.AddRange(new System.Data.Common.DbParameter[]
                 {
-                    this.TenantDbFactory.ObjectsDB.GetNewParameter("@limit", System.Data.DbType.Int32, request.Length),
-                    this.TenantDbFactory.ObjectsDB.GetNewParameter("@offset", System.Data.DbType.Int32, request.Start),
+                    this.EbConnectionFactory.ObjectsDB.GetNewParameter("@limit", System.Data.DbType.Int32, request.Length),
+                    this.EbConnectionFactory.ObjectsDB.GetNewParameter("@offset", System.Data.DbType.Int32, request.Start),
                 });
             }
 
             if (request.Params != null)
             {
                 foreach (Dictionary<string, string> param in request.Params)
-                    parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter(string.Format("@{0}", param["name"]), (System.Data.DbType)Convert.ToInt32(param["type"]), param["value"]));
+                    parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(string.Format("@{0}", param["name"]), (System.Data.DbType)Convert.ToInt32(param["type"]), param["value"]));
             }
 
-            var _dataset = _dV.DoQueries4DataVis(_sql, this.TenantDbFactory, parameters.ToArray());
+            var _dataset = _dV.DoQueries4DataVis(_sql, this.EbConnectionFactory, parameters.ToArray());
 
             //-- 
             int _recordsTotal = 0, _recordsFiltered = 0;
@@ -140,22 +140,22 @@ namespace ExpressBase.ServiceStack
                     {
                         parameters.AddRange(new System.Data.Common.DbParameter[]
                         {
-                            this.TenantDbFactory.ObjectsDB.GetNewParameter("@limit", System.Data.DbType.Int32, 0),
-                            this.TenantDbFactory.ObjectsDB.GetNewParameter("@offset", System.Data.DbType.Int32, 0)
+                            this.EbConnectionFactory.ObjectsDB.GetNewParameter("@limit", System.Data.DbType.Int32, 0),
+                            this.EbConnectionFactory.ObjectsDB.GetNewParameter("@offset", System.Data.DbType.Int32, 0)
                         });
                     }
 
                     if (request.Params != null)
                     {
                         foreach (Dictionary<string, string> param in request.Params)
-                            parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter(string.Format("@{0}", param["name"]), (System.Data.DbType)Convert.ToInt32(param["type"]), param["value"]));
+                            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(string.Format("@{0}", param["name"]), (System.Data.DbType)Convert.ToInt32(param["type"]), param["value"]));
                     }
 
                     Log.Info(">>>>>>>>>>>>>>>>>>>>>>>> dscolumns Parameters Added");
 
                     try
                     {
-                        _dataset = this.TenantDbFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray());
+                        _dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray());
 
                         foreach (var dt in _dataset.Tables)
                             resp.Columns.Add(dt.Columns);

@@ -25,7 +25,7 @@ namespace ExpressBase.ServiceStack
 
         public EbReport Report = null;
         private iTextSharp.text.Font f = FontFactory.GetFont(FontFactory.HELVETICA, 12);
-        public ReportService(ITenantDbFactory _dbf) : base(_dbf) { }
+        public ReportService(IEbConnectionFactory _dbf) : base(_dbf) { }
 
         public ReportRenderResponse Get(ReportRenderRequest request)
         {

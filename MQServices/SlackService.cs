@@ -49,7 +49,7 @@ namespace ExpressBase.ServiceStack.MQServices
         {
             public string Post(SlackAuthMqRequest req)
             {
-                TenantDbFactory dbFactory = new TenantDbFactory(req.TenantAccountId, this.Redis);
+                EbConnectionFactory dbFactory = new EbConnectionFactory(req.TenantAccountId, this.Redis);
 
                 if (req.IsNew)
                 {
@@ -77,7 +77,7 @@ namespace ExpressBase.ServiceStack.MQServices
 
             public string Post(SlackPostMqRequest req)
             {
-                TenantDbFactory dbFactory = new TenantDbFactory(req.TenantAccountId, this.Redis);
+                EbConnectionFactory dbFactory = new EbConnectionFactory(req.TenantAccountId, this.Redis);
 
                 string sql = "SELECT slackjson FROM eb_users WHERE id = @id";
                 

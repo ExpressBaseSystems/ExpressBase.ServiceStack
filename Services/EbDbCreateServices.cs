@@ -13,18 +13,18 @@ namespace ExpressBase.ServiceStack.Services
     public class EbDbCreateServices : EbBaseService
     {
 
-        public EbDbCreateServices(ITenantDbFactory _dbf) : base(_dbf) { }
+        public EbDbCreateServices(IEbConnectionFactory _idbf) : base(_idbf) { }
 
         public EbDbCreateResponse Any(EbDbCreateRequest request)
         {
             bool rslt;
-            using (var con = TenantDbFactory.DataDB.GetNewConnection())
+            using (var con = this.EbConnectionFactory.DataDB.GetNewConnection())
             {
                 try
                 {
                     con.Open();
                     string sql = string.Format("CREATE DATABASE {0};", request.dbName);
-                    var cmd = TenantDbFactory.DataDB.GetNewCommand(con, sql);
+                    var cmd = EbConnectionFactory.DataDB.GetNewCommand(con, sql);
                     cmd.ExecuteNonQuery();
 
 
@@ -50,7 +50,7 @@ namespace ExpressBase.ServiceStack.Services
         public bool DbOperations(EbDbCreateRequest request)
         {
             bool rtn;
-            using (var con1 = TenantDbFactory.DataDB.GetNewConnection(request.dbName.ToLower()))
+            using (var con1 = this.EbConnectionFactory.DataDB.GetNewConnection(request.dbName.ToLower()))
             {
                 con1.Open();
 
@@ -135,7 +135,7 @@ namespace ExpressBase.ServiceStack.Services
                     {
                         result = reader.ReadToEnd();
                     }
-                    var cmdtxt1 = TenantDbFactory.DataDB.GetNewCommand(con, result);
+                    var cmdtxt1 = EbConnectionFactory.DataDB.GetNewCommand(con, result);
                     cmdtxt1.ExecuteNonQuery();
                 }
             }
@@ -152,22 +152,22 @@ namespace ExpressBase.ServiceStack.Services
             {
                 //.......select details from server tbl eb_usres.........
                 string sql1 = "SELECT email,pwd,firstname,socialid FROM eb_users WHERE id=@uid";
-                DbParameter[] parameter = { this.TenantDbFactory.ObjectsDB.GetNewParameter("@uid", System.Data.DbType.Int32, request.UserId) };
-                var rslt = this.TenantDbFactory.ObjectsDB.DoQuery(sql1, parameter);
+                DbParameter[] parameter = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("@uid", System.Data.DbType.Int32, request.UserId) };
+                var rslt = this.EbConnectionFactory.ObjectsDB.DoQuery(sql1, parameter);
 
                 //..............insert into client tbl eb_users............ 
                 string sql2 = "INSERT INTO eb_users(email,pwd,firstname,socialid) VALUES (@email,@pwd,@firstname,@socialid);";
-                var cmdtxt3 = TenantDbFactory.DataDB.GetNewCommand(con, sql2);
-                cmdtxt3.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("email", System.Data.DbType.String, rslt.Rows[0][0]));
-                cmdtxt3.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("pwd", System.Data.DbType.String, rslt.Rows[0][1]));
-                cmdtxt3.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("firstname", System.Data.DbType.String, rslt.Rows[0][2]));
-                cmdtxt3.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("socialid", System.Data.DbType.String, rslt.Rows[0][3]));
+                var cmdtxt3 = EbConnectionFactory.DataDB.GetNewCommand(con, sql2);
+                cmdtxt3.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("email", System.Data.DbType.String, rslt.Rows[0][0]));
+                cmdtxt3.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("pwd", System.Data.DbType.String, rslt.Rows[0][1]));
+                cmdtxt3.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("firstname", System.Data.DbType.String, rslt.Rows[0][2]));
+                cmdtxt3.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("socialid", System.Data.DbType.String, rslt.Rows[0][3]));
                 cmdtxt3.ExecuteNonQuery();
 
                 //.....select tenant id from eb_users tbl of client....
                 string sql3 = "SELECT max(id) FROM eb_users;";
                 //var id= TenantDbFactory.DataDB.DoQuery(sql3);
-                DbCommand cmd = this.TenantDbFactory.ObjectsDB.GetNewCommand(con, sql3);
+                DbCommand cmd = this.EbConnectionFactory.ObjectsDB.GetNewCommand(con, sql3);
                 var id = cmd.ExecuteScalar().ToString();
 
                 //.......add role to tenant as a/c owner
@@ -176,7 +176,7 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     sql4 += string.Format("INSERT INTO eb_role2user(role_id,user_id,createdat) VALUES ({0},{1},now());", (int)role, id);
                 }
-                var cmdtxt5 = TenantDbFactory.DataDB.GetNewCommand(con, sql4);
+                var cmdtxt5 = EbConnectionFactory.DataDB.GetNewCommand(con, sql4);
                 cmdtxt5.ExecuteNonQuery();
             }
             catch (Exception e) { return false; }

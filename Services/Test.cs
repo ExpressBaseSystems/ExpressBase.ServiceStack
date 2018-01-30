@@ -11,11 +11,11 @@ namespace ExpressBase.ServiceStack.Services
 {
     public class Test : EbBaseService
     {
-        public Test(ITenantDbFactory _dbf) : base(_dbf) { }
+        public Test(IEbConnectionFactory _dbf) : base(_dbf) { }
         public TestResponse Any(TestRequest request)
         {
             ILog log = LogManager.GetLogger(GetType());
-            var con = TenantDbFactory.DataDB.GetNewConnection();
+            var con = EbConnectionFactory.DataDB.GetNewConnection();
             log.Info("Connection");
             con.Open();
             log.Info(".............."+con+"Connection Opened");

@@ -24,7 +24,7 @@ namespace ExpressBase.ServiceStack.Auth0
             ILog log = LogManager.GetLogger(GetType());
 
             log.Info("In TryAuthenticate method1");
-            var TenantDbFactory = authService.ResolveService<ITenantDbFactory>() as TenantDbFactory;
+            var TenantDbFactory = authService.ResolveService<IEbConnectionFactory>() as EbConnectionFactory;
 
             log.Info("In TryAuthenticate method2");
 
@@ -34,8 +34,6 @@ namespace ExpressBase.ServiceStack.Auth0
 
             var cid = request.Meta.ContainsKey("cid") ? request.Meta["cid"] : string.Empty;
             var socialId = request.Meta.ContainsKey("socialId") ? request.Meta["socialId"] : string.Empty;
-
-            //EbBaseService bservice = new EbBaseService();
 
             if (request.Meta.ContainsKey("signup_tok"))
             {

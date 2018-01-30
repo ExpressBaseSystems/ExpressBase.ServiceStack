@@ -10,13 +10,13 @@ namespace ExpressBase.ServiceStack
 {
     public class DevRelatedServices : EbBaseService
     {
-        public DevRelatedServices(ITenantDbFactory _dbf) : base(_dbf) { }
+        public DevRelatedServices(IEbConnectionFactory _dbf) : base(_dbf) { }
 
         public GetApplicationResponse Get(GetApplicationRequest request)
         {
             GetApplicationResponse resp = new GetApplicationResponse();
 
-            using (var con = TenantDbFactory.DataDB.GetNewConnection())
+            using (var con = EbConnectionFactory.DataDB.GetNewConnection())
             {
                 string sql = "";
                 if (request.id > 0)
@@ -28,9 +28,9 @@ namespace ExpressBase.ServiceStack
                 {
                     sql = "SELECT id, applicationname FROM eb_applications";
                 }
-                DbParameter[] parameters = { this.TenantDbFactory.ObjectsDB.GetNewParameter("id", System.Data.DbType.Int32, request.id) };
+                DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("id", System.Data.DbType.Int32, request.id) };
 
-                var dt = this.TenantDbFactory.ObjectsDB.DoQuery(sql, parameters);
+                var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(sql, parameters);
 
                 Dictionary<string, object> Dict = new Dictionary<string, object>();
                 if (dt.Rows.Count > 1)
