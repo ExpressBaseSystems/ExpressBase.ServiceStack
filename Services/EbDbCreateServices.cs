@@ -1,100 +1,105 @@
 ﻿using ExpressBase.Common;
+using ExpressBase.Common.Connections;
 using ExpressBase.Common.Data;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using System;
-using System.Collections.Generic;
 using System.Data.Common;
 using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace ExpressBase.ServiceStack.Services
 {
     public class EbDbCreateServices : EbBaseService
     {
+        private EbConnectionFactory _dcConnectionFactory = null;
+
+        private EbConnectionFactory DCConnectionFactory
+        {
+            get
+            {
+                if(_dcConnectionFactory == null)
+                    _dcConnectionFactory = new EbConnectionFactory(EbConnectionsConfigProvider.DataCenterConnections);
+
+                return _dcConnectionFactory;
+            }
+        }
 
         public EbDbCreateServices(IEbConnectionFactory _idbf) : base(_idbf) { }
 
         public EbDbCreateResponse Any(EbDbCreateRequest request)
         {
-            bool rslt;
-            using (var con = this.EbConnectionFactory.DataDB.GetNewConnection())
+            EbDbCreateResponse resp = new EbDbCreateResponse();
+
+            using (var con = this.DCConnectionFactory.DataDB.GetNewConnection())
             {
                 try
                 {
                     con.Open();
-                    string sql = string.Format("CREATE DATABASE {0};", request.dbName);
-                    var cmd = EbConnectionFactory.DataDB.GetNewCommand(con, sql);
+                    var cmd = this.DCConnectionFactory.DataDB.GetNewCommand(con, string.Format("CREATE DATABASE {0};", request.dbName));
                     cmd.ExecuteNonQuery();
 
-
-                    rslt = DbOperations(request);
+                    resp.resp = DbOperations(request);
                 }
 
                 catch (Exception e)
                 {
                     if (e.Data["Code"].ToString() == "42P04")
-                    {
-
-                        rslt = DbOperations(request);
-                    }
-                    else
-                    {
-                        return new EbDbCreateResponse() { resp = false };
-                    }
+                        resp.resp = DbOperations(request);
                 }
             }
-            return new EbDbCreateResponse() { resp = rslt };
+
+            return resp;
         }
 
         public bool DbOperations(EbDbCreateRequest request)
         {
-            bool rtn;
-            using (var con1 = this.EbConnectionFactory.DataDB.GetNewConnection(request.dbName.ToLower()))
-            {
-                con1.Open();
+            bool rtn = false;
 
-                var con_trans = con1.BeginTransaction();
-                //try
-                //{
-                //......*********USER TABLE******************.......
+            EbConnectionsConfig _solutionConnections = EbConnectionsConfigProvider.DataCenterConnections;
+
+            _solutionConnections.ObjectsDbConnection.DatabaseName = request.dbName.ToLower();
+            _solutionConnections.DataDbConnection.DatabaseName = request.dbName.ToLower();
+
+            using (var con = (new EbConnectionFactory(_solutionConnections)).DataDB.GetNewConnection())
+            {
+                con.Open();
+                var con_trans = con.BeginTransaction();
 
                 //.......create user table sequence...............
                 string path = "ExpressBase.Common.SqlScripts.PostGreSql.DataDb.Alter_Eb_User_Sequences.sql";
-                bool b1 = CreateOrAlter_Structure(request, con1, path);
+                bool b1 = CreateOrAlter_Structure(request, con, path);
 
                 //.........create user table........................
                 path = "ExpressBase.Common.SqlScripts.PostGreSql.DataDb.Create_Eb_User.sql";
-                bool b2 = CreateOrAlter_Structure(request, con1, path);
+                bool b2 = CreateOrAlter_Structure(request, con, path);
 
                 //.......create user table index...............
                 path = "ExpressBase.Common.SqlScripts.PostGreSql.DataDb.Create_Eb_User_Indexes.sql";
-                bool b3 = CreateOrAlter_Structure(request, con1, path);
+                bool b3 = CreateOrAlter_Structure(request, con, path);
 
                 //.......create user table Functions...............
                 path = "ExpressBase.Common.SqlScripts.PostGreSql.DataDb.Create_Eb_User_Functions.sql";
-                bool b4 = CreateOrAlter_Structure(request, con1, path);
+                bool b4 = CreateOrAlter_Structure(request, con, path);
 
                 //...........*************OBJECT TABLE***************...........
 
                 //...........create object table sequences...........
                 path = "ExpressBase.Common.SqlScripts.PostGreSql.ObjectsDb.Alter_Eb_Object_Sequences.sql";
-                bool b5 = CreateOrAlter_Structure(request, con1, path);
+                bool b5 = CreateOrAlter_Structure(request, con, path);
 
                 //.......create object tables..............
                 path = "ExpressBase.Common.SqlScripts.PostGreSql.ObjectsDb.Create_Eb_Objects.sql";
-                bool b6 = CreateOrAlter_Structure(request, con1, path);
+                bool b6 = CreateOrAlter_Structure(request, con, path);
 
                 //.......create object table index...........
                 path = "ExpressBase.Common.SqlScripts.PostGreSql.ObjectsDb.Create_Eb_Object_Indexes.sql";
-                bool b7 = CreateOrAlter_Structure(request, con1, path);
+                bool b7 = CreateOrAlter_Structure(request, con, path);
 
                 //.......create object table functions...........
                 path = "ExpressBase.Common.SqlScripts.PostGreSql.ObjectsDb.Create_Eb_Object_Functions.sql";
-                bool b8 = CreateOrAlter_Structure(request, con1, path);
+                bool b8 = CreateOrAlter_Structure(request, con, path);
 
                 //.....insert into user tables.........
-                bool b9 = InsertIntoTables(request, con1);
+                bool b9 = InsertIntoTables(request, con);
 
                 if (b1 & b2 & b3 & b4 & b5 & b6 & b7 & b8 & b9)
                 {
@@ -102,29 +107,17 @@ namespace ExpressBase.ServiceStack.Services
                     rtn = true;
                 }
                 else
-                {
                     con_trans.Rollback();
-                    rtn = false;
-                }
-                    //con_trans.Commit();
-                    // b = true;
-
-                    //}
-                    //catch (Exception e)
-                    //{
-                    //    con_trans.Rollback();
-                    //    return false;
-                    //}
             }
+
             return rtn;
         }
 
         public bool CreateOrAlter_Structure(EbDbCreateRequest request, DbConnection con, string path)
         {
-
             try
             {
-                string result;
+                string result = null;
 
                 var assembly = typeof(ExpressBase.Common.Resource).Assembly;
 
@@ -132,9 +125,8 @@ namespace ExpressBase.ServiceStack.Services
                 using (Stream stream = assembly.GetManifestResourceStream(path))
                 {
                     using (StreamReader reader = new StreamReader(stream))
-                    {
                         result = reader.ReadToEnd();
-                    }
+
                     var cmdtxt1 = EbConnectionFactory.DataDB.GetNewCommand(con, result);
                     cmdtxt1.ExecuteNonQuery();
                 }
@@ -143,6 +135,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 return false;
             }
+
             return true;
         }
 
@@ -165,11 +158,12 @@ namespace ExpressBase.ServiceStack.Services
 				var id = Convert.ToInt32(cmdtxt3.ExecuteScalar());
 
                 //.......add role to tenant as a/c owner
-                string sql4 = "";
+                string sql4 = string.Empty;
                 foreach (var role in Enum.GetValues(typeof(SystemRoles)))
                 {
                     sql4 += string.Format("INSERT INTO eb_role2user(role_id,user_id,createdat) VALUES ({0},{1},now());", (int)role, id);
                 }
+
                 var cmdtxt5 = EbConnectionFactory.DataDB.GetNewCommand(con, sql4);
                 cmdtxt5.ExecuteNonQuery();
             }

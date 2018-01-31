@@ -25,7 +25,7 @@ namespace ExpressBase.ServiceStack.MQServices
                     ada.SelectCommand.Parameters.Add(new Npgsql.NpgsqlParameter("solution_id", NpgsqlTypes.NpgsqlDbType.Text) { Value = req.TenantAccountId });
                     ada.Fill(dt);
 
-                    EbConnections cons = new EbConnections();
+                    EbConnectionsConfig cons = new EbConnectionsConfig();
                     foreach (DataRow dr in dt.Rows)
                     {
                         if (dr["con_type"].ToString() == EbConnectionTypes.EbDATA.ToString())
@@ -45,7 +45,7 @@ namespace ExpressBase.ServiceStack.MQServices
                         // ... More to come
                     }
 
-                    Redis.Set<EbConnections>(string.Format(CoreConstants.SOLUTION_CONNECTION_REDIS_KEY, req.TenantAccountId), cons);
+                    Redis.Set<EbConnectionsConfig>(string.Format(CoreConstants.SOLUTION_CONNECTION_REDIS_KEY, req.TenantAccountId), cons);
 
                     return true;
                 }

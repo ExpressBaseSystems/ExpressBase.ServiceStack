@@ -24,7 +24,7 @@ namespace ExpressBase.ServiceStack.MQServices
         [Authenticate]
         public string Post(UploadFileRequest request)
         {
-            EbConnections SolutionConnections = this.Redis.Get<EbConnections>(string.Format(CoreConstants.SOLUTION_CONNECTION_REDIS_KEY, request.TenantAccountId));
+            EbConnectionsConfig SolutionConnections = this.Redis.Get<EbConnectionsConfig>(string.Format(CoreConstants.SOLUTION_CONNECTION_REDIS_KEY, request.TenantAccountId));
 
             string bucketName = "files";
 
@@ -205,7 +205,7 @@ namespace ExpressBase.ServiceStack.MQServices
             if (request.ImageInfo.FileName.StartsWith("dp"))
                 bucketName = "dp_images";
 
-            EbConnections SolutionConnections = this.Redis.Get<EbConnections>(string.Format(CoreConstants.SOLUTION_CONNECTION_REDIS_KEY, request.TenantAccountId));
+            EbConnectionsConfig SolutionConnections = this.Redis.Get<EbConnectionsConfig>(string.Format(CoreConstants.SOLUTION_CONNECTION_REDIS_KEY, request.TenantAccountId));
 
             if (request.IsAsync)
             {
