@@ -15,16 +15,17 @@ namespace ExpressBase.ServiceStack.Services
         public TestResponse Any(TestRequest request)
         {
             ILog log = LogManager.GetLogger(GetType());
-            var con = TenantDbFactory.DataDB.GetNewConnection();
+            OracleDB db = new OracleDB();
+            var con = db.GetNewConnection();
             log.Info("Connection");
             con.Open();
-            log.Info(".............."+con+"Connection Opened");
+            log.Info(".............." + con + "Connection Opened");
             string sql = "INSERT INTO testtb (name) VALUES ('BINI')";
 
             //var cmd = c.GetNewCommand(con, sql);
             //cmd.ExecuteNonQuery();
 
-            
+
             return null;
         }
     }
