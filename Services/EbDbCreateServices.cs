@@ -150,25 +150,19 @@ namespace ExpressBase.ServiceStack.Services
         {
             try
             {
-                //.......select details from server tbl eb_usres.........
+                //.......select details from server tbl eb_usres......... from INFRA
                 string sql1 = "SELECT email,pwd,firstname,socialid FROM eb_users WHERE id=@uid";
-                DbParameter[] parameter = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("@uid", System.Data.DbType.Int32, request.UserId) };
-                var rslt = this.EbConnectionFactory.ObjectsDB.DoQuery(sql1, parameter);
+                DbParameter[] parameter = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("@uid", System.Data.DbType.Int32, 1) };// update 1 with  request.UserId
+				var rslt = this.EbConnectionFactory.ObjectsDB.DoQuery(sql1, parameter);
 
-                //..............insert into client tbl eb_users............ 
-                string sql2 = "INSERT INTO eb_users(email,pwd,firstname,socialid) VALUES (@email,@pwd,@firstname,@socialid);";
+                //..............insert into client tbl eb_users............ to SOLUTION
+                string sql2 = "INSERT INTO eb_users(email,pwd,firstname,socialid) VALUES (@email,@pwd,@firstname,@socialid) RETURNING id;";
                 var cmdtxt3 = EbConnectionFactory.DataDB.GetNewCommand(con, sql2);
                 cmdtxt3.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("email", System.Data.DbType.String, rslt.Rows[0][0]));
                 cmdtxt3.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("pwd", System.Data.DbType.String, rslt.Rows[0][1]));
                 cmdtxt3.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("firstname", System.Data.DbType.String, rslt.Rows[0][2]));
                 cmdtxt3.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("socialid", System.Data.DbType.String, rslt.Rows[0][3]));
-                cmdtxt3.ExecuteNonQuery();
-
-                //.....select tenant id from eb_users tbl of client....
-                string sql3 = "SELECT max(id) FROM eb_users;";
-                //var id= TenantDbFactory.DataDB.DoQuery(sql3);
-                DbCommand cmd = this.EbConnectionFactory.ObjectsDB.GetNewCommand(con, sql3);
-                var id = cmd.ExecuteScalar().ToString();
+				var id = Convert.ToInt32(cmdtxt3.ExecuteScalar());
 
                 //.......add role to tenant as a/c owner
                 string sql4 = "";

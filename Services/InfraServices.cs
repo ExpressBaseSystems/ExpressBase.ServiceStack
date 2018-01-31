@@ -28,47 +28,24 @@ namespace ExpressBase.ServiceStack.Services
 
         public CreateAccountResponse Post(CreateAccountRequest request)
         {
-            CreateAccountResponse resp;
-            using (var con = (!string.IsNullOrEmpty(request.DbName)) ? this.EbConnectionFactory.DataDB.GetNewConnection(request.DbName.ToLower()) : this.EbConnectionFactory.DataDB.GetNewConnection())
+			CreateAccountResponse resp = new CreateAccountResponse();
+            if (request.op == "updatetenant")
             {
-                con.Open();
-                if (request.op == "updatetenant")
-                {
-                    //string sql = "UPDATE eb_users SET firstname=@firstname,company=@company,employees=@employees,designation=@designation,country=@country,pwd = @pwd WHERE email=@email RETURNING id,email;" +
-                    //    "INSERT INTO eb_role2user()";
-                    string sql = "SELECT * FROM eb_tenantprofile_setup(@firstname,@company,@employees,@designation,@country,@pwd,@email)";
-                    DbParameter[] parameters = { this.EbConnectionFactory.DataDB.GetNewParameter("firstname", System.Data.DbType.String, request.Colvalues["Name"]),
-                        this.EbConnectionFactory.DataDB.GetNewParameter("company", System.Data.DbType.String, request.Colvalues["Company"]),
-                        this.EbConnectionFactory.DataDB.GetNewParameter("employees", System.Data.DbType.String, request.Colvalues["Employees"]),
-                        this.EbConnectionFactory.DataDB.GetNewParameter("designation", System.Data.DbType.String, request.Colvalues["Designation"]),
-                        this.EbConnectionFactory.DataDB.GetNewParameter("country", System.Data.DbType.String, request.Colvalues["Country"]),
-                        this.EbConnectionFactory.DataDB.GetNewParameter("pwd", System.Data.DbType.String, (request.Colvalues["Password"].ToString() + request.Colvalues["Email"].ToString()).ToMD5Hash()),
-                        this.EbConnectionFactory.DataDB.GetNewParameter("email", System.Data.DbType.String, request.Colvalues["Email"])
+                string sql = "SELECT * FROM eb_tenantprofile_setup(@firstname, @company, @employees, @designation, @country, @pwd, @email);";
+                DbParameter[] parameters = {
+					this.EbConnectionFactory.DataDB.GetNewParameter("firstname", System.Data.DbType.String, request.Colvalues["Name"]),
+                    this.EbConnectionFactory.DataDB.GetNewParameter("company", System.Data.DbType.String, request.Colvalues["Company"]),
+                    this.EbConnectionFactory.DataDB.GetNewParameter("employees", System.Data.DbType.String, request.Colvalues["Employees"]),
+                    this.EbConnectionFactory.DataDB.GetNewParameter("designation", System.Data.DbType.String, request.Colvalues["Designation"]),
+                    this.EbConnectionFactory.DataDB.GetNewParameter("country", System.Data.DbType.String, request.Colvalues["Country"]),
+                    this.EbConnectionFactory.DataDB.GetNewParameter("pwd", System.Data.DbType.String, (request.Colvalues["Password"].ToString() + request.Colvalues["Email"].ToString()).ToMD5Hash()),
+                    this.EbConnectionFactory.DataDB.GetNewParameter("email", System.Data.DbType.String, request.Colvalues["Email"])
+                };
 
-                    };
-                    var ds = this.EbConnectionFactory.ObjectsDB.DoQuery(sql, parameters);
-                    resp = new CreateAccountResponse()
-                    {
-                        id = Convert.ToInt32(ds.Rows[0][0])
-                    };
-                    
-                }
-                else
-                {
-                    var cmd = EbConnectionFactory.DataDB.GetNewCommand(con, "INSERT INTO eb_users (firstname,company,employees,designation,country,pwd,email) values(@firstname,@company,@employees,@designation,@country,@pwd,@email)");
-                    cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("firstname", System.Data.DbType.String, request.Colvalues["Name"]));
-                    cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("company", System.Data.DbType.String, request.Colvalues["Company"]));
-                    cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("employees", System.Data.DbType.String, request.Colvalues["Employees"]));
-                    cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("designation", System.Data.DbType.String, request.Colvalues["Designation"]));
-                    cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("country", System.Data.DbType.String, request.Colvalues["Country"]));
-                    cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("pwd", System.Data.DbType.String, (request.Colvalues["Password"].ToString() + request.Colvalues["Email"].ToString()).ToMD5Hash()));
-                    cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("email", System.Data.DbType.String, request.Colvalues["Email"]));
-                    resp = new CreateAccountResponse
-                    {
-                        id = Convert.ToInt32(cmd.ExecuteScalar())
-                    };                    
-                }
+                var ds = this.EbConnectionFactory.DataDB.DoQuery(sql, parameters);
+				resp.id = Convert.ToInt32(ds.Rows[0][0]);
             }
+                
             return resp;
         }
 
