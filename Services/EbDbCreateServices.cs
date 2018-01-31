@@ -1,5 +1,6 @@
 ﻿using ExpressBase.Common;
 using ExpressBase.Common.Connections;
+using ExpressBase.Common.Constants;
 using ExpressBase.Common.Data;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using System;
@@ -17,7 +18,7 @@ namespace ExpressBase.ServiceStack.Services
             get
             {
                 if(_dcConnectionFactory == null)
-                    _dcConnectionFactory = new EbConnectionFactory(EbConnectionsConfigProvider.DataCenterConnections);
+                    _dcConnectionFactory = new EbConnectionFactory(EbConnectionsConfigProvider.DataCenterConnections, CoreConstants.EXPRESSBASE);
 
                 return _dcConnectionFactory;
             }
@@ -59,7 +60,7 @@ namespace ExpressBase.ServiceStack.Services
             _solutionConnections.ObjectsDbConnection.DatabaseName = request.dbName.ToLower();
             _solutionConnections.DataDbConnection.DatabaseName = request.dbName.ToLower();
 
-            using (var con = (new EbConnectionFactory(_solutionConnections)).DataDB.GetNewConnection())
+            using (var con = (new EbConnectionFactory(_solutionConnections, request.TenantAccountId)).DataDB.GetNewConnection())
             {
                 con.Open();
                 var con_trans = con.BeginTransaction();
@@ -144,24 +145,24 @@ namespace ExpressBase.ServiceStack.Services
             try
             {
                 //.......select details from server tbl eb_usres......... from INFRA
-                string sql1 = "SELECT email,pwd,firstname,socialid FROM eb_users WHERE id=@uid";
-                DbParameter[] parameter = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("@uid", System.Data.DbType.Int32, 1) };// update 1 with  request.UserId
-				var rslt = this.EbConnectionFactory.ObjectsDB.DoQuery(sql1, parameter);
+                string sql1 = "SELECT email, pwd, firstname, socialid FROM eb_users WHERE id=@uid";
+                DbParameter[] parameter = { this.InfraConnectionFactory.DataDB.GetNewParameter("@uid", System.Data.DbType.Int32, request.UserId) };
+				var rslt = this.InfraConnectionFactory.DataDB.DoQuery(sql1, parameter);
 
                 //..............insert into client tbl eb_users............ to SOLUTION
-                string sql2 = "INSERT INTO eb_users(email,pwd,firstname,socialid) VALUES (@email,@pwd,@firstname,@socialid) RETURNING id;";
+                string sql2 = "INSERT INTO eb_users(email, pwd, firstname, socialid) VALUES (@email, @pwd, @firstname, @socialid) RETURNING id;";
                 var cmdtxt3 = EbConnectionFactory.DataDB.GetNewCommand(con, sql2);
-                cmdtxt3.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("email", System.Data.DbType.String, rslt.Rows[0][0]));
-                cmdtxt3.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("pwd", System.Data.DbType.String, rslt.Rows[0][1]));
-                cmdtxt3.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("firstname", System.Data.DbType.String, rslt.Rows[0][2]));
-                cmdtxt3.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("socialid", System.Data.DbType.String, rslt.Rows[0][3]));
+                cmdtxt3.Parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("email", System.Data.DbType.String, rslt.Rows[0][0]));
+                cmdtxt3.Parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("pwd", System.Data.DbType.String, rslt.Rows[0][1]));
+                cmdtxt3.Parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("firstname", System.Data.DbType.String, rslt.Rows[0][2]));
+                cmdtxt3.Parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("socialid", System.Data.DbType.String, rslt.Rows[0][3]));
 				var id = Convert.ToInt32(cmdtxt3.ExecuteScalar());
 
                 //.......add role to tenant as a/c owner
                 string sql4 = string.Empty;
                 foreach (var role in Enum.GetValues(typeof(SystemRoles)))
                 {
-                    sql4 += string.Format("INSERT INTO eb_role2user(role_id,user_id,createdat) VALUES ({0},{1},now());", (int)role, id);
+                    sql4 += string.Format("INSERT INTO eb_role2user(role_id, user_id, createdat) VALUES ({0}, {1}, now());", (int)role, id);
                 }
 
                 var cmdtxt5 = EbConnectionFactory.DataDB.GetNewCommand(con, sql4);

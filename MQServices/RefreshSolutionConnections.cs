@@ -14,7 +14,7 @@ namespace ExpressBase.ServiceStack.MQServices
     {
         public bool Post(RefreshSolutionConnectionsMqRequest req)
         {
-            using (var con = new EbConnectionFactory(CoreConstants.EXPRESSBASE, this.Redis).DataDB.GetNewConnection() as Npgsql.NpgsqlConnection)
+            using (var con = this.InfraConnectionFactory.DataDB.GetNewConnection() as Npgsql.NpgsqlConnection)
             {
                 try
                 {
