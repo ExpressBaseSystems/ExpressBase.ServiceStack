@@ -49,9 +49,9 @@ namespace ExpressBase.ServiceStack.MQServices
 
             public string Post(SMSSentMqRequest req)
             {
-                TenantDbFactory dbFactory = new TenantDbFactory(req.TenantAccountId, this.Redis);
+                EbConnectionFactory dbFactory = new EbConnectionFactory(req.TenantAccountId, this.Redis);
 
-                var MsgStatus = dbFactory.SMSService.SentSMS(req.To, req.From, req.Body);
+                var MsgStatus = dbFactory.SMSConnection.SendSMS(req.To, req.From, req.Body);
 
                 SMSStatusLogMqRequest logMqRequest = new SMSStatusLogMqRequest();
                 logMqRequest.SMSSentStatus = new SMSSentStatus();
@@ -82,7 +82,7 @@ namespace ExpressBase.ServiceStack.MQServices
 
             public string Post(SMSStatusLogMqRequest request)
             {
-                TenantDbFactory tenantDbFactory = new TenantDbFactory(request.TenantAccountId, this.Redis);
+                EbConnectionFactory tenantDbFactory = new EbConnectionFactory(request.TenantAccountId, this.Redis);
 
                 string sql = "INSERT INTO logs_sms(uri, send_to, send_from, message_body, status, error_message, user_id, context_id) VALUES (@uri, @to, @from, @message_body, @status, @error_message, @user_id, @context_id) RETURNING id";
 

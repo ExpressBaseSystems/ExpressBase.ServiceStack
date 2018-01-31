@@ -17,7 +17,7 @@ namespace ExpressBase.ServiceStack.Auth0
         public RegisterResponse Post(RegisterRequest request)
         {
             var response = new RegisterResponse(); 
-            var _InfraDb = base.ResolveService<ITenantDbFactory>() as TenantDbFactory;
+            var _InfraDb = base.ResolveService<IEbConnectionFactory>() as EbConnectionFactory;
 
             DbParameter[] parameters = {
                 _InfraDb.DataDB.GetNewParameter("email", System.Data.DbType.String, request.Email)

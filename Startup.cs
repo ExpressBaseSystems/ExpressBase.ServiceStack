@@ -1,4 +1,5 @@
-﻿using ExpressBase.Common.Data;
+﻿using ExpressBase.Common;
+using ExpressBase.Common.Data;
 using ExpressBase.Common.EbServiceStack.ReqNRes;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ExpressBase.ServiceStack.Auth0;
@@ -50,17 +51,7 @@ namespace ExpressBase.ServiceStack
         {
             loggerFactory.AddConsole(Configuration.GetSection("Logging"));
             loggerFactory.AddDebug();
-            var redisserver = Configuration.GetValue<string>("EbRedisConfig:RedisServer");
-            var redispassword = Configuration.GetValue<string>("EbRedisConfig:RedisPassword");
-            var redisport = Configuration.GetValue<int>("EbRedisConfig:RedisPort");
-            var prikey = Configuration.GetValue<string>("JwtConfig:PrivateKeyXml");
-            var pubkey = Configuration.GetValue<string>("JwtConfig:PublicKeyXml");
-            var rabbituser = Configuration.GetValue<string>("EbRabbitMqConfig:RabbitUser");
-            var rabbitpassword = Configuration.GetValue<string>("EbRabbitMqConfig:RabbitPassword");
-            var rabbithost = Configuration.GetValue<string>("EbRabbitMqConfig:RabbitHost");
-            var rabbitport = Configuration.GetValue<int>("EbRabbitMqConfig:RabbitPort");
-            var rabbitvhost = Configuration.GetValue<string>("EbRabbitMqConfig:RabbitVHost");
-            EbLiveSettings ELive = new EbLiveSettings(redisserver, redispassword, redisport, prikey, pubkey, rabbituser, rabbitpassword, rabbithost, rabbitport, rabbitvhost);
+            
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
@@ -73,13 +64,13 @@ namespace ExpressBase.ServiceStack
 
             app.UseStaticFiles();
 
-            app.UseServiceStack(new AppHost() { EbLiveSettings = ELive });
+            app.UseServiceStack(new AppHost());
         }
     }
 
     public class AppHost : AppHostBase
     {
-        public EbLiveSettings EbLiveSettings { get; set; }
+        //public EbLiveSettings EbLiveSettings { get; set; }
 
         private PooledRedisClientManager RedisBusPool { get; set; }
 
@@ -95,11 +86,11 @@ namespace ExpressBase.ServiceStack
             var co = this.Config;
             LogManager.LogFactory = new ConsoleLogFactory(debugEnabled: true);
 
-            var jwtprovider = new JwtAuthProvider(AppSettings)
+            var jwtprovider = new JwtAuthProvider
             {
                 HashAlgorithm = "RS256",
-                PrivateKeyXml = EbLiveSettings.PrivateKeyXml,
-                PublicKeyXml = EbLiveSettings.PublicKeyXml,
+                PrivateKeyXml = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_JWT_PRIVATE_KEY_XML),
+                PublicKeyXml = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_JWT_PUBLIC_KEY_XML),
 #if (DEBUG)
                 RequireSecureConnection = false,
                 //EncryptPayload = true,
@@ -175,42 +166,37 @@ namespace ExpressBase.ServiceStack
             SetConfig(new HostConfig { DefaultContentType = MimeTypes.Json });
 
             var redisConnectionString = string.Format("redis://{0}@{1}:{2}",
-               EbLiveSettings.RedisPassword, EbLiveSettings.RedisServer, EbLiveSettings.RedisPort);
-
-            //RedisBusPool = new PooledRedisClientManager(redisConnectionString);
+               Environment.GetEnvironmentVariable(EnvironmentConstants.EB_REDIS_PASSWORD),
+               Environment.GetEnvironmentVariable(EnvironmentConstants.EB_REDIS_SERVER),
+               Environment.GetEnvironmentVariable(EnvironmentConstants.EB_REDIS_PORT));
 
             container.Register<IRedisClientsManager>(c => new RedisManagerPool(redisConnectionString));
-
-            //container.Register<IAuthRepository>(c => new RedisAuthRepository(RedisBusPool));
-
             container.Register<IUserAuthRepository>(c => new EbRedisAuthRepository(c.Resolve<IRedisClientsManager>()));
-
-            
 
             container.Register<JwtAuthProvider>(jwtprovider);
 
             //container.Register<ApiKeyAuthProvider>(apikeyauthprovider);
 
-            container.Register<ITenantDbFactory>(c => new TenantDbFactory(c)).ReusedWithin(ReuseScope.Request);
+            container.Register<IEbConnectionFactory>(c => new EbConnectionFactory(c)).ReusedWithin(ReuseScope.Request);
 
             RabbitMqMessageFactory rabitFactory = new RabbitMqMessageFactory();
-            rabitFactory.ConnectionFactory.UserName = EbLiveSettings.RabbitUser;
-            rabitFactory.ConnectionFactory.Password = EbLiveSettings.RabbitPassword;
-            rabitFactory.ConnectionFactory.HostName = EbLiveSettings.RabbitHost;
-            rabitFactory.ConnectionFactory.Port = EbLiveSettings.RabbitPort;
-            rabitFactory.ConnectionFactory.VirtualHost = EbLiveSettings.RabbitVHost;
+            rabitFactory.ConnectionFactory.UserName = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_RABBIT_USER);
+            rabitFactory.ConnectionFactory.Password = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_RABBIT_PASSWORD);
+            rabitFactory.ConnectionFactory.HostName = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_RABBIT_HOST);
+            rabitFactory.ConnectionFactory.Port = Convert.ToInt32(Environment.GetEnvironmentVariable(EnvironmentConstants.EB_RABBIT_PORT));
+            rabitFactory.ConnectionFactory.VirtualHost = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_RABBIT_VHOST);
 
             var mqServer = new RabbitMqServer(rabitFactory);
             mqServer.RetryCount = 1;
-           // mqServer.RegisterHandler<EmailServicesMqRequest>(base.ExecuteMessage);
+            //mqServer.RegisterHandler<EmailServicesMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<SMSSentMqRequest>(base.ExecuteMessage);
-           // mqServer.RegisterHandler<RefreshSolutionConnectionsMqRequest>(base.ExecuteMessage);
+            //mqServer.RegisterHandler<RefreshSolutionConnectionsMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<SMSStatusLogMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<UploadFileMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<ImageResizeMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<FileMetaPersistMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<SlackPostMqRequest>(base.ExecuteMessage);
-            ////mqServer.RegisterHandler<SlackAuthMqRequest>(base.ExecuteMessage);
+            //mqServer.RegisterHandler<SlackAuthMqRequest>(base.ExecuteMessage);
 
             mqServer.Start();
 
@@ -225,7 +211,7 @@ namespace ExpressBase.ServiceStack
             });
 
             //Add a request filter to check if the user has a session initialized
-            this.GlobalRequestFilters.Add((req, res, requestDto) =>
+                    this.GlobalRequestFilters.Add((req, res, requestDto) =>
             {
                 ILog log = LogManager.GetLogger(GetType());
 
@@ -249,7 +235,7 @@ namespace ExpressBase.ServiceStack
                 }
                 try
                 {
-                    if (requestDto != null && requestDto.GetType() != typeof(Authenticate) && requestDto.GetType() != typeof(GetAccessToken) && requestDto.GetType() != typeof(UniqueRequest) && requestDto.GetType() != typeof(CreateAccountRequest)&& requestDto.GetType() != typeof(EmailServicesRequest) && requestDto.GetType() != typeof(RegisterRequest) && requestDto.GetType() != typeof(AutoGenSolIdRequest))
+                    if (requestDto != null && requestDto.GetType() != typeof(Authenticate) && requestDto.GetType() != typeof(GetAccessToken) && requestDto.GetType() != typeof(UniqueRequest) && requestDto.GetType() != typeof(CreateAccountRequest)&& requestDto.GetType() != typeof(EmailServicesMqRequest) && requestDto.GetType() != typeof(RegisterRequest) && requestDto.GetType() != typeof(AutoGenSolIdRequest))
                     {
                         var auth = req.Headers[HttpHeaders.Authorization];
                         if (string.IsNullOrEmpty(auth))

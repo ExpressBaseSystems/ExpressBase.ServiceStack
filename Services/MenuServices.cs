@@ -12,7 +12,7 @@ namespace ExpressBase.ServiceStack.Services
 {
     public class MenuServices : EbBaseService
     {
-        public MenuServices(ITenantDbFactory _dbf) : base(_dbf) { }
+        public MenuServices(IEbConnectionFactory _dbf) : base(_dbf) { }
 
         List<System.Data.Common.DbParameter> parameters = new List<System.Data.Common.DbParameter>();
         public object Get(SidebarUserRequest request)
@@ -37,7 +37,7 @@ AND EO.id = EO2A.obj_id
 AND EO2A.eb_del = 'false';";
 
             //parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@Ids", System.Data.DbType.String, request.Ids));
-            var ds = this.TenantDbFactory.ObjectsDB.DoQueries(Query1.Replace("@Ids", request.Ids));
+            var ds = this.EbConnectionFactory.ObjectsDB.DoQueries(Query1.Replace("@Ids", request.Ids));
 
             Dictionary<int, AppObject> appColl = new Dictionary<int, AppObject>();
             foreach (EbDataRow dr in ds.Tables[0].Rows)
@@ -90,7 +90,7 @@ FROM
 ORDER BY EO.obj_type";
 
             //parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@Ids", System.Data.DbType.String, request.Ids));
-            var ds = this.TenantDbFactory.ObjectsDB.DoQueries(Query1);
+            var ds = this.EbConnectionFactory.ObjectsDB.DoQueries(Query1);
 
             Dictionary<int, AppObject> appColl = new Dictionary<int, AppObject>();
 

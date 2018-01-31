@@ -21,7 +21,7 @@ namespace ExpressBase.ServiceStack
 
             if (!string.IsNullOrEmpty(session.ProviderOAuthAccess[0].DisplayName))
             {
-                var _InfraDb = authService.ResolveService<ITenantDbFactory>() as TenantDbFactory;
+                var _InfraDb = authService.ResolveService<IEbConnectionFactory>() as EbConnectionFactory;
                 using (var con = _InfraDb.DataDB.GetNewConnection())
                 {
                     con.Open();

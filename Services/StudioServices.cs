@@ -8,7 +8,6 @@ using ExpressBase.Objects.ServiceStack_Artifacts;
 using ServiceStack.Logging;
 using System.Linq;
 using ExpressBase.Common;
-using ExpressBase.Objects.ObjectContainers;
 using ExpressBase.Common.Objects;
 using ExpressBase.Common.Data;
 using ExpressBase.Objects.Objects;
@@ -25,7 +24,7 @@ namespace ExpressBase.ServiceStack
     [Authenticate]
     public class EbObjectService : EbBaseService
     {
-        public EbObjectService(ITenantDbFactory _dbf) : base(_dbf) { }
+        public EbObjectService(IEbConnectionFactory _dbf) : base(_dbf) { }
 
         #region Get EbObject Queries
 
@@ -186,8 +185,8 @@ AS tags";
         {  // Fetch all version without json of a particular Object
 
             ILog log = LogManager.GetLogger(GetType());
-            parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@refid", System.Data.DbType.String, request.RefId));
-            var dt = this.TenantDbFactory.ObjectsDB.DoQuery(Query1, parameters.ToArray());
+            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@refid", System.Data.DbType.String, request.RefId));
+            var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(Query1, parameters.ToArray());
 
             foreach (EbDataRow dr in dt.Rows)
             {
@@ -211,8 +210,8 @@ AS tags";
         {  // Fetch particular version with json of a particular Object
 
             ILog log = LogManager.GetLogger(GetType());
-            parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@refid", System.Data.DbType.String, request.RefId));
-            var dt = this.TenantDbFactory.ObjectsDB.DoQuery(Query2, parameters.ToArray());
+            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@refid", System.Data.DbType.String, request.RefId));
+            var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(Query2, parameters.ToArray());
 
             foreach (EbDataRow dr in dt.Rows)
             {
@@ -233,8 +232,8 @@ AS tags";
         {
             // Fetch latest non - committed version with json - for EDIT of a particular Object
 
-            parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@refid", System.Data.DbType.String, request.RefId));
-            var dt = this.TenantDbFactory.ObjectsDB.DoQuery(Query3, parameters.ToArray());
+            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@refid", System.Data.DbType.String, request.RefId));
+            var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(Query3, parameters.ToArray());
 
             foreach (EbDataRow dr in dt.Rows)
             {
@@ -259,8 +258,8 @@ AS tags";
         public object Get(EbObjectLatestCommitedRequest request)
         {
             // Fetch latest committed version with json - for Execute/Run/Consume a particular Object
-            parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@refid", System.Data.DbType.String, request.RefId));
-            var dt = this.TenantDbFactory.ObjectsDB.DoQuery(Query4, parameters.ToArray());
+            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@refid", System.Data.DbType.String, request.RefId));
+            var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(Query4, parameters.ToArray());
 
             foreach (EbDataRow dr in dt.Rows)
             {
@@ -284,8 +283,8 @@ AS tags";
         [CompressResponse]
         public object Get(EbObjectObjListRequest request)
         { // Get All latest committed versions of this Object Type without json
-            parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@type", System.Data.DbType.Int32, request.EbObjectType));
-            var dt = this.TenantDbFactory.ObjectsDB.DoQuery(Query5, parameters.ToArray());
+            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@type", System.Data.DbType.Int32, request.EbObjectType));
+            var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(Query5, parameters.ToArray());
 
             foreach (EbDataRow dr in dt.Rows)
             {
@@ -310,8 +309,8 @@ AS tags";
         [CompressResponse]
         public object Get(EbObjectListRequest request)
         { // Get All latest committed versions of this Object Type without json
-            parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@type", System.Data.DbType.Int32, request.EbObjectType));
-            var dt = this.TenantDbFactory.ObjectsDB.DoQuery(Query_ObjectList, parameters.ToArray());
+            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@type", System.Data.DbType.Int32, request.EbObjectType));
+            var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(Query_ObjectList, parameters.ToArray());
 
             foreach (EbDataRow dr in dt.Rows)
             {
@@ -333,8 +332,8 @@ AS tags";
         [CompressResponse]
         public object Get(EbObjectObjLisAllVerRequest request)
         { // Get All latest committed versions of this Object Type without json
-            parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@type", System.Data.DbType.Int32, request.EbObjectType));
-            var dt = this.TenantDbFactory.ObjectsDB.DoQuery(Query_AllVerList, parameters.ToArray());
+            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@type", System.Data.DbType.Int32, request.EbObjectType));
+            var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(Query_AllVerList, parameters.ToArray());
 
             Dictionary<string, List<EbObjectWrapper>> f_dict = new Dictionary<string, List<EbObjectWrapper>>();
             List<EbObjectWrapper> f_list = null;
@@ -366,8 +365,8 @@ AS tags";
         { //Fetch ebobjects relations
             parameters = new List<System.Data.Common.DbParameter>();
             ILog log = LogManager.GetLogger(GetType());
-            parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@dominant", System.Data.DbType.String, request.DominantId));
-            var dt = this.TenantDbFactory.ObjectsDB.DoQuery(GetLiveObjectRelations, parameters.ToArray());
+            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@dominant", System.Data.DbType.String, request.DominantId));
+            var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(GetLiveObjectRelations, parameters.ToArray());
             foreach (EbDataRow dr in dt.Rows)
             {
                 var _ebObject = new EbObjectWrapper();
@@ -391,8 +390,8 @@ AS tags";
             f = new List<EbObjectWrapper>();
             parameters = new List<System.Data.Common.DbParameter>();
             ILog log = LogManager.GetLogger(GetType());
-            parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@tags", System.Data.DbType.String, request.Tags));
-            var dt = this.TenantDbFactory.ObjectsDB.DoQuery(GetTaggedObjects, parameters.ToArray());
+            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@tags", System.Data.DbType.String, request.Tags));
+            var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(GetTaggedObjects, parameters.ToArray());
             foreach (EbDataRow dr in dt.Rows)
             {
                 var _ebObject = new EbObjectWrapper();
@@ -412,8 +411,8 @@ AS tags";
         [CompressResponse]
         public object Get(EbObjectExploreObjectRequest request)
         {
-            parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.Int32, request.Id));
-            var dt = this.TenantDbFactory.ObjectsDB.DoQuery("SELECT * FROM public.eb_objects_exploreobject(@id)", parameters.ToArray());
+            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.Int32, request.Id));
+            var dt = this.EbConnectionFactory.ObjectsDB.DoQuery("SELECT * FROM public.eb_objects_exploreobject(@id)", parameters.ToArray());
 
             foreach (EbDataRow dr in dt.Rows)
             {
@@ -465,8 +464,8 @@ AS tags";
         [CompressResponse]
         public object Get(EbObjectUpdateDashboardRequest request)
         {
-            parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@refid", System.Data.DbType.String, request.Refid));
-            var dt = this.TenantDbFactory.ObjectsDB.DoQuery("SELECT * FROM public.eb_objects_update_Dashboard(@refid)", parameters.ToArray());
+            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@refid", System.Data.DbType.String, request.Refid));
+            var dt = this.EbConnectionFactory.ObjectsDB.DoQuery("SELECT * FROM public.eb_objects_update_Dashboard(@refid)", parameters.ToArray());
 
             foreach (EbDataRow dr in dt.Rows)
             {
@@ -510,8 +509,8 @@ AS tags";
         [CompressResponse]
         public object Get(EbObjectStatusHistoryRequest request)
         { // Get All latest committed versions of this Object Type without json
-            parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@refid", System.Data.DbType.String, request.RefId));
-            var dt = this.TenantDbFactory.ObjectsDB.DoQuery(Query_StatusHistory, parameters.ToArray());
+            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@refid", System.Data.DbType.String, request.RefId));
+            var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(Query_StatusHistory, parameters.ToArray());
 
             foreach (EbDataRow dr in dt.Rows)
             {
@@ -535,8 +534,8 @@ AS tags";
         {  // Fetch particular version with json of a particular Object
 
             ILog log = LogManager.GetLogger(GetType());
-            parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.Int32, request.Id));
-            var dt = this.TenantDbFactory.ObjectsDB.DoQuery(FetchLiveversionQuery, parameters.ToArray());
+            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.Int32, request.Id));
+            var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(FetchLiveversionQuery, parameters.ToArray());
 
             foreach (EbDataRow dr in dt.Rows)
             {
@@ -554,7 +553,7 @@ AS tags";
         {
             string s ="";
             ILog log = LogManager.GetLogger(GetType());
-            var dt = this.TenantDbFactory.ObjectsDB.DoQuery(GetAllTags);
+            var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(GetAllTags);
             foreach (EbDataRow dr in dt.Rows)
             {
                 s+=dr[0].ToString()+",";
@@ -581,7 +580,7 @@ AS tags";
             try
             {
 
-                using (var con = this.TenantDbFactory.ObjectsDB.GetNewConnection())
+                using (var con = this.EbConnectionFactory.ObjectsDB.GetNewConnection())
                 {
                     con.Open();
                     DbCommand cmd = null;
@@ -589,21 +588,21 @@ AS tags";
                     string[] arr = { };
 
                     string sql = "SELECT eb_objects_commit(@id, @obj_name, @obj_desc, @obj_type, @obj_json, @obj_changelog,  @commit_uid, @src_pid, @cur_pid, @relations, @tags, @app_id)";
-                    cmd = this.TenantDbFactory.ObjectsDB.GetNewCommand(con, sql);
+                    cmd = this.EbConnectionFactory.ObjectsDB.GetNewCommand(con, sql);
 
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.String, request.RefId));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_name", System.Data.DbType.String, request.Name.Replace("\n", "").Replace("\t", "").Replace("\r", "")));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_type", System.Data.DbType.Int32, GetObjectType(obj)));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_desc", System.Data.DbType.String, (!string.IsNullOrEmpty(request.Description)) ? request.Description : string.Empty));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_json", NpgsqlTypes.NpgsqlDbType.Json, request.Json));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_changelog", System.Data.DbType.String, request.ChangeLog));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@commit_uid", System.Data.DbType.Int32, request.UserId));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@src_pid", System.Data.DbType.String, request.TenantAccountId));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@cur_pid", System.Data.DbType.String, request.TenantAccountId));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@relations", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text, (request.Relations != null) ? request.Relations.Split(',').Select(n => n.ToString()).ToArray() : arr));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@tags", System.Data.DbType.String, (!string.IsNullOrEmpty(request.Tags)) ? request.Tags : string.Empty));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.String, request.RefId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@obj_name", System.Data.DbType.String, request.Name.Replace("\n", "").Replace("\t", "").Replace("\r", "")));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@obj_type", System.Data.DbType.Int32, GetObjectType(obj)));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@obj_desc", System.Data.DbType.String, (!string.IsNullOrEmpty(request.Description)) ? request.Description : string.Empty));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@obj_json", NpgsqlTypes.NpgsqlDbType.Json, request.Json));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@obj_changelog", System.Data.DbType.String, request.ChangeLog));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@commit_uid", System.Data.DbType.Int32, request.UserId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@src_pid", System.Data.DbType.String, request.TenantAccountId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@cur_pid", System.Data.DbType.String, request.TenantAccountId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@relations", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text, (request.Relations != null) ? request.Relations.Split(',').Select(n => n.ToString()).ToArray() : arr));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@tags", System.Data.DbType.String, (!string.IsNullOrEmpty(request.Tags)) ? request.Tags : string.Empty));
                     // cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@app_id", System.Data.DbType.Int32, request.AppId));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@app_id", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer, SetAppId(request.Apps)));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@app_id", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer, SetAppId(request.Apps)));
 
                     refId = cmd.ExecuteScalar().ToString();
                     SetRedis(obj, refId);
@@ -626,7 +625,7 @@ AS tags";
             try
             {
 
-                using (var con = this.TenantDbFactory.ObjectsDB.GetNewConnection())
+                using (var con = this.EbConnectionFactory.ObjectsDB.GetNewConnection())
                 {
                     con.Open();
                     DbCommand cmd = null;
@@ -634,20 +633,20 @@ AS tags";
                     string[] arr = { };
 
                     string sql = "SELECT eb_objects_save(@id, @obj_name, @obj_desc, @obj_type, @obj_json, @commit_uid, @src_pid, @cur_pid, @relations, @tags, @app_id)";
-                    cmd = this.TenantDbFactory.ObjectsDB.GetNewCommand(con, sql);
+                    cmd = this.EbConnectionFactory.ObjectsDB.GetNewCommand(con, sql);
 
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.String, request.RefId));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_name", System.Data.DbType.String, request.Name.Replace("\n", "").Replace("\t", "").Replace("\r", "")));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_type", System.Data.DbType.Int32, GetObjectType(obj)));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_desc", System.Data.DbType.String, (!string.IsNullOrEmpty(request.Description)) ? request.Description : string.Empty));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_json", NpgsqlTypes.NpgsqlDbType.Json, request.Json));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@commit_uid", System.Data.DbType.Int32, request.UserId));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@src_pid", System.Data.DbType.String, request.TenantAccountId));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@cur_pid", System.Data.DbType.String, request.TenantAccountId));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@relations", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text, (request.Relations != null) ? request.Relations.Split(',').Select(n => n.ToString()).ToArray() : arr));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@tags", System.Data.DbType.String, (!string.IsNullOrEmpty(request.Tags)) ? request.Tags : string.Empty));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.String, request.RefId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@obj_name", System.Data.DbType.String, request.Name.Replace("\n", "").Replace("\t", "").Replace("\r", "")));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@obj_type", System.Data.DbType.Int32, GetObjectType(obj)));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@obj_desc", System.Data.DbType.String, (!string.IsNullOrEmpty(request.Description)) ? request.Description : string.Empty));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@obj_json", NpgsqlTypes.NpgsqlDbType.Json, request.Json));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@commit_uid", System.Data.DbType.Int32, request.UserId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@src_pid", System.Data.DbType.String, request.TenantAccountId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@cur_pid", System.Data.DbType.String, request.TenantAccountId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@relations", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text, (request.Relations != null) ? request.Relations.Split(',').Select(n => n.ToString()).ToArray() : arr));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@tags", System.Data.DbType.String, (!string.IsNullOrEmpty(request.Tags)) ? request.Tags : string.Empty));
                     // cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@app_id", System.Data.DbType.Int32, request.AppId));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@app_id", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer, SetAppId(request.Apps)));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@app_id", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer, SetAppId(request.Apps)));
 
                     refId = cmd.ExecuteScalar().ToString();
                     SetRedis(obj, refId);
@@ -670,7 +669,7 @@ AS tags";
 
             try
             {
-                using (var con = this.TenantDbFactory.ObjectsDB.GetNewConnection())
+                using (var con = this.EbConnectionFactory.ObjectsDB.GetNewConnection())
                 {
                     con.Open();
                     DbCommand cmd = null;
@@ -678,21 +677,21 @@ AS tags";
                     string[] arr = { };
 
                     string sql = "SELECT eb_objects_create_new_object(@obj_name, @obj_desc, @obj_type, @obj_cur_status, @obj_json::json, @commit_uid, @src_pid, @cur_pid, @relations, @issave, @tags, @app_id)";
-                    cmd = this.TenantDbFactory.ObjectsDB.GetNewCommand(con, sql);
+                    cmd = this.EbConnectionFactory.ObjectsDB.GetNewCommand(con, sql);
 
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_name", System.Data.DbType.String, request.Name.Replace("\n", "").Replace("\t", "").Replace("\r", "")));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_type", System.Data.DbType.Int32, GetObjectType(obj)));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_desc", System.Data.DbType.String, (!string.IsNullOrEmpty(request.Description)) ? request.Description : string.Empty));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_cur_status", System.Data.DbType.Int32, ObjectLifeCycleStatus.Dev));//request.Status
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_json", NpgsqlTypes.NpgsqlDbType.Json, request.Json));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@commit_uid", System.Data.DbType.Int32, request.UserId));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@src_pid", System.Data.DbType.String, request.TenantAccountId));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@cur_pid", System.Data.DbType.String, request.TenantAccountId));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@relations", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text, (request.Relations != null) ? request.Relations.Split(',').Select(n => n.ToString()).ToArray() : arr));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@issave", System.Data.DbType.Boolean, request.IsSave));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@tags", System.Data.DbType.String, (!string.IsNullOrEmpty(request.Tags)) ? request.Tags : string.Empty));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@obj_name", System.Data.DbType.String, request.Name.Replace("\n", "").Replace("\t", "").Replace("\r", "")));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@obj_type", System.Data.DbType.Int32, GetObjectType(obj)));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@obj_desc", System.Data.DbType.String, (!string.IsNullOrEmpty(request.Description)) ? request.Description : string.Empty));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@obj_cur_status", System.Data.DbType.Int32, ObjectLifeCycleStatus.Dev));//request.Status
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@obj_json", NpgsqlTypes.NpgsqlDbType.Json, request.Json));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@commit_uid", System.Data.DbType.Int32, request.UserId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@src_pid", System.Data.DbType.String, request.TenantAccountId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@cur_pid", System.Data.DbType.String, request.TenantAccountId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@relations", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text, (request.Relations != null) ? request.Relations.Split(',').Select(n => n.ToString()).ToArray() : arr));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@issave", System.Data.DbType.Boolean, request.IsSave));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@tags", System.Data.DbType.String, (!string.IsNullOrEmpty(request.Tags)) ? request.Tags : string.Empty));
                     //cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@app_id", System.Data.DbType.Int32, request.AppId));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@app_id", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer, SetAppId(request.Apps)));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@app_id", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer, SetAppId(request.Apps)));
 
                     refId = cmd.ExecuteScalar().ToString();
                     SetRedis(obj, refId);
@@ -714,7 +713,7 @@ AS tags";
             try
             {
 
-                using (var con = this.TenantDbFactory.ObjectsDB.GetNewConnection())
+                using (var con = this.EbConnectionFactory.ObjectsDB.GetNewConnection())
                 {
                     con.Open();
                     DbCommand cmd = null;
@@ -722,14 +721,14 @@ AS tags";
                     string[] arr = { };
 
                     string sql = "SELECT eb_objects_create_major_version(@id, @obj_type, @commit_uid, @src_pid, @cur_pid, @relations)";
-                    cmd = this.TenantDbFactory.ObjectsDB.GetNewCommand(con, sql);
+                    cmd = this.EbConnectionFactory.ObjectsDB.GetNewCommand(con, sql);
 
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.String, request.RefId));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_type", System.Data.DbType.Int32, (int)request.EbObjectType));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@commit_uid", System.Data.DbType.Int32, request.UserId));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@src_pid", System.Data.DbType.String, request.TenantAccountId));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@cur_pid", System.Data.DbType.String, request.TenantAccountId));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@relations", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text, (request.Relations != null) ? request.Relations.Split(',').Select(n => n.ToString()).ToArray() : arr));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.String, request.RefId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@obj_type", System.Data.DbType.Int32, (int)request.EbObjectType));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@commit_uid", System.Data.DbType.Int32, request.UserId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@src_pid", System.Data.DbType.String, request.TenantAccountId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@cur_pid", System.Data.DbType.String, request.TenantAccountId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@relations", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text, (request.Relations != null) ? request.Relations.Split(',').Select(n => n.ToString()).ToArray() : arr));
 
                     refId = cmd.ExecuteScalar().ToString();
 
@@ -751,7 +750,7 @@ AS tags";
 
             try
             {
-                using (var con = this.TenantDbFactory.ObjectsDB.GetNewConnection())
+                using (var con = this.EbConnectionFactory.ObjectsDB.GetNewConnection())
                 {
                     con.Open();
                     DbCommand cmd = null;
@@ -759,14 +758,14 @@ AS tags";
                     string[] arr = { };
 
                     string sql = "SELECT eb_objects_create_minor_version(@id, @obj_type, @commit_uid, @src_pid, @cur_pid, @relations)";
-                    cmd = this.TenantDbFactory.ObjectsDB.GetNewCommand(con, sql);
+                    cmd = this.EbConnectionFactory.ObjectsDB.GetNewCommand(con, sql);
 
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.String, request.RefId));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_type", System.Data.DbType.Int32, (int)request.EbObjectType));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@commit_uid", System.Data.DbType.Int32, request.UserId));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@src_pid", System.Data.DbType.String, request.TenantAccountId));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@cur_pid", System.Data.DbType.String, request.TenantAccountId));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@relations", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text, (request.Relations != null) ? request.Relations.Split(',').Select(n => n.ToString()).ToArray() : arr));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.String, request.RefId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@obj_type", System.Data.DbType.Int32, (int)request.EbObjectType));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@commit_uid", System.Data.DbType.Int32, request.UserId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@src_pid", System.Data.DbType.String, request.TenantAccountId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@cur_pid", System.Data.DbType.String, request.TenantAccountId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@relations", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text, (request.Relations != null) ? request.Relations.Split(',').Select(n => n.ToString()).ToArray() : arr));
 
                     refId = cmd.ExecuteScalar().ToString();
                 }
@@ -786,7 +785,7 @@ AS tags";
 
             try
             {
-                using (var con = this.TenantDbFactory.ObjectsDB.GetNewConnection())
+                using (var con = this.EbConnectionFactory.ObjectsDB.GetNewConnection())
                 {
                     con.Open();
                     DbCommand cmd = null;
@@ -794,14 +793,14 @@ AS tags";
                     string[] arr = { };
 
                     string sql = "SELECT eb_objects_create_patch_version(@id, @obj_type, @commit_uid, @src_pid, @cur_pid, @relations)";
-                    cmd = this.TenantDbFactory.ObjectsDB.GetNewCommand(con, sql);
+                    cmd = this.EbConnectionFactory.ObjectsDB.GetNewCommand(con, sql);
 
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.String, request.RefId));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_type", System.Data.DbType.Int32, (int)request.EbObjectType));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@commit_uid", System.Data.DbType.Int32, request.UserId));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@src_pid", System.Data.DbType.String, request.TenantAccountId));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@cur_pid", System.Data.DbType.String, request.TenantAccountId));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@relations", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text, (request.Relations != null) ? request.Relations.Split(',').Select(n => n.ToString()).ToArray() : arr));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.String, request.RefId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@obj_type", System.Data.DbType.Int32, (int)request.EbObjectType));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@commit_uid", System.Data.DbType.Int32, request.UserId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@src_pid", System.Data.DbType.String, request.TenantAccountId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@cur_pid", System.Data.DbType.String, request.TenantAccountId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@relations", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text, (request.Relations != null) ? request.Relations.Split(',').Select(n => n.ToString()).ToArray() : arr));
 
                     refId = cmd.ExecuteScalar().ToString();
                 }
@@ -818,14 +817,14 @@ AS tags";
             ILog log = LogManager.GetLogger(GetType());
             log.Info("#DS insert -- entered post");
 
-            using (var con = this.TenantDbFactory.ObjectsDB.GetNewConnection())
+            using (var con = this.EbConnectionFactory.ObjectsDB.GetNewConnection())
             {
                 con.Open();
                 DbCommand cmd = null;
                 log.Info("#DS insert 1 -- con open");
                 string[] arr = { };
                 var code = EbSerializers.Json_Deserialize<EbSqlFunction>(request.Json).Sql;
-                cmd = this.TenantDbFactory.ObjectsDB.GetNewCommand(con, code);
+                cmd = this.EbConnectionFactory.ObjectsDB.GetNewCommand(con, code);
                 string refId = cmd.ExecuteScalar().ToString();
 
                 return new EbObjectRunSqlFunctionResponse() { RefId = refId };
@@ -839,19 +838,19 @@ AS tags";
 
             try
             {
-                using (var con = this.TenantDbFactory.ObjectsDB.GetNewConnection())
+                using (var con = this.EbConnectionFactory.ObjectsDB.GetNewConnection())
                 {
                     con.Open();
                     DbCommand cmd = null;
                     log.Info("#DS insert 1 -- con open");
 
                     string sql = "SELECT eb_objects_change_status(@id, @status, @commit_uid, @obj_changelog)";
-                    cmd = this.TenantDbFactory.ObjectsDB.GetNewCommand(con, sql);
+                    cmd = this.EbConnectionFactory.ObjectsDB.GetNewCommand(con, sql);
 
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.String, request.RefId));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@status", System.Data.DbType.Int32, (int)request.Status));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@commit_uid", System.Data.DbType.Int32, request.UserId));
-                    cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@obj_changelog", System.Data.DbType.String, request.ChangeLog));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@id", System.Data.DbType.String, request.RefId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@status", System.Data.DbType.Int32, (int)request.Status));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@commit_uid", System.Data.DbType.Int32, request.UserId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@obj_changelog", System.Data.DbType.String, request.ChangeLog));
                     cmd.ExecuteScalar();
                 }
             }

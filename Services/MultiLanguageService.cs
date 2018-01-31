@@ -16,7 +16,7 @@ namespace ExpressBase.ServiceStack.Services
 
 	public class MultiLanguageService : EbBaseService
 	{
-		public MultiLanguageService(ITenantDbFactory _dbf) : base(_dbf) { }
+		public MultiLanguageService(IEbConnectionFactory _dbf) : base(_dbf) { }
 
 
 		//-------------------------------------------------------------------------------------------------------------
@@ -89,10 +89,10 @@ namespace ExpressBase.ServiceStack.Services
 											WHERE A.id=C.key_id AND B.id=C.lang_id  
 											ORDER BY A.key ASC, B.language ASC;");
 			List<DbParameter> parameters = new List<DbParameter>();
-			parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@KEY", System.Data.DbType.String, (request.Key_String + "%")));
-			parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@OFFSET", System.Data.DbType.Int32, request.Offset));
-			parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@LIMIT", System.Data.DbType.Int32, request.Limit));
-			var ds = this.TenantDbFactory.ObjectsDB.DoQueries(query, parameters.ToArray());
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@KEY", System.Data.DbType.String, (request.Key_String + "%")));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@OFFSET", System.Data.DbType.Int32, request.Offset));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@LIMIT", System.Data.DbType.Int32, request.Limit));
+			var ds = this.EbConnectionFactory.ObjectsDB.DoQueries(query, parameters.ToArray());
 			int i = -1;
 			Dictionary<long, int> map = new Dictionary<long, int>();
 			var count = ds.Tables[0].Rows[0][0];
@@ -113,7 +113,7 @@ namespace ExpressBase.ServiceStack.Services
 		{
 			string query = string.Format(@"select id,language from eb_languages order by language asc");
 			List<DbParameter> parameters = new List<DbParameter>();
-			var dt = this.TenantDbFactory.ObjectsDB.DoQuery(query, parameters.ToArray());
+			var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(query, parameters.ToArray());
 			Dictionary<string, int> dict = new Dictionary<string, int>();
 			foreach (EbDataRow dr in dt.Rows)
 				dict.Add(dr[1].ToString(), Convert.ToInt32(dr[0]));
@@ -128,8 +128,8 @@ namespace ExpressBase.ServiceStack.Services
 											WHERE A.id=C.key_id AND B.id=C.lang_id AND LOWER(A.key) LIKE LOWER(@KEY) 
 											ORDER BY B.language ASC");
 			List<DbParameter> parameters = new List<DbParameter>();
-			parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@KEY", System.Data.DbType.String, request.Key));
-			var dt = this.TenantDbFactory.ObjectsDB.DoQuery(query, parameters.ToArray());
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@KEY", System.Data.DbType.String, request.Key));
+			var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(query, parameters.ToArray());
 			int i = 0;
 			foreach (EbDataRow dr in dt.Rows)
 				dict.Add(i++, new MLKeyValue { KeyVal_Id = dr[0].ToString(), Key = dr[1].ToString(), Key_Id = dr[2].ToString(), Lang_Id = dr[3].ToString(), KeyVal_Value = dr[4].ToString() });
@@ -151,9 +151,9 @@ namespace ExpressBase.ServiceStack.Services
 				if (list[i].KeyVal_Id == "")
 				{
 					query1.Append("( " + (kid + rcount) + "," + (lid + rcount) + "," + (kval + rcount) + "),");
-					parameters1.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter((kid + rcount), System.Data.DbType.Int64, list[i].Key_Id));
-					parameters1.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter((lid + rcount), System.Data.DbType.Int32, list[i].Lang_Id));
-					parameters1.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter((kval + rcount), System.Data.DbType.String, list[i].KeyVal_Value));
+					parameters1.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter((kid + rcount), System.Data.DbType.Int64, list[i].Key_Id));
+					parameters1.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter((lid + rcount), System.Data.DbType.Int32, list[i].Lang_Id));
+					parameters1.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter((kval + rcount), System.Data.DbType.String, list[i].KeyVal_Value));
 					rcount++;
 					list.Remove(list[i]);
 					InsertCount++;
@@ -162,7 +162,7 @@ namespace ExpressBase.ServiceStack.Services
 			query1.Append(";");
 			int dt1 = 0;
 			if (InsertCount > 0)
-				dt1 = this.TenantDbFactory.ObjectsDB.DoNonQuery(query1.ToString(), parameters1.ToArray());
+				dt1 = this.EbConnectionFactory.ObjectsDB.DoNonQuery(query1.ToString(), parameters1.ToArray());
 			if (list.Count() == 0)
 				return new MLUpdateKeyValueResponse { Data = dt1 };
 			StringBuilder sb = new StringBuilder();
@@ -173,13 +173,13 @@ namespace ExpressBase.ServiceStack.Services
 			foreach (MLKeyValue obj in list)
 			{
 				sb.Append("(" + (kvalid + rcount) + "," + (kvalvalue + rcount) + "),");
-				parameters2.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter((kvalid + rcount), System.Data.DbType.Int64, obj.KeyVal_Id));
-				parameters2.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter((kvalvalue + rcount), System.Data.DbType.String, obj.KeyVal_Value));
+				parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter((kvalid + rcount), System.Data.DbType.Int64, obj.KeyVal_Id));
+				parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter((kvalvalue + rcount), System.Data.DbType.String, obj.KeyVal_Value));
 				rcount++;
 			}
 			sb.Length = sb.Length - 1;
 			sb.Append(") AS B(id, value) WHERE B.id = A.id;");
-			var dt2 = this.TenantDbFactory.ObjectsDB.DoNonQuery(sb.ToString(), parameters2.ToArray());
+			var dt2 = this.EbConnectionFactory.ObjectsDB.DoNonQuery(sb.ToString(), parameters2.ToArray());
 			return new MLUpdateKeyValueResponse { Data = dt1 + dt2 };
 		}
 
@@ -187,10 +187,10 @@ namespace ExpressBase.ServiceStack.Services
 		{
 			List<MLAddKey> list = request.Data;
 			string query1 = "INSERT INTO eb_keys (key) VALUES(@KEY) RETURNING id;";
-			var con = this.TenantDbFactory.ObjectsDB.GetNewConnection();
+			var con = this.EbConnectionFactory.ObjectsDB.GetNewConnection();
 			con.Open();
-			DbCommand cmd = this.TenantDbFactory.ObjectsDB.GetNewCommand(con, query1);
-			cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@KEY", System.Data.DbType.String, request.Key));
+			DbCommand cmd = this.EbConnectionFactory.ObjectsDB.GetNewCommand(con, query1);
+			cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@KEY", System.Data.DbType.String, request.Key));
 			var key_id = cmd.ExecuteScalar().ToString();
 
 			StringBuilder query2 = new StringBuilder();
@@ -201,14 +201,14 @@ namespace ExpressBase.ServiceStack.Services
 			foreach (MLAddKey obj in request.Data)
 			{
 				query2.Append("(" + (kid + i) + "," + (lid + i) + "," + (kval + i) + "),");
-				parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter((kid + i), System.Data.DbType.Int64, key_id));
-				parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter((lid + i), System.Data.DbType.Int32, obj.Lang_Id));
-				parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter((kval + i), System.Data.DbType.String, obj.Key_Value));
+				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter((kid + i), System.Data.DbType.Int64, key_id));
+				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter((lid + i), System.Data.DbType.Int32, obj.Lang_Id));
+				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter((kval + i), System.Data.DbType.String, obj.Key_Value));
 				i++;
 			}
 			query2.Length = query2.Length - 1;
 			query2.Append(";");
-			var dt = this.TenantDbFactory.ObjectsDB.DoNonQuery(query2.ToString(), parameters.ToArray());
+			var dt = this.EbConnectionFactory.ObjectsDB.DoNonQuery(query2.ToString(), parameters.ToArray());
 			return new MLAddKeyResponse { KeyId = Convert.ToInt32(key_id), RowAffected = dt };
 		}
 	}

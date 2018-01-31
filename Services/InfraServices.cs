@@ -1,4 +1,5 @@
 ﻿using ExpressBase.Common;
+using ExpressBase.Common.Constants;
 using ExpressBase.Common.Data;
 using ExpressBase.Common.Extensions;
 using ExpressBase.Data;
@@ -23,12 +24,12 @@ namespace ExpressBase.ServiceStack.Services
     [Authenticate]
     public class InfraServices : EbBaseService
     {
-        public InfraServices(ITenantDbFactory _dbf) : base(_dbf) { }
+        public InfraServices(IEbConnectionFactory _dbf) : base(_dbf) { }
 
         public CreateAccountResponse Post(CreateAccountRequest request)
         {
             CreateAccountResponse resp;
-            using (var con = (!string.IsNullOrEmpty(request.DbName)) ? TenantDbFactory.DataDB.GetNewConnection(request.DbName.ToLower()) : TenantDbFactory.DataDB.GetNewConnection())
+            using (var con = (!string.IsNullOrEmpty(request.DbName)) ? this.EbConnectionFactory.DataDB.GetNewConnection(request.DbName.ToLower()) : this.EbConnectionFactory.DataDB.GetNewConnection())
             {
                 con.Open();
                 if (request.op == "updatetenant")
@@ -36,16 +37,16 @@ namespace ExpressBase.ServiceStack.Services
                     //string sql = "UPDATE eb_users SET firstname=@firstname,company=@company,employees=@employees,designation=@designation,country=@country,pwd = @pwd WHERE email=@email RETURNING id,email;" +
                     //    "INSERT INTO eb_role2user()";
                     string sql = "SELECT * FROM eb_tenantprofile_setup(@firstname,@company,@employees,@designation,@country,@pwd,@email)";
-                    DbParameter[] parameters = { this.TenantDbFactory.DataDB.GetNewParameter("firstname", System.Data.DbType.String, request.Colvalues["Name"]),
-                        this.TenantDbFactory.DataDB.GetNewParameter("company", System.Data.DbType.String, request.Colvalues["Company"]),
-                        this.TenantDbFactory.DataDB.GetNewParameter("employees", System.Data.DbType.String, request.Colvalues["Employees"]),
-                        this.TenantDbFactory.DataDB.GetNewParameter("designation", System.Data.DbType.String, request.Colvalues["Designation"]),
-                        this.TenantDbFactory.DataDB.GetNewParameter("country", System.Data.DbType.String, request.Colvalues["Country"]),
-                        this.TenantDbFactory.DataDB.GetNewParameter("pwd", System.Data.DbType.String, (request.Colvalues["Password"].ToString() + request.Colvalues["Email"].ToString()).ToMD5Hash()),
-                        this.TenantDbFactory.DataDB.GetNewParameter("email", System.Data.DbType.String, request.Colvalues["Email"])
+                    DbParameter[] parameters = { this.EbConnectionFactory.DataDB.GetNewParameter("firstname", System.Data.DbType.String, request.Colvalues["Name"]),
+                        this.EbConnectionFactory.DataDB.GetNewParameter("company", System.Data.DbType.String, request.Colvalues["Company"]),
+                        this.EbConnectionFactory.DataDB.GetNewParameter("employees", System.Data.DbType.String, request.Colvalues["Employees"]),
+                        this.EbConnectionFactory.DataDB.GetNewParameter("designation", System.Data.DbType.String, request.Colvalues["Designation"]),
+                        this.EbConnectionFactory.DataDB.GetNewParameter("country", System.Data.DbType.String, request.Colvalues["Country"]),
+                        this.EbConnectionFactory.DataDB.GetNewParameter("pwd", System.Data.DbType.String, (request.Colvalues["Password"].ToString() + request.Colvalues["Email"].ToString()).ToMD5Hash()),
+                        this.EbConnectionFactory.DataDB.GetNewParameter("email", System.Data.DbType.String, request.Colvalues["Email"])
 
                     };
-                    var ds = this.TenantDbFactory.ObjectsDB.DoQuery(sql, parameters);
+                    var ds = this.EbConnectionFactory.ObjectsDB.DoQuery(sql, parameters);
                     resp = new CreateAccountResponse()
                     {
                         id = Convert.ToInt32(ds.Rows[0][0])
@@ -54,14 +55,14 @@ namespace ExpressBase.ServiceStack.Services
                 }
                 else
                 {
-                    var cmd = TenantDbFactory.DataDB.GetNewCommand(con, "INSERT INTO eb_users (firstname,company,employees,designation,country,pwd,email) values(@firstname,@company,@employees,@designation,@country,@pwd,@email)");
-                    cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("firstname", System.Data.DbType.String, request.Colvalues["Name"]));
-                    cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("company", System.Data.DbType.String, request.Colvalues["Company"]));
-                    cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("employees", System.Data.DbType.String, request.Colvalues["Employees"]));
-                    cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("designation", System.Data.DbType.String, request.Colvalues["Designation"]));
-                    cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("country", System.Data.DbType.String, request.Colvalues["Country"]));
-                    cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("pwd", System.Data.DbType.String, (request.Colvalues["Password"].ToString() + request.Colvalues["Email"].ToString()).ToMD5Hash()));
-                    cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("email", System.Data.DbType.String, request.Colvalues["Email"]));
+                    var cmd = EbConnectionFactory.DataDB.GetNewCommand(con, "INSERT INTO eb_users (firstname,company,employees,designation,country,pwd,email) values(@firstname,@company,@employees,@designation,@country,@pwd,@email)");
+                    cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("firstname", System.Data.DbType.String, request.Colvalues["Name"]));
+                    cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("company", System.Data.DbType.String, request.Colvalues["Company"]));
+                    cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("employees", System.Data.DbType.String, request.Colvalues["Employees"]));
+                    cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("designation", System.Data.DbType.String, request.Colvalues["Designation"]));
+                    cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("country", System.Data.DbType.String, request.Colvalues["Country"]));
+                    cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("pwd", System.Data.DbType.String, (request.Colvalues["Password"].ToString() + request.Colvalues["Email"].ToString()).ToMD5Hash()));
+                    cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("email", System.Data.DbType.String, request.Colvalues["Email"]));
                     resp = new CreateAccountResponse
                     {
                         id = Convert.ToInt32(cmd.ExecuteScalar())
@@ -76,7 +77,7 @@ namespace ExpressBase.ServiceStack.Services
             GetProductPlanResponse getProductPlanResponse = new GetProductPlanResponse();
             string sql = @"SELECT * FROM eb_product_plans;
                             SELECT * FROM eb_random_sid();";
-            var ds = this.TenantDbFactory.ObjectsDB.DoQueries(sql);
+            var ds = this.EbConnectionFactory.ObjectsDB.DoQueries(sql);
             Dictionary<int, List<ProductPlan>> coll = new Dictionary<int, List<ProductPlan>>();
 
             foreach (EbDataRow dr in ds.Tables[0].Rows)
@@ -96,7 +97,7 @@ namespace ExpressBase.ServiceStack.Services
         {
             AutoGenSolIdResponse resp = new AutoGenSolIdResponse();
             string sql = "SELECT * FROM eb_random_sid();";
-            var ds = this.TenantDbFactory.ObjectsDB.DoQuery(sql);
+            var ds = this.EbConnectionFactory.ObjectsDB.DoQuery(sql);
             resp.Sid = ds.Rows[0][0].ToString();
             return resp;
         }
@@ -104,17 +105,17 @@ namespace ExpressBase.ServiceStack.Services
 
         public CreateSolutionResponse Post(CreateSolutionRequest request)
         {
-            using (var con = TenantDbFactory.DataDB.GetNewConnection())
+            using (var con = this.EbConnectionFactory.DataDB.GetNewConnection())
             {
                 con.Open();
                 string sql = "select * from eb_subscription_persist( @sname,@i_sid,@e_sid,@tenant_id,@descript,@js); ";
-                var cmd = TenantDbFactory.DataDB.GetNewCommand(con, sql);
-                cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("@sname", System.Data.DbType.String, request.Colvalues["Sname"]));
-                cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("@i_sid", System.Data.DbType.String, request.Colvalues["Isid"]));
-                cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("@e_sid", System.Data.DbType.String, request.Colvalues["Esid"]));
-                cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("@tenant_id", System.Data.DbType.Int32, request.UserId));
-                cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("@descript", System.Data.DbType.String, request.Colvalues["Desc"]));
-                cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("@js", System.Data.DbType.String, request.Colvalues["Subscription"]));
+                var cmd = this.EbConnectionFactory.DataDB.GetNewCommand(con, sql);
+                cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("@sname", System.Data.DbType.String, request.Colvalues["Sname"]));
+                cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("@i_sid", System.Data.DbType.String, request.Colvalues["Isid"]));
+                cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("@e_sid", System.Data.DbType.String, request.Colvalues["Esid"]));
+                cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("@tenant_id", System.Data.DbType.Int32, request.UserId));
+                cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("@descript", System.Data.DbType.String, request.Colvalues["Desc"]));
+                cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("@js", System.Data.DbType.String, request.Colvalues["Subscription"]));
                 return new CreateSolutionResponse { Solnid = Convert.ToInt32(cmd.ExecuteScalar()) };
             }
 
@@ -125,7 +126,7 @@ namespace ExpressBase.ServiceStack.Services
 
            string DbName = request.Colvalues["Sid"].ToString();
             CreateApplicationResponse resp;
-            using (var con = TenantDbFactory.DataDB.GetNewConnection(DbName.ToLower()))
+            using (var con = this.EbConnectionFactory.DataDB.GetNewConnection(DbName.ToLower()))
             {
                 con.Open();
 
@@ -137,11 +138,11 @@ namespace ExpressBase.ServiceStack.Services
                     //else
                         sql = "INSERT INTO eb_applications (application_name,application_type, description,app_icon) VALUES (@applicationname,@apptype, @description,@appicon) RETURNING id";
 
-                    var cmd = TenantDbFactory.DataDB.GetNewCommand(con, sql);
-                    cmd.Parameters.Add(TenantDbFactory.ObjectsDB.GetNewParameter("applicationname", System.Data.DbType.String, request.Colvalues["AppName"]));
-                    cmd.Parameters.Add(TenantDbFactory.ObjectsDB.GetNewParameter("apptype", System.Data.DbType.String, request.Colvalues["AppType"]));
-                    cmd.Parameters.Add(TenantDbFactory.ObjectsDB.GetNewParameter("description", System.Data.DbType.String, request.Colvalues["DescApp"]));
-                    cmd.Parameters.Add(TenantDbFactory.ObjectsDB.GetNewParameter("appicon", System.Data.DbType.String, request.Colvalues["AppIcon"]));
+                    var cmd = EbConnectionFactory.DataDB.GetNewCommand(con, sql);
+                    cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("applicationname", System.Data.DbType.String, request.Colvalues["AppName"]));
+                    cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("apptype", System.Data.DbType.String, request.Colvalues["AppType"]));
+                    cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("description", System.Data.DbType.String, request.Colvalues["DescApp"]));
+                    cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("appicon", System.Data.DbType.String, request.Colvalues["AppIcon"]));
                     var res = cmd.ExecuteScalar();
                     resp = new CreateApplicationResponse(){ id = Convert.ToInt32(res) };
                 }
@@ -155,7 +156,8 @@ namespace ExpressBase.ServiceStack.Services
         {
             List<EbSolutionsWrapper> temp = new List<EbSolutionsWrapper>();
             string sql = string.Format("SELECT * FROM eb_solutions WHERE tenant_id={0}", request.UserId);
-            var dt = TenantDbFactory.DataDB.DoQuery(sql);
+
+            var dt = this.EbConnectionFactory.DataDB.DoQuery(sql);
             foreach (EbDataRow dr in dt.Rows)
             {
                 var _ebSolutions = (new EbSolutionsWrapper
@@ -174,9 +176,8 @@ namespace ExpressBase.ServiceStack.Services
 
         public GetSolutioInfoResponse Get(GetSolutioInfoRequest request)
         {
-            TenantDbFactory dbFactory = new TenantDbFactory("expressbase", this.Redis);
             string sql = string.Format("SELECT * FROM eb_solutions WHERE isolution_id='{0}'", request.TenantAccountId);
-            var dt = dbFactory.DataDB.DoQuery(sql);
+            var dt = (new EbConnectionFactory(CoreConstants.EXPRESSBASE, this.Redis)).DataDB.DoQuery(sql);
             EbSolutionsWrapper _ebSolutions = new EbSolutionsWrapper
             {
                 SolutionName = dt.Rows[0][6].ToString(),
@@ -192,11 +193,11 @@ namespace ExpressBase.ServiceStack.Services
         public EditAccountResponse Post(EditAccountRequest request)
         {
             EditAccountResponse resp;
-            using (var con = TenantDbFactory.DataDB.GetNewConnection())
+            using (var con = EbConnectionFactory.DataDB.GetNewConnection())
             {
                 Dictionary<string, object> dict = new Dictionary<string, object>();
                 string sql = string.Format("SELECT * FROM eb_tenantaccount WHERE id={0}", request.Colvalues["id"]);
-                var dt = TenantDbFactory.DataDB.DoQuery(sql);
+                var dt = EbConnectionFactory.DataDB.DoQuery(sql);
                 foreach (EbDataRow dr in dt.Rows)
                 {
                     foreach (EbDataColumn dc in dt.Columns)
@@ -1039,13 +1040,13 @@ namespace ExpressBase.ServiceStack.Services
             //}
             //else
             {
-                using (var con = TenantDbFactory.DataDB.GetNewConnection())
+                using (var con = EbConnectionFactory.DataDB.GetNewConnection())
                 {
                     con.Open();
                     if (request.restype == "img")
                     {
                         string sql = string.Format("SELECT id,profileimg FROM eb_tenants WHERE id={0}", request.Uid);
-                        var dt = TenantDbFactory.DataDB.DoQuery(sql);
+                        var dt = EbConnectionFactory.DataDB.DoQuery(sql);
                         // Dictionary<int, string> list = new Dictionary<int, string>();
                         List<List<object>> list = new List<List<object>>();
                         foreach (EbDataRow dr in dt.Rows)
@@ -1061,7 +1062,7 @@ namespace ExpressBase.ServiceStack.Services
                     else
                     {
                         string sql = string.Format("SELECT id,profileimg FROM eb_tenants WHERE cname={0}", request.Uname);
-                        var dt = TenantDbFactory.DataDB.DoQuery(sql);
+                        var dt = EbConnectionFactory.DataDB.DoQuery(sql);
                         List<List<object>> list = new List<List<object>>();
                         foreach (EbDataRow dr in dt.Rows)
                         {
@@ -1080,7 +1081,7 @@ namespace ExpressBase.ServiceStack.Services
         }
 
 
-        public void TableInsertsDataDB(TenantDbFactory dbf, EbDataTable dt, DbConnection _con_d1)
+        public void TableInsertsDataDB(EbConnectionFactory dbf, EbDataTable dt, DbConnection _con_d1)
         {
             string result;
             var assembly = typeof(ExpressBase.Common.Resource).GetAssembly();
@@ -1094,16 +1095,16 @@ namespace ExpressBase.ServiceStack.Services
                 var datacmd = dbf.DataDB.GetNewCommand(_con_d1, result);
                 datacmd.ExecuteNonQuery();
                 var cmd = dbf.DataDB.GetNewCommand(_con_d1, "INSERT INTO eb_users(email,pwd,fullname,phnoprimary) VALUES(@email,@pwd,@fullname,@phnoprimary); INSERT INTO eb_role2user(user_id,role_id) VALUES(1,3)");
-                cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("email", System.Data.DbType.String, dt.Rows[0][0]));
-                cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("pwd", System.Data.DbType.String, dt.Rows[0][3]));
-                cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("fullname", System.Data.DbType.String, dt.Rows[0][1]));
-                cmd.Parameters.Add(TenantDbFactory.DataDB.GetNewParameter("phnoprimary", System.Data.DbType.String, dt.Rows[0][2]));
+                cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("email", System.Data.DbType.String, dt.Rows[0][0]));
+                cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("pwd", System.Data.DbType.String, dt.Rows[0][3]));
+                cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("fullname", System.Data.DbType.String, dt.Rows[0][1]));
+                cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("phnoprimary", System.Data.DbType.String, dt.Rows[0][2]));
                 cmd.ExecuteScalar();
             }
 
         }
 
-        public void TableInsertObjectDB(TenantDbFactory dbf, DbConnection _con_o1)
+        public void TableInsertObjectDB(EbConnectionFactory dbf, DbConnection _con_o1)
         {
             string result;
             var assembly = typeof(ExpressBase.Common.Resource).GetAssembly();
@@ -1124,8 +1125,8 @@ namespace ExpressBase.ServiceStack.Services
             UniqueRequestResponse res = new UniqueRequestResponse();
             ILog log = LogManager.GetLogger(GetType());
             string sql = "SELECT id FROM eb_users WHERE email ~* @email";
-            DbParameter[] parameters = { this.TenantDbFactory.ObjectsDB.GetNewParameter("email", System.Data.DbType.String, request.email) };
-            var dt = this.TenantDbFactory.ObjectsDB.DoQuery(sql, parameters);
+            DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("email", System.Data.DbType.String, request.email) };
+            var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(sql, parameters);
             if (dt.Rows.Count > 0)
                 res.isUniq = false;
             else
@@ -1137,7 +1138,7 @@ namespace ExpressBase.ServiceStack.Services
         public GetAccountResponse Any(GetAccountRequest request)
         {
             string sql = string.Format("SELECT id,solutionname,profilelogo,solutionid,createdat FROM eb_solutions WHERE tenantid={0}", request.UserId);
-            var dt = TenantDbFactory.DataDB.DoQuery(sql);
+            var dt = this.EbConnectionFactory.DataDB.DoQuery(sql);
             List<List<object>> list = new List<List<object>>();
             foreach (EbDataRow dr in dt.Rows)
             {

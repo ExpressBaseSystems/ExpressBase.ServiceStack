@@ -19,7 +19,7 @@ namespace ExpressBase.ServiceStack
     [Authenticate]
     public class DataSourceService : EbBaseService
     {
-        public DataSourceService(ITenantDbFactory _dbf) : base(_dbf) { }
+        public DataSourceService(IEbConnectionFactory _dbf) : base(_dbf) { }
 
         [CompressResponse]
         public DataSourceDataResponse Any(DataSourceDataRequest request)
@@ -62,11 +62,11 @@ namespace ExpressBase.ServiceStack
 
             bool _isPaged = (_sql.ToLower().Contains("@offset") && _sql.ToLower().Contains("@limit"));
 
-            var parameters = DataHelper.GetParams(this.TenantDbFactory, _isPaged, request.Params, request.Length, request.Start);
+            var parameters = DataHelper.GetParams(this.EbConnectionFactory, _isPaged, request.Params, request.Length, request.Start);
             if (request.Params == null)
                 _sql = _sql.Replace("@id", "0");
 
-            var _dataset = this.TenantDbFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray<System.Data.Common.DbParameter>());
+            var _dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray<System.Data.Common.DbParameter>());
 
             //-- 
             int _recordsTotal = 0, _recordsFiltered = 0;
@@ -132,14 +132,14 @@ namespace ExpressBase.ServiceStack
 
             bool _isPaged = (_sql.ToLower().Contains("@offset") && _sql.ToLower().Contains("@limit"));
 
-            var parameters = DataHelper.GetParams(this.TenantDbFactory, _isPaged, request.Params, request.Length, request.Start).ToArray<System.Data.Common.DbParameter>();
+            var parameters = DataHelper.GetParams(this.EbConnectionFactory, _isPaged, request.Params, request.Length, request.Start).ToArray<System.Data.Common.DbParameter>();
             if (request.Params == null)
                 _sql = _sql.Replace("@id", "0");
 
             //var _dataset = this.TenantDbFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray<System.Data.Common.DbParameter>());
 
             DataSet _dataset = new DataSet();
-            using (var con = this.TenantDbFactory.ObjectsDB.GetNewConnection() as NpgsqlConnection)
+            using (var con = this.EbConnectionFactory.ObjectsDB.GetNewConnection() as NpgsqlConnection)
             {
                 try
                 {
@@ -208,13 +208,13 @@ namespace ExpressBase.ServiceStack
                     string _sql = _ds.Sql/*Decoded()*/.Replace("@and_search", string.Empty).Replace("@orderby", "1");
                     _isPaged = (_sql.ToLower().Contains("@offset") && _sql.ToLower().Contains("@limit"));
 
-                    var parameters = DataHelper.GetParams(this.TenantDbFactory, _isPaged, request.Params, 0, 0);
+                    var parameters = DataHelper.GetParams(this.EbConnectionFactory, _isPaged, request.Params, 0, 0);
                     if (request.Params == null)
                         _sql = _sql.Replace("@id", "0");
 
                     try
                     {
-                        _dataset = this.TenantDbFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray<System.Data.Common.DbParameter>());
+                        _dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray<System.Data.Common.DbParameter>());
 
                         foreach (var dt in _dataset.Tables)
                             resp.Columns.Add(dt.Columns);

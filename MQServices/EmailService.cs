@@ -13,6 +13,7 @@ using System.Text;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Data.Common;
+using ExpressBase.Common.Constants;
 
 namespace ExpressBase.ServiceStack
 {
@@ -30,7 +31,7 @@ namespace ExpressBase.ServiceStack
             public string Post(EmailServicesMqRequest request)
             {
                 
-                var _InfraDb = base.ResolveService<ITenantDbFactory>() as TenantDbFactory;
+                var _InfraDb = new EbConnectionFactory(request.TenantAccountId, this.Redis);
                 var myService = base.ResolveService<EbObjectService>();
                 var res =(EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = request.refid });
                 EbEmailTemplate ebEmailTemplate = new EbEmailTemplate();

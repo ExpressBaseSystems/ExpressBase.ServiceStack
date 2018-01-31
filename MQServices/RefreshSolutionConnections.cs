@@ -1,5 +1,6 @@
 ﻿using ExpressBase.Common;
 using ExpressBase.Common.Connections;
+using ExpressBase.Common.Constants;
 using ExpressBase.Common.Data;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ServiceStack;
@@ -13,7 +14,7 @@ namespace ExpressBase.ServiceStack.MQServices
     {
         public bool Post(RefreshSolutionConnectionsMqRequest req)
         {
-            using (var con = new TenantDbFactory("expressbase", this.Redis).DataDB.GetNewConnection() as Npgsql.NpgsqlConnection)
+            using (var con = new EbConnectionFactory(CoreConstants.EXPRESSBASE, this.Redis).DataDB.GetNewConnection() as Npgsql.NpgsqlConnection)
             {
                 try
                 {
@@ -24,7 +25,7 @@ namespace ExpressBase.ServiceStack.MQServices
                     ada.SelectCommand.Parameters.Add(new Npgsql.NpgsqlParameter("solution_id", NpgsqlTypes.NpgsqlDbType.Text) { Value = req.TenantAccountId });
                     ada.Fill(dt);
 
-                    EbSolutionConnections cons = new EbSolutionConnections();
+                    EbConnections cons = new EbConnections();
                     foreach (DataRow dr in dt.Rows)
                     {
                         if (dr["con_type"].ToString() == EbConnectionTypes.EbDATA.ToString())
@@ -44,7 +45,7 @@ namespace ExpressBase.ServiceStack.MQServices
                         // ... More to come
                     }
 
-                    Redis.Set<EbSolutionConnections>(string.Format("EbSolutionConnections_{0}", req.TenantAccountId), cons);
+                    Redis.Set<EbConnections>(string.Format("EbSolutionConnections_{0}", req.TenantAccountId), cons);
 
                     return true;
                 }

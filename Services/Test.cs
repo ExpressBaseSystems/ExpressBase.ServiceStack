@@ -11,21 +11,20 @@ namespace ExpressBase.ServiceStack.Services
 {
     public class Test : EbBaseService
     {
-        public Test(ITenantDbFactory _dbf) : base(_dbf) { }
+        public Test(IEbConnectionFactory _dbf) : base(_dbf) { }
         public TestResponse Any(TestRequest request)
         {
             ILog log = LogManager.GetLogger(GetType());
-            OracleDB db = new OracleDB();
-            var con = db.GetNewConnection();
+            var con = EbConnectionFactory.DataDB.GetNewConnection();
             log.Info("Connection");
             con.Open();
-            log.Info(".............." + con + "Connection Opened");
+            log.Info(".............."+con+"Connection Opened");
             string sql = "INSERT INTO testtb (name) VALUES ('BINI')";
 
             //var cmd = c.GetNewCommand(con, sql);
             //cmd.ExecuteNonQuery();
 
-
+            
             return null;
         }
     }
