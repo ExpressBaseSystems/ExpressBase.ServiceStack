@@ -1,4 +1,5 @@
 ﻿using ExpressBase.Common;
+using ExpressBase.Common.Constants;
 using ExpressBase.Common.Data;
 using ExpressBase.Common.EbServiceStack.ReqNRes;
 using ExpressBase.Objects.ServiceStack_Artifacts;
@@ -222,9 +223,9 @@ namespace ExpressBase.ServiceStack
                     {
                         log.Info("In Authenticate");
 
-                        string TenantId = (requestDto as Authenticate).Meta != null ? (requestDto as Authenticate).Meta["cid"] : "expressbase";
+                        string TenantId = (requestDto as Authenticate).Meta != null ? (requestDto as Authenticate).Meta["cid"] : CoreConstants.EXPRESSBASE;
                         log.Info(TenantId);
-                        RequestContext.Instance.Items.Add("TenantAccountId", TenantId);
+                        RequestContext.Instance.Items.Add(CoreConstants.SOLUTION_ID, TenantId);
                     }
                 }
                 catch (Exception e)
@@ -247,7 +248,7 @@ namespace ExpressBase.ServiceStack
                             {
                                 if (c.Type == "cid" && !string.IsNullOrEmpty(c.Value))
                                 {
-                                    RequestContext.Instance.Items.Add("TenantAccountId", c.Value);
+                                    RequestContext.Instance.Items.Add(CoreConstants.SOLUTION_ID, c.Value);
                                     if (requestDto is IEbSSRequest)
                                         (requestDto as IEbSSRequest).TenantAccountId = c.Value;
                                     if (requestDto is EbServiceStackRequest)

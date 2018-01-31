@@ -445,7 +445,7 @@ namespace ExpressBase.ServiceStack.Services
 
         //    ILog log = LogManager.GetLogger(GetType());
 
-        //    if (request.TenantAccountId != "expressbase")
+        //    if (request.TenantAccountId != CoreConstants.EXPRESSBASE)
         //    {
         //        //base.ClientID = request.TenantAccountId;
         //        using (var con = this.TenantDbFactory.ObjectsDB.GetNewConnection())
@@ -864,7 +864,7 @@ namespace ExpressBase.ServiceStack.Services
 
         public TokenRequiredSelectResponse Any(TokenRequiredSelectRequest request)
         {
-            //if (!string.IsNullOrEmpty(request.TenantAccountId) && request.TenantAccountId != "expressbase")
+            //if (!string.IsNullOrEmpty(request.TenantAccountId) && request.TenantAccountId != CoreConstants.EXPRESSBASE)
             //{
             //    using (var con = this.TenantDbFactory.ObjectsDB.GetNewConnection())
             //    {

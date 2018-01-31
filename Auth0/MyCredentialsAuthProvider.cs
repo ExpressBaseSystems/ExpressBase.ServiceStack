@@ -1,4 +1,5 @@
-﻿using ExpressBase.Common.Data;
+﻿using ExpressBase.Common.Constants;
+using ExpressBase.Common.Data;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ExpressBase.Security;
 using ServiceStack;
@@ -37,12 +38,12 @@ namespace ExpressBase.ServiceStack.Auth0
 
             if (request.Meta.ContainsKey("signup_tok"))
             {
-                cid = "expressbase";
+                cid = CoreConstants.EXPRESSBASE;
                 _authUser = User.GetInfraVerifiedUser(TenantDbFactory.DataDB, UserName, request.Meta["signup_tok"]);
             }
             else
             {
-                //if (cid == "expressbase")
+                //if (cid == CoreConstants.EXPRESSBASE)
                 //{
                 //    log.Info("for tenant login");
                 //    _authUser = (string.IsNullOrEmpty(socialId)) ? User.GetInfraUser(TenantDbFactory.DataDB, UserName, password) : User.GetInfraUserViaSocial(TenantDbFactory.DataDB, UserName, socialId);
@@ -50,7 +51,7 @@ namespace ExpressBase.ServiceStack.Auth0
                 //}
                 //else
                 //{
-                    //log.Info("for user login");
+                //log.Info("for user login");
                 //    _authUser = (string.IsNullOrEmpty(socialId)) ? User.GetDetails(TenantDbFactory.DataDB, UserName, password) : User.GetInfraUserViaSocial(TenantDbFactory.DataDB, socialId);
                 _authUser = User.GetDetails(TenantDbFactory.DataDB, UserName, password, socialId);
                 log.Info("#Eb reached 2");

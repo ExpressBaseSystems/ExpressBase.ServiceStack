@@ -45,7 +45,7 @@ namespace ExpressBase.ServiceStack.MQServices
                         // ... More to come
                     }
 
-                    Redis.Set<EbConnections>(string.Format("EbSolutionConnections_{0}", req.TenantAccountId), cons);
+                    Redis.Set<EbConnections>(string.Format(CoreConstants.SOLUTION_CONNECTION_REDIS_KEY, req.TenantAccountId), cons);
 
                     return true;
                 }

@@ -7,6 +7,7 @@ using ServiceStack.Configuration;
 using ServiceStack.Web;
 using ExpressBase.Common;
 using ExpressBase.Common.Data;
+using ExpressBase.Common.Constants;
 
 namespace ExpressBase.ServiceStack
 {
@@ -33,7 +34,7 @@ namespace ExpressBase.ServiceStack
                     cmd.ExecuteNonQuery();
                 }
 
-                (session as CustomUserSession).Company = "expressbase";
+                (session as CustomUserSession).Company = CoreConstants.EXPRESSBASE;
                 (session as CustomUserSession).WhichConsole = "tc";
                 return authService.Redirect(SuccessRedirectUrlFilter(this, "http://localhost:5000/Ext/AfterSignInSocial?email=" + session.Email + "&socialId=" + session.UserName + "&provider=" + session.AuthProvider + "&providerToken=" + session.ProviderOAuthAccess[0].AccessTokenSecret));
             }
