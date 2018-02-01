@@ -21,6 +21,7 @@
     <PackageReference Include="FOSS.ServiceStack.RabbitMq.Core" Version="5.0.2" />
     <PackageReference Include="FOSS.ServiceStack.Server.Core" Version="5.0.2" />
     <PackageReference Include="Microsoft.AspNetCore.All" Version="2.0.3" />
+    <PackageReference Include="QRCoder" Version="1.3.2" />
     <PackageReference Include="RestSharp.NetCore" Version="105.2.3" />
     <PackageReference Include="Twilio" Version="5.9.1" />
   </ItemGroup>

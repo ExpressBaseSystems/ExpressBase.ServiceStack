@@ -25,7 +25,7 @@ namespace ExpressBase.ServiceStack.Auth0
             ILog log = LogManager.GetLogger(GetType());
 
             log.Info("In TryAuthenticate method1");
-            var TenantDbFactory = authService.ResolveService<IEbConnectionFactory>() as EbConnectionFactory;
+            var EbConnectionFactory = authService.ResolveService<IEbConnectionFactory>() as EbConnectionFactory;
 
             log.Info("In TryAuthenticate method2");
 
@@ -40,7 +40,7 @@ namespace ExpressBase.ServiceStack.Auth0
 			if (request.Meta.ContainsKey("signup_tok"))
             {
                 cid = CoreConstants.EXPRESSBASE;
-                _authUser = User.GetInfraVerifiedUser(TenantDbFactory.DataDB, UserName, request.Meta["signup_tok"]);
+                _authUser = User.GetInfraVerifiedUser(EbConnectionFactory.DataDB, UserName, request.Meta["signup_tok"]);
             }
             else if(request.Meta.ContainsKey("socialId"))
             {
