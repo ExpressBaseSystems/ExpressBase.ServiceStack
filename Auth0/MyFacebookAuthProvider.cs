@@ -36,7 +36,7 @@ namespace ExpressBase.ServiceStack.Auth0
                     cmd.Parameters.Add(_InfraDb.DataDB.GetNewParameter("profileimg", System.Data.DbType.String, session.ProviderOAuthAccess[0].Items["profileUrl"]));
                     int logatmp = Convert.ToInt32(cmd.ExecuteScalar());
 
-                    //(session as CustomUserSession).Company = "expressbase";
+                    //(session as CustomUserSession).Company = CoreConstants.EXPRESSBASE;
                     //(session as CustomUserSession).WhichConsole = "tc";
                     return authService.Redirect(SuccessRedirectUrlFilter(this, "http://expressbase.com/Ext/AfterSignInSocial?email=" + session.ProviderOAuthAccess[0].Email + "&socialId=" + session.ProviderOAuthAccess[0].UserName + "&provider=" + session.AuthProvider + "&providerToken=" + session.ProviderOAuthAccess[0].AccessTokenSecret + "&lg=" + logatmp));
                 }

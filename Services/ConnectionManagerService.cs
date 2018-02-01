@@ -18,7 +18,7 @@ namespace ExpressBase.ServiceStack.Services
         public GetConnectionsResponse Post(GetConnectionsRequest req)
         {
             GetConnectionsResponse resp = new GetConnectionsResponse();
-            resp.EBSolutionConnections = this.Redis.Get<EbConnections>(string.Format("EbSolutionConnections_{0}", req.TenantAccountId));
+            resp.EBSolutionConnections = this.Redis.Get<EbConnectionsConfig>(string.Format(CoreConstants.SOLUTION_CONNECTION_REDIS_KEY, req.TenantAccountId));
 
             return resp;
         }
@@ -26,87 +26,53 @@ namespace ExpressBase.ServiceStack.Services
         [Authenticate]
         public void Post(InitialSolutionConnectionsRequest request)
         {
-            EbConnections _solutionConnections = new EbConnections
-            {
-                ObjectsDbConnection = new EbObjectsDbConnection
-                {
-                    DatabaseVendor = DatabaseVendors.PGSQL,
-                    Server = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_INFRA_DB_SERVER),
-                    Port = Convert.ToInt16(Environment.GetEnvironmentVariable(EnvironmentConstants.EB_INFRA_DB_PORT)),
-                    DatabaseName = request.SolutionId,
-                    IsDefault = true,
-                    NickName = request.SolutionId + "_Initial",
-                    UserName = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_INFRA_DB_RW_USER), // CREATE NEW USER FOR SOLUTION
-                    Password = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_INFRA_DB_RW_PASSWORD), // CREATE NEW PASS FOR SOLUTION
-                    Timeout = Convert.ToInt16(Environment.GetEnvironmentVariable(EnvironmentConstants.EB_INFRA_DB_TIMEOUT))
-                },
-                DataDbConnection = new EbDataDbConnection
-                {
-                    DatabaseVendor = DatabaseVendors.PGSQL,
-                    Server = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_INFRA_DB_SERVER),
-                    Port = Convert.ToInt16(Environment.GetEnvironmentVariable(EnvironmentConstants.EB_INFRA_DB_PORT)),
-                    DatabaseName = request.SolutionId,
-                    IsDefault = true,
-                    NickName = request.SolutionId + "_Initial",
-                    UserName = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_INFRA_DB_RW_USER), // CREATE NEW USER FOR SOLUTION
-                    Password = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_INFRA_DB_RW_PASSWORD), // CREATE NEW PASS FOR SOLUTION
-                    Timeout = Convert.ToInt16(Environment.GetEnvironmentVariable(EnvironmentConstants.EB_INFRA_DB_TIMEOUT))
-                },
-                //To Be Deleted
-                FilesDbConnection = new EbFilesDbConnection
-                {
-                    FilesDbVendor = FilesDbVendors.MongoDB,
-                    IsDefault = true,
-                    NickName = request.SolutionId + "_Initial",
-                    FilesDB_url = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_INFRA_FILES_DB_URL)
-                }
-            };
+            EbConnectionsConfig _solutionConnections = EbConnectionsConfigProvider.DataCenterConnections;
 
-            _solutionConnections.ObjectsDbConnection.Persist(request.SolutionId, this.EbConnectionFactory, true, request.UserId);
-            _solutionConnections.DataDbConnection.Persist(request.SolutionId, this.EbConnectionFactory, true, request.UserId);
-            _solutionConnections.FilesDbConnection.Persist(request.SolutionId, this.EbConnectionFactory, true, request.UserId);
+            _solutionConnections.ObjectsDbConnection.DatabaseName = request.SolutionId;
+            _solutionConnections.ObjectsDbConnection.NickName = request.SolutionId + "_Initial";
 
-            this.Redis.Set<EbConnections>(string.Format(CoreConstants.SOLUTION_CONNECTION_REDIS_KEY, request.SolutionId), _solutionConnections);
+            _solutionConnections.DataDbConnection.DatabaseName = request.SolutionId;
+            _solutionConnections.DataDbConnection.NickName = request.SolutionId + "_Initial";
+
+            _solutionConnections.ObjectsDbConnection.Persist(request.SolutionId, this.InfraConnectionFactory, true, request.UserId);
+            _solutionConnections.DataDbConnection.Persist(request.SolutionId, this.InfraConnectionFactory, true, request.UserId);
+            _solutionConnections.FilesDbConnection.Persist(request.SolutionId, this.InfraConnectionFactory, true, request.UserId);
+
+            this.Redis.Set<EbConnectionsConfig>(string.Format(CoreConstants.SOLUTION_CONNECTION_REDIS_KEY, request.SolutionId), _solutionConnections);
         }
 
         [Authenticate]
         public void Post(ChangeSMTPConnectionRequest request)
         {
-            EbConnectionFactory dbFactory = new EbConnectionFactory(CoreConstants.EXPRESSBASE, this.Redis);
-            request.SMTPConnection.Persist(request.TenantAccountId, dbFactory, request.IsNew, request.UserId);
+            request.SMTPConnection.Persist(request.TenantAccountId, this.InfraConnectionFactory, request.IsNew, request.UserId);
             base.MessageProducer3.Publish(new RefreshSolutionConnectionsMqRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
         }
 
         [Authenticate]
         public void Post(ChangeDataDBConnectionRequest request)
         {
-            EbConnectionFactory dbFactory = new EbConnectionFactory(CoreConstants.EXPRESSBASE, this.Redis);
-            request.DataDBConnection.Persist(request.TenantAccountId, dbFactory, request.IsNew, request.UserId);
-
+            request.DataDBConnection.Persist(request.TenantAccountId, this.InfraConnectionFactory, request.IsNew, request.UserId);
             base.MessageProducer3.Publish(new RefreshSolutionConnectionsMqRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
         }
 
         [Authenticate]
         public void Post(ChangeObjectsDBConnectionRequest request)
         {
-            EbConnectionFactory dbFactory = new EbConnectionFactory(CoreConstants.EXPRESSBASE, this.Redis);
-            request.ObjectsDBConnection.Persist(request.TenantAccountId, dbFactory, request.IsNew, request.UserId);
+            request.ObjectsDBConnection.Persist(request.TenantAccountId, this.InfraConnectionFactory, request.IsNew, request.UserId);
             base.MessageProducer3.Publish(new RefreshSolutionConnectionsMqRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
         }
 
         [Authenticate]
         public void Post(ChangeFilesDBConnectionRequest request)
         {
-            EbConnectionFactory dbFactory = new EbConnectionFactory(CoreConstants.EXPRESSBASE, this.Redis);
-            request.FilesDBConnection.Persist(request.TenantAccountId, dbFactory, request.IsNew, request.UserId);
+            request.FilesDBConnection.Persist(request.TenantAccountId, this.InfraConnectionFactory, request.IsNew, request.UserId);
             base.MessageProducer3.Publish(new RefreshSolutionConnectionsMqRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
         }
 
         [Authenticate]
         public void Post(ChangeSMSConnectionRequest request)
         {
-            EbConnectionFactory dbFactory = new EbConnectionFactory(CoreConstants.EXPRESSBASE, this.Redis);
-            request.SMSConnection.Persist(request.TenantAccountId, dbFactory, request.IsNew, request.UserId);
+            request.SMSConnection.Persist(request.TenantAccountId, this.InfraConnectionFactory, request.IsNew, request.UserId);
             base.MessageProducer3.Publish(new RefreshSolutionConnectionsMqRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
         }
 
