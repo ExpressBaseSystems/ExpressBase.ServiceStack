@@ -25,7 +25,7 @@ namespace ExpressBase.ServiceStack.Auth0
             ILog log = LogManager.GetLogger(GetType());
 
             log.Info("In TryAuthenticate method1");
-            var TenantDbFactory = authService.ResolveService<IEbConnectionFactory>() as EbConnectionFactory;
+            var EbConnectionFactory = authService.ResolveService<IEbConnectionFactory>() as EbConnectionFactory;
 
             log.Info("In TryAuthenticate method2");
 
@@ -39,21 +39,21 @@ namespace ExpressBase.ServiceStack.Auth0
             if (request.Meta.ContainsKey("signup_tok"))
             {
                 cid = CoreConstants.EXPRESSBASE;
-                _authUser = User.GetInfraVerifiedUser(TenantDbFactory.DataDB, UserName, request.Meta["signup_tok"]);
+                _authUser = User.GetInfraVerifiedUser(EbConnectionFactory.DataDB, UserName, request.Meta["signup_tok"]);
             }
             else
             {
                 //if (cid == CoreConstants.EXPRESSBASE)
                 //{
                 //    log.Info("for tenant login");
-                //    _authUser = (string.IsNullOrEmpty(socialId)) ? User.GetInfraUser(TenantDbFactory.DataDB, UserName, password) : User.GetInfraUserViaSocial(TenantDbFactory.DataDB, UserName, socialId);
+                //    _authUser = (string.IsNullOrEmpty(socialId)) ? User.GetInfraUser(EbConnectionFactory.DataDB, UserName, password) : User.GetInfraUserViaSocial(EbConnectionFactory.DataDB, UserName, socialId);
                 //    log.Info("#Eb reached 1");
                 //}
                 //else
                 //{
                 //log.Info("for user login");
-                //    _authUser = (string.IsNullOrEmpty(socialId)) ? User.GetDetails(TenantDbFactory.DataDB, UserName, password) : User.GetInfraUserViaSocial(TenantDbFactory.DataDB, socialId);
-                _authUser = User.GetDetails(TenantDbFactory.DataDB, UserName, password, socialId);
+                //    _authUser = (string.IsNullOrEmpty(socialId)) ? User.GetDetails(EbConnectionFactory.DataDB, UserName, password) : User.GetInfraUserViaSocial(EbConnectionFactory.DataDB, socialId);
+                _authUser = User.GetDetails(EbConnectionFactory.DataDB, UserName, password, socialId);
                 log.Info("#Eb reached 2");
                 //}
             }
