@@ -101,6 +101,14 @@ namespace ExpressBase.ServiceStack
             var _ds = this.Redis.Get<EbDataSource>(request.RefId);
             string _sql = string.Empty;
 
+            if (_ds == null)
+            {
+                var myService = base.ResolveService<EbObjectService>();
+                var result = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = request.RefId });
+                _ds = EbSerializers.Json_Deserialize(result.Data[0].Json);
+                Redis.Set<EbDataSource>(request.RefId, _ds);
+            }
+
             if (_ds != null)
             {
                 string _c = string.Empty;

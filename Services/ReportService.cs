@@ -15,6 +15,7 @@ using System.Data;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using QRCoder;
 
 namespace ExpressBase.ServiceStack
 {
@@ -39,18 +40,14 @@ namespace ExpressBase.ServiceStack
             Report.IsLastpage = false;
             Report.watermarkImages = new Dictionary<string, byte[]>();
             Report.WaterMarkList = new List<object>();
+            Report.CurrentTimestamp = DateTime.Now;
             //-- END REPORT object INIT
 
             var myDataSourceservice = base.ResolveService<DataSourceService>();
             if (Report.DataSourceRefId != string.Empty)
             {
-                //cresp = this.Redis.Get<DataSourceColumnsResponse>(string.Format("{0}_columns", Report.DataSourceRefId));
-                //if (cresp.IsNull)
-                //    cresp = myDataSourceservice.Any(new DataSourceColumnsRequest { RefId = Report.DataSourceRefId });
-                //Report.DataColumns = (cresp.Columns.Count > 1) ? cresp.Columns[1] : cresp.Columns[0];
                 dresp = myDataSourceservice.Any(new DataSourceDataRequest444 { RefId = Report.DataSourceRefId, Draw = 1, Start = 0, Length = 100 });
                 Report.DataSet = dresp.DataSet;
-                //Report.DataRow = dresp.Data;
             }
 
 
@@ -71,14 +68,51 @@ namespace ExpressBase.ServiceStack
             // Anchor anchor = new Anchor("xyz",link);
             //anchor.Reference = "http://eb_roby_dev.localhost:5000/ReportRender?refid=eb_roby_dev-eb_roby_dev-3-1127-1854?tab=" + JsonConvert.SerializeObject(Report.DataRow[Report.SerialNumber - 1]);
             // d.Add(anchor);
+            //QR & BAR CODES
+            Report.Doc.Add(new Paragraph("Barcode EAN.UCC-13"));
+            BarcodeEan codeEAN = new BarcodeEan();
+            //codeEAN.Code = "4512345678906";
+
+            //Report.Doc.Add(new Paragraph("default:"));
+            //Report.Doc.Add(codeEAN.CreateImageWithBarcode(Report.Canvas, null, null));
+
+            //codeEAN.GuardBars = false;
+            //Report.Doc.Add(new Paragraph("without guard bars:"));
+            //Report.Doc.Add(codeEAN.CreateImageWithBarcode(Report.Canvas, null, null));
+
+            //codeEAN.Baseline = -1f;
+            //codeEAN.GuardBars = true;
+            //Report.Doc.Add(new Paragraph("text above:"));
+            //Report.Doc.Add(codeEAN.CreateImageWithBarcode(Report.Canvas, null, null));
+
+            codeEAN.Baseline = codeEAN.Size;
+            Report.Doc.Add(new Paragraph("qr"));
+
+            //BarcodeQRCode qrcode = new BarcodeQRCode("4512345678906", 1, 1, null);
+            //Image qrcodeImage = qrcode.getImage();
+            //qrcodeImage.setAbsolutePosition(10, 500);
+            //qrcodeImage.scalePercent(200);
+            //d1.Add(qrcodeImage);
+
+            QRCodeGenerator qrGenerator = new QRCodeGenerator();
+            QRCodeData qrCodeData = qrGenerator.CreateQrCode("4512345678906", QRCodeGenerator.ECCLevel.Q);
+            BitmapByteQRCode qrCode = new BitmapByteQRCode(qrCodeData);
+            byte[] qrCodeImage = qrCode.GetGraphic(20);
+            iTextSharp.text.Image img = iTextSharp.text.Image.GetInstance(qrCodeImage);
+            img.ScaleAbsolute(200, 200);
+            Report.Doc.Add(img);
+
             Report.Doc.NewPage();
 
             Report.DrawReportHeader();
             Report.DrawDetail();
             Report.Doc.Close();
             Report.Ms1.Position = 0;//important
-            Report.DataSet.Tables.Clear();
-            Report.DataSet.Dispose();
+            if (Report.DataSourceRefId != string.Empty)
+            {
+                Report.DataSet.Tables.Clear();
+                Report.DataSet.Dispose();
+            }
             return new ReportRenderResponse { StreamWrapper = new MemorystreamWrapper(Report.Ms1) };
 
         }
