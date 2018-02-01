@@ -86,22 +86,24 @@ WHERE
         public GetBotForm4UserResponse Get(GetBotForm4UserRequest request)
         {
             var Query1 = @"
-                            SELECT    
-                                    EOV.refid, EO.obj_name
+                            SELECT
+		                            EOV.refid, EO.obj_name 
                             FROM
-                                    eb_objects EO, eb_objects_ver EOV, eb_objects_status EOS
-                            WHERE
-                                     EO.id = EOV.eb_objects_id  AND 
-                                     EOS.eb_obj_ver_id = EOV.id AND 
-                                     EO.id = ANY('@Ids') AND 
-                                     EOS.status = 3 AND
-                                     (
-                                        EO.obj_type = 16 OR
-                                        EO.obj_type = 17 OR
-                                        EO.obj_type = 18
-                                     );
+		                            eb_objects EO, eb_objects_ver EOV, eb_objects_status EOS, eb_objects2application EOTA
+                            WHERE 
+		                            EO.id = EOV.eb_objects_id  AND
+		                            EO.id = EOTA.obj_id  AND
+		                            EOS.eb_obj_ver_id = EOV.id AND
+		                            EO.id =  ANY('@Ids') AND 
+		                            EOS.status = 3 AND
+		                            ( 	
+			                            EO.obj_type = 16 OR
+			                            EO.obj_type = 17
+			                            OR EO.obj_type = 18
+		                            )  AND
+		                            EOTA.app_id = @appid;
                         ";
-            EbDataTable table = this.EbConnectionFactory.ObjectsDB.DoQuery(Query1.Replace("@Ids", request.BotFormIds));
+            EbDataTable table = this.EbConnectionFactory.ObjectsDB.DoQuery(Query1.Replace("@Ids", request.BotFormIds).Replace("@appid", request.AppId));
             GetBotForm4UserResponse resp = new GetBotForm4UserResponse();
             foreach (EbDataRow row in table.Rows)
             {
