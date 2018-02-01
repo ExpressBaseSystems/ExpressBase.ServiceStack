@@ -54,18 +54,18 @@ namespace ExpressBase.ServiceStack.Auth0
 				//{
 				//log.Info("for user login");
 				//    _authUser = (string.IsNullOrEmpty(socialId)) ? User.GetDetails(TenantDbFactory.DataDB, UserName, password) : User.GetInfraUserViaSocial(TenantDbFactory.DataDB, socialId);
-				_authUser = User.GetDetailsSocial(TenantDbFactory.DataDB, request.Meta["socialId"]);
+				_authUser = User.GetDetailsSocial(EbConnectionFactory.DataDB, request.Meta["socialId"]);
 				log.Info("#Eb reached 2");
                 //}
             }
 			else if (request.Meta.ContainsKey("sso"))
 			{
-				_authUser = User.GetDetailsSSO(TenantDbFactory.DataDB, UserName);
+				_authUser = User.GetDetailsSSO(EbConnectionFactory.DataDB, UserName);
 				log.Info("#Eb reached 2");
 			}
 			else
 			{
-				_authUser = User.GetDetailsNormal(TenantDbFactory.DataDB, UserName, password);
+				_authUser = User.GetDetailsNormal(EbConnectionFactory.DataDB, UserName, password);
 				log.Info("#Eb reached 2");
 			}
 
