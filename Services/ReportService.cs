@@ -68,10 +68,12 @@ namespace ExpressBase.ServiceStack
             // Anchor anchor = new Anchor("xyz",link);
             //anchor.Reference = "http://eb_roby_dev.localhost:5000/ReportRender?refid=eb_roby_dev-eb_roby_dev-3-1127-1854?tab=" + JsonConvert.SerializeObject(Report.DataRow[Report.SerialNumber - 1]);
             // d.Add(anchor);
+
             //QR & BAR CODES
-            Report.Doc.Add(new Paragraph("Barcode EAN.UCC-13"));
-            BarcodeEan codeEAN = new BarcodeEan();
-            //codeEAN.Code = "4512345678906";
+            //Report.Doc.Add(new Paragraph("Barcode EAN.UCC-13"));
+           // BarcodeEan codeEAN = new BarcodeEan();
+            //codeEAN.CodeType = 1;
+            //codeEAN.Code = "28880123456788";
 
             //Report.Doc.Add(new Paragraph("default:"));
             //Report.Doc.Add(codeEAN.CreateImageWithBarcode(Report.Canvas, null, null));
@@ -83,24 +85,27 @@ namespace ExpressBase.ServiceStack
             //codeEAN.Baseline = -1f;
             //codeEAN.GuardBars = true;
             //Report.Doc.Add(new Paragraph("text above:"));
-            //Report.Doc.Add(codeEAN.CreateImageWithBarcode(Report.Canvas, null, null));
+            //try
+            //{
+            //    Report.Doc.Add(codeEAN.CreateImageWithBarcode(Report.Canvas, null, null));
+            //}
+            //catch (Exception e)
+            //{
+            //    Report.Doc.Add(new Paragraph("Error in generating barcode"));
 
-            codeEAN.Baseline = codeEAN.Size;
-            Report.Doc.Add(new Paragraph("qr"));
+            //}
 
-            //BarcodeQRCode qrcode = new BarcodeQRCode("4512345678906", 1, 1, null);
-            //Image qrcodeImage = qrcode.getImage();
-            //qrcodeImage.setAbsolutePosition(10, 500);
-            //qrcodeImage.scalePercent(200);
-            //d1.Add(qrcodeImage);
+            //   codeEAN.Baseline = codeEAN.Size;
 
-            QRCodeGenerator qrGenerator = new QRCodeGenerator();
-            QRCodeData qrCodeData = qrGenerator.CreateQrCode("4512345678906", QRCodeGenerator.ECCLevel.Q);
-            BitmapByteQRCode qrCode = new BitmapByteQRCode(qrCodeData);
-            byte[] qrCodeImage = qrCode.GetGraphic(20);
-            iTextSharp.text.Image img = iTextSharp.text.Image.GetInstance(qrCodeImage);
-            img.ScaleAbsolute(200, 200);
-            Report.Doc.Add(img);
+
+            //  Report.Doc.Add(new Paragraph("qr"));
+            //QRCodeGenerator qrGenerator = new QRCodeGenerator();
+            //QRCodeData qrCodeData = qrGenerator.CreateQrCode("4512345678906", QRCodeGenerator.ECCLevel.Q);
+            //BitmapByteQRCode qrCode = new BitmapByteQRCode(qrCodeData);
+            //byte[] qrCodeImage = qrCode.GetGraphic(20);
+            //iTextSharp.text.Image img = iTextSharp.text.Image.GetInstance(qrCodeImage);
+            //img.ScaleAbsolute(200, 200);
+            //Report.Doc.Add(img);
 
             Report.Doc.NewPage();
 
