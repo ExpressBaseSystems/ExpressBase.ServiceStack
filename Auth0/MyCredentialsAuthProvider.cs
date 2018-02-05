@@ -34,29 +34,40 @@ namespace ExpressBase.ServiceStack.Auth0
             var request = authService.Request.Dto as Authenticate;
 
             var cid = request.Meta.ContainsKey("cid") ? request.Meta["cid"] : string.Empty;
-            var socialId = request.Meta.ContainsKey("socialId") ? request.Meta["socialId"] : string.Empty;
+            //var socialId = request.Meta.ContainsKey("socialId") ? request.Meta["socialId"] : string.Empty;
+			//var sso = request.Meta.ContainsKey("sso") ? request.Meta["sso"] : string.Empty;
 
-            if (request.Meta.ContainsKey("signup_tok"))
+			if (request.Meta.ContainsKey("signup_tok"))
             {
                 cid = CoreConstants.EXPRESSBASE;
                 _authUser = User.GetInfraVerifiedUser(EbConnectionFactory.DataDB, UserName, request.Meta["signup_tok"]);
             }
-            else
+            else if(request.Meta.ContainsKey("socialId"))
             {
-                //if (cid == CoreConstants.EXPRESSBASE)
-                //{
-                //    log.Info("for tenant login");
-                //    _authUser = (string.IsNullOrEmpty(socialId)) ? User.GetInfraUser(EbConnectionFactory.DataDB, UserName, password) : User.GetInfraUserViaSocial(EbConnectionFactory.DataDB, UserName, socialId);
-                //    log.Info("#Eb reached 1");
-                //}
-                //else
-                //{
-                //log.Info("for user login");
-                //    _authUser = (string.IsNullOrEmpty(socialId)) ? User.GetDetails(EbConnectionFactory.DataDB, UserName, password) : User.GetInfraUserViaSocial(EbConnectionFactory.DataDB, socialId);
-                _authUser = User.GetDetails(EbConnectionFactory.DataDB, UserName, password, socialId);
-                log.Info("#Eb reached 2");
+				//if (cid == CoreConstants.EXPRESSBASE)
+				//{
+				//    log.Info("for tenant login");
+				//    _authUser = (string.IsNullOrEmpty(socialId)) ? User.GetInfraUser(TenantDbFactory.DataDB, UserName, password) : User.GetInfraUserViaSocial(TenantDbFactory.DataDB, UserName, socialId);
+				//    log.Info("#Eb reached 1");
+				//}
+				//else
+				//{
+				//log.Info("for user login");
+				//    _authUser = (string.IsNullOrEmpty(socialId)) ? User.GetDetails(TenantDbFactory.DataDB, UserName, password) : User.GetInfraUserViaSocial(TenantDbFactory.DataDB, socialId);
+				_authUser = User.GetDetailsSocial(EbConnectionFactory.DataDB, request.Meta["socialId"]);
+				log.Info("#Eb reached 2");
                 //}
             }
+			else if (request.Meta.ContainsKey("sso"))
+			{
+				_authUser = User.GetDetailsSSO(EbConnectionFactory.DataDB, UserName);
+				log.Info("#Eb reached 2");
+			}
+			else
+			{
+				_authUser = User.GetDetailsNormal(EbConnectionFactory.DataDB, UserName, password);
+				log.Info("#Eb reached 2");
+			}
 
             if (_authUser != null)
             {
