@@ -1,6 +1,7 @@
 ﻿using ExpressBase.Common;
 using ExpressBase.Common.Data;
 using ExpressBase.Common.Objects;
+using ExpressBase.Common.Structures;
 using ExpressBase.Data;
 using ExpressBase.Objects;
 using ExpressBase.Objects.ServiceStack_Artifacts;
@@ -197,7 +198,7 @@ namespace ExpressBase.ServiceStack
                 var rlist = resultlist.Data;
                 foreach (var element in rlist)
                 {
-                    if (element.EbObjectType == EbObjectType.TableVisualization || element.EbObjectType == EbObjectType.ChartVisualization)
+                    if (element.EbObjectType.Equals(EbObjectTypes.TableVisualization) || element.EbObjectType.Equals(EbObjectTypes.ChartVisualization))
                     {
                         dvList.Add(element);
                     }
@@ -212,7 +213,7 @@ namespace ExpressBase.ServiceStack
                 var rlist = resultlist.Data;
                 foreach (var element in rlist)
                 {
-                    if (element.EbObjectType == EbObjectType.TableVisualization || element.EbObjectType == EbObjectType.ChartVisualization)
+                    if (element.EbObjectType.Equals(EbObjectTypes.TableVisualization) || element.EbObjectType.Equals(EbObjectTypes.ChartVisualization))
                     {
                         dvTaggedList.Add(element);
                     }
