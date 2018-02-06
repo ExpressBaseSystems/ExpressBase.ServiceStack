@@ -11,6 +11,7 @@ using ExpressBase.Common.Objects;
 using ExpressBase.Common.Data;
 using ExpressBase.Objects.EmailRelated;
 using System.Text.RegularExpressions;
+using ExpressBase.Common.Structures;
 
 namespace ExpressBase.ServiceStack
 {
@@ -236,7 +237,7 @@ AS tags";
                 {
                     Id = Convert.ToInt32(dr[0]),
                     Name = dr[1].ToString(),
-                    EbObjectType = (EbObjectType)Convert.ToInt32(dr[2]),
+                    EbObjectType = EbObjectTypes.Get(Convert.ToInt32(dr[2])), 
                     Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[3]),
                     Description = dr[4].ToString(),
                     VersionNumber = dr[7].ToString(),
@@ -262,8 +263,8 @@ AS tags";
                 {
                     Id = Convert.ToInt32(dr[0]),
                     Name = dr[1].ToString(),
-                    EbObjectType = (EbObjectType)Convert.ToInt32(dr[2]),
-                    Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[4]),
+                    EbObjectType = EbObjectTypes.Get(Convert.ToInt32(dr[2])),
+					Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[4]),
                     Description = dr[5].ToString(),
                     VersionNumber = dr[8].ToString(),
                     Json = (!string.IsNullOrEmpty(request.RefId)) ? dr[12].ToString() : null,
@@ -287,8 +288,8 @@ AS tags";
                 {
                     Id = Convert.ToInt32(dr[0]),
                     Name = dr[1].ToString() + dr[7].ToString(),
-                    EbObjectType = (EbObjectType)Convert.ToInt32(dr[2]),
-                    Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[3]),
+                    EbObjectType = EbObjectTypes.Get(Convert.ToInt32(dr[2])),
+					Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[3]),
                     Description = dr[4].ToString(),
                     VersionNumber = dr[7].ToString(),
                     CommitTs = Convert.ToDateTime((dr[9].ToString()) == "" ? DateTime.MinValue : dr[9]),
@@ -313,8 +314,8 @@ AS tags";
                 {
                     Id = Convert.ToInt32(dr[0]),
                     Name = dr[1].ToString(),
-                    EbObjectType = (EbObjectType)Convert.ToInt32(dr[2]),
-                    Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[3]),
+                    EbObjectType = EbObjectTypes.Get(Convert.ToInt32(dr[2])),
+					Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[3]),
                     Description = dr[4].ToString()
                 });
 
@@ -345,8 +346,8 @@ AS tags";
                 {
                     Id = Convert.ToInt32(dr[0]),
                     Name = dr[1].ToString(),
-                    EbObjectType = (EbObjectType)Convert.ToInt32(dr[2]),
-                    Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[3]),
+                    EbObjectType = EbObjectTypes.Get(Convert.ToInt32(dr[2])),
+					Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[3]),
                     VersionNumber = dr[7].ToString(),
                     RefId = dr[11].ToString(),
                 });
@@ -369,9 +370,9 @@ AS tags";
                 _ebObject.Name = dr[0].ToString();
                 _ebObject.RefId = dr[1].ToString();
                 _ebObject.VersionNumber = dr[2].ToString();
-                _ebObject.EbObjectType = (EbObjectType)Convert.ToInt32(dr[3]);
+                _ebObject.EbObjectType = EbObjectTypes.Get(Convert.ToInt32(dr[3]));
 
-                f.Add(_ebObject);
+				f.Add(_ebObject);
             }
 
             return new EbObjectRelationsResponse { Data = f };
@@ -394,9 +395,9 @@ AS tags";
                 _ebObject.Name = dr[0].ToString();
                 _ebObject.RefId = dr[1].ToString();
                 _ebObject.VersionNumber = dr[2].ToString();
-                _ebObject.EbObjectType = (EbObjectType)Convert.ToInt32(dr[3]);
+                _ebObject.EbObjectType = EbObjectTypes.Get(Convert.ToInt32(dr[3]));
 
-                f.Add(_ebObject);
+				f.Add(_ebObject);
             }
 
             return new EbObjectTaggedResponse { Data = f };
@@ -415,8 +416,8 @@ AS tags";
                 {
                     Id = Convert.ToInt32(dr[0]),
                     Name = dr[1].ToString(),
-                    EbObjectType = (EbObjectType)Convert.ToInt32(dr[2]),
-                    Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[3]),
+                    EbObjectType = EbObjectTypes.Get(Convert.ToInt32(dr[2])),
+					Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[3]),
                     Description = dr[4].ToString(),
                     ChangeLog = dr[5].ToString(),
                     CommitTs = Convert.ToDateTime((dr[6].ToString()) == "" ? DateTime.MinValue : dr[6]),
@@ -858,21 +859,21 @@ AS tags";
         public int GetObjectType(object obj)
         {
             if (obj is EbDataSource)
-                return Convert.ToInt32(EbObjectType.DataSource);
+                return EbObjectTypes.DataSource.IntCode;
             else if (obj is EbTableVisualization)
-                return Convert.ToInt32(EbObjectType.TableVisualization);
+                return EbObjectTypes.TableVisualization.IntCode;
             else if (obj is EbChartVisualization)
-                return Convert.ToInt32(EbObjectType.ChartVisualization);
+                return EbObjectTypes.ChartVisualization.IntCode;
             else if (obj is EbWebForm)
-                return Convert.ToInt32(EbObjectType.WebForm);
+                return EbObjectTypes.WebForm.IntCode;
             else if (obj is EbReport)
-                return Convert.ToInt32(EbObjectType.Report);
+                return EbObjectTypes.Report.IntCode;
             else if (obj is EbFilterDialog)
-                return Convert.ToInt32(EbObjectType.FilterDialog);
+                return EbObjectTypes.FilterDialog.IntCode;
             else if (obj is EbEmailTemplate)
-                return Convert.ToInt32(EbObjectType.EmailBuilder);
+                return EbObjectTypes.EmailBuilder.IntCode;
             else if (obj is EbBotForm)
-                return Convert.ToInt32(EbObjectType.BotForm);
+                return EbObjectTypes.BotForm.IntCode;
             else
                 return -1;
         }
