@@ -25,7 +25,7 @@ namespace ExpressBase.ServiceStack
         private DataSourceDataResponse dresp = null;
 
         public EbReport Report = null;
-        private iTextSharp.text.Font f = FontFactory.GetFont(FontFactory.HELVETICA, 12);
+        //private iTextSharp.text.Font f = FontFactory.GetFont(FontFactory.HELVETICA, 12);
         public ReportService(IEbConnectionFactory _dbf) : base(_dbf) { }
 
         public ReportRenderResponse Get(ReportRenderRequest request)
@@ -50,8 +50,6 @@ namespace ExpressBase.ServiceStack
                 Report.DataSet = dresp.DataSet;
             }
 
-
-
             Rectangle rec = new Rectangle(Report.Width, Report.Height);
             Report.Doc = new Document(rec);
             Report.Ms1 = new MemoryStream();
@@ -67,48 +65,8 @@ namespace ExpressBase.ServiceStack
             //iTextSharp.text.Font link = FontFactory.GetFont("Arial", 12, iTextSharp.text.Font.UNDERLINE, BaseColor.DarkGray);
             // Anchor anchor = new Anchor("xyz",link);
             //anchor.Reference = "http://eb_roby_dev.localhost:5000/ReportRender?refid=eb_roby_dev-eb_roby_dev-3-1127-1854?tab=" + JsonConvert.SerializeObject(Report.DataRow[Report.SerialNumber - 1]);
-            // d.Add(anchor);
-
-            //QR & BAR CODES
-            //Report.Doc.Add(new Paragraph("Barcode EAN.UCC-13"));
-           // BarcodeEan codeEAN = new BarcodeEan();
-            //codeEAN.CodeType = 1;
-            //codeEAN.Code = "28880123456788";
-
-            //Report.Doc.Add(new Paragraph("default:"));
-            //Report.Doc.Add(codeEAN.CreateImageWithBarcode(Report.Canvas, null, null));
-
-            //codeEAN.GuardBars = false;
-            //Report.Doc.Add(new Paragraph("without guard bars:"));
-            //Report.Doc.Add(codeEAN.CreateImageWithBarcode(Report.Canvas, null, null));
-
-            //codeEAN.Baseline = -1f;
-            //codeEAN.GuardBars = true;
-            //Report.Doc.Add(new Paragraph("text above:"));
-            //try
-            //{
-            //    Report.Doc.Add(codeEAN.CreateImageWithBarcode(Report.Canvas, null, null));
-            //}
-            //catch (Exception e)
-            //{
-            //    Report.Doc.Add(new Paragraph("Error in generating barcode"));
-
-            //}
-
-            //   codeEAN.Baseline = codeEAN.Size;
-
-
-            //  Report.Doc.Add(new Paragraph("qr"));
-            //QRCodeGenerator qrGenerator = new QRCodeGenerator();
-            //QRCodeData qrCodeData = qrGenerator.CreateQrCode("4512345678906", QRCodeGenerator.ECCLevel.Q);
-            //BitmapByteQRCode qrCode = new BitmapByteQRCode(qrCodeData);
-            //byte[] qrCodeImage = qrCode.GetGraphic(20);
-            //iTextSharp.text.Image img = iTextSharp.text.Image.GetInstance(qrCodeImage);
-            //img.ScaleAbsolute(200, 200);
-            //Report.Doc.Add(img);
-
+            // d.Add(anchor);            
             Report.Doc.NewPage();
-
             Report.DrawReportHeader();
             Report.DrawDetail();
             Report.Doc.Close();
