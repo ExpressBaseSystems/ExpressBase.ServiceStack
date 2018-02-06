@@ -1,6 +1,7 @@
 ﻿using ExpressBase.Common;
 using ExpressBase.Common.Data;
 using ExpressBase.Common.Objects;
+using ExpressBase.Common.Structures;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using System;
 using System.Collections.Generic;
@@ -62,16 +63,18 @@ AND EO2A.eb_del = 'false';";
                 if (!_Coll[appid].Types.Keys.Contains<int>(typeId))
                     _Coll[appid].Types.Add(typeId, new TypeWrap {Objects = new List<ObjWrap>() });
 
-                _Coll[appid].Types[typeId].Objects.Add(new ObjWrap
+				var ___otyp = (EbObjectType)Convert.ToInt32(dr[1]);
+
+				_Coll[appid].Types[typeId].Objects.Add(new ObjWrap
                 {
                     Id = Convert.ToInt32(dr[0]),
-                    EbObjectType = (EbObjectType)dr[1],
+                    EbObjectType = Convert.ToInt32(dr[1]),
                     ObjName = dr[2].ToString(),
                     VersionNumber = dr[3].ToString(),
                     Refid = dr[4].ToString(),
                     AppId = Convert.ToInt32(dr[5]),
                     Description = dr[6].ToString(),
-                    EbType = ((EbObjectType)dr[1]).ToString()
+                    EbType = ___otyp.Name
 
                 });
             }
@@ -103,25 +106,32 @@ ORDER BY EO.obj_type";
 
             Dictionary<int, TypeWrap> _types = new Dictionary<int, TypeWrap>();
 
-            foreach (EbDataRow dr in ds.Tables[1].Rows)
-            {
-                
-                var typeId = Convert.ToInt32(dr[1]);
+			try
+			{
+				foreach (EbDataRow dr in ds.Tables[1].Rows)
+				{
+					var typeId = Convert.ToInt32(dr[1]);
 
-                if (!_types.Keys.Contains<int>(typeId))
-                    _types.Add(typeId, new TypeWrap { Objects = new List<ObjWrap>() });
+					if (!_types.Keys.Contains<int>(typeId))
+						_types.Add(typeId, new TypeWrap { Objects = new List<ObjWrap>() });
 
-                _types[typeId].Objects.Add(new ObjWrap
-                {
-                    Id = Convert.ToInt32(dr[0]),
-                    EbObjectType = (EbObjectType)dr[1],
-                    ObjName = dr[2].ToString(),
-                    Description = dr[3].ToString(),
-                    EbType = ((EbObjectType)dr[1]).ToString(),
-                    AppId = Convert.ToInt32(dr[4])
+					var ___otyp = (EbObjectType)Convert.ToInt32(dr[1]);
 
-                });
-            }
+					_types[typeId].Objects.Add(new ObjWrap
+					{
+						Id = Convert.ToInt32(dr[0]),
+						EbObjectType = Convert.ToInt32(dr[1]),
+						ObjName = dr[2].ToString(),
+						Description = dr[3].ToString(),
+						EbType = ___otyp.ToString(),
+						AppId = Convert.ToInt32(dr[4])
+
+					});
+				}
+			}catch (Exception ee)
+			{
+
+			}
 
             return new SidebarDevResponse{ Data = _types, AppList = appColl };
         }
