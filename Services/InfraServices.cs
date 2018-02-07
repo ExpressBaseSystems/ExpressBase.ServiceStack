@@ -127,7 +127,7 @@ namespace ExpressBase.ServiceStack.Services
 
                     var cmd = EbConnectionFactory.DataDB.GetNewCommand(con, sql);
                     cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("applicationname", System.Data.DbType.String, request.Colvalues["AppName"]));
-                    cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("apptype", System.Data.DbType.String, request.Colvalues["AppType"]));
+                    cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("apptype", System.Data.DbType.Int32, request.Colvalues["AppType"]));
                     cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("description", System.Data.DbType.String, request.Colvalues["DescApp"]));
                     cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("appicon", System.Data.DbType.String, request.Colvalues["AppIcon"]));
                     cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("appid", System.Data.DbType.String, request.Colvalues["AppId"]));
