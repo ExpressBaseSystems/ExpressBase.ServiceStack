@@ -70,18 +70,24 @@ namespace ExpressBase.ServiceStack.Services
             return getProductPlanResponse;
         }
 
-        public AutoGenSolIdResponse Get(AutoGenSolIdRequest request)
+        public AutoGenEbIdResponse Get(AutoGenEbIdRequest request)
         {
-            AutoGenSolIdResponse resp = new AutoGenSolIdResponse();
-            string sql = "SELECT * FROM eb_random_sid();";
+            AutoGenEbIdResponse resp = new AutoGenEbIdResponse();
+            string sql = null;
+            sql = string.Format("SELECT * FROM eb_id_gen('{0}');", request.WhichId);            
             var ds = this.EbConnectionFactory.ObjectsDB.DoQuery(sql);
             resp.Sid = ds.Rows[0][0].ToString();
+            resp.AppId = ds.Rows[0][1].ToString();
             return resp;
         }
 
 
-        public CreateSolutionResponse Post(CreateSolutionRequest request)
+        public void Post(CreateSolutionRequest request)
         {
+            EbDbCreateServices _dbService = base.ResolveService<EbDbCreateServices>();
+            ConnectionManager _conService = base.ResolveService<ConnectionManager>();
+            string DbName = request.Colvalues["Isid"].ToString().ToLower();
+            CreateSolutionResponse resp;
             using (var con = this.EbConnectionFactory.DataDB.GetNewConnection())
             {
                 con.Open();
@@ -93,9 +99,13 @@ namespace ExpressBase.ServiceStack.Services
                 cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("@tenant_id", System.Data.DbType.Int32, request.UserId));
                 cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("@descript", System.Data.DbType.String, request.Colvalues["Desc"]));
                 cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("@js", System.Data.DbType.String, request.Colvalues["Subscription"]));
-                return new CreateSolutionResponse { Solnid = Convert.ToInt32(cmd.ExecuteScalar()) };
+                resp =  new CreateSolutionResponse { Solnid = Convert.ToInt32(cmd.ExecuteScalar()) };
             }
-
+            if(resp.Solnid > 0) {
+                EbDbCreateResponse response =(EbDbCreateResponse)_dbService.Any(new EbDbCreateRequest { dbName = DbName,TenantAccountId = request.TenantAccountId ,UserId =request.UserId });
+                if (response.resp)
+                    _conService.Post(new InitialSolutionConnectionsRequest { SolutionId = DbName, TenantAccountId = request.TenantAccountId, UserId = request.UserId });
+            }                         
         }
 
         public CreateApplicationResponse Post(CreateApplicationRequest request)
@@ -113,13 +123,14 @@ namespace ExpressBase.ServiceStack.Services
                     //if (request.Id > 0)                   
                     //    sql = "UPDATE eb_applications SET applicationname = @applicationname, description= @description WHERE id = @id RETURNING id";
                     //else
-                        sql = "INSERT INTO eb_applications (application_name,application_type, description,app_icon) VALUES (@applicationname,@apptype, @description,@appicon) RETURNING id";
+                        sql = "INSERT INTO eb_applications (application_name,application_type, description,app_icon,app_id) VALUES (@applicationname,@apptype, @description,@appicon,@appid) RETURNING id";
 
                     var cmd = EbConnectionFactory.DataDB.GetNewCommand(con, sql);
                     cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("applicationname", System.Data.DbType.String, request.Colvalues["AppName"]));
-                    cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("apptype", System.Data.DbType.String, request.Colvalues["AppType"]));
+                    cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("apptype", System.Data.DbType.Int32, request.Colvalues["AppType"]));
                     cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("description", System.Data.DbType.String, request.Colvalues["DescApp"]));
                     cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("appicon", System.Data.DbType.String, request.Colvalues["AppIcon"]));
+                    cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("appid", System.Data.DbType.String, request.Colvalues["AppId"]));
                     var res = cmd.ExecuteScalar();
                     resp = new CreateApplicationResponse(){ id = Convert.ToInt32(res) };
                 }
