@@ -1,4 +1,6 @@
-﻿using ExpressBase.Common.Data;
+﻿using ExpressBase.Common;
+using ExpressBase.Common.Data;
+using ExpressBase.Common.Structures;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using System;
 using System.Collections.Generic;
@@ -49,6 +51,40 @@ namespace ExpressBase.ServiceStack
 
             }
             return resp;
-        }        
+        }
+
+        public object Get(GetObjectRequest request)
+        {
+            var Query1 = "SELECT EO.id, EO.obj_type, EO.obj_name,EO.obj_desc,EO.applicationid FROM eb_objects EO ORDER BY EO.obj_type";
+            var ds = this.EbConnectionFactory.ObjectsDB.DoQuery(Query1);
+            Dictionary<int, TypeWrap> _types = new Dictionary<int, TypeWrap>();
+            try
+            {
+                foreach (EbDataRow dr in ds.Rows)
+                {                   
+                    var typeId = Convert.ToInt32(dr[1]);
+
+                    if (!_types.Keys.Contains<int>(typeId))
+                        _types.Add(typeId, new TypeWrap { Objects = new List<ObjWrap>() });
+
+                    var ___otyp = (EbObjectType)Convert.ToInt32(dr[1]);
+
+                    _types[typeId].Objects.Add(new ObjWrap
+                    {
+                        Id = Convert.ToInt32(dr[0]),
+                        EbObjectType = Convert.ToInt32(dr[1]),
+                        ObjName = dr[2].ToString(),
+                        Description = dr[3].ToString(),
+                        EbType = ___otyp.ToString(),
+                        AppId = Convert.ToInt32(dr[4])
+
+                    });
+                }
+            }
+            catch (Exception ee)
+            {
+            }
+            return new GetObjectResponse { Data = _types };
+        }
     }
 }
