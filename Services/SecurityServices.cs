@@ -398,11 +398,11 @@ namespace ExpressBase.ServiceStack.Services
 									WHERE EO.id = EOV.eb_objects_id AND EOV.id = EOS.eb_obj_ver_id AND EOS.status = 3 
 									AND EO.id = EO2A.obj_id AND EO2A.eb_del = 'false';
 
-									SELECT id, role_name, description, applicationid FROM eb_roles WHERE id <> @id ORDER BY role_name;
+									SELECT id, role_name, description, applicationid, is_anonymous FROM eb_roles WHERE id <> @id ORDER BY role_name;
 									SELECT id, role1_id, role2_id FROM eb_role2role WHERE eb_del = FALSE;");//if db_ok then append to 3rd query "WHERE eb_del=FALSE" 
 			if (request.id > 0)
 			{
-				query += string.Format(@"SELECT role_name,applicationid,description FROM eb_roles WHERE id = @id;
+				query += string.Format(@"SELECT role_name,applicationid,description,is_anonymous FROM eb_roles WHERE id = @id;
 										SELECT permissionname,obj_id,op_id FROM eb_role2permission WHERE role_id = @id AND eb_del = FALSE;
 										SELECT A.applicationname, A.description FROM eb_applications A, eb_roles R WHERE A.id = R.applicationid AND R.id = @id AND A.eb_del = FALSE;
 
@@ -422,7 +422,7 @@ namespace ExpressBase.ServiceStack.Services
 				//---------------
 				foreach (EbDataRow dr in ds.Tables[2].Rows)
 				{
-					_roleList.Add(new Eb_RoleObject() { Id = Convert.ToInt32(dr[0]), Name = dr[1].ToString(), Description = dr[2].ToString(), App_Id = Convert.ToInt32(dr[3]) });
+					_roleList.Add(new Eb_RoleObject() { Id = Convert.ToInt32(dr[0]), Name = dr[1].ToString(), Description = dr[2].ToString(), App_Id = Convert.ToInt32(dr[3]), Is_Anonymous = Convert.ToBoolean(dr[4]) });
 				}
 				foreach (EbDataRow dr in ds.Tables[3].Rows)
 				{
@@ -439,6 +439,7 @@ namespace ExpressBase.ServiceStack.Services
 				RoleInfo.Add("RoleName", ds.Tables[4].Rows[0][0].ToString());
 				RoleInfo.Add("AppId", Convert.ToInt32(ds.Tables[4].Rows[0][1]));
 				RoleInfo.Add("RoleDescription", ds.Tables[4].Rows[0][2].ToString());
+				RoleInfo.Add("IsAnonymous", (Convert.ToBoolean(ds.Tables[4].Rows[0][3]))?"true":"false");
 				RoleInfo.Add("AppName", ds.Tables[6].Rows[0][0].ToString());
 				RoleInfo.Add("AppDescription", ds.Tables[6].Rows[0][1].ToString());
 				foreach (var dr in ds.Tables[5].Rows)
@@ -476,11 +477,12 @@ namespace ExpressBase.ServiceStack.Services
 			using (var con = this.EbConnectionFactory.ObjectsDB.GetNewConnection())
 			{
 				con.Open();
-				string sql = "SELECT eb_create_or_update_rbac_manageroles(@role_id, @applicationid, @createdby, @role_name, @description, @users, @dependants,@permission );";
+				string sql = "SELECT eb_create_or_update_rbac_manageroles(@role_id, @applicationid, @createdby, @role_name, @description, @is_anonym, @users, @dependants,@permission );";
 				var cmd = this.EbConnectionFactory.ObjectsDB.GetNewCommand(con, sql);
 				int[] emptyarr = new int[] { };
 				cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("role_id", System.Data.DbType.Int32, request.Colvalues["roleid"]));
 				cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("description", System.Data.DbType.String, request.Colvalues["Description"]));
+				cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("is_anonym", System.Data.DbType.Boolean, request.Colvalues["IsAnonymous"]));
 				cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("role_name", System.Data.DbType.String, request.Colvalues["role_name"]));
 				cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("applicationid", System.Data.DbType.Int32, request.Colvalues["applicationid"]));
 				cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("createdby", System.Data.DbType.Int32, request.UserId));
