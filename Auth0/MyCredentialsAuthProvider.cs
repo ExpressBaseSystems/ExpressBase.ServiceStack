@@ -27,6 +27,8 @@ namespace ExpressBase.ServiceStack.Auth0
 			var request = authService.Request.Dto as Authenticate;
 			var cid = request.Meta.ContainsKey("cid") ? request.Meta["cid"] : string.Empty;
 			var socialId = request.Meta.ContainsKey("socialId") ? request.Meta["socialId"] : string.Empty;
+			var emailId = request.Meta.ContainsKey("emailId") ? request.Meta["emailId"] : string.Empty;//for anonymous
+			var phone = request.Meta.ContainsKey("phone") ? request.Meta["phone"] : string.Empty;//for anonymous
 			var whichContext = request.Meta["wc"].ToLower().Trim();
 
 			var EbConnectionFactory = authService.TryResolve<IEbConnectionFactory>() as EbConnectionFactory;
@@ -43,7 +45,12 @@ namespace ExpressBase.ServiceStack.Auth0
 			//         }
 
 			User _authUser = null;
-			if (!string.IsNullOrEmpty(socialId))
+			if (request.Meta.ContainsKey("anonymous") && whichContext.Equals("bc"))
+			{
+				_authUser = User.GetDetailsAnonymous(EbConnectionFactory.DataDB, socialId, emailId, phone, whichContext);
+				Logger.Info("TryAuthenticate -> anonymous");
+			}
+			else if (!string.IsNullOrEmpty(socialId))
             {
 				_authUser = User.GetDetailsSocial(EbConnectionFactory.DataDB, socialId, whichContext);
 				Logger.Info("TryAuthenticate -> socialId");
