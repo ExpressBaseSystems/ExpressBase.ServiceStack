@@ -119,12 +119,12 @@ ORDER BY EO.obj_type";
 
 					_types[typeId].Objects.Add(new ObjWrap
 					{
-						Id = Convert.ToInt32(dr[0]),
-						EbObjectType = Convert.ToInt32(dr[1]),
+						Id = (dr[0] != DBNull.Value) ? Convert.ToInt32(dr[0]) : 0,
+						EbObjectType = (dr[1] != DBNull.Value) ? Convert.ToInt32(dr[1]) : 0,
 						ObjName = dr[2].ToString(),
 						Description = dr[3].ToString(),
 						EbType = ___otyp.ToString(),
-						AppId = Convert.ToInt32(dr[4])
+						AppId = (dr[4] != DBNull.Value) ? Convert.ToInt32(dr[4]) : 0
 
 					});
 				}
