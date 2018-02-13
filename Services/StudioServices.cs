@@ -454,8 +454,8 @@ AS tags";
                             OwnerName = dr[33].ToString()
                         }
                     });
-                    .
-f.Add(_ebObject);
+
+                    f.Add(_ebObject);
                 }
                 catch (Exception e)
                 {
