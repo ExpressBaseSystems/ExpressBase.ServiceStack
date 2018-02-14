@@ -45,9 +45,17 @@ namespace ExpressBase.ServiceStack
 
             var myDataSourceservice = base.ResolveService<DataSourceService>();
             if (Report.DataSourceRefId != string.Empty)
-            {
-                dresp = myDataSourceservice.Any(new DataSourceDataRequest444 { RefId = Report.DataSourceRefId, Draw = 1, Start = 0, Length = 100 });
-                Report.DataSet = dresp.DataSet;
+           {
+            //    dresp = myDataSourceservice.Any(new DataSourceDataRequest444 { RefId = Report.DataSourceRefId, Draw = 1, Start = 0, Length = 100 });
+            //    Report.DataSet = dresp.DataSet;
+
+                cresp = this.Redis.Get<DataSourceColumnsResponse>(string.Format("{0}_columns", Report.DataSourceRefId));
+                if (cresp.IsNull)
+                    cresp = myDataSourceservice.Any(new DataSourceColumnsRequest { RefId = Report.DataSourceRefId });
+                Report.DataColumns = (cresp.Columns.Count > 1) ? cresp.Columns[1] : cresp.Columns[0];
+                dresp = myDataSourceservice.Any(new DataSourceDataRequest { RefId = Report.DataSourceRefId, Draw = 1, Start = 0, Length = 100 });
+                Report.DataRow = dresp.Data;
+              
             }
 
             Rectangle rec = new Rectangle(Report.Width, Report.Height);
@@ -71,11 +79,11 @@ namespace ExpressBase.ServiceStack
             Report.DrawDetail();
             Report.Doc.Close();
             Report.Ms1.Position = 0;//important
-            if (Report.DataSourceRefId != string.Empty)
-            {
-                Report.DataSet.Tables.Clear();
-                Report.DataSet.Dispose();
-            }
+            //if (Report.DataSourceRefId != string.Empty)
+            //{
+            //    Report.DataSet.Tables.Clear();
+            //    Report.DataSet.Dispose();
+            //}
             return new ReportRenderResponse { StreamWrapper = new MemorystreamWrapper(Report.Ms1) };
 
         }

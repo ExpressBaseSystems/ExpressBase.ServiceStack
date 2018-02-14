@@ -237,7 +237,7 @@ AS tags";
                 {
                     Id = Convert.ToInt32(dr[0]),
                     Name = dr[1].ToString(),
-                    EbObjectType = EbObjectTypes.Get(Convert.ToInt32(dr[2])), 
+                    EbObjectType = EbObjectTypes.Get(Convert.ToInt32(dr[2])),
                     Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[3]),
                     Description = dr[4].ToString(),
                     VersionNumber = dr[7].ToString(),
@@ -264,7 +264,7 @@ AS tags";
                     Id = Convert.ToInt32(dr[0]),
                     Name = dr[1].ToString(),
                     EbObjectType = EbObjectTypes.Get(Convert.ToInt32(dr[2])),
-					Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[4]),
+                    Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[4]),
                     Description = dr[5].ToString(),
                     VersionNumber = dr[8].ToString(),
                     Json = (!string.IsNullOrEmpty(request.RefId)) ? dr[12].ToString() : null,
@@ -289,7 +289,7 @@ AS tags";
                     Id = Convert.ToInt32(dr[0]),
                     Name = dr[1].ToString() + dr[7].ToString(),
                     EbObjectType = EbObjectTypes.Get(Convert.ToInt32(dr[2])),
-					Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[3]),
+                    Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[3]),
                     Description = dr[4].ToString(),
                     VersionNumber = dr[7].ToString(),
                     CommitTs = Convert.ToDateTime((dr[9].ToString()) == "" ? DateTime.MinValue : dr[9]),
@@ -315,7 +315,7 @@ AS tags";
                     Id = Convert.ToInt32(dr[0]),
                     Name = dr[1].ToString(),
                     EbObjectType = EbObjectTypes.Get(Convert.ToInt32(dr[2])),
-					Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[3]),
+                    Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[3]),
                     Description = dr[4].ToString()
                 });
 
@@ -347,7 +347,7 @@ AS tags";
                     Id = Convert.ToInt32(dr[0]),
                     Name = dr[1].ToString(),
                     EbObjectType = EbObjectTypes.Get(Convert.ToInt32(dr[2])),
-					Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[3]),
+                    Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[3]),
                     VersionNumber = dr[7].ToString(),
                     RefId = dr[11].ToString(),
                 });
@@ -372,7 +372,7 @@ AS tags";
                 _ebObject.VersionNumber = dr[2].ToString();
                 _ebObject.EbObjectType = EbObjectTypes.Get(Convert.ToInt32(dr[3]));
 
-				f.Add(_ebObject);
+                f.Add(_ebObject);
             }
 
             return new EbObjectRelationsResponse { Data = f };
@@ -397,7 +397,7 @@ AS tags";
                 _ebObject.VersionNumber = dr[2].ToString();
                 _ebObject.EbObjectType = EbObjectTypes.Get(Convert.ToInt32(dr[3]));
 
-				f.Add(_ebObject);
+                f.Add(_ebObject);
             }
 
             return new EbObjectTaggedResponse { Data = f };
@@ -412,47 +412,55 @@ AS tags";
 
             foreach (EbDataRow dr in dt.Rows)
             {
-                var _ebObject = (new EbObjectWrapper
+                try
                 {
-                    Id = Convert.ToInt32(dr[0]),
-                    Name = dr[1].ToString(),
-                    EbObjectType = EbObjectTypes.Get(Convert.ToInt32(dr[2])),
-					Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[3]),
-                    Description = dr[4].ToString(),
-                    ChangeLog = dr[5].ToString(),
-                    CommitTs = Convert.ToDateTime((dr[6].ToString()) == "" ? DateTime.MinValue : dr[6]),
-                    CommitUname = dr[7].ToString(),
-                    RefId = dr[8].ToString(),
-                    VersionNumber = dr[9].ToString(),
-                    WorkingMode = Convert.ToBoolean(dr[10]),
-                    Json_wc = dr[12].ToString(),
-                    Json_lc = dr[13].ToString(),
-                    Wc_All = dr[11] as string[],
-                    Tags = dr[17].ToString(),
-                    Apps = dr[18].ToString().Replace("\n", "").Replace("\t", "").Replace("\r", ""),
-                    Dashboard_Tiles = new EbObjectWrapper_Dashboard
+                    var _ebObject = (new EbObjectWrapper
                     {
-                        MajorVersionNumber = Convert.ToInt32(dr[14]),
-                        MinorVersionNumber = Convert.ToInt32(dr[15]),
-                        PatchVersionNumber = Convert.ToInt32(dr[16]),
-                        LastCommitedVersionRefid = dr[19].ToString(),
-                        LastCommitedVersionNumber = dr[20].ToString(),
-                        LastCommitedVersionCommit_ts = Convert.ToDateTime((dr[21].ToString()) == "" ? DateTime.MinValue : dr[21]),
-                        LastCommitedVersion_Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[22]),
-                        LastCommitedby_Name = dr[23].ToString(),
-                        LastCommitedby_Id = Convert.ToInt32(dr[24]),
-                        LiveVersionRefid = dr[25].ToString(),
-                        LiveVersionNumber = dr[26].ToString(),
-                        LiveVersionCommit_ts = Convert.ToDateTime((dr[27].ToString()) == "" ? DateTime.MinValue : dr[27]),
-                        LiveVersion_Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[28]),
-                        LiveVersionCommitby_Name = dr[29].ToString(),
-                        LiveVersionCommitby_Id = Convert.ToInt32(dr[30]),
-                        OwnerUid = Convert.ToInt32(dr[31]),
-                        OwnerTs = Convert.ToDateTime((dr[32].ToString()) == "" ? DateTime.MinValue : dr[32]),
-                        OwnerName = dr[33].ToString()
-                    }
-                });
-                f.Add(_ebObject);
+                        Id = Convert.ToInt32(dr[0]),
+                        Name = dr[1].ToString(),
+                        EbObjectType = EbObjectTypes.Get(Convert.ToInt32(dr[2])),
+                        Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[3]),
+                        Description = dr[4].ToString(),
+                        ChangeLog = dr[5].ToString(),
+                        CommitTs = Convert.ToDateTime((dr[6].ToString()) == "" ? DateTime.MinValue : dr[6]),
+                        CommitUname = dr[7].ToString(),
+                        RefId = dr[8].ToString(),
+                        VersionNumber = dr[9].ToString(),
+                        WorkingMode = Convert.ToBoolean(dr[10]),
+                        Json_wc = dr[12].ToString(),
+                        Json_lc = dr[13].ToString(),
+                        Wc_All = dr[11] as string[],
+                        Tags = dr[17].ToString(),
+                        Apps = dr[18].ToString().Replace("\n", "").Replace("\t", "").Replace("\r", ""),
+                        Dashboard_Tiles = new EbObjectWrapper_Dashboard
+                        {
+                            MajorVersionNumber = Convert.ToInt32(dr[14]),
+                            MinorVersionNumber = Convert.ToInt32(dr[15]),
+                            PatchVersionNumber = Convert.ToInt32(dr[16]),
+                            LastCommitedVersionRefid = dr[19].ToString(),
+                            LastCommitedVersionNumber = dr[20].ToString(),
+                            LastCommitedVersionCommit_ts = Convert.ToDateTime((dr[21].ToString()) == "" ? DateTime.MinValue : dr[21]),
+                            LastCommitedVersion_Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[22]),
+                            LastCommitedby_Name = dr[23].ToString(),
+                            LastCommitedby_Id = Convert.ToInt32(dr[24]),
+                            LiveVersionRefid = dr[25].ToString(),
+                            LiveVersionNumber = dr[26].ToString(),
+                            LiveVersionCommit_ts = Convert.ToDateTime((dr[27].ToString()) == "" ? DateTime.MinValue : dr[27]),
+                            LiveVersion_Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[28]),
+                            LiveVersionCommitby_Name = dr[29].ToString(),
+                            LiveVersionCommitby_Id = Convert.ToInt32(dr[30]),
+                            OwnerUid = Convert.ToInt32(dr[31]),
+                            OwnerTs = Convert.ToDateTime((dr[32].ToString()) == "" ? DateTime.MinValue : dr[32]),
+                            OwnerName = dr[33].ToString()
+                        }
+                    });
+
+                    f.Add(_ebObject);
+                }
+                catch (Exception e)
+                {
+                }
+
             }
             return new EbObjectExploreObjectResponse { Data = f };
         }
@@ -547,12 +555,12 @@ AS tags";
         [CompressResponse]
         public object Get(EbObjectGetAllTagsRequest request)
         {
-            string s ="";
+            string s = "";
             ILog log = LogManager.GetLogger(GetType());
             var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(GetAllTags);
             foreach (EbDataRow dr in dt.Rows)
             {
-                s+=dr[0].ToString()+",";
+                s += dr[0].ToString() + ",";
             }
 
             return new EbObjectGetAllTagsResponse { Data = s };
