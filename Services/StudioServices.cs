@@ -370,7 +370,7 @@ AS tags";
                 _ebObject.Name = dr[0].ToString();
                 _ebObject.RefId = dr[1].ToString();
                 _ebObject.VersionNumber = dr[2].ToString();
-                _ebObject.EbObjectType = EbObjectTypes.Get(Convert.ToInt32(dr[3]));
+                _ebObject.EbObjectType = (EbObjectType)Convert.ToInt32(dr[3]);
 
                 f.Add(_ebObject);
             }
