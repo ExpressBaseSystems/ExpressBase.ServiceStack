@@ -918,22 +918,24 @@ AS tags";
             }
         }
 
-        public int[] SetAppId(string _apps)
+        public string SetAppId(string _apps)
         {
-            int[] appids;
-            int counter = 0;
+            string appids="";
+            //int[] appids;
+            //int counter = 0;
             var myService = base.ResolveService<DevRelatedServices>();
             Dictionary<string, object> res = ((GetApplicationResponse)myService.Get(new GetApplicationRequest())).Data;
             List<string> applist = _apps.Split(',').ToList();
-            appids = new int[applist.Count];
+            //appids = new int[applist.Count];
             foreach (string s in applist)
             {
                 foreach (var x in res)
                 {
                     if (s == Regex.Unescape(x.Value.ToString()).Replace("\n", "").Replace("\t", "").Replace("\r", ""))
                     {
-                        appids[counter] = Convert.ToInt32(x.Key);
-                        counter++;
+                        appids += x.Key;
+                        //appids[counter] = Convert.ToInt32(x.Key);
+                        //counter++;
                     }
                 }
             }
