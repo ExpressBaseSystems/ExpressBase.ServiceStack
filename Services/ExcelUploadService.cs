@@ -1,5 +1,6 @@
 ﻿using ExpressBase.Common;
 using ExpressBase.Common.Data;
+using ExpressBase.Common.Structures;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using Newtonsoft.Json;
 using ServiceStack;
@@ -22,7 +23,7 @@ namespace ExpressBase.ServiceStack.Services
         public CheckTblResponse Any(CheckTblRequest request)
         {
             string qry = "SELECT EXISTS (SELECT 1 FROM   information_schema.tables WHERE  table_schema = 'public' AND table_name = @tbl); ";
-            DbParameter[] parameter = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("@tbl", System.Data.DbType.String, request.tblName.ToLower()) };
+            DbParameter[] parameter = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("@tbl", EbDbTypes.String, request.tblName.ToLower()) };
             var rslt = this.EbConnectionFactory.ObjectsDB.DoQuery(qry, parameter);
             CheckTblResponse response = new CheckTblResponse();
             response.msg = rslt.Rows[0];
@@ -76,7 +77,7 @@ namespace ExpressBase.ServiceStack.Services
                     var item = dr.ItemArray[i];
 
                     sql += "@item" + iter2 + ",";
-                    parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@item" + iter2, dbtype(dict[dt.Columns[i].ToString()]), item));
+                   // parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@item" + iter2, dbtype(dict[dt.Columns[i].ToString()]), item));
                     iter2++;
                 }
                 sql = sql.Remove(sql.LastIndexOf(','));
@@ -88,101 +89,101 @@ namespace ExpressBase.ServiceStack.Services
         }
 
         //..........method for retrive dbtype.........
-        public DbType dbtype(string type)
-        {
-            DbType data_type = System.Data.DbType.String;
-            switch (type.ToLower())
-            {
-                case "text":
-                case "string":
-                case "character":
-                    data_type = System.Data.DbType.String;
-                    break;
-                case "ansistring":
-                    data_type = System.Data.DbType.AnsiString;
-                    break;
-                case "binary":
-                    data_type = System.Data.DbType.Binary;
-                    break;
-                case "byte":
-                    data_type = System.Data.DbType.Byte;
-                    break;
-                case "boolean":
-                    data_type = System.Data.DbType.Boolean;
-                    break;
-                case "currency":
-                    data_type = System.Data.DbType.Currency;
-                    break;
-                case "date":
-                    data_type = System.Data.DbType.Date;
-                    break;
-                case "timestamp":
-                case "datetime":
-                    data_type = System.Data.DbType.DateTime;
-                    break;
-                case "decimal":
-                    data_type = System.Data.DbType.Decimal;
-                    break;
-                case "numeric":
-                case "double":
-                    data_type = System.Data.DbType.Double;
-                    break;
-                case "guid":
-                    data_type = System.Data.DbType.Guid;
-                    break;
-                case "smallint":
-                case "int16":
-                    data_type = System.Data.DbType.Int16;
-                    break;
-                case "int32":
-                    data_type = System.Data.DbType.Int32;
-                    break;
-                case "integer":
-                case "int64":
-                    data_type = System.Data.DbType.Int64;
-                    break;
-                case "object":
-                    data_type = System.Data.DbType.Object;
-                    break;
-                case "sbyte":
-                    data_type = System.Data.DbType.SByte;
-                    break;
-                case "single":
-                    data_type = System.Data.DbType.Single;
-                    break;
-                case "time":
-                    data_type = System.Data.DbType.Time;
-                    break;
-                case "uint16":
-                    data_type = System.Data.DbType.UInt16;
-                    break;
-                case "uint32":
-                    data_type = System.Data.DbType.UInt32;
-                    break;
-                case "uint64":
-                    data_type = System.Data.DbType.UInt64;
-                    break;
-                case "varnumeric":
-                    data_type = System.Data.DbType.VarNumeric;
-                    break;
-                case "ansistringfixedlength":
-                    data_type = System.Data.DbType.AnsiStringFixedLength;
-                    break;
-                case "stringfixedlength":
-                    data_type = System.Data.DbType.StringFixedLength;
-                    break;
-                case "xml":
-                    data_type = System.Data.DbType.Xml;
-                    break;
-                case "datetime2":
-                    data_type = System.Data.DbType.DateTime2;
-                    break;
-                case "datetimeoffset":
-                    data_type = System.Data.DbType.DateTimeOffset;
-                    break;
-            }
-            return data_type;
-        }
+        //public DbType dbtype(string type)
+        //{
+        //    EbDbType data_type = EbDbTypes.String;
+        //    switch (type.ToLower())
+        //    {
+        //        case "text":
+        //        case "string":
+        //        case "character":
+        //            data_type = EbDbTypes.String;
+        //            break;
+        //        case "ansistring":
+        //            data_type = System.Data.DbType.AnsiString;
+        //            break;
+        //        case "binary":
+        //            data_type = System.Data.DbType.Binary;
+        //            break;
+        //        case "byte":
+        //            data_type = System.Data.DbType.Byte;
+        //            break;
+        //        case "boolean":
+        //            data_type = EbDbTypes.Boolean;
+        //            break;
+        //        case "currency":
+        //            data_type = System.Data.DbType.Currency;
+        //            break;
+        //        case "date":
+        //            data_type = EbDbTypes.Date;
+        //            break;
+        //        case "timestamp":
+        //        case "datetime":
+        //            data_type = System.Data.DbType.DateTime;
+        //            break;
+        //        case "decimal":
+        //            data_type = EbDbTypes.Decimal;
+        //            break;
+        //        case "numeric":
+        //        case "double":
+        //            data_type = System.Data.DbType.Double;
+        //            break;
+        //        case "guid":
+        //            data_type = System.Data.DbType.Guid;
+        //            break;
+        //        case "smallint":
+        //        case "int16":
+        //            data_type = System.Data.DbType.Int16;
+        //            break;
+        //        case "int32":
+        //            data_type = EbDbTypes.Int32;
+        //            break;
+        //        case "integer":
+        //        case "int64":
+        //            data_type = EbDbTypes.Int64;
+        //            break;
+        //        case "object":
+        //            data_type = System.Data.DbType.Object;
+        //            break;
+        //        case "sbyte":
+        //            data_type = System.Data.DbType.SByte;
+        //            break;
+        //        case "single":
+        //            data_type = System.Data.DbType.Single;
+        //            break;
+        //        case "time":
+        //            data_type = System.Data.DbType.Time;
+        //            break;
+        //        case "uint16":
+        //            data_type = System.Data.DbType.UInt16;
+        //            break;
+        //        case "uint32":
+        //            data_type = System.Data.DbType.UInt32;
+        //            break;
+        //        case "uint64":
+        //            data_type = System.Data.DbType.UInt64;
+        //            break;
+        //        case "varnumeric":
+        //            data_type = System.Data.DbType.VarNumeric;
+        //            break;
+        //        case "ansistringfixedlength":
+        //            data_type = System.Data.DbType.AnsiStringFixedLength;
+        //            break;
+        //        case "stringfixedlength":
+        //            data_type = System.Data.DbType.StringFixedLength;
+        //            break;
+        //        case "xml":
+        //            data_type = System.Data.DbType.Xml;
+        //            break;
+        //        case "datetime2":
+        //            data_type = System.Data.DbType.DateTime2;
+        //            break;
+        //        case "datetimeoffset":
+        //            data_type = System.Data.DbType.DateTimeOffset;
+        //            break;
+        //    }
+        //    return data_type;
+        //}
 
         //.......create new table and insert excel data
         public ExcelCreateTableResponse Any(ExcelCreateTableRequest request)

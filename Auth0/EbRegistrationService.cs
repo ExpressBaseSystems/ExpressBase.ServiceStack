@@ -1,6 +1,7 @@
 ﻿using ExpressBase.Common;
 using ExpressBase.Common.Data;
 using ExpressBase.Common.Extensions;
+using ExpressBase.Common.Structures;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ServiceStack;
 using ServiceStack.Messaging;
@@ -20,7 +21,7 @@ namespace ExpressBase.ServiceStack.Auth0
             var _InfraDb = base.ResolveService<IEbConnectionFactory>() as EbConnectionFactory;
 
             DbParameter[] parameters = {
-                _InfraDb.DataDB.GetNewParameter("email", System.Data.DbType.String, request.Email)
+                _InfraDb.DataDB.GetNewParameter("email", EbDbTypes.String, request.Email)
                // _InfraDb.DataDB.GetNewParameter("pwd", System.Data.DbType.String, (request.Password + request.Email).ToMD5Hash())
             };
 

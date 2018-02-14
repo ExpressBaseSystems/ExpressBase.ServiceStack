@@ -2,6 +2,7 @@
 using ExpressBase.Common.Connections;
 using ExpressBase.Common.Constants;
 using ExpressBase.Common.Data;
+using ExpressBase.Common.Structures;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using System;
 using System.Data.Common;
@@ -146,16 +147,16 @@ namespace ExpressBase.ServiceStack.Services
             {
                 //.......select details from server tbl eb_usres......... from INFRA
                 string sql1 = "SELECT email, pwd, firstname, socialid FROM eb_users WHERE id=@uid";
-                DbParameter[] parameter = { this.InfraConnectionFactory.DataDB.GetNewParameter("@uid", System.Data.DbType.Int32, request.UserId) };
+                DbParameter[] parameter = { this.InfraConnectionFactory.DataDB.GetNewParameter("@uid", EbDbTypes.Int32, request.UserId) };
 				var rslt = this.InfraConnectionFactory.DataDB.DoQuery(sql1, parameter);
 
                 //..............insert into client tbl eb_users............ to SOLUTION
                 string sql2 = "INSERT INTO eb_users(email, pwd, firstname, socialid) VALUES (@email, @pwd, @firstname, @socialid) RETURNING id;";
                 var cmdtxt3 = EbConnectionFactory.DataDB.GetNewCommand(con, sql2);
-                cmdtxt3.Parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("email", System.Data.DbType.String, rslt.Rows[0][0]));
-                cmdtxt3.Parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("pwd", System.Data.DbType.String, rslt.Rows[0][1]));
-                cmdtxt3.Parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("firstname", System.Data.DbType.String, rslt.Rows[0][2]));
-                cmdtxt3.Parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("socialid", System.Data.DbType.String, rslt.Rows[0][3]));
+                cmdtxt3.Parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, rslt.Rows[0][0]));
+                cmdtxt3.Parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("pwd", EbDbTypes.String, rslt.Rows[0][1]));
+                cmdtxt3.Parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("firstname", EbDbTypes.String, rslt.Rows[0][2]));
+                cmdtxt3.Parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("socialid", EbDbTypes.String, rslt.Rows[0][3]));
 				var id = Convert.ToInt32(cmdtxt3.ExecuteScalar());
 
                 //.......add role to tenant as a/c owner

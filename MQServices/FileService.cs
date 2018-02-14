@@ -3,6 +3,7 @@ using ExpressBase.Common.Constants;
 using ExpressBase.Common.Data;
 using ExpressBase.Common.EbServiceStack;
 using ExpressBase.Common.EbServiceStack.ReqNRes;
+using ExpressBase.Common.Structures;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using MongoDB.Bson;
 using ServiceStack;
@@ -427,12 +428,12 @@ namespace ExpressBase.ServiceStack.MQServices
                 string sql = "INSERT INTO eb_files(userid, objid, length, filetype, tags, bucketname, uploaddatetime) VALUES(@userid, @objid, @length, @filetype, @tags, @bucketname, CURRENT_TIMESTAMP) RETURNING id";
                 DbParameter[] parameters =
                     {
-                        connectionFactory.DataDB.GetNewParameter("userid", System.Data.DbType.Int32, request.UserId),
-                        connectionFactory.DataDB.GetNewParameter("objid",System.Data.DbType.String, request.FileDetails.ObjectId),
-                        connectionFactory.DataDB.GetNewParameter("length",System.Data.DbType.Int64, request.FileDetails.Length),
-                        connectionFactory.DataDB.GetNewParameter("filetype",System.Data.DbType.String, request.FileDetails.FileType),
-                        connectionFactory.DataDB.GetNewParameter("tags",System.Data.DbType.String, tag),
-                        connectionFactory.DataDB.GetNewParameter("bucketname",System.Data.DbType.String, request.BucketName)
+                        connectionFactory.DataDB.GetNewParameter("userid", EbDbTypes.Int32, request.UserId),
+                        connectionFactory.DataDB.GetNewParameter("objid",EbDbTypes.String, request.FileDetails.ObjectId),
+                        connectionFactory.DataDB.GetNewParameter("length",EbDbTypes.Int64, request.FileDetails.Length),
+                        connectionFactory.DataDB.GetNewParameter("filetype",EbDbTypes.String, request.FileDetails.FileType),
+                        connectionFactory.DataDB.GetNewParameter("tags",EbDbTypes.String, tag),
+                        connectionFactory.DataDB.GetNewParameter("bucketname",EbDbTypes.String, request.BucketName)
                     };
                 var iCount = connectionFactory.DataDB.DoQuery(sql, parameters);
 

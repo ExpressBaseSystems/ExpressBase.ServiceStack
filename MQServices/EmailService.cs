@@ -14,6 +14,7 @@ using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Data.Common;
 using ExpressBase.Common.Constants;
+using ExpressBase.Common.Structures;
 
 namespace ExpressBase.ServiceStack
 {
@@ -50,7 +51,7 @@ namespace ExpressBase.ServiceStack
                 {
                     ebDataSource = EbSerializers.Json_Deserialize(element.Json);
                 }
-                DbParameter[] parameters = { _InfraDb.ObjectsDB.GetNewParameter("id", System.Data.DbType.Int32, 1)}; //change 1 by request.id
+                DbParameter[] parameters = { _InfraDb.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, 1)}; //change 1 by request.id
                 var ds = _InfraDb.ObjectsDB.DoQueries(ebDataSource.Sql,parameters);
                 //var pattern = @"\{{(.*?)\}}";
                 //var matches = Regex.Matches(ebEmailTemplate.Body, pattern);

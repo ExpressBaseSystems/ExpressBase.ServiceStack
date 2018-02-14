@@ -1,5 +1,6 @@
 ﻿using ExpressBase.Common;
 using ExpressBase.Common.Data;
+using ExpressBase.Common.Structures;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using Newtonsoft.Json;
 using RestSharp;
@@ -58,8 +59,8 @@ namespace ExpressBase.ServiceStack.MQServices
                         string sql = "UPDATE eb_users SET slackjson = @slackjson WHERE id = @id RETURNING id";
 
                         var id = dbFactory.DataDB.DoQuery<Int32>(sql, new DbParameter[] {
-                            dbFactory.DataDB.GetNewParameter("slackjson", NpgsqlTypes.NpgsqlDbType.Json,EbSerializers.Json_Serialize(req.SlackJson)),
-                            dbFactory.DataDB.GetNewParameter("id", System.Data.DbType.Int32, req.UserId)
+                            dbFactory.DataDB.GetNewParameter("slackjson", EbDbTypes.Json,EbSerializers.Json_Serialize(req.SlackJson)),
+                            dbFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, req.UserId)
                         });
                     }
 
@@ -81,7 +82,7 @@ namespace ExpressBase.ServiceStack.MQServices
 
                 string sql = "SELECT slackjson FROM eb_users WHERE id = @id";
                 
-                var dt = dbFactory.DataDB.DoQuery(sql, new DbParameter[] { dbFactory.DataDB.GetNewParameter("id", System.Data.DbType.Int32, req.UserId) });
+                var dt = dbFactory.DataDB.DoQuery(sql, new DbParameter[] { dbFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, req.UserId) });
                 var json = dt.Rows[0][0];
                 SlackJson slackJson = JsonConvert.DeserializeObject<SlackJson>(json.ToString());
 

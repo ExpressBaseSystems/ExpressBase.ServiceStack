@@ -1,5 +1,6 @@
 ﻿using ExpressBase.Common;
 using ExpressBase.Common.Data;
+using ExpressBase.Common.Structures;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ServiceStack;
 using System;
@@ -128,13 +129,13 @@ WHERE
                     DbCommand cmd = null;
                     string sql = "SELECT * FROM eb_createbot(@solid, @name, @fullname, @url, @welcome_msg, @uid, @botid)";
                     cmd = this.EbConnectionFactory.ObjectsDB.GetNewCommand(con, sql);
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@solid", System.Data.DbType.String, request.SolutionId));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@name", System.Data.DbType.String, request.BotName));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@fullname", System.Data.DbType.String, request.FullName));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@url", System.Data.DbType.String, request.WebURL));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@welcome_msg", System.Data.DbType.String, request.WelcomeMsg));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@uid", System.Data.DbType.Int32, request.UserId));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@botid", System.Data.DbType.Int32, (request.BotId != null) ? request.BotId : "0"));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@solid", EbDbTypes.String, request.SolutionId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@name", EbDbTypes.String, request.BotName));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@fullname", EbDbTypes.String, request.FullName));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@url", EbDbTypes.String, request.WebURL));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@welcome_msg", EbDbTypes.String, request.WelcomeMsg));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@uid", EbDbTypes.Int32, request.UserId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@botid", EbDbTypes.Int32, (request.BotId != null) ? request.BotId : "0"));
 
                     botid = cmd.ExecuteScalar().ToString();
                 }
@@ -166,7 +167,7 @@ FROM
 	eb_bots 
 WHERE 
 	solution_id = @solid;";
-            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@solid", System.Data.DbType.Int32, 100));//request.SolutionId));
+            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@solid", EbDbTypes.Int32, 100));//request.SolutionId));
             var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(sql, parameters.ToArray());
 
             foreach (var dr in dt.Rows)

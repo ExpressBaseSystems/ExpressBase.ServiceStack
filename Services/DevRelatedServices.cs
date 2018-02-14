@@ -30,7 +30,7 @@ namespace ExpressBase.ServiceStack
                 {
                     sql = "SELECT id, applicationname FROM eb_applications";
                 }
-                DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("id", System.Data.DbType.Int32, request.id) };
+                DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, request.id) };
 
                 var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(sql, parameters);
 

@@ -1,5 +1,6 @@
 ﻿using ExpressBase.Common;
 using ExpressBase.Common.Data;
+using ExpressBase.Common.Structures;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ServiceStack;
 using System;
@@ -89,9 +90,9 @@ namespace ExpressBase.ServiceStack.Services
 											WHERE A.id=C.key_id AND B.id=C.lang_id  
 											ORDER BY A.key ASC, B.language ASC;");
 			List<DbParameter> parameters = new List<DbParameter>();
-			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@KEY", System.Data.DbType.String, (request.Key_String + "%")));
-			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@OFFSET", System.Data.DbType.Int32, request.Offset));
-			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@LIMIT", System.Data.DbType.Int32, request.Limit));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@KEY", EbDbTypes.String, (request.Key_String + "%")));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@OFFSET", EbDbTypes.Int32, request.Offset));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@LIMIT", EbDbTypes.Int32, request.Limit));
 			var ds = this.EbConnectionFactory.ObjectsDB.DoQueries(query, parameters.ToArray());
 			int i = -1;
 			Dictionary<long, int> map = new Dictionary<long, int>();
@@ -128,7 +129,7 @@ namespace ExpressBase.ServiceStack.Services
 											WHERE A.id=C.key_id AND B.id=C.lang_id AND LOWER(A.key) LIKE LOWER(@KEY) 
 											ORDER BY B.language ASC");
 			List<DbParameter> parameters = new List<DbParameter>();
-			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@KEY", System.Data.DbType.String, request.Key));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@KEY", EbDbTypes.String, request.Key));
 			var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(query, parameters.ToArray());
 			int i = 0;
 			foreach (EbDataRow dr in dt.Rows)
@@ -151,9 +152,9 @@ namespace ExpressBase.ServiceStack.Services
 				if (list[i].KeyVal_Id == "")
 				{
 					query1.Append("( " + (kid + rcount) + "," + (lid + rcount) + "," + (kval + rcount) + "),");
-					parameters1.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter((kid + rcount), System.Data.DbType.Int64, list[i].Key_Id));
-					parameters1.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter((lid + rcount), System.Data.DbType.Int32, list[i].Lang_Id));
-					parameters1.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter((kval + rcount), System.Data.DbType.String, list[i].KeyVal_Value));
+					parameters1.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter((kid + rcount), EbDbTypes.Int64, list[i].Key_Id));
+					parameters1.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter((lid + rcount), EbDbTypes.Int32, list[i].Lang_Id));
+					parameters1.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter((kval + rcount), EbDbTypes.String, list[i].KeyVal_Value));
 					rcount++;
 					list.Remove(list[i]);
 					InsertCount++;
@@ -173,8 +174,8 @@ namespace ExpressBase.ServiceStack.Services
 			foreach (MLKeyValue obj in list)
 			{
 				sb.Append("(" + (kvalid + rcount) + "," + (kvalvalue + rcount) + "),");
-				parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter((kvalid + rcount), System.Data.DbType.Int64, obj.KeyVal_Id));
-				parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter((kvalvalue + rcount), System.Data.DbType.String, obj.KeyVal_Value));
+				parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter((kvalid + rcount), EbDbTypes.Int64, obj.KeyVal_Id));
+				parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter((kvalvalue + rcount), EbDbTypes.String, obj.KeyVal_Value));
 				rcount++;
 			}
 			sb.Length = sb.Length - 1;
@@ -190,7 +191,7 @@ namespace ExpressBase.ServiceStack.Services
 			var con = this.EbConnectionFactory.ObjectsDB.GetNewConnection();
 			con.Open();
 			DbCommand cmd = this.EbConnectionFactory.ObjectsDB.GetNewCommand(con, query1);
-			cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@KEY", System.Data.DbType.String, request.Key));
+			cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@KEY", EbDbTypes.String, request.Key));
 			var key_id = cmd.ExecuteScalar().ToString();
 
 			StringBuilder query2 = new StringBuilder();
@@ -201,9 +202,9 @@ namespace ExpressBase.ServiceStack.Services
 			foreach (MLAddKey obj in request.Data)
 			{
 				query2.Append("(" + (kid + i) + "," + (lid + i) + "," + (kval + i) + "),");
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter((kid + i), System.Data.DbType.Int64, key_id));
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter((lid + i), System.Data.DbType.Int32, obj.Lang_Id));
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter((kval + i), System.Data.DbType.String, obj.Key_Value));
+				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter((kid + i), EbDbTypes.Int64, key_id));
+				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter((lid + i), EbDbTypes.Int32, obj.Lang_Id));
+				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter((kval + i), EbDbTypes.String, obj.Key_Value));
 				i++;
 			}
 			query2.Length = query2.Length - 1;

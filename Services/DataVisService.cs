@@ -75,15 +75,15 @@ namespace ExpressBase.ServiceStack
             {
                 parameters.AddRange(new System.Data.Common.DbParameter[]
                 {
-                    this.EbConnectionFactory.ObjectsDB.GetNewParameter("@limit", System.Data.DbType.Int32, request.Length),
-                    this.EbConnectionFactory.ObjectsDB.GetNewParameter("@offset", System.Data.DbType.Int32, request.Start),
+                    this.EbConnectionFactory.ObjectsDB.GetNewParameter("@limit", EbDbTypes.Int32, request.Length),
+                    this.EbConnectionFactory.ObjectsDB.GetNewParameter("@offset", EbDbTypes.Int32, request.Start),
                 });
             }
 
             if (request.Params != null)
             {
                 foreach (Dictionary<string, string> param in request.Params)
-                    parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(string.Format("@{0}", param["name"]), (System.Data.DbType)Convert.ToInt32(param["type"]), param["value"]));
+                    parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(string.Format("@{0}", param["name"]), (EbDbType)Convert.ToInt32(param["type"]), param["value"]));
             }
 
             var _dataset = _dV.DoQueries4DataVis(_sql, this.EbConnectionFactory, parameters.ToArray());
@@ -141,15 +141,15 @@ namespace ExpressBase.ServiceStack
                     {
                         parameters.AddRange(new System.Data.Common.DbParameter[]
                         {
-                            this.EbConnectionFactory.ObjectsDB.GetNewParameter("@limit", System.Data.DbType.Int32, 0),
-                            this.EbConnectionFactory.ObjectsDB.GetNewParameter("@offset", System.Data.DbType.Int32, 0)
+                            this.EbConnectionFactory.ObjectsDB.GetNewParameter("@limit", EbDbTypes.Int32, 0),
+                            this.EbConnectionFactory.ObjectsDB.GetNewParameter("@offset", EbDbTypes.Int32, 0)
                         });
                     }
 
                     if (request.Params != null)
                     {
                         foreach (Dictionary<string, string> param in request.Params)
-                            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(string.Format("@{0}", param["name"]), (System.Data.DbType)Convert.ToInt32(param["type"]), param["value"]));
+                            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(string.Format("@{0}", param["name"]), (EbDbType)Convert.ToInt32(param["type"]), param["value"]));
                     }
 
                     Log.Info(">>>>>>>>>>>>>>>>>>>>>>>> dscolumns Parameters Added");

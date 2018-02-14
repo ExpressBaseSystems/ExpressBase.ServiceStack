@@ -8,6 +8,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Data.Common;
 using ExpressBase.Common.Data;
+using ExpressBase.Common.Structures;
 
 namespace ExpressBase.ServiceStack.MQServices
 {
@@ -88,15 +89,15 @@ namespace ExpressBase.ServiceStack.MQServices
 
                 DbParameter[] parameters = 
                         {
-                        connectionFactory.DataDB.GetNewParameter("uri", System.Data.DbType.String, string.IsNullOrEmpty(request.SMSSentStatus.Uri)?string.Empty:request.SMSSentStatus.Uri),
-                        connectionFactory.DataDB.GetNewParameter("to",System.Data.DbType.String, request.SMSSentStatus.To),
-                        connectionFactory.DataDB.GetNewParameter("from",System.Data.DbType.String, request.SMSSentStatus.From),
-                        connectionFactory.DataDB.GetNewParameter("message_body",System.Data.DbType.String, string.IsNullOrEmpty(request.SMSSentStatus.Body)?string.Empty:request.SMSSentStatus.Body),
-                        connectionFactory.DataDB.GetNewParameter("status",System.Data.DbType.String, string.IsNullOrEmpty(request.SMSSentStatus.Status)?string.Empty:request.SMSSentStatus.Status),
+                        connectionFactory.DataDB.GetNewParameter("uri", EbDbTypes.String, string.IsNullOrEmpty(request.SMSSentStatus.Uri)?string.Empty:request.SMSSentStatus.Uri),
+                        connectionFactory.DataDB.GetNewParameter("to",EbDbTypes.String, request.SMSSentStatus.To),
+                        connectionFactory.DataDB.GetNewParameter("from",EbDbTypes.String, request.SMSSentStatus.From),
+                        connectionFactory.DataDB.GetNewParameter("message_body",EbDbTypes.String, string.IsNullOrEmpty(request.SMSSentStatus.Body)?string.Empty:request.SMSSentStatus.Body),
+                        connectionFactory.DataDB.GetNewParameter("status",EbDbTypes.String, string.IsNullOrEmpty(request.SMSSentStatus.Status)?string.Empty:request.SMSSentStatus.Status),
                         //connectionFactory.DataDB.GetNewParameter("sent_time",System.Data.DbType.DateTime, request.SMSSentStatus.SentTime),
-                        connectionFactory.DataDB.GetNewParameter("error_message",System.Data.DbType.String, string.IsNullOrEmpty(request.SMSSentStatus.ErrorMessage)?string.Empty:request.SMSSentStatus.ErrorMessage),
-                        connectionFactory.DataDB.GetNewParameter("user_id",System.Data.DbType.Int32, request.UserId),
-                        connectionFactory.DataDB.GetNewParameter("context_id",System.Data.DbType.Int32, string.IsNullOrEmpty(request.ContextId.ToString())?request.UserId:request.ContextId)
+                        connectionFactory.DataDB.GetNewParameter("error_message",EbDbTypes.String, string.IsNullOrEmpty(request.SMSSentStatus.ErrorMessage)?string.Empty:request.SMSSentStatus.ErrorMessage),
+                        connectionFactory.DataDB.GetNewParameter("user_id",EbDbTypes.Int32, request.UserId),
+                        connectionFactory.DataDB.GetNewParameter("context_id",EbDbTypes.Int32, string.IsNullOrEmpty(request.ContextId.ToString())?request.UserId:request.ContextId)
                         };
                 var iCount = connectionFactory.DataDB.DoQuery(sql, parameters);
 

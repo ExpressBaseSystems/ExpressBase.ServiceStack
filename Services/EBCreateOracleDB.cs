@@ -1,5 +1,6 @@
 ﻿using ExpressBase.Common;
 using ExpressBase.Common.Data;
+using ExpressBase.Common.Structures;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ServiceStack.Logging;
 using System;
@@ -128,16 +129,16 @@ namespace ExpressBase.ServiceStack
             {
                 //.......select details from server tbl eb_usres.........
                 string sql1 = "SELECT email,pwd,firstname,socialid FROM eb_users WHERE id=@uid";
-                DbParameter[] parameter = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("@uid", System.Data.DbType.Int32, request.UserId) };
+                DbParameter[] parameter = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("@uid", EbDbTypes.Int32, request.UserId) };
                 var rslt = this.EbConnectionFactory.ObjectsDB.DoQuery(sql1, parameter);
 
                 //..............insert into client tbl eb_users............ 
                 string sql2 = "INSERT INTO eb_users(email,pwd,firstname,socialid) VALUES (@email,@pwd,@firstname,@socialid);";
                 var cmdtxt3 = EbConnectionFactory.DataDB.GetNewCommand(con, sql2);
-                cmdtxt3.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("email", System.Data.DbType.String, rslt.Rows[0][0]));
-                cmdtxt3.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("pwd", System.Data.DbType.String, rslt.Rows[0][1]));
-                cmdtxt3.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("firstname", System.Data.DbType.String, rslt.Rows[0][2]));
-                cmdtxt3.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("socialid", System.Data.DbType.String, rslt.Rows[0][3]));
+                cmdtxt3.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("email", EbDbTypes.String, rslt.Rows[0][0]));
+                cmdtxt3.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("pwd", EbDbTypes.String, rslt.Rows[0][1]));
+                cmdtxt3.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("firstname", EbDbTypes.String, rslt.Rows[0][2]));
+                cmdtxt3.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("socialid", EbDbTypes.String, rslt.Rows[0][3]));
                 cmdtxt3.ExecuteNonQuery();
 
                 //.....select tenant id from eb_users tbl of client....
