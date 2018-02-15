@@ -237,7 +237,7 @@ AS tags";
                 {
                     Id = Convert.ToInt32(dr[0]),
                     Name = dr[1].ToString(),
-                    EbObjectType = EbObjectTypes.Get(Convert.ToInt32(dr[2])),
+                    EbObjectType = ((EbObjectType)Convert.ToInt32(dr[3])).IntCode,
                     Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[3]),
                     Description = dr[4].ToString(),
                     VersionNumber = dr[7].ToString(),
@@ -263,7 +263,7 @@ AS tags";
                 {
                     Id = Convert.ToInt32(dr[0]),
                     Name = dr[1].ToString(),
-                    EbObjectType = EbObjectTypes.Get(Convert.ToInt32(dr[2])),
+                    EbObjectType = ((EbObjectType)Convert.ToInt32(dr[3])).IntCode,
                     Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[4]),
                     Description = dr[5].ToString(),
                     VersionNumber = dr[8].ToString(),
@@ -288,7 +288,7 @@ AS tags";
                 {
                     Id = Convert.ToInt32(dr[0]),
                     Name = dr[1].ToString() + dr[7].ToString(),
-                    EbObjectType = EbObjectTypes.Get(Convert.ToInt32(dr[2])),
+                    EbObjectType = ((EbObjectType)Convert.ToInt32(dr[3])).IntCode,
                     Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[3]),
                     Description = dr[4].ToString(),
                     VersionNumber = dr[7].ToString(),
@@ -314,7 +314,7 @@ AS tags";
                 {
                     Id = Convert.ToInt32(dr[0]),
                     Name = dr[1].ToString(),
-                    EbObjectType = EbObjectTypes.Get(Convert.ToInt32(dr[2])),
+                    EbObjectType = ((EbObjectType)Convert.ToInt32(dr[3])).IntCode,
                     Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[3]),
                     Description = dr[4].ToString()
                 });
@@ -346,8 +346,8 @@ AS tags";
                 {
                     Id = Convert.ToInt32(dr[0]),
                     Name = dr[1].ToString(),
-                    EbObjectType = EbObjectTypes.Get(Convert.ToInt32(dr[2])),
-                    Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[3]),
+                    EbObjectType = ((EbObjectType)Convert.ToInt32(dr[3])).IntCode,
+                Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[3]),
                     VersionNumber = dr[7].ToString(),
                     RefId = dr[11].ToString(),
                 });
@@ -370,7 +370,7 @@ AS tags";
                 _ebObject.Name = dr[0].ToString();
                 _ebObject.RefId = dr[1].ToString();
                 _ebObject.VersionNumber = dr[2].ToString();
-                _ebObject.EbObjectType = (EbObjectType)Convert.ToInt32(dr[3]);
+                _ebObject.EbObjectType = ((EbObjectType)Convert.ToInt32(dr[3])).IntCode;
 
                 f.Add(_ebObject);
             }
@@ -395,7 +395,7 @@ AS tags";
                 _ebObject.Name = dr[0].ToString();
                 _ebObject.RefId = dr[1].ToString();
                 _ebObject.VersionNumber = dr[2].ToString();
-                _ebObject.EbObjectType = EbObjectTypes.Get(Convert.ToInt32(dr[3]));
+                _ebObject.EbObjectType = ((EbObjectType)Convert.ToInt32(dr[3])).IntCode;
 
                 f.Add(_ebObject);
             }
@@ -418,7 +418,7 @@ AS tags";
                     {
                         Id = Convert.ToInt32(dr[0]),
                         Name = dr[1].ToString(),
-                        EbObjectType = EbObjectTypes.Get(Convert.ToInt32(dr[2])),
+                        EbObjectType = ((EbObjectType)Convert.ToInt32(dr[3])).IntCode,
                         Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[3]),
                         Description = dr[4].ToString(),
                         ChangeLog = dr[5].ToString(),

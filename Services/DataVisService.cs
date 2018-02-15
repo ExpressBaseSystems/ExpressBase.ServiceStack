@@ -198,7 +198,7 @@ namespace ExpressBase.ServiceStack
                 var rlist = resultlist.Data;
                 foreach (var element in rlist)
                 {
-                    if (element.EbObjectType.Equals(EbObjectTypes.TableVisualization) || element.EbObjectType.Equals(EbObjectTypes.ChartVisualization))
+                    if (element.EbObjectType == (int)EbObjectTypes.TableVisualization || element.EbObjectType == (int)EbObjectTypes.ChartVisualization)
                     {
                         dvList.Add(element);
                     }
@@ -213,7 +213,7 @@ namespace ExpressBase.ServiceStack
                 var rlist = resultlist.Data;
                 foreach (var element in rlist)
                 {
-                    if (element.EbObjectType.Equals(EbObjectTypes.TableVisualization) || element.EbObjectType.Equals(EbObjectTypes.ChartVisualization))
+                    if (element.EbObjectType == (int)EbObjectTypes.TableVisualization || element.EbObjectType == (int)EbObjectTypes.ChartVisualization)
                     {
                         dvTaggedList.Add(element);
                     }
