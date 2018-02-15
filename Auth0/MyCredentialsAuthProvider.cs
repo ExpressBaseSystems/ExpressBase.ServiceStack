@@ -6,6 +6,7 @@ using ServiceStack.Auth;
 using ServiceStack.Configuration;
 using ServiceStack.Logging;
 using ServiceStack.Redis;
+using System;
 
 namespace ExpressBase.ServiceStack.Auth0
 {
@@ -29,6 +30,7 @@ namespace ExpressBase.ServiceStack.Auth0
 			var socialId = request.Meta.ContainsKey("socialId") ? request.Meta["socialId"] : string.Empty;
 			var emailId = request.Meta.ContainsKey("emailId") ? request.Meta["emailId"] : string.Empty;//for anonymous
 			var phone = request.Meta.ContainsKey("phone") ? request.Meta["phone"] : string.Empty;//for anonymous
+			var appid = request.Meta.ContainsKey("appid") ? Convert.ToInt32(request.Meta["appid"]) : 0;//for anonymous
 			var whichContext = request.Meta["wc"].ToLower().Trim();
 
 			var EbConnectionFactory = authService.TryResolve<IEbConnectionFactory>() as EbConnectionFactory;
@@ -47,7 +49,7 @@ namespace ExpressBase.ServiceStack.Auth0
 			User _authUser = null;
 			if (request.Meta.ContainsKey("anonymous") && whichContext.Equals("bc"))
 			{
-				_authUser = User.GetDetailsAnonymous(EbConnectionFactory.DataDB, socialId, emailId, phone, whichContext);
+				_authUser = User.GetDetailsAnonymous(EbConnectionFactory.DataDB, socialId, emailId, phone, appid, whichContext);
 				Logger.Info("TryAuthenticate -> anonymous");
 			}
 			else if (!string.IsNullOrEmpty(socialId))
