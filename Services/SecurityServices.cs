@@ -189,9 +189,14 @@ namespace ExpressBase.ServiceStack.Services
 
 		public bool Any(UniqueCheckRequest request)
 		{
-			
-			string sql = "SELECT id FROM eb_users WHERE email LIKE @email";
-			DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("email", EbDbTypes.String, request.email) };
+			string sql = string.Empty;
+			if (!string.IsNullOrEmpty(request.email))
+				sql = "SELECT id FROM eb_users WHERE LOWER(email) LIKE LOWER(@email)";
+			if (!string.IsNullOrEmpty(request.roleName))
+				sql = "SELECT id FROM eb_roles WHERE LOWER(role_name) LIKE LOWER(@roleName);";
+			DbParameter[] parameters = {
+				this.EbConnectionFactory.ObjectsDB.GetNewParameter("email", EbDbTypes.String, string.IsNullOrEmpty(request.email)?"":request.email),
+				this.EbConnectionFactory.ObjectsDB.GetNewParameter("roleName", EbDbTypes.String, string.IsNullOrEmpty(request.roleName)?"":request.roleName)};
 			var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(sql, parameters);
 			if (dt.Rows.Count > 0)
 			{

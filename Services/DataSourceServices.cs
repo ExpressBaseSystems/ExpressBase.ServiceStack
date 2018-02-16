@@ -61,7 +61,7 @@ namespace ExpressBase.ServiceStack
                 (string.IsNullOrEmpty(request.OrderByCol)) ? "id" : string.Format("{0} {1}", request.OrderByCol, ((request.OrderByDir == 2) ? "DESC" : "ASC")));
 
             bool _isPaged = (_sql.ToLower().Contains("@offset") && _sql.ToLower().Contains("@limit"));
-
+            
             var parameters = DataHelper.GetParams(this.EbConnectionFactory, _isPaged, request.Params, request.Length, request.Start);
             if (request.Params == null)
                 _sql = _sql.Replace("@id", "0");
