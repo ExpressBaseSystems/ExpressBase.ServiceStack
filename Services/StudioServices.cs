@@ -347,7 +347,7 @@ AS tags";
                     Id = Convert.ToInt32(dr[0]),
                     Name = dr[1].ToString(),
                     EbObjectType = ((EbObjectType)Convert.ToInt32(dr[3])).IntCode,
-                Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[3]),
+                    Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[3]),
                     VersionNumber = dr[7].ToString(),
                     RefId = dr[11].ToString(),
                 });
@@ -429,7 +429,7 @@ AS tags";
                         WorkingMode = Convert.ToBoolean(dr[10]),
                         Json_wc = dr[12].ToString(),
                         Json_lc = dr[13].ToString(),
-                        Wc_All = dr[11] as string[],
+                        Wc_All = (dr[11] as string).Split(","),
                         Tags = dr[17].ToString(),
                         Apps = dr[18].ToString().Replace("\n", "").Replace("\t", "").Replace("\r", ""),
                         Dashboard_Tiles = new EbObjectWrapper_Dashboard
@@ -588,7 +588,7 @@ AS tags";
                 {
                     con.Open();
                     DbCommand cmd = null;
-                    log.Info("#DS insert 1 -- con open");                  
+                    log.Info("#DS insert 1 -- con open");
                     string sql = "SELECT eb_objects_commit(@id, @obj_name, @obj_desc, @obj_type, @obj_json, @obj_changelog,  @commit_uid, @src_pid, @cur_pid, @relations, @tags, @app_id)";
                     cmd = this.EbConnectionFactory.ObjectsDB.GetNewCommand(con, sql);
 
@@ -632,7 +632,7 @@ AS tags";
                     con.Open();
                     DbCommand cmd = null;
                     log.Info("#DS insert 1 -- con open");
-                 
+
                     string sql = "SELECT eb_objects_save(@id, @obj_name, @obj_desc, @obj_type, @obj_json, @commit_uid, @src_pid, @cur_pid, @relations, @tags, @app_id)";
                     cmd = this.EbConnectionFactory.ObjectsDB.GetNewCommand(con, sql);
 
@@ -920,7 +920,7 @@ AS tags";
 
         public string SetAppId(string _apps)
         {
-            string appids="";
+            string appids = "";
             //int[] appids;
             //int counter = 0;
             var myService = base.ResolveService<DevRelatedServices>();

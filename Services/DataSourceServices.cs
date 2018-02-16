@@ -65,15 +65,15 @@ namespace ExpressBase.ServiceStack
             var parameters = DataHelper.GetParams(this.EbConnectionFactory, _isPaged, request.Params, request.Length, request.Start);
             if (request.Params == null)
                 _sql = _sql.Replace("@id", "0");
-            Console.WriteLine("Before :  "+DateTime.Now);
+            Console.WriteLine("Before :  " + DateTime.Now);
             var dtStart = DateTime.Now;
             var _dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray<System.Data.Common.DbParameter>());
 
             //-- 
             Console.WriteLine(DateTime.Now);
-   var dtEnd = DateTime.Now;
+            var dtEnd = DateTime.Now;
             var ts = (dtEnd - dtStart).TotalMilliseconds;
-            Console.WriteLine("final:::"+ ts);
+            Console.WriteLine("final:::" + ts);
             int _recordsTotal = 0, _recordsFiltered = 0;
             if (_isPaged)
             {
@@ -208,7 +208,7 @@ namespace ExpressBase.ServiceStack
                 resp.Columns = new List<ColumnColletion>();
 
                 var _ds = this.Redis.Get<EbDataSource>(request.RefId);
-                if(_ds == null)
+                if (_ds == null)
                 {
                     var myService = base.ResolveService<EbObjectService>();
                     var result = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = request.RefId });
