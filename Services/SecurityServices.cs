@@ -40,6 +40,39 @@ namespace ExpressBase.ServiceStack.Services
 			return resp;
 		} //for user search
 
+		public GetAnonymousUserResponse Any(GetAnonymousUserRequest request)
+		{
+			GetAnonymousUserResponse resp = new GetAnonymousUserResponse();
+			using (var con = this.EbConnectionFactory.ObjectsDB.GetNewConnection())
+			{
+				con.Open();
+				string sql = @"SELECT A.id, A.fullname, A.email, A.phoneno, A.socialid, A.firstvisit, A.lastvisit, A.totalvisits, B.applicationname 
+								FROM eb_usersanonymous A, eb_applications B WHERE A.appid = B.id;";
+
+				DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("searchtext", EbDbTypes.String, (request.Colvalues != null) ? request.Colvalues["searchtext"] : string.Empty) };
+
+				var dt = this.EbConnectionFactory.ObjectsDB.DoQueries(sql, parameters);
+
+				List<Eb_AnonymousUser_ForCommonList> returndata = new List<Eb_AnonymousUser_ForCommonList>();
+				foreach (EbDataRow dr in dt.Tables[0].Rows)
+				{
+					returndata.Add(new Eb_AnonymousUser_ForCommonList {
+						Id = Convert.ToInt32(dr[0]),
+						Full_Name = dr[1].ToString(),
+						Email_Id = dr[2].ToString(),
+						Phone_No = dr[3].ToString(),
+						Social_Id = dr[4].ToString(),
+						First_Visit = (dr[5].ToString() == DateTime.MinValue.ToString()) ? "": dr[5].ToString(),
+						Last_Visit = (dr[6].ToString() == DateTime.MinValue.ToString()) ? "" : dr[6].ToString(),
+						Total_Visits = Convert.ToInt32(dr[7]),
+						App_Name = dr[8].ToString()
+					});
+				}
+				resp.Data = returndata;
+			}
+			return resp;
+		}
+
 		public GetUserGroupResponse1 Any(GetUserGroupRequest1 request)
 		{
 			GetUserGroupResponse1 resp = new GetUserGroupResponse1();
