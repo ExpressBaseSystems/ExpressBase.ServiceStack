@@ -54,7 +54,7 @@ namespace ExpressBase.ServiceStack
                     cresp = myDataSourceservice.Any(new DataSourceColumnsRequest { RefId = Report.DataSourceRefId });
                 Report.DataColumns = (cresp.Columns.Count > 1) ? cresp.Columns[1] : cresp.Columns[0];
                 dresp = myDataSourceservice.Any(new DataSourceDataRequest { RefId = Report.DataSourceRefId, Draw = 1, Start = 0, Length = 100 });
-                Report.DataRow = dresp.Data;
+                Report.DataRow = dresp.Data;Console.WriteLine("Rows: " + dresp.Data.Count);
               
             }
 
