@@ -306,6 +306,70 @@ namespace ExpressBase.ServiceStack.Services
 			return resp;
 		}
 
+
+		//------MANAGE ANONYMOUS USER START----------------------------
+
+		public GetManageAnonymousUserResponse Any(GetManageAnonymousUserRequest request)
+		{
+			Dictionary<string, string> Udata = new Dictionary<string, string>();
+			string sql = @"SELECT A.id, A.fullname, A.email, A.phoneno, A.socialid, A.firstvisit, A.lastvisit, A.totalvisits, B.applicationname, A.remarks
+								FROM eb_usersanonymous A, eb_applications B
+								WHERE A.appid = B.id AND A.id = @id;
+							SELECT B.firstname, A.modifiedat FROM eb_usersanonymous A, eb_users B 
+								WHERE A.modifiedby = B.id AND A.id = @id;";
+			
+			DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("@id", EbDbTypes.Int32, request.Id) };
+			var ds = this.EbConnectionFactory.ObjectsDB.DoQueries(sql, parameters);
+			if (ds.Tables.Count > 1)
+			{
+				Udata.Add("FullName", ds.Tables[0].Rows[0][1].ToString());
+				Udata.Add("Email", ds.Tables[0].Rows[0][2].ToString());
+				Udata.Add("Phone", ds.Tables[0].Rows[0][3].ToString());
+				Udata.Add("SocialId", ds.Tables[0].Rows[0][4].ToString());
+				Udata.Add("FirstVisit", ds.Tables[0].Rows[0][5].ToString());
+				Udata.Add("LastVisit", ds.Tables[0].Rows[0][6].ToString());
+				Udata.Add("TotalVisits", ds.Tables[0].Rows[0][7].ToString());
+				Udata.Add("ApplicationName", ds.Tables[0].Rows[0][8].ToString());
+				Udata.Add("Remarks", ds.Tables[0].Rows[0][9].ToString());
+				if(ds.Tables[1].Rows.Count > 0)
+				{
+					Udata.Add("ModifiedBy", ds.Tables[1].Rows[0][0].ToString());
+					Udata.Add("ModifiedAt", ds.Tables[1].Rows[0][1].ToString());
+				}
+				else
+				{
+					Udata.Add("ModifiedBy", "");
+					Udata.Add("ModifiedAt", "");
+				}
+			}
+			return new GetManageAnonymousUserResponse {UserData = Udata };
+		}
+
+		public UpdateAnonymousUserResponse Any(UpdateAnonymousUserRequest request)
+		{
+			string sql = @"UPDATE eb_usersanonymous 
+								SET fullname=@fullname, email=@emailid, phoneno=@phoneno, remarks = @remarks, modifiedby = @modifiedby, modifiedat = NOW()
+								WHERE id=@id";
+			DbParameter[] parameters = {
+				this.EbConnectionFactory.ObjectsDB.GetNewParameter("@fullname", EbDbTypes.String, request.FullName),
+				this.EbConnectionFactory.ObjectsDB.GetNewParameter("@emailid", EbDbTypes.String, request.EmailID),
+				this.EbConnectionFactory.ObjectsDB.GetNewParameter("@phoneno", EbDbTypes.String, request.PhoneNumber),
+				this.EbConnectionFactory.ObjectsDB.GetNewParameter("@remarks", EbDbTypes.String, request.Remarks),
+				this.EbConnectionFactory.ObjectsDB.GetNewParameter("@modifiedby", EbDbTypes.Int32, request.UserId),
+				this.EbConnectionFactory.ObjectsDB.GetNewParameter("@id", EbDbTypes.Int32, request.Id)
+			};
+			return new UpdateAnonymousUserResponse {RowAffected = this.EbConnectionFactory.ObjectsDB.DoNonQuery(sql, parameters) };
+		}
+
+
+		public ConvertAnonymousUserResponse Any(ConvertAnonymousUserRequest request)
+		{
+			//WORK NOT COMPLETED
+			return new ConvertAnonymousUserResponse { status = 1 };
+		}
+
+
+
 		//------MANAGE USER GROUP START------------------------------
 
 		public GetManageUserGroupResponse Any(GetManageUserGroupRequest request)
