@@ -16,6 +16,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using QRCoder;
+using Microsoft.CodeAnalysis.CSharp.Scripting;
 
 namespace ExpressBase.ServiceStack
 {
@@ -27,9 +28,41 @@ namespace ExpressBase.ServiceStack
         public EbReport Report = null;
         //private iTextSharp.text.Font f = FontFactory.GetFont(FontFactory.HELVETICA, 12);
         public ReportService(IEbConnectionFactory _dbf) : base(_dbf) { }
-
+        public class Globals
+        {
+            public int X;
+            public int Y;
+        }
         public ReportRenderResponse Get(ReportRenderRequest request)
         {
+          
+            Console.ForegroundColor = ConsoleColor.DarkGreen;
+            DateTime ts_start; DateTime ts_end; TimeSpan ts;
+            ts_start = DateTime.Now;
+            Console.WriteLine(CSharpScript.EvaluateAsync("10*10").Result);
+            ts_end = DateTime.Now;
+            ts = ts_end - ts_start;
+            Console.WriteLine("ts-Evaluate : " + ts);
+
+            ts_start = DateTime.Now;
+            var script = CSharpScript.Create<int>("X*Y", globalsType: typeof(Globals));
+            script.Compile();
+            var i = 10;
+                Console.WriteLine(( script.RunAsync(new Globals { X = i, Y = i })).Result.ReturnValue);
+            ts_end = DateTime.Now;
+            ts = ts_end - ts_start;
+            Console.WriteLine("ts-Compile1 : " + ts);
+
+            ts_start = DateTime.Now;
+            i = 20;
+            Console.WriteLine((script.RunAsync(new Globals { X = i, Y = i })).Result.ReturnValue);
+            ts_end = DateTime.Now;
+            ts = ts_end - ts_start;
+            Console.WriteLine("ts-Compile2 : " + ts);
+
+            Console.ForegroundColor = ConsoleColor.White;
+
+
             //-- Get REPORT object and Init 
             var myObjectservice = base.ResolveService<EbObjectService>();
             EbObjectParticularVersionResponse resultlist = myObjectservice.Get(new EbObjectParticularVersionRequest { RefId = request.Refid }) as EbObjectParticularVersionResponse;
