@@ -17,6 +17,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using QRCoder;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
+using Microsoft.CodeAnalysis.Scripting;
+using System.Dynamic;
 
 namespace ExpressBase.ServiceStack
 {
@@ -28,38 +30,121 @@ namespace ExpressBase.ServiceStack
         public EbReport Report = null;
         //private iTextSharp.text.Font f = FontFactory.GetFont(FontFactory.HELVETICA, 12);
         public ReportService(IEbConnectionFactory _dbf) : base(_dbf) { }
+
         public class Globals
         {
-            public int X;
-            public int Y;
+            public dynamic T1 { get; set; }
+            public dynamic T2 { get; set; }
+            public dynamic T3 { get; set; }
+            public dynamic T4 { get; set; }
+            public dynamic T5 { get; set; }
+            public dynamic T6 { get; set; }
+            public dynamic T7 { get; set; }
+            public dynamic T8 { get; set; }
+            public dynamic T9 { get; set; }
+            public dynamic T10 { get; set; }
+
+            public Globals()
+            {
+                T1 = new NTVDict();
+                T2 = new NTVDict();
+                T3 = new NTVDict();
+                T4 = new NTVDict();
+                T5 = new NTVDict();
+                T6 = new NTVDict();
+                T7 = new NTVDict();
+                T8 = new NTVDict();
+                T9 = new NTVDict();
+                T10 = new NTVDict();
+            }
         }
+
+        public class NTVDict : DynamicObject
+        {
+            private Dictionary<string, object> dictionary = new Dictionary<string, object>();
+
+            public int Count
+            {
+                get
+                {
+                    return dictionary.Count;
+                }
+            }
+
+            public override bool TryGetMember(GetMemberBinder binder, out object result)
+            {
+                string name = binder.Name.ToLower();
+
+                object x;
+                dictionary.TryGetValue(name, out x);
+                if (x != null)
+                {
+                    var _data = x as NTV;
+
+                    if (_data.Type == DbType.Int32)
+                        result = Convert.ToInt32((x as NTV).Value);
+                    else
+                        result = (x as NTV).Value.ToString();
+
+                    return true;
+                }
+
+                result = null;
+                return false;
+            }
+
+            public override bool TrySetMember(SetMemberBinder binder, object value)
+            {
+                dictionary[binder.Name.ToLower()] = value;
+                return true;
+            }
+        }
+
+
+        public class NTV
+        {
+            public string Name { get; set; }
+
+            public DbType Type { get; set; }
+
+            public object Value { get; set; }
+        }
+
         public ReportRenderResponse Get(ReportRenderRequest request)
         {
-          
-            Console.ForegroundColor = ConsoleColor.DarkGreen;
-            DateTime ts_start; DateTime ts_end; TimeSpan ts;
-            ts_start = DateTime.Now;
-            Console.WriteLine(CSharpScript.EvaluateAsync("10*10").Result);
-            ts_end = DateTime.Now;
-            ts = ts_end - ts_start;
-            Console.WriteLine("ts-Evaluate : " + ts);
 
-            ts_start = DateTime.Now;
-            var script = CSharpScript.Create<int>("X*Y", globalsType: typeof(Globals));
-            script.Compile();
-            var i = 10;
-                Console.WriteLine(( script.RunAsync(new Globals { X = i, Y = i })).Result.ReturnValue);
-            ts_end = DateTime.Now;
-            ts = ts_end - ts_start;
-            Console.WriteLine("ts-Compile1 : " + ts);
+            Globals globals = new Globals();
+            globals.T1.x = new NTV { Name = "x", Type = DbType.Int32, Value = 10 };
+            globals.T1.y = new NTV { Name = "y", Type = DbType.Int32, Value = 20 };
+            try
+            {
+                Console.ForegroundColor = ConsoleColor.DarkGreen;
+                DateTime ts_start; DateTime ts_end; TimeSpan ts;
 
-            ts_start = DateTime.Now;
-            i = 20;
-            Console.WriteLine((script.RunAsync(new Globals { X = i, Y = i })).Result.ReturnValue);
-            ts_end = DateTime.Now;
-            ts = ts_end - ts_start;
-            Console.WriteLine("ts-Compile2 : " + ts);
+                // Console.WriteLine(CSharpScript.EvaluateAsync("return Environment.GetEnvironmentVariable(\"EB_REDIS_PASSWORD\");", ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core", "MSCorLib").WithImports("System.Dynamic", "System")).Result);
 
+                ts_start = DateTime.Now;
+                var script = CSharpScript.Create<int>("(T1.x * T1.y) + 2", ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System.Dynamic"), globalsType: typeof(Globals));
+                script.Compile();
+                ts_end = DateTime.Now;
+                Console.WriteLine("ts-Compile1 : " + ts);
+                ts = ts_end - ts_start;
+
+                ts_start = DateTime.Now;
+                Console.WriteLine((script.RunAsync(globals)).Result.ReturnValue);
+                ts_end = DateTime.Now;
+                ts = ts_end - ts_start;
+                Console.WriteLine("ts-Compile2 : " + ts);
+
+                ts_start = DateTime.Now;
+                Console.WriteLine((script.RunAsync(globals)).Result.ReturnValue);
+                ts_end = DateTime.Now;
+                ts = ts_end - ts_start;
+                Console.WriteLine("ts-Compile3 : " + ts);
+            }
+            catch (Exception e)
+            {
+            }
             Console.ForegroundColor = ConsoleColor.White;
 
 
@@ -78,17 +163,17 @@ namespace ExpressBase.ServiceStack
 
             var myDataSourceservice = base.ResolveService<DataSourceService>();
             if (Report.DataSourceRefId != string.Empty)
-           {
-            //    dresp = myDataSourceservice.Any(new DataSourceDataRequest444 { RefId = Report.DataSourceRefId, Draw = 1, Start = 0, Length = 100 });
-            //    Report.DataSet = dresp.DataSet;
+            {
+                //    dresp = myDataSourceservice.Any(new DataSourceDataRequest444 { RefId = Report.DataSourceRefId, Draw = 1, Start = 0, Length = 100 });
+                //    Report.DataSet = dresp.DataSet;
 
                 cresp = this.Redis.Get<DataSourceColumnsResponse>(string.Format("{0}_columns", Report.DataSourceRefId));
                 if (cresp.IsNull)
                     cresp = myDataSourceservice.Any(new DataSourceColumnsRequest { RefId = Report.DataSourceRefId });
                 Report.DataColumns = (cresp.Columns.Count > 1) ? cresp.Columns[1] : cresp.Columns[0];
                 dresp = myDataSourceservice.Any(new DataSourceDataRequest { RefId = Report.DataSourceRefId, Draw = 1, Start = 0, Length = 100 });
-                Report.DataRow = dresp.Data;Console.WriteLine("Rows: " + dresp.Data.Count);
-              
+                Report.DataRow = dresp.Data; Console.WriteLine("Rows: " + dresp.Data.Count);
+
             }
 
             Rectangle rec = new Rectangle(Report.Width, Report.Height);
