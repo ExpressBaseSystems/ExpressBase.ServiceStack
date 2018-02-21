@@ -480,7 +480,7 @@ AS tags";
                     RefId = request.Refid,
                     VersionNumber = dr[2].ToString(),
                     WorkingMode = Convert.ToBoolean(dr[3]),
-                    Wc_All = dr[4] as string[],
+                    Wc_All = (dr[4] as string).Split(","),
                     Tags = dr[8].ToString(),
                     Apps = dr[9].ToString().Replace("\n", "").Replace("\t", "").Replace("\r", ""),
                     Dashboard_Tiles = new EbObjectWrapper_Dashboard
