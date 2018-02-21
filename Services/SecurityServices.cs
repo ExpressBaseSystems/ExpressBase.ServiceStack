@@ -21,14 +21,14 @@ namespace ExpressBase.ServiceStack.Services
 		public GetUsersResponse1 Any(GetUsersRequest1 request)
 		{
 			GetUsersResponse1 resp = new GetUsersResponse1();
-			using (var con = this.EbConnectionFactory.ObjectsDB.GetNewConnection())
+			using (var con = this.EbConnectionFactory.DataDB.GetNewConnection())
 			{
 				con.Open();
 				string sql = "SELECT id,firstname,email FROM eb_users WHERE firstname ~* @searchtext";
 
-				DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("searchtext", EbDbTypes.String, (request.Colvalues != null) ? request.Colvalues["searchtext"] : string.Empty) };
+				DbParameter[] parameters = { this.EbConnectionFactory.DataDB.GetNewParameter("searchtext", EbDbTypes.String, (request.Colvalues != null) ? request.Colvalues["searchtext"] : string.Empty) };
 
-				var dt = this.EbConnectionFactory.ObjectsDB.DoQueries(sql, parameters);
+				var dt = this.EbConnectionFactory.DataDB.DoQueries(sql, parameters);
 
 				List<Eb_User_ForCommonList> returndata = new List<Eb_User_ForCommonList>();
 				foreach (EbDataRow dr in dt.Tables[0].Rows)
@@ -43,15 +43,15 @@ namespace ExpressBase.ServiceStack.Services
 		public GetAnonymousUserResponse Any(GetAnonymousUserRequest request)
 		{
 			GetAnonymousUserResponse resp = new GetAnonymousUserResponse();
-			using (var con = this.EbConnectionFactory.ObjectsDB.GetNewConnection())
+			using (var con = this.EbConnectionFactory.DataDB.GetNewConnection())
 			{
 				con.Open();
 				string sql = @"SELECT A.id, A.fullname, A.email, A.phoneno, A.socialid, A.firstvisit, A.lastvisit, A.totalvisits, B.applicationname 
 								FROM eb_usersanonymous A, eb_applications B WHERE A.appid = B.id;";
 
-				DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("searchtext", EbDbTypes.String, (request.Colvalues != null) ? request.Colvalues["searchtext"] : string.Empty) };
+				DbParameter[] parameters = { this.EbConnectionFactory.DataDB.GetNewParameter("searchtext", EbDbTypes.String, (request.Colvalues != null) ? request.Colvalues["searchtext"] : string.Empty) };
 
-				var dt = this.EbConnectionFactory.ObjectsDB.DoQueries(sql, parameters);
+				var dt = this.EbConnectionFactory.DataDB.DoQueries(sql, parameters);
 
 				List<Eb_AnonymousUser_ForCommonList> returndata = new List<Eb_AnonymousUser_ForCommonList>();
 				foreach (EbDataRow dr in dt.Tables[0].Rows)
@@ -76,14 +76,14 @@ namespace ExpressBase.ServiceStack.Services
 		public GetUserGroupResponse1 Any(GetUserGroupRequest1 request)
 		{
 			GetUserGroupResponse1 resp = new GetUserGroupResponse1();
-			using (var con = this.EbConnectionFactory.ObjectsDB.GetNewConnection())
+			using (var con = this.EbConnectionFactory.DataDB.GetNewConnection())
 			{
 				con.Open();
-				string sql = "SELECT id,name,description FROM eb_usergroup WHERE name ~* @searchtext";
+				string sql = "SELECT id,name,description FROM eb_usergroup WHERE name ~* :searchtext";
 
-				DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("searchtext", EbDbTypes.String, (request.Colvalues != null) ? request.Colvalues["searchtext"] : string.Empty) };
+				DbParameter[] parameters = { this.EbConnectionFactory.DataDB.GetNewParameter("searchtext", EbDbTypes.String, (request.Colvalues != null) ? request.Colvalues["searchtext"] : string.Empty) };
 
-				var dt = this.EbConnectionFactory.ObjectsDB.DoQueries(sql, parameters);
+				var dt = this.EbConnectionFactory.DataDB.DoQueries(sql, parameters);
 
 				List<Eb_UserGroup_ForCommonList> returndata = new List<Eb_UserGroup_ForCommonList>();
 				foreach (EbDataRow dr in dt.Tables[0].Rows)
@@ -98,20 +98,15 @@ namespace ExpressBase.ServiceStack.Services
 		public GetRolesResponse1 Any(GetRolesRequest1 request)
 		{
 			GetRolesResponse1 resp = new GetRolesResponse1();
-			using (var con = this.EbConnectionFactory.ObjectsDB.GetNewConnection())
+			using (var con = this.EbConnectionFactory.DataDB.GetNewConnection())
 			{
 				con.Open();
-				string sql = @"SELECT R.id,R.role_name,R.description,A.applicationname,
-									(SELECT COUNT(role1_id) FROM eb_role2role WHERE role1_id=R.id AND eb_del=false) AS subrole_count,
-									(SELECT COUNT(user_id) FROM eb_role2user WHERE role_id=R.id AND eb_del=false) AS user_count,
-									(SELECT COUNT(distinct permissionname) FROM eb_role2permission RP, eb_objects2application OA WHERE role_id = R.id AND app_id=A.id AND RP.obj_id=OA.obj_id AND RP.eb_del = FALSE AND OA.eb_del = FALSE) AS permission_count
-								FROM eb_roles R, eb_applications A
-								WHERE R.applicationid = A.id AND R.role_name ~* @searchtext";
+				//string sql = @"";
 				//string sql = "SELECT R.id,R.role_name,R.description,A.applicationname FROM eb_roles R, eb_applications A WHERE R.applicationid = A.id AND R.role_name ~* @searchtext";
 
-				DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("searchtext", EbDbTypes.String, (request.Colvalues != null) ? request.Colvalues["searchtext"] : string.Empty) };
+				DbParameter[] parameters = { this.EbConnectionFactory.DataDB.GetNewParameter("searchtext", EbDbTypes.String, (request.Colvalues != null) ? request.Colvalues["searchtext"] : string.Empty) };
 
-				var dt = this.EbConnectionFactory.ObjectsDB.DoQueries(sql, parameters);
+				var dt = this.EbConnectionFactory.DataDB.DoQueries(this.EbConnectionFactory.DataDB.EB_GETROLESRESPONSE_QUERY, parameters);
 
 				List<Eb_Roles_ForCommonList> returndata = new List<Eb_Roles_ForCommonList>();
 				foreach (EbDataRow dr in dt.Tables[0].Rows)
@@ -131,17 +126,17 @@ namespace ExpressBase.ServiceStack.Services
 			GetManageUserResponse resp = new GetManageUserResponse();
 			string sql = @"SELECT id, role_name, description FROM eb_roles ORDER BY role_name;
                         SELECT id, name,description FROM eb_usergroup ORDER BY name;
-						SELECT id, role1_id, role2_id FROM eb_role2role WHERE eb_del = FALSE;";
+						SELECT id, role1_id, role2_id FROM eb_role2role WHERE eb_del = 'F';";
 			if (request.Id > 0)
 			{
 				sql += @"SELECT fullname,nickname,email,alternateemail,dob,sex,phnoprimary,phnosecondary,landline,phextension,fbid,fbname,statusid,hide
 						FROM eb_users WHERE id = @id;
-						SELECT role_id FROM eb_role2user WHERE user_id = @id AND eb_del = FALSE;
-						SELECT groupid FROM eb_user2usergroup WHERE userid = @id AND eb_del = FALSE;";
+						SELECT role_id FROM eb_role2user WHERE user_id = @id AND eb_del = 'F';
+						SELECT groupid FROM eb_user2usergroup WHERE userid = @id AND eb_del = 'F';";
 			}
 			//SELECT firstname, email, socialid, socialname FROM eb_users WHERE id = @id;	old 4th query
-			DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("@id", EbDbTypes.Int32, request.Id) };
-			var ds = this.EbConnectionFactory.ObjectsDB.DoQueries(sql, parameters);
+			DbParameter[] parameters = { this.EbConnectionFactory.DataDB.GetNewParameter("@id", EbDbTypes.Int32, request.Id) };
+			var ds = this.EbConnectionFactory.DataDB.DoQueries(sql, parameters);
 
 			resp.Roles = new List<EbRole>();
 			foreach (var dr in ds.Tables[0].Rows)
@@ -223,14 +218,20 @@ namespace ExpressBase.ServiceStack.Services
 		public bool Any(UniqueCheckRequest request)
 		{
 			string sql = string.Empty;
-			if (!string.IsNullOrEmpty(request.email))
-				sql = "SELECT id FROM eb_users WHERE LOWER(email) LIKE LOWER(@email)";
+            DbParameter[] parameters = new DbParameter[] { };
+
+            if (!string.IsNullOrEmpty(request.email))
+            {
+                sql = "SELECT id FROM eb_users WHERE LOWER(email) LIKE LOWER(:email)";
+                parameters =new DbParameter[] { this.EbConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, string.IsNullOrEmpty(request.email)?"":request.email)  };
+            }
+				
 			if (!string.IsNullOrEmpty(request.roleName))
-				sql = "SELECT id FROM eb_roles WHERE LOWER(role_name) LIKE LOWER(@roleName);";
-			DbParameter[] parameters = {
-				this.EbConnectionFactory.ObjectsDB.GetNewParameter("email", EbDbTypes.String, string.IsNullOrEmpty(request.email)?"":request.email),
-				this.EbConnectionFactory.ObjectsDB.GetNewParameter("roleName", EbDbTypes.String, string.IsNullOrEmpty(request.roleName)?"":request.roleName)};
-			var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(sql, parameters);
+            {
+                sql = "SELECT id FROM eb_roles WHERE LOWER(role_name) LIKE LOWER(:roleName);";
+                parameters = new DbParameter[] { this.EbConnectionFactory.DataDB.GetNewParameter("roleName", EbDbTypes.String, string.IsNullOrEmpty(request.roleName) ? "" : request.roleName) };
+            }		
+			var dt = this.EbConnectionFactory.DataDB.DoQuery(sql, parameters);
 			if (dt.Rows.Count > 0)
 			{
 				return true;
@@ -245,7 +246,7 @@ namespace ExpressBase.ServiceStack.Services
 		{
 			SaveUserResponse resp;
 			string sql = "";
-			using (var con = this.EbConnectionFactory.ObjectsDB.GetNewConnection())
+			using (var con = this.EbConnectionFactory.DataDB.GetNewConnection())
 			{
 				con.Open();
 				string password = "";
@@ -265,28 +266,28 @@ namespace ExpressBase.ServiceStack.Services
 				int[] emptyarr = new int[] { };
 				DbParameter[] parameters = 
 					{
-						this.EbConnectionFactory.ObjectsDB.GetNewParameter("userid", EbDbTypes.Int32, request.UserId),
-						this.EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, request.Id),
-						this.EbConnectionFactory.ObjectsDB.GetNewParameter("fullname", EbDbTypes.String, request.FullName),
-						this.EbConnectionFactory.ObjectsDB.GetNewParameter("nickname", EbDbTypes.String, request.NickName),
-						this.EbConnectionFactory.ObjectsDB.GetNewParameter("email", EbDbTypes.String, request.EmailPrimary),
-						this.EbConnectionFactory.ObjectsDB.GetNewParameter("pwd", EbDbTypes.String,password),
-						this.EbConnectionFactory.ObjectsDB.GetNewParameter("dob", EbDbTypes.Date, request.DateOfBirth),
-						this.EbConnectionFactory.ObjectsDB.GetNewParameter("sex", EbDbTypes.String, request.Sex),
-						this.EbConnectionFactory.ObjectsDB.GetNewParameter("alternateemail", EbDbTypes.String, request.EmailSecondary),
-						this.EbConnectionFactory.ObjectsDB.GetNewParameter("phprimary", EbDbTypes.String, request.PhonePrimary),
-						this.EbConnectionFactory.ObjectsDB.GetNewParameter("phsecondary", EbDbTypes.String, request.PhoneSecondary),
-						this.EbConnectionFactory.ObjectsDB.GetNewParameter("phlandphone", EbDbTypes.String, request.LandPhone),
-						this.EbConnectionFactory.ObjectsDB.GetNewParameter("extension", EbDbTypes.String, request.PhoneExtension),
-						this.EbConnectionFactory.ObjectsDB.GetNewParameter("fbid", EbDbTypes.String, request.FbId),
-						this.EbConnectionFactory.ObjectsDB.GetNewParameter("fbname", EbDbTypes.String, request.FbName),
-						this.EbConnectionFactory.ObjectsDB.GetNewParameter("roles", EbDbTypes.String, (request.Roles != string.Empty? request.Roles : string.Empty)),
-						this.EbConnectionFactory.ObjectsDB.GetNewParameter("group", EbDbTypes.String, (request.UserGroups != string.Empty? request.UserGroups : string.Empty)),
-						this.EbConnectionFactory.ObjectsDB.GetNewParameter("statusid", EbDbTypes.Int32, Convert.ToInt32(request.StatusId)),
-						this.EbConnectionFactory.ObjectsDB.GetNewParameter("hide", EbDbTypes.String, request.Hide)
+						this.EbConnectionFactory.DataDB.GetNewParameter("userid", EbDbTypes.Int32, request.UserId),
+						this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.Id),
+						this.EbConnectionFactory.DataDB.GetNewParameter("fullname", EbDbTypes.String, request.FullName),
+						this.EbConnectionFactory.DataDB.GetNewParameter("nickname", EbDbTypes.String, request.NickName),
+						this.EbConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, request.EmailPrimary),
+						this.EbConnectionFactory.DataDB.GetNewParameter("pwd", EbDbTypes.String,password),
+						this.EbConnectionFactory.DataDB.GetNewParameter("dob", EbDbTypes.Date, request.DateOfBirth),
+						this.EbConnectionFactory.DataDB.GetNewParameter("sex", EbDbTypes.String, request.Sex),
+						this.EbConnectionFactory.DataDB.GetNewParameter("alternateemail", EbDbTypes.String, request.EmailSecondary),
+						this.EbConnectionFactory.DataDB.GetNewParameter("phprimary", EbDbTypes.String, request.PhonePrimary),
+						this.EbConnectionFactory.DataDB.GetNewParameter("phsecondary", EbDbTypes.String, request.PhoneSecondary),
+						this.EbConnectionFactory.DataDB.GetNewParameter("phlandphone", EbDbTypes.String, request.LandPhone),
+						this.EbConnectionFactory.DataDB.GetNewParameter("extension", EbDbTypes.String, request.PhoneExtension),
+						this.EbConnectionFactory.DataDB.GetNewParameter("fbid", EbDbTypes.String, request.FbId),
+						this.EbConnectionFactory.DataDB.GetNewParameter("fbname", EbDbTypes.String, request.FbName),
+						this.EbConnectionFactory.DataDB.GetNewParameter("roles", EbDbTypes.String, (request.Roles != string.Empty? request.Roles : string.Empty)),
+						this.EbConnectionFactory.DataDB.GetNewParameter("group", EbDbTypes.String, (request.UserGroups != string.Empty? request.UserGroups : string.Empty)),
+						this.EbConnectionFactory.DataDB.GetNewParameter("statusid", EbDbTypes.Int32, Convert.ToInt32(request.StatusId)),
+						this.EbConnectionFactory.DataDB.GetNewParameter("hide", EbDbTypes.String, request.Hide)
 					};
 				
-				EbDataSet dt = this.EbConnectionFactory.ObjectsDB.DoQueries(sql, parameters);
+				EbDataSet dt = this.EbConnectionFactory.DataDB.DoQueries(sql, parameters);
 				
 				
 
@@ -316,9 +317,9 @@ namespace ExpressBase.ServiceStack.Services
 			if (request.id > 0)
 			{
 				string query = @"SELECT id,name,description FROM eb_usergroup WHERE id = @id;
-							SELECT U.id,U.firstname,U.email FROM eb_users U, eb_user2usergroup G WHERE G.groupid = @id AND U.id=G.userid AND G.eb_del = FALSE;";
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@id", EbDbTypes.Int32, request.id));
-				var ds = this.EbConnectionFactory.ObjectsDB.DoQueries(query, parameters.ToArray());
+							SELECT U.id,U.firstname,U.email FROM eb_users U, eb_user2usergroup G WHERE G.groupid = @id AND U.id=G.userid AND G.eb_del = 'F';";
+				parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("@id", EbDbTypes.Int32, request.id));
+				var ds = this.EbConnectionFactory.DataDB.DoQueries(query, parameters.ToArray());
 				if (ds.Tables.Count > 0)
 				{
 					_userGroupInfo.Add("id", Convert.ToInt32(ds.Tables[0].Rows[0][0]));
@@ -334,19 +335,19 @@ namespace ExpressBase.ServiceStack.Services
 				_userGroupInfo.Add("id", 0);
 
 			return new GetManageUserGroupResponse() { SelectedUserGroupInfo = _userGroupInfo, UsersList = _usersList };
-			//using (var con = this.TenantDbFactory.ObjectsDB.GetNewConnection())
+			//using (var con = this.TenantDbFactory.DataDB.GetNewConnection())
 			//{
 			//	con.Open();
 			//	string sql = "";
 			//	if (request.id > 0)
 			//	{
 			//		sql = @"SELECT id,name,description FROM eb_usergroup WHERE id = @id;
-			//                        SELECT id,firstname FROM eb_users WHERE id IN(SELECT userid FROM eb_user2usergroup WHERE groupid = @id AND eb_del = FALSE)";
+			//                        SELECT id,firstname FROM eb_users WHERE id IN(SELECT userid FROM eb_user2usergroup WHERE groupid = @id AND eb_del = 'F')";
 
 
-			//		DbParameter[] parameters = { this.TenantDbFactory.ObjectsDB.GetNewParameter("id", System.Data.DbType.Int32, request.id) };
+			//		DbParameter[] parameters = { this.TenantDbFactory.DataDB.GetNewParameter("id", System.Data.DbType.Int32, request.id) };
 
-			//		var ds = this.TenantDbFactory.ObjectsDB.DoQueries(sql, parameters);
+			//		var ds = this.TenantDbFactory.DataDB.DoQueries(sql, parameters);
 			//		Dictionary<string, object> result = new Dictionary<string, object>();
 			//		foreach (var dr in ds.Tables[0].Rows)
 			//		{
@@ -369,7 +370,7 @@ namespace ExpressBase.ServiceStack.Services
 			//	else
 			//	{
 			//		sql = "SELECT id,name FROM eb_usergroup";
-			//		var dt = this.TenantDbFactory.ObjectsDB.DoQueries(sql);
+			//		var dt = this.TenantDbFactory.DataDB.DoQueries(sql);
 
 			//		Dictionary<string, object> returndata = new Dictionary<string, object>();
 			//		foreach (EbDataRow dr in dt.Tables[0].Rows)
@@ -387,21 +388,21 @@ namespace ExpressBase.ServiceStack.Services
 		{
 			SaveUserGroupResponse resp;
 			string sql = "SELECT * FROM eb_createormodifyusergroup(@userid,@id,@name,@description,@users);";
-			using (var con = this.EbConnectionFactory.ObjectsDB.GetNewConnection())
+			using (var con = this.EbConnectionFactory.DataDB.GetNewConnection())
 			{
 				con.Open();
 				
 				int[] emptyarr = new int[] { };
 				DbParameter[] parameters =
 					{
-						this.EbConnectionFactory.ObjectsDB.GetNewParameter("userid", EbDbTypes.Int32, request.UserId),
-						this.EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, request.Id),
-						this.EbConnectionFactory.ObjectsDB.GetNewParameter("name", EbDbTypes.String, request.Name),
-						this.EbConnectionFactory.ObjectsDB.GetNewParameter("description", EbDbTypes.String, request.Description),
-						this.EbConnectionFactory.ObjectsDB.GetNewParameter("users", EbDbTypes.String,(request.Users != string.Empty? request.Users : string.Empty))
+						this.EbConnectionFactory.DataDB.GetNewParameter("userid", EbDbTypes.Int32, request.UserId),
+						this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.Id),
+						this.EbConnectionFactory.DataDB.GetNewParameter("name", EbDbTypes.String, request.Name),
+						this.EbConnectionFactory.DataDB.GetNewParameter("description", EbDbTypes.String, request.Description),
+						this.EbConnectionFactory.DataDB.GetNewParameter("users", EbDbTypes.String,(request.Users != string.Empty? request.Users : string.Empty))
 					};
 
-				EbDataSet dt = this.EbConnectionFactory.ObjectsDB.DoQueries(sql, parameters);
+				EbDataSet dt = this.EbConnectionFactory.DataDB.DoQueries(sql, parameters);
 
 
 
@@ -425,31 +426,18 @@ namespace ExpressBase.ServiceStack.Services
 		public GetManageRolesResponse Any(GetManageRolesRequest request)
 		{
 			string query = null;
-			List<DbParameter> parameters = new List<DbParameter>();
-			//old query
-			//SELECT DISTINCT EO.id, EO.obj_name, EO.obj_type, EO.applicationid
-			//FROM eb_objects EO, eb_objects_ver EOV, eb_objects_status EOS
-			//WHERE EO.id = EOV.eb_objects_id AND EOV.id = EOS.eb_obj_ver_id AND EOS.status = 3 AND EO.applicationid > 0;
-			query = string.Format(@"SELECT id, applicationname FROM eb_applications where eb_del = FALSE ORDER BY applicationname;
-
-									SELECT DISTINCT EO.id, EO.obj_name, EO.obj_type, EO2A.app_id
-									FROM eb_objects EO, eb_objects_ver EOV, eb_objects_status EOS, eb_objects2application EO2A 
-									WHERE EO.id = EOV.eb_objects_id AND EOV.id = EOS.eb_obj_ver_id AND EOS.status = 3 
-									AND EO.id = EO2A.obj_id AND EO2A.eb_del = 'false';
-
-									SELECT id, role_name, description, applicationid, is_anonymous FROM eb_roles WHERE id <> @id ORDER BY role_name;
-									SELECT id, role1_id, role2_id FROM eb_role2role WHERE eb_del = FALSE;");//if db_ok then append to 3rd query "WHERE eb_del=FALSE" 
-			if (request.id > 0)
+			
+            //old query
+            //SELECT DISTINCT EO.id, EO.obj_name, EO.obj_type, EO.applicationid
+            //FROM eb_objects EO, eb_objects_ver EOV, eb_objects_status EOS
+            //WHERE EO.id = EOV.eb_objects_id AND EOV.id = EOS.eb_obj_ver_id AND EOS.status = 3 AND EO.applicationid > 0;
+            query = this.EbConnectionFactory.DataDB.EB_GETMANAGEROLESRESPONSE_QUERY;
+			 if (request.id > 0)
 			{
-				query += string.Format(@"SELECT role_name,applicationid,description,is_anonymous FROM eb_roles WHERE id = @id;
-										SELECT permissionname,obj_id,op_id FROM eb_role2permission WHERE role_id = @id AND eb_del = FALSE;
-										SELECT A.applicationname, A.description FROM eb_applications A, eb_roles R WHERE A.id = R.applicationid AND R.id = @id AND A.eb_del = FALSE;
-
-										SELECT A.id, A.firstname, A.email, B.id FROM eb_users A, eb_role2user B
-											WHERE A.id = B.user_id AND A.eb_del = FALSE AND B.eb_del = FALSE AND B.role_id = @id");
+                query += this.EbConnectionFactory.DataDB.EB_GETMANAGEROLESRESPONSE_QUERY_EXTENDED;
 			}
-			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@id", EbDbTypes.Int32, request.id));
-			var ds = this.EbConnectionFactory.ObjectsDB.DoQueries(query, parameters.ToArray());
+            DbParameter[] parameters = { this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.id) };
+			var ds = this.EbConnectionFactory.DataDB.DoQueries(query, parameters);
 			ApplicationCollection _applicationCollection = null;
 			List<Eb_RoleObject> _roleList = new List<Eb_RoleObject>();
 			List<Eb_RoleToRole> _r2rList = new List<Eb_RoleToRole>();
@@ -461,7 +449,7 @@ namespace ExpressBase.ServiceStack.Services
 				//---------------
 				foreach (EbDataRow dr in ds.Tables[2].Rows)
 				{
-					_roleList.Add(new Eb_RoleObject() { Id = Convert.ToInt32(dr[0]), Name = dr[1].ToString(), Description = dr[2].ToString(), App_Id = Convert.ToInt32(dr[3]), Is_Anonymous = Convert.ToBoolean(dr[4]) });
+                    _roleList.Add(new Eb_RoleObject() { Id = Convert.ToInt32(dr[0]), Name = dr[1].ToString(), Description = dr[2].ToString(), App_Id = Convert.ToInt32(dr[3]), Is_Anonymous = (dr[4].ToString() == "T") ? true : false });
 				}
 				foreach (EbDataRow dr in ds.Tables[3].Rows)
 				{
@@ -496,9 +484,9 @@ namespace ExpressBase.ServiceStack.Services
 			string query = null;
 			List<DbParameter> parameters = new List<DbParameter>();
 			query = string.Format(@"SELECT id, firstname, email FROM eb_users
-									WHERE LOWER(firstname) LIKE LOWER(@NAME) AND eb_del = FALSE ORDER BY firstname ASC"); 
-			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@NAME", EbDbTypes.String, ("%" + request.SearchText + "%")));
-			var ds = this.EbConnectionFactory.ObjectsDB.DoQueries(query, parameters.ToArray());
+									WHERE LOWER(firstname) LIKE LOWER(@NAME) AND eb_del = 'F' ORDER BY firstname ASC"); 
+			parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("@NAME", EbDbTypes.String, ("%" + request.SearchText + "%")));
+			var ds = this.EbConnectionFactory.DataDB.DoQueries(query, parameters.ToArray());
 			List<Eb_Users> _usersList = new List<Eb_Users>();
 			if (ds.Tables.Count > 0)
 			{
@@ -513,25 +501,25 @@ namespace ExpressBase.ServiceStack.Services
 		public SaveRoleResponse Post(SaveRoleRequest request)
 		{
 			SaveRoleResponse resp;
-			using (var con = this.EbConnectionFactory.ObjectsDB.GetNewConnection())
-			{
-				con.Open();
-				string sql = "SELECT eb_create_or_update_rbac_manageroles(@role_id, @applicationid, @createdby, @role_name, @description, @is_anonym, @users, @dependants,@permission );";
-				var cmd = this.EbConnectionFactory.ObjectsDB.GetNewCommand(con, sql);
-				int[] emptyarr = new int[] { };
-				cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("role_id", EbDbTypes.Int32, request.Colvalues["roleid"]));
-				cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("description", EbDbTypes.String, request.Colvalues["Description"]));
-				cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("is_anonym", EbDbTypes.Boolean, request.Colvalues["IsAnonymous"]));
-				cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("role_name", EbDbTypes.String, request.Colvalues["role_name"]));
-				cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("applicationid", EbDbTypes.Int32, request.Colvalues["applicationid"]));
-				cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("createdby", EbDbTypes.Int32, request.UserId));
-				cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("permission", EbDbTypes.String , (request.Colvalues["permission"].ToString() != string.Empty) ? request.Colvalues["permission"]: string.Empty));
-				cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("users", EbDbTypes.String, (request.Colvalues["users"].ToString() != string.Empty) ? request.Colvalues["users"] : string.Empty));
-				cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("dependants", EbDbTypes.String, (request.Colvalues["dependants"].ToString() != string.Empty) ? request.Colvalues["dependants"] : string.Empty));
+            using (var con = this.EbConnectionFactory.DataDB.GetNewConnection())
+            {
+                con.Open();
+                string sql = this.EbConnectionFactory.DataDB.EB_SAVEROLES_QUERY;
+                int[] emptyarr = new int[] { };
+                DbParameter[] parameters ={ this.EbConnectionFactory.DataDB.GetNewParameter("role_id", EbDbTypes.Int32, request.Colvalues["roleid"]),
+                                        this.EbConnectionFactory.DataDB.GetNewParameter("description", EbDbTypes.String, request.Colvalues["Description"]),
+                                        this.EbConnectionFactory.DataDB.GetNewParameter("is_anonym", EbDbTypes.Boolean, request.Colvalues["IsAnonymous"]),
+                                        this.EbConnectionFactory.DataDB.GetNewParameter("role_name", EbDbTypes.String, request.Colvalues["role_name"]),
+                                        this.EbConnectionFactory.DataDB.GetNewParameter("applicationid", EbDbTypes.Int32, request.Colvalues["applicationid"]),
+                                        this.EbConnectionFactory.DataDB.GetNewParameter("createdby", EbDbTypes.Int32, request.UserId),
+                                        this.EbConnectionFactory.DataDB.GetNewParameter("permission", EbDbTypes.String , (request.Colvalues["permission"].ToString() != string.Empty) ? request.Colvalues["permission"]: string.Empty),
+                                        this.EbConnectionFactory.DataDB.GetNewParameter("users", EbDbTypes.String, (request.Colvalues["users"].ToString() != string.Empty) ? request.Colvalues["users"] : string.Empty),
+                                        this.EbConnectionFactory.DataDB.GetNewParameter("dependants", EbDbTypes.String, (request.Colvalues["dependants"].ToString() != string.Empty) ? request.Colvalues["dependants"] : string.Empty) };
 
-				resp = new SaveRoleResponse
+                var ds = this.EbConnectionFactory.DataDB.DoQuery(sql, parameters);
+                resp = new SaveRoleResponse
 				{
-					id = Convert.ToInt32(cmd.ExecuteScalar())
+					id =Convert.ToInt32(ds.Rows[0][0])
 				};
 			}
 			return resp;

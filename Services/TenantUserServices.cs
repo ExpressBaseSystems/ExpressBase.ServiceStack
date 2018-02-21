@@ -85,8 +85,8 @@ namespace ExpressBase.ServiceStack.Services
 				sql = @"SELECT id, role_name, description FROM eb_roles ORDER BY role_name;
                         SELECT id, name,description FROM eb_usergroup ORDER BY name;
 						SELECT firstname,email FROM eb_users WHERE id = @id;
-						SELECT role_id FROM eb_role2user WHERE user_id = @id AND eb_del = FALSE;
-						SELECT groupid FROM eb_user2usergroup WHERE userid = @id AND eb_del = FALSE;";
+						SELECT role_id FROM eb_role2user WHERE user_id = @id AND eb_del = 'F';
+						SELECT groupid FROM eb_user2usergroup WHERE userid = @id AND eb_del = 'F';";
 			}
 			else
 			{
@@ -150,7 +150,7 @@ namespace ExpressBase.ServiceStack.Services
                 string sql = string.Empty;
                 if (request.id > 0)
                     sql = @"SELECT id, role_name, description FROM eb_roles;
-                             SELECT id, role_name, description FROM eb_roles WHERE id IN(SELECT role_id FROM eb_role2user WHERE user_id = @id AND eb_del = FALSE)";
+                             SELECT id, role_name, description FROM eb_roles WHERE id IN(SELECT role_id FROM eb_role2user WHERE user_id = @id AND eb_del = 'F')";
                 else
                     sql = "SELECT id,role_name, description FROM eb_roles";
 
@@ -221,9 +221,9 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     sql = @"UPDATE eb_usergroup SET name = @name,description = @description WHERE id = @id;
                                     INSERT INTO eb_user2usergroup(userid,groupid) SELECT uid,@id FROM UNNEST(array(SELECT unnest(@users) except 
-                                        SELECT UNNEST(array(SELECT userid from eb_user2usergroup WHERE groupid = @id AND eb_del = FALSE)))) as uid;
-                                    UPDATE eb_user2usergroup SET eb_del = true WHERE userid IN(
-                                        SELECT UNNEST(array(SELECT userid from eb_user2usergroup WHERE groupid = @id AND eb_del = FALSE)) except SELECT UNNEST(@users));";
+                                        SELECT UNNEST(array(SELECT userid from eb_user2usergroup WHERE groupid = @id AND eb_del = 'F')))) as uid;
+                                    UPDATE eb_user2usergroup SET eb_del = 'T' WHERE userid IN(
+                                        SELECT UNNEST(array(SELECT userid from eb_user2usergroup WHERE groupid = @id AND eb_del = 'F')) except SELECT UNNEST(@users));";
                 }
                 else
                 {
@@ -307,7 +307,7 @@ namespace ExpressBase.ServiceStack.Services
                 if (request.id > 0)
                     sql = @"
                                    SELECT id,role_name FROM eb_roles WHERE id != @id AND applicationid= @applicationid;
-                                   SELECT role2_id FROM eb_role2role WHERE role1_id = @id AND eb_del = FALSE";
+                                   SELECT role2_id FROM eb_role2role WHERE role1_id = @id AND eb_del = 'F'";
                 else
                     sql = "SELECT id,role_name FROM eb_roles WHERE applicationid= @applicationid";
 
@@ -364,7 +364,7 @@ namespace ExpressBase.ServiceStack.Services
                 con.Open();
                 string sql = @"
                 SELECT role_name,applicationid,description FROM eb_roles WHERE id = @id;
-                SELECT permissionname,obj_id,op_id FROM eb_role2permission WHERE role_id = @id AND eb_del = FALSE;
+                SELECT permissionname,obj_id,op_id FROM eb_role2permission WHERE role_id = @id AND eb_del = 'F';
                 SELECT applicationname FROM eb_applications WHERE id IN(SELECT applicationid FROM eb_roles WHERE id = @id);";
                
 
@@ -422,7 +422,7 @@ namespace ExpressBase.ServiceStack.Services
             using (var con = this.EbConnectionFactory.ObjectsDB.GetNewConnection())
             {
                 con.Open();
-                string sql = @"SELECT id,firstname FROM eb_users WHERE id IN(SELECT user_id FROM eb_role2user WHERE role_id = @roleid AND eb_del = FALSE)";
+                string sql = @"SELECT id,firstname FROM eb_users WHERE id IN(SELECT user_id FROM eb_role2user WHERE role_id = @roleid AND eb_del = 'F')";
 
 
                 DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("roleid", EbDbTypes.Int32, request.id) };
@@ -450,7 +450,7 @@ namespace ExpressBase.ServiceStack.Services
                 if (request.id > 0)
                 {
                     sql = @"SELECT id, name FROM eb_usergroup;
-                            SELECT id,name FROM eb_usergroup WHERE id IN(SELECT groupid FROM eb_user2usergroup WHERE userid = @userid AND eb_del = FALSE)";
+                            SELECT id,name FROM eb_usergroup WHERE id IN(SELECT groupid FROM eb_user2usergroup WHERE userid = @userid AND eb_del = 'F')";
                 }
                 else
                 {
@@ -492,7 +492,7 @@ namespace ExpressBase.ServiceStack.Services
                 if (request.id > 0)
                 {
                     sql = @"SELECT id,name,description FROM eb_usergroup WHERE id = @id;
-                           SELECT id,firstname FROM eb_users WHERE id IN(SELECT userid FROM eb_user2usergroup WHERE groupid = @id AND eb_del = FALSE)";
+                           SELECT id,firstname FROM eb_users WHERE id IN(SELECT userid FROM eb_user2usergroup WHERE groupid = @id AND eb_del = 'F')";
 
 
                     DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, request.id) };
