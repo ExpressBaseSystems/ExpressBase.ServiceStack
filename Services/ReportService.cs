@@ -16,6 +16,10 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using QRCoder;
+using Microsoft.CodeAnalysis.CSharp.Scripting;
+using Microsoft.CodeAnalysis.Scripting;
+using System.Dynamic;
+using ExpressBase.Objects.Objects.ReportRelated;
 
 namespace ExpressBase.ServiceStack
 {
@@ -27,6 +31,7 @@ namespace ExpressBase.ServiceStack
         public EbReport Report = null;
         //private iTextSharp.text.Font f = FontFactory.GetFont(FontFactory.HELVETICA, 12);
         public ReportService(IEbConnectionFactory _dbf) : base(_dbf) { }
+
 
         public ReportRenderResponse Get(ReportRenderRequest request)
         {
@@ -40,22 +45,23 @@ namespace ExpressBase.ServiceStack
             Report.IsLastpage = false;
             Report.watermarkImages = new Dictionary<string, byte[]>();
             Report.WaterMarkList = new List<object>();
+            Report.ScriptCollection = new Dictionary<string, Script>();
             Report.CurrentTimestamp = DateTime.Now;
             //-- END REPORT object INIT
 
             var myDataSourceservice = base.ResolveService<DataSourceService>();
             if (Report.DataSourceRefId != string.Empty)
-           {
-            //    dresp = myDataSourceservice.Any(new DataSourceDataRequest444 { RefId = Report.DataSourceRefId, Draw = 1, Start = 0, Length = 100 });
-            //    Report.DataSet = dresp.DataSet;
+            {
+                //    dresp = myDataSourceservice.Any(new DataSourceDataRequest444 { RefId = Report.DataSourceRefId, Draw = 1, Start = 0, Length = 100 });
+                //    Report.DataSet = dresp.DataSet;
 
                 cresp = this.Redis.Get<DataSourceColumnsResponse>(string.Format("{0}_columns", Report.DataSourceRefId));
                 if (cresp.IsNull)
                     cresp = myDataSourceservice.Any(new DataSourceColumnsRequest { RefId = Report.DataSourceRefId });
                 Report.DataColumns = (cresp.Columns.Count > 1) ? cresp.Columns[1] : cresp.Columns[0];
                 dresp = myDataSourceservice.Any(new DataSourceDataRequest { RefId = Report.DataSourceRefId, Draw = 1, Start = 0, Length = 100 });
-                Report.DataRow = dresp.Data;Console.WriteLine("Rows: " + dresp.Data.Count);
-              
+                Report.DataRow = dresp.Data; Console.WriteLine("Rows: " + dresp.Data.Count);
+
             }
 
             Rectangle rec = new Rectangle(Report.Width, Report.Height);
@@ -70,6 +76,64 @@ namespace ExpressBase.ServiceStack
             Report.PageNumber = Report.Writer.PageNumber;
             Report.InitializeSummaryFields();
             GetWatermarkImages();
+
+            foreach (EbReportHeader r_header in Report.ReportHeaders)
+                this.FillScriptCollection(r_header.Fields);
+
+            foreach (EbReportFooter r_footer in Report.ReportFooters)
+                this.FillScriptCollection(r_footer.Fields);
+
+            foreach (EbPageHeader p_header in Report.PageHeaders)
+                this.FillScriptCollection(p_header.Fields);
+
+            foreach (EbReportDetail detail in Report.Detail)
+                this.FillScriptCollection(detail.Fields);
+
+            foreach (EbPageFooter p_footer in Report.PageFooters)
+                this.FillScriptCollection(p_footer.Fields);
+
+            //Globals globals = new Globals();
+            //foreach (string calcfd in (field as EbCalcField).DataFieldsUsed)
+            //{
+            //    string TName = calcfd.Split('.')[0];
+            //    string fName = calcfd.Split('.')[1];
+            //    globals[TName].Add(fName, new NTV { Name = fName, Type = (DbType)(field as EbCalcField).DbType, Value = Report.GetFieldtData(fName, 0) });
+            //}
+
+
+
+            //try
+            //{
+            //    globals.T1.x = new NTV { Name = "x", Type = DbType.Int32, Value = 10 };
+            //    globals.T1.y = new NTV { Name = "y", Type = DbType.Int32, Value = 20 };           
+            //    DateTime ts_start; DateTime ts_end; TimeSpan ts;
+
+            //    // Console.WriteLine(CSharpScript.EvaluateAsync("return Environment.GetEnvironmentVariable(\"EB_REDIS_PASSWORD\");", ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core", "MSCorLib").WithImports("System.Dynamic", "System")).Result);
+
+            //    ts_start = DateTime.Now;
+            //    var script = CSharpScript.Create<int>("(T1.x * T1.y) + 2", ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System.Dynamic"), globalsType: typeof(Globals));
+            //    script.Compile();
+            //    ts_end = DateTime.Now;
+            //    Console.WriteLine("ts-Compile1 : " + ts);
+            //    ts = ts_end - ts_start;
+
+            //    ts_start = DateTime.Now;
+            //    Console.WriteLine((script.RunAsync(globals)).Result.ReturnValue);
+            //    ts_end = DateTime.Now;
+            //    ts = ts_end - ts_start;
+            //    Console.WriteLine("ts-Compile2 : " + ts);
+
+            //    ts_start = DateTime.Now;
+            //    Console.WriteLine((script.RunAsync(globals)).Result.ReturnValue);
+            //    ts_end = DateTime.Now;
+            //    ts = ts_end - ts_start;
+            //    Console.WriteLine("ts-Compile3 : " + ts);
+            //}
+            //catch (Exception e)
+            //{
+            //}          
+
+
             //iTextSharp.text.Font link = FontFactory.GetFont("Arial", 12, iTextSharp.text.Font.UNDERLINE, BaseColor.DarkGray);
             // Anchor anchor = new Anchor("xyz",link);
             //anchor.Reference = "http://eb_roby_dev.localhost:5000/ReportRender?refid=eb_roby_dev-eb_roby_dev-3-1127-1854?tab=" + JsonConvert.SerializeObject(Report.DataRow[Report.SerialNumber - 1]);
@@ -86,6 +150,19 @@ namespace ExpressBase.ServiceStack
             //}
             return new ReportRenderResponse { StreamWrapper = new MemorystreamWrapper(Report.Ms1) };
 
+        }
+
+        private void FillScriptCollection(List<EbReportField> fields)
+        {
+            foreach (EbReportField field in fields)
+            {
+                if (field is EbCalcField && !Report.ScriptCollection.ContainsKey(field.Name))
+                {
+                    Script script = CSharpScript.Create<dynamic>((field as EbCalcField).Expression, ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System.Dynamic"), globalsType: typeof(Globals));
+                    script.Compile();
+                    Report.ScriptCollection.Add(field.Name, script);
+                }
+            }
         }
 
         private void GetWatermarkImages()
