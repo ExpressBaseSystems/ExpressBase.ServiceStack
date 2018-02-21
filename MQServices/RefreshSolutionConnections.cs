@@ -19,7 +19,7 @@ namespace ExpressBase.ServiceStack.MQServices
                 try
                 {
                     con.Open();
-                    string sql = @"SELECT con_type, con_obj FROM eb_connections WHERE solution_id = @solution_id AND eb_del = false";
+                    string sql = @"SELECT con_type, con_obj FROM eb_connections WHERE solution_id = @solution_id AND eb_del = 'F'";
                     DataTable dt = new DataTable();
                     var ada = new Npgsql.NpgsqlDataAdapter(sql, con);
                     ada.SelectCommand.Parameters.Add(new Npgsql.NpgsqlParameter("solution_id", NpgsqlTypes.NpgsqlDbType.Text) { Value = req.TenantAccountId });

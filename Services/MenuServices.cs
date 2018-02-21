@@ -18,27 +18,27 @@ namespace ExpressBase.ServiceStack.Services
         List<System.Data.Common.DbParameter> parameters = new List<System.Data.Common.DbParameter>();
         public object Get(SidebarUserRequest request)
         {
-            var Query1 = @"
-SELECT id, applicationname
-FROM eb_applications;
-SELECT
-    EO.id, EO.obj_type, EO.obj_name,
-    EOV.version_num, EOV.refid, EO2A.app_id,EO.obj_desc
-FROM
-    eb_objects EO, eb_objects_ver EOV, eb_objects_status EOS, eb_objects2application EO2A 
-WHERE
-    EO.id = EOV.eb_objects_id 
-AND 
-    EOS.eb_obj_ver_id = EOV.id 
-AND 
-    EO.id = ANY('@Ids')  
-AND 
-    EOS.status = 3 
-AND EO.id = EO2A.obj_id 
-AND EO2A.eb_del = 'false';";
+            //            var Query1 = @"
+            //SELECT id, applicationname
+            //FROM eb_applications;
+            //SELECT
+            //    EO.id, EO.obj_type, EO.obj_name,
+            //    EOV.version_num, EOV.refid, EO2A.app_id,EO.obj_desc
+            //FROM
+            //    eb_objects EO, eb_objects_ver EOV, eb_objects_status EOS, eb_objects2application EO2A 
+            //WHERE
+            //    EO.id = EOV.eb_objects_id 
+            //AND 
+            //    EOS.eb_obj_ver_id = EOV.id 
+            //AND 
+            //    EO.id = ANY('@Ids')  
+            //AND 
+            //    EOS.status = 3 
+            //AND EO.id = EO2A.obj_id 
+            //AND EO2A.eb_del = 'F';";
 
             //parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@Ids", System.Data.DbType.String, request.Ids));
-            var ds = this.EbConnectionFactory.ObjectsDB.DoQueries(Query1.Replace("@Ids", request.Ids));
+            var ds = this.EbConnectionFactory.ObjectsDB.DoQueries(this.EbConnectionFactory.ObjectsDB.EB_SIDEBARUSER_REQUEST.Replace("@Ids", string.IsNullOrEmpty(request.Ids) ? "0" : request.Ids));
 
             Dictionary<int, AppObject> appColl = new Dictionary<int, AppObject>();
             foreach (EbDataRow dr in ds.Tables[0].Rows)
