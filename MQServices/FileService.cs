@@ -173,7 +173,7 @@ namespace ExpressBase.ServiceStack.MQServices
                 try
                 {
                     con.Open();
-                    string sql = @"SELECT id, userid, objid, length, tags, bucketname, filetype, uploaddatetime, eb_del FROM public.eb_files WHERE regexp_split_to_array(tags, ',') @> @tags AND COALESCE(eb_del, FALSE)=FALSE;";
+                    string sql = @"SELECT id, userid, objid, length, tags, bucketname, filetype, uploaddatetime, eb_del FROM public.eb_files WHERE regexp_split_to_array(tags, ',') @> @tags AND COALESCE(eb_del, 'F')='F';";
                     DataTable dt = new DataTable();
                     var ada = new Npgsql.NpgsqlDataAdapter(sql, con);
                       ada.SelectCommand.Parameters.Add(new Npgsql.NpgsqlParameter("tags", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text) { Value =  request.Tags});

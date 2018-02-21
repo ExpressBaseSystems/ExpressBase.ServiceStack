@@ -15,6 +15,20 @@ namespace ExpressBase.ServiceStack.Services
         public ConnectionManager(IEbConnectionFactory _dbf, IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_dbf, _mqp, _mqc) { }
 
         [Authenticate]
+        public bool Post(RefreshSolutionConnectionsRequest request)
+        {
+            try
+            {
+                base.MessageProducer3.Publish(new RefreshSolutionConnectionsMqRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        [Authenticate]
         public GetConnectionsResponse Post(GetConnectionsRequest req)
         {
             GetConnectionsResponse resp = new GetConnectionsResponse();

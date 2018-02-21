@@ -225,32 +225,32 @@ WHERE
             return new EbObjectParticularVersionResponse { Data = f };
         }
 
-        [CompressResponse]
-        public object Get(EbObjectNonCommitedVersionRequest request)
-        {
-            // Fetch latest non - committed version with json - for EDIT of a particular Object
+        //[CompressResponse]
+        //public object Get(EbObjectNonCommitedVersionRequest request)
+        //{
+        //    // Fetch latest non - committed version with json - for EDIT of a particular Object
 
-            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@refid", EbDbTypes.String, request.RefId));
-            var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(Query3, parameters.ToArray());
+        //    parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@refid", EbDbTypes.String, request.RefId));
+        //    var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(Query3, parameters.ToArray());
 
-            foreach (EbDataRow dr in dt.Rows)
-            {
-                var _ebObject = (new EbObjectWrapper
-                {
-                    Id = Convert.ToInt32(dr[0]),
-                    Name = dr[1].ToString(),
-                    EbObjectType = ((EbObjectType)Convert.ToInt32(dr[3])).IntCode,
-                    Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[3]),
-                    Description = dr[4].ToString(),
-                    VersionNumber = dr[7].ToString(),
-                    Json = (!string.IsNullOrEmpty(request.RefId)) ? dr[11].ToString() : null,
-                    RefId = dr[12].ToString()
-                });
+        //    foreach (EbDataRow dr in dt.Rows)
+        //    {
+        //        var _ebObject = (new EbObjectWrapper
+        //        {
+        //            Id = Convert.ToInt32(dr[0]),
+        //            Name = dr[1].ToString(),
+        //            EbObjectType = ((EbObjectType)Convert.ToInt32(dr[3])).IntCode,
+        //            Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[3]),
+        //            Description = dr[4].ToString(),
+        //            VersionNumber = dr[7].ToString(),
+        //            Json = (!string.IsNullOrEmpty(request.RefId)) ? dr[11].ToString() : null,
+        //            RefId = dr[12].ToString()
+        //        });
 
-                f.Add(_ebObject);
-            }
-            return new EbObjectNonCommitedVersionResponse { Data = f };
-        }
+        //        f.Add(_ebObject);
+        //    }
+        //    return new EbObjectNonCommitedVersionResponse { Data = f };
+        //}
 
         [CompressResponse]
         public object Get(EbObjectLatestCommitedRequest request)
@@ -482,7 +482,7 @@ WHERE
                     RefId = request.Refid,
                     VersionNumber = dr[2].ToString(),
                     WorkingMode = Convert.ToBoolean(dr[3]),
-                    Wc_All = dr[4] as string[],
+                    Wc_All = (dr[4] as string).Split(","),
                     Tags = dr[8].ToString(),
                     Apps = dr[9].ToString().Replace("\n", "").Replace("\t", "").Replace("\r", ""),
                     Dashboard_Tiles = new EbObjectWrapper_Dashboard

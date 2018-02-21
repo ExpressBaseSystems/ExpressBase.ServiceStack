@@ -38,7 +38,7 @@
 //        //{
 //        //    tcol = this.Redis.Get<EbTableCollection>("EbTableCollection");
 //        //    Objects.EbForm _form = this.Redis.Get<Objects.EbForm>(string.Format("form{0}", request.FId));
-//        //    string sql = string.Format("select * from {0} where id= {1} AND eb_del='false' ", tcol[request.TableId].Name, request.ColId);
+//        //    string sql = string.Format("select * from {0} where id= {1} AND eb_del='F' ", tcol[request.TableId].Name, request.ColId);
 //        //    var ds = this.TenantDbFactory.ObjectsDB.DoQueries(sql);
 //        //    _form.SetData(ds);
 //        //    return new ViewResponse
