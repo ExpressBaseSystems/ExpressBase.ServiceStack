@@ -691,7 +691,7 @@ WHERE
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@src_pid", EbDbTypes.String, request.TenantAccountId));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@cur_pid", EbDbTypes.String, request.TenantAccountId));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@relations", EbDbTypes.String, (request.Relations != null) ? request.Relations : string.Empty));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@issave", EbDbTypes.Boolean, request.IsSave));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@issave", EbDbTypes.String , (request.IsSave==true)?'T':'F'));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@tags", EbDbTypes.String, (!string.IsNullOrEmpty(request.Tags)) ? request.Tags : string.Empty));
                     //cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@app_id", System.Data.DbType.Int32, request.AppId));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@app_id", EbDbTypes.String, SetAppId(request.Apps)));
