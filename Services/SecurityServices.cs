@@ -132,7 +132,7 @@ namespace ExpressBase.ServiceStack.Services
 			string sql = @"SELECT id, role_name, description FROM eb_roles ORDER BY role_name;
                         SELECT id, name,description FROM eb_usergroup ORDER BY name;
 						SELECT id, role1_id, role2_id FROM eb_role2role WHERE eb_del = FALSE;";
-			if (request.Id > 0)
+			if (request.Id > 1)
 			{
 				sql += @"SELECT fullname,nickname,email,alternateemail,dob,sex,phnoprimary,phnosecondary,landline,phextension,fbid,fbname,statusid,hide
 						FROM eb_users WHERE id = @id;
@@ -173,7 +173,7 @@ namespace ExpressBase.ServiceStack.Services
 			}
 
 
-			if (request.Id > 0)
+			if (request.Id > 1)
 			{
 				resp.UserData = new Dictionary<string, string>();
 				foreach (var dr in ds.Tables[3].Rows)
@@ -258,7 +258,8 @@ namespace ExpressBase.ServiceStack.Services
 				else
 				{
 					//password = string.IsNullOrEmpty(request.Colvalues["pwd"].ToString()) ? GeneratePassword() : (request.Colvalues["pwd"].ToString() + request.Colvalues["email"].ToString()).ToMD5Hash();
-					password = GeneratePassword();
+					//password = GeneratePassword();
+					password = (request.Password + request.EmailPrimary).ToMD5Hash();
 					sql = "SELECT * FROM eb_createormodifyuserandroles(@userid,@id,@fullname,@nickname,@email,@pwd,@dob,@sex,@alternateemail,@phprimary,@phsecondary,@phlandphone,@extension,@fbid,@fbname,@roles,@group,@statusid,@hide);";
 
 				}
@@ -314,8 +315,8 @@ namespace ExpressBase.ServiceStack.Services
 			Dictionary<string, string> Udata = new Dictionary<string, string>();
 			string sql = @"SELECT A.id, A.fullname, A.email, A.phoneno, A.socialid, A.firstvisit, A.lastvisit, A.totalvisits, B.applicationname, A.remarks
 								FROM eb_usersanonymous A, eb_applications B
-								WHERE A.appid = B.id AND A.id = @id;
-							SELECT B.firstname, A.modifiedat FROM eb_usersanonymous A, eb_users B 
+								WHERE A.appid = B.id AND A.ebuserid = 1 AND A.id = @id;
+							SELECT B.fullname, A.modifiedat FROM eb_usersanonymous A, eb_users B 
 								WHERE A.modifiedby = B.id AND A.id = @id;";
 			
 			DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("@id", EbDbTypes.Int32, request.Id) };
@@ -365,7 +366,17 @@ namespace ExpressBase.ServiceStack.Services
 		public ConvertAnonymousUserResponse Any(ConvertAnonymousUserRequest request)
 		{
 			//WORK NOT COMPLETED
-			return new ConvertAnonymousUserResponse { status = 1 };
+			string sql = @"SELECT * FROM eb_convertanonymoususer2user(@userid, @id, @fullname, @email, @phnoprimary, @remarks);";
+			DbParameter[] parameters = {
+				this.EbConnectionFactory.ObjectsDB.GetNewParameter("userid", EbDbTypes.Int32, request.UserId),
+				this.EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, request.Id),
+				this.EbConnectionFactory.ObjectsDB.GetNewParameter("fullname", EbDbTypes.String, request.FullName),
+				this.EbConnectionFactory.ObjectsDB.GetNewParameter("email", EbDbTypes.String, request.EmailID),
+				this.EbConnectionFactory.ObjectsDB.GetNewParameter("phnoprimary", EbDbTypes.String, request.PhoneNumber),
+				this.EbConnectionFactory.ObjectsDB.GetNewParameter("remarks", EbDbTypes.String, request.Remarks)
+			};
+			EbDataSet dt = this.EbConnectionFactory.ObjectsDB.DoQueries(sql, parameters);
+			return new ConvertAnonymousUserResponse { status = (dt.Tables.Count > 0) ? Convert.ToInt32(dt.Tables[0].Rows[0][0]): 0 };
 		}
 
 
