@@ -62,6 +62,8 @@ namespace ExpressBase.ServiceStack.MQServices
                 }
                 catch (Exception e)
                 {
+                    Log.Info("Exception:" + e.ToString());
+
                     return "Failed to Uplaod to MQ";
                 }
             }
@@ -194,6 +196,7 @@ namespace ExpressBase.ServiceStack.MQServices
                 }
                 catch (Exception e)
                 {
+                    Log.Info("Exception:" + e.ToString());
                     return null;
                 }
             }
@@ -230,6 +233,7 @@ namespace ExpressBase.ServiceStack.MQServices
                 }
                 catch (Exception e)
                 {
+                    Log.Info("Exception:" + e.ToString());
                     return "Failed to Uplaod to MQ";
                 }
             }
@@ -345,6 +349,7 @@ namespace ExpressBase.ServiceStack.MQServices
                 }
                 catch (Exception e)
                 {
+                    Log.Info("Exception:" + e.ToString());
                 }
                 return null;
             }
@@ -411,6 +416,7 @@ namespace ExpressBase.ServiceStack.MQServices
                 }
                 catch (Exception e)
                 {
+                    Log.Info("Exception:" + e.ToString());
                 }
                 return null;
             }

@@ -166,7 +166,10 @@ namespace ExpressBase.ServiceStack
                         ada.Fill(_dataset);
                     }
                 }
-                catch (Npgsql.NpgsqlException npgse) { }
+                catch (Npgsql.NpgsqlException npgse)
+                {
+                    Log.Info("Exception:" + npgse.ToString());
+                }
             }
 
             //-- 

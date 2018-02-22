@@ -52,11 +52,12 @@ namespace ExpressBase.ServiceStack
             var myDataSourceservice = base.ResolveService<DataSourceService>();
             if (Report.DataSourceRefId != string.Empty)
             {
-                //    dresp = myDataSourceservice.Any(new DataSourceDataRequest444 { RefId = Report.DataSourceRefId, Draw = 1, Start = 0, Length = 100 });
-                //    Report.DataSet = dresp.DataSet;
+                Console.WriteLine("Report.DataSourceRefId   :"+ Report.DataSourceRefId);
+                   //    dresp = myDataSourceservice.Any(new DataSourceDataRequest444 { RefId = Report.DataSourceRefId, Draw = 1, Start = 0, Length = 100 });
+                   //    Report.DataSet = dresp.DataSet;
 
-                cresp = this.Redis.Get<DataSourceColumnsResponse>(string.Format("{0}_columns", Report.DataSourceRefId));
-                if (cresp.IsNull)
+                   cresp = this.Redis.Get<DataSourceColumnsResponse>(string.Format("{0}_columns", Report.DataSourceRefId));
+                if (cresp== null)
                     cresp = myDataSourceservice.Any(new DataSourceColumnsRequest { RefId = Report.DataSourceRefId });
                 Report.DataColumns = (cresp.Columns.Count > 1) ? cresp.Columns[1] : cresp.Columns[0];
                 dresp = myDataSourceservice.Any(new DataSourceDataRequest { RefId = Report.DataSourceRefId, Draw = 1, Start = 0, Length = 100 });
