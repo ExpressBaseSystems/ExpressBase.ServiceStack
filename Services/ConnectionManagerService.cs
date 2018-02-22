@@ -22,8 +22,9 @@ namespace ExpressBase.ServiceStack.Services
                 base.MessageProducer3.Publish(new RefreshSolutionConnectionsMqRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
                 return true;
             }
-            catch
+            catch(Exception e)
             {
+                Console.WriteLine("Exception:" + e.ToString());
                 return false;
             }
         }
@@ -106,6 +107,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
+                Console.WriteLine("Exception:" + e.ToString());
                 res.ConnectionStatus = false;
             }
 
@@ -122,6 +124,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
+                Console.WriteLine("Exception:" + e.ToString());
                 res.ConnectionStatus = false;
             }
             return res;

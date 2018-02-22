@@ -461,6 +461,7 @@ WHERE
                 }
                 catch (Exception e)
                 {
+                    Console.WriteLine("Exception:" + e.ToString());
                 }
 
             }
@@ -614,6 +615,7 @@ WHERE
             }
             catch (Exception e)
             {
+                Console.WriteLine("Exception:" + e.ToString());
 
             }
             return new EbObject_CommitResponse() { RefId = refId };
@@ -657,7 +659,7 @@ WHERE
             }
             catch (Exception e)
             {
-
+                Console.WriteLine("Exception:" + e.ToString());
             }
             return new EbObject_SaveResponse() { RefId = refId };
         }
@@ -702,7 +704,7 @@ WHERE
             }
             catch (Exception e)
             {
-
+                Console.WriteLine("Exception:" + e.ToString());
             }
             return new EbObject_Create_New_ObjectResponse() { RefId = refId };
         }
@@ -739,7 +741,7 @@ WHERE
             }
             catch (Exception e)
             {
-
+                Console.WriteLine("Exception:" + e.ToString());
 
             }
             return new EbObject_Create_Major_VersionResponse() { RefId = refId };
@@ -775,7 +777,7 @@ WHERE
             }
             catch (Exception e)
             {
-
+                Console.WriteLine("Exception:" + e.ToString());
             }
             return new EbObject_Create_Minor_VersionResponse() { RefId = refId };
         }
@@ -810,7 +812,7 @@ WHERE
             }
             catch (Exception e)
             {
-
+                Console.WriteLine("Exception:" + e.ToString());
             }
             return new EbObject_Create_Patch_VersionResponse() { RefId = refId };
         }
@@ -859,7 +861,7 @@ WHERE
             }
             catch (Exception e)
             {
-
+                Console.WriteLine("Exception:" + e.ToString());
             }
         }
 
