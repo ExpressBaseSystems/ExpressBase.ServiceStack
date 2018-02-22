@@ -189,5 +189,13 @@ WHERE
             return new BotListResponse { Data = res };
         }
 
+        public object Get(CreateBotFormTableRequest request)
+        {
+            string qry = "SELECT EXISTS (SELECT 1 FROM   information_schema.tables WHERE  table_schema = 'public' AND table_name = @tbl); ";
+            DbParameter[] parameter = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("@tbl", EbDbTypes.String, request.TableName.ToLower()) };
+            var rslt = this.EbConnectionFactory.ObjectsDB.IsTableExists(qry, parameter);
+            return new CreateBotFormTableResponse();
+        }
+
     }
 }

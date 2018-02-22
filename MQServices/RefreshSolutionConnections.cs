@@ -51,6 +51,7 @@ namespace ExpressBase.ServiceStack.MQServices
                 }
                 catch (Exception e)
                 {
+                    Log.Info("Exception:" + e.ToString());
                     return false;
                 }
             }
