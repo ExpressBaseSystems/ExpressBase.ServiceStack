@@ -1,6 +1,8 @@
 ﻿using ExpressBase.Common;
 using ExpressBase.Common.Data;
+using ExpressBase.Common.Objects;
 using ExpressBase.Common.Structures;
+using ExpressBase.Objects;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ServiceStack;
 using System;
@@ -189,11 +191,37 @@ WHERE
             return new BotListResponse { Data = res };
         }
 
-        public object Get(CreateBotFormTableRequest request)
+        public object Any(CreateBotFormTableRequest request)
         {
+            
             string qry = "SELECT EXISTS (SELECT 1 FROM   information_schema.tables WHERE  table_schema = 'public' AND table_name = @tbl); ";
-            DbParameter[] parameter = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("@tbl", EbDbTypes.String, request.TableName.ToLower()) };
-            var rslt = this.EbConnectionFactory.ObjectsDB.IsTableExists(qry, parameter);
+            DbParameter[] parameter1 = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("@tbl", EbDbTypes.String, request.BotObj.TableName.ToLower()) };
+            var rslt = this.EbConnectionFactory.ObjectsDB.IsTableExists(qry, parameter1);
+            string cols = "";
+            foreach (EbControl control in request.BotObj.Controls)
+            {
+                if(control is EbNumeric)
+                {
+                    cols += control.Name + " integer,";
+                }
+               else if (control is EbTextBox)
+                {
+                    cols += control.Name + " text,";
+                }
+                else if (control is EbDate)
+                {
+                    cols += control.Name + " Date,";
+                }
+                //EbDbType dbType = (EbDbType)control.GetType().GetPublicStaticField("EbDbType").GetValue(null);
+                //cols += control.Name + " " + + ", ";
+            }
+            if (!rslt)
+            {
+                string sql = "CREATE TABLE @tbl(@cols)".Replace("@cols", cols.Substring(0, cols.Length-1).Trim()).Replace("@tbl", request.BotObj.TableName);
+                this.EbConnectionFactory.ObjectsDB.CreateTable(sql);
+            }
+            else { }
+                //Alter
             return new CreateBotFormTableResponse();
         }
 
