@@ -530,7 +530,7 @@ namespace ExpressBase.ServiceStack.Services
 				RoleInfo.Add("RoleName", ds.Tables[4].Rows[0][0].ToString());
 				RoleInfo.Add("AppId", Convert.ToInt32(ds.Tables[4].Rows[0][1]));
 				RoleInfo.Add("RoleDescription", ds.Tables[4].Rows[0][2].ToString());
-				RoleInfo.Add("IsAnonymous", (Convert.ToBoolean(ds.Tables[4].Rows[0][3]))?"true":"false");
+				RoleInfo.Add("IsAnonymous", (ds.Tables[4].Rows[0][3].ToString() == "T")?"true":"false");
 				RoleInfo.Add("AppName", ds.Tables[6].Rows[0][0].ToString());
 				RoleInfo.Add("AppDescription", ds.Tables[6].Rows[0][1].ToString());
 				foreach (var dr in ds.Tables[5].Rows)
