@@ -20,23 +20,18 @@ namespace ExpressBase.ServiceStack.Services
 
 		public GetUsersResponse1 Any(GetUsersRequest1 request)
 		{
-			GetUsersResponse1 resp = new GetUsersResponse1();
-			using (var con = this.EbConnectionFactory.DataDB.GetNewConnection())
-			{
-				con.Open();
-				string sql = "SELECT id,firstname,email FROM eb_users WHERE firstname ~* @searchtext";
+			GetUsersResponse1 resp = new GetUsersResponse1();         
+			string sql = "SELECT id,firstname,email FROM eb_users;";
+            
+			var dt = this.EbConnectionFactory.DataDB.DoQuery(sql);
 
-				DbParameter[] parameters = { this.EbConnectionFactory.DataDB.GetNewParameter("searchtext", EbDbTypes.String, (request.Colvalues != null) ? request.Colvalues["searchtext"] : string.Empty) };
-
-				var dt = this.EbConnectionFactory.DataDB.DoQueries(sql, parameters);
-
-				List<Eb_User_ForCommonList> returndata = new List<Eb_User_ForCommonList>();
-				foreach (EbDataRow dr in dt.Tables[0].Rows)
-				{
-					returndata.Add(new Eb_User_ForCommonList {Id = Convert.ToInt32(dr[0]), Name = dr[1].ToString(), Email = dr[2].ToString() });
-				}
-				resp.Data = returndata;
+			List<Eb_User_ForCommonList> returndata = new List<Eb_User_ForCommonList>();
+			foreach (EbDataRow dr in dt.Rows)
+            {
+				returndata.Add(new Eb_User_ForCommonList {Id = Convert.ToInt32(dr[0]), Name = dr[1].ToString(), Email = dr[2].ToString() });
 			}
+			resp.Data = returndata;
+			
 			return resp;
 		} //for user search
 
@@ -130,12 +125,12 @@ namespace ExpressBase.ServiceStack.Services
 			if (request.Id > 0)
 			{
 				sql += @"SELECT fullname,nickname,email,alternateemail,dob,sex,phnoprimary,phnosecondary,landline,phextension,fbid,fbname,statusid,hide
-						FROM eb_users WHERE id = @id;
-						SELECT role_id FROM eb_role2user WHERE user_id = @id AND eb_del = 'F';
-						SELECT groupid FROM eb_user2usergroup WHERE userid = @id AND eb_del = 'F';";
+						FROM eb_users WHERE id = :id;
+						SELECT role_id FROM eb_role2user WHERE user_id = :id AND eb_del = 'F';
+						SELECT groupid FROM eb_user2usergroup WHERE userid = :id AND eb_del = 'F';";
 			}
-			//SELECT firstname, email, socialid, socialname FROM eb_users WHERE id = @id;	old 4th query
-			DbParameter[] parameters = { this.EbConnectionFactory.DataDB.GetNewParameter("@id", EbDbTypes.Int32, request.Id) };
+
+			DbParameter[] parameters = { this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.Id) };
 			var ds = this.EbConnectionFactory.DataDB.DoQueries(sql, parameters);
 
 			resp.Roles = new List<EbRole>();
