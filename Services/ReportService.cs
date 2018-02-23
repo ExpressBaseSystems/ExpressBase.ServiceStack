@@ -20,6 +20,7 @@ using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
 using System.Dynamic;
 using ExpressBase.Objects.Objects.ReportRelated;
+using System.Text;
 
 namespace ExpressBase.ServiceStack
 {
@@ -52,11 +53,12 @@ namespace ExpressBase.ServiceStack
             var myDataSourceservice = base.ResolveService<DataSourceService>();
             if (Report.DataSourceRefId != string.Empty)
             {
-                //    dresp = myDataSourceservice.Any(new DataSourceDataRequest444 { RefId = Report.DataSourceRefId, Draw = 1, Start = 0, Length = 100 });
-                //    Report.DataSet = dresp.DataSet;
+                Console.WriteLine("Report.DataSourceRefId   :"+ Report.DataSourceRefId);
+                   //    dresp = myDataSourceservice.Any(new DataSourceDataRequest444 { RefId = Report.DataSourceRefId, Draw = 1, Start = 0, Length = 100 });
+                   //    Report.DataSet = dresp.DataSet;
 
-                cresp = this.Redis.Get<DataSourceColumnsResponse>(string.Format("{0}_columns", Report.DataSourceRefId));
-                if (cresp.IsNull)
+                   cresp = this.Redis.Get<DataSourceColumnsResponse>(string.Format("{0}_columns", Report.DataSourceRefId));
+                if (cresp== null)
                     cresp = myDataSourceservice.Any(new DataSourceColumnsRequest { RefId = Report.DataSourceRefId });
                 Report.DataColumns = (cresp.Columns.Count > 1) ? cresp.Columns[1] : cresp.Columns[0];
                 dresp = myDataSourceservice.Any(new DataSourceDataRequest { RefId = Report.DataSourceRefId, Draw = 1, Start = 0, Length = 100 });
@@ -75,6 +77,7 @@ namespace ExpressBase.ServiceStack
             Report.Canvas = Report.Writer.DirectContent;
             Report.PageNumber = Report.Writer.PageNumber;
             Report.InitializeSummaryFields();
+           
             GetWatermarkImages();
 
             foreach (EbReportHeader r_header in Report.ReportHeaders)
@@ -142,6 +145,13 @@ namespace ExpressBase.ServiceStack
             Report.DrawReportHeader();
             Report.DrawDetail();
             Report.Doc.Close();
+            Report.Ms1.Position = 0;
+            Report.PdfReader = new PdfReader(Report.Ms1);
+            Report.Stamp = new PdfStamper(Report.PdfReader, Report.Ms1);
+            byte[] USER = Encoding.ASCII.GetBytes("123");
+            byte[] OWNER = Encoding.ASCII.GetBytes("ownerpwd");
+            Report.Stamp.SetEncryption(USER, OWNER, 0, PdfWriter.ENCRYPTION_AES_128); Report.Stamp.FormFlattening = true;
+            Report.Stamp.Close();
             Report.Ms1.Position = 0;//important
             //if (Report.DataSourceRefId != string.Empty)
             //{

@@ -157,6 +157,7 @@ namespace ExpressBase.ServiceStack.Services
 					parameters1.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter((kval + rcount), EbDbTypes.String, list[i].KeyVal_Value));
 					rcount++;
 					list.Remove(list[i]);
+					i--;
 					InsertCount++;
 				}
 			query1.Length = query1.Length - 1;

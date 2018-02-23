@@ -13,7 +13,7 @@ namespace ExpressBase.ServiceStack
         {
             var host = new WebHostBuilder()
                 .UseKestrel(options => {
-                    options.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(5);
+                    options.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(7);
                 })
                 .UseContentRoot(Directory.GetCurrentDirectory())
                 .UseUrls(urls: "http://*:8000/")
