@@ -193,18 +193,18 @@ WHERE
 
         public object Any(CreateBotFormTableRequest request)
         {
-            
+
             string qry = "SELECT EXISTS (SELECT 1 FROM   information_schema.tables WHERE  table_schema = 'public' AND table_name = @tbl); ";
             DbParameter[] parameter1 = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("@tbl", EbDbTypes.String, request.BotObj.TableName.ToLower()) };
             var rslt = this.EbConnectionFactory.ObjectsDB.IsTableExists(qry, parameter1);
             string cols = "";
             foreach (EbControl control in request.BotObj.Controls)
             {
-                if(control is EbNumeric)
+                if (control is EbNumeric)
                 {
                     cols += control.Name + " integer,";
                 }
-               else if (control is EbTextBox)
+                else if (control is EbTextBox)
                 {
                     cols += control.Name + " text,";
                 }
@@ -217,11 +217,37 @@ WHERE
             }
             if (!rslt)
             {
-                string sql = "CREATE TABLE @tbl(@cols)".Replace("@cols", cols.Substring(0, cols.Length-1).Trim()).Replace("@tbl", request.BotObj.TableName);
+                string sql = "CREATE TABLE @tbl(@cols)".Replace("@cols", cols.Substring(0, cols.Length - 1).Trim()).Replace("@tbl", request.BotObj.TableName);
                 this.EbConnectionFactory.ObjectsDB.CreateTable(sql);
             }
             else { }
-                //Alter
+            //Alter
+            return new CreateBotFormTableResponse();
+        }
+
+        public object Any(InsertIntoBotFormTableRequest request)
+        {
+            //string qry = "insert into @tbl({0}) values({1})".Replace("@tbl", request.TableName);
+            DbParameter[] parameter1 = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("@tbl", EbDbTypes.String, request.TableName.ToLower()) };
+            string cols = "";
+            string vals = "";
+            foreach (var obj in request.Fields)
+            {
+                cols += obj.Key + ",";
+                if (obj.Value[1] == "integer")
+                {
+                    vals += obj.Value[0] + ",";
+                }
+                else
+                    vals += "'" + obj.Value[0] + "',";
+            }
+            cols = cols.Substring(0, cols.Length - 1).Trim();
+            vals = vals.Substring(0, vals.Length - 1).Trim();
+            //qry.Replace("@cols", cols).Replace("@val", vals);
+            //String.Format(qry, cols, vals);
+            var qry = string.Format("insert into {0}({1}) values({2})", request.TableName, cols, vals);
+
+            var rslt = this.EbConnectionFactory.ObjectsDB.InsertTable(qry);
             return new CreateBotFormTableResponse();
         }
 
