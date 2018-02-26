@@ -21,12 +21,10 @@ namespace ExpressBase.ServiceStack.Services
 		public GetUsersResponse1 Any(GetUsersRequest1 request)
 		{
 			GetUsersResponse1 resp = new GetUsersResponse1();
-			using (var con = this.EbConnectionFactory.DataDB.GetNewConnection())
-			{
-				con.Open();
-				string sql = "SELECT id,fullname,email FROM eb_users WHERE fullname ~* @searchtext AND eb_del = 'F';";
+			
+				string sql = "SELECT id,fullname,email FROM eb_users WHERE LOWER(fullname) LIKE LOWER('%' || :searchtext || '%') AND eb_del = 'F';";
 
-				DbParameter[] parameters = { this.EbConnectionFactory.DataDB.GetNewParameter("searchtext", EbDbTypes.String, (request.Colvalues != null) ? request.Colvalues["searchtext"] : string.Empty) };
+				DbParameter[] parameters = { this.EbConnectionFactory.DataDB.GetNewParameter("searchtext", EbDbTypes.String, (request.Colvalues != null) ? request.Colvalues["searchtext"] : "") };
 
 				var dt = this.EbConnectionFactory.DataDB.DoQueries(sql, parameters);
 
@@ -36,7 +34,7 @@ namespace ExpressBase.ServiceStack.Services
 					returndata.Add(new Eb_User_ForCommonList {Id = Convert.ToInt32(dr[0]), Name = dr[1].ToString(), Email = dr[2].ToString() });
 				}
 				resp.Data = returndata;
-			}
+			
 			return resp;
 		} //for user search
 
@@ -79,7 +77,7 @@ namespace ExpressBase.ServiceStack.Services
 			using (var con = this.EbConnectionFactory.DataDB.GetNewConnection())
 			{
 				con.Open();
-				string sql = "SELECT id,name,description FROM eb_usergroup WHERE name ~* :searchtext";
+				string sql = "SELECT id,name,description FROM eb_usergroup WHERE LOWER(name) LIKE LOWER('%' || :searchtext || '%') AND eb_del = 'F';";
 
 				DbParameter[] parameters = { this.EbConnectionFactory.DataDB.GetNewParameter("searchtext", EbDbTypes.String, (request.Colvalues != null) ? request.Colvalues["searchtext"] : string.Empty) };
 
@@ -130,12 +128,12 @@ namespace ExpressBase.ServiceStack.Services
 			if (request.Id > 1)
 			{
 				sql += @"SELECT fullname,nickname,email,alternateemail,dob,sex,phnoprimary,phnosecondary,landline,phextension,fbid,fbname,statusid,hide
-						FROM eb_users WHERE id = @id;
-						SELECT role_id FROM eb_role2user WHERE user_id = @id AND eb_del = 'F';
-						SELECT groupid FROM eb_user2usergroup WHERE userid = @id AND eb_del = 'F';";
+						FROM eb_users WHERE id = :id;
+						SELECT role_id FROM eb_role2user WHERE user_id = :id AND eb_del = 'F';
+						SELECT groupid FROM eb_user2usergroup WHERE userid = :id AND eb_del = 'F';";
 			}
 			//SELECT firstname, email, socialid, socialname FROM eb_users WHERE id = @id;	old 4th query
-			DbParameter[] parameters = { this.EbConnectionFactory.DataDB.GetNewParameter("@id", EbDbTypes.Int32, request.Id) };
+			DbParameter[] parameters = { this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.Id) };
 			var ds = this.EbConnectionFactory.DataDB.DoQueries(sql, parameters);
 
 			resp.Roles = new List<EbRole>();
@@ -215,14 +213,14 @@ namespace ExpressBase.ServiceStack.Services
 			return strPwd;
 		}
 
-		public bool Any(UniqueCheckRequest request)
+		public UniqueCheckResponse Any(UniqueCheckRequest request)
 		{
 			string sql = string.Empty;
             DbParameter[] parameters = new DbParameter[] { };
 
             if (!string.IsNullOrEmpty(request.email))
             {
-                sql = "SELECT id FROM eb_users WHERE LOWER(email) LIKE LOWER(:email) AND eb_del = 'F'";
+                sql = "SELECT id FROM eb_users WHERE LOWER(email) LIKE LOWER('%' || :email || '%') AND eb_del = 'F'";
                 parameters =new DbParameter[] { this.EbConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, string.IsNullOrEmpty(request.email)?"":request.email)  };
             }
 				
@@ -234,22 +232,21 @@ namespace ExpressBase.ServiceStack.Services
 			var dt = this.EbConnectionFactory.DataDB.DoQuery(sql, parameters);
 			if (dt.Rows.Count > 0)
 			{
-				return true;
+				return new UniqueCheckResponse { unrespose = true};
 			}
 			else
 			{
-				return false;
-			}
+                return new UniqueCheckResponse { unrespose = false };
+            }
 		}
 
 		public SaveUserResponse Post(SaveUserRequest request)
 		{
 			SaveUserResponse resp;
-			string sql = "SELECT * FROM eb_createormodifyuserandroles(@userid,@id,@fullname,@nickname,@email,@pwd,@dob,@sex,@alternateemail,@phprimary,@phsecondary,@phlandphone,@extension,@fbid,@fbname,@roles,@group,@statusid,@hide,@anonymoususerid);";
-			using (var con = this.EbConnectionFactory.DataDB.GetNewConnection())
-			{
-				con.Open();
-				string password = (request.Password + request.EmailPrimary).ToMD5Hash(); 
+            string sql = this.EbConnectionFactory.DataDB.EB_SAVEUSER_QUERY;
+			
+			
+			string password = (request.Password + request.EmailPrimary).ToMD5Hash(); 
 				
 				DbParameter[] parameters = 
 					{
@@ -269,7 +266,7 @@ namespace ExpressBase.ServiceStack.Services
 						this.EbConnectionFactory.DataDB.GetNewParameter("fbid", EbDbTypes.String, request.FbId),
 						this.EbConnectionFactory.DataDB.GetNewParameter("fbname", EbDbTypes.String, request.FbName),
 						this.EbConnectionFactory.DataDB.GetNewParameter("roles", EbDbTypes.String, (request.Roles != string.Empty? request.Roles : string.Empty)),
-						this.EbConnectionFactory.DataDB.GetNewParameter("group", EbDbTypes.String, (request.UserGroups != string.Empty? request.UserGroups : string.Empty)),
+						this.EbConnectionFactory.DataDB.GetNewParameter("groups", EbDbTypes.String, (request.UserGroups != string.Empty? request.UserGroups : string.Empty)),
 						this.EbConnectionFactory.DataDB.GetNewParameter("statusid", EbDbTypes.Int32, Convert.ToInt32(request.StatusId)),
 						this.EbConnectionFactory.DataDB.GetNewParameter("hide", EbDbTypes.String, request.Hide),
 						this.EbConnectionFactory.DataDB.GetNewParameter("anonymoususerid", EbDbTypes.Int32, request.AnonymousUserId)
@@ -289,7 +286,7 @@ namespace ExpressBase.ServiceStack.Services
 					id = Convert.ToInt32(dt.Tables[0].Rows[0][0])
 
 				};
-			}
+			
 			return resp;
 		}
 
@@ -376,9 +373,9 @@ namespace ExpressBase.ServiceStack.Services
 			Dictionary<string, object> _userGroupInfo = new Dictionary<string, object>();
 			if (request.id > 0)
 			{
-				string query = @"SELECT id,name,description FROM eb_usergroup WHERE id = @id;
-							SELECT U.id,U.fullname,U.email FROM eb_users U, eb_user2usergroup G WHERE G.groupid = @id AND U.id=G.userid AND G.eb_del = 'F';";
-				parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("@id", EbDbTypes.Int32, request.id));
+				string query = @"SELECT id,name,description FROM eb_usergroup WHERE id = :id;
+							SELECT U.id,U.fullname,U.email FROM eb_users U, eb_user2usergroup G WHERE G.groupid = :id AND U.id=G.userid AND G.eb_del = 'F';";
+				parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.id));
 				var ds = this.EbConnectionFactory.DataDB.DoQueries(query, parameters.ToArray());
 				if (ds.Tables.Count > 0)
 				{
