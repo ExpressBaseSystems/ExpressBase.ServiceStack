@@ -24,7 +24,7 @@ namespace ExpressBase.ServiceStack.Services
 			using (var con = this.EbConnectionFactory.DataDB.GetNewConnection())
 			{
 				con.Open();
-				string sql = "SELECT id,fullname,email FROM eb_users WHERE fullname ~* @searchtext AND eb_del = 'F';";
+				string sql = "SELECT id,fullname,email,nickname,sex,phnoprimary,statusid FROM eb_users WHERE fullname ~* @searchtext AND eb_del = 'F';";
 
 				DbParameter[] parameters = { this.EbConnectionFactory.DataDB.GetNewParameter("searchtext", EbDbTypes.String, (request.Colvalues != null) ? request.Colvalues["searchtext"] : string.Empty) };
 
@@ -33,7 +33,15 @@ namespace ExpressBase.ServiceStack.Services
 				List<Eb_User_ForCommonList> returndata = new List<Eb_User_ForCommonList>();
 				foreach (EbDataRow dr in dt.Tables[0].Rows)
 				{
-					returndata.Add(new Eb_User_ForCommonList {Id = Convert.ToInt32(dr[0]), Name = dr[1].ToString(), Email = dr[2].ToString() });
+					returndata.Add(new Eb_User_ForCommonList {
+						Id = Convert.ToInt32(dr[0]),
+						Name = dr[1].ToString(),
+						Email = dr[2].ToString(),
+						Nick_Name = dr[3].ToString(),
+						Sex = dr[4].ToString(),
+						Phone_Number = dr[5].ToString(),
+						Status = (((EbUserStatus)Convert.ToInt32(dr[6])).ToString())
+					});
 				}
 				resp.Data = returndata;
 			}
