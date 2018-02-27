@@ -29,13 +29,14 @@ namespace ExpressBase.ServiceStack
         private DataSourceColumnsResponse cresp = null;
         private DataSourceDataResponse dresp = null;
 
-        public EbReport Report = null;
         //private iTextSharp.text.Font f = FontFactory.GetFont(FontFactory.HELVETICA, 12);
         public ReportService(IEbConnectionFactory _dbf) : base(_dbf) { }
 
 
         public ReportRenderResponse Get(ReportRenderRequest request)
         {
+            EbReport Report = null;
+
             //-- Get REPORT object and Init 
             var myObjectservice = base.ResolveService<EbObjectService>();
             EbObjectParticularVersionResponse resultlist = myObjectservice.Get(new EbObjectParticularVersionRequest { RefId = request.Refid }) as EbObjectParticularVersionResponse;
@@ -53,13 +54,16 @@ namespace ExpressBase.ServiceStack
             var myDataSourceservice = base.ResolveService<DataSourceService>();
             if (Report.DataSourceRefId != string.Empty)
             {
-                Console.WriteLine("Report.DataSourceRefId   :"+ Report.DataSourceRefId);
-                   //    dresp = myDataSourceservice.Any(new DataSourceDataRequest444 { RefId = Report.DataSourceRefId, Draw = 1, Start = 0, Length = 100 });
-                   //    Report.DataSet = dresp.DataSet;
+                Console.WriteLine("Report.DataSourceRefId   :" + Report.DataSourceRefId);
+                //    dresp = myDataSourceservice.Any(new DataSourceDataRequest444 { RefId = Report.DataSourceRefId, Draw = 1, Start = 0, Length = 100 });
+                //    Report.DataSet = dresp.DataSet;
 
-                   cresp = this.Redis.Get<DataSourceColumnsResponse>(string.Format("{0}_columns", Report.DataSourceRefId));
-                if (cresp== null)
-                    cresp = myDataSourceservice.Any(new DataSourceColumnsRequest { RefId = Report.DataSourceRefId });
+                cresp = this.Redis.Get<DataSourceColumnsResponse>(string.Format("{0}_columns", Report.DataSourceRefId));
+                if (cresp == null)
+                    cresp = myDataSourceservice.Any(new DataSourceColumnsRequest
+                    {
+                        RefId = Report.DataSourceRefId
+                    });
                 Report.DataColumns = (cresp.Columns.Count > 1) ? cresp.Columns[1] : cresp.Columns[0];
                 dresp = myDataSourceservice.Any(new DataSourceDataRequest { RefId = Report.DataSourceRefId, Draw = 1, Start = 0, Length = 100 });
                 Report.DataRow = dresp.Data; Console.WriteLine("Rows: " + dresp.Data.Count);
@@ -77,64 +81,23 @@ namespace ExpressBase.ServiceStack
             Report.Canvas = Report.Writer.DirectContent;
             Report.PageNumber = Report.Writer.PageNumber;
             Report.InitializeSummaryFields();
-           
-            GetWatermarkImages();
+
+            GetWatermarkImages(Report);
 
             foreach (EbReportHeader r_header in Report.ReportHeaders)
-                this.FillScriptCollection(r_header.Fields);
+                this.FillScriptCollection(Report, r_header.Fields);
 
             foreach (EbReportFooter r_footer in Report.ReportFooters)
-                this.FillScriptCollection(r_footer.Fields);
+                this.FillScriptCollection(Report, r_footer.Fields);
 
             foreach (EbPageHeader p_header in Report.PageHeaders)
-                this.FillScriptCollection(p_header.Fields);
+                this.FillScriptCollection(Report, p_header.Fields);
 
             foreach (EbReportDetail detail in Report.Detail)
-                this.FillScriptCollection(detail.Fields);
+                this.FillScriptCollection(Report, detail.Fields);
 
             foreach (EbPageFooter p_footer in Report.PageFooters)
-                this.FillScriptCollection(p_footer.Fields);
-
-            //Globals globals = new Globals();
-            //foreach (string calcfd in (field as EbCalcField).DataFieldsUsed)
-            //{
-            //    string TName = calcfd.Split('.')[0];
-            //    string fName = calcfd.Split('.')[1];
-            //    globals[TName].Add(fName, new NTV { Name = fName, Type = (DbType)(field as EbCalcField).DbType, Value = Report.GetFieldtData(fName, 0) });
-            //}
-
-
-
-            //try
-            //{
-            //    globals.T1.x = new NTV { Name = "x", Type = DbType.Int32, Value = 10 };
-            //    globals.T1.y = new NTV { Name = "y", Type = DbType.Int32, Value = 20 };           
-            //    DateTime ts_start; DateTime ts_end; TimeSpan ts;
-
-            //    // Console.WriteLine(CSharpScript.EvaluateAsync("return Environment.GetEnvironmentVariable(\"EB_REDIS_PASSWORD\");", ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core", "MSCorLib").WithImports("System.Dynamic", "System")).Result);
-
-            //    ts_start = DateTime.Now;
-            //    var script = CSharpScript.Create<int>("(T1.x * T1.y) + 2", ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System.Dynamic"), globalsType: typeof(Globals));
-            //    script.Compile();
-            //    ts_end = DateTime.Now;
-            //    Console.WriteLine("ts-Compile1 : " + ts);
-            //    ts = ts_end - ts_start;
-
-            //    ts_start = DateTime.Now;
-            //    Console.WriteLine((script.RunAsync(globals)).Result.ReturnValue);
-            //    ts_end = DateTime.Now;
-            //    ts = ts_end - ts_start;
-            //    Console.WriteLine("ts-Compile2 : " + ts);
-
-            //    ts_start = DateTime.Now;
-            //    Console.WriteLine((script.RunAsync(globals)).Result.ReturnValue);
-            //    ts_end = DateTime.Now;
-            //    ts = ts_end - ts_start;
-            //    Console.WriteLine("ts-Compile3 : " + ts);
-            //}
-            //catch (Exception e)
-            //{
-            //}          
+                this.FillScriptCollection(Report, p_footer.Fields);
 
 
             //iTextSharp.text.Font link = FontFactory.GetFont("Arial", 12, iTextSharp.text.Font.UNDERLINE, BaseColor.DarkGray);
@@ -145,13 +108,8 @@ namespace ExpressBase.ServiceStack
             Report.DrawReportHeader();
             Report.DrawDetail();
             Report.Doc.Close();
-            Report.Ms1.Position = 0;
-            Report.PdfReader = new PdfReader(Report.Ms1);
-            Report.Stamp = new PdfStamper(Report.PdfReader, Report.Ms1);
-            byte[] USER = Encoding.ASCII.GetBytes("123");
-            byte[] OWNER = Encoding.ASCII.GetBytes("ownerpwd");
-            Report.Stamp.SetEncryption(USER, OWNER, 0, PdfWriter.ENCRYPTION_AES_128); Report.Stamp.FormFlattening = true;
-            Report.Stamp.Close();
+            if (Report.UserPassword != string.Empty || Report.OwnerPassword != string.Empty)
+                Report.SetPassword();
             Report.Ms1.Position = 0;//important
             //if (Report.DataSourceRefId != string.Empty)
             //{
@@ -162,7 +120,7 @@ namespace ExpressBase.ServiceStack
 
         }
 
-        private void FillScriptCollection(List<EbReportField> fields)
+        private void FillScriptCollection(EbReport Report, List<EbReportField> fields)
         {
             foreach (EbReportField field in fields)
             {
@@ -175,17 +133,16 @@ namespace ExpressBase.ServiceStack
             }
         }
 
-        private void GetWatermarkImages()
+        private void GetWatermarkImages(EbReport Report)
         {
             var myFileService = base.ResolveService<FileService>();
-            byte[] fileByte = null;
             if (Report.ReportObjects != null)
             {
                 foreach (var field in Report.ReportObjects)
                 {
-                    if ((field as EbWaterMark).Image != string.Empty)
+                    if ((field is EbWaterMark) && (field as EbWaterMark).Image != string.Empty)
                     {
-                        fileByte = myFileService.Post
+                        byte[] fileByte = myFileService.Post
                       (new DownloadFileRequest
                       {
                           FileDetails = new FileMeta
@@ -194,8 +151,8 @@ namespace ExpressBase.ServiceStack
                               FileType = "jpg"
                           }
                       });
+                        Report.watermarkImages.Add((field as EbWaterMark).Image, fileByte);
                     }
-                    Report.watermarkImages.Add((field as EbWaterMark).Image, fileByte);
                 }
             }
         }
