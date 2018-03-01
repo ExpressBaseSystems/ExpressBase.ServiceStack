@@ -89,7 +89,7 @@ WHERE
         public GetBotForm4UserResponse Get(GetBotForm4UserRequest request)
         {
             var Query1 = @"
-                            SELECT
+                            SELECT DISTINCT
 		                            EOV.refid, EO.obj_name 
                             FROM
 		                            eb_objects EO, eb_objects_ver EOV, eb_objects_status EOS, eb_objects2application EOTA
