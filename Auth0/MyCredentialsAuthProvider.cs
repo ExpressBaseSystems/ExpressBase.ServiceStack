@@ -80,7 +80,9 @@ namespace ExpressBase.ServiceStack.Auth0
                 session.User = _authUser;
                 session.WhichConsole = whichContext;
                 _authUser.wc = whichContext;
-                session.UserAuthId = string.Format("{0}-{1}-{2}", cid, _authUser.Email, whichContext);
+                _authUser.AuthId = string.Format("{0}-{1}-{2}", cid, _authUser.Email, whichContext);
+
+                session.UserAuthId = _authUser.AuthId;
 
                 var authRepo = HostContext.AppHost.GetAuthRepository(authService.Request);
                 var existingUser = (authRepo as EbRedisAuthRepository).GetUserAuth(session.UserAuthId);
