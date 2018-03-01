@@ -452,7 +452,7 @@ namespace ExpressBase.ServiceStack.Services
 		public SaveUserGroupResponse Post(SaveUserGroupRequest request)
 		{
 			SaveUserGroupResponse resp;
-			string sql = "SELECT * FROM eb_createormodifyusergroup(@userid,@id,@name,@description,@users);";
+			string sql = this.EbConnectionFactory.DataDB.EB_SAVEUSERGROUP_QUERY;
 			using (var con = this.EbConnectionFactory.DataDB.GetNewConnection())
 			{
 				con.Open();
@@ -547,12 +547,11 @@ namespace ExpressBase.ServiceStack.Services
 		public GetUserDetailsResponse Any(GetUserDetailsRequest request)
 		{
 			string query = null;
-			List<DbParameter> parameters = new List<DbParameter>();
-			query = string.Format(@"SELECT id, fullname, email FROM eb_users
-									WHERE LOWER(fullname) LIKE LOWER(@NAME) AND eb_del = 'F' ORDER BY fullname ASC"); 
-			parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("@NAME", EbDbTypes.String, ("%" + request.SearchText + "%")));
-			var ds = this.EbConnectionFactory.DataDB.DoQueries(query, parameters.ToArray());
-			List<Eb_Users> _usersList = new List<Eb_Users>();
+			query = string.Format(@"SELECT id,fullname,email FROM eb_users WHERE LOWER(fullname) LIKE LOWER('%' || :searchtext || '%') AND eb_del = 'F' ORDER BY fullname ASC;");
+            DbParameter[] parameters = { this.EbConnectionFactory.DataDB.GetNewParameter("searchtext", EbDbTypes.String, request.SearchText) };
+
+            var ds = this.EbConnectionFactory.DataDB.DoQueries(query, parameters);
+            List<Eb_Users> _usersList = new List<Eb_Users>();
 			if (ds.Tables.Count > 0)
 			{
 				foreach (EbDataRow dr in ds.Tables[0].Rows)
