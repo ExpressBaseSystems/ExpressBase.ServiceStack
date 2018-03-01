@@ -12,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using ServiceStack;
 using ServiceStack.Auth;
+using ServiceStack.Configuration;
 using ServiceStack.Logging;
 using ServiceStack.Messaging;
 using ServiceStack.ProtoBuf;
@@ -20,6 +21,9 @@ using ServiceStack.Redis;
 using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
+using System.Linq;
+using System.Net;
+using static ExpressBase.ServiceStack.Services.ServerEventsSSServices;
 
 namespace ExpressBase.ServiceStack
 {
@@ -121,8 +125,9 @@ namespace ExpressBase.ServiceStack
 
             this.Plugins.Add(new CorsFeature(allowedHeaders: "Content-Type, Authorization, Access-Control-Allow-Origin, Access-Control-Allow-Credentials"));
             this.Plugins.Add(new ProtoBufFormat());
+            this.Plugins.Add(new ServerEventsFeature());
 
-            Plugins.Add(new AuthFeature(() => new CustomUserSession(),
+            this.Plugins.Add(new AuthFeature(() => new CustomUserSession(),
                 new IAuthProvider[] {
                     new MyFacebookAuthProvider(AppSettings)
                     {
@@ -175,6 +180,10 @@ namespace ExpressBase.ServiceStack
             container.Register<IUserAuthRepository>(c => new EbRedisAuthRepository(c.Resolve<IRedisClientsManager>()));
 
             container.Register<JwtAuthProvider>(jwtprovider);
+            container.RegisterAutoWiredAs<MemoryChatHistory, IChatHistory>();
+
+            container.Register<IServerEvents>(c => new RedisServerEvents(c.Resolve<IRedisClientsManager>()));
+            container.Resolve<IServerEvents>().Start();
 
             //container.Register<ApiKeyAuthProvider>(apikeyauthprovider);
 
@@ -212,7 +221,7 @@ namespace ExpressBase.ServiceStack
             });
 
             //Add a request filter to check if the user has a session initialized
-                    this.GlobalRequestFilters.Add((req, res, requestDto) =>
+            this.GlobalRequestFilters.Add((req, res, requestDto) =>
             {
                 ILog log = LogManager.GetLogger(GetType());
 
@@ -236,7 +245,8 @@ namespace ExpressBase.ServiceStack
                 }
                 try
                 {
-                    if (requestDto != null && requestDto.GetType() != typeof(Authenticate) && requestDto.GetType() != typeof(GetAccessToken) && requestDto.GetType() != typeof(UniqueRequest) && requestDto.GetType() != typeof(CreateAccountRequest)&& requestDto.GetType() != typeof(EmailServicesMqRequest) && requestDto.GetType() != typeof(RegisterRequest) && requestDto.GetType() != typeof(AutoGenEbIdRequest))
+                    if (requestDto != null && requestDto.GetType() != typeof(Authenticate) && requestDto.GetType() != typeof(GetAccessToken) && requestDto.GetType() != typeof(UniqueRequest) && requestDto.GetType() != typeof(CreateAccountRequest)&& requestDto.GetType() != typeof(EmailServicesMqRequest) && requestDto.GetType() != typeof(RegisterRequest) && requestDto.GetType() != typeof(AutoGenEbIdRequest)
+                    && requestDto.GetType() != typeof(GetEventSubscribers) && requestDto.GetType() != typeof(GetChatHistory) && requestDto.GetType() != typeof(PostChatToChannel))
                     {
                         var auth = req.Headers[HttpHeaders.Authorization];
                         if (string.IsNullOrEmpty(auth))
@@ -323,4 +333,5 @@ namespace ExpressBase.ServiceStack
             //});
         }
     }
+
 }
