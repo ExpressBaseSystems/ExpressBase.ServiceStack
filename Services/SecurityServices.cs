@@ -170,7 +170,11 @@ namespace ExpressBase.ServiceStack.Services
 			resp.Role2RoleList = new List<Eb_RoleToRole>();
 			foreach (EbDataRow dr in ds.Tables[2].Rows)
 			{
-				resp.Role2RoleList.Add(new Eb_RoleToRole() { Id = Convert.ToInt32(dr[0]), Dominant = Convert.ToInt32(dr[1]), Dependent = Convert.ToInt32(dr[2]) });
+				resp.Role2RoleList.Add(new Eb_RoleToRole() {
+					Id = Convert.ToInt32(dr[0]),
+					Dominant = Convert.ToInt32(dr[1]),
+					Dependent = Convert.ToInt32(dr[2])
+				});
 			}
 
 
@@ -514,11 +518,22 @@ namespace ExpressBase.ServiceStack.Services
 				//---------------
 				foreach (EbDataRow dr in ds.Tables[2].Rows)
 				{
-                    _roleList.Add(new Eb_RoleObject() { Id = Convert.ToInt32(dr[0]), Name = dr[1].ToString(), Description = dr[2].ToString(), App_Id = Convert.ToInt32(dr[3]), Is_Anonymous = (dr[4].ToString() == "T") ? true : false });
+                    _roleList.Add(new Eb_RoleObject() {
+						Id = Convert.ToInt32(dr[0]),
+						Name = dr[1].ToString(),
+						Description = dr[2].ToString(),
+						App_Id = Convert.ToInt32(dr[3]),
+						Is_Anonymous = (dr[4].ToString() == "T") ? true : false,
+						Is_System = false
+					});
 				}
 				foreach (EbDataRow dr in ds.Tables[3].Rows)
 				{
-					_r2rList.Add(new Eb_RoleToRole() { Id = Convert.ToInt32(dr[0]), Dominant= Convert.ToInt32(dr[1]), Dependent= Convert.ToInt32(dr[2])});
+					_r2rList.Add(new Eb_RoleToRole() {
+						Id = Convert.ToInt32(dr[0]),
+						Dominant = Convert.ToInt32(dr[1]),
+						Dependent = Convert.ToInt32(dr[2])
+					});
 				}
 
 			}
@@ -538,7 +553,12 @@ namespace ExpressBase.ServiceStack.Services
 					Permission.Add(dr[0].ToString());
 				foreach (EbDataRow dr in ds.Tables[7].Rows)
 				{
-					_usersList.Add(new Eb_Users() { Id = Convert.ToInt32(dr[0]), Name= dr[1].ToString(),Email= dr[2].ToString(), Role2User_Id= Convert.ToInt32(dr[3]) });
+					_usersList.Add(new Eb_Users() {
+						Id = Convert.ToInt32(dr[0]),
+						Name = dr[1].ToString(),
+						Email = dr[2].ToString(),
+						Role2User_Id = Convert.ToInt32(dr[3])
+					});
 				}
 			}
 			return new GetManageRolesResponse() { ApplicationCollection = _applicationCollection, SelectedRoleInfo = RoleInfo, PermissionList = Permission, RoleList = _roleList, Role2RoleList = _r2rList, UsersList = _usersList };
