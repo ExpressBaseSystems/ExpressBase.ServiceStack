@@ -233,7 +233,7 @@ WHERE
             ds.Relations = "";
             ds.IsSave = false;
             ds.Tags = "";
-            ds.Apps = "";
+            ds.Apps = request.Apps;
             ds.TenantAccountId = request.TenantAccountId;
             ds.WhichConsole = request.WhichConsole;
             ds.UserId = request.UserId;
@@ -244,14 +244,14 @@ WHERE
             var dvobj = new EbTableVisualization();
             dvobj.DataSourceRefId = refid;
             var ds1 = new EbObject_Create_New_ObjectRequest();
-            ds1.Name = request.BotObj.Name + "_response"; ;
+            ds1.Name = request.BotObj.Name + "_response"; 
             ds1.Description = "desc";
             ds1.Json = EbSerializers.Json_Serialize(dvobj);
             ds1.Status = ObjectLifeCycleStatus.Live;
             ds1.Relations = refid;
             ds1.IsSave = false;
             ds1.Tags = "";
-            ds1.Apps = "Second App";
+            ds1.Apps = request.Apps;
             ds1.TenantAccountId = request.TenantAccountId;
             ds1.WhichConsole = request.WhichConsole;
             ds1.UserId = request.UserId;
