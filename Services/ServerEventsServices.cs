@@ -212,6 +212,9 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     // Notify everyone in the channel for public messages
                     ServerEvents.NotifyChannel("notifications", "cmd.notify", msg);
+                    ServerEvents.NotifyUserId("eb_dbpjl5pgxleq20180130063835-binivarghese@gmail.com-uc", "cmd.notify", msg);
+                    ServerEvents.NotifySubscription("U528cJKnu6NaBQ2fNyl8", "cmd.notify", msg);
+
                 }
 
                 if (!msg.Private)
