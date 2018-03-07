@@ -222,6 +222,42 @@ WHERE
             }
             else { }
             //Alter
+
+            var dsobj = new EbDataSource();
+            dsobj.Sql = "SELECT * FROM @tbl".Replace("@tbl", request.BotObj.TableName);
+            var ds = new EbObject_Create_New_ObjectRequest();
+            ds.Name = request.BotObj.Name+"_datasource";
+            ds.Description = "desc";
+            ds.Json = EbSerializers.Json_Serialize(dsobj);
+            ds.Status = ObjectLifeCycleStatus.Live;
+            ds.Relations = "";
+            ds.IsSave = false;
+            ds.Tags = "";
+            ds.Apps = "";
+            ds.TenantAccountId = request.TenantAccountId;
+            ds.WhichConsole = request.WhichConsole;
+            ds.UserId = request.UserId;
+            var myService = base.ResolveService<EbObjectService>();
+            var res =myService.Post(ds);
+            var refid = res.RefId;
+
+            var dvobj = new EbTableVisualization();
+            dvobj.DataSourceRefId = refid;
+            var ds1 = new EbObject_Create_New_ObjectRequest();
+            ds1.Name = request.BotObj.Name + "_response"; ;
+            ds1.Description = "desc";
+            ds1.Json = EbSerializers.Json_Serialize(dvobj);
+            ds1.Status = ObjectLifeCycleStatus.Live;
+            ds1.Relations = refid;
+            ds1.IsSave = false;
+            ds1.Tags = "";
+            ds1.Apps = "Second App";
+            ds1.TenantAccountId = request.TenantAccountId;
+            ds1.WhichConsole = request.WhichConsole;
+            ds1.UserId = request.UserId;
+            var myService1 = base.ResolveService<EbObjectService>();
+            var res1 = myService.Post(ds1);
+            var refid1 = res.RefId;
             return new CreateBotFormTableResponse();
         }
 
