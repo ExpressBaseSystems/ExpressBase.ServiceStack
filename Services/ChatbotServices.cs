@@ -244,7 +244,7 @@ WHERE
             var dvobj = new EbTableVisualization();
             dvobj.DataSourceRefId = refid;
             var ds1 = new EbObject_Create_New_ObjectRequest();
-            ds1.Name = request.BotObj.Name + "_response"; ;
+            ds1.Name = request.BotObj.Name + "_response"; 
             ds1.Description = "desc";
             ds1.Json = EbSerializers.Json_Serialize(dvobj);
             ds1.Status = ObjectLifeCycleStatus.Live;
