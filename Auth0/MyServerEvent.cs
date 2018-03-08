@@ -11,16 +11,14 @@
 //    {
 //        public MyRedisServerEvents(IRedisPubSubServer redisPubSub) : base(redisPubSub)
 //        {
+            
 //        }
 
 //        public MyRedisServerEvents(IRedisClientsManager clientsManager) : base(clientsManager)
 //        {
 //        }
 
-//        public override void NotifyUserId(string userId, string selector, object message, string channel = null)
-//        {
-
-//        }
+        
 //    }
 
 

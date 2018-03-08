@@ -697,7 +697,7 @@ WHERE
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@obj_name", EbDbTypes.String, request.Name.Replace("\n", "").Replace("\t", "").Replace("\r", "")));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@obj_type", EbDbTypes.Int32, GetObjectType(obj)));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@obj_desc", EbDbTypes.String, (!string.IsNullOrEmpty(request.Description)) ? request.Description : string.Empty));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@obj_cur_status", EbDbTypes.Int32, ObjectLifeCycleStatus.Dev));//request.Status
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@obj_cur_status", EbDbTypes.Int32, request.Status));//request.Status//changed for bot
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@obj_json", EbDbTypes.Json, request.Json));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@commit_uid", EbDbTypes.Int32, request.UserId));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@src_pid", EbDbTypes.String, request.TenantAccountId));
@@ -713,7 +713,7 @@ WHERE
                     if (obj is EbBotForm)
                     {
                         var myService = base.ResolveService<ChatbotServices>();
-                        var res = (CreateBotFormTableResponse)myService.Any(new CreateBotFormTableRequest() { BotObj = obj });
+                        var res = (CreateBotFormTableResponse)myService.Any(new CreateBotFormTableRequest() { BotObj = obj, Apps = request.Apps, TenantAccountId = request.TenantAccountId, UserId = request.UserId, WhichConsole = request.WhichConsole });
                     }
                 }
             }
