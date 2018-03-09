@@ -113,15 +113,15 @@ namespace ExpressBase.ServiceStack
                 PersistSession = true,
                 SessionExpiry = TimeSpan.FromHours(12)
             };
-//            var apikeyauthprovider = new ApiKeyAuthProvider(AppSettings)
-//            {
-//#if (DEBUG)
-//                RequireSecureConnection = false,
-//                //EncryptPayload = true,
-//#endif
-//                PersistSession = true,
-//                SessionExpiry = TimeSpan.FromHours(12)
-//            };
+            //            var apikeyauthprovider = new ApiKeyAuthProvider(AppSettings)
+            //            {
+            //#if (DEBUG)
+            //                RequireSecureConnection = false,
+            //                //EncryptPayload = true,
+            //#endif
+            //                PersistSession = true,
+            //                SessionExpiry = TimeSpan.FromHours(12)
+            //            };
 
             this.Plugins.Add(new CorsFeature(allowedHeaders: "Content-Type, Authorization, Access-Control-Allow-Origin, Access-Control-Allow-Credentials"));
             this.Plugins.Add(new ProtoBufFormat());
@@ -177,6 +177,12 @@ namespace ExpressBase.ServiceStack
                Environment.GetEnvironmentVariable(EnvironmentConstants.EB_REDIS_PORT));
 
             container.Register<IRedisClientsManager>(c => new RedisManagerPool(redisConnectionString));
+
+            container.Register<IJsonServiceClient>(c => {
+                var req = HostContext.TryGetCurrentRequest();
+                return new JsonServiceClient("http://localhost:7000") { BearerToken = (req != null) ? req.Headers[HttpHeaders.Authorization] : null };
+             });
+
             container.Register<IUserAuthRepository>(c => new EbRedisAuthRepository(c.Resolve<IRedisClientsManager>()));
 
             container.Register<JwtAuthProvider>(jwtprovider);
@@ -202,7 +208,7 @@ namespace ExpressBase.ServiceStack
             //mqServer.RegisterHandler<SMSSentMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<RefreshSolutionConnectionsMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<SMSStatusLogMqRequest>(base.ExecuteMessage);
-            //mqServer.RegisterHandler<UploadFileMqRequest>(base.ExecuteMessage);
+            //mqServer.RegisterHandler<UploadFileMqRequestTest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<ImageResizeMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<FileMetaPersistMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<SlackPostMqRequest>(base.ExecuteMessage);
@@ -279,6 +285,13 @@ namespace ExpressBase.ServiceStack
                                     RequestContext.Instance.Items.Add("wc", c.Value);
                                     if (requestDto is EbServiceStackRequest)
                                         (requestDto as EbServiceStackRequest).WhichConsole = c.Value.ToString();
+                                    continue;
+                                }
+                                if (c.Type == "sub" && !string.IsNullOrEmpty(c.Value))
+                                {
+                                    RequestContext.Instance.Items.Add("sub", c.Value);
+                                    if (requestDto is EbServiceStackRequest)
+                                        (requestDto as EbServiceStackRequest).UserAuthId = c.Value.ToString();
                                     continue;
                                 }
                             }

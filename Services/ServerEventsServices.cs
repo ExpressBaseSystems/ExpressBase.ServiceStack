@@ -1,4 +1,5 @@
-﻿using ServiceStack;
+﻿using ExpressBase.Objects.ServerEvents_Artifacts;
+using ServiceStack;
 using ServiceStack.Configuration;
 using System;
 using System.Collections.Generic;
@@ -196,11 +197,31 @@ namespace ExpressBase.ServiceStack.Services
                     // Mark the message as private so it can be displayed differently in Chat
                     msg.Private = true;
                     // Send the message to the specific user Id
+
+                    JsonServiceClient ServerEventsServiceClient = new JsonServiceClient("http://localhost:7000");
+
+                    ServerEventsServiceClient.BearerToken = this.Request.Authorization;
+
                     var subscriptionInfos = ServerEvents.GetSubscriptionInfosByUserId("eb_dbpjl5pgxleq20180130063835-binivarghese@gmail.com-uc");
                     //ServerEvents.NotifyUserId("4545", "cmd.notify", msg);
                     foreach(var x in subscriptionInfos)
                         ServerEvents.NotifySubscription(x.SubscriptionId, "cmd.notify", msg);
-                    
+                    var usr = ServerEventsServiceClient.Post<bool>(
+                        new NotifyUserIdRequest
+                        {
+                            Msg = msg.ToJson(),
+                            Selector = "cmd.notify",
+                            ToUserAuthId = "eb_dbpjl5pgxleq20180130063835-binivarghese@gmail.com-uc"
+                        }
+                        );
+                    var chn = ServerEventsServiceClient.Post<bool>(
+                        new NotifyChannelRequest
+                        {
+                            Msg = msg.ToJson(),
+                            Selector = "cmd.notify",
+                            ToChannel = new string[] { "notifications", "test"},
+                        }
+                        );
                     // Also provide UI feedback to the user sending the private message so they
                     // can see what was sent. Relay it to all senders active subscriptions 
                     var toSubs = ServerEvents.GetSubscriptionInfosByUserId(request.ToUserId);

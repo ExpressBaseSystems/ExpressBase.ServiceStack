@@ -4,6 +4,7 @@ using ExpressBase.Common.Data;
 using ExpressBase.Common.EbServiceStack;
 using ExpressBase.Common.EbServiceStack.ReqNRes;
 using ExpressBase.Common.Structures;
+using ExpressBase.Objects.ServerEvents_Artifacts;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using MongoDB.Bson;
 using ServiceStack;
@@ -42,7 +43,7 @@ namespace ExpressBase.ServiceStack.MQServices
             {
                 try
                 {
-                    this.MessageProducer3.Publish(new UploadFileMqRequest
+                    this.MessageProducer3.Publish(new UploadFileMqRequestTest
                     {
                         FileDetails = new FileMeta
                         {
@@ -215,7 +216,7 @@ namespace ExpressBase.ServiceStack.MQServices
             {
                 try
                 {
-                    this.MessageProducer3.Publish(new UploadFileMqRequest
+                    this.MessageProducer3.Publish(new UploadFileMqRequestTest
                     {
                         FileDetails = new FileMeta
                         {
@@ -227,7 +228,9 @@ namespace ExpressBase.ServiceStack.MQServices
                         FileByte = request.ImageByte,
                         BucketName = bucketName,
                         TenantAccountId = request.TenantAccountId,
-                        UserId = request.UserId
+                        UserId = request.UserId,
+                        UserAuthId = request.UserAuthId,
+                        Token = this.Request.Authorization
                     });
                     return "Successfully Uploaded to MQ";
                 }
@@ -298,9 +301,9 @@ namespace ExpressBase.ServiceStack.MQServices
         [Restrict(InternalOnly = true)]
         public class FileServiceInternal : EbBaseService
         {
-            public FileServiceInternal(IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_mqp, _mqc) { }
+            public FileServiceInternal(IMessageProducer _mqp, IMessageQueueClient _mqc, IJsonServiceClient _sec) : base(_mqp, _mqc, _sec) { }
 
-            public string Post(UploadFileMqRequest request)
+            public string Post(UploadFileMqRequestTest request)
             {
                 try
                 {
@@ -313,7 +316,14 @@ namespace ExpressBase.ServiceStack.MQServices
                         request.BucketName
                         ).
                         ToString();
+                    this.EbSeClient.BearerToken = request.Token;
 
+                    this.EbSeClient.Post<bool>(new NotifyUserIdRequest
+                    {
+                        Msg = Id,
+                        Selector = "cmd.onUploadSuccess",
+                        ToUserAuthId = request.UserAuthId,
+                    });
                     this.MessageProducer3.Publish(new FileMetaPersistMqRequest
                     {
                         FileDetails = new FileMeta
@@ -356,7 +366,7 @@ namespace ExpressBase.ServiceStack.MQServices
 
             public string Post(ImageResizeMqRequest request)
             {
-                UploadFileMqRequest uploadFileRequest = new UploadFileMqRequest();
+                UploadFileMqRequestTest uploadFileRequest = new UploadFileMqRequestTest();
                 uploadFileRequest.TenantAccountId = request.TenantAccountId;
                 uploadFileRequest.UserId = request.UserId;
 
