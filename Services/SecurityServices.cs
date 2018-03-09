@@ -135,7 +135,7 @@ namespace ExpressBase.ServiceStack.Services
 						SELECT id, role1_id, role2_id FROM eb_role2role WHERE eb_del = 'F';";
 			if (request.Id > 1)
 			{
-				sql += @"SELECT fullname,nickname,email,alternateemail,dob,sex,phnoprimary,phnosecondary,landline,phextension,fbid,fbname,statusid,hide
+				sql += @"SELECT fullname,nickname,email,alternateemail,dob,sex,phnoprimary,phnosecondary,landline,phextension,fbid,fbname,statusid,hide,preferencesjson
 						FROM eb_users WHERE id = :id;
 						SELECT role_id FROM eb_role2user WHERE user_id = :id AND eb_del = 'F';
 						SELECT groupid FROM eb_user2usergroup WHERE userid = :id AND eb_del = 'F';";
@@ -198,6 +198,7 @@ namespace ExpressBase.ServiceStack.Services
 					resp.UserData.Add("fbname", dr[11].ToString());
 					resp.UserData.Add("statusid", dr[12].ToString());
 					resp.UserData.Add("hide", dr[13].ToString());
+					resp.UserData.Add("preference", dr[14].ToString());
 				}
 
 				resp.UserRoles = new List<int>();

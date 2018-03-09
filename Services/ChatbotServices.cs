@@ -3,6 +3,7 @@ using ExpressBase.Common.Data;
 using ExpressBase.Common.Objects;
 using ExpressBase.Common.Structures;
 using ExpressBase.Objects;
+using ExpressBase.Objects.Objects.DVRelated;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ServiceStack;
 using System;
@@ -198,22 +199,35 @@ WHERE
             DbParameter[] parameter1 = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("@tbl", EbDbTypes.String, request.BotObj.TableName.ToLower()) };
             var rslt = this.EbConnectionFactory.ObjectsDB.IsTableExists(qry, parameter1);
             string cols = "";
+            var Columns = new DVColumnCollection();
+            var pos = 0;
             foreach (EbControl control in request.BotObj.Controls)
             {
+                DVBaseColumn _col = null;
                 if (control is EbNumeric)
                 {
                     cols += control.Name + " integer,";
+                    _col = new DVNumericColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = System.Data.DbType.Int32, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
                 }
                 else if (control is EbTextBox)
                 {
                     cols += control.Name + " text,";
+                    _col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = System.Data.DbType.String, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
                 }
                 else if (control is EbDate)
                 {
                     cols += control.Name + " Date,";
+                    _col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = System.Data.DbType.DateTime, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
+                }
+                else if (control is EbInputGeoLocation)
+                {
+                    cols += control.Name + " text,";
+                    _col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = System.Data.DbType.String, bVisible = true, sWidth = "100px", ClassName = "dt-body-right tdheight", RenderAs = StringRenderType.Marker};
                 }
                 //EbDbType dbType = (EbDbType)control.GetType().GetPublicStaticField("EbDbType").GetValue(null);
                 //cols += control.Name + " " + + ", ";
+                Columns.Add(_col);
+                pos++;
             }
             if (!rslt)
             {
@@ -243,6 +257,8 @@ WHERE
 
             var dvobj = new EbTableVisualization();
             dvobj.DataSourceRefId = refid;
+            dvobj.Columns = Columns;
+            dvobj.DSColumns = Columns;
             var ds1 = new EbObject_Create_New_ObjectRequest();
             ds1.Name = request.BotObj.Name + "_response"; 
             ds1.Description = "desc";
@@ -254,10 +270,10 @@ WHERE
             ds1.Apps = request.Apps;
             ds1.TenantAccountId = request.TenantAccountId;
             ds1.WhichConsole = request.WhichConsole;
-            ds1.UserId = request.UserId;
-            var myService1 = base.ResolveService<EbObjectService>();
+            ds1.UserId = request.UserId; 
             var res1 = myService.Post(ds1);
             var refid1 = res.RefId;
+
             return new CreateBotFormTableResponse();
         }
 
