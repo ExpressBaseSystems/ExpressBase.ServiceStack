@@ -43,7 +43,7 @@ namespace ExpressBase.ServiceStack.MQServices
             {
                 try
                 {
-                    this.MessageProducer3.Publish(new UploadFileMqRequestTest
+                    this.MessageProducer3.Publish(new UploadFileMqRequest
                     {
                         FileDetails = new FileMeta
                         {
@@ -216,7 +216,7 @@ namespace ExpressBase.ServiceStack.MQServices
             {
                 try
                 {
-                    this.MessageProducer3.Publish(new UploadFileMqRequestTest
+                    this.MessageProducer3.Publish(new UploadFileMqRequest
                     {
                         FileDetails = new FileMeta
                         {
@@ -303,7 +303,7 @@ namespace ExpressBase.ServiceStack.MQServices
         {
             public FileServiceInternal(IMessageProducer _mqp, IMessageQueueClient _mqc, IJsonServiceClient _sec) : base(_mqp, _mqc, _sec) { }
 
-            public string Post(UploadFileMqRequestTest request)
+            public string Post(UploadFileMqRequest request)
             {
                 try
                 {
@@ -366,7 +366,7 @@ namespace ExpressBase.ServiceStack.MQServices
 
             public string Post(ImageResizeMqRequest request)
             {
-                UploadFileMqRequestTest uploadFileRequest = new UploadFileMqRequestTest();
+                UploadFileMqRequest uploadFileRequest = new UploadFileMqRequest();
                 uploadFileRequest.TenantAccountId = request.TenantAccountId;
                 uploadFileRequest.UserId = request.UserId;
 
