@@ -196,8 +196,11 @@ namespace ExpressBase.ServiceStack.Services
                     // Mark the message as private so it can be displayed differently in Chat
                     msg.Private = true;
                     // Send the message to the specific user Id
-                    ServerEvents.NotifyUserId(request.ToUserId, request.Selector, msg);
-
+                    var subscriptionInfos = ServerEvents.GetSubscriptionInfosByUserId("eb_dbpjl5pgxleq20180130063835-binivarghese@gmail.com-uc");
+                    //ServerEvents.NotifyUserId("4545", "cmd.notify", msg);
+                    foreach(var x in subscriptionInfos)
+                        ServerEvents.NotifySubscription(x.SubscriptionId, "cmd.notify", msg);
+                    
                     // Also provide UI feedback to the user sending the private message so they
                     // can see what was sent. Relay it to all senders active subscriptions 
                     var toSubs = ServerEvents.GetSubscriptionInfosByUserId(request.ToUserId);
@@ -211,7 +214,7 @@ namespace ExpressBase.ServiceStack.Services
                 else
                 {
                     // Notify everyone in the channel for public messages
-                    ServerEvents.NotifyChannel("notifications", "cmd.notify", msg);
+                    ServerEvents.NotifyChannel(request.Channel, request.Selector, msg);
                 }
 
                 if (!msg.Private)
