@@ -2,6 +2,7 @@
 using ExpressBase.Common.Constants;
 using ExpressBase.Common.Data;
 using ExpressBase.Common.Extensions;
+using ExpressBase.Common.Objects;
 using ExpressBase.Common.Structures;
 using ExpressBase.Data;
 using ExpressBase.Objects;
@@ -134,6 +135,7 @@ namespace ExpressBase.ServiceStack.Services
                     cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("appid", EbDbTypes.String, request.Colvalues["AppId"]));
                     var res = cmd.ExecuteScalar();
                     resp = new CreateApplicationResponse(){ id = Convert.ToInt32(res) };
+                    //DvforAnonymousUser(request, Convert.ToInt32(res));
                 }
                 else
                     resp = new CreateApplicationResponse(){ id = 0 };
@@ -200,6 +202,49 @@ namespace ExpressBase.ServiceStack.Services
                 };
             }
             return resp;
+        }
+
+        public void DvforAnonymousUser(CreateApplicationRequest request, int appid)
+        {
+            string sql =string.Format(@"SELECT A.id, A.fullname, A.email, A.phoneno, A.socialid, A.firstvisit, A.lastvisit, A.totalvisits, B.applicationname 
+								FROM eb_usersanonymous A, eb_applications B WHERE A.appid = B.id AND A.ebuserid = 1 AND A.appid = {0}",13);
+
+            var dsobj = new EbDataSource();
+            dsobj.Sql = sql;
+            var ds = new EbObject_Create_New_ObjectRequest();
+            ds.Name = request.Colvalues["AppName"]+"_datasource";
+            ds.Description = "desc";
+            ds.Json = EbSerializers.Json_Serialize(dsobj);
+            ds.Status = ObjectLifeCycleStatus.Live;
+            ds.Relations = "";
+            ds.IsSave = false;
+            ds.Tags = "";
+            ds.Apps = request.Colvalues["AppName"].ToString();
+            ds.TenantAccountId = request.TenantAccountId;
+            //ds.WhichConsole = request.WhichConsole;
+            ds.UserId = request.UserId;
+            var myService = base.ResolveService<EbObjectService>();
+            var res = myService.Post(ds);
+            var refid = res.RefId;
+
+            var dvobj = new EbTableVisualization();
+            dvobj.DataSourceRefId = refid;
+            //dvobj.Columns = Columns;
+            //dvobj.DSColumns = Columns;
+            var ds1 = new EbObject_Create_New_ObjectRequest();
+            ds1.Name = request.Colvalues["AppName"]+"_response";
+            ds1.Description = "desc";
+            ds1.Json = EbSerializers.Json_Serialize(dvobj);
+            ds1.Status = ObjectLifeCycleStatus.Live;
+            ds1.Relations = refid;
+            ds1.IsSave = false;
+            ds1.Tags = "";
+            ds1.Apps = request.Colvalues["AppName"].ToString();
+            ds1.TenantAccountId = request.TenantAccountId;
+            //ds1.WhichConsole = request.WhichConsole;
+            ds1.UserId = request.UserId;
+            var res1 = myService.Post(ds1);
+            var refid1 = res.RefId;
         }
 
         //public DataBaseConfigResponse Post(DataBaseConfigRequest request)
