@@ -135,7 +135,7 @@ namespace ExpressBase.ServiceStack.Services
 						SELECT id, role1_id, role2_id FROM eb_role2role WHERE eb_del = 'F';";
 			if (request.Id > 1)
 			{
-				sql += @"SELECT fullname,nickname,email,alternateemail,dob,sex,phnoprimary,phnosecondary,landline,phextension,fbid,fbname,statusid,hide
+				sql += @"SELECT fullname,nickname,email,alternateemail,dob,sex,phnoprimary,phnosecondary,landline,phextension,fbid,fbname,statusid,hide,preferencesjson
 						FROM eb_users WHERE id = :id;
 						SELECT role_id FROM eb_role2user WHERE user_id = :id AND eb_del = 'F';
 						SELECT groupid FROM eb_user2usergroup WHERE userid = :id AND eb_del = 'F';";
@@ -170,7 +170,11 @@ namespace ExpressBase.ServiceStack.Services
 			resp.Role2RoleList = new List<Eb_RoleToRole>();
 			foreach (EbDataRow dr in ds.Tables[2].Rows)
 			{
-				resp.Role2RoleList.Add(new Eb_RoleToRole() { Id = Convert.ToInt32(dr[0]), Dominant = Convert.ToInt32(dr[1]), Dependent = Convert.ToInt32(dr[2]) });
+				resp.Role2RoleList.Add(new Eb_RoleToRole() {
+					Id = Convert.ToInt32(dr[0]),
+					Dominant = Convert.ToInt32(dr[1]),
+					Dependent = Convert.ToInt32(dr[2])
+				});
 			}
 
 
@@ -194,6 +198,7 @@ namespace ExpressBase.ServiceStack.Services
 					resp.UserData.Add("fbname", dr[11].ToString());
 					resp.UserData.Add("statusid", dr[12].ToString());
 					resp.UserData.Add("hide", dr[13].ToString());
+					resp.UserData.Add("preference", dr[14].ToString());
 				}
 
 				resp.UserRoles = new List<int>();
@@ -277,7 +282,8 @@ namespace ExpressBase.ServiceStack.Services
 						this.EbConnectionFactory.DataDB.GetNewParameter("groups", EbDbTypes.String, (request.UserGroups != string.Empty? request.UserGroups : string.Empty)),
 						this.EbConnectionFactory.DataDB.GetNewParameter("statusid", EbDbTypes.Int32, Convert.ToInt32(request.StatusId)),
 						this.EbConnectionFactory.DataDB.GetNewParameter("hide", EbDbTypes.String, request.Hide),
-						this.EbConnectionFactory.DataDB.GetNewParameter("anonymoususerid", EbDbTypes.Int32, request.AnonymousUserId)
+						this.EbConnectionFactory.DataDB.GetNewParameter("anonymoususerid", EbDbTypes.Int32, request.AnonymousUserId),
+						this.EbConnectionFactory.DataDB.GetNewParameter("preference", EbDbTypes.String, request.Preference),
 					};
 				
 				EbDataSet dt = this.EbConnectionFactory.DataDB.DoQueries(sql, parameters);
@@ -514,11 +520,22 @@ namespace ExpressBase.ServiceStack.Services
 				//---------------
 				foreach (EbDataRow dr in ds.Tables[2].Rows)
 				{
-                    _roleList.Add(new Eb_RoleObject() { Id = Convert.ToInt32(dr[0]), Name = dr[1].ToString(), Description = dr[2].ToString(), App_Id = Convert.ToInt32(dr[3]), Is_Anonymous = (dr[4].ToString() == "T") ? true : false });
+                    _roleList.Add(new Eb_RoleObject() {
+						Id = Convert.ToInt32(dr[0]),
+						Name = dr[1].ToString(),
+						Description = dr[2].ToString(),
+						App_Id = Convert.ToInt32(dr[3]),
+						Is_Anonymous = (dr[4].ToString() == "T") ? true : false,
+						Is_System = false
+					});
 				}
 				foreach (EbDataRow dr in ds.Tables[3].Rows)
 				{
-					_r2rList.Add(new Eb_RoleToRole() { Id = Convert.ToInt32(dr[0]), Dominant= Convert.ToInt32(dr[1]), Dependent= Convert.ToInt32(dr[2])});
+					_r2rList.Add(new Eb_RoleToRole() {
+						Id = Convert.ToInt32(dr[0]),
+						Dominant = Convert.ToInt32(dr[1]),
+						Dependent = Convert.ToInt32(dr[2])
+					});
 				}
 
 			}
@@ -538,7 +555,12 @@ namespace ExpressBase.ServiceStack.Services
 					Permission.Add(dr[0].ToString());
 				foreach (EbDataRow dr in ds.Tables[7].Rows)
 				{
-					_usersList.Add(new Eb_Users() { Id = Convert.ToInt32(dr[0]), Name= dr[1].ToString(),Email= dr[2].ToString(), Role2User_Id= Convert.ToInt32(dr[3]) });
+					_usersList.Add(new Eb_Users() {
+						Id = Convert.ToInt32(dr[0]),
+						Name = dr[1].ToString(),
+						Email = dr[2].ToString(),
+						Role2User_Id = Convert.ToInt32(dr[3])
+					});
 				}
 			}
 			return new GetManageRolesResponse() { ApplicationCollection = _applicationCollection, SelectedRoleInfo = RoleInfo, PermissionList = Permission, RoleList = _roleList, Role2RoleList = _r2rList, UsersList = _usersList };

@@ -66,44 +66,140 @@ namespace ExpressBase.ServiceStack.Services
                 con.Open();
                 var con_trans = con.BeginTransaction();
 
-                //.......create user table sequence...............
-                string path = "ExpressBase.Common.SqlScripts.PostGreSql.DataDb.Alter_Eb_User_Sequences.sql";
+                //.............DataDb Tables
+
+                string path = "ExpressBase.Common.SqlScripts.PostGreSql.DataDb.TableCreate.eb_users.sql";
                 bool b1 = CreateOrAlter_Structure(request, con, path);
 
-                //.........create user table........................
-                path = "ExpressBase.Common.SqlScripts.PostGreSql.DataDb.Create_Eb_User.sql";
+                path = "ExpressBase.Common.SqlScripts.PostGreSql.DataDb.TableCreate.eb_usergroup.sql";
                 bool b2 = CreateOrAlter_Structure(request, con, path);
 
-                //.......create user table index...............
-                path = "ExpressBase.Common.SqlScripts.PostGreSql.DataDb.Create_Eb_User_Indexes.sql";
+                path = "ExpressBase.Common.SqlScripts.PostGreSql.DataDb.TableCreate.eb_roles.sql";
                 bool b3 = CreateOrAlter_Structure(request, con, path);
 
-                //.......create user table Functions...............
-                path = "ExpressBase.Common.SqlScripts.PostGreSql.DataDb.Create_Eb_User_Functions.sql";
+                path = "ExpressBase.Common.SqlScripts.PostGreSql.DataDb.TableCreate.eb_userstatus.sql";
                 bool b4 = CreateOrAlter_Structure(request, con, path);
 
-                //...........*************OBJECT TABLE***************...........
-
-                //...........create object table sequences...........
-                path = "ExpressBase.Common.SqlScripts.PostGreSql.ObjectsDb.Alter_Eb_Object_Sequences.sql";
+                path = "ExpressBase.Common.SqlScripts.PostGreSql.DataDb.TableCreate.eb_useranonymous.sql";
                 bool b5 = CreateOrAlter_Structure(request, con, path);
 
-                //.......create object tables..............
-                path = "ExpressBase.Common.SqlScripts.PostGreSql.ObjectsDb.Create_Eb_Objects.sql";
+                path = "ExpressBase.Common.SqlScripts.PostGreSql.DataDb.TableCreate.eb_role2user.sql";
                 bool b6 = CreateOrAlter_Structure(request, con, path);
 
-                //.......create object table index...........
-                path = "ExpressBase.Common.SqlScripts.PostGreSql.ObjectsDb.Create_Eb_Object_Indexes.sql";
+                path = "ExpressBase.Common.SqlScripts.PostGreSql.DataDb.TableCreate.eb_role2role.sql";
                 bool b7 = CreateOrAlter_Structure(request, con, path);
 
-                //.......create object table functions...........
-                path = "ExpressBase.Common.SqlScripts.PostGreSql.ObjectsDb.Create_Eb_Object_Functions.sql";
+                path = "ExpressBase.Common.SqlScripts.PostGreSql.DataDb.TableCreate.eb_role2permission.sql";
                 bool b8 = CreateOrAlter_Structure(request, con, path);
 
-                //.....insert into user tables.........
-                bool b9 = InsertIntoTables(request, con);
+                path = "ExpressBase.Common.SqlScripts.PostGreSql.DataDb.TableCreate.eb_user2usergroup.sql";
+                bool b9 = CreateOrAlter_Structure(request, con, path);
 
-                if (b1 & b2 & b3 & b4 & b5 & b6 & b7 & b8 & b9)
+                //.............DataDb Functions
+
+                path = "ExpressBase.Common.SqlScripts.PostGreSql.DataDb.FunctionCreate.eb_authenticate_anonymous.sql";
+                bool b10 = CreateOrAlter_Structure(request, con, path);
+
+                path = "ExpressBase.Common.SqlScripts.PostGreSql.DataDb.FunctionCreate.eb_authenticate_unified.sql";
+                bool b11 = CreateOrAlter_Structure(request, con, path);
+
+                path = "ExpressBase.Common.SqlScripts.PostGreSql.DataDb.FunctionCreate.eb_create_or_update_rbac_manageroles.sql";
+                bool b12 = CreateOrAlter_Structure(request, con, path);
+
+                path = "ExpressBase.Common.SqlScripts.PostGreSql.DataDb.FunctionCreate.eb_create_or_update_role.sql";
+                bool b13 = CreateOrAlter_Structure(request, con, path);
+
+                path = "ExpressBase.Common.SqlScripts.PostGreSql.DataDb.FunctionCreate.eb_create_or_update_role2role.sql";
+                bool b14 = CreateOrAlter_Structure(request, con, path);
+
+                path = "ExpressBase.Common.SqlScripts.PostGreSql.DataDb.FunctionCreate.eb_create_or_update_role2user.sql";
+                bool b15 = CreateOrAlter_Structure(request, con, path);
+
+                path = "ExpressBase.Common.SqlScripts.PostGreSql.DataDb.FunctionCreate.eb_createormodifyuserandroles.sql";
+                bool b16 = CreateOrAlter_Structure(request, con, path);
+
+                path = "ExpressBase.Common.SqlScripts.PostGreSql.DataDb.FunctionCreate.eb_createormodifyusergroup.sql";
+                bool b17 = CreateOrAlter_Structure(request, con, path);
+
+                path = "ExpressBase.Common.SqlScripts.PostGreSql.DataDb.FunctionCreate.eb_getpermissions.sql";
+                bool b18 = CreateOrAlter_Structure(request, con, path);
+
+                path = "ExpressBase.Common.SqlScripts.PostGreSql.DataDb.FunctionCreate.eb_getroles.sql";
+                bool b19 = CreateOrAlter_Structure(request, con, path);
+
+                //.............ObjectsDb Tables
+
+                path = "ExpressBase.Common.SqlScripts.PostGreSql.ObjectsDb.TableCreate.eb_applications.sql";
+                bool b20 = CreateOrAlter_Structure(request, con, path);
+
+                path = "ExpressBase.Common.SqlScripts.PostGreSql.ObjectsDb.TableCreate.eb_bots.sql";
+                bool b21 = CreateOrAlter_Structure(request, con, path);
+
+                path = "ExpressBase.Common.SqlScripts.PostGreSql.ObjectsDb.TableCreate.eb_files.sql";
+                bool b22 = CreateOrAlter_Structure(request, con, path);
+
+                path = "ExpressBase.Common.SqlScripts.PostGreSql.ObjectsDb.TableCreate.eb_objects.sql";
+                bool b23 = CreateOrAlter_Structure(request, con, path);
+
+                path = "ExpressBase.Common.SqlScripts.PostGreSql.ObjectsDb.TableCreate.eb_objects_relations.sql";
+                bool b24 = CreateOrAlter_Structure(request, con, path);
+
+                path = "ExpressBase.Common.SqlScripts.PostGreSql.ObjectsDb.TableCreate.eb_objects_status.sql";
+                bool b25 = CreateOrAlter_Structure(request, con, path);
+
+                path = "ExpressBase.Common.SqlScripts.PostGreSql.ObjectsDb.TableCreate.eb_objects_ver.sql";
+                bool b26 = CreateOrAlter_Structure(request, con, path);
+
+                path = "ExpressBase.Common.SqlScripts.PostGreSql.ObjectsDb.TableCreate.eb_objects2application.sql";
+                bool b27 = CreateOrAlter_Structure(request, con, path);
+
+                //.............ObjectsDb Functions
+
+                path = "ExpressBase.Common.SqlScripts.PostGreSql.ObjectsDb.FunctionCreate.eb_botdetails.sql";
+                bool b28 = CreateOrAlter_Structure(request, con, path);
+
+                path = "ExpressBase.Common.SqlScripts.PostGreSql.ObjectsDb.FunctionCreate.eb_createbot.sql";
+                bool b29 = CreateOrAlter_Structure(request, con, path);
+
+                path = "ExpressBase.Common.SqlScripts.PostGreSql.ObjectsDb.FunctionCreate.eb_objects_change_status.sql";
+                bool b30 = CreateOrAlter_Structure(request, con, path);
+
+                path = "ExpressBase.Common.SqlScripts.PostGreSql.ObjectsDb.FunctionCreate.eb_objects_commit.sql";
+                bool b31 = CreateOrAlter_Structure(request, con, path);
+
+                path = "ExpressBase.Common.SqlScripts.PostGreSql.ObjectsDb.FunctionCreate.eb_objects_create_major_version.sql";
+                bool b32 = CreateOrAlter_Structure(request, con, path);
+
+                path = "ExpressBase.Common.SqlScripts.PostGreSql.ObjectsDb.FunctionCreate.eb_objects_create_minor_version.sql";
+                bool b33 = CreateOrAlter_Structure(request, con, path);
+
+                path = "ExpressBase.Common.SqlScripts.PostGreSql.ObjectsDb.FunctionCreate.eb_objects_create_new_object.sql";
+                bool b34 = CreateOrAlter_Structure(request, con, path);
+
+                path = "ExpressBase.Common.SqlScripts.PostGreSql.ObjectsDb.FunctionCreate.eb_objects_create_patch_version.sql";
+                bool b35 = CreateOrAlter_Structure(request, con, path);
+
+                path = "ExpressBase.Common.SqlScripts.PostGreSql.ObjectsDb.FunctionCreate.eb_objects_exploreobject.sql";
+                bool b36 = CreateOrAlter_Structure(request, con, path);
+
+                path = "ExpressBase.Common.SqlScripts.PostGreSql.ObjectsDb.FunctionCreate.eb_objects_getversiontoopen.sql";
+                bool b37 = CreateOrAlter_Structure(request, con, path);
+
+                path = "ExpressBase.Common.SqlScripts.PostGreSql.ObjectsDb.FunctionCreate.eb_objects_save.sql";
+                bool b38 = CreateOrAlter_Structure(request, con, path);
+
+                path = "ExpressBase.Common.SqlScripts.PostGreSql.ObjectsDb.FunctionCreate.eb_objects_update_dashboard.sql";
+                bool b39 = CreateOrAlter_Structure(request, con, path);
+
+                path = "ExpressBase.Common.SqlScripts.PostGreSql.ObjectsDb.FunctionCreate.eb_update_rel.sql";
+                bool b40 = CreateOrAlter_Structure(request, con, path);
+
+
+                //.....insert into user tables.........
+                bool b41 = InsertIntoTables(request, con);
+
+                if (b1 & b2 & b3 & b4 & b5 & b6 & b7 & b8 & b9 & b10 & b11 & b12 & b13 & b14 & b15 & b16 & b17 & b18 & b19 & 
+                    b20 & b21 & b22 & b23 & b24 & b25 & b26 & b27 & b28 & b29 & b30 & b31 & b32 & b33 & b34 & b35 & b36 & b37 & b38 & b39 & b40 & b41)
                 {
                     con_trans.Commit();
                     rtn = true;
@@ -151,7 +247,7 @@ namespace ExpressBase.ServiceStack.Services
 				var rslt = this.InfraConnectionFactory.DataDB.DoQuery(sql1, parameter);
 
                 //..............insert into client tbl eb_users............ to SOLUTION
-                string sql2 = "INSERT INTO eb_users(email, pwd, firstname, socialid) VALUES (@email, @pwd, @firstname, @socialid) RETURNING id;";
+                string sql2 = "INSERT INTO eb_users(email, pwd, fullname, socialid) VALUES (@email, @pwd, @firstname, @socialid) RETURNING id;";
                 var cmdtxt3 = EbConnectionFactory.DataDB.GetNewCommand(con, sql2);
                 cmdtxt3.Parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, rslt.Rows[0][0]));
                 cmdtxt3.Parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("pwd", EbDbTypes.String, rslt.Rows[0][1]));

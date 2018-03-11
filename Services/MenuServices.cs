@@ -38,7 +38,11 @@ namespace ExpressBase.ServiceStack.Services
             //AND EO2A.eb_del = 'F';";
 
             //parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@Ids", System.Data.DbType.String, request.Ids));
-            var ds = this.EbConnectionFactory.ObjectsDB.DoQueries(this.EbConnectionFactory.ObjectsDB.EB_SIDEBARUSER_REQUEST.Replace(":Ids", string.IsNullOrEmpty(request.Ids) ? "0" : request.Ids));
+            var ds = new EbDataSet();
+            if(request.SysRole.Contains("SolutionOwner"))
+                ds = this.EbConnectionFactory.ObjectsDB.DoQueries(this.EbConnectionFactory.ObjectsDB.EB_SIDEBARUSER_REQUEST.Replace("AND EO.id = ANY('{:Ids}') ", string.Empty));
+            else
+                ds = this.EbConnectionFactory.ObjectsDB.DoQueries(this.EbConnectionFactory.ObjectsDB.EB_SIDEBARUSER_REQUEST.Replace(":Ids", string.IsNullOrEmpty(request.Ids) ? "0" : request.Ids));
 
             Dictionary<int, AppObject> appColl = new Dictionary<int, AppObject>();
             foreach (EbDataRow dr in ds.Tables[0].Rows)
