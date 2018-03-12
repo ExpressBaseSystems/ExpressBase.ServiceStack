@@ -105,7 +105,8 @@ WHERE
 			                            EO.obj_type = 17
 			                            OR EO.obj_type = 18
 		                            )  AND
-		                            EOTA.app_id = @appid;
+		                            EOTA.app_id = @appid AND
+                                    EOTA.eb_del = 'F';
                         ";
             EbDataTable table = this.EbConnectionFactory.ObjectsDB.DoQuery(Query1.Replace("@Ids", request.BotFormIds).Replace("@appid", request.AppId));
             GetBotForm4UserResponse resp = new GetBotForm4UserResponse();
