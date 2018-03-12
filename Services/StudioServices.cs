@@ -12,6 +12,7 @@ using ExpressBase.Common.Data;
 using ExpressBase.Objects.EmailRelated;
 using System.Text.RegularExpressions;
 using ExpressBase.Common.Structures;
+using System.Data.OracleClient;
 
 namespace ExpressBase.ServiceStack
 {
@@ -72,22 +73,22 @@ ORDER BY
         //ORDER BY
         //    EO.obj_type";
 
-//        // Get All latest versions of this Object Type without json
-//        private const string Query5 = @"
-//SELECT 
-//    EO.id, EO.obj_name, EO.obj_type, EO.obj_cur_status,EO.obj_desc,
-//    EOV.id, EOV.eb_objects_id, EOV.version_num, EOV.obj_changelog,EOV.commit_ts, EOV.commit_uid, EOV.refid,
-//    EU.firstname
-//FROM 
-//    eb_objects EO, eb_objects_ver EOV
-//LEFT JOIN
-//	eb_users EU
-//ON 
-//	EOV.commit_uid=EU.id
-//WHERE
-//    EO.id = EOV.eb_objects_id AND EO.obj_type=@type
-//ORDER BY
-//    EO.obj_name";
+        //        // Get All latest versions of this Object Type without json
+        //        private const string Query5 = @"
+        //SELECT 
+        //    EO.id, EO.obj_name, EO.obj_type, EO.obj_cur_status,EO.obj_desc,
+        //    EOV.id, EOV.eb_objects_id, EOV.version_num, EOV.obj_changelog,EOV.commit_ts, EOV.commit_uid, EOV.refid,
+        //    EU.firstname
+        //FROM 
+        //    eb_objects EO, eb_objects_ver EOV
+        //LEFT JOIN
+        //	eb_users EU
+        //ON 
+        //	EOV.commit_uid=EU.id
+        //WHERE
+        //    EO.id = EOV.eb_objects_id AND EO.obj_type=@type
+        //ORDER BY
+        //    EO.obj_name";
 
         private const string Query6 = @"
 SELECT @function_name";
@@ -114,15 +115,15 @@ WHERE
         //    AND EO.id =EOV.eb_objects_id  AND EOS.eb_obj_ver_id = EOV.id AND EOS.status = 3 AND EO.obj_type IN(16 ,17)";
 
 
-            //........not completd unnest
-        private const string GetTaggedObjects = @"    
-SELECT 
-	EO.obj_name, EOV.refid, EOV.version_num, EO.obj_type,EOS.status
-FROM 
-	eb_objects EO, eb_objects_ver EOV,eb_objects_status EOS,unnest(string_to_array(EO.obj_tags, ',')) Tags
-WHERE 
-	Tags IN(@tags) AND EO.id =EOV.eb_objects_id
-    AND EOS.eb_obj_ver_id = EOV.id AND EOS.status = 3 AND EO.obj_type IN(16 ,17)";
+        //........not completd unnest
+        //        private const string GetTaggedObjects = @"    
+        //SELECT 
+        //	EO.obj_name, EOV.refid, EOV.version_num, EO.obj_type,EOS.status
+        //FROM 
+        //	eb_objects EO, eb_objects_ver EOV,eb_objects_status EOS,unnest(string_to_array(EO.obj_tags, ',')) Tags
+        //WHERE 
+        //	Tags IN(@tags) AND EO.id =EOV.eb_objects_id
+        //    AND EOS.eb_obj_ver_id = EOV.id AND EOS.status = 3 AND EO.obj_type IN(16 ,17)";
 
         //        private const string Query_AllVerList = @"
         //SELECT 
@@ -159,20 +160,20 @@ WHERE
         //ORDER BY 
         //EOS.id DESC";
 
-//        private const string FetchLiveversionQuery = @"
-//SELECT
-//    EO.id, EO.obj_name, EO.obj_type, EO.obj_desc,
-//    EOV.id, EOV.eb_objects_id, EOV.version_num, EOV.obj_changelog, EOV.commit_ts, EOV.commit_uid, EOV.obj_json, EOV.refid, EOS.status
-//FROM
-//    eb_objects_ver EOV, eb_objects_status EOS, eb_objects EO
-//WHERE
-//    EO.id = @id AND EOV.eb_objects_id = @id AND EOS.status = 3 AND EOS.eb_obj_ver_id = EOV.id";
+        //        private const string FetchLiveversionQuery = @"
+        //SELECT
+        //    EO.id, EO.obj_name, EO.obj_type, EO.obj_desc,
+        //    EOV.id, EOV.eb_objects_id, EOV.version_num, EOV.obj_changelog, EOV.commit_ts, EOV.commit_uid, EOV.obj_json, EOV.refid, EOS.status
+        //FROM
+        //    eb_objects_ver EOV, eb_objects_status EOS, eb_objects EO
+        //WHERE
+        //    EO.id = @id AND EOV.eb_objects_id = @id AND EOS.status = 3 AND EOS.eb_obj_ver_id = EOV.id";
 
-//        private const string GetAllTags = @"
-//SELECT distinct(tags)
-//FROM (SELECT unnest(string_to_array(obj_tags, ',')) AS tags
-//	  FROM eb_objects)
-//AS tags";
+        //        private const string GetAllTags = @"
+        //SELECT distinct(tags)
+        //FROM (SELECT unnest(string_to_array(obj_tags, ',')) AS tags
+        //	  FROM eb_objects)
+        //AS tags";
         #endregion
 
         List<EbObjectWrapper> f = new List<EbObjectWrapper>();
@@ -183,7 +184,7 @@ WHERE
         {  // Fetch all version without json of a particular Object
 
             ILog log = LogManager.GetLogger(GetType());
-            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@refid", EbDbTypes.String, request.RefId));
+            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("refid", EbDbTypes.String, request.RefId));
             var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(this.EbConnectionFactory.ObjectsDB.EB_FETCH_ALL_VERSIONS_OF_AN_OBJ, parameters.ToArray());
 
             foreach (EbDataRow dr in dt.Rows)
@@ -193,7 +194,7 @@ WHERE
                     Id = Convert.ToInt32(dr[0]),
                     VersionNumber = dr[1].ToString(),
                     ChangeLog = dr[2].ToString(),
-                    CommitTs = Convert.ToDateTime((dr[3].ToString()) == "" ? DateTime.MinValue : dr[3]),
+                    CommitTs = Convert.ToDateTime((dr[3].ToString()) == "0" || (dr[3].ToString()) == "" ? DateTime.MinValue : dr[3]),
                     RefId = dr[4].ToString(),
                     CommitUId = Convert.ToInt32(dr[5]),
                     CommitUname = dr[6].ToString()
@@ -204,12 +205,13 @@ WHERE
         }
 
         [CompressResponse]
-        public object Get(EbObjectParticularVersionRequest request)
+        public object Get(EbObjectParticularVersionRequest request)  
         {  // Fetch particular version with json of a particular Object
 
             ILog log = LogManager.GetLogger(GetType());
-            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@refid", EbDbTypes.String, request.RefId));
-            var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(this.EbConnectionFactory.ObjectsDB.EB_PARTICULAR_VERSION_OF_AN_OBJ, parameters.ToArray());
+           // parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":refid", EbDbTypes.String, request.RefId));
+            DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("refid", EbDbTypes.String, request.RefId) };
+            var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(this.EbConnectionFactory.ObjectsDB.EB_PARTICULAR_VERSION_OF_AN_OBJ, parameters);
 
             foreach (EbDataRow dr in dt.Rows)
             {
@@ -217,7 +219,7 @@ WHERE
                 {
                     Json = dr[0].ToString(),
                     VersionNumber = dr[1].ToString(),
-                    Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[2]),
+                    Status = Enum.GetName(typeof(ObjectLifeCycleStatus), Convert.ToInt32(dr[2])),
                     Tags = dr[3].ToString()
                 });
                 f.Add(_ebObject);
@@ -256,8 +258,8 @@ WHERE
         public object Get(EbObjectLatestCommitedRequest request)
         {
             // Fetch latest committed version with json - for Execute/Run/Consume a particular Object
-            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@refid", EbDbTypes.String, request.RefId));
-            var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(this.EbConnectionFactory.ObjectsDB.EB_LATEST_COMMITTED_VERSION_OF_AN_OBJ, parameters.ToArray());
+            DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("refid", EbDbTypes.String, request.RefId) };
+            var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(this.EbConnectionFactory.ObjectsDB.EB_LATEST_COMMITTED_VERSION_OF_AN_OBJ, parameters);
 
             foreach (EbDataRow dr in dt.Rows)
             {
@@ -266,7 +268,7 @@ WHERE
                     Id = Convert.ToInt32(dr[0]),
                     Name = dr[1].ToString(),
                     EbObjectType = ((EbObjectType)Convert.ToInt32(dr[3])).IntCode,
-                    Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[4]),
+                    Status = Enum.GetName(typeof(ObjectLifeCycleStatus), Convert.ToInt32(dr[4])),
                     Description = dr[5].ToString(),
                     VersionNumber = dr[8].ToString(),
                     Json = (!string.IsNullOrEmpty(request.RefId)) ? dr[12].ToString() : null,
@@ -281,8 +283,9 @@ WHERE
         [CompressResponse]
         public object Get(EbObjectObjListRequest request)
         { // Get All latest committed versions of this Object Type without json
-            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@type", EbDbTypes.Int32, request.EbObjectType));
-            var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(this.EbConnectionFactory.ObjectsDB.EB_ALL_LATEST_COMMITTED_VERSION_OF_AN_OBJ, parameters.ToArray());
+            
+            DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("type", EbDbTypes.Int32, request.EbObjectType) };
+            var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(this.EbConnectionFactory.ObjectsDB.EB_ALL_LATEST_COMMITTED_VERSION_OF_AN_OBJ, parameters);
 
             foreach (EbDataRow dr in dt.Rows)
             {
@@ -291,10 +294,10 @@ WHERE
                     Id = Convert.ToInt32(dr[0]),
                     Name = dr[1].ToString() + dr[7].ToString(),
                     EbObjectType = ((EbObjectType)Convert.ToInt32(dr[3])).IntCode,
-                    Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[3]),
+                    Status = Enum.GetName(typeof(ObjectLifeCycleStatus), Convert.ToInt32(dr[3])),
                     Description = dr[4].ToString(),
                     VersionNumber = dr[7].ToString(),
-                    CommitTs = Convert.ToDateTime((dr[9].ToString()) == "" ? DateTime.MinValue : dr[9]),
+                    CommitTs = Convert.ToDateTime((dr[9].ToString()) == "" || (dr[9].ToString()) == "0" ? DateTime.MinValue : dr[9]),
                     RefId = dr[11].ToString(),
                     CommitUname = dr[12].ToString(),
                 });
@@ -307,8 +310,9 @@ WHERE
         [CompressResponse]
         public object Get(EbObjectListRequest request)
         { // Get All latest committed versions of this Object Type without json
-            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@type", EbDbTypes.Int32, request.EbObjectType));
-            var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(this.EbConnectionFactory.ObjectsDB.EB_GET_OBJ_LIST_FROM_EBOBJECTS, parameters.ToArray());
+            //parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@type", EbDbTypes.Int32, request.EbObjectType));
+            DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("type", EbDbTypes.Int32, request.EbObjectType) };
+            var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(this.EbConnectionFactory.ObjectsDB.EB_GET_OBJ_LIST_FROM_EBOBJECTS, parameters);
 
             foreach (EbDataRow dr in dt.Rows)
             {
@@ -317,7 +321,7 @@ WHERE
                     Id = Convert.ToInt32(dr[0]),
                     Name = dr[1].ToString(),
                     EbObjectType = ((EbObjectType)Convert.ToInt32(dr[3])).IntCode,
-                    Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[3]),
+                    Status = Enum.GetName(typeof(ObjectLifeCycleStatus), Convert.ToInt32(dr[3])),
                     Description = dr[4].ToString()
                 });
 
@@ -330,8 +334,9 @@ WHERE
         [CompressResponse]
         public object Get(EbObjectObjLisAllVerRequest request)
         { // Get All latest committed versions of this Object Type without json
-            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@type", EbDbTypes.Int32, request.EbObjectType));
-            var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(this.EbConnectionFactory.ObjectsDB.EB_GET_ALL_COMMITTED_VERSION_LIST, parameters.ToArray());
+            //parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@type", EbDbTypes.Int32, request.EbObjectType));
+            DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("type", EbDbTypes.Int32, request.EbObjectType) };
+            var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(this.EbConnectionFactory.ObjectsDB.EB_GET_ALL_COMMITTED_VERSION_LIST, parameters);
 
             Dictionary<string, List<EbObjectWrapper>> f_dict = new Dictionary<string, List<EbObjectWrapper>>();
             List<EbObjectWrapper> f_list = null;
@@ -349,7 +354,7 @@ WHERE
                     Id = Convert.ToInt32(dr[0]),
                     Name = dr[1].ToString(),
                     EbObjectType = ((EbObjectType)Convert.ToInt32(dr[3])).IntCode,
-                    Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[3]),
+                    Status = Enum.GetName(typeof(ObjectLifeCycleStatus), Convert.ToInt32(dr[3])),
                     VersionNumber = dr[7].ToString(),
                     RefId = dr[11].ToString(),
                 });
@@ -361,10 +366,11 @@ WHERE
         [CompressResponse]
         public object Get(EbObjectRelationsRequest request)
         { //Fetch ebobjects relations
-            parameters = new List<System.Data.Common.DbParameter>();
+            //parameters = new List<System.Data.Common.DbParameter>();
             ILog log = LogManager.GetLogger(GetType());
-            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@dominant", EbDbTypes.String, request.DominantId));
-            var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(this.EbConnectionFactory.ObjectsDB.EB_GET_LIVE_OBJ_RELATIONS, parameters.ToArray());
+            //parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@dominant", EbDbTypes.String, request.DominantId));
+            DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("dominant", EbDbTypes.String, request.DominantId) };
+            var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(this.EbConnectionFactory.ObjectsDB.EB_GET_LIVE_OBJ_RELATIONS, parameters);
             foreach (EbDataRow dr in dt.Rows)
             {
                 var _ebObject = new EbObjectWrapper();
@@ -386,10 +392,11 @@ WHERE
         public object Get(EbObjectTaggedRequest request)
         { //
             f = new List<EbObjectWrapper>();
-            parameters = new List<System.Data.Common.DbParameter>();
+            //parameters = new List<System.Data.Common.DbParameter>();
             ILog log = LogManager.GetLogger(GetType());
-            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@tags", EbDbTypes.String, request.Tags));
-            var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(GetTaggedObjects, parameters.ToArray());
+            //parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@tags", EbDbTypes.String, request.Tags));
+            DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("tags", EbDbTypes.String, request.Tags) };
+            var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(this.EbConnectionFactory.ObjectsDB.EB_GET_TAGGED_OBJECTS, parameters);
             foreach (EbDataRow dr in dt.Rows)
             {
                 var _ebObject = new EbObjectWrapper();
@@ -409,8 +416,11 @@ WHERE
         [CompressResponse]
         public object Get(EbObjectExploreObjectRequest request)
         {
-            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@id", EbDbTypes.Int32, request.Id));
-            var dt = this.EbConnectionFactory.ObjectsDB.DoQuery("SELECT * FROM public.eb_objects_exploreobject(@id)", parameters.ToArray());
+            //parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, request.Id));
+
+            DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, request.Id) };
+
+            var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(this.EbConnectionFactory.ObjectsDB.EB_EXPLORE_OBJECT, parameters);
 
             foreach (EbDataRow dr in dt.Rows)
             {
@@ -420,18 +430,18 @@ WHERE
                     {
                         Id = Convert.ToInt32(dr[0]),
                         Name = dr[1].ToString(),
-                        EbObjectType = ((EbObjectType)Convert.ToInt32(dr[3])).IntCode,
-                        Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[3]),
+                        EbObjectType = ((EbObjectType)Convert.ToInt32(dr[2])).IntCode,
+                        Status = Enum.GetName(typeof(ObjectLifeCycleStatus),Convert.ToInt32(dr[3])),
                         Description = dr[4].ToString(),
                         ChangeLog = dr[5].ToString(),
-                        CommitTs = Convert.ToDateTime((dr[6].ToString()) == "" ? DateTime.MinValue : dr[6]),
+                        CommitTs = Convert.ToDateTime((dr[6].ToString()) == "0" || (dr[6].ToString()) == "" ? DateTime.MinValue : dr[6]),
                         CommitUname = dr[7].ToString(),
                         RefId = dr[8].ToString(),
                         VersionNumber = dr[9].ToString(),
-                        WorkingMode = Convert.ToBoolean(dr[10]),
-                        Json_wc = dr[12].ToString(),
-                        Json_lc = dr[13].ToString(),
-                        Wc_All = (dr[11] as string).Split(","),
+                        WorkingMode = (dr[10].ToString()=="T")? true : false,
+                        Json_wc = dr[12] as string,
+                        Json_lc = dr[13] as string,
+                        Wc_All = (dr[11] as string==null)? (dr[11] as string[]):(dr[11] as string).Split(","),
                         Tags = dr[17].ToString(),
                         Apps = dr[18].ToString().Replace("\n", "").Replace("\t", "").Replace("\r", ""),
                         Dashboard_Tiles = new EbObjectWrapper_Dashboard
@@ -441,18 +451,18 @@ WHERE
                             PatchVersionNumber = Convert.ToInt32(dr[16]),
                             LastCommitedVersionRefid = dr[19].ToString(),
                             LastCommitedVersionNumber = dr[20].ToString(),
-                            LastCommitedVersionCommit_ts = Convert.ToDateTime((dr[21].ToString()) == "" ? DateTime.MinValue : dr[21]),
-                            LastCommitedVersion_Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[22]),
+                            LastCommitedVersionCommit_ts = Convert.ToDateTime((dr[21].ToString()) == "0" || (dr[21].ToString()) == "" ? DateTime.MinValue : dr[21]),
+                            LastCommitedVersion_Status = Enum.GetName(typeof(ObjectLifeCycleStatus), Convert.ToInt32(dr[22])),
                             LastCommitedby_Name = dr[23].ToString(),
                             LastCommitedby_Id = Convert.ToInt32(dr[24]),
                             LiveVersionRefid = dr[25].ToString(),
                             LiveVersionNumber = dr[26].ToString(),
-                            LiveVersionCommit_ts = Convert.ToDateTime((dr[27].ToString()) == "" ? DateTime.MinValue : dr[27]),
-                            LiveVersion_Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[28]),
+                            LiveVersionCommit_ts = Convert.ToDateTime((dr[27].ToString()) == "0" || (dr[27].ToString()) == "" ? DateTime.MinValue : dr[27]),
+                            LiveVersion_Status = Enum.GetName(typeof(ObjectLifeCycleStatus), Convert.ToInt32(dr[28])),
                             LiveVersionCommitby_Name = dr[29].ToString(),
                             LiveVersionCommitby_Id = Convert.ToInt32(dr[30]),
                             OwnerUid = Convert.ToInt32(dr[31]),
-                            OwnerTs = Convert.ToDateTime((dr[32].ToString()) == "" ? DateTime.MinValue : dr[32]),
+                            OwnerTs = Convert.ToDateTime((dr[32].ToString()) == "0" || (dr[32].ToString()) == "" ? DateTime.MinValue : dr[32]),
                             OwnerName = dr[33].ToString()
                         }
                     });
@@ -461,7 +471,6 @@ WHERE
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine("Exception:" + e.ToString());
                 }
 
             }
@@ -471,44 +480,48 @@ WHERE
         [CompressResponse]
         public object Get(EbObjectUpdateDashboardRequest request)
         {
-            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@refid", EbDbTypes.String, request.Refid));
-            var dt = this.EbConnectionFactory.ObjectsDB.DoQuery("SELECT * FROM public.eb_objects_update_Dashboard(@refid)", parameters.ToArray());
+            DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("refid", EbDbTypes.String, request.Refid) };
+            var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(this.EbConnectionFactory.ObjectsDB.EB_UPDATE_DASHBOARD, parameters);
 
             foreach (EbDataRow dr in dt.Rows)
             {
-                var _ebObject = (new EbObjectWrapper
+                try
                 {
-                    Name = dr[0].ToString(),
-                    Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[1]),
-                    RefId = request.Refid,
-                    VersionNumber = dr[2].ToString(),
-                    WorkingMode = Convert.ToBoolean(dr[3]),
-                    Wc_All = (dr[4] as string).Split(","),
-                    Tags = dr[8].ToString(),
-                    Apps = dr[9].ToString().Replace("\n", "").Replace("\t", "").Replace("\r", ""),
-                    Dashboard_Tiles = new EbObjectWrapper_Dashboard
+                    var _ebObject = (new EbObjectWrapper
                     {
-                        MajorVersionNumber = Convert.ToInt32(dr[5]),
-                        MinorVersionNumber = Convert.ToInt32(dr[6]),
-                        PatchVersionNumber = Convert.ToInt32(dr[7]),
-                        LastCommitedVersionRefid = dr[10].ToString(),
-                        LastCommitedVersionNumber = dr[11].ToString(),
-                        LastCommitedVersionCommit_ts = Convert.ToDateTime((dr[12].ToString()) == "" ? DateTime.MinValue : dr[12]),
-                        LastCommitedVersion_Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[13]),
-                        LastCommitedby_Name = dr[14].ToString(),
-                        LastCommitedby_Id = Convert.ToInt32(dr[15]),
-                        LiveVersionRefid = dr[16].ToString(),
-                        LiveVersionNumber = dr[17].ToString(),
-                        LiveVersionCommit_ts = Convert.ToDateTime((dr[18].ToString()) == "" ? DateTime.MinValue : dr[18]),
-                        LiveVersion_Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[19]),
-                        LiveVersionCommitby_Name = dr[20].ToString(),
-                        LiveVersionCommitby_Id = Convert.ToInt32(dr[21]),
-                        OwnerUid = Convert.ToInt32(dr[22]),
-                        OwnerTs = Convert.ToDateTime((dr[23].ToString()) == "" ? DateTime.MinValue : dr[23]),
-                        OwnerName = dr[24].ToString()
-                    }
-                });
-                f.Add(_ebObject);
+                        Name = dr[0].ToString(),
+                        Status = Enum.GetName(typeof(ObjectLifeCycleStatus), Convert.ToInt32(dr[1])),
+                        RefId = request.Refid,
+                        VersionNumber = dr[2].ToString(),
+                        WorkingMode = (dr[10].ToString() == "T") ? true : false,
+                        Wc_All = (dr[4] as string == null) ? (dr[4] as string[]) : (dr[4] as string).Split(","),
+                        Tags = dr[8].ToString(),
+                        Apps = dr[9].ToString().Replace("\n", "").Replace("\t", "").Replace("\r", ""),
+                        Dashboard_Tiles = new EbObjectWrapper_Dashboard
+                        {
+                            MajorVersionNumber = Convert.ToInt32(dr[5]),
+                            MinorVersionNumber = Convert.ToInt32(dr[6]),
+                            PatchVersionNumber = Convert.ToInt32(dr[7]),
+                            LastCommitedVersionRefid = dr[10].ToString(),
+                            LastCommitedVersionNumber = dr[11].ToString(),
+                            LastCommitedVersionCommit_ts = Convert.ToDateTime((dr[12].ToString()) == "0" || (dr[12].ToString()) == "" ? DateTime.MinValue : dr[12]),
+                            LastCommitedVersion_Status = Enum.GetName(typeof(ObjectLifeCycleStatus), Convert.ToInt32(dr[13])),
+                            LastCommitedby_Name = dr[14].ToString(),
+                            LastCommitedby_Id = Convert.ToInt32(dr[15]),
+                            LiveVersionRefid = dr[16].ToString(),
+                            LiveVersionNumber = dr[17].ToString(),
+                            LiveVersionCommit_ts = Convert.ToDateTime((dr[18].ToString()) == "0" || (dr[18].ToString()) == "" ? DateTime.MinValue : dr[18]),
+                            LiveVersion_Status = Enum.GetName(typeof(ObjectLifeCycleStatus), Convert.ToInt32(dr[19])),
+                            LiveVersionCommitby_Name = dr[20].ToString(),
+                            LiveVersionCommitby_Id = Convert.ToInt32(dr[21]),
+                            OwnerUid = Convert.ToInt32(dr[22]),
+                            OwnerTs = Convert.ToDateTime((dr[23].ToString()) == "" || (dr[23].ToString()) == "" ? DateTime.MinValue : dr[23]),
+                            OwnerName = dr[24].ToString()
+                        }
+                    });
+                    f.Add(_ebObject);
+                }
+                catch (Exception e) { }     
             }
             return new EbObjectUpdateDashboardResponse { Data = f };
         }
@@ -516,17 +529,18 @@ WHERE
         [CompressResponse]
         public object Get(EbObjectStatusHistoryRequest request)
         { // Get All latest committed versions of this Object Type without json
-            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@refid", EbDbTypes.String, request.RefId));
-            var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(this.EbConnectionFactory.ObjectsDB.EB_GET_OBJ_STATUS_HISTORY, parameters.ToArray());
+            //parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@refid", EbDbTypes.String, request.RefId));
+            DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("refid", EbDbTypes.String, request.RefId) };
+            var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(this.EbConnectionFactory.ObjectsDB.EB_GET_OBJ_STATUS_HISTORY, parameters);
 
             foreach (EbDataRow dr in dt.Rows)
             {
                 var _ebObject = (new EbObjectWrapper
                 {
                     Id = Convert.ToInt32(dr[0]),
-                    Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[1]),
+                    Status = Enum.GetName(typeof(ObjectLifeCycleStatus), Convert.ToInt32(dr[1])),
                     CommitUname = dr[2].ToString(),
-                    CommitTs = Convert.ToDateTime((dr[3].ToString()) == "" ? DateTime.MinValue : dr[3]),
+                    CommitTs = Convert.ToDateTime((dr[3].ToString()) == "" || (dr[3].ToString()) == "0" ? DateTime.MinValue : dr[3]),
                     ChangeLog = dr[4].ToString(),
                     CommitUId = Convert.ToInt32(dr[5])
                 });
@@ -541,8 +555,9 @@ WHERE
         {  // Fetch particular version with json of a particular Object
 
             ILog log = LogManager.GetLogger(GetType());
-            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@id", EbDbTypes.Int32, request.Id));
-            var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(this.EbConnectionFactory.ObjectsDB.EB_LIVE_VERSION_OF_OBJS, parameters.ToArray());
+            //parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@id", EbDbTypes.Int32, request.Id));
+            DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, request.Id) };
+            var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(this.EbConnectionFactory.ObjectsDB.EB_LIVE_VERSION_OF_OBJS, parameters);
 
             foreach (EbDataRow dr in dt.Rows)
             {
@@ -592,35 +607,30 @@ WHERE
                     con.Open();
                     DbCommand cmd = null;
                     log.Info("#DS insert 1 -- con open");
-                    string sql = "SELECT eb_objects_commit(@id, @obj_name, @obj_desc, @obj_type, @obj_json, @obj_changelog,  @commit_uid, @src_pid, @cur_pid, @relations, @tags, @app_id)";
+                    //string sql = "SELECT eb_objects_commit(@id, @obj_name, @obj_desc, @obj_type, @obj_json, @obj_changelog,  @commit_uid, @src_pid, @cur_pid, @relations, @tags, @app_id)";
+                    string sql = this.EbConnectionFactory.ObjectsDB.EB_COMMIT_OBJECT;
                     cmd = this.EbConnectionFactory.ObjectsDB.GetNewCommand(con, sql);
 
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@id", EbDbTypes.String, request.RefId));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@obj_name", EbDbTypes.String, request.Name.Replace("\n", "").Replace("\t", "").Replace("\r", "")));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@obj_type", EbDbTypes.Int32, GetObjectType(obj)));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@obj_desc", EbDbTypes.String, (!string.IsNullOrEmpty(request.Description)) ? request.Description : string.Empty));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@obj_json", EbDbTypes.Json, request.Json));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@obj_changelog", EbDbTypes.String, request.ChangeLog));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@commit_uid", EbDbTypes.Int32, request.UserId));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@src_pid", EbDbTypes.String, request.TenantAccountId));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@cur_pid", EbDbTypes.String, request.TenantAccountId));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@relations", EbDbTypes.String, (request.Relations != null) ? request.Relations : string.Empty));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@tags", EbDbTypes.String, (!string.IsNullOrEmpty(request.Tags)) ? request.Tags : string.Empty));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":id", EbDbTypes.String, request.RefId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_name", EbDbTypes.String, request.Name.Replace("\n", "").Replace("\t", "").Replace("\r", "")));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_type", EbDbTypes.Int32, GetObjectType(obj)));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_desc", EbDbTypes.String, (!string.IsNullOrEmpty(request.Description)) ? request.Description : string.Empty));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_json", EbDbTypes.Json, request.Json));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_changelog", EbDbTypes.String, request.ChangeLog));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":commit_uid", EbDbTypes.Int32, request.UserId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":src_pid", EbDbTypes.String, request.TenantAccountId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":cur_pid", EbDbTypes.String, request.TenantAccountId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":relations", EbDbTypes.String, (request.Relations != null) ? request.Relations : string.Empty));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":tags", EbDbTypes.String, (!string.IsNullOrEmpty(request.Tags)) ? request.Tags : string.Empty));
                     // cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@app_id", System.Data.DbType.Int32, request.AppId));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@app_id", EbDbTypes.String, SetAppId(request.Apps)));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":app_id", EbDbTypes.String, SetAppId(request.Apps)));
 
                     refId = cmd.ExecuteScalar().ToString();
                     SetRedis(obj, refId);
-                    if (obj is EbBotForm)
-                    {
-                        var myService = base.ResolveService<ChatbotServices>();
-                        var res = (CreateBotFormTableResponse)myService.Any(new CreateBotFormTableRequest() { BotObj = obj });
-                    }
                 }
             }
             catch (Exception e)
             {
-                Console.WriteLine("Exception:" + e.ToString());
 
             }
             return new EbObject_CommitResponse() { RefId = refId };
@@ -642,34 +652,30 @@ WHERE
                     DbCommand cmd = null;
                     log.Info("#DS insert 1 -- con open");
 
-                    string sql = "SELECT eb_objects_save(@id, @obj_name, @obj_desc, @obj_type, @obj_json, @commit_uid, @src_pid, @cur_pid, @relations, @tags, @app_id)";
+                    //string sql = "SELECT eb_objects_save(@id, @obj_name, @obj_desc, @obj_type, @obj_json, @commit_uid, @src_pid, @cur_pid, @relations, @tags, @app_id)";
+                    string sql = this.EbConnectionFactory.ObjectsDB.EB_SAVE_OBJECT;
                     cmd = this.EbConnectionFactory.ObjectsDB.GetNewCommand(con, sql);
 
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@id", EbDbTypes.String, request.RefId));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@obj_name", EbDbTypes.String, request.Name.Replace("\n", "").Replace("\t", "").Replace("\r", "")));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@obj_type", EbDbTypes.Int32, GetObjectType(obj)));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@obj_desc", EbDbTypes.String, (!string.IsNullOrEmpty(request.Description)) ? request.Description : string.Empty));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@obj_json", EbDbTypes.Json, request.Json));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@commit_uid", EbDbTypes.Int32, request.UserId));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@src_pid", EbDbTypes.String, request.TenantAccountId));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@cur_pid", EbDbTypes.String, request.TenantAccountId));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@relations", EbDbTypes.String, (request.Relations != null) ? request.Relations : string.Empty));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@tags", EbDbTypes.String, (!string.IsNullOrEmpty(request.Tags)) ? request.Tags : string.Empty));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":id", EbDbTypes.String, request.RefId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_name", EbDbTypes.String, request.Name.Replace("\n", "").Replace("\t", "").Replace("\r", "")));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_type", EbDbTypes.Int32, GetObjectType(obj)));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_desc", EbDbTypes.String, (!string.IsNullOrEmpty(request.Description)) ? request.Description : string.Empty));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_json", EbDbTypes.Json, request.Json));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":commit_uid", EbDbTypes.Int32, request.UserId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":src_pid", EbDbTypes.String, request.TenantAccountId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":cur_pid", EbDbTypes.String, request.TenantAccountId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":relations", EbDbTypes.String, (request.Relations != null) ? request.Relations : string.Empty));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":tags", EbDbTypes.String, (!string.IsNullOrEmpty(request.Tags)) ? request.Tags : string.Empty));
                     // cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@app_id", System.Data.DbType.Int32, request.AppId));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@app_id", EbDbTypes.String, SetAppId(request.Apps)));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":app_id", EbDbTypes.String, SetAppId(request.Apps)));
 
                     refId = cmd.ExecuteScalar().ToString();
                     SetRedis(obj, refId);
-                    if(obj is EbBotForm)
-                    {
-                        var myService = base.ResolveService<ChatbotServices>();
-                        var res = (CreateBotFormTableResponse)myService.Any(new CreateBotFormTableRequest() { BotObj = obj });
-                    }
                 }
             }
             catch (Exception e)
             {
-                Console.WriteLine("Exception:" + e.ToString());
+
             }
             return new EbObject_SaveResponse() { RefId = refId };
         }
@@ -691,35 +697,45 @@ WHERE
                     log.Info("#DS insert 1 -- con open");
                     string[] arr = { };
 
-                    string sql = "SELECT eb_objects_create_new_object(@obj_name, @obj_desc, @obj_type, @obj_cur_status, @obj_json::json, @commit_uid, @src_pid, @cur_pid, @relations, @issave, @tags, @app_id)";
+                    //string sql = "SELECT eb_objects_create_new_object(@obj_name, @obj_desc, @obj_type, @obj_cur_status, @obj_json::json, @commit_uid, @src_pid, @cur_pid, @relations, @issave, @tags, @app_id)";
+                    String sql = this.EbConnectionFactory.ObjectsDB.EB_CREATE_NEW_OBJECT;
                     cmd = this.EbConnectionFactory.ObjectsDB.GetNewCommand(con, sql);
 
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@obj_name", EbDbTypes.String, request.Name.Replace("\n", "").Replace("\t", "").Replace("\r", "")));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@obj_type", EbDbTypes.Int32, GetObjectType(obj)));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@obj_desc", EbDbTypes.String, (!string.IsNullOrEmpty(request.Description)) ? request.Description : string.Empty));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@obj_cur_status", EbDbTypes.Int32, ObjectLifeCycleStatus.Dev));//request.Status
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@obj_json", EbDbTypes.Json, request.Json));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@commit_uid", EbDbTypes.Int32, request.UserId));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@src_pid", EbDbTypes.String, request.TenantAccountId));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@cur_pid", EbDbTypes.String, request.TenantAccountId));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@relations", EbDbTypes.String, (request.Relations != null) ? request.Relations : string.Empty));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@issave", EbDbTypes.String , (request.IsSave==true)?'T':'F'));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@tags", EbDbTypes.String, (!string.IsNullOrEmpty(request.Tags)) ? request.Tags : string.Empty));
+                    //cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@obj_name", EbDbTypes.String, request.Name.Replace("\n", "").Replace("\t", "").Replace("\r", "")));
+                    //cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@obj_type", EbDbTypes.Int32, GetObjectType(obj)));
+                    //cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@obj_desc", EbDbTypes.String, (!string.IsNullOrEmpty(request.Description)) ? request.Description : string.Empty));
+                    //cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@obj_cur_status", EbDbTypes.Int32, ObjectLifeCycleStatus.Dev));//request.Status
+                    //cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@obj_json", EbDbTypes.Json, request.Json));
+                    //cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@commit_uid", EbDbTypes.Int32, request.UserId));
+                    //cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@src_pid", EbDbTypes.String, request.TenantAccountId));
+                    //cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@cur_pid", EbDbTypes.String, request.TenantAccountId));
+                    //cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@relations", EbDbTypes.String, (request.Relations != null) ? request.Relations : string.Empty));
+                    //cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@issave", EbDbTypes.String, (request.IsSave == true) ? 'T' : 'F'));
+                    //cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@tags", EbDbTypes.String, (!string.IsNullOrEmpty(request.Tags)) ? request.Tags : string.Empty));
+                    ////cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@app_id", System.Data.DbType.Int32, request.AppId));
+                    //cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@app_id", EbDbTypes.String, SetAppId(request.Apps)));
+
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_name", EbDbTypes.String, request.Name.Replace("\n", "").Replace("\t", "").Replace("\r", "")));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_type", EbDbTypes.Int32, GetObjectType(obj)));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_desc", EbDbTypes.String, (!string.IsNullOrEmpty(request.Description)) ? request.Description : string.Empty));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_cur_status", EbDbTypes.Int32, (int)request.Status));//request.Status
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_json", EbDbTypes.Json, request.Json));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":commit_uid", EbDbTypes.Int32, request.UserId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":src_pid", EbDbTypes.String, request.TenantAccountId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":cur_pid", EbDbTypes.String, request.TenantAccountId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":relations", EbDbTypes.String, (request.Relations != null) ? request.Relations : string.Empty));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":issave", EbDbTypes.String, (request.IsSave == true) ? 'T' : 'F'));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":tags", EbDbTypes.String, (!string.IsNullOrEmpty(request.Tags)) ? request.Tags : string.Empty));
                     //cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@app_id", System.Data.DbType.Int32, request.AppId));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@app_id", EbDbTypes.String, SetAppId(request.Apps)));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":app_id", EbDbTypes.String, SetAppId(request.Apps)));
 
                     refId = cmd.ExecuteScalar().ToString();
                     SetRedis(obj, refId);
-                    if (obj is EbBotForm)
-                    {
-                        var myService = base.ResolveService<ChatbotServices>();
-                        var res = (CreateBotFormTableResponse)myService.Any(new CreateBotFormTableRequest() { BotObj = obj });
-                    }
                 }
             }
             catch (Exception e)
             {
-                Console.WriteLine("Exception:" + e.ToString());
+
             }
             return new EbObject_Create_New_ObjectResponse() { RefId = refId };
         }
@@ -740,15 +756,15 @@ WHERE
                     log.Info("#DS insert 1 -- con open");
                     string[] arr = { };
 
-                    string sql = "SELECT eb_objects_create_major_version(@id, @obj_type, @commit_uid, @src_pid, @cur_pid, @relations)";
+                    string sql = this.EbConnectionFactory.ObjectsDB.EB_MAJOR_VERSION_OF_OBJECT;
                     cmd = this.EbConnectionFactory.ObjectsDB.GetNewCommand(con, sql);
 
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@id", EbDbTypes.String, request.RefId));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@obj_type", EbDbTypes.Int32, (int)request.EbObjectType));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@commit_uid", EbDbTypes.Int32, request.UserId));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@src_pid", EbDbTypes.String, request.TenantAccountId));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@cur_pid", EbDbTypes.String, request.TenantAccountId));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@relations", EbDbTypes.String, (request.Relations != null) ? request.Relations : string.Empty));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":id", EbDbTypes.String, request.RefId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_type", EbDbTypes.Int32, (int)request.EbObjectType));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":commit_uid", EbDbTypes.Int32, request.UserId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":src_pid", EbDbTypes.String, request.TenantAccountId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":cur_pid", EbDbTypes.String, request.TenantAccountId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":relations", EbDbTypes.String, (request.Relations != null) ? request.Relations : string.Empty));
 
                     refId = cmd.ExecuteScalar().ToString();
 
@@ -756,7 +772,7 @@ WHERE
             }
             catch (Exception e)
             {
-                Console.WriteLine("Exception:" + e.ToString());
+
 
             }
             return new EbObject_Create_Major_VersionResponse() { RefId = refId };
@@ -777,22 +793,22 @@ WHERE
                     log.Info("#DS insert 1 -- con open");
                     string[] arr = { };
 
-                    string sql = "SELECT eb_objects_create_minor_version(@id, @obj_type, @commit_uid, @src_pid, @cur_pid, @relations)";
+                    string sql = this.EbConnectionFactory.ObjectsDB.EB_MINOR_VERSION_OF_OBJECT;
                     cmd = this.EbConnectionFactory.ObjectsDB.GetNewCommand(con, sql);
 
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@id", EbDbTypes.String, request.RefId));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@obj_type", EbDbTypes.Int32, (int)request.EbObjectType));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@commit_uid", EbDbTypes.Int32, request.UserId));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@src_pid", EbDbTypes.String, request.TenantAccountId));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@cur_pid", EbDbTypes.String, request.TenantAccountId));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@relations", EbDbTypes.String, (request.Relations != null) ? request.Relations : string.Empty));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":id", EbDbTypes.String, request.RefId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_type", EbDbTypes.Int32, (int)request.EbObjectType));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":commit_uid", EbDbTypes.Int32, request.UserId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":src_pid", EbDbTypes.String, request.TenantAccountId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":cur_pid", EbDbTypes.String, request.TenantAccountId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":relations", EbDbTypes.String, (request.Relations != null) ? request.Relations : string.Empty));
 
                     refId = cmd.ExecuteScalar().ToString();
                 }
             }
             catch (Exception e)
             {
-                Console.WriteLine("Exception:" + e.ToString());
+
             }
             return new EbObject_Create_Minor_VersionResponse() { RefId = refId };
         }
@@ -812,22 +828,22 @@ WHERE
                     log.Info("#DS insert 1 -- con open");
                     string[] arr = { };
 
-                    string sql = "SELECT eb_objects_create_patch_version(@id, @obj_type, @commit_uid, @src_pid, @cur_pid, @relations)";
+                    string sql = this.EbConnectionFactory.ObjectsDB.EB_PATCH_VERSION_OF_OBJECT;
                     cmd = this.EbConnectionFactory.ObjectsDB.GetNewCommand(con, sql);
 
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@id", EbDbTypes.String, request.RefId));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@obj_type", EbDbTypes.Int32, (int)request.EbObjectType));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@commit_uid", EbDbTypes.Int32, request.UserId));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@src_pid", EbDbTypes.String, request.TenantAccountId));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@cur_pid", EbDbTypes.String, request.TenantAccountId));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@relations", EbDbTypes.String, (request.Relations != null) ? request.Relations : string.Empty));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":id", EbDbTypes.String, request.RefId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_type", EbDbTypes.Int32, (int)request.EbObjectType));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":commit_uid", EbDbTypes.Int32, request.UserId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":src_pid", EbDbTypes.String, request.TenantAccountId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":cur_pid", EbDbTypes.String, request.TenantAccountId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":relations", EbDbTypes.String, (request.Relations != null) ? request.Relations : string.Empty));
 
                     refId = cmd.ExecuteScalar().ToString();
                 }
             }
             catch (Exception e)
             {
-                Console.WriteLine("Exception:" + e.ToString());
+
             }
             return new EbObject_Create_Patch_VersionResponse() { RefId = refId };
         }
@@ -864,19 +880,19 @@ WHERE
                     DbCommand cmd = null;
                     log.Info("#DS insert 1 -- con open");
 
-                    string sql = "SELECT eb_objects_change_status(@id, @status, @commit_uid, @obj_changelog)";
+                    string sql = this.EbConnectionFactory.ObjectsDB.EB_CHANGE_STATUS_OBJECT;
                     cmd = this.EbConnectionFactory.ObjectsDB.GetNewCommand(con, sql);
 
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@id", EbDbTypes.String, request.RefId));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@status", EbDbTypes.Int32, (int)request.Status));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@commit_uid", EbDbTypes.Int32, request.UserId));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@obj_changelog", EbDbTypes.String, request.ChangeLog));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":id", EbDbTypes.String, request.RefId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":status", EbDbTypes.Int32, (int)request.Status));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":commit_uid", EbDbTypes.Int32, request.UserId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_changelog", EbDbTypes.String, request.ChangeLog));
                     cmd.ExecuteScalar();
                 }
             }
             catch (Exception e)
             {
-                Console.WriteLine("Exception:" + e.ToString());
+
             }
         }
 

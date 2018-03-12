@@ -23,7 +23,7 @@ namespace ExpressBase.ServiceStack
                 string sql = "";
                 if (request.id > 0)
                 {
-                    sql = "SELECT * FROM eb_applications WHERE id = @id";
+                    sql = "SELECT * FROM eb_applications WHERE id = :id";
                     
                 }
                 else
