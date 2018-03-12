@@ -108,8 +108,8 @@ namespace ExpressBase.ServiceStack
                     payload["wc"] = (session as CustomUserSession).WhichConsole;
                 },
 
-                ExpireTokensIn = TimeSpan.FromSeconds(90),
-                ExpireRefreshTokensIn = TimeSpan.FromHours(8),
+                ExpireTokensIn = TimeSpan.FromHours(12),
+                ExpireRefreshTokensIn = TimeSpan.FromHours(24),
                 PersistSession = true,
                 SessionExpiry = TimeSpan.FromHours(12)
             };
@@ -153,14 +153,9 @@ namespace ExpressBase.ServiceStack
                     RedirectUrl = "http://localhost:8000/"
                     },
 
-                    new MyCredentialsAuthProvider(AppSettings)
-        {
-            PersistSession = true
-                    },
+                    new MyCredentialsAuthProvider(AppSettings) { PersistSession = true },
 
-                    jwtprovider,
-                    //apikeyauthprovider
-
+                    jwtprovider
                 }));
 
             //Also works but it's recommended to handle 404's by registering at end of .NET Core pipeline
