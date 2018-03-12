@@ -2,6 +2,7 @@
 using ExpressBase.Common.Constants;
 using ExpressBase.Common.Data;
 using ExpressBase.Common.EbServiceStack.ReqNRes;
+using ExpressBase.Common.ServiceClients;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ExpressBase.ServiceStack.Auth0;
 using Funq;
@@ -12,17 +13,13 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using ServiceStack;
 using ServiceStack.Auth;
-using ServiceStack.Configuration;
 using ServiceStack.Logging;
 using ServiceStack.Messaging;
 using ServiceStack.ProtoBuf;
 using ServiceStack.RabbitMq;
 using ServiceStack.Redis;
 using System;
-using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
-using System.Linq;
-using System.Net;
 using static ExpressBase.ServiceStack.Services.ServerEventsSSServices;
 
 namespace ExpressBase.ServiceStack
@@ -108,8 +105,8 @@ namespace ExpressBase.ServiceStack
                     payload["wc"] = (session as CustomUserSession).WhichConsole;
                 },
 
-                ExpireTokensIn = TimeSpan.FromHours(10),
-                ExpireRefreshTokensIn = TimeSpan.FromHours(12),
+                ExpireTokensIn = TimeSpan.FromMinutes(5),
+                ExpireRefreshTokensIn = TimeSpan.FromHours(8),
                 PersistSession = true,
                 SessionExpiry = TimeSpan.FromHours(12)
             };
@@ -178,11 +175,6 @@ namespace ExpressBase.ServiceStack
 
             container.Register<IRedisClientsManager>(c => new RedisManagerPool(redisConnectionString));
 
-            container.Register<IJsonServiceClient>(c => {
-                var req = HostContext.TryGetCurrentRequest();
-                return new JsonServiceClient("http://localhost:7000") { BearerToken = (req != null) ? req.Headers[HttpHeaders.Authorization] : null };
-             });
-
             container.Register<IUserAuthRepository>(c => new EbRedisAuthRepository(c.Resolve<IRedisClientsManager>()));
 
             container.Register<JwtAuthProvider>(jwtprovider);
@@ -194,6 +186,9 @@ namespace ExpressBase.ServiceStack
             //container.Register<ApiKeyAuthProvider>(apikeyauthprovider);
 
             container.Register<IEbConnectionFactory>(c => new EbConnectionFactory(c)).ReusedWithin(ReuseScope.Request);
+
+            container.Register<IEbServerEventClient>(c => new EbServerEventClient(c)).ReusedWithin(ReuseScope.Request);
+            container.Register<IEbMqClient>(c => new EbMqClient(c)).ReusedWithin(ReuseScope.Request);
 
             RabbitMqMessageFactory rabitFactory = new RabbitMqMessageFactory();
             rabitFactory.ConnectionFactory.UserName = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_RABBIT_USER);
