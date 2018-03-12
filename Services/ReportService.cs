@@ -82,7 +82,7 @@ namespace ExpressBase.ServiceStack
             Report.PageNumber = Report.Writer.PageNumber;
             Report.InitializeSummaryFields();
 
-            GetWatermarkImages(Report);
+            Report.GetWatermarkImages();
 
             foreach (EbReportHeader r_header in Report.ReportHeaders)
                 this.FillScriptCollection(Report, r_header.Fields);
@@ -133,29 +133,7 @@ namespace ExpressBase.ServiceStack
             }
         }
 
-        private void GetWatermarkImages(EbReport Report)
-        {
-            var myFileService = base.ResolveService<FileService>();
-            if (Report.ReportObjects != null)
-            {
-                foreach (var field in Report.ReportObjects)
-                {
-                    if ((field is EbWaterMark) && (field as EbWaterMark).Image != string.Empty)
-                    {
-                        byte[] fileByte = myFileService.Post
-                      (new DownloadFileRequest
-                      {
-                          FileDetails = new FileMeta
-                          {
-                              FileName = (field as EbWaterMark).Image + ".jpg",
-                              FileType = "jpg"
-                          }
-                      });
-                        Report.watermarkImages.Add((field as EbWaterMark).Image, fileByte);
-                    }
-                }
-            }
-        }
+    
     }
 
     public partial class HeaderFooter : PdfPageEventHelper
@@ -169,7 +147,7 @@ namespace ExpressBase.ServiceStack
             Report.DrawPageHeader();
             Report.DrawPageFooter();
             if (Report.IsLastpage == true) Report.DrawReportFooter();
-            Report.DrawWaterMark(Report.PdfReader, d, writer);
+            Report.DrawWaterMark(d, writer);
         }
 
         public HeaderFooter(EbReport _c) : base()

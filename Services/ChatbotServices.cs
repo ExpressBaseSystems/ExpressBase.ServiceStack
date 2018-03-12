@@ -3,6 +3,7 @@ using ExpressBase.Common.Data;
 using ExpressBase.Common.Objects;
 using ExpressBase.Common.Structures;
 using ExpressBase.Objects;
+using ExpressBase.Objects.Objects.DVRelated;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ServiceStack;
 using System;
@@ -89,7 +90,7 @@ WHERE
         public GetBotForm4UserResponse Get(GetBotForm4UserRequest request)
         {
             var Query1 = @"
-                            SELECT
+                            SELECT DISTINCT
 		                            EOV.refid, EO.obj_name 
                             FROM
 		                            eb_objects EO, eb_objects_ver EOV, eb_objects_status EOS, eb_objects2application EOTA
@@ -104,7 +105,8 @@ WHERE
 			                            EO.obj_type = 17
 			                            OR EO.obj_type = 18
 		                            )  AND
-		                            EOTA.app_id = @appid;
+		                            EOTA.app_id = @appid AND
+                                    EOTA.eb_del = 'F';
                         ";
             EbDataTable table = this.EbConnectionFactory.ObjectsDB.DoQuery(Query1.Replace("@Ids", request.BotFormIds).Replace("@appid", request.AppId));
             GetBotForm4UserResponse resp = new GetBotForm4UserResponse();
@@ -198,22 +200,35 @@ WHERE
             DbParameter[] parameter1 = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("@tbl", EbDbTypes.String, request.BotObj.TableName.ToLower()) };
             var rslt = this.EbConnectionFactory.ObjectsDB.IsTableExists(qry, parameter1);
             string cols = "";
+            var Columns = new DVColumnCollection();
+            var pos = 0;
             foreach (EbControl control in request.BotObj.Controls)
             {
+                DVBaseColumn _col = null;
                 if (control is EbNumeric)
                 {
                     cols += control.Name + " integer,";
+                    _col = new DVNumericColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = System.Data.DbType.Int32, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
                 }
                 else if (control is EbTextBox)
                 {
                     cols += control.Name + " text,";
+                    _col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = System.Data.DbType.String, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
                 }
                 else if (control is EbDate)
                 {
                     cols += control.Name + " Date,";
+                    _col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = System.Data.DbType.DateTime, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
+                }
+                else if (control is EbInputGeoLocation)
+                {
+                    cols += control.Name + " text,";
+                    _col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = System.Data.DbType.String, bVisible = true, sWidth = "100px", ClassName = "dt-body-right tdheight", RenderAs = StringRenderType.Marker};
                 }
                 //EbDbType dbType = (EbDbType)control.GetType().GetPublicStaticField("EbDbType").GetValue(null);
                 //cols += control.Name + " " + + ", ";
+                Columns.Add(_col);
+                pos++;
             }
             if (!rslt)
             {
@@ -222,6 +237,44 @@ WHERE
             }
             else { }
             //Alter
+
+            var dsobj = new EbDataSource();
+            dsobj.Sql = "SELECT * FROM @tbl".Replace("@tbl", request.BotObj.TableName);
+            var ds = new EbObject_Create_New_ObjectRequest();
+            ds.Name = request.BotObj.Name+"_datasource";
+            ds.Description = "desc";
+            ds.Json = EbSerializers.Json_Serialize(dsobj);
+            ds.Status = ObjectLifeCycleStatus.Live;
+            ds.Relations = "";
+            ds.IsSave = false;
+            ds.Tags = "";
+            ds.Apps = request.Apps;
+            ds.TenantAccountId = request.TenantAccountId;
+            ds.WhichConsole = request.WhichConsole;
+            ds.UserId = request.UserId;
+            var myService = base.ResolveService<EbObjectService>();
+            var res =myService.Post(ds);
+            var refid = res.RefId;
+
+            var dvobj = new EbTableVisualization();
+            dvobj.DataSourceRefId = refid;
+            dvobj.Columns = Columns;
+            dvobj.DSColumns = Columns;
+            var ds1 = new EbObject_Create_New_ObjectRequest();
+            ds1.Name = request.BotObj.Name + "_response"; 
+            ds1.Description = "desc";
+            ds1.Json = EbSerializers.Json_Serialize(dvobj);
+            ds1.Status = ObjectLifeCycleStatus.Live;
+            ds1.Relations = refid;
+            ds1.IsSave = false;
+            ds1.Tags = "";
+            ds1.Apps = request.Apps;
+            ds1.TenantAccountId = request.TenantAccountId;
+            ds1.WhichConsole = request.WhichConsole;
+            ds1.UserId = request.UserId; 
+            var res1 = myService.Post(ds1);
+            var refid1 = res.RefId;
+
             return new CreateBotFormTableResponse();
         }
 

@@ -731,6 +731,11 @@ WHERE
 
                     refId = cmd.ExecuteScalar().ToString();
                     SetRedis(obj, refId);
+                    if (obj is EbBotForm)
+                    {
+                        var myService = base.ResolveService<ChatbotServices>();
+                        var res = (CreateBotFormTableResponse)myService.Any(new CreateBotFormTableRequest() { BotObj = obj, Apps = request.Apps, TenantAccountId = request.TenantAccountId, UserId = request.UserId, WhichConsole = request.WhichConsole });
+                    }
                 }
             }
             catch (Exception e)
