@@ -21,6 +21,7 @@ using Microsoft.CodeAnalysis.Scripting;
 using System.Dynamic;
 using ExpressBase.Objects.Objects.ReportRelated;
 using System.Text;
+using ExpressBase.Security;
 
 namespace ExpressBase.ServiceStack
 {
@@ -47,8 +48,10 @@ namespace ExpressBase.ServiceStack
             Report.IsLastpage = false;
             Report.watermarkImages = new Dictionary<string, byte[]>();
             Report.WaterMarkList = new List<object>();
-            Report.ScriptCollection = new Dictionary<string, Script>();
+            Report.ValueScriptCollection = new Dictionary<string, Script>();
+            Report.AppearanceScriptCollection = new Dictionary<string, Script>();
             Report.CurrentTimestamp = DateTime.Now;
+            //   User u = this.Redis.Get<User>(string.Format("{0}-{1}-{2}", ViewBag.cid, ViewBag.email, ViewBag.wc));
             //-- END REPORT object INIT
 
             var myDataSourceservice = base.ResolveService<DataSourceService>();
@@ -124,16 +127,35 @@ namespace ExpressBase.ServiceStack
         {
             foreach (EbReportField field in fields)
             {
-                if (field is EbCalcField && !Report.ScriptCollection.ContainsKey(field.Name))
+                try
                 {
-                    Script script = CSharpScript.Create<dynamic>((field as EbCalcField).Expression, ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System.Dynamic"), globalsType: typeof(Globals));
-                    script.Compile();
-                    Report.ScriptCollection.Add(field.Name, script);
+                    if (field is EbCalcField && !Report.ValueScriptCollection.ContainsKey(field.Name))
+                    {
+
+                        byte[] dataval = Convert.FromBase64String((field as EbCalcField).ValueExpression);
+                        string decodedvalE = Encoding.UTF8.GetString(dataval);
+                        Script valscript = CSharpScript.Create<dynamic>(decodedvalE, ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System.Dynamic"), globalsType: typeof(Globals));
+                        valscript.Compile();
+                        Report.ValueScriptCollection.Add(field.Name, valscript);
+
+                    }
+                    else if ((field is EbDataField && !Report.AppearanceScriptCollection.ContainsKey(field.Name) && (field as EbDataField).AppearanceExpression !=""))
+                    {
+                        byte[] dataapp = Convert.FromBase64String((field as EbDataField).AppearanceExpression);
+                        string decodedAppE = Encoding.UTF8.GetString(dataapp);
+                        Script appearscript = CSharpScript.Create<dynamic>(decodedAppE, ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System.Dynamic"), globalsType: typeof(Globals));
+                        appearscript.Compile();
+                        Report.AppearanceScriptCollection.Add(field.Name, appearscript);
+                    }
+                }
+                catch (Exception e)
+                {
+
                 }
             }
         }
 
-    
+
     }
 
     public partial class HeaderFooter : PdfPageEventHelper
