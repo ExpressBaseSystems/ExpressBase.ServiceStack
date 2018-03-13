@@ -92,7 +92,7 @@ namespace ExpressBase.ServiceStack
                 RecordsFiltered = _recordsFiltered
             };
             this.Log.Info("dsresponse*****" + dsresponse.Data);
-
+            var x = EbSerializers.Json_Serialize(dsresponse);
             return dsresponse;
         }
 
