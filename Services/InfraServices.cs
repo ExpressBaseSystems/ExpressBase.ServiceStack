@@ -124,14 +124,14 @@ namespace ExpressBase.ServiceStack.Services
                     //if (request.Id > 0)                   
                     //    sql = "UPDATE eb_applications SET applicationname = @applicationname, description= @description WHERE id = @id RETURNING id";
                     //else
-                        sql = "INSERT INTO eb_applications (application_name,application_type, description,app_icon,app_id) VALUES (@applicationname,@apptype, @description,@appicon,@appid) RETURNING id";
+                        sql = "INSERT INTO eb_applications (applicationname,application_type, description,app_icon) VALUES (@applicationname,@apptype, @description,@appicon) RETURNING id";
 
                     var cmd = EbConnectionFactory.DataDB.GetNewCommand(con, sql);
                     cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("applicationname", EbDbTypes.String, request.Colvalues["AppName"]));
                     cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("apptype", EbDbTypes.Int32, request.Colvalues["AppType"]));
                     cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("description", EbDbTypes.String, request.Colvalues["DescApp"]));
                     cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("appicon", EbDbTypes.String, request.Colvalues["AppIcon"]));
-                    cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("appid", EbDbTypes.String, request.Colvalues["AppId"]));
+                    //cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("appid", EbDbTypes.String, request.Colvalues["AppId"]));
                     var res = cmd.ExecuteScalar();
                     resp = new CreateApplicationResponse(){ id = Convert.ToInt32(res) };
                 }
