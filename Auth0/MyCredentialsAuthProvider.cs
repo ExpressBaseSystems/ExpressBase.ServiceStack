@@ -30,9 +30,6 @@ namespace ExpressBase.ServiceStack.Auth0
 			var request = authService.Request.Dto as Authenticate;
 			var cid = request.Meta.ContainsKey("cid") ? request.Meta["cid"] : string.Empty;
 			var socialId = request.Meta.ContainsKey("socialId") ? request.Meta["socialId"] : string.Empty;
-			var emailId = request.Meta.ContainsKey("emailId") ? request.Meta["emailId"] : string.Empty;//for anonymous
-			var phone = request.Meta.ContainsKey("phone") ? request.Meta["phone"] : string.Empty;//for anonymous
-			var appid = request.Meta.ContainsKey("appid") ? Convert.ToInt32(request.Meta["appid"]) : 0;//for anonymous
 			var whichContext = request.Meta["wc"].ToLower().Trim();
 
 			var EbConnectionFactory = authService.TryResolve<IEbConnectionFactory>() as EbConnectionFactory;
@@ -51,7 +48,21 @@ namespace ExpressBase.ServiceStack.Auth0
 			User _authUser = null;
 			if (request.Meta.ContainsKey("anonymous") && whichContext.Equals("bc"))
 			{
-				_authUser = User.GetDetailsAnonymous(EbConnectionFactory.DataDB, socialId, emailId, phone, appid, whichContext);
+				var emailId = request.Meta.ContainsKey("emailId") ? request.Meta["emailId"] : string.Empty;//for anonymous
+				var phone = request.Meta.ContainsKey("phone") ? request.Meta["phone"] : string.Empty;//for anonymous
+				var appid = request.Meta.ContainsKey("appid") ? Convert.ToInt32(request.Meta["appid"]) : 0;//for anonymous
+				var user_ip = request.Meta.ContainsKey("user_ip") ? request.Meta["user_ip"] : string.Empty;//for anonymous
+				var user_name = request.Meta.ContainsKey("user_name") ? request.Meta["user_name"] : string.Empty;//for anonymous
+				var user_browser = request.Meta.ContainsKey("user_browser") ? request.Meta["user_browser"] : string.Empty;//for anonymous
+				var city = request.Meta.ContainsKey("city") ? request.Meta["city"] : string.Empty;//for anonymous
+				var region = request.Meta.ContainsKey("region") ? request.Meta["region"] : string.Empty;//for anonymous
+				var country = request.Meta.ContainsKey("country") ? request.Meta["country"] : string.Empty;//for anonymous
+				var latitude = request.Meta.ContainsKey("latitude") ? request.Meta["latitude"] : string.Empty;//for anonymous
+				var longitude = request.Meta.ContainsKey("longitude") ? request.Meta["longitude"] : string.Empty;//for anonymous
+				var timezone = request.Meta.ContainsKey("timezone") ? request.Meta["timezone"] : string.Empty;//for anonymous
+				var iplocationjson = request.Meta.ContainsKey("iplocationjson") ? request.Meta["iplocationjson"] : string.Empty;//for anonymous
+
+				_authUser = User.GetDetailsAnonymous(EbConnectionFactory.DataDB, socialId, emailId, phone, appid, whichContext, user_ip, user_name, user_browser, city, region, country, latitude, longitude, timezone, iplocationjson);
 				Logger.Info("TryAuthenticate -> anonymous");
 			}
 			else if (!string.IsNullOrEmpty(socialId))
