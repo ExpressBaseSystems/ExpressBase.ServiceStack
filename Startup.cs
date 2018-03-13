@@ -2,6 +2,9 @@
 using ExpressBase.Common.Constants;
 using ExpressBase.Common.Data;
 using ExpressBase.Common.EbServiceStack.ReqNRes;
+using ExpressBase.Common.ServiceClients;
+using ExpressBase.Common.ServiceStack;
+using ExpressBase.Common.ServiceStack.Auth0;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ExpressBase.ServiceStack.Auth0;
 using Funq;
@@ -12,7 +15,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using ServiceStack;
 using ServiceStack.Auth;
-using ServiceStack.Configuration;
 using ServiceStack.Logging;
 using ServiceStack.Messaging;
 using ServiceStack.ProtoBuf;
@@ -21,8 +23,6 @@ using ServiceStack.Redis;
 using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
-using System.Linq;
-using System.Net;
 using static ExpressBase.ServiceStack.Services.ServerEventsSSServices;
 
 namespace ExpressBase.ServiceStack
@@ -56,7 +56,7 @@ namespace ExpressBase.ServiceStack
         {
             loggerFactory.AddConsole(Configuration.GetSection("Logging"));
             loggerFactory.AddDebug();
-            
+
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
@@ -108,20 +108,20 @@ namespace ExpressBase.ServiceStack
                     payload["wc"] = (session as CustomUserSession).WhichConsole;
                 },
 
-                ExpireTokensIn = TimeSpan.FromHours(10),
-                ExpireRefreshTokensIn = TimeSpan.FromHours(12),
+                ExpireTokensIn = TimeSpan.FromHours(12),
+                ExpireRefreshTokensIn = TimeSpan.FromHours(24),
                 PersistSession = true,
                 SessionExpiry = TimeSpan.FromHours(12)
             };
-//            var apikeyauthprovider = new ApiKeyAuthProvider(AppSettings)
-//            {
-//#if (DEBUG)
-//                RequireSecureConnection = false,
-//                //EncryptPayload = true,
-//#endif
-//                PersistSession = true,
-//                SessionExpiry = TimeSpan.FromHours(12)
-//            };
+            //            var apikeyauthprovider = new ApiKeyAuthProvider(AppSettings)
+            //            {
+            //#if (DEBUG)
+            //                RequireSecureConnection = false,
+            //                //EncryptPayload = true,
+            //#endif
+            //                PersistSession = true,
+            //                SessionExpiry = TimeSpan.FromHours(12)
+            //            };
 
             this.Plugins.Add(new CorsFeature(allowedHeaders: "Content-Type, Authorization, Access-Control-Allow-Origin, Access-Control-Allow-Credentials"));
             this.Plugins.Add(new ProtoBufFormat());
@@ -130,15 +130,15 @@ namespace ExpressBase.ServiceStack
             this.Plugins.Add(new AuthFeature(() => new CustomUserSession(),
                 new IAuthProvider[] {
                     new MyFacebookAuthProvider(AppSettings)
-                    {
-                        AppId = "151550788692231",
+        {
+            AppId = "151550788692231",
                         AppSecret = "94ec1a04342e5cf7e7a971f2eb7ad7bc",
                         Permissions = new string[] { "email, public_profile" }
                     },
 
                     new MyTwitterAuthProvider(AppSettings)
-                    {
-                        ConsumerKey = "6G9gaYo7DMx1OHYRAcpmkPfvu",
+        {
+            ConsumerKey = "6G9gaYo7DMx1OHYRAcpmkPfvu",
                         ConsumerSecret = "Jx8uUIPeo5D0agjUnqkKHGQ4o6zTrwze9EcLtjDlOgLnuBaf9x",
                        // CallbackUrl = "http://localhost:8000/auth/twitter",
                         
@@ -147,20 +147,15 @@ namespace ExpressBase.ServiceStack
                     },
 
                     new MyGithubAuthProvider(AppSettings)
-                    {
-                    ClientId="4504eefeb8f027c810dd",
-                    ClientSecret="d9c1c956a9fddd089798e0031851e93a8d0e5cc6",
-                    RedirectUrl ="http://localhost:8000/"
+        {
+            ClientId = "4504eefeb8f027c810dd",
+                    ClientSecret = "d9c1c956a9fddd089798e0031851e93a8d0e5cc6",
+                    RedirectUrl = "http://localhost:8000/"
                     },
 
-                    new MyCredentialsAuthProvider(AppSettings)
-                    {
-                        PersistSession = true
-                    },
+                    new MyCredentialsAuthProvider(AppSettings) { PersistSession = true },
 
-                    jwtprovider,
-                    //apikeyauthprovider
-
+                    jwtprovider
                 }));
 
             //Also works but it's recommended to handle 404's by registering at end of .NET Core pipeline
@@ -177,7 +172,8 @@ namespace ExpressBase.ServiceStack
                Environment.GetEnvironmentVariable(EnvironmentConstants.EB_REDIS_PORT));
 
             container.Register<IRedisClientsManager>(c => new RedisManagerPool(redisConnectionString));
-            container.Register<IUserAuthRepository>(c => new EbRedisAuthRepository(c.Resolve<IRedisClientsManager>()));
+
+            container.Register<IUserAuthRepository>(c => new MyRedisAuthRepository(c.Resolve<IRedisClientsManager>()));
 
             container.Register<JwtAuthProvider>(jwtprovider);
             container.RegisterAutoWiredAs<MemoryChatHistory, IChatHistory>();
@@ -188,6 +184,9 @@ namespace ExpressBase.ServiceStack
             //container.Register<ApiKeyAuthProvider>(apikeyauthprovider);
 
             container.Register<IEbConnectionFactory>(c => new EbConnectionFactory(c)).ReusedWithin(ReuseScope.Request);
+
+            container.Register<IEbServerEventClient>(c => new EbServerEventClient(c)).ReusedWithin(ReuseScope.Request);
+            container.Register<IEbMqClient>(c => new EbMqClient(c)).ReusedWithin(ReuseScope.Request);
 
             RabbitMqMessageFactory rabitFactory = new RabbitMqMessageFactory();
             rabitFactory.ConnectionFactory.UserName = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_RABBIT_USER);
@@ -202,7 +201,7 @@ namespace ExpressBase.ServiceStack
             //mqServer.RegisterHandler<SMSSentMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<RefreshSolutionConnectionsMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<SMSStatusLogMqRequest>(base.ExecuteMessage);
-            //mqServer.RegisterHandler<UploadFileMqRequest>(base.ExecuteMessage);
+            //mqServer.RegisterHandler<UploadFileMqRequestTest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<ImageResizeMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<FileMetaPersistMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<SlackPostMqRequest>(base.ExecuteMessage);
@@ -245,7 +244,7 @@ namespace ExpressBase.ServiceStack
                 }
                 try
                 {
-                    if (requestDto != null && requestDto.GetType() != typeof(Authenticate) && requestDto.GetType() != typeof(GetAccessToken) && requestDto.GetType() != typeof(UniqueRequest) && requestDto.GetType() != typeof(CreateAccountRequest)&& requestDto.GetType() != typeof(EmailServicesMqRequest) && requestDto.GetType() != typeof(RegisterRequest) && requestDto.GetType() != typeof(AutoGenEbIdRequest)
+                    if (requestDto != null && requestDto.GetType() != typeof(Authenticate) && requestDto.GetType() != typeof(GetAccessToken) && requestDto.GetType() != typeof(UniqueRequest) && requestDto.GetType() != typeof(CreateAccountRequest) && requestDto.GetType() != typeof(EmailServicesMqRequest) && requestDto.GetType() != typeof(RegisterRequest) && requestDto.GetType() != typeof(AutoGenEbIdRequest)
                     && requestDto.GetType() != typeof(GetEventSubscribers) && requestDto.GetType() != typeof(GetChatHistory) && requestDto.GetType() != typeof(PostChatToChannel))
                     {
                         var auth = req.Headers[HttpHeaders.Authorization];
@@ -281,6 +280,13 @@ namespace ExpressBase.ServiceStack
                                         (requestDto as EbServiceStackRequest).WhichConsole = c.Value.ToString();
                                     continue;
                                 }
+                                if (c.Type == "sub" && !string.IsNullOrEmpty(c.Value))
+                                {
+                                    RequestContext.Instance.Items.Add("sub", c.Value);
+                                    if (requestDto is EbServiceStackRequest)
+                                        (requestDto as EbServiceStackRequest).UserAuthId = c.Value.ToString();
+                                    continue;
+                                }
                             }
                         }
                     }
@@ -309,7 +315,7 @@ namespace ExpressBase.ServiceStack
                 if (req.RawUrl.Contains("smscallback"))
                 {
                     req.Headers.Add("BearerToken", "");
-                    
+
                 }
             });
             //AfterInitCallbacks.Add(host =>

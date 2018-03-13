@@ -18,7 +18,6 @@
 
   <ItemGroup>
     <PackageReference Include="FOSS.ServiceStack.ProtoBuf.Core" Version="5.0.2" />
-    <PackageReference Include="FOSS.ServiceStack.RabbitMq.Core" Version="5.0.2" />
     <PackageReference Include="FOSS.ServiceStack.Server.Core" Version="5.0.2" />
     <PackageReference Include="Microsoft.AspNetCore.All" Version="2.0.3" />
     <PackageReference Include="RestSharp.NetCore" Version="105.2.3" />
@@ -26,6 +25,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!--<ProjectReference Include="..\ServiceStack.Core\ServiceStack.ProtoBuf\ServiceStack.ProtoBuf.csproj" />
+    <ProjectReference Include="..\ServiceStack.Core\ServiceStack.RabbitMq\ServiceStack.RabbitMq.csproj" />
+    <ProjectReference Include="..\ServiceStack.Core\ServiceStack.Server\ServiceStack.Server.csproj" />-->
     <ProjectReference Include="..\ExpressBase.Common\ExpressBase.Common.csproj" />
     <ProjectReference Include="..\ExpressBase.Objects\ExpressBase.Objects.csproj" />
     <ProjectReference Include="..\ExpressBase.Security\ExpressBase.Security.csproj" />

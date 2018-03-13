@@ -89,12 +89,9 @@ namespace ExpressBase.ServiceStack.Services
         public object Get(SidebarDevRequest request)
         {
             var Query1 = @"
-SELECT id, applicationname FROM eb_applications;
-SELECT
-    EO.id, EO.obj_type, EO.obj_name,EO.obj_desc,EO.applicationid
-FROM
-    eb_objects EO
-ORDER BY EO.obj_type";
+            SELECT id, applicationname FROM eb_applications;
+            SELECT EO.id, EO.obj_type, EO.obj_name,EO.obj_desc,EO.applicationid FROM
+            eb_objects EO ORDER BY EO.obj_type;";
 
             //parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@Ids", System.Data.DbType.String, request.Ids));
             var ds = this.EbConnectionFactory.ObjectsDB.DoQueries(Query1);
@@ -123,14 +120,14 @@ ORDER BY EO.obj_type";
 
 					_types[typeId].Objects.Add(new ObjWrap
 					{
-						Id = (dr[0] != DBNull.Value) ? Convert.ToInt32(dr[0]) : 0,
-						EbObjectType = (dr[1] != DBNull.Value) ? Convert.ToInt32(dr[1]) : 0,
+						Id = (dr[0] != null) ? Convert.ToInt32(dr[0]) : 0,
+						EbObjectType = (dr[1] != null) ? Convert.ToInt32(dr[1]) : 0,
 						ObjName = dr[2].ToString(),
 						Description = dr[3].ToString(),
 						EbType = ___otyp.ToString(),
-						AppId = (dr[4] != DBNull.Value) ? Convert.ToInt32(dr[4]) : 0
+						AppId = (Convert.ToInt32(dr[4]) == 0) ?  0 : Convert.ToInt32(dr[4])
 
-					});
+                    });
 				}
 			}catch (Exception ee)
 			{
