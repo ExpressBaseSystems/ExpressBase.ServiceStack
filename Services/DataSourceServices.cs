@@ -89,7 +89,8 @@ namespace ExpressBase.ServiceStack
                 Draw = request.Draw,
                 Data = (_dataset.Tables.Count > 1) ? _dataset.Tables[1].Rows : _dataset.Tables[0].Rows,
                 RecordsTotal = _recordsTotal,
-                RecordsFiltered = _recordsFiltered
+                RecordsFiltered = _recordsFiltered,
+                Ispaged = _isPaged
             };
             this.Log.Info("dsresponse*****" + dsresponse.Data);
             var x = EbSerializers.Json_Serialize(dsresponse);
