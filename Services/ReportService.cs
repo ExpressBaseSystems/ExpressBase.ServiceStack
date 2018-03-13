@@ -70,7 +70,7 @@ namespace ExpressBase.ServiceStack
 
             }
 
-            Rectangle rec = new Rectangle(Report.Width, Report.Height);
+            Rectangle rec = new Rectangle(Report.WidthPt, Report.HeightPt);
             Report.Doc = new Document(rec);
             Report.Ms1 = new MemoryStream();
             Report.Writer = PdfWriter.GetInstance(Report.Doc, Report.Ms1);
