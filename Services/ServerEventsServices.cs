@@ -1,11 +1,10 @@
-﻿using ExpressBase.Objects.ServerEvents_Artifacts;
+﻿using ExpressBase.Common.ServerEvents_Artifacts;
 using ServiceStack;
 using ServiceStack.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Threading.Tasks;
 
 namespace ExpressBase.ServiceStack.Services
 {

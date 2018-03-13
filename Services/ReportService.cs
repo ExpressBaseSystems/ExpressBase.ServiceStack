@@ -21,6 +21,7 @@ using Microsoft.CodeAnalysis.Scripting;
 using System.Dynamic;
 using ExpressBase.Objects.Objects.ReportRelated;
 using System.Text;
+using ExpressBase.ServiceStack.Services;
 using ExpressBase.Security;
 
 namespace ExpressBase.ServiceStack
