@@ -1,4 +1,6 @@
 ﻿using ExpressBase.Common.Data;
+using ExpressBase.Common.ServiceStack;
+using ExpressBase.Common.ServiceStack.Auth0;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ExpressBase.Security;
 using ServiceStack;
@@ -85,8 +87,8 @@ namespace ExpressBase.ServiceStack.Auth0
                 session.UserAuthId = _authUser.AuthId;
 
                 var authRepo = HostContext.AppHost.GetAuthRepository(authService.Request);
-                var existingUser = (authRepo as EbRedisAuthRepository).GetUserAuth(session.UserAuthId);
-                (authRepo as EbRedisAuthRepository).UpdateUserAuth(existingUser, _authUser);
+                var existingUser = (authRepo as MyRedisAuthRepository).GetUserAuth(session.UserAuthId);
+                (authRepo as MyRedisAuthRepository).UpdateUserAuth(existingUser, _authUser);
             }
 
             return (_authUser != null);

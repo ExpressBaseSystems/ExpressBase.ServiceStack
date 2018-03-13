@@ -253,6 +253,20 @@ namespace ExpressBase.ServiceStack.Services
             }
 		}
 
+		public ChangeUserPasswordResponse Any(ChangeUserPasswordRequest request)
+		{
+			string sql = "UPDATE eb_users SET pwd = :newpwd WHERE id = :userid AND pwd = :oldpwd;";
+			DbParameter[] parameters = new DbParameter[] {
+				this.EbConnectionFactory.ObjectsDB.GetNewParameter("userid", EbDbTypes.Int32, request.UserId),
+				this.EbConnectionFactory.ObjectsDB.GetNewParameter("oldpwd", EbDbTypes.String, (request.OldPwd + request.Email).ToMD5Hash()),
+				this.EbConnectionFactory.ObjectsDB.GetNewParameter("newpwd", EbDbTypes.String, (request.NewPwd + request.Email).ToMD5Hash())
+			};
+			return new ChangeUserPasswordResponse() {
+				isSuccess = this.EbConnectionFactory.ObjectsDB.DoNonQuery(sql, parameters) > 0 ? true : false
+			};
+		}
+
+
 		public SaveUserResponse Post(SaveUserRequest request)
 		{
 			SaveUserResponse resp;
@@ -358,8 +372,7 @@ namespace ExpressBase.ServiceStack.Services
 			};
 			return new UpdateAnonymousUserResponse {RowAffected = this.EbConnectionFactory.ObjectsDB.DoNonQuery(sql, parameters) };
 		}
-
-
+		
 		public ConvertAnonymousUserResponse Any(ConvertAnonymousUserRequest request)
 		{
 			//WORK NOT COMPLETED
@@ -376,8 +389,7 @@ namespace ExpressBase.ServiceStack.Services
 			return new ConvertAnonymousUserResponse { status = (dt.Tables.Count > 0) ? Convert.ToInt32(dt.Tables[0].Rows[0][0]): 0 };
 		}
 
-
-
+		
 		//------MANAGE USER GROUP START------------------------------
 
 		public GetManageUserGroupResponse Any(GetManageUserGroupRequest request)
