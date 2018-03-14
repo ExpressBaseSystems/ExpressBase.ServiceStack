@@ -150,7 +150,7 @@ namespace ExpressBase.ServiceStack
                         Report.ValueScriptCollection.Add(field.Name, valscript);
 
                     }
-                    else if ((field is EbDataField && !Report.AppearanceScriptCollection.ContainsKey(field.Name) && (field as EbDataField).AppearanceExpression != ""))
+                    if ((field is EbDataField && !Report.AppearanceScriptCollection.ContainsKey(field.Name) && (field as EbDataField).AppearanceExpression != ""))
                     {
                         byte[] dataapp = Convert.FromBase64String((field as EbDataField).AppearanceExpression);
                         string decodedAppE = Encoding.UTF8.GetString(dataapp);
