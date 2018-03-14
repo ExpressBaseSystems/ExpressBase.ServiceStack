@@ -23,6 +23,8 @@ using ExpressBase.Objects.Objects.ReportRelated;
 using System.Text;
 using ExpressBase.ServiceStack.Services;
 using ExpressBase.Security;
+using System.DrawingCore.Text;
+using System.DrawingCore;
 
 namespace ExpressBase.ServiceStack
 {
@@ -37,8 +39,18 @@ namespace ExpressBase.ServiceStack
 
         public ReportRenderResponse Get(ReportRenderRequest request)
         {
-            EbReport Report = null;
+            int count = iTextSharp.text.FontFactory.RegisterDirectory("G:\\ExpressBase.Core\\ExpressBase.Objects\\Fonts\\");
+            using (InstalledFontCollection col = new InstalledFontCollection())
+            {
+                foreach (FontFamily fa in col.Families)
+                {
+                    Console.WriteLine(fa.Name);
+                }
+            }
 
+
+
+            EbReport Report = null;
             //-- Get REPORT object and Init 
             var myObjectservice = base.ResolveService<EbObjectService>();
             EbObjectParticularVersionResponse resultlist = myObjectservice.Get(new EbObjectParticularVersionRequest { RefId = request.Refid }) as EbObjectParticularVersionResponse;
@@ -74,7 +86,7 @@ namespace ExpressBase.ServiceStack
 
             }
 
-            Rectangle rec = new Rectangle(Report.WidthPt, Report.HeightPt);
+            iTextSharp.text.Rectangle rec = new iTextSharp.text.Rectangle(Report.WidthPt, Report.HeightPt);
             Report.Doc = new Document(rec);
             Report.Ms1 = new MemoryStream();
             Report.Writer = PdfWriter.GetInstance(Report.Doc, Report.Ms1);
@@ -140,7 +152,7 @@ namespace ExpressBase.ServiceStack
                         Report.ValueScriptCollection.Add(field.Name, valscript);
 
                     }
-                    else if ((field is EbDataField && !Report.AppearanceScriptCollection.ContainsKey(field.Name) && (field as EbDataField).AppearanceExpression !=""))
+                    else if ((field is EbDataField && !Report.AppearanceScriptCollection.ContainsKey(field.Name) && (field as EbDataField).AppearanceExpression != ""))
                     {
                         byte[] dataapp = Convert.FromBase64String((field as EbDataField).AppearanceExpression);
                         string decodedAppE = Encoding.UTF8.GetString(dataapp);
