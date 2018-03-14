@@ -142,19 +142,14 @@ namespace ExpressBase.ServiceStack
                 {
                     if (field is EbCalcField && !Report.ValueScriptCollection.ContainsKey(field.Name))
                     {
-
-                        byte[] dataval = Convert.FromBase64String((field as EbCalcField).ValueExpression);
-                        string decodedvalE = Encoding.UTF8.GetString(dataval);
-                        Script valscript = CSharpScript.Create<dynamic>(decodedvalE, ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System.Dynamic"), globalsType: typeof(Globals));
+                        Script valscript = CSharpScript.Create<dynamic>((field as EbCalcField).ValueExpression, ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System.Dynamic"), globalsType: typeof(Globals));
                         valscript.Compile();
                         Report.ValueScriptCollection.Add(field.Name, valscript);
 
                     }
                     if ((field is EbDataField && !Report.AppearanceScriptCollection.ContainsKey(field.Name) && (field as EbDataField).AppearanceExpression != ""))
                     {
-                        byte[] dataapp = Convert.FromBase64String((field as EbDataField).AppearanceExpression);
-                        string decodedAppE = Encoding.UTF8.GetString(dataapp);
-                        Script appearscript = CSharpScript.Create<dynamic>(decodedAppE, ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System.Dynamic"), globalsType: typeof(Globals));
+                        Script appearscript = CSharpScript.Create<dynamic>((field as EbDataField).AppearanceExpression, ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System.Dynamic"), globalsType: typeof(Globals));
                         appearscript.Compile();
                         Report.AppearanceScriptCollection.Add(field.Name, appearscript);
                     }
