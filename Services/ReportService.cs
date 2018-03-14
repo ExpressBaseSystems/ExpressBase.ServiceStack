@@ -39,16 +39,14 @@ namespace ExpressBase.ServiceStack
 
         public ReportRenderResponse Get(ReportRenderRequest request)
         {
-            int count = iTextSharp.text.FontFactory.RegisterDirectory("G:\\ExpressBase.Core\\ExpressBase.Objects\\Fonts\\");
-            using (InstalledFontCollection col = new InstalledFontCollection())
-            {
-                foreach (FontFamily fa in col.Families)
-                {
-                    Console.WriteLine(fa.Name);
-                }
-            }
-
-
+            //int count = iTextSharp.text.FontFactory.RegisterDirectory("E:\\ExpressBase.Core\\ExpressBase.Objects\\Fonts\\");
+            //using (InstalledFontCollection col = new InstalledFontCollection())
+            //{
+            //    foreach (FontFamily fa in col.Families)
+            //    {
+            //        Console.WriteLine(fa.Name);
+            //    }
+            //}
 
             EbReport Report = null;
             //-- Get REPORT object and Init 
@@ -64,7 +62,7 @@ namespace ExpressBase.ServiceStack
             Report.ValueScriptCollection = new Dictionary<string, Script>();
             Report.AppearanceScriptCollection = new Dictionary<string, Script>();
             Report.CurrentTimestamp = DateTime.Now;
-            //   User u = this.Redis.Get<User>(string.Format("{0}-{1}-{2}", ViewBag.cid, ViewBag.email, ViewBag.wc));
+            Report.UserName = request.Fullname;
             //-- END REPORT object INIT
 
             var myDataSourceservice = base.ResolveService<DataSourceService>();
