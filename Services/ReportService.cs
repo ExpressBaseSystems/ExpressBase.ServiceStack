@@ -23,6 +23,8 @@ using ExpressBase.Objects.Objects.ReportRelated;
 using System.Text;
 using ExpressBase.ServiceStack.Services;
 using ExpressBase.Security;
+using System.DrawingCore.Text;
+using System.DrawingCore;
 
 namespace ExpressBase.ServiceStack
 {
@@ -37,8 +39,16 @@ namespace ExpressBase.ServiceStack
 
         public ReportRenderResponse Get(ReportRenderRequest request)
         {
-            EbReport Report = null;
+            //int count = iTextSharp.text.FontFactory.RegisterDirectory("E:\\ExpressBase.Core\\ExpressBase.Objects\\Fonts\\");
+            //using (InstalledFontCollection col = new InstalledFontCollection())
+            //{
+            //    foreach (FontFamily fa in col.Families)
+            //    {
+            //        Console.WriteLine(fa.Name);
+            //    }
+            //}
 
+            EbReport Report = null;
             //-- Get REPORT object and Init 
             var myObjectservice = base.ResolveService<EbObjectService>();
             EbObjectParticularVersionResponse resultlist = myObjectservice.Get(new EbObjectParticularVersionRequest { RefId = request.Refid }) as EbObjectParticularVersionResponse;
@@ -52,7 +62,7 @@ namespace ExpressBase.ServiceStack
             Report.ValueScriptCollection = new Dictionary<string, Script>();
             Report.AppearanceScriptCollection = new Dictionary<string, Script>();
             Report.CurrentTimestamp = DateTime.Now;
-            //   User u = this.Redis.Get<User>(string.Format("{0}-{1}-{2}", ViewBag.cid, ViewBag.email, ViewBag.wc));
+            Report.UserName = request.Fullname;
             //-- END REPORT object INIT
 
             var myDataSourceservice = base.ResolveService<DataSourceService>();
@@ -74,7 +84,7 @@ namespace ExpressBase.ServiceStack
 
             }
 
-            Rectangle rec = new Rectangle(Report.WidthPt, Report.HeightPt);
+            iTextSharp.text.Rectangle rec = new iTextSharp.text.Rectangle(Report.WidthPt, Report.HeightPt);
             Report.Doc = new Document(rec);
             Report.Ms1 = new MemoryStream();
             Report.Writer = PdfWriter.GetInstance(Report.Doc, Report.Ms1);
@@ -132,19 +142,14 @@ namespace ExpressBase.ServiceStack
                 {
                     if (field is EbCalcField && !Report.ValueScriptCollection.ContainsKey(field.Name))
                     {
-
-                        byte[] dataval = Convert.FromBase64String((field as EbCalcField).ValueExpression);
-                        string decodedvalE = Encoding.UTF8.GetString(dataval);
-                        Script valscript = CSharpScript.Create<dynamic>(decodedvalE, ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System.Dynamic"), globalsType: typeof(Globals));
+                        Script valscript = CSharpScript.Create<dynamic>((field as EbCalcField).ValueExpression, ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System.Dynamic"), globalsType: typeof(Globals));
                         valscript.Compile();
                         Report.ValueScriptCollection.Add(field.Name, valscript);
 
                     }
-                    else if ((field is EbDataField && !Report.AppearanceScriptCollection.ContainsKey(field.Name) && (field as EbDataField).AppearanceExpression !=""))
+                    if ((field is EbDataField && !Report.AppearanceScriptCollection.ContainsKey(field.Name) && (field as EbDataField).AppearanceExpression != ""))
                     {
-                        byte[] dataapp = Convert.FromBase64String((field as EbDataField).AppearanceExpression);
-                        string decodedAppE = Encoding.UTF8.GetString(dataapp);
-                        Script appearscript = CSharpScript.Create<dynamic>(decodedAppE, ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System.Dynamic"), globalsType: typeof(Globals));
+                        Script appearscript = CSharpScript.Create<dynamic>((field as EbDataField).AppearanceExpression, ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System.Dynamic"), globalsType: typeof(Globals));
                         appearscript.Compile();
                         Report.AppearanceScriptCollection.Add(field.Name, appearscript);
                     }

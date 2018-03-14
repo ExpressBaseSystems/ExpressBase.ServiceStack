@@ -206,13 +206,13 @@ namespace ExpressBase.ServiceStack.Services
 
         public void Get(CreateApplicationRequest request)
         {
-            string sql =string.Format(@"SELECT A.id, A.fullname, A.email, A.phoneno, A.socialid, A.firstvisit, A.lastvisit, A.totalvisits, B.applicationname 
+            string sql =string.Format(@"SELECT A.socialid, A.id, A.fullname, A.email, A.phoneno, A.firstvisit, A.lastvisit, A.totalvisits, B.applicationname 
 								FROM eb_usersanonymous A, eb_applications B WHERE A.appid = B.id AND A.ebuserid = 1 AND A.appid = {0}", request.appid);
 
             var dsobj = new EbDataSource();
             dsobj.Sql = sql;
             var ds = new EbObject_Create_New_ObjectRequest();
-            ds.Name = request.Colvalues["AppName"]+"_datasource";
+            ds.Name = request.Colvalues["DescApp"] + "_datasource";
             ds.Description = "desc";
             ds.Json = EbSerializers.Json_Serialize(dsobj);
             ds.Status = ObjectLifeCycleStatus.Live;
@@ -232,7 +232,7 @@ namespace ExpressBase.ServiceStack.Services
             //dvobj.Columns = Columns;
             //dvobj.DSColumns = Columns;
             var ds1 = new EbObject_Create_New_ObjectRequest();
-            ds1.Name = request.Colvalues["AppName"]+"_response";
+            ds1.Name = request.Colvalues["DescApp"] + "_response";
             ds1.Description = "desc";
             ds1.Json = EbSerializers.Json_Serialize(dvobj);
             ds1.Status = ObjectLifeCycleStatus.Live;
