@@ -4,7 +4,6 @@ using ExpressBase.Common.EbServiceStack.ReqNRes;
 using ExpressBase.Objects;
 using ExpressBase.Objects.ReportRelated;
 using ExpressBase.Objects.ServiceStack_Artifacts;
-using ExpressBase.ServiceStack.MQServices;
 using iTextSharp.text;
 using iTextSharp.text.pdf;
 using Microsoft.AspNetCore.Mvc;
@@ -43,7 +42,7 @@ namespace ExpressBase.ServiceStack
             EbObjectParticularVersionResponse resultlist = myObjectservice.Get(new EbObjectParticularVersionRequest { RefId = request.Refid }) as EbObjectParticularVersionResponse;
             Report = EbSerializers.Json_Deserialize<EbReport>(resultlist.Data[0].Json);
             Report.ReportService = this;
-            Report.FileService = base.ResolveService<FileService>();
+            //Report.FileService = base.ResolveService<FileService>();
             Report.SolutionId = request.TenantAccountId;
             Report.IsLastpage = false;
             Report.watermarkImages = new Dictionary<string, byte[]>();

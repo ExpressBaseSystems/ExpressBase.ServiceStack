@@ -13,6 +13,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using ServiceStack;
 using ServiceStack.Auth;
+using ServiceStack.Discovery.Redis;
 using ServiceStack.Logging;
 using ServiceStack.Messaging;
 using ServiceStack.ProtoBuf;
@@ -76,7 +77,7 @@ namespace ExpressBase.ServiceStack
 
         private PooledRedisClientManager RedisBusPool { get; set; }
 
-        public AppHost() : base("Test Razor", typeof(AppHost).GetAssembly()) { }
+        public AppHost() : base("EXPRESSbase Services", typeof(AppHost).Assembly) { }
 
         public override void OnAfterConfigChanged()
         {
@@ -122,7 +123,7 @@ namespace ExpressBase.ServiceStack
 
             this.Plugins.Add(new CorsFeature(allowedHeaders: "Content-Type, Authorization, Access-Control-Allow-Origin, Access-Control-Allow-Credentials"));
             this.Plugins.Add(new ProtoBufFormat());
-            this.Plugins.Add(new ServerEventsFeature());
+            //this.Plugins.Add(new ServerEventsFeature());
 
             this.Plugins.Add(new AuthFeature(() => new CustomUserSession(),
                 new IAuthProvider[] {
@@ -165,6 +166,8 @@ namespace ExpressBase.ServiceStack
 
             this.ContentTypes.Register(MimeTypes.ProtoBuf, (reqCtx, res, stream) => ProtoBuf.Serializer.NonGeneric.Serialize(stream, res), ProtoBuf.Serializer.NonGeneric.Deserialize);
 
+            
+
             SetConfig(new HostConfig { DebugMode = true });
             SetConfig(new HostConfig { DefaultContentType = MimeTypes.Json });
 
@@ -180,15 +183,18 @@ namespace ExpressBase.ServiceStack
             container.Register<JwtAuthProvider>(jwtprovider);
             container.RegisterAutoWiredAs<MemoryChatHistory, IChatHistory>();
 
-            container.Register<IServerEvents>(c => new RedisServerEvents(c.Resolve<IRedisClientsManager>()));
-            container.Resolve<IServerEvents>().Start();
+            //SetConfig(new HostConfig
+            //{
+            //    WebHostUrl = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_SERVICESTACK_INT_URL)
+            //});
 
-            //container.Register<ApiKeyAuthProvider>(apikeyauthprovider);
+            //Plugins.Add(new RedisServiceDiscoveryFeature());
 
             container.Register<IEbConnectionFactory>(c => new EbConnectionFactory(c)).ReusedWithin(ReuseScope.Request);
 
             container.Register<IEbServerEventClient>(c => new EbServerEventClient(c)).ReusedWithin(ReuseScope.Request);
             container.Register<IEbMqClient>(c => new EbMqClient(c)).ReusedWithin(ReuseScope.Request);
+            container.Register<IEbStaticFileClient>(c => new EbStaticFileClient(c)).ReusedWithin(ReuseScope.Request);
 
             RabbitMqMessageFactory rabitFactory = new RabbitMqMessageFactory();
             rabitFactory.ConnectionFactory.UserName = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_RABBIT_USER);
@@ -203,7 +209,7 @@ namespace ExpressBase.ServiceStack
             //mqServer.RegisterHandler<SMSSentMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<RefreshSolutionConnectionsMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<SMSStatusLogMqRequest>(base.ExecuteMessage);
-            //mqServer.RegisterHandler<UploadFileMqRequestTest>(base.ExecuteMessage);
+            //mqServer.RegisterHandler<UploadFileAsyncRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<ImageResizeMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<FileMetaPersistMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<SlackPostMqRequest>(base.ExecuteMessage);
@@ -307,7 +313,7 @@ namespace ExpressBase.ServiceStack
                 {
                     if (responseDto.GetResponseDto().GetType() == typeof(GetAccessTokenResponse))
                     {
-                        res.SetSessionCookie("Token", (res.Dto as GetAccessTokenResponse).AccessToken);
+                        //res.SetSessionCookie("Token", (res.Dto as GetAccessTokenResponse).AccessToken);
                     }
                 }
             });

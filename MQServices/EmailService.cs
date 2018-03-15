@@ -26,22 +26,19 @@ namespace ExpressBase.ServiceStack
         {
             public EmailServiceInternal(IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_mqp, _mqc) { }
 
-            
-
-
             public string Post(EmailServicesMqRequest request)
             {
-                
+
                 var _InfraDb = new EbConnectionFactory(request.TenantAccountId, this.Redis);
                 var myService = base.ResolveService<EbObjectService>();
-                var res =(EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = request.refid });
+                var res = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = request.refid });
                 EbEmailTemplate ebEmailTemplate = new EbEmailTemplate();
                 foreach (var element in res.Data)
                 {
-                     ebEmailTemplate = EbSerializers.Json_Deserialize(element.Json);
+                    ebEmailTemplate = EbSerializers.Json_Deserialize(element.Json);
                 }
 
-               
+
 
                 var myDs = base.ResolveService<EbObjectService>();
                 var myDsres = (EbObjectParticularVersionResponse)myDs.Get(new EbObjectParticularVersionRequest() { RefId = ebEmailTemplate.DataSourceRefId });
@@ -51,14 +48,14 @@ namespace ExpressBase.ServiceStack
                 {
                     ebDataSource = EbSerializers.Json_Deserialize(element.Json);
                 }
-                DbParameter[] parameters = { _InfraDb.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, 1)}; //change 1 by request.id
-                var ds = _InfraDb.ObjectsDB.DoQueries(ebDataSource.Sql,parameters);
+                DbParameter[] parameters = { _InfraDb.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, 1) }; //change 1 by request.id
+                var ds = _InfraDb.ObjectsDB.DoQueries(ebDataSource.Sql, parameters);
                 //var pattern = @"\{{(.*?)\}}";
                 //var matches = Regex.Matches(ebEmailTemplate.Body, pattern);
                 //Dictionary<string, object> dict = new Dictionary<string, object>();
                 foreach (var dscol in ebEmailTemplate.DsColumnsCollection)
                 {
-                    string str = dscol.Title.Replace("{{", "").Replace("}}","");
+                    string str = dscol.Title.Replace("{{", "").Replace("}}", "");
 
 
                     foreach (var dt in ds.Tables)
@@ -67,8 +64,8 @@ namespace ExpressBase.ServiceStack
                         string colname = dt.Rows[0][str.Split('.')[1]].ToString();
                         ebEmailTemplate.Body = ebEmailTemplate.Body.Replace(dscol.Title, colname);
                     }
-                    
-                }           
+
+                }
                 var emailMessage = new MimeMessage();
                 emailMessage.From.Add(new MailboxAddress("EXPRESSbase", "info@expressbase.com"));
                 emailMessage.To.Add(new MailboxAddress("", request.To));
@@ -94,6 +91,6 @@ namespace ExpressBase.ServiceStack
         }
     }
 
-   
+
 
 }
