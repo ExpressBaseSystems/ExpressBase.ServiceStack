@@ -13,7 +13,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using ServiceStack;
 using ServiceStack.Auth;
-using ServiceStack.Discovery.Redis;
 using ServiceStack.Logging;
 using ServiceStack.Messaging;
 using ServiceStack.ProtoBuf;
@@ -21,7 +20,6 @@ using ServiceStack.RabbitMq;
 using ServiceStack.Redis;
 using System;
 using System.IdentityModel.Tokens.Jwt;
-using static ExpressBase.ServiceStack.Services.ServerEventsSSServices;
 
 namespace ExpressBase.ServiceStack
 {
@@ -161,12 +159,7 @@ namespace ExpressBase.ServiceStack
 
                 }));
 
-            //Also works but it's recommended to handle 404's by registering at end of .NET Core pipeline
-            //this.CustomErrorHttpHandlers[HttpStatusCode.NotFound] = new RazorHandler("/notfound");
-
             this.ContentTypes.Register(MimeTypes.ProtoBuf, (reqCtx, res, stream) => ProtoBuf.Serializer.NonGeneric.Serialize(stream, res), ProtoBuf.Serializer.NonGeneric.Deserialize);
-
-            
 
             SetConfig(new HostConfig { DebugMode = true });
             SetConfig(new HostConfig { DefaultContentType = MimeTypes.Json });
@@ -177,21 +170,11 @@ namespace ExpressBase.ServiceStack
                Environment.GetEnvironmentVariable(EnvironmentConstants.EB_REDIS_PORT));
 
             container.Register<IRedisClientsManager>(c => new RedisManagerPool(redisConnectionString));
-
             container.Register<IUserAuthRepository>(c => new EbRedisAuthRepository(c.Resolve<IRedisClientsManager>()));
 
             container.Register<JwtAuthProvider>(jwtprovider);
-            container.RegisterAutoWiredAs<MemoryChatHistory, IChatHistory>();
-
-            //SetConfig(new HostConfig
-            //{
-            //    WebHostUrl = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_SERVICESTACK_INT_URL)
-            //});
-
-            //Plugins.Add(new RedisServiceDiscoveryFeature());
 
             container.Register<IEbConnectionFactory>(c => new EbConnectionFactory(c)).ReusedWithin(ReuseScope.Request);
-
             container.Register<IEbServerEventClient>(c => new EbServerEventClient(c)).ReusedWithin(ReuseScope.Request);
             container.Register<IEbMqClient>(c => new EbMqClient(c)).ReusedWithin(ReuseScope.Request);
             container.Register<IEbStaticFileClient>(c => new EbStaticFileClient(c)).ReusedWithin(ReuseScope.Request);
@@ -204,18 +187,6 @@ namespace ExpressBase.ServiceStack
             rabitFactory.ConnectionFactory.VirtualHost = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_RABBIT_VHOST);
 
             var mqServer = new RabbitMqServer(rabitFactory);
-            mqServer.RetryCount = 1;
-            //mqServer.RegisterHandler<EmailServicesMqRequest>(base.ExecuteMessage);
-            //mqServer.RegisterHandler<SMSSentMqRequest>(base.ExecuteMessage);
-            //mqServer.RegisterHandler<RefreshSolutionConnectionsMqRequest>(base.ExecuteMessage);
-            //mqServer.RegisterHandler<SMSStatusLogMqRequest>(base.ExecuteMessage);
-            //mqServer.RegisterHandler<UploadFileAsyncRequest>(base.ExecuteMessage);
-            //mqServer.RegisterHandler<ImageResizeMqRequest>(base.ExecuteMessage);
-            //mqServer.RegisterHandler<FileMetaPersistMqRequest>(base.ExecuteMessage);
-            //mqServer.RegisterHandler<SlackPostMqRequest>(base.ExecuteMessage);
-            //mqServer.RegisterHandler<SlackAuthMqRequest>(base.ExecuteMessage);
-
-            mqServer.Start();
 
             container.AddScoped<IMessageProducer, RabbitMqProducer>(serviceProvider =>
             {
@@ -227,7 +198,6 @@ namespace ExpressBase.ServiceStack
                 return mqServer.CreateMessageQueueClient() as RabbitMqQueueClient;
             });
 
-            //Add a request filter to check if the user has a session initialized
             this.GlobalRequestFilters.Add((req, res, requestDto) =>
             {
                 ILog log = LogManager.GetLogger(GetType());
@@ -253,7 +223,7 @@ namespace ExpressBase.ServiceStack
                 try
                 {
                     if (requestDto != null && requestDto.GetType() != typeof(Authenticate) && requestDto.GetType() != typeof(GetAccessToken) && requestDto.GetType() != typeof(UniqueRequest) && requestDto.GetType() != typeof(CreateAccountRequest)&& requestDto.GetType() != typeof(EmailServicesMqRequest) && requestDto.GetType() != typeof(RegisterRequest) && requestDto.GetType() != typeof(AutoGenEbIdRequest)
-                    && requestDto.GetType() != typeof(GetEventSubscribers) && requestDto.GetType() != typeof(GetChatHistory) && requestDto.GetType() != typeof(PostChatToChannel))
+                    && requestDto.GetType() != typeof(GetEventSubscribers) )
                     {
                         var auth = req.Headers[HttpHeaders.Authorization];
                         if (string.IsNullOrEmpty(auth))
@@ -326,6 +296,8 @@ namespace ExpressBase.ServiceStack
                     
                 }
             });
+            
+            //--Api Key Generation
             //AfterInitCallbacks.Add(host =>
             //{
 
