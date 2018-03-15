@@ -283,7 +283,7 @@ namespace ExpressBase.ServiceStack
                 {
                     if (responseDto.GetResponseDto().GetType() == typeof(GetAccessTokenResponse))
                     {
-                        //res.SetSessionCookie("Token", (res.Dto as GetAccessTokenResponse).AccessToken);
+                        res.SetSessionCookie("Token", (res.Dto as GetAccessTokenResponse).AccessToken);
                     }
                 }
             });
