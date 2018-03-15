@@ -3,6 +3,8 @@ using ExpressBase.Common.Constants;
 using ExpressBase.Common.Data;
 using ExpressBase.Common.EbServiceStack.ReqNRes;
 using ExpressBase.Common.ServiceClients;
+using ExpressBase.Common.ServiceStack;
+using ExpressBase.Common.ServiceStack.Auth0;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ExpressBase.ServiceStack.Auth0;
 using Funq;
@@ -19,6 +21,7 @@ using ServiceStack.ProtoBuf;
 using ServiceStack.RabbitMq;
 using ServiceStack.Redis;
 using System;
+using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 
 namespace ExpressBase.ServiceStack
@@ -52,7 +55,7 @@ namespace ExpressBase.ServiceStack
         {
             loggerFactory.AddConsole(Configuration.GetSection("Logging"));
             loggerFactory.AddDebug();
-            
+
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
@@ -87,7 +90,7 @@ namespace ExpressBase.ServiceStack
             var co = this.Config;
             LogManager.LogFactory = new ConsoleLogFactory(debugEnabled: true);
 
-            var jwtprovider = new JwtAuthProvider
+            var jwtprovider = new MyJwtAuthProvider
             {
                 HashAlgorithm = "RS256",
                 PrivateKeyXml = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_JWT_PRIVATE_KEY_XML),
@@ -96,6 +99,11 @@ namespace ExpressBase.ServiceStack
                 RequireSecureConnection = false,
                 //EncryptPayload = true,
 #endif
+                ExpireTokensIn = TimeSpan.FromSeconds(90),
+                ExpireRefreshTokensIn = TimeSpan.FromHours(24),
+                PersistSession = true,
+                SessionExpiry = TimeSpan.FromHours(12),
+
                 CreatePayloadFilter = (payload, session) =>
                 {
                     payload["sub"] = (session as CustomUserSession).UserAuthId;
@@ -104,10 +112,13 @@ namespace ExpressBase.ServiceStack
                     payload["wc"] = (session as CustomUserSession).WhichConsole;
                 },
 
-                ExpireTokensIn = TimeSpan.FromMinutes(5),
-                ExpireRefreshTokensIn = TimeSpan.FromHours(8),
-                PersistSession = true,
-                SessionExpiry = TimeSpan.FromHours(12)
+                PopulateSessionFilter = (session, token, req) => {
+                    var csession = session as CustomUserSession;
+                    csession.UserAuthId = token["sub"];
+                    csession.CId = token["cid"];
+                    csession.Uid = Convert.ToInt32(token["uid"]);
+                    csession.WhichConsole = token["wc"];
+                }
             };
             //            var apikeyauthprovider = new ApiKeyAuthProvider(AppSettings)
             //            {
@@ -126,15 +137,15 @@ namespace ExpressBase.ServiceStack
             this.Plugins.Add(new AuthFeature(() => new CustomUserSession(),
                 new IAuthProvider[] {
                     new MyFacebookAuthProvider(AppSettings)
-                    {
-                        AppId = "151550788692231",
+        {
+            AppId = "151550788692231",
                         AppSecret = "94ec1a04342e5cf7e7a971f2eb7ad7bc",
                         Permissions = new string[] { "email, public_profile" }
                     },
 
                     new MyTwitterAuthProvider(AppSettings)
-                    {
-                        ConsumerKey = "6G9gaYo7DMx1OHYRAcpmkPfvu",
+        {
+            ConsumerKey = "6G9gaYo7DMx1OHYRAcpmkPfvu",
                         ConsumerSecret = "Jx8uUIPeo5D0agjUnqkKHGQ4o6zTrwze9EcLtjDlOgLnuBaf9x",
                        // CallbackUrl = "http://localhost:8000/auth/twitter",
                         
@@ -143,20 +154,15 @@ namespace ExpressBase.ServiceStack
                     },
 
                     new MyGithubAuthProvider(AppSettings)
-                    {
-                    ClientId="4504eefeb8f027c810dd",
-                    ClientSecret="d9c1c956a9fddd089798e0031851e93a8d0e5cc6",
-                    RedirectUrl ="http://localhost:8000/"
+        {
+            ClientId = "4504eefeb8f027c810dd",
+                    ClientSecret = "d9c1c956a9fddd089798e0031851e93a8d0e5cc6",
+                    RedirectUrl = "http://localhost:8000/"
                     },
 
-                    new MyCredentialsAuthProvider(AppSettings)
-                    {
-                        PersistSession = true
-                    },
+                    new MyCredentialsAuthProvider(AppSettings) { PersistSession = true },
 
-                    jwtprovider,
-                    //apikeyauthprovider
-
+                    jwtprovider
                 }));
 
             this.ContentTypes.Register(MimeTypes.ProtoBuf, (reqCtx, res, stream) => ProtoBuf.Serializer.NonGeneric.Serialize(stream, res), ProtoBuf.Serializer.NonGeneric.Deserialize);
@@ -170,7 +176,8 @@ namespace ExpressBase.ServiceStack
                Environment.GetEnvironmentVariable(EnvironmentConstants.EB_REDIS_PORT));
 
             container.Register<IRedisClientsManager>(c => new RedisManagerPool(redisConnectionString));
-            container.Register<IUserAuthRepository>(c => new EbRedisAuthRepository(c.Resolve<IRedisClientsManager>()));
+
+            container.Register<IUserAuthRepository>(c => new MyRedisAuthRepository(c.Resolve<IRedisClientsManager>()));
 
             container.Register<JwtAuthProvider>(jwtprovider);
 
@@ -293,7 +300,7 @@ namespace ExpressBase.ServiceStack
                 if (req.RawUrl.Contains("smscallback"))
                 {
                     req.Headers.Add("BearerToken", "");
-                    
+
                 }
             });
             
