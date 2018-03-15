@@ -91,7 +91,7 @@ namespace ExpressBase.ServiceStack
             var co = this.Config;
             LogManager.LogFactory = new ConsoleLogFactory(debugEnabled: true);
 
-            var jwtprovider = new JwtAuthProvider
+            var jwtprovider = new MyJwtAuthProvider
             {
                 HashAlgorithm = "RS256",
                 PrivateKeyXml = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_JWT_PRIVATE_KEY_XML),
@@ -100,6 +100,11 @@ namespace ExpressBase.ServiceStack
                 RequireSecureConnection = false,
                 //EncryptPayload = true,
 #endif
+                ExpireTokensIn = TimeSpan.FromSeconds(90),
+                ExpireRefreshTokensIn = TimeSpan.FromHours(24),
+                PersistSession = true,
+                SessionExpiry = TimeSpan.FromHours(12),
+
                 CreatePayloadFilter = (payload, session) =>
                 {
                     payload["sub"] = (session as CustomUserSession).UserAuthId;
@@ -108,10 +113,13 @@ namespace ExpressBase.ServiceStack
                     payload["wc"] = (session as CustomUserSession).WhichConsole;
                 },
 
-                ExpireTokensIn = TimeSpan.FromHours(12),
-                ExpireRefreshTokensIn = TimeSpan.FromHours(24),
-                PersistSession = true,
-                SessionExpiry = TimeSpan.FromHours(12)
+                PopulateSessionFilter = (session, token, req) => {
+                    var csession = session as CustomUserSession;
+                    csession.UserAuthId = token["sub"];
+                    csession.CId = token["cid"];
+                    csession.Uid = Convert.ToInt32(token["uid"]);
+                    csession.WhichConsole = token["wc"];
+                }
             };
             //            var apikeyauthprovider = new ApiKeyAuthProvider(AppSettings)
             //            {
@@ -178,8 +186,8 @@ namespace ExpressBase.ServiceStack
             container.Register<JwtAuthProvider>(jwtprovider);
             container.RegisterAutoWiredAs<MemoryChatHistory, IChatHistory>();
 
-            container.Register<IServerEvents>(c => new RedisServerEvents(c.Resolve<IRedisClientsManager>()));
-            container.Resolve<IServerEvents>().Start();
+            //container.Register<IServerEvents>(c => new RedisServerEvents(c.Resolve<IRedisClientsManager>()));
+            //container.Resolve<IServerEvents>().Start();
 
             //container.Register<ApiKeyAuthProvider>(apikeyauthprovider);
 
