@@ -22,6 +22,9 @@ using System.Dynamic;
 using ExpressBase.Objects.Objects.ReportRelated;
 using System.Text;
 using ExpressBase.ServiceStack.Services;
+using ExpressBase.Security;
+using System.DrawingCore.Text;
+using System.DrawingCore;
 
 namespace ExpressBase.ServiceStack
 {
@@ -36,8 +39,16 @@ namespace ExpressBase.ServiceStack
 
         public ReportRenderResponse Get(ReportRenderRequest request)
         {
-            EbReport Report = null;
+            //int count = iTextSharp.text.FontFactory.RegisterDirectory("E:\\ExpressBase.Core\\ExpressBase.Objects\\Fonts\\");
+            //using (InstalledFontCollection col = new InstalledFontCollection())
+            //{
+            //    foreach (FontFamily fa in col.Families)
+            //    {
+            //        Console.WriteLine(fa.Name);
+            //    }
+            //}
 
+            EbReport Report = null;
             //-- Get REPORT object and Init 
             var myObjectservice = base.ResolveService<EbObjectService>();
             EbObjectParticularVersionResponse resultlist = myObjectservice.Get(new EbObjectParticularVersionRequest { RefId = request.Refid }) as EbObjectParticularVersionResponse;
@@ -48,8 +59,10 @@ namespace ExpressBase.ServiceStack
             Report.IsLastpage = false;
             Report.watermarkImages = new Dictionary<string, byte[]>();
             Report.WaterMarkList = new List<object>();
-            Report.ScriptCollection = new Dictionary<string, Script>();
+            Report.ValueScriptCollection = new Dictionary<string, Script>();
+            Report.AppearanceScriptCollection = new Dictionary<string, Script>();
             Report.CurrentTimestamp = DateTime.Now;
+            Report.UserName = request.Fullname;
             //-- END REPORT object INIT
 
             var myDataSourceservice = base.ResolveService<DataSourceService>();
@@ -71,7 +84,7 @@ namespace ExpressBase.ServiceStack
 
             }
 
-            Rectangle rec = new Rectangle(Report.Width, Report.Height);
+            iTextSharp.text.Rectangle rec = new iTextSharp.text.Rectangle(Report.WidthPt, Report.HeightPt);
             Report.Doc = new Document(rec);
             Report.Ms1 = new MemoryStream();
             Report.Writer = PdfWriter.GetInstance(Report.Doc, Report.Ms1);
@@ -125,16 +138,30 @@ namespace ExpressBase.ServiceStack
         {
             foreach (EbReportField field in fields)
             {
-                if (field is EbCalcField && !Report.ScriptCollection.ContainsKey(field.Name))
+                try
                 {
-                    Script script = CSharpScript.Create<dynamic>((field as EbCalcField).Expression, ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System.Dynamic"), globalsType: typeof(Globals));
-                    script.Compile();
-                    Report.ScriptCollection.Add(field.Name, script);
+                    if (field is EbCalcField && !Report.ValueScriptCollection.ContainsKey(field.Name))
+                    {
+                        Script valscript = CSharpScript.Create<dynamic>((field as EbCalcField).ValueExpression, ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System.Dynamic"), globalsType: typeof(Globals));
+                        valscript.Compile();
+                        Report.ValueScriptCollection.Add(field.Name, valscript);
+
+                    }
+                    if ((field is EbDataField && !Report.AppearanceScriptCollection.ContainsKey(field.Name) && (field as EbDataField).AppearanceExpression != ""))
+                    {
+                        Script appearscript = CSharpScript.Create<dynamic>((field as EbDataField).AppearanceExpression, ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System.Dynamic"), globalsType: typeof(Globals));
+                        appearscript.Compile();
+                        Report.AppearanceScriptCollection.Add(field.Name, appearscript);
+                    }
+                }
+                catch (Exception e)
+                {
+
                 }
             }
         }
 
-    
+
     }
 
     public partial class HeaderFooter : PdfPageEventHelper
