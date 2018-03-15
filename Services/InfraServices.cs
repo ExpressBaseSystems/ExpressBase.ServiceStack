@@ -206,7 +206,8 @@ namespace ExpressBase.ServiceStack.Services
 
         public void Get(CreateApplicationRequest request)
         {
-            string sql =string.Format(@"SELECT A.socialid, A.id, A.fullname, A.email, A.phoneno, A.firstvisit, A.lastvisit, A.totalvisits, B.applicationname 
+            string sql =string.Format(@"SELECT A.socialid, A.id, A.fullname, A.email, A.phoneno, A.firstvisit, A.lastvisit, A.totalvisits, 
+                                A.city, A.region, A.country, B.applicationname , concat(A.latitude::text,',' ,A.longitude::text) AS latlong
 								FROM eb_usersanonymous A, eb_applications B WHERE A.appid = B.id AND A.ebuserid = 1 AND A.appid = {0}", request.appid);
 
             var dsobj = new EbDataSource();
