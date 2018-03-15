@@ -4,7 +4,6 @@ using ExpressBase.Common.EbServiceStack.ReqNRes;
 using ExpressBase.Objects;
 using ExpressBase.Objects.ReportRelated;
 using ExpressBase.Objects.ServiceStack_Artifacts;
-using ExpressBase.ServiceStack.MQServices;
 using iTextSharp.text;
 using iTextSharp.text.pdf;
 using Microsoft.AspNetCore.Mvc;
@@ -39,16 +38,14 @@ namespace ExpressBase.ServiceStack
 
         public ReportRenderResponse Get(ReportRenderRequest request)
         {
-            int count = iTextSharp.text.FontFactory.RegisterDirectory("G:\\ExpressBase.Core\\ExpressBase.Objects\\Fonts\\");
-            using (InstalledFontCollection col = new InstalledFontCollection())
-            {
-                foreach (FontFamily fa in col.Families)
-                {
-                    Console.WriteLine(fa.Name);
-                }
-            }
-
-
+            //int count = iTextSharp.text.FontFactory.RegisterDirectory("E:\\ExpressBase.Core\\ExpressBase.Objects\\Fonts\\");
+            //using (InstalledFontCollection col = new InstalledFontCollection())
+            //{
+            //    foreach (FontFamily fa in col.Families)
+            //    {
+            //        Console.WriteLine(fa.Name);
+            //    }
+            //}
 
             EbReport Report = null;
             //-- Get REPORT object and Init 
@@ -56,7 +53,7 @@ namespace ExpressBase.ServiceStack
             EbObjectParticularVersionResponse resultlist = myObjectservice.Get(new EbObjectParticularVersionRequest { RefId = request.Refid }) as EbObjectParticularVersionResponse;
             Report = EbSerializers.Json_Deserialize<EbReport>(resultlist.Data[0].Json);
             Report.ReportService = this;
-            Report.FileService = base.ResolveService<FileService>();
+            //Report.FileService = base.ResolveService<FileService>();
             Report.SolutionId = request.TenantAccountId;
             Report.IsLastpage = false;
             Report.watermarkImages = new Dictionary<string, byte[]>();
@@ -64,7 +61,7 @@ namespace ExpressBase.ServiceStack
             Report.ValueScriptCollection = new Dictionary<string, Script>();
             Report.AppearanceScriptCollection = new Dictionary<string, Script>();
             Report.CurrentTimestamp = DateTime.Now;
-            //   User u = this.Redis.Get<User>(string.Format("{0}-{1}-{2}", ViewBag.cid, ViewBag.email, ViewBag.wc));
+            Report.UserName = request.Fullname;
             //-- END REPORT object INIT
 
             var myDataSourceservice = base.ResolveService<DataSourceService>();
@@ -144,19 +141,14 @@ namespace ExpressBase.ServiceStack
                 {
                     if (field is EbCalcField && !Report.ValueScriptCollection.ContainsKey(field.Name))
                     {
-
-                        byte[] dataval = Convert.FromBase64String((field as EbCalcField).ValueExpression);
-                        string decodedvalE = Encoding.UTF8.GetString(dataval);
-                        Script valscript = CSharpScript.Create<dynamic>(decodedvalE, ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System.Dynamic"), globalsType: typeof(Globals));
+                        Script valscript = CSharpScript.Create<dynamic>((field as EbCalcField).ValueExpression, ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System.Dynamic"), globalsType: typeof(Globals));
                         valscript.Compile();
                         Report.ValueScriptCollection.Add(field.Name, valscript);
 
                     }
-                    else if ((field is EbDataField && !Report.AppearanceScriptCollection.ContainsKey(field.Name) && (field as EbDataField).AppearanceExpression != ""))
+                    if ((field is EbDataField && !Report.AppearanceScriptCollection.ContainsKey(field.Name) && (field as EbDataField).AppearanceExpression != ""))
                     {
-                        byte[] dataapp = Convert.FromBase64String((field as EbDataField).AppearanceExpression);
-                        string decodedAppE = Encoding.UTF8.GetString(dataapp);
-                        Script appearscript = CSharpScript.Create<dynamic>(decodedAppE, ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System.Dynamic"), globalsType: typeof(Globals));
+                        Script appearscript = CSharpScript.Create<dynamic>((field as EbDataField).AppearanceExpression, ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System.Dynamic"), globalsType: typeof(Globals));
                         appearscript.Compile();
                         Report.AppearanceScriptCollection.Add(field.Name, appearscript);
                     }

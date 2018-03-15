@@ -4,7 +4,7 @@ using ExpressBase.Common.Data;
 using ExpressBase.Common.EbServiceStack.ReqNRes;
 using ExpressBase.Common.ServiceClients;
 using ExpressBase.Common.ServiceStack;
-using ExpressBase.Common.ServiceStack.Auth0;
+using ExpressBase.Common.ServiceStack.Auth;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ExpressBase.ServiceStack.Auth0;
 using Funq;
@@ -23,7 +23,6 @@ using ServiceStack.Redis;
 using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
-using static ExpressBase.ServiceStack.Services.ServerEventsSSServices;
 
 namespace ExpressBase.ServiceStack
 {
@@ -79,7 +78,7 @@ namespace ExpressBase.ServiceStack
 
         private PooledRedisClientManager RedisBusPool { get; set; }
 
-        public AppHost() : base("Test Razor", typeof(AppHost).GetAssembly()) { }
+        public AppHost() : base("EXPRESSbase Services", typeof(AppHost).Assembly) { }
 
         public override void OnAfterConfigChanged()
         {
@@ -91,7 +90,7 @@ namespace ExpressBase.ServiceStack
             var co = this.Config;
             LogManager.LogFactory = new ConsoleLogFactory(debugEnabled: true);
 
-            var jwtprovider = new JwtAuthProvider
+            var jwtprovider = new MyJwtAuthProvider
             {
                 HashAlgorithm = "RS256",
                 PrivateKeyXml = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_JWT_PRIVATE_KEY_XML),
@@ -100,6 +99,11 @@ namespace ExpressBase.ServiceStack
                 RequireSecureConnection = false,
                 //EncryptPayload = true,
 #endif
+                ExpireTokensIn = TimeSpan.FromSeconds(90),
+                ExpireRefreshTokensIn = TimeSpan.FromHours(24),
+                PersistSession = true,
+                SessionExpiry = TimeSpan.FromHours(12),
+
                 CreatePayloadFilter = (payload, session) =>
                 {
                     payload["sub"] = (session as CustomUserSession).UserAuthId;
@@ -108,10 +112,13 @@ namespace ExpressBase.ServiceStack
                     payload["wc"] = (session as CustomUserSession).WhichConsole;
                 },
 
-                ExpireTokensIn = TimeSpan.FromHours(12),
-                ExpireRefreshTokensIn = TimeSpan.FromHours(24),
-                PersistSession = true,
-                SessionExpiry = TimeSpan.FromHours(12)
+                PopulateSessionFilter = (session, token, req) => {
+                    var csession = session as CustomUserSession;
+                    csession.UserAuthId = token["sub"];
+                    csession.CId = token["cid"];
+                    csession.Uid = Convert.ToInt32(token["uid"]);
+                    csession.WhichConsole = token["wc"];
+                }
             };
             //            var apikeyauthprovider = new ApiKeyAuthProvider(AppSettings)
             //            {
@@ -125,7 +132,7 @@ namespace ExpressBase.ServiceStack
 
             this.Plugins.Add(new CorsFeature(allowedHeaders: "Content-Type, Authorization, Access-Control-Allow-Origin, Access-Control-Allow-Credentials"));
             this.Plugins.Add(new ProtoBufFormat());
-            this.Plugins.Add(new ServerEventsFeature());
+            //this.Plugins.Add(new ServerEventsFeature());
 
             this.Plugins.Add(new AuthFeature(() => new CustomUserSession(),
                 new IAuthProvider[] {
@@ -158,9 +165,6 @@ namespace ExpressBase.ServiceStack
                     jwtprovider
                 }));
 
-            //Also works but it's recommended to handle 404's by registering at end of .NET Core pipeline
-            //this.CustomErrorHttpHandlers[HttpStatusCode.NotFound] = new RazorHandler("/notfound");
-
             this.ContentTypes.Register(MimeTypes.ProtoBuf, (reqCtx, res, stream) => ProtoBuf.Serializer.NonGeneric.Serialize(stream, res), ProtoBuf.Serializer.NonGeneric.Deserialize);
 
             SetConfig(new HostConfig { DebugMode = true });
@@ -176,17 +180,11 @@ namespace ExpressBase.ServiceStack
             container.Register<IUserAuthRepository>(c => new MyRedisAuthRepository(c.Resolve<IRedisClientsManager>()));
 
             container.Register<JwtAuthProvider>(jwtprovider);
-            container.RegisterAutoWiredAs<MemoryChatHistory, IChatHistory>();
-
-            container.Register<IServerEvents>(c => new RedisServerEvents(c.Resolve<IRedisClientsManager>()));
-            container.Resolve<IServerEvents>().Start();
-
-            //container.Register<ApiKeyAuthProvider>(apikeyauthprovider);
 
             container.Register<IEbConnectionFactory>(c => new EbConnectionFactory(c)).ReusedWithin(ReuseScope.Request);
-
             container.Register<IEbServerEventClient>(c => new EbServerEventClient(c)).ReusedWithin(ReuseScope.Request);
             container.Register<IEbMqClient>(c => new EbMqClient(c)).ReusedWithin(ReuseScope.Request);
+            container.Register<IEbStaticFileClient>(c => new EbStaticFileClient(c)).ReusedWithin(ReuseScope.Request);
 
             RabbitMqMessageFactory rabitFactory = new RabbitMqMessageFactory();
             rabitFactory.ConnectionFactory.UserName = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_RABBIT_USER);
@@ -196,18 +194,6 @@ namespace ExpressBase.ServiceStack
             rabitFactory.ConnectionFactory.VirtualHost = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_RABBIT_VHOST);
 
             var mqServer = new RabbitMqServer(rabitFactory);
-            mqServer.RetryCount = 1;
-            //mqServer.RegisterHandler<EmailServicesMqRequest>(base.ExecuteMessage);
-            //mqServer.RegisterHandler<SMSSentMqRequest>(base.ExecuteMessage);
-            //mqServer.RegisterHandler<RefreshSolutionConnectionsMqRequest>(base.ExecuteMessage);
-            //mqServer.RegisterHandler<SMSStatusLogMqRequest>(base.ExecuteMessage);
-            //mqServer.RegisterHandler<UploadFileMqRequestTest>(base.ExecuteMessage);
-            //mqServer.RegisterHandler<ImageResizeMqRequest>(base.ExecuteMessage);
-            //mqServer.RegisterHandler<FileMetaPersistMqRequest>(base.ExecuteMessage);
-            //mqServer.RegisterHandler<SlackPostMqRequest>(base.ExecuteMessage);
-            //mqServer.RegisterHandler<SlackAuthMqRequest>(base.ExecuteMessage);
-
-            mqServer.Start();
 
             container.AddScoped<IMessageProducer, RabbitMqProducer>(serviceProvider =>
             {
@@ -219,7 +205,6 @@ namespace ExpressBase.ServiceStack
                 return mqServer.CreateMessageQueueClient() as RabbitMqQueueClient;
             });
 
-            //Add a request filter to check if the user has a session initialized
             this.GlobalRequestFilters.Add((req, res, requestDto) =>
             {
                 ILog log = LogManager.GetLogger(GetType());
@@ -244,8 +229,8 @@ namespace ExpressBase.ServiceStack
                 }
                 try
                 {
-                    if (requestDto != null && requestDto.GetType() != typeof(Authenticate) && requestDto.GetType() != typeof(GetAccessToken) && requestDto.GetType() != typeof(UniqueRequest) && requestDto.GetType() != typeof(CreateAccountRequest) && requestDto.GetType() != typeof(EmailServicesMqRequest) && requestDto.GetType() != typeof(RegisterRequest) && requestDto.GetType() != typeof(AutoGenEbIdRequest)
-                    && requestDto.GetType() != typeof(GetEventSubscribers) && requestDto.GetType() != typeof(GetChatHistory) && requestDto.GetType() != typeof(PostChatToChannel))
+                    if (requestDto != null && requestDto.GetType() != typeof(Authenticate) && requestDto.GetType() != typeof(GetAccessToken) && requestDto.GetType() != typeof(UniqueRequest) && requestDto.GetType() != typeof(CreateAccountRequest)&& requestDto.GetType() != typeof(EmailServicesMqRequest) && requestDto.GetType() != typeof(RegisterRequest) && requestDto.GetType() != typeof(AutoGenEbIdRequest)
+                    && requestDto.GetType() != typeof(GetEventSubscribers) )
                     {
                         var auth = req.Headers[HttpHeaders.Authorization];
                         if (string.IsNullOrEmpty(auth))
@@ -318,6 +303,8 @@ namespace ExpressBase.ServiceStack
 
                 }
             });
+            
+            //--Api Key Generation
             //AfterInitCallbacks.Add(host =>
             //{
 

@@ -16,7 +16,7 @@ namespace ExpressBase.ServiceStack
                     options.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(7);
                 })
                 .UseContentRoot(Directory.GetCurrentDirectory())
-                .UseUrls(urls: "http://*:8000/")
+                .UseUrls(urls: "http://*:41600/")
                 .UseStartup<Startup>()
                 .Build();
 

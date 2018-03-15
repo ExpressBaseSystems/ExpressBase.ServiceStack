@@ -324,7 +324,7 @@ namespace ExpressBase.ServiceStack.Services
 		public GetManageAnonymousUserResponse Any(GetManageAnonymousUserRequest request)
 		{
 			Dictionary<string, string> Udata = new Dictionary<string, string>();
-			string sql = @"SELECT A.id, A.fullname, A.email, A.phoneno, A.socialid, A.firstvisit, A.lastvisit, A.totalvisits, B.applicationname, A.remarks
+			string sql = @"SELECT A.id, A.fullname, A.email, A.phoneno, A.socialid, A.firstvisit, A.lastvisit, A.totalvisits, B.applicationname, A.remarks, A.browser, A.ipaddress
 								FROM eb_usersanonymous A, eb_applications B
 								WHERE A.appid = B.id AND A.ebuserid = 1 AND A.id = @id;
 							SELECT B.fullname, A.modifiedat FROM eb_usersanonymous A, eb_users B 
@@ -343,7 +343,9 @@ namespace ExpressBase.ServiceStack.Services
 				Udata.Add("TotalVisits", ds.Tables[0].Rows[0][7].ToString());
 				Udata.Add("ApplicationName", ds.Tables[0].Rows[0][8].ToString());
 				Udata.Add("Remarks", ds.Tables[0].Rows[0][9].ToString());
-				if(ds.Tables[1].Rows.Count > 0)
+				Udata.Add("Browser", ds.Tables[0].Rows[0][10].ToString());
+				Udata.Add("IpAddress", ds.Tables[0].Rows[0][11].ToString());
+				if (ds.Tables[1].Rows.Count > 0)
 				{
 					Udata.Add("ModifiedBy", ds.Tables[1].Rows[0][0].ToString());
 					Udata.Add("ModifiedAt", ds.Tables[1].Rows[0][1].ToString());
