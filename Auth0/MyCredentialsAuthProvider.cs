@@ -1,6 +1,6 @@
 ﻿using ExpressBase.Common.Data;
 using ExpressBase.Common.ServiceStack;
-using ExpressBase.Common.ServiceStack.Auth0;
+using ExpressBase.Common.ServiceStack.Auth;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ExpressBase.Security;
 using ServiceStack;
