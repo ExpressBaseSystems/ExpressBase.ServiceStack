@@ -253,6 +253,20 @@ namespace ExpressBase.ServiceStack.Services
             }
 		}
 
+		public ChangeUserPasswordResponse Any(ChangeUserPasswordRequest request)
+		{
+			string sql = "UPDATE eb_users SET pwd = :newpwd WHERE id = :userid AND pwd = :oldpwd;";
+			DbParameter[] parameters = new DbParameter[] {
+				this.EbConnectionFactory.ObjectsDB.GetNewParameter("userid", EbDbTypes.Int32, request.UserId),
+				this.EbConnectionFactory.ObjectsDB.GetNewParameter("oldpwd", EbDbTypes.String, (request.OldPwd + request.Email).ToMD5Hash()),
+				this.EbConnectionFactory.ObjectsDB.GetNewParameter("newpwd", EbDbTypes.String, (request.NewPwd + request.Email).ToMD5Hash())
+			};
+			return new ChangeUserPasswordResponse() {
+				isSuccess = this.EbConnectionFactory.ObjectsDB.DoNonQuery(sql, parameters) > 0 ? true : false
+			};
+		}
+
+
 		public SaveUserResponse Post(SaveUserRequest request)
 		{
 			SaveUserResponse resp;
@@ -269,7 +283,7 @@ namespace ExpressBase.ServiceStack.Services
 						this.EbConnectionFactory.DataDB.GetNewParameter("nickname", EbDbTypes.String, request.NickName),
 						this.EbConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, request.EmailPrimary),
 						this.EbConnectionFactory.DataDB.GetNewParameter("pwd", EbDbTypes.String,password),
-						this.EbConnectionFactory.DataDB.GetNewParameter("dob", EbDbTypes.Date, request.DateOfBirth),
+						this.EbConnectionFactory.DataDB.GetNewParameter("dob", EbDbTypes.DateTime, request.DateOfBirth),
 						this.EbConnectionFactory.DataDB.GetNewParameter("sex", EbDbTypes.String, request.Sex),
 						this.EbConnectionFactory.DataDB.GetNewParameter("alternateemail", EbDbTypes.String, request.EmailSecondary),
 						this.EbConnectionFactory.DataDB.GetNewParameter("phprimary", EbDbTypes.String, request.PhonePrimary),
@@ -310,7 +324,7 @@ namespace ExpressBase.ServiceStack.Services
 		public GetManageAnonymousUserResponse Any(GetManageAnonymousUserRequest request)
 		{
 			Dictionary<string, string> Udata = new Dictionary<string, string>();
-			string sql = @"SELECT A.id, A.fullname, A.email, A.phoneno, A.socialid, A.firstvisit, A.lastvisit, A.totalvisits, B.applicationname, A.remarks
+			string sql = @"SELECT A.id, A.fullname, A.email, A.phoneno, A.socialid, A.firstvisit, A.lastvisit, A.totalvisits, B.applicationname, A.remarks, A.browser, A.ipaddress
 								FROM eb_usersanonymous A, eb_applications B
 								WHERE A.appid = B.id AND A.ebuserid = 1 AND A.id = @id;
 							SELECT B.fullname, A.modifiedat FROM eb_usersanonymous A, eb_users B 
@@ -329,7 +343,9 @@ namespace ExpressBase.ServiceStack.Services
 				Udata.Add("TotalVisits", ds.Tables[0].Rows[0][7].ToString());
 				Udata.Add("ApplicationName", ds.Tables[0].Rows[0][8].ToString());
 				Udata.Add("Remarks", ds.Tables[0].Rows[0][9].ToString());
-				if(ds.Tables[1].Rows.Count > 0)
+				Udata.Add("Browser", ds.Tables[0].Rows[0][10].ToString());
+				Udata.Add("IpAddress", ds.Tables[0].Rows[0][11].ToString());
+				if (ds.Tables[1].Rows.Count > 0)
 				{
 					Udata.Add("ModifiedBy", ds.Tables[1].Rows[0][0].ToString());
 					Udata.Add("ModifiedAt", ds.Tables[1].Rows[0][1].ToString());
@@ -358,8 +374,7 @@ namespace ExpressBase.ServiceStack.Services
 			};
 			return new UpdateAnonymousUserResponse {RowAffected = this.EbConnectionFactory.ObjectsDB.DoNonQuery(sql, parameters) };
 		}
-
-
+		
 		public ConvertAnonymousUserResponse Any(ConvertAnonymousUserRequest request)
 		{
 			//WORK NOT COMPLETED
@@ -376,8 +391,7 @@ namespace ExpressBase.ServiceStack.Services
 			return new ConvertAnonymousUserResponse { status = (dt.Tables.Count > 0) ? Convert.ToInt32(dt.Tables[0].Rows[0][0]): 0 };
 		}
 
-
-
+		
 		//------MANAGE USER GROUP START------------------------------
 
 		public GetManageUserGroupResponse Any(GetManageUserGroupRequest request)

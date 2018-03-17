@@ -9,6 +9,7 @@ using ExpressBase.Common;
 using ExpressBase.Common.Data;
 using ExpressBase.Common.Constants;
 using ExpressBase.Common.Structures;
+using ExpressBase.Common.ServiceStack.Auth;
 
 namespace ExpressBase.ServiceStack
 {
