@@ -548,7 +548,7 @@ namespace ExpressBase.ServiceStack.Services
 				RoleInfo.Add("RoleName", ds.Tables[4].Rows[0][0].ToString());
 				RoleInfo.Add("AppId", Convert.ToInt32(ds.Tables[4].Rows[0][1]));
 				RoleInfo.Add("RoleDescription", ds.Tables[4].Rows[0][2].ToString());
-				RoleInfo.Add("IsAnonymous", (Convert.ToBoolean(ds.Tables[4].Rows[0][3]))?"true":"false");
+				RoleInfo.Add("IsAnonymous", (ds.Tables[4].Rows[0][3].ToString() == "T")?true:false);
 				RoleInfo.Add("AppName", ds.Tables[6].Rows[0][0].ToString());
 				RoleInfo.Add("AppDescription", ds.Tables[6].Rows[0][1].ToString());
 				foreach (var dr in ds.Tables[5].Rows)
@@ -594,7 +594,7 @@ namespace ExpressBase.ServiceStack.Services
                 int[] emptyarr = new int[] { };
                 DbParameter[] parameters ={ this.EbConnectionFactory.DataDB.GetNewParameter("role_id", EbDbTypes.Int32, request.Colvalues["roleid"]),
                                         this.EbConnectionFactory.DataDB.GetNewParameter("description", EbDbTypes.String, request.Colvalues["Description"]),
-                                        this.EbConnectionFactory.DataDB.GetNewParameter("is_anonym", EbDbTypes.Boolean, (request.Colvalues["IsAnonymous"]).Equals("true")?true:false),
+                                        this.EbConnectionFactory.DataDB.GetNewParameter("is_anonym", EbDbTypes.String, (request.Colvalues["IsAnonymous"]).Equals("true")?"T":"F"),
                                         this.EbConnectionFactory.DataDB.GetNewParameter("role_name", EbDbTypes.String, request.Colvalues["role_name"]),
                                         this.EbConnectionFactory.DataDB.GetNewParameter("applicationid", EbDbTypes.Int32, request.Colvalues["applicationid"]),
                                         this.EbConnectionFactory.DataDB.GetNewParameter("createdby", EbDbTypes.Int32, request.UserId),
