@@ -89,7 +89,7 @@ WHERE
 
         public GetBotForm4UserResponse Get(GetBotForm4UserRequest request)
         {
-            var Query1 = @"
+            /*var Query1 = @"
                             SELECT DISTINCT
 		                            EOV.refid, EO.obj_name 
                             FROM
@@ -98,7 +98,7 @@ WHERE
 		                            EO.id = EOV.eb_objects_id  AND
 		                            EO.id = EOTA.obj_id  AND
 		                            EOS.eb_obj_ver_id = EOV.id AND
-		                            EO.id =  ANY('@Ids') AND 
+		                            EO.id =  ANY(@Ids) AND 
 		                            EOS.status = 3 AND
 		                            ( 	
 			                            EO.obj_type = 16 OR
@@ -106,9 +106,10 @@ WHERE
 			                            OR EO.obj_type = 18
 		                            )  AND
 		                            EOTA.app_id = @appid AND
-                                    EOTA.eb_del = 'F';
-                        ";
-            EbDataTable table = this.EbConnectionFactory.ObjectsDB.DoQuery(Query1.Replace("@Ids", request.BotFormIds).Replace("@appid", request.AppId));
+                                    EOTA.eb_del = 'F'
+                        ";*/
+        
+            EbDataTable table = this.EbConnectionFactory.ObjectsDB.DoQuery(this.EbConnectionFactory.ObjectsDB.EB_GET_BOT_FORM.Replace("@Ids", request.BotFormIds).Replace("@appid", request.AppId));
             GetBotForm4UserResponse resp = new GetBotForm4UserResponse();
             foreach (EbDataRow row in table.Rows)
             {
@@ -196,9 +197,10 @@ WHERE
         public object Any(CreateBotFormTableRequest request)
         {
 
-            string qry = "SELECT EXISTS (SELECT 1 FROM   information_schema.tables WHERE  table_schema = 'public' AND table_name = @tbl); ";
-            DbParameter[] parameter1 = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("@tbl", EbDbTypes.String, request.BotObj.TableName.ToLower()) };
-            var rslt = this.EbConnectionFactory.ObjectsDB.IsTableExists(qry, parameter1);
+            //string qry = "SELECT EXISTS (SELECT 1 FROM   information_schema.tables WHERE  table_schema = 'public' AND table_name = @tbl); ";
+            //DbParameter[] parameter1 = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("@tbl", EbDbTypes.String, request.BotObj.TableName.ToLower()) };
+            DbParameter[] parameter1 = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("tbl", EbDbTypes.String, request.BotObj.TableName.ToLower()) };
+            var rslt = this.EbConnectionFactory.ObjectsDB.IsTableExists(this.EbConnectionFactory.ObjectsDB.IS_TABLE_EXIST, parameter1);
             string cols = "";
             var Columns = new DVColumnCollection();
             var pos = 0;
@@ -207,29 +209,38 @@ WHERE
                 DVBaseColumn _col = null;
                 if (control is EbNumeric)
                 {
-                    cols += control.Name + " integer,";
-                    _col = new DVNumericColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = System.Data.DbType.Int32, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
+                    //cols += control.Name + " integer,";
+                    cols += control.Name + " "+ this.EbConnectionFactory.ObjectsDB.GetType(EbDbTypes.Int32)+",";
+                    _col = new DVNumericColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = EbDbTypes.Int32, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
                 }
                 else if (control is EbTextBox)
                 {
-                    cols += control.Name + " text,";
-                    _col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = System.Data.DbType.String, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
+                    //cols += control.Name + " text,";
+                    cols += control.Name + " " + this.EbConnectionFactory.ObjectsDB.GetType(EbDbTypes.String) + ",";
+                    _col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = EbDbTypes.String, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
                 }
                 else if (control is EbDate)
                 {
-                    cols += control.Name + " Date,";
-                    _col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = System.Data.DbType.DateTime, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
+                    //cols += control.Name + " Date,";
+                    cols += control.Name + " " + this.EbConnectionFactory.ObjectsDB.GetType(EbDbTypes.DateTime) + ",";
+                    _col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = EbDbTypes.DateTime, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
                 }
                 else if (control is EbInputGeoLocation)
                 {
-                    cols += control.Name + " text,";
-                    _col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = System.Data.DbType.String, bVisible = true, sWidth = "100px", ClassName = "dt-body-right tdheight", RenderAs = StringRenderType.Marker};
+                    //cols += control.Name + " text,";
+                    cols += control.Name + " " + this.EbConnectionFactory.ObjectsDB.GetType(EbDbTypes.String) + ",";
+                    _col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = EbDbTypes.String, bVisible = true, sWidth = "100px", ClassName = "dt-body-right tdheight", RenderAs = StringRenderType.Marker};
                 }
+
+                //cols = cols.Remove(cols.LastIndexOf(','));
+                //cols = cols.Remove(cols.Length-1);
+
                 //EbDbType dbType = (EbDbType)control.GetType().GetPublicStaticField("EbDbType").GetValue(null);
                 //cols += control.Name + " " + + ", ";
                 Columns.Add(_col);
                 pos++;
             }
+
             if (!rslt)
             {
                 string sql = "CREATE TABLE @tbl(@cols)".Replace("@cols", cols.Substring(0, cols.Length - 1).Trim()).Replace("@tbl", request.BotObj.TableName);
@@ -291,6 +302,10 @@ WHERE
                 {
                     vals += obj.Value[0] + ",";
                 }
+                //else if (obj.Value[1] == "date")
+                //{
+                //    vals += "'" + this.EbConnectionFactory.ObjectsDB.ConvertToDbDate(obj.Value[0]) + "',";
+                //}
                 else
                     vals += "'" + obj.Value[0] + "',";
             }
