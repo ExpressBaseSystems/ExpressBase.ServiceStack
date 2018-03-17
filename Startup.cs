@@ -182,9 +182,9 @@ namespace ExpressBase.ServiceStack
             container.Register<JwtAuthProvider>(jwtprovider);
 
             container.Register<IEbConnectionFactory>(c => new EbConnectionFactory(c)).ReusedWithin(ReuseScope.Request);
-            container.Register<IEbServerEventClient>(c => new EbServerEventClient(c)).ReusedWithin(ReuseScope.Request);
-            container.Register<IEbMqClient>(c => new EbMqClient(c)).ReusedWithin(ReuseScope.Request);
-            container.Register<IEbStaticFileClient>(c => new EbStaticFileClient(c)).ReusedWithin(ReuseScope.Request);
+            container.Register<IEbServerEventClient>(c => new EbServerEventClient()).ReusedWithin(ReuseScope.Request);
+            container.Register<IEbMqClient>(c => new EbMqClient()).ReusedWithin(ReuseScope.Request);
+            container.Register<IEbStaticFileClient>(c => new EbStaticFileClient()).ReusedWithin(ReuseScope.Request);
 
             RabbitMqMessageFactory rabitFactory = new RabbitMqMessageFactory();
             rabitFactory.ConnectionFactory.UserName = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_RABBIT_USER);
