@@ -208,22 +208,22 @@ WHERE
                 if (control is EbNumeric)
                 {
                     cols += control.Name + " integer,";
-                    _col = new DVNumericColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = System.Data.DbType.Int32, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
+                    _col = new DVNumericColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = EbDbTypes.Int32, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
                 }
                 else if (control is EbTextBox)
                 {
                     cols += control.Name + " text,";
-                    _col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = System.Data.DbType.String, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
+                    _col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = EbDbTypes.String, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
                 }
                 else if (control is EbDate)
                 {
                     cols += control.Name + " Date,";
-                    _col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = System.Data.DbType.DateTime, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
+                    _col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = EbDbTypes.DateTime, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
                 }
                 else if (control is EbInputGeoLocation)
                 {
                     cols += control.Name + " text,";
-                    _col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = System.Data.DbType.String, bVisible = true, sWidth = "100px", ClassName = "dt-body-right tdheight", RenderAs = StringRenderType.Marker};
+                    _col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = EbDbTypes.String, bVisible = true, sWidth = "100px", ClassName = "dt-body-right tdheight", RenderAs = StringRenderType.Marker};
                 }
                 //EbDbType dbType = (EbDbType)control.GetType().GetPublicStaticField("EbDbType").GetValue(null);
                 //cols += control.Name + " " + + ", ";
