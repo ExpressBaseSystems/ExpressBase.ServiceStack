@@ -147,11 +147,10 @@ namespace ExpressBase.ServiceStack.Services
         {
             List<EbSolutionsWrapper> temp = new List<EbSolutionsWrapper>();
             string sql = string.Format("SELECT * FROM eb_solutions WHERE tenant_id={0}", request.UserId);
-
             var dt = this.EbConnectionFactory.DataDB.DoQuery(sql);
             foreach (EbDataRow dr in dt.Rows)
             {
-                var _ebSolutions = (new EbSolutionsWrapper
+                EbSolutionsWrapper _ebSolutions = (new EbSolutionsWrapper
                 {
                     SolutionName = dr[6].ToString(),
                     Description = dr[2].ToString(),
@@ -161,12 +160,13 @@ namespace ExpressBase.ServiceStack.Services
                 });
                 temp.Add(_ebSolutions);
             }
-            GetSolutionResponse resp = new GetSolutionResponse() { Data = temp };
+            GetSolutionResponse resp = new GetSolutionResponse() { Data = temp };          
             return resp;
         }
 
         public GetSolutioInfoResponse Get(GetSolutioInfoRequest request)
         {
+            ConnectionManager _conService = base.ResolveService<ConnectionManager>();
             string sql = string.Format("SELECT * FROM eb_solutions WHERE isolution_id='{0}'", request.TenantAccountId);
             var dt = (new EbConnectionFactory(CoreConstants.EXPRESSBASE, this.Redis)).DataDB.DoQuery(sql);
             EbSolutionsWrapper _ebSolutions = new EbSolutionsWrapper
@@ -177,7 +177,11 @@ namespace ExpressBase.ServiceStack.Services
                 EsolutionId = dt.Rows[0][5].ToString()
             };
             GetSolutioInfoResponse resp = new GetSolutioInfoResponse() { Data = _ebSolutions };
-
+            if (resp.Data != null)
+            {
+                GetConnectionsResponse response = (GetConnectionsResponse)_conService.Post(new GetConnectionsRequest { ConnectionType = 0, TenantAccountId = request.TenantAccountId });
+                resp.EBSolutionConnections = response.EBSolutionConnections;
+            }
             return resp;
         }
 
