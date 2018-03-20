@@ -3,6 +3,7 @@ using ExpressBase.Common.Connections;
 using ExpressBase.Common.Constants;
 using ExpressBase.Common.Data;
 using ExpressBase.Common.Data.MongoDB;
+using ExpressBase.Common.ServiceClients;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ServiceStack;
 using ServiceStack.Messaging;
@@ -12,14 +13,16 @@ namespace ExpressBase.ServiceStack.Services
 {
     public class ConnectionManager : EbBaseService
     {
-        public ConnectionManager(IEbConnectionFactory _dbf, IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_dbf, _mqp, _mqc) { }
+        public ConnectionManager(IEbConnectionFactory _dbf, IMessageProducer _mqp, IMessageQueueClient _mqc, IEbMqClient _mq) : base(_dbf, _mqp, _mqc, _mq)
+        {
+        }
 
         [Authenticate]
         public bool Post(RefreshSolutionConnectionsBySolutionIdAsyncRequest request)
         {
             try
             {
-                base.MessageProducer3.Publish(new RefreshSolutionConnectionsRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
+                this.MQClient.Post<bool>(new RefreshSolutionConnectionsBySolutionIdAsyncRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
                 return true;
             }
             catch(Exception e)
