@@ -92,9 +92,9 @@ namespace ExpressBase.ServiceStack.Auth0
                 session.IsAuthenticated = true;
                 session.User = _authUser;
                 session.WhichConsole = whichContext;
+                session.DBVendor = EbConnectionFactory.DataDB.Vendor;
                 _authUser.wc = whichContext;
                 _authUser.AuthId = string.Format("{0}-{1}-{2}", cid, _authUser.Email, whichContext);
-
                 session.UserAuthId = _authUser.AuthId;
 
                 var authRepo = HostContext.AppHost.GetAuthRepository(authService.Request);
@@ -119,8 +119,9 @@ namespace ExpressBase.ServiceStack.Auth0
                 {
                     UserId = _customUserSession.UserAuthId,
                     UserName = _customUserSession.UserName,
-                    User = _customUserSession.User
-				};
+                    User = _customUserSession.User,
+                    SessionId = _customUserSession.Id
+                };
             }
 
             return authResponse;
