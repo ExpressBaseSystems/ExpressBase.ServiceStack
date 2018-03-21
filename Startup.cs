@@ -15,6 +15,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using ServiceStack;
 using ServiceStack.Auth;
+using ServiceStack.Caching;
 using ServiceStack.Logging;
 using ServiceStack.Messaging;
 using ServiceStack.ProtoBuf;
@@ -133,6 +134,7 @@ namespace ExpressBase.ServiceStack
             this.Plugins.Add(new CorsFeature(allowedHeaders: "Content-Type, Authorization, Access-Control-Allow-Origin, Access-Control-Allow-Credentials"));
             this.Plugins.Add(new ProtoBufFormat());
             //this.Plugins.Add(new ServerEventsFeature());
+            this.Plugins.Add(new SessionFeature());
 
             this.Plugins.Add(new AuthFeature(() => new CustomUserSession(),
                 new IAuthProvider[] {
@@ -178,7 +180,7 @@ namespace ExpressBase.ServiceStack
             container.Register<IRedisClientsManager>(c => new RedisManagerPool(redisConnectionString));
 
             container.Register<IUserAuthRepository>(c => new MyRedisAuthRepository(c.Resolve<IRedisClientsManager>()));
-
+            container.Register<ICacheClient>(c => new RedisClientManagerCacheClient(c.Resolve<IRedisClientsManager>()));
             container.Register<JwtAuthProvider>(jwtprovider);
 
             container.Register<IEbConnectionFactory>(c => new EbConnectionFactory(c)).ReusedWithin(ReuseScope.Request);
