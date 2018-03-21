@@ -210,7 +210,7 @@ WHERE
                 if (control is EbNumeric)
                 {
                     //cols += control.Name + " integer,";
-                    cols += control.Name + " "+ this.EbConnectionFactory.ObjectsDB.GetType(EbDbTypes.Int32)+",";
+                    cols += control.Name + " "+ this.EbConnectionFactory.ObjectsDB.GetType(EbDbTypes.VarNumeric)+",";
                     _col = new DVNumericColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = EbDbTypes.Int32, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
                 }
                 else if (control is EbTextBox)
@@ -291,11 +291,11 @@ WHERE
 
         public object Any(InsertIntoBotFormTableRequest request)
         {
-            DbParameter parameter1= this.EbConnectionFactory.ObjectsDB.GetNewParameter(":tbl", EbDbTypes.String, request.TableName.ToLower());
+            DbParameter parameter1;
             List<DbParameter> paramlist = new List<DbParameter>();
             string cols = "";
             string vals = "";
-            paramlist.Add(parameter1);
+            //paramlist.Add(parameter1);
             foreach (var obj in request.Fields)
             {
                 cols += obj.Name + ",";
@@ -311,19 +311,21 @@ WHERE
                 //    vals += "'" + obj.Value[0] + "',";
                 if (obj.Type == "integer")
                 {
+                    int numreturn;
                     vals += ":"+ obj.Name+",";
-                    parameter1 = this.EbConnectionFactory.ObjectsDB.GetNewParameter(":"+ obj.Name, EbDbTypes.Int32, obj.Value);
+                    parameter1 = this.EbConnectionFactory.ObjectsDB.GetNewParameter(obj.Name, EbDbTypes.VarNumeric, double.Parse(obj.Value) );
                 }
                 else
                 {
+                   
                     vals += ":" + obj.Name + ",";
-                    parameter1 = this.EbConnectionFactory.ObjectsDB.GetNewParameter(":" + obj.Name, EbDbTypes.String, obj.Value);
+                    parameter1 = this.EbConnectionFactory.ObjectsDB.GetNewParameter(obj.Name, EbDbTypes.String, obj.Value);
                 }
                 paramlist.Add(parameter1);
             }
             cols = cols.Substring(0, cols.Length - 1).Trim();
             vals = vals.Substring(0, vals.Length - 1).Trim();
-            var qry = string.Format("insert into :tbl ({0}) values({1})", cols, vals);
+            var qry = string.Format("insert into @tbl({0}) values({1})".Replace("@tbl",request.TableName), cols, vals);
 
             var rslt = this.EbConnectionFactory.ObjectsDB.InsertTable(qry,paramlist.ToArray());
             return new InsertIntoBotFormTableResponse();
