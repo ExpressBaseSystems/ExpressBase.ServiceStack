@@ -193,6 +193,9 @@ namespace ExpressBase.ServiceStack.Services
                 path = "ExpressBase.Common.SqlScripts.PostGreSql.ObjectsDb.FunctionCreate.eb_update_rel.sql";
                 bool b40 = CreateOrAlter_Structure(con, path);
 
+                path = "ExpressBase.Common.SqlScripts.PostGreSql.DataDb.FunctionCreate.eb_assignprivileges.sql";
+                bool b43 = CreateOrAlter_Structure(con, path);
+
 
                 //.....insert into user tables.........
                 bool b41 = InsertIntoTables(request, con);
@@ -200,7 +203,7 @@ namespace ExpressBase.ServiceStack.Services
                 var b42 = CreateUsers4DataBase(con, request);
 
                 if (b1 & b2 & b3 & b4 & b5 & b6 & b7 & b8 & b9 & b10 & b11 & b12 & b13 & b14 & b15 & b16 & b17 & b18 & b19 & 
-                    b20 & b21 & b22 & b23 & b24 & b25 & b26 & b27 & b28 & b29 & b30 & b31 & b32 & b33 & b34 & b35 & b36 & b37 & b38 & b39 & b40 & b41 & b42.resp)
+                    b20 & b21 & b22 & b23 & b24 & b25 & b26 & b27 & b28 & b29 & b30 & b31 & b32 & b33 & b34 & b35 & b36 & b37 & b38 & b39 & b40 & b41 & b42.resp & b43)
                 {
                     con_trans.Commit();
                     return b42;
@@ -219,36 +222,48 @@ namespace ExpressBase.ServiceStack.Services
                 string AdminPass = HelperFunction.GeneratePassword();
                 string ROUserPass = HelperFunction.GeneratePassword();
                 string RWUserPass = HelperFunction.GeneratePassword();
-                string sql = @"CREATE ROLE @unameadmin WITH LOGIN PASSWORD '@passwordAdmin' NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE NOREPLICATION  VALID UNTIL 'infinity';
-                                        GRANT ALL PRIVILEGES ON DATABASE ""@dbname"" TO @unameadmin;
-                                        GRANT USAGE ON SCHEMA public TO @unameadmin;
-                                        GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO @unameadmin;
-                                        GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO @unameadmin;
-                                        GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO @unameadmin;
-                                      CREATE ROLE @unameROUser WITH LOGIN PASSWORD '@passwordRO' NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE NOREPLICATION  VALID UNTIL 'infinity';
-                                        GRANT CONNECT ON DATABASE ""@dbname"" TO @unameROUser;
-                                        GRANT USAGE ON SCHEMA public TO @unameROUser;
-                                        GRANT SELECT ON ALL TABLES IN SCHEMA public TO @unameROUser;
-                                        GRANT SELECT ON ALL SEQUENCES IN SCHEMA public TO @unameROUser;
-                                        GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO @unameROUser;
-                                      CREATE ROLE @unameRWUser WITH LOGIN PASSWORD '@passwordRW' NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE NOREPLICATION  VALID UNTIL 'infinity';
-                                        GRANT CONNECT ON DATABASE ""@dbname"" TO @unameRWUser;
-                                        GRANT USAGE ON SCHEMA public TO @unameRWUser;
-                                        GRANT SELECT,INSERT,UPDATE ON ALL TABLES IN SCHEMA public TO @unameRWUser;
-                                        GRANT SELECT,UPDATE ON ALL SEQUENCES IN SCHEMA public TO @unameRWUser;
-                                        GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO @unameRWUser;"
-                                        .Replace("@unameadmin", request.dbName + "_Admin").Replace("@unameROUser", request.dbName + "_RO")
-                                        .Replace("@unameRWUser", request.dbName + "_RW").Replace("@passwordAdmin", AdminPass).Replace("@passwordRO", ROUserPass).Replace("@passwordRW", RWUserPass).Replace("@dbname", request.dbName);
 
-                var cmd = EbConnectionFactory.DataDB.GetNewCommand(con, sql);
-                //cmd.Parameters.AddWithValue("@unameadmin", request.dbName +"_Admin");
-                //cmd.Parameters.AddWithValue("@unameROUser", request.dbName + "_RO");
-                //cmd.Parameters.AddWithValue("@unameRWUser", request.dbName + "_RW");
-                //cmd.Parameters.AddWithValue("@passwordAdmin", AdminPass);
-                //cmd.Parameters.AddWithValue("@passwordRO", ROUserPass);
-                //cmd.Parameters.AddWithValue("@passwordRW", RWUserPass);
-                //cmd.Parameters.AddWithValue("@dbname", request.dbName);
-                cmd.ExecuteNonQuery();
+                string usersql = "SELECT * FROM eb_assignprivileges('@unameadmin','@adminpass','@unameROUser','@ROpass','@unameRWUser','@RWpass');".Replace("@unameadmin", request.dbName + "_Admin").Replace("@adminpass", AdminPass).Replace("@unameROUser", request.dbName + "_RO").Replace("@ROpass", ROUserPass).Replace("@unameRWUser", request.dbName + "_RW").Replace("@RWpass",RWUserPass);
+                var cmd = EbConnectionFactory.DataDB.GetNewCommand(con, usersql);
+                //cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("unameadmin", EbDbTypes.String, request.dbName + "_Admin"));
+                //cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("adminpass", EbDbTypes.String, AdminPass));
+                //cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("unameROUser", EbDbTypes.String, request.dbName + "_RO"));
+                //cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("ROpass", EbDbTypes.String, ROUserPass));
+                //cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("unameRWUser", EbDbTypes.String, request.dbName + "_RW"));
+                //cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("RWpass", EbDbTypes.String, RWUserPass));
+                try
+                {
+                    cmd.ExecuteNonQuery();
+                }
+                catch(Exception e)
+                {
+
+                }
+
+
+                //string sql = @"GRANT ALL PRIVILEGES ON DATABASE ""@dbname"" TO @unameadmin;
+                //               GRANT USAGE ON SCHEMA public TO @unameadmin;
+                //               GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO @unameadmin;
+                //               GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO @unameadmin;
+                //               GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO @unameadmin;
+                //               GRANT CONNECT ON DATABASE ""@dbname"" TO @unameROUser;
+                //               GRANT USAGE ON SCHEMA public TO @unameROUser;
+                //               GRANT SELECT ON ALL TABLES IN SCHEMA public TO @unameROUser;
+                //               GRANT SELECT ON ALL SEQUENCES IN SCHEMA public TO @unameROUser;
+                //               GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO @unameROUser;
+                //               GRANT CONNECT ON DATABASE ""@dbname"" TO @unameRWUser;
+                //               GRANT USAGE ON SCHEMA public TO @unameRWUser;
+                //               GRANT SELECT,INSERT,UPDATE ON ALL TABLES IN SCHEMA public TO @unameRWUser;
+                //               GRANT SELECT,UPDATE ON ALL SEQUENCES IN SCHEMA public TO @unameRWUser;
+                //               GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO @unameRWUser;"
+                //                        .Replace("@unameadmin", request.dbName + "_Admin").Replace("@unameROUser", request.dbName + "_RO")
+                //                        .Replace("@unameRWUser", request.dbName + "_RW").Replace("@dbname", request.dbName);
+
+                //var cmd1 = EbConnectionFactory.DataDB.GetNewCommand(con, sql);
+                //cmd1.ExecuteNonQuery();
+                var con1 = new Npgsql.NpgsqlConnection(string.Format("Host=35.200.147.143; Port=5432; Database={0}; Username={1}; Password={2}; SSL Mode=Require; Use SSL Stream=true; Trust Server Certificate=true; Pooling=true; CommandTimeout=500;", request.dbName, request.dbName + "_Admin", AdminPass));
+                con1.Open();
+
                 return new EbDbCreateResponse { resp = true,
                     AdminUserName = request.dbName + "_Admin",
                     AdminPassword = AdminPass,
