@@ -87,6 +87,7 @@ namespace ExpressBase.ServiceStack
         public override void Configure(Container container)
         {
             var co = this.Config;
+
             LogManager.LogFactory = new ConsoleLogFactory(debugEnabled: true);
 
             var jwtprovider = new MyJwtAuthProvider
@@ -119,36 +120,33 @@ namespace ExpressBase.ServiceStack
                     csession.WhichConsole = token["wc"];
                 }
             };
-            //            var apikeyauthprovider = new ApiKeyAuthProvider(AppSettings)
-            //            {
-            //#if (DEBUG)
-            //                RequireSecureConnection = false,
-            //                //EncryptPayload = true,
-            //#endif
-            //                PersistSession = true,
-            //                SessionExpiry = TimeSpan.FromHours(12)
-            //            };
 
             this.Plugins.Add(new CorsFeature(allowedHeaders: "Content-Type, Authorization, Access-Control-Allow-Origin, Access-Control-Allow-Credentials"));
+
             this.Plugins.Add(new ProtoBufFormat());
             this.Plugins.Add(new SessionFeature());
 
-            this.Plugins.Add(new AuthFeature(() => new CustomUserSession(),
-                new IAuthProvider[] {
-                    new MyFacebookAuthProvider(AppSettings) {
+            this.Plugins.Add(new AuthFeature(() => 
+                new CustomUserSession(),
+                new IAuthProvider[] 
+                {
+                    new MyFacebookAuthProvider(AppSettings)
+                    {
                         AppId = "151550788692231",
                         AppSecret = "94ec1a04342e5cf7e7a971f2eb7ad7bc",
                         Permissions = new string[] { "email, public_profile" }
                     },
 
-                    new MyTwitterAuthProvider(AppSettings) {
+                    new MyTwitterAuthProvider(AppSettings)
+                    {
                         ConsumerKey = "6G9gaYo7DMx1OHYRAcpmkPfvu",
                         ConsumerSecret = "Jx8uUIPeo5D0agjUnqkKHGQ4o6zTrwze9EcLtjDlOgLnuBaf9x",
                        // CallbackUrl = "http://localhost:8000/auth/twitter",
                        // RequestTokenUrl= "https://api.twitter.com/oauth/authenticate",
                     },
 
-                    new MyGithubAuthProvider(AppSettings) {
+                    new MyGithubAuthProvider(AppSettings)
+                    {
                         ClientId = "4504eefeb8f027c810dd",
                         ClientSecret = "d9c1c956a9fddd089798e0031851e93a8d0e5cc6",
                         RedirectUrl = "http://localhost:8000/"
@@ -173,9 +171,7 @@ namespace ExpressBase.ServiceStack
 
             container.Register<IUserAuthRepository>(c => new MyRedisAuthRepository(c.Resolve<IRedisClientsManager>()));
             container.Register<ICacheClient>(c => new RedisClientManagerCacheClient(c.Resolve<IRedisClientsManager>()));
-
             container.Register<JwtAuthProvider>(jwtprovider);
-
             container.Register<IEbConnectionFactory>(c => new EbConnectionFactory(c)).ReusedWithin(ReuseScope.Request);
             container.Register<IEbServerEventClient>(c => new EbServerEventClient()).ReusedWithin(ReuseScope.Request);
             container.Register<IEbMqClient>(c => new EbMqClient()).ReusedWithin(ReuseScope.Request);
@@ -187,7 +183,6 @@ namespace ExpressBase.ServiceStack
             rabitFactory.ConnectionFactory.HostName = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_RABBIT_HOST);
             rabitFactory.ConnectionFactory.Port = Convert.ToInt32(Environment.GetEnvironmentVariable(EnvironmentConstants.EB_RABBIT_PORT));
             rabitFactory.ConnectionFactory.VirtualHost = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_RABBIT_VHOST);
-
             var mqServer = new RabbitMqServer(rabitFactory);
 
             container.AddScoped<IMessageProducer, RabbitMqProducer>(serviceProvider =>

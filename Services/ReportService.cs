@@ -64,6 +64,9 @@ namespace ExpressBase.ServiceStack
             Report.UserName = request.Fullname;
             //-- END REPORT object INIT
 
+            iTextSharp.text.Rectangle rec = new iTextSharp.text.Rectangle(Report.WidthPt, Report.HeightPt);
+            Report.Doc = new Document(rec);
+            Report.Ms1 = new MemoryStream();
             var myDataSourceservice = base.ResolveService<DataSourceService>();
             if (Report.DataSourceRefId != string.Empty)
             {
@@ -78,14 +81,14 @@ namespace ExpressBase.ServiceStack
                         RefId = Report.DataSourceRefId
                     });
                 Report.DataColumns = (cresp.Columns.Count > 1) ? cresp.Columns[1] : cresp.Columns[0];
-                dresp = myDataSourceservice.Any(new DataSourceDataRequest { RefId = Report.DataSourceRefId, Draw = 1, Start = 0, Length = 100 });
+                dresp = myDataSourceservice.Any(new DataSourceDataRequest { RefId = Report.DataSourceRefId, Draw = 1, Start = 0, Length = 100, Params=request.Params });
                 Report.DataRow = dresp.Data; Console.WriteLine("Rows: " + dresp.Data.Count);
-
+                if (dresp.Data.Count==0)
+                {
+                    return new ReportRenderResponse { StreamWrapper = new MemorystreamWrapper(Report.Ms1) };
+                }
             }
 
-            iTextSharp.text.Rectangle rec = new iTextSharp.text.Rectangle(Report.WidthPt, Report.HeightPt);
-            Report.Doc = new Document(rec);
-            Report.Ms1 = new MemoryStream();
             Report.Writer = PdfWriter.GetInstance(Report.Doc, Report.Ms1);
             Report.Writer.Open();
             Report.Doc.Open();
