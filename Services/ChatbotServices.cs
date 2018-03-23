@@ -210,25 +210,25 @@ WHERE
                 if (control is EbNumeric)
                 {
                     //cols += control.Name + " integer,";
-                    cols += control.Name + " "+ this.EbConnectionFactory.ObjectsDB.GetType(EbDbTypes.VarNumeric)+",";
+                    cols += control.Name + " "+ this.EbConnectionFactory.ObjectsDB.VendorDbTypes.VarNumeric+",";
                     _col = new DVNumericColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = EbDbTypes.Int32, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
                 }
                 else if (control is EbTextBox)
                 {
                     //cols += control.Name + " text,";
-                    cols += control.Name + " " + this.EbConnectionFactory.ObjectsDB.GetType(EbDbTypes.String) + ",";
+                    cols += control.Name + " " + this.EbConnectionFactory.ObjectsDB.VendorDbTypes.String + ",";
                     _col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = EbDbTypes.String, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
                 }
                 else if (control is EbDate)
                 {
                     //cols += control.Name + " Date,";
-                    cols += control.Name + " " + this.EbConnectionFactory.ObjectsDB.GetType(EbDbTypes.DateTime) + ",";
+                    cols += control.Name + " " + this.EbConnectionFactory.ObjectsDB.VendorDbTypes.DateTime + ",";
                     _col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = EbDbTypes.DateTime, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
                 }
                 else if (control is EbInputGeoLocation)
                 {
                     //cols += control.Name + " text,";
-                    cols += control.Name + " " + this.EbConnectionFactory.ObjectsDB.GetType(EbDbTypes.String) + ",";
+                    cols += control.Name + " " + this.EbConnectionFactory.ObjectsDB.VendorDbTypes.String + ",";
                     _col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = EbDbTypes.String, bVisible = true, sWidth = "100px", ClassName = "dt-body-right tdheight", RenderAs = StringRenderType.Marker};
                 }
 
