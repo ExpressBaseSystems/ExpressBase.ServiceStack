@@ -395,7 +395,7 @@ WHERE
             //parameters = new List<System.Data.Common.DbParameter>();
             ILog log = LogManager.GetLogger(GetType());
             //parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@tags", EbDbTypes.String, request.Tags));
-            DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("tag", EbDbTypes.String, request.Tags) };
+            DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("tags", EbDbTypes.String, request.Tags) };
             var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(this.EbConnectionFactory.ObjectsDB.EB_GET_TAGGED_OBJECTS, parameters);
             foreach (EbDataRow dr in dt.Rows)
             {
@@ -627,6 +627,11 @@ WHERE
 
                     refId = cmd.ExecuteScalar().ToString();
                     SetRedis(obj, refId);
+                    if (obj is EbBotForm)
+                    {
+                        var myService = base.ResolveService<ChatbotServices>();
+                        var res = (CreateBotFormTableResponse)myService.Any(new CreateBotFormTableRequest() { BotObj = obj, Apps = request.Apps, TenantAccountId = request.TenantAccountId, UserId = request.UserId, WhichConsole = request.WhichConsole });
+                    }
                 }
             }
             catch (Exception e)
@@ -671,6 +676,11 @@ WHERE
 
                     refId = cmd.ExecuteScalar().ToString();
                     SetRedis(obj, refId);
+                    if (obj is EbBotForm)
+                    {
+                        var myService = base.ResolveService<ChatbotServices>();
+                        var res = (CreateBotFormTableResponse)myService.Any(new CreateBotFormTableRequest() { BotObj = obj, Apps = request.Apps, TenantAccountId = request.TenantAccountId, UserId = request.UserId, WhichConsole = request.WhichConsole });
+                    }
                 }
             }
             catch (Exception e)
