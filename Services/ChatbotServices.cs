@@ -234,6 +234,11 @@ WHERE
                     cols += control.Name + " " + vDbTypes.String.VDbType.ToString() + ",";
                     _col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = EbDbTypes.String, bVisible = true, sWidth = "100px", ClassName = "dt-body-right tdheight", RenderAs = StringRenderType.Marker};
                 }
+                else
+                {
+                    cols += control.Name + " " + vDbTypes.String.VDbType.ToString() + ",";
+                    _col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = EbDbTypes.String, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
+                }
                 Columns.Add(_col);
                 pos++;
             }
@@ -244,8 +249,47 @@ WHERE
                 this.EbConnectionFactory.ObjectsDB.CreateTable(sql);
                 CreateDsAndDv(request,Columns);
             }
-            else { }
-            //Alter            
+
+            //Alter Table
+            //else
+            //{
+            //    string sql = @"select column_name,data_type from information_schema.columns
+            //                    where table_name = '@tbl';".Replace("@tbl", request.BotObj.TableName);
+            //    EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery(sql);
+            //    sql = "";
+            //    var colsArray = cols.Substring(0, cols.Length - 1).Split(",");
+            //    var name = ""; var type = "";
+            //    foreach (EbDataRow dr in dt.Rows)
+            //    {
+            //        var flag = false;
+            //        for (var i = 0; i < colsArray.Length; i++)
+            //        {
+            //            var splitarray = colsArray[i].Split(" ");
+            //            name = splitarray[0].ToLower();
+            //            type = splitarray[1];
+            //            if (splitarray[0].ToLower() == (dr[0].ToString().ToLower()))
+            //            {
+            //                //type check
+            //                //if ()
+            //                //{
+            //                //    sql += "alter table @tbl RENAME column " + dr[0].ToString() + " TO " + dr[0].ToString() + "_Old;";
+            //                //}
+            //                //else
+            //                flag = true;
+            //            }
+            //            else
+            //                flag = false;                        
+            //        }
+            //        if (!flag)
+            //            sql += "alter table @tbl Add column " + name + " " + type + ";";
+
+            //    }
+            //    if (sql != "")
+            //    {
+            //        sql = sql.Replace("@tbl", request.BotObj.TableName);
+            //        //var ret = this.EbConnectionFactory.ObjectsDB.UpdateTable(sql);
+            //    }
+            //}           
 
             return new CreateBotFormTableResponse();
         }
@@ -320,8 +364,7 @@ WHERE
                     parameter1 = this.EbConnectionFactory.ObjectsDB.GetNewParameter(obj.Name, EbDbTypes.Time, DateTime.Parse(obj.Value));
                 }
                 else
-                {
-                   
+                {                   
                     vals += ":" + obj.Name + ",";
                     parameter1 = this.EbConnectionFactory.ObjectsDB.GetNewParameter(obj.Name, EbDbTypes.String, obj.Value);
                 }
