@@ -11,6 +11,8 @@ using System.Linq;
 using System.IdentityModel.Tokens.Jwt;
 using System.Data;
 using Npgsql;
+using ExpressBase.Common.Structures;
+using System.Data.Common;
 
 namespace ExpressBase.ServiceStack
 {
@@ -149,6 +151,37 @@ namespace ExpressBase.ServiceStack
             }
 
             return resp;
+        }
+
+        [CompressResponse]
+        public DataSourceDataSetResponse Any(DataSourceDataSetRequest request)
+        {
+            this.Log.Info("data request");
+
+            DataSourceDataSetResponse dsresponse = null;
+
+            var _ds = this.Redis.Get<EbDataSource>(request.RefId);
+            string _sql = string.Empty;
+
+            if (_ds != null)
+            {
+                string _c = string.Empty;
+
+                _sql = _ds.Sql;
+            }
+            List<DbParameter> parameters = new List<DbParameter>();
+            if (request.Params != null && request.Params.Count > 0)
+            {
+                foreach (Param param in request.Params)
+                    parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(string.Format("@{0}", param.Name), (EbDbTypes)Convert.ToInt32(param.Type), param.Value));
+            }
+            var _dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray<System.Data.Common.DbParameter>());
+            
+            dsresponse = new DataSourceDataSetResponse
+            {               
+                DataSet  =  _dataset
+            };
+            return dsresponse;
         }
     }
 }

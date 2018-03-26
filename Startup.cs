@@ -124,7 +124,6 @@ namespace ExpressBase.ServiceStack
             this.Plugins.Add(new CorsFeature(allowedHeaders: "Content-Type, Authorization, Access-Control-Allow-Origin, Access-Control-Allow-Credentials"));
 
             this.Plugins.Add(new ProtoBufFormat());
-
             this.Plugins.Add(new SessionFeature());
 
             this.Plugins.Add(new AuthFeature(() => 
@@ -144,7 +143,6 @@ namespace ExpressBase.ServiceStack
                         ConsumerSecret = "Jx8uUIPeo5D0agjUnqkKHGQ4o6zTrwze9EcLtjDlOgLnuBaf9x",
                        // CallbackUrl = "http://localhost:8000/auth/twitter",
                        // RequestTokenUrl= "https://api.twitter.com/oauth/authenticate",
-                        
                     },
 
                     new MyGithubAuthProvider(AppSettings)

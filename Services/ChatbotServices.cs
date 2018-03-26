@@ -204,39 +204,36 @@ WHERE
             string cols = "";
             var Columns = new DVColumnCollection();
             var pos = 0;
+            var vDbTypes = this.EbConnectionFactory.ObjectsDB.VendorDbTypes;
             foreach (EbControl control in request.BotObj.Controls)
             {
                 DVBaseColumn _col = null;
                 if (control is EbNumeric)
                 {
-                    //cols += control.Name + " integer,";
-                    cols += control.Name + " "+ this.EbConnectionFactory.ObjectsDB.GetType(EbDbTypes.VarNumeric)+",";
+                    cols += control.Name + " "+ vDbTypes.Decimal.VDbType.ToString() + ",";
                     _col = new DVNumericColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = EbDbTypes.Int32, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
                 }
                 else if (control is EbTextBox)
                 {
-                    //cols += control.Name + " text,";
-                    cols += control.Name + " " + this.EbConnectionFactory.ObjectsDB.GetType(EbDbTypes.String) + ",";
+                    cols += control.Name + " " + vDbTypes.String.VDbType.ToString() + ",";
                     _col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = EbDbTypes.String, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
                 }
                 else if (control is EbDate)
                 {
-                    //cols += control.Name + " Date,";
-                    cols += control.Name + " " + this.EbConnectionFactory.ObjectsDB.GetType(EbDbTypes.DateTime) + ",";
+                    if((control as EbDate).EbDateType == EbDateType.Date)
+                        cols += control.Name + " " + vDbTypes.Date.VDbType.ToString() + ",";
+                    else if ((control as EbDate).EbDateType == EbDateType.DateTime)
+                        cols += control.Name + " " + vDbTypes.DateTime.VDbType.ToString() + ",";
+                    else if ((control as EbDate).EbDateType == EbDateType.Time)
+                        cols += control.Name + " " + vDbTypes.Time.VDbType.ToString() + ",";
                     _col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = EbDbTypes.DateTime, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
                 }
                 else if (control is EbInputGeoLocation)
                 {
                     //cols += control.Name + " text,";
-                    cols += control.Name + " " + this.EbConnectionFactory.ObjectsDB.GetType(EbDbTypes.String) + ",";
+                    cols += control.Name + " " + vDbTypes.String.VDbType.ToString() + ",";
                     _col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = EbDbTypes.String, bVisible = true, sWidth = "100px", ClassName = "dt-body-right tdheight", RenderAs = StringRenderType.Marker};
                 }
-
-                //cols = cols.Remove(cols.LastIndexOf(','));
-                //cols = cols.Remove(cols.Length-1);
-
-                //EbDbType dbType = (EbDbType)control.GetType().GetPublicStaticField("EbDbType").GetValue(null);
-                //cols += control.Name + " " + + ", ";
                 Columns.Add(_col);
                 pos++;
             }
@@ -245,14 +242,20 @@ WHERE
             {
                 string sql = "CREATE TABLE @tbl(@cols)".Replace("@cols", cols.Substring(0, cols.Length - 1).Trim()).Replace("@tbl", request.BotObj.TableName);
                 this.EbConnectionFactory.ObjectsDB.CreateTable(sql);
+                CreateDsAndDv(request,Columns);
             }
             else { }
-            //Alter
+            //Alter            
 
+            return new CreateBotFormTableResponse();
+        }
+
+        public void CreateDsAndDv(CreateBotFormTableRequest request, DVColumnCollection Columns)
+        {
             var dsobj = new EbDataSource();
             dsobj.Sql = "SELECT * FROM @tbl".Replace("@tbl", request.BotObj.TableName);
             var ds = new EbObject_Create_New_ObjectRequest();
-            ds.Name = request.BotObj.Name+"_datasource";
+            ds.Name = request.BotObj.Name + "_datasource";
             ds.Description = "desc";
             ds.Json = EbSerializers.Json_Serialize(dsobj);
             ds.Status = ObjectLifeCycleStatus.Live;
@@ -264,7 +267,7 @@ WHERE
             ds.WhichConsole = request.WhichConsole;
             ds.UserId = request.UserId;
             var myService = base.ResolveService<EbObjectService>();
-            var res =myService.Post(ds);
+            var res = myService.Post(ds);
             var refid = res.RefId;
 
             var dvobj = new EbTableVisualization();
@@ -272,7 +275,7 @@ WHERE
             dvobj.Columns = Columns;
             dvobj.DSColumns = Columns;
             var ds1 = new EbObject_Create_New_ObjectRequest();
-            ds1.Name = request.BotObj.Name + "_response"; 
+            ds1.Name = request.BotObj.Name + "_response";
             ds1.Description = "desc";
             ds1.Json = EbSerializers.Json_Serialize(dvobj);
             ds1.Status = ObjectLifeCycleStatus.Live;
@@ -282,11 +285,9 @@ WHERE
             ds1.Apps = request.Apps;
             ds1.TenantAccountId = request.TenantAccountId;
             ds1.WhichConsole = request.WhichConsole;
-            ds1.UserId = request.UserId; 
+            ds1.UserId = request.UserId;
             var res1 = myService.Post(ds1);
             var refid1 = res.RefId;
-
-            return new CreateBotFormTableResponse();
         }
 
         public object Any(InsertIntoBotFormTableRequest request)
@@ -295,25 +296,28 @@ WHERE
             List<DbParameter> paramlist = new List<DbParameter>();
             string cols = "";
             string vals = "";
-            //paramlist.Add(parameter1);
             foreach (var obj in request.Fields)
             {
                 cols += obj.Name + ",";
-                //if (obj.Value[1] == "integer")
-                //{
-                //    vals += obj.Value[0] + ",";
-                //}
-                //else if (obj.Value[1] == "date")
-                //{
-                //    vals += "'" + this.EbConnectionFactory.ObjectsDB.ConvertToDbDate(obj.Value[0]) + "',";
-                //}
-                //else
-                //    vals += "'" + obj.Value[0] + "',";
-                if (obj.Type == "integer")
+                if (obj.Type == EbDbTypes.Decimal)
                 {
-                    int numreturn;
                     vals += ":"+ obj.Name+",";
-                    parameter1 = this.EbConnectionFactory.ObjectsDB.GetNewParameter(obj.Name, EbDbTypes.VarNumeric, double.Parse(obj.Value) );
+                    parameter1 = this.EbConnectionFactory.ObjectsDB.GetNewParameter(obj.Name, EbDbTypes.Decimal, double.Parse(obj.Value) );
+                }
+                else if (obj.Type == EbDbTypes.Date)
+                {
+                    vals += ":" + obj.Name + ",";
+                    parameter1 = this.EbConnectionFactory.ObjectsDB.GetNewParameter(obj.Name, EbDbTypes.Date, DateTime.Parse(obj.Value));
+                }
+                else if (obj.Type == EbDbTypes.DateTime)
+                {
+                    vals += ":" + obj.Name + ",";
+                    parameter1 = this.EbConnectionFactory.ObjectsDB.GetNewParameter(obj.Name, EbDbTypes.DateTime, DateTime.Parse(obj.Value));
+                }
+                else if (obj.Type == EbDbTypes.Time)
+                {
+                    vals += ":" + obj.Name + ",";
+                    parameter1 = this.EbConnectionFactory.ObjectsDB.GetNewParameter(obj.Name, EbDbTypes.Time, DateTime.Parse(obj.Value));
                 }
                 else
                 {
