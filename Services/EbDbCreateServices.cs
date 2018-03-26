@@ -19,7 +19,7 @@ namespace ExpressBase.ServiceStack.Services
         {
             get
             {
-                if(_dcConnectionFactory == null)
+                if (_dcConnectionFactory == null)
                     _dcConnectionFactory = new EbConnectionFactory(EbConnectionsConfigProvider.DataCenterConnections, CoreConstants.EXPRESSBASE);
 
                 return _dcConnectionFactory;
@@ -30,7 +30,7 @@ namespace ExpressBase.ServiceStack.Services
 
         public EbDbCreateResponse Any(EbDbCreateRequest request)
         {
-           
+
             using (var con = this.DCConnectionFactory.DataDB.GetNewConnection())
             {
                 try
@@ -49,7 +49,7 @@ namespace ExpressBase.ServiceStack.Services
                 }
             }
             return null;
-           
+
         }
 
         public EbDbCreateResponse DbOperations(EbDbCreateRequest request)
@@ -161,7 +161,7 @@ namespace ExpressBase.ServiceStack.Services
                 bool b29 = CreateOrAlter_Structure(con, path);
 
                 path = "ExpressBase.Common.SqlScripts.PostGreSql.ObjectsDb.FunctionCreate.eb_objects_change_status.sql";
-                bool b30 = CreateOrAlter_Structure( con, path);
+                bool b30 = CreateOrAlter_Structure(con, path);
 
                 path = "ExpressBase.Common.SqlScripts.PostGreSql.ObjectsDb.FunctionCreate.eb_objects_commit.sql";
                 bool b31 = CreateOrAlter_Structure(con, path);
@@ -193,19 +193,18 @@ namespace ExpressBase.ServiceStack.Services
                 path = "ExpressBase.Common.SqlScripts.PostGreSql.ObjectsDb.FunctionCreate.eb_update_rel.sql";
                 bool b40 = CreateOrAlter_Structure(con, path);
 
-                path = "ExpressBase.Common.SqlScripts.PostGreSql.DataDb.FunctionCreate.eb_assignprivileges.sql";
-                bool b43 = CreateOrAlter_Structure(con, path);
-
-
+               
                 //.....insert into user tables.........
                 bool b41 = InsertIntoTables(request, con);
 
                 var b42 = CreateUsers4DataBase(con, request);
 
-                if (b1 & b2 & b3 & b4 & b5 & b6 & b7 & b8 & b9 & b10 & b11 & b12 & b13 & b14 & b15 & b16 & b17 & b18 & b19 & 
-                    b20 & b21 & b22 & b23 & b24 & b25 & b26 & b27 & b28 & b29 & b30 & b31 & b32 & b33 & b34 & b35 & b36 & b37 & b38 & b39 & b40 & b41 & b42.resp & b43)
+                if (b1 & b2 & b3 & b4 & b5 & b6 & b7 & b8 & b9 & b10 & b11 & b12 & b13 & b14 & b15 & b16 & b17 & b18 & b19 &
+                    b20 & b21 & b22 & b23 & b24 & b25 & b26 & b27 & b28 & b29 & b30 & b31 & b32 & b33 & b34 & b35 & b36 & b37 & b38 & b39 & b40 & b41 & b42.resp)
                 {
                     con_trans.Commit();
+                    var con1 = new Npgsql.NpgsqlConnection(string.Format("Host=35.200.147.143; Port=5432; Database={0}; Username={1}; Password={2}; SSL Mode=Require; Use SSL Stream=true; Trust Server Certificate=true; Pooling=true; CommandTimeout=500;", request.dbName, request.dbName + "_admin", b42.AdminPassword));
+                    con1.Open();
                     return b42;
                 }
                 else
@@ -218,68 +217,50 @@ namespace ExpressBase.ServiceStack.Services
         public EbDbCreateResponse CreateUsers4DataBase(DbConnection con, EbDbCreateRequest request)
         {
             try
-             {
-                string AdminPass = HelperFunction.GeneratePassword();
-                string ROUserPass = HelperFunction.GeneratePassword();
-                string RWUserPass = HelperFunction.GeneratePassword();
+            {
+               
+                string usersql = "SELECT * FROM eb_assignprivileges('@unameadmin','@unameROUser','@unameRWUser');".Replace("@unameadmin", request.dbName + "_admin").Replace("@unameROUser", request.dbName + "_ro").Replace("@unameRWUser", request.dbName + "_rw");
 
-                string usersql = "SELECT * FROM eb_assignprivileges('@unameadmin','@adminpass','@unameROUser','@ROpass','@unameRWUser','@RWpass');".Replace("@unameadmin", request.dbName + "_Admin").Replace("@adminpass", AdminPass).Replace("@unameROUser", request.dbName + "_RO").Replace("@ROpass", ROUserPass).Replace("@unameRWUser", request.dbName + "_RW").Replace("@RWpass",RWUserPass);
-                var cmd = EbConnectionFactory.DataDB.GetNewCommand(con, usersql);
-                //cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("unameadmin", EbDbTypes.String, request.dbName + "_Admin"));
-                //cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("adminpass", EbDbTypes.String, AdminPass));
-                //cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("unameROUser", EbDbTypes.String, request.dbName + "_RO"));
-                //cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("ROpass", EbDbTypes.String, ROUserPass));
-                //cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("unameRWUser", EbDbTypes.String, request.dbName + "_RW"));
-                //cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("RWpass", EbDbTypes.String, RWUserPass));
-                try
+                var dt = this.EbConnectionFactory.DataDB.DoQuery(usersql);
+
+                
+                string sql = @"GRANT ALL PRIVILEGES ON DATABASE ""@dbname"" TO @unameadmin;
+                               GRANT USAGE ON SCHEMA public TO @unameadmin;
+                               GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO @unameadmin;
+                               GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO @unameadmin;
+                               GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO @unameadmin;
+                               GRANT CONNECT ON DATABASE ""@dbname"" TO @unameROUser;
+                               GRANT USAGE ON SCHEMA public TO @unameROUser;
+                               GRANT SELECT ON ALL TABLES IN SCHEMA public TO @unameROUser;
+                               GRANT SELECT ON ALL SEQUENCES IN SCHEMA public TO @unameROUser;
+                               GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO @unameROUser;
+                               GRANT CONNECT ON DATABASE ""@dbname"" TO @unameRWUser;
+                               GRANT USAGE ON SCHEMA public TO @unameRWUser;
+                               GRANT SELECT,INSERT,UPDATE ON ALL TABLES IN SCHEMA public TO @unameRWUser;
+                               GRANT SELECT,UPDATE ON ALL SEQUENCES IN SCHEMA public TO @unameRWUser;
+                               GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO @unameRWUser;"
+                                    .Replace("@unameadmin", request.dbName + "_admin").Replace("@unameROUser", request.dbName + "_ro")
+                                    .Replace("@unameRWUser", request.dbName + "_rw").Replace("@dbname", request.dbName);
+
+                              var  grnt = this.EbConnectionFactory.DataDB.DoNonQuery(sql);
+                
+
+                return new EbDbCreateResponse
                 {
-                    cmd.ExecuteNonQuery();
-                }
-                catch(Exception e)
-                {
-
-                }
-
-
-                //string sql = @"GRANT ALL PRIVILEGES ON DATABASE ""@dbname"" TO @unameadmin;
-                //               GRANT USAGE ON SCHEMA public TO @unameadmin;
-                //               GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO @unameadmin;
-                //               GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO @unameadmin;
-                //               GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO @unameadmin;
-                //               GRANT CONNECT ON DATABASE ""@dbname"" TO @unameROUser;
-                //               GRANT USAGE ON SCHEMA public TO @unameROUser;
-                //               GRANT SELECT ON ALL TABLES IN SCHEMA public TO @unameROUser;
-                //               GRANT SELECT ON ALL SEQUENCES IN SCHEMA public TO @unameROUser;
-                //               GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO @unameROUser;
-                //               GRANT CONNECT ON DATABASE ""@dbname"" TO @unameRWUser;
-                //               GRANT USAGE ON SCHEMA public TO @unameRWUser;
-                //               GRANT SELECT,INSERT,UPDATE ON ALL TABLES IN SCHEMA public TO @unameRWUser;
-                //               GRANT SELECT,UPDATE ON ALL SEQUENCES IN SCHEMA public TO @unameRWUser;
-                //               GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO @unameRWUser;"
-                //                        .Replace("@unameadmin", request.dbName + "_Admin").Replace("@unameROUser", request.dbName + "_RO")
-                //                        .Replace("@unameRWUser", request.dbName + "_RW").Replace("@dbname", request.dbName);
-
-                //var cmd1 = EbConnectionFactory.DataDB.GetNewCommand(con, sql);
-                //cmd1.ExecuteNonQuery();
-                var con1 = new Npgsql.NpgsqlConnection(string.Format("Host=35.200.147.143; Port=5432; Database={0}; Username={1}; Password={2}; SSL Mode=Require; Use SSL Stream=true; Trust Server Certificate=true; Pooling=true; CommandTimeout=500;", request.dbName, request.dbName + "_Admin", AdminPass));
-                con1.Open();
-
-                return new EbDbCreateResponse { resp = true,
-                    AdminUserName = request.dbName + "_Admin",
-                    AdminPassword = AdminPass,
-                    ReadOnlyUserName = request.dbName + "_RO",
-                    ReadOnlyPassword = ROUserPass,
-                    ReadWriteUserName = request.dbName + "_RW",
-                    ReadWritePassword = RWUserPass,
+                    resp = true,
+                    AdminUserName = request.dbName + "_admin",
+                    AdminPassword = dt.Rows[0][0].ToString(),
+                    ReadOnlyUserName = request.dbName + "_ro",
+                    ReadOnlyPassword = dt.Rows[0][1].ToString(),
+                    ReadWriteUserName = request.dbName + "_rw",
+                    ReadWritePassword = dt.Rows[0][2].ToString(),
                     dbname = request.dbName
                 };
-
             }
             catch (Exception e)
             {
                 return null;
             }
-            
         }
 
         public bool CreateOrAlter_Structure(DbConnection con, string path)
@@ -315,7 +296,7 @@ namespace ExpressBase.ServiceStack.Services
                 //.......select details from server tbl eb_usres......... from INFRA
                 string sql1 = "SELECT email, pwd, firstname, socialid FROM eb_users WHERE id=@uid";
                 DbParameter[] parameter = { this.InfraConnectionFactory.DataDB.GetNewParameter("@uid", EbDbTypes.Int32, request.UserId) };
-				var rslt = this.InfraConnectionFactory.DataDB.DoQuery(sql1, parameter);
+                var rslt = this.InfraConnectionFactory.DataDB.DoQuery(sql1, parameter);
 
                 //..............insert into client tbl eb_users............ to SOLUTION
                 string sql2 = "INSERT INTO eb_users(email, pwd, fullname, socialid) VALUES (@email, @pwd, @firstname, @socialid) RETURNING id;";
@@ -324,7 +305,7 @@ namespace ExpressBase.ServiceStack.Services
                 cmdtxt3.Parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("pwd", EbDbTypes.String, rslt.Rows[0][1]));
                 cmdtxt3.Parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("firstname", EbDbTypes.String, rslt.Rows[0][2]));
                 cmdtxt3.Parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("socialid", EbDbTypes.String, rslt.Rows[0][3]));
-				var id = Convert.ToInt32(cmdtxt3.ExecuteScalar());
+                var id = Convert.ToInt32(cmdtxt3.ExecuteScalar());
 
                 //.......add role to tenant as a/c owner
                 string sql4 = string.Empty;
