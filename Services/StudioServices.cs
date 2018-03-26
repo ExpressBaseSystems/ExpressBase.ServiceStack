@@ -13,6 +13,7 @@ using ExpressBase.Objects.EmailRelated;
 using System.Text.RegularExpressions;
 using ExpressBase.Common.Structures;
 using System.Data.OracleClient;
+using ExpressBase.Objects.Objects.ReportRelated;
 
 namespace ExpressBase.ServiceStack
 {
@@ -395,7 +396,7 @@ WHERE
             //parameters = new List<System.Data.Common.DbParameter>();
             ILog log = LogManager.GetLogger(GetType());
             //parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@tags", EbDbTypes.String, request.Tags));
-            DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("tag", EbDbTypes.String, request.Tags) };
+            DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("tags", EbDbTypes.String, request.Tags) };
             var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(this.EbConnectionFactory.ObjectsDB.EB_GET_TAGGED_OBJECTS, parameters);
             foreach (EbDataRow dr in dt.Rows)
             {
@@ -615,7 +616,7 @@ WHERE
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_name", EbDbTypes.String, request.Name.Replace("\n", "").Replace("\t", "").Replace("\r", "")));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_type", EbDbTypes.Int32, GetObjectType(obj)));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_desc", EbDbTypes.String, (!string.IsNullOrEmpty(request.Description)) ? request.Description : string.Empty));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_json", EbDbTypes.Json, request.Json));
+                    //cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_json", EbDbTypes.Json, request.Json));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_changelog", EbDbTypes.String, request.ChangeLog));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":commit_uid", EbDbTypes.Int32, request.UserId));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":src_pid", EbDbTypes.String, request.TenantAccountId));
@@ -625,8 +626,30 @@ WHERE
                     // cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@app_id", System.Data.DbType.Int32, request.AppId));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":app_id", EbDbTypes.String, SetAppId(request.Apps)));
 
-                    refId = cmd.ExecuteScalar().ToString();
+                    if (sql.Contains(":obj_json"))
+                    {
+                        cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_json", EbDbTypes.Json, request.Json));
+                        refId = cmd.ExecuteScalar().ToString();
+                    }
+                    else
+                    {
+                        refId = cmd.ExecuteScalar().ToString();
+                        string sql1 = "update eb_objects_ver set obj_json=:jsonobj where refid=:refid";
+
+                        NTV[] parms = new NTV[2];
+                        parms[0] = new NTV() { Name = ":jsonobj", Type = EbDbTypes.Json, Value = request.Json };
+                        parms[1] = new NTV { Name = ":refid", Type = EbDbTypes.String, Value = refId };
+
+                        Update_Json_Val(con, sql1, parms);
+                    }
+
+                    //refId = cmd.ExecuteScalar().ToString();
                     SetRedis(obj, refId);
+                    if (obj is EbBotForm)
+                    {
+                        var myService = base.ResolveService<ChatbotServices>();
+                        var res = (CreateBotFormTableResponse)myService.Any(new CreateBotFormTableRequest() { BotObj = obj, Apps = request.Apps, TenantAccountId = request.TenantAccountId, UserId = request.UserId, WhichConsole = request.WhichConsole });
+                    }
                 }
             }
             catch (Exception e)
@@ -660,7 +683,7 @@ WHERE
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_name", EbDbTypes.String, request.Name.Replace("\n", "").Replace("\t", "").Replace("\r", "")));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_type", EbDbTypes.Int32, GetObjectType(obj)));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_desc", EbDbTypes.String, (!string.IsNullOrEmpty(request.Description)) ? request.Description : string.Empty));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_json", EbDbTypes.Json, request.Json));
+                    //cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_json", EbDbTypes.Json, request.Json));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":commit_uid", EbDbTypes.Int32, request.UserId));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":src_pid", EbDbTypes.String, request.TenantAccountId));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":cur_pid", EbDbTypes.String, request.TenantAccountId));
@@ -669,8 +692,31 @@ WHERE
                     // cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@app_id", System.Data.DbType.Int32, request.AppId));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":app_id", EbDbTypes.String, SetAppId(request.Apps)));
 
-                    refId = cmd.ExecuteScalar().ToString();
+
+                    if (sql.Contains(":obj_json"))
+                    {
+                        cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_json", EbDbTypes.Json, request.Json));
+                        refId = cmd.ExecuteScalar().ToString();
+                    }
+                    else
+                    {
+                        refId = cmd.ExecuteScalar().ToString();
+                        string sql1 = "update eb_objects_ver set obj_json=:jsonobj where refid=:refid";
+
+                        NTV[] parms = new NTV[2];
+                        parms[0] = new NTV() { Name = ":jsonobj", Type = EbDbTypes.Json, Value = request.Json };
+                        parms[1] = new NTV { Name = ":refid", Type = EbDbTypes.String, Value = refId };
+
+                        Update_Json_Val(con, sql1, parms);
+                    }
+
+                    //refId = cmd.ExecuteScalar().ToString();
                     SetRedis(obj, refId);
+                    if (obj is EbBotForm)
+                    {
+                        var myService = base.ResolveService<ChatbotServices>();
+                        var res = (CreateBotFormTableResponse)myService.Any(new CreateBotFormTableRequest() { BotObj = obj, Apps = request.Apps, TenantAccountId = request.TenantAccountId, UserId = request.UserId, WhichConsole = request.WhichConsole });
+                    }
                 }
             }
             catch (Exception e)
@@ -700,26 +746,12 @@ WHERE
                     //string sql = "SELECT eb_objects_create_new_object(@obj_name, @obj_desc, @obj_type, @obj_cur_status, @obj_json::json, @commit_uid, @src_pid, @cur_pid, @relations, @issave, @tags, @app_id)";
                     String sql = this.EbConnectionFactory.ObjectsDB.EB_CREATE_NEW_OBJECT;
                     cmd = this.EbConnectionFactory.ObjectsDB.GetNewCommand(con, sql);
-
-                    //cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@obj_name", EbDbTypes.String, request.Name.Replace("\n", "").Replace("\t", "").Replace("\r", "")));
-                    //cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@obj_type", EbDbTypes.Int32, GetObjectType(obj)));
-                    //cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@obj_desc", EbDbTypes.String, (!string.IsNullOrEmpty(request.Description)) ? request.Description : string.Empty));
-                    //cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@obj_cur_status", EbDbTypes.Int32, ObjectLifeCycleStatus.Dev));//request.Status
-                    //cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@obj_json", EbDbTypes.Json, request.Json));
-                    //cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@commit_uid", EbDbTypes.Int32, request.UserId));
-                    //cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@src_pid", EbDbTypes.String, request.TenantAccountId));
-                    //cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@cur_pid", EbDbTypes.String, request.TenantAccountId));
-                    //cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@relations", EbDbTypes.String, (request.Relations != null) ? request.Relations : string.Empty));
-                    //cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@issave", EbDbTypes.String, (request.IsSave == true) ? 'T' : 'F'));
-                    //cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@tags", EbDbTypes.String, (!string.IsNullOrEmpty(request.Tags)) ? request.Tags : string.Empty));
-                    ////cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@app_id", System.Data.DbType.Int32, request.AppId));
-                    //cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@app_id", EbDbTypes.String, SetAppId(request.Apps)));
-
+                   
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_name", EbDbTypes.String, request.Name.Replace("\n", "").Replace("\t", "").Replace("\r", "")));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_type", EbDbTypes.Int32, GetObjectType(obj)));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_desc", EbDbTypes.String, (!string.IsNullOrEmpty(request.Description)) ? request.Description : string.Empty));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_cur_status", EbDbTypes.Int32, (int)request.Status));//request.Status
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_json", EbDbTypes.Json, request.Json));
+                    //cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_json", EbDbTypes.Json, request.Json));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":commit_uid", EbDbTypes.Int32, request.UserId));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":src_pid", EbDbTypes.String, request.TenantAccountId));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":cur_pid", EbDbTypes.String, request.TenantAccountId));
@@ -729,7 +761,24 @@ WHERE
                     //cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@app_id", System.Data.DbType.Int32, request.AppId));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":app_id", EbDbTypes.String, SetAppId(request.Apps)));
 
-                    refId = cmd.ExecuteScalar().ToString();
+                    if (sql.Contains(":obj_json"))
+                    {
+                        cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_json", EbDbTypes.Json, request.Json));
+                        refId = cmd.ExecuteScalar().ToString();
+                    }
+                    else
+                    {
+                        refId = cmd.ExecuteScalar().ToString();
+                        string sql1 = "update eb_objects_ver set obj_json=:jsonobj where refid=:refid";
+
+                        NTV[] parms = new NTV[2];
+                        parms[0] = new NTV() { Name = ":jsonobj", Type = EbDbTypes.Json, Value = request.Json };
+                        parms[1] = new NTV { Name = ":refid", Type = EbDbTypes.String, Value = refId };
+                        
+                        Update_Json_Val(con,sql1, parms);
+                    }
+
+                        //refId = cmd.ExecuteScalar().ToString();
                     SetRedis(obj, refId);
                     if (obj is EbBotForm)
                     {
@@ -853,11 +902,39 @@ WHERE
             return new EbObject_Create_Patch_VersionResponse() { RefId = refId };
         }
 
+        public void Update_Json_Val(DbConnection con,String qry, NTV[] param)
+        {
+            try
+            {
+                
+                DbTransaction transaction = con.BeginTransaction();
+                DbCommand cmnd = null;
+                cmnd = con.CreateCommand();
+                cmnd.Transaction = transaction;
+                cmnd.CommandText = qry;
+
+                foreach(var para in param)
+                {
+                    DbParameter parm = this.EbConnectionFactory.ObjectsDB.GetNewParameter(para.Name, para.Type);
+                    parm.Value = para.Value;
+                    cmnd.Parameters.Add(parm);
+                }
+                
+                cmnd.ExecuteNonQuery();
+                cmnd.Transaction.Commit();
+            }
+            catch (Exception e)
+            {
+
+            }
+        }
+
+
         public EbObjectRunSqlFunctionResponse Post(EbObjectRunSqlFunctionRequest request)
         {
             ILog log = LogManager.GetLogger(GetType());
             log.Info("#DS insert -- entered post");
-
+           
             using (var con = this.EbConnectionFactory.ObjectsDB.GetNewConnection())
             {
                 con.Open();
@@ -982,4 +1059,18 @@ WHERE
             return appids;
         }
     }
+
+    public class NTV
+    {
+        public string Name { get; set; }
+
+        public EbDbTypes Type { get; set; }
+
+        public object Value { get; set; }
+    }
+    //public class MappedValue
+    //{
+    //    public EbDbTypes type_ { get; set; }
+    //    public object val_ { get; set; }
+    //}
 }
