@@ -31,6 +31,7 @@ namespace ExpressBase.ServiceStack
     {
         private DataSourceColumnsResponse cresp = null;
         private DataSourceDataResponse dresp = null;
+        // private DataSourceDataSetResponse dsresp = null;
 
         //private iTextSharp.text.Font f = FontFactory.GetFont(FontFactory.HELVETICA, 12);
         public ReportService(IEbConnectionFactory _dbf) : base(_dbf) { }
@@ -71,8 +72,8 @@ namespace ExpressBase.ServiceStack
             if (Report.DataSourceRefId != string.Empty)
             {
                 Console.WriteLine("Report.DataSourceRefId   :" + Report.DataSourceRefId);
-                //    dresp = myDataSourceservice.Any(new DataSourceDataRequest444 { RefId = Report.DataSourceRefId, Draw = 1, Start = 0, Length = 100 });
-                //    Report.DataSet = dresp.DataSet;
+                //dsresp = myDataSourceservice.Any(new DataSourceDataSetRequest { RefId = Report.DataSourceRefId});
+                //Report.DataSet = dsresp.DataSet;
 
                 cresp = this.Redis.Get<DataSourceColumnsResponse>(string.Format("{0}_columns", Report.DataSourceRefId));
                 if (cresp == null)
@@ -81,9 +82,9 @@ namespace ExpressBase.ServiceStack
                         RefId = Report.DataSourceRefId
                     });
                 Report.DataColumns = (cresp.Columns.Count > 1) ? cresp.Columns[1] : cresp.Columns[0];
-                dresp = myDataSourceservice.Any(new DataSourceDataRequest { RefId = Report.DataSourceRefId, Draw = 1, Start = 0, Length = 100, Params=request.Params });
-                Report.DataRow = dresp.Data; Console.WriteLine("Rows: " + dresp.Data.Count);
-                if (dresp.Data.Count==0)
+                dresp = myDataSourceservice.Any(new DataSourceDataRequest { RefId = Report.DataSourceRefId, Draw = 1, Start = 0, Length = 100, Params = request.Params });
+                Report.DataRows = dresp.Data;
+                if (dresp.Data.Count == 0)
                 {
                     return new ReportRenderResponse { StreamWrapper = new MemorystreamWrapper(Report.Ms1) };
                 }
