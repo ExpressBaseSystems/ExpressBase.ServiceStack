@@ -70,7 +70,10 @@ namespace ExpressBase.ServiceStack.Services
         public void Post(ChangeDataDBConnectionRequest request)
         {
             request.DataDBConnection.Persist(request.TenantAccountId, this.InfraConnectionFactory, request.IsNew, request.UserId);
-            base.MessageProducer3.Publish(new RefreshSolutionConnectionsRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
+            base.MessageProducer3.Publish(new RefreshSolutionConnectionsRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId,
+                BToken = (!String.IsNullOrEmpty(this.Request.Authorization)) ? this.Request.Authorization.Replace("Bearer", string.Empty).Trim() : String.Empty,
+                RToken = (!String.IsNullOrEmpty(this.Request.Headers["rToken"])) ? this.Request.Headers["rToken"] : String.Empty
+            });
         }
 
         [Authenticate]
@@ -106,7 +109,7 @@ namespace ExpressBase.ServiceStack.Services
 
             try
             {
-                DataDB.DoNonQuery("CREATE TABLE eb_testConnection(id integer,connection_status text)");
+                DataDB.DoQuery(DataDB.EB_TEST_CREATE_TABLE);
             }
             catch (Exception e)
             {
