@@ -9,6 +9,7 @@ using ServiceStack;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -317,7 +318,9 @@ WHERE
                 else if (obj.Type == EbDbTypes.Time)
                 {
                     vals += ":" + obj.Name + ",";
-                    parameter1 = this.EbConnectionFactory.ObjectsDB.GetNewParameter(obj.Name, EbDbTypes.Time, DateTime.Parse(obj.Value));
+                    DateTime dt = DateTime.Parse(obj.Value);
+                    //DateTime.ParseExact(obj.Value, "HH:mm:ss", CultureInfo.InvariantCulture)
+                    parameter1 = this.EbConnectionFactory.ObjectsDB.GetNewParameter(obj.Name, EbDbTypes.Time, dt.ToString("HH:mm:ss"));
                 }
                 else
                 {
