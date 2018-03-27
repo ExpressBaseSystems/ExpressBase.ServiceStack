@@ -14,6 +14,7 @@ namespace ExpressBase.ServiceStack
             var host = new WebHostBuilder()
                 .UseKestrel(options => {
                     options.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(7);
+                    options.Limits.RequestHeadersTimeout = TimeSpan.FromMinutes(5);
                 })
                 .UseContentRoot(Directory.GetCurrentDirectory())
                 .UseUrls(urls: "http://*:41600/")
