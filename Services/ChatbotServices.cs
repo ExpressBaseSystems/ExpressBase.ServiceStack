@@ -204,24 +204,20 @@ WHERE
             var rslt = this.EbConnectionFactory.ObjectsDB.IsTableExists(this.EbConnectionFactory.ObjectsDB.IS_TABLE_EXIST, parameter1);
             string cols = "";
             var Columns = new DVColumnCollection();
-            var TempColumns = new DVColumnCollection();
             var pos = 0;
             var vDbTypes = this.EbConnectionFactory.ObjectsDB.VendorDbTypes;
             foreach (EbControl control in request.BotObj.Controls)
             {
                 DVBaseColumn _col = null;
-                DVBaseColumn _Tempcol = null;
                 if (control is EbNumeric)
                 {
                     cols += control.Name + " " + vDbTypes.Decimal.VDbType.ToString() + ",";
                     _col = new DVNumericColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = EbDbTypes.Int32, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
-                    //_Tempcol = new DVNumericColumn { Name = control.Name ,Type = vDbTypes.Decimal.VDbType.ToString() };
                 }
                 else if (control is EbTextBox)
                 {
                     cols += control.Name + " " + vDbTypes.String.VDbType.ToString() + ",";
                     _col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = EbDbTypes.String, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
-                    //_Tempcol = new DVStringColumn { Name = control.Name, Type = vDbTypes.String.VDbType.ToString() };
                 }
                 else if (control is EbDate)
                 {
@@ -229,36 +225,29 @@ WHERE
                     {
                         cols += control.Name + " " + vDbTypes.Date.VDbType.ToString() + ",";
                         _col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = EbDbTypes.Date, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
-                        //_Tempcol = new DVStringColumn { Name = control.Name, Type = vDbTypes.Date.EbDbType };
                     }
                     else if ((control as EbDate).EbDateType == EbDateType.DateTime)
                     {
                         cols += control.Name + " " + vDbTypes.DateTime.VDbType.ToString() + ",";
                         _col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = EbDbTypes.DateTime, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
-                        //_Tempcol = new DVStringColumn { Name = control.Name, Type = vDbTypes.DateTime.VDbType.ToString() };
                     }
                     else if ((control as EbDate).EbDateType == EbDateType.Time)
                     {
                         cols += control.Name + " " + vDbTypes.Time.VDbType.ToString() + ",";
                         _col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = EbDbTypes.Time, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
-                        //_Tempcol = new DVStringColumn { Name = control.Name, Type = vDbTypes.Time.VDbType.ToString() };
                     }
                 }
                 else if (control is EbInputGeoLocation)
                 {
-                    //cols += control.Name + " text,";
                     cols += control.Name + " " + vDbTypes.String.VDbType.ToString() + ",";
                     _col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = EbDbTypes.String, bVisible = true, sWidth = "100px", ClassName = "dt-body-right tdheight", RenderAs = StringRenderType.Marker };
-                    //_Tempcol = new DVStringColumn { Name = control.Name, Type = vDbTypes.String.VDbType.ToString() };
                 }
                 else
                 {
                     cols += control.Name + " " + vDbTypes.String.VDbType.ToString() + ",";
                     _col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = EbDbTypes.String, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
-                    //_Tempcol = new DVStringColumn { Name = control.Name, Type = vDbTypes.String.VDbType.ToString() };
                 }
                 Columns.Add(_col);
-                //TempColumns.Add(_Tempcol);
                 pos++;
             }
 
