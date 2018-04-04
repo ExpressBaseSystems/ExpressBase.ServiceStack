@@ -106,18 +106,18 @@ namespace ExpressBase.ServiceStack
 
                 CreatePayloadFilter = (payload, session) =>
                 {
-                    payload["sub"] = (session as CustomUserSession).UserAuthId;
-                    payload["cid"] = (session as CustomUserSession).CId;
-                    payload["uid"] = (session as CustomUserSession).Uid.ToString();
-                    payload["wc"] = (session as CustomUserSession).WhichConsole;
+                    payload[TokenConstants.SUB] = (session as CustomUserSession).UserAuthId;
+                    payload[TokenConstants.CID] = (session as CustomUserSession).CId;
+                    payload[TokenConstants.UID] = (session as CustomUserSession).Uid.ToString();
+                    payload[TokenConstants.WC] = (session as CustomUserSession).WhichConsole;
                 },
 
                 PopulateSessionFilter = (session, token, req) => {
                     var csession = session as CustomUserSession;
-                    csession.UserAuthId = token["sub"];
-                    csession.CId = token["cid"];
-                    csession.Uid = Convert.ToInt32(token["uid"]);
-                    csession.WhichConsole = token["wc"];
+                    csession.UserAuthId = token[TokenConstants.SUB];
+                    csession.CId = token[TokenConstants.CID];
+                    csession.Uid = Convert.ToInt32(token[TokenConstants.UID]);
+                    csession.WhichConsole = token[TokenConstants.WC];
                 }
             };
 
@@ -206,7 +206,7 @@ namespace ExpressBase.ServiceStack
                     {
                         log.Info("In Authenticate");
 
-                        string TenantId = (requestDto as Authenticate).Meta != null ? (requestDto as Authenticate).Meta["cid"] : CoreConstants.EXPRESSBASE;
+                        string TenantId = (requestDto as Authenticate).Meta != null ? (requestDto as Authenticate).Meta[TokenConstants.CID] : CoreConstants.EXPRESSBASE;
                         log.Info(TenantId);
                         RequestContext.Instance.Items.Add(CoreConstants.SOLUTION_ID, TenantId);
                     }
@@ -227,10 +227,10 @@ namespace ExpressBase.ServiceStack
                             res.ReturnAuthRequired();
                         else
                         {
-                            var jwtoken = new JwtSecurityToken(auth.Replace("Bearer", string.Empty).Trim());
+                            var jwtoken = new JwtSecurityToken(auth.Replace(CacheConstants.BEARER, string.Empty).Trim());
                             foreach (var c in jwtoken.Claims)
                             {
-                                if (c.Type == "cid" && !string.IsNullOrEmpty(c.Value))
+                                if (c.Type == TokenConstants.CID && !string.IsNullOrEmpty(c.Value))
                                 {
                                     RequestContext.Instance.Items.Add(CoreConstants.SOLUTION_ID, c.Value);
                                     if (requestDto is IEbSSRequest)
@@ -239,7 +239,7 @@ namespace ExpressBase.ServiceStack
                                         (requestDto as EbServiceStackRequest).TenantAccountId = c.Value;
                                     continue;
                                 }
-                                if (c.Type == "uid" && !string.IsNullOrEmpty(c.Value))
+                                if (c.Type == TokenConstants.UID && !string.IsNullOrEmpty(c.Value))
                                 {
                                     RequestContext.Instance.Items.Add("UserId", Convert.ToInt32(c.Value));
                                     if (requestDto is IEbSSRequest)
@@ -248,16 +248,16 @@ namespace ExpressBase.ServiceStack
                                         (requestDto as EbServiceStackRequest).UserId = Convert.ToInt32(c.Value);
                                     continue;
                                 }
-                                if (c.Type == "wc" && !string.IsNullOrEmpty(c.Value))
+                                if (c.Type == TokenConstants.WC && !string.IsNullOrEmpty(c.Value))
                                 {
-                                    RequestContext.Instance.Items.Add("wc", c.Value);
+                                    RequestContext.Instance.Items.Add(TokenConstants.WC, c.Value);
                                     if (requestDto is EbServiceStackRequest)
                                         (requestDto as EbServiceStackRequest).WhichConsole = c.Value.ToString();
                                     continue;
                                 }
-                                if (c.Type == "sub" && !string.IsNullOrEmpty(c.Value))
+                                if (c.Type == TokenConstants.SUB && !string.IsNullOrEmpty(c.Value))
                                 {
-                                    RequestContext.Instance.Items.Add("sub", c.Value);
+                                    RequestContext.Instance.Items.Add(TokenConstants.SUB, c.Value);
                                     if (requestDto is EbServiceStackRequest)
                                         (requestDto as EbServiceStackRequest).UserAuthId = c.Value.ToString();
                                     continue;

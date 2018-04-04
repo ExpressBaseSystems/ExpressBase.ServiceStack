@@ -1,4 +1,5 @@
-﻿using ExpressBase.Common.ServiceStack.Auth;
+﻿using ExpressBase.Common.Constants;
+using ExpressBase.Common.ServiceStack.Auth;
 using ExpressBase.Security;
 using ServiceStack;
 using ServiceStack.Auth;
@@ -44,7 +45,7 @@ namespace ExpressBase.ServiceStack.Auth0
                 if (jwtAuthProvider.ValidateRefreshToken != null && !jwtAuthProvider.ValidateRefreshToken(jwtPayload, Request))
                     throw new ArgumentException(ErrorMessages.RefreshTokenInvalid.Localize(Request), nameof(request.RefreshToken));
 
-                var userId = jwtPayload["sub"];
+                var userId = jwtPayload[TokenConstants.SUB];
 
                 CustomUserSession session;
                 if (AuthRepository is IUserAuthRepository userRepo)
