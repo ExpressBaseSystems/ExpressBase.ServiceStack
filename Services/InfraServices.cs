@@ -28,6 +28,23 @@ namespace ExpressBase.ServiceStack.Services
     {
         public InfraServices(IEbConnectionFactory _dbf) : base(_dbf) { }
 
+        public bool Post(JoinbetaReq r)
+        {
+            try
+            {
+                string sql = string.Format("INSERT INTO eb_beta_enq(email,time) values('{0}','now()') RETURNING id", r.Email);
+                var f = this.EbConnectionFactory.DataDB.DoQuery(sql);
+                if (f.Rows.Count > 0)
+                    return true;
+                else
+                    return false;
+            }
+            catch(Exception e)
+            {
+                return false;
+            }
+        }
+
         public CreateAccountResponse Post(CreateAccountRequest request)
         {
 			CreateAccountResponse resp = new CreateAccountResponse();

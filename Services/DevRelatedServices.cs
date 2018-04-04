@@ -12,7 +12,7 @@ namespace ExpressBase.ServiceStack
 {
     public class DevRelatedServices : EbBaseService
     {
-        public DevRelatedServices(IEbConnectionFactory _dbf) : base(_dbf) { }
+        public DevRelatedServices(IEbConnectionFactory _dbf) : base(_dbf) { }      
 
         public GetApplicationResponse Get(GetApplicationRequest request)
         {
