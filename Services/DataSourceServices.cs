@@ -106,8 +106,8 @@ namespace ExpressBase.ServiceStack
             string _dsRedisKey = string.Format("{0}_columns", request.RefId);
             EbDataSet _dataset = null;
             bool _isPaged = false;
-            //DataSourceColumnsResponse resp = null;
-            DataSourceColumnsResponse resp = this.Redis.Get<DataSourceColumnsResponse>(_dsRedisKey);
+            DataSourceColumnsResponse resp = null;
+            //DataSourceColumnsResponse resp = this.Redis.Get<DataSourceColumnsResponse>(_dsRedisKey);
 
             if (resp == null || resp.Columns == null || resp.Columns.Count == 0)
             {
