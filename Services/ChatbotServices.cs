@@ -242,6 +242,26 @@ WHERE
                     cols += control.Name + " " + vDbTypes.String.VDbType.ToString() + ",";
                     _col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = EbDbTypes.String, bVisible = true, sWidth = "100px", ClassName = "dt-body-right tdheight", RenderAs = StringRenderType.Marker };
                 }
+				else if(control is EbCards)
+				{
+					cols += control.Name + " " + vDbTypes.String.VDbType.ToString() + ",";
+					_col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = EbDbTypes.String, bVisible = true, sWidth = "100px", ClassName = "dt-body-right tdheight" };
+					DbParameter[] parameter2 = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("tbl", EbDbTypes.String, request.BotObj.TableName.ToLower()+"_"+ control.Name) };
+					var rslt1 = this.EbConnectionFactory.ObjectsDB.IsTableExists(this.EbConnectionFactory.ObjectsDB.IS_TABLE_EXIST, parameter2);
+
+					//foreach (control.)
+					//{
+
+					//}
+					if (!rslt1)
+					{
+						var str = "id SERIAL PRIMARY KEY,";
+						cols = str + cols;
+						string sql = "CREATE TABLE @tbl(@cols)".Replace("@cols", cols).Replace("@tbl", request.BotObj.TableName);
+						this.EbConnectionFactory.ObjectsDB.CreateTable(sql);
+						CreateDsAndDv(request, Columns);
+					}
+				}
                 else
                 {
                     cols += control.Name + " " + vDbTypes.String.VDbType.ToString() + ",";
