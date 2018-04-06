@@ -1,4 +1,6 @@
-﻿using ExpressBase.Common.Data;
+﻿using ExpressBase.Common;
+using ExpressBase.Common.Constants;
+using ExpressBase.Common.Data;
 using ExpressBase.Common.ServiceStack;
 using ExpressBase.Common.ServiceStack.Auth;
 using ExpressBase.Objects.ServiceStack_Artifacts;
@@ -28,9 +30,9 @@ namespace ExpressBase.ServiceStack.Auth0
 			Logger.Info("In TryAuthenticate method1");
 
 			var request = authService.Request.Dto as Authenticate;
-			var cid = request.Meta.ContainsKey("cid") ? request.Meta["cid"] : string.Empty;
-			var socialId = request.Meta.ContainsKey("socialId") ? request.Meta["socialId"] : string.Empty;
-			var whichContext = request.Meta["wc"].ToLower().Trim();
+			var cid = request.Meta.ContainsKey(TokenConstants.CID) ? request.Meta[TokenConstants.CID] : string.Empty;
+			var socialId = request.Meta.ContainsKey(TokenConstants.SOCIALID) ? request.Meta[TokenConstants.SOCIALID] : string.Empty;
+			var whichContext = request.Meta[TokenConstants.WC].ToLower().Trim();
 
 			var EbConnectionFactory = authService.TryResolve<IEbConnectionFactory>() as EbConnectionFactory;
 
@@ -110,7 +112,7 @@ namespace ExpressBase.ServiceStack.Auth0
 			Logger.Info("Authenticate -> Start");
 			AuthenticateResponse authResponse = base.Authenticate(authService, session, request) as AuthenticateResponse;
             var _customUserSession = authService.GetSession() as CustomUserSession;
-            _customUserSession.WhichConsole = request.Meta.ContainsKey("wc") ? request.Meta["wc"] : string.Empty;
+            _customUserSession.WhichConsole = request.Meta.ContainsKey(RoutingConstants.WC) ? request.Meta[RoutingConstants.WC] : string.Empty;
 
             if (!string.IsNullOrEmpty(authResponse.SessionId) && _customUserSession != null)
             {
