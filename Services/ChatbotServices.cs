@@ -242,24 +242,82 @@ WHERE
                     cols += control.Name + " " + vDbTypes.String.VDbType.ToString() + ",";
                     _col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = EbDbTypes.String, bVisible = true, sWidth = "100px", ClassName = "dt-body-right tdheight", RenderAs = StringRenderType.Marker };
                 }
+
 				else if(control is EbCards)
 				{
 					cols += control.Name + " " + vDbTypes.String.VDbType.ToString() + ",";
 					_col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = EbDbTypes.String, bVisible = true, sWidth = "100px", ClassName = "dt-body-right tdheight" };
-					DbParameter[] parameter2 = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("tbl", EbDbTypes.String, request.BotObj.TableName.ToLower()+"_"+ control.Name) };
-					var rslt1 = this.EbConnectionFactory.ObjectsDB.IsTableExists(this.EbConnectionFactory.ObjectsDB.IS_TABLE_EXIST, parameter2);
+					
+					//if((control as EbCards).MultiSelect){}//may be required
+					DbParameter[] parameter2 = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("tbl", EbDbTypes.String, request.BotObj.TableName.ToLower()+"_Cards_"+ control.Name) };
+					var rslt2 = this.EbConnectionFactory.ObjectsDB.IsTableExists(this.EbConnectionFactory.ObjectsDB.IS_TABLE_EXIST, parameter2);
+					string cols2 = "";
+					var Columns2 = new DVColumnCollection();
+					var pos2 = 0;
 
-					//foreach (control.)
-					//{
-
-					//}
-					if (!rslt1)
+					foreach (EbCardField CardField in (control as EbCards).CardFields)
 					{
-						var str = "id SERIAL PRIMARY KEY,";
-						cols = str + cols;
-						string sql = "CREATE TABLE @tbl(@cols)".Replace("@cols", cols).Replace("@tbl", request.BotObj.TableName);
-						this.EbConnectionFactory.ObjectsDB.CreateTable(sql);
-						CreateDsAndDv(request, Columns);
+						DVBaseColumn _col2 = null;
+						if (CardField is EbCardNumericField)
+						{
+							cols2 += CardField.Name + " " + vDbTypes.Decimal.VDbType.ToString() + ",";
+							_col2 = new DVStringColumn { Data = pos2, Name = CardField.Name, sTitle = CardField.Name, Type = EbDbTypes.Int32, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
+						}
+						else 
+						{
+							cols2 += CardField.Name + " " + vDbTypes.String.VDbType.ToString() + ",";
+							_col2 = new DVStringColumn { Data = pos2, Name = CardField.Name, sTitle = CardField.Name, Type = EbDbTypes.String, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
+						}
+
+						Columns2.Add(_col2);
+						pos2++;
+					}
+
+					if (!rslt2)
+					{
+						var str2 = "id SERIAL PRIMARY KEY,";
+						cols2 = str2 + cols2;
+						string sql2 = "CREATE TABLE @tbl(@cols)".Replace("@cols", cols).Replace("@tbl", request.BotObj.TableName + "_Cards_" + control.Name);
+						this.EbConnectionFactory.ObjectsDB.CreateTable(sql2);
+						//CreateDsAndDv(request, Columns2);///////////////////?request
+					}
+					else
+					{
+						var ColsColl2 = this.EbConnectionFactory.ObjectsDB.GetColumnSchema(request.BotObj.TableName + "_Cards_" + control.Name);
+						var sql2 = "";
+						var name2 = "";
+						foreach (DVBaseColumn col in Columns2)
+						{
+							var flag2 = false;
+							name2 = col.Name.ToLower();
+							foreach (EbDataColumn dr in ColsColl2)
+							{
+								if (name2 == (dr.ColumnName.ToLower()))
+								{
+									//type check
+									if (col.Type == dr.Type)
+									{
+										flag2 = true;
+										break;
+									}
+									else
+									{
+										flag2 = true;
+										//Errorrrrrrrrr...........
+									}
+								}
+								else
+									flag2 = false;
+							}
+							if (!flag2)
+								sql2 += "alter table @tbl Add column " + name2 + " " + vDbTypes.GetVendorDbType(col.Type).ToString() + ";";
+
+						}
+						if (sql2 != "")
+						{
+							sql2 = sql2.Replace("@tbl", request.BotObj.TableName + "_Cards_" + control.Name);
+							var ret2 = this.EbConnectionFactory.ObjectsDB.UpdateTable(sql2);
+						}
 					}
 				}
                 else
