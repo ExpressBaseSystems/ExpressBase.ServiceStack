@@ -72,7 +72,7 @@ namespace ExpressBase.ServiceStack
             if (Report.DataSourceRefId != string.Empty)
             {
                 Console.WriteLine("Report.DataSourceRefId   :" + Report.DataSourceRefId);
-                dsresp = myDataSourceservice.Any(new DataSourceDataSetRequest { RefId = Report.DataSourceRefId });
+                dsresp = myDataSourceservice.Any(new DataSourceDataSetRequest { RefId = Report.DataSourceRefId , Params = request.Params });
                 Report.DataSet = dsresp.DataSet;
 
                 //cresp = this.Redis.Get<DataSourceColumnsResponse>(string.Format("{0}_columns", Report.DataSourceRefId));
