@@ -203,7 +203,7 @@ namespace ExpressBase.ServiceStack.Services
                 //.....insert into user tables.........
                 bool b41 = InsertIntoTables(request, con, con_trans);
 
-                var b42 = request.ischange == "true" ? null : CreateUsers4DataBase(con, request);
+                var b42 = request.ischange == "true" ? null : CreateUsers4DataBase(con, request, con_trans);
 
                 if (b1 & b2 & b3 & b4 & b5 & b6 & b7 & b8 & b9 & b10 & b11 & b12 & b13 & b14 & b15 & b16 & b17 & b18 & b19 &
                     b20 & b21 & b22 & b23 & b24 & b25 & b26 & b27 & b28 & b31 & b32 & b33 & b34 & b35 & b36 & b37 & b38 & b39 & b40 & b41 & b44)
@@ -219,36 +219,48 @@ namespace ExpressBase.ServiceStack.Services
             return null;
         }
 
-        public EbDbCreateResponse CreateUsers4DataBase(DbConnection con, EbDbCreateRequest request)
+        public EbDbCreateResponse CreateUsers4DataBase(DbConnection con, EbDbCreateRequest request, DbTransaction con_trans)
         {
             try
             {
                
                 string usersql = "SELECT * FROM eb_assignprivileges('@unameadmin','@unameROUser','@unameRWUser');".Replace("@unameadmin", request.dbName + "_admin").Replace("@unameROUser", request.dbName + "_ro").Replace("@unameRWUser", request.dbName + "_rw");
 
-                var dt = this.EbConnectionFactory.DataDB.DoQuery(usersql);
+                var dt = this.InfraConnectionFactory.DataDB.DoQuery(usersql);
 
                 
-                string sql = @"GRANT ALL PRIVILEGES ON DATABASE ""@dbname"" TO @unameadmin;
-                               GRANT USAGE ON SCHEMA public TO @unameadmin;
-                               GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO @unameadmin;
-                               GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO @unameadmin;
-                               GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO @unameadmin;
-                               GRANT CONNECT ON DATABASE ""@dbname"" TO @unameROUser;
-                               GRANT USAGE ON SCHEMA public TO @unameROUser;
-                               GRANT SELECT ON ALL TABLES IN SCHEMA public TO @unameROUser;
-                               GRANT SELECT ON ALL SEQUENCES IN SCHEMA public TO @unameROUser;
-                               GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO @unameROUser;
+                string sql = @"REVOKE connect ON DATABASE ""@dbname"" FROM PUBLIC;
+                               GRANT ALL PRIVILEGES ON DATABASE ""@dbname"" TO @ebadmin;                   
+                               GRANT ALL PRIVILEGES ON DATABASE ""@dbname"" TO @unameadmin;      
+                               GRANT CONNECT ON DATABASE ""@dbname"" TO @unameROUser;     
                                GRANT CONNECT ON DATABASE ""@dbname"" TO @unameRWUser;
-                               GRANT USAGE ON SCHEMA public TO @unameRWUser;
-                               GRANT SELECT,INSERT,UPDATE ON ALL TABLES IN SCHEMA public TO @unameRWUser;
-                               GRANT SELECT,UPDATE ON ALL SEQUENCES IN SCHEMA public TO @unameRWUser;
-                               GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO @unameRWUser;"
-                                    .Replace("@unameadmin", request.dbName + "_admin").Replace("@unameROUser", request.dbName + "_ro")
-                                    .Replace("@unameRWUser", request.dbName + "_rw").Replace("@dbname", request.dbName);
+                              ".Replace("@unameadmin", request.dbName + "_admin").Replace("@unameROUser", request.dbName + "_ro")
+                               .Replace("@unameRWUser", request.dbName + "_rw").Replace("@dbname", request.dbName).Replace("@ebadmin", Environment.GetEnvironmentVariable(EnvironmentConstants.EB_DATACENTRE_ADMIN_USER));
 
-                              var  grnt = this.EbConnectionFactory.DataDB.DoNonQuery(sql);
-                
+                var  grnt = this.InfraConnectionFactory.DataDB.DoNonQuery(sql);
+
+                string sql2 = @"GRANT USAGE ON SCHEMA public TO @ebadmin;
+                            GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO @ebadmin;
+                            GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO @ebadmin;
+                            GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO @ebadmin;
+                            GRANT USAGE ON SCHEMA public TO @unameadmin;   
+                            GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO @unameadmin;
+                            GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO @unameadmin;
+                            GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO @unameadmin;
+                            REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM @unameROUser;
+                            GRANT USAGE ON SCHEMA public TO @unameROUser;
+                            GRANT SELECT ON ALL TABLES IN SCHEMA public TO @unameROUser;
+                            GRANT SELECT ON ALL SEQUENCES IN SCHEMA public TO @unameROUser;
+                            GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO @unameROUser;
+                            GRANT USAGE ON SCHEMA public TO @unameRWUser;
+                            GRANT SELECT,INSERT,UPDATE ON ALL TABLES IN SCHEMA public TO @unameRWUser;
+                            GRANT SELECT,UPDATE ON ALL SEQUENCES IN SCHEMA public TO @unameRWUser;
+                            GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO @unameRWUser;"
+                                    .Replace("@unameadmin", request.dbName + "_admin").Replace("@unameROUser", request.dbName + "_ro")
+                                    .Replace("@unameRWUser", request.dbName + "_rw").Replace("@ebadmin", Environment.GetEnvironmentVariable(EnvironmentConstants.EB_DATACENTRE_ADMIN_USER));
+
+                var cmdtxt = EbConnectionFactory.DataDB.GetNewCommand(con, sql2, con_trans);
+                cmdtxt.ExecuteNonQuery();
 
                 return new EbDbCreateResponse
                 {
