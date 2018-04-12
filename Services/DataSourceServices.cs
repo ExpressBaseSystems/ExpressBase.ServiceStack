@@ -204,7 +204,7 @@ namespace ExpressBase.ServiceStack
             if (request.Params != null && request.Params.Count > 0)
             {
                 foreach (Param param in request.Params)
-                    parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(string.Format("@{0}", param.Name), (EbDbTypes)Convert.ToInt32(param.Type), param.Value));
+                    parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(string.Format("{0}", param.Name), (EbDbTypes)Convert.ToInt32(param.Type), param.Value));
             }
             var _dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray<System.Data.Common.DbParameter>());
             
