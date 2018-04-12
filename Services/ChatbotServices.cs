@@ -245,12 +245,12 @@ WHERE
 
 				else if(control is EbCards)
 				{
-					cols += control.Name + " " + vDbTypes.String.VDbType.ToString() + ",";
-					_col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = EbDbTypes.String, bVisible = true, sWidth = "100px", ClassName = "dt-body-right tdheight" };
+					//cols += control.Name + " " + vDbTypes.String.VDbType.ToString() + ",";
+					//_col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = EbDbTypes.String, bVisible = true, sWidth = "100px", ClassName = "dt-body-right tdheight" };
 
 					if ((control as EbCards).MultiSelect)///////
 					{
-						DbParameter[] parameter2 = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("tbl", EbDbTypes.String, request.BotObj.TableName.ToLower() + "_" + control.Name) };
+						DbParameter[] parameter2 = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("tbl", EbDbTypes.String, request.BotObj.TableName.ToLower() + "_lines") };
 						var rslt2 = this.EbConnectionFactory.ObjectsDB.IsTableExists(this.EbConnectionFactory.ObjectsDB.IS_TABLE_EXIST, parameter2);
 						string cols2 = "";
 						var Columns2 = new DVColumnCollection();
@@ -258,17 +258,17 @@ WHERE
 
 						foreach (EbCardField CardField in (control as EbCards).CardFields)
 						{
-							if (CardField.DbFieldMap == null)
+							if (CardField.Persist)
 							{
 								DVBaseColumn _col2 = null;
 								if (CardField is EbCardNumericField)
 								{
-									cols2 += CardField.Name + " " + vDbTypes.Decimal.VDbType.ToString() + ",";
+									cols2 += "," + CardField.Name + " " + vDbTypes.Decimal.VDbType.ToString();
 									_col2 = new DVStringColumn { Data = pos2, Name = CardField.Name, sTitle = CardField.Name, Type = EbDbTypes.Int32, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
 								}
 								else
 								{
-									cols2 += CardField.Name + " " + vDbTypes.String.VDbType.ToString() + ",";
+									cols2 += "," + CardField.Name + " " + vDbTypes.String.VDbType.ToString();
 									_col2 = new DVStringColumn { Data = pos2, Name = CardField.Name, sTitle = CardField.Name, Type = EbDbTypes.String, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
 								}
 
@@ -281,7 +281,7 @@ WHERE
 						{
 							var str2 = "id SERIAL PRIMARY KEY,";
 							cols2 = str2 + cols2;
-							string sql2 = "CREATE TABLE @tbl(@colsRemarks Text)".Replace("@cols", cols2).Replace("@tbl", request.BotObj.TableName + "_" + control.Name);
+							string sql2 = "CREATE TABLE @tbl( SelectedCardId Integer, FormId Integer @cols)".Replace("@cols", cols2).Replace("@tbl", request.BotObj.TableName + "_lines");
 							this.EbConnectionFactory.ObjectsDB.CreateTable(sql2);
 							//CreateDsAndDv(request, Columns2);///////////////////?request
 						}
@@ -328,7 +328,7 @@ WHERE
 					{
 						foreach (EbCardField CardField in (control as EbCards).CardFields)
 						{
-							if (CardField.DbFieldMap == null)
+							if (CardField.Persist)
 							{
 								if (CardField is EbCardNumericField)
 								{
@@ -344,6 +344,7 @@ WHERE
 								pos++;
 							}
 						}
+
 					}
 				}
                 else
