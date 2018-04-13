@@ -8,6 +8,7 @@ using ExpressBase.Objects.ServiceStack_Artifacts;
 using ServiceStack;
 using ServiceStack.Messaging;
 using System;
+using System.Data.Common;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -70,7 +71,10 @@ namespace ExpressBase.ServiceStack.Services
         public void Post(ChangeDataDBConnectionRequest request)
         {
             request.DataDBConnection.Persist(request.TenantAccountId, this.InfraConnectionFactory, request.IsNew, request.UserId);
-            base.MessageProducer3.Publish(new RefreshSolutionConnectionsRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId,
+               base.MessageProducer3.Publish(new RefreshSolutionConnectionsRequest()
+            {
+                TenantAccountId = request.TenantAccountId,
+                UserId = request.UserId,
                 BToken = (!String.IsNullOrEmpty(this.Request.Authorization)) ? this.Request.Authorization.Replace("Bearer", string.Empty).Trim() : String.Empty,
                 RToken = (!String.IsNullOrEmpty(this.Request.Headers["rToken"])) ? this.Request.Headers["rToken"] : String.Empty
             });
@@ -79,7 +83,7 @@ namespace ExpressBase.ServiceStack.Services
         [Authenticate]
         public void Post(ChangeObjectsDBConnectionRequest request)
         {
-            request.ObjectsDBConnection.Persist(request.TenantAccountId, this.InfraConnectionFactory, request.IsNew, request.UserId);
+            request.ObjectsDBConnection.Persist(request.TenantAccountId, this.InfraConnectionFactory, request.IsNew, request.UserId);          
             base.MessageProducer3.Publish(new RefreshSolutionConnectionsRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
         }
 
@@ -99,8 +103,8 @@ namespace ExpressBase.ServiceStack.Services
 
         public TestConnectionResponse Post(TestConnectionRequest request)
         {
-            TestConnectionResponse res = new TestConnectionResponse() { ConnectionStatus = true };
-
+            TestConnectionResponse res = new TestConnectionResponse();
+            bool IsAdmin = false;
             IDatabase DataDB = null;
             if (request.DataDBConnection.DatabaseVendor == DatabaseVendors.PGSQL)
                 DataDB = new PGSQLDatabase(request.DataDBConnection);
@@ -109,12 +113,36 @@ namespace ExpressBase.ServiceStack.Services
 
             try
             {
-                DataDB.DoQuery(DataDB.EB_TEST_CREATE_TABLE);
+                var dt = DataDB.DoQuery(DataDB.EB_USER_ROLE_PRIVS.Replace("@uname",request.DataDBConnection.UserName));
+                
+                if (request.DataDBConnection.DatabaseVendor == DatabaseVendors.PGSQL)
+                {
+                    var adminroles = Enum.GetValues(typeof(PGSQLSysRoles));
+                    foreach(var dr in dt.Rows)
+                    {
+                        int pos = Array.IndexOf(adminroles, dr[0]);
+                        IsAdmin = (pos > -1) ? true : false;
+                    }
+                    res.ConnectionStatus = IsAdmin;
+                    
+                }
+                else if (request.DataDBConnection.DatabaseVendor == DatabaseVendors.ORACLE)
+                {
+                    var adminroles = Enum.GetValues(typeof(OracleSysRoles));
+                    foreach (var dr in dt.Rows)
+                    {
+                        int pos = Array.IndexOf(adminroles, dr[0]);
+                        IsAdmin = (pos > -1) ? true : false;
+                    }
+                    res.ConnectionStatus = IsAdmin;
+
+                }
+
             }
             catch (Exception e)
             {
                 Console.WriteLine("Exception:" + e.ToString());
-                res.ConnectionStatus = false;
+                res.ConnectionStatus = IsAdmin;
             }
 
             return res;
