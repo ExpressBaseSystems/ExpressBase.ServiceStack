@@ -243,12 +243,12 @@ WHERE
                     _col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = EbDbTypes.String, bVisible = true, sWidth = "100px", ClassName = "dt-body-right tdheight", RenderAs = StringRenderType.Marker };
                 }
 
-				else if(control is EbCards)
+				else if(control is EbDynamicCardSet)
 				{
 					//cols += control.Name + " " + vDbTypes.String.VDbType.ToString() + ",";
 					//_col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = EbDbTypes.String, bVisible = true, sWidth = "100px", ClassName = "dt-body-right tdheight" };
 
-					if ((control as EbCards).MultiSelect)///////
+					if ((control as EbDynamicCardSet).MultiSelect)///////
 					{
 						DbParameter[] parameter2 = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("tbl", EbDbTypes.String, request.BotObj.TableName.ToLower() + "_lines") };
 						var rslt2 = this.EbConnectionFactory.ObjectsDB.IsTableExists(this.EbConnectionFactory.ObjectsDB.IS_TABLE_EXIST, parameter2);
@@ -256,7 +256,7 @@ WHERE
 						var Columns2 = new DVColumnCollection();
 						var pos2 = 0;
 
-						foreach (EbCardField CardField in (control as EbCards).CardFields)
+						foreach (EbCardField CardField in (control as EbDynamicCardSet).CardFields)
 						{
 							if (CardField.Persist)
 							{
@@ -326,7 +326,7 @@ WHERE
 					}
 					else
 					{
-						foreach (EbCardField CardField in (control as EbCards).CardFields)
+						foreach (EbCardField CardField in (control as EbDynamicCardSet).CardFields)
 						{
 							if (CardField.Persist)
 							{
