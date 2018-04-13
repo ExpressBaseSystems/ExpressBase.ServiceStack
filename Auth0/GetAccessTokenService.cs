@@ -29,7 +29,7 @@ namespace ExpressBase.ServiceStack.Auth0
                 JsonObject jwtPayload;
                 try
                 {
-                    jwtPayload = jwtAuthProvider.GetVerifiedJwtPayload(Request, request.RefreshToken.Split('.'));
+                    jwtPayload = jwtAuthProvider.GetVerifiedJwtPayload(Request, request.RefreshToken.Split(CharConstants.DOT));
                 }
                 catch (ArgumentException)
                 {
