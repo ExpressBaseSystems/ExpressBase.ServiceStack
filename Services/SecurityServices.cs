@@ -228,7 +228,7 @@ namespace ExpressBase.ServiceStack.Services
 				
 			if (!string.IsNullOrEmpty(request.roleName))
             {
-                sql = "SELECT id FROM eb_roles WHERE LOWER(role_name) LIKE LOWER(:roleName);";
+                sql = "SELECT id FROM eb_roles WHERE LOWER(role_name) LIKE LOWER(:roleName)";
                 parameters = new DbParameter[] { this.EbConnectionFactory.DataDB.GetNewParameter("roleName", EbDbTypes.String, string.IsNullOrEmpty(request.roleName) ? "" : request.roleName) };
             }		
 			var dt = this.EbConnectionFactory.DataDB.DoQuery(sql, parameters);
