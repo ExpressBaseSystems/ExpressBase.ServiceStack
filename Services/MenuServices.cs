@@ -40,7 +40,7 @@ namespace ExpressBase.ServiceStack.Services
             //parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@Ids", System.Data.DbType.String, request.Ids));
             var ds = new EbDataSet();
             if(request.SysRole.Contains("SolutionOwner"))
-                ds = this.EbConnectionFactory.ObjectsDB.DoQueries(this.EbConnectionFactory.ObjectsDB.EB_SIDEBARUSER_REQUEST.Replace("AND EO.id = ANY('{:Ids}') ", string.Empty));
+                ds = this.EbConnectionFactory.ObjectsDB.DoQueries(this.EbConnectionFactory.ObjectsDB.EB_SIDEBARUSER_REQUEST.Replace("AND EO.id = ANY(:Ids) ", string.Empty));
             else
                 ds = this.EbConnectionFactory.ObjectsDB.DoQueries(this.EbConnectionFactory.ObjectsDB.EB_SIDEBARUSER_REQUEST.Replace(":Ids", string.IsNullOrEmpty(request.Ids) ? "0" : request.Ids));
 
@@ -151,7 +151,7 @@ namespace ExpressBase.ServiceStack.Services
                                 EO.id, EO.obj_type, EO.obj_name, EO.obj_desc,EO2A.app_id 
                             FROM 
                                 eb_objects EO
-                            LEFT JOIN
+                            INNER JOIN
                                 eb_objects2application EO2A 
                             ON
                                 EO.id = EO2A.obj_id 

@@ -35,14 +35,14 @@ namespace ExpressBase.ServiceStack
                 var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(sql, parameters);
 
                 Dictionary<string, object> Dict = new Dictionary<string, object>();
-                if (dt.Rows.Count > 1)
+                if (request.id <= 0)
                 {
                     foreach (var dr in dt.Rows)
                     {
                         Dict.Add(dr[0].ToString(), dr[1]);
                     }
                 }
-                else if (dt.Rows.Count == 1)
+                else 
                 {
                     Dict.Add("applicationname", dt.Rows[0][0]);
                     Dict.Add("description", dt.Rows[0][1]);
