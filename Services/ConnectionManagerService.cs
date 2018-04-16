@@ -8,7 +8,9 @@ using ExpressBase.Objects.ServiceStack_Artifacts;
 using ServiceStack;
 using ServiceStack.Messaging;
 using System;
+using System.Collections.Generic;
 using System.Data.Common;
+using System.Linq;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -117,22 +119,22 @@ namespace ExpressBase.ServiceStack.Services
                 
                 if (request.DataDBConnection.DatabaseVendor == DatabaseVendors.PGSQL)
                 {
-                    var adminroles = Enum.GetValues(typeof(PGSQLSysRoles));
-                    foreach(var dr in dt.Rows)
-                    {
-                        int pos = Array.IndexOf(adminroles, dr[0]);
-                        IsAdmin = (pos > -1) ? true : false;
+                    string[] adminroles = Enum.GetNames(typeof(PGSQLSysRoles));
+                    List<string> adroleslist = adminroles.OfType<string>().ToList();
+                    foreach (var dr in dt.Rows)
+                    {                  
+                        IsAdmin = (adroleslist.Contains(dr[0])) ? true : false;
                     }
                     res.ConnectionStatus = IsAdmin;
                     
                 }
                 else if (request.DataDBConnection.DatabaseVendor == DatabaseVendors.ORACLE)
                 {
-                    var adminroles = Enum.GetValues(typeof(OracleSysRoles));
+                    string[] adminroles = Enum.GetNames(typeof(OracleSysRoles));
+                    List<string> adroleslist = adminroles.OfType<string>().ToList();
                     foreach (var dr in dt.Rows)
                     {
-                        int pos = Array.IndexOf(adminroles, dr[0]);
-                        IsAdmin = (pos > -1) ? true : false;
+                        IsAdmin = (adroleslist.Contains(dr[0])) ? true : false;
                     }
                     res.ConnectionStatus = IsAdmin;
 
