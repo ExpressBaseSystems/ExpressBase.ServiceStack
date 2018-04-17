@@ -259,7 +259,7 @@ namespace ExpressBase.ServiceStack.Services
                                     .Replace("@unameadmin", request.dbName + "_admin").Replace("@unameROUser", request.dbName + "_ro")
                                     .Replace("@unameRWUser", request.dbName + "_rw").Replace("@ebadmin", Environment.GetEnvironmentVariable(EnvironmentConstants.EB_DATACENTRE_ADMIN_USER));
 
-                var cmdtxt = EbConnectionFactory.DataDB.GetNewCommand(con, sql2, con_trans);
+                var cmdtxt = EbConnectionFactory.DataDB.GetNewCommand(con, sql2);
                 cmdtxt.ExecuteNonQuery();
 
                 return new EbDbCreateResponse
@@ -294,7 +294,7 @@ namespace ExpressBase.ServiceStack.Services
                     using (StreamReader reader = new StreamReader(stream))
                         result = reader.ReadToEnd();
 
-                    var cmdtxt1 = EbConnectionFactory.DataDB.GetNewCommand(con, result, con_trans);
+                    var cmdtxt1 = EbConnectionFactory.DataDB.GetNewCommand(con, result);
                     cmdtxt1.ExecuteNonQuery();
                 }
             }
@@ -317,7 +317,7 @@ namespace ExpressBase.ServiceStack.Services
 
                 //..............insert into client tbl eb_users............ to SOLUTION
                 string sql2 = "INSERT INTO eb_users(email, pwd, fullname, socialid) VALUES (:email, :pwd, :firstname, :socialid) RETURNING id;";
-                var cmdtxt3 = EbConnectionFactory.DataDB.GetNewCommand(con, sql2, con_trans);
+                var cmdtxt3 = EbConnectionFactory.DataDB.GetNewCommand(con, sql2);
                 cmdtxt3.Parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, rslt.Rows[0][0]));
                 cmdtxt3.Parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("pwd", EbDbTypes.String, rslt.Rows[0][1]));
                 cmdtxt3.Parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("firstname", EbDbTypes.String, rslt.Rows[0][2]));
@@ -331,7 +331,7 @@ namespace ExpressBase.ServiceStack.Services
                     sql4 += string.Format("INSERT INTO eb_role2user(role_id, user_id, createdat) VALUES ({0}, {1}, now());", (int)role, id);
                 }
 
-                var cmdtxt5 = EbConnectionFactory.DataDB.GetNewCommand(con, sql4, con_trans);
+                var cmdtxt5 = EbConnectionFactory.DataDB.GetNewCommand(con, sql4);
                 cmdtxt5.ExecuteNonQuery();
             }
             catch (Exception e) { return false; }

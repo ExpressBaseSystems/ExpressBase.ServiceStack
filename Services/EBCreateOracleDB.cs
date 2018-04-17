@@ -112,7 +112,7 @@ namespace ExpressBase.ServiceStack
                     {
                         result = reader.ReadToEnd();
                     }
-                    var cmdtxt1 = EbConnectionFactory.DataDB.GetNewCommand(con, result, con_trans);
+                    var cmdtxt1 = EbConnectionFactory.DataDB.GetNewCommand(con, result);
                     cmdtxt1.ExecuteNonQuery();
                 }
             }
