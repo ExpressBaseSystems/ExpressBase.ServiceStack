@@ -86,7 +86,11 @@ namespace ExpressBase.ServiceStack
             var parameters = DataHelper.GetParams(this.EbConnectionFactory, _isPaged, request.Params, request.Length, request.Start);
             Console.WriteLine("Before :  " + DateTime.Now);
             var dtStart = DateTime.Now;
+            Console.WriteLine("................................................datasourceDSrequeststart " + DateTime.Now);
             var _dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray<System.Data.Common.DbParameter>());
+            Console.WriteLine("................................................datasourceDSrequeststart " + DateTime.Now);
+            var dtstop = DateTime.Now;
+            Console.WriteLine("..................................totaltimeinSeconds"+ dtstop.Subtract(dtStart).Seconds);
 
             //-- 
             Console.WriteLine(DateTime.Now);
@@ -165,7 +169,9 @@ namespace ExpressBase.ServiceStack
 
                     try
                     {
+                        Console.WriteLine("................................................datasourcecolumnrequeststart " + System.DateTime.Now);
                         _dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray<System.Data.Common.DbParameter>());
+                        Console.WriteLine("................................................datasourcecolumnrequestfinish " + System.DateTime.Now);
 
                         foreach (var dt in _dataset.Tables)
                             resp.Columns.Add(dt.Columns);
