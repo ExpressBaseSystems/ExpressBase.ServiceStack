@@ -12,7 +12,6 @@ using ExpressBase.Common.Data;
 using ExpressBase.Objects.EmailRelated;
 using System.Text.RegularExpressions;
 using ExpressBase.Common.Structures;
-using System.Data.OracleClient;
 using ExpressBase.Objects.Objects.ReportRelated;
 
 namespace ExpressBase.ServiceStack
