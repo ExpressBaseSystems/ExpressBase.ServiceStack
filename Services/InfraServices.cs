@@ -48,17 +48,15 @@ namespace ExpressBase.ServiceStack.Services
         public CreateAccountResponse Post(CreateAccountRequest request)
         {
 			CreateAccountResponse resp = new CreateAccountResponse();
-            if (request.op == "updatetenant")
+            if (request.Op == "updatetenant")
             {
-                string sql = "SELECT * FROM eb_tenantprofile_setup(@firstname, @company, @employees, @designation, @country, @pwd, @email);";
+                string sql = "SELECT * FROM eb_tenantprofile_setup(@firstname, @company, @country, @pwd, @email);";
                 DbParameter[] parameters = {
-					this.EbConnectionFactory.DataDB.GetNewParameter("firstname", EbDbTypes.String, request.Colvalues["Name"]),
-                    this.EbConnectionFactory.DataDB.GetNewParameter("company", EbDbTypes.String, request.Colvalues["Company"]),
-                    this.EbConnectionFactory.DataDB.GetNewParameter("employees", EbDbTypes.String, request.Colvalues["Employees"]),
-                    this.EbConnectionFactory.DataDB.GetNewParameter("designation", EbDbTypes.String, request.Colvalues["Designation"]),
-                    this.EbConnectionFactory.DataDB.GetNewParameter("country", EbDbTypes.String, request.Colvalues["Country"]),
-                    this.EbConnectionFactory.DataDB.GetNewParameter("pwd", EbDbTypes.String, (request.Colvalues["Password"].ToString() + request.Colvalues["Email"].ToString()).ToMD5Hash()),
-                    this.EbConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, request.Colvalues["Email"])
+					this.EbConnectionFactory.DataDB.GetNewParameter("firstname", EbDbTypes.String, request.Name),
+                    this.EbConnectionFactory.DataDB.GetNewParameter("company", EbDbTypes.String, request.Company),
+                    this.EbConnectionFactory.DataDB.GetNewParameter("country", EbDbTypes.String, request.Country),
+                    this.EbConnectionFactory.DataDB.GetNewParameter("pwd", EbDbTypes.String, (request.Password.ToString() + request.Email.ToString()).ToMD5Hash()),
+                    this.EbConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, request.Email)
                 };
 
                 var ds = this.EbConnectionFactory.DataDB.DoQuery(sql, parameters);
