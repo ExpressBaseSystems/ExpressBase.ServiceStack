@@ -55,10 +55,20 @@ namespace ExpressBase.ServiceStack
                             _c += string.Format("AND {0} {1} '{2}' ", col, op, val);
                     }
                 }
-                if (this.EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.PGSQL)
+                if (this.EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.PGSQL) {
+                    if (!_ds.Sql.ToLower().Contains("@and_search"))
+                        _ds.Sql = "SELECT * FROM (" + _ds.Sql + ") as data WHERE 1=1 @and_search";
                     _sql = _ds.Sql.Replace("@and_search", _c);
+                }
                 else
-                    _sql = _ds.Sql.Replace(":and_search", _c);
+                {
+                    if (!_ds.Sql.ToLower().Contains(":and_search"))
+                    {
+                        _ds.Sql = "SELECT * FROM (" + _ds.Sql + ") data WHERE 1=1 :and_search";
+                    }
+                    _ds.Sql = _ds.Sql.ReplaceAll(";", string.Empty);
+                    _sql = _ds.Sql.Replace(":and_search", _c)+";";
+                }
             }
             bool _isPaged = false;
             if (this.EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.PGSQL)
