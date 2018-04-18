@@ -613,8 +613,8 @@ WHERE
 
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":id", EbDbTypes.String, request.RefId));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_name", EbDbTypes.String, request.Name.Replace("\n", "").Replace("\t", "").Replace("\r", "")));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_type", EbDbTypes.Int32, GetObjectType(obj)));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_desc", EbDbTypes.String, (!string.IsNullOrEmpty(request.Description)) ? request.Description : string.Empty));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_type", EbDbTypes.Int32, GetObjectType(obj)));
                     //cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_json", EbDbTypes.Json, request.Json));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_changelog", EbDbTypes.String, request.ChangeLog));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":commit_uid", EbDbTypes.Int32, request.UserId));
@@ -677,11 +677,11 @@ WHERE
                     //string sql = "SELECT eb_objects_save(@id, @obj_name, @obj_desc, @obj_type, @obj_json, @commit_uid, @src_pid, @cur_pid, @relations, @tags, @app_id)";
                     string sql = this.EbConnectionFactory.ObjectsDB.EB_SAVE_OBJECT;
                     cmd = this.EbConnectionFactory.ObjectsDB.GetNewCommand(con, sql);
-
+                    
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":id", EbDbTypes.String, request.RefId));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_name", EbDbTypes.String, request.Name.Replace("\n", "").Replace("\t", "").Replace("\r", "")));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_type", EbDbTypes.Int32, GetObjectType(obj)));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_desc", EbDbTypes.String, (!string.IsNullOrEmpty(request.Description)) ? request.Description : string.Empty));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_type", EbDbTypes.Int32, GetObjectType(obj)));
                     //cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_json", EbDbTypes.Json, request.Json));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":commit_uid", EbDbTypes.Int32, request.UserId));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":src_pid", EbDbTypes.String, request.TenantAccountId));
@@ -745,10 +745,10 @@ WHERE
                     //string sql = "SELECT eb_objects_create_new_object(@obj_name, @obj_desc, @obj_type, @obj_cur_status, @obj_json::json, @commit_uid, @src_pid, @cur_pid, @relations, @issave, @tags, @app_id)";
                     String sql = this.EbConnectionFactory.ObjectsDB.EB_CREATE_NEW_OBJECT;
                     cmd = this.EbConnectionFactory.ObjectsDB.GetNewCommand(con, sql);
-                   
+                    
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_name", EbDbTypes.String, request.Name.Replace("\n", "").Replace("\t", "").Replace("\r", "")));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_type", EbDbTypes.Int32, GetObjectType(obj)));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_desc", EbDbTypes.String, (!string.IsNullOrEmpty(request.Description)) ? request.Description : string.Empty));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_type", EbDbTypes.Int32, GetObjectType(obj))); 
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_cur_status", EbDbTypes.Int32, (int)request.Status));//request.Status
                     //cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_json", EbDbTypes.Json, request.Json));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":commit_uid", EbDbTypes.Int32, request.UserId));
