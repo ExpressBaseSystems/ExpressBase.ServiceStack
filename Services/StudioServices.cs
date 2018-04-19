@@ -215,10 +215,11 @@ WHERE
 
             foreach (EbDataRow dr in dt.Rows)
             {
-                var _ebObject = (new EbObjectWrapper
-                {
-                    Json = dr[0].ToString(),
-                    VersionNumber = dr[1].ToString(),
+				var _ebObject = (new EbObjectWrapper
+				{
+					Json = dr[0].ToString(),
+					VersionNumber = dr[1].ToString(),
+					EbObjectType = (dr[4] != DBNull.Value) ? Convert.ToInt32(dr[4]) : 0,
                     Status = Enum.GetName(typeof(ObjectLifeCycleStatus), Convert.ToInt32(dr[2])),
                     Tags = dr[3].ToString()
                 });
