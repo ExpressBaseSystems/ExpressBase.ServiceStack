@@ -182,7 +182,7 @@ namespace ExpressBase.ServiceStack.Services
         public GetSolutioInfoResponse Get(GetSolutioInfoRequest request)
         {
             ConnectionManager _conService = base.ResolveService<ConnectionManager>();
-            string sql = string.Format("SELECT * FROM eb_solutions WHERE isolution_id='{0}'", request.TenantAccountId);
+            string sql = string.Format("SELECT * FROM eb_solutions WHERE isolution_id='{0}'", request.IsolutionId);
             var dt = (new EbConnectionFactory(CoreConstants.EXPRESSBASE, this.Redis)).DataDB.DoQuery(sql);
             EbSolutionsWrapper _ebSolutions = new EbSolutionsWrapper
             {
