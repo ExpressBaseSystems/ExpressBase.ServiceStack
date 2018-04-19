@@ -194,7 +194,7 @@ namespace ExpressBase.ServiceStack.Services
             GetSolutioInfoResponse resp = new GetSolutioInfoResponse() { Data = _ebSolutions };
             if (resp.Data != null)
             {
-                GetConnectionsResponse response = (GetConnectionsResponse)_conService.Post(new GetConnectionsRequest { ConnectionType = 0, TenantAccountId = request.TenantAccountId });
+                GetConnectionsResponse response = (GetConnectionsResponse)_conService.Post(new GetConnectionsRequest { ConnectionType = 0, TenantAccountId = request.IsolutionId });
                 resp.EBSolutionConnections = response.EBSolutionConnections;
             }
             return resp;

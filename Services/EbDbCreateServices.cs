@@ -67,92 +67,92 @@ namespace ExpressBase.ServiceStack.Services
                 string vendor = this.EbConnectionFactory.DataDB.Vendor.ToString();
                 //.............DataDb Tables
                 string path = "ExpressBase.Common.SqlScripts.@vendor.eb_extras.sql".Replace("@vendor", vendor);
-                bool b1 = CreateOrAlter_Structure(con, path, con_trans);
+                bool b1 = CreateOrAlter_Structure(con, path);
 
                 path = "ExpressBase.Common.SqlScripts.@vendor.DataDb.TableCreate.eb_users.sql".Replace("@vendor",vendor);
-                bool b2 = CreateOrAlter_Structure(con, path, con_trans);
+                bool b2 = CreateOrAlter_Structure(con, path);
 
                 path = "ExpressBase.Common.SqlScripts.@vendor.DataDb.TableCreate.eb_usergroup.sql".Replace("@vendor", vendor);
-                bool b3 = CreateOrAlter_Structure(con, path, con_trans);
+                bool b3 = CreateOrAlter_Structure(con, path);
 
                 path = "ExpressBase.Common.SqlScripts.@vendor.DataDb.TableCreate.eb_roles.sql".Replace("@vendor", vendor);
-                bool b4 = CreateOrAlter_Structure(con, path, con_trans);
+                bool b4 = CreateOrAlter_Structure(con, path);
 
                 path = "ExpressBase.Common.SqlScripts.@vendor.DataDb.TableCreate.eb_userstatus.sql".Replace("@vendor", vendor);
-                bool b5 = CreateOrAlter_Structure(con, path, con_trans);
+                bool b5 = CreateOrAlter_Structure(con, path);
 
                 path = "ExpressBase.Common.SqlScripts.@vendor.DataDb.TableCreate.eb_useranonymous.sql".Replace("@vendor", vendor);
-                bool b6 = CreateOrAlter_Structure(con, path, con_trans);
+                bool b6 = CreateOrAlter_Structure(con, path);
 
                 path = "ExpressBase.Common.SqlScripts.@vendor.DataDb.TableCreate.eb_role2user.sql".Replace("@vendor", vendor);
-                bool b7 = CreateOrAlter_Structure(con, path, con_trans);
+                bool b7 = CreateOrAlter_Structure(con, path);
 
                 path = "ExpressBase.Common.SqlScripts.@vendor.DataDb.TableCreate.eb_role2role.sql".Replace("@vendor", vendor);
-                bool b8 = CreateOrAlter_Structure(con, path, con_trans);
+                bool b8 = CreateOrAlter_Structure(con, path);
 
                 path = "ExpressBase.Common.SqlScripts.@vendor.DataDb.TableCreate.eb_role2permission.sql".Replace("@vendor", vendor);
-                bool b9 = CreateOrAlter_Structure(con, path, con_trans);
+                bool b9 = CreateOrAlter_Structure(con, path);
 
                 path = "ExpressBase.Common.SqlScripts.@vendor.DataDb.TableCreate.eb_user2usergroup.sql".Replace("@vendor", vendor);
-                bool b10 = CreateOrAlter_Structure(con, path, con_trans);
+                bool b10 = CreateOrAlter_Structure(con, path);
 
                 //.............DataDb Functions
 
                 path = "ExpressBase.Common.SqlScripts.@vendor.DataDb.FunctionCreate.eb_authenticate_anonymous.sql".Replace("@vendor", vendor);
-                bool b11 = CreateOrAlter_Structure(con, path, con_trans);
+                bool b11 = CreateOrAlter_Structure(con, path);
 
                 path = "ExpressBase.Common.SqlScripts.@vendor.DataDb.FunctionCreate.eb_authenticate_unified.sql".Replace("@vendor", vendor);
-                bool b12 = CreateOrAlter_Structure(con, path, con_trans);
+                bool b12 = CreateOrAlter_Structure(con, path);
 
                 path = "ExpressBase.Common.SqlScripts.@vendor.DataDb.FunctionCreate.eb_create_or_update_rbac_manageroles.sql".Replace("@vendor", vendor);
-                bool b13 = CreateOrAlter_Structure(con, path, con_trans);
+                bool b13 = CreateOrAlter_Structure(con, path);
 
                 path = "ExpressBase.Common.SqlScripts.@vendor.DataDb.FunctionCreate.eb_create_or_update_role.sql".Replace("@vendor", vendor);
-                bool b14 = CreateOrAlter_Structure(con, path, con_trans);
+                bool b14 = CreateOrAlter_Structure(con, path);
 
                 path = "ExpressBase.Common.SqlScripts.@vendor.DataDb.FunctionCreate.eb_create_or_update_role2role.sql".Replace("@vendor", vendor);
-                bool b15 = CreateOrAlter_Structure(con, path, con_trans);
+                bool b15 = CreateOrAlter_Structure(con, path);
 
                 path = "ExpressBase.Common.SqlScripts.@vendor.DataDb.FunctionCreate.eb_create_or_update_role2user.sql".Replace("@vendor", vendor);
-                bool b16 = CreateOrAlter_Structure(con, path, con_trans);
+                bool b16 = CreateOrAlter_Structure(con, path);
 
                 path = "ExpressBase.Common.SqlScripts.@vendor.DataDb.FunctionCreate.eb_createormodifyuserandroles.sql".Replace("@vendor", vendor);
-                bool b17 = CreateOrAlter_Structure(con, path, con_trans);
+                bool b17 = CreateOrAlter_Structure(con, path);
 
                 path = "ExpressBase.Common.SqlScripts.@vendor.DataDb.FunctionCreate.eb_createormodifyusergroup.sql".Replace("@vendor", vendor);
-                bool b18 = CreateOrAlter_Structure(con, path, con_trans);
+                bool b18 = CreateOrAlter_Structure(con, path);
 
                 path = "ExpressBase.Common.SqlScripts.@vendor.DataDb.FunctionCreate.eb_getpermissions.sql".Replace("@vendor", vendor);
-                bool b19 = CreateOrAlter_Structure(con, path, con_trans);
+                bool b19 = CreateOrAlter_Structure(con, path);
 
                 path = "ExpressBase.Common.SqlScripts.@vendor.DataDb.FunctionCreate.eb_getroles.sql".Replace("@vendor", vendor);
-                bool b20 = CreateOrAlter_Structure(con, path, con_trans);
+                bool b20 = CreateOrAlter_Structure(con, path);
 
                 //.............ObjectsDb Tables
 
                 path = "ExpressBase.Common.SqlScripts.@vendor.ObjectsDb.TableCreate.eb_applications.sql".Replace("@vendor", vendor);
-                bool b21 = CreateOrAlter_Structure(con, path, con_trans);
+                bool b21 = CreateOrAlter_Structure(con, path);
 
                 path = "ExpressBase.Common.SqlScripts.@vendor.ObjectsDb.TableCreate.eb_bots.sql".Replace("@vendor", vendor);
-                bool b22 = CreateOrAlter_Structure(con, path, con_trans);
+                bool b22 = CreateOrAlter_Structure(con, path);
 
                 path = "ExpressBase.Common.SqlScripts.@vendor.ObjectsDb.TableCreate.eb_files.sql".Replace("@vendor", vendor);
-                bool b23 = CreateOrAlter_Structure(con, path, con_trans);
+                bool b23 = CreateOrAlter_Structure(con, path);
 
                 path = "ExpressBase.Common.SqlScripts.@vendor.ObjectsDb.TableCreate.eb_objects.sql".Replace("@vendor", vendor);
-                bool b24 = CreateOrAlter_Structure(con, path, con_trans);
+                bool b24 = CreateOrAlter_Structure(con, path);
 
                 path = "ExpressBase.Common.SqlScripts.@vendor.ObjectsDb.TableCreate.eb_objects_relations.sql".Replace("@vendor", vendor);
-                bool b25 = CreateOrAlter_Structure(con, path, con_trans);
+                bool b25 = CreateOrAlter_Structure(con, path);
 
                 path = "ExpressBase.Common.SqlScripts.@vendor.ObjectsDb.TableCreate.eb_objects_status.sql".Replace("@vendor", vendor);
-                bool b26 = CreateOrAlter_Structure(con, path, con_trans);
+                bool b26 = CreateOrAlter_Structure(con, path);
 
                 path = "ExpressBase.Common.SqlScripts.@vendor.ObjectsDb.TableCreate.eb_objects_ver.sql".Replace("@vendor", vendor);
-                bool b27 = CreateOrAlter_Structure(con, path, con_trans);
+                bool b27 = CreateOrAlter_Structure(con, path);
 
                 path = "ExpressBase.Common.SqlScripts.@vendor.ObjectsDb.TableCreate.eb_objects2application.sql".Replace("@vendor", vendor);
-                bool b28 = CreateOrAlter_Structure(con, path, con_trans);
+                bool b28 = CreateOrAlter_Structure(con, path);
 
                 //.............ObjectsDb Functions
 
@@ -163,45 +163,45 @@ namespace ExpressBase.ServiceStack.Services
                 //bool b30 = CreateOrAlter_Structure(con, path);
 
                 path = "ExpressBase.Common.SqlScripts.@vendor.ObjectsDb.FunctionCreate.eb_objects_change_status.sql".Replace("@vendor", vendor);
-                bool b31 = CreateOrAlter_Structure(con, path, con_trans);
+                bool b31 = CreateOrAlter_Structure(con, path);
 
                 path = "ExpressBase.Common.SqlScripts.@vendor.ObjectsDb.FunctionCreate.eb_objects_commit.sql".Replace("@vendor", vendor);
-                bool b32 = CreateOrAlter_Structure(con, path, con_trans);
+                bool b32 = CreateOrAlter_Structure(con, path);
 
                 path = "ExpressBase.Common.SqlScripts.@vendor.ObjectsDb.FunctionCreate.eb_objects_create_major_version.sql".Replace("@vendor", vendor);
-                bool b33 = CreateOrAlter_Structure(con, path, con_trans);
+                bool b33 = CreateOrAlter_Structure(con, path);
 
                 path = "ExpressBase.Common.SqlScripts.@vendor.ObjectsDb.FunctionCreate.eb_objects_create_minor_version.sql".Replace("@vendor", vendor);
-                bool b34 = CreateOrAlter_Structure(con, path, con_trans);
+                bool b34 = CreateOrAlter_Structure(con, path);
 
                 path = "ExpressBase.Common.SqlScripts.@vendor.ObjectsDb.FunctionCreate.eb_objects_create_new_object.sql".Replace("@vendor", vendor);
-                bool b35 = CreateOrAlter_Structure(con, path, con_trans);
+                bool b35 = CreateOrAlter_Structure(con, path);
 
                 path = "ExpressBase.Common.SqlScripts.@vendor.ObjectsDb.FunctionCreate.eb_objects_create_patch_version.sql".Replace("@vendor", vendor);
-                bool b36 = CreateOrAlter_Structure(con, path, con_trans);
+                bool b36 = CreateOrAlter_Structure(con, path);
 
                 path = "ExpressBase.Common.SqlScripts.@vendor.ObjectsDb.FunctionCreate.eb_objects_exploreobject.sql".Replace("@vendor", vendor);
-                bool b37 = CreateOrAlter_Structure(con, path, con_trans);
+                bool b37 = CreateOrAlter_Structure(con, path);
 
                 path = "ExpressBase.Common.SqlScripts.@vendor.ObjectsDb.FunctionCreate.eb_objects_getversiontoopen.sql".Replace("@vendor", vendor);
-                bool b38 = CreateOrAlter_Structure(con, path, con_trans);
+                bool b38 = CreateOrAlter_Structure(con, path);
 
                 path = "ExpressBase.Common.SqlScripts.@vendor.ObjectsDb.FunctionCreate.eb_objects_save.sql".Replace("@vendor", vendor);
-                bool b39 = CreateOrAlter_Structure(con, path, con_trans);
+                bool b39 = CreateOrAlter_Structure(con, path);
 
                 path = "ExpressBase.Common.SqlScripts.@vendor.ObjectsDb.FunctionCreate.eb_objects_update_dashboard.sql".Replace("@vendor", vendor);
-                bool b40 = CreateOrAlter_Structure(con, path, con_trans);
+                bool b40 = CreateOrAlter_Structure(con, path);
 
                 //path = "ExpressBase.Common.SqlScripts.@vendor.ObjectsDb.FunctionCreate.eb_update_rel.sql".Replace("@vendor", vendor);
               //  bool b43 = CreateOrAlter_Structure(con, path, con_trans);
 
                 path = "ExpressBase.Common.SqlScripts.@vendor.ObjectsDb.FunctionCreate.eb_get_tagged_object.sql".Replace("@vendor", vendor);
-                bool b44 = CreateOrAlter_Structure(con, path, con_trans);
+                bool b44 = CreateOrAlter_Structure(con, path);
 
                
 
                 //.....insert into user tables.........
-                bool b41 = InsertIntoTables(request, con, con_trans);
+                bool b41 = InsertIntoTables(request, con);
 
                 var b42 = request.ischange == "true" ? null : CreateUsers4DataBase(con, request, con_trans);
 
@@ -280,7 +280,7 @@ namespace ExpressBase.ServiceStack.Services
             }
         }
 
-        public bool CreateOrAlter_Structure(DbConnection con, string path, DbTransaction con_trans)
+        public bool CreateOrAlter_Structure(DbConnection con, string path)
         {
             try
             {
@@ -306,7 +306,7 @@ namespace ExpressBase.ServiceStack.Services
             return true;
         }
 
-        public bool InsertIntoTables(EbDbCreateRequest request, DbConnection con,DbTransaction con_trans)
+        public bool InsertIntoTables(EbDbCreateRequest request, DbConnection con)
         {
             try
             {
