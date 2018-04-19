@@ -44,55 +44,56 @@ namespace ExpressBase.ServiceStack
                         var op = _dic.Operator;  var col = _dic.Column;  var val = _dic.Value;
 
                         if (op == "x*")
-                            _c += string.Format("AND LOWER({0})::text LIKE LOWER('{1}%') ", col, val);
+                            _c += string.Format("AND LOWER({0}) LIKE LOWER('{1}%') ", col, val);
                         else if (op == "*x")
-                            _c += string.Format("AND LOWER({0})::text LIKE LOWER('%{1}') ", col, val);
+                            _c += string.Format("AND LOWER({0}) LIKE LOWER('%{1}') ", col, val);
                         else if (op == "*x*")
-                            _c += string.Format("AND LOWER({0})::text LIKE LOWER('%{1}%') ", col, val);
+                            _c += string.Format("AND LOWER({0}) LIKE LOWER('%{1}%') ", col, val);
                         else if (op == "=")
-                            _c += string.Format("AND LOWER({0}::text) = LOWER('{1}') ", col, val);
+                            _c += string.Format("AND LOWER({0}) = LOWER('{1}') ", col, val);
                         else
                             _c += string.Format("AND {0} {1} '{2}' ", col, op, val);
                     }
                 }
-                if (this.EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.PGSQL) {
-                    if (!_ds.Sql.ToLower().Contains("@and_search"))
-                        _ds.Sql = "SELECT * FROM (" + _ds.Sql + ") as data WHERE 1=1 @and_search";
-                    _sql = _ds.Sql.Replace("@and_search", _c);
-                }
-                else
-                {
+                //if (this.EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.PGSQL) {
+                //    if (!_ds.Sql.ToLower().Contains("@and_search"))
+                //        _ds.Sql = "SELECT * FROM (" + _ds.Sql + ") as data WHERE 1=1 @and_search order by @orderby";
+                //    _ds.Sql = _ds.Sql.ReplaceAll(";", string.Empty);
+                //    _sql = _ds.Sql.Replace("@and_search", _c) + ";";
+                //}
+                //else
+                //{
                     if (!_ds.Sql.ToLower().Contains(":and_search"))
                     {
-                        _ds.Sql = "SELECT * FROM (" + _ds.Sql + ") data WHERE 1=1 :and_search";
+                        _ds.Sql = "SELECT * FROM (" + _ds.Sql + ") data WHERE 1=1 :and_search order by :orderby";
                     }
                     _ds.Sql = _ds.Sql.ReplaceAll(";", string.Empty);
                     _sql = _ds.Sql.Replace(":and_search", _c)+";";
-                }
+                //}
             }
             bool _isPaged = false;
-            if (this.EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.PGSQL)
-            {
-                _sql = _sql.Replace("@orderby",
-                (string.IsNullOrEmpty(request.OrderByCol)) ? "id" : string.Format("{0} {1}", request.OrderByCol, ((request.OrderByDir == 2) ? "DESC" : "ASC")));
+            //if (this.EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.PGSQL)
+            //{
+            //    _sql = _sql.Replace("@orderby",
+            //    (string.IsNullOrEmpty(request.OrderByCol)) ? "1" : string.Format("{0} {1}", request.OrderByCol, ((request.OrderByDir == 2) ? "DESC" : "ASC")));
 
-                 _isPaged = (_sql.ToLower().Contains("@offset") && _sql.ToLower().Contains("@limit"));
+            //     _isPaged = (_sql.ToLower().Contains("@offset") && _sql.ToLower().Contains("@limit"));
 
-                //var parameters = DataHelper.GetParams(this.EbConnectionFactory, _isPaged, request.Params, request.Length, request.Start);
-                if (request.Params == null)
-                    _sql = _sql.Replace("@id", "0");
-            }
-            else
-            {
+            //    //var parameters = DataHelper.GetParams(this.EbConnectionFactory, _isPaged, request.Params, request.Length, request.Start);
+            //    if (request.Params == null)
+            //        _sql = _sql.Replace("@id", "0");
+            //}
+            //else
+            //{
                 _sql = _sql.Replace(":orderby",
-               (string.IsNullOrEmpty(request.OrderByCol)) ? "id" : string.Format("{0} {1}", request.OrderByCol, ((request.OrderByDir == 2) ? "DESC" : "ASC")));
+               (string.IsNullOrEmpty(request.OrderByCol)) ? "1" : string.Format("{0} {1}", request.OrderByCol, ((request.OrderByDir == 2) ? "DESC" : "ASC")));
 
                 _isPaged = (_sql.ToLower().Contains(":offset") && _sql.ToLower().Contains(":limit"));
 
                 
                 if (request.Params == null)
                     _sql = _sql.Replace(":id", "0");
-            }
+            //}
             var parameters = DataHelper.GetParams(this.EbConnectionFactory, _isPaged, request.Params, request.Length, request.Start);
             Console.WriteLine("Before :  " + DateTime.Now);
             var dtStart = DateTime.Now;
@@ -157,24 +158,24 @@ namespace ExpressBase.ServiceStack
                 if (_ds != null)
                 {
                     string _sql = string.Empty;
-                    if (this.EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.PGSQL)
-                    {
-                         _sql = _ds.Sql/*Decoded()*/.Replace("@and_search", string.Empty).Replace("@orderby", "1");
-                        _isPaged = (_sql.ToLower().Contains("@offset") && _sql.ToLower().Contains("@limit"));
+                    //if (this.EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.PGSQL)
+                    //{
+                    //     _sql = _ds.Sql/*Decoded()*/.Replace("@and_search", string.Empty).Replace("@orderby", "1");
+                    //    _isPaged = (_sql.ToLower().Contains("@offset") && _sql.ToLower().Contains("@limit"));
 
 
-                        if (request.Params == null)
-                            _sql = _sql.Replace("@id", "0");
-                    }
-                    else
-                    {
+                    //    if (request.Params == null)
+                    //        _sql = _sql.Replace("@id", "0");
+                    //}
+                    //else
+                    //{
                          _sql = _ds.Sql/*Decoded()*/.Replace(":and_search", string.Empty).Replace(":orderby", "1");
                         _isPaged = (_sql.ToLower().Contains(":offset") && _sql.ToLower().Contains(":limit"));
 
 
                         if (request.Params == null)
                             _sql = _sql.Replace(":id", "0");
-                    }
+                    //}
                     var parameters = DataHelper.GetParams(this.EbConnectionFactory, _isPaged, request.Params, 0, 0);
 
                     try
