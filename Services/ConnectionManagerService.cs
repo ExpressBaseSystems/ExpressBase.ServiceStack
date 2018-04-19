@@ -28,7 +28,7 @@ namespace ExpressBase.ServiceStack.Services
                 this.MQClient.Post<bool>(new RefreshSolutionConnectionsBySolutionIdAsyncRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
                 return true;
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 Console.WriteLine("Exception:" + e.ToString());
                 return false;
@@ -73,20 +73,23 @@ namespace ExpressBase.ServiceStack.Services
         public void Post(ChangeDataDBConnectionRequest request)
         {
             request.DataDBConnection.Persist(request.TenantAccountId, this.InfraConnectionFactory, request.IsNew, request.UserId);
-               base.MessageProducer3.Publish(new RefreshSolutionConnectionsRequest()
+            var myService = base.ResolveService<EbDbCreateServices>();
+            var result = myService.Post(new EbDbCreateRequest() { dbName = request.DataDBConnection.DatabaseName, ischange = "true", DataDBConnection = request.DataDBConnection });
+            base.MessageProducer3.Publish(new RefreshSolutionConnectionsRequest()
             {
-                TenantAccountId = request.TenantAccountId,
+                TenantAccountId = request.SolutionId,
                 UserId = request.UserId,
                 BToken = (!String.IsNullOrEmpty(this.Request.Authorization)) ? this.Request.Authorization.Replace("Bearer", string.Empty).Trim() : String.Empty,
                 RToken = (!String.IsNullOrEmpty(this.Request.Headers["rToken"])) ? this.Request.Headers["rToken"] : String.Empty
             });
+          
         }
 
         [Authenticate]
         public void Post(ChangeObjectsDBConnectionRequest request)
         {
-            request.ObjectsDBConnection.Persist(request.TenantAccountId, this.InfraConnectionFactory, request.IsNew, request.UserId);          
-            base.MessageProducer3.Publish(new RefreshSolutionConnectionsRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
+            request.ObjectsDBConnection.Persist(request.TenantAccountId, this.InfraConnectionFactory, request.IsNew, request.UserId);
+            base.MessageProducer3.Publish(new RefreshSolutionConnectionsRequest() { TenantAccountId = request.SolutionId, UserId = request.UserId });
         }
 
         [Authenticate]
@@ -115,18 +118,18 @@ namespace ExpressBase.ServiceStack.Services
 
             try
             {
-                var dt = DataDB.DoQuery(DataDB.EB_USER_ROLE_PRIVS.Replace("@uname",request.DataDBConnection.UserName));
-                
+                var dt = DataDB.DoQuery(DataDB.EB_USER_ROLE_PRIVS.Replace("@uname", request.DataDBConnection.UserName));
+
                 if (request.DataDBConnection.DatabaseVendor == DatabaseVendors.PGSQL)
                 {
                     string[] adminroles = Enum.GetNames(typeof(PGSQLSysRoles));
                     List<string> adroleslist = adminroles.OfType<string>().ToList();
                     foreach (var dr in dt.Rows)
-                    {                  
+                    {
                         IsAdmin = (adroleslist.Contains(dr[0])) ? true : false;
                     }
                     res.ConnectionStatus = IsAdmin;
-                    
+
                 }
                 else if (request.DataDBConnection.DatabaseVendor == DatabaseVendors.ORACLE)
                 {
