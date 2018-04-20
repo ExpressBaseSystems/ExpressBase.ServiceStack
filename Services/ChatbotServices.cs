@@ -258,7 +258,7 @@ WHERE
 
 						foreach (EbCardField CardField in (control as EbDynamicCardSet).CardFields)
 						{
-							if (CardField.Persist)
+							if (!CardField.DoNotPersist)
 							{
 								DVBaseColumn _col2 = null;
 								if (CardField is EbCardNumericField)
@@ -328,7 +328,7 @@ WHERE
 					{
 						foreach (EbCardField CardField in (control as EbDynamicCardSet).CardFields)
 						{
-							if (CardField.Persist)
+							if (!CardField.DoNotPersist)
 							{
 								if (CardField is EbCardNumericField)
 								{
