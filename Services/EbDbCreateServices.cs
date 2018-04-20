@@ -6,6 +6,7 @@ using ExpressBase.Common.Security;
 using ExpressBase.Common.Structures;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using System;
+using System.Data;
 using System.Data.Common;
 using System.IO;
 
@@ -27,52 +28,74 @@ namespace ExpressBase.ServiceStack.Services
         }
 
         public EbDbCreateServices(IEbConnectionFactory _idbf) : base(_idbf) { }
-
+    
         public EbDbCreateResponse Post(EbDbCreateRequest request)
         {
-            IDatabase DataDB = null;
-            if (request.DataDBConnection.DatabaseVendor == DatabaseVendors.PGSQL)
-                DataDB = new PGSQLDatabase(request.DataDBConnection);
-            else if (request.DataDBConnection.DatabaseVendor == DatabaseVendors.ORACLE)
-                DataDB = new OracleDB(request.DataDBConnection);
+            EbConnectionsConfig _solutionConnections = EbConnectionsConfigProvider.DataCenterConnections;
 
-            using (var con = DataDB.GetNewConnection())
+            _solutionConnections.ObjectsDbConnection.DatabaseName = request.dbName;
+
+            _solutionConnections.DataDbConnection.DatabaseName = request.dbName;
+
+            EbConnectionFactory NewCon = new EbConnectionFactory(_solutionConnections, request.dbName);
+
+            IDatabase DataDB = null;
+
+            if (!request.ischange)
+            {
+                DataDB = NewCon.DataDB;
+            }
+            else
+            {
+                if (request.DataDBConnection.DatabaseVendor == DatabaseVendors.PGSQL)
+                    DataDB = new PGSQLDatabase(request.DataDBConnection);
+                else if (request.DataDBConnection.DatabaseVendor == DatabaseVendors.ORACLE)
+                    DataDB = new OracleDB(request.DataDBConnection);
+            }           
+            using (var con = this.InfraConnectionFactory.DataDB.GetNewConnection())
             {
                 try
                 {
-                    if (request.DataDBConnection.DatabaseVendor == DatabaseVendors.PGSQL)
+                    if (DataDB.Vendor == DatabaseVendors.PGSQL)
                     {
                         con.Open();
-                        var cmd = DataDB.GetNewCommand(con, string.Format("CREATE DATABASE {0};", request.dbName));
+                        var cmd = this.InfraConnectionFactory.DataDB.GetNewCommand(con, string.Format("CREATE DATABASE {0};", request.dbName));
                         cmd.ExecuteNonQuery();
                     }
-                    return DbOperations(request);
+                    return DbOperations(request, DataDB);
                 }
 
                 catch (Exception e)
                 {
                     if (e.Data["Code"].ToString() == "42P04")
-                        return DbOperations(request);
+                        return DbOperations(request, DataDB);
                 }
             }
             return null;
 
         }
 
-        public EbDbCreateResponse DbOperations(EbDbCreateRequest request)
+        public EbDbCreateResponse DbOperations(EbDbCreateRequest request, IDatabase DataDB)
         {
-            IDatabase DataDB = null;
-            if (request.DataDBConnection.DatabaseVendor == DatabaseVendors.PGSQL)
-                DataDB = new PGSQLDatabase(request.DataDBConnection);
-            else if (request.DataDBConnection.DatabaseVendor == DatabaseVendors.ORACLE)
-                DataDB = new OracleDB(request.DataDBConnection);
+            //IDatabase DataDB = null;
+            //if (!request.ischange)
+            //{
+            //    DataDB = DataDBCon;
+            //}
+            //else
+            //{
+            //    if (request.DataDBConnection.DatabaseVendor == DatabaseVendors.PGSQL)
+            //        DataDB = new PGSQLDatabase(request.DataDBConnection);
+            //    else if (request.DataDBConnection.DatabaseVendor == DatabaseVendors.ORACLE)
+            //        DataDB = new OracleDB(request.DataDBConnection);
+            //}
 
-            EbConnectionsConfig _solutionConnections = EbConnectionsConfigProvider.DataCenterConnections;
+            //EbConnectionsConfig _solutionConnections = EbConnectionsConfigProvider.DataCenterConnections;
 
-            _solutionConnections.ObjectsDbConnection.DatabaseName = request.dbName.ToLower();
-            _solutionConnections.DataDbConnection.DatabaseName = request.dbName.ToLower();
+            //_solutionConnections.ObjectsDbConnection.DatabaseName = request.dbName.ToLower();
+            //_solutionConnections.DataDbConnection.DatabaseName = request.dbName.ToLower();
 
-            using (var con = request.ischange == "true"? DataDB.GetNewConnection():(new EbConnectionFactory(_solutionConnections, request.TenantAccountId)).DataDB.GetNewConnection())
+            using (var con = DataDB.GetNewConnection())
             {
                 con.Open();
                 var con_trans = con.BeginTransaction();
@@ -213,15 +236,15 @@ namespace ExpressBase.ServiceStack.Services
                
 
                 //.....insert into user tables.........
-                bool b41 = InsertIntoTables(request, con);
+                bool b41 = InsertIntoTables(request, con, DataDB);
 
-                var b42 = request.ischange == "true" ? null : CreateUsers4DataBase(con, request, con_trans);
+                var b42 = request.ischange ? null : CreateUsers4DataBase(con, request, DataDB);
 
                 if (b1 & b2 & b3 & b4 & b5 & b6 & b7 & b8 & b9 & b10 & b11 & b12 & b13 & b14 & b15 & b16 & b17 & b18 & b19 &
                     b20 & b21 & b22 & b23 & b24 & b25 & b26 & b27 & b28 & b31 & b32 & b33 & b34 & b35 & b36 & b37 & b38 & b39 & b40 & b41 & b44)
                 {
                     con_trans.Commit();
-                    var success = request.ischange == "true" ? new EbDbCreateResponse() { resp = true } : b42;
+                    var success = request.ischange ? new EbDbCreateResponse() { resp = true } : b42;
                     return success;
                 }
                 else
@@ -231,15 +254,22 @@ namespace ExpressBase.ServiceStack.Services
             return null;
         }
 
-        public EbDbCreateResponse CreateUsers4DataBase(DbConnection con, EbDbCreateRequest request, DbTransaction con_trans)
+        public EbDbCreateResponse CreateUsers4DataBase(DbConnection con, EbDbCreateRequest request, IDatabase DataDB)
         {
             try
             {
-                IDatabase DataDB = null;
-                if (request.DataDBConnection.DatabaseVendor == DatabaseVendors.PGSQL)
-                    DataDB = new PGSQLDatabase(request.DataDBConnection);
-                else if (request.DataDBConnection.DatabaseVendor == DatabaseVendors.ORACLE)
-                    DataDB = new OracleDB(request.DataDBConnection);
+                //IDatabase DataDB = null;
+                //if (!request.ischange)
+                //{
+                //    DataDB = request.Idbcon;
+                //}
+                //else
+                //{
+                //    if (request.DataDBConnection.DatabaseVendor == DatabaseVendors.PGSQL)
+                //        DataDB = new PGSQLDatabase(request.DataDBConnection);
+                //    else if (request.DataDBConnection.DatabaseVendor == DatabaseVendors.ORACLE)
+                //        DataDB = new OracleDB(request.DataDBConnection);
+                //}
 
                 string usersql = "SELECT * FROM eb_assignprivileges('@unameadmin','@unameROUser','@unameRWUser');".Replace("@unameadmin", request.dbName + "_admin").Replace("@unameROUser", request.dbName + "_ro").Replace("@unameRWUser", request.dbName + "_rw");
 
@@ -324,33 +354,61 @@ namespace ExpressBase.ServiceStack.Services
             return true;
         }
 
-        public bool InsertIntoTables(EbDbCreateRequest request, DbConnection con)
+        public bool InsertIntoTables(EbDbCreateRequest request, DbConnection con, IDatabase DataDB)
         {
             try
             {
+                //IDatabase DataDB = null;
+                //if (!request.ischange)
+                //{
+                //    DataDB = request.Idbcon;
+                //}
+                //else
+                //{
+                //    if (request.DataDBConnection.DatabaseVendor == DatabaseVendors.PGSQL)
+                //        DataDB = new PGSQLDatabase(request.DataDBConnection);
+                //    else if (request.DataDBConnection.DatabaseVendor == DatabaseVendors.ORACLE)
+                //        DataDB = new OracleDB(request.DataDBConnection);
+                //}
+
                 //.......select details from server tbl eb_usres......... from INFRA
-                string sql1 = "SELECT email, pwd, firstname, socialid FROM eb_users WHERE id=:uid";
+                string sql1 = "SELECT email, pwd, firstname,socialid FROM eb_users WHERE id=:uid";
                 DbParameter[] parameter = { this.InfraConnectionFactory.DataDB.GetNewParameter("uid", EbDbTypes.Int32, request.UserId) };
                 var rslt = this.InfraConnectionFactory.DataDB.DoQuery(sql1, parameter);
 
                 //..............insert into client tbl eb_users............ to SOLUTION
-                string sql2 = "INSERT INTO eb_users(email, pwd, fullname, socialid) VALUES (:email, :pwd, :firstname, :socialid) RETURNING id;";
-                var cmdtxt3 = EbConnectionFactory.DataDB.GetNewCommand(con, sql2);
-                cmdtxt3.Parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, rslt.Rows[0][0]));
-                cmdtxt3.Parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("pwd", EbDbTypes.String, rslt.Rows[0][1]));
-                cmdtxt3.Parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("firstname", EbDbTypes.String, rslt.Rows[0][2]));
-                cmdtxt3.Parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("socialid", EbDbTypes.String, rslt.Rows[0][3]));
-                var id = Convert.ToInt32(cmdtxt3.ExecuteScalar());
+                string sql2 = @"INSERT INTO eb_users(email,pwd) VALUES ('anonymous@anonym.com','294de3557d9d00b3d2d8a1e6aab028cf'); 
+                                INSERT INTO eb_users(email, pwd, fullname,socialid) VALUES (:email, :pwd, :fullname, :socialid);";
 
-                //.......add role to tenant as a/c owner
-                string sql4 = string.Empty;
+                string sql3 = string.Empty;
                 foreach (var role in Enum.GetValues(typeof(SystemRoles)))
                 {
-                    sql4 += string.Format("INSERT INTO eb_role2user(role_id, user_id, createdat) VALUES ({0}, {1}, now());", (int)role, id);
+                    int rid = (int)role;
+                    sql3 += DataDB.EB_INITROLE2USER.Replace("@role_id", rid.ToString()).Replace("@user_id", "2");
                 }
 
-                var cmdtxt5 = EbConnectionFactory.DataDB.GetNewCommand(con, sql4);
-                cmdtxt5.ExecuteNonQuery();
+                if (DataDB.Vendor == DatabaseVendors.PGSQL)
+                {
+                    var cmdtxt3 = DataDB.GetNewCommand(con, sql2);
+                    cmdtxt3.Parameters.Add(DataDB.GetNewParameter("email", EbDbTypes.String, rslt.Rows[0][0]));
+                    cmdtxt3.Parameters.Add(DataDB.GetNewParameter("pwd", EbDbTypes.String, rslt.Rows[0][1]));
+                    cmdtxt3.Parameters.Add(DataDB.GetNewParameter("fullname", EbDbTypes.String, rslt.Rows[0][2]));
+                    cmdtxt3.Parameters.Add(DataDB.GetNewParameter("socialid", EbDbTypes.String, rslt.Rows[0][3]));
+                    cmdtxt3.ExecuteScalar();
+                    var cmdtxt5 = DataDB.GetNewCommand(con, sql3);
+                    cmdtxt5.ExecuteNonQuery();
+                }
+                else if(DataDB.Vendor == DatabaseVendors.ORACLE)
+                {
+                    DbParameter[] parameters = { DataDB.GetNewParameter("email", EbDbTypes.String, rslt.Rows[0][0]),
+                                                 DataDB.GetNewParameter("pwd", EbDbTypes.String, rslt.Rows[0][1]),
+                                                 DataDB.GetNewParameter("fullname", EbDbTypes.String, rslt.Rows[0][2]),
+                                                 DataDB.GetNewParameter("socialid", EbDbTypes.String, rslt.Rows[0][3])
+                                                  };
+                    var result1 = DataDB.DoNonQuery(sql2, parameters);
+                    var result2 = DataDB.DoNonQuery(sql3);
+
+                }
             }
             catch (Exception e) { return false; }
             return true;

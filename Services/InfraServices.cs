@@ -1,4 +1,5 @@
 ﻿using ExpressBase.Common;
+using ExpressBase.Common.Connections;
 using ExpressBase.Common.Constants;
 using ExpressBase.Common.Data;
 using ExpressBase.Common.Extensions;
@@ -119,7 +120,8 @@ namespace ExpressBase.ServiceStack.Services
                 resp =  new CreateSolutionResponse { Solnid = Convert.ToInt32(cmd.ExecuteScalar()) };
             }
             if(resp.Solnid > 0) {
-                EbDbCreateResponse response =(EbDbCreateResponse)_dbService.Post(new EbDbCreateRequest { dbName = DbName,TenantAccountId = request.TenantAccountId ,UserId =request.UserId });
+
+                EbDbCreateResponse response =(EbDbCreateResponse)_dbService.Post(new EbDbCreateRequest { dbName = DbName,TenantAccountId = request.TenantAccountId ,UserId = request.UserId, Idbcon = this.EbConnectionFactory.DataDB  });
                 if (response.resp)
                     _conService.Post(new InitialSolutionConnectionsRequest { SolutionId = DbName, TenantAccountId = request.TenantAccountId, UserId = request.UserId });
             }                         
