@@ -73,8 +73,9 @@ namespace ExpressBase.ServiceStack.Services
         public void Post(ChangeDataDBConnectionRequest request)
         {
             request.DataDBConnection.Persist(request.TenantAccountId, this.InfraConnectionFactory, request.IsNew, request.UserId);
+        
             var myService = base.ResolveService<EbDbCreateServices>();
-            var result = myService.Post(new EbDbCreateRequest() { dbName = request.DataDBConnection.DatabaseName, ischange = "true", DataDBConnection = request.DataDBConnection });
+            var result = myService.Post(new EbDbCreateRequest() { dbName = request.DataDBConnection.DatabaseName, ischange = true, DataDBConnection = request.DataDBConnection, UserId = request.UserId,TenantAccountId = request.TenantAccountId });
             base.MessageProducer3.Publish(new RefreshSolutionConnectionsRequest()
             {
                 TenantAccountId = request.SolutionId,
