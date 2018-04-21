@@ -134,8 +134,8 @@ namespace ExpressBase.ServiceStack
             {
                 resp = new DataSourceColumnsResponse();
                 resp.Columns = new List<ColumnColletion>();
-                //EbDataSource _ds = null;
-                var _ds = this.Redis.Get<EbDataSource>(request.RefId);
+                EbDataSource _ds = null;
+                //var _ds = this.Redis.Get<EbDataSource>(request.RefId);
                 if (_ds == null)
                 {
                     var myService = base.ResolveService<EbObjectService>();
