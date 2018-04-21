@@ -130,6 +130,10 @@ namespace ExpressBase.ServiceStack.Services
 		public GetManageUserResponse Any(GetManageUserRequest request)
 		{
 			GetManageUserResponse resp = new GetManageUserResponse();
+			if(request.RqstMode == 3)//Mode == 3 for MyProfile View
+			{
+				request.Id = request.UserId;
+			}
 			string sql = @"SELECT id, role_name, description FROM eb_roles ORDER BY role_name;
                         SELECT id, name,description FROM eb_usergroup ORDER BY name;
 						SELECT id, role1_id, role2_id FROM eb_role2role WHERE eb_del = 'F';";
