@@ -72,7 +72,7 @@ namespace ExpressBase.ServiceStack.Services
         [Authenticate]
         public void Post(ChangeDataDBConnectionRequest request)
         {
-            request.DataDBConnection.Persist(request.TenantAccountId, this.InfraConnectionFactory, request.IsNew, request.UserId);
+            request.DataDBConnection.Persist(request.SolutionId, this.InfraConnectionFactory, request.IsNew, request.UserId);
         
             var myService = base.ResolveService<EbDbCreateServices>();
             var result = myService.Post(new EbDbCreateRequest() { dbName = request.DataDBConnection.DatabaseName, ischange = true, DataDBConnection = request.DataDBConnection, UserId = request.UserId,TenantAccountId = request.TenantAccountId });
@@ -89,7 +89,7 @@ namespace ExpressBase.ServiceStack.Services
         [Authenticate]
         public void Post(ChangeObjectsDBConnectionRequest request)
         {
-            request.ObjectsDBConnection.Persist(request.TenantAccountId, this.InfraConnectionFactory, request.IsNew, request.UserId);
+            request.ObjectsDBConnection.Persist(request.SolutionId, this.InfraConnectionFactory, request.IsNew, request.UserId);
             base.MessageProducer3.Publish(new RefreshSolutionConnectionsRequest() { TenantAccountId = request.SolutionId, UserId = request.UserId });
         }
 
