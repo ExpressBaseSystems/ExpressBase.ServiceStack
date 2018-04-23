@@ -88,14 +88,12 @@ namespace ExpressBase.ServiceStack.Services
             return getProductPlanResponse;
         }
 
-        public AutoGenEbIdResponse Get(AutoGenEbIdRequest request)
-        {
-            AutoGenEbIdResponse resp = new AutoGenEbIdResponse();
+        public AutoGenSidResponse Get(AutoGenSidRequest request)
+        {           
             string sql = null;
-            sql = string.Format("SELECT * FROM eb_id_gen('{0}');", request.WhichId);            
+            sql = "SELECT * FROM eb_sid_gen()";            
             var ds = this.EbConnectionFactory.ObjectsDB.DoQuery(sql);
-            resp.Sid = ds.Rows[0][0].ToString();
-            resp.AppId = ds.Rows[0][1].ToString();
+            AutoGenSidResponse resp = new AutoGenSidResponse { Sid = ds.Rows[0][0].ToString()};
             return resp;
         }
 
@@ -125,39 +123,6 @@ namespace ExpressBase.ServiceStack.Services
                 if (response.resp)
                     _conService.Post(new InitialSolutionConnectionsRequest { SolutionId = DbName, TenantAccountId = request.TenantAccountId, UserId = request.UserId });
             }                         
-        }
-
-        public CreateApplicationResponse Post(CreateApplicationRequest request)
-        {
-
-           string DbName = request.Colvalues["Sid"].ToString();
-            CreateApplicationResponse resp;
-            using (var con = this.EbConnectionFactory.DataDB.GetNewConnection(DbName.ToLower()))
-            {
-                con.Open();
-
-                if (!string.IsNullOrEmpty(request.Colvalues["AppName"].ToString()))
-                {
-                    string sql = "";
-                    //if (request.Id > 0)                   
-                    //    sql = "UPDATE eb_applications SET applicationname = @applicationname, description= @description WHERE id = @id RETURNING id";
-                    //else
-                        sql = "INSERT INTO eb_applications (applicationname,application_type, description,app_icon) VALUES (@applicationname,@apptype, @description,@appicon) RETURNING id";
-
-                    var cmd = EbConnectionFactory.DataDB.GetNewCommand(con, sql);
-                    cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("applicationname", EbDbTypes.String, request.Colvalues["AppName"]));
-                    cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("apptype", EbDbTypes.Int32, request.Colvalues["AppType"]));
-                    cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("description", EbDbTypes.String, request.Colvalues["DescApp"]));
-                    cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("appicon", EbDbTypes.String, request.Colvalues["AppIcon"]));
-                    var res = cmd.ExecuteScalar();
-                    resp = new CreateApplicationResponse(){ id = Convert.ToInt32(res) };
-                    //if(Convert.ToInt32(request.Colvalues["AppType"]) == (int)EbApplicationTypes.Bot)
-                    //    DvforAnonymousUser(request, Convert.ToInt32(res));
-                }
-                else
-                    resp = new CreateApplicationResponse(){ id = 0 };
-            }
-            return resp;
         }
 
         public GetSolutionResponse Get(GetSolutionRequest request)
@@ -225,49 +190,49 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
-        public void Get(CreateApplicationRequest request)
-        {
-            string sql =string.Format(@"SELECT A.socialid, A.id, A.fullname, A.email, A.phoneno, A.firstvisit, A.lastvisit, A.totalvisits, 
-                                A.city, A.region, A.country, B.applicationname , concat(A.latitude::text,',' ,A.longitude::text) AS latlong
-								FROM eb_usersanonymous A, eb_applications B WHERE A.appid = B.id AND A.ebuserid = 1 AND A.appid = {0}", request.appid);
+        //public void Get(CreateApplicationRequest request)
+        //{
+        //    string sql =string.Format(@"SELECT A.socialid, A.id, A.fullname, A.email, A.phoneno, A.firstvisit, A.lastvisit, A.totalvisits, 
+        //                        A.city, A.region, A.country, B.applicationname , concat(A.latitude::text,',' ,A.longitude::text) AS latlong
+								//FROM eb_usersanonymous A, eb_applications B WHERE A.appid = B.id AND A.ebuserid = 1 AND A.appid = {0}", request.appid);
 
-            var dsobj = new EbDataSource();
-            dsobj.Sql = sql;
-            var ds = new EbObject_Create_New_ObjectRequest();
-            ds.Name = request.Colvalues["DescApp"] + "_datasource";
-            ds.Description = "desc";
-            ds.Json = EbSerializers.Json_Serialize(dsobj);
-            ds.Status = ObjectLifeCycleStatus.Live;
-            ds.Relations = "";
-            ds.IsSave = false;
-            ds.Tags = "";
-            ds.Apps = request.Colvalues["AppName"].ToString();
-            ds.TenantAccountId = request.TenantAccountId;
-            //ds.WhichConsole = request.WhichConsole;
-            ds.UserId = request.UserId;
-            var myService = base.ResolveService<EbObjectService>();
-            var res = myService.Post(ds);
-            var refid = res.RefId;
+        //    var dsobj = new EbDataSource();
+        //    dsobj.Sql = sql;
+        //    var ds = new EbObject_Create_New_ObjectRequest();
+        //    ds.Name = request.Description + "_datasource";
+        //    ds.Description = "desc";
+        //    ds.Json = EbSerializers.Json_Serialize(dsobj);
+        //    ds.Status = ObjectLifeCycleStatus.Live;
+        //    ds.Relations = "";
+        //    ds.IsSave = false;
+        //    ds.Tags = "";
+        //    ds.Apps = request.AppName.ToString();
+        //    ds.TenantAccountId = request.TenantAccountId; 
+        //    //ds.WhichConsole = request.WhichConsole;
+        //    ds.UserId = request.UserId;
+        //    var myService = base.ResolveService<EbObjectService>();
+        //    var res = myService.Post(ds);
+        //    var refid = res.RefId;
 
-            var dvobj = new EbTableVisualization();
-            dvobj.DataSourceRefId = refid;
-            //dvobj.Columns = Columns;
-            //dvobj.DSColumns = Columns;
-            var ds1 = new EbObject_Create_New_ObjectRequest();
-            ds1.Name = request.Colvalues["DescApp"] + "_response";
-            ds1.Description = "desc";
-            ds1.Json = EbSerializers.Json_Serialize(dvobj);
-            ds1.Status = ObjectLifeCycleStatus.Live;
-            ds1.Relations = refid;
-            ds1.IsSave = false;
-            ds1.Tags = "";
-            ds1.Apps = request.Colvalues["AppName"].ToString();
-            ds1.TenantAccountId = request.TenantAccountId;
-            //ds1.WhichConsole = request.WhichConsole;
-            ds1.UserId = request.UserId;
-            var res1 = myService.Post(ds1);
-            var refid1 = res.RefId;
-        }
+        //    var dvobj = new EbTableVisualization();
+        //    dvobj.DataSourceRefId = refid;
+        //    //dvobj.Columns = Columns;
+        //    //dvobj.DSColumns = Columns;
+        //    var ds1 = new EbObject_Create_New_ObjectRequest();
+        //    ds1.Name = request.Description+ "_response";
+        //    ds1.Description = "desc";
+        //    ds1.Json = EbSerializers.Json_Serialize(dvobj);
+        //    ds1.Status = ObjectLifeCycleStatus.Live;
+        //    ds1.Relations = refid;
+        //    ds1.IsSave = false;
+        //    ds1.Tags = "";
+        //    ds1.Apps = request.AppName.ToString();
+        //    ds1.TenantAccountId = request.TenantAccountId;
+        //    //ds1.WhichConsole = request.WhichConsole;
+        //    ds1.UserId = request.UserId;
+        //    var res1 = myService.Post(ds1);
+        //    var refid1 = res.RefId;
+        //}
 
         //public DataBaseConfigResponse Post(DataBaseConfigRequest request)
         //{
