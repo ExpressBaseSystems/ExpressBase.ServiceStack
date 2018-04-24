@@ -88,28 +88,30 @@ namespace ExpressBase.ServiceStack.Auth0
                 Logger.Info("TryAuthenticate -> Normal");
 
             }
-
-            if (_authUser.Email != null)
+            if(_authUser != null)
             {
-                CustomUserSession session = authService.GetSession(false) as CustomUserSession;
-                var redisClient = authService.TryResolve<IRedisClientsManager>().GetClient();
-                session.CId = cid;
-                _authUser.CId = cid;
-                session.Uid = _authUser.UserId;
-                session.Email = _authUser.Email;
-                session.IsAuthenticated = true;
-                session.User = _authUser;
-                session.WhichConsole = whichContext;
-                session.DBVendor = EbConnectionFactory.DataDB.Vendor;
-                _authUser.wc = whichContext;
-                _authUser.AuthId = string.Format("{0}-{1}-{2}", cid, _authUser.Email, whichContext);
-                session.UserAuthId = _authUser.AuthId;
+                if (_authUser.Email != null)
+                {
+                    CustomUserSession session = authService.GetSession(false) as CustomUserSession;
+                    var redisClient = authService.TryResolve<IRedisClientsManager>().GetClient();
+                    session.CId = cid;
+                    _authUser.CId = cid;
+                    session.Uid = _authUser.UserId;
+                    session.Email = _authUser.Email;
+                    session.IsAuthenticated = true;
+                    session.User = _authUser;
+                    session.WhichConsole = whichContext;
+                    session.DBVendor = EbConnectionFactory.DataDB.Vendor;
+                    _authUser.wc = whichContext;
+                    _authUser.AuthId = string.Format("{0}-{1}-{2}", cid, _authUser.Email, whichContext);
+                    session.UserAuthId = _authUser.AuthId;
 
-                var authRepo = HostContext.AppHost.GetAuthRepository(authService.Request);
-                var existingUser = (authRepo as MyRedisAuthRepository).GetUserAuth(session.UserAuthId);
-                (authRepo as MyRedisAuthRepository).UpdateUserAuth(existingUser, _authUser);
+                    var authRepo = HostContext.AppHost.GetAuthRepository(authService.Request);
+                    var existingUser = (authRepo as MyRedisAuthRepository).GetUserAuth(session.UserAuthId);
+                    (authRepo as MyRedisAuthRepository).UpdateUserAuth(existingUser, _authUser);
+                }
             }
-
+           
             return (_authUser != null);
         }
 
@@ -146,10 +148,10 @@ namespace ExpressBase.ServiceStack.Auth0
             }
             catch (Exception e)
             {
-                if (e.Message == "er_server")
-                    throw new Exception("Internal Server Error");
-                else
+                if (e.Message == "Invalid UserName or Password")
                     throw new Exception("Invalid Username/Password");
+                else
+                    throw new Exception("Internal Server Error");
             }
         }
 

@@ -77,24 +77,7 @@ namespace ExpressBase.ServiceStack.Services
 
         public EbDbCreateResponse DbOperations(EbDbCreateRequest request, IDatabase DataDB)
         {
-            //IDatabase DataDB = null;
-            //if (!request.ischange)
-            //{
-            //    DataDB = DataDBCon;
-            //}
-            //else
-            //{
-            //    if (request.DataDBConnection.DatabaseVendor == DatabaseVendors.PGSQL)
-            //        DataDB = new PGSQLDatabase(request.DataDBConnection);
-            //    else if (request.DataDBConnection.DatabaseVendor == DatabaseVendors.ORACLE)
-            //        DataDB = new OracleDB(request.DataDBConnection);
-            //}
-
-            //EbConnectionsConfig _solutionConnections = EbConnectionsConfigProvider.DataCenterConnections;
-
-            //_solutionConnections.ObjectsDbConnection.DatabaseName = request.dbName.ToLower();
-            //_solutionConnections.DataDbConnection.DatabaseName = request.dbName.ToLower();
-
+            
             using (var con = DataDB.GetNewConnection())
             {
                 con.Open();
@@ -259,19 +242,7 @@ namespace ExpressBase.ServiceStack.Services
         {
             try
             {
-                //IDatabase DataDB = null;
-                //if (!request.ischange)
-                //{
-                //    DataDB = request.Idbcon;
-                //}
-                //else
-                //{
-                //    if (request.DataDBConnection.DatabaseVendor == DatabaseVendors.PGSQL)
-                //        DataDB = new PGSQLDatabase(request.DataDBConnection);
-                //    else if (request.DataDBConnection.DatabaseVendor == DatabaseVendors.ORACLE)
-                //        DataDB = new OracleDB(request.DataDBConnection);
-                //}
-
+               
                 string usersql = "SELECT * FROM eb_assignprivileges('@unameadmin','@unameROUser','@unameRWUser');".Replace("@unameadmin", request.dbName + "_admin").Replace("@unameROUser", request.dbName + "_ro").Replace("@unameRWUser", request.dbName + "_rw");
 
                 var dt = this.InfraConnectionFactory.DataDB.DoQuery(usersql);
@@ -361,19 +332,6 @@ namespace ExpressBase.ServiceStack.Services
         {
             try
             {
-                //IDatabase DataDB = null;
-                //if (!request.ischange)
-                //{
-                //    DataDB = request.Idbcon;
-                //}
-                //else
-                //{
-                //    if (request.DataDBConnection.DatabaseVendor == DatabaseVendors.PGSQL)
-                //        DataDB = new PGSQLDatabase(request.DataDBConnection);
-                //    else if (request.DataDBConnection.DatabaseVendor == DatabaseVendors.ORACLE)
-                //        DataDB = new OracleDB(request.DataDBConnection);
-                //}
-
                 //.......select details from server tbl eb_usres......... from INFRA
                 string sql1 = "SELECT email, pwd, firstname,socialid FROM eb_users WHERE id=:uid";
                 DbParameter[] parameter = { this.InfraConnectionFactory.DataDB.GetNewParameter("uid", EbDbTypes.Int32, request.UserId) };
