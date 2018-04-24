@@ -149,7 +149,7 @@ namespace ExpressBase.ServiceStack.Auth0
             catch (Exception e)
             {
                 if (e.Message == "Invalid UserName or Password")
-                    throw new Exception("Invalid Username/Password");
+                    throw new Exception("Invalid Username or Password");
                 else
                     throw new Exception("Internal Server Error");
             }
