@@ -119,7 +119,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             if(resp.Solnid > 0) {
 
-                EbDbCreateResponse response =(EbDbCreateResponse)_dbService.Post(new EbDbCreateRequest { dbName = DbName,TenantAccountId = request.TenantAccountId ,UserId = request.UserId, Idbcon = this.EbConnectionFactory.DataDB  });
+                EbDbCreateResponse response =(EbDbCreateResponse)_dbService.Post(new EbDbCreateRequest { dbName = DbName,TenantAccountId = request.TenantAccountId ,UserId = request.UserId, Idbcon = this.EbConnectionFactory.DataDB, ischange = false  });
                 if (response.resp)
                     _conService.Post(new InitialSolutionConnectionsRequest { SolutionId = DbName, TenantAccountId = request.TenantAccountId, UserId = request.UserId });
             }                         
