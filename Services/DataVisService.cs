@@ -234,6 +234,7 @@ namespace ExpressBase.ServiceStack
 
             var _ds = this.Redis.Get<EbDataSource>(request.RefId);
             string _sql = string.Empty;
+            string tempsql = string.Empty;
 
             if (_ds != null)
             {
@@ -265,6 +266,15 @@ namespace ExpressBase.ServiceStack
                 _ds.Sql = _ds.Sql.ReplaceAll(";", string.Empty);
                 _sql = _ds.Sql.Replace(":and_search", _c) + ";";
                 //}
+                if (request.Ispaging)
+                {
+                    tempsql = _sql.ReplaceAll(";", string.Empty);
+                    tempsql = "SELECT COUNT(*) FROM (" + tempsql + ");";
+
+                    var sql1 = _sql.ReplaceAll(";", string.Empty);
+                    sql1 = "SELECT * FROM ( SELECT a.*,ROWNUM rnum FROM (" + sql1 + ")a WHERE ROWNUM <= :limit+:offset) WHERE rnum > :offset;";
+                    _sql = tempsql + sql1;
+                }
             }
             bool _isPaged = false;
            
@@ -272,7 +282,6 @@ namespace ExpressBase.ServiceStack
            (string.IsNullOrEmpty(request.OrderByCol)) ? "1" : string.Format("{0} {1}", request.OrderByCol, ((request.OrderByDir == 2) ? "DESC" : "ASC")));
 
             _isPaged = (_sql.ToLower().Contains(":offset") && _sql.ToLower().Contains(":limit"));
-
 
             if (request.Params == null)
                 _sql = _sql.Replace(":id", "0");
