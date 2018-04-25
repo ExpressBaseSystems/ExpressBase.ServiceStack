@@ -243,32 +243,33 @@ WHERE
                     _col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = EbDbTypes.String, bVisible = true, sWidth = "100px", ClassName = "dt-body-right tdheight", RenderAs = StringRenderType.Marker };
                 }
 
-				else if(control is EbDynamicCardSet)
+				else if(control is EbCardSetParent)
 				{
-					//cols += control.Name + " " + vDbTypes.String.VDbType.ToString() + ",";
-					//_col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = EbDbTypes.String, bVisible = true, sWidth = "100px", ClassName = "dt-body-right tdheight" };
 
-					if ((control as EbDynamicCardSet).MultiSelect)///////
+					if ((control as EbCardSetParent).MultiSelect)///////
 					{
+						cols += control.Name + " " + vDbTypes.String.VDbType.ToString() + ",";
+						_col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = EbDbTypes.String, bVisible = true, sWidth = "100px", ClassName = "dt-body-right tdheight" };
+
 						DbParameter[] parameter2 = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("tbl", EbDbTypes.String, request.BotObj.TableName.ToLower() + "_lines") };
 						var rslt2 = this.EbConnectionFactory.ObjectsDB.IsTableExists(this.EbConnectionFactory.ObjectsDB.IS_TABLE_EXIST, parameter2);
 						string cols2 = "";
 						var Columns2 = new DVColumnCollection();
 						var pos2 = 0;
 
-						foreach (EbCardField CardField in (control as EbDynamicCardSet).CardFields)
+						foreach (EbCardField CardField in (control as EbCardSetParent).CardFields)
 						{
 							if (!CardField.DoNotPersist)
 							{
 								DVBaseColumn _col2 = null;
 								if (CardField is EbCardNumericField)
 								{
-									cols2 += "," + CardField.Name + " " + vDbTypes.Decimal.VDbType.ToString();
+									cols2 +=  CardField.Name + " " + vDbTypes.Decimal.VDbType.ToString() + "," ;
 									_col2 = new DVStringColumn { Data = pos2, Name = CardField.Name, sTitle = CardField.Name, Type = EbDbTypes.Int32, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
 								}
 								else
 								{
-									cols2 += "," + CardField.Name + " " + vDbTypes.String.VDbType.ToString();
+									cols2 += CardField.Name + " " + vDbTypes.String.VDbType.ToString() + "," ;
 									_col2 = new DVStringColumn { Data = pos2, Name = CardField.Name, sTitle = CardField.Name, Type = EbDbTypes.String, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
 								}
 
@@ -281,9 +282,9 @@ WHERE
 						{
 							var str2 = "id SERIAL PRIMARY KEY,";
 							cols2 = str2 + cols2;
-							string sql2 = "CREATE TABLE @tbl( SelectedCardId Integer, FormId Integer @cols)".Replace("@cols", cols2).Replace("@tbl", request.BotObj.TableName + "_lines");
+							string sql2 = "CREATE TABLE @tbl( @cols SelectedCardId Integer, FormId Integer)".Replace("@cols", cols2).Replace("@tbl", request.BotObj.TableName + "_lines");
 							this.EbConnectionFactory.ObjectsDB.CreateTable(sql2);
-							//CreateDsAndDv(request, Columns2);///////////////////?request
+							CreateDsAndDv4Cards(request, Columns2);///////////////////?request
 						}
 						else
 						{
@@ -326,7 +327,7 @@ WHERE
 					}
 					else
 					{
-						foreach (EbCardField CardField in (control as EbDynamicCardSet).CardFields)
+						foreach (EbCardField CardField in (control as EbCardSetParent).CardFields)
 						{
 							if (!CardField.DoNotPersist)
 							{
@@ -373,7 +374,7 @@ WHERE
                 this.EbConnectionFactory.ObjectsDB.CreateTable(sql);		
 				
 				//_______________________UNCOMMENT after test______________________
-                //CreateDsAndDv(request, Columns);
+                CreateDsAndDv(request, Columns);
             }
 
             //Alter Table
@@ -462,7 +463,47 @@ WHERE
             var refid1 = res.RefId;
         }
 
-        public object Any(InsertIntoBotFormTableRequest request)
+		public void CreateDsAndDv4Cards(CreateBotFormTableRequest request, DVColumnCollection Columns)
+		{
+			var dsobj = new EbDataSource();
+			dsobj.Sql = "SELECT * FROM @tbl".Replace("@tbl", request.BotObj.TableName+"_lines");
+			var ds = new EbObject_Create_New_ObjectRequest();
+			ds.Name = request.BotObj.Name + "_datasource4Card";
+			ds.Description = "desc";
+			ds.Json = EbSerializers.Json_Serialize(dsobj);
+			ds.Status = ObjectLifeCycleStatus.Live;
+			ds.Relations = "";
+			ds.IsSave = false;
+			ds.Tags = "";
+			ds.Apps = request.Apps;
+			ds.TenantAccountId = request.TenantAccountId;
+			ds.WhichConsole = request.WhichConsole;
+			ds.UserId = request.UserId;
+			var myService = base.ResolveService<EbObjectService>();
+			var res = myService.Post(ds);
+			var refid = res.RefId;
+
+			var dvobj = new EbTableVisualization();
+			dvobj.DataSourceRefId = refid;
+			dvobj.Columns = Columns;
+			dvobj.DSColumns = Columns;
+			var ds1 = new EbObject_Create_New_ObjectRequest();
+			ds1.Name = request.BotObj.Name + "_response4Card";
+			ds1.Description = "desc";
+			ds1.Json = EbSerializers.Json_Serialize(dvobj);
+			ds1.Status = ObjectLifeCycleStatus.Live;
+			ds1.Relations = refid;
+			ds1.IsSave = false;
+			ds1.Tags = "";
+			ds1.Apps = request.Apps;
+			ds1.TenantAccountId = request.TenantAccountId;
+			ds1.WhichConsole = request.WhichConsole;
+			ds1.UserId = request.UserId;
+			var res1 = myService.Post(ds1);
+			var refid1 = res.RefId;
+		}
+
+		public object Any(InsertIntoBotFormTableRequest request)
         {
             DbParameter parameter1;
             List<DbParameter> paramlist = new List<DbParameter>();
