@@ -272,7 +272,13 @@ namespace ExpressBase.ServiceStack
                     tempsql = "SELECT COUNT(*) FROM (" + tempsql + ");";
 
                     var sql1 = _sql.ReplaceAll(";", string.Empty);
-                    sql1 = "SELECT * FROM ( SELECT a.*,ROWNUM rnum FROM (" + sql1 + ")a WHERE ROWNUM <= :limit+:offset) WHERE rnum > :offset;";
+                    if (this.EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.ORACLE)
+                    {
+                        sql1 = "SELECT * FROM ( SELECT a.*,ROWNUM rnum FROM (" + sql1 + ")a WHERE ROWNUM <= :limit+:offset) WHERE rnum > :offset;";
+                        //sql1 += "ALTER TABLE T1 DROP COLUMN rnum;SELECT * FROM T1;";
+                    }
+                    else
+                        sql1 = sql1 + " LIMIT :limit OFFSET :offset;";
                     _sql = tempsql + sql1;
                 }
             }
