@@ -63,24 +63,28 @@ namespace ExpressBase.ServiceStack.Services
 
                 Dictionary<int, TypeWrap> _types = new Dictionary<int, TypeWrap>();
                 var typeId = Convert.ToInt32(dr[1]);
+                var ___otyp = (EbObjectType)Convert.ToInt32(dr[1]);
 
-                if (!_Coll[appid].Types.Keys.Contains<int>(typeId))
-                    _Coll[appid].Types.Add(typeId, new TypeWrap {Objects = new List<ObjWrap>() });
-
-				var ___otyp = (EbObjectType)Convert.ToInt32(dr[1]);
-
-				_Coll[appid].Types[typeId].Objects.Add(new ObjWrap
+                if (___otyp.IsUserFacing)
                 {
-                    Id = Convert.ToInt32(dr[0]),
-                    EbObjectType = Convert.ToInt32(dr[1]),
-                    ObjName = dr[2].ToString(),
-                    VersionNumber = dr[3].ToString(),
-                    Refid = dr[4].ToString(),
-                    AppId = Convert.ToInt32(dr[5]),
-                    Description = dr[6].ToString(),
-                    EbType = ___otyp.Name
+                    if (!_Coll[appid].Types.Keys.Contains<int>(typeId))
+                        _Coll[appid].Types.Add(typeId, new TypeWrap { Objects = new List<ObjWrap>() });
 
-                });
+                    _Coll[appid].Types[typeId].Objects.Add(new ObjWrap
+                    {
+                        Id = Convert.ToInt32(dr[0]),
+                        EbObjectType = Convert.ToInt32(dr[1]),
+                        ObjName = dr[2].ToString(),
+                        VersionNumber = dr[3].ToString(),
+                        Refid = dr[4].ToString(),
+                        AppId = Convert.ToInt32(dr[5]),
+                        Description = dr[6].ToString(),
+                        EbType = ___otyp.Name
+
+                    });
+
+                }
+               
             }
 
             return new SidebarUserResponse { Data = _Coll, AppList = appColl };
