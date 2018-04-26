@@ -5,6 +5,7 @@ using ExpressBase.Common.Structures;
 using ExpressBase.Objects;
 using ExpressBase.Objects.Objects.DVRelated;
 using ExpressBase.Objects.ServiceStack_Artifacts;
+using Newtonsoft.Json;
 using ServiceStack;
 using System;
 using System.Collections.Generic;
@@ -204,7 +205,9 @@ WHERE
             var rslt = this.EbConnectionFactory.ObjectsDB.IsTableExists(this.EbConnectionFactory.ObjectsDB.IS_TABLE_EXIST, parameter1);
             string cols = "";
             var Columns = new DVColumnCollection();
-            var pos = 0;
+			var LineColumns = new DVColumnCollection();
+			var LineTableCreated = false;
+			var pos = 0;
             var vDbTypes = this.EbConnectionFactory.ObjectsDB.VendorDbTypes;
             foreach (EbControl control in request.BotObj.Controls)
             {
@@ -249,49 +252,46 @@ WHERE
 					if ((control as EbCardSetParent).MultiSelect)///////
 					{
 						cols += control.Name + " " + vDbTypes.String.VDbType.ToString() + ",";
-						_col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = EbDbTypes.String, bVisible = true, sWidth = "100px", ClassName = "dt-body-right tdheight" };
+						_col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = EbDbTypes.String, bVisible = true, sWidth = "100px", ClassName = "dt-body-right tdheight", RenderAs = StringRenderType.Link };
 
-						DbParameter[] parameter2 = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("tbl", EbDbTypes.String, request.BotObj.TableName.ToLower() + "_lines") };
-						var rslt2 = this.EbConnectionFactory.ObjectsDB.IsTableExists(this.EbConnectionFactory.ObjectsDB.IS_TABLE_EXIST, parameter2);
-						string cols2 = "";
-						var Columns2 = new DVColumnCollection();
-						var pos2 = 0;
+						DbParameter[] lineparameter = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("tbl", EbDbTypes.String, request.BotObj.TableName.ToLower() + "_lines") };
+						var linerslt = this.EbConnectionFactory.ObjectsDB.IsTableExists(this.EbConnectionFactory.ObjectsDB.IS_TABLE_EXIST, lineparameter);
+						string linecols = "";
+						var linepos = 0;
 
 						foreach (EbCardField CardField in (control as EbCardSetParent).CardFields)
 						{
 							if (!CardField.DoNotPersist)
 							{
-								DVBaseColumn _col2 = null;
+								DVBaseColumn _linecol = null;
 								if (CardField is EbCardNumericField)
 								{
-									cols2 +=  CardField.Name + " " + vDbTypes.Decimal.VDbType.ToString() + "," ;
-									_col2 = new DVStringColumn { Data = pos2, Name = CardField.Name, sTitle = CardField.Name, Type = EbDbTypes.Int32, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
+									linecols += "," + CardField.Name + " " + vDbTypes.Decimal.VDbType.ToString();
+									_linecol = new DVNumericColumn { Data = linepos, Name = CardField.Name, sTitle = CardField.Name, Type = EbDbTypes.Double, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
 								}
 								else
 								{
-									cols2 += CardField.Name + " " + vDbTypes.String.VDbType.ToString() + "," ;
-									_col2 = new DVStringColumn { Data = pos2, Name = CardField.Name, sTitle = CardField.Name, Type = EbDbTypes.String, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
+									linecols += "," + CardField.Name + " " + vDbTypes.String.VDbType.ToString();
+									_linecol = new DVStringColumn { Data = linepos, Name = CardField.Name, sTitle = CardField.Name, Type = CardField.EbDbType, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
 								}
 
-								Columns2.Add(_col2);
-								pos2++;
+							LineColumns.Add(_linecol);
+							linepos++;
 							}
 						}
 
-						if (!rslt2)
+						if (!linerslt)
 						{
-							var str2 = "id SERIAL PRIMARY KEY,";
-							cols2 = str2 + cols2;
-							string sql2 = "CREATE TABLE @tbl( @cols SelectedCardId Integer, FormId Integer)".Replace("@cols", cols2).Replace("@tbl", request.BotObj.TableName + "_lines");
+							string sql2 = "CREATE TABLE @tbl( id SERIAL PRIMARY KEY, formid integer, selectedcardid integer @cols)".Replace("@cols", linecols).Replace("@tbl", request.BotObj.TableName + "_lines");
 							this.EbConnectionFactory.ObjectsDB.CreateTable(sql2);
-							CreateDsAndDv4Cards(request, Columns2);///////////////////?request
+							LineTableCreated = true;
 						}
 						else
 						{
-							var ColsColl2 = this.EbConnectionFactory.ObjectsDB.GetColumnSchema(request.BotObj.TableName + "_" + control.Name);
+							var ColsColl2 = this.EbConnectionFactory.ObjectsDB.GetColumnSchema(request.BotObj.TableName + "_lines");
 							var sql2 = "";
 							var name2 = "";
-							foreach (DVBaseColumn col in Columns2)
+							foreach (DVBaseColumn col in LineColumns)
 							{
 								var flag2 = false;
 								name2 = col.Name.ToLower();
@@ -325,6 +325,7 @@ WHERE
 							}
 						}
 					}
+					//single card
 					else
 					{
 						foreach (EbCardField CardField in (control as EbCardSetParent).CardFields)
@@ -334,12 +335,12 @@ WHERE
 								if (CardField is EbCardNumericField)
 								{
 									cols += CardField.Name + " " + vDbTypes.Decimal.VDbType.ToString() + ",";
-									_col = new DVStringColumn { Data = pos, Name = CardField.Name, sTitle = CardField.Name, Type = EbDbTypes.Int32, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
+									_col = new DVNumericColumn { Data = pos, Name = CardField.Name, sTitle = CardField.Name, Type = EbDbTypes.Double, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
 								}
 								else
 								{
 									cols += CardField.Name + " " + vDbTypes.String.VDbType.ToString() + ",";
-									_col = new DVStringColumn { Data = pos, Name = CardField.Name, sTitle = CardField.Name, Type = EbDbTypes.String, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
+									_col = new DVStringColumn { Data = pos, Name = CardField.Name, sTitle = CardField.Name, Type = CardField.EbDbType, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
 								}
 								Columns.Add(_col);
 								pos++;
@@ -371,11 +372,22 @@ WHERE
                 str += "autogen " + vDbTypes.Int64.VDbType.ToString();
                 cols += str;
                 string sql = "CREATE TABLE @tbl(@cols)".Replace("@cols", cols).Replace("@tbl", request.BotObj.TableName);
-                this.EbConnectionFactory.ObjectsDB.CreateTable(sql);		
-				
-				//_______________________UNCOMMENT after test______________________
-                CreateDsAndDv(request, Columns);
-            }
+                this.EbConnectionFactory.ObjectsDB.CreateTable(sql);
+
+				if (LineTableCreated)
+				{
+					string rfid = CreateDsAndDv4Cards(request, LineColumns);
+					foreach(DVBaseColumn col in Columns)
+					{
+						if((col as DVStringColumn).RenderAs == StringRenderType.Link)
+						{
+							(col as DVStringColumn).LinkRefId = rfid;
+						}
+					}
+				}
+				CreateDsAndDv(request, Columns);
+
+			}
 
             //Alter Table
             else
@@ -463,10 +475,10 @@ WHERE
             var refid1 = res.RefId;
         }
 
-		public void CreateDsAndDv4Cards(CreateBotFormTableRequest request, DVColumnCollection Columns)
+		public string CreateDsAndDv4Cards(CreateBotFormTableRequest request, DVColumnCollection Columns)
 		{
 			var dsobj = new EbDataSource();
-			dsobj.Sql = "SELECT * FROM @tbl".Replace("@tbl", request.BotObj.TableName+"_lines");
+			dsobj.Sql = "SELECT * FROM @tbl WHERE formid = :id".Replace("@tbl", request.BotObj.TableName+"_lines");
 			var ds = new EbObject_Create_New_ObjectRequest();
 			ds.Name = request.BotObj.Name + "_datasource4Card";
 			ds.Description = "desc";
@@ -501,6 +513,8 @@ WHERE
 			ds1.UserId = request.UserId;
 			var res1 = myService.Post(ds1);
 			var refid1 = res.RefId;
+
+			return refid;
 		}
 
 		public object Any(InsertIntoBotFormTableRequest request)
@@ -509,7 +523,13 @@ WHERE
             List<DbParameter> paramlist = new List<DbParameter>();
             string cols = "";
             string vals = "";
-            foreach (var obj in request.Fields)
+
+			DbParameter Param4Lines;
+			string Cols4Lines = "";
+			List<string> Vals4Lines = new List<string>(); ;
+			int cardCount = 0;
+
+			foreach (var obj in request.Fields)
             {
                 cols += obj.Name + ",";
                 if (obj.Type == EbDbTypes.Decimal)
@@ -534,6 +554,48 @@ WHERE
                     //DateTime.ParseExact(obj.Value, "HH:mm:ss", CultureInfo.InvariantCulture)
                     parameter1 = this.EbConnectionFactory.ObjectsDB.GetNewParameter(obj.Name, EbDbTypes.Time, dt.ToString("HH:mm:ss"));
                 }
+				else if(obj.Type == EbDbTypes.Json)
+				{
+					vals += ":" + obj.Name + ",";
+					parameter1 = this.EbConnectionFactory.ObjectsDB.GetNewParameter(obj.Name, EbDbTypes.String, "CARD_LINES");
+
+					//Insert to table _lines
+					
+					Dictionary<int,List<BotInsert>> ObjectLines = JsonConvert.DeserializeObject<Dictionary<int, List<BotInsert>>>(obj.Value);
+					
+					foreach (KeyValuePair<int, List<BotInsert>> card in ObjectLines)
+					{
+						// do something with card.Value or card.Key
+						string Vals4SingleLine = "";
+						foreach (var objLines in card.Value)
+						{
+							if(cardCount == 0)
+								Cols4Lines += objLines.Name + ",";
+							if (objLines.Type == EbDbTypes.Double)
+							{
+								Vals4SingleLine += ":line" + cardCount + objLines.Name + ",";
+								Param4Lines = this.EbConnectionFactory.ObjectsDB.GetNewParameter("line"+ cardCount + objLines.Name, EbDbTypes.Double, double.Parse(objLines.Value));
+							}
+							else
+							{
+								Vals4SingleLine += ":line"+ cardCount + objLines.Name + ",";
+								Param4Lines = this.EbConnectionFactory.ObjectsDB.GetNewParameter("line"+ cardCount + objLines.Name, EbDbTypes.String, objLines.Value);
+							}
+							paramlist.Add(Param4Lines);
+						}
+						if (cardCount == 0)
+							Cols4Lines += "selectedcardid";
+						Vals4SingleLine += ":line" + cardCount + "_selected_card_id";
+						paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("line" + cardCount + "_selected_card_id", EbDbTypes.Int32, card.Key));
+						Vals4Lines.Add(Vals4SingleLine);
+						cardCount++;
+					}
+
+
+
+
+
+				}
                 else
                 {
                     vals += ":" + obj.Name + ",";
@@ -551,7 +613,20 @@ WHERE
             paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("autogen", EbDbTypes.Int64, new Random().Next()));
             var qry = string.Format("insert into @tbl({0}) values({1})".Replace("@tbl", request.TableName), cols, vals);
 
-            var rslt = this.EbConnectionFactory.ObjectsDB.InsertTable(qry, paramlist.ToArray());
+			//append second insert query
+			if (!Cols4Lines.IsNullOrEmpty())
+			{
+				qry = "WITH rows AS (" + qry + " returning id)";
+				qry += "INSERT INTO " + request.TableName + "_lines(formid," + Cols4Lines + ") ";
+
+				qry += "(SELECT rows.id," + Vals4Lines[0] + " FROM rows)";
+				for(int i = 1; i < Vals4Lines.Count; i++)
+				{
+					qry += " UNION ALL (SELECT rows.id," + Vals4Lines[i] + " FROM rows)";
+				}
+			}
+
+			var rslt = this.EbConnectionFactory.ObjectsDB.InsertTable(qry, paramlist.ToArray());
             return new InsertIntoBotFormTableResponse();
         }
 
