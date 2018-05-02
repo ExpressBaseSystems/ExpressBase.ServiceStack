@@ -601,7 +601,7 @@ namespace ExpressBase.ServiceStack.Services
                 int[] emptyarr = new int[] { };
                 DbParameter[] parameters ={ this.EbConnectionFactory.DataDB.GetNewParameter("role_id", EbDbTypes.Int32, request.Colvalues["roleid"]),
                                         this.EbConnectionFactory.DataDB.GetNewParameter("description", EbDbTypes.String, request.Colvalues["Description"]),
-                                        this.EbConnectionFactory.DataDB.GetNewParameter("is_anonym", EbDbTypes.String, (request.Colvalues["IsAnonymous"]).Equals("true")?"T":"F"),
+                                        this.EbConnectionFactory.DataDB.GetNewParameter("is_anonym", EbDbTypes.String, request.Colvalues["IsAnonymous"]),
                                         this.EbConnectionFactory.DataDB.GetNewParameter("role_name", EbDbTypes.String, request.Colvalues["role_name"]),
                                         this.EbConnectionFactory.DataDB.GetNewParameter("applicationid", EbDbTypes.Int32, request.Colvalues["applicationid"]),
                                         this.EbConnectionFactory.DataDB.GetNewParameter("createdby", EbDbTypes.Int32, request.UserId),
