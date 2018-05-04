@@ -344,7 +344,7 @@ namespace ExpressBase.ServiceStack.Services
             try
             {
                 //.......select details from server tbl eb_usres......... from INFRA
-                string sql1 = "SELECT email, pwd, firstname,socialid FROM eb_users WHERE id=:uid";
+                string sql1 = "SELECT email, pwd, fullname,socialid FROM eb_users WHERE id=:uid";
                 DbParameter[] parameter = { this.InfraConnectionFactory.DataDB.GetNewParameter("uid", EbDbTypes.Int32, request.UserId) };
                 var rslt = this.InfraConnectionFactory.DataDB.DoQuery(sql1, parameter);
 
