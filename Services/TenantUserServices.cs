@@ -16,32 +16,6 @@ namespace ExpressBase.ServiceStack.Services
     {
         public TenantUserServices(IEbConnectionFactory _dbf) : base(_dbf) { }
 
-        public CreateApplicationResponse Post(CreateApplicationRequest request)
-        {
-            string DbName = request.Sid;
-            CreateApplicationResponse resp;
-            using (var con = this.EbConnectionFactory.DataDB.GetNewConnection(DbName.ToLower()))
-            {
-                con.Open();
-                if (!string.IsNullOrEmpty(request.AppName))
-                {                    
-                    string sql = "INSERT INTO eb_applications (applicationname,application_type, description,app_icon) VALUES (@applicationname,@apptype, @description,@appicon) RETURNING id";
-
-                    var cmd = EbConnectionFactory.DataDB.GetNewCommand(con, sql);
-                    cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("applicationname", EbDbTypes.String, request.AppName));
-                    cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("apptype", EbDbTypes.Int32, request.AppType));
-                    cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("description", EbDbTypes.String, request.Description));
-                    cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("appicon", EbDbTypes.String, request.AppIcon));
-                    var res = cmd.ExecuteScalar();
-                    resp = new CreateApplicationResponse() { id = Convert.ToInt32(res) };
-                }
-                else
-                    resp = new CreateApplicationResponse() { id = 0 };
-            }
-            return resp;
-        }
-
-
         //private string GeneratePassword()
         //{
         //    string strPwdchar = "abcdefghijklmnopqrstuvwxyz0123456789#+@&$ABCDEFGHIJKLMNOPQRSTUVWXYZ";
