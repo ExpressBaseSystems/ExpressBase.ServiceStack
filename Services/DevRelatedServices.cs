@@ -12,7 +12,7 @@ namespace ExpressBase.ServiceStack
 {
     public class DevRelatedServices : EbBaseService
     {
-        public DevRelatedServices(IEbConnectionFactory _dbf) : base(_dbf) { }      
+        public DevRelatedServices(IEbConnectionFactory _dbf) : base(_dbf) { }
 
         public GetApplicationResponse Get(GetApplicationRequest request)
         {
@@ -24,7 +24,7 @@ namespace ExpressBase.ServiceStack
                 if (request.id > 0)
                 {
                     sql = "SELECT * FROM eb_applications WHERE id = :id";
-                    
+
                 }
                 else
                 {
@@ -42,7 +42,7 @@ namespace ExpressBase.ServiceStack
                         Dict.Add(dr[0].ToString(), dr[1]);
                     }
                 }
-                else 
+                else
                 {
                     Dict.Add("applicationname", dt.Rows[0][0]);
                     Dict.Add("description", dt.Rows[0][1]);
@@ -61,7 +61,7 @@ namespace ExpressBase.ServiceStack
             try
             {
                 foreach (EbDataRow dr in ds.Rows)
-                {                   
+                {
                     var typeId = Convert.ToInt32(dr[1]);
 
                     if (!_types.Keys.Contains<int>(typeId))
@@ -112,6 +112,31 @@ namespace ExpressBase.ServiceStack
             return resp;
         }
 
+        public CreateApplicationResponse Post(CreateApplicationDevRequest request)
+        {
+            CreateApplicationResponse resp;
+            try
+            {
+                string sql = "INSERT INTO eb_applications (applicationname,application_type, description,app_icon) VALUES (@applicationname,@apptype, @description,@appicon) RETURNING id";
 
+                DbParameter[] parameters = {
+                    this.EbConnectionFactory.DataDB.GetNewParameter("applicationname", EbDbTypes.String, request.AppName),
+                    this.EbConnectionFactory.DataDB.GetNewParameter("apptype", EbDbTypes.Int32, request.AppType),
+                    this.EbConnectionFactory.DataDB.GetNewParameter("description", EbDbTypes.String, request.Description),
+                    this.EbConnectionFactory.DataDB.GetNewParameter("appicon", EbDbTypes.String, request.AppIcon)
+                };
+                var res = this.EbConnectionFactory.DataDB.DoNonQuery(sql, parameters);
+
+                resp = new CreateApplicationResponse() { id = Convert.ToInt32(res) };//returning row affected
+
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("exception:" + e.Message);
+                resp = new CreateApplicationResponse() { id = 0 };
+            }
+            
+            return resp;
+        }
     }
 }
