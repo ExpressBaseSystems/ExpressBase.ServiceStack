@@ -98,31 +98,32 @@ namespace ExpressBase.ServiceStack.Services
         }
 
 
-        public void Post(CreateSolutionRequest request)
-        {
+        public CreateSolutionResponse Post(CreateSolutionRequest request)
+        {           
             EbDbCreateServices _dbService = base.ResolveService<EbDbCreateServices>();
             ConnectionManager _conService = base.ResolveService<ConnectionManager>();
-            string DbName = request.Colvalues["Isid"].ToString().ToLower();
+            string DbName = request.Isid.ToString().ToLower();
             CreateSolutionResponse resp;
             using (var con = this.EbConnectionFactory.DataDB.GetNewConnection())
             {
                 con.Open();
                 string sql = "select * from eb_subscription_persist( @sname,@i_sid,@e_sid,@tenant_id,@descript,@js); ";
                 var cmd = this.EbConnectionFactory.DataDB.GetNewCommand(con, sql);
-                cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("@sname", EbDbTypes.String, request.Colvalues["Sname"]));
-                cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("@i_sid", EbDbTypes.String, request.Colvalues["Isid"]));
-                cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("@e_sid", EbDbTypes.String, request.Colvalues["Esid"]));
+                cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("@sname", EbDbTypes.String, request.SolutionName));
+                cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("@i_sid", EbDbTypes.String, request.Isid));
+                cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("@e_sid", EbDbTypes.String, request.Esid));
                 cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("@tenant_id", EbDbTypes.Int32, request.UserId));
-                cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("@descript", EbDbTypes.String, request.Colvalues["Desc"]));
-                cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("@js", EbDbTypes.String, request.Colvalues["Subscription"]));
+                cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("@descript", EbDbTypes.String, request.Description));
+                cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("@js", EbDbTypes.String, request.Subscription));
                 resp =  new CreateSolutionResponse { Solnid = Convert.ToInt32(cmd.ExecuteScalar()) };
             }
             if(resp.Solnid > 0) {
 
                 EbDbCreateResponse response =(EbDbCreateResponse)_dbService.Post(new EbDbCreateRequest { dbName = DbName,TenantAccountId = request.TenantAccountId ,UserId = request.UserId, Idbcon = this.EbConnectionFactory.DataDB, ischange = false  });
                 if (response.resp)
-                    _conService.Post(new InitialSolutionConnectionsRequest { SolutionId = DbName, TenantAccountId = request.TenantAccountId, UserId = request.UserId });
-            }                         
+                    _conService.Post(new InitialSolutionConnectionsRequest { SolutionId = DbName, TenantAccountId = request.TenantAccountId, UserId = request.UserId });              
+            }
+            return resp;
         }
 
         public GetSolutionResponse Get(GetSolutionRequest request)
