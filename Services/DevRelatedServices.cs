@@ -96,7 +96,7 @@ namespace ExpressBase.ServiceStack
                 con.Open();
                 if (!string.IsNullOrEmpty(request.AppName))
                 {
-                    string sql = "INSERT INTO eb_applications (applicationname,application_type, description,app_icon) VALUES (@applicationname,@apptype, @description,@appicon) RETURNING id";
+                    string sql = "INSERT INTO eb_applications (applicationname,application_type, description,app_icon) VALUES (:applicationname,:apptype, :description,:appicon) RETURNING id";
 
                     var cmd = EbConnectionFactory.DataDB.GetNewCommand(con, sql);
                     cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("applicationname", EbDbTypes.String, request.AppName));
@@ -117,7 +117,7 @@ namespace ExpressBase.ServiceStack
             CreateApplicationResponse resp;
             try
             {
-                string sql = "INSERT INTO eb_applications (applicationname,application_type, description,app_icon) VALUES (@applicationname,@apptype, @description,@appicon) RETURNING id";
+                string sql = "INSERT INTO eb_applications (applicationname,application_type, description,app_icon) VALUES (:applicationname,:apptype, :description,:appicon) RETURNING id";
 
                 DbParameter[] parameters = {
                     this.EbConnectionFactory.DataDB.GetNewParameter("applicationname", EbDbTypes.String, request.AppName),
