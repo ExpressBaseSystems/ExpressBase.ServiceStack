@@ -127,7 +127,13 @@ namespace ExpressBase.ServiceStack.Services
                     List<string> adroleslist = adminroles.OfType<string>().ToList();
                     foreach (var dr in dt.Rows)
                     {
-                        IsAdmin = (adroleslist.Contains(dr[0])) ? true : false;
+                        if (adroleslist.Contains(dr[0]))     //IsAdmin = (adroleslist.Contains(dr[0])) ? true : false;
+                            IsAdmin = true;
+                        else
+                        {
+                            IsAdmin = false;
+                            break;
+                        }
                     }
                     res.ConnectionStatus = IsAdmin;
 
@@ -138,7 +144,14 @@ namespace ExpressBase.ServiceStack.Services
                     List<string> adroleslist = adminroles.OfType<string>().ToList();
                     foreach (var dr in dt.Rows)
                     {
-                        IsAdmin = (adroleslist.Contains(dr[0])) ? true : false;
+                        if (adroleslist.Contains(dr[0]))
+                            IsAdmin = true;
+                        else
+                        {
+                            IsAdmin = false;
+                            break;
+                        }
+                            
                     }
                     res.ConnectionStatus = IsAdmin;
 
