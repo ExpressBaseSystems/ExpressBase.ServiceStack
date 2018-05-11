@@ -53,6 +53,86 @@ namespace ExpressBase.ServiceStack
             return resp;
         }
 
+        public GetAllApplicationResponse Get(GetAllApplicationRequest request)
+        {
+            GetAllApplicationResponse resp = new GetAllApplicationResponse();
+            try {
+                string sql = "SELECT id,applicationname,app_icon,application_type,description FROM eb_applications WHERE eb_del='F'";
+                var ds = this.EbConnectionFactory.ObjectsDB.DoQuery(sql);
+                List<AppWrapper> list = new List<AppWrapper>();
+                foreach (EbDataRow dr in ds.Rows)
+                {
+                    list.Add(new AppWrapper
+                    {
+                        Id = Convert.ToInt32(dr[0]),
+                        Name = dr[1].ToString(),
+                        Icon = dr[2].ToString(),
+                        AppType = Convert.ToInt32(dr[3]),
+                        Description = dr[4].ToString()
+                    });
+                }
+                resp.Data = list;
+            }
+            catch(Exception e)
+            {
+                Console.WriteLine("Exception" + e.Message);
+            }
+            return resp;
+        }
+
+        public GetObjectsByAppIdResponse Get(GetObjectsByAppIdRequest request)
+        {
+            GetObjectsByAppIdResponse resp = new GetObjectsByAppIdResponse();
+            try
+            {
+                string sql = @"SELECT 
+                                     EO.id, EO.obj_type, EO.obj_name, EO.obj_desc
+                                FROM
+                                     eb_objects EO
+                                INNER JOIN
+                                     eb_objects2application EO2A
+                                ON
+                                     EO.id = EO2A.obj_id
+                                WHERE 
+	                                EO2A.app_id=:appid
+                                ORDER BY
+                                    EO.obj_type;";
+                DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("appid", EbDbTypes.Int32, request.Id) };
+
+                var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(sql, parameters);
+
+                Dictionary<int, TypeWrap> _types = new Dictionary<int, TypeWrap>();
+                foreach (EbDataRow dr in dt.Rows)
+                {
+                    var typeId = Convert.ToInt32(dr[1]);
+
+                    var ___otyp = (EbObjectType)Convert.ToInt32(dr[1]);
+
+                    if (___otyp.IsAvailableIn(request.AppType))
+                    {
+                        if (!_types.Keys.Contains<int>(typeId))
+                            _types.Add(typeId, new TypeWrap { Objects = new List<ObjWrap>() });
+
+                        _types[typeId].Objects.Add(new ObjWrap
+                        {
+                            Id = (dr[0] != null) ? Convert.ToInt32(dr[0]) : 0,
+                            EbObjectType = (dr[1] != null) ? Convert.ToInt32(dr[1]) : 0,
+                            ObjName = dr[2].ToString(),
+                            Description = dr[3].ToString(),
+                            EbType = ___otyp.ToString()
+                        });
+                    }
+                }
+                resp.Data = _types;
+            }
+            catch(Exception e)
+            {
+                Console.WriteLine("Exception" + e.Message);
+            }
+           
+            return resp;
+        }
+
         public object Get(GetObjectRequest request)
         {
             var Query1 = "SELECT EO.id, EO.obj_type, EO.obj_name,EO.obj_desc,EO.applicationid FROM eb_objects EO ORDER BY EO.obj_type";
@@ -96,7 +176,7 @@ namespace ExpressBase.ServiceStack
                 con.Open();
                 if (!string.IsNullOrEmpty(request.AppName))
                 {
-                    string sql = "INSERT INTO eb_applications (applicationname,application_type, description,app_icon) VALUES (@applicationname,@apptype, @description,@appicon) RETURNING id";
+                    string sql = "INSERT INTO eb_applications (applicationname,application_type, description,app_icon) VALUES (:applicationname,:apptype, :description,:appicon) RETURNING id";
 
                     var cmd = EbConnectionFactory.DataDB.GetNewCommand(con, sql);
                     cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("applicationname", EbDbTypes.String, request.AppName));
@@ -117,7 +197,7 @@ namespace ExpressBase.ServiceStack
             CreateApplicationResponse resp;
             try
             {
-                string sql = "INSERT INTO eb_applications (applicationname,application_type, description,app_icon) VALUES (@applicationname,@apptype, @description,@appicon) RETURNING id";
+                string sql = "INSERT INTO eb_applications (applicationname,application_type, description,app_icon) VALUES (:applicationname,:apptype, :description,:appicon) RETURNING id";
 
                 DbParameter[] parameters = {
                     this.EbConnectionFactory.DataDB.GetNewParameter("applicationname", EbDbTypes.String, request.AppName),

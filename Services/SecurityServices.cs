@@ -270,7 +270,7 @@ namespace ExpressBase.ServiceStack.Services
 				
 				DbParameter[] parameters = 
 					{
-						this.EbConnectionFactory.DataDB.GetNewParameter("userid", EbDbTypes.Int32, request.UserId),
+                        this.EbConnectionFactory.DataDB.GetNewParameter("userid", EbDbTypes.Int32, request.UserId),
 						this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.Id),
 						this.EbConnectionFactory.DataDB.GetNewParameter("fullname", EbDbTypes.String, request.FullName),
 						this.EbConnectionFactory.DataDB.GetNewParameter("nickname", EbDbTypes.String, request.NickName),
@@ -600,14 +600,15 @@ namespace ExpressBase.ServiceStack.Services
                 string sql = this.EbConnectionFactory.DataDB.EB_SAVEROLES_QUERY;
                 int[] emptyarr = new int[] { };
                 DbParameter[] parameters ={ this.EbConnectionFactory.DataDB.GetNewParameter("role_id", EbDbTypes.Int32, request.Colvalues["roleid"]),
-                                        this.EbConnectionFactory.DataDB.GetNewParameter("description", EbDbTypes.String, request.Colvalues["Description"]),
-                                        this.EbConnectionFactory.DataDB.GetNewParameter("is_anonym", EbDbTypes.String, request.Colvalues["IsAnonymous"]),
-                                        this.EbConnectionFactory.DataDB.GetNewParameter("role_name", EbDbTypes.String, request.Colvalues["role_name"]),
-                                        this.EbConnectionFactory.DataDB.GetNewParameter("applicationid", EbDbTypes.Int32, request.Colvalues["applicationid"]),
-                                        this.EbConnectionFactory.DataDB.GetNewParameter("createdby", EbDbTypes.Int32, request.UserId),
-                                        this.EbConnectionFactory.DataDB.GetNewParameter("permission", EbDbTypes.String , (request.Colvalues["permission"].ToString() != string.Empty) ? request.Colvalues["permission"]: string.Empty),
-                                        this.EbConnectionFactory.DataDB.GetNewParameter("users", EbDbTypes.String, (request.Colvalues["users"].ToString() != string.Empty) ? request.Colvalues["users"] : string.Empty),
-                                        this.EbConnectionFactory.DataDB.GetNewParameter("dependants", EbDbTypes.String, (request.Colvalues["dependants"].ToString() != string.Empty) ? request.Colvalues["dependants"] : string.Empty) };
+                                            this.EbConnectionFactory.DataDB.GetNewParameter("applicationid", EbDbTypes.Int32, request.Colvalues["applicationid"]),
+                                            this.EbConnectionFactory.DataDB.GetNewParameter("createdby", EbDbTypes.Int32, request.UserId),
+                                            this.EbConnectionFactory.DataDB.GetNewParameter("role_name", EbDbTypes.String, request.Colvalues["role_name"]),
+                                            this.EbConnectionFactory.DataDB.GetNewParameter("description", EbDbTypes.String, request.Colvalues["Description"]),
+                                            this.EbConnectionFactory.DataDB.GetNewParameter("is_anonym", EbDbTypes.String, request.Colvalues["IsAnonymous"]),
+                                            this.EbConnectionFactory.DataDB.GetNewParameter("users", EbDbTypes.String, (request.Colvalues["users"].ToString() != string.Empty) ? request.Colvalues["users"] : string.Empty),
+                                            this.EbConnectionFactory.DataDB.GetNewParameter("dependants", EbDbTypes.String, (request.Colvalues["dependants"].ToString() != string.Empty) ? request.Colvalues["dependants"] : string.Empty),
+                                            this.EbConnectionFactory.DataDB.GetNewParameter("permission", EbDbTypes.String , (request.Colvalues["permission"].ToString() != string.Empty) ? request.Colvalues["permission"]: string.Empty)
+                                        };
 
                 var ds = this.EbConnectionFactory.DataDB.DoQuery(sql, parameters);
                 resp = new SaveRoleResponse

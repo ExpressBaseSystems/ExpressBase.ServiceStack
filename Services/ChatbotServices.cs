@@ -535,38 +535,49 @@ WHERE
 
 			foreach (var obj in request.Fields)
 			{
-				cols += obj.Name + ",";
+				
 				if (obj.Type == EbDbTypes.Decimal)
 				{
+					cols += obj.Name + ",";
 					vals += ":" + obj.Name + ",";
 					parameter1 = this.EbConnectionFactory.ObjectsDB.GetNewParameter(obj.Name, EbDbTypes.Decimal, double.Parse(obj.Value));
+					paramlist.Add(parameter1);
 				}
 				else if (obj.Type == EbDbTypes.Date)
 				{
+					cols += obj.Name + ",";
 					vals += ":" + obj.Name + ",";
 					parameter1 = this.EbConnectionFactory.ObjectsDB.GetNewParameter(obj.Name, EbDbTypes.Date, DateTime.Parse(obj.Value));
+					paramlist.Add(parameter1);
 				}
 				else if (obj.Type == EbDbTypes.DateTime)
 				{
+					cols += obj.Name + ",";
 					vals += ":" + obj.Name + ",";
 					parameter1 = this.EbConnectionFactory.ObjectsDB.GetNewParameter(obj.Name, EbDbTypes.DateTime, DateTime.Parse(obj.Value));
+					paramlist.Add(parameter1);
 				}
 				else if (obj.Type == EbDbTypes.Time)
 				{
+					cols += obj.Name + ",";
 					vals += ":" + obj.Name + ",";
 					DateTime dt = DateTime.Parse(obj.Value);
 					//DateTime.ParseExact(obj.Value, "HH:mm:ss", CultureInfo.InvariantCulture)
 					parameter1 = this.EbConnectionFactory.ObjectsDB.GetNewParameter(obj.Name, EbDbTypes.Time, dt.ToString("HH:mm:ss"));
+					paramlist.Add(parameter1);
 				}
 				else if (obj.Type == EbDbTypes.Json)
-				{
-					vals += ":" + obj.Name + ",";
-					parameter1 = this.EbConnectionFactory.ObjectsDB.GetNewParameter(obj.Name, EbDbTypes.String, "CARD_LINES");
+				{	
+					Dictionary<int, List<BotInsert>> ObjectLines = JsonConvert.DeserializeObject<Dictionary<int, List<BotInsert>>>(obj.Value);
+					if(ObjectLines.Keys.Count > 0)
+					{
+						cols += obj.Name + ",";
+						vals += ":" + obj.Name + ",";
+						parameter1 = this.EbConnectionFactory.ObjectsDB.GetNewParameter(obj.Name, EbDbTypes.String, "CARD_LINES");
+						paramlist.Add(parameter1);
+					}
 
 					//Insert to table _lines
-
-					Dictionary<int, List<BotInsert>> ObjectLines = JsonConvert.DeserializeObject<Dictionary<int, List<BotInsert>>>(obj.Value);
-
 					foreach (KeyValuePair<int, List<BotInsert>> card in ObjectLines)
 					{
 						// do something with card.Value or card.Key
@@ -599,10 +610,12 @@ WHERE
 				}
 				else
 				{
+					cols += obj.Name + ",";
 					vals += ":" + obj.Name + ",";
 					parameter1 = this.EbConnectionFactory.ObjectsDB.GetNewParameter(obj.Name, EbDbTypes.String, obj.Value);
+					paramlist.Add(parameter1);
 				}
-				paramlist.Add(parameter1);
+				
 			}
 			cols = cols + "eb_created_by,eb_created_at,eb_lastmodified_by,eb_lastmodified_at,transaction_date,autogen";
 			vals = vals + ":eb_created_by,:eb_created_at,:eb_lastmodified_by,:eb_lastmodified_at,:transaction_date,:autogen";
