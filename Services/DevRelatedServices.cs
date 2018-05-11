@@ -85,7 +85,8 @@ namespace ExpressBase.ServiceStack
             GetObjectsByAppIdResponse resp = new GetObjectsByAppIdResponse();
             try
             {
-                string sql = @"SELECT 
+                string sql = @" SELECT applicationname,description,app_icon,application_type FROM eb_applications WHERE id=:appid;
+                                SELECT 
                                      EO.id, EO.obj_type, EO.obj_name, EO.obj_desc
                                 FROM
                                      eb_objects EO
@@ -99,10 +100,18 @@ namespace ExpressBase.ServiceStack
                                     EO.obj_type;";
                 DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("appid", EbDbTypes.Int32, request.Id) };
 
-                var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(sql, parameters);
+                var dt = this.EbConnectionFactory.ObjectsDB.DoQueries(sql, parameters);
+
+                resp.AppInfo = new AppWrapper
+                {
+                    Name = dt.Tables[0].Rows[0][0].ToString(),
+                    Description = dt.Tables[0].Rows[0][1].ToString(),
+                    Icon = dt.Tables[0].Rows[0][2].ToString(),
+                    AppType = Convert.ToInt32(dt.Tables[0].Rows[0][3])
+                };
 
                 Dictionary<int, TypeWrap> _types = new Dictionary<int, TypeWrap>();
-                foreach (EbDataRow dr in dt.Rows)
+                foreach (EbDataRow dr in dt.Tables[1].Rows)
                 {
                     var typeId = Convert.ToInt32(dr[1]);
 
