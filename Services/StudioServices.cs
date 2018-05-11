@@ -1056,6 +1056,8 @@ WHERE
                     }
                 }
             }
+            if (appids == "")
+                appids = "0";
             return appids;
         }
     }

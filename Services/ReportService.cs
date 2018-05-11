@@ -24,6 +24,7 @@ using ExpressBase.ServiceStack.Services;
 using ExpressBase.Security;
 using System.DrawingCore.Text;
 using System.DrawingCore;
+using ExpressBase.Common.ServiceClients;
 
 namespace ExpressBase.ServiceStack
 {
@@ -34,7 +35,7 @@ namespace ExpressBase.ServiceStack
         private DataSourceDataSetResponse dsresp = null;
 
         //private iTextSharp.text.Font f = FontFactory.GetFont(FontFactory.HELVETICA, 12);
-        public ReportService(IEbConnectionFactory _dbf) : base(_dbf) { }
+        public ReportService(IEbConnectionFactory _dbf, IEbStaticFileClient _sfc) : base(_dbf, _sfc) { }
 
 
         public ReportRenderResponse Get(ReportRenderRequest request)
@@ -93,13 +94,14 @@ namespace ExpressBase.ServiceStack
             Report.Writer = PdfWriter.GetInstance(Report.Doc, Report.Ms1);
             Report.Writer.Open();
             Report.Doc.Open();
+            Report.Doc.AddTitle(Report.Name);
             Report.Writer.PageEvent = new HeaderFooter(Report);
             Report.Writer.CloseStream = true;//important
             Report.Canvas = Report.Writer.DirectContent;
             Report.PageNumber = Report.Writer.PageNumber;
             Report.InitializeSummaryFields();
 
-            Report.GetWatermarkImages();
+            Report.GetWatermarkImages(/*this.FileClient*/);
 
             foreach (EbReportHeader r_header in Report.ReportHeaders)
                 this.FillScriptCollection(Report, r_header.Fields);
