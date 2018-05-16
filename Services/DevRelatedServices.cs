@@ -206,7 +206,7 @@ namespace ExpressBase.ServiceStack
             CreateApplicationResponse resp;
             try
             {
-                string sql = "INSERT INTO eb_applications (applicationname,application_type, description,app_icon) VALUES (:applicationname,:apptype, :description,:appicon) RETURNING id";
+                string sql = "INSERT INTO eb_applications (applicationname,application_type, description,app_icon) VALUES (:applicationname,:apptype, :description,:appicon)";
 
                 DbParameter[] parameters = {
                     this.EbConnectionFactory.DataDB.GetNewParameter("applicationname", EbDbTypes.String, request.AppName),
