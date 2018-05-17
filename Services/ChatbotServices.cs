@@ -325,7 +325,7 @@ WHERE
 							}
 							if (sql2 != "")
 							{
-								sql2 = sql2.Replace("@tbl", request.BotObj.TableName + "_" + control.Name);
+								sql2 = sql2.Replace("@tbl", request.BotObj.TableName + "_lines");
 								var ret2 = this.EbConnectionFactory.ObjectsDB.UpdateTable(sql2);
 							}
 						}
