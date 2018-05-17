@@ -269,7 +269,7 @@ namespace ExpressBase.ServiceStack
                 if (request.Ispaging)
                 {
                     tempsql = _sql.ReplaceAll(";", string.Empty);
-                    tempsql = "SELECT COUNT(*) FROM (" + tempsql + ");";
+                    tempsql = "SELECT COUNT(*) FROM (" + tempsql + ") data1;";
 
                     var sql1 = _sql.ReplaceAll(";", string.Empty);
                     if (this.EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.ORACLE)
@@ -278,7 +278,10 @@ namespace ExpressBase.ServiceStack
                         //sql1 += "ALTER TABLE T1 DROP COLUMN rnum;SELECT * FROM T1;";
                     }
                     else
-                        sql1 = sql1 + " LIMIT :limit OFFSET :offset;";
+                    {
+                        if (!sql1.ToLower().Contains(":limit"))
+                            sql1 = sql1 + " LIMIT :limit OFFSET :offset;";
+                    }
                     _sql = tempsql + sql1;
                 }
             }
