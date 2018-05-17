@@ -21,27 +21,30 @@ namespace ExpressBase.ServiceStack.Services
 		public GetUsersResponse1 Any(GetUsersRequest1 request)
 		{
 			GetUsersResponse1 resp = new GetUsersResponse1();
-			
-				string sql = "SELECT id,fullname,email,nickname,sex,phnoprimary,statusid FROM eb_users WHERE LOWER(fullname) LIKE LOWER('%' || :searchtext || '%') AND eb_del = 'F';";
+			string show = string.Empty;
+			if (request.Show != "all")
+				show = " AND hide = 'no'";
 
-				DbParameter[] parameters = { this.EbConnectionFactory.DataDB.GetNewParameter("searchtext", EbDbTypes.String, (request.Colvalues != null) ? request.Colvalues["searchtext"] : "") };
+			string sql = "SELECT id,fullname,email,nickname,sex,phnoprimary,statusid FROM eb_users WHERE eb_del = 'F'" + show + ";";
 
-				var dt = this.EbConnectionFactory.DataDB.DoQueries(sql, parameters);
+			DbParameter[] parameters = null;
 
-				List<Eb_User_ForCommonList> returndata = new List<Eb_User_ForCommonList>();
-				foreach (EbDataRow dr in dt.Tables[0].Rows)
-				{
-					returndata.Add(new Eb_User_ForCommonList {
-						Id = Convert.ToInt32(dr[0]),
-						Name = dr[1].ToString(),
-						Email = dr[2].ToString(),
-						Nick_Name = dr[3].ToString(),
-						Sex = dr[4].ToString(),
-						Phone_Number = dr[5].ToString(),
-						Status = (((EbUserStatus)Convert.ToInt32(dr[6])).ToString())
-					});
-				}
-				resp.Data = returndata;
+			var dt = this.EbConnectionFactory.DataDB.DoQueries(sql, parameters);
+
+			List<Eb_User_ForCommonList> returndata = new List<Eb_User_ForCommonList>();
+			foreach (EbDataRow dr in dt.Tables[0].Rows)
+			{
+				returndata.Add(new Eb_User_ForCommonList {
+					Id = Convert.ToInt32(dr[0]),
+					Name = dr[1].ToString(),
+					Email = dr[2].ToString(),
+					Nick_Name = dr[3].ToString(),
+					Sex = dr[4].ToString(),
+					Phone_Number = dr[5].ToString(),
+					Status = (((EbUserStatus)Convert.ToInt32(dr[6])).ToString())
+				});
+			}
+			resp.Data = returndata;
 			
 			return resp;
 		} //for user search
