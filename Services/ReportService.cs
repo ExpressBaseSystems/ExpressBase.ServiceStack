@@ -25,6 +25,9 @@ using ExpressBase.Security;
 using System.DrawingCore.Text;
 using System.DrawingCore;
 using ExpressBase.Common.ServiceClients;
+using System.Text.RegularExpressions;
+using ServiceStack.Redis;
+using ExpressBase.Common.Structures;
 
 namespace ExpressBase.ServiceStack
 {
@@ -73,7 +76,7 @@ namespace ExpressBase.ServiceStack
             if (Report.DataSourceRefId != string.Empty)
             {
                 Console.WriteLine("Report.DataSourceRefId   :" + Report.DataSourceRefId);
-                dsresp = myDataSourceservice.Any(new DataSourceDataSetRequest { RefId = Report.DataSourceRefId , Params = request.Params });
+                dsresp = myDataSourceservice.Any(new DataSourceDataSetRequest { RefId = Report.DataSourceRefId, Params = request.Params });
                 Report.DataSet = dsresp.DataSet;
 
                 //cresp = this.Redis.Get<DataSourceColumnsResponse>(string.Format("{0}_columns", Report.DataSourceRefId));
@@ -166,7 +169,93 @@ namespace ExpressBase.ServiceStack
             }
         }
 
+        public ValidateCalcExpressionResponse Get(ValidateCalcExpressionRequest request)
+        {
+            var myObjectservice = base.ResolveService<EbObjectService>();
+            var myDataSourceservice = base.ResolveService<DataSourceService>();
+            EbDataSource ds = null;
+            bool _isValid = true;
+            string _excepMsg = "";
+            Type resultType;
+            int resultType_enum = 0;
+            DataSourceColumnsResponse cresp = new DataSourceColumnsResponse();
+            cresp = Redis.Get<DataSourceColumnsResponse>(string.Format("{0}_columns", request.DataSourceRefId));
+            if (cresp == null || cresp.Columns.Count == 0)
+            {
+                ds = Redis.Get<EbDataSource>(request.DataSourceRefId);
+                if (ds == null)
+                {
+                    EbObjectParticularVersionResponse dsresult = myObjectservice.Get(new EbObjectParticularVersionRequest { RefId = request.DataSourceRefId }) as EbObjectParticularVersionResponse;
+                    ds = EbSerializers.Json_Deserialize<EbDataSource>(dsresult.Data[0].Json);
+                    Redis.Set(request.DataSourceRefId, ds);
+                }
+                if (ds.FilterDialogRefId != string.Empty)
+                    ds.AfterRedisGet(Redis as RedisClient);
+                cresp = myDataSourceservice.Any(new DataSourceColumnsRequest { RefId = request.DataSourceRefId, Params = (ds.FilterDialog != null) ? ds.FilterDialog.GetDefaultParams() : null });
+                Redis.Set(string.Format("{0}_columns", request.DataSourceRefId), cresp);
+            }
+            Script valscript = CSharpScript.Create<dynamic>(request.ValueExpression, ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System.Dynamic"), globalsType: typeof(Globals));
 
+            try
+            {
+                valscript.Compile();
+            }
+            catch (Exception e)
+            {
+                _isValid = false;
+                _excepMsg = e.Message;
+            }
+            var matches = Regex.Matches(request.ValueExpression, @"T[0-9]{1}.\w+").OfType<Match>().Select(m => m.Groups[0].Value).Distinct();
+            string[] _dataFieldsUsed = new string[matches.Count()];
+            int i = 0;
+            foreach (var match in matches)
+                _dataFieldsUsed[i++] = match;
+
+            Globals globals = new Globals();
+            {
+                foreach (string calcfd in _dataFieldsUsed)
+                {
+                    dynamic _value = null;
+                    string TName = calcfd.Split('.')[0];
+                    string fName = calcfd.Split('.')[1];
+                    EbDbTypes typ = cresp.Columns[Convert.ToInt32(TName.Replace(@"T", string.Empty))][fName].Type;
+                    switch (typ.ToString())
+                    {
+                        case "Int32":
+                            _value = 0;
+                            break;
+                        case "String":
+                            _value = "Eb";
+                            break;
+                        case "Datetime":
+                            _value = DateTime.MinValue;
+                            break;
+                        default:
+                            _value = 0;
+                            break;
+                    }
+                    globals[TName].Add(fName, new NTV { Name = fName, Type = typ, Value = _value as object });
+                }
+
+                resultType = (valscript.RunAsync(globals)).Result.ReturnValue.GetType();
+                switch (resultType.FullName)
+                {
+                    case "System.Int32":
+                        resultType_enum = 11;
+                        break;
+                    case "System.String":
+                        resultType_enum = 16;
+                        break;
+                    case "System.DateTime":
+                        resultType_enum = 6;
+                        break;
+                    default:
+                        resultType_enum = 0;
+                        break;
+                }
+            }
+            return new ValidateCalcExpressionResponse { IsValid = _isValid, Type = resultType_enum, ExceptionMessage = _excepMsg };
+        }
     }
 
     public partial class HeaderFooter : PdfPageEventHelper

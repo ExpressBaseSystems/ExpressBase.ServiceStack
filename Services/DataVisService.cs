@@ -245,17 +245,43 @@ namespace ExpressBase.ServiceStack
                     foreach (TFilters _dic in request.TFilters)
                     {
                         var op = _dic.Operator; var col = _dic.Column; var val = _dic.Value;
-
-                        if (op == "x*")
-                            _c += string.Format("AND LOWER({0}) LIKE LOWER('{1}%') ", col, val);
-                        else if (op == "*x")
-                            _c += string.Format("AND LOWER({0}) LIKE LOWER('%{1}') ", col, val);
-                        else if (op == "*x*")
-                            _c += string.Format("AND LOWER({0}) LIKE LOWER('%{1}%') ", col, val);
-                        else if (op == "=")
-                            _c += string.Format("AND LOWER({0}) = LOWER('{1}') ", col, val);
+                        var array = _dic.Value.Split("|");
+                        if (array.Length == 0)
+                        {
+                            if (op == "x*")
+                                _c += string.Format("AND LOWER({0}) LIKE LOWER('{1}%') ", col, val);
+                            else if (op == "*x")
+                                _c += string.Format("AND LOWER({0}) LIKE LOWER('%{1}') ", col, val);
+                            else if (op == "*x*")
+                                _c += string.Format("AND LOWER({0}) LIKE LOWER('%{1}%') ", col, val);
+                            else if (op == "=")
+                                _c += string.Format("AND LOWER({0}) = LOWER('{1}') ", col, val);
+                            else
+                                _c += string.Format("AND {0} {1} '{2}' ", col, op, val);
+                        }
                         else
-                            _c += string.Format("AND {0} {1} '{2}' ", col, op, val);
+                        {
+                            string _cond = string.Empty;
+                            for (int i = 0; i < array.Length; i++)
+                            {
+                                if (array[i].Trim() != "")
+                                {
+                                    if (op == "x*")
+                                        _cond += string.Format(" LOWER({0}) LIKE LOWER('{1}%') OR", col, array[i].Trim());
+                                    else if (op == "*x")
+                                        _cond += string.Format(" LOWER({0}) LIKE LOWER('%{1}') OR", col, array[i].Trim());
+                                    else if (op == "*x*")
+                                        _cond += string.Format(" LOWER({0}) LIKE LOWER('%{1}%') OR", col, array[i].Trim());
+                                    else if (op == "=")
+                                        _cond += string.Format(" LOWER({0}) = LOWER('{1}') OR", col, array[i].Trim());
+                                    else
+                                        _cond += string.Format(" {0} {1} '{2}' OR", col, op, array[i].Trim());
+                                }
+                            }
+                            int place = _cond.LastIndexOf("OR");
+                            _cond = _cond.Substring(0,place);
+                            _c += "AND (" + _cond + ")";
+                        }
                     }
                 }
                 
@@ -269,7 +295,7 @@ namespace ExpressBase.ServiceStack
                 if (request.Ispaging)
                 {
                     tempsql = _sql.ReplaceAll(";", string.Empty);
-                    tempsql = "SELECT COUNT(*) FROM (" + tempsql + ");";
+                    tempsql = "SELECT COUNT(*) FROM (" + tempsql + ") data1;";
 
                     var sql1 = _sql.ReplaceAll(";", string.Empty);
                     if (this.EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.ORACLE)

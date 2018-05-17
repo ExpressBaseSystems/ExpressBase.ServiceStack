@@ -1062,14 +1062,6 @@ WHERE
         }
     }
 
-    public class NTV
-    {
-        public string Name { get; set; }
-
-        public EbDbTypes Type { get; set; }
-
-        public object Value { get; set; }
-    }
     //public class MappedValue
     //{
     //    public EbDbTypes type_ { get; set; }
