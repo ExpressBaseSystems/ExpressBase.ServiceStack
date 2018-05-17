@@ -295,7 +295,7 @@ namespace ExpressBase.ServiceStack
                 if (request.Ispaging)
                 {
                     tempsql = _sql.ReplaceAll(";", string.Empty);
-                    tempsql = "SELECT COUNT(*) FROM (" + tempsql + ");";
+                    tempsql = "SELECT COUNT(*) FROM (" + tempsql + ") data1;";
 
                     var sql1 = _sql.ReplaceAll(";", string.Empty);
                     if (this.EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.ORACLE)
