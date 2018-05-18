@@ -1106,7 +1106,7 @@ namespace ExpressBase.ServiceStack.Services
         public void TableInsertsDataDB(EbConnectionFactory dbf, EbDataTable dt, DbConnection _con_d1)
         {
             string result;
-            var assembly = typeof(ExpressBase.Common.Resource).GetAssembly();
+            var assembly = typeof(Common.sqlscripts).GetAssembly();
             using (Stream stream = assembly.GetManifestResourceStream("ExpressBase.Data.SqlScripts.PostGreSql.DataDb.postgres_eb_users.sql"))
             {
                 using (StreamReader reader = new StreamReader(stream))
@@ -1129,7 +1129,7 @@ namespace ExpressBase.ServiceStack.Services
         public void TableInsertObjectDB(EbConnectionFactory dbf, DbConnection _con_o1)
         {
             string result;
-            var assembly = typeof(ExpressBase.Common.Resource).GetAssembly();
+            var assembly = typeof(sqlscripts).Assembly;
             using (Stream stream = assembly.GetManifestResourceStream("ExpressBase.Data.SqlScripts.PostGreSql.ObjectsDb.postgres_eb_objects.sql"))
             {
                 using (StreamReader reader = new StreamReader(stream))
