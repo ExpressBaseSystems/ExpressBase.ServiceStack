@@ -27,7 +27,7 @@ namespace ExpressBase.ServiceStack.Services
 
 			string sql = "SELECT id,fullname,email,nickname,sex,phnoprimary,statusid FROM eb_users WHERE eb_del = 'F'" + show + ";";
 
-			DbParameter[] parameters = null;
+			DbParameter[] parameters = { };
 
 			var dt = this.EbConnectionFactory.DataDB.DoQueries(sql, parameters);
 
