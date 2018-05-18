@@ -75,7 +75,7 @@ namespace ExpressBase.ServiceStack.Auth0
                 Logger.Info("TryAuthenticate -> socialId");
 
             }
-            else if (request.Meta.ContainsKey("sso") && whichContext.Equals("dc"))
+            else if (request.Meta.ContainsKey("sso") && (whichContext.Equals("dc") || whichContext.Equals("uc")))
             {
 
                 _authUser = User.GetDetailsSSO(EbConnectionFactory.DataDB, UserName, whichContext);

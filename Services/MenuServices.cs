@@ -150,22 +150,9 @@ namespace ExpressBase.ServiceStack.Services
 
         public object Get(SidebarDevRequest request)
         {
-            var Query1 = @"SELECT id, applicationname FROM eb_applications;
-                            SELECT 
-	                            EO.id, EO.obj_type, EO.obj_name, EO.obj_desc, COALESCE(EO2A.app_id, 0)
-                            FROM 
-	                            eb_objects EO
-                            LEFT JOIN
-	                            eb_objects2application EO2A 
-                            ON
-	                            EO.id = EO2A.obj_id 
-                            WHERE
-	                            COALESCE(EO2A.eb_del, 'F') = 'F' 
-                            ORDER BY 
-	                            EO.obj_type;";
 
-            //parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@Ids", System.Data.DbType.String, request.Ids));
-            var ds = this.EbConnectionFactory.ObjectsDB.DoQueries(Query1);
+
+            var ds = this.EbConnectionFactory.ObjectsDB.DoQueries(this.EbConnectionFactory.ObjectsDB.EB_SIDEBARDEV_REQUEST);
 
             Dictionary<int, AppObject> appColl = new Dictionary<int, AppObject>();
 

@@ -304,7 +304,10 @@ namespace ExpressBase.ServiceStack
                         //sql1 += "ALTER TABLE T1 DROP COLUMN rnum;SELECT * FROM T1;";
                     }
                     else
-                        sql1 = sql1 + " LIMIT :limit OFFSET :offset;";
+                    {
+                        if (!sql1.ToLower().Contains(":limit"))
+                            sql1 = sql1 + " LIMIT :limit OFFSET :offset;";
+                    }
                     _sql = tempsql + sql1;
                 }
             }
