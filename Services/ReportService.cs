@@ -133,13 +133,12 @@ namespace ExpressBase.ServiceStack
             if (Report.UserPassword != string.Empty || Report.OwnerPassword != string.Empty)
                 Report.SetPassword();
             Report.Ms1.Position = 0;//important
-            //if (Report.DataSourceRefId != string.Empty)
-            //{
-            //    Report.DataSet.Tables.Clear();
-            //    Report.DataSet.Dispose();
-            //}
-            return new ReportRenderResponse { StreamWrapper = new MemorystreamWrapper(Report.Ms1) };
-
+            if (Report.DataSourceRefId != string.Empty)
+            {
+                Report.DataSet.Tables.Clear();
+                Report.DataSet = null;
+            }
+            return new ReportRenderResponse { StreamWrapper = new MemorystreamWrapper(Report.Ms1), ReportName = Report.Name };
         }
 
         private void FillScriptCollection(EbReport Report, List<EbReportField> fields)
