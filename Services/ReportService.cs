@@ -38,7 +38,7 @@ namespace ExpressBase.ServiceStack
         private DataSourceDataSetResponse dsresp = null;
 
         //private iTextSharp.text.Font f = FontFactory.GetFont(FontFactory.HELVETICA, 12);
-        public ReportService(IEbConnectionFactory _dbf/*, IEbStaticFileClient _sfc*/) : base(_dbf/*, _sfc*/) { }
+        public ReportService(IEbConnectionFactory _dbf, IEbStaticFileClient _sfc) : base(_dbf, _sfc) { }
 
 
         public ReportRenderResponse Get(ReportRenderRequest request)
