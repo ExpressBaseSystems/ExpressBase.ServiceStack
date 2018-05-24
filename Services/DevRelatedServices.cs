@@ -56,7 +56,8 @@ namespace ExpressBase.ServiceStack
         public GetAllApplicationResponse Get(GetAllApplicationRequest request)
         {
             GetAllApplicationResponse resp = new GetAllApplicationResponse();
-            try {
+            try
+            {
                 string sql = "SELECT id,applicationname,app_icon,application_type,description FROM eb_applications WHERE eb_del='F'";
                 var ds = this.EbConnectionFactory.ObjectsDB.DoQuery(sql);
                 List<AppWrapper> list = new List<AppWrapper>();
@@ -73,7 +74,7 @@ namespace ExpressBase.ServiceStack
                 }
                 resp.Data = list;
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 Console.WriteLine("Exception" + e.Message);
             }
@@ -134,11 +135,11 @@ namespace ExpressBase.ServiceStack
                 }
                 resp.Data = _types;
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 Console.WriteLine("Exception" + e.Message);
             }
-           
+
             return resp;
         }
 
@@ -224,8 +225,83 @@ namespace ExpressBase.ServiceStack
                 Console.WriteLine("exception:" + e.Message);
                 resp = new CreateApplicationResponse() { id = 0 };
             }
-            
+
             return resp;
+        }
+
+        public GetTbaleSchemaResponse Get(GetTableSchemaRequest request)
+        {
+            Dictionary<string, List<Coloums>> Dict = new Dictionary<string, List<Coloums>>();
+            string query = @"
+               SELECT 
+              ACols.*,
+                 BCols.foreign_table_name,
+                    BCols.foreign_column_name 
+            FROM
+                    (SELECT 
+                        TCols.*, CCols.constraint_type FROM
+                            (SELECT
+                             T.table_name, C.column_name, C.data_type
+                            FROM 
+                                information_schema.tables T,
+                             information_schema.columns C
+                            WHERE
+                              T.table_name = C.table_name AND
+                                 T.table_schema='public') TCols
+                            LEFT JOIN
+                            (SELECT 
+                               TC.table_name,TC.constraint_type,KCU.column_name 
+                             FROM
+                              information_schema.table_constraints TC,
+                              information_schema.key_column_usage KCU
+                             WHERE
+                              TC.constraint_name=KCU.constraint_name AND
+                              (TC.constraint_type = 'PRIMARY KEY' OR TC.constraint_type = 'FOREIGN KEY') AND
+                              TC.table_schema='public') CCols
+                             ON 
+                             CCols.table_name=TCols.table_name AND
+                                CCols.column_name=TCols.column_name) ACols
+             LEFT JOIN
+                        (SELECT
+                     tc.constraint_name, tc.table_name, kcu.column_name, 
+                   ccu.table_name AS foreign_table_name,
+                      ccu.column_name AS foreign_column_name 
+               FROM 
+             information_schema.table_constraints AS tc 
+                  JOIN 
+                       information_schema.key_column_usage AS kcu
+                        ON 
+                       tc.constraint_name = kcu.constraint_name
+                     JOIN  
+                       information_schema.constraint_column_usage AS ccu
+                        ON 
+                       ccu.constraint_name = tc.constraint_name
+                        WHERE 
+                       constraint_type = 'FOREIGN KEY' AND tc.table_schema='public') BCols
+                     ON
+                      ACols.table_name=BCols.table_name AND  ACols.column_name=BCols.column_name
+                ORDER BY
+                 table_name, column_name";
+
+            var res = this.EbConnectionFactory.DataDB.DoQuery(query);
+            string key = "";
+            foreach (EbDataRow dr in res.Rows)
+            {
+                key = dr[0] as string;
+                if (!Dict.ContainsKey(key))
+                    Dict.Add(key, new List<Coloums> { });
+
+                Dict[key].Add(new Coloums
+                {
+                    cname = dr[1] as string,
+                    type = dr[2] as string,
+                    constraints = dr[3] as string,
+                    foreign_tnm = dr[4] as string,
+                    foreign_cnm = dr[5] as string
+                });
+            }
+            return new GetTbaleSchemaResponse { Data = Dict};
         }
     }
 }
+
