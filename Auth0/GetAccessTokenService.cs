@@ -82,8 +82,8 @@ namespace ExpressBase.ServiceStack.Auth0
                 session.IsAuthenticated = true;
                 session.UserAuthId = userId;
 
-                string temp = userId.Substring(userId.IndexOf('-') + 1);
-                session.Email = temp.Substring(0, temp.IndexOf('-'));
+                string temp = userId.Substring(userId.IndexOf(CharConstants.COLON) + 1);
+                session.Email = temp.Substring(0, temp.IndexOf(CharConstants.COLON));
                 session.Uid = (userAuth as User).UserId;
                 session.WhichConsole = userId.Substring(userId.Length - 2);
                 session.Roles.Clear();
