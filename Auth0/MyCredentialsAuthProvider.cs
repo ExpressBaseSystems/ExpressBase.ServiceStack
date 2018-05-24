@@ -103,7 +103,7 @@ namespace ExpressBase.ServiceStack.Auth0
                     session.WhichConsole = whichContext;
                     session.DBVendor = EbConnectionFactory.DataDB.Vendor;
                     _authUser.wc = whichContext;
-                    _authUser.AuthId = string.Format("{0}-{1}-{2}", cid, _authUser.Email, whichContext);
+                    _authUser.AuthId = string.Format(TokenConstants.SUB_FORMAT, cid, _authUser.Email, whichContext);
                     session.UserAuthId = _authUser.AuthId;
 
                     var authRepo = HostContext.AppHost.GetAuthRepository(authService.Request);

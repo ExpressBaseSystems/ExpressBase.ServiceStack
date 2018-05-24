@@ -112,7 +112,8 @@ namespace ExpressBase.ServiceStack
                     payload[TokenConstants.WC] = (session as CustomUserSession).WhichConsole;
                 },
 
-                PopulateSessionFilter = (session, token, req) => {
+                PopulateSessionFilter = (session, token, req) =>
+                {
                     var csession = session as CustomUserSession;
                     csession.UserAuthId = token[TokenConstants.SUB];
                     csession.CId = token[TokenConstants.CID];
@@ -126,9 +127,9 @@ namespace ExpressBase.ServiceStack
             this.Plugins.Add(new ProtoBufFormat());
             this.Plugins.Add(new SessionFeature());
 
-            this.Plugins.Add(new AuthFeature(() => 
+            this.Plugins.Add(new AuthFeature(() =>
                 new CustomUserSession(),
-                new IAuthProvider[] 
+                new IAuthProvider[]
                 {
                     new MyFacebookAuthProvider(AppSettings)
                     {
@@ -219,14 +220,21 @@ namespace ExpressBase.ServiceStack
                 }
                 try
                 {
-                    if (requestDto != null && requestDto.GetType() != typeof(Authenticate) && requestDto.GetType() != typeof(GetAccessToken) && requestDto.GetType() != typeof(UniqueRequest) && requestDto.GetType() != typeof(CreateAccountRequest)&& requestDto.GetType() != typeof(EmailServicesMqRequest) && requestDto.GetType() != typeof(RegisterRequest) && requestDto.GetType() != typeof(AutoGenSidRequest) && requestDto.GetType() != typeof(JoinbetaReq)
-                    && requestDto.GetType() != typeof(GetEventSubscribers) )
+                    if (requestDto != null && requestDto.GetType() != typeof(Authenticate) && requestDto.GetType() != typeof(GetAccessToken) && requestDto.GetType() != typeof(UniqueRequest) && requestDto.GetType() != typeof(CreateAccountRequest) && requestDto.GetType() != typeof(EmailServicesMqRequest) && requestDto.GetType() != typeof(RegisterRequest) && requestDto.GetType() != typeof(AutoGenSidRequest) && requestDto.GetType() != typeof(JoinbetaReq)
+                    && requestDto.GetType() != typeof(GetEventSubscribers))
                     {
                         var auth = req.Headers[HttpHeaders.Authorization];
                         if (string.IsNullOrEmpty(auth))
                             res.ReturnAuthRequired();
                         else
                         {
+                            if (req.Headers[CacheConstants.RTOKEN] != null)
+                            {
+                                Resolve<IEbStaticFileClient>().AddAuthentication(req);
+                                Resolve<IEbServerEventClient>().AddAuthentication(req);
+                                Resolve<IEbMqClient>().AddAuthentication(req);
+
+                            }
                             var jwtoken = new JwtSecurityToken(auth.Replace(CacheConstants.BEARER, string.Empty).Trim());
                             foreach (var c in jwtoken.Claims)
                             {
@@ -293,7 +301,7 @@ namespace ExpressBase.ServiceStack
 
                 }
             });
-            
+
             //--Api Key Generation
             //AfterInitCallbacks.Add(host =>
             //{
