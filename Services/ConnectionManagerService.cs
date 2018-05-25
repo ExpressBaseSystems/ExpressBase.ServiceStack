@@ -21,17 +21,19 @@ namespace ExpressBase.ServiceStack.Services
         }
 
         [Authenticate]
-        public bool Post(RefreshSolutionConnectionsBySolutionIdAsyncRequest request)
+        public RefreshSolutionConnectionsAsyncResponse Post(RefreshSolutionConnectionsBySolutionIdAsyncRequest request)
         {
+            RefreshSolutionConnectionsAsyncResponse res = new RefreshSolutionConnectionsAsyncResponse();
             try
             {
-                this.MQClient.Post<bool>(new RefreshSolutionConnectionsBySolutionIdAsyncRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
-                return true;
+                res = this.MQClient.Post<RefreshSolutionConnectionsAsyncResponse>(new RefreshSolutionConnectionsBySolutionIdAsyncRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
+                return res;
             }
             catch (Exception e)
             {
                 Console.WriteLine("Exception:" + e.ToString());
-                return false;
+                res.ResponseStatus.Message = e.Message;
+                return res;
             }
         }
 
@@ -70,41 +72,77 @@ namespace ExpressBase.ServiceStack.Services
         }
 
         [Authenticate]
-        public void Post(ChangeDataDBConnectionRequest request)
+        public ChangeConnectionResponse Post(ChangeDataDBConnectionRequest request)
         {
-            request.DataDBConnection.Persist(request.SolutionId, this.InfraConnectionFactory, request.IsNew, request.UserId);
-        
-            var myService = base.ResolveService<EbDbCreateServices>();
-            var result = myService.Post(new EbDbCreateRequest() { dbName = request.DataDBConnection.DatabaseName, ischange = true, DataDBConnection = request.DataDBConnection, UserId = request.UserId,TenantAccountId = request.TenantAccountId });
-            base.MessageProducer3.Publish(new RefreshSolutionConnectionsRequest()
+            ChangeConnectionResponse res = new ChangeConnectionResponse();
+            try
             {
-                TenantAccountId = request.SolutionId,
-                UserId = request.UserId,
-                BToken = (!String.IsNullOrEmpty(this.Request.Authorization)) ? this.Request.Authorization.Replace("Bearer", string.Empty).Trim() : String.Empty,
-                RToken = (!String.IsNullOrEmpty(this.Request.Headers["rToken"])) ? this.Request.Headers["rToken"] : String.Empty
-            });
-          
+                request.DataDBConnection.Persist(request.SolutionId, this.InfraConnectionFactory, request.IsNew, request.UserId);
+
+                var myService = base.ResolveService<EbDbCreateServices>();
+                var result = myService.Post(new EbDbCreateRequest() { dbName = request.DataDBConnection.DatabaseName, ischange = true, DataDBConnection = request.DataDBConnection, UserId = request.UserId, TenantAccountId = request.TenantAccountId });
+                base.MessageProducer3.Publish(new RefreshSolutionConnectionsRequest()
+                {
+                    TenantAccountId = request.SolutionId,
+                    UserId = request.UserId,
+                    BToken = (!String.IsNullOrEmpty(this.Request.Authorization)) ? this.Request.Authorization.Replace("Bearer", string.Empty).Trim() : String.Empty,
+                    RToken = (!String.IsNullOrEmpty(this.Request.Headers["rToken"])) ? this.Request.Headers["rToken"] : String.Empty
+                });
+            }
+            catch (Exception e)
+            {
+                res.ResponseStatus.Message = e.Message;
+            }
+
+            return res;
         }
 
         [Authenticate]
-        public void Post(ChangeObjectsDBConnectionRequest request)
+        public ChangeConnectionResponse Post(ChangeObjectsDBConnectionRequest request)
         {
-            request.ObjectsDBConnection.Persist(request.SolutionId, this.InfraConnectionFactory, request.IsNew, request.UserId);
-            base.MessageProducer3.Publish(new RefreshSolutionConnectionsRequest() { TenantAccountId = request.SolutionId, UserId = request.UserId });
+            ChangeConnectionResponse res = new ChangeConnectionResponse();
+            try
+            {
+                request.ObjectsDBConnection.Persist(request.SolutionId, this.InfraConnectionFactory, request.IsNew, request.UserId);
+                base.MessageProducer3.Publish(new RefreshSolutionConnectionsRequest() { TenantAccountId = request.SolutionId, UserId = request.UserId });
+            }
+            catch (Exception e)
+            {
+                res.ResponseStatus.Message = e.Message;
+            }
+            return res;
         }
 
         [Authenticate]
-        public void Post(ChangeFilesDBConnectionRequest request)
+        public ChangeConnectionResponse Post(ChangeFilesDBConnectionRequest request)
         {
-            request.FilesDBConnection.Persist(request.TenantAccountId, this.InfraConnectionFactory, request.IsNew, request.UserId);
-            base.MessageProducer3.Publish(new RefreshSolutionConnectionsRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
+            ChangeConnectionResponse res = new ChangeConnectionResponse();
+            try
+            {
+                request.FilesDBConnection.Persist(request.TenantAccountId, this.InfraConnectionFactory, request.IsNew, request.UserId);
+                base.MessageProducer3.Publish(new RefreshSolutionConnectionsRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
+            }
+            catch (Exception e)
+            {
+                res.ResponseStatus.Message = e.Message;
+            }
+            return res;
         }
 
         [Authenticate]
-        public void Post(ChangeSMSConnectionRequest request)
+        public ChangeConnectionResponse Post(ChangeSMSConnectionRequest request)
         {
-            request.SMSConnection.Persist(request.TenantAccountId, this.InfraConnectionFactory, request.IsNew, request.UserId);
-            base.MessageProducer3.Publish(new RefreshSolutionConnectionsRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
+            ChangeConnectionResponse res = new ChangeConnectionResponse();
+            try
+            {
+                request.SMSConnection.Persist(request.TenantAccountId, this.InfraConnectionFactory, request.IsNew, request.UserId);
+                base.MessageProducer3.Publish(new RefreshSolutionConnectionsRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
+            }
+            catch (Exception e)
+            {
+                res.ResponseStatus.Message = e.Message;
+            }
+            return res;
         }
 
         public TestConnectionResponse Post(TestConnectionRequest request)
@@ -151,7 +189,7 @@ namespace ExpressBase.ServiceStack.Services
                             IsAdmin = false;
                             break;
                         }
-                            
+
                     }
                     res.ConnectionStatus = IsAdmin;
 
