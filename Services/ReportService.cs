@@ -260,9 +260,11 @@ namespace ExpressBase.ServiceStack
     public partial class HeaderFooter : PdfPageEventHelper
     {
         private EbReport Report { get; set; }
+
         public override void OnStartPage(PdfWriter writer, Document document)
         {
         }
+
         public override void OnEndPage(PdfWriter writer, Document d)
         {
             Report.DrawPageHeader();

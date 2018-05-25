@@ -25,7 +25,7 @@ namespace ExpressBase.ServiceStack.Services
 			if (request.Show != "all")
 				show = " AND hide = 'no'";
 
-			string sql = "SELECT id,fullname,email,nickname,sex,phnoprimary,statusid FROM eb_users WHERE eb_del = 'F'" + show + ";";
+			string sql = "SELECT id,fullname,email,nickname,sex,phnoprimary,statusid FROM eb_users WHERE eb_del = 'F' AND id > 1" + show + ";";
 
 			DbParameter[] parameters = { };
 
