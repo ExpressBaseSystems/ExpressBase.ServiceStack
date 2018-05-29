@@ -69,8 +69,6 @@ namespace ExpressBase.ServiceStack.Auth0
                     _authUser = User.GetDetailsAnonymous(EbConnectionFactory.DataDB, socialId, emailId, phone, appid, whichContext, user_ip, user_name, user_browser, city, region, country, latitude, longitude, timezone, iplocationjson);
 
                     Logger.Info("TryAuthenticate -> anonymous");
-                    Logger.Info("TryAuthenticate -> Details: " + "\nConnection: "+EbConnectionFactory.DataDB.ToJson() + "\nSId: " + socialId + "\nEmail: " + emailId + "\nPhone: " + phone + "\nAppId: " + appid + "\nWC: " + whichContext + "\nUsrIp: " + user_ip+ "\nusrName: " + user_name + "\nBrowser: " + user_browser+ "\nCity: " + city + "\nRegion: " + region + "\nCountry: " + country + "\nLat: " + latitude+ "\nLong: "+ longitude + "\nTmz: " + timezone);
-                    Logger.Info("User: "+ _authUser.ToJson());
 
                 }
                 else if (!string.IsNullOrEmpty(socialId))
@@ -161,9 +159,10 @@ namespace ExpressBase.ServiceStack.Auth0
             }
             catch (Exception e)
             {
-                if (e.Message == "Invalid UserName or Password")
-                    throw new Exception("Invalid Username or Password");
-                else
+                Console.WriteLine("Exception Inside Auth Provider");
+                //if (e.Message == "Invalid UserName or Password")
+                //    throw new Exception("Invalid Username or Password");
+                //else
                     throw new Exception("Internal Server Error");
             }
         }
