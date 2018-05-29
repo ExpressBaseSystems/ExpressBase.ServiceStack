@@ -65,6 +65,7 @@ namespace ExpressBase.ServiceStack
             Report.WaterMarkList = new List<object>();
             Report.ValueScriptCollection = new Dictionary<string, Script>();
             Report.AppearanceScriptCollection = new Dictionary<string, Script>();
+            Report.FieldDict = new Dictionary<string, object>();
             Report.CurrentTimestamp = DateTime.Now;
             Report.UserName = request.Fullname;
             //-- END REPORT object INIT
@@ -107,19 +108,34 @@ namespace ExpressBase.ServiceStack
             Report.GetWatermarkImages(/*this.FileClient*/);
 
             foreach (EbReportHeader r_header in Report.ReportHeaders)
-                this.FillScriptCollection(Report, r_header.Fields);
+            {
+                FillScriptCollection(Report, r_header.Fields);
+                FillFieldDict(Report, r_header.Fields);
+            }
 
             foreach (EbReportFooter r_footer in Report.ReportFooters)
-                this.FillScriptCollection(Report, r_footer.Fields);
+            {
+                FillScriptCollection(Report, r_footer.Fields);
+                FillFieldDict(Report, r_footer.Fields);
+            }
 
             foreach (EbPageHeader p_header in Report.PageHeaders)
-                this.FillScriptCollection(Report, p_header.Fields);
+            {
+                FillScriptCollection(Report, p_header.Fields);
+                FillFieldDict(Report, p_header.Fields);
+            }
 
             foreach (EbReportDetail detail in Report.Detail)
-                this.FillScriptCollection(Report, detail.Fields);
+            {
+                FillScriptCollection(Report, detail.Fields);
+                FillFieldDict(Report, detail.Fields);
+            }
 
             foreach (EbPageFooter p_footer in Report.PageFooters)
-                this.FillScriptCollection(Report, p_footer.Fields);
+            {
+                FillScriptCollection(Report, p_footer.Fields);
+                FillFieldDict(Report, p_footer.Fields);
+            }
 
 
             //iTextSharp.text.Font link = FontFactory.GetFont("Arial", 12, iTextSharp.text.Font.UNDERLINE, BaseColor.DarkGray);
@@ -168,6 +184,13 @@ namespace ExpressBase.ServiceStack
             }
         }
 
+        private void FillFieldDict(EbReport Report, List<EbReportField> fields)
+        {
+            foreach (EbReportField field in fields)
+            {
+                Report.FieldDict.Add(field.Name, field);
+            }
+        }
         public ValidateCalcExpressionResponse Get(ValidateCalcExpressionRequest request)
         {
             var myObjectservice = base.ResolveService<EbObjectService>();
@@ -260,9 +283,11 @@ namespace ExpressBase.ServiceStack
     public partial class HeaderFooter : PdfPageEventHelper
     {
         private EbReport Report { get; set; }
+
         public override void OnStartPage(PdfWriter writer, Document document)
         {
         }
+
         public override void OnEndPage(PdfWriter writer, Document d)
         {
             Report.DrawPageHeader();
