@@ -93,7 +93,6 @@ namespace ExpressBase.ServiceStack.Auth0
                 }
                 if (_authUser != null)
                 {
-                    Logger.Info("Inside Auth User Not Null");
                     if (_authUser.Email != null)
                     {
                         CustomUserSession session = authService.GetSession(false) as CustomUserSession;
@@ -159,10 +158,9 @@ namespace ExpressBase.ServiceStack.Auth0
             }
             catch (Exception e)
             {
-                Console.WriteLine("Exception Inside Auth Provider: " + e.StackTrace);
-                //if (e.Message == "Invalid UserName or Password")
-                //    throw new Exception("Invalid Username or Password");
-                //else
+                if (e.Message == "Invalid UserName or Password")
+                    throw new Exception("Invalid Username or Password");
+                else
                     throw new Exception("Internal Server Error");
             }
         }
