@@ -644,5 +644,19 @@ WHERE
 			return new InsertIntoBotFormTableResponse();
 		}
 
+		public GetBotsResponse Get(GetBotsRequest request)
+		{
+			List<BotDetails> list = new List<BotDetails>();
+			string qry = @"SELECT id, applicationname FROM eb_applications WHERE application_type = 3 AND eb_del = 'F'";
+			var table = this.EbConnectionFactory.ObjectsDB.DoQuery(qry);
+			foreach (EbDataRow row in table.Rows)
+			{
+				list.Add(new BotDetails { id = Convert.ToInt32(row[0]), name = row[1].ToString() });
+			}
+			return new GetBotsResponse { BotList = list};
+		}
+
+
+
 	}
 }
