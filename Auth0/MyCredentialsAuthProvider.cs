@@ -159,7 +159,7 @@ namespace ExpressBase.ServiceStack.Auth0
             }
             catch (Exception e)
             {
-                Console.WriteLine("Exception Inside Auth Provider");
+                Console.WriteLine("Exception Inside Auth Provider: " + e.StackTrace);
                 //if (e.Message == "Invalid UserName or Password")
                 //    throw new Exception("Invalid Username or Password");
                 //else
