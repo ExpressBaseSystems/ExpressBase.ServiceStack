@@ -68,6 +68,7 @@ namespace ExpressBase.ServiceStack.Auth0
 
                     _authUser = User.GetDetailsAnonymous(EbConnectionFactory.DataDB, socialId, emailId, phone, appid, whichContext, user_ip, user_name, user_browser, city, region, country, latitude, longitude, timezone, iplocationjson);
                     Logger.Info("TryAuthenticate -> anonymous");
+                    Logger.Info("User: "+ _authUser.ToJson());
 
                 }
                 else if (!string.IsNullOrEmpty(socialId))
