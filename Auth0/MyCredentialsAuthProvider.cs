@@ -27,92 +27,102 @@ namespace ExpressBase.ServiceStack.Auth0
 
         public override bool TryAuthenticate(IServiceBase authService, string UserName, string password)
         {
-            Logger.Info("In TryAuthenticate method1");
-
-            var request = authService.Request.Dto as Authenticate;
-            var cid = request.Meta.ContainsKey(TokenConstants.CID) ? request.Meta[TokenConstants.CID] : string.Empty;
-            var socialId = request.Meta.ContainsKey(TokenConstants.SOCIALID) ? request.Meta[TokenConstants.SOCIALID] : string.Empty;
-            var whichContext = request.Meta[TokenConstants.WC].ToLower().Trim();
-
-            var EbConnectionFactory = authService.TryResolve<IEbConnectionFactory>() as EbConnectionFactory;
-
-            Logger.Info("In TryAuthenticate method2");
-            //string[] app_types = { "Mobile", "Web", "Bot" };
-            //if (request.Meta["context"] == "tc" || request.Meta["context"] == "dc")
-            //	app_types 
-
-            //if (request.Meta.ContainsKey("signup_tok"))
-            //         {
-            //             cid = CoreConstants.EXPRESSBASE;
-            //             _authUser = User.GetInfraVerifiedUser(EbConnectionFactory.DataDB, UserName, request.Meta["signup_tok"]);
-            //         }
-
-            User _authUser = null;
-            if (request.Meta.ContainsKey("anonymous") && whichContext.Equals("bc"))
+            try
             {
-                var emailId = request.Meta.ContainsKey("emailId") ? request.Meta["emailId"] : string.Empty;//for anonymous
-                var phone = request.Meta.ContainsKey("phone") ? request.Meta["phone"] : string.Empty;//for anonymous
-                var appid = request.Meta.ContainsKey("appid") ? Convert.ToInt32(request.Meta["appid"]) : 0;//for anonymous
-                var user_ip = request.Meta.ContainsKey("user_ip") ? request.Meta["user_ip"] : string.Empty;//for anonymous
-                var user_name = request.Meta.ContainsKey("user_name") ? request.Meta["user_name"] : string.Empty;//for anonymous
-                var user_browser = request.Meta.ContainsKey("user_browser") ? request.Meta["user_browser"] : string.Empty;//for anonymous
-                var city = request.Meta.ContainsKey("city") ? request.Meta["city"] : string.Empty;//for anonymous
-                var region = request.Meta.ContainsKey("region") ? request.Meta["region"] : string.Empty;//for anonymous
-                var country = request.Meta.ContainsKey("country") ? request.Meta["country"] : string.Empty;//for anonymous
-                var latitude = request.Meta.ContainsKey("latitude") ? request.Meta["latitude"] : string.Empty;//for anonymous
-                var longitude = request.Meta.ContainsKey("longitude") ? request.Meta["longitude"] : string.Empty;//for anonymous
-                var timezone = request.Meta.ContainsKey("timezone") ? request.Meta["timezone"] : string.Empty;//for anonymous
-                var iplocationjson = request.Meta.ContainsKey("iplocationjson") ? request.Meta["iplocationjson"] : string.Empty;//for anonymous
+                Logger.Info("In TryAuthenticate method1");
 
-                _authUser = User.GetDetailsAnonymous(EbConnectionFactory.DataDB, socialId, emailId, phone, appid, whichContext, user_ip, user_name, user_browser, city, region, country, latitude, longitude, timezone, iplocationjson);
-                Logger.Info("TryAuthenticate -> anonymous");
+                var request = authService.Request.Dto as Authenticate;
+                var cid = request.Meta.ContainsKey(TokenConstants.CID) ? request.Meta[TokenConstants.CID] : string.Empty;
+                var socialId = request.Meta.ContainsKey(TokenConstants.SOCIALID) ? request.Meta[TokenConstants.SOCIALID] : string.Empty;
+                var whichContext = request.Meta[TokenConstants.WC].ToLower().Trim();
 
-            }
-            else if (!string.IsNullOrEmpty(socialId))
-            {
+                var EbConnectionFactory = authService.TryResolve<IEbConnectionFactory>() as EbConnectionFactory;
 
-                _authUser = User.GetDetailsSocial(EbConnectionFactory.DataDB, socialId, whichContext);
-                Logger.Info("TryAuthenticate -> socialId");
+                Logger.Info("In TryAuthenticate method2");
+                //string[] app_types = { "Mobile", "Web", "Bot" };
+                //if (request.Meta["context"] == "tc" || request.Meta["context"] == "dc")
+                //	app_types 
 
-            }
-            else if (request.Meta.ContainsKey("sso") && (whichContext.Equals("dc") || whichContext.Equals("uc")))
-            {
+                //if (request.Meta.ContainsKey("signup_tok"))
+                //         {
+                //             cid = CoreConstants.EXPRESSBASE;
+                //             _authUser = User.GetInfraVerifiedUser(EbConnectionFactory.DataDB, UserName, request.Meta["signup_tok"]);
+                //         }
 
-                _authUser = User.GetDetailsSSO(EbConnectionFactory.DataDB, UserName, whichContext);
-                Logger.Info("TryAuthenticate -> sso");
-
-            }
-            else
-            {
-                _authUser = User.GetDetailsNormal(EbConnectionFactory.DataDB, UserName, password, whichContext);
-                Logger.Info("TryAuthenticate -> Normal");
-
-            }
-            if(_authUser != null)
-            {
-                if (_authUser.Email != null)
+                User _authUser = null;
+                if (request.Meta.ContainsKey("anonymous") && whichContext.Equals("bc"))
                 {
-                    CustomUserSession session = authService.GetSession(false) as CustomUserSession;
-                    var redisClient = authService.TryResolve<IRedisClientsManager>().GetClient();
-                    session.CId = cid;
-                    _authUser.CId = cid;
-                    session.Uid = _authUser.UserId;
-                    session.Email = _authUser.Email;
-                    session.IsAuthenticated = true;
-                    session.User = _authUser;
-                    session.WhichConsole = whichContext;
-                    session.DBVendor = EbConnectionFactory.DataDB.Vendor;
-                    _authUser.wc = whichContext;
-                    _authUser.AuthId = string.Format(TokenConstants.SUB_FORMAT, cid, _authUser.Email, whichContext);
-                    session.UserAuthId = _authUser.AuthId;
+                    var emailId = request.Meta.ContainsKey("emailId") ? request.Meta["emailId"] : string.Empty;//for anonymous
+                    var phone = request.Meta.ContainsKey("phone") ? request.Meta["phone"] : string.Empty;//for anonymous
+                    var appid = request.Meta.ContainsKey("appid") ? Convert.ToInt32(request.Meta["appid"]) : 0;//for anonymous
+                    var user_ip = request.Meta.ContainsKey("user_ip") ? request.Meta["user_ip"] : string.Empty;//for anonymous
+                    var user_name = request.Meta.ContainsKey("user_name") ? request.Meta["user_name"] : string.Empty;//for anonymous
+                    var user_browser = request.Meta.ContainsKey("user_browser") ? request.Meta["user_browser"] : string.Empty;//for anonymous
+                    var city = request.Meta.ContainsKey("city") ? request.Meta["city"] : string.Empty;//for anonymous
+                    var region = request.Meta.ContainsKey("region") ? request.Meta["region"] : string.Empty;//for anonymous
+                    var country = request.Meta.ContainsKey("country") ? request.Meta["country"] : string.Empty;//for anonymous
+                    var latitude = request.Meta.ContainsKey("latitude") ? request.Meta["latitude"] : string.Empty;//for anonymous
+                    var longitude = request.Meta.ContainsKey("longitude") ? request.Meta["longitude"] : string.Empty;//for anonymous
+                    var timezone = request.Meta.ContainsKey("timezone") ? request.Meta["timezone"] : string.Empty;//for anonymous
+                    var iplocationjson = request.Meta.ContainsKey("iplocationjson") ? request.Meta["iplocationjson"] : string.Empty;//for anonymous
 
-                    var authRepo = HostContext.AppHost.GetAuthRepository(authService.Request);
-                    var existingUser = (authRepo as MyRedisAuthRepository).GetUserAuth(session.UserAuthId);
-                    (authRepo as MyRedisAuthRepository).UpdateUserAuth(existingUser, _authUser);
+                    _authUser = User.GetDetailsAnonymous(EbConnectionFactory.DataDB, socialId, emailId, phone, appid, whichContext, user_ip, user_name, user_browser, city, region, country, latitude, longitude, timezone, iplocationjson);
+
+                    Logger.Info("TryAuthenticate -> anonymous");
+
                 }
+                else if (!string.IsNullOrEmpty(socialId))
+                {
+
+                    _authUser = User.GetDetailsSocial(EbConnectionFactory.DataDB, socialId, whichContext);
+                    Logger.Info("TryAuthenticate -> socialId");
+
+                }
+                else if (request.Meta.ContainsKey("sso") && (whichContext.Equals("dc") || whichContext.Equals("uc")))
+                {
+
+                    _authUser = User.GetDetailsSSO(EbConnectionFactory.DataDB, UserName, whichContext);
+                    Logger.Info("TryAuthenticate -> sso");
+
+                }
+                else
+                {
+                    _authUser = User.GetDetailsNormal(EbConnectionFactory.DataDB, UserName, password, whichContext);
+                    Logger.Info("TryAuthenticate -> Normal");
+
+                }
+                if (_authUser != null)
+                {
+                    if (_authUser.Email != null)
+                    {
+                        CustomUserSession session = authService.GetSession(false) as CustomUserSession;
+                        var redisClient = authService.TryResolve<IRedisClientsManager>().GetClient();
+                        session.CId = cid;
+                        _authUser.CId = cid;
+                        session.Uid = _authUser.UserId;
+                        session.Email = _authUser.Email;
+                        session.IsAuthenticated = true;
+                        session.User = _authUser;
+                        session.WhichConsole = whichContext;
+                        session.DBVendor = EbConnectionFactory.DataDB.Vendor;
+                        _authUser.wc = whichContext;
+                        _authUser.AuthId = string.Format(TokenConstants.SUB_FORMAT, cid, _authUser.Email, whichContext);
+                        session.UserAuthId = _authUser.AuthId;
+
+                        var authRepo = HostContext.AppHost.GetAuthRepository(authService.Request);
+                        var existingUser = (authRepo as MyRedisAuthRepository).GetUserAuth(session.UserAuthId);
+                        (authRepo as MyRedisAuthRepository).UpdateUserAuth(existingUser, _authUser);
+                    }
+                }
+                return (_authUser != null);
+
+            } catch(Exception ee)
+            {
+                Logger.Info("Exception: "+ ee.ToJson());
+                return false;
             }
            
-            return (_authUser != null);
+            
         }
 
         public override object Authenticate(IServiceBase authService, IAuthSession session, Authenticate request)
