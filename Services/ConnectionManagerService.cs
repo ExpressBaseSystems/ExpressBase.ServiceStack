@@ -9,6 +9,7 @@ using ServiceStack;
 using ServiceStack.Messaging;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Data.Common;
 using System.Linq;
 
@@ -42,7 +43,43 @@ namespace ExpressBase.ServiceStack.Services
         {
             GetConnectionsResponse resp = new GetConnectionsResponse();
             resp.EBSolutionConnections = this.Redis.Get<EbConnectionsConfig>(string.Format(CoreConstants.SOLUTION_CONNECTION_REDIS_KEY, req.TenantAccountId));
+            if (resp.EBSolutionConnections == null)
+                using (var con = this.InfraConnectionFactory.DataDB.GetNewConnection() as Npgsql.NpgsqlConnection)
+                {
+                    con.Open();
+                    string sql = @"SELECT con_type, con_obj FROM eb_connections WHERE solution_id = @solution_id AND eb_del = 'F'";
+                    DataTable dt = new DataTable();
+                    EbConnectionsConfig cons = new EbConnectionsConfig();
 
+                    var ada = new Npgsql.NpgsqlDataAdapter(sql, con);
+                    ada.SelectCommand.Parameters.Add(new Npgsql.NpgsqlParameter("solution_id", NpgsqlTypes.NpgsqlDbType.Text) { Value = req.TenantAccountId });
+                    ada.Fill(dt);
+
+                    if (dt.Rows.Count != 0)
+                    {
+                        foreach (DataRow dr in dt.Rows)
+                        {
+                            if (dr["con_type"].ToString() == EbConnectionTypes.EbDATA.ToString())
+                                cons.DataDbConnection = EbSerializers.Json_Deserialize<EbDataDbConnection>(dr["con_obj"].ToString());
+                            else if (dr["con_type"].ToString() == EbConnectionTypes.EbDATA_RO.ToString())
+                                cons.DataDbConnection = EbSerializers.Json_Deserialize<EbDataDbConnection>(dr["con_obj"].ToString());
+                            else if (dr["con_type"].ToString() == EbConnectionTypes.EbOBJECTS.ToString())
+                                cons.ObjectsDbConnection = EbSerializers.Json_Deserialize<EbObjectsDbConnection>(dr["con_obj"].ToString());
+                            //else if (dr["con_type"].ToString() == EbConnectionTypes.EbFILES.ToString())
+                            //    cons.FilesDbConnection = EbSerializers.Json_Deserialize<EbFilesDbConnection>(dr["con_obj"].ToString());
+                            else if (dr["con_type"].ToString() == EbConnectionTypes.EbLOGS.ToString())
+                                cons.LogsDbConnection = EbSerializers.Json_Deserialize<EbLogsDbConnection>(dr["con_obj"].ToString());
+                            else if (dr["con_type"].ToString() == EbConnectionTypes.SMTP.ToString())
+                                cons.SMTPConnection = EbSerializers.Json_Deserialize<SMTPConnection>(dr["con_obj"].ToString());
+                            else if (dr["con_type"].ToString() == EbConnectionTypes.SMS.ToString())
+                                cons.SMSConnection = EbSerializers.Json_Deserialize<SMSConnection>(dr["con_obj"].ToString());
+                            // ... More to come
+                        }
+
+                        Redis.Set<EbConnectionsConfig>(string.Format(CoreConstants.SOLUTION_CONNECTION_REDIS_KEY, req.TenantAccountId), cons);
+                        resp.EBSolutionConnections = cons;
+                    }
+                }
             return resp;
         }
 
