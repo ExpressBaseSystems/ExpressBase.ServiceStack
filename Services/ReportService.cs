@@ -68,6 +68,7 @@ namespace ExpressBase.ServiceStack
             Report.FieldDict = new Dictionary<string, object>();
             Report.CurrentTimestamp = DateTime.Now;
             Report.UserName = request.Fullname;
+            Report.FileClient = this.FileClient;
             Report.Parameters = request.Params;
             //-- END REPORT object INIT
 
