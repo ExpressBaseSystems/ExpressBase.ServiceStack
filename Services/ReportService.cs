@@ -68,6 +68,7 @@ namespace ExpressBase.ServiceStack
             Report.FieldDict = new Dictionary<string, object>();
             Report.CurrentTimestamp = DateTime.Now;
             Report.UserName = request.Fullname;
+            Report.FileClient = this.FileClient;
             //-- END REPORT object INIT
 
             iTextSharp.text.Rectangle rec = new iTextSharp.text.Rectangle(Report.WidthPt, Report.HeightPt);
