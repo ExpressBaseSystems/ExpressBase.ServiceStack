@@ -61,7 +61,7 @@ namespace ExpressBase.ServiceStack
             //Report.FileService = base.ResolveService<FileService>();
             Report.SolutionId = request.TenantAccountId;
             Report.IsLastpage = false;
-            Report.watermarkImages = new Dictionary<string, byte[]>();
+            Report.WatermarkImages = new Dictionary<string, byte[]>();
             Report.WaterMarkList = new List<object>();
             Report.ValueScriptCollection = new Dictionary<string, Script>();
             Report.AppearanceScriptCollection = new Dictionary<string, Script>();
@@ -69,6 +69,7 @@ namespace ExpressBase.ServiceStack
             Report.CurrentTimestamp = DateTime.Now;
             Report.UserName = request.Fullname;
             Report.FileClient = this.FileClient;
+            Report.Parameters = request.Params;
             //-- END REPORT object INIT
 
             iTextSharp.text.Rectangle rec = new iTextSharp.text.Rectangle(Report.WidthPt, Report.HeightPt);
@@ -78,7 +79,7 @@ namespace ExpressBase.ServiceStack
             if (Report.DataSourceRefId != string.Empty)
             {
                 Console.WriteLine("Report.DataSourceRefId   :" + Report.DataSourceRefId);
-                dsresp = myDataSourceservice.Any(new DataSourceDataSetRequest { RefId = Report.DataSourceRefId, Params = request.Params });
+                dsresp = myDataSourceservice.Any(new DataSourceDataSetRequest { RefId = Report.DataSourceRefId, Params = Report.Parameters });
                 Report.DataSet = dsresp.DataSet;
                 {
                     //cresp = this.Redis.Get<DataSourceColumnsResponse>(string.Format("{0}_columns", Report.DataSourceRefId));
@@ -297,9 +298,11 @@ namespace ExpressBase.ServiceStack
             if (Report.IsLastpage == true)
                 Report.DrawReportFooter();
             Report.DrawWaterMark(d, writer);
-            //ColumnText ct = new ColumnText(Report.Canvas);
-            //ct.SetSimpleColumn(phrase, this.LeftPt, lly, this.WidthPt + this.LeftPt, ury, 15, Element.ALIGN_RIGHT);
-            //ct.Go();
+            ColumnText ct = new ColumnText(Report.Canvas);
+            Phrase phrase = new Phrase(Report.PageNumber.ToString() + ", " + Report.UserName +", "+Report.CurrentTimestamp);
+            phrase.Font= FontFactory.GetFont("Arial", 12, iTextSharp.text.Font.UNDERLINE, BaseColor.DarkGray);
+            ct.SetSimpleColumn(phrase, 100, 150, Report.WidthPt -10, 150, 15, Element.ALIGN_RIGHT);
+            ct.Go();
         }
 
         public HeaderFooter(EbReport _c) : base()
