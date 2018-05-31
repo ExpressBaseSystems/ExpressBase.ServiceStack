@@ -69,7 +69,9 @@ namespace ExpressBase.ServiceStack
                 Report.FieldDict = new Dictionary<string, object>();
                 Report.CurrentTimestamp = DateTime.Now;
                 Report.UserName = request.Fullname;
+                Report.FileClient = new EbStaticFileClient();
                 Report.FileClient = this.FileClient;
+                Console.WriteLine("Inside Report Service...\nFileClientBaseUri: "+ this.FileClient.BaseUri+ "="+ Report.FileClient);
                 Report.Parameters = request.Params;
                 //-- END REPORT object INIT
 
