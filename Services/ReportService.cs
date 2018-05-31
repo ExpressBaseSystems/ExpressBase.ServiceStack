@@ -34,7 +34,7 @@ namespace ExpressBase.ServiceStack
     public class ReportService : EbBaseService
     {
         //private DataSourceColumnsResponse cresp = null;
-       // private DataSourceDataResponse dresp = null;
+        // private DataSourceDataResponse dresp = null;
         private DataSourceDataSetResponse dsresp = null;
 
         //private iTextSharp.text.Font f = FontFactory.GetFont(FontFactory.HELVETICA, 12);
@@ -53,109 +53,115 @@ namespace ExpressBase.ServiceStack
             //}
 
             EbReport Report = null;
-            //-- Get REPORT object and Init 
-            var myObjectservice = base.ResolveService<EbObjectService>();
-            EbObjectParticularVersionResponse resultlist = myObjectservice.Get(new EbObjectParticularVersionRequest { RefId = request.Refid }) as EbObjectParticularVersionResponse;
-            Report = EbSerializers.Json_Deserialize<EbReport>(resultlist.Data[0].Json);
-            Report.ReportService = this;
-            //Report.FileService = base.ResolveService<FileService>();
-            Report.SolutionId = request.TenantAccountId;
-            Report.IsLastpage = false;
-            Report.WatermarkImages = new Dictionary<string, byte[]>();
-            Report.WaterMarkList = new List<object>();
-            Report.ValueScriptCollection = new Dictionary<string, Script>();
-            Report.AppearanceScriptCollection = new Dictionary<string, Script>();
-            Report.FieldDict = new Dictionary<string, object>();
-            Report.CurrentTimestamp = DateTime.Now;
-            Report.UserName = request.Fullname;
-            Report.FileClient = this.FileClient;
-            Report.Parameters = request.Params;
-            //-- END REPORT object INIT
-
-            iTextSharp.text.Rectangle rec = new iTextSharp.text.Rectangle(Report.WidthPt, Report.HeightPt);
-            Report.Doc = new Document(rec);
-            Report.Ms1 = new MemoryStream();
-            var myDataSourceservice = base.ResolveService<DataSourceService>();
-            if (Report.DataSourceRefId != string.Empty)
+            try
             {
-                Console.WriteLine("Report.DataSourceRefId   :" + Report.DataSourceRefId);
-                dsresp = myDataSourceservice.Any(new DataSourceDataSetRequest { RefId = Report.DataSourceRefId, Params = Report.Parameters });
-                Report.DataSet = dsresp.DataSet;
+                var myObjectservice = base.ResolveService<EbObjectService>();
+                EbObjectParticularVersionResponse resultlist = myObjectservice.Get(new EbObjectParticularVersionRequest { RefId = request.Refid }) as EbObjectParticularVersionResponse;
+                Report = EbSerializers.Json_Deserialize<EbReport>(resultlist.Data[0].Json);
+                Report.ReportService = this;
+                //Report.FileService = base.ResolveService<FileService>();
+                Report.SolutionId = request.TenantAccountId;
+                Report.IsLastpage = false;
+                Report.WatermarkImages = new Dictionary<string, byte[]>();
+                Report.WaterMarkList = new List<object>();
+                Report.ValueScriptCollection = new Dictionary<string, Script>();
+                Report.AppearanceScriptCollection = new Dictionary<string, Script>();
+                Report.FieldDict = new Dictionary<string, object>();
+                Report.CurrentTimestamp = DateTime.Now;
+                Report.UserName = request.Fullname;
+                Report.FileClient = this.FileClient;
+                Report.Parameters = request.Params;
+                //-- END REPORT object INIT
+
+                iTextSharp.text.Rectangle rec = new iTextSharp.text.Rectangle(Report.WidthPt, Report.HeightPt);
+                Report.Doc = new Document(rec);
+                Report.Ms1 = new MemoryStream();
+                var myDataSourceservice = base.ResolveService<DataSourceService>();
+                if (Report.DataSourceRefId != string.Empty)
                 {
-                    //cresp = this.Redis.Get<DataSourceColumnsResponse>(string.Format("{0}_columns", Report.DataSourceRefId));
-                    //if (cresp == null)
-                    //    cresp = myDataSourceservice.Any(new DataSourceColumnsRequest
-                    //    {
-                    //        RefId = Report.DataSourceRefId
-                    //    });
-                    //Report.DataColumns = (cresp.Columns.Count > 1) ? cresp.Columns[1] : cresp.Columns[0];
-                    //dresp = myDataSourceservice.Any(new DataSourceDataRequest { RefId = Report.DataSourceRefId, Draw = 1, Start = 0, Length = 100, Params = request.Params });
-                    //Report.DataRows = dresp.Data;
-                    //if (dresp.Data.Count == 0)
-                    //{
-                    //    return new ReportRenderResponse { StreamWrapper = new MemorystreamWrapper(Report.Ms1) };
-                    //}
+                    Console.WriteLine("Report.DataSourceRefId   :" + Report.DataSourceRefId);
+                    dsresp = myDataSourceservice.Any(new DataSourceDataSetRequest { RefId = Report.DataSourceRefId, Params = Report.Parameters });
+                    Report.DataSet = dsresp.DataSet;
+                    {
+                        //cresp = this.Redis.Get<DataSourceColumnsResponse>(string.Format("{0}_columns", Report.DataSourceRefId));
+                        //if (cresp == null)
+                        //    cresp = myDataSourceservice.Any(new DataSourceColumnsRequest
+                        //    {
+                        //        RefId = Report.DataSourceRefId
+                        //    });
+                        //Report.DataColumns = (cresp.Columns.Count > 1) ? cresp.Columns[1] : cresp.Columns[0];
+                        //dresp = myDataSourceservice.Any(new DataSourceDataRequest { RefId = Report.DataSourceRefId, Draw = 1, Start = 0, Length = 100, Params = request.Params });
+                        //Report.DataRows = dresp.Data;
+                        //if (dresp.Data.Count == 0)
+                        //{
+                        //    return new ReportRenderResponse { StreamWrapper = new MemorystreamWrapper(Report.Ms1) };
+                        //}
+                    }
+                }
+
+                Report.Writer = PdfWriter.GetInstance(Report.Doc, Report.Ms1);
+                Report.Writer.Open();
+                Report.Doc.Open();
+                Report.Doc.AddTitle(Report.Name);
+                Report.Writer.PageEvent = new HeaderFooter(Report);
+                Report.Writer.CloseStream = true;//important
+                Report.Canvas = Report.Writer.DirectContent;
+                Report.PageNumber = Report.Writer.PageNumber;
+                Report.InitializeSummaryFields();
+
+                Report.GetWatermarkImages(/*this.FileClient*/);
+
+                foreach (EbReportHeader r_header in Report.ReportHeaders)
+                {
+                    FillScriptCollection(Report, r_header.Fields);
+                    FillFieldDict(Report, r_header.Fields);
+                }
+
+                foreach (EbReportFooter r_footer in Report.ReportFooters)
+                {
+                    FillScriptCollection(Report, r_footer.Fields);
+                    FillFieldDict(Report, r_footer.Fields);
+                }
+
+                foreach (EbPageHeader p_header in Report.PageHeaders)
+                {
+                    FillScriptCollection(Report, p_header.Fields);
+                    FillFieldDict(Report, p_header.Fields);
+                }
+
+                foreach (EbReportDetail detail in Report.Detail)
+                {
+                    FillScriptCollection(Report, detail.Fields);
+                    FillFieldDict(Report, detail.Fields);
+                }
+
+                foreach (EbPageFooter p_footer in Report.PageFooters)
+                {
+                    FillScriptCollection(Report, p_footer.Fields);
+                    FillFieldDict(Report, p_footer.Fields);
+                }
+
+
+                //iTextSharp.text.Font link = FontFactory.GetFont("Arial", 12, iTextSharp.text.Font.UNDERLINE, BaseColor.DarkGray);
+                // Anchor anchor = new Anchor("xyz",link);
+                //anchor.Reference = "http://eb_roby_dev.localhost:5000/ReportRender?refid=eb_roby_dev-eb_roby_dev-3-1127-1854?tab=" + JsonConvert.SerializeObject(Report.DataRow[Report.SerialNumber - 1]);
+                // d.Add(anchor);            
+                Report.Doc.NewPage();
+                Report.DrawReportHeader();
+                Report.DrawDetail();
+                Report.Doc.Close();
+                if (Report.UserPassword != string.Empty || Report.OwnerPassword != string.Empty)
+                    Report.SetPassword();
+                Report.Ms1.Position = 0;//important
+                if (Report.DataSourceRefId != string.Empty)
+                {
+                    Report.DataSet.Tables.Clear();
+                    Report.DataSet = null;
                 }
             }
-
-            Report.Writer = PdfWriter.GetInstance(Report.Doc, Report.Ms1);
-            Report.Writer.Open();
-            Report.Doc.Open();
-            Report.Doc.AddTitle(Report.Name);
-            Report.Writer.PageEvent = new HeaderFooter(Report);
-            Report.Writer.CloseStream = true;//important
-            Report.Canvas = Report.Writer.DirectContent;
-            Report.PageNumber = Report.Writer.PageNumber;
-            Report.InitializeSummaryFields();
-
-            Report.GetWatermarkImages(/*this.FileClient*/);
-
-            foreach (EbReportHeader r_header in Report.ReportHeaders)
+            catch (Exception e)
             {
-                FillScriptCollection(Report, r_header.Fields);
-                FillFieldDict(Report, r_header.Fields);
-            }
-
-            foreach (EbReportFooter r_footer in Report.ReportFooters)
-            {
-                FillScriptCollection(Report, r_footer.Fields);
-                FillFieldDict(Report, r_footer.Fields);
-            }
-
-            foreach (EbPageHeader p_header in Report.PageHeaders)
-            {
-                FillScriptCollection(Report, p_header.Fields);
-                FillFieldDict(Report, p_header.Fields);
-            }
-
-            foreach (EbReportDetail detail in Report.Detail)
-            {
-                FillScriptCollection(Report, detail.Fields);
-                FillFieldDict(Report, detail.Fields);
-            }
-
-            foreach (EbPageFooter p_footer in Report.PageFooters)
-            {
-                FillScriptCollection(Report, p_footer.Fields);
-                FillFieldDict(Report, p_footer.Fields);
-            }
-
-
-            //iTextSharp.text.Font link = FontFactory.GetFont("Arial", 12, iTextSharp.text.Font.UNDERLINE, BaseColor.DarkGray);
-            // Anchor anchor = new Anchor("xyz",link);
-            //anchor.Reference = "http://eb_roby_dev.localhost:5000/ReportRender?refid=eb_roby_dev-eb_roby_dev-3-1127-1854?tab=" + JsonConvert.SerializeObject(Report.DataRow[Report.SerialNumber - 1]);
-            // d.Add(anchor);            
-            Report.Doc.NewPage();
-            Report.DrawReportHeader();
-            Report.DrawDetail();
-            Report.Doc.Close();
-            if (Report.UserPassword != string.Empty || Report.OwnerPassword != string.Empty)
-                Report.SetPassword();
-            Report.Ms1.Position = 0;//important
-            if (Report.DataSourceRefId != string.Empty)
-            {
-                Report.DataSet.Tables.Clear();
-                Report.DataSet = null;
+                Console.WriteLine(e.Message);
             }
             return new ReportRenderResponse { StreamWrapper = new MemorystreamWrapper(Report.Ms1), ReportName = Report.Name };
         }
@@ -182,7 +188,7 @@ namespace ExpressBase.ServiceStack
                 }
                 catch (Exception e)
                 {
-
+                    Console.WriteLine(e.Message);
                 }
             }
         }
@@ -229,6 +235,7 @@ namespace ExpressBase.ServiceStack
             {
                 _isValid = false;
                 _excepMsg = e.Message;
+                Console.WriteLine(e.Message);
             }
             var matches = Regex.Matches(request.ValueExpression, @"T[0-9]{1}.\w+").OfType<Match>().Select(m => m.Groups[0].Value).Distinct();
             string[] _dataFieldsUsed = new string[matches.Count()];
@@ -299,9 +306,9 @@ namespace ExpressBase.ServiceStack
                 Report.DrawReportFooter();
             Report.DrawWaterMark(d, writer);
             ColumnText ct = new ColumnText(Report.Canvas);
-            Phrase phrase = new Phrase(Report.PageNumber.ToString() + ", " + Report.UserName +", "+Report.CurrentTimestamp);
-            phrase.Font= FontFactory.GetFont("Arial", 12, iTextSharp.text.Font.UNDERLINE, BaseColor.DarkGray);
-            ct.SetSimpleColumn(phrase, 100, 150, Report.WidthPt -10, 150, 15, Element.ALIGN_RIGHT);
+            Phrase phrase = new Phrase(Report.PageNumber.ToString() + ", " + Report.UserName + ", " + Report.CurrentTimestamp);
+            phrase.Font = FontFactory.GetFont("Arial", 12, iTextSharp.text.Font.UNDERLINE, BaseColor.DarkGray);
+            ct.SetSimpleColumn(phrase, 100, 150, Report.WidthPt - 10, 150, 15, Element.ALIGN_RIGHT);
             ct.Go();
         }
 
