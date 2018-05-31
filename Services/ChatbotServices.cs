@@ -363,6 +363,17 @@ WHERE
 				pos++;
 			}
 
+			colsName = ", eb_created_by, eb_created_at, eb_lastmodified_by, eb_lastmodified_at, eb_del, eb_void, eb_transaction_date, eb_autogen";
+			
+			Columns.Add(new DVNumericColumn { Data = pos++, Name = "eb_created_by", sTitle = "eb_created_by", Type = EbDbTypes.Int32, bVisible = true, sWidth = "100px", ClassName = "tdheight" });
+			Columns.Add(new DVNumericColumn { Data = pos++, Name = "eb_created_at", sTitle = "eb_created_at", Type = EbDbTypes.DateTime, bVisible = true, sWidth = "100px", ClassName = "tdheight" });
+			Columns.Add(new DVNumericColumn { Data = pos++, Name = "eb_lastmodified_by", sTitle = "eb_lastmodified_by", Type = EbDbTypes.Int32, bVisible = true, sWidth = "100px", ClassName = "tdheight" });
+			Columns.Add(new DVNumericColumn { Data = pos++, Name = "eb_lastmodified_at", sTitle = "eb_lastmodified_at", Type = EbDbTypes.DateTime, bVisible = true, sWidth = "100px", ClassName = "tdheight" });
+			Columns.Add(new DVNumericColumn { Data = pos++, Name = "eb_del", sTitle = "eb_del", Type = EbDbTypes.Boolean, bVisible = true, sWidth = "100px", ClassName = "tdheight" });
+			Columns.Add(new DVNumericColumn { Data = pos++, Name = "eb_void", sTitle = "eb_void", Type = EbDbTypes.Boolean, bVisible = true, sWidth = "100px", ClassName = "tdheight" });
+			Columns.Add(new DVNumericColumn { Data = pos++, Name = "eb_transaction_date", sTitle = "eb_transaction_date", Type = EbDbTypes.DateTime, bVisible = true, sWidth = "100px", ClassName = "tdheight" });
+			Columns.Add(new DVNumericColumn { Data = pos++, Name = "eb_autogen", sTitle = "eb_autogen", Type = EbDbTypes.Decimal, bVisible = true, sWidth = "100px", ClassName = "tdheight" });
+
 			if (!rslt)
 			{
 				var str = "id SERIAL PRIMARY KEY,";
@@ -373,8 +384,8 @@ WHERE
 				str += "eb_lastmodified_at " + vDbTypes.DateTime.VDbType.ToString() + ",";
 				str += "eb_del " + vDbTypes.Boolean.VDbType.ToString() + " DEFAULT 'F',";
 				str += "eb_void " + vDbTypes.Boolean.VDbType.ToString() + " DEFAULT 'F',";
-				str += "transaction_date " + vDbTypes.DateTime.VDbType.ToString() + ",";
-				str += "autogen " + vDbTypes.Int64.VDbType.ToString();
+				str += "eb_transaction_date " + vDbTypes.DateTime.VDbType.ToString() + ",";
+				str += "eb_autogen " + vDbTypes.Int64.VDbType.ToString();
 				cols += str;
 				string sql = "CREATE TABLE @tbl(@cols)".Replace("@cols", cols).Replace("@tbl", request.BotObj.TableName);
 				this.EbConnectionFactory.ObjectsDB.CreateTable(sql);
@@ -400,7 +411,13 @@ WHERE
 				//                where table_name = '@tbl';".Replace("@tbl", request.BotObj.TableName);
 				//EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery(sql);
 				var ColsColl = this.EbConnectionFactory.ObjectsDB.GetColumnSchema(request.BotObj.TableName);
+				bool modify = false;
 				var sql = "";
+				if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.ORACLE)/////////////////////////
+					sql = "ALTER TABLE @tbl ADD (";
+				else
+					sql = "ALTER TABLE @tbl ADD COLUMN (";
+				
 				var name = "";
 				foreach (DVBaseColumn col in Columns)
 				{
@@ -411,28 +428,31 @@ WHERE
 						if (name == (dr.ColumnName.ToLower()))
 						{
 							//type check
-							if (col.Type == dr.Type)
-							{
+							//if (col.Type == dr.Type)
+							//{
 								flag = true;
 								break;
-							}
-							else
-							{
-								flag = true;
-								//Errorrrrrrrrr...........
-							}
+							//}
+							//else
+							//{
+							//	flag = true;
+							//	//Errorrrrrrrrr...........
+							//}
 						}
 						else
 							flag = false;
 					}
 					if (!flag)
-						sql += "alter table @tbl Add column " + name + " " + vDbTypes.GetVendorDbType(col.Type).ToString() + ";";
+					{
+						sql += name + " " + vDbTypes.GetVendorDbType(col.Type).ToString() + ",";
+						modify = true;
+					}
 
 				}
-				if (sql != "")
+				if (modify)
 				{
 					sql = sql.Replace("@tbl", request.BotObj.TableName);
-					var ret = this.EbConnectionFactory.ObjectsDB.UpdateTable(sql);
+					var ret = this.EbConnectionFactory.ObjectsDB.UpdateTable(sql.Substring(0,sql.Length-1) + ")");
 				}
 			}
 
@@ -617,14 +637,14 @@ WHERE
 				}
 				
 			}
-			cols = cols + "eb_created_by,eb_created_at,eb_lastmodified_by,eb_lastmodified_at,transaction_date,autogen";
-			vals = vals + ":eb_created_by,:eb_created_at,:eb_lastmodified_by,:eb_lastmodified_at,:transaction_date,:autogen";
+			cols = cols + "eb_created_by,eb_created_at,eb_lastmodified_by,eb_lastmodified_at,eb_transaction_date,eb_autogen";
+			vals = vals + ":eb_created_by,:eb_created_at,:eb_lastmodified_by,:eb_lastmodified_at,:eb_transaction_date,:eb_autogen";
 			paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_created_by", EbDbTypes.Int32, request.UserId));
-			paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_created_at", EbDbTypes.DateTime, DateTime.Now));
+			paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_created_at", EbDbTypes.Date, DateTime.Now));
 			paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_lastmodified_by", EbDbTypes.Int32, request.UserId));
-			paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_lastmodified_at", EbDbTypes.DateTime, DateTime.Now));
-			paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("transaction_date", EbDbTypes.DateTime, DateTime.Now));
-			paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("autogen", EbDbTypes.Int64, new Random().Next()));
+			paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_lastmodified_at", EbDbTypes.Date, DateTime.Now));
+			paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_transaction_date", EbDbTypes.Date, DateTime.Now));
+			paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_autogen", EbDbTypes.Int64, new Random().Next()));
 			var qry = string.Format("insert into @tbl({0}) values({1})".Replace("@tbl", request.TableName), cols, vals);
 
 			//append second insert query
