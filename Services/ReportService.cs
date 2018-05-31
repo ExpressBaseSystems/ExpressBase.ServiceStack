@@ -70,8 +70,7 @@ namespace ExpressBase.ServiceStack
                 Report.CurrentTimestamp = DateTime.Now;
                 Report.UserName = request.Fullname;
                 Report.FileClient = new EbStaticFileClient();
-                Report.FileClient = this.FileClient;
-                Console.WriteLine("Inside Report Service...\nFileClientBaseUri: "+ this.FileClient.BaseUri+ "="+ Report.FileClient);
+                Report.FileClient = this.FileClient; 
                 Report.Parameters = request.Params;
                 //-- END REPORT object INIT
 
@@ -80,8 +79,7 @@ namespace ExpressBase.ServiceStack
                 Report.Ms1 = new MemoryStream();
                 var myDataSourceservice = base.ResolveService<DataSourceService>();
                 if (Report.DataSourceRefId != string.Empty)
-                {
-                    Console.WriteLine("Report.DataSourceRefId   :" + Report.DataSourceRefId);
+                { 
                     dsresp = myDataSourceservice.Any(new DataSourceDataSetRequest { RefId = Report.DataSourceRefId, Params = Report.Parameters });
                     Report.DataSet = dsresp.DataSet;
                     {
