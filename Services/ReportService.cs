@@ -305,11 +305,7 @@ namespace ExpressBase.ServiceStack
             if (Report.IsLastpage == true)
                 Report.DrawReportFooter();
             Report.DrawWaterMark(d, writer);
-            ColumnText ct = new ColumnText(Report.Canvas);
-            Phrase phrase = new Phrase(Report.PageNumber.ToString() + ", " + Report.UserName + ", " + Report.CurrentTimestamp);
-            phrase.Font = FontFactory.GetFont("Arial", 12, iTextSharp.text.Font.UNDERLINE, BaseColor.DarkGray);
-            ct.SetSimpleColumn(phrase, 100, 150, Report.WidthPt - 10, 150, 15, Element.ALIGN_RIGHT);
-            ct.Go();
+            Report.SetDetail();
         }
 
         public HeaderFooter(EbReport _c) : base()
