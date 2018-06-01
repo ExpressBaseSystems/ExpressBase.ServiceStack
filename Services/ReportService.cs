@@ -161,7 +161,7 @@ namespace ExpressBase.ServiceStack
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.Message);
+                Console.WriteLine("Exception-reportService " + e.ToString());
             }
             return new ReportRenderResponse { StreamWrapper = new MemorystreamWrapper(Report.Ms1), ReportName = Report.Name };
         }
