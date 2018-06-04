@@ -365,9 +365,9 @@ WHERE
 
 			colsName = ", eb_created_by, eb_created_at, eb_lastmodified_by, eb_lastmodified_at, eb_del, eb_void, eb_transaction_date, eb_autogen";
 			
-			Columns.Add(new DVNumericColumn { Data = pos++, Name = "eb_created_by", sTitle = "eb_created_by", Type = EbDbTypes.Int32, bVisible = true, sWidth = "100px", ClassName = "tdheight" });
+			Columns.Add(new DVNumericColumn { Data = pos++, Name = "eb_created_by", sTitle = "eb_created_by", Type = EbDbTypes.Decimal, bVisible = true, sWidth = "100px", ClassName = "tdheight" });
 			Columns.Add(new DVNumericColumn { Data = pos++, Name = "eb_created_at", sTitle = "eb_created_at", Type = EbDbTypes.DateTime, bVisible = true, sWidth = "100px", ClassName = "tdheight" });
-			Columns.Add(new DVNumericColumn { Data = pos++, Name = "eb_lastmodified_by", sTitle = "eb_lastmodified_by", Type = EbDbTypes.Int32, bVisible = true, sWidth = "100px", ClassName = "tdheight" });
+			Columns.Add(new DVNumericColumn { Data = pos++, Name = "eb_lastmodified_by", sTitle = "eb_lastmodified_by", Type = EbDbTypes.Decimal, bVisible = true, sWidth = "100px", ClassName = "tdheight" });
 			Columns.Add(new DVNumericColumn { Data = pos++, Name = "eb_lastmodified_at", sTitle = "eb_lastmodified_at", Type = EbDbTypes.DateTime, bVisible = true, sWidth = "100px", ClassName = "tdheight" });
 			Columns.Add(new DVNumericColumn { Data = pos++, Name = "eb_del", sTitle = "eb_del", Type = EbDbTypes.Boolean, bVisible = true, sWidth = "100px", ClassName = "tdheight" });
 			Columns.Add(new DVNumericColumn { Data = pos++, Name = "eb_void", sTitle = "eb_void", Type = EbDbTypes.Boolean, bVisible = true, sWidth = "100px", ClassName = "tdheight" });
@@ -442,7 +442,7 @@ WHERE
 						else
 							flag = false;
 					}
-					if (!flag)
+					if (!flag && !name.Equals("id"))/////////////
 					{
 						sql += name + " " + vDbTypes.GetVendorDbType(col.Type).ToString() + ",";
 						modify = true;
@@ -554,14 +554,21 @@ WHERE
 			int cardCount = 0;
 
 			foreach (var obj in request.Fields)
-			{
-				
+			{				
 				if (obj.Type == EbDbTypes.Decimal)
 				{
 					cols += obj.Name + ",";
-					vals += ":" + obj.Name + ",";
-					parameter1 = this.EbConnectionFactory.ObjectsDB.GetNewParameter(obj.Name, EbDbTypes.Decimal, double.Parse(obj.Value));
-					paramlist.Add(parameter1);
+					if (obj.AutoIncrement)
+					{
+						vals+= string.Format("(SELECT MAX({0})+1 FROM {1}),", obj.Name, request.TableName);
+					}
+					else
+					{
+						vals += ":" + obj.Name + ",";
+						parameter1 = this.EbConnectionFactory.ObjectsDB.GetNewParameter(obj.Name, EbDbTypes.Decimal, double.Parse(obj.Value));
+						paramlist.Add(parameter1);
+					}
+					
 				}
 				else if (obj.Type == EbDbTypes.Date)
 				{
