@@ -205,21 +205,21 @@ WHERE
         }
 
         [CompressResponse]
-        public object Get(EbObjectParticularVersionRequest request)  
+        public object Get(EbObjectParticularVersionRequest request)
         {  // Fetch particular version with json of a particular Object
 
             ILog log = LogManager.GetLogger(GetType());
-           // parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":refid", EbDbTypes.String, request.RefId));
+            // parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":refid", EbDbTypes.String, request.RefId));
             DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("refid", EbDbTypes.String, request.RefId) };
             var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(this.EbConnectionFactory.ObjectsDB.EB_PARTICULAR_VERSION_OF_AN_OBJ, parameters);
 
             foreach (EbDataRow dr in dt.Rows)
             {
-				var _ebObject = (new EbObjectWrapper
-				{
-					Json = dr[0].ToString(),
-					VersionNumber = dr[1].ToString(),
-					EbObjectType = (dr[4] != DBNull.Value) ? Convert.ToInt32(dr[4]) : 0,
+                var _ebObject = (new EbObjectWrapper
+                {
+                    Json = dr[0].ToString(),
+                    VersionNumber = dr[1].ToString(),
+                    EbObjectType = (dr[4] != DBNull.Value) ? Convert.ToInt32(dr[4]) : 0,
                     Status = Enum.GetName(typeof(ObjectLifeCycleStatus), Convert.ToInt32(dr[2])),
                     Tags = dr[3].ToString()
                 });
@@ -284,7 +284,7 @@ WHERE
         [CompressResponse]
         public object Get(EbObjectObjListRequest request)
         { // Get All latest committed versions of this Object Type without json
-            
+
             DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("type", EbDbTypes.Int32, request.EbObjectType) };
             var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(this.EbConnectionFactory.ObjectsDB.EB_ALL_LATEST_COMMITTED_VERSION_OF_AN_OBJ, parameters);
 
@@ -432,17 +432,17 @@ WHERE
                         Id = Convert.ToInt32(dr[0]),
                         Name = dr[1].ToString(),
                         EbObjectType = ((EbObjectType)Convert.ToInt32(dr[2])).IntCode,
-                        Status = Enum.GetName(typeof(ObjectLifeCycleStatus),Convert.ToInt32(dr[3])),
+                        Status = Enum.GetName(typeof(ObjectLifeCycleStatus), Convert.ToInt32(dr[3])),
                         Description = dr[4].ToString(),
                         ChangeLog = dr[5].ToString(),
                         CommitTs = Convert.ToDateTime((dr[6].ToString()) == "0" || (dr[6].ToString()) == "" ? DateTime.MinValue : dr[6]),
                         CommitUname = dr[7].ToString(),
                         RefId = dr[8].ToString(),
                         VersionNumber = dr[9].ToString(),
-                        WorkingMode = (dr[10].ToString()=="T")? true : false,
+                        WorkingMode = (dr[10].ToString() == "T") ? true : false,
                         Json_wc = dr[12] as string,
                         Json_lc = dr[13] as string,
-                        Wc_All = (dr[11] as string==null)? (dr[11] as string[]):(dr[11] as string).Split(","),
+                        Wc_All = (dr[11] as string == null) ? (dr[11] as string[]) : (dr[11] as string).Split(","),
                         Tags = dr[17].ToString(),
                         Apps = dr[18].ToString().Replace("\n", "").Replace("\t", "").Replace("\r", ""),
                         Dashboard_Tiles = new EbObjectWrapper_Dashboard
@@ -472,6 +472,7 @@ WHERE
                 }
                 catch (Exception e)
                 {
+                    Console.WriteLine("Exception: " + e.ToString());
                 }
 
             }
@@ -522,7 +523,10 @@ WHERE
                     });
                     f.Add(_ebObject);
                 }
-                catch (Exception e) { }     
+                catch (Exception e)
+                {
+                    Console.WriteLine("Exception: " + e.ToString());
+                }
             }
             return new EbObjectUpdateDashboardResponse { Data = f };
         }
@@ -654,6 +658,7 @@ WHERE
             }
             catch (Exception e)
             {
+                Console.WriteLine("Exception: " + e.ToString());
 
             }
             return new EbObject_CommitResponse() { RefId = refId };
@@ -678,7 +683,7 @@ WHERE
                     //string sql = "SELECT eb_objects_save(@id, @obj_name, @obj_desc, @obj_type, @obj_json, @commit_uid, @src_pid, @cur_pid, @relations, @tags, @app_id)";
                     string sql = this.EbConnectionFactory.ObjectsDB.EB_SAVE_OBJECT;
                     cmd = this.EbConnectionFactory.ObjectsDB.GetNewCommand(con, sql);
-                    
+
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":id", EbDbTypes.String, request.RefId));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_name", EbDbTypes.String, request.Name.Replace("\n", "").Replace("\t", "").Replace("\r", "")));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_desc", EbDbTypes.String, (!string.IsNullOrEmpty(request.Description)) ? request.Description : string.Empty));
@@ -721,6 +726,7 @@ WHERE
             }
             catch (Exception e)
             {
+                Console.WriteLine("Exception: " + e.ToString());
 
             }
             return new EbObject_SaveResponse() { RefId = refId };
@@ -746,10 +752,10 @@ WHERE
                     //string sql = "SELECT eb_objects_create_new_object(@obj_name, @obj_desc, @obj_type, @obj_cur_status, @obj_json::json, @commit_uid, @src_pid, @cur_pid, @relations, @issave, @tags, @app_id)";
                     String sql = this.EbConnectionFactory.ObjectsDB.EB_CREATE_NEW_OBJECT;
                     cmd = this.EbConnectionFactory.ObjectsDB.GetNewCommand(con, sql);
-                    
+
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_name", EbDbTypes.String, request.Name.Replace("\n", "").Replace("\t", "").Replace("\r", "")));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_desc", EbDbTypes.String, (!string.IsNullOrEmpty(request.Description)) ? request.Description : string.Empty));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_type", EbDbTypes.Int32, GetObjectType(obj))); 
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_type", EbDbTypes.Int32, GetObjectType(obj)));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_cur_status", EbDbTypes.Int32, (int)request.Status));//request.Status
                     //cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_json", EbDbTypes.Json, request.Json));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":commit_uid", EbDbTypes.Int32, request.UserId));
@@ -774,11 +780,11 @@ WHERE
                         NTV[] parms = new NTV[2];
                         parms[0] = new NTV() { Name = ":jsonobj", Type = EbDbTypes.Json, Value = request.Json };
                         parms[1] = new NTV { Name = ":refid", Type = EbDbTypes.String, Value = refId };
-                        
-                        Update_Json_Val(con,sql1, parms);
+
+                        Update_Json_Val(con, sql1, parms);
                     }
 
-                        //refId = cmd.ExecuteScalar().ToString();
+                    //refId = cmd.ExecuteScalar().ToString();
                     SetRedis(obj, refId);
                     if (obj is EbBotForm)
                     {
@@ -789,6 +795,7 @@ WHERE
             }
             catch (Exception e)
             {
+                Console.WriteLine("Exception: " + e.ToString());
 
             }
             return new EbObject_Create_New_ObjectResponse() { RefId = refId };
@@ -826,6 +833,7 @@ WHERE
             }
             catch (Exception e)
             {
+                Console.WriteLine("Exception: " + e.ToString());
 
 
             }
@@ -862,6 +870,7 @@ WHERE
             }
             catch (Exception e)
             {
+                Console.WriteLine("Exception: " + e.ToString());
 
             }
             return new EbObject_Create_Minor_VersionResponse() { RefId = refId };
@@ -897,34 +906,36 @@ WHERE
             }
             catch (Exception e)
             {
+                Console.WriteLine("Exception: " + e.ToString());
 
             }
             return new EbObject_Create_Patch_VersionResponse() { RefId = refId };
         }
 
-        public void Update_Json_Val(DbConnection con,String qry, NTV[] param)
+        public void Update_Json_Val(DbConnection con, String qry, NTV[] param)
         {
             try
             {
-                
+
                 DbTransaction transaction = con.BeginTransaction();
                 DbCommand cmnd = null;
                 cmnd = con.CreateCommand();
                 cmnd.Transaction = transaction;
                 cmnd.CommandText = qry;
 
-                foreach(var para in param)
+                foreach (var para in param)
                 {
                     DbParameter parm = this.EbConnectionFactory.ObjectsDB.GetNewParameter(para.Name, para.Type);
                     parm.Value = para.Value;
                     cmnd.Parameters.Add(parm);
                 }
-                
+
                 cmnd.ExecuteNonQuery();
                 cmnd.Transaction.Commit();
             }
             catch (Exception e)
             {
+                Console.WriteLine("Exception: " + e.ToString());
 
             }
         }
@@ -934,7 +945,7 @@ WHERE
         {
             ILog log = LogManager.GetLogger(GetType());
             log.Info("#DS insert -- entered post");
-           
+
             using (var con = this.EbConnectionFactory.ObjectsDB.GetNewConnection())
             {
                 con.Open();
@@ -974,7 +985,7 @@ WHERE
             }
             catch (Exception e)
             {
-
+                Console.WriteLine("Exception: " + e.ToString());
             }
         }
 

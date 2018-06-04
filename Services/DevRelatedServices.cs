@@ -173,6 +173,7 @@ namespace ExpressBase.ServiceStack
             }
             catch (Exception ee)
             {
+                Console.WriteLine("Exception: " + ee.ToString());
             }
             return new GetObjectResponse { Data = _types };
         }

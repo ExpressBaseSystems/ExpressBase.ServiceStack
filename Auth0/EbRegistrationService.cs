@@ -17,7 +17,7 @@ namespace ExpressBase.ServiceStack.Auth0
 
         public RegisterResponse Post(RegisterRequest request)
         {
-            var response = new RegisterResponse(); 
+            var response = new RegisterResponse();
             var _InfraDb = base.ResolveService<IEbConnectionFactory>() as EbConnectionFactory;
 
             DbParameter[] parameters = {
@@ -26,7 +26,7 @@ namespace ExpressBase.ServiceStack.Auth0
             };
 
             EbDataTable dt = _InfraDb.DataDB.DoQuery("INSERT INTO eb_users (email, u_token) VALUES ( @email, md5( @email || now())) RETURNING id, u_token;", parameters);
-            
+
             if (dt.Rows.Count > 0)
             {
                 try
@@ -37,8 +37,9 @@ namespace ExpressBase.ServiceStack.Auth0
                     response.UserName = dt.Rows[0][1].ToString();
                     response.UserId = dt.Rows[0][0].ToString();
                 }
-                catch (Exception e) {
-                  
+                catch (Exception e)
+                {
+                    Console.WriteLine("Exception: " + e.ToString());
                 }
             }
 
