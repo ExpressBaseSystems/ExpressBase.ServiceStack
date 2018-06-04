@@ -149,8 +149,8 @@ WHERE
 			}
 			catch (Exception e)
 			{
-
-			}
+                Console.WriteLine("Exception: " + e.ToString());
+            }
 			return new CreateBotResponse() { BotId = botid };
 		}
 

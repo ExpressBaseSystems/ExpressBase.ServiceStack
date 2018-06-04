@@ -68,10 +68,11 @@ namespace ExpressBase.ServiceStack.Services
 
                 catch (Exception e)
                 {
+                    Console.WriteLine("Exception: " + e.ToString());
                     //if (e.Data["Code"].ToString() == "42P04")
                     //    return DbOperations(request, DataDB);
                     //else
-                        return new EbDbCreateResponse { ResponseStatus =   new ResponseStatus { Message = "Database Already exists" } };
+                    return new EbDbCreateResponse { ResponseStatus =   new ResponseStatus { Message = "Database Already exists" } };
                 }
             }
           
@@ -307,7 +308,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
-                Console.WriteLine(".............problem in CreateUsers4DataBase");
+                Console.WriteLine(".............problem in CreateUsers4DataBase: " + e.ToString());
                 return null;
             }
         }
@@ -334,6 +335,7 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception e)
             {
                 //return false;
+                Console.WriteLine("Exception: " + e.ToString());
                 throw new Exception("Already Exists");
             }
 
@@ -384,6 +386,7 @@ namespace ExpressBase.ServiceStack.Services
                 }
             }
             catch (Exception e) {
+                Console.WriteLine("Exception: " + e.ToString());
                 Console.WriteLine(".............problem in InsertIntoTables");
                 return false;
             }

@@ -42,6 +42,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch(Exception e)
             {
+                Console.WriteLine("Exception: " + e.ToString());
                 return false;
             }
         }
