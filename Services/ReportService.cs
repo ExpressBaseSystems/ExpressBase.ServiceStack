@@ -59,7 +59,6 @@ namespace ExpressBase.ServiceStack
                 EbObjectParticularVersionResponse resultlist = myObjectservice.Get(new EbObjectParticularVersionRequest { RefId = request.Refid }) as EbObjectParticularVersionResponse;
                 Report = EbSerializers.Json_Deserialize<EbReport>(resultlist.Data[0].Json);
                 Report.ReportService = this;
-                //Report.FileService = base.ResolveService<FileService>();
                 Report.SolutionId = request.TenantAccountId;
                 Report.IsLastpage = false;
                 Report.WatermarkImages = new Dictionary<string, byte[]>();
@@ -143,9 +142,9 @@ namespace ExpressBase.ServiceStack
 
 
                 //iTextSharp.text.Font link = FontFactory.GetFont("Arial", 12, iTextSharp.text.Font.UNDERLINE, BaseColor.DarkGray);
-                // Anchor anchor = new Anchor("xyz",link);
+                //Anchor anchor = new Anchor("xyz", link);
                 //anchor.Reference = "http://eb_roby_dev.localhost:5000/ReportRender?refid=eb_roby_dev-eb_roby_dev-3-1127-1854?tab=" + JsonConvert.SerializeObject(Report.DataRow[Report.SerialNumber - 1]);
-                // d.Add(anchor);            
+                //Report.Doc.Add(anchor);
                 Report.Doc.NewPage();
                 Report.DrawReportHeader();
                 Report.DrawDetail();
