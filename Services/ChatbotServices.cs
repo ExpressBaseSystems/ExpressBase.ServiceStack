@@ -294,6 +294,7 @@ WHERE
 						else
 						{
 							var ColsColl2 = this.EbConnectionFactory.ObjectsDB.GetColumnSchema(request.BotObj.TableName + "_lines");
+							bool modify2 = false;
 							var sql2 = "";
 							var name2 = "";
 							foreach (DVBaseColumn col in LineColumns)
@@ -305,29 +306,44 @@ WHERE
 									if (name2 == (dr.ColumnName.ToLower()))
 									{
 										//type check
-										if (col.Type == dr.Type)
-										{
+										//if (col.Type == dr.Type)
+										//{
 											flag2 = true;
 											break;
-										}
-										else
-										{
-											flag2 = true;
-											//Errorrrrrrrrr...........
-										}
+										//}
+										//else
+										//{
+										//	flag2 = true;
+										//	//Errorrrrrrrrr...........
+										//}
 									}
 									else
 										flag2 = false;
 								}
-								if (!flag2)
-									sql2 += "alter table @tbl Add column " + name2 + " " + vDbTypes.GetVendorDbType(col.Type).ToString() + ";";
+								if (!flag2 && !name2.Equals("id"))/////////////
+								{
+									sql2 += name2 + " " + vDbTypes.GetVendorDbType(col.Type).ToString() + ",";
+									modify2 = true;
+								}
+								//if (!flag2)
+								//	sql2 += "alter table @tbl Add column " + name2 + " " + vDbTypes.GetVendorDbType(col.Type).ToString() + ";";
 
 							}
-							if (sql2 != "")
+							if (modify2)
 							{
+								if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.ORACLE)/////////////////////////
+									sql2 = "ALTER TABLE @tbl ADD (" + sql2.Substring(0, sql2.Length - 1) + ")";
+								else
+									sql2 = "ALTER TABLE @tbl ADD COLUMN " + sql2.Substring(0, sql2.Length - 1);
+
 								sql2 = sql2.Replace("@tbl", request.BotObj.TableName + "_lines");
-								var ret2 = this.EbConnectionFactory.ObjectsDB.UpdateTable(sql2);
+								var ret = this.EbConnectionFactory.ObjectsDB.UpdateTable(sql2);
 							}
+							//if (sql2 != "")
+							//{
+							//	sql2 = sql2.Replace("@tbl", request.BotObj.TableName + "_lines");
+							//	var ret2 = this.EbConnectionFactory.ObjectsDB.UpdateTable(sql2);
+							//}
 						}
 					}
 					//single card
@@ -412,13 +428,8 @@ WHERE
 				//EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery(sql);
 				var ColsColl = this.EbConnectionFactory.ObjectsDB.GetColumnSchema(request.BotObj.TableName);
 				bool modify = false;
-				var sql = "";
-				if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.ORACLE)/////////////////////////
-					sql = "ALTER TABLE @tbl ADD (";
-				else
-					sql = "ALTER TABLE @tbl ADD COLUMN (";
-				
-				var name = "";
+				var sql = string.Empty;								
+				var name = string.Empty;
 				foreach (DVBaseColumn col in Columns)
 				{
 					var flag = false;
@@ -451,8 +462,13 @@ WHERE
 				}
 				if (modify)
 				{
+					if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.ORACLE)/////////////////////////
+						sql = "ALTER TABLE @tbl ADD (" + sql.Substring(0, sql.Length - 1) + ")";
+					else
+						sql = "ALTER TABLE @tbl ADD COLUMN " + sql.Substring(0, sql.Length - 1);
+
 					sql = sql.Replace("@tbl", request.BotObj.TableName);
-					var ret = this.EbConnectionFactory.ObjectsDB.UpdateTable(sql.Substring(0,sql.Length-1) + ")");
+					var ret = this.EbConnectionFactory.ObjectsDB.UpdateTable(sql);
 				}
 			}
 
