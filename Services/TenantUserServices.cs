@@ -21,7 +21,6 @@ namespace ExpressBase.ServiceStack.Services
             using (var con = this.EbConnectionFactory.ObjectsDB.GetNewConnection())
             {
                 con.Open();
-                DbCommand cmd = null;
                 List<LocationConfig> list = request.ConfString;
                 StringBuilder query1 = new StringBuilder();
                 query1.Append(@"INSERT INTO eb_location_config (keys,isrequired) VALUES");
@@ -30,7 +29,7 @@ namespace ExpressBase.ServiceStack.Services
                 int count = 0;
                 int InsertCount = 0;
                 for (int i = 0; i < list.Count(); i++)
-                    if (list[i].KeyId == "")
+                    if (list[i].KeyId == null)
                     {
                         query1.Append("( " + (keys + count) + "," + (isrequired + count) + "),");
                         parameters1.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":key" + count, EbDbTypes.String, list[i].Name));
@@ -40,7 +39,7 @@ namespace ExpressBase.ServiceStack.Services
                         i--;
                         InsertCount++;
                 }
-                query1.Length = query1.Length - 1;
+                query1.Length--;
                 query1.Append(";");
                 int dt1 = 0;
                 if (InsertCount > 0)
@@ -48,30 +47,36 @@ namespace ExpressBase.ServiceStack.Services
                 if (list.Count() == 0)
                     return new CreateLocationConfigResponse { };
                 StringBuilder query2 = new StringBuilder();
-                query2.Append(@"UPDATE eb_location_config AS EL SET value = L.value FROM (VALUES");
+                query2.Append(@"UPDATE eb_location_config AS EL SET keys = L.keys , isrequired =L.isrequired FROM (VALUES");
                 List<DbParameter> parameters2 = new List<DbParameter>();
-                string kname = ":kname", kreq = ":kreq";
+                string kname = ":kname", kreq = ":kreq",kid=":kid";
                 count = 0;
                 foreach (var obj in list)
                 {
-                    query2.Append("(" + (kname + count) + "," + (kreq + count) + "),");
+                    query2.Append("(" + (kname + count) + "," + (kreq + count) + "," + (kid + count)+"),");
                     parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter((kname + count), EbDbTypes.String, obj.Name));
                     parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter((kreq + count), EbDbTypes.String, obj.Isrequired));
+                    parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter((kid + count), EbDbTypes.Int32, Convert.ToInt32(obj.KeyId)));
+                    count++;
                 }
-                    return new CreateLocationConfigResponse { };
+                query2.Length--;
+                query2.Append(") AS L(keys, isrequired,kid) WHERE L.kid = EL.id;");
+                var dt2 = this.EbConnectionFactory.ObjectsDB.DoNonQuery(query2.ToString(), parameters2.ToArray());
+                return new CreateLocationConfigResponse { };
             }
         }
+
         public GetLocationConfigResponse Get(GetLocationConfigRequest request)
         {
             List<LocationConfig> Conf = new List<LocationConfig>();
-            string query = "SELECT * FROM eb_location_config;";
+            string query = "SELECT * FROM eb_location_config ORDER BY id;";
             EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery(query);
             foreach (EbDataRow r in dt.Rows)
             {
                 var confobj = new LocationConfig {
-                    Name = r[0].ToString(),
-                    Isrequired=(r[1].ToString()=="T")?"true":"false",
-                    KeyId=r[2].ToString()
+                    Name = r[1].ToString(),
+                    Isrequired=(r[2].ToString()=="T")?"true":"false",
+                    KeyId=r[0].ToString()
                 };
                 Conf.Add(confobj);
             }
