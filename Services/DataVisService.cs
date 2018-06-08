@@ -233,6 +233,27 @@ namespace ExpressBase.ServiceStack
             DataSourceDataResponse dsresponse = null;
 
             var _ds = this.Redis.Get<EbDataSource>(request.RefId);
+
+            if (_ds == null)
+            {
+                var myService = base.ResolveService<EbObjectService>();
+                var result = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = request.RefId });
+                _ds = EbSerializers.Json_Deserialize(result.Data[0].Json);
+                Redis.Set<EbDataSource>(request.RefId, _ds);
+            }
+            if (_ds.FilterDialogRefId != string.Empty)
+            {
+                var _dsf = this.Redis.Get<EbFilterDialog>(_ds.FilterDialogRefId);
+                if (_dsf == null)
+                {
+                    var myService = base.ResolveService<EbObjectService>();
+                    var result = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = _ds.FilterDialogRefId });
+                    _dsf = EbSerializers.Json_Deserialize(result.Data[0].Json);
+                    Redis.Set<EbFilterDialog>(_ds.FilterDialogRefId, _dsf);
+                }
+                if (request.Params == null)
+                    request.Params = _dsf.GetDefaultParams();
+            }
             string _sql = string.Empty;
             string tempsql = string.Empty;
 
@@ -380,6 +401,19 @@ namespace ExpressBase.ServiceStack
                     var result = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = request.RefId });
                     _ds = EbSerializers.Json_Deserialize(result.Data[0].Json);
                     Redis.Set<EbDataSource>(request.RefId, _ds);
+                }
+                if (_ds.FilterDialogRefId != string.Empty)
+                {
+                    var _dsf = this.Redis.Get<EbFilterDialog>(_ds.FilterDialogRefId);
+                    if (_dsf == null)
+                    {
+                        var myService = base.ResolveService<EbObjectService>();
+                        var result = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = _ds.FilterDialogRefId });
+                        _dsf = EbSerializers.Json_Deserialize(result.Data[0].Json);
+                        Redis.Set<EbFilterDialog>(_ds.FilterDialogRefId, _dsf);
+                    }
+                    if (request.Params == null)
+                        request.Params = _dsf.GetDefaultParams();
                 }
 
                 if (_ds != null)
