@@ -684,7 +684,7 @@ WHERE
 			}
 
 			var rslt = this.EbConnectionFactory.ObjectsDB.InsertTable(qry, paramlist.ToArray());
-			return new InsertIntoBotFormTableResponse();
+			return new InsertIntoBotFormTableResponse { RowAffected = rslt};
 		}
 
 		public GetBotsResponse Get(GetBotsRequest request)
