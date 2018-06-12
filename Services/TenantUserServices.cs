@@ -5,6 +5,7 @@ using ExpressBase.Common.LocationNSolution;
 using ExpressBase.Common.Structures;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ExpressBase.Security.Core;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
@@ -17,12 +18,13 @@ namespace ExpressBase.ServiceStack.Services
     public class TenantUserServices : EbBaseService
     {
         public TenantUserServices(IEbConnectionFactory _dbf) : base(_dbf) { }
+
         public CreateLocationConfigResponse Post(CreateLocationConfigRequest request)
         {
             using (var con = this.EbConnectionFactory.ObjectsDB.GetNewConnection())
             {
                 con.Open();
-                List<Eb_LocationConfig> list = request.ConfString;
+                List<EbLocationConfig> list = request.ConfString;
                 StringBuilder query1 = new StringBuilder();
                 query1.Append(@"INSERT INTO eb_location_config (keys,isrequired) VALUES");
                 List<DbParameter> parameters1 = new List<DbParameter>();
@@ -69,7 +71,7 @@ namespace ExpressBase.ServiceStack.Services
 
         public GetLocationConfigResponse Get(GetLocationConfigRequest request)
         {
-            List<Eb_LocationConfig> Conf = new List<Eb_LocationConfig>();
+            List<EbLocationConfig> Conf = new List<EbLocationConfig>();
             Dictionary<string, string> MetaDict = new Dictionary<string, string>();
             string query = "SELECT * FROM eb_location_config ORDER BY id; SELECT * FROM eb_locations WHERE id=:locid";
             List<DbParameter> parameters = new List<DbParameter>();
@@ -78,7 +80,7 @@ namespace ExpressBase.ServiceStack.Services
 
             foreach (EbDataRow r in dt.Tables[0].Rows)
             {
-                var confobj = new Eb_LocationConfig
+                var confobj = new EbLocationConfig
                 {
                     Name = r[1].ToString(),
                     Isrequired = (r[2].ToString() == "T") ? "true" : "false",
@@ -110,12 +112,56 @@ namespace ExpressBase.ServiceStack.Services
                 parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":meta", EbDbTypes.String, request.ConfMeta));
                 parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":lid", EbDbTypes.Int32, request.Locid));
                 var query1 = "INSERT INTO eb_locations(longname,shortname,image,meta_json) VALUES(:lname,:sname,:img,:meta);";
-                var query2 = "UPDATE eb_locations SET longname= :lname, shortname = :sname, image = :img, meta_json = :meta WHERE id=:lid;";
+                var query2 = "UPDATE eb_locations SET longname= :lname, shortname = :sname, image = :img, meta_json = :meta WHERE id = :lid;";
                 var query = ((request.Locid) > 0) ? query2 : query1;
                 var dt2 = this.EbConnectionFactory.ObjectsDB.DoNonQuery(query.ToString(), parameters.ToArray());
+                EbLocation el = new EbLocation { LocId = request.Locid, LongName = request.Longname, ShortName = request.Longname, Img = request.Img/*, Meta = request.ConfMeta*/ };
+                SetSolutionObject(el, request.TenantAccountId);
             }
             return new SaveLocationMetaResponse { };
         }
+
+        public void SetSolutionObject(EbLocation el, string tenantId)
+        {
+            var _infraService = base.ResolveService<InfraServices>();
+            GetSolutioInfoResponse res = (GetSolutioInfoResponse)_infraService.Get(new GetSolutioInfoRequest { IsolutionId = tenantId });
+            EbSolutionsWrapper wrap_sol = res.Data;
+            Dictionary<string, EbLocation> Loc = GetAllLocations();
+            Eb_Solution sol_Obj = new Eb_Solution
+            {
+                InternalSolutionID = tenantId,
+                ExternalSolutionID = wrap_sol.EsolutionId.ToString(),
+                DateCreated = wrap_sol.DateCreated.ToString(),
+                Description = wrap_sol.Description.ToString(),
+                LocationCollection = Loc,
+                NumberOfUsers = 2,
+                SolutionName = wrap_sol.SolutionName.ToString()
+            };
+            this.Redis.Set<Eb_Solution>(String.Format("solution_{0}", tenantId), sol_Obj);
+            var x=this.Redis.Get<Eb_Solution>(String.Format("solution_{0}", tenantId));
+        }
+
+        public Dictionary<string, EbLocation> GetAllLocations()
+        {
+            Dictionary<string, EbLocation> locCollection = new Dictionary<string, EbLocation>();
+            string query = "SELECT * FROM eb_locations;";
+            EbDataTable table = this.EbConnectionFactory.ObjectsDB.DoQuery(query);
+            foreach (var r in table.Rows)
+            {
+                var x = JsonConvert.DeserializeObject<Dictionary<string, string>>(r[4].ToString());
+                EbLocation el = new EbLocation
+                {
+                    LocId = Convert.ToInt32(r[0]),
+                    ShortName = r[1].ToString(),
+                    LongName = r[2].ToString(),
+                    Img = r[3].ToString(),
+                    Meta = JsonConvert.DeserializeObject<Dictionary<string, string>>(r[4].ToString())
+            };
+                locCollection[r[1].ToString()] = el;
+            }
+            return locCollection;
+        }
+
         //private string GeneratePassword()
         //{
         //    string strPwdchar = "abcdefghijklmnopqrstuvwxyz0123456789#+@&$ABCDEFGHIJKLMNOPQRSTUVWXYZ";
