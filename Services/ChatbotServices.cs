@@ -251,7 +251,7 @@ WHERE
 				else if (control is EbCardSetParent)
 				{
 
-					if ((control as EbCardSetParent).MultiSelect)///////
+					if (true)///////(control as EbCardSetParent).MultiSelect// temp fix, bcoz unable to detect singleselect on insert rqst
 					{
 						cols += control.Name + " " + vDbTypes.String.VDbType.ToString() + ",";
 						_col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = EbDbTypes.String, bVisible = true, sWidth = "100px", ClassName = "dt-body-right tdheight", RenderAs = StringRenderType.Link };
