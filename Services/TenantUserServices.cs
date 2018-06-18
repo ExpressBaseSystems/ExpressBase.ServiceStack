@@ -73,7 +73,7 @@ namespace ExpressBase.ServiceStack.Services
         {
             List<EbLocationConfig> Conf = new List<EbLocationConfig>();
             Dictionary<string, string> MetaDict = new Dictionary<string, string>();
-            string query = "SELECT * FROM eb_location_config ORDER BY id; SELECT * FROM eb_locations WHERE id=:locid";
+            string query = String.Format("SELECT * FROM eb_location_config ORDER BY id; SELECT * FROM eb_locations {0};",(request.LocId>0) ? "WHERE id =:locid":"");
             List<DbParameter> parameters = new List<DbParameter>();
             parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":locid", EbDbTypes.Int32, request.LocId));
             EbDataSet dt = this.EbConnectionFactory.ObjectsDB.DoQueries(query, parameters.ToArray());
