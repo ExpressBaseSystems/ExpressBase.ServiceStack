@@ -251,7 +251,7 @@ WHERE
 				else if (control is EbCardSetParent)
 				{
 
-					if ((control as EbCardSetParent).MultiSelect)///////
+					if (true)///////(control as EbCardSetParent).MultiSelect// temp fix, bcoz unable to detect singleselect on insert rqst
 					{
 						cols += control.Name + " " + vDbTypes.String.VDbType.ToString() + ",";
 						_col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = EbDbTypes.String, bVisible = true, sWidth = "100px", ClassName = "dt-body-right tdheight", RenderAs = StringRenderType.Link };
@@ -684,17 +684,17 @@ WHERE
 			}
 
 			var rslt = this.EbConnectionFactory.ObjectsDB.InsertTable(qry, paramlist.ToArray());
-			return new InsertIntoBotFormTableResponse();
+			return new InsertIntoBotFormTableResponse { RowAffected = rslt};
 		}
 
 		public GetBotsResponse Get(GetBotsRequest request)
 		{
 			List<BotDetails> list = new List<BotDetails>();
-			string qry = @"SELECT id, applicationname FROM eb_applications WHERE application_type = 3 AND eb_del = 'F'";
+			string qry = @"SELECT id, applicationname, app_icon FROM eb_applications WHERE application_type = 3 AND eb_del = 'F'";
 			var table = this.EbConnectionFactory.ObjectsDB.DoQuery(qry);
 			foreach (EbDataRow row in table.Rows)
 			{
-				list.Add(new BotDetails { id = Convert.ToInt32(row[0]), name = row[1].ToString() });
+				list.Add(new BotDetails { id = Convert.ToInt32(row[0]), name = row[1].ToString(), icon = row[2].ToString() });
 			}
 			return new GetBotsResponse { BotList = list};
 		}
