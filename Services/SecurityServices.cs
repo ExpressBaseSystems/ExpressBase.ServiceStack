@@ -137,9 +137,7 @@ namespace ExpressBase.ServiceStack.Services
 			{
 				request.Id = request.UserId;
 			}
-			string sql = @"SELECT id, role_name, description FROM eb_roles ORDER BY role_name;
-                        SELECT id, name,description FROM eb_usergroup ORDER BY name;
-						SELECT id, role1_id, role2_id FROM eb_role2role WHERE eb_del = 'F';";
+			string sql = this.EbConnectionFactory.DataDB.EB_MANAGEUSER_FIRST_QUERY;
 			if (request.Id > 1)
 			{
 				sql += @"SELECT fullname,nickname,email,alternateemail,dob,sex,phnoprimary,phnosecondary,landline,phextension,fbid,fbname,statusid,hide,preferencesjson
