@@ -29,6 +29,7 @@ using System.Text.RegularExpressions;
 using ServiceStack.Redis;
 using ExpressBase.Common.Structures;
 using ExpressBase.Common.LocationNSolution;
+using ExpressBase.Common.Objects;
 
 namespace ExpressBase.ServiceStack
 {
@@ -67,10 +68,11 @@ namespace ExpressBase.ServiceStack
                 Report.ValueScriptCollection = new Dictionary<string, Script>();
                 Report.AppearanceScriptCollection = new Dictionary<string, Script>();
                 Report.FieldDict = new Dictionary<string, object>();
+                Report.LinkCollection = new Dictionary<string, List<Common.Objects.EbControl>>();
                 Report.CurrentTimestamp = DateTime.Now;
                 Report.UserName = request.Fullname;
                 Report.FileClient = new EbStaticFileClient();
-                Report.FileClient = this.FileClient; 
+                Report.FileClient = this.FileClient;
                 Report.Parameters = request.Params;
                 //var x = this.Redis.Get<Eb_Solution>(String.Format("solution_{0}", request.TenantAccountId));
                 //-- END REPORT object INIT
@@ -80,7 +82,7 @@ namespace ExpressBase.ServiceStack
                 Report.Ms1 = new MemoryStream();
                 var myDataSourceservice = base.ResolveService<DataSourceService>();
                 if (Report.DataSourceRefId != string.Empty)
-                { 
+                {
                     dsresp = myDataSourceservice.Any(new DataSourceDataSetRequest { RefId = Report.DataSourceRefId, Params = Report.Parameters });
                     Report.DataSet = dsresp.DataSet;
                     {
@@ -116,30 +118,35 @@ namespace ExpressBase.ServiceStack
                 {
                     FillScriptCollection(Report, r_header.Fields);
                     FillFieldDict(Report, r_header.Fields);
+                    FillLinkCollection(Report, r_header.Fields);
                 }
 
                 foreach (EbReportFooter r_footer in Report.ReportFooters)
                 {
                     FillScriptCollection(Report, r_footer.Fields);
                     FillFieldDict(Report, r_footer.Fields);
+                    FillLinkCollection(Report, r_footer.Fields);
                 }
 
                 foreach (EbPageHeader p_header in Report.PageHeaders)
                 {
                     FillScriptCollection(Report, p_header.Fields);
                     FillFieldDict(Report, p_header.Fields);
+                    FillLinkCollection(Report, p_header.Fields);
                 }
 
                 foreach (EbReportDetail detail in Report.Detail)
                 {
                     FillScriptCollection(Report, detail.Fields);
                     FillFieldDict(Report, detail.Fields);
+                    FillLinkCollection(Report, detail.Fields);
                 }
 
                 foreach (EbPageFooter p_footer in Report.PageFooters)
                 {
                     FillScriptCollection(Report, p_footer.Fields);
                     FillFieldDict(Report, p_footer.Fields);
+                    FillLinkCollection(Report, p_footer.Fields);
                 }
 
 
@@ -201,6 +208,51 @@ namespace ExpressBase.ServiceStack
                 Report.FieldDict.Add(field.Name, field);
             }
         }
+
+        private void FillLinkCollection(EbReport Report, List<EbReportField> fields)
+        {
+            foreach (EbReportField field in fields)
+            {
+                if (field is EbDataField)
+                {
+                    string LinkRefid = (field as EbDataField).LinkRefid;
+                    if (!string.IsNullOrEmpty((field as EbDataField).LinkRefid))
+                    {
+                        var myObjectservice = base.ResolveService<EbObjectService>();
+                        var res = (EbObjectParticularVersionResponse)myObjectservice.Get(new EbObjectParticularVersionRequest { RefId = LinkRefid });
+                        EbReport linkreport = EbSerializers.Json_Deserialize<EbReport>(res.Data[0].Json);
+                        try
+                        {
+                            EbDataSource LinkDatasource = Redis.Get<EbDataSource>(linkreport.DataSourceRefId);
+                            if (LinkDatasource == null || LinkDatasource.Sql == null || LinkDatasource.Sql == string.Empty)
+                            {
+                                var result = (EbObjectParticularVersionResponse)myObjectservice.Get(new EbObjectParticularVersionRequest { RefId = linkreport.DataSourceRefId });
+                                LinkDatasource = EbSerializers.Json_Deserialize(result.Data[1].Json);
+                                Redis.Set<EbDataSource>(linkreport.DataSourceRefId, LinkDatasource);
+                            }
+
+                            if (!string.IsNullOrEmpty(LinkDatasource.FilterDialogRefId))
+                            {
+                                LinkDatasource.FilterDialog = Redis.Get<EbFilterDialog>(LinkDatasource.FilterDialogRefId);
+                                if (LinkDatasource.FilterDialog == null)
+                                {
+                                    var result = (EbObjectParticularVersionResponse)myObjectservice.Get(new EbObjectParticularVersionRequest { RefId = LinkDatasource.FilterDialogRefId });
+                                    LinkDatasource.FilterDialog = EbSerializers.Json_Deserialize(result.Data[1].Json);
+                                    Redis.Set<EbFilterDialog>(LinkDatasource.FilterDialogRefId, LinkDatasource.FilterDialog);
+                                }
+                                Report.LinkCollection[LinkRefid] = LinkDatasource.FilterDialog.Controls;
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine("Exception: " + e.ToString());
+                        }
+
+                    }
+                }
+            }
+        }
+
         public ValidateCalcExpressionResponse Get(ValidateCalcExpressionRequest request)
         {
             Type resultType;
