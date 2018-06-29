@@ -265,7 +265,7 @@ namespace ExpressBase.ServiceStack
                 {
                     foreach (TFilters _dic in request.TFilters)
                     {
-                        var op = _dic.Operator; var col = _dic.Column; var val = _dic.Value;
+                        var op = _dic.Operator; var col = _dic.Column; var val = _dic.Value; var type = _dic.Type;
                         var array = _dic.Value.Split("|");
                         if (array.Length == 0)
                         {
@@ -287,16 +287,29 @@ namespace ExpressBase.ServiceStack
                             {
                                 if (array[i].Trim() != "")
                                 {
-                                    if (op == "x*")
-                                        _cond += string.Format(" LOWER({0}) LIKE LOWER('{1}%') OR", col, array[i].Trim());
-                                    else if (op == "*x")
-                                        _cond += string.Format(" LOWER({0}) LIKE LOWER('%{1}') OR", col, array[i].Trim());
-                                    else if (op == "*x*")
-                                        _cond += string.Format(" LOWER({0}) LIKE LOWER('%{1}%') OR", col, array[i].Trim());
-                                    else if (op == "=")
-                                        _cond += string.Format(" LOWER({0}) = LOWER('{1}') OR", col, array[i].Trim());
+                                    if (type == "string")
+                                    {
+                                        if (op == "x*")
+                                            _cond += string.Format(" LOWER({0}) LIKE LOWER('{1}%') OR", col, array[i].Trim());
+                                        else if (op == "*x")
+                                            _cond += string.Format(" LOWER({0}) LIKE LOWER('%{1}') OR", col, array[i].Trim());
+                                        else if (op == "*x*")
+                                            _cond += string.Format(" LOWER({0}) LIKE LOWER('%{1}%') OR", col, array[i].Trim());
+                                        else if (op == "=")
+                                            _cond += string.Format(" LOWER({0}) = LOWER('{1}') OR", col, array[i].Trim());
+                                    }
                                     else
-                                        _cond += string.Format(" {0} {1} '{2}' OR", col, op, array[i].Trim());
+                                    {
+                                        if (this.EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.ORACLE)
+                                        {
+                                            if (type == "date")
+                                                _cond += string.Format(" {0} {1} date '{2}' OR", col, op, array[i].Trim());
+                                            else
+                                                _cond += string.Format(" {0} {1} '{2}' OR", col, op, array[i].Trim());
+                                        }
+                                        else
+                                            _cond += string.Format(" {0} {1} '{2}' OR", col, op, array[i].Trim());
+                                    }
                                 }
                             }
                             int place = _cond.LastIndexOf("OR");
