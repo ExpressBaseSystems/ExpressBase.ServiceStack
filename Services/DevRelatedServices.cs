@@ -1,7 +1,9 @@
 ﻿using ExpressBase.Common;
+using ExpressBase.Common.Application;
 using ExpressBase.Common.Data;
 using ExpressBase.Common.Structures;
 using ExpressBase.Objects.ServiceStack_Artifacts;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
@@ -62,7 +64,7 @@ namespace ExpressBase.ServiceStack
                 var ds = this.EbConnectionFactory.ObjectsDB.DoQuery(sql);
                 List<AppWrapper> list = new List<AppWrapper>();
                 foreach (EbDataRow dr in ds.Rows)
-                {
+                {					
                     list.Add(new AppWrapper
                     {
                         Id = Convert.ToInt32(dr[0]),
@@ -70,7 +72,7 @@ namespace ExpressBase.ServiceStack
                         Icon = dr[2].ToString(),
                         AppType = Convert.ToInt32(dr[3]),
                         Description = dr[4].ToString()
-                    });
+					});
                 }
                 resp.Data = list;
             }
@@ -86,7 +88,21 @@ namespace ExpressBase.ServiceStack
             GetObjectsByAppIdResponse resp = new GetObjectsByAppIdResponse();
             try
             {
-                string sql = @" SELECT applicationname,description,app_icon,application_type FROM eb_applications WHERE id=:appid;
+                //string sql = @" SELECT applicationname,description,app_icon,application_type, app_settings FROM eb_applications WHERE id=:appid;
+                //                SELECT 
+                //                     EO.id, EO.obj_type, EO.obj_name, EO.obj_desc
+                //                FROM
+                //                     eb_objects EO
+                //                INNER JOIN
+                //                     eb_objects2application EO2A
+                //                ON
+                //                     EO.id = EO2A.obj_id
+                //                WHERE 
+	               //                 EO2A.app_id=:appid
+                //                ORDER BY
+                //                    EO.obj_type;";
+				
+				string sql = @" SELECT applicationname,description,app_icon,application_type FROM eb_applications WHERE id=:appid;
                                 SELECT 
                                      EO.id, EO.obj_type, EO.obj_name, EO.obj_desc
                                 FROM
@@ -98,17 +114,26 @@ namespace ExpressBase.ServiceStack
                                 WHERE 
 	                                EO2A.app_id=:appid
                                 ORDER BY
-                                    EO.obj_type;";
-                DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("appid", EbDbTypes.Int32, request.Id) };
+                                    EO.obj_type;";// del this qry, uncomment above qry after app_settings col created in all using solutions
+				DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("appid", EbDbTypes.Int32, request.Id) };
 
                 var dt = this.EbConnectionFactory.ObjectsDB.DoQueries(sql, parameters);
 
-                resp.AppInfo = new AppWrapper
+				int appType = Convert.ToInt32(dt.Tables[0].Rows[0][3]);
+				object appStng = null;
+				if (appType == 3)//if bot app
+				{
+					//appStng = JsonConvert.DeserializeObject<EbBotSettings>(dt.Tables[0].Rows[0][4].ToString());//uncomment after app_settings added
+				}
+
+				resp.AppInfo = new AppWrapper
                 {
+					Id = request.Id,
                     Name = dt.Tables[0].Rows[0][0].ToString(),
                     Description = dt.Tables[0].Rows[0][1].ToString(),
                     Icon = dt.Tables[0].Rows[0][2].ToString(),
-                    AppType = Convert.ToInt32(dt.Tables[0].Rows[0][3])
+                    AppType = appType,
+					AppSettings = appStng
                 };
 
                 Dictionary<int, TypeWrap> _types = new Dictionary<int, TypeWrap>();
@@ -303,6 +328,21 @@ namespace ExpressBase.ServiceStack
             }
             return new GetTbaleSchemaResponse { Data = Dict};
         }
-    }
+
+		public SaveAppSettingsResponse Any(SaveAppSettingsRequest request)
+		{
+			string sql = "UPDATE eb_applications SET app_settings = :newsettings WHERE id = :appid AND application_type = :apptype AND eb_del='F';";
+			DbParameter[] parameters = new DbParameter[] {
+				this.EbConnectionFactory.ObjectsDB.GetNewParameter("appid", EbDbTypes.Int32, request.AppId),
+				this.EbConnectionFactory.ObjectsDB.GetNewParameter("apptype", EbDbTypes.Int32, request.AppType),
+				this.EbConnectionFactory.ObjectsDB.GetNewParameter("newsettings", EbDbTypes.String, request.Settings)
+			};
+			//this.Redis.Set("","");
+			return new SaveAppSettingsResponse()
+			{
+				ResStatus = this.EbConnectionFactory.ObjectsDB.DoNonQuery(sql, parameters)
+			};
+		}
+	}
 }
 
