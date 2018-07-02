@@ -1,4 +1,5 @@
 ﻿using ExpressBase.Common;
+using ExpressBase.Common.Application;
 using ExpressBase.Common.Data;
 using ExpressBase.Common.Objects;
 using ExpressBase.Common.Structures;
@@ -690,16 +691,32 @@ WHERE
 		public GetBotsResponse Get(GetBotsRequest request)
 		{
 			List<BotDetails> list = new List<BotDetails>();
-			string qry = @"SELECT id, applicationname, app_icon FROM eb_applications WHERE application_type = 3 AND eb_del = 'F'";
+			string qry = @"SELECT id, applicationname, app_icon, app_settings FROM eb_applications WHERE application_type = 3 AND eb_del = 'F'";
 			var table = this.EbConnectionFactory.ObjectsDB.DoQuery(qry);
 			foreach (EbDataRow row in table.Rows)
 			{
-				list.Add(new BotDetails { id = Convert.ToInt32(row[0]), name = row[1].ToString(), icon = row[2].ToString() });
+				list.Add(new BotDetails {
+					id = Convert.ToInt32(row[0]),
+					name = row[1].ToString(),
+					icon = row[2].ToString(),
+					botsettings = JsonConvert.DeserializeObject<EbBotSettings>(row[3].ToString()) });
 			}
 			return new GetBotsResponse { BotList = list};
 		}
 
-
-
+		public GetBotSettingsResponse Get(GetBotSettingsRequest request)
+		{
+			string sql = "SELECT app_settings FROM eb_applications WHERE id = :appid AND application_type = 3 AND eb_del = 'F'";
+			DbParameter[] parameters = new DbParameter[] {
+				this.EbConnectionFactory.ObjectsDB.GetNewParameter("appid", EbDbTypes.Int32, request.AppId)
+			};
+			//this.Redis.Set("","");
+			var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(sql, parameters);
+			return new GetBotSettingsResponse()
+			{
+				Settings = JsonConvert.DeserializeObject<EbBotSettings>(dt.Rows[0][0].ToString())
+			};
+		}
+		
 	}
 }

@@ -88,22 +88,22 @@ namespace ExpressBase.ServiceStack
             GetObjectsByAppIdResponse resp = new GetObjectsByAppIdResponse();
             try
             {
-                //string sql = @" SELECT applicationname,description,app_icon,application_type, app_settings FROM eb_applications WHERE id=:appid;
-                //                SELECT 
-                //                     EO.id, EO.obj_type, EO.obj_name, EO.obj_desc
-                //                FROM
-                //                     eb_objects EO
-                //                INNER JOIN
-                //                     eb_objects2application EO2A
-                //                ON
-                //                     EO.id = EO2A.obj_id
-                //                WHERE 
-	               //                 EO2A.app_id=:appid
-                //                ORDER BY
-                //                    EO.obj_type;";
-				
+				//string sql = @" SELECT applicationname,description,app_icon,application_type, app_settings FROM eb_applications WHERE id=:appid;
+				//                SELECT 
+				//                     EO.id, EO.obj_type, EO.obj_name, EO.obj_desc
+				//                FROM
+				//                     eb_objects EO
+				//                INNER JOIN
+				//                     eb_objects2application EO2A
+				//                ON
+				//                     EO.id = EO2A.obj_id
+				//                WHERE 
+				//                 EO2A.app_id=:appid
+				//                ORDER BY
+				//                    EO.obj_type;";
+
 				string sql = @" SELECT applicationname,description,app_icon,application_type FROM eb_applications WHERE id=:appid;
-                                SELECT 
+                              SELECT 
                                      EO.id, EO.obj_type, EO.obj_name, EO.obj_desc
                                 FROM
                                      eb_objects EO
@@ -337,7 +337,7 @@ namespace ExpressBase.ServiceStack
 				this.EbConnectionFactory.ObjectsDB.GetNewParameter("apptype", EbDbTypes.Int32, request.AppType),
 				this.EbConnectionFactory.ObjectsDB.GetNewParameter("newsettings", EbDbTypes.String, request.Settings)
 			};
-			//this.Redis.Set("","");
+			this.Redis.Set<EbBotSettings>(string.Format("{0}-{1}_app_settings", request.TenantAccountId, request.AppId), JsonConvert.DeserializeObject<EbBotSettings>(request.Settings));
 			return new SaveAppSettingsResponse()
 			{
 				ResStatus = this.EbConnectionFactory.ObjectsDB.DoNonQuery(sql, parameters)
