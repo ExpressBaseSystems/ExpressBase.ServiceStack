@@ -88,33 +88,20 @@ namespace ExpressBase.ServiceStack
             GetObjectsByAppIdResponse resp = new GetObjectsByAppIdResponse();
             try
             {
-				//string sql = @" SELECT applicationname,description,app_icon,application_type, app_settings FROM eb_applications WHERE id=:appid;
-				//                SELECT 
-				//                     EO.id, EO.obj_type, EO.obj_name, EO.obj_desc
-				//                FROM
-				//                     eb_objects EO
-				//                INNER JOIN
-				//                     eb_objects2application EO2A
-				//                ON
-				//                     EO.id = EO2A.obj_id
-				//                WHERE 
-				//                 EO2A.app_id=:appid
-				//                ORDER BY
-				//                    EO.obj_type;";
-
-				string sql = @" SELECT applicationname,description,app_icon,application_type FROM eb_applications WHERE id=:appid;
-                              SELECT 
-                                     EO.id, EO.obj_type, EO.obj_name, EO.obj_desc
-                                FROM
-                                     eb_objects EO
-                                INNER JOIN
-                                     eb_objects2application EO2A
-                                ON
-                                     EO.id = EO2A.obj_id
-                                WHERE 
-	                                EO2A.app_id=:appid
-                                ORDER BY
-                                    EO.obj_type;";// del this qry, uncomment above qry after app_settings col created in all using solutions
+				string sql = @" SELECT applicationname,description,app_icon,application_type, app_settings FROM eb_applications WHERE id=:appid;
+				                SELECT 
+				                     EO.id, EO.obj_type, EO.obj_name, EO.obj_desc
+				                FROM
+				                     eb_objects EO
+				                INNER JOIN
+				                     eb_objects2application EO2A
+				                ON
+				                     EO.id = EO2A.obj_id
+				                WHERE 
+				                 EO2A.app_id=:appid
+				                ORDER BY
+				                    EO.obj_type;";
+								
 				DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("appid", EbDbTypes.Int32, request.Id) };
 
                 var dt = this.EbConnectionFactory.ObjectsDB.DoQueries(sql, parameters);
@@ -123,7 +110,7 @@ namespace ExpressBase.ServiceStack
 				object appStng = null;
 				if (appType == 3)//if bot app
 				{
-					//appStng = JsonConvert.DeserializeObject<EbBotSettings>(dt.Tables[0].Rows[0][4].ToString());//uncomment after app_settings added
+					appStng = JsonConvert.DeserializeObject<EbBotSettings>(dt.Tables[0].Rows[0][4].ToString());
 				}
 
 				resp.AppInfo = new AppWrapper
