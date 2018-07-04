@@ -29,22 +29,24 @@ namespace ExpressBase.ServiceStack.Services
     {
         public InfraServices(IEbConnectionFactory _dbf) : base(_dbf) { }
 
-        public bool Post(JoinbetaReq r)
+        public JoinbetaResponse Post(JoinbetaReq r)
         {
+            JoinbetaResponse resp = new JoinbetaResponse();
             try
             {
                 string sql = string.Format("INSERT INTO eb_beta_enq(email,time) values('{0}','now()') RETURNING id", r.Email);
                 var f = this.EbConnectionFactory.DataDB.DoQuery(sql);
                 if (f.Rows.Count > 0)
-                    return true;
+                    resp.Status = true;
                 else
-                    return false;
+                    resp.Status = false;
             }
             catch(Exception e)
             {
                 Console.WriteLine("Exception: " + e.ToString());
-                return false;
+                resp.Status = false;
             }
+            return resp;
         }
 
         public CreateAccountResponse Post(CreateAccountRequest request)
