@@ -306,11 +306,29 @@ namespace ExpressBase.ServiceStack
                     EbDbTypes typ = cresp.Columns[Convert.ToInt32(TName.Replace(@"T", string.Empty))][fName].Type;
                     switch (typ.ToString())
                     {
+                        case "Int16":
+                            _value = 0;
+                            break;
                         case "Int32":
+                            _value = 0;
+                            break;
+                        case "Int64":
+                            _value = 0;
+                            break;
+                        case "Decimal":
+                            _value = 0;
+                            break;
+                        case "Double":
+                            _value = 0;
+                            break;
+                        case "Single":
                             _value = 0;
                             break;
                         case "String":
                             _value = "Eb";
+                            break;
+                        case "Date":
+                            _value = DateTime.MinValue;
                             break;
                         case "Datetime":
                             _value = DateTime.MinValue;
@@ -325,14 +343,32 @@ namespace ExpressBase.ServiceStack
                 resultType = (valscript.RunAsync(globals)).Result.ReturnValue.GetType();
                 switch (resultType.FullName)
                 {
-                    case "System.Int32":
-                        resultType_enum = 11;
-                        break;
-                    case "System.String":
-                        resultType_enum = 16;
+                    case "System.Date":
+                        resultType_enum = 5;
                         break;
                     case "System.DateTime":
                         resultType_enum = 6;
+                        break;
+                    case "System.Decimal":
+                        resultType_enum = 7;
+                        break;
+                    case "System.Double":
+                        resultType_enum = 8;
+                        break;
+                    case "System.Int16":
+                        resultType_enum = 10;
+                        break;
+                    case "System.Int32":
+                        resultType_enum = 11;
+                        break;
+                    case "System.Int64":
+                        resultType_enum = 12;
+                        break;
+                    case "System.Single":
+                        resultType_enum = 15;
+                        break;
+                    case "System.String":
+                        resultType_enum = 16;
                         break;
                     default:
                         resultType_enum = 0;
