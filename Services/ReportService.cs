@@ -339,7 +339,13 @@ namespace ExpressBase.ServiceStack
                     }
                     globals[TName].Add(fName, new NTV { Name = fName, Type = typ, Value = _value as object });
                 }
-
+                if (request.Parameters != null)
+                {
+                    foreach (Param p in request.Parameters)
+                    {
+                        globals["Params"].Add(p.Name, new NTV { Name = p.Name, Type = (EbDbTypes)Convert.ToInt32(p.Type), Value = p.Value });
+                    }
+                }
                 resultType = (valscript.RunAsync(globals)).Result.ReturnValue.GetType();
                 switch (resultType.FullName)
                 {
