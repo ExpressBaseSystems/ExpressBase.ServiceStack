@@ -339,8 +339,28 @@ namespace ExpressBase.ServiceStack
                     }
                     globals[TName].Add(fName, new NTV { Name = fName, Type = typ, Value = _value as object });
                 }
+                if (request.Parameters != null)
+                {
+                    foreach (Param p in request.Parameters)
+                    {
+                        globals["Params"].Add(p.Name, new NTV { Name = p.Name, Type = (EbDbTypes)Convert.ToInt32(p.Type), Value = p.Value });
+                    }
+                }
+                var matches2 = Regex.Matches(request.ValueExpression, @"Calc.\w+").OfType<Match>()
+                        .Select(m => m.Groups[0].Value)
+                        .Distinct();
+                string[] _calcFieldsUsed = new string[matches2.Count()];
+                int j = 0;
+                foreach (var match in matches2)
+                    _calcFieldsUsed[j++] = match.Replace("Calc.",string.Empty);
+                foreach (string calcfd in _calcFieldsUsed)
+                {
+                    globals["Calc"].Add(calcfd, new NTV { Name = calcfd, Type = (EbDbTypes)11, Value = 0 });
+                }
 
-                resultType = (valscript.RunAsync(globals)).Result.ReturnValue.GetType();
+                    resultType = (valscript.RunAsync(globals)).Result.ReturnValue.GetType();
+
+                //return expression type
                 switch (resultType.FullName)
                 {
                     case "System.Date":
