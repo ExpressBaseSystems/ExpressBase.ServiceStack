@@ -393,16 +393,18 @@ WHERE
 
 			if (!rslt)
 			{
-				var str = "id SERIAL PRIMARY KEY,";
+				var str = "";
+				if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.PGSQL)/////////////
+					str = "id SERIAL PRIMARY KEY,";				
 				cols = str + cols;
-				str = "eb_created_by " + vDbTypes.Int32.VDbType.ToString() + ",";
+				str = "eb_created_by " + vDbTypes.Decimal.VDbType.ToString() + ",";
 				str += "eb_created_at " + vDbTypes.DateTime.VDbType.ToString() + ",";
-				str += "eb_lastmodified_by " + vDbTypes.Int32.VDbType.ToString() + ",";
+				str += "eb_lastmodified_by " + vDbTypes.Decimal.VDbType.ToString() + ",";
 				str += "eb_lastmodified_at " + vDbTypes.DateTime.VDbType.ToString() + ",";
 				str += "eb_del " + vDbTypes.Boolean.VDbType.ToString() + " DEFAULT 'F',";
 				str += "eb_void " + vDbTypes.Boolean.VDbType.ToString() + " DEFAULT 'F',";
 				str += "eb_transaction_date " + vDbTypes.DateTime.VDbType.ToString() + ",";
-				str += "eb_autogen " + vDbTypes.Int64.VDbType.ToString();
+				str += "eb_autogen " + vDbTypes.Decimal.VDbType.ToString();
 				cols += str;
 				string sql = "CREATE TABLE @tbl(@cols)".Replace("@cols", cols).Replace("@tbl", request.BotObj.TableName);
 				this.EbConnectionFactory.ObjectsDB.CreateTable(sql);

@@ -346,9 +346,18 @@ namespace ExpressBase.ServiceStack
                 }
             }
             bool _isPaged = false;
-           
-            _sql = _sql.Replace(":orderby",
-           (string.IsNullOrEmpty(request.OrderByCol)) ? "1" : string.Format("{0} {1}", request.OrderByCol, ((request.OrderByDir == 2) ? "DESC" : "ASC")));
+
+            string __order = string.Empty;
+            if (request.OrderBy != null && request.OrderBy.Count >0)
+            {
+                foreach(OrderBy order in request.OrderBy)
+                {
+                    __order += string.Format("{0} {1},", order.Column, (order.Direction == 2) ? "DESC" : "ASC");
+                }
+                int indx = __order.LastIndexOf(",");
+                __order = __order.Substring(0, indx);
+            }
+            _sql = _sql.Replace(":orderby",(string.IsNullOrEmpty(__order)) ? "1" : __order);
 
             _isPaged = (_sql.ToLower().Contains(":offset") && _sql.ToLower().Contains(":limit"));
 
