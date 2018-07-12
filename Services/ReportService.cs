@@ -85,21 +85,6 @@ namespace ExpressBase.ServiceStack
                 {
                     dsresp = myDataSourceservice.Any(new DataSourceDataSetRequest { RefId = Report.DataSourceRefId, Params = Report.Parameters });
                     Report.DataSet = dsresp.DataSet;
-                    {
-                        //cresp = this.Redis.Get<DataSourceColumnsResponse>(string.Format("{0}_columns", Report.DataSourceRefId));
-                        //if (cresp == null)
-                        //    cresp = myDataSourceservice.Any(new DataSourceColumnsRequest
-                        //    {
-                        //        RefId = Report.DataSourceRefId
-                        //    });
-                        //Report.DataColumns = (cresp.Columns.Count > 1) ? cresp.Columns[1] : cresp.Columns[0];
-                        //dresp = myDataSourceservice.Any(new DataSourceDataRequest { RefId = Report.DataSourceRefId, Draw = 1, Start = 0, Length = 100, Params = request.Params });
-                        //Report.DataRows = dresp.Data;
-                        //if (dresp.Data.Count == 0)
-                        //{
-                        //    return new ReportRenderResponse { StreamWrapper = new MemorystreamWrapper(Report.Ms1) };
-                        //}
-                    }
                 }
 
                 Report.Writer = PdfWriter.GetInstance(Report.Doc, Report.Ms1);
@@ -112,7 +97,7 @@ namespace ExpressBase.ServiceStack
                 Report.PageNumber = Report.Writer.PageNumber;
                 Report.InitializeSummaryFields();
 
-                Report.GetWatermarkImages(/*this.FileClient*/);
+                Report.GetWatermarkImages();
 
                 foreach (EbReportHeader r_header in Report.ReportHeaders)
                 {
@@ -149,11 +134,6 @@ namespace ExpressBase.ServiceStack
                     FillLinkCollection(Report, p_footer.Fields);
                 }
 
-
-                //iTextSharp.text.Font link = FontFactory.GetFont("Arial", 12, iTextSharp.text.Font.UNDERLINE, BaseColor.DarkGray);
-                //Anchor anchor = new Anchor("xyz", link);
-                //anchor.Reference = "http://eb_roby_dev.localhost:5000/ReportRender?refid=eb_roby_dev-eb_roby_dev-3-1127-1854?tab=" + JsonConvert.SerializeObject(Report.DataRow[Report.SerialNumber - 1]);
-                //Report.Doc.Add(anchor);
                 Report.Doc.NewPage();
                 Report.DrawReportHeader();
                 Report.DrawDetail();

@@ -149,14 +149,12 @@ namespace ExpressBase.ServiceStack
             EbDataSet _dataset = null;
             bool _isPaged = false;
             DataSourceColumnsResponse resp = null;
-            //DataSourceColumnsResponse resp = this.Redis.Get<DataSourceColumnsResponse>(_dsRedisKey);
 
             if (resp == null || resp.Columns == null || resp.Columns.Count == 0)
             {
                 resp = new DataSourceColumnsResponse();
                 resp.Columns = new List<ColumnColletion>();
                 EbDataSource _ds = null;
-                //var _ds = this.Redis.Get<EbDataSource>(request.RefId);
                 if (_ds == null)
                 {
                     var myService = base.ResolveService<EbObjectService>();
@@ -170,7 +168,7 @@ namespace ExpressBase.ServiceStack
                     string _sql = string.Empty;
                     if (this.EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.PGSQL)
                     {
-                        _sql = _ds.Sql/*Decoded()*/.Replace("@and_search", string.Empty).Replace("@orderby", "1");
+                        _sql = _ds.Sql.Replace("@and_search", string.Empty).Replace("@orderby", "1");
                         _isPaged = (_sql.ToLower().Contains("@offset") && _sql.ToLower().Contains("@limit"));
 
 
@@ -179,7 +177,7 @@ namespace ExpressBase.ServiceStack
                     }
                     else
                     {
-                        _sql = _ds.Sql/*Decoded()*/.Replace(":and_search", string.Empty).Replace(":orderby", "1");
+                        _sql = _ds.Sql.Replace(":and_search", string.Empty).Replace(":orderby", "1");
                         _isPaged = (_sql.ToLower().Contains(":offset") && _sql.ToLower().Contains(":limit"));
 
 
