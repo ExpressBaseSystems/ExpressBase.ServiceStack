@@ -35,8 +35,6 @@ namespace ExpressBase.ServiceStack
 {
     public class ReportService : EbBaseService
     {
-        //private DataSourceColumnsResponse cresp = null;
-        // private DataSourceDataResponse dresp = null;
         private DataSourceDataSetResponse dsresp = null;
 
         //private iTextSharp.text.Font f = FontFactory.GetFont(FontFactory.HELVETICA, 12);
