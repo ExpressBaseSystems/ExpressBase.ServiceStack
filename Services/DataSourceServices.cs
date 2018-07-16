@@ -40,7 +40,7 @@ namespace ExpressBase.ServiceStack
                 _ds = EbSerializers.Json_Deserialize(result.Data[0].Json);
                 Redis.Set<EbDataSource>(request.RefId, _ds);
             }
-            if (_ds.FilterDialogRefId != string.Empty)
+            if (_ds.FilterDialogRefId != string.Empty && _ds.FilterDialogRefId != null)
             {
                 var _dsf = this.Redis.Get<EbFilterDialog>(_ds.FilterDialogRefId);
                 if (_dsf == null)
@@ -226,7 +226,7 @@ namespace ExpressBase.ServiceStack
                 _ds = EbSerializers.Json_Deserialize(result.Data[0].Json);
                 Redis.Set<EbDataSource>(request.RefId, _ds);
             }
-            if (_ds.FilterDialogRefId != string.Empty)
+            if (_ds.FilterDialogRefId != string.Empty && _ds.FilterDialogRefId !=null)
             {
                 var _dsf = this.Redis.Get<EbFilterDialog>(_ds.FilterDialogRefId);
                 if (_dsf == null)
