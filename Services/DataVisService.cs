@@ -4,7 +4,11 @@ using ExpressBase.Common.Objects;
 using ExpressBase.Common.Structures;
 using ExpressBase.Data;
 using ExpressBase.Objects;
+using ExpressBase.Objects.Objects.DVRelated;
+using ExpressBase.Objects.Objects.ReportRelated;
 using ExpressBase.Objects.ServiceStack_Artifacts;
+using Microsoft.CodeAnalysis.CSharp.Scripting;
+using Microsoft.CodeAnalysis.Scripting;
 using ServiceStack;
 using ServiceStack.Logging;
 using ServiceStack.Redis;
@@ -13,6 +17,7 @@ using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace ExpressBase.ServiceStack
 {
@@ -230,6 +235,8 @@ namespace ExpressBase.ServiceStack
         {
             this.Log.Info("data request");
 
+            EbDataVisualization _dV = request.EbDataVisualization;
+
             DataSourceDataResponse dsresponse = null;
 
             var _ds = this.Redis.Get<EbDataSource>(request.RefId);
@@ -328,8 +335,12 @@ namespace ExpressBase.ServiceStack
                 //}
                 if (request.Ispaging)
                 {
-                    tempsql = _sql.ReplaceAll(";", string.Empty);
-                    tempsql = "SELECT COUNT(*) FROM (" + tempsql + ") data1;";
+                    var matches = Regex.Matches(_sql, @"\;\s*SELECT\s*COUNT\(\*\)\s*FROM");
+                    if (matches.Count == 0)
+                    {
+                        tempsql = _sql.ReplaceAll(";", string.Empty);
+                        tempsql = "SELECT COUNT(*) FROM (" + tempsql + ") data1;";
+                    }
 
                     var sql1 = _sql.ReplaceAll(";", string.Empty);
                     if (this.EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.ORACLE)
@@ -342,7 +353,7 @@ namespace ExpressBase.ServiceStack
                         if (!sql1.ToLower().Contains(":limit"))
                             sql1 = sql1 + " LIMIT :limit OFFSET :offset;";
                     }
-                    _sql = tempsql + sql1;
+                    _sql = sql1 + tempsql ;
                 }
             }
             bool _isPaged = false;
@@ -381,17 +392,20 @@ namespace ExpressBase.ServiceStack
             int _recordsTotal = 0, _recordsFiltered = 0;
             if (_isPaged)
             {
-                Int32.TryParse(_dataset.Tables[0].Rows[0][0].ToString(), out _recordsTotal);
-                Int32.TryParse(_dataset.Tables[0].Rows[0][0].ToString(), out _recordsFiltered);
+                Int32.TryParse(_dataset.Tables[_dataset.Tables.Count-1].Rows[0][0].ToString(), out _recordsTotal);
+                Int32.TryParse(_dataset.Tables[_dataset.Tables.Count - 1].Rows[0][0].ToString(), out _recordsFiltered);
             }
-            _recordsTotal = (_recordsTotal > 0) ? _recordsTotal : _dataset.Tables[0].Rows.Count;
-            _recordsFiltered = (_recordsFiltered > 0) ? _recordsFiltered : _dataset.Tables[0].Rows.Count;
+            _recordsTotal = (_recordsTotal > 0) ? _recordsTotal : _dataset.Tables[_dataset.Tables.Count - 1].Rows.Count;
+            _recordsFiltered = (_recordsFiltered > 0) ? _recordsFiltered : _dataset.Tables[_dataset.Tables.Count - 1].Rows.Count;
             //-- 
-
+            if (_dataset.Tables.Count > 0)
+            {
+                _dataset = PreProcessing(_dataset, _dV);
+            }
             dsresponse = new DataSourceDataResponse
             {
                 Draw = request.Draw,
-                Data = (_dataset.Tables.Count > 1) ? _dataset.Tables[1].Rows : _dataset.Tables[0].Rows,
+                Data =  _dataset.Tables[0].Rows,
                 RecordsTotal = _recordsTotal,
                 RecordsFiltered = _recordsFiltered,
                 Ispaged = _isPaged
@@ -473,6 +487,41 @@ namespace ExpressBase.ServiceStack
             }
 
             return resp;
+        }
+
+        public EbDataSet PreProcessing(EbDataSet _dataset, EbDataVisualization _dv)
+        {
+            var colCount =  _dataset.Tables[0].Columns.Count;
+            Dictionary<string, int> dict = new Dictionary<string, int>();
+            foreach (DVBaseColumn col in _dv.Columns)
+            {
+                if (col.Formula != null && col.Formula != "")
+                {
+                    string[] _dataFieldsUsed;
+                    Script valscript = CSharpScript.Create<dynamic>(col.Formula, ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System.Dynamic"), globalsType: typeof(Globals));
+                    valscript.Compile();
+                    _dataset.Tables[0].Columns.RemoveAt(colCount - 1);// rownum deleted for oracle
+                    _dataset.Tables[0].Columns.Add(new EbDataColumn { ColumnIndex = col.Data, ColumnName = col.Name, Type = col.Type });
+                    for (int i = 0; i < _dataset.Tables[0].Rows.Count; i++)
+                    {
+                        Globals globals = new Globals();
+                        var matches = Regex.Matches(col.Formula, @"T[0-9]{1}.\w+").OfType<Match>().Select(m => m.Groups[0].Value).Distinct();
+                        _dataFieldsUsed = new string[matches.Count()];
+                        int j = 0;
+                        foreach (var match in matches)
+                            _dataFieldsUsed[j++] = match;
+                        foreach (string calcfd in _dataFieldsUsed)
+                        {
+                            string TName = calcfd.Split('.')[0];
+                            string fName = calcfd.Split('.')[1];
+                            globals[TName].Add(fName, new NTV { Name = fName, Type = _dataset.Tables[0].Columns[fName].Type, Value = _dataset.Tables[0].Rows[i][fName] });
+                        }
+                    _dataset.Tables[0].Rows[i][col.Data] = valscript.RunAsync(globals).Result.ReturnValue.ToString();
+                    }
+                }
+            }
+
+            return _dataset;
         }
     }
 }
