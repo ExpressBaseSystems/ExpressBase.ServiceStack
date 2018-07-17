@@ -589,6 +589,14 @@ WHERE
             return new EbObjectGetAllTagsResponse { Data = s };
         }
 
+        [CompressResponse]
+        public UniqueObjectNameCheckResponse Get(UniqueObjectNameCheckRequest request)
+        {
+            DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("name",EbDbTypes.String,request.ObjName)};
+            var dt = this.EbConnectionFactory.ObjectsDB.DoQuery("SELECT id FROM eb_objects WHERE obj_name = :name ;", parameters);
+            bool _isunique = (dt.Rows.Count > 0) ? false : true;
+            return new UniqueObjectNameCheckResponse { IsUnique=_isunique};
+        }
 
         #region SaveOrCommit Queries
 

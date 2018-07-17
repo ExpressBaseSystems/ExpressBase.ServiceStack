@@ -16,7 +16,8 @@ namespace ExpressBase.ServiceStack.Services
         public MenuServices(IEbConnectionFactory _dbf) : base(_dbf) { }
 
         List<System.Data.Common.DbParameter> parameters = new List<System.Data.Common.DbParameter>();
-        public object Get(SidebarUserRequest request)
+
+        public SidebarUserResponse Get(SidebarUserRequest request)
         {
             //            var Query1 = @"
             //SELECT id, applicationname
