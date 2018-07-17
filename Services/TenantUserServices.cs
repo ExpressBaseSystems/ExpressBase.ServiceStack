@@ -69,97 +69,85 @@ namespace ExpressBase.ServiceStack.Services
             }
         }
 
-        public GetLocationConfigResponse Get(GetLocationConfigRequest request)
-        {
-            List<EbLocationConfig> Conf = new List<EbLocationConfig>();
-            Dictionary<string, string> MetaDict = new Dictionary<string, string>();
-            string query = String.Format("SELECT * FROM eb_location_config ORDER BY id; SELECT * FROM eb_locations {0};",(request.LocId>0) ? "WHERE id =:locid":"");
-            List<DbParameter> parameters = new List<DbParameter>();
-            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":locid", EbDbTypes.Int32, request.LocId));
-            EbDataSet dt = this.EbConnectionFactory.ObjectsDB.DoQueries(query, parameters.ToArray());
-
-            foreach (EbDataRow r in dt.Tables[0].Rows)
-            {
-                var confobj = new EbLocationConfig
-                {
-                    Name = r[1].ToString(),
-                    Isrequired = (r[2].ToString() == "T") ? "true" : "false",
-                    KeyId = r[0].ToString()
-                };
-                Conf.Add(confobj);
-            }
-
-            foreach (EbDataRow r in dt.Tables[1].Rows)
-            {
-                MetaDict["LocId"] = r[0].ToString();
-                MetaDict["ShortName"] = r[1].ToString();
-                MetaDict["LongName"] = r[2].ToString();
-                MetaDict["Img"] = r[3].ToString();
-                MetaDict["Meta"] = r[4].ToString();
-            }
-            return new GetLocationConfigResponse { Data = Conf, Meta = MetaDict };
-        }
-
         public SaveLocationMetaResponse Post(SaveLocationMetaRequest request)
         {
             using (var con = this.EbConnectionFactory.ObjectsDB.GetNewConnection())
             {
                 con.Open();
                 List<DbParameter> parameters = new List<DbParameter>();
-                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":lname", EbDbTypes.String, request.Longname));
-                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":sname", EbDbTypes.String, request.Shortname));
-                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":img", EbDbTypes.String, (request.Img == null) ? "" : request.Img));
-                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":meta", EbDbTypes.String, request.ConfMeta));
-                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":lid", EbDbTypes.Int32, request.Locid));
+                var query = "";
                 var query1 = "INSERT INTO eb_locations(longname,shortname,image,meta_json) VALUES(:lname,:sname,:img,:meta);";
                 var query2 = "UPDATE eb_locations SET longname= :lname, shortname = :sname, image = :img, meta_json = :meta WHERE id = :lid;";
-                var query = ((request.Locid) > 0) ? query2 : query1;
+                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":lname", EbDbTypes.String, request.Longname));
+                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":sname", EbDbTypes.String, request.Shortname));
+                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":img", EbDbTypes.String, request.Img));
+                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":meta", EbDbTypes.String, request.ConfMeta));
+                if (request.Locid > 0)
+                {
+                    parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":lid", EbDbTypes.Int32, request.Locid));
+                    query = query2;
+                }
+                else
+                    query = query1;
                 var dt2 = this.EbConnectionFactory.ObjectsDB.DoNonQuery(query.ToString(), parameters.ToArray());
-                EbLocation el = new EbLocation { LocId = request.Locid, LongName = request.Longname, ShortName = request.Longname, Img = request.Img/*, Meta = request.ConfMeta*/ };
-                SetSolutionObject(el, request.TenantAccountId);
             }
+            this.Post(new UpdateSolutionRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId ,Token = request.Token});
             return new SaveLocationMetaResponse { };
         }
 
-        public void SetSolutionObject(EbLocation el, string tenantId)
+        public UpdateSolutionResponse Post(UpdateSolutionRequest req)
         {
             var _infraService = base.ResolveService<InfraServices>();
-            GetSolutioInfoResponse res = (GetSolutioInfoResponse)_infraService.Get(new GetSolutioInfoRequest { IsolutionId = tenantId });
+            GetSolutioInfoResponse res = (GetSolutioInfoResponse)_infraService.Get(new GetSolutioInfoRequest { IsolutionId = req.TenantAccountId });
             EbSolutionsWrapper wrap_sol = res.Data;
-            Dictionary<string, EbLocation> Loc = GetAllLocations();
+            LocationInfoResponse Loc = this.Get(new LocationInfoRequest());
             Eb_Solution sol_Obj = new Eb_Solution
             {
-                InternalSolutionID = tenantId,
+                InternalSolutionID = req.TenantAccountId,
                 ExternalSolutionID = wrap_sol.EsolutionId.ToString(),
                 DateCreated = wrap_sol.DateCreated.ToString(),
                 Description = wrap_sol.Description.ToString(),
-                LocationCollection = Loc,
+                LocationCollection = Loc.Locations,
                 NumberOfUsers = 2,
                 SolutionName = wrap_sol.SolutionName.ToString()
             };
-            this.Redis.Set<Eb_Solution>(String.Format("solution_{0}", tenantId), sol_Obj);
-            var x=this.Redis.Get<Eb_Solution>(String.Format("solution_{0}", tenantId));
+
+            this.Redis.Set<Eb_Solution>(String.Format("solution_{0}", req.TenantAccountId), sol_Obj);
+            var x = this.Redis.Get<Eb_Solution>(String.Format("solution_{0}", req.TenantAccountId));
+
+            return new UpdateSolutionResponse { };
         }
 
-        public Dictionary<string, EbLocation> GetAllLocations()
+        public LocationInfoResponse Get(LocationInfoRequest req)
         {
-            Dictionary<string, EbLocation> locCollection = new Dictionary<string, EbLocation>();
-            string query = "SELECT * FROM eb_locations;";
-            EbDataTable table = this.EbConnectionFactory.ObjectsDB.DoQuery(query);
-            foreach (var r in table.Rows)
+            List<EbLocationConfig> Conf = new List<EbLocationConfig>();
+            Dictionary<int,EbSolutionLocation> locs = new Dictionary<int,EbSolutionLocation>();
+
+            string query = "SELECT * FROM eb_location_config ORDER BY id; SELECT * FROM eb_locations";
+            EbDataSet dt = this.EbConnectionFactory.ObjectsDB.DoQueries(query);
+
+            foreach (EbDataRow r in dt.Tables[0].Rows)
             {
-                var x = JsonConvert.DeserializeObject<Dictionary<string, string>>(r[4].ToString());
-                EbLocation el = new EbLocation
+                Conf.Add(new EbLocationConfig
+                {
+                    Name = r[1].ToString(),
+                    Isrequired = (r[2].ToString() == "T") ? "true" : "false",
+                    KeyId = r[0].ToString()
+                });
+            }
+
+            foreach (var r in dt.Tables[1].Rows)
+            {
+                locs.Add(Convert.ToInt32(r[0]),new EbSolutionLocation
                 {
                     LocId = Convert.ToInt32(r[0]),
                     ShortName = r[1].ToString(),
                     LongName = r[2].ToString(),
                     Img = r[3].ToString(),
                     Meta = JsonConvert.DeserializeObject<Dictionary<string, string>>(r[4].ToString())
-            };
-                locCollection[r[1].ToString()] = el;
+                });
             }
-            return locCollection;
+            return new LocationInfoResponse { Locations = locs, Config = Conf };
         }
 
         //private string GeneratePassword()
