@@ -4,6 +4,7 @@ using ExpressBase.Common.Objects;
 using ExpressBase.Common.Structures;
 using ExpressBase.Data;
 using ExpressBase.Objects;
+using ExpressBase.Objects.Objects;
 using ExpressBase.Objects.Objects.DVRelated;
 using ExpressBase.Objects.Objects.ReportRelated;
 using ExpressBase.Objects.ServiceStack_Artifacts;
