@@ -494,6 +494,11 @@ namespace ExpressBase.ServiceStack
         {
             var colCount =  _dataset.Tables[0].Columns.Count;
             Dictionary<string, int> dict = new Dictionary<string, int>();
+            _dataset.Tables[0].Columns.RemoveAt(colCount - 1);// rownum deleted for oracle
+            for (int i = 0; i < _dataset.Tables[0].Rows.Count; i++)
+            {
+                _dataset.Tables[0].Rows[i].RemoveAt(colCount - 1);
+            }
             foreach (DVBaseColumn col in _dv.Columns)
             {
                 if (col.Formula != null && col.Formula != "")
@@ -501,7 +506,6 @@ namespace ExpressBase.ServiceStack
                     string[] _dataFieldsUsed;
                     Script valscript = CSharpScript.Create<dynamic>(col.Formula, ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System.Dynamic"), globalsType: typeof(Globals));
                     valscript.Compile();
-                    _dataset.Tables[0].Columns.RemoveAt(colCount - 1);// rownum deleted for oracle
                     _dataset.Tables[0].Columns.Add(new EbDataColumn { ColumnIndex = col.Data, ColumnName = col.Name, Type = col.Type });
                     for (int i = 0; i < _dataset.Tables[0].Rows.Count; i++)
                     {
@@ -517,7 +521,7 @@ namespace ExpressBase.ServiceStack
                             string fName = calcfd.Split('.')[1];
                             globals[TName].Add(fName, new NTV { Name = fName, Type = _dataset.Tables[0].Columns[fName].Type, Value = _dataset.Tables[0].Rows[i][fName] });
                         }
-                    _dataset.Tables[0].Rows[i][col.Data] = valscript.RunAsync(globals).Result.ReturnValue.ToString();
+                    _dataset.Tables[0].Rows[i].Insert(col.Data, valscript.RunAsync(globals).Result.ReturnValue.ToString());
                     }
                 }
             }

@@ -130,6 +130,14 @@ namespace ExpressBase.ServiceStack.Services
             }
         }
 
+        public DeleteLocResponse Post(DeleteLocRequest request)
+        {
+            List<DbParameter> parameters = new List<DbParameter>();
+            string query = "UPDATE eb_location_config SET eb_del = 'T' WHERE id=:id RETURNING id";
+            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":id", EbDbTypes.Int32, request.Id));
+            var dt = this.EbConnectionFactory.ObjectsDB.DoNonQuery(query.ToString(), parameters.ToArray());
+            return new DeleteLocResponse {id=(dt==1)?request.Id:0 };
+        }
         public UpdateSolutionResponse Post(UpdateSolutionRequest req)
         {
             var _infraService = base.ResolveService<InfraServices>();
