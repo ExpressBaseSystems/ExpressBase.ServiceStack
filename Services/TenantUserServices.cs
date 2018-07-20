@@ -188,7 +188,7 @@ namespace ExpressBase.ServiceStack.Services
                     LocId = Convert.ToInt32(r[0]),
                     ShortName = r[1].ToString(),
                     LongName = r[2].ToString(),
-                    Img = r[3].ToString(),
+                    Logo = r[3].ToString(),
                     Meta = JsonConvert.DeserializeObject<Dictionary<string, string>>(r[4].ToString())
                 });
             }

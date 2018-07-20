@@ -69,10 +69,8 @@ namespace ExpressBase.ServiceStack
                 Report.FileClient = new EbStaticFileClient();
                 Report.FileClient = this.FileClient;
                 Report.Parameters = request.Params;
-                var x = this.Redis.Get<Eb_Solution>(String.Format("solution_{0}", request.TenantAccountId));
+                Report.Solution = this.Redis.Get<Eb_Solution>(String.Format("solution_{0}", request.TenantAccountId));
                 //-- END REPORT object INIT
-                var y = x.Locations[31];
-                var z = y.Img;
                 iTextSharp.text.Rectangle rec = new iTextSharp.text.Rectangle(Report.WidthPt, Report.HeightPt);
                 Report.Doc = new Document(rec);
                 Report.Ms1 = new MemoryStream();
