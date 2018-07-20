@@ -77,20 +77,20 @@ namespace ExpressBase.ServiceStack.Services
             using (var con = this.EbConnectionFactory.ObjectsDB.GetNewConnection())
             {
                 con.Open();
-                EbLocationConfig conf = request.Conf;
+                EbLocationCustomField conf = request.Conf;
                 string query = @"INSERT INTO eb_location_config (keys,isrequired,keytype,eb_del) VALUES(:keys,:isrequired,:type,'F') RETURNING id";
                 string query2 = @"UPDATE eb_location_config SET keys = :keys ,isrequired = :isrequired , keytype = :type WHERE id = :keyid";
                 string exeq = "";
 
                 List<DbParameter> parameters = new List<DbParameter>();
                 parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":keys", EbDbTypes.String, conf.Name));
-                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":isrequired", EbDbTypes.String, conf.Isrequired));
+                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":isrequired", EbDbTypes.String, conf.IsRequired));
                 parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":type", EbDbTypes.String, conf.Type));
 
-                if (conf.KeyId != null)
+                if (conf.Id != null)
                 {
                     exeq = query2;
-                    parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":keyid", EbDbTypes.String, conf.KeyId));
+                    parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":keyid", EbDbTypes.String, conf.Id));
                 }
                 else
                     exeq = query;
@@ -146,13 +146,13 @@ namespace ExpressBase.ServiceStack.Services
             LocationInfoResponse Loc = this.Get(new LocationInfoRequest());
             Eb_Solution sol_Obj = new Eb_Solution
             {
-                InternalSolutionID = req.TenantAccountId,
-                ExternalSolutionID = wrap_sol.EsolutionId.ToString(),
+                SolutionID = req.TenantAccountId,
                 DateCreated = wrap_sol.DateCreated.ToString(),
                 Description = wrap_sol.Description.ToString(),
-                LocationCollection = Loc.Locations,
+                Locations = Loc.Locations,
                 NumberOfUsers = 2,
-                SolutionName = wrap_sol.SolutionName.ToString()
+                SolutionName = wrap_sol.SolutionName.ToString(),
+                LocationConfig = Loc.Config
             };
 
             this.Redis.Set<Eb_Solution>(String.Format("solution_{0}", req.TenantAccountId), sol_Obj);
@@ -163,26 +163,26 @@ namespace ExpressBase.ServiceStack.Services
 
         public LocationInfoResponse Get(LocationInfoRequest req)
         {
-            List<EbLocationConfig> Conf = new List<EbLocationConfig>();
-            Dictionary<int,EbSolutionLocation> locs = new Dictionary<int,EbSolutionLocation>();
+            List<EbLocationCustomField> Conf = new List<EbLocationCustomField>();
+            Dictionary<int,EbLocation> locs = new Dictionary<int,EbLocation>();
 
             string query = "SELECT * FROM eb_location_config ORDER BY id; SELECT * FROM eb_locations";
             EbDataSet dt = this.EbConnectionFactory.ObjectsDB.DoQueries(query);
 
             foreach (EbDataRow r in dt.Tables[0].Rows)
             {
-                Conf.Add(new EbLocationConfig
+                Conf.Add(new EbLocationCustomField
                 {
                     Name = r[1].ToString(),
-                    Isrequired = (r[2].ToString() == "T") ? "true" : "false",
-                    KeyId = r[0].ToString(),
+                    IsRequired = (r[2].ToString() == "T") ? true : false,
+                    Id = r[0].ToString(),
                     Type = r[3].ToString()
                 });
             }
 
             foreach (var r in dt.Tables[1].Rows)
             {
-                locs.Add(Convert.ToInt32(r[0]),new EbSolutionLocation
+                locs.Add(Convert.ToInt32(r[0]),new EbLocation
                 {
                     LocId = Convert.ToInt32(r[0]),
                     ShortName = r[1].ToString(),
