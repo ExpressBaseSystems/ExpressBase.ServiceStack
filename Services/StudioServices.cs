@@ -592,10 +592,10 @@ WHERE
         [CompressResponse]
         public UniqueObjectNameCheckResponse Get(UniqueObjectNameCheckRequest request)
         {
-            DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("name",EbDbTypes.String,request.ObjName)};
+            DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("name", EbDbTypes.String, request.ObjName) };
             var dt = this.EbConnectionFactory.ObjectsDB.DoQuery("SELECT id FROM eb_objects WHERE obj_name = :name ;", parameters);
             bool _isunique = (dt.Rows.Count > 0) ? false : true;
-            return new UniqueObjectNameCheckResponse { IsUnique=_isunique};
+            return new UniqueObjectNameCheckResponse { IsUnique = _isunique };
         }
 
         #region SaveOrCommit Queries
@@ -745,7 +745,7 @@ WHERE
             dynamic obj = EbSerializers.Json_Deserialize(request.Json);
             var _type = obj.GetType();
             string refId = null;
-            string exception_msg = string.Empty ;
+            string exception_msg = string.Empty;
             ILog log = LogManager.GetLogger(GetType());
             log.Info("#DS insert -- entered post");
 
@@ -804,9 +804,12 @@ WHERE
             }
             catch (Exception e)
             {
-                var m = e.ToErrorCode();
                 Console.WriteLine("Exception: " + e.ToString());
-
+                if (e is Npgsql.PostgresException)
+                {
+                    if ((e as Npgsql.PostgresException).SqlState == "23505")
+                        exception_msg = "The Operation Can't be completed because an item with the name \"" + request.Name + "\"" + " already exists. Specify a diffrent name.";
+                }
             }
             return new EbObject_Create_New_ObjectResponse() { RefId = refId, ExceptionMessage = exception_msg };
         }
