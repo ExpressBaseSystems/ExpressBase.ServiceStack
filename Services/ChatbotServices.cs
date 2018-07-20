@@ -198,7 +198,7 @@ WHERE
 			return new BotListResponse { Data = res };
 		}
 
-		public object Any123(CreateBotFormTableRequest request)
+		public object Any(CreateBotFormTableRequest request)
 		{
 			var vDbTypes = this.EbConnectionFactory.ObjectsDB.VendorDbTypes;
 			List<TableColumnMeta> _listNamesAndTypes = new List<TableColumnMeta> ();
@@ -217,18 +217,21 @@ WHERE
 				}
 				else if (control is EbCardSetParent)
 				{
-					Dictionary<string, VendorDbType> _dicNameTypeLine = new Dictionary<string, VendorDbType>();
+					List<TableColumnMeta> listLine = new List<TableColumnMeta>();
 					foreach (EbCardField CardField in (control as EbCardSetParent).CardFields)
 					{
 						if (!CardField.DoNotPersist)
 						{
 							if (CardField is EbCardNumericField)
-								_dicNameTypeLine.Add(CardField.Name, vDbTypes.Decimal);
+								listLine.Add(new TableColumnMeta { Name = CardField.Name, Type = vDbTypes.Decimal });
 							else
-								_dicNameTypeLine.Add(CardField.Name, vDbTypes.String);
+								listLine.Add(new TableColumnMeta { Name = CardField.Name, Type = vDbTypes.String });
 						}
 					}
-					string linecols = string.Join(CharConstants.COMMA + CharConstants.SPACE.ToString(), _dicNameTypeLine.Select(x => x.Key + CharConstants.SPACE + x.Value).ToArray());
+					listLine.Add(new TableColumnMeta { Name = "formid", Type = vDbTypes.Decimal });
+					listLine.Add(new TableColumnMeta { Name = "selectedcardid", Type = vDbTypes.Decimal });
+
+					CreateOrAlterTable((request.BotObj.TableName.ToLower() + "_lines"), listLine);					
 				}
 				else //(control is EbTextBox || control is EbInputGeoLocation)
 					_listNamesAndTypes.Add(new TableColumnMeta { Name = control.Name, Type = vDbTypes.String });
@@ -242,18 +245,43 @@ WHERE
 			_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_transaction_date", Type = vDbTypes.DateTime });
 			_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_autogen", Type = vDbTypes.Decimal });
 
-			string cols = string.Join(CharConstants.COMMA + CharConstants.SPACE.ToString(), _listNamesAndTypes.Select(x => x.Name + CharConstants.SPACE + x.Type.VDbType.ToString() + (x.Default.IsNullOrEmpty()? "": (" DEFAULT '"+x.Default+"'"))).ToArray());
-			var isTableExists = this.EbConnectionFactory.ObjectsDB.IsTableExists(this.EbConnectionFactory.ObjectsDB.IS_TABLE_EXIST, new DbParameter[] { this.EbConnectionFactory.ObjectsDB.GetNewParameter("tbl", EbDbTypes.String, request.BotObj.TableName.ToLower()) });
+			CreateOrAlterTable(request.BotObj.TableName.ToLower(), _listNamesAndTypes);
+			
+			return new CreateBotFormTableResponse();
+		}
+
+		public class TableColumnMeta
+		{
+			public string Name { get; set; }
+			public VendorDbType Type { get; set; }
+			public string Default { get; set; }
+		}
+
+		private int CreateOrAlterTable(string tableName, List<TableColumnMeta> listNamesAndTypes)
+		{
+			//checking for space in column name, table name
+			foreach(TableColumnMeta entry in listNamesAndTypes)
+			{
+				if (entry.Name.Contains(CharConstants.SPACE) || tableName.Contains(CharConstants.SPACE))
+					return -1;
+			}			
+			var isTableExists = this.EbConnectionFactory.ObjectsDB.IsTableExists(this.EbConnectionFactory.ObjectsDB.IS_TABLE_EXIST, new DbParameter[] { this.EbConnectionFactory.ObjectsDB.GetNewParameter("tbl", EbDbTypes.String, tableName) });
 			if (!isTableExists)
-			{				
-				string sql = "CREATE TABLE @tbl(@cols)".Replace("@cols", cols).Replace("@tbl", request.BotObj.TableName);
+			{
+				string cols = string.Join(CharConstants.COMMA + CharConstants.SPACE.ToString(), listNamesAndTypes.Select(x => x.Name + CharConstants.SPACE + x.Type.VDbType.ToString() + (x.Default.IsNullOrEmpty() ? "" : (" DEFAULT '" + x.Default + "'"))).ToArray());
+				string sql = string.Empty;
+				if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.ORACLE)////////////
+					sql = "CREATE TABLE @tbl(@cols)".Replace("@cols", cols).Replace("@tbl", tableName);
+				else
+					sql = "CREATE TABLE @tbl( id SERIAL PRIMARY KEY, @cols)".Replace("@cols", cols).Replace("@tbl", tableName);
 				this.EbConnectionFactory.ObjectsDB.CreateTable(sql);
+				return 0;
 			}
 			else
 			{
-				var colSchema = this.EbConnectionFactory.ObjectsDB.GetColumnSchema(request.BotObj.TableName);
+				var colSchema = this.EbConnectionFactory.ObjectsDB.GetColumnSchema(tableName);
 				string sql = string.Empty;
-				foreach (TableColumnMeta entry in _listNamesAndTypes)
+				foreach (TableColumnMeta entry in listNamesAndTypes)
 				{
 					bool isFound = false;
 					foreach (EbDataColumn dr in colSchema)
@@ -268,7 +296,6 @@ WHERE
 					{
 						sql += entry.Name + " " + entry.Type.VDbType.ToString() + ",";
 					}
-
 				}
 				if (!sql.IsEmpty())
 				{
@@ -277,299 +304,290 @@ WHERE
 					else
 						sql = "ALTER TABLE @tbl ADD COLUMN " + sql.Substring(0, sql.Length - 1);
 
-					sql = sql.Replace("@tbl", request.BotObj.TableName);
-					var ret = this.EbConnectionFactory.ObjectsDB.UpdateTable(sql);
+					sql = sql.Replace("@tbl", tableName);
+					return(this.EbConnectionFactory.ObjectsDB.UpdateTable(sql));
 				}
-
 			}
-
-			return new CreateBotFormTableResponse();
+			return -1;
 		}
 
-		public class TableColumnMeta
-		{
-			public string Name { get; set; }
-			public VendorDbType Type { get; set; }
-			public string Default { get; set; }
-		}
+		//public object Any123(CreateBotFormTableRequest request)
+		//{
+		//	DbParameter[] parameter1 = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("tbl", EbDbTypes.String, request.BotObj.TableName.ToLower()) };
+		//	var rslt = this.EbConnectionFactory.ObjectsDB.IsTableExists(this.EbConnectionFactory.ObjectsDB.IS_TABLE_EXIST, parameter1);
+		//	string cols = "";
+		//	var Columns = new DVColumnCollection();
+		//	string dvRefidOfCards = null;
+		//	var pos = 1;
+		//	var vDbTypes = this.EbConnectionFactory.ObjectsDB.VendorDbTypes;
+		//	string colsName = "id";
+		//	Columns.Add(new DVNumericColumn { Data = 0, Name = "id", sTitle = "id", Type = EbDbTypes.Int32, bVisible = true, sWidth = "100px", ClassName = "tdheight" });
+		//	foreach (EbControl control in request.BotObj.Controls)
+		//	{
+		//		DVBaseColumn _col = null;
+		//		colsName += "," + control.Name;
+		//		if (control is EbNumeric)
+		//		{
+		//			cols += control.Name + " " + vDbTypes.Decimal.VDbType.ToString() + ",";
+		//			_col = new DVNumericColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = EbDbTypes.Int32, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
+		//		}
+		//		else if (control is EbTextBox)
+		//		{
+		//			cols += control.Name + " " + vDbTypes.String.VDbType.ToString() + ",";
+		//			_col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = EbDbTypes.String, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
+		//		}
+		//		else if (control is EbDate)
+		//		{
+		//			if ((control as EbDate).EbDateType == EbDateType.Date)
+		//			{
+		//				cols += control.Name + " " + vDbTypes.Date.VDbType.ToString() + ",";
+		//				_col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = EbDbTypes.Date, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
+		//			}
+		//			else if ((control as EbDate).EbDateType == EbDateType.DateTime)
+		//			{
+		//				cols += control.Name + " " + vDbTypes.DateTime.VDbType.ToString() + ",";
+		//				_col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = EbDbTypes.DateTime, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
+		//			}
+		//			else if ((control as EbDate).EbDateType == EbDateType.Time)
+		//			{
+		//				cols += control.Name + " " + vDbTypes.Time.VDbType.ToString() + ",";
+		//				_col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = EbDbTypes.Time, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
+		//			}
+		//		}
+		//		else if (control is EbInputGeoLocation)
+		//		{
+		//			cols += control.Name + " " + vDbTypes.String.VDbType.ToString() + ",";
+		//			_col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = EbDbTypes.String, bVisible = true, sWidth = "100px", ClassName = "dt-body-right tdheight", RenderAs = StringRenderType.Marker };
+		//		}
 
-		public object Any(CreateBotFormTableRequest request)
-		{
-			DbParameter[] parameter1 = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("tbl", EbDbTypes.String, request.BotObj.TableName.ToLower()) };
-			var rslt = this.EbConnectionFactory.ObjectsDB.IsTableExists(this.EbConnectionFactory.ObjectsDB.IS_TABLE_EXIST, parameter1);
-			string cols = "";
-			var Columns = new DVColumnCollection();
-			string dvRefidOfCards = null;
-			var pos = 1;
-			var vDbTypes = this.EbConnectionFactory.ObjectsDB.VendorDbTypes;
-			string colsName = "id";
-			Columns.Add(new DVNumericColumn { Data = 0, Name = "id", sTitle = "id", Type = EbDbTypes.Int32, bVisible = true, sWidth = "100px", ClassName = "tdheight" });
-			foreach (EbControl control in request.BotObj.Controls)
-			{
-				DVBaseColumn _col = null;
-				colsName += "," + control.Name;
-				if (control is EbNumeric)
-				{
-					cols += control.Name + " " + vDbTypes.Decimal.VDbType.ToString() + ",";
-					_col = new DVNumericColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = EbDbTypes.Int32, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
-				}
-				else if (control is EbTextBox)
-				{
-					cols += control.Name + " " + vDbTypes.String.VDbType.ToString() + ",";
-					_col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = EbDbTypes.String, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
-				}
-				else if (control is EbDate)
-				{
-					if ((control as EbDate).EbDateType == EbDateType.Date)
-					{
-						cols += control.Name + " " + vDbTypes.Date.VDbType.ToString() + ",";
-						_col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = EbDbTypes.Date, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
-					}
-					else if ((control as EbDate).EbDateType == EbDateType.DateTime)
-					{
-						cols += control.Name + " " + vDbTypes.DateTime.VDbType.ToString() + ",";
-						_col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = EbDbTypes.DateTime, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
-					}
-					else if ((control as EbDate).EbDateType == EbDateType.Time)
-					{
-						cols += control.Name + " " + vDbTypes.Time.VDbType.ToString() + ",";
-						_col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = EbDbTypes.Time, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
-					}
-				}
-				else if (control is EbInputGeoLocation)
-				{
-					cols += control.Name + " " + vDbTypes.String.VDbType.ToString() + ",";
-					_col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = EbDbTypes.String, bVisible = true, sWidth = "100px", ClassName = "dt-body-right tdheight", RenderAs = StringRenderType.Marker };
-				}
+		//		else if (control is EbCardSetParent)
+		//		{
 
-				else if (control is EbCardSetParent)
-				{
+		//			if (true)///////(control as EbCardSetParent).MultiSelect// temp fix, bcoz unable to detect singleselect on insert rqst
+		//			{
+		//				cols += control.Name + " " + vDbTypes.String.VDbType.ToString() + ",";
+		//				_col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = EbDbTypes.String, bVisible = true, sWidth = "100px", ClassName = "dt-body-right tdheight", RenderAs = StringRenderType.Link };
 
-					if (true)///////(control as EbCardSetParent).MultiSelect// temp fix, bcoz unable to detect singleselect on insert rqst
-					{
-						cols += control.Name + " " + vDbTypes.String.VDbType.ToString() + ",";
-						_col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = EbDbTypes.String, bVisible = true, sWidth = "100px", ClassName = "dt-body-right tdheight", RenderAs = StringRenderType.Link };
+		//				var LineColumns = new DVColumnCollection();
+		//				DbParameter[] lineparameter = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("tbl", EbDbTypes.String, request.BotObj.TableName.ToLower() + "_lines") };
+		//				var linerslt = this.EbConnectionFactory.ObjectsDB.IsTableExists(this.EbConnectionFactory.ObjectsDB.IS_TABLE_EXIST, lineparameter);
+		//				string linecolsName = "id";
+		//				LineColumns.Add(new DVNumericColumn { Data = 0, Name = "id", sTitle = "id", Type = EbDbTypes.Int32, bVisible = true, sWidth = "100px", ClassName = "tdheight" });
+		//				string linecols = "";
+		//				var linepos = 1;
 
-						var LineColumns = new DVColumnCollection();
-						DbParameter[] lineparameter = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("tbl", EbDbTypes.String, request.BotObj.TableName.ToLower() + "_lines") };
-						var linerslt = this.EbConnectionFactory.ObjectsDB.IsTableExists(this.EbConnectionFactory.ObjectsDB.IS_TABLE_EXIST, lineparameter);
-						string linecolsName = "id";
-						LineColumns.Add(new DVNumericColumn { Data = 0, Name = "id", sTitle = "id", Type = EbDbTypes.Int32, bVisible = true, sWidth = "100px", ClassName = "tdheight" });
-						string linecols = "";
-						var linepos = 1;
+		//				foreach (EbCardField CardField in (control as EbCardSetParent).CardFields)
+		//				{
+		//					if (!CardField.DoNotPersist)
+		//					{
+		//						linecolsName += "," + CardField.Name;
+		//						DVBaseColumn _linecol = null;
+		//						if (CardField is EbCardNumericField)
+		//						{
+		//							linecols += "," + CardField.Name + " " + vDbTypes.Decimal.VDbType.ToString();
+		//							_linecol = new DVNumericColumn { Data = linepos, Name = CardField.Name, sTitle = CardField.Name, Type = EbDbTypes.Double, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
+		//						}
+		//						else
+		//						{
+		//							linecols += "," + CardField.Name + " " + vDbTypes.String.VDbType.ToString();
+		//							_linecol = new DVStringColumn { Data = linepos, Name = CardField.Name, sTitle = CardField.Name, Type = CardField.EbDbType, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
+		//						}
+		//						LineColumns.Add(_linecol);
+		//						linepos++;
+		//					}
+		//				}
 
-						foreach (EbCardField CardField in (control as EbCardSetParent).CardFields)
-						{
-							if (!CardField.DoNotPersist)
-							{
-								linecolsName += "," + CardField.Name;
-								DVBaseColumn _linecol = null;
-								if (CardField is EbCardNumericField)
-								{
-									linecols += "," + CardField.Name + " " + vDbTypes.Decimal.VDbType.ToString();
-									_linecol = new DVNumericColumn { Data = linepos, Name = CardField.Name, sTitle = CardField.Name, Type = EbDbTypes.Double, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
-								}
-								else
-								{
-									linecols += "," + CardField.Name + " " + vDbTypes.String.VDbType.ToString();
-									_linecol = new DVStringColumn { Data = linepos, Name = CardField.Name, sTitle = CardField.Name, Type = CardField.EbDbType, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
-								}
-								LineColumns.Add(_linecol);
-								linepos++;
-							}
-						}
+		//				if (!linerslt)
+		//				{
+		//					string sql2 = "CREATE TABLE @tbl( id SERIAL PRIMARY KEY, formid integer, selectedcardid integer @cols)".Replace("@cols", linecols).Replace("@tbl", request.BotObj.TableName + "_lines");
+		//					this.EbConnectionFactory.ObjectsDB.CreateTable(sql2);
+		//					dvRefidOfCards = CreateDsAndDv4Cards(request, LineColumns, linecolsName);
+		//				}
+		//				else
+		//				{
+		//					var ColsColl2 = this.EbConnectionFactory.ObjectsDB.GetColumnSchema(request.BotObj.TableName + "_lines");
+		//					bool modify2 = false;
+		//					var sql2 = "";
+		//					var name2 = "";
+		//					foreach (DVBaseColumn col in LineColumns)
+		//					{
+		//						var flag2 = false;
+		//						name2 = col.Name.ToLower();
+		//						foreach (EbDataColumn dr in ColsColl2)
+		//						{
+		//							if (name2 == (dr.ColumnName.ToLower()))
+		//							{
+		//								//type check
+		//								//if (col.Type == dr.Type)
+		//								//{
+		//									flag2 = true;
+		//									break;
+		//								//}
+		//								//else
+		//								//{
+		//								//	flag2 = true;
+		//								//	//Errorrrrrrrrr...........
+		//								//}
+		//							}
+		//							else
+		//								flag2 = false;
+		//						}
+		//						if (!flag2 && !name2.Equals("id"))/////////////
+		//						{
+		//							sql2 += name2 + " " + vDbTypes.GetVendorDbType(col.Type).ToString() + ",";
+		//							modify2 = true;
+		//						}
+		//						//if (!flag2)
+		//						//	sql2 += "alter table @tbl Add column " + name2 + " " + vDbTypes.GetVendorDbType(col.Type).ToString() + ";";
 
-						if (!linerslt)
-						{
-							string sql2 = "CREATE TABLE @tbl( id SERIAL PRIMARY KEY, formid integer, selectedcardid integer @cols)".Replace("@cols", linecols).Replace("@tbl", request.BotObj.TableName + "_lines");
-							this.EbConnectionFactory.ObjectsDB.CreateTable(sql2);
-							dvRefidOfCards = CreateDsAndDv4Cards(request, LineColumns, linecolsName);
-						}
-						else
-						{
-							var ColsColl2 = this.EbConnectionFactory.ObjectsDB.GetColumnSchema(request.BotObj.TableName + "_lines");
-							bool modify2 = false;
-							var sql2 = "";
-							var name2 = "";
-							foreach (DVBaseColumn col in LineColumns)
-							{
-								var flag2 = false;
-								name2 = col.Name.ToLower();
-								foreach (EbDataColumn dr in ColsColl2)
-								{
-									if (name2 == (dr.ColumnName.ToLower()))
-									{
-										//type check
-										//if (col.Type == dr.Type)
-										//{
-											flag2 = true;
-											break;
-										//}
-										//else
-										//{
-										//	flag2 = true;
-										//	//Errorrrrrrrrr...........
-										//}
-									}
-									else
-										flag2 = false;
-								}
-								if (!flag2 && !name2.Equals("id"))/////////////
-								{
-									sql2 += name2 + " " + vDbTypes.GetVendorDbType(col.Type).ToString() + ",";
-									modify2 = true;
-								}
-								//if (!flag2)
-								//	sql2 += "alter table @tbl Add column " + name2 + " " + vDbTypes.GetVendorDbType(col.Type).ToString() + ";";
+		//					}
+		//					if (modify2)
+		//					{
+		//						if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.ORACLE)/////////////////////////
+		//							sql2 = "ALTER TABLE @tbl ADD (" + sql2.Substring(0, sql2.Length - 1) + ")";
+		//						else
+		//							sql2 = "ALTER TABLE @tbl ADD COLUMN " + sql2.Substring(0, sql2.Length - 1);
 
-							}
-							if (modify2)
-							{
-								if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.ORACLE)/////////////////////////
-									sql2 = "ALTER TABLE @tbl ADD (" + sql2.Substring(0, sql2.Length - 1) + ")";
-								else
-									sql2 = "ALTER TABLE @tbl ADD COLUMN " + sql2.Substring(0, sql2.Length - 1);
+		//						sql2 = sql2.Replace("@tbl", request.BotObj.TableName + "_lines");
+		//						var ret = this.EbConnectionFactory.ObjectsDB.UpdateTable(sql2);
+		//					}
+		//					//if (sql2 != "")
+		//					//{
+		//					//	sql2 = sql2.Replace("@tbl", request.BotObj.TableName + "_lines");
+		//					//	var ret2 = this.EbConnectionFactory.ObjectsDB.UpdateTable(sql2);
+		//					//}
+		//				}
+		//			}
+		//			//single card
+		//			else
+		//			{
+		//				foreach (EbCardField CardField in (control as EbCardSetParent).CardFields)
+		//				{
+		//					if (!CardField.DoNotPersist)
+		//					{
+		//						if (CardField is EbCardNumericField)
+		//						{
+		//							cols += CardField.Name + " " + vDbTypes.Decimal.VDbType.ToString() + ",";
+		//							_col = new DVNumericColumn { Data = pos, Name = CardField.Name, sTitle = CardField.Name, Type = EbDbTypes.Double, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
+		//						}
+		//						else
+		//						{
+		//							cols += CardField.Name + " " + vDbTypes.String.VDbType.ToString() + ",";
+		//							_col = new DVStringColumn { Data = pos, Name = CardField.Name, sTitle = CardField.Name, Type = CardField.EbDbType, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
+		//						}
+		//						Columns.Add(_col);
+		//						pos++;
+		//					}
+		//				}
 
-								sql2 = sql2.Replace("@tbl", request.BotObj.TableName + "_lines");
-								var ret = this.EbConnectionFactory.ObjectsDB.UpdateTable(sql2);
-							}
-							//if (sql2 != "")
-							//{
-							//	sql2 = sql2.Replace("@tbl", request.BotObj.TableName + "_lines");
-							//	var ret2 = this.EbConnectionFactory.ObjectsDB.UpdateTable(sql2);
-							//}
-						}
-					}
-					//single card
-					else
-					{
-						foreach (EbCardField CardField in (control as EbCardSetParent).CardFields)
-						{
-							if (!CardField.DoNotPersist)
-							{
-								if (CardField is EbCardNumericField)
-								{
-									cols += CardField.Name + " " + vDbTypes.Decimal.VDbType.ToString() + ",";
-									_col = new DVNumericColumn { Data = pos, Name = CardField.Name, sTitle = CardField.Name, Type = EbDbTypes.Double, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
-								}
-								else
-								{
-									cols += CardField.Name + " " + vDbTypes.String.VDbType.ToString() + ",";
-									_col = new DVStringColumn { Data = pos, Name = CardField.Name, sTitle = CardField.Name, Type = CardField.EbDbType, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
-								}
-								Columns.Add(_col);
-								pos++;
-							}
-						}
+		//			}
+		//		}
+		//		else
+		//		{
+		//			cols += control.Name + " " + vDbTypes.String.VDbType.ToString() + ",";
+		//			_col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = EbDbTypes.String, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
+		//		}
+		//		Columns.Add(_col);
+		//		pos++;
+		//	}
 
-					}
-				}
-				else
-				{
-					cols += control.Name + " " + vDbTypes.String.VDbType.ToString() + ",";
-					_col = new DVStringColumn { Data = pos, Name = control.Name, sTitle = control.Name, Type = EbDbTypes.String, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
-				}
-				Columns.Add(_col);
-				pos++;
-			}
-
-			colsName += ", eb_created_by, eb_created_at, eb_lastmodified_by, eb_lastmodified_at, eb_del, eb_void, eb_transaction_date, eb_autogen";
+		//	colsName += ", eb_created_by, eb_created_at, eb_lastmodified_by, eb_lastmodified_at, eb_del, eb_void, eb_transaction_date, eb_autogen";
 			
-			Columns.Add(new DVNumericColumn { Data = pos++, Name = "eb_created_by", sTitle = "eb_created_by", Type = EbDbTypes.Decimal, bVisible = true, sWidth = "100px", ClassName = "tdheight" });
-			Columns.Add(new DVNumericColumn { Data = pos++, Name = "eb_created_at", sTitle = "eb_created_at", Type = EbDbTypes.DateTime, bVisible = true, sWidth = "100px", ClassName = "tdheight" });
-			Columns.Add(new DVNumericColumn { Data = pos++, Name = "eb_lastmodified_by", sTitle = "eb_lastmodified_by", Type = EbDbTypes.Decimal, bVisible = true, sWidth = "100px", ClassName = "tdheight" });
-			Columns.Add(new DVNumericColumn { Data = pos++, Name = "eb_lastmodified_at", sTitle = "eb_lastmodified_at", Type = EbDbTypes.DateTime, bVisible = true, sWidth = "100px", ClassName = "tdheight" });
-			Columns.Add(new DVNumericColumn { Data = pos++, Name = "eb_del", sTitle = "eb_del", Type = EbDbTypes.Boolean, bVisible = true, sWidth = "100px", ClassName = "tdheight" });
-			Columns.Add(new DVNumericColumn { Data = pos++, Name = "eb_void", sTitle = "eb_void", Type = EbDbTypes.Boolean, bVisible = true, sWidth = "100px", ClassName = "tdheight" });
-			Columns.Add(new DVNumericColumn { Data = pos++, Name = "eb_transaction_date", sTitle = "eb_transaction_date", Type = EbDbTypes.DateTime, bVisible = true, sWidth = "100px", ClassName = "tdheight" });
-			Columns.Add(new DVNumericColumn { Data = pos++, Name = "eb_autogen", sTitle = "eb_autogen", Type = EbDbTypes.Decimal, bVisible = true, sWidth = "100px", ClassName = "tdheight" });
+		//	Columns.Add(new DVNumericColumn { Data = pos++, Name = "eb_created_by", sTitle = "eb_created_by", Type = EbDbTypes.Decimal, bVisible = true, sWidth = "100px", ClassName = "tdheight" });
+		//	Columns.Add(new DVNumericColumn { Data = pos++, Name = "eb_created_at", sTitle = "eb_created_at", Type = EbDbTypes.DateTime, bVisible = true, sWidth = "100px", ClassName = "tdheight" });
+		//	Columns.Add(new DVNumericColumn { Data = pos++, Name = "eb_lastmodified_by", sTitle = "eb_lastmodified_by", Type = EbDbTypes.Decimal, bVisible = true, sWidth = "100px", ClassName = "tdheight" });
+		//	Columns.Add(new DVNumericColumn { Data = pos++, Name = "eb_lastmodified_at", sTitle = "eb_lastmodified_at", Type = EbDbTypes.DateTime, bVisible = true, sWidth = "100px", ClassName = "tdheight" });
+		//	Columns.Add(new DVNumericColumn { Data = pos++, Name = "eb_del", sTitle = "eb_del", Type = EbDbTypes.Boolean, bVisible = true, sWidth = "100px", ClassName = "tdheight" });
+		//	Columns.Add(new DVNumericColumn { Data = pos++, Name = "eb_void", sTitle = "eb_void", Type = EbDbTypes.Boolean, bVisible = true, sWidth = "100px", ClassName = "tdheight" });
+		//	Columns.Add(new DVNumericColumn { Data = pos++, Name = "eb_transaction_date", sTitle = "eb_transaction_date", Type = EbDbTypes.DateTime, bVisible = true, sWidth = "100px", ClassName = "tdheight" });
+		//	Columns.Add(new DVNumericColumn { Data = pos++, Name = "eb_autogen", sTitle = "eb_autogen", Type = EbDbTypes.Decimal, bVisible = true, sWidth = "100px", ClassName = "tdheight" });
 
-			if (!rslt)
-			{
-				var str = "";
-				if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.PGSQL)/////////////
-					str = "id SERIAL PRIMARY KEY,";				
-				cols = str + cols;
-				str = "eb_created_by " + vDbTypes.Decimal.VDbType.ToString() + ",";
-				str += "eb_created_at " + vDbTypes.DateTime.VDbType.ToString() + ",";
-				str += "eb_lastmodified_by " + vDbTypes.Decimal.VDbType.ToString() + ",";
-				str += "eb_lastmodified_at " + vDbTypes.DateTime.VDbType.ToString() + ",";
-				str += "eb_del " + vDbTypes.Boolean.VDbType.ToString() + " DEFAULT 'F',";
-				str += "eb_void " + vDbTypes.Boolean.VDbType.ToString() + " DEFAULT 'F',";
-				str += "eb_transaction_date " + vDbTypes.DateTime.VDbType.ToString() + ",";
-				str += "eb_autogen " + vDbTypes.Decimal.VDbType.ToString();
-				cols += str;
-				string sql = "CREATE TABLE @tbl(@cols)".Replace("@cols", cols).Replace("@tbl", request.BotObj.TableName);
-				this.EbConnectionFactory.ObjectsDB.CreateTable(sql);
+		//	if (!rslt)
+		//	{
+		//		var str = "";
+		//		if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.PGSQL)/////////////
+		//			str = "id SERIAL PRIMARY KEY,";				
+		//		cols = str + cols;
+		//		str = "eb_created_by " + vDbTypes.Decimal.VDbType.ToString() + ",";
+		//		str += "eb_created_at " + vDbTypes.DateTime.VDbType.ToString() + ",";
+		//		str += "eb_lastmodified_by " + vDbTypes.Decimal.VDbType.ToString() + ",";
+		//		str += "eb_lastmodified_at " + vDbTypes.DateTime.VDbType.ToString() + ",";
+		//		str += "eb_del " + vDbTypes.Boolean.VDbType.ToString() + " DEFAULT 'F',";
+		//		str += "eb_void " + vDbTypes.Boolean.VDbType.ToString() + " DEFAULT 'F',";
+		//		str += "eb_transaction_date " + vDbTypes.DateTime.VDbType.ToString() + ",";
+		//		str += "eb_autogen " + vDbTypes.Decimal.VDbType.ToString();
+		//		cols += str;
+		//		string sql = "CREATE TABLE @tbl(@cols)".Replace("@cols", cols).Replace("@tbl", request.BotObj.TableName);
+		//		this.EbConnectionFactory.ObjectsDB.CreateTable(sql);
 
-				if (!dvRefidOfCards.IsNullOrEmpty())
-				{
-					foreach (DVBaseColumn col in Columns)
-					{
-						if (col is DVStringColumn && (col as DVStringColumn).RenderAs == StringRenderType.Link)
-						{
-							(col as DVStringColumn).LinkRefId = dvRefidOfCards;
-						}
-					}
-				}
-				CreateDsAndDv(request, Columns, colsName);
+		//		if (!dvRefidOfCards.IsNullOrEmpty())
+		//		{
+		//			foreach (DVBaseColumn col in Columns)
+		//			{
+		//				if (col is DVStringColumn && (col as DVStringColumn).RenderAs == StringRenderType.Link)
+		//				{
+		//					(col as DVStringColumn).LinkRefId = dvRefidOfCards;
+		//				}
+		//			}
+		//		}
+		//		CreateDsAndDv(request, Columns, colsName);
 
-			}
+		//	}
 
-			//Alter Table
-			else
-			{
-				//string sql = @"select column_name,data_type from information_schema.columns
-				//                where table_name = '@tbl';".Replace("@tbl", request.BotObj.TableName);
-				//EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery(sql);
-				var ColsColl = this.EbConnectionFactory.ObjectsDB.GetColumnSchema(request.BotObj.TableName);
-				bool modify = false;
-				var sql = string.Empty;								
-				var name = string.Empty;
-				foreach (DVBaseColumn col in Columns)
-				{
-					var flag = false;
-					name = col.Name.ToLower();
-					foreach (EbDataColumn dr in ColsColl)
-					{
-						if (name == (dr.ColumnName.ToLower()))
-						{
-							//type check
-							//if (col.Type == dr.Type)
-							//{
-								flag = true;
-								break;
-							//}
-							//else
-							//{
-							//	flag = true;
-							//	//Errorrrrrrrrr...........
-							//}
-						}
-						else
-							flag = false;
-					}
-					if (!flag && !name.Equals("id"))/////////////
-					{
-						sql += name + " " + vDbTypes.GetVendorDbType(col.Type).ToString() + ",";
-						modify = true;
-					}
+		//	//Alter Table
+		//	else
+		//	{
+		//		//string sql = @"select column_name,data_type from information_schema.columns
+		//		//                where table_name = '@tbl';".Replace("@tbl", request.BotObj.TableName);
+		//		//EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery(sql);
+		//		var ColsColl = this.EbConnectionFactory.ObjectsDB.GetColumnSchema(request.BotObj.TableName);
+		//		bool modify = false;
+		//		var sql = string.Empty;								
+		//		var name = string.Empty;
+		//		foreach (DVBaseColumn col in Columns)
+		//		{
+		//			var flag = false;
+		//			name = col.Name.ToLower();
+		//			foreach (EbDataColumn dr in ColsColl)
+		//			{
+		//				if (name == (dr.ColumnName.ToLower()))
+		//				{
+		//					//type check
+		//					//if (col.Type == dr.Type)
+		//					//{
+		//						flag = true;
+		//						break;
+		//					//}
+		//					//else
+		//					//{
+		//					//	flag = true;
+		//					//	//Errorrrrrrrrr...........
+		//					//}
+		//				}
+		//				else
+		//					flag = false;
+		//			}
+		//			if (!flag && !name.Equals("id"))/////////////
+		//			{
+		//				sql += name + " " + vDbTypes.GetVendorDbType(col.Type).ToString() + ",";
+		//				modify = true;
+		//			}
 
-				}
-				if (modify)
-				{
-					if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.ORACLE)/////////////////////////
-						sql = "ALTER TABLE @tbl ADD (" + sql.Substring(0, sql.Length - 1) + ")";
-					else
-						sql = "ALTER TABLE @tbl ADD COLUMN " + sql.Substring(0, sql.Length - 1);
+		//		}
+		//		if (modify)
+		//		{
+		//			if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.ORACLE)/////////////////////////
+		//				sql = "ALTER TABLE @tbl ADD (" + sql.Substring(0, sql.Length - 1) + ")";
+		//			else
+		//				sql = "ALTER TABLE @tbl ADD COLUMN " + sql.Substring(0, sql.Length - 1);
 
-					sql = sql.Replace("@tbl", request.BotObj.TableName);
-					var ret = this.EbConnectionFactory.ObjectsDB.UpdateTable(sql);
-				}
-			}
+		//			sql = sql.Replace("@tbl", request.BotObj.TableName);
+		//			var ret = this.EbConnectionFactory.ObjectsDB.UpdateTable(sql);
+		//		}
+		//	}
 
-			return new CreateBotFormTableResponse();
-		}
+		//	return new CreateBotFormTableResponse();
+		//}
 
 		public void CreateDsAndDv(CreateBotFormTableRequest request, DVColumnCollection Columns, string ColumnName)
 		{

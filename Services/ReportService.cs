@@ -63,16 +63,14 @@ namespace ExpressBase.ServiceStack
                 Report.WaterMarkList = new List<object>();
                 Report.ValueScriptCollection = new Dictionary<string, Script>();
                 Report.AppearanceScriptCollection = new Dictionary<string, Script>();
-               // Report.FieldDict = new Dictionary<string, object>();
                 Report.LinkCollection = new Dictionary<string, List<Common.Objects.EbControl>>();
                 Report.CurrentTimestamp = DateTime.Now;
                 Report.UserName = request.Fullname;
                 Report.FileClient = new EbStaticFileClient();
                 Report.FileClient = this.FileClient;
                 Report.Parameters = request.Params;
-                //var x = this.Redis.Get<Eb_Solution>(String.Format("solution_{0}", request.TenantAccountId));
+                Report.Solution = this.Redis.Get<Eb_Solution>(String.Format("solution_{0}", request.TenantAccountId));
                 //-- END REPORT object INIT
-
                 iTextSharp.text.Rectangle rec = new iTextSharp.text.Rectangle(Report.WidthPt, Report.HeightPt);
                 Report.Doc = new Document(rec);
                 Report.Ms1 = new MemoryStream();
