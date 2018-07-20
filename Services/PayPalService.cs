@@ -6,7 +6,9 @@ using ExpressBase.Objects.ServiceStack_Artifacts;
 using Flurl.Http;
 using Newtonsoft.Json;
 using RestSharp;
+using RestSharp.Extensions;
 using RestSharp.Authenticators;
+using ServiceStack;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -29,7 +31,7 @@ namespace ExpressBase.ServiceStack.Services
         string P_PayResponse;
         int P_PayResCode;
 
-        public PayPalService() : base()
+        public PayPalService(IEbConnectionFactory _dbf) : base(_dbf)
         {
         }
 
@@ -84,7 +86,7 @@ namespace ExpressBase.ServiceStack.Services
             return await flurlRequest.SendAsync(_method, new Flurl.Http.Content.CapturedJsonContent(JsonBody));
         }
 
-        PayPalOauthObject GetOAuthToken()
+        PayPalOauthObject CreateOAuthToken()
         {
             string UserID = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_PAYPAL_USERID);
             string UserSecret = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_PAYPAL_USERSECRET);
@@ -118,6 +120,7 @@ namespace ExpressBase.ServiceStack.Services
                 "\nToken Type:: " + SerialOauthResponse.TokenType +
                 "\nApp ID:: " + SerialOauthResponse.AppId +
                 "\nExpires In:: " + SerialOauthResponse.ExpiresIn.ToString());
+            this.Redis.Set<PayPalOauthObject>("EB_PAYPAL_OAUTH", SerialOauthResponse);
             return SerialOauthResponse;
         }
 
@@ -221,11 +224,12 @@ namespace ExpressBase.ServiceStack.Services
 
         }
 
+        [Authenticate]
         public PayPalPaymentResponse Get(PayPalPaymentRequest req)
         {
             PayPalPaymentResponse resp = new PayPalPaymentResponse();
 
-            PayPalOauthObject payPalOauth = GetOAuthToken();
+            PayPalOauthObject payPalOauth = CreateOAuthToken();
 
             FlurlClient flurlClient = new FlurlClient(UriString);
             flurlClient.Headers.Add("Content-Type", "application/json");
@@ -268,6 +272,7 @@ namespace ExpressBase.ServiceStack.Services
             string AgreementUrl = UriString + "v1/payments/billing-agreements/";
             FlurlRequest AgreementRequest = new FlurlRequest(AgreementUrl);
             AgreementRequest.Client = flurlClient;
+
             string AgreementJson = JsonConvert.SerializeObject(BillAgreementRequest, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
             var AgreementResult = Send(HttpMethod.Post, AgreementRequest, AgreementJson).Result;
             var AgreementResConents = GetResponseContents(AgreementResult).Result;
