@@ -138,6 +138,7 @@ namespace ExpressBase.ServiceStack.Services
             var dt = this.EbConnectionFactory.ObjectsDB.DoNonQuery(query.ToString(), parameters.ToArray());
             return new DeleteLocResponse {id=(dt==1)?request.Id:0 };
         }
+
         public UpdateSolutionResponse Post(UpdateSolutionRequest req)
         {
             var _infraService = base.ResolveService<InfraServices>();
@@ -166,7 +167,7 @@ namespace ExpressBase.ServiceStack.Services
             List<EbLocationCustomField> Conf = new List<EbLocationCustomField>();
             Dictionary<int,EbLocation> locs = new Dictionary<int,EbLocation>();
 
-            string query = "SELECT * FROM eb_location_config WHERE eb_del='F' ORDER BY id ; SELECT * FROM eb_locations";
+            string query = "SELECT * FROM eb_location_config WHERE eb_del = 'F' ORDER BY id; SELECT * FROM eb_locations;";
             EbDataSet dt = this.EbConnectionFactory.ObjectsDB.DoQueries(query);
 
             foreach (EbDataRow r in dt.Tables[0].Rows)
