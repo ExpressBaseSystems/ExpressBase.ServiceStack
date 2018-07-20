@@ -259,13 +259,7 @@ namespace ExpressBase.ServiceStack
             try
             {
                 valscript.Compile();
-            }
-            catch (Exception e)
-            {
-                _isValid = false;
-                _excepMsg = e.Message;
-                Console.WriteLine(e.Message);
-            }
+          
             var matches = Regex.Matches(request.ValueExpression, @"T[0-9]{1}.\w+").OfType<Match>().Select(m => m.Groups[0].Value).Distinct();
             string[] _dataFieldsUsed = new string[matches.Count()];
             int i = 0;
@@ -370,6 +364,13 @@ namespace ExpressBase.ServiceStack
                         resultType_enum = 0;
                         break;
                 }
+            }
+            }
+            catch (Exception e)
+            {
+                _isValid = false;
+                _excepMsg = e.Message;
+                Console.WriteLine(e.Message);
             }
             return new ValidateCalcExpressionResponse { IsValid = _isValid, Type = resultType_enum, ExceptionMessage = _excepMsg };
         }

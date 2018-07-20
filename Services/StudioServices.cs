@@ -745,6 +745,7 @@ WHERE
             dynamic obj = EbSerializers.Json_Deserialize(request.Json);
             var _type = obj.GetType();
             string refId = null;
+            string exception_msg = string.Empty ;
             ILog log = LogManager.GetLogger(GetType());
             log.Info("#DS insert -- entered post");
 
@@ -803,10 +804,11 @@ WHERE
             }
             catch (Exception e)
             {
+                var m = e.ToErrorCode();
                 Console.WriteLine("Exception: " + e.ToString());
 
             }
-            return new EbObject_Create_New_ObjectResponse() { RefId = refId };
+            return new EbObject_Create_New_ObjectResponse() { RefId = refId, ExceptionMessage = exception_msg };
         }
 
         public EbObject_Create_Major_VersionResponse Post(EbObject_Create_Major_VersionRequest request)
