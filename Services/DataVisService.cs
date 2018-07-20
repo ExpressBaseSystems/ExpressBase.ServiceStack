@@ -26,7 +26,7 @@ namespace ExpressBase.ServiceStack
     public class DataVisService : EbBaseService
     {
         public DataVisService(IEbConnectionFactory _dbf) : base(_dbf) { }
-        
+
         //[CompressResponse]
         //public DataSourceDataResponse Any(DataVisDataRequest request)
         //{
@@ -117,7 +117,7 @@ namespace ExpressBase.ServiceStack
 
         //    return dsresponse;
         //}
-      
+
         //[CompressResponse]
         //public DataSourceColumnsResponse Any(DataVisColumnsRequest request)
         //{
@@ -196,7 +196,7 @@ namespace ExpressBase.ServiceStack
                 _Tags = "'" + item + "',";
             _Tags = _Tags.Remove(_Tags.Length - 1);
             _Tags = _Tags.Remove(_Tags.Length - 1);
-            _Tags = _Tags.Remove(0,1);
+            _Tags = _Tags.Remove(0, 1);
 
             List<EbObjectWrapper> dvList = new List<EbObjectWrapper>();
             if (request.DsRefid != dsobj.DataSourceRefId)
@@ -321,12 +321,12 @@ namespace ExpressBase.ServiceStack
                                 }
                             }
                             int place = _cond.LastIndexOf("OR");
-                            _cond = _cond.Substring(0,place);
+                            _cond = _cond.Substring(0, place);
                             _c += "AND (" + _cond + ")";
                         }
                     }
                 }
-                
+
                 if (!_ds.Sql.ToLower().Contains(":and_search"))
                 {
                     _ds.Sql = "SELECT * FROM (" + _ds.Sql + ") data WHERE 1=1 :and_search order by :orderby";
@@ -354,22 +354,22 @@ namespace ExpressBase.ServiceStack
                         if (!sql1.ToLower().Contains(":limit"))
                             sql1 = sql1 + " LIMIT :limit OFFSET :offset;";
                     }
-                    _sql = sql1 + tempsql ;
+                    _sql = sql1 + tempsql;
                 }
             }
             bool _isPaged = false;
 
             string __order = string.Empty;
-            if (request.OrderBy != null && request.OrderBy.Count >0)
+            if (request.OrderBy != null && request.OrderBy.Count > 0)
             {
-                foreach(OrderBy order in request.OrderBy)
+                foreach (OrderBy order in request.OrderBy)
                 {
                     __order += string.Format("{0} {1},", order.Column, (order.Direction == 2) ? "DESC" : "ASC");
                 }
                 int indx = __order.LastIndexOf(",");
                 __order = __order.Substring(0, indx);
             }
-            _sql = _sql.Replace(":orderby",(string.IsNullOrEmpty(__order)) ? "1" : __order);
+            _sql = _sql.Replace(":orderby", (string.IsNullOrEmpty(__order)) ? "1" : __order);
 
             _isPaged = (_sql.ToLower().Contains(":offset") && _sql.ToLower().Contains(":limit"));
 
@@ -393,7 +393,7 @@ namespace ExpressBase.ServiceStack
             int _recordsTotal = 0, _recordsFiltered = 0;
             if (_isPaged)
             {
-                Int32.TryParse(_dataset.Tables[_dataset.Tables.Count-1].Rows[0][0].ToString(), out _recordsTotal);
+                Int32.TryParse(_dataset.Tables[_dataset.Tables.Count - 1].Rows[0][0].ToString(), out _recordsTotal);
                 Int32.TryParse(_dataset.Tables[_dataset.Tables.Count - 1].Rows[0][0].ToString(), out _recordsFiltered);
             }
             _recordsTotal = (_recordsTotal > 0) ? _recordsTotal : _dataset.Tables[_dataset.Tables.Count - 1].Rows.Count;
@@ -406,7 +406,7 @@ namespace ExpressBase.ServiceStack
             dsresponse = new DataSourceDataResponse
             {
                 Draw = request.Draw,
-                Data =  _dataset.Tables[0].Rows,
+                Data = _dataset.Tables[0].Rows,
                 RecordsTotal = _recordsTotal,
                 RecordsFiltered = _recordsFiltered,
                 Ispaged = _isPaged
@@ -456,7 +456,7 @@ namespace ExpressBase.ServiceStack
                 if (_ds != null)
                 {
                     string _sql = string.Empty;
-                    
+
                     _sql = _ds.Sql/*Decoded()*/.Replace(":and_search", string.Empty).Replace(":orderby", "1");
                     _isPaged = (_sql.ToLower().Contains(":offset") && _sql.ToLower().Contains(":limit"));
 
@@ -470,7 +470,7 @@ namespace ExpressBase.ServiceStack
                     {
                         Console.WriteLine("................................................datasourcecolumnrequeststart " + System.DateTime.Now);
                         _dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray<System.Data.Common.DbParameter>());
-                       
+
                         Console.WriteLine("................................................datasourcecolumnrequestfinish " + System.DateTime.Now);
 
                         foreach (var dt in _dataset.Tables)
@@ -492,16 +492,21 @@ namespace ExpressBase.ServiceStack
 
         public EbDataSet PreProcessing(EbDataSet _dataset, EbDataVisualization _dv)
         {
-            var colCount =  _dataset.Tables[0].Columns.Count;
+            dynamic result = null;
+            var colCount = _dataset.Tables[0].Columns.Count;
             Dictionary<string, int> dict = new Dictionary<string, int>();
+            _dataset.Tables[0].Columns.RemoveAt(colCount - 1);// rownum deleted for oracle
+            for (int i = 0; i < _dataset.Tables[0].Rows.Count; i++)
+            {
+                _dataset.Tables[0].Rows[i].RemoveAt(colCount - 1);
+            }
             foreach (DVBaseColumn col in _dv.Columns)
             {
-                if (col.Formula != null && col.Formula != "")
+                if (col.IsCustomColumn || (col.Formula != null && col.Formula != ""))
                 {
                     string[] _dataFieldsUsed;
                     Script valscript = CSharpScript.Create<dynamic>(col.Formula, ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System.Dynamic"), globalsType: typeof(Globals));
                     valscript.Compile();
-                    _dataset.Tables[0].Columns.RemoveAt(colCount - 1);// rownum deleted for oracle
                     _dataset.Tables[0].Columns.Add(new EbDataColumn { ColumnIndex = col.Data, ColumnName = col.Name, Type = col.Type });
                     for (int i = 0; i < _dataset.Tables[0].Rows.Count; i++)
                     {
@@ -511,13 +516,23 @@ namespace ExpressBase.ServiceStack
                         int j = 0;
                         foreach (var match in matches)
                             _dataFieldsUsed[j++] = match;
-                        foreach (string calcfd in _dataFieldsUsed)
+                        try
                         {
-                            string TName = calcfd.Split('.')[0];
-                            string fName = calcfd.Split('.')[1];
-                            globals[TName].Add(fName, new NTV { Name = fName, Type = _dataset.Tables[0].Columns[fName].Type, Value = _dataset.Tables[0].Rows[i][fName] });
+                            foreach (string calcfd in _dataFieldsUsed)
+                            {
+                                string TName = calcfd.Split('.')[0];
+                                string fName = calcfd.Split('.')[1];
+                                globals[TName].Add(fName, new NTV { Name = fName, Type = _dataset.Tables[0].Columns[fName].Type, Value = _dataset.Tables[0].Rows[i][fName] });
+                            }
                         }
-                    _dataset.Tables[0].Rows[i][col.Data] = valscript.RunAsync(globals).Result.ReturnValue.ToString();
+                        catch (Exception e)
+                        { }
+                        try
+                        {
+                            result = valscript.RunAsync(globals).Result.ReturnValue.ToString();
+                        }
+                        catch (Exception) { }
+                        _dataset.Tables[0].Rows[i].Insert(col.Data, result);
                     }
                 }
             }

@@ -1,5 +1,6 @@
 ﻿using ExpressBase.Common;
 using ExpressBase.Common.Application;
+using ExpressBase.Common.Constants;
 using ExpressBase.Common.Data;
 using ExpressBase.Common.Objects;
 using ExpressBase.Common.Structures;
@@ -197,11 +198,103 @@ WHERE
 			return new BotListResponse { Data = res };
 		}
 
+		public object Any123(CreateBotFormTableRequest request)
+		{
+			var vDbTypes = this.EbConnectionFactory.ObjectsDB.VendorDbTypes;
+			List<TableColumnMeta> _listNamesAndTypes = new List<TableColumnMeta> ();
+			foreach (EbControl control in request.BotObj.Controls)
+			{
+				if (control is EbNumeric)
+					_listNamesAndTypes.Add(new TableColumnMeta { Name = control.Name, Type = vDbTypes.Decimal } );
+				else if (control is EbDate)
+				{
+					if ((control as EbDate).EbDateType == EbDateType.Date)
+						_listNamesAndTypes.Add(new TableColumnMeta { Name = control.Name, Type = vDbTypes.Date });
+					else if ((control as EbDate).EbDateType == EbDateType.DateTime)
+						_listNamesAndTypes.Add(new TableColumnMeta { Name = control.Name, Type = vDbTypes.DateTime });
+					else if ((control as EbDate).EbDateType == EbDateType.Time)
+						_listNamesAndTypes.Add(new TableColumnMeta { Name = control.Name, Type = vDbTypes.Time });
+				}
+				else if (control is EbCardSetParent)
+				{
+					Dictionary<string, VendorDbType> _dicNameTypeLine = new Dictionary<string, VendorDbType>();
+					foreach (EbCardField CardField in (control as EbCardSetParent).CardFields)
+					{
+						if (!CardField.DoNotPersist)
+						{
+							if (CardField is EbCardNumericField)
+								_dicNameTypeLine.Add(CardField.Name, vDbTypes.Decimal);
+							else
+								_dicNameTypeLine.Add(CardField.Name, vDbTypes.String);
+						}
+					}
+					string linecols = string.Join(CharConstants.COMMA + CharConstants.SPACE.ToString(), _dicNameTypeLine.Select(x => x.Key + CharConstants.SPACE + x.Value).ToArray());
+				}
+				else //(control is EbTextBox || control is EbInputGeoLocation)
+					_listNamesAndTypes.Add(new TableColumnMeta { Name = control.Name, Type = vDbTypes.String });
+			}
+			_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_by", Type = vDbTypes.Decimal });
+			_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_at", Type = vDbTypes.DateTime });
+			_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_by", Type = vDbTypes.Decimal });
+			_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_at", Type = vDbTypes.DateTime });
+			_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_del", Type = vDbTypes.Boolean, Default = "F" });
+			_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_void", Type = vDbTypes.Boolean, Default = "F" });
+			_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_transaction_date", Type = vDbTypes.DateTime });
+			_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_autogen", Type = vDbTypes.Decimal });
+
+			string cols = string.Join(CharConstants.COMMA + CharConstants.SPACE.ToString(), _listNamesAndTypes.Select(x => x.Name + CharConstants.SPACE + x.Type.VDbType.ToString() + (x.Default.IsNullOrEmpty()? "": (" DEFAULT '"+x.Default+"'"))).ToArray());
+			var isTableExists = this.EbConnectionFactory.ObjectsDB.IsTableExists(this.EbConnectionFactory.ObjectsDB.IS_TABLE_EXIST, new DbParameter[] { this.EbConnectionFactory.ObjectsDB.GetNewParameter("tbl", EbDbTypes.String, request.BotObj.TableName.ToLower()) });
+			if (!isTableExists)
+			{				
+				string sql = "CREATE TABLE @tbl(@cols)".Replace("@cols", cols).Replace("@tbl", request.BotObj.TableName);
+				this.EbConnectionFactory.ObjectsDB.CreateTable(sql);
+			}
+			else
+			{
+				var colSchema = this.EbConnectionFactory.ObjectsDB.GetColumnSchema(request.BotObj.TableName);
+				string sql = string.Empty;
+				foreach (TableColumnMeta entry in _listNamesAndTypes)
+				{
+					bool isFound = false;
+					foreach (EbDataColumn dr in colSchema)
+					{
+						if (entry.Name.ToLower() == (dr.ColumnName.ToLower()))
+						{
+							isFound = true;
+							break;
+						}
+					}
+					if (!isFound)
+					{
+						sql += entry.Name + " " + entry.Type.VDbType.ToString() + ",";
+					}
+
+				}
+				if (!sql.IsEmpty())
+				{
+					if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.ORACLE)/////////////////////////
+						sql = "ALTER TABLE @tbl ADD (" + sql.Substring(0, sql.Length - 1) + ")";
+					else
+						sql = "ALTER TABLE @tbl ADD COLUMN " + sql.Substring(0, sql.Length - 1);
+
+					sql = sql.Replace("@tbl", request.BotObj.TableName);
+					var ret = this.EbConnectionFactory.ObjectsDB.UpdateTable(sql);
+				}
+
+			}
+
+			return new CreateBotFormTableResponse();
+		}
+
+		public class TableColumnMeta
+		{
+			public string Name { get; set; }
+			public VendorDbType Type { get; set; }
+			public string Default { get; set; }
+		}
+
 		public object Any(CreateBotFormTableRequest request)
 		{
-
-			//string qry = "SELECT EXISTS (SELECT 1 FROM   information_schema.tables WHERE  table_schema = 'public' AND table_name = @tbl); ";
-			//DbParameter[] parameter1 = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("@tbl", EbDbTypes.String, request.BotObj.TableName.ToLower()) };
 			DbParameter[] parameter1 = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("tbl", EbDbTypes.String, request.BotObj.TableName.ToLower()) };
 			var rslt = this.EbConnectionFactory.ObjectsDB.IsTableExists(this.EbConnectionFactory.ObjectsDB.IS_TABLE_EXIST, parameter1);
 			string cols = "";
@@ -380,7 +473,7 @@ WHERE
 				pos++;
 			}
 
-			colsName = ", eb_created_by, eb_created_at, eb_lastmodified_by, eb_lastmodified_at, eb_del, eb_void, eb_transaction_date, eb_autogen";
+			colsName += ", eb_created_by, eb_created_at, eb_lastmodified_by, eb_lastmodified_at, eb_del, eb_void, eb_transaction_date, eb_autogen";
 			
 			Columns.Add(new DVNumericColumn { Data = pos++, Name = "eb_created_by", sTitle = "eb_created_by", Type = EbDbTypes.Decimal, bVisible = true, sWidth = "100px", ClassName = "tdheight" });
 			Columns.Add(new DVNumericColumn { Data = pos++, Name = "eb_created_at", sTitle = "eb_created_at", Type = EbDbTypes.DateTime, bVisible = true, sWidth = "100px", ClassName = "tdheight" });
