@@ -17,6 +17,8 @@ using System.Net.Http;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
 using System.Threading.Tasks;
+using ExpressBase.Common.Structures;
+using System.Data.Common;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -124,7 +126,7 @@ namespace ExpressBase.ServiceStack.Services
             return SerialOauthResponse;
         }
 
-        BillingPlanResponse GetBillingPlan(PayPalOauthObject payPalOauth, FlurlClient flurlClient)
+        BillingPlanResponse CreateBillingPlan(PayPalOauthObject payPalOauth, FlurlClient flurlClient)
         {
             BillingPlanRequest Plan = new BillingPlanRequest();
             Plan.Name = "Test Plan";
@@ -191,7 +193,7 @@ namespace ExpressBase.ServiceStack.Services
 
             //PREPARING REQUEST TO CREATE BILLING PLAN
             string JsonBody = JsonConvert.SerializeObject(Plan, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
-            
+
             FlurlRequest flurlRequest = new FlurlRequest(UriString + "v1/payments/billing-plans/");
             flurlRequest.Client = flurlClient;
 
@@ -235,10 +237,14 @@ namespace ExpressBase.ServiceStack.Services
             flurlClient.Headers.Add("Content-Type", "application/json");
             flurlClient.Headers.Add("Authorization", "Bearer " + payPalOauth.AccessToken);
 
+            string ppBillingId = GetBillingPlanId(10, 5);
 
             //CREATING BILLING PLAN && //ACTIVATING THE BILLING PLAN
-            BillingPlanResponse BillPlanResponse = GetBillingPlan(payPalOauth, flurlClient);
+            BillingPlanResponse BillPlanResponse = CreateBillingPlan(payPalOauth, flurlClient);
 
+            EbBillingPlan plan = new EbBillingPlan(10, 5, BillPlanResponse);
+
+            var x = PersistBillingPlan(plan);
 
             //CREATING AND PARSING THE BILLING AGREEMENT
             //Object Initializations
@@ -284,6 +290,36 @@ namespace ExpressBase.ServiceStack.Services
 
             resp.Test = AcceptUrl;
             return resp;
+        }
+
+        bool PersistBillingPlan(EbBillingPlan plan)
+        {
+
+            string sql = "INSERT INTO eb_pp_billing_plans(pp_billingplan_id, num_users, amount_per_users, currency) VALUES(@plan_id, @num, @amount, @currency) RETURNING id";
+            DbParameter[] parameters =
+            {
+                        this.InfraConnectionFactory.DataDB.GetNewParameter("plan_id", EbDbTypes.String, plan.PlanResponse.PlanID),
+                        this.InfraConnectionFactory.DataDB.GetNewParameter("num",EbDbTypes.Int16, plan.NumUsers),
+                        this.InfraConnectionFactory.DataDB.GetNewParameter("amount",EbDbTypes.Decimal, plan.AmountperUser),
+                        this.InfraConnectionFactory.DataDB.GetNewParameter("currency",EbDbTypes.Int64, plan.PlanResponse.CurrencyCode.ToString()), //To String
+
+            };
+            var id = this.EbConnectionFactory.DataDB.DoNonQuery(sql, parameters);
+
+            return ((id > 0) ? true : false);
+        }
+
+        string GetBillingPlanId(int users, float amount)
+        {
+
+            string sql = "SELECT pp_billingplan_id FROM eb_pp_billing_plans WHERE num_users=@num AND amount_per_user = @amount"; // Include currency and Merchent ID
+            DbParameter[] parameters =
+            {
+                        this.InfraConnectionFactory.DataDB.GetNewParameter("num", EbDbTypes.Int16, users),
+                        this.InfraConnectionFactory.DataDB.GetNewParameter("amount",EbDbTypes.Decimal, amount)
+            };
+
+            return this.EbConnectionFactory.DataDB.DoQuery<string>(sql, parameters);
         }
     }
 }
