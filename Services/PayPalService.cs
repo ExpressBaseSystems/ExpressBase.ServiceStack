@@ -33,8 +33,63 @@ namespace ExpressBase.ServiceStack.Services
         string P_PayResponse;
         int P_PayResCode;
 
+        private PayPalOauthObject _payPalOauth = null;
+
+        FlurlClient flurlClient = new FlurlClient(UriString);
+
+        PayPalOauthObject PayPalOauth
+        {
+            get
+            {
+                string UserID = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_PAYPAL_USERID);
+                string UserSecret = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_PAYPAL_USERSECRET);
+
+                if (_payPalOauth == null)
+                    _payPalOauth = this.Redis.Get<PayPalOauthObject>("EB_PAYPAL_OAUTH");
+                //if(_payPalOauth.ExpiresIn == 0) Not Implemeted if expiry get a new token
+                else
+                {
+                    var client = new RestClient(new Uri(UriString));
+                    System.Net.CookieContainer CookieJar = new System.Net.CookieContainer();
+                    client.Authenticator = new HttpBasicAuthenticator(UserID, UserSecret);
+                    client.CookieContainer = CookieJar;
+
+
+                    //SENDING OAUTH-BASED AUTHENTICATION REQUEST
+                    var OAuthRequest = new RestRequest("v1/oauth2/token", Method.POST);
+                    OAuthRequest.AddHeader("Accept", "application/json");
+                    OAuthRequest.AddHeader("Accept-Language", "en_US");
+                    OAuthRequest.AddHeader("Content-Type", "application/x-www-form-urlencoded");
+                    OAuthRequest.AddParameter("grant_type", "client_credentials");
+
+
+                    //RECEIVING AND PARSING OAUTH RESPONSE
+                    var res = client.ExecuteAsyncPost(OAuthRequest, PayPalCallback, "POST");
+                    System.Threading.Thread.Sleep(8000);
+
+                    Console.WriteLine("OAUTH REQUEST\n***************");
+                    Console.WriteLine("HTTP Response Status Code :: " + StatusCode.ToString());
+                    Console.WriteLine("Message Body :: " + Response);
+                    var StreamData = GenerateStreamFromString(Response);
+                    var serializer = new DataContractJsonSerializer(typeof(PayPalOauthObject));
+                    _payPalOauth = serializer.ReadObject(StreamData) as PayPalOauthObject;
+
+                    Console.WriteLine("\nNONCE:: " + _payPalOauth.Nonce +
+                        "\nAccess Token:: " + _payPalOauth.AccessToken +
+                        "\nToken Type:: " + _payPalOauth.TokenType +
+                        "\nApp ID:: " + _payPalOauth.AppId +
+                        "\nExpires In:: " + _payPalOauth.ExpiresIn.ToString());
+                    this.Redis.Set<PayPalOauthObject>("EB_PAYPAL_OAUTH", _payPalOauth);
+                }
+                return _payPalOauth;
+            }
+
+        }
+
         public PayPalService(IEbConnectionFactory _dbf) : base(_dbf)
         {
+            flurlClient.Headers.Add("Content-Type", "application/json");
+            flurlClient.Headers.Add("Authorization", "Bearer " + PayPalOauth.AccessToken);
         }
 
         public System.IO.Stream GenerateStreamFromString(string s)
@@ -86,44 +141,6 @@ namespace ExpressBase.ServiceStack.Services
         async Task<HttpResponseMessage> Send(HttpMethod _method, Flurl.Http.FlurlRequest flurlRequest, string JsonBody)
         {
             return await flurlRequest.SendAsync(_method, new Flurl.Http.Content.CapturedJsonContent(JsonBody));
-        }
-
-        PayPalOauthObject CreateOAuthToken()
-        {
-            string UserID = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_PAYPAL_USERID);
-            string UserSecret = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_PAYPAL_USERSECRET);
-            var client = new RestClient(new Uri(UriString));
-            System.Net.CookieContainer CookieJar = new System.Net.CookieContainer();
-            client.Authenticator = new HttpBasicAuthenticator(UserID, UserSecret);
-            client.CookieContainer = CookieJar;
-
-
-            //SENDING OAUTH-BASED AUTHENTICATION REQUEST
-            var OAuthRequest = new RestRequest("v1/oauth2/token", Method.POST);
-            OAuthRequest.AddHeader("Accept", "application/json");
-            OAuthRequest.AddHeader("Accept-Language", "en_US");
-            OAuthRequest.AddHeader("Content-Type", "application/x-www-form-urlencoded");
-            OAuthRequest.AddParameter("grant_type", "client_credentials");
-
-
-            //RECEIVING AND PARSING OAUTH RESPONSE
-            var res = client.ExecuteAsyncPost(OAuthRequest, PayPalCallback, "POST");
-            System.Threading.Thread.Sleep(8000);
-
-            Console.WriteLine("OAUTH REQUEST\n***************");
-            Console.WriteLine("HTTP Response Status Code :: " + StatusCode.ToString());
-            Console.WriteLine("Message Body :: " + Response);
-            var StreamData = GenerateStreamFromString(Response);
-            var serializer = new DataContractJsonSerializer(typeof(PayPalOauthObject));
-            var SerialOauthResponse = serializer.ReadObject(StreamData) as PayPalOauthObject;
-
-            Console.WriteLine("\nNONCE:: " + SerialOauthResponse.Nonce +
-                "\nAccess Token:: " + SerialOauthResponse.AccessToken +
-                "\nToken Type:: " + SerialOauthResponse.TokenType +
-                "\nApp ID:: " + SerialOauthResponse.AppId +
-                "\nExpires In:: " + SerialOauthResponse.ExpiresIn.ToString());
-            this.Redis.Set<PayPalOauthObject>("EB_PAYPAL_OAUTH", SerialOauthResponse);
-            return SerialOauthResponse;
         }
 
         BillingPlanResponse CreateBillingPlan(PayPalOauthObject payPalOauth, FlurlClient flurlClient)
@@ -231,20 +248,7 @@ namespace ExpressBase.ServiceStack.Services
         {
             PayPalPaymentResponse resp = new PayPalPaymentResponse();
 
-            PayPalOauthObject payPalOauth = CreateOAuthToken();
-
-            FlurlClient flurlClient = new FlurlClient(UriString);
-            flurlClient.Headers.Add("Content-Type", "application/json");
-            flurlClient.Headers.Add("Authorization", "Bearer " + payPalOauth.AccessToken);
-
             string ppBillingId = GetBillingPlanId(10, 5);
-
-            //CREATING BILLING PLAN && //ACTIVATING THE BILLING PLAN
-            BillingPlanResponse BillPlanResponse = CreateBillingPlan(payPalOauth, flurlClient);
-
-            EbBillingPlan plan = new EbBillingPlan(10, 5, BillPlanResponse);
-
-            var x = PersistBillingPlan(plan);
 
             //CREATING AND PARSING THE BILLING AGREEMENT
             //Object Initializations
@@ -265,7 +269,7 @@ namespace ExpressBase.ServiceStack.Services
                 Name = "Trial Billing Request",
                 Description = "Trial billing agreement",
                 StartDate = "2020-01-01T09:13:49Z",
-                BillingPlan = new BillingPlanResponse(BillPlanResponse.PlanID),
+                BillingPlan = new BillingPlanResponse(ppBillingId),
                 Payer = new PayerDetails()
                 {
                     PayMethod = PayerDetails.PaymentMethodsStrings[(int)PaymentMethod.paypal],
@@ -295,13 +299,13 @@ namespace ExpressBase.ServiceStack.Services
         bool PersistBillingPlan(EbBillingPlan plan)
         {
 
-            string sql = "INSERT INTO eb_pp_billing_plans(pp_billingplan_id, num_users, amount_per_users, currency) VALUES(@plan_id, @num, @amount, @currency) RETURNING id";
+            string sql = @"INSERT INTO eb_pp_billing_plans(pp_billingplan_id, num_users, amount_per_user/*, currency*/) VALUES(@plan_id, @num, @amount/*, @currency*/) RETURNING id";
             DbParameter[] parameters =
             {
                         this.InfraConnectionFactory.DataDB.GetNewParameter("plan_id", EbDbTypes.String, plan.PlanResponse.PlanID),
                         this.InfraConnectionFactory.DataDB.GetNewParameter("num",EbDbTypes.Int16, plan.NumUsers),
                         this.InfraConnectionFactory.DataDB.GetNewParameter("amount",EbDbTypes.Decimal, plan.AmountperUser),
-                        this.InfraConnectionFactory.DataDB.GetNewParameter("currency",EbDbTypes.Int64, plan.PlanResponse.CurrencyCode.ToString()), //To String
+                        //this.InfraConnectionFactory.DataDB.GetNewParameter("currency",EbDbTypes.Int64, plan.PlanResponse.CurrencyCode.ToString()), //To String
 
             };
             var id = this.EbConnectionFactory.DataDB.DoNonQuery(sql, parameters);
@@ -311,6 +315,7 @@ namespace ExpressBase.ServiceStack.Services
 
         string GetBillingPlanId(int users, float amount)
         {
+            string ppBillingId = null;
 
             string sql = "SELECT pp_billingplan_id FROM eb_pp_billing_plans WHERE num_users=@num AND amount_per_user = @amount"; // Include currency and Merchent ID
             DbParameter[] parameters =
@@ -319,7 +324,20 @@ namespace ExpressBase.ServiceStack.Services
                         this.InfraConnectionFactory.DataDB.GetNewParameter("amount",EbDbTypes.Decimal, amount)
             };
 
-            return this.EbConnectionFactory.DataDB.DoQuery<string>(sql, parameters);
+            ppBillingId = this.EbConnectionFactory.DataDB.DoQuery<string>(sql, parameters);
+
+            if (string.IsNullOrEmpty(ppBillingId))
+            {
+                //CREATING BILLING PLAN && //ACTIVATING THE BILLING PLAN
+                BillingPlanResponse BillPlanResponse = CreateBillingPlan(PayPalOauth, flurlClient);
+
+                EbBillingPlan plan = new EbBillingPlan(10, 5, BillPlanResponse);
+                var x = PersistBillingPlan(plan);
+
+                ppBillingId = BillPlanResponse.PlanID;
+
+            }
+            return ppBillingId;
         }
     }
 }
