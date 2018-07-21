@@ -22,8 +22,6 @@ using System.Data.Common;
 
 namespace ExpressBase.ServiceStack.Services
 {
-
-
     public class PayPalService : EbBaseService
     {
         const string OAuthTokenPath = "/v1/oauth2/token";
@@ -54,14 +52,12 @@ namespace ExpressBase.ServiceStack.Services
                     client.Authenticator = new HttpBasicAuthenticator(UserID, UserSecret);
                     client.CookieContainer = CookieJar;
 
-
                     //SENDING OAUTH-BASED AUTHENTICATION REQUEST
                     var OAuthRequest = new RestRequest("v1/oauth2/token", Method.POST);
                     OAuthRequest.AddHeader("Accept", "application/json");
                     OAuthRequest.AddHeader("Accept-Language", "en_US");
                     OAuthRequest.AddHeader("Content-Type", "application/x-www-form-urlencoded");
                     OAuthRequest.AddParameter("grant_type", "client_credentials");
-
 
                     //RECEIVING AND PARSING OAUTH RESPONSE
                     var res = client.ExecuteAsyncPost(OAuthRequest, PayPalCallback, "POST");
@@ -83,7 +79,6 @@ namespace ExpressBase.ServiceStack.Services
                 }
                 return _payPalOauth;
             }
-
         }
 
         public PayPalService(IEbConnectionFactory _dbf) : base(_dbf)
@@ -277,7 +272,6 @@ namespace ExpressBase.ServiceStack.Services
                     FundingOptionId = null
                 }
             };
-
 
             string AgreementUrl = UriString + "v1/payments/billing-agreements/";
             FlurlRequest AgreementRequest = new FlurlRequest(AgreementUrl);
