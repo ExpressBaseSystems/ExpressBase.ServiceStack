@@ -26,8 +26,8 @@ namespace ExpressBase.ServiceStack.Services
     {
         const string OAuthTokenPath = "/v1/oauth2/token";
         const string UriString = "https://api.sandbox.paypal.com/";
-        string Response;
-        int StatusCode;
+        string OAuthResponse;
+        int OAuthStatusCode = 0;
         string P_PayResponse;
         int P_PayResCode;
 
@@ -39,44 +39,57 @@ namespace ExpressBase.ServiceStack.Services
         {
             get
             {
-                string UserID = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_PAYPAL_USERID);
-                string UserSecret = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_PAYPAL_USERSECRET);
 
                 if (_payPalOauth == null)
-                    _payPalOauth = this.Redis.Get<PayPalOauthObject>("EB_PAYPAL_OAUTH");
-                //if(_payPalOauth.ExpiresIn == 0) Not Implemeted if expiry get a new token
-                else
                 {
-                    var client = new RestClient(new Uri(UriString));
-                    System.Net.CookieContainer CookieJar = new System.Net.CookieContainer();
-                    client.Authenticator = new HttpBasicAuthenticator(UserID, UserSecret);
-                    client.CookieContainer = CookieJar;
+                    _payPalOauth = this.Redis.Get<PayPalOauthObject>("EB_PAYPAL_OAUTH");
+                    if (_payPalOauth == null /*|| _payPalOauth.ExpiresIn >30 sec*/)
+                    {
+                        string UserID = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_PAYPAL_USERID);
+                        string UserSecret = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_PAYPAL_USERSECRET);
+                        var client = new RestClient(new Uri(UriString));
+                        System.Net.CookieContainer CookieJar = new System.Net.CookieContainer();
+                        client.Authenticator = new HttpBasicAuthenticator(UserID, UserSecret);
+                        client.CookieContainer = CookieJar;
 
-                    //SENDING OAUTH-BASED AUTHENTICATION REQUEST
-                    var OAuthRequest = new RestRequest("v1/oauth2/token", Method.POST);
-                    OAuthRequest.AddHeader("Accept", "application/json");
-                    OAuthRequest.AddHeader("Accept-Language", "en_US");
-                    OAuthRequest.AddHeader("Content-Type", "application/x-www-form-urlencoded");
-                    OAuthRequest.AddParameter("grant_type", "client_credentials");
+                        //SENDING OAUTH-BASED AUTHENTICATION REQUEST
+                        var OAuthRequest = new RestRequest("v1/oauth2/token", Method.POST);
+                        OAuthRequest.AddHeader("Accept", "application/json");
+                        OAuthRequest.AddHeader("Accept-Language", "en_US");
+                        OAuthRequest.AddHeader("Content-Type", "application/x-www-form-urlencoded");
+                        OAuthRequest.AddParameter("grant_type", "client_credentials");
 
-                    //RECEIVING AND PARSING OAUTH RESPONSE
-                    var res = client.ExecuteAsyncPost(OAuthRequest, PayPalCallback, "POST");
-                    System.Threading.Thread.Sleep(8000);
+                        //RECEIVING AND PARSING OAUTH RESPONSE
+                        var res = client.ExecuteAsyncPost(OAuthRequest, PayPalCallback, "POST");
 
-                    Console.WriteLine("OAUTH REQUEST\n***************");
-                    Console.WriteLine("HTTP Response Status Code :: " + StatusCode.ToString());
-                    Console.WriteLine("Message Body :: " + Response);
-                    var StreamData = GenerateStreamFromString(Response);
-                    var serializer = new DataContractJsonSerializer(typeof(PayPalOauthObject));
-                    _payPalOauth = serializer.ReadObject(StreamData) as PayPalOauthObject;
+                        int _timeout = 0;
+                        while(OAuthStatusCode==0)
+                        {
+                            _timeout += 500;
+                            if (_timeout >= 60000)
+                                break;
+                            System.Threading.Thread.Sleep(500);
+                        }
 
-                    Console.WriteLine("\nNONCE:: " + _payPalOauth.Nonce +
-                        "\nAccess Token:: " + _payPalOauth.AccessToken +
-                        "\nToken Type:: " + _payPalOauth.TokenType +
-                        "\nApp ID:: " + _payPalOauth.AppId +
-                        "\nExpires In:: " + _payPalOauth.ExpiresIn.ToString());
-                    this.Redis.Set<PayPalOauthObject>("EB_PAYPAL_OAUTH", _payPalOauth);
+                        Console.WriteLine("OAUTH REQUEST\n***************");
+                        Console.WriteLine("HTTP Response Status Code :: " + OAuthStatusCode.ToString());
+                        Console.WriteLine("Message Body :: " + OAuthResponse);
+                        var StreamData = GenerateStreamFromString(OAuthResponse);
+                        var serializer = new DataContractJsonSerializer(typeof(PayPalOauthObject));
+                        _payPalOauth = serializer.ReadObject(StreamData) as PayPalOauthObject;
+
+                        Console.WriteLine("\nNONCE:: " + _payPalOauth.Nonce +
+                            "\nAccess Token:: " + _payPalOauth.AccessToken +
+                            "\nToken Type:: " + _payPalOauth.TokenType +
+                            "\nApp ID:: " + _payPalOauth.AppId +
+                            "\nExpires In:: " + _payPalOauth.ExpiresIn.ToString());
+                        this.Redis.Set<PayPalOauthObject>("EB_PAYPAL_OAUTH", _payPalOauth);
+                    }
                 }
+                //if((_payPalOauth.Expiry - GetCurrentTime)<30 minutes )
+                //    Request MQ to update the paypal token
+                //else if(_payPalOauth.ExpiresIn <30 sec)
+                //    Create new auth token
                 return _payPalOauth;
             }
         }
@@ -123,12 +136,12 @@ namespace ExpressBase.ServiceStack.Services
         {
             if (response.StatusCode == HttpStatusCode.OK)
             {
-                Response = response.Content;
-                StatusCode = (int)response.StatusCode;
+                OAuthResponse = response.Content;
+                OAuthStatusCode = (int)response.StatusCode;
             }
             else
             {
-                StatusCode = (int)response.StatusCode;
+                OAuthStatusCode = (int)response.StatusCode;
                 Console.WriteLine("\nRequest Failed");
             }
         }
