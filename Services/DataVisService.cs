@@ -399,7 +399,7 @@ namespace ExpressBase.ServiceStack
             _recordsTotal = (_recordsTotal > 0) ? _recordsTotal : _dataset.Tables[_dataset.Tables.Count - 1].Rows.Count;
             _recordsFiltered = (_recordsFiltered > 0) ? _recordsFiltered : _dataset.Tables[_dataset.Tables.Count - 1].Rows.Count;
             //-- 
-            if (_dataset.Tables.Count > 0)
+            if (_dataset.Tables.Count > 0 && _dV != null)
             {
                 _dataset = PreProcessing(_dataset, _dV);
             }
