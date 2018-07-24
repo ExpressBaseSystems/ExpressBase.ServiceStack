@@ -70,37 +70,6 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
-        public object Get(GetProductPlanRequest request)
-        {
-            GetProductPlanResponse getProductPlanResponse = new GetProductPlanResponse();
-            string sql = @"SELECT * FROM eb_product_plans;
-                            SELECT * FROM eb_random_sid();";
-            var ds = this.EbConnectionFactory.ObjectsDB.DoQueries(sql);
-            Dictionary<int, List<ProductPlan>> coll = new Dictionary<int, List<ProductPlan>>();
-
-            foreach (EbDataRow dr in ds.Tables[0].Rows)
-            {
-                var id = Convert.ToInt32(dr[1]);
-                ProductPlan pp = new ProductPlan { Plan = dr[2].ToString(), Amount = Convert.ToDecimal(dr[3]), EvalDays = Convert.ToInt32(dr[4]) };
-                if (!coll.ContainsKey(id))
-                    coll.Add(id, new List<ProductPlan>());
-                coll[id].Add(pp);
-            }
-            getProductPlanResponse.Plans = coll;
-
-            return getProductPlanResponse;
-        }
-
-        public AutoGenSidResponse Get(AutoGenSidRequest request)
-        {           
-            string sql = null;
-            sql = "SELECT * FROM eb_sid_gen()";            
-            var ds = this.EbConnectionFactory.ObjectsDB.DoQuery(sql);
-            AutoGenSidResponse resp = new AutoGenSidResponse { Sid = ds.Rows[0][0].ToString()};
-            return resp;
-        }
-
-
         public CreateSolutionResponse Post(CreateSolutionRequest request)
         {           
             EbDbCreateServices _dbService = base.ResolveService<EbDbCreateServices>();
