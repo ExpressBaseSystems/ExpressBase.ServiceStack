@@ -12,11 +12,10 @@ namespace ExpressBase.ServiceStack.Services
     {
         public ImportExportService(IEbConnectionFactory _dbf) : base(_dbf) { }
 
-        
-        //public RelationTreeResponse Get(RelationTreeRequest request)
-        //{
-        //    return new RelationTreeResponse { };
-        //}
+        public RelationTreeResponse Get(RelationTreeRequest request)
+        {
+            return new RelationTreeResponse { };
+        }
     }
     
 }
