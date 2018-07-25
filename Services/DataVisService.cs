@@ -334,7 +334,7 @@ namespace ExpressBase.ServiceStack
                 _ds.Sql = _ds.Sql.ReplaceAll(";", string.Empty);
                 _sql = _ds.Sql.Replace(":and_search", _c) + ";";
                 //}
-                if (request.Ispaging)
+                if (request.Ispaging )
                 {
                     var matches = Regex.Matches(_sql, @"\;\s*SELECT\s*COUNT\(\*\)\s*FROM");
                     if (matches.Count == 0)
