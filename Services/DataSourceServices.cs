@@ -13,6 +13,7 @@ using System.Data;
 using Npgsql;
 using ExpressBase.Common.Structures;
 using System.Data.Common;
+using System.Text.RegularExpressions;
 
 namespace ExpressBase.ServiceStack
 {
@@ -57,6 +58,7 @@ namespace ExpressBase.ServiceStack
             if (_ds != null)
             {
                 string _c = string.Empty;
+                string tempsql = string.Empty;
 
                 if (request.TFilters != null && request.TFilters.Count > 0)
                 {
@@ -76,34 +78,60 @@ namespace ExpressBase.ServiceStack
                             _c += string.Format("AND {0} {1} '{2}' ", col, op, val);
                     }
                 }
-                if (this.EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.PGSQL)
-                    _sql = _ds.Sql.Replace("@and_search", _c);
+                //if (this.EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.PGSQL)
+                //    _sql = _ds.Sql.Replace("@and_search", _c);
+                //else
+                //    _sql = _ds.Sql.Replace(":and_search", _c);
+                if (!_ds.Sql.ToLower().Contains(":and_search"))
+                {
+                    _ds.Sql = "SELECT * FROM (" + _ds.Sql + ") data WHERE 1=1 :and_search order by :orderby";
+                }
+                _ds.Sql = _ds.Sql.ReplaceAll(";", string.Empty);
+                _sql = _ds.Sql.Replace(":and_search", _c) + ";";
+                var matches = Regex.Matches(_sql, @"\;\s*SELECT\s*COUNT\(\*\)\s*FROM");
+                if (matches.Count == 0)
+                {
+                    tempsql = _sql.ReplaceAll(";", string.Empty);
+                    tempsql = "SELECT COUNT(*) FROM (" + tempsql + ") data1;";
+                }
+
+                var sql1 = _sql.ReplaceAll(";", string.Empty);
+                if (this.EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.ORACLE)
+                {
+                    sql1 = "SELECT * FROM ( SELECT a.*,ROWNUM rnum FROM (" + sql1 + ")a WHERE ROWNUM <= :limit+:offset) WHERE rnum > :offset;";
+                    //sql1 += "ALTER TABLE T1 DROP COLUMN rnum;SELECT * FROM T1;";
+                }
                 else
-                    _sql = _ds.Sql.Replace(":and_search", _c);
+                {
+                    if (!sql1.ToLower().Contains(":limit"))
+                        sql1 = sql1 + " LIMIT :limit OFFSET :offset;";
+                }
+                _sql = sql1 + tempsql;
+
             }
             bool _isPaged = false;
-            if (this.EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.PGSQL)
-            {
-                _sql = _sql.Replace("@orderby",
-                (string.IsNullOrEmpty(request.OrderByCol)) ? "id" : string.Format("{0} {1}", request.OrderByCol, ((request.OrderByDir == 2) ? "DESC" : "ASC")));
+            //if (this.EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.PGSQL)
+            //{
+            //_sql = _sql.Replace("@orderby",
+            //(string.IsNullOrEmpty(request.OrderByCol)) ? "id" : string.Format("{0} {1}", request.OrderByCol, ((request.OrderByDir == 2) ? "DESC" : "ASC")));
 
-                _isPaged = (_sql.ToLower().Contains("@offset") && _sql.ToLower().Contains("@limit"));
+            //_isPaged = (_sql.ToLower().Contains("@offset") && _sql.ToLower().Contains("@limit"));
 
-                //var parameters = DataHelper.GetParams(this.EbConnectionFactory, _isPaged, request.Params, request.Length, request.Start);
-                if (request.Params == null)
-                    _sql = _sql.Replace("@id", "0");
-            }
-            else
-            {
-                _sql = _sql.Replace(":orderby",
-               (string.IsNullOrEmpty(request.OrderByCol)) ? "id" : string.Format("{0} {1}", request.OrderByCol, ((request.OrderByDir == 2) ? "DESC" : "ASC")));
+            ////var parameters = DataHelper.GetParams(this.EbConnectionFactory, _isPaged, request.Params, request.Length, request.Start);
+            //if (request.Params == null)
+            //    _sql = _sql.Replace("@id", "0");
+            //}
+            //else
+            //{
+            _sql = _sql.Replace(":orderby",
+           (string.IsNullOrEmpty(request.OrderByCol)) ? "1" : string.Format("{0} {1}", request.OrderByCol, ((request.OrderByDir == 2) ? "DESC" : "ASC")));
 
-                _isPaged = (_sql.ToLower().Contains(":offset") && _sql.ToLower().Contains(":limit"));
+            _isPaged = (_sql.ToLower().Contains(":offset") && _sql.ToLower().Contains(":limit"));
 
 
-                if (request.Params == null)
-                    _sql = _sql.Replace(":id", "0");
-            }
+            if (request.Params == null)
+                _sql = _sql.Replace(":id", "0");
+            //}
             var parameters = DataHelper.GetParams(this.EbConnectionFactory, _isPaged, request.Params, request.Length, request.Start);
             Console.WriteLine("Before :  " + DateTime.Now);
             var dtStart = DateTime.Now;
@@ -121,17 +149,17 @@ namespace ExpressBase.ServiceStack
             int _recordsTotal = 0, _recordsFiltered = 0;
             if (_isPaged)
             {
-                Int32.TryParse(_dataset.Tables[0].Rows[0][0].ToString(), out _recordsTotal);
-                Int32.TryParse(_dataset.Tables[0].Rows[0][0].ToString(), out _recordsFiltered);
+                Int32.TryParse(_dataset.Tables[1].Rows[0][0].ToString(), out _recordsTotal);
+                Int32.TryParse(_dataset.Tables[1].Rows[0][0].ToString(), out _recordsFiltered);
             }
-            _recordsTotal = (_recordsTotal > 0) ? _recordsTotal : _dataset.Tables[0].Rows.Count;
-            _recordsFiltered = (_recordsFiltered > 0) ? _recordsFiltered : _dataset.Tables[0].Rows.Count;
+            _recordsTotal = (_recordsTotal > 0) ? _recordsTotal : _dataset.Tables[1].Rows.Count;
+            _recordsFiltered = (_recordsFiltered > 0) ? _recordsFiltered : _dataset.Tables[1].Rows.Count;
             //-- 
 
             dsresponse = new DataSourceDataResponse
             {
                 Draw = request.Draw,
-                Data = (_dataset.Tables.Count > 1) ? _dataset.Tables[1].Rows : _dataset.Tables[0].Rows,
+                Data = _dataset.Tables[0].Rows,
                 RecordsTotal = _recordsTotal,
                 RecordsFiltered = _recordsFiltered,
                 Ispaged = _isPaged
