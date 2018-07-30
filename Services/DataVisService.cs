@@ -334,7 +334,7 @@ namespace ExpressBase.ServiceStack
                 _ds.Sql = _ds.Sql.ReplaceAll(";", string.Empty);
                 _sql = _ds.Sql.Replace(":and_search", _c) + ";";
                 //}
-                if (request.Ispaging)
+                if (request.Ispaging )
                 {
                     var matches = Regex.Matches(_sql, @"\;\s*SELECT\s*COUNT\(\*\)\s*FROM");
                     if (matches.Count == 0)
@@ -495,10 +495,13 @@ namespace ExpressBase.ServiceStack
             dynamic result = null;
             var colCount = _dataset.Tables[0].Columns.Count;
             Dictionary<string, int> dict = new Dictionary<string, int>();
-            _dataset.Tables[0].Columns.RemoveAt(colCount - 1);// rownum deleted for oracle
-            for (int i = 0; i < _dataset.Tables[0].Rows.Count; i++)
+            if (this.EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.ORACLE && _dv.IsPaging)
             {
-                _dataset.Tables[0].Rows[i].RemoveAt(colCount - 1);
+                _dataset.Tables[0].Columns.RemoveAt(colCount - 1);// rownum deleted for oracle
+                for (int i = 0; i < _dataset.Tables[0].Rows.Count; i++)
+                {
+                    _dataset.Tables[0].Rows[i].RemoveAt(colCount - 1);
+                }
             }
             foreach (DVBaseColumn col in _dv.Columns)
             {

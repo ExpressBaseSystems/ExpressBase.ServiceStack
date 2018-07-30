@@ -19,13 +19,13 @@ using System.Runtime.Serialization.Json;
 using System.Threading.Tasks;
 using ExpressBase.Common.Structures;
 using System.Data.Common;
+using ExpressBase.Common.LocationNSolution;
+using ExpressBase.Common.Constants;
 
 namespace ExpressBase.ServiceStack.Services
 {
     public class PayPalService : EbBaseService
     {
-        const string OAuthTokenPath = "/v1/oauth2/token";
-        const string UriString = "https://api.sandbox.paypal.com/";
         string OAuthResponse;
         int OAuthStatusCode = 0;
         string P_PayResponse;
@@ -33,7 +33,7 @@ namespace ExpressBase.ServiceStack.Services
 
         private PayPalOauthObject _payPalOauth = null;
 
-        FlurlClient flurlClient = new FlurlClient(UriString);
+        FlurlClient flurlClient = new FlurlClient(PayPalConstants.UriString);
 
         PayPalOauthObject PayPalOauth
         {
@@ -47,7 +47,7 @@ namespace ExpressBase.ServiceStack.Services
                     {
                         string UserID = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_PAYPAL_USERID);
                         string UserSecret = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_PAYPAL_USERSECRET);
-                        var client = new RestClient(new Uri(UriString));
+                        var client = new RestClient(new Uri(PayPalConstants.UriString));
                         System.Net.CookieContainer CookieJar = new System.Net.CookieContainer();
                         client.Authenticator = new HttpBasicAuthenticator(UserID, UserSecret);
                         client.CookieContainer = CookieJar;
@@ -202,7 +202,7 @@ namespace ExpressBase.ServiceStack.Services
             //PREPARING REQUEST TO CREATE BILLING PLAN
             string JsonBody = JsonConvert.SerializeObject(Plan, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
 
-            FlurlRequest flurlRequest = new FlurlRequest(UriString + "v1/payments/billing-plans/");
+            FlurlRequest flurlRequest = new FlurlRequest(PayPalConstants.BillingPlanPath);
             flurlRequest.Client = flurlClient;
 
 
@@ -216,7 +216,7 @@ namespace ExpressBase.ServiceStack.Services
             BillPlanResponse = JsonConvert.DeserializeObject<BillingPlanResponse>(ResultContents);
             Console.WriteLine("\nBilling Plan Response ID :: " + BillPlanResponse.PlanID);
             string PaymentPlanID = BillPlanResponse.PlanID;
-            string Url = UriString + "v1/payments/billing-plans/" + PaymentPlanID + "/";
+            string Url = PayPalConstants.BillingPlanPath + PaymentPlanID + "/";
             FlurlRequest ActivateRequest = new FlurlRequest(Url);
             ActivateRequest.Client = flurlClient;
             string _activateJson = "[{  \"op\": \"replace\",  \"path\": \"/\",  \"value\": {    \"state\": \"ACTIVE\"  }}]";
@@ -235,7 +235,7 @@ namespace ExpressBase.ServiceStack.Services
         }
 
         [Authenticate]
-        public PayPalPaymentResponse Get(PayPalPaymentRequest req)
+        public PayPalPaymentResponse Post(PayPalPaymentRequest req)
         {
             PayPalPaymentResponse resp = new PayPalPaymentResponse();
 
@@ -245,32 +245,36 @@ namespace ExpressBase.ServiceStack.Services
             //Object Initializations
             //string PlanObject = "id : \"" + "\"" + PaymentPlanID;
 
-            FundingInstrument fundingInstrument = new FundingInstrument();
-            fundingInstrument.CardDetails = new CreditCard()
-            {
-                CardNumber = 4868693532126484.ToString(),
-                Cvv2 = 568,
-                CardType = "visa",
-                ExpireMonth = 10,
-                ExpireYear = 2026,
-            };
+            int UserCount = 5;//this.Redis.Get<Eb_Solution>(String.Format("solution_{0}",req.TenantAccountId)).NumberOfUsers;
 
+            FundingInstrument fundingInstrument = new FundingInstrument();
+            if (req.BillingMethod == PaymentMethod.bank)
+            {
+                fundingInstrument.CardDetails = new CreditCard()
+                {
+                    CardNumber = req.CardNumber.ToString(),
+                    Cvv2 = req.Cvv,
+                    CardType = "visa",
+                    ExpireMonth = req.ExpMonth,
+                    ExpireYear = req.ExpYear,
+                };
+            }
+            
             BillingAgreementRequest BillAgreementRequest = new BillingAgreementRequest()
             {
-                Name = "Trial Billing Request",
-                Description = "Trial billing agreement",
-                StartDate = "2020-01-01T09:13:49Z",
+                Name = "Billing Request - ID: " + req.TenantAccountId,
+                Description = "Billing agreement for client: " + req.TenantAccountId + " Number of users: " + UserCount.ToString() + " Total amount charged: $" + (UserCount*5).ToString(),
+                StartDate = DateTime.Now.AddMinutes(5.0).ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss'Z'"),//"2020-01-01T09:13:49Z",
                 BillingPlan = new BillingPlanResponse(ppBillingId),
                 Payer = new PayerDetails()
                 {
-                    PayMethod = PayerDetails.PaymentMethodsStrings[(int)PaymentMethod.paypal],
-                    FundingInstruments = null,
+                    PayMethod = (req.BillingMethod == PaymentMethod.bank) ? PayerDetails.PaymentMethodsStrings[(int)PaymentMethod.paypal] : PayerDetails.PaymentMethodsStrings[(int)PaymentMethod.paypal],
+                    FundingInstruments = (req.BillingMethod == PaymentMethod.bank)?new List<FundingInstrument>(){fundingInstrument}:null,
                     FundingOptionId = null
                 }
             };
-
-            string AgreementUrl = UriString + "v1/payments/billing-agreements/";
-            FlurlRequest AgreementRequest = new FlurlRequest(AgreementUrl);
+            
+            FlurlRequest AgreementRequest = new FlurlRequest(PayPalConstants.AgreementUrl);
             AgreementRequest.Client = flurlClient;
 
             string AgreementJson = JsonConvert.SerializeObject(BillAgreementRequest, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
