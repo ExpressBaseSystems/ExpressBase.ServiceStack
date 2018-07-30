@@ -63,12 +63,12 @@ namespace ExpressBase.ServiceStack.Services
                         var res = client.ExecuteAsyncPost(OAuthRequest, PayPalCallback, "POST");
 
                         int _timeout = 0;
-                        while(OAuthStatusCode==0)
+                        while (OAuthStatusCode == 0)
                         {
-                            _timeout += 500;
                             if (_timeout >= 60000)
                                 break;
                             System.Threading.Thread.Sleep(500);
+                            _timeout += 500;
                         }
 
                         Console.WriteLine("OAUTH REQUEST\n***************");
@@ -108,23 +108,6 @@ namespace ExpressBase.ServiceStack.Services
             writer.Flush();
             stream.Position = 0;
             return stream;
-        }
-
-        public System.IO.Stream GenerateStreamFromObject(object s)
-        {
-            var stream = new System.IO.MemoryStream();
-            var writer = new System.IO.StreamWriter(stream);
-            writer.Write(s);
-            writer.Flush();
-            stream.Position = 0;
-            return stream;
-        }
-
-        public string GetStringFromStream(System.IO.Stream stream)
-        {
-            System.IO.StreamReader reader = new System.IO.StreamReader(stream);
-            string str = reader.ReadToEnd();
-            return str;
         }
 
         async Task<string> GetResponseContents(HttpResponseMessage Response)
