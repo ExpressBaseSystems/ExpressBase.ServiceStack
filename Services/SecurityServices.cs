@@ -193,7 +193,7 @@ namespace ExpressBase.ServiceStack.Services
 					resp.UserData.Add("nickname", dr[1].ToString());
 					resp.UserData.Add("email", dr[2].ToString());
 					resp.UserData.Add("alternateemail", dr[3].ToString());
-					resp.UserData.Add("dob", dr[4].ToString().Substring(0, 10));
+					resp.UserData.Add("dob", Convert.ToDateTime(dr[4]).ToString("yyyy-MM-dd"));
 					resp.UserData.Add("sex", dr[5].ToString());
 					resp.UserData.Add("phnoprimary", dr[6].ToString());
 					resp.UserData.Add("phnosecondary", dr[7].ToString());
@@ -277,7 +277,7 @@ namespace ExpressBase.ServiceStack.Services
 						this.EbConnectionFactory.DataDB.GetNewParameter("nickname", EbDbTypes.String, request.NickName),
 						this.EbConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, request.EmailPrimary),
 						this.EbConnectionFactory.DataDB.GetNewParameter("pwd", EbDbTypes.String,password),
-						this.EbConnectionFactory.DataDB.GetNewParameter("dob", EbDbTypes.Date, request.DateOfBirth),
+						this.EbConnectionFactory.DataDB.GetNewParameter("dob", EbDbTypes.Date,  DateTime.Parse(request.DateOfBirth)),
 						this.EbConnectionFactory.DataDB.GetNewParameter("sex", EbDbTypes.String, request.Sex),
 						this.EbConnectionFactory.DataDB.GetNewParameter("alternateemail", EbDbTypes.String, request.EmailSecondary),
 						this.EbConnectionFactory.DataDB.GetNewParameter("phprimary", EbDbTypes.String, request.PhonePrimary),
