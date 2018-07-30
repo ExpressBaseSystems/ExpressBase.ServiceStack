@@ -189,8 +189,8 @@ namespace ExpressBase.ServiceStack
             {
                 if (field is EbDataField)
                 {
-                    string LinkRefid = (field as EbDataField).LinkRefid;
-                    if (!string.IsNullOrEmpty((field as EbDataField).LinkRefid))
+                    string LinkRefid = (field as EbDataField).LinkRefId;
+                    if (!string.IsNullOrEmpty((field as EbDataField).LinkRefId))
                     {
                         var myObjectservice = base.ResolveService<EbObjectService>();
                         var res = (EbObjectParticularVersionResponse)myObjectservice.Get(new EbObjectParticularVersionRequest { RefId = LinkRefid });
