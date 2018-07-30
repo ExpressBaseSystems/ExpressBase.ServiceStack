@@ -220,7 +220,7 @@ namespace ExpressBase.ServiceStack
             CreateApplicationResponse resp;
             try
             {
-                string sql = "INSERT INTO eb_applications (applicationname,application_type, description,app_icon) VALUES (:applicationname,:apptype, :description,:appicon)";
+                string sql = "INSERT INTO eb_applications (applicationname,application_type, description,app_icon) VALUES (:applicationname,:apptype, :description,:appicon) RETURNING id;";
 
                 DbParameter[] parameters = {
                     this.EbConnectionFactory.DataDB.GetNewParameter("applicationname", EbDbTypes.String, request.AppName),
@@ -228,9 +228,9 @@ namespace ExpressBase.ServiceStack
                     this.EbConnectionFactory.DataDB.GetNewParameter("description", EbDbTypes.String, request.Description),
                     this.EbConnectionFactory.DataDB.GetNewParameter("appicon", EbDbTypes.String, request.AppIcon)
                 };
-                var res = this.EbConnectionFactory.DataDB.DoNonQuery(sql, parameters);
+                var dt = this.EbConnectionFactory.DataDB.DoQuery(sql, parameters);
 
-                resp = new CreateApplicationResponse() { id = Convert.ToInt32(res) };//returning row affected
+                resp = new CreateApplicationResponse() { id = Convert.ToInt32(dt.Rows[0][0]) };
 
             }
             catch (Exception e)
