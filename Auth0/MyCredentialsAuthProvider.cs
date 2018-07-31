@@ -94,13 +94,18 @@ namespace ExpressBase.ServiceStack.Auth0
                 if (_authUser != null)
                 {
                     if (_authUser.Email != null)
-                    {
-                        CustomUserSession session = authService.GetSession(false) as CustomUserSession;
+                    {						
+						CustomUserSession session = authService.GetSession(false) as CustomUserSession;
                         var redisClient = authService.TryResolve<IRedisClientsManager>().GetClient();
-                        session.CId = cid;
+						if (_authUser.Email.Equals(TokenConstants.ANONYM_EMAIL))
+						{
+							session.Aid = _authUser.UserId;
+							_authUser.UserId = 1;
+						}
+						session.CId = cid;
                         _authUser.CId = cid;
                         session.Uid = _authUser.UserId;
-                        session.Email = _authUser.Email;
+						session.Email = _authUser.Email;
                         session.IsAuthenticated = true;
                         session.User = _authUser;
                         session.WhichConsole = whichContext;
@@ -146,7 +151,7 @@ namespace ExpressBase.ServiceStack.Auth0
                             UserName = _customUserSession.UserName,
                             User = _customUserSession.User,
                             SessionId = _customUserSession.Id,
-
+							AnonId = _customUserSession.Aid
                         };
                     }
                     return authResponse;
