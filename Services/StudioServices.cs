@@ -1062,26 +1062,25 @@ WHERE
         public string SetAppId(string _apps)
         {
             string appids = "";
-            //int[] appids;
-            //int counter = 0;
+            var Result = decimal.TryParse(_apps, out decimal myDec);
+            if (Result) return myDec.ToString();
             var myService = base.ResolveService<DevRelatedServices>();
             Dictionary<string, object> res = ((GetApplicationResponse)myService.Get(new GetApplicationRequest())).Data;
             List<string> applist = _apps.Split(',').ToList();
-            //appids = new int[applist.Count];
             foreach (string s in applist)
             {
                 foreach (var x in res)
                 {
                     if (s == Regex.Unescape(x.Value.ToString()).Replace("\n", "").Replace("\t", "").Replace("\r", ""))
                     {
-                        appids += x.Key;
-                        //appids[counter] = Convert.ToInt32(x.Key);
-                        //counter++;
+                        appids += x.Key +",";
                     }
                 }
             }
             if (appids == "")
                 appids = "0";
+            else
+                appids = appids.Substring(0,appids.Length-2);
             return appids;
         }
     }
