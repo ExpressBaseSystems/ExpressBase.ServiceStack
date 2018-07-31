@@ -193,7 +193,7 @@ namespace ExpressBase.ServiceStack.Services
 					resp.UserData.Add("nickname", dr[1].ToString());
 					resp.UserData.Add("email", dr[2].ToString());
 					resp.UserData.Add("alternateemail", dr[3].ToString());
-					resp.UserData.Add("dob", dr[4].ToString().Substring(0, 10));
+					resp.UserData.Add("dob", Convert.ToDateTime(dr[4]).ToString("yyyy-MM-dd"));
 					resp.UserData.Add("sex", dr[5].ToString());
 					resp.UserData.Add("phnoprimary", dr[6].ToString());
 					resp.UserData.Add("phnosecondary", dr[7].ToString());
@@ -277,7 +277,7 @@ namespace ExpressBase.ServiceStack.Services
 						this.EbConnectionFactory.DataDB.GetNewParameter("nickname", EbDbTypes.String, request.NickName),
 						this.EbConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, request.EmailPrimary),
 						this.EbConnectionFactory.DataDB.GetNewParameter("pwd", EbDbTypes.String,password),
-						this.EbConnectionFactory.DataDB.GetNewParameter("dob", EbDbTypes.Date, request.DateOfBirth),
+						this.EbConnectionFactory.DataDB.GetNewParameter("dob", EbDbTypes.Date,  DateTime.Parse(request.DateOfBirth)),
 						this.EbConnectionFactory.DataDB.GetNewParameter("sex", EbDbTypes.String, request.Sex),
 						this.EbConnectionFactory.DataDB.GetNewParameter("alternateemail", EbDbTypes.String, request.EmailSecondary),
 						this.EbConnectionFactory.DataDB.GetNewParameter("phprimary", EbDbTypes.String, request.PhonePrimary),
@@ -320,11 +320,11 @@ namespace ExpressBase.ServiceStack.Services
 			Dictionary<string, string> Udata = new Dictionary<string, string>();
 			string sql = @"SELECT A.id, A.fullname, A.email, A.phoneno, A.socialid, A.firstvisit, A.lastvisit, A.totalvisits, B.applicationname, A.remarks, A.browser, A.ipaddress
 								FROM eb_usersanonymous A, eb_applications B
-								WHERE A.appid = B.id AND A.ebuserid = 1 AND A.id = @id;
+								WHERE A.appid = B.id AND A.ebuserid = 1 AND A.id = :id;
 							SELECT B.fullname, A.modifiedat FROM eb_usersanonymous A, eb_users B 
-								WHERE A.modifiedby = B.id AND A.id = @id;";
+								WHERE A.modifiedby = B.id AND A.id = :id;";
 			
-			DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("@id", EbDbTypes.Int32, request.Id) };
+			DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, request.Id) };
 			var ds = this.EbConnectionFactory.ObjectsDB.DoQueries(sql, parameters);
 			if (ds.Tables.Count > 1)
 			{
@@ -356,15 +356,16 @@ namespace ExpressBase.ServiceStack.Services
 		public UpdateAnonymousUserResponse Any(UpdateAnonymousUserRequest request)
 		{
 			string sql = @"UPDATE eb_usersanonymous 
-								SET fullname=@fullname, email=@emailid, phoneno=@phoneno, remarks = @remarks, modifiedby = @modifiedby, modifiedat = NOW()
-								WHERE id=@id";
+								SET fullname=:fullname, email=:emailid, phoneno=:phoneno, remarks = :remarks, modifiedby = :modifiedby, modifiedat = :NOW
+								WHERE id=:id";
 			DbParameter[] parameters = {
-				this.EbConnectionFactory.ObjectsDB.GetNewParameter("@fullname", EbDbTypes.String, request.FullName),
-				this.EbConnectionFactory.ObjectsDB.GetNewParameter("@emailid", EbDbTypes.String, request.EmailID),
-				this.EbConnectionFactory.ObjectsDB.GetNewParameter("@phoneno", EbDbTypes.String, request.PhoneNumber),
-				this.EbConnectionFactory.ObjectsDB.GetNewParameter("@remarks", EbDbTypes.String, request.Remarks),
-				this.EbConnectionFactory.ObjectsDB.GetNewParameter("@modifiedby", EbDbTypes.Int32, request.UserId),
-				this.EbConnectionFactory.ObjectsDB.GetNewParameter("@id", EbDbTypes.Int32, request.Id)
+				this.EbConnectionFactory.ObjectsDB.GetNewParameter("fullname", EbDbTypes.String, request.FullName),
+				this.EbConnectionFactory.ObjectsDB.GetNewParameter("emailid", EbDbTypes.String, request.EmailID),
+				this.EbConnectionFactory.ObjectsDB.GetNewParameter("phoneno", EbDbTypes.String, request.PhoneNumber),
+				this.EbConnectionFactory.ObjectsDB.GetNewParameter("remarks", EbDbTypes.String, request.Remarks),
+				this.EbConnectionFactory.ObjectsDB.GetNewParameter("modifiedby", EbDbTypes.Int32, request.UserId),
+				this.EbConnectionFactory.ObjectsDB.GetNewParameter("NOW", EbDbTypes.DateTime, DateTime.Now),
+				this.EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, request.Id)
 			};
 			return new UpdateAnonymousUserResponse {RowAffected = this.EbConnectionFactory.ObjectsDB.DoNonQuery(sql, parameters) };
 		}
@@ -372,7 +373,7 @@ namespace ExpressBase.ServiceStack.Services
 		public ConvertAnonymousUserResponse Any(ConvertAnonymousUserRequest request)
 		{
 			//WORK NOT COMPLETED
-			string sql = @"SELECT * FROM eb_convertanonymoususer2user(@userid, @id, @fullname, @email, @phnoprimary, @remarks);";
+			string sql = @"SELECT * FROM eb_convertanonymoususer2user(:userid, :id, :fullname, :email, :phnoprimary, :remarks);";
 			DbParameter[] parameters = {
 				this.EbConnectionFactory.ObjectsDB.GetNewParameter("userid", EbDbTypes.Int32, request.UserId),
 				this.EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, request.Id),
