@@ -31,8 +31,11 @@ namespace ExpressBase.ServiceStack.Services
         int OAuthStatusCode = 0;
         string P_PayResponse;
         int P_PayResCode;
-        string CancelUrl = "https://payment.eb-test.info/PayPal/CancelAgreement";
-        string ReturnUrl = "https://payment.eb-test.info/PayPal/ReturnSuccess";
+        string CancelPage = "/PayPal/CancelAgreement",
+            ReturnPage = "/PayPal/ReturnSuccess",
+            CancelUrl = string.Empty,
+            ReturnUrl = string.Empty;
+
 
         private PayPalOauthObject _payPalOAuth = null;
         PayPalPaymentResponse PayPalResponse;
@@ -274,6 +277,8 @@ namespace ExpressBase.ServiceStack.Services
         [Authenticate]
         public PayPalPaymentResponse Post(PayPalPaymentRequest req)
         {
+            CancelUrl = req.Environment + CancelPage;
+            ReturnUrl = req.Environment + ReturnPage;
             int UserCount = 5;//this.Redis.Get<Eb_Solution>(String.Format("solution_{0}",req.TenantAccountId)).NumberOfUsers;
             PayPalResponse = new PayPalPaymentResponse();
 
