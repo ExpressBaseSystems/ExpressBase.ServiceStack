@@ -32,8 +32,10 @@ namespace ExpressBase.ServiceStack.Services
         int UserCount = 5;
         int PricePerUser = 5;
         string Currency = "USD";
-        string CancelUrl = "https://payment.eb-test.info/PayPal/CancelAgreement";
-        string ReturnUrl = "https://payment.eb-test.info/PayPal/ReturnSuccess";
+        string CancelPage = "/PayPal/CancelAgreement",
+            ReturnPage = "/PayPal/ReturnSuccess",
+            CancelUrl = string.Empty,
+            ReturnUrl = string.Empty;
 
         private PayPalOauthObject _payPalOAuth = null;
         PayPalPaymentResponse PayPalResponse;
@@ -278,7 +280,8 @@ namespace ExpressBase.ServiceStack.Services
         {
             //this.Redis.Get<Eb_Solution>(String.Format("solution_{0}",req.TenantAccountId)).NumberOfUsers;
             PayPalResponse = new PayPalPaymentResponse();
-
+            CancelUrl = req.Environment + CancelPage;
+            ReturnUrl = req.Environment + ReturnPage;
             string ppBillingId = GetBillingPlanId(UserCount, 5);
             string BillingAgreementID = string.Empty;
             var Agreement = CreateBillingAgreement(req.TenantAccountId, ppBillingId);
