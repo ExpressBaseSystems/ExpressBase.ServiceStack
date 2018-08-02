@@ -21,6 +21,7 @@ using ExpressBase.Common.Structures;
 using System.Data.Common;
 using ExpressBase.Common.LocationNSolution;
 using ExpressBase.Common.Constants;
+using System.Text;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -30,22 +31,20 @@ namespace ExpressBase.ServiceStack.Services
         int OAuthStatusCode = 0;
         string P_PayResponse;
         int P_PayResCode;
-        string AcceptUrl = string.Empty;
-        string ExecuteUrl = string.Empty;
-        string CancelUrl = "https://payment.eb-test.info/paymentreturn/paypalreturn?res=cancel";
-        string ReturnUrl = "https://payment.eb-test.info/paymentreturn/paypalreturn?res=accept&tok=";
+        string CancelUrl = "https://payment.eb-test.info/PayPal/CancelAgreement";
+        string ReturnUrl = "https://payment.eb-test.info/PayPal/ReturnSuccess";
 
-        private PayPalOauthObject _payPalOauth = new PayPalOauthObject();
+        private PayPalOauthObject _payPalOAuth = null;
+        PayPalPaymentResponse PayPalResponse;
 
         FlurlClient flurlClient = new FlurlClient(PayPalConstants.UriString);
 
         private PayPalOauthObject MakeNewOAuth()
         {
-            PayPalOauthObject OAuth = new PayPalOauthObject();
-            string UserID = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_PAYPAL_USERID);
-            string UserSecret = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_PAYPAL_USERSECRET);
+            string UserID = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_PAYPAL_USERID),
+            UserSecret = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_PAYPAL_USERSECRET);
             var client = new RestClient(new Uri(PayPalConstants.UriString));
-            System.Net.CookieContainer CookieJar = new System.Net.CookieContainer();
+            CookieContainer CookieJar = new CookieContainer();
             client.Authenticator = new HttpBasicAuthenticator(UserID, UserSecret);
             client.CookieContainer = CookieJar;
 
@@ -54,7 +53,7 @@ namespace ExpressBase.ServiceStack.Services
             OAuthRequest.AddHeader("Accept-Language", "en_US");
             OAuthRequest.AddHeader("Content-Type", "application/x-www-form-urlencoded");
             OAuthRequest.AddParameter("grant_type", "client_credentials");
-            var res = client.ExecuteAsyncPost(OAuthRequest, PayPalCallback, "POST");
+            client.ExecuteAsyncPost(OAuthRequest, PayPalCallback, "POST");
 
             int _timeout = 0;
             while (OAuthStatusCode == 0)
@@ -65,19 +64,9 @@ namespace ExpressBase.ServiceStack.Services
                 _timeout += 500;
             }
 
-            Console.WriteLine("OAUTH REQUEST\n***************");
-            Console.WriteLine("HTTP Response Status Code :: " + OAuthStatusCode.ToString());
-            Console.WriteLine("Message Body :: " + OAuthResponse);
             var StreamData = GenerateStreamFromString(OAuthResponse);
-            var serializer = new DataContractJsonSerializer(typeof(PayPalOauthObject));
-            OAuth = serializer.ReadObject(StreamData) as PayPalOauthObject;
-
-            Console.WriteLine("\nNONCE:: " + OAuth.Nonce +
-                "\nAccess Token:: " + OAuth.AccessToken +
-                "\nToken Type:: " + OAuth.TokenType +
-                "\nApp ID:: " + OAuth.AppId +
-                "\nExpires In:: " + OAuth.ExpiresIn.ToString());
-            OAuth.SetExpireTime();
+            PayPalOauthObject OAuth = new DataContractJsonSerializer(typeof(PayPalOauthObject)).ReadObject(StreamData) as PayPalOauthObject;
+            this.Redis.Set<PayPalOauthObject>("EB_PAYPAL_OAUTH", OAuth);
             return OAuth;
         }
 
@@ -86,24 +75,24 @@ namespace ExpressBase.ServiceStack.Services
             get
             {
 
-                if (_payPalOauth.AccessToken == string.Empty)
+                if (_payPalOAuth == null)
                 {
-                    _payPalOauth = this.Redis.Get<PayPalOauthObject>("EB_PAYPAL_OAUTH");
-                }
+                    _payPalOAuth = this.Redis.Get<PayPalOauthObject>("EB_PAYPAL_OAUTH");
 
-                if (_payPalOauth.GetExpireTime() < DateTime.Now)
-                {
-                    _payPalOauth = MakeNewOAuth();
-                    this.Redis.Set<PayPalOauthObject>("EB_PAYPAL_OAUTH", _payPalOauth);
+                    if (_payPalOAuth == null)
+                        _payPalOAuth = MakeNewOAuth();
                 }
-                return _payPalOauth;
+                if (_payPalOAuth.ExpireTime < DateTime.Now)
+                    _payPalOAuth = MakeNewOAuth();
+
+                return _payPalOAuth;
             }
         }
 
         public PayPalService(IEbConnectionFactory _dbf) : base(_dbf)
         {
             flurlClient.Headers.Add("Content-Type", "application/json");
-            flurlClient.Headers.Add("Authorization", "Bearer " + PayPalOauth.AccessToken);
+            flurlClient.Headers.Add("Authorization", "Bearer " + PayPalOauth.Token);
         }
 
         public System.IO.Stream GenerateStreamFromString(string s)
@@ -172,23 +161,18 @@ namespace ExpressBase.ServiceStack.Services
             });
 
             Plan.MerchantPref.SetupFee = null;// new Dictionary<string, string>() { { "value", "1" }, { "currency", "USD" } };
-            
+
             //need to change the below line - OAuth tokens are NOT supposed to be transferred like this
-            Plan.MerchantPref.ReturnUrl = ReturnUrl + payPalOauth.AccessToken;
+            Plan.MerchantPref.ReturnUrl = ReturnUrl;
             Plan.MerchantPref.CancelUrl = CancelUrl;
             Plan.MerchantPref.AutoBillAmount = "YES";
             Plan.MerchantPref.InitialFailAmountAction = "CONTINUE";
             Plan.MerchantPref.MaxFailAttempts = "1";
 
-
-            //PREPARING REQUEST TO CREATE BILLING PLAN
             string JsonBody = JsonConvert.SerializeObject(Plan, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
 
             FlurlRequest flurlRequest = new FlurlRequest(PayPalConstants.BillingPlanPath);
             flurlRequest.Client = flurlClient;
-
-
-            //SENDING BILLING PLAN REQUEST AND RECEIVING RESPONSE
             var PaymentPlanResult = Send(HttpMethod.Post, flurlRequest, JsonBody).Result;
             var ResultContents = GetResponseContents(PaymentPlanResult).Result;
             Console.WriteLine("Payment Plan Create Request :: ");
@@ -198,28 +182,23 @@ namespace ExpressBase.ServiceStack.Services
             BillPlanResponse = JsonConvert.DeserializeObject<BillingPlanResponse>(ResultContents);
             Console.WriteLine("\nBilling Plan Response ID :: " + BillPlanResponse.PlanID);
             string PaymentPlanID = BillPlanResponse.PlanID;
+            if (ActivatePlan(flurlClient, PaymentPlanID))
+            {
+                BillPlanResponse.CurrentState = BillingPlanResponse.PlanStateStrings[(int)PlanState.ACTIVE];
+            }
+            return BillPlanResponse;
+        }
+
+        private bool ActivatePlan(FlurlClient flurlClient, string PaymentPlanID)
+        {
             string Url = PayPalConstants.BillingPlanPath + PaymentPlanID + "/";
             FlurlRequest ActivateRequest = new FlurlRequest(Url);
             ActivateRequest.Client = flurlClient;
             string _activateJson = "[{  \"op\": \"replace\",  \"path\": \"/\",  \"value\": {    \"state\": \"ACTIVE\"  }}]";
             var ActResult = Send(new HttpMethod("PATCH"), ActivateRequest, _activateJson).Result;
-            var ActResultContents = GetResponseContents(ActResult).Result;
-            if (ActResult.StatusCode == HttpStatusCode.OK)
-            {
-                BillPlanResponse.CurrentState = BillingPlanResponse.PlanStateStrings[(int)PlanState.ACTIVE];
-            }
-            Console.WriteLine("\n\nPayment Plan Activation Request :: ");
+            Console.WriteLine("\n\nPayment Plan Activation Request: ");
             Console.WriteLine("Response Code :: " + ActResult.StatusCode);
-            Console.WriteLine("Response :: " + ActResultContents);
-
-            return BillPlanResponse;
-
-        }
-
-        public string GetBillingAgreementID()
-        {
-            throw new NotImplementedException();
-            //return "";
+            return ActResult.StatusCode == HttpStatusCode.OK;
         }
 
         public BillingAgreementResponse CreateBillingAgreement(PayPalPaymentRequest req, string BillingPlanID, int UserCount)
@@ -229,7 +208,7 @@ namespace ExpressBase.ServiceStack.Services
             BillingAgreementRequest BillAgreementRequest = new BillingAgreementRequest()
             {
                 Name = "Billing Request - ID: " + req.TenantAccountId,
-                Description = "Billing agreement for client: " + req.TenantAccountId + " Number of users: " + UserCount.ToString() + " Total amount charged: $" + (UserCount * 5).ToString(),
+                Description = "Billing agreement for client: " + req.TenantAccountId + " Number of users: " + UserCount.ToString() + " Total amount charged: dollars " + (UserCount * 5).ToString(),
                 StartDate = DateTime.Now.AddMinutes(5.0).ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss'Z'"),//"2020-01-01T09:13:49Z",
                 BillingPlan = new BillingPlanResponse(BillingPlanID),
                 Payer = new PayerDetails()
@@ -251,11 +230,52 @@ namespace ExpressBase.ServiceStack.Services
             return JsonConvert.DeserializeObject<BillingAgreementResponse>(AgreementResConents);
         }
 
+        private string ConstructExecuteUrl(string PaymentId)
+        {
+            return new StringBuilder()
+                .Append(PayPalConstants.UriString + PayPalConstants.AgreementUrl)
+                .Append(PaymentId)
+                .Append("/agreement-execute").ToString();
+        }
+
+        private bool SavePayPalAgreement(BillingAgreementResponse FinalResponse, string ResponseContents)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void SaveRejectedPayment()
+        {
+
+        }
+
+        [Authenticate]
+        public void Post(PayPalFailureReturnRequest req)
+        {
+            
+        }
+
+
+        [Authenticate]
+        public void Post(PayPalSuccessReturnRequest req)
+        {
+            string PayId = req.PaymentId;
+            string ExecuteUrl = ConstructExecuteUrl(PayId);
+            FlurlRequest ExecuteRequest = new FlurlRequest();
+            ExecuteRequest.Client = flurlClient;
+            var ExecuteResponse = Send(HttpMethod.Post, ExecuteRequest, "").Result;
+            var ResponseContents = GetResponseContents(ExecuteResponse).Result;
+            Console.WriteLine("Execute Response Status Code: " + ExecuteResponse.StatusCode);
+            Console.WriteLine("Response: " + ResponseContents);
+            BillingAgreementResponse FinalResponse = JsonConvert.DeserializeObject<BillingAgreementResponse>(ResponseContents);
+            SavePayPalAgreement(FinalResponse, ResponseContents);
+
+        }
+
         [Authenticate]
         public PayPalPaymentResponse Post(PayPalPaymentRequest req)
         {
             int UserCount = 5;//this.Redis.Get<Eb_Solution>(String.Format("solution_{0}",req.TenantAccountId)).NumberOfUsers;
-            PayPalPaymentResponse resp = new PayPalPaymentResponse();
+            PayPalResponse = new PayPalPaymentResponse();
 
             string ppBillingId = GetBillingPlanId(UserCount, 5);
             string BillingAgreementID = string.Empty;
@@ -263,13 +283,12 @@ namespace ExpressBase.ServiceStack.Services
             foreach (var _link in Agreement.Links)
             {
                 if (_link.Rel == "approval_url")
-                    AcceptUrl = _link.Href;
+                    PayPalResponse.ApprovalUrl = _link.Href;
                 if (_link.Rel == "execute")
-                    ExecuteUrl = _link.Href;
+                    PayPalResponse.ExecuteUrl = _link.Href;
             }
-            
-            resp.Test = AcceptUrl;
-            return resp;
+
+            return PayPalResponse;
         }
 
         bool PersistBillingPlan(EbBillingPlan plan)
