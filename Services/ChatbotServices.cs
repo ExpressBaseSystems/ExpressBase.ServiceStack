@@ -237,8 +237,10 @@ WHERE
 					_listNamesAndTypes.Add(new TableColumnMeta { Name = control.Name, Type = vDbTypes.String });
 			}
 			_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_by", Type = vDbTypes.Decimal });
+			_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_aid", Type = vDbTypes.Decimal });
 			_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_at", Type = vDbTypes.DateTime });
 			_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_by", Type = vDbTypes.Decimal });
+			_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_aid", Type = vDbTypes.Decimal });
 			_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_at", Type = vDbTypes.DateTime });
 			_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_del", Type = vDbTypes.Boolean, Default = "F" });
 			_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_void", Type = vDbTypes.Boolean, Default = "F" });
@@ -271,10 +273,16 @@ WHERE
 				string cols = string.Join(CharConstants.COMMA + CharConstants.SPACE.ToString(), listNamesAndTypes.Select(x => x.Name + CharConstants.SPACE + x.Type.VDbType.ToString() + (x.Default.IsNullOrEmpty() ? "" : (" DEFAULT '" + x.Default + "'"))).ToArray());
 				string sql = string.Empty;
 				if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.ORACLE)////////////
-					sql = "CREATE TABLE @tbl(@cols)".Replace("@cols", cols).Replace("@tbl", tableName);
+				{
+					sql = "CREATE TABLE @tbl(id NUMBER(10), @cols)".Replace("@cols", cols).Replace("@tbl", tableName);					
+					this.EbConnectionFactory.ObjectsDB.CreateTable(sql);//Table Creation
+					CreateSquenceAndTrigger(tableName);//
+				}
 				else
+				{
 					sql = "CREATE TABLE @tbl( id SERIAL PRIMARY KEY, @cols)".Replace("@cols", cols).Replace("@tbl", tableName);
-				this.EbConnectionFactory.ObjectsDB.CreateTable(sql);
+					this.EbConnectionFactory.ObjectsDB.CreateTable(sql);
+				}				
 				return 0;
 			}
 			else
@@ -294,21 +302,54 @@ WHERE
 					}
 					if (!isFound)
 					{
-						sql += entry.Name + " " + entry.Type.VDbType.ToString() + ",";
+						sql += entry.Name + " " + entry.Type.VDbType.ToString() + " " + (entry.Default.IsNullOrEmpty() ? "" : (" DEFAULT '" + entry.Default + "'")) + ",";
 					}
 				}
-				if (!sql.IsEmpty())
+				bool appendId = false;
+				var existingIdCol = colSchema.FirstOrDefault(o => o.ColumnName.ToLower() == "id");
+				if (existingIdCol == null)
+					appendId = true;
+				if (!sql.IsEmpty() || appendId)
 				{
 					if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.ORACLE)/////////////////////////
-						sql = "ALTER TABLE @tbl ADD (" + sql.Substring(0, sql.Length - 1) + ")";
+					{
+						sql = (appendId ? "id NUMBER(10)," : "") + sql;
+						if (!sql.IsEmpty())
+						{
+							sql = "ALTER TABLE @tbl ADD (" + sql.Substring(0, sql.Length - 1) + ")";
+							sql = sql.Replace("@tbl", tableName);
+							this.EbConnectionFactory.ObjectsDB.UpdateTable(sql);
+							if(appendId)
+								CreateSquenceAndTrigger(tableName);
+						}
+					}
 					else
-						sql = "ALTER TABLE @tbl ADD COLUMN " + sql.Substring(0, sql.Length - 1);
-
-					sql = sql.Replace("@tbl", tableName);
-					return(this.EbConnectionFactory.ObjectsDB.UpdateTable(sql));
+					{
+						sql = (appendId ? "id SERIAL," : "") + sql;
+						if (!sql.IsEmpty())
+						{
+							sql = "ALTER TABLE @tbl ADD COLUMN " + (sql.Substring(0, sql.Length - 1)).Replace(",", ", ADD COLUMN ");
+							sql = sql.Replace("@tbl", tableName);
+							this.EbConnectionFactory.ObjectsDB.UpdateTable(sql);
+						}
+					}					
+					return(0);
 				}
 			}
 			return -1;
+		}
+
+		private void CreateSquenceAndTrigger(string tableName)
+		{
+			string sqnceSql = "CREATE SEQUENCE @name_sequence".Replace("@name", tableName);
+			string trgrSql = string.Format(@"CREATE OR REPLACE TRIGGER {0}_on_insert
+													BEFORE INSERT ON {0}
+													FOR EACH ROW
+													BEGIN
+														SELECT {0}_sequence.nextval INTO :new.id FROM dual;
+													END;", tableName);
+			this.EbConnectionFactory.ObjectsDB.CreateTable(sqnceSql);//Sequence Creation
+			this.EbConnectionFactory.ObjectsDB.CreateTable(trgrSql);//Trigger Creation
 		}
 
 		//public object Any123(CreateBotFormTableRequest request)
@@ -774,12 +815,14 @@ WHERE
 				}
 				
 			}
-			cols = cols + "eb_created_by,eb_created_at,eb_lastmodified_by,eb_lastmodified_at,eb_transaction_date,eb_autogen";
-			vals = vals + ":eb_created_by,:eb_created_at,:eb_lastmodified_by,:eb_lastmodified_at,:eb_transaction_date,:eb_autogen";
+			cols = cols + "eb_created_by, eb_created_aid, eb_created_at, eb_lastmodified_by, eb_lastmodified_aid, eb_lastmodified_at, eb_transaction_date, eb_autogen";
+			vals = vals + ":eb_created_by,:eb_created_aid,:eb_created_at,:eb_lastmodified_by,:eb_lastmodified_aid,:eb_lastmodified_at,:eb_transaction_date,:eb_autogen";
 			paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_created_by", EbDbTypes.Int32, request.UserId));
-			paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_created_at", EbDbTypes.Date, DateTime.Now));
+			paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_created_aid", EbDbTypes.Int32, request.AnonUserId));
+			paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_created_at", EbDbTypes.DateTime, DateTime.Now));
 			paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_lastmodified_by", EbDbTypes.Int32, request.UserId));
-			paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_lastmodified_at", EbDbTypes.Date, DateTime.Now));
+			paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_lastmodified_aid", EbDbTypes.Int32, request.AnonUserId));
+			paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_lastmodified_at", EbDbTypes.DateTime, DateTime.Now));
 			paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_transaction_date", EbDbTypes.Date, DateTime.Now));
 			paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_autogen", EbDbTypes.Int64, new Random().Next()));
 			var qry = string.Format("insert into @tbl({0}) values({1})".Replace("@tbl", request.TableName), cols, vals);

@@ -29,13 +29,11 @@ namespace ExpressBase.ServiceStack.Services
     {
         string OAuthResponse;
         int OAuthStatusCode = 0;
-        string P_PayResponse;
-        int P_PayResCode;
-        string CancelPage = "/PayPal/CancelAgreement",
-            ReturnPage = "/PayPal/ReturnSuccess",
-            CancelUrl = string.Empty,
-            ReturnUrl = string.Empty;
-
+        int UserCount = 5;
+        int PricePerUser = 5;
+        string Currency = "USD";
+        string CancelUrl = "https://payment.eb-test.info/PayPal/CancelAgreement";
+        string ReturnUrl = "https://payment.eb-test.info/PayPal/ReturnSuccess";
 
         private PayPalOauthObject _payPalOAuth = null;
         PayPalPaymentResponse PayPalResponse;
@@ -59,7 +57,7 @@ namespace ExpressBase.ServiceStack.Services
             client.ExecuteAsyncPost(OAuthRequest, PayPalCallback, "POST");
 
             int _timeout = 0;
-            while (OAuthStatusCode == 0)
+            while (OAuthStatusCode.Equals(0))
             {
                 if (_timeout >= 60000)
                     break;
@@ -115,7 +113,7 @@ namespace ExpressBase.ServiceStack.Services
 
         void PayPalCallback(IRestResponse response, RestRequestAsyncHandle handle)
         {
-            if (response.StatusCode == HttpStatusCode.OK)
+            if (response.StatusCode.Equals(HttpStatusCode.OK))
             {
                 OAuthResponse = response.Content;
                 OAuthStatusCode = (int)response.StatusCode;
@@ -132,12 +130,12 @@ namespace ExpressBase.ServiceStack.Services
             return await flurlRequest.SendAsync(_method, new Flurl.Http.Content.CapturedJsonContent(JsonBody));
         }
 
-        BillingPlanResponse CreateBillingPlan(PayPalOauthObject payPalOauth, FlurlClient flurlClient, int _users, double _amount)
+        BillingPlanResponse CreateBillingPlan(PayPalOauthObject payPalOauth, FlurlClient flurlClient)
         {
-            double PaymentSum = _users * _amount;
+            double PaymentSum = UserCount * PricePerUser;
             double TaxPercent = 0.3;
             BillingPlanRequest Plan = new BillingPlanRequest();
-            Plan.Name = "Test Plan";
+            Plan.Name = "Billing Plan - Price: " + PaymentSum + " " + Currency;
             Plan.Description = "Testing the Billing Plan in PayPal";
             Plan.Type = "FIXED";
             Plan.PaymentDef = new List<PaymentDefinition>();
@@ -165,7 +163,6 @@ namespace ExpressBase.ServiceStack.Services
 
             Plan.MerchantPref.SetupFee = null;// new Dictionary<string, string>() { { "value", "1" }, { "currency", "USD" } };
 
-            //need to change the below line - OAuth tokens are NOT supposed to be transferred like this
             Plan.MerchantPref.ReturnUrl = ReturnUrl;
             Plan.MerchantPref.CancelUrl = CancelUrl;
             Plan.MerchantPref.AutoBillAmount = "YES";
@@ -201,18 +198,20 @@ namespace ExpressBase.ServiceStack.Services
             var ActResult = Send(new HttpMethod("PATCH"), ActivateRequest, _activateJson).Result;
             Console.WriteLine("\n\nPayment Plan Activation Request: ");
             Console.WriteLine("Response Code :: " + ActResult.StatusCode);
-            return ActResult.StatusCode == HttpStatusCode.OK;
+            return ActResult.StatusCode.Equals(HttpStatusCode.OK);
         }
 
-        public BillingAgreementResponse CreateBillingAgreement(PayPalPaymentRequest req, string BillingPlanID, int UserCount)
+        public BillingAgreementResponse CreateBillingAgreement(string TenantAccountId, string BillingPlanID)
         {
+            double TotalPrice = UserCount * PricePerUser;
             FundingInstrument fundingInstrument = new FundingInstrument();
-
+            string _startDate = DateTime.Now.AddMinutes(5.0).ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss'Z'");
             BillingAgreementRequest BillAgreementRequest = new BillingAgreementRequest()
             {
-                Name = "Billing Request - ID: " + req.TenantAccountId,
-                Description = "Billing agreement for client: " + req.TenantAccountId + " Number of users: " + UserCount.ToString() + " Total amount charged: dollars " + (UserCount * 5).ToString(),
-                StartDate = DateTime.Now.AddMinutes(5.0).ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss'Z'"),//"2020-01-01T09:13:49Z",
+                Name = "Billing Agreement - Solution ID: " + TenantAccountId + " Price: " + TotalPrice + " " + Currency,
+                Description = "Billing agreement for client: " + TenantAccountId + " Number of users: " + UserCount.ToString() + " Total amount charged: " 
+                + (TotalPrice).ToString() + " " + Currency + " Starting from: " + _startDate,
+                StartDate = _startDate,//"2020-01-01T09:13:49Z",
                 BillingPlan = new BillingPlanResponse(BillingPlanID),
                 Payer = new PayerDetails()
                 {
@@ -277,19 +276,17 @@ namespace ExpressBase.ServiceStack.Services
         [Authenticate]
         public PayPalPaymentResponse Post(PayPalPaymentRequest req)
         {
-            CancelUrl = req.Environment + CancelPage;
-            ReturnUrl = req.Environment + ReturnPage;
-            int UserCount = 5;//this.Redis.Get<Eb_Solution>(String.Format("solution_{0}",req.TenantAccountId)).NumberOfUsers;
+            //this.Redis.Get<Eb_Solution>(String.Format("solution_{0}",req.TenantAccountId)).NumberOfUsers;
             PayPalResponse = new PayPalPaymentResponse();
 
             string ppBillingId = GetBillingPlanId(UserCount, 5);
             string BillingAgreementID = string.Empty;
-            var Agreement = CreateBillingAgreement(req, ppBillingId, UserCount);
+            var Agreement = CreateBillingAgreement(req.TenantAccountId, ppBillingId);
             foreach (var _link in Agreement.Links)
             {
-                if (_link.Rel == "approval_url")
+                if (_link.Rel.Equals("approval_url"))
                     PayPalResponse.ApprovalUrl = _link.Href;
-                if (_link.Rel == "execute")
+                if (_link.Rel.Equals("execute"))
                     PayPalResponse.ExecuteUrl = _link.Href;
             }
 
@@ -328,8 +325,7 @@ namespace ExpressBase.ServiceStack.Services
 
             if (string.IsNullOrEmpty(ppBillingId))
             {
-                //CREATING BILLING PLAN && ACTIVATING THE BILLING PLAN
-                BillingPlanResponse BillPlanResponse = CreateBillingPlan(PayPalOauth, flurlClient, users, amount);
+                BillingPlanResponse BillPlanResponse = CreateBillingPlan(PayPalOauth, flurlClient);
 
                 EbBillingPlan plan = new EbBillingPlan(10, 5, BillPlanResponse);
                 var x = PersistBillingPlan(plan);

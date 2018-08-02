@@ -1080,7 +1080,7 @@ WHERE
             if (appids == "")
                 appids = "0";
             else
-                appids = appids.Substring(0,appids.Length-2);
+                appids = appids.Substring(0,appids.Length-1);
             return appids;
         }
     }
