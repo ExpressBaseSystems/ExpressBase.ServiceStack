@@ -237,7 +237,7 @@ namespace ExpressBase.ServiceStack.Services
         private string ConstructExecuteUrl(string PaymentId)
         {
             return new StringBuilder()
-                .Append(PayPalConstants.UriString + PayPalConstants.AgreementUrl)
+                .Append(PayPalConstants.AgreementUrl)
                 .Append(PaymentId)
                 .Append("/agreement-execute").ToString();
         }
