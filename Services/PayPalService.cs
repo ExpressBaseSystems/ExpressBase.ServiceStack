@@ -265,8 +265,7 @@ namespace ExpressBase.ServiceStack.Services
             try
             {
                 string PayId = req.PaymentId;
-                string ExecuteUrl = ConstructExecuteUrl(PayId);
-                FlurlRequest ExecuteRequest = new FlurlRequest();
+                FlurlRequest ExecuteRequest = new FlurlRequest(ConstructExecuteUrl(PayId));
                 ExecuteRequest.Client = flurlClient;
                 var ExecuteResponse = Send(HttpMethod.Post, ExecuteRequest, "").Result;
                 var ResponseContents = GetResponseContents(ExecuteResponse).Result;
