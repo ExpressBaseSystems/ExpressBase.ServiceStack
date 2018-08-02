@@ -292,7 +292,7 @@ namespace ExpressBase.ServiceStack.Services
                 ReturnUrl = req.Environment + ReturnPage;
                 string ppBillingId = GetBillingPlanId(UserCount, 5);
                 string BillingAgreementID = string.Empty;
-                var Agreement = CreateBillingAgreement(req.TenantAccountId, ppBillingId);
+                var Agreement = CreateBillingAgreement(req.SolutionId, ppBillingId);
                 foreach (var _link in Agreement.Links)
                 {
                     if (_link.Rel.Equals("approval_url"))
