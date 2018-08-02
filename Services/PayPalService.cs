@@ -262,17 +262,23 @@ namespace ExpressBase.ServiceStack.Services
         [Authenticate]
         public void Post(PayPalSuccessReturnRequest req)
         {
-            string PayId = req.PaymentId;
-            string ExecuteUrl = ConstructExecuteUrl(PayId);
-            FlurlRequest ExecuteRequest = new FlurlRequest();
-            ExecuteRequest.Client = flurlClient;
-            var ExecuteResponse = Send(HttpMethod.Post, ExecuteRequest, "").Result;
-            var ResponseContents = GetResponseContents(ExecuteResponse).Result;
-            Console.WriteLine("Execute Response Status Code: " + ExecuteResponse.StatusCode);
-            Console.WriteLine("Response: " + ResponseContents);
-            BillingAgreementResponse FinalResponse = JsonConvert.DeserializeObject<BillingAgreementResponse>(ResponseContents);
-            SavePayPalAgreement(FinalResponse, ResponseContents);
-
+            try
+            {
+                string PayId = req.PaymentId;
+                string ExecuteUrl = ConstructExecuteUrl(PayId);
+                FlurlRequest ExecuteRequest = new FlurlRequest();
+                ExecuteRequest.Client = flurlClient;
+                var ExecuteResponse = Send(HttpMethod.Post, ExecuteRequest, "").Result;
+                var ResponseContents = GetResponseContents(ExecuteResponse).Result;
+                Console.WriteLine("Execute Response Status Code: " + ExecuteResponse.StatusCode);
+                Console.WriteLine("Response: " + ResponseContents);
+                BillingAgreementResponse FinalResponse = JsonConvert.DeserializeObject<BillingAgreementResponse>(ResponseContents);
+                SavePayPalAgreement(FinalResponse, ResponseContents);
+            }
+            catch(Exception ex)
+            {
+                Console.WriteLine("Exception Thrown : " + ex);
+            }
         }
 
         [Authenticate]
@@ -280,19 +286,25 @@ namespace ExpressBase.ServiceStack.Services
         {
             //this.Redis.Get<Eb_Solution>(String.Format("solution_{0}",req.TenantAccountId)).NumberOfUsers;
             PayPalResponse = new PayPalPaymentResponse();
-            CancelUrl = req.Environment + CancelPage;
-            ReturnUrl = req.Environment + ReturnPage;
-            string ppBillingId = GetBillingPlanId(UserCount, 5);
-            string BillingAgreementID = string.Empty;
-            var Agreement = CreateBillingAgreement(req.TenantAccountId, ppBillingId);
-            foreach (var _link in Agreement.Links)
+            try
             {
-                if (_link.Rel.Equals("approval_url"))
-                    PayPalResponse.ApprovalUrl = _link.Href;
-                if (_link.Rel.Equals("execute"))
-                    PayPalResponse.ExecuteUrl = _link.Href;
+                CancelUrl = req.Environment + CancelPage;
+                ReturnUrl = req.Environment + ReturnPage;
+                string ppBillingId = GetBillingPlanId(UserCount, 5);
+                string BillingAgreementID = string.Empty;
+                var Agreement = CreateBillingAgreement(req.TenantAccountId, ppBillingId);
+                foreach (var _link in Agreement.Links)
+                {
+                    if (_link.Rel.Equals("approval_url"))
+                        PayPalResponse.ApprovalUrl = _link.Href;
+                    if (_link.Rel.Equals("execute"))
+                        PayPalResponse.ExecuteUrl = _link.Href;
+                }
             }
-
+            catch(Exception ex)
+            {
+                Console.WriteLine("Exception thrown : " + ex);
+            }
             return PayPalResponse;
         }
 
