@@ -568,6 +568,8 @@ namespace ExpressBase.ServiceStack
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":tags", EbDbTypes.String, (!string.IsNullOrEmpty(request.Tags)) ? request.Tags : string.Empty));
                     //cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@app_id", System.Data.DbType.Int32, request.AppId));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":app_id", EbDbTypes.String, SetAppId(request.Apps)));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":s_obj_id", EbDbTypes.String, request.SourceObjId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":s_ver_id", EbDbTypes.String, request.SourceVerID));
 
                     if (sql.Contains(":obj_json"))
                     {
@@ -746,7 +748,6 @@ namespace ExpressBase.ServiceStack
             }
         }
 
-
         public EbObjectRunSqlFunctionResponse Post(EbObjectRunSqlFunctionRequest request)
         {
             ILog log = LogManager.GetLogger(GetType());
@@ -816,6 +817,7 @@ namespace ExpressBase.ServiceStack
             else
                 return -1;
         }
+
         public void SetRedis(object obj, string refId)
         {
             if (obj is EbFilterDialog)
