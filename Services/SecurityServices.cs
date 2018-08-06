@@ -521,6 +521,7 @@ namespace ExpressBase.ServiceStack.Services
 			ApplicationCollection _applicationCollection = null;
 			List<Eb_RoleObject> _roleList = new List<Eb_RoleObject>();
 			List<Eb_RoleToRole> _r2rList = new List<Eb_RoleToRole>();
+			List<Eb_Location> _location = new List<Eb_Location>();
 			
 			if (ds.Tables.Count > 0)
 			{
@@ -546,23 +547,32 @@ namespace ExpressBase.ServiceStack.Services
 						Dependent = Convert.ToInt32(dr[2])
 					});
 				}
+				foreach (EbDataRow dr in ds.Tables[4].Rows)
+				{
+					_location.Add(new Eb_Location()
+					{
+						Id = Convert.ToInt32(dr[0]),
+						LongName = dr[1].ToString(),
+						ShortName = dr[2].ToString()
+					});
+				}
 
 			}
 			Dictionary<string, object> RoleInfo = new Dictionary<string, object>();
 			List<string> Permission = new List<string>();
 			List<Eb_Users> _usersList = new List<Eb_Users>();
 
-			if (ds.Tables.Count > 4)
+			if (ds.Tables.Count > 5)
 			{
-				RoleInfo.Add("RoleName", ds.Tables[4].Rows[0][0].ToString());
-				RoleInfo.Add("AppId", Convert.ToInt32(ds.Tables[4].Rows[0][1]));
-				RoleInfo.Add("RoleDescription", ds.Tables[4].Rows[0][2].ToString());
-				RoleInfo.Add("IsAnonymous", (ds.Tables[4].Rows[0][3].ToString() == "T")?true:false);
-				RoleInfo.Add("AppName", ds.Tables[6].Rows[0][0].ToString());
-				RoleInfo.Add("AppDescription", ds.Tables[6].Rows[0][1].ToString());
-				foreach (var dr in ds.Tables[5].Rows)
+				RoleInfo.Add("RoleName", ds.Tables[5].Rows[0][0].ToString());
+				RoleInfo.Add("AppId", Convert.ToInt32(ds.Tables[5].Rows[0][1]));
+				RoleInfo.Add("RoleDescription", ds.Tables[5].Rows[0][2].ToString());
+				RoleInfo.Add("IsAnonymous", (ds.Tables[5].Rows[0][3].ToString() == "T")?true:false);
+				RoleInfo.Add("AppName", ds.Tables[7].Rows[0][0].ToString());
+				RoleInfo.Add("AppDescription", ds.Tables[7].Rows[0][1].ToString());
+				foreach (var dr in ds.Tables[6].Rows)
 					Permission.Add(dr[0].ToString());
-				foreach (EbDataRow dr in ds.Tables[7].Rows)
+				foreach (EbDataRow dr in ds.Tables[8].Rows)
 				{
 					_usersList.Add(new Eb_Users() {
 						Id = Convert.ToInt32(dr[0]),
@@ -571,8 +581,12 @@ namespace ExpressBase.ServiceStack.Services
 						Role2User_Id = Convert.ToInt32(dr[3])
 					});
 				}
+				string temp_locs = string.Empty;
+				foreach (var dr in ds.Tables[9].Rows)
+					temp_locs += dr[0].ToString() + ",";
+				RoleInfo.Add("LocationIds", string.IsNullOrEmpty(temp_locs) ? "": temp_locs.Substring(0, temp_locs.Length -1));
 			}
-			return new GetManageRolesResponse() { ApplicationCollection = _applicationCollection, SelectedRoleInfo = RoleInfo, PermissionList = Permission, RoleList = _roleList, Role2RoleList = _r2rList, UsersList = _usersList };
+			return new GetManageRolesResponse() { ApplicationCollection = _applicationCollection, SelectedRoleInfo = RoleInfo, PermissionList = Permission, RoleList = _roleList, Role2RoleList = _r2rList, UsersList = _usersList, LocationList = _location };
 		}
 		
 		public GetUserDetailsResponse Any(GetUserDetailsRequest request)
@@ -609,8 +623,9 @@ namespace ExpressBase.ServiceStack.Services
                                             this.EbConnectionFactory.DataDB.GetNewParameter("is_anonym", EbDbTypes.String, request.Colvalues["IsAnonymous"]),
                                             this.EbConnectionFactory.DataDB.GetNewParameter("users", EbDbTypes.String, (request.Colvalues["users"].ToString() != string.Empty) ? request.Colvalues["users"] : string.Empty),
                                             this.EbConnectionFactory.DataDB.GetNewParameter("dependants", EbDbTypes.String, (request.Colvalues["dependants"].ToString() != string.Empty) ? request.Colvalues["dependants"] : string.Empty),
-                                            this.EbConnectionFactory.DataDB.GetNewParameter("permission", EbDbTypes.String , (request.Colvalues["permission"].ToString() != string.Empty) ? request.Colvalues["permission"]: string.Empty)
-                                        };
+                                            this.EbConnectionFactory.DataDB.GetNewParameter("permission", EbDbTypes.String , (request.Colvalues["permission"].ToString() != string.Empty) ? request.Colvalues["permission"]: string.Empty),
+											this.EbConnectionFactory.DataDB.GetNewParameter("locations", EbDbTypes.String , request.Colvalues["locations"].ToString())
+										};
 
                 var ds = this.EbConnectionFactory.DataDB.DoQuery(sql, parameters);
                 resp = new SaveRoleResponse

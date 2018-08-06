@@ -23,166 +23,12 @@ namespace ExpressBase.ServiceStack
     {
         public EbObjectService(IEbConnectionFactory _dbf) : base(_dbf) { }
 
-        #region Get EbObject Queries
-
-        // Fetch all version without json of a particular Object
-        //        private const string Query1 = @"
-        //SELECT 
-        //    EOV.id, EOV.version_num, EOV.obj_changelog, EOV.commit_ts, EOV.refid, EOV.commit_uid, EU.firstname
-        //FROM 
-        //    eb_objects_ver EOV, eb_users EU
-        //WHERE
-        //    EOV.commit_uid = EU.id AND
-        //    EOV.eb_objects_id=(SELECT eb_objects_id FROM eb_objects_ver WHERE refid=@refid)
-        //ORDER BY
-        //    EOV.id DESC";
-
-        //        // Fetch particular version with json of a particular Object
-        //        private const string Query2 = @"
-        //SELECT
-        //    obj_json, version_num, status, EO.obj_tags
-        //FROM
-        //    eb_objects_ver EOV, eb_objects_status EOS, eb_objects EO
-        //WHERE
-        //    EOV.refid=@refid AND EOS.eb_obj_ver_id = EOV.id AND EO.id=EOV.eb_objects_id
-        //ORDER BY
-        //	EOS.id DESC 
-        //LIMIT 1";
-
-        //Fetch latest non-committed version with json - for EDIT
-        private const string Query3 = @"
-SELECT 
-    EO.id, EO.obj_name, EO.obj_type, EO.obj_cur_status,EO.obj_desc,
-    EOV.id,EOV.eb_objects_id,EOV.version_num, EOV.obj_changelog,EOV.commit_ts, EOV.commit_uid, EOV.obj_json, EOV.refid
-FROM 
-    eb_objects EO, eb_objects_ver EOV
-WHERE
-    EO.id = EOV.eb_objects_id AND EOV.eb_objects_id=(SELECT eb_objects_id FROM eb_objects_ver WHERE refid=@refid) AND EOV.ver_num = -1 AND EOV.commit_uid IS NULL
-ORDER BY
-    EO.obj_type";
-
-        // Fetch latest committed version with json - for Execute/Run/Consume
-        //        private const string Query4 = @"
-        //SELECT 
-        //    EO.id, EO.obj_name, EO.obj_type, EO.obj_cur_status, EO.obj_desc,
-        //    EOV.id, EOV.eb_objects_id, EOV.version_num, EOV.obj_changelog, EOV.commit_ts, EOV.commit_uid, EOV.obj_json, EOV.refid
-        //FROM 
-        //    eb_objects EO, eb_objects_ver EOV
-        //WHERE
-        //    EO.id = EOV.eb_objects_id AND EOV.refid=@refid
-        //ORDER BY
-        //    EO.obj_type";
-
-        //        // Get All latest versions of this Object Type without json
-        //        private const string Query5 = @"
-        //SELECT 
-        //    EO.id, EO.obj_name, EO.obj_type, EO.obj_cur_status,EO.obj_desc,
-        //    EOV.id, EOV.eb_objects_id, EOV.version_num, EOV.obj_changelog,EOV.commit_ts, EOV.commit_uid, EOV.refid,
-        //    EU.firstname
-        //FROM 
-        //    eb_objects EO, eb_objects_ver EOV
-        //LEFT JOIN
-        //	eb_users EU
-        //ON 
-        //	EOV.commit_uid=EU.id
-        //WHERE
-        //    EO.id = EOV.eb_objects_id AND EO.obj_type=@type
-        //ORDER BY
-        //    EO.obj_name";
-
-        private const string Query6 = @"
-SELECT @function_name";
-
-        private const string GetObjectRelations = @"
-SELECT 
-	EO.obj_name, EOV.refid, EOV.version_num, EO.obj_type
-FROM 
-	eb_objects EO, eb_objects_ver EOV
-WHERE 
-	EO.id = ANY (SELECT eb_objects_id FROM eb_objects_ver WHERE refid IN(SELECT dependant FROM eb_objects_relations WHERE dominant=@dominant))
-    AND EOV.refid =ANY(SELECT dependant FROM eb_objects_relations WHERE dominant=@dominant)
-    AND EO.id =EOV.eb_objects_id";
-
-        //        private const string GetLiveObjectRelations = @"
-        //SELECT 
-        //	EO.obj_name, EOV.refid, EOV.version_num, EO.obj_type,EOS.status
-        //FROM 
-        //	eb_objects EO, eb_objects_ver EOV,eb_objects_status EOS
-        //WHERE 
-        //	EO.id = ANY (SELECT eb_objects_id FROM eb_objects_ver WHERE refid IN(SELECT dependant FROM eb_objects_relations
-        //                          WHERE dominant=@dominant))
-        //    AND EOV.refid =ANY(SELECT dependant FROM eb_objects_relations WHERE dominant=@dominant)    
-        //    AND EO.id =EOV.eb_objects_id  AND EOS.eb_obj_ver_id = EOV.id AND EOS.status = 3 AND EO.obj_type IN(16 ,17)";
-
-
-        //........not completd unnest
-        //        private const string GetTaggedObjects = @"    
-        //SELECT 
-        //	EO.obj_name, EOV.refid, EOV.version_num, EO.obj_type,EOS.status
-        //FROM 
-        //	eb_objects EO, eb_objects_ver EOV,eb_objects_status EOS,unnest(string_to_array(EO.obj_tags, ',')) Tags
-        //WHERE 
-        //	Tags IN(@tags) AND EO.id =EOV.eb_objects_id
-        //    AND EOS.eb_obj_ver_id = EOV.id AND EOS.status = 3 AND EO.obj_type IN(16 ,17)";
-
-        //        private const string Query_AllVerList = @"
-        //SELECT 
-        //    EO.id, EO.obj_name, EO.obj_type, EO.obj_cur_status,EO.obj_desc,
-        //    EOV.id, EOV.eb_objects_id, EOV.version_num, EOV.obj_changelog, EOV.commit_ts, EOV.commit_uid, EOV.refid,
-        //    EU.firstname
-        //FROM 
-        //    eb_objects EO, eb_objects_ver EOV
-        //LEFT JOIN
-        //	eb_users EU
-        //ON 
-        //	EOV.commit_uid=EU.id
-        //WHERE
-        //    EO.id = EOV.eb_objects_id  AND EO.obj_type=@type AND COALESCE(EOV.working_mode, FALSE) <> true
-        //ORDER BY
-        //    EO.obj_name";
-
-        //        private const string Query_ObjectList = @"SELECT 
-        //    id, obj_name, obj_type, obj_cur_status, obj_desc  
-        //FROM 
-        //    eb_objects
-        //WHERE
-        //    obj_type=@type
-        //ORDER BY
-        //    obj_name";
-
-        //        private const string Query_StatusHistory = @"
-        //SELECT 
-        //    EOS.eb_obj_ver_id, EOS.status, EU.firstname, EOS.ts, EOS.changelog, EOV.commit_uid   
-        //FROM
-        //    eb_objects_status EOS, eb_objects_ver EOV, eb_users EU
-        //WHERE
-        //    eb_obj_ver_id = EOV.id AND EOV.refid = @refid AND EOV.commit_uid=EU.id
-        //ORDER BY 
-        //EOS.id DESC";
-
-        //        private const string FetchLiveversionQuery = @"
-        //SELECT
-        //    EO.id, EO.obj_name, EO.obj_type, EO.obj_desc,
-        //    EOV.id, EOV.eb_objects_id, EOV.version_num, EOV.obj_changelog, EOV.commit_ts, EOV.commit_uid, EOV.obj_json, EOV.refid, EOS.status
-        //FROM
-        //    eb_objects_ver EOV, eb_objects_status EOS, eb_objects EO
-        //WHERE
-        //    EO.id = @id AND EOV.eb_objects_id = @id AND EOS.status = 3 AND EOS.eb_obj_ver_id = EOV.id";
-
-        //        private const string GetAllTags = @"
-        //SELECT distinct(tags)
-        //FROM (SELECT unnest(string_to_array(obj_tags, ',')) AS tags
-        //	  FROM eb_objects)
-        //AS tags";
-        #endregion
-
         List<EbObjectWrapper> f = new List<EbObjectWrapper>();
         List<System.Data.Common.DbParameter> parameters = new List<System.Data.Common.DbParameter>();
  
         [CompressResponse]
-        public object Get(EbObjectAllVersionsRequest request)
-        {  // Fetch all version without json of a particular Object
-
+        public object Get(EbObjectAllVersionsRequest request) // Fetch all version without json of a particular Object
+        { 
             ILog log = LogManager.GetLogger(GetType());
             parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("refid", EbDbTypes.String, request.RefId));
             var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(this.EbConnectionFactory.ObjectsDB.EB_FETCH_ALL_VERSIONS_OF_AN_OBJ, parameters.ToArray());
@@ -205,11 +51,9 @@ WHERE
         }
 
         [CompressResponse]
-        public object Get(EbObjectParticularVersionRequest request)
-        {  // Fetch particular version with json of a particular Object
-
+        public object Get(EbObjectParticularVersionRequest request)// Fetch particular version with json of a particular Object
+        {  
             ILog log = LogManager.GetLogger(GetType());
-            // parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":refid", EbDbTypes.String, request.RefId));
             DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("refid", EbDbTypes.String, request.RefId) };
             var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(this.EbConnectionFactory.ObjectsDB.EB_PARTICULAR_VERSION_OF_AN_OBJ, parameters);
 
@@ -226,39 +70,11 @@ WHERE
                 f.Add(_ebObject);
             }
             return new EbObjectParticularVersionResponse { Data = f };
-        }
-
-        //[CompressResponse]
-        //public object Get(EbObjectNonCommitedVersionRequest request)
-        //{
-        //    // Fetch latest non - committed version with json - for EDIT of a particular Object
-
-        //    parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@refid", EbDbTypes.String, request.RefId));
-        //    var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(Query3, parameters.ToArray());
-
-        //    foreach (EbDataRow dr in dt.Rows)
-        //    {
-        //        var _ebObject = (new EbObjectWrapper
-        //        {
-        //            Id = Convert.ToInt32(dr[0]),
-        //            Name = dr[1].ToString(),
-        //            EbObjectType = ((EbObjectType)Convert.ToInt32(dr[3])).IntCode,
-        //            Status = Enum.GetName(typeof(ObjectLifeCycleStatus), dr[3]),
-        //            Description = dr[4].ToString(),
-        //            VersionNumber = dr[7].ToString(),
-        //            Json = (!string.IsNullOrEmpty(request.RefId)) ? dr[11].ToString() : null,
-        //            RefId = dr[12].ToString()
-        //        });
-
-        //        f.Add(_ebObject);
-        //    }
-        //    return new EbObjectNonCommitedVersionResponse { Data = f };
-        //}
+        }    
 
         [CompressResponse]
-        public object Get(EbObjectLatestCommitedRequest request)
-        {
-            // Fetch latest committed version with json - for Execute/Run/Consume a particular Object
+        public object Get(EbObjectLatestCommitedRequest request) // Fetch latest committed version with json - for Execute/Run/Consume a particular Object
+        {           
             DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("refid", EbDbTypes.String, request.RefId) };
             var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(this.EbConnectionFactory.ObjectsDB.EB_LATEST_COMMITTED_VERSION_OF_AN_OBJ, parameters);
 
@@ -282,9 +98,8 @@ WHERE
         }
 
         [CompressResponse]
-        public object Get(EbObjectObjListRequest request)
-        { // Get All latest committed versions of this Object Type without json
-
+        public object Get(EbObjectObjListRequest request)// Get All latest committed versions of this Object Type without json
+        { 
             DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("type", EbDbTypes.Int32, request.EbObjectType) };
             var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(this.EbConnectionFactory.ObjectsDB.EB_ALL_LATEST_COMMITTED_VERSION_OF_AN_OBJ, parameters);
 
@@ -309,9 +124,8 @@ WHERE
         }
 
         [CompressResponse]
-        public object Get(EbObjectListRequest request)
-        { // Get All latest committed versions of this Object Type without json
-            //parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@type", EbDbTypes.Int32, request.EbObjectType));
+        public object Get(EbObjectListRequest request)// Get All latest committed versions of this Object Type without json
+        { 
             DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("type", EbDbTypes.Int32, request.EbObjectType) };
             var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(this.EbConnectionFactory.ObjectsDB.EB_GET_OBJ_LIST_FROM_EBOBJECTS, parameters);
 
@@ -333,9 +147,8 @@ WHERE
 
 
         [CompressResponse]
-        public object Get(EbObjectObjLisAllVerRequest request)
-        { // Get All latest committed versions of this Object Type without json
-            //parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@type", EbDbTypes.Int32, request.EbObjectType));
+        public object Get(EbObjectObjLisAllVerRequest request)// Get All latest committed versions of this Object Type without json
+        { 
             DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("type", EbDbTypes.Int32, request.EbObjectType) };
             var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(this.EbConnectionFactory.ObjectsDB.EB_GET_ALL_COMMITTED_VERSION_LIST, parameters);
 
@@ -365,11 +178,9 @@ WHERE
 
 
         [CompressResponse]
-        public object Get(EbObjectRelationsRequest request)
-        { //Fetch ebobjects relations
-            //parameters = new List<System.Data.Common.DbParameter>();
-            ILog log = LogManager.GetLogger(GetType());
-            //parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@dominant", EbDbTypes.String, request.DominantId));
+        public object Get(EbObjectRelationsRequest request)//Fetch ebobjects relations           
+        { 
+            ILog log = LogManager.GetLogger(GetType());            
             DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("dominant", EbDbTypes.String, request.DominantId) };
             var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(this.EbConnectionFactory.ObjectsDB.EB_GET_LIVE_OBJ_RELATIONS, parameters);
             foreach (EbDataRow dr in dt.Rows)
@@ -393,9 +204,7 @@ WHERE
         public object Get(EbObjectTaggedRequest request)
         { //
             f = new List<EbObjectWrapper>();
-            //parameters = new List<System.Data.Common.DbParameter>();
             ILog log = LogManager.GetLogger(GetType());
-            //parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@tags", EbDbTypes.String, request.Tags));
             DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("tags", EbDbTypes.String, request.Tags) };
             var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(this.EbConnectionFactory.ObjectsDB.EB_GET_TAGGED_OBJECTS, parameters);
             foreach (EbDataRow dr in dt.Rows)
@@ -417,8 +226,6 @@ WHERE
         [CompressResponse]
         public object Get(EbObjectExploreObjectRequest request)
         {
-            //parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, request.Id));
-
             DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, request.Id) };
 
             var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(this.EbConnectionFactory.ObjectsDB.EB_EXPLORE_OBJECT, parameters);
@@ -534,8 +341,7 @@ WHERE
         [CompressResponse]
         public object Get(EbObjectStatusHistoryRequest request)
         { // Get All latest committed versions of this Object Type without json
-            //parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@refid", EbDbTypes.String, request.RefId));
-            DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("refid", EbDbTypes.String, request.RefId) };
+             DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("refid", EbDbTypes.String, request.RefId) };
             var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(this.EbConnectionFactory.ObjectsDB.EB_GET_OBJ_STATUS_HISTORY, parameters);
 
             foreach (EbDataRow dr in dt.Rows)
@@ -556,11 +362,9 @@ WHERE
         }
 
         [CompressResponse]
-        public object Get(EbObjectFetchLiveVersionRequest request)
-        {  // Fetch particular version with json of a particular Object
-
+        public object Get(EbObjectFetchLiveVersionRequest request) // Fetch particular version with json of a particular Object
+        { 
             ILog log = LogManager.GetLogger(GetType());
-            //parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@id", EbDbTypes.Int32, request.Id));
             DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, request.Id) };
             var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(this.EbConnectionFactory.ObjectsDB.EB_LIVE_VERSION_OF_OBJS, parameters);
 
@@ -620,8 +424,7 @@ WHERE
                     con.Open();
                     DbCommand cmd = null;
                     log.Info("#DS insert 1 -- con open");
-                    //string sql = "SELECT eb_objects_commit(@id, @obj_name, @obj_desc, @obj_type, @obj_json, @obj_changelog,  @commit_uid, @src_pid, @cur_pid, @relations, @tags, @app_id)";
-                    string sql = this.EbConnectionFactory.ObjectsDB.EB_COMMIT_OBJECT;
+                   string sql = this.EbConnectionFactory.ObjectsDB.EB_COMMIT_OBJECT;
                     cmd = this.EbConnectionFactory.ObjectsDB.GetNewCommand(con, sql);
 
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":id", EbDbTypes.String, request.RefId));
@@ -631,11 +434,8 @@ WHERE
                     //cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_json", EbDbTypes.Json, request.Json));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_changelog", EbDbTypes.String, request.ChangeLog));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":commit_uid", EbDbTypes.Int32, request.UserId));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":src_pid", EbDbTypes.String, request.TenantAccountId));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":cur_pid", EbDbTypes.String, request.TenantAccountId));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":relations", EbDbTypes.String, (request.Relations != null) ? request.Relations : string.Empty));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":tags", EbDbTypes.String, (!string.IsNullOrEmpty(request.Tags)) ? request.Tags : string.Empty));
-                    // cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@app_id", System.Data.DbType.Int32, request.AppId));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":app_id", EbDbTypes.String, SetAppId(request.Apps)));
 
                     if (sql.Contains(":obj_json"))
@@ -655,8 +455,7 @@ WHERE
                         Update_Json_Val(con, sql1, parms);
                     }
 
-                    //refId = cmd.ExecuteScalar().ToString();
-                    SetRedis(obj, refId);
+                  SetRedis(obj, refId);
                     if (obj is EbBotForm)
                     {
                         var myService = base.ResolveService<ChatbotServices>();
@@ -688,7 +487,6 @@ WHERE
                     DbCommand cmd = null;
                     log.Info("#DS insert 1 -- con open");
 
-                    //string sql = "SELECT eb_objects_save(@id, @obj_name, @obj_desc, @obj_type, @obj_json, @commit_uid, @src_pid, @cur_pid, @relations, @tags, @app_id)";
                     string sql = this.EbConnectionFactory.ObjectsDB.EB_SAVE_OBJECT;
                     cmd = this.EbConnectionFactory.ObjectsDB.GetNewCommand(con, sql);
 
@@ -698,11 +496,8 @@ WHERE
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_type", EbDbTypes.Int32, GetObjectType(obj)));
                     //cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_json", EbDbTypes.Json, request.Json));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":commit_uid", EbDbTypes.Int32, request.UserId));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":src_pid", EbDbTypes.String, request.TenantAccountId));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":cur_pid", EbDbTypes.String, request.TenantAccountId));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":relations", EbDbTypes.String, (request.Relations != null) ? request.Relations : string.Empty));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":tags", EbDbTypes.String, (!string.IsNullOrEmpty(request.Tags)) ? request.Tags : string.Empty));
-                    // cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@app_id", System.Data.DbType.Int32, request.AppId));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":app_id", EbDbTypes.String, SetAppId(request.Apps)));
 
 
@@ -723,8 +518,7 @@ WHERE
                         Update_Json_Val(con, sql1, parms);
                     }
 
-                    //refId = cmd.ExecuteScalar().ToString();
-                    SetRedis(obj, refId);
+                   SetRedis(obj, refId);
                     if (obj is EbBotForm)
                     {
                         var myService = base.ResolveService<ChatbotServices>();
@@ -757,8 +551,7 @@ WHERE
                     DbCommand cmd = null;
                     log.Info("#DS insert 1 -- con open");
                     string[] arr = { };
-
-                    //string sql = "SELECT eb_objects_create_new_object(@obj_name, @obj_desc, @obj_type, @obj_cur_status, @obj_json::json, @commit_uid, @src_pid, @cur_pid, @relations, @issave, @tags, @app_id)";
+                    
                     String sql = this.EbConnectionFactory.ObjectsDB.EB_CREATE_NEW_OBJECT;
                     cmd = this.EbConnectionFactory.ObjectsDB.GetNewCommand(con, sql);
 
@@ -768,13 +561,14 @@ WHERE
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_cur_status", EbDbTypes.Int32, (int)request.Status));//request.Status
                     //cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_json", EbDbTypes.Json, request.Json));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":commit_uid", EbDbTypes.Int32, request.UserId));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":src_pid", EbDbTypes.String, request.TenantAccountId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":src_pid", EbDbTypes.String, request.SourceSolutionId));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":cur_pid", EbDbTypes.String, request.TenantAccountId));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":relations", EbDbTypes.String, (request.Relations != null) ? request.Relations : string.Empty));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":issave", EbDbTypes.String, (request.IsSave == true) ? 'T' : 'F'));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":tags", EbDbTypes.String, (!string.IsNullOrEmpty(request.Tags)) ? request.Tags : string.Empty));
-                    //cmd.Parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@app_id", System.Data.DbType.Int32, request.AppId));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":app_id", EbDbTypes.String, SetAppId(request.Apps)));
+                   cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":app_id", EbDbTypes.String, SetAppId(request.Apps)));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":s_obj_id", EbDbTypes.String, request.SourceObjId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":s_ver_id", EbDbTypes.String, request.SourceVerID));
 
                     if (sql.Contains(":obj_json"))
                     {
@@ -792,8 +586,6 @@ WHERE
 
                         Update_Json_Val(con, sql1, parms);
                     }
-
-                    //refId = cmd.ExecuteScalar().ToString();
                     SetRedis(obj, refId);
                     if (obj is EbBotForm)
                     {
@@ -953,7 +745,6 @@ WHERE
             }
         }
 
-
         public EbObjectRunSqlFunctionResponse Post(EbObjectRunSqlFunctionRequest request)
         {
             ILog log = LogManager.GetLogger(GetType());
@@ -1023,6 +814,7 @@ WHERE
             else
                 return -1;
         }
+
         public void SetRedis(object obj, string refId)
         {
             if (obj is EbFilterDialog)
