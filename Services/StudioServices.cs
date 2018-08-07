@@ -29,7 +29,6 @@ namespace ExpressBase.ServiceStack
         [CompressResponse]
         public object Get(EbObjectAllVersionsRequest request) // Fetch all version without json of a particular Object
         { 
-            ILog log = LogManager.GetLogger(GetType());
             parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("refid", EbDbTypes.String, request.RefId));
             EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery(this.EbConnectionFactory.ObjectsDB.EB_FETCH_ALL_VERSIONS_OF_AN_OBJ, parameters.ToArray());
 
@@ -53,7 +52,6 @@ namespace ExpressBase.ServiceStack
         [CompressResponse]
         public object Get(EbObjectParticularVersionRequest request)// Fetch particular version with json of a particular Object
         {  
-            ILog log = LogManager.GetLogger(GetType());
             DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("refid", EbDbTypes.String, request.RefId) };
             EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery(this.EbConnectionFactory.ObjectsDB.EB_PARTICULAR_VERSION_OF_AN_OBJ, parameters);
 
@@ -179,8 +177,7 @@ namespace ExpressBase.ServiceStack
 
         [CompressResponse]
         public object Get(EbObjectRelationsRequest request)//Fetch ebobjects relations           
-        { 
-            ILog log = LogManager.GetLogger(GetType());            
+        {            
             DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("dominant", EbDbTypes.String, request.DominantId) };
             EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery(this.EbConnectionFactory.ObjectsDB.EB_GET_LIVE_OBJ_RELATIONS, parameters);
             foreach (EbDataRow dr in dt.Rows)
@@ -202,9 +199,8 @@ namespace ExpressBase.ServiceStack
 
         [CompressResponse]
         public object Get(EbObjectTaggedRequest request)
-        { //
+        { 
             f = new List<EbObjectWrapper>();
-            ILog log = LogManager.GetLogger(GetType());
             DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("tags", EbDbTypes.String, request.Tags) };
             EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery(this.EbConnectionFactory.ObjectsDB.EB_GET_TAGGED_OBJECTS, parameters);
             foreach (EbDataRow dr in dt.Rows)
@@ -227,9 +223,7 @@ namespace ExpressBase.ServiceStack
         public object Get(EbObjectExploreObjectRequest request)
         {
             DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, request.Id) };
-
             EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery(this.EbConnectionFactory.ObjectsDB.EB_EXPLORE_OBJECT, parameters);
-
             foreach (EbDataRow dr in dt.Rows)
             {
                 try
