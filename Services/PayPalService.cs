@@ -187,6 +187,11 @@ namespace ExpressBase.ServiceStack.Services
             if (ActivatePlan(flurlClient, PaymentPlanID))
             {
                 BillPlanResponse.CurrentState = BillingPlanResponse.PlanStateStrings[(int)PlanState.ACTIVE];
+                Console.WriteLine("DEBUG MESSAGE: Activated Plan Successfully - " + PaymentPlanID);
+            }
+            else
+            {
+                Console.WriteLine("DEBUG MESSAGE: Activation Failed for Plan - " + PaymentPlanID);
             }
             return BillPlanResponse;
         }
@@ -242,9 +247,23 @@ namespace ExpressBase.ServiceStack.Services
                 .Append("/agreement-execute").ToString();
         }
 
-        private bool SavePayPalAgreement(BillingAgreementResponse FinalResponse, string ResponseContents)
+        private bool SavePayPalAgreement(BillingAgreementResponse FinalResponse, string ResponseContents, string SolutionId)
         {
-            throw new NotImplementedException();
+            string sql = @"INSERT INTO eb_pp_subscriptions(solution_id, pp_billing_plan_id, agreement_creation_date, is_canceled, start_date, raw_json) VALUES(@solution_id, @billing_plan_id, @agc_date, @canceled, @s_date, @json) RETURNING id";
+            
+            DbParameter[] parameters =
+            {
+                        this.InfraConnectionFactory.DataDB.GetNewParameter("solution_id", EbDbTypes.String, SolutionId),
+                        this.InfraConnectionFactory.DataDB.GetNewParameter("pp_billing_plan_id",EbDbTypes.Int32, FinalResponse.AgreementPlan.PlanID),
+                        this.InfraConnectionFactory.DataDB.GetNewParameter("agreement_creation_date",EbDbTypes.String, DateTime.Now.ToString("dd-MM-yyyy")),
+                        this.InfraConnectionFactory.DataDB.GetNewParameter("is_canceled",EbDbTypes.String, (FinalResponse.AgreementState=="Cancelled")?"true":"false"),
+                        this.InfraConnectionFactory.DataDB.GetNewParameter("start_date",EbDbTypes.String, FinalResponse.StartDate),
+                        this.InfraConnectionFactory.DataDB.GetNewParameter("raw_json",EbDbTypes.String, ResponseContents),
+
+            };
+            var id = this.EbConnectionFactory.DataDB.DoNonQuery(sql, parameters);
+
+            return id > 0;
         }
 
         public void SaveRejectedPayment()
@@ -272,7 +291,8 @@ namespace ExpressBase.ServiceStack.Services
                 Console.WriteLine("Execute Response Status Code: " + ExecuteResponse.StatusCode);
                 Console.WriteLine("Response: " + ResponseContents);
                 BillingAgreementResponse FinalResponse = JsonConvert.DeserializeObject<BillingAgreementResponse>(ResponseContents);
-                SavePayPalAgreement(FinalResponse, ResponseContents);
+                if (!SavePayPalAgreement(FinalResponse, ResponseContents, req.SolutionId))
+                    throw new Exception("Failed to save data to the database");
             }
             catch(Exception ex)
             {
@@ -310,18 +330,24 @@ namespace ExpressBase.ServiceStack.Services
         bool PersistBillingPlan(EbBillingPlan plan)
         {
 
-            string sql = @"INSERT INTO eb_pp_billing_plans(pp_billingplan_id, num_users, amount_per_user/*, currency*/) VALUES(@plan_id, @num, @amount/*, @currency*/) RETURNING id";
+            string sql = @"INSERT INTO eb_pp_billing_plans(pp_billingplan_id, num_users, amount_per_user, currency) VALUES(@plan_id, @num, @amount, @curr_code) RETURNING id";
+            string _currencyCode = string.Empty;
+            foreach(var _temp in plan.PlanResponse.PaymentDefinitions)
+            {
+                if (_temp.PaymentType=="REGULAR")
+                    _currencyCode = _temp.Amount["currency"];
+            }
             DbParameter[] parameters =
             {
                         this.InfraConnectionFactory.DataDB.GetNewParameter("plan_id", EbDbTypes.String, plan.PlanResponse.PlanID),
                         this.InfraConnectionFactory.DataDB.GetNewParameter("num",EbDbTypes.Int16, plan.NumUsers),
                         this.InfraConnectionFactory.DataDB.GetNewParameter("amount",EbDbTypes.Decimal, plan.AmountperUser),
-                        //this.InfraConnectionFactory.DataDB.GetNewParameter("currency",EbDbTypes.Int64, plan.PlanResponse.CurrencyCode.ToString()), //To String
+                        this.InfraConnectionFactory.DataDB.GetNewParameter("curr_code",EbDbTypes.String, _currencyCode), 
 
             };
             var id = this.EbConnectionFactory.DataDB.DoNonQuery(sql, parameters);
 
-            return ((id > 0) ? true : false);
+            return id > 0;
         }
 
         string GetBillingPlanId(int users, double amount)
@@ -341,7 +367,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 BillingPlanResponse BillPlanResponse = CreateBillingPlan(PayPalOauth, flurlClient);
 
-                EbBillingPlan plan = new EbBillingPlan(10, 5, BillPlanResponse);
+                EbBillingPlan plan = new EbBillingPlan(users, amount, BillPlanResponse);
                 var x = PersistBillingPlan(plan);
 
                 ppBillingId = BillPlanResponse.PlanID;
