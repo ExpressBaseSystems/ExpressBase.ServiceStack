@@ -155,6 +155,9 @@ namespace ExpressBase.ServiceStack.Services
                     path = "ExpressBase.Common.sqlscripts.@vendor.datadb.functioncreate.eb_create_or_update_role2loc.sql".Replace("@vendor", vendor.ToLower());
                     bool b49 = CreateOrAlter_Structure(con, path, DataDB);
 
+                    path = "ExpressBase.Common.sqlscripts.@vendor.datadb.tablecreate.eb_role2location.sql".Replace("@vendor", vendor.ToLower());
+                    bool b48 = CreateOrAlter_Structure(con, path, DataDB);
+
                     //.............ObjectsDb Tables
 
                     path = "ExpressBase.Common.sqlscripts.@vendor.objectsdb.tablecreate.eb_applications.sql".Replace("@vendor", vendor.ToLower());
@@ -190,8 +193,6 @@ namespace ExpressBase.ServiceStack.Services
                     path = "ExpressBase.Common.sqlscripts.@vendor.objectsdb.tablecreate.eb_location_config.sql".Replace("@vendor", vendor.ToLower());
                     bool b47 = CreateOrAlter_Structure(con, path, DataDB);
 
-                    path = "ExpressBase.Common.sqlscripts.@vendor.objectsdb.tablecreate.eb_role2location.sql".Replace("@vendor", vendor.ToLower());
-                    bool b48 = CreateOrAlter_Structure(con, path, DataDB);
 
                     //.............ObjectsDb Functions
 
