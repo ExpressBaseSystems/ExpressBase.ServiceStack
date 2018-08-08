@@ -50,7 +50,12 @@ namespace ExpressBase.ServiceStack.Auth0
                 //         }
 
                 User _authUser = null;
-                if (request.Meta.ContainsKey("anonymous") && whichContext.Equals("bc"))
+				if (whichContext.Equals(RoutingConstants.TC))
+				{
+					_authUser = User.GetDetailsTenant(EbConnectionFactory.DataDB, UserName, password);
+					Logger.Info("TryAuthenticate -> Tenant");
+				}
+                else if (request.Meta.ContainsKey("anonymous") && whichContext.Equals("bc"))
                 {
                     var emailId = request.Meta.ContainsKey("emailId") ? request.Meta["emailId"] : string.Empty;//for anonymous
                     var phone = request.Meta.ContainsKey("phone") ? request.Meta["phone"] : string.Empty;//for anonymous

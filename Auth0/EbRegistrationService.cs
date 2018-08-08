@@ -25,7 +25,7 @@ namespace ExpressBase.ServiceStack.Auth0
                // _InfraDb.DataDB.GetNewParameter("pwd", System.Data.DbType.String, (request.Password + request.Email).ToMD5Hash())
             };
 
-            EbDataTable dt = _InfraDb.DataDB.DoQuery("INSERT INTO eb_users (email, u_token) VALUES ( @email, md5( @email || now())) RETURNING id, u_token;", parameters);
+            EbDataTable dt = _InfraDb.DataDB.DoQuery("INSERT INTO eb_tenants (email) VALUES ( @email) RETURNING id;", parameters);
 
             if (dt.Rows.Count > 0)
             {
