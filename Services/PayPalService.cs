@@ -32,8 +32,8 @@ namespace ExpressBase.ServiceStack.Services
         int UserCount = 5;
         int PricePerUser = 5;
         string Currency = "USD";
-        string CancelPage = "/PayPal/CancelAgreement",
-            ReturnPage = "/PayPal/ReturnSuccess",
+        string CancelPage = "/PayPal/CancelAgreement?sid=",
+            ReturnPage = "/PayPal/ReturnSuccess?sid=",
             CancelUrl = string.Empty,
             ReturnUrl = string.Empty;
 
@@ -271,6 +271,145 @@ namespace ExpressBase.ServiceStack.Services
 
         }
 
+        private bool SavePayPalWebHookJson(string JsonString, int state, string[] ActionComponents)
+        {
+            string sql = @"INSERT INTO eb_test_web_hook_json(json_value, state, action1, action2, action3) VALUES(@json_str, @state, @ac1, @ac2, @ac3) RETURNING id";
+
+            DbParameter[] parameters =
+            {
+                this.InfraConnectionFactory.DataDB.GetNewParameter("json_str",EbDbTypes.String, JsonString),
+                this.InfraConnectionFactory.DataDB.GetNewParameter("state",EbDbTypes.Int32, state),
+                this.InfraConnectionFactory.DataDB.GetNewParameter("ac1",EbDbTypes.String, ActionComponents[0]),
+                this.InfraConnectionFactory.DataDB.GetNewParameter("ac2",EbDbTypes.String, ActionComponents[1]),
+                this.InfraConnectionFactory.DataDB.GetNewParameter("ac3",EbDbTypes.String, ActionComponents[2]),
+            };
+            var id = this.EbConnectionFactory.DataDB.DoNonQuery(sql, parameters);
+
+            return id > 0;
+        }
+
+        [Authenticate]
+        public void Post(PayPalWebHookHandler handler)
+        {
+            bool _jsonEmpty = true, _actionEmpty = true;
+            int state = 0;
+            string[] ActionComponents = handler.Action.Split('.'); ;
+            if (handler.JsonBody==string.Empty)
+            {
+                Console.WriteLine("The JSON body is empty");
+            }
+            else
+            {
+                _jsonEmpty = false;
+                Console.WriteLine("JSON Response: \n" + handler.JsonBody);
+                
+                StringBuilder responseBuilder = new StringBuilder();
+                if (ActionComponents[0].Equals("billing"))
+                    state += 10;
+
+                else if (ActionComponents[0].Equals("checkout"))
+                    state += 100;
+
+                else
+                    state -= 100;
+
+                if (state < 0)
+                {
+                    responseBuilder.Append("Invalid Action Component Passed : ");
+                    responseBuilder.Append(ActionComponents[0]);
+                }
+                else
+                {
+                    if (ActionComponents[1].Equals("plan") && state < 100)
+                        state += 1000;
+                    else if (ActionComponents[1].Equals("subscription") && state < 100)
+                        state += 2000;
+                    else
+                        state -= 3000;
+
+                    if (ActionComponents[1].Equals("order") && state > 10)
+                        state += 3000;
+                    else
+                        state -= 3500;
+                }
+
+                if(state < 0)
+                {
+                    responseBuilder.Append(" ");
+                    responseBuilder.Append(ActionComponents[1]);
+                }
+                else
+                {
+                    if (ActionComponents[2].Equals("created"))
+                        state += 1;
+                    if (ActionComponents[2].Equals("updated"))
+                        state += 2;
+                    if (ActionComponents[2].Equals("cancelled"))
+                        state += 3;
+                    if (ActionComponents[2].Equals("reactivated"))
+                        state += 4;
+                    if (ActionComponents[2].Equals("suspended"))
+                        state += 5;
+                    if (ActionComponents[2].Equals("completed"))
+                        state += 6;
+
+                    if (state > 0 && state % 10 == 0)
+                        state -= 4000;
+
+                    if (state <= 0)
+                    {
+                        Console.WriteLine("Error occurred while decoding Action: " + responseBuilder.ToString());
+                        return;
+                    }
+
+                    else
+                    {
+                        if(state.Equals(1011))
+                        {
+                            Console.WriteLine("Instantiating Handle for Billing Plan Created Event");
+                        }
+                        else if(state.Equals(1012))
+                        {
+                            Console.WriteLine("Instantiating Handle for Billing Plan Updated Event");
+                        }
+                        else if(state.Equals(2011))
+                        {
+                            Console.WriteLine("Instantiating Handle for Billing Subscription Created Event");
+                        }
+                        else if(state.Equals(2012))
+                        {
+                            Console.WriteLine("Instantiating Handle for Billing Subscription Updated Event");
+                        }
+                        else if(state.Equals(2013))
+                        {
+                            Console.WriteLine("Instantiating Handle for Billing Subscription Cancelled Event");
+                        }
+                        else if(state.Equals(2014))
+                        {
+                            Console.WriteLine("Instantiating Handle for Billing Subscription Reactivated Event");
+                        }
+                        else if (state.Equals(2015))
+                        {
+                            Console.WriteLine("Instantiating Handle for Billing Subscription Suspended Event");
+                        }
+                        else if (state.Equals(3016))
+                        {
+                            Console.WriteLine("Instantiating Handle for Checkout Order Completed Event");
+                        }
+                        else
+                        {
+                            Console.WriteLine("Error: Wrong Code Created. Check state assignment or responses received.");
+                        }
+                    }
+
+                }
+            }
+            if(!_jsonEmpty && !_actionEmpty)
+            {
+                SavePayPalWebHookJson(handler.JsonBody, state, ActionComponents);
+            }
+        }
+
         [Authenticate]
         public void Post(PayPalFailureReturnRequest req)
         {
@@ -307,8 +446,8 @@ namespace ExpressBase.ServiceStack.Services
             PayPalResponse = new PayPalPaymentResponse();
             try
             {
-                CancelUrl = req.Environment + CancelPage;
-                ReturnUrl = req.Environment + ReturnPage;
+                CancelUrl = req.Environment + CancelPage + req.SolutionId;
+                ReturnUrl = req.Environment + ReturnPage + req.SolutionId;
                 string ppBillingId = GetBillingPlanId(UserCount, 5);
                 string BillingAgreementID = string.Empty;
                 var Agreement = CreateBillingAgreement(req.SolutionId, ppBillingId);

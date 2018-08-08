@@ -29,7 +29,7 @@ namespace ExpressBase.ServiceStack.Services
         }
 
         public EbDbCreateServices(IEbConnectionFactory _idbf) : base(_idbf) { }
-    
+
         public EbDbCreateResponse Post(EbDbCreateRequest request)
         {
             EbConnectionsConfig _solutionConnections = EbConnectionsConfigProvider.DataCenterConnections;
@@ -52,7 +52,7 @@ namespace ExpressBase.ServiceStack.Services
                     DataDB = new PGSQLDatabase(request.DataDBConnection);
                 else if (request.DataDBConnection.DatabaseVendor == DatabaseVendors.ORACLE)
                     DataDB = new OracleDB(request.DataDBConnection);
-            }           
+            }
             using (var con = this.InfraConnectionFactory.DataDB.GetNewConnection())
             {
                 try
@@ -72,16 +72,16 @@ namespace ExpressBase.ServiceStack.Services
                     //if (e.Data["Code"].ToString() == "42P04")
                     //    return DbOperations(request, DataDB);
                     //else
-                    return new EbDbCreateResponse { ResponseStatus =   new ResponseStatus { Message = "Database Already exists" } };
+                    return new EbDbCreateResponse { ResponseStatus = new ResponseStatus { Message = "Database Already exists" } };
                 }
             }
-          
+
 
         }
 
         public EbDbCreateResponse DbOperations(EbDbCreateRequest request, IDatabase DataDB)
         {
-            
+
             using (var con = DataDB.GetNewConnection())
             {
                 con.Open();
@@ -121,7 +121,7 @@ namespace ExpressBase.ServiceStack.Services
                     bool b10 = CreateOrAlter_Structure(con, path, DataDB);
 
                     //.............DataDb Functions
-                    path = "ExpressBase.Common.sqlscripts.@vendor.datadb.functioncreate.eb_authenticate_unified.sql".Replace("@vendor", vendor.ToLower()); 
+                    path = "ExpressBase.Common.sqlscripts.@vendor.datadb.functioncreate.eb_authenticate_unified.sql".Replace("@vendor", vendor.ToLower());
                     bool b11 = CreateOrAlter_Structure(con, path, DataDB);
 
                     path = "ExpressBase.Common.sqlscripts.@vendor.datadb.functioncreate.eb_authenticate_anonymous.sql".Replace("@vendor", vendor.ToLower());
@@ -150,6 +150,13 @@ namespace ExpressBase.ServiceStack.Services
 
                     path = "ExpressBase.Common.sqlscripts.@vendor.datadb.functioncreate.eb_getroles.sql".Replace("@vendor", vendor.ToLower());
                     bool b20 = CreateOrAlter_Structure(con, path, DataDB);
+
+
+                    path = "ExpressBase.Common.sqlscripts.@vendor.datadb.functioncreate.eb_create_or_update_role2loc.sql".Replace("@vendor", vendor.ToLower());
+                    bool b49 = CreateOrAlter_Structure(con, path, DataDB);
+
+                    path = "ExpressBase.Common.sqlscripts.@vendor.datadb.tablecreate.eb_role2location.sql".Replace("@vendor", vendor.ToLower());
+                    bool b48 = CreateOrAlter_Structure(con, path, DataDB);
 
                     //.............ObjectsDb Tables
 
@@ -185,6 +192,7 @@ namespace ExpressBase.ServiceStack.Services
 
                     path = "ExpressBase.Common.sqlscripts.@vendor.objectsdb.tablecreate.eb_location_config.sql".Replace("@vendor", vendor.ToLower());
                     bool b47 = CreateOrAlter_Structure(con, path, DataDB);
+
 
                     //.............ObjectsDb Functions
 
@@ -239,7 +247,8 @@ namespace ExpressBase.ServiceStack.Services
                     var b42 = request.ischange ? null : CreateUsers4DataBase(con, request, DataDB);
 
                     if (b1 & b2 & b3 & b4 & b5 & b6 & b7 & b8 & b9 & b10 & b11 & b12 & b13 & b14 & b15 & b16 & b17 & b18 & b19 &
-                        b20 & b21 & b22 & b23 & b24 & b25 & b26 & b27 & b28 & b29 & b31 & b32 & b33 & b34 & b35 & b36 & b37 & b38 & b39 & b40 & b41 & b44 & b45 &b46)
+                        b20 & b21 & b22 & b23 & b24 & b25 & b26 & b27 & b28 & b29 & b31 & b32 & b33 & b34 & b35 & b36 & b37 & b38 & b39 & b40 & b41 & b44 & b45 & b46 & b47 &
+                        b48 & b49)
                     {
                         Console.WriteLine(".............Reached Commit");
                         con_trans.Commit();
@@ -254,7 +263,7 @@ namespace ExpressBase.ServiceStack.Services
                     con_trans.Rollback();
                     throw new Exception(e.Message);
                 }
-              
+
             }
 
             return null;
@@ -264,12 +273,12 @@ namespace ExpressBase.ServiceStack.Services
         {
             try
             {
-               
+
                 string usersql = "SELECT * FROM eb_assignprivileges('@unameadmin','@unameROUser','@unameRWUser');".Replace("@unameadmin", request.dbName + "_admin").Replace("@unameROUser", request.dbName + "_ro").Replace("@unameRWUser", request.dbName + "_rw");
 
                 var dt = this.InfraConnectionFactory.DataDB.DoQuery(usersql);
 
-                
+
                 string sql = @"REVOKE connect ON DATABASE ""@dbname"" FROM PUBLIC;
                                GRANT ALL PRIVILEGES ON DATABASE ""@dbname"" TO @ebadmin;                   
                                GRANT ALL PRIVILEGES ON DATABASE ""@dbname"" TO @unameadmin;      
@@ -278,7 +287,7 @@ namespace ExpressBase.ServiceStack.Services
                               ".Replace("@unameadmin", request.dbName + "_admin").Replace("@unameROUser", request.dbName + "_ro")
                                .Replace("@unameRWUser", request.dbName + "_rw").Replace("@dbname", request.dbName).Replace("@ebadmin", Environment.GetEnvironmentVariable(EnvironmentConstants.EB_DATACENTRE_ADMIN_USER));
 
-                var  grnt = this.InfraConnectionFactory.DataDB.DoNonQuery(sql);
+                var grnt = this.InfraConnectionFactory.DataDB.DoNonQuery(sql);
 
                 string sql2 = @"GRANT USAGE ON SCHEMA public TO @ebadmin;
                             GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO @ebadmin;
@@ -326,7 +335,7 @@ namespace ExpressBase.ServiceStack.Services
         {
             try
             {
-                
+
                 string result = null;
 
                 var assembly = typeof(sqlscripts).Assembly;
@@ -382,7 +391,7 @@ namespace ExpressBase.ServiceStack.Services
                     var cmdtxt5 = DataDB.GetNewCommand(con, sql3);
                     cmdtxt5.ExecuteNonQuery();
                 }
-                else if(DataDB.Vendor == DatabaseVendors.ORACLE)
+                else if (DataDB.Vendor == DatabaseVendors.ORACLE)
                 {
                     DbParameter[] parameters = { DataDB.GetNewParameter("email", EbDbTypes.String, rslt.Rows[0][0]),
                                                  DataDB.GetNewParameter("pwd", EbDbTypes.String, rslt.Rows[0][1]),
@@ -394,7 +403,8 @@ namespace ExpressBase.ServiceStack.Services
 
                 }
             }
-            catch (Exception e) {
+            catch (Exception e)
+            {
                 Console.WriteLine("Exception: " + e.ToString());
                 Console.WriteLine(".............problem in InsertIntoTables");
                 return false;
