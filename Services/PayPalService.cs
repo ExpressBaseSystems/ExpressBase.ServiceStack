@@ -32,8 +32,8 @@ namespace ExpressBase.ServiceStack.Services
         int UserCount = 5;
         int PricePerUser = 5;
         string Currency = "USD";
-        string CancelPage = "/PayPal/CancelAgreement?sid=",
-            ReturnPage = "/PayPal/ReturnSuccess?sid=",
+        string CancelPage = "/PayPal/CancelAgreement/",
+            ReturnPage = "/PayPal/ReturnSuccess/",
             CancelUrl = string.Empty,
             ReturnUrl = string.Empty;
 
