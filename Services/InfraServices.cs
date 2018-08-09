@@ -54,9 +54,9 @@ namespace ExpressBase.ServiceStack.Services
 			CreateAccountResponse resp = new CreateAccountResponse();
             if (request.Op == "updatetenant")
             {
-                string sql = "SELECT * FROM eb_tenantprofile_setup(@firstname, @company, @country, @pwd, @email);";
+                string sql = "SELECT * FROM eb_tenantprofile_setup(@fullname, @company, @country, @pwd, @email);";
                 DbParameter[] parameters = {
-					this.EbConnectionFactory.DataDB.GetNewParameter("firstname", EbDbTypes.String, request.Name),
+					this.EbConnectionFactory.DataDB.GetNewParameter("fullname", EbDbTypes.String, request.Name),
                     this.EbConnectionFactory.DataDB.GetNewParameter("company", EbDbTypes.String, request.Company),
                     this.EbConnectionFactory.DataDB.GetNewParameter("country", EbDbTypes.String, request.Country),
                     this.EbConnectionFactory.DataDB.GetNewParameter("pwd", EbDbTypes.String, (request.Password.ToString() + request.Email.ToString()).ToMD5Hash()),
@@ -140,28 +140,28 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
-        public EditAccountResponse Post(EditAccountRequest request)
-        {
-            EditAccountResponse resp;
-            using (var con = EbConnectionFactory.DataDB.GetNewConnection())
-            {
-                Dictionary<string, object> dict = new Dictionary<string, object>();
-                string sql = string.Format("SELECT * FROM eb_tenantaccount WHERE id={0}", request.Colvalues["id"]);
-                var dt = EbConnectionFactory.DataDB.DoQuery(sql);
-                foreach (EbDataRow dr in dt.Rows)
-                {
-                    foreach (EbDataColumn dc in dt.Columns)
-                    {
-                        dict.Add(dc.ColumnName, dr[dc.ColumnName]);
-                    }
-                }
-                resp = new EditAccountResponse()
-                {
-                    Data = dict
-                };
-            }
-            return resp;
-        }
+        //public EditAccountResponse Post(EditAccountRequest request)
+        //{
+        //    EditAccountResponse resp;
+        //    using (var con = EbConnectionFactory.DataDB.GetNewConnection())
+        //    {
+        //        Dictionary<string, object> dict = new Dictionary<string, object>();
+        //        string sql = string.Format("SELECT * FROM eb_tenantaccount WHERE id={0}", request.Colvalues["id"]);
+        //        var dt = EbConnectionFactory.DataDB.DoQuery(sql);
+        //        foreach (EbDataRow dr in dt.Rows)
+        //        {
+        //            foreach (EbDataColumn dc in dt.Columns)
+        //            {
+        //                dict.Add(dc.ColumnName, dr[dc.ColumnName]);
+        //            }
+        //        }
+        //        resp = new EditAccountResponse()
+        //        {
+        //            Data = dict
+        //        };
+        //    }
+        //    return resp;
+        //}
 
         //public void Get(CreateApplicationRequest request)
         //{
@@ -854,8 +854,6 @@ namespace ExpressBase.ServiceStack.Services
         //    return resp;
         //}
 
-
-
         public TokenRequiredSelectResponse Any(TokenRequiredSelectRequest request)
         {
             //if (!string.IsNullOrEmpty(request.TenantAccountId) && request.TenantAccountId != CoreConstants.EXPRESSBASE)
@@ -1074,7 +1072,6 @@ namespace ExpressBase.ServiceStack.Services
             }
         }
 
-
         public void TableInsertsDataDB(EbConnectionFactory dbf, EbDataTable dt, DbConnection _con_d1)
         {
             string result;
@@ -1118,7 +1115,7 @@ namespace ExpressBase.ServiceStack.Services
         {
             UniqueRequestResponse res = new UniqueRequestResponse();
             ILog log = LogManager.GetLogger(GetType());
-            string sql = "SELECT id FROM eb_users WHERE email ~* @email";
+            string sql = "SELECT id FROM eb_tenants WHERE email ~* @email";
             DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("email", EbDbTypes.String, request.email) };
             var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(sql, parameters);
             if (dt.Rows.Count > 0)
