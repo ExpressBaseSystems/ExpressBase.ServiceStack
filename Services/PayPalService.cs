@@ -247,7 +247,7 @@ namespace ExpressBase.ServiceStack.Services
                 .Append("/agreement-execute").ToString();
         }
 
-        private bool SavePayPalAgreement(BillingAgreementResponse FinalResponse, string ResponseContents, string SolutionId)
+        private bool SaveFinalBillingAgreement(BillingAgreementResponse FinalResponse, string ResponseContents, string SolutionId)
         {
             string sql = @"INSERT INTO eb_pp_subscriptions(solution_id, pp_billing_plan_id, agreement_creation_date, is_canceled, start_date, raw_json) VALUES(@solution_id, @billing_plan_id, @agc_date, @canceled, @s_date, @json) RETURNING id";
             
@@ -291,8 +291,11 @@ namespace ExpressBase.ServiceStack.Services
         [Authenticate]
         public void Post(PayPalWebHookHandler handler)
         {
+            //if (!SaveFinalBillingAgreement(FinalResponse, ResponseContents, req.SolutionId))
+            //    throw new Exception("Failed to save data to the database");
             int state = 0;
             string[] ActionComponents = handler.Action.Split('.'); ;
+            SavePayPalWebHookJson(handler.JsonBody, state, ActionComponents);
             if (handler.JsonBody==string.Empty)
             {
                 Console.WriteLine("The JSON body is empty");
@@ -300,8 +303,6 @@ namespace ExpressBase.ServiceStack.Services
             else
             {
                 Console.WriteLine("JSON Response: \n" + handler.JsonBody);
-
-                SavePayPalWebHookJson(handler.JsonBody, state, ActionComponents);
 
                 StringBuilder responseBuilder = new StringBuilder();
                 if (ActionComponents[0].Equals("billing"))
@@ -426,10 +427,10 @@ namespace ExpressBase.ServiceStack.Services
                 Console.WriteLine("Execute Response Status Code: " + ExecuteResponse.StatusCode);
                 Console.WriteLine("Response: " + ResponseContents);
                 BillingAgreementResponse FinalResponse = JsonConvert.DeserializeObject<BillingAgreementResponse>(ResponseContents);
-                if (!SavePayPalAgreement(FinalResponse, ResponseContents, req.SolutionId))
-                    throw new Exception("Failed to save data to the database");
+                //if (!SaveFinalBillingAgreement(FinalResponse, ResponseContents, req.SolutionId))
+                //    throw new Exception("Failed to save data to the database");
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 Console.WriteLine("Exception Thrown : " + ex);
             }
