@@ -29,7 +29,7 @@ namespace ExpressBase.ServiceStack.Services
     {
         string OAuthResponse;
         int OAuthStatusCode = 0;
-        int UserCount = 5;
+        volatile int UserCount = 0;
         int PricePerUser = 5;
         string Currency = "USD";
         string CancelPage = "/PayPal/CancelAgreement/",
@@ -273,7 +273,7 @@ namespace ExpressBase.ServiceStack.Services
 
         private bool SavePayPalWebHookJson(string JsonString, int state, string[] ActionComponents)
         {
-            string sql = @"INSERT INTO eb_test_web_hook_json(json_value, state, action1, action2, action3) VALUES(@json_str, @state, @ac1, @ac2, @ac3) RETURNING id";
+            string sql = @"INSERT INTO eb_test_webhook_json(json_value, state, action1, action2, action3) VALUES(@json_str, @state, @ac1, @ac2, @ac3) RETURNING id";
 
             DbParameter[] parameters =
             {
@@ -291,7 +291,6 @@ namespace ExpressBase.ServiceStack.Services
         [Authenticate]
         public void Post(PayPalWebHookHandler handler)
         {
-            bool _jsonEmpty = true, _actionEmpty = true;
             int state = 0;
             string[] ActionComponents = handler.Action.Split('.'); ;
             if (handler.JsonBody==string.Empty)
@@ -300,9 +299,10 @@ namespace ExpressBase.ServiceStack.Services
             }
             else
             {
-                _jsonEmpty = false;
                 Console.WriteLine("JSON Response: \n" + handler.JsonBody);
-                
+
+                SavePayPalWebHookJson(handler.JsonBody, state, ActionComponents);
+
                 StringBuilder responseBuilder = new StringBuilder();
                 if (ActionComponents[0].Equals("billing"))
                     state += 10;
@@ -404,10 +404,6 @@ namespace ExpressBase.ServiceStack.Services
 
                 }
             }
-            if(!_jsonEmpty && !_actionEmpty)
-            {
-                SavePayPalWebHookJson(handler.JsonBody, state, ActionComponents);
-            }
         }
 
         [Authenticate]
@@ -448,7 +444,8 @@ namespace ExpressBase.ServiceStack.Services
             {
                 CancelUrl = req.Environment + CancelPage + req.SolutionId;
                 ReturnUrl = req.Environment + ReturnPage + req.SolutionId;
-                string ppBillingId = GetBillingPlanId(UserCount, 5);
+                UserCount = req.UserCount;
+                string ppBillingId = GetBillingPlanId(UserCount, 5);//(UserCount, 5);
                 string BillingAgreementID = string.Empty;
                 var Agreement = CreateBillingAgreement(req.SolutionId, ppBillingId);
                 foreach (var _link in Agreement.Links)
