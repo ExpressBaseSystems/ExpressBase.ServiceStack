@@ -29,7 +29,7 @@ namespace ExpressBase.ServiceStack.Services
     {
         string OAuthResponse;
         int OAuthStatusCode = 0;
-        int UserCount = 5;
+        volatile int UserCount = 0;
         int PricePerUser = 5;
         string Currency = "USD";
         string CancelPage = "/PayPal/CancelAgreement/",
@@ -247,7 +247,7 @@ namespace ExpressBase.ServiceStack.Services
                 .Append("/agreement-execute").ToString();
         }
 
-        private bool SavePayPalAgreement(BillingAgreementResponse FinalResponse, string ResponseContents, string SolutionId)
+        private bool SaveFinalBillingAgreement(BillingAgreementResponse FinalResponse, string ResponseContents, string SolutionId)
         {
             string sql = @"INSERT INTO eb_pp_subscriptions(solution_id, pp_billing_plan_id, agreement_creation_date, is_canceled, start_date, raw_json) VALUES(@solution_id, @billing_plan_id, @agc_date, @canceled, @s_date, @json) RETURNING id";
             
@@ -273,7 +273,7 @@ namespace ExpressBase.ServiceStack.Services
 
         private bool SavePayPalWebHookJson(string JsonString, int state, string[] ActionComponents)
         {
-            string sql = @"INSERT INTO eb_test_web_hook_json(json_value, state, action1, action2, action3) VALUES(@json_str, @state, @ac1, @ac2, @ac3) RETURNING id";
+            string sql = @"INSERT INTO eb_test_webhook_json(json_value, state, action1, action2, action3) VALUES(@json_str, @state, @ac1, @ac2, @ac3) RETURNING id";
 
             DbParameter[] parameters =
             {
@@ -291,18 +291,19 @@ namespace ExpressBase.ServiceStack.Services
         [Authenticate]
         public void Post(PayPalWebHookHandler handler)
         {
-            bool _jsonEmpty = true, _actionEmpty = true;
+            //if (!SaveFinalBillingAgreement(FinalResponse, ResponseContents, req.SolutionId))
+            //    throw new Exception("Failed to save data to the database");
             int state = 0;
             string[] ActionComponents = handler.Action.Split('.'); ;
+            SavePayPalWebHookJson(handler.JsonBody, state, ActionComponents);
             if (handler.JsonBody==string.Empty)
             {
                 Console.WriteLine("The JSON body is empty");
             }
             else
             {
-                _jsonEmpty = false;
                 Console.WriteLine("JSON Response: \n" + handler.JsonBody);
-                
+
                 StringBuilder responseBuilder = new StringBuilder();
                 if (ActionComponents[0].Equals("billing"))
                     state += 10;
@@ -404,10 +405,6 @@ namespace ExpressBase.ServiceStack.Services
 
                 }
             }
-            if(!_jsonEmpty && !_actionEmpty)
-            {
-                SavePayPalWebHookJson(handler.JsonBody, state, ActionComponents);
-            }
         }
 
         [Authenticate]
@@ -430,10 +427,10 @@ namespace ExpressBase.ServiceStack.Services
                 Console.WriteLine("Execute Response Status Code: " + ExecuteResponse.StatusCode);
                 Console.WriteLine("Response: " + ResponseContents);
                 BillingAgreementResponse FinalResponse = JsonConvert.DeserializeObject<BillingAgreementResponse>(ResponseContents);
-                if (!SavePayPalAgreement(FinalResponse, ResponseContents, req.SolutionId))
-                    throw new Exception("Failed to save data to the database");
+                //if (!SaveFinalBillingAgreement(FinalResponse, ResponseContents, req.SolutionId))
+                //    throw new Exception("Failed to save data to the database");
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 Console.WriteLine("Exception Thrown : " + ex);
             }
@@ -448,7 +445,8 @@ namespace ExpressBase.ServiceStack.Services
             {
                 CancelUrl = req.Environment + CancelPage + req.SolutionId;
                 ReturnUrl = req.Environment + ReturnPage + req.SolutionId;
-                string ppBillingId = GetBillingPlanId(UserCount, 5);
+                UserCount = req.UserCount;
+                string ppBillingId = GetBillingPlanId(UserCount, 5);//(UserCount, 5);
                 string BillingAgreementID = string.Empty;
                 var Agreement = CreateBillingAgreement(req.SolutionId, ppBillingId);
                 foreach (var _link in Agreement.Links)
