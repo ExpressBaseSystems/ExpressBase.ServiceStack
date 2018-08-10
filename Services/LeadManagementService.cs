@@ -16,16 +16,45 @@ namespace ExpressBase.ServiceStack.Services
 
 		public GetManageLeadResponse Any(GetManageLeadRequest request)
 		{
+			string SqlQry = "SELECT firmcode, fname FROM firmmaster;";
+			List<DbParameter> paramList = new List<DbParameter>();
 			Dictionary<int, string> CostCenter = new Dictionary<int, string>();
-			CostCenter.Add(0, "Hair o Craft");
-			CostCenter.Add(1, "HOC Kochi");
-			CostCenter.Add(2, "HOC Kozhikode");
-			CostCenter.Add(3, "HOC TRIVANDRUM");
-			CostCenter.Add(4, "HOC Coimbatore");
-
 			Dictionary<string, string> CustomerData = new Dictionary<string, string>();
-			CustomerData.Add("AccId","0");
-
+			if (request.RequestMode == 1)//edit mode 
+			{
+				SqlQry += @"SELECT accountcode, firmcode, trdate, genurl, name, dob, age, genphoffice, profession, genemail,
+							customertype, clcity, clcountry, city, typeofcustomer, sourcecategory, subcategory, consultation, picsrcvd
+							FROM customervendor WHERE accountcode = :accountcode AND prehead='50';";
+				paramList.Add(this.EbConnectionFactory.DataDB.GetNewParameter("accountcode", EbDbTypes.String, request.AccId));
+			}			
+			var ds = this.EbConnectionFactory.DataDB.DoQueries(SqlQry, paramList.ToArray());			
+			foreach (var dr in ds.Tables[0].Rows)
+			{
+				CostCenter.Add(Convert.ToInt32(dr[0]), dr[1].ToString());
+			}			
+			if (ds.Tables.Count > 1 && ds.Tables[1].Rows.Count > 0)
+			{
+				var dr = ds.Tables[1].Rows[0];
+				CustomerData.Add("accountcode", dr[0].ToString());
+				CustomerData.Add("firmcode", dr[1].ToString());
+				CustomerData.Add("trdate", Convert.ToDateTime(dr[2]).ToString("dd-MM-yyyy"));
+				CustomerData.Add("genurl", dr[3].ToString());
+				CustomerData.Add("name", dr[4].ToString());
+				CustomerData.Add("dob", Convert.ToDateTime(dr[5]).ToString("dd-MM-yyyy"));
+				CustomerData.Add("age", dr[6].ToString());
+				CustomerData.Add("genphoffice", dr[7].ToString());
+				CustomerData.Add("profession", dr[8].ToString());
+				CustomerData.Add("genemail", dr[9].ToString());
+				CustomerData.Add("customertype", dr[10].ToString());
+				CustomerData.Add("clcity", dr[11].ToString());
+				CustomerData.Add("clcountry", dr[12].ToString());
+				CustomerData.Add("city", dr[13].ToString());
+				CustomerData.Add("typeofcustomer", dr[14].ToString());
+				CustomerData.Add("sourcecategory", dr[15].ToString());
+				CustomerData.Add("subcategory", dr[16].ToString());
+				CustomerData.Add("consultation", dr[17].ToString());
+				CustomerData.Add("picsrcvd", dr[18].ToString());
+			}			
 			return new GetManageLeadResponse { CostCenterDict = CostCenter, CustomerDataDict = CustomerData };
 		}
 
@@ -98,17 +127,17 @@ namespace ExpressBase.ServiceStack.Services
 			foreach (KeyValueType_Field item in Fields)
 			{
 				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(item.Key, item.Type, item.Value));
-				s_set += item.Key + "=" + item.Value + ",";
+				s_set += item.Key + "=:" + item.Key + ",";
 			}
 			foreach (KeyValueType_Field item in WhereFields)
 			{
 				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(item.Key, item.Type, item.Value));
-				s_where += item.Key + "=" + item.Value + ",";
+				s_where += item.Key + "=:" + item.Key + " AND ";
 			}
 			string strQry = @"UPDATE @tblname@ SET @str_set@ WHERE @str_where@;"
 								.Replace("@tblname@", TblName)
 								.Replace("@str_set@", s_set.Substring(0, s_set.Length - 1))
-								.Replace("@str_where@", s_where.Substring(0, s_where.Length - 1));
+								.Replace("@str_where@", s_where.Substring(0, s_where.Length - 4));
 			this.EbConnectionFactory.ObjectsDB.UpdateTable(strQry, parameters.ToArray());
 			return 1;
 		}
