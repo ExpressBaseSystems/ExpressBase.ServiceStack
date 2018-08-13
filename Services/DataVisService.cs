@@ -542,6 +542,78 @@ namespace ExpressBase.ServiceStack
 
             return _dataset;
         }
+
+        [CompressResponse]
+        public DataSourceDataResponse Any(InlineTableDataRequest request)
+        {
+            DataSourceDataResponse dsresponse = null;
+
+            var _ds = this.Redis.Get<EbDataSource>(request.RefId);
+            string _sql = string.Empty;
+
+            if (_ds == null)
+            {
+                var myService = base.ResolveService<EbObjectService>();
+                var result = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = request.RefId });
+                _ds = EbSerializers.Json_Deserialize(result.Data[0].Json);
+                Redis.Set<EbDataSource>(request.RefId, _ds);
+            }
+            if (_ds.FilterDialogRefId != string.Empty && _ds.FilterDialogRefId != null)
+            {
+                var _dsf = this.Redis.Get<EbFilterDialog>(_ds.FilterDialogRefId);
+                if (_dsf == null)
+                {
+                    var myService = base.ResolveService<EbObjectService>();
+                    var result = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = _ds.FilterDialogRefId });
+                    _dsf = EbSerializers.Json_Deserialize(result.Data[0].Json);
+                    Redis.Set<EbFilterDialog>(_ds.FilterDialogRefId, _dsf);
+                }
+                if (request.Params == null)
+                    request.Params = _dsf.GetDefaultParams();
+            }
+
+            bool _isPaged = false;
+            if (_ds != null)
+            {
+                string _c = string.Empty;
+                string tempsql = string.Empty;
+                _sql = _ds.Sql;
+            }
+            var parameters = DataHelper.GetParams(this.EbConnectionFactory, _isPaged, request.Params, request.Length, request.Start);
+            Console.WriteLine("Before :  " + DateTime.Now);
+            var dtStart = DateTime.Now;
+            Console.WriteLine("................................................datasourceDSrequeststart " + DateTime.Now);
+            var _dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray<System.Data.Common.DbParameter>());
+            Console.WriteLine("................................................datasourceDSrequeststart " + DateTime.Now);
+            var dtstop = DateTime.Now;
+            Console.WriteLine("..................................totaltimeinSeconds" + dtstop.Subtract(dtStart).Seconds);
+
+            //-- 
+            Console.WriteLine(DateTime.Now);
+            var dtEnd = DateTime.Now;
+            var ts = (dtEnd - dtStart).TotalMilliseconds;
+            Console.WriteLine("final:::" + ts);
+            int _recordsTotal = 0, _recordsFiltered = 0;
+            if (_isPaged)
+            {
+                Int32.TryParse(_dataset.Tables[1].Rows[0][0].ToString(), out _recordsTotal);
+                Int32.TryParse(_dataset.Tables[1].Rows[0][0].ToString(), out _recordsFiltered);
+            }
+            _recordsTotal = (_recordsTotal > 0) ? _recordsTotal : _dataset.Tables[1].Rows.Count;
+            _recordsFiltered = (_recordsFiltered > 0) ? _recordsFiltered : _dataset.Tables[1].Rows.Count;
+            //-- 
+
+            dsresponse = new DataSourceDataResponse
+            {
+                Data = _dataset.Tables[0].Rows,
+                RecordsTotal = _recordsTotal,
+                RecordsFiltered = _recordsFiltered,
+                Ispaged = _isPaged
+            };
+            this.Log.Info("dsresponse*****" + dsresponse.Data);
+            var x = EbSerializers.Json_Serialize(dsresponse);
+            return dsresponse;
+        }
     }
 }
 
