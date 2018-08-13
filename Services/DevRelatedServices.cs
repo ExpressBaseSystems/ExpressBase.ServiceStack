@@ -339,6 +339,14 @@ namespace ExpressBase.ServiceStack
                 ResStatus = this.EbConnectionFactory.ObjectsDB.DoNonQuery(sql, parameters)
             };
         }
+        
+        public UniqueApplicationNameCheckResponse Get(UniqueApplicationNameCheckRequest request)
+        {
+            DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("name", EbDbTypes.String, request.AppName) };
+            EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery("SELECT id FROM eb_applications WHERE applicationname = :name ;", parameters);
+            bool _isunique = (dt.Rows.Count > 0) ? false : true;
+            return new UniqueApplicationNameCheckResponse { IsUnique = _isunique };
+        }
     }
 }
 
