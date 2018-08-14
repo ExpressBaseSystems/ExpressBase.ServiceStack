@@ -230,17 +230,35 @@ namespace ExpressBase.ServiceStack
             CreateApplicationResponse resp;
             try
             {
-                string sql = "INSERT INTO eb_applications (applicationname,application_type, description,app_icon) VALUES (:applicationname,:apptype, :description,:appicon) RETURNING id;";
+                // DbParameter[] parameters= new DbParameter[];
+                List<DbParameter> parameters = new List<DbParameter>();
+                string sql;
+                if (this.EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.ORACLE)
+                {
+                    //sql = @"INSERT INTO eb_applications (applicationname,application_type, description,app_icon) VALUES (:applicationname,:apptype, :description,:appicon);
+                    //     SELECT eb_applications_id_seq.CURRVAL FROM dual; ";
+                    sql = "INSERT INTO eb_applications (applicationname,application_type, description,app_icon) VALUES (:applicationname,:apptype, :description,:appicon) returning id into :cur_id; ";
+                    parameters.Add(this.EbConnectionFactory.DataDB.GetNewOutParameter("cur_id", EbDbTypes.Int32));
+                }
+                else
+                {
+                    sql = "INSERT INTO eb_applications (applicationname,application_type, description,app_icon) VALUES (:applicationname,:apptype, :description,:appicon) returning id; ";
 
-                DbParameter[] parameters = {
-                    this.EbConnectionFactory.DataDB.GetNewParameter("applicationname", EbDbTypes.String, request.AppName),
-                    this.EbConnectionFactory.DataDB.GetNewParameter("apptype", EbDbTypes.Int32, request.AppType),
-                    this.EbConnectionFactory.DataDB.GetNewParameter("description", EbDbTypes.String, request.Description),
-                    this.EbConnectionFactory.DataDB.GetNewParameter("appicon", EbDbTypes.String, request.AppIcon)
-                };
-                var dt = this.EbConnectionFactory.DataDB.DoQuery(sql, parameters);
+                }
+                //string sql = "INSERT INTO eb_applications (applicationname,application_type, description,app_icon) VALUES (:applicationname,:apptype, :description,:appicon) RETURNING id;";
+                parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("applicationname", EbDbTypes.String, request.AppName));
+                parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("apptype", EbDbTypes.Int32, request.AppType));
+                parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("description", EbDbTypes.String, request.Description));
+                parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("appicon", EbDbTypes.String, request.AppIcon));
 
-                resp = new CreateApplicationResponse() { id = Convert.ToInt32(dt.Rows[0][0]) };
+                //var dt = this.EbConnectionFactory.DataDB.DoReturnId(sql, parameters.ToArray());
+
+                //var dt = this.EbConnectionFactory.DataDB.DoQuery(sql, parameters.ToArray());
+
+                var dt = this.EbConnectionFactory.DataDB.DoNonQuery(sql, parameters.ToArray());
+
+                // resp = new CreateApplicationResponse() { id = Convert.ToInt32(dt.Rows[0][0]) };
+                resp = new CreateApplicationResponse() { id = dt };
 
             }
             catch (Exception e)

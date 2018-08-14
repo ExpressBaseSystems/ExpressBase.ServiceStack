@@ -24,8 +24,10 @@ namespace ExpressBase.ServiceStack.Services
 			if (request.RequestMode == 1)//edit mode 
 			{
 				SqlQry += @"SELECT accountcode, firmcode, trdate, genurl, name, dob, age, genphoffice, profession, genemail,
-							customertype, clcity, clcountry, city, typeofcustomer, sourcecategory, subcategory, consultation, picsrcvd
-							FROM customervendor WHERE accountcode = :accountcode AND prehead='50';";
+								customertype, clcity, clcountry, city, typeofcustomer, sourcecategory, subcategory, consultation, picsrcvd
+								FROM customervendor WHERE accountcode = :accountcode AND prehead='50';
+							SELECT id,trdate,status,followupdate,narration FROM leaddetails
+								WHERE accountcode=:accountcode AND prehead='50';";
 				paramList.Add(this.EbConnectionFactory.DataDB.GetNewParameter("accountcode", EbDbTypes.String, request.AccId));
 			}			
 			var ds = this.EbConnectionFactory.DataDB.DoQueries(SqlQry, paramList.ToArray());			
@@ -55,13 +57,21 @@ namespace ExpressBase.ServiceStack.Services
 				CustomerData.Add("subcategory", dr[16].ToString());
 				CustomerData.Add("consultation", dr[17].ToString());
 				CustomerData.Add("picsrcvd", dr[18].ToString());
-				
+
+				//followup details
+				foreach (var i in ds.Tables[2].Rows)
+				{
+					Flist.Add(new FeedbackEntry
+					{
+						Id = Convert.ToInt32(i[0]),
+						Date = Convert.ToDateTime(i[1]).ToString("dd-MM-yyyy"),
+						Status = i[2].ToString(),
+						Followup_Date = Convert.ToDateTime(i[3]).ToString("dd-MM-yyyy"),						
+						Comments = i[4].ToString()
+					});
+				}
 			}
 
-			//Flist.Add(new FeedbackEntry { Id = "12", Date = "22/02/2017", FollowupDate = "aaaaa", Status = "Foloow", Comments = "zcmdcbbc" });
-			//Flist.Add(new FeedbackEntry { Id = "13", Date = "sasa", FollowupDate = "bbbbbb", Status = "Foloow", Comments = "zcmdcbbc" });
-			//Flist.Add(new FeedbackEntry { Id = "14", Date = "22/02/2017", FollowupDate = "ccccccc", Status = "Foloow", Comments = "zcmdcbbc" });
-			//Flist.Add(new FeedbackEntry { Id = "15", Date = "sasa", FollowupDate = "dddddd", Status = "Foloow", Comments = "zcmdcbbc" });
 
 			return new GetManageLeadResponse { CostCenterDict = CostCenter, CustomerDataDict = CustomerData, FeedbackList = Flist };
 		}
@@ -129,48 +139,84 @@ namespace ExpressBase.ServiceStack.Services
 			return new SaveCustomerResponse { Status = rstatus };
 		}
 
-		private int InsertToTable(string TblName, List<KeyValueType_Field> Fields)
+		public SaveCustomerFollowupResponse Any(SaveCustomerFollowupRequest request)
 		{
+			int rstatus = 0;
+			FeedbackEntry F_Obj = JsonConvert.DeserializeObject<FeedbackEntry>(request.Data);
 			List<DbParameter> parameters = new List<DbParameter>();
-			string cols = string.Empty;
-			string vals = string.Empty;
-			foreach (KeyValueType_Field item in Fields)
-			{
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(item.Key, item.Type, item.Value));
-				cols += item.Key + ",";
-				vals += ":" + item.Key + ",";
-			}
-			string strQry = @"INSERT INTO @tblname@(@cols@) VALUES(@vals@);"
-								.Replace("@tblname@", TblName)
-								.Replace("@cols@", cols.Substring(0, cols.Length - 1))
-								.Replace("@vals@", vals.Substring(0, vals.Length - 1));
-			this.EbConnectionFactory.ObjectsDB.InsertTable(strQry, parameters.ToArray());
-			return 1;
-		}
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, F_Obj.Id));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("accountcode", EbDbTypes.String, F_Obj.Account_Code));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("trdate", EbDbTypes.String, F_Obj.Date));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("status", EbDbTypes.String, F_Obj.Status));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("followupdate", EbDbTypes.String, F_Obj.Followup_Date));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("narration", EbDbTypes.String, F_Obj.Comments));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("createdby", EbDbTypes.String, request.UserName));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("createddt", EbDbTypes.String, DateTime.Now.ToString("dd-MM-yyyy")));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("modifiedby", EbDbTypes.String, request.UserName));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("modifieddt", EbDbTypes.String, DateTime.Now.ToString("dd-MM-yyyy")));
 
-		private int UpdateToTable(string TblName, List<KeyValueType_Field> Fields, List<KeyValueType_Field> WhereFields)
-		{
-			List<DbParameter> parameters = new List<DbParameter>();
-			string s_set = string.Empty;
-			string s_where = string.Empty;
-			foreach (KeyValueType_Field item in Fields)
+			if (F_Obj.Id == 0)//new
 			{
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(item.Key, item.Type, item.Value));
-				s_set += item.Key + "=:" + item.Key + ",";
+				string Qry = @"INSERT INTO leaddetails(prehead, accountcode, trdate, status, followupdate, narration, createdby, createddt) 
+									VALUES('50 , :accountcode, :trdate, :status, :followupdate, :narration, :createdby, :createddt);";
+				rstatus = this.EbConnectionFactory.ObjectsDB.InsertTable(Qry, parameters.ToArray());
 			}
-			foreach (KeyValueType_Field item in WhereFields)
+			else//update
 			{
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(item.Key, item.Type, item.Value));
-				s_where += item.Key + "=:" + item.Key + " AND ";
+				string Qry = @"UPDATE leaddetails 
+								SET status=:status, followupdate=:followupdate, narration=:narration, modifiedby = :modifiedby, modifieddt = :modifieddt  
+								WHERE prehead = '50' AND accountcode = :accountcode AND id=:id;";
+				rstatus = this.EbConnectionFactory.ObjectsDB.UpdateTable(Qry, parameters.ToArray());
 			}
-			string strQry = @"UPDATE @tblname@ SET @str_set@ WHERE @str_where@;"
-								.Replace("@tblname@", TblName)
-								.Replace("@str_set@", s_set.Substring(0, s_set.Length - 1))
-								.Replace("@str_where@", s_where.Substring(0, s_where.Length - 4));
-			this.EbConnectionFactory.ObjectsDB.UpdateTable(strQry, parameters.ToArray());
-			return 1;
+			return new SaveCustomerFollowupResponse { Status = rstatus };
 		}
 
 
+
+
+
+
+
+		//private int InsertToTable(string TblName, List<KeyValueType_Field> Fields)
+		//{
+		//	List<DbParameter> parameters = new List<DbParameter>();
+		//	string cols = string.Empty;
+		//	string vals = string.Empty;
+		//	foreach (KeyValueType_Field item in Fields)
+		//	{
+		//		parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(item.Key, item.Type, item.Value));
+		//		cols += item.Key + ",";
+		//		vals += ":" + item.Key + ",";
+		//	}
+		//	string strQry = @"INSERT INTO @tblname@(@cols@) VALUES(@vals@);"
+		//						.Replace("@tblname@", TblName)
+		//						.Replace("@cols@", cols.Substring(0, cols.Length - 1))
+		//						.Replace("@vals@", vals.Substring(0, vals.Length - 1));
+		//	this.EbConnectionFactory.ObjectsDB.InsertTable(strQry, parameters.ToArray());
+		//	return 1;
+		//}
+
+		//private int UpdateToTable(string TblName, List<KeyValueType_Field> Fields, List<KeyValueType_Field> WhereFields)
+		//{
+		//	List<DbParameter> parameters = new List<DbParameter>();
+		//	string s_set = string.Empty;
+		//	string s_where = string.Empty;
+		//	foreach (KeyValueType_Field item in Fields)
+		//	{
+		//		parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(item.Key, item.Type, item.Value));
+		//		s_set += item.Key + "=:" + item.Key + ",";
+		//	}
+		//	foreach (KeyValueType_Field item in WhereFields)
+		//	{
+		//		parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(item.Key, item.Type, item.Value));
+		//		s_where += item.Key + "=:" + item.Key + " AND ";
+		//	}
+		//	string strQry = @"UPDATE @tblname@ SET @str_set@ WHERE @str_where@;"
+		//						.Replace("@tblname@", TblName)
+		//						.Replace("@str_set@", s_set.Substring(0, s_set.Length - 1))
+		//						.Replace("@str_where@", s_where.Substring(0, s_where.Length - 4));
+		//	this.EbConnectionFactory.ObjectsDB.UpdateTable(strQry, parameters.ToArray());
+		//	return 1;
+		//}
 	}
 }
