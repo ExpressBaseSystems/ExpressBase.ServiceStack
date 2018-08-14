@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace ExpressBase.ServiceStack
@@ -346,6 +347,33 @@ namespace ExpressBase.ServiceStack
             EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery("SELECT id FROM eb_applications WHERE applicationname = :name ;", parameters);
             bool _isunique = (dt.Rows.Count > 0) ? false : true;
             return new UniqueApplicationNameCheckResponse { IsUnique = _isunique };
+        }
+        public SurveyQuesResponse Post(SurveyQuesRequest request)
+        {
+            SurveyQuesResponse resp = new SurveyQuesResponse();
+            int c_count = 0;
+            StringBuilder s = new StringBuilder();
+            List<DbParameter> parameters = new List<DbParameter>();
+
+            s.Append(String.Format("INSERT INTO eb_survey_queries(query,q_type) VALUES('{0}',{1});", request.Question, request.QuesType));
+
+            s.Append("INSERT INTO eb_query_choices(q_id,choice) VALUES");
+
+            foreach(string choice in request.Choices)
+            {
+                int count = c_count++;
+                s.Append("(currval('eb_survey_queries_id_seq'),:choice"+ count + ")");
+
+                if (choice != request.Choices.Last())
+                    s.Append(",");
+                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("choice" + count, EbDbTypes.String, choice));
+            }
+            int res = this.EbConnectionFactory.ObjectsDB.DoNonQuery(s.ToString(),parameters.ToArray());
+            if (res >= 2)
+                resp.Status = true;
+            else
+                resp.Status = false;
+            return resp;
         }
     }
 }
