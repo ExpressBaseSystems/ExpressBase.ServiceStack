@@ -121,7 +121,9 @@ namespace ExpressBase.ServiceStack.Services
                         Icon = AppObj.Icon
                     },
                     TenantAccountId=request.TenantAccountId,
-                    UserId=request.UserId
+                    UserId=request.UserId,
+                    UserAuthId = request.UserAuthId,
+                    WhichConsole = request.WhichConsole
                 });
             }
             catch (Exception e)
@@ -179,10 +181,18 @@ namespace ExpressBase.ServiceStack.Services
                 GetOneFromAppstoreResponse resp = base.ResolveService<ImportExportService>().Get(new GetOneFromAppStoreRequest { Id = request.Id });
                 AppWrapper AppObj = resp.Wrapper;
                 List<EbObject> ObjectCollection = AppObj.ObjCollection;
+                UniqueApplicationNameCheckResponse uniq_appnameresp;
 
+                do
+                {
+                    uniq_appnameresp = base.ResolveService<DevRelatedServices>().Get(new UniqueApplicationNameCheckRequest { AppName = AppObj.Name });
+                    if (!uniq_appnameresp.IsUnique)
+                        AppObj.Name = AppObj.Name + "(1)";
+                }
+                while (!uniq_appnameresp.IsUnique);
                 CreateApplicationResponse appres = base.ResolveService<DevRelatedServices>().Post(new CreateApplicationDevRequest
                 {
-                    AppName = AppObj.Name + "(install 10)",
+                    AppName = AppObj.Name,
                     AppType = AppObj.AppType,
                     Description = AppObj.Description,
                     AppIcon = AppObj.Icon
@@ -204,7 +214,7 @@ namespace ExpressBase.ServiceStack.Services
                     obj.ReplaceRefid(RefidMap);
                     EbObject_Create_New_ObjectRequest ds = new EbObject_Create_New_ObjectRequest
                     {
-                        Name = obj.Name +100000,
+                        Name = obj.Name,
                         Description = obj.Description,
                         Json = EbSerializers.Json_Serialize(obj),
                         Status = ObjectLifeCycleStatus.Dev,
@@ -214,7 +224,11 @@ namespace ExpressBase.ServiceStack.Services
                         Apps = appres.id.ToString(),
                         SourceSolutionId = (obj.RefId.Split("-"))[0],
                         SourceObjId = (obj.RefId.Split("-"))[3],
-                        SourceVerID = (obj.RefId.Split("-"))[4]
+                        SourceVerID = (obj.RefId.Split("-"))[4],
+                        TenantAccountId=request.TenantAccountId,
+                        UserId=request.UserId,
+                        UserAuthId =request.UserAuthId,
+                        WhichConsole=request.WhichConsole
                     };
                     EbObject_Create_New_ObjectResponse res = base.ResolveService<EbObjectService>().Post(ds);
                     RefidMap[obj.RefId] = res.RefId;
