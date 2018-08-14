@@ -424,6 +424,39 @@ namespace ExpressBase.ServiceStack
                 resp.Status = false;
             return resp;
         }
-    }
+
+		public ManageSurveyResponse Post(ManageSurveyRequest request)
+		{
+			Eb_Survey surveyObj = new Eb_Survey() { Id = 0};
+			List<Eb_SurveyQuestion> questionList = new List<Eb_SurveyQuestion>();
+			string qryStr = @"SELECT Q.id, Q.query, Q.q_type FROM eb_survey_queries Q;";
+			if(request.Id > 0)
+			{
+				qryStr += @"SELECT S.id, S.name, S.start, S.end, S.status, S.questions FROM eb_surveys S WHERE S.id = '" + request.Id + "';";
+			}
+			EbDataSet dt = this.EbConnectionFactory.DataDB.DoQueries(qryStr, new DbParameter[] { });
+			if(dt.Tables.Count > 0)
+			{
+				foreach(EbDataRow dr in dt.Tables[0].Rows)
+				{
+					questionList.Add(new Eb_SurveyQuestion { Id = Convert.ToInt32(dr[0]), Question = dr[1].ToString()});
+				}
+			}
+			if(dt.Tables.Count > 1 && dt.Tables[1].Rows.Count > 0)
+			{
+				surveyObj.Id = Convert.ToInt32(dt.Tables[1].Rows[0][0]);
+				surveyObj.Name = dt.Tables[1].Rows[0][1].ToString();
+				surveyObj.Start = Convert.ToDateTime(dt.Tables[1].Rows[0][2]);
+				surveyObj.End = Convert.ToDateTime(dt.Tables[1].Rows[0][3]);
+				surveyObj.Status = Convert.ToInt32(dt.Tables[1].Rows[0][3]);
+				surveyObj.QuesIds = dt.Tables[1].Rows[0][1].ToString().Split(",").Select(Int32.Parse).ToList(); 
+			}
+
+
+			return new ManageSurveyResponse() {Obj = surveyObj, AllQuestions = questionList };
+		}
+
+
+	}
 }
 
