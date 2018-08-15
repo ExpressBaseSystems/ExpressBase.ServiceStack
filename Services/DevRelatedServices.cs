@@ -371,8 +371,8 @@ namespace ExpressBase.ServiceStack
         {
             Dictionary<int,EbSurveyQuery> dict = new Dictionary<int, EbSurveyQuery>();
 
-            string sql = @"SELECT Q.id,Q.query,Q.q_type,C.choice from eb_survey_queries Q 
-                           INNER JOIN eb_query_choices C ON C.q_id = q.id;";
+            string sql = @"SELECT Q.id,Q.query,Q.q_type,C.id,C.choice,C.score from eb_survey_queries Q 
+                           INNER JOIN eb_query_choices C ON C.q_id = q.id WHERE C.eb_del = 'F';";
 
             var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(sql);
             foreach (EbDataRow dr in dt.Rows)
@@ -380,16 +380,30 @@ namespace ExpressBase.ServiceStack
                 int id = Convert.ToInt32(dr[0]);
                 if (!dict.ContainsKey(id))
                 {
-                    dict.Add(id,new EbSurveyQuery
+                    dict.Add(id, new EbSurveyQuery
                     {
                         QuesId = id,
                         Question = dr[1] as string,
                         QuesType = Convert.ToInt32(dr[2]),
-                        Choices = new List<string> { dr[3].ToString() }
+                        Choices = new List<QueryChoices>()
+                    });
+
+                    dict[id].Choices.Add(new QueryChoices
+                    {
+                        ChoiceId = Convert.ToInt32(dr[3]),
+                        Choice = dr[4].ToString(),
+                        Score = Convert.ToInt32(dr[5])
                     });
                 }
                 else
-                    dict[id].Choices.Add(dr[3].ToString());
+                {
+                    dict[id].Choices.Add(new QueryChoices
+                    {
+                        ChoiceId = Convert.ToInt32(dr[3]),
+                        Choice = dr[4].ToString(),
+                        Score = Convert.ToInt32(dr[5])
+                    });
+                }
             }
                 return new GetSurveyQueriesResponse { Data = dict };
         }
@@ -401,22 +415,51 @@ namespace ExpressBase.ServiceStack
             int c_count = 0;
             StringBuilder s = new StringBuilder();
             List<DbParameter> parameters = new List<DbParameter>();
-
-            s.Append("INSERT INTO eb_survey_queries(query,q_type) VALUES(:query,:qtype);");
-            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("query", EbDbTypes.String, ques.Question));
-            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("qtype", EbDbTypes.Int32, ques.QuesType));
-
-            s.Append("INSERT INTO eb_query_choices(q_id,choice) VALUES");
-
-            foreach (string choice in ques.Choices)
+            if(ques.QuesId > 0)
             {
-                int count = c_count++;
-                s.Append("(currval('eb_survey_queries_id_seq'),:choice" + count + ")");
+                s.Append("UPDATE eb_survey_queries SET query=:query,q_type=:qtype WHERE id=:qid;");
+                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("query", EbDbTypes.String, ques.Question));
+                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("qtype", EbDbTypes.Int32, ques.QuesType));
+                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("qid", EbDbTypes.Int32, ques.QuesId));
 
-                if (choice != ques.Choices.Last())
-                    s.Append(",");
-                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("choice" + count, EbDbTypes.String, choice));
+                foreach (QueryChoices choice in ques.Choices)
+                {
+                    int count = c_count++;
+
+                    if (choice.EbDel)
+                    {
+                        s.Append("UPDATE eb_query_choices SET eb_del = 'T' WHERE id=:choiceid"+ count + ";");
+                        parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("choiceid" + count, EbDbTypes.Int32, choice.ChoiceId));
+                    }
+                    else
+                    {
+                        s.Append("UPDATE eb_query_choices SET choice=:choice"+ count + ",score=:chscore"+ count + " WHERE id=:chid"+ count + ";");
+                        parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("choice" + count, EbDbTypes.String, choice.Choice));
+                        parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("chid" + count, EbDbTypes.Int32, choice.ChoiceId));
+                        parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("chscore" + count, EbDbTypes.Int32, choice.Score));
+                    }
+                }
             }
+            else
+            {
+                s.Append("INSERT INTO eb_survey_queries(query,q_type) VALUES(:query,:qtype);");
+                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("query", EbDbTypes.String, ques.Question));
+                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("qtype", EbDbTypes.Int32, ques.QuesType));
+
+                s.Append("INSERT INTO eb_query_choices(q_id,choice,score) VALUES");
+
+                foreach (QueryChoices choice in ques.Choices)
+                {
+                    int count = c_count++;
+                    s.Append("(currval('eb_survey_queries_id_seq'),:choice" + count + ",:score"+ count + ")");
+
+                    if (choice != ques.Choices.Last())
+                        s.Append(",");
+                    parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("choice" + count, EbDbTypes.String, choice.Choice));
+                    parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("score" + count, EbDbTypes.Int32, choice.Score));
+                }
+            }
+           
             int res = this.EbConnectionFactory.ObjectsDB.DoNonQuery(s.ToString(), parameters.ToArray());
             if (res >= 2)
                 resp.Status = true;
