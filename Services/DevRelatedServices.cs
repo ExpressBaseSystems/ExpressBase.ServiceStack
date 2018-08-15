@@ -476,10 +476,11 @@ namespace ExpressBase.ServiceStack
 			}
 			else
 			{
-				string qryStr = @"INSERT INTO eb_surveys(name, startdate, enddate, status, questions) VALUES (:name, :start, :end, :status, :questions);";
-				rstatus = this.EbConnectionFactory.ObjectsDB.InsertTable(qryStr, parameters.ToArray());
+				string qryStr = @"INSERT INTO eb_surveys(name, startdate, enddate, status, questions) VALUES (:name, :start, :end, :status, :questions) RETURNING id;";
+				EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery(qryStr, parameters.ToArray());
+				rstatus = Convert.ToInt32(dt.Rows[0][0]);
 			}			
-			return new SaveSurveyResponse() { Status = rstatus > 0};
+			return new SaveSurveyResponse() { Status = rstatus};
 		}
 
 
