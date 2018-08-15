@@ -7,6 +7,7 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -475,7 +476,7 @@ namespace ExpressBase.ServiceStack
 			string qryStr = @"SELECT Q.id, Q.query, Q.q_type FROM eb_survey_queries Q;";
 			if(request.Id > 0)
 			{
-				qryStr += @"SELECT S.id, S.name, S.start, S.end, S.status, S.questions FROM eb_surveys S WHERE S.id = '" + request.Id + "';";
+				qryStr += @"SELECT S.id, S.name, S.startdate, S.enddate, S.status, S.questions FROM eb_surveys S WHERE S.id = '" + request.Id + "';";
 			}
 			EbDataSet dt = this.EbConnectionFactory.DataDB.DoQueries(qryStr, new DbParameter[] { });
 			if(dt.Tables.Count > 0)
@@ -489,14 +490,40 @@ namespace ExpressBase.ServiceStack
 			{
 				surveyObj.Id = Convert.ToInt32(dt.Tables[1].Rows[0][0]);
 				surveyObj.Name = dt.Tables[1].Rows[0][1].ToString();
-				surveyObj.Start = Convert.ToDateTime(dt.Tables[1].Rows[0][2]);
-				surveyObj.End = Convert.ToDateTime(dt.Tables[1].Rows[0][3]);
-				surveyObj.Status = Convert.ToInt32(dt.Tables[1].Rows[0][3]);
-				surveyObj.QuesIds = dt.Tables[1].Rows[0][1].ToString().Split(",").Select(Int32.Parse).ToList(); 
+				surveyObj.Start = Convert.ToDateTime(dt.Tables[1].Rows[0][2]).ToString("dd-MM-yyyy HH:mm");
+				surveyObj.End = Convert.ToDateTime(dt.Tables[1].Rows[0][3]).ToString("dd-MM-yyyy HH:mm");
+				surveyObj.Status = Convert.ToInt32(dt.Tables[1].Rows[0][4]);
+				surveyObj.QuesIds = dt.Tables[1].Rows[0][5].ToString().Split(",").Select(Int32.Parse).ToList(); 
 			}
 
 
 			return new ManageSurveyResponse() {Obj = surveyObj, AllQuestions = questionList };
+		}
+
+		public SaveSurveyResponse Post(SaveSurveyRequest request)
+		{
+			var rstatus = 0;
+			Eb_Survey surveyObj = JsonConvert.DeserializeObject<Eb_Survey>(request.Data);
+			List<DbParameter> parameters = new List<DbParameter>();
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, surveyObj.Id));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("name", EbDbTypes.String, surveyObj.Name));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("start", EbDbTypes.DateTime, DateTime.ParseExact(surveyObj.Start, "dd-MM-yyyy HH:mm", null)));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("end", EbDbTypes.DateTime, DateTime.ParseExact(surveyObj.End, "dd-MM-yyyy HH:mm", null)));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("status", EbDbTypes.Int32, surveyObj.Status));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("questions", EbDbTypes.String, surveyObj.QuesIds.Select(i => i.ToString(CultureInfo.InvariantCulture)).Aggregate((s1, s2) => s1 + "," + s2)));
+			
+			if (surveyObj.Id > 0)
+			{
+				string qryStr = @"UPDATE eb_surveys SET name=:name, startdate=:start, enddate=:end, status=:status, questions=:questions WHERE id=:id;";
+				rstatus = this.EbConnectionFactory.ObjectsDB.UpdateTable(qryStr, parameters.ToArray());
+			}
+			else
+			{
+				string qryStr = @"INSERT INTO eb_surveys(name, startdate, enddate, status, questions) VALUES (:name, :start, :end, :status, :questions) RETURNING id;";
+				EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery(qryStr, parameters.ToArray());
+				rstatus = Convert.ToInt32(dt.Rows[0][0]);
+			}			
+			return new SaveSurveyResponse() { Status = rstatus};
 		}
 
 
