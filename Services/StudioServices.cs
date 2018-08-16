@@ -25,10 +25,10 @@ namespace ExpressBase.ServiceStack
 
         List<EbObjectWrapper> f = new List<EbObjectWrapper>();
         List<System.Data.Common.DbParameter> parameters = new List<System.Data.Common.DbParameter>();
- 
+
         [CompressResponse]
         public object Get(EbObjectAllVersionsRequest request) // Fetch all version without json of a particular Object
-        { 
+        {
             parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("refid", EbDbTypes.String, request.RefId));
             EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery(this.EbConnectionFactory.ObjectsDB.EB_FETCH_ALL_VERSIONS_OF_AN_OBJ, parameters.ToArray());
 
@@ -51,7 +51,7 @@ namespace ExpressBase.ServiceStack
 
         [CompressResponse]
         public object Get(EbObjectParticularVersionRequest request)// Fetch particular version with json of a particular Object
-        {  
+        {
             DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("refid", EbDbTypes.String, request.RefId) };
             EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery(this.EbConnectionFactory.ObjectsDB.EB_PARTICULAR_VERSION_OF_AN_OBJ, parameters);
 
@@ -68,11 +68,11 @@ namespace ExpressBase.ServiceStack
                 f.Add(_ebObject);
             }
             return new EbObjectParticularVersionResponse { Data = f };
-        }    
+        }
 
         [CompressResponse]
         public object Get(EbObjectLatestCommitedRequest request) // Fetch latest committed version with json - for Execute/Run/Consume a particular Object
-        {           
+        {
             DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("refid", EbDbTypes.String, request.RefId) };
             EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery(this.EbConnectionFactory.ObjectsDB.EB_LATEST_COMMITTED_VERSION_OF_AN_OBJ, parameters);
 
@@ -97,7 +97,7 @@ namespace ExpressBase.ServiceStack
 
         [CompressResponse]
         public object Get(EbObjectObjListRequest request)// Get All latest committed versions of this Object Type without json
-        { 
+        {
             DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("type", EbDbTypes.Int32, request.EbObjectType) };
             EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery(this.EbConnectionFactory.ObjectsDB.EB_ALL_LATEST_COMMITTED_VERSION_OF_AN_OBJ, parameters);
 
@@ -123,7 +123,7 @@ namespace ExpressBase.ServiceStack
 
         [CompressResponse]
         public object Get(EbObjectListRequest request)// Get All latest committed versions of this Object Type without json
-        { 
+        {
             DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("type", EbDbTypes.Int32, request.EbObjectType) };
             EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery(this.EbConnectionFactory.ObjectsDB.EB_GET_OBJ_LIST_FROM_EBOBJECTS, parameters);
 
@@ -146,7 +146,7 @@ namespace ExpressBase.ServiceStack
 
         [CompressResponse]
         public object Get(EbObjectObjLisAllVerRequest request)// Get All latest committed versions of this Object Type without json
-        { 
+        {
             DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("type", EbDbTypes.Int32, request.EbObjectType) };
             EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery(this.EbConnectionFactory.ObjectsDB.EB_GET_ALL_COMMITTED_VERSION_LIST, parameters);
 
@@ -177,7 +177,7 @@ namespace ExpressBase.ServiceStack
 
         [CompressResponse]
         public object Get(EbObjectRelationsRequest request)//Fetch ebobjects relations           
-        {            
+        {
             DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("dominant", EbDbTypes.String, request.DominantId) };
             EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery(this.EbConnectionFactory.ObjectsDB.EB_GET_LIVE_OBJ_RELATIONS, parameters);
             foreach (EbDataRow dr in dt.Rows)
@@ -199,7 +199,7 @@ namespace ExpressBase.ServiceStack
 
         [CompressResponse]
         public object Get(EbObjectTaggedRequest request)
-        { 
+        {
             f = new List<EbObjectWrapper>();
             DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("tags", EbDbTypes.String, request.Tags) };
             EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery(this.EbConnectionFactory.ObjectsDB.EB_GET_TAGGED_OBJECTS, parameters);
@@ -335,7 +335,7 @@ namespace ExpressBase.ServiceStack
         [CompressResponse]
         public object Get(EbObjectStatusHistoryRequest request)
         { // Get All latest committed versions of this Object Type without json
-             DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("refid", EbDbTypes.String, request.RefId) };
+            DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("refid", EbDbTypes.String, request.RefId) };
             EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery(this.EbConnectionFactory.ObjectsDB.EB_GET_OBJ_STATUS_HISTORY, parameters);
 
             foreach (EbDataRow dr in dt.Rows)
@@ -357,7 +357,7 @@ namespace ExpressBase.ServiceStack
 
         [CompressResponse]
         public object Get(EbObjectFetchLiveVersionRequest request) // Fetch particular version with json of a particular Object
-        { 
+        {
             ILog log = LogManager.GetLogger(GetType());
             DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, request.Id) };
             EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery(this.EbConnectionFactory.ObjectsDB.EB_LIVE_VERSION_OF_OBJS, parameters);
@@ -418,7 +418,7 @@ namespace ExpressBase.ServiceStack
                     con.Open();
                     DbCommand cmd = null;
                     log.Info("#DS insert 1 -- con open");
-                   string sql = this.EbConnectionFactory.ObjectsDB.EB_COMMIT_OBJECT;
+                    string sql = this.EbConnectionFactory.ObjectsDB.EB_COMMIT_OBJECT;
                     cmd = this.EbConnectionFactory.ObjectsDB.GetNewCommand(con, sql);
 
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":id", EbDbTypes.String, request.RefId));
@@ -448,12 +448,18 @@ namespace ExpressBase.ServiceStack
 
                         Update_Json_Val(con, sql1, parms);
                     }
-
-                  SetRedis(obj, refId);
+                    SetRedis(obj, refId);
+                    
+                    // need optimization
                     if (obj is EbBotForm)
                     {
                         ChatbotServices myService = base.ResolveService<ChatbotServices>();
                         CreateBotFormTableResponse res = (CreateBotFormTableResponse)myService.Any(new CreateBotFormTableRequest() { BotObj = obj, Apps = request.Apps, TenantAccountId = request.TenantAccountId, UserId = request.UserId, WhichConsole = request.WhichConsole });
+                    }
+                    else if (obj is EbWebForm)
+                    {
+                        ChatbotServices myService = base.ResolveService<ChatbotServices>();
+                        CreateWebFormTableResponse res = (CreateWebFormTableResponse)myService.Any(new CreateWebFormTableRequest() { WebObj = obj as EbWebForm, Apps = request.Apps, TenantAccountId = request.TenantAccountId, UserId = request.UserId, WhichConsole = request.WhichConsole });
                     }
                 }
             }
@@ -512,11 +518,16 @@ namespace ExpressBase.ServiceStack
                         Update_Json_Val(con, sql1, parms);
                     }
 
-                   SetRedis(obj, refId);
+                    SetRedis(obj, refId);
                     if (obj is EbBotForm)
                     {
                         ChatbotServices myService = base.ResolveService<ChatbotServices>();
                         CreateBotFormTableResponse res = (CreateBotFormTableResponse)myService.Any(new CreateBotFormTableRequest() { BotObj = obj, Apps = request.Apps, TenantAccountId = request.TenantAccountId, UserId = request.UserId, WhichConsole = request.WhichConsole });
+                    }
+                    else if (obj is EbWebForm)
+                    {
+                        ChatbotServices myService = base.ResolveService<ChatbotServices>();
+                        CreateWebFormTableResponse res = (CreateWebFormTableResponse)myService.Any(new CreateWebFormTableRequest() { WebObj = obj as EbWebForm, Apps = request.Apps, TenantAccountId = request.TenantAccountId, UserId = request.UserId, WhichConsole = request.WhichConsole });
                     }
                 }
             }
@@ -544,7 +555,7 @@ namespace ExpressBase.ServiceStack
                     DbCommand cmd = null;
                     log.Info("#DS Create new object -- con open");
                     string[] arr = { };
-                    
+
                     String sql = this.EbConnectionFactory.ObjectsDB.EB_CREATE_NEW_OBJECT;
                     cmd = this.EbConnectionFactory.ObjectsDB.GetNewCommand(con, sql);
 
@@ -559,7 +570,7 @@ namespace ExpressBase.ServiceStack
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":relations", EbDbTypes.String, (request.Relations != null) ? request.Relations : string.Empty));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":issave", EbDbTypes.String, (request.IsSave == true) ? 'T' : 'F'));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":tags", EbDbTypes.String, (!string.IsNullOrEmpty(request.Tags)) ? request.Tags : string.Empty));
-                   cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":app_id", EbDbTypes.String, SetAppId(request.Apps)));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":app_id", EbDbTypes.String, SetAppId(request.Apps)));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":s_obj_id", EbDbTypes.String, request.SourceObjId));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":s_ver_id", EbDbTypes.String, request.SourceVerID));
 
@@ -584,6 +595,11 @@ namespace ExpressBase.ServiceStack
                     {
                         ChatbotServices myService = base.ResolveService<ChatbotServices>();
                         CreateBotFormTableResponse res = (CreateBotFormTableResponse)myService.Any(new CreateBotFormTableRequest() { BotObj = obj, Apps = request.Apps, TenantAccountId = request.TenantAccountId, UserId = request.UserId, WhichConsole = request.WhichConsole });
+                    }
+                    else if (obj is EbWebForm)
+                    {
+                        ChatbotServices myService = base.ResolveService<ChatbotServices>();
+                        CreateWebFormTableResponse res = (CreateWebFormTableResponse)myService.Any(new CreateWebFormTableRequest() { WebObj = obj, Apps = request.Apps, TenantAccountId = request.TenantAccountId, UserId = request.UserId, WhichConsole = request.WhichConsole });
                     }
                 }
             }
@@ -858,14 +874,14 @@ namespace ExpressBase.ServiceStack
                 {
                     if (s == Regex.Unescape(x.Value.ToString()).Replace("\n", "").Replace("\t", "").Replace("\r", ""))
                     {
-                        appids += x.Key +",";
+                        appids += x.Key + ",";
                     }
                 }
             }
             if (appids == "")
                 appids = "0";
             else
-                appids = appids.Substring(0,appids.Length-1);
+                appids = appids.Substring(0, appids.Length - 1);
             return appids;
         }
     }
