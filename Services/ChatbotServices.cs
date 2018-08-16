@@ -233,6 +233,19 @@ WHERE
 
 					CreateOrAlterTable((request.BotObj.TableName.ToLower() + "_lines"), listLine);					
 				}
+				else if(control is EbSurvey)
+				{
+					DevRelatedServices myService = base.ResolveService<DevRelatedServices>();
+					ManageSurveyResponse res = (ManageSurveyResponse)myService.Post(new ManageSurveyRequest() { Id = (control as EbSurvey).SurveyId });
+
+					_listNamesAndTypes.Add(new TableColumnMeta { Name = control.Name, Type = vDbTypes.String });
+					foreach(int qid in res.Obj.QuesIds)
+					{
+						Eb_SurveyQuestion Que = res.AllQuestions.Find(i => i.Id == qid);
+						_listNamesAndTypes.Add(new TableColumnMeta { Name = ("query_" + Que.Id), Type = vDbTypes.String });
+					}
+
+				}
 				else //(control is EbTextBox || control is EbInputGeoLocation)
 					_listNamesAndTypes.Add(new TableColumnMeta { Name = control.Name, Type = vDbTypes.String });
 			}
