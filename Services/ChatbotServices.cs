@@ -278,22 +278,19 @@ WHERE
                         }
                     }
                     listLine.Add(new TableColumnMeta { Name = "formid", Type = vDbTypes.Decimal });
-                    listLine.Add(new TableColumnMeta { Name = "selectedcardid", Type = vDbTypes.Decimal });
+                    listLine.Add(new TableColumnMeta { Name = "itemid", Type = vDbTypes.Decimal });//selected card id
 
 					CreateOrAlterTable((request.BotObj.TableName.ToLower() + "_lines"), listLine);					
 				}
 				else if(control is EbSurvey)
 				{
-					DevRelatedServices myService = base.ResolveService<DevRelatedServices>();
-					ManageSurveyResponse res = (ManageSurveyResponse)myService.Post(new ManageSurveyRequest() { Id = (control as EbSurvey).SurveyId });
-
 					_listNamesAndTypes.Add(new TableColumnMeta { Name = control.Name, Type = vDbTypes.String });
-					foreach(int qid in res.Obj.QuesIds)
-					{
-						Eb_SurveyQuestion Que = res.AllQuestions.Find(i => i.Id == qid);
-						_listNamesAndTypes.Add(new TableColumnMeta { Name = ("query_" + Que.Id), Type = vDbTypes.String });
-					}
-
+					List<TableColumnMeta> listLine = new List<TableColumnMeta>();
+					listLine.Add(new TableColumnMeta { Name = "formid", Type = vDbTypes.Decimal });
+					listLine.Add(new TableColumnMeta { Name = "itemid", Type = vDbTypes.Decimal });//survey id
+					listLine.Add(new TableColumnMeta { Name = "surveyid", Type = vDbTypes.Decimal });
+					listLine.Add(new TableColumnMeta { Name = "option", Type = vDbTypes.String });
+					CreateOrAlterTable((request.BotObj.TableName.ToLower() + "_lines"), listLine);
 				}
 				else //(control is EbTextBox || control is EbInputGeoLocation)
 					_listNamesAndTypes.Add(new TableColumnMeta { Name = control.Name, Type = vDbTypes.String });
@@ -833,7 +830,7 @@ WHERE
                     {
                         cols += obj.Name + ",";
                         vals += ":" + obj.Name + ",";
-                        parameter1 = this.EbConnectionFactory.ObjectsDB.GetNewParameter(obj.Name, EbDbTypes.String, "CARD_LINES");
+                        parameter1 = this.EbConnectionFactory.ObjectsDB.GetNewParameter(obj.Name, EbDbTypes.String, "LINES");
                         paramlist.Add(parameter1);
                     }
 
@@ -859,9 +856,9 @@ WHERE
                             paramlist.Add(Param4Lines);
                         }
                         if (cardCount == 0)
-                            Cols4Lines += "selectedcardid";
-                        Vals4SingleLine += ":line" + cardCount + "_selected_card_id";
-                        paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("line" + cardCount + "_selected_card_id", EbDbTypes.Int32, card.Key));
+                            Cols4Lines += "itemid";
+                        Vals4SingleLine += ":line" + cardCount + "_item_id";
+                        paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("line" + cardCount + "_item_id", EbDbTypes.Int32, card.Key));
                         Vals4Lines.Add(Vals4SingleLine);
                         cardCount++;
                     }
