@@ -49,6 +49,7 @@ namespace ExpressBase.ServiceStack.Services
                     Id = Convert.ToInt32(_row[0]),
                     Name = _row[1].ToString(),
                     Status = Convert.ToInt32(_row[2]),
+                    SolutionId= _row[3].ToString(),
                     Cost = Convert.ToInt32(_row[4]),
                     CreatedBy = Convert.ToInt32(_row[5]),
                     CreatedAt = Convert.ToDateTime(_row[6]),
@@ -120,8 +121,8 @@ namespace ExpressBase.ServiceStack.Services
                         Description = AppObj.Description,
                         Icon = AppObj.Icon
                     },
-                    TenantAccountId=request.TenantAccountId,
-                    UserId=request.UserId,
+                    TenantAccountId = request.TenantAccountId,
+                    UserId = request.UserId,
                     UserAuthId = request.UserAuthId,
                     WhichConsole = request.WhichConsole
                 });
@@ -133,43 +134,6 @@ namespace ExpressBase.ServiceStack.Services
             }
 
             return new ExportApplicationResponse { Result = result };
-        }
-
-        public void GetRelated(string _refid, OrderedDictionary ObjDictionary)
-        {
-            EbObject obj = null;
-
-            if (ObjDictionary.Contains(_refid))
-            {
-                obj = (EbObject)ObjDictionary[_refid];
-                ObjDictionary.Remove(_refid);
-            }
-            else
-                obj = GetObjfromDB(_refid);
-
-            ObjDictionary.Add(_refid, obj);
-
-            string RefidS = obj.DiscoverRelatedRefids();
-
-            string[] _refCollection = RefidS.Split(",");
-            foreach (string _ref in _refCollection)
-            {
-                if (_ref.Trim() != string.Empty)
-                {
-                    GetRelated(_ref, ObjDictionary);
-                    Console.WriteLine(_ref);
-                    Console.WriteLine(_ref);
-                }
-            }
-        }
-
-        public EbObject GetObjfromDB(string _refid)
-        {
-            EbObjectService ObjectService = base.ResolveService<EbObjectService>();
-            EbObjectParticularVersionResponse res = (EbObjectParticularVersionResponse)ObjectService.Get(new EbObjectParticularVersionRequest { RefId = _refid });
-            EbObject obj = EbSerializers.Json_Deserialize(res.Data[0].Json);
-            obj.RefId = _refid;
-            return obj;
         }
 
         public ImportApplicationResponse Get(ImportApplicationRequest request)
@@ -225,10 +189,10 @@ namespace ExpressBase.ServiceStack.Services
                         SourceSolutionId = (obj.RefId.Split("-"))[0],
                         SourceObjId = (obj.RefId.Split("-"))[3],
                         SourceVerID = (obj.RefId.Split("-"))[4],
-                        TenantAccountId=request.TenantAccountId,
-                        UserId=request.UserId,
-                        UserAuthId =request.UserAuthId,
-                        WhichConsole=request.WhichConsole
+                        TenantAccountId = request.TenantAccountId,
+                        UserId = request.UserId,
+                        UserAuthId = request.UserAuthId,
+                        WhichConsole = request.WhichConsole
                     };
                     EbObject_Create_New_ObjectResponse res = base.ResolveService<EbObjectService>().Post(ds);
                     RefidMap[obj.RefId] = res.RefId;
@@ -237,9 +201,75 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception e)
             {
                 Console.WriteLine(e.Message);
-                result =  "Failed";
+                result = "Failed";
             }
-            return new ImportApplicationResponse { Result =result};
+            return new ImportApplicationResponse { Result = result };
+        }
+
+        public ShareToPublicResponse Post(ShareToPublicRequest request)
+        {
+            using (DbConnection con = this.InfraConnectionFactory.ObjectsDB.GetNewConnection())
+            {
+                con.Open();
+                string sql = @"
+                        INSERT INTO eb_appstore_detailed(app_store_id, title, is_free, published_at, published_by,
+								 short_desc, tags, detailed_desc, demo_links, video_links, images, pricing_desc)
+                            VALUES (:app_store_id, :title, :is_free, Now(), :published_by, :short_desc, :tags,
+		                            :detailed_desc, :demo_links, :video_links, :images, :pricing_desc);
+
+                        UPDATE eb_appstore SET status = 2, cost = :cost where id = :app_store_id;";
+                DbCommand cmd = InfraConnectionFactory.ObjectsDB.GetNewCommand(con, sql);
+                cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":app_store_id", EbDbTypes.Int32, request.AppStoreId));
+                cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":title", EbDbTypes.String, request.Title));
+                cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":is_free", EbDbTypes.String, (Convert.ToInt32(request.IsFree) == 1) ? "T" : "F"));
+                cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":published_by", EbDbTypes.Int32, request.UserId));
+                cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":short_desc", EbDbTypes.String, request.ShortDesc));
+                cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":tags", EbDbTypes.String, request.Tags));
+                cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":detailed_desc", EbDbTypes.String, request.DetailedDesc));
+                cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":demo_links", EbDbTypes.String, request.DemoLinks));
+                cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":video_links", EbDbTypes.String, request.VideoLinks));
+                cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":images", EbDbTypes.String, request.Images));
+                cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":pricing_desc", EbDbTypes.String, request.PricingDesc));
+                cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":cost", EbDbTypes.Int32, request.Cost));
+                var p = cmd.ExecuteNonQuery();
+            }
+            return new ShareToPublicResponse { };
+        }
+        public void GetRelated(string _refid, OrderedDictionary ObjDictionary)
+        {
+            EbObject obj = null;
+
+            if (ObjDictionary.Contains(_refid))
+            {
+                obj = (EbObject)ObjDictionary[_refid];
+                ObjDictionary.Remove(_refid);
+            }
+            else
+                obj = GetObjfromDB(_refid);
+
+            ObjDictionary.Add(_refid, obj);
+
+            string RefidS = obj.DiscoverRelatedRefids();
+
+            string[] _refCollection = RefidS.Split(",");
+            foreach (string _ref in _refCollection)
+            {
+                if (_ref.Trim() != string.Empty)
+                {
+                    GetRelated(_ref, ObjDictionary);
+                    Console.WriteLine(_ref);
+                    Console.WriteLine(_ref);
+                }
+            }
+        }
+
+        public EbObject GetObjfromDB(string _refid)
+        {
+            EbObjectService ObjectService = base.ResolveService<EbObjectService>();
+            EbObjectParticularVersionResponse res = (EbObjectParticularVersionResponse)ObjectService.Get(new EbObjectParticularVersionRequest { RefId = _refid });
+            EbObject obj = EbSerializers.Json_Deserialize(res.Data[0].Json);
+            obj.RefId = _refid;
+            return obj;
         }
     }
 }
