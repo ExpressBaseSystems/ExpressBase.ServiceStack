@@ -409,7 +409,7 @@ namespace ExpressBase.ServiceStack
             {
                 Draw = request.Draw,
                 Data = _dataset.Tables[0].Rows,
-                FormattedData = _formattedDataTable.Rows,
+                FormattedData = (_formattedDataTable != null) ? _formattedDataTable.Rows : null,
                 RecordsTotal = _recordsTotal,
                 RecordsFiltered = _recordsFiltered,
                 Ispaged = _isPaged
@@ -564,12 +564,23 @@ namespace ExpressBase.ServiceStack
                         _formattedData = Convert.ToDateTime(_unformattedData).ToString("d", cults.DateTimeFormat);
                         _dataset.Tables[0].Rows[i][col.Data] = Convert.ToDateTime(_unformattedData).ToString("yyyy-MM-dd");
                     }
-                    else if (col.Type == EbDbTypes.Decimal)
+                    else if (col.Type == EbDbTypes.Decimal || col.Type == EbDbTypes.Int32)
                         _formattedData = Convert.ToDecimal(_unformattedData).ToString("N", cults.NumberFormat);
 
 
                     if (!string.IsNullOrEmpty(col.LinkRefId))
-                        _formattedData = "<a href='#' oncontextmenu='return false' class ='tablelink_dvContainer_1530626977038_0_0' data-link='" + col.LinkRefId + "'>" + _formattedData + "</a>";
+                    {
+                        if(col.LinkType == LinkTypeEnum.Popout)
+                            _formattedData = "<a href='#' oncontextmenu='return false' class ='tablelink_dvContainer_1530626977038_0_0' data-link='" + col.LinkRefId + "'>" + _formattedData + "</a>";
+                        else if (col.LinkType == LinkTypeEnum.Inline)
+                            _formattedData = "< a href = '#' oncontextmenu = 'return false' class ='tablelink_dvContainer_1530626977038_0_0' data-link='"+ col.LinkRefId + "' data-inline='true' data-data='"+ _formattedData + "'><i class='fa fa-plus'></i></a>" + _formattedData ;
+                        else if (col.LinkType == LinkTypeEnum.Both)
+                            _formattedData = "<a href ='#' oncontextmenu='return false' class='tablelink_dvContainer_1530626977038_0_0' data-link='"+ col.LinkRefId +"' data-inline='true' data-data='"+ _formattedData + "'> <i class='fa fa-plus'></i></a>" + "&nbsp;  <a href='#' oncontextmenu='return false' class ='tablelink_dvContainer_1530626977038_0_0' data-link='" + col.LinkRefId + "'>" + _formattedData + "</a>";
+                    }
+					else if (col.Type == EbDbTypes.String && (col as DVStringColumn).RenderAs == StringRenderType.Link && col.LinkType == LinkTypeEnum.Tab)/////////////////
+					{
+						_formattedData = "<a href='../custompage/leadmanagement?ac="+ _dataset.Tables[0].Rows[i][1] + "' target='_blank'>" + _formattedData + "</a>";
+					}
 
                     _formattedTable.Rows[i].Insert(col.Data, _formattedData);
 

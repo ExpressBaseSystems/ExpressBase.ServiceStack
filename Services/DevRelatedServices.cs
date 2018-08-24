@@ -490,7 +490,7 @@ namespace ExpressBase.ServiceStack
 			{
 				foreach(EbDataRow dr in dt.Tables[0].Rows)
 				{
-					questionList.Add(new Eb_SurveyQuestion { Id = Convert.ToInt32(dr[0]), Question = dr[1].ToString()});
+					questionList.Add(new Eb_SurveyQuestion { Id = Convert.ToInt32(dr[0]), Question = dr[1].ToString(), ChoiceType = Convert.ToInt32(dr[2]) });
 				}
 			}
 			if(dt.Tables.Count > 1 && dt.Tables[1].Rows.Count > 0)
@@ -506,6 +506,45 @@ namespace ExpressBase.ServiceStack
 
 			return new ManageSurveyResponse() {Obj = surveyObj, AllQuestions = questionList };
 		}
+
+		public GetParticularSurveyResponse Post(GetParticularSurveyRequest request)
+		{
+			string qryStr = @"	SELECT name FROM eb_surveys WHERE id=:id;
+							SELECT * FROM
+								(SELECT UNNEST(string_to_array(S.questions, ',')::int[]) AS q_id FROM eb_surveys S WHERE id=:id) QUES_IDS, 
+								(SELECT Q.id, Q.query, Q.q_type, C.choice FROM eb_survey_queries Q, eb_query_choices C
+									WHERE Q.id = C.q_id AND C.eb_del='F') QUES_ANS
+								WHERE QUES_IDS.q_id=QUES_ANS.id;";
+
+			EbDataSet dt = this.EbConnectionFactory.DataDB.DoQueries(qryStr, new DbParameter[] { this.EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, request.SurveyId) });
+			Dictionary<int, Eb_SurveyQuestion> _queries = new Dictionary<int, Eb_SurveyQuestion>();
+			string _surveyname = string.Empty;
+
+			if(dt.Tables.Count > 1)
+			{
+				_surveyname = dt.Tables[0].Rows[0][0].ToString();
+				int _serialno = 1, _oldqid = 0, _newqid;
+				Eb_SurveyQuestion _question = null;
+				foreach (EbDataRow dr in dt.Tables[1].Rows)
+				{
+					_newqid = Convert.ToInt32(dr[1]);
+					if (_oldqid != _newqid)
+					{
+						_question = new Eb_SurveyQuestion() { Id = _newqid, Question = dr[2].ToString(), ChoiceType = Convert.ToInt32(dr[3]), Choices = new List<string> { dr[4].ToString() } };
+						_queries.Add(_serialno++, _question);
+						_oldqid = _newqid;
+					}
+					else
+					{
+						_question.Choices.Add(dr[4].ToString());
+					}					
+				}
+			}
+			return new GetParticularSurveyResponse {SurveyId =  request.SurveyId, SurveyName = _surveyname, Queries = _queries};
+		}
+
+
+		
 
 		public SaveSurveyResponse Post(SaveSurveyRequest request)
 		{
@@ -531,6 +570,18 @@ namespace ExpressBase.ServiceStack
 				rstatus = Convert.ToInt32(dt.Rows[0][0]);
 			}			
 			return new SaveSurveyResponse() { Status = rstatus};
+		}
+
+		public GetSurveyListResponse Post(GetSurveyListRequest request)
+		{
+			string qryStr = @"SELECT id, name FROM eb_surveys;";
+			EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(qryStr, new DbParameter[] { });
+			Dictionary<int, string> dict = new Dictionary<int, string>();
+			foreach(EbDataRow dr in dt.Rows)
+			{
+				dict.Add(Convert.ToInt32(dr[0]), dr[1].ToString());
+			}
+			return (new GetSurveyListResponse { SurveyDict = dict });
 		}
 
 
