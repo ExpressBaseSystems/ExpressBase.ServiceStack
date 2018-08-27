@@ -49,7 +49,7 @@ namespace ExpressBase.ServiceStack.Services
                     Id = Convert.ToInt32(_row[0]),
                     Name = _row[1].ToString(),
                     Status = Convert.ToInt32(_row[2]),
-                    SolutionId= _row[3].ToString(),
+                    SolutionId = _row[3].ToString(),
                     Cost = Convert.ToInt32(_row[4]),
                     CreatedBy = Convert.ToInt32(_row[5]),
                     CreatedAt = Convert.ToDateTime(_row[6]),
@@ -77,7 +77,7 @@ namespace ExpressBase.ServiceStack.Services
                 cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":app_name", EbDbTypes.String, request.Store.Name));
                 cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":status", EbDbTypes.Int32, request.Store.Status));
                 cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":user_solution_id", EbDbTypes.String, request.TenantAccountId));
-                cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":cost", EbDbTypes.Int32, request.Store.Cost));
+                cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":cost", EbDbTypes.Decimal, request.Store.Cost));
                 cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":created_by", EbDbTypes.Int32, request.UserId));
                 cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":json", EbDbTypes.Json, request.Store.Json));
                 cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":currency", EbDbTypes.String, request.Store.Currency));
@@ -208,32 +208,74 @@ namespace ExpressBase.ServiceStack.Services
 
         public ShareToPublicResponse Post(ShareToPublicRequest request)
         {
+            int _id;
             using (DbConnection con = this.InfraConnectionFactory.ObjectsDB.GetNewConnection())
             {
                 con.Open();
-                string sql = @"
+                string sql;
+                if (request.Store.DetailId > 0)
+                    sql = @"
+                            UPDATE eb_appstore_detailed 
+                            SET  title = :title, is_free = :is_free, short_desc = :short_desc, tags = :tags, 
+                                 detailed_desc = :detailed_desc, demo_links = :demo_links,
+                                 video_links = :video_links, images = :images, pricing_desc = :pricing_desc
+                            WHERE 
+                                app_store_id = :app_store_id; 
+                            UPDATE eb_appstore SET cost = :cost WHERE id = :app_store_id;";
+                else
+                    sql = @"
                         INSERT INTO eb_appstore_detailed(app_store_id, title, is_free, published_at, published_by,
 								 short_desc, tags, detailed_desc, demo_links, video_links, images, pricing_desc)
                             VALUES (:app_store_id, :title, :is_free, Now(), :published_by, :short_desc, :tags,
 		                            :detailed_desc, :demo_links, :video_links, :images, :pricing_desc);
-
-                        UPDATE eb_appstore SET status = 2, cost = :cost where id = :app_store_id;";
+                        UPDATE eb_appstore SET status = 2, cost = :cost WHERE id = :app_store_id;";
                 DbCommand cmd = InfraConnectionFactory.ObjectsDB.GetNewCommand(con, sql);
-                cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":app_store_id", EbDbTypes.Int32, request.AppStoreId));
-                cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":title", EbDbTypes.String, request.Title));
-                cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":is_free", EbDbTypes.String, (Convert.ToInt32(request.IsFree) == 1) ? "T" : "F"));
+                cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":app_store_id", EbDbTypes.Int32, request.Store.Id));
+                cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":title", EbDbTypes.String, request.Store.Title));
+                cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":is_free", EbDbTypes.String, (Convert.ToInt32(request.Store.IsFree) == 1) ? "T" : "F"));
                 cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":published_by", EbDbTypes.Int32, request.UserId));
-                cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":short_desc", EbDbTypes.String, request.ShortDesc));
-                cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":tags", EbDbTypes.String, request.Tags));
-                cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":detailed_desc", EbDbTypes.String, request.DetailedDesc));
-                cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":demo_links", EbDbTypes.String, request.DemoLinks));
-                cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":video_links", EbDbTypes.String, request.VideoLinks));
-                cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":images", EbDbTypes.String, request.Images));
-                cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":pricing_desc", EbDbTypes.String, request.PricingDesc));
-                cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":cost", EbDbTypes.Int32, request.Cost));
-                var p = cmd.ExecuteNonQuery();
+                cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":short_desc", EbDbTypes.String, request.Store.ShortDesc));
+                cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":tags", EbDbTypes.String, request.Store.Tags));
+                cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":detailed_desc", EbDbTypes.String, request.Store.DetailedDesc));
+                cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":demo_links", EbDbTypes.String, request.Store.DemoLinks));
+                cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":video_links", EbDbTypes.String, request.Store.VideoLinks));
+                cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":images", EbDbTypes.String, request.Store.Images));
+                cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":pricing_desc", EbDbTypes.String, request.Store.PricingDesc));
+                cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":cost", EbDbTypes.Decimal, request.Store.Cost));
+                _id = cmd.ExecuteNonQuery();
             }
-            return new ShareToPublicResponse { };
+            return new ShareToPublicResponse { ReturningId = _id };
+        }
+
+        public GetAppDetailsResponse Get(GetAppDetailsRequest request)
+        {
+            DbParameter[] Parameters = { InfraConnectionFactory.ObjectsDB.GetNewParameter(":id", EbDbTypes.Int32, request.Id) };
+            string sql = @"SELECT * FROM 
+                             eb_appstore_detailed EAD , eb_appstore EA
+                           WHERE
+                             EA.id =:id AND
+                             EAD.app_store_id = EA.id;";
+            List<AppStore> _storeCollection = new List<AppStore>();
+            EbDataTable dt = InfraConnectionFactory.ObjectsDB.DoQuery(sql, Parameters);
+            foreach (EbDataRow _row in dt.Rows)
+            {
+                AppStore app_detail = new AppStore
+                {
+                    DetailId = Convert.ToInt32(_row[0]),
+                    Title = _row[1].ToString(),
+                    IsFree = (_row[2].ToString() == "T") ? "1" : "2",
+                    ShortDesc = _row[5].ToString(),
+                    Tags = _row[6].ToString(),
+                    DetailedDesc = _row[7].ToString(),
+                    DemoLinks = _row[8].ToString(),
+                    VideoLinks = _row[9].ToString(),
+                    Images = _row[10].ToString(),
+                    PricingDesc = _row[11].ToString(),
+                    Cost = Math.Round(Convert.ToDecimal(_row[17]), 2)
+                };
+                _storeCollection.Add(app_detail);
+            }
+            return new GetAppDetailsResponse { StoreCollection = _storeCollection };
         }
         public void GetRelated(string _refid, OrderedDictionary ObjDictionary)
         {
