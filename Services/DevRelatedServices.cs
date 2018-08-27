@@ -432,6 +432,13 @@ namespace ExpressBase.ServiceStack
                         s.Append("UPDATE eb_query_choices SET eb_del = 'T' WHERE id=:choiceid"+ count + ";");
                         parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("choiceid" + count, EbDbTypes.Int32, choice.ChoiceId));
                     }
+                    else if (choice.IsNew)
+                    {
+                        s.Append("INSERT INTO eb_query_choices(q_id,choice,score) VALUES(:questid"+ count + ",:choice"+ count + ",:chscore"+ count + ");");
+                        parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("questid" + count, EbDbTypes.Int32, ques.QuesId));
+                        parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("choice" + count, EbDbTypes.String, choice.Choice));
+                        parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("chscore" + count, EbDbTypes.Int32, choice.Score));
+                    }
                     else
                     {
                         s.Append("UPDATE eb_query_choices SET choice=:choice"+ count + ",score=:chscore"+ count + " WHERE id=:chid"+ count + ";");

@@ -22,6 +22,7 @@ namespace ExpressBase.ServiceStack.Services
 			Dictionary<string, string> CustomerData = new Dictionary<string, string>();
 			List<FeedbackEntry> Flist = new List<FeedbackEntry>();
 			List<BillingEntry> Blist = new List<BillingEntry>();
+			List<SurgeryEntry> Slist = new List<SurgeryEntry>();
 			if (request.RequestMode == 1)//edit mode 
 			{
 				SqlQry += @"SELECT accountcode, firmcode, trdate, genurl, name, dob, age, genphoffice, profession, genemail,
@@ -30,7 +31,9 @@ namespace ExpressBase.ServiceStack.Services
 							SELECT id,trdate,status,followupdate,narration, createdby FROM leaddetails
 								WHERE accountcode=:accountcode AND prehead='50' ORDER BY trdate DESC;
 							SELECT id,trdate,totalamount,advanceamount,balanceamount,cashreceived,paymentmode,bank,createddt,narration,createdby 
-								FROM leadpaymentdetails WHERE accountcode=:accountcode ORDER BY trdate DESC;";
+								FROM leadpaymentdetails WHERE accountcode=:accountcode ORDER BY trdate DESC;
+							SELECT id,dateofsurgery,branch,patientinstructions,doctorsinstructions,createdby,createddt 
+								FROM leadsurgerydetails WHERE accountcode=:accountcode AND prehead='50';";
 				paramList.Add(this.EbConnectionFactory.DataDB.GetNewParameter("accountcode", EbDbTypes.String, request.AccId));
 			}			
 			var ds = this.EbConnectionFactory.DataDB.DoQueries(SqlQry, paramList.ToArray());			
@@ -93,10 +96,23 @@ namespace ExpressBase.ServiceStack.Services
 						Created_By = i[10].ToString()
 					});
 				}
+
+				//surgery details
+				foreach (var i in ds.Tables[4].Rows)
+				{
+					Slist.Add(new SurgeryEntry
+					{
+						Id = Convert.ToInt32(i[0]),
+						Date = Convert.ToDateTime(i[1]).ToString("dd-MM-yyyy"),
+						Branch = i[2].ToString(),
+						Created_By = i[5].ToString(),
+						Created_Date = i[6].ToString()
+					});
+				}
 			}
 
 
-			return new GetManageLeadResponse { CostCenterDict = CostCenter, CustomerDataDict = CustomerData, FeedbackList = Flist, BillingList = Blist };
+			return new GetManageLeadResponse { CostCenterDict = CostCenter, CustomerDataDict = CustomerData, FeedbackList = Flist, BillingList = Blist, SurgeryList = Slist };
 		}
 
 		public SaveCustomerResponse Any(SaveCustomerRequest request)
@@ -228,6 +244,39 @@ namespace ExpressBase.ServiceStack.Services
 				rstatus = this.EbConnectionFactory.ObjectsDB.UpdateTable(Qry, parameters.ToArray());
 			}
 			return new SaveCustomerPaymentResponse { Status = rstatus };
+		}
+
+		public SaveSurgeryDetailsResponse Any(SaveSurgeryDetailsRequest request)
+		{
+			int rstatus = 0;
+			SurgeryEntry S_Obj = JsonConvert.DeserializeObject<SurgeryEntry>(request.Data);
+			List<DbParameter> parameters = new List<DbParameter>();
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, S_Obj.Id));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("accountcode", EbDbTypes.String, S_Obj.Account_Code));
+
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("dateofsurgery", EbDbTypes.String, S_Obj.Date));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("branch", EbDbTypes.String, S_Obj.Branch));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("patientinstructions", EbDbTypes.String, ""));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("doctorinstructions", EbDbTypes.String, ""));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("createdby", EbDbTypes.String, request.UserName));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("createddt", EbDbTypes.String, DateTime.Now.ToString("dd-MM-yyyy")));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("modifiedby", EbDbTypes.String, request.UserName));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("modifieddt", EbDbTypes.String, DateTime.Now.ToString("dd-MM-yyyy")));
+			if (S_Obj.Id == 0)//new
+			{
+				string Qry = @"INSERT INTO leadsurgerydetals(prehead,accountcode,dateofsurgery,branch,patientinstructions,doctorinstructions,createdby,createddt)
+													VALUES (50,:accountcode,:dateofsurgery,:branch,:patientinstructions,:doctorinstructions,:createdby,:createddt);";
+				rstatus = this.EbConnectionFactory.ObjectsDB.InsertTable(Qry, parameters.ToArray());
+			}
+			else//update
+			{
+				string Qry = @"UPDATE leadsurgerydetails 
+								SET dateofsurgery = :dateofsurgery,branch = :branch,patientinstructions = :patientinstructions,doctorinstructions = :doctorinstructions,
+									createdby = :createdby,createddt = :createddt, modifiedby = :modifiedby, modifieddt = :modifieddt 
+								WHERE accountcode=:accountcode AND id = :id;";
+				rstatus = this.EbConnectionFactory.ObjectsDB.UpdateTable(Qry, parameters.ToArray());
+			}
+			return new SaveSurgeryDetailsResponse { Status = rstatus };
 		}
 
 
