@@ -120,6 +120,9 @@ namespace ExpressBase.ServiceStack.Services
                     path = "ExpressBase.Common.sqlscripts.@vendor.datadb.tablecreate.eb_user2usergroup.sql".Replace("@vendor", vendor.ToLower());
                     bool b10 = CreateOrAlter_Structure(con, path, DataDB);
 
+                    path = "ExpressBase.Common.sqlscripts.@vendor.datadb.tablecreate.eb_files.sql".Replace("@vendor", vendor.ToLower());
+                    bool b23 = CreateOrAlter_Structure(con, path, DataDB);
+
                     //.............DataDb Functions
                     path = "ExpressBase.Common.sqlscripts.@vendor.datadb.functioncreate.eb_authenticate_unified.sql".Replace("@vendor", vendor.ToLower());
                     bool b11 = CreateOrAlter_Structure(con, path, DataDB);
@@ -165,9 +168,6 @@ namespace ExpressBase.ServiceStack.Services
 
                     path = "ExpressBase.Common.sqlscripts.@vendor.objectsdb.tablecreate.eb_bots.sql".Replace("@vendor", vendor.ToLower());
                     bool b22 = CreateOrAlter_Structure(con, path, DataDB);
-
-                    path = "ExpressBase.Common.sqlscripts.@vendor.objectsdb.tablecreate.eb_files.sql".Replace("@vendor", vendor.ToLower());
-                    bool b23 = CreateOrAlter_Structure(con, path, DataDB);
 
                     path = "ExpressBase.Common.sqlscripts.@vendor.objectsdb.tablecreate.eb_objects.sql".Replace("@vendor", vendor.ToLower());
                     bool b24 = CreateOrAlter_Structure(con, path, DataDB);
@@ -241,6 +241,11 @@ namespace ExpressBase.ServiceStack.Services
                     path = "ExpressBase.Common.sqlscripts.@vendor.eb_compilefunctions.sql".Replace("@vendor", vendor.ToLower());
                     bool b45 = CreateOrAlter_Structure(con, path, DataDB);
 
+                    //..........files db tables.......................
+
+                    path = "ExpressBase.Common.sqlscripts.@vendor.filesdb.tablecreate.eb_files_bytea.sql".Replace("@vendor", vendor.ToLower());
+                    bool b50 = CreateOrAlter_Structure(con, path, DataDB);
+
                     //.....insert into user tables.........
                     bool b41 = InsertIntoTables(request, con, DataDB);
 
@@ -248,7 +253,7 @@ namespace ExpressBase.ServiceStack.Services
 
                     if (b1 & b2 & b3 & b4 & b5 & b6 & b7 & b8 & b9 & b10 & b11 & b12 & b13 & b14 & b15 & b16 & b17 & b18 & b19 &
                         b20 & b21 & b22 & b23 & b24 & b25 & b26 & b27 & b28 & b29 & b31 & b32 & b33 & b34 & b35 & b36 & b37 & b38 & b39 & b40 & b41 & b44 & b45 & b46 & b47 &
-                        b48 & b49)
+                        b48 & b49 & b50)
                     {
                         Console.WriteLine(".............Reached Commit");
                         con_trans.Commit();
@@ -365,13 +370,13 @@ namespace ExpressBase.ServiceStack.Services
             try
             {
                 //.......select details from server tbl eb_usres......... from INFRA
-                string sql1 = "SELECT email, pwd, fullname,socialid FROM eb_users WHERE id=:uid";
+                string sql1 = "SELECT email, pwd, fullname,fb_id FROM eb_tenants WHERE id=:uid";
                 DbParameter[] parameter = { this.InfraConnectionFactory.DataDB.GetNewParameter("uid", EbDbTypes.Int32, request.UserId) };
                 var rslt = this.InfraConnectionFactory.DataDB.DoQuery(sql1, parameter);
 
                 //..............insert into client tbl eb_users............ to SOLUTION
                 string sql2 = @"INSERT INTO eb_users(email,pwd) VALUES ('anonymous@anonym.com','294de3557d9d00b3d2d8a1e6aab028cf'); 
-                                INSERT INTO eb_users(email, pwd, fullname,socialid) VALUES (:email, :pwd, :fullname, :socialid);";
+                                INSERT INTO eb_users(email, pwd, fullname,fbid) VALUES (:email, :pwd, :fullname, :socialid);";
 
                 string sql3 = string.Empty;
                 foreach (var role in Enum.GetValues(typeof(SystemRoles)))

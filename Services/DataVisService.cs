@@ -8,6 +8,7 @@ using ExpressBase.Objects.Objects;
 using ExpressBase.Objects.Objects.DVRelated;
 using ExpressBase.Objects.Objects.ReportRelated;
 using ExpressBase.Objects.ServiceStack_Artifacts;
+using ExpressBase.Security;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
 using ServiceStack;
@@ -15,6 +16,7 @@ using ServiceStack.Logging;
 using ServiceStack.Redis;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Text;
@@ -399,14 +401,15 @@ namespace ExpressBase.ServiceStack
             _recordsTotal = (_recordsTotal > 0) ? _recordsTotal : _dataset.Tables[_dataset.Tables.Count - 1].Rows.Count;
             _recordsFiltered = (_recordsFiltered > 0) ? _recordsFiltered : _dataset.Tables[_dataset.Tables.Count - 1].Rows.Count;
             //-- 
+            EbDataTable _formattedDataTable = null;
             if (_dataset.Tables.Count > 0 && _dV != null)
-            {
-                _dataset = PreProcessing(_dataset, _dV);
-            }
+                _formattedDataTable = PreProcessing( ref _dataset, _dV, request.UserInfo);
+
             dsresponse = new DataSourceDataResponse
             {
                 Draw = request.Draw,
                 Data = _dataset.Tables[0].Rows,
+                FormattedData = (_formattedDataTable != null) ? _formattedDataTable.Rows : null,
                 RecordsTotal = _recordsTotal,
                 RecordsFiltered = _recordsFiltered,
                 Ispaged = _isPaged
@@ -490,9 +493,10 @@ namespace ExpressBase.ServiceStack
             return resp;
         }
 
-        public EbDataSet PreProcessing(EbDataSet _dataset, EbDataVisualization _dv)
+        public EbDataTable PreProcessing( ref EbDataSet _dataset, EbDataVisualization _dv, User _user)
         {
             dynamic result = null;
+            var _user_culture = CultureInfo.GetCultureInfo(_user.Preference.Locale);
             var colCount = _dataset.Tables[0].Columns.Count;
             Dictionary<string, int> dict = new Dictionary<string, int>();
             if (this.EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.ORACLE && _dv.IsPaging)
@@ -503,8 +507,16 @@ namespace ExpressBase.ServiceStack
                     _dataset.Tables[0].Rows[i].RemoveAt(colCount - 1);
                 }
             }
+
+            EbDataTable _formattedTable = new EbDataTable();
+
+            _dv.Columns.Sort(new Comparison<DVBaseColumn>((x, y) => Decimal.Compare(x.Data, y.Data)));
+
             foreach (DVBaseColumn col in _dv.Columns)
             {
+                var cults = col.GetColumnCultureInfo(_user_culture);
+                _formattedTable.Columns.Add(new EbDataColumn { Type = col.Type, ColumnIndex = col.Data, ColumnName = col.Name });
+
                 if (col.IsCustomColumn || (col.Formula != null && col.Formula != ""))
                 {
                     string[] _dataFieldsUsed;
@@ -538,9 +550,116 @@ namespace ExpressBase.ServiceStack
                         _dataset.Tables[0].Rows[i].Insert(col.Data, result);
                     }
                 }
+
+                for (int i = 0; i < _dataset.Tables[0].Rows.Count; i++)
+                {
+                    object _unformattedData = _dataset.Tables[0].Rows[i][col.Data];
+                    object _formattedData = _unformattedData;
+
+                    if (col.Data == 0)
+                        _formattedTable.Rows.Add(new EbDataRow());
+
+                    if (col.Type == EbDbTypes.Date)
+                    {
+                        _formattedData = Convert.ToDateTime(_unformattedData).ToString("d", cults.DateTimeFormat);
+                        _dataset.Tables[0].Rows[i][col.Data] = Convert.ToDateTime(_unformattedData).ToString("yyyy-MM-dd");
+                    }
+                    else if (col.Type == EbDbTypes.Decimal || col.Type == EbDbTypes.Int32)
+                        _formattedData = Convert.ToDecimal(_unformattedData).ToString("N", cults.NumberFormat);
+
+
+                    if (!string.IsNullOrEmpty(col.LinkRefId))
+                    {
+                        if(col.LinkType == LinkTypeEnum.Popout)
+                            _formattedData = "<a href='#' oncontextmenu='return false' class ='tablelink_dvContainer_1530626977038_0_0' data-link='" + col.LinkRefId + "'>" + _formattedData + "</a>";
+                        else if (col.LinkType == LinkTypeEnum.Inline)
+                            _formattedData = "< a href = '#' oncontextmenu = 'return false' class ='tablelink_dvContainer_1530626977038_0_0' data-link='"+ col.LinkRefId + "' data-inline='true' data-data='"+ _formattedData + "'><i class='fa fa-plus'></i></a>" + _formattedData ;
+                        else if (col.LinkType == LinkTypeEnum.Both)
+                            _formattedData = "<a href ='#' oncontextmenu='return false' class='tablelink_dvContainer_1530626977038_0_0' data-link='"+ col.LinkRefId +"' data-inline='true' data-data='"+ _formattedData + "'> <i class='fa fa-plus'></i></a>" + "&nbsp;  <a href='#' oncontextmenu='return false' class ='tablelink_dvContainer_1530626977038_0_0' data-link='" + col.LinkRefId + "'>" + _formattedData + "</a>";
+                    }
+					else if (col.Type == EbDbTypes.String && (col as DVStringColumn).RenderAs == StringRenderType.Link && col.LinkType == LinkTypeEnum.Tab)/////////////////
+					{
+						_formattedData = "<a href='../custompage/leadmanagement?ac="+ _dataset.Tables[0].Rows[i][1] + "' target='_blank'>" + _formattedData + "</a>";
+					}
+
+                    _formattedTable.Rows[i].Insert(col.Data, _formattedData);
+
+                }
             }
 
-            return _dataset;
+            return _formattedTable;
+        }
+
+        [CompressResponse]
+        public DataSourceDataResponse Any(InlineTableDataRequest request)
+        {
+            DataSourceDataResponse dsresponse = null;
+
+            var _ds = this.Redis.Get<EbDataSource>(request.RefId);
+            string _sql = string.Empty;
+
+            if (_ds == null)
+            {
+                var myService = base.ResolveService<EbObjectService>();
+                var result = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = request.RefId });
+                _ds = EbSerializers.Json_Deserialize(result.Data[0].Json);
+                Redis.Set<EbDataSource>(request.RefId, _ds);
+            }
+            if (_ds.FilterDialogRefId != string.Empty && _ds.FilterDialogRefId != null)
+            {
+                var _dsf = this.Redis.Get<EbFilterDialog>(_ds.FilterDialogRefId);
+                if (_dsf == null)
+                {
+                    var myService = base.ResolveService<EbObjectService>();
+                    var result = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = _ds.FilterDialogRefId });
+                    _dsf = EbSerializers.Json_Deserialize(result.Data[0].Json);
+                    Redis.Set<EbFilterDialog>(_ds.FilterDialogRefId, _dsf);
+                }
+                if (request.Params == null)
+                    request.Params = _dsf.GetDefaultParams();
+            }
+
+            bool _isPaged = false;
+            if (_ds != null)
+            {
+                string _c = string.Empty;
+                string tempsql = string.Empty;
+                _sql = _ds.Sql;
+            }
+            var parameters = DataHelper.GetParams(this.EbConnectionFactory, _isPaged, request.Params, request.Length, request.Start);
+            Console.WriteLine("Before :  " + DateTime.Now);
+            var dtStart = DateTime.Now;
+            Console.WriteLine("................................................datasourceDSrequeststart " + DateTime.Now);
+            var _dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray<System.Data.Common.DbParameter>());
+            Console.WriteLine("................................................datasourceDSrequeststart " + DateTime.Now);
+            var dtstop = DateTime.Now;
+            Console.WriteLine("..................................totaltimeinSeconds" + dtstop.Subtract(dtStart).Seconds);
+
+            //-- 
+            Console.WriteLine(DateTime.Now);
+            var dtEnd = DateTime.Now;
+            var ts = (dtEnd - dtStart).TotalMilliseconds;
+            Console.WriteLine("final:::" + ts);
+            int _recordsTotal = 0, _recordsFiltered = 0;
+            if (_isPaged)
+            {
+                Int32.TryParse(_dataset.Tables[1].Rows[0][0].ToString(), out _recordsTotal);
+                Int32.TryParse(_dataset.Tables[1].Rows[0][0].ToString(), out _recordsFiltered);
+            }
+            _recordsTotal = (_recordsTotal > 0) ? _recordsTotal : _dataset.Tables[1].Rows.Count;
+            _recordsFiltered = (_recordsFiltered > 0) ? _recordsFiltered : _dataset.Tables[1].Rows.Count;
+            //-- 
+
+            dsresponse = new DataSourceDataResponse
+            {
+                Data = _dataset.Tables[0].Rows,
+                RecordsTotal = _recordsTotal,
+                RecordsFiltered = _recordsFiltered,
+                Ispaged = _isPaged
+            };
+            this.Log.Info("dsresponse*****" + dsresponse.Data);
+            var x = EbSerializers.Json_Serialize(dsresponse);
+            return dsresponse;
         }
     }
 }
