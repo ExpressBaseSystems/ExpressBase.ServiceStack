@@ -120,7 +120,7 @@ namespace ExpressBase.ServiceStack.Services
             responseStream.ReadAsync(FileContents, 0, FileContents.Length);
             base.MessageProducer3.Publish(new UploadFileRequest()
             {
-                FileByte = FileContents,
+                Byte = FileContents,
                 FileDetails = new FileMeta()
                 {
                     FileName = _fileName
