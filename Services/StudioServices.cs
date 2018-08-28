@@ -174,7 +174,53 @@ namespace ExpressBase.ServiceStack
             return new EbObjectObjListAllVerResponse { Data = f_dict };
         }
 
+        [CompressResponse]
+        public object Get(EbObjectObjLisAllObjNVerRequest request)// Get All latest committed versions of this Object Type without json
+        {
+            EbDataTable dt;
+           
+                string query = @"SELECT 
+                            EO.id, EO.obj_name, EO.obj_type, EO.obj_cur_status,EO.obj_desc,
+                            EOV.id, EOV.eb_objects_id, EOV.version_num, EOV.obj_changelog, EOV.commit_ts, EOV.commit_uid, EOV.refid,
+                            EU.fullname
+                        FROM 
+                            eb_objects EO, eb_objects_ver EOV
+                        LEFT JOIN
+	                        eb_users EU
+                        ON 
+	                        EOV.commit_uid=EU.id
+                        WHERE
+                            EO.id IN(:ids) AND
+                            EO.id = EOV.eb_objects_id AND COALESCE(EOV.working_mode, 'F') <> 'T'
+                        ORDER BY
+                            EO.obj_name;";
+               
+                DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter(":ids", EbDbTypes.String, request.ObjectIds) };
+                dt = this.EbConnectionFactory.ObjectsDB.DoQuery(this.EbConnectionFactory.ObjectsDB.EB_GET_ALL_COMMITTED_VERSION_LIST, parameters);
+           
+            Dictionary<string, List<EbObjectWrapper>> f_dict = new Dictionary<string, List<EbObjectWrapper>>();
+            List<EbObjectWrapper> f_list = null;
+            foreach (EbDataRow dr in dt.Rows)
+            {
+                string _nameKey = dr[1].ToString();
+                if (!f_dict.ContainsKey(_nameKey))
+                {
+                    f_list = new List<EbObjectWrapper>();
+                    f_dict.Add(_nameKey, f_list);
+                }
 
+                f_list.Add(new EbObjectWrapper
+                {
+                    Id = Convert.ToInt32(dr[0]),
+                    Name = dr[1].ToString(),
+                    EbObjectType = ((EbObjectType)Convert.ToInt32(dr[3])).IntCode,
+                    Status = Enum.GetName(typeof(ObjectLifeCycleStatus), Convert.ToInt32(dr[3])),
+                    VersionNumber = dr[7].ToString(),
+                    RefId = dr[11].ToString(),
+                });
+            }
+            return new EbObjectObjListAllVerResponse { Data = f_dict };
+        }
         [CompressResponse]
         public object Get(EbObjectRelationsRequest request)//Fetch ebobjects relations           
         {
