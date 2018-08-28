@@ -370,13 +370,13 @@ namespace ExpressBase.ServiceStack.Services
             try
             {
                 //.......select details from server tbl eb_usres......... from INFRA
-                string sql1 = "SELECT email, pwd, fullname,socialid FROM eb_users WHERE id=:uid";
+                string sql1 = "SELECT email, pwd, fullname,fb_id FROM eb_tenants WHERE id=:uid";
                 DbParameter[] parameter = { this.InfraConnectionFactory.DataDB.GetNewParameter("uid", EbDbTypes.Int32, request.UserId) };
                 var rslt = this.InfraConnectionFactory.DataDB.DoQuery(sql1, parameter);
 
                 //..............insert into client tbl eb_users............ to SOLUTION
                 string sql2 = @"INSERT INTO eb_users(email,pwd) VALUES ('anonymous@anonym.com','294de3557d9d00b3d2d8a1e6aab028cf'); 
-                                INSERT INTO eb_users(email, pwd, fullname,socialid) VALUES (:email, :pwd, :fullname, :socialid);";
+                                INSERT INTO eb_users(email, pwd, fullname,fbid) VALUES (:email, :pwd, :fullname, :socialid);";
 
                 string sql3 = string.Empty;
                 foreach (var role in Enum.GetValues(typeof(SystemRoles)))
