@@ -92,11 +92,10 @@ namespace ExpressBase.ServiceStack.Services
         public ExportApplicationResponse Post(ExportApplicationRequest request)
         {
             string result = "Success";
-            int app_id = 1;
             OrderedDictionary ObjDictionary = new OrderedDictionary();
             try
             {
-                GetApplicationResponse appRes = base.ResolveService<DevRelatedServices>().Get(new GetApplicationRequest { Id = app_id });
+                GetApplicationResponse appRes = base.ResolveService<DevRelatedServices>().Get(new GetApplicationRequest { Id = request.AppId });
                 AppWrapper AppObj = appRes.AppInfo;
                 AppObj.ObjCollection = new List<EbObject>();
                 string[] refs = request.Refids.Split(",");
@@ -113,7 +112,7 @@ namespace ExpressBase.ServiceStack.Services
                     Store = new AppStore
                     {
                         Name = AppObj.Name,
-                        Cost = 1000,
+                        Cost = 10.00m,
                         Currency = "USD",
                         Json = stream,
                         Status = 1,
