@@ -175,7 +175,7 @@ namespace ExpressBase.ServiceStack.Services
             string pwd = "";
             UserName = Uname;
             Password = pwd;
-            string BasePath = "";
+            string BasePath = "/files/Softfiles_L/";
             Host = FileDownloadConstants.HostName;
             Files = new List<string>();
             List<string> DirStructure = ListDirectory(BasePath);
@@ -210,6 +210,7 @@ namespace ExpressBase.ServiceStack.Services
                             imgupreq.ImageInfo.ImageQuality = ImageQuality.original;
                             imgupreq.ImageInfo.Length = FileContents.Length;
                             imgupreq.ImageInfo.MetaDataDictionary = new Dictionary<string, List<string>>();
+                            imgupreq.ImageInfo.MetaDataDictionary.Add("Customer",new List<string>() { name});
 
                             var x = FileClient.Post<UploadAsyncResponse>(imgupreq);
                             response.Close();
