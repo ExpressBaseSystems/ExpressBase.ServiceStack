@@ -579,7 +579,7 @@ namespace ExpressBase.ServiceStack
                     }
 					else if (col.Type == EbDbTypes.String && (col as DVStringColumn).RenderAs == StringRenderType.Link && col.LinkType == LinkTypeEnum.Tab)/////////////////
 					{
-						_formattedData = "<a href='../custompage/leadmanagement?ac="+ _dataset.Tables[0].Rows[i][1] + "' target='_blank'>" + _formattedData + "</a>";
+						_formattedData = "<a href='../custompage/leadmanagement?ac="+ _dataset.Tables[0].Rows[i][0] + "' target='_blank'>" + _formattedData + "</a>";
 					}
 
                     _formattedTable.Rows[i].Insert(col.Data, _formattedData);

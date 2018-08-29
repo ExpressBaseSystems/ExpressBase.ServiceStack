@@ -16,56 +16,77 @@ namespace ExpressBase.ServiceStack.Services
 
 		public GetManageLeadResponse Any(GetManageLeadRequest request)
 		{
-			string SqlQry = "SELECT firmcode, fname FROM firmmaster;";
+			string SqlQry = @"SELECT firmcode, fname FROM firmmaster;
+							  SELECT id, name FROM customervendor WHERE prehead=54 ORDER BY name;
+							  SELECT id, name FROM customervendor WHERE prehead=52 ORDER BY name;";
 			List<DbParameter> paramList = new List<DbParameter>();
 			Dictionary<int, string> CostCenter = new Dictionary<int, string>();
+			Dictionary<string, int> DicDict = new Dictionary<string, int>();
+			Dictionary<string, int> StaffDict = new Dictionary<string, int>();
 			Dictionary<string, string> CustomerData = new Dictionary<string, string>();
 			List<FeedbackEntry> Flist = new List<FeedbackEntry>();
 			List<BillingEntry> Blist = new List<BillingEntry>();
 			List<SurgeryEntry> Slist = new List<SurgeryEntry>();
 			if (request.RequestMode == 1)//edit mode 
 			{
-				SqlQry += @"SELECT accountcode, firmcode, trdate, genurl, name, dob, age, genphoffice, profession, genemail,
+				SqlQry += @"SELECT id, firmcode, trdate, genurl, name, dob, genphoffice, profession, genemail,
 								customertype, clcity, clcountry, city, typeofcustomer, sourcecategory, subcategory, consultation, picsrcvd
-								FROM customervendor WHERE accountcode = :accountcode AND prehead='50';
+								FROM customervendor WHERE id = :accountid AND prehead='50';
 							SELECT id,trdate,status,followupdate,narration, createdby FROM leaddetails
-								WHERE accountcode=:accountcode AND prehead='50' ORDER BY trdate DESC;
+								WHERE accountid=:accountid AND prehead='50' ORDER BY trdate DESC;
 							SELECT id,trdate,totalamount,advanceamount,balanceamount,cashreceived,paymentmode,bank,createddt,narration,createdby 
-								FROM leadpaymentdetails WHERE accountcode=:accountcode ORDER BY trdate DESC;
+								FROM leadpaymentdetails WHERE accountid=:accountid ORDER BY trdate DESC;
 							SELECT id,dateofsurgery,branch,patientinstructions,doctorsinstructions,createdby,createddt 
-								FROM leadsurgerydetails WHERE accountcode=:accountcode AND prehead='50';";
-				paramList.Add(this.EbConnectionFactory.DataDB.GetNewParameter("accountcode", EbDbTypes.String, request.AccId));
+								FROM leadsurgerydetails WHERE accountid=:accountid AND prehead='50';
+							SELECT noofgrafts,totalrate,prpsessions,consulted,consultingfeepaid,consultingdoctor,closing,nature,consdate
+								FROM leadratedetails WHERE accountid=accountid AND prehead='50';";
+				paramList.Add(this.EbConnectionFactory.DataDB.GetNewParameter("accountid", EbDbTypes.Int32, request.AccId));
 			}			
-			var ds = this.EbConnectionFactory.DataDB.DoQueries(SqlQry, paramList.ToArray());			
+			var ds = this.EbConnectionFactory.DataDB.DoQueries(SqlQry, paramList.ToArray());	
+			
 			foreach (var dr in ds.Tables[0].Rows)
-			{
 				CostCenter.Add(Convert.ToInt32(dr[0]), dr[1].ToString());
-			}			
-			if (ds.Tables.Count > 1 && ds.Tables[1].Rows.Count > 0)
+			foreach (var dr in ds.Tables[1].Rows)
+				DicDict.Add(dr[1].ToString(), Convert.ToInt32(dr[0]));
+			foreach (var dr in ds.Tables[2].Rows)
+				StaffDict.Add(dr[1].ToString(), Convert.ToInt32(dr[0]));
+
+			if (ds.Tables.Count > 3 && ds.Tables[3].Rows.Count > 0)
 			{
-				var dr = ds.Tables[1].Rows[0];
-				CustomerData.Add("accountcode", dr[0].ToString());
+				var dr = ds.Tables[3].Rows[0];
+				CustomerData.Add("accountid", dr[0].ToString());
 				CustomerData.Add("firmcode", dr[1].ToString());
 				CustomerData.Add("trdate", Convert.ToDateTime(dr[2]).ToString("dd-MM-yyyy"));
 				CustomerData.Add("genurl", dr[3].ToString());
 				CustomerData.Add("name", dr[4].ToString());
 				CustomerData.Add("dob", Convert.ToDateTime(dr[5]).ToString("dd-MM-yyyy"));
-				CustomerData.Add("age", dr[6].ToString());
-				CustomerData.Add("genphoffice", dr[7].ToString());
-				CustomerData.Add("profession", dr[8].ToString());
-				CustomerData.Add("genemail", dr[9].ToString());
-				CustomerData.Add("customertype", dr[10].ToString());
-				CustomerData.Add("clcity", dr[11].ToString());
-				CustomerData.Add("clcountry", dr[12].ToString());
-				CustomerData.Add("city", dr[13].ToString());
-				CustomerData.Add("typeofcustomer", dr[14].ToString());
-				CustomerData.Add("sourcecategory", dr[15].ToString());
-				CustomerData.Add("subcategory", dr[16].ToString());
-				CustomerData.Add("consultation", dr[17].ToString());
-				CustomerData.Add("picsrcvd", dr[18].ToString());
+				//CustomerData.Add("age", dr[6].ToString());
+				CustomerData.Add("genphoffice", dr[6].ToString());
+				CustomerData.Add("profession", dr[7].ToString());
+				CustomerData.Add("genemail", dr[8].ToString());
+				CustomerData.Add("customertype", dr[9].ToString());
+				CustomerData.Add("clcity", dr[10].ToString());
+				CustomerData.Add("clcountry", dr[11].ToString());
+				CustomerData.Add("city", dr[12].ToString());
+				CustomerData.Add("typeofcustomer", dr[13].ToString());
+				CustomerData.Add("sourcecategory", dr[14].ToString());
+				CustomerData.Add("subcategory", dr[15].ToString());
+				CustomerData.Add("consultation", dr[16].ToString());
+				CustomerData.Add("picsrcvd", dr[17].ToString());
+
+				dr = ds.Tables[7].Rows[0];
+				CustomerData.Add("noofgrafts", dr[0].ToString());
+				CustomerData.Add("totalrate", dr[1].ToString());
+				CustomerData.Add("prpsessions", dr[2].ToString());
+				CustomerData.Add("consulted", dr[3].ToString());
+				CustomerData.Add("consultingfeepaid", dr[4].ToString());
+				CustomerData.Add("consultingdoctor", dr[5].ToString());
+				CustomerData.Add("closing", dr[6].ToString());
+				CustomerData.Add("nature", dr[7].ToString());
+				CustomerData.Add("consdate", Convert.ToDateTime(dr[8]).ToString("dd-MM-yyyy"));
 
 				//followup details
-				foreach (var i in ds.Tables[2].Rows)
+				foreach (var i in ds.Tables[4].Rows)
 				{
 					Flist.Add(new FeedbackEntry
 					{
@@ -79,7 +100,7 @@ namespace ExpressBase.ServiceStack.Services
 				}
 
 				//Billing details
-				foreach (var i in ds.Tables[3].Rows)
+				foreach (var i in ds.Tables[5].Rows)
 				{
 					Blist.Add(new BillingEntry
 					{
@@ -98,7 +119,7 @@ namespace ExpressBase.ServiceStack.Services
 				}
 
 				//surgery details
-				foreach (var i in ds.Tables[4].Rows)
+				foreach (var i in ds.Tables[6].Rows)
 				{
 					Slist.Add(new SurgeryEntry
 					{
@@ -112,7 +133,15 @@ namespace ExpressBase.ServiceStack.Services
 			}
 
 
-			return new GetManageLeadResponse { CostCenterDict = CostCenter, CustomerDataDict = CustomerData, FeedbackList = Flist, BillingList = Blist, SurgeryList = Slist };
+			return new GetManageLeadResponse {
+				CostCenterDict = CostCenter,
+				DoctorDict = DicDict,
+				StaffDict = StaffDict,
+				CustomerDataDict = CustomerData,
+				FeedbackList = Flist,
+				BillingList = Blist,
+				SurgeryList = Slist
+			};
 		}
 
 		public SaveCustomerResponse Any(SaveCustomerRequest request)
@@ -158,14 +187,33 @@ namespace ExpressBase.ServiceStack.Services
 			if (dict.TryGetValue("picsrcvd", out found))
 				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
 
+			if (dict.TryGetValue("consdate", out found))
+				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
+			if (dict.TryGetValue("consultingdoctor", out found))
+				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
+			if (dict.TryGetValue("noofgrafts", out found))
+				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
+			if (dict.TryGetValue("totalrate", out found))
+				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
+			if (dict.TryGetValue("prpsessions", out found))
+				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
+			if (dict.TryGetValue("consultingfeepaid", out found))
+				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
+			if (dict.TryGetValue("closing", out found))
+				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
+			if (dict.TryGetValue("nature", out found))
+				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
+
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("prehead", EbDbTypes.String, "50"));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("accountcode", EbDbTypes.String, Fields.Find(i => i.Key == "genurl").Value));
 
 			int rstatus = 0;
 			if (request.RequestMode == 0)//New Customer
 			{
-				string Qry = @"INSERT INTO customervendor(firmcode, trdate, genurl, name, dob, age, genphoffice, profession, genemail, customertype, clcity, clcountry, city, typeofcustomer, sourcecategory, subcategory, consultation, picsrcvd) 
-										VALUES(:firmcode, :trdate, :genurl, :name, :dob, :age, :genphoffice, :profession, :genemail, :customertype, :clcity, :clcountry, :city, :typeofcustomer, :sourcecategory, :subcategory, :consultation, :picsrcvd);";
+				string Qry = @"INSERT INTO customervendor(accountcode, prehead, firmcode, trdate, genurl, name, dob, age, genphoffice, profession, genemail, customertype, clcity, clcountry, city, typeofcustomer, sourcecategory, subcategory, consultation, picsrcvd) 
+										VALUES(:accountcode, :prehead, :firmcode, :trdate, :genurl, :name, :dob, :age, :genphoffice, :profession, :genemail, :customertype, :clcity, :clcountry, :city, :typeofcustomer, :sourcecategory, :subcategory, :consultation, :picsrcvd);
+								INSERT INTO leadratedetails(accountcode, noofgrafts, totalrate, prpsessions, consulted, consultingfeepaid, consultingdoctor, closing, nature, consdate)
+										VALUES (:accountcode, :noofgrafts, :totalrate, :prpsessions, :consulted, :consultingfeepaid, :consultingdoctor, :closing, :nature, :consdate);";
 				rstatus = this.EbConnectionFactory.ObjectsDB.InsertTable(Qry, parameters.ToArray());
 			}			
 			else if (request.RequestMode == 1)
