@@ -125,7 +125,7 @@ namespace ExpressBase.ServiceStack.Services
                 _accountCode = row[1].ToString();
                 _imageId = row[2].ToString();
                 _fileName = row[3].ToString();
-                Files.Add(new KeyValuePair<int, string>(CustomerId, UploadPath + _imageId + "/DICOM" + _fileName));
+                Files.Add(new KeyValuePair<int, string>(CustomerId, UploadPath + _imageId + "/DICOM/" + _fileName));
             }
         }
 
