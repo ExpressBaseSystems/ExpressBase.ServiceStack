@@ -466,11 +466,15 @@ namespace ExpressBase.ServiceStack
                     parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("choice" + count, EbDbTypes.String, choice.Choice));
                     parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("score" + count, EbDbTypes.Int32, choice.Score));
                 }
+                s.Append(";SELECT currval('eb_survey_queries_id_seq');");
             }
            
-            int res = this.EbConnectionFactory.ObjectsDB.DoNonQuery(s.ToString(), parameters.ToArray());
-            if (res >= 2)
+            var res = this.EbConnectionFactory.ObjectsDB.DoQueries(s.ToString(), parameters.ToArray());
+            if (Convert.ToInt32(res.Tables[0].Rows[0][0]) > 0)
+            {
                 resp.Status = true;
+                resp.Quesid = Convert.ToInt32(res.Tables[0].Rows[0][0]);
+            }
             else
                 resp.Status = false;
             return resp;
@@ -481,7 +485,8 @@ namespace ExpressBase.ServiceStack
 			Eb_Survey surveyObj = new Eb_Survey() { Id = 0};
 			List<Eb_SurveyQuestion> questionList = new List<Eb_SurveyQuestion>();
 			string qryStr = @"SELECT Q.id, Q.query, Q.q_type FROM eb_survey_queries Q;";
-			if(request.Id > 0)
+
+            if (request.Id > 0)
 			{
 				qryStr += @"SELECT S.id, S.name, S.startdate, S.enddate, S.status, S.questions FROM eb_surveys S WHERE S.id = '" + request.Id + "';";
 			}
@@ -584,7 +589,36 @@ namespace ExpressBase.ServiceStack
 			return (new GetSurveyListResponse { SurveyDict = dict });
 		}
 
+        public GetSurveysByAppResponse Get(GetSurveysByAppRequest request)
+        {
+            List<Eb_Survey> list = new List<Eb_Survey>();
+            string query = "SELECT id,name,startdate,enddate,status,questions FROM eb_surveys";
+            string quesid = string.Empty;
+            try
+            {
+                var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(query);
+                foreach (EbDataRow row in dt.Rows)
+                {
+                    quesid = row[5].ToString();
 
+                    list.Add(new Eb_Survey
+                    {
+                        Id = Convert.ToInt32(row[0]),
+                        Name = row[1] as string,
+                        Start = Convert.ToDateTime(row[2]).ToString("dd-MM-yyyy"),
+                        End = Convert.ToDateTime(row[3]).ToString("dd-MM-yyyy"),
+                        Status = Convert.ToInt32(row[4]),
+                        QuesIds = quesid.Split(",").Select(Int32.Parse).ToList<int>()
+                    });
+                }
+            }
+            catch(Exception ee)
+            {
+                Console.WriteLine(ee.Message);
+            }
+            
+            return new GetSurveysByAppResponse { Surveys = list};
+        }
 	}
 }
 

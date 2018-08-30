@@ -571,11 +571,11 @@ namespace ExpressBase.ServiceStack
                     if (!string.IsNullOrEmpty(col.LinkRefId))
                     {
                         if(col.LinkType == LinkTypeEnum.Popout)
-                            _formattedData = "<a href='#' oncontextmenu='return false' class ='tablelink_dvContainer_1530626977038_0_0' data-link='" + col.LinkRefId + "'>" + _formattedData + "</a>";
+                            _formattedData = "<a href='#' oncontextmenu='return false' class ='tablelink' data-link='" + col.LinkRefId + "'>" + _formattedData + "</a>";
                         else if (col.LinkType == LinkTypeEnum.Inline)
-                            _formattedData = "< a href = '#' oncontextmenu = 'return false' class ='tablelink_dvContainer_1530626977038_0_0' data-link='"+ col.LinkRefId + "' data-inline='true' data-data='"+ _formattedData + "'><i class='fa fa-plus'></i></a>" + _formattedData ;
+                            _formattedData = "< a href = '#' oncontextmenu = 'return false' class ='tablelink' data-link='"+ col.LinkRefId + "' data-inline='true' data-data='"+ _formattedData + "'><i class='fa fa-plus'></i></a>" + _formattedData ;
                         else if (col.LinkType == LinkTypeEnum.Both)
-                            _formattedData = "<a href ='#' oncontextmenu='return false' class='tablelink_dvContainer_1530626977038_0_0' data-link='"+ col.LinkRefId +"' data-inline='true' data-data='"+ _formattedData + "'> <i class='fa fa-plus'></i></a>" + "&nbsp;  <a href='#' oncontextmenu='return false' class ='tablelink_dvContainer_1530626977038_0_0' data-link='" + col.LinkRefId + "'>" + _formattedData + "</a>";
+                            _formattedData = "<a href ='#' oncontextmenu='return false' class='tablelink' data-link='"+ col.LinkRefId +"' data-inline='true' data-data='"+ _formattedData + "'> <i class='fa fa-plus'></i></a>" + "&nbsp;  <a href='#' oncontextmenu='return false' class ='tablelink' data-link='" + col.LinkRefId + "'>" + _formattedData + "</a>";
                     }
 					else if (col.Type == EbDbTypes.String && (col as DVStringColumn).RenderAs == StringRenderType.Link && col.LinkType == LinkTypeEnum.Tab)/////////////////
 					{
