@@ -68,9 +68,9 @@ namespace ExpressBase.ServiceStack
                 Report.CurrentTimestamp = DateTime.Now;
                 Report.UserName = request.Fullname;
                 Report.FileClient = new EbStaticFileClient();
-                Report.FileClient = this.FileClient;
+                Report.FileClient = FileClient;
                 Report.Parameters = request.Params;
-                Report.Solution = this.Redis.Get<Eb_Solution>(String.Format("solution_{0}", request.TenantAccountId));
+                Report.Solution = Redis.Get<Eb_Solution>(String.Format("solution_{0}", request.TenantAccountId));
                 //-- END REPORT object INIT
                 iTextSharp.text.Rectangle rec = new iTextSharp.text.Rectangle(Report.WidthPt, Report.HeightPt);
                 Report.Doc = new Document(rec);
@@ -95,39 +95,19 @@ namespace ExpressBase.ServiceStack
                 Report.GetWatermarkImages();
                 Report.FillingCollections();
                 foreach (EbReportHeader r_header in Report.ReportHeaders)
-                {
-                    //Report.FillScriptCollection(r_header.Fields);
-                    //FillFieldDict(Report, r_header.Fields);
                     FillLinkCollection(Report, r_header.Fields);
-                }
 
                 foreach (EbReportFooter r_footer in Report.ReportFooters)
-                {
-                    //FillScriptCollection(Report, r_footer.Fields);
-                    //FillFieldDict(Report, r_footer.Fields);
                     FillLinkCollection(Report, r_footer.Fields);
-                }
 
                 foreach (EbPageHeader p_header in Report.PageHeaders)
-                {
-                    //FillScriptCollection(Report, p_header.Fields);
-                    //FillFieldDict(Report, p_header.Fields);
                     FillLinkCollection(Report, p_header.Fields);
-                }
 
                 foreach (EbReportDetail detail in Report.Detail)
-                {
-                    //FillScriptCollection(Report, detail.Fields);
-                    //FillFieldDict(Report, detail.Fields);
                     FillLinkCollection(Report, detail.Fields);
-                }
 
                 foreach (EbPageFooter p_footer in Report.PageFooters)
-                {
-                    //FillScriptCollection(Report, p_footer.Fields);
-                    //FillFieldDict(Report, p_footer.Fields);
                     FillLinkCollection(Report, p_footer.Fields);
-                }
 
                 Report.Doc.NewPage();
                 Report.DrawReportHeader();
@@ -148,42 +128,7 @@ namespace ExpressBase.ServiceStack
             }
             return new ReportRenderResponse { StreamWrapper = new MemorystreamWrapper(Report.Ms1), ReportName = Report.Name };
         }
-
-        //private void FillScriptCollection(EbReport Report, List<EbReportField> fields)
-        //{
-        //    foreach (EbReportField field in fields)
-        //    {
-        //        try
-        //        {
-        //            if (field is EbCalcField && !Report.ValueScriptCollection.ContainsKey(field.Name))
-        //            {
-        //                Script valscript = CSharpScript.Create<dynamic>((field as EbCalcField).ValueExpression, ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System.Dynamic"), globalsType: typeof(Globals));
-        //                valscript.Compile();
-        //                Report.ValueScriptCollection.Add(field.Name, valscript);
-
-        //            }
-        //            if ((field is EbDataField && !Report.AppearanceScriptCollection.ContainsKey(field.Name) && (field as EbDataField).AppearanceExpression != ""))
-        //            {
-        //                Script appearscript = CSharpScript.Create<dynamic>((field as EbDataField).AppearanceExpression, ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System.Dynamic"), globalsType: typeof(Globals));
-        //                appearscript.Compile();
-        //                Report.AppearanceScriptCollection.Add(field.Name, appearscript);
-        //            }
-        //        }
-        //        catch (Exception e)
-        //        {
-        //            Console.WriteLine(e.Message + e.StackTrace);
-        //        }
-        //    }
-        //}
-
-        //private void FillFieldDict(EbReport Report, List<EbReportField> fields)
-        //{
-        //    foreach (EbReportField field in fields)
-        //    {
-        //        Report.FieldDict.Add(field.Name, field);
-        //    }
-        //}
-
+        
         private void FillLinkCollection(EbReport Report, List<EbReportField> fields)
         {
             foreach (EbReportField field in fields)
@@ -396,7 +341,7 @@ namespace ExpressBase.ServiceStack
 
         public HeaderFooter(EbReport _c) : base()
         {
-            this.Report = _c;
+            Report = _c;
         }
     }
 }

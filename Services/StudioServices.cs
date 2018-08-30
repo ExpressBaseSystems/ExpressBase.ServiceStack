@@ -293,7 +293,7 @@ namespace ExpressBase.ServiceStack
                         Wc_All = (dr[11] as string == null) ? (dr[11] as string[]) : (dr[11] as string).Split(","),
                         Tags = dr[17].ToString(),
                         Apps = dr[18].ToString().Replace("\n", "").Replace("\t", "").Replace("\r", ""),
-                        Dashboard_Tiles = new EbObjectWrapper_Dashboard
+                        Dashboard_Tiles = new EbObj_Dashboard
                         {
                             MajorVersionNumber = Convert.ToInt32(dr[14]),
                             MinorVersionNumber = Convert.ToInt32(dr[15]),
@@ -347,7 +347,7 @@ namespace ExpressBase.ServiceStack
                         Wc_All = (dr[4] as string == null) ? (dr[4] as string[]) : (dr[4] as string).Split(","),
                         Tags = dr[8].ToString(),
                         Apps = dr[9].ToString().Replace("\n", "").Replace("\t", "").Replace("\r", ""),
-                        Dashboard_Tiles = new EbObjectWrapper_Dashboard
+                        Dashboard_Tiles = new EbObj_Dashboard
                         {
                             MajorVersionNumber = Convert.ToInt32(dr[5]),
                             MinorVersionNumber = Convert.ToInt32(dr[6]),
