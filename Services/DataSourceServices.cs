@@ -285,12 +285,7 @@ namespace ExpressBase.ServiceStack
 
                 _sql = _ds.Sql;
             }
-            List<DbParameter> parameters = new List<DbParameter>();
-            if (request.Params != null && request.Params.Count > 0)
-            {
-                foreach (Param param in request.Params)
-                    parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(string.Format("{0}", param.Name), (EbDbTypes)Convert.ToInt32(param.Type), param.Value));
-            }
+            var parameters = DataHelper.GetParams(this.EbConnectionFactory, false, request.Params, 0, 0);
             var _dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray<System.Data.Common.DbParameter>());
 
             dsresponse = new DataSourceDataSetResponse
