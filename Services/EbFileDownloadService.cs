@@ -2,25 +2,22 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
-using System.Runtime.Serialization;
-using System.Text;
 using ExpressBase.Common.Constants;
-using ExpressBase.Common.Structures;
-using System.Data.Common;
 using ServiceStack;
 using ExpressBase.Common;
 using ExpressBase.Common.Data;
 using ExpressBase.Common.Enums;
 using ExpressBase.Objects.ServiceStack_Artifacts;
-using ServiceStack.Messaging;
 using ExpressBase.Common.ServiceClients;
 using ExpressBase.Common.EbServiceStack.ReqNRes;
 using ExpressBase.Common.ServiceStack.ReqNRes;
 using System.Linq;
+using System.Data.Common;
+using ExpressBase.Common.Structures;
 
 namespace ExpressBase.ServiceStack.Services
 {
-    public class EbFileDownloadService: EbBaseService
+    public class EbFileDownloadService : EbBaseService
     {
         public string UserName { get; set; }
         public string Password { private get; set; }
@@ -112,6 +109,24 @@ namespace ExpressBase.ServiceStack.Services
             return DirectoryListing;
         }
 
+        private void GetFileNamesFromDb()
+        {
+            string UploadPath = FileDownloadConstants.HostName + @"files/SoftFiles_L/";
+            string ImageTableQuery = @"SELECT customervendor.accountcode, customervendor.imageid, vddicommentry.filename from vddicommentry
+            INNER JOIN customervendor ON customervendor.imagecount > 0 and vddicommentry.patientid=(customervendor.prehead||customervendor.accountcode)";
+            string _imageId = string.Empty, _fileName = string.Empty, _accountCode = string.Empty;
+
+            var table = this.EbConnectionFactory.ObjectsDB.DoQuery(ImageTableQuery);
+            foreach (EbDataRow row in table.Rows)
+            {
+                _accountCode = row[0].ToString();
+                _imageId = row[1].ToString();
+                _fileName = row[2].ToString();
+                Files.Add(UploadPath + _imageId + "/DICOM" + _fileName);
+            }
+            Files.Insert(0, "ftp://35.200.199.41/files/Softfiles_L/39958/DICOM/000_DSC00531.JPG");
+        }
+
         //public void DownloadFile(string DirecStructure)//, List<string> fileNames)
         //{
         //    FtpWebRequest request;
@@ -175,32 +190,40 @@ namespace ExpressBase.ServiceStack.Services
             string pwd = "";
             UserName = Uname;
             Password = pwd;
-            string BasePath = "";
+            //string BasePath = "";
             Host = FileDownloadConstants.HostName;
             Files = new List<string>();
-            List<string> DirStructure = ListDirectory(BasePath);
-            for (int i = 0; i < 10; i++)
-            {
-                string Path = BasePath + DirStructure[i] + "/";
-                ListFilesDirectory(Path);
-                FtpWebRequest request;
-                FtpWebResponse response;
 
-                string fullpath = Host + Path + "DICOM/";
-                if (Files.Count > 0)
+            GetFileNamesFromDb();
+
+            //List<string> DirStructure = ListDirectory(BasePath);
+            //foreach (var _file in Files)
+            //{
+            //    string Path = _file;
+            //ListFilesDirectory(Path);
+            FtpWebRequest request;
+            FtpWebResponse response;
+
+            if (Files.Count > 0)
+            {
+                int count = 0;
+                foreach (string name in Files)
                 {
-                    foreach (string name in Files)
+                    if (!name.Equals(string.Empty))
                     {
-                        if (!name.Equals(string.Empty))
+                        try
                         {
-                            request = (FtpWebRequest)WebRequest.Create(fullpath + name);
+                            Console.WriteLine(count+1.ToString() + ". FileName: " + name);
+                            request = (FtpWebRequest)WebRequest.Create(name);//fullpath + name);
                             request.Method = WebRequestMethods.Ftp.DownloadFile;
                             request.Credentials = new NetworkCredential(UserName, Password);
                             response = (FtpWebResponse)request.GetResponse();
-                            //WriteFile(response, name);
                             Stream responseStream = response.GetResponseStream();
                             byte[] FileContents = new byte[response.ContentLength];
+                            if (FileContents.Length == 0)
+                                throw new Exception("File returned empty");
                             responseStream.ReadAsync(FileContents, 0, FileContents.Length);
+
                             UploadImageAsyncRequest imgupreq = new UploadImageAsyncRequest();
                             imgupreq.ImageByte = FileContents;
                             imgupreq.ImageInfo = new ImageMeta();
@@ -213,14 +236,23 @@ namespace ExpressBase.ServiceStack.Services
 
                             var x = FileClient.Post<UploadAsyncResponse>(imgupreq);
                             response.Close();
+
+                            if (count > 10)
+                                break;
+                            else
+                                count++;
+                        }
+                        catch(Exception ex)
+                        {
+                            continue;
                         }
                     }
-                    Files.Clear();
                 }
-                else
-                {
-                    Console.WriteLine("There were no files in that directory!\n\n");
-                }
+                Files.Clear();
+            }
+            else
+            {
+                Console.WriteLine("There were no files in that directory!\n\n");
             }
         }
     }
