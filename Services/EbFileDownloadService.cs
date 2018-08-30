@@ -210,8 +210,8 @@ namespace ExpressBase.ServiceStack.Services
         [Authenticate]
         public void Post(FileDownloadRequestObject req)
         {
-            string Uname = "";
-            string pwd = "";
+            string Uname = "ftpUser1";
+            string pwd = "ftpPassword1";
             UserName = Uname;
             Password = pwd;
             string FilerefId = string.Empty;
@@ -265,6 +265,7 @@ namespace ExpressBase.ServiceStack.Services
                                 throw new Exception("File Mapping Failed");
 
                             var x = FileClient.Post<UploadAsyncResponse>(imgupreq);
+                            Console.WriteLine("..........Success.........." + iter.ToString() + ". FileName: " + file.Value);
                             response.Close();
 
                             if (count > 10)
