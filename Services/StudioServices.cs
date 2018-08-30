@@ -63,7 +63,8 @@ namespace ExpressBase.ServiceStack
                     VersionNumber = dr[1].ToString(),
                     EbObjectType = (dr[4] != DBNull.Value) ? Convert.ToInt32(dr[4]) : 0,
                     Status = Enum.GetName(typeof(ObjectLifeCycleStatus), Convert.ToInt32(dr[2])),
-                    Tags = dr[3].ToString()
+                    Tags = dr[3].ToString(),
+                    RefId = request.RefId
                 });
                 f.Add(_ebObject);
             }
@@ -178,8 +179,8 @@ namespace ExpressBase.ServiceStack
         public object Get(EbAllObjNVerRequest request)// Get All latest committed versions of this Object Type without json
         {
             EbDataTable dt;
-           
-                string query = @"SELECT 
+
+            string query = @"SELECT 
                             EO.id, EO.obj_name, EO.obj_type, EO.obj_cur_status,EO.obj_desc,
                             EOV.id, EOV.eb_objects_id, EOV.version_num, EOV.obj_changelog, EOV.commit_ts, EOV.commit_uid, EOV.refid,
                             EU.fullname
@@ -194,10 +195,10 @@ namespace ExpressBase.ServiceStack
                             EO.id = EOV.eb_objects_id AND COALESCE(EOV.working_mode, 'F') <> 'T'
                         ORDER BY
                             EO.obj_name;";
-               
-                DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter(":ids", EbDbTypes.String, request.ObjectIds) };
-                dt = this.EbConnectionFactory.ObjectsDB.DoQuery(query, parameters);
-           
+
+            DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter(":ids", EbDbTypes.String, request.ObjectIds) };
+            dt = this.EbConnectionFactory.ObjectsDB.DoQuery(query, parameters);
+
             Dictionary<string, List<EbObjectWrapper>> f_dict = new Dictionary<string, List<EbObjectWrapper>>();
             List<EbObjectWrapper> f_list = null;
             foreach (EbDataRow dr in dt.Rows)
@@ -495,7 +496,7 @@ namespace ExpressBase.ServiceStack
                         Update_Json_Val(con, sql1, parms);
                     }
                     SetRedis(obj, refId);
-                    
+
                     // need optimization
                     if (obj is EbBotForm)
                     {
@@ -819,19 +820,15 @@ namespace ExpressBase.ServiceStack
             };
         }
 
-        public void Post(EbObjectChangeStatusRequest request)
+        public EbObjectChangeStatusResponse Post(EbObjectChangeStatusRequest request)
         {
-            ILog log = LogManager.GetLogger(GetType());
-            log.Info("#DS Change status");
-
+            int id = 0;
             try
             {
                 using (DbConnection con = this.EbConnectionFactory.ObjectsDB.GetNewConnection())
                 {
                     con.Open();
                     DbCommand cmd = null;
-                    log.Info("#DS insert 1 -- con open");
-
                     string sql = this.EbConnectionFactory.ObjectsDB.EB_CHANGE_STATUS_OBJECT;
                     cmd = this.EbConnectionFactory.ObjectsDB.GetNewCommand(con, sql);
 
@@ -839,13 +836,14 @@ namespace ExpressBase.ServiceStack
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":status", EbDbTypes.Int32, (int)request.Status));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":commit_uid", EbDbTypes.Int32, request.UserId));
                     cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_changelog", EbDbTypes.String, request.ChangeLog));
-                    cmd.ExecuteScalar();
+                    id = (int)cmd.ExecuteScalar();
                 }
             }
             catch (Exception e)
             {
                 Console.WriteLine("Exception: " + e.ToString());
             }
+            return new EbObjectChangeStatusResponse { Id = id };
         }
 
         public int GetObjectType(object obj)

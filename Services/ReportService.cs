@@ -39,9 +39,10 @@ namespace ExpressBase.ServiceStack
 
         //private iTextSharp.text.Font f = FontFactory.GetFont(FontFactory.HELVETICA, 12);
         public ReportService(IEbConnectionFactory _dbf, IEbStaticFileClient _sfc) : base(_dbf, _sfc) { }
-        
+
         public ReportRenderResponse Get(ReportRenderRequest request)
-        { { //int count = iTextSharp.text.FontFactory.RegisterDirectory("E:\\ExpressBase.Core\\ExpressBase.Objects\\Fonts\\");
+        {
+            { //int count = iTextSharp.text.FontFactory.RegisterDirectory("E:\\ExpressBase.Core\\ExpressBase.Objects\\Fonts\\");
               //using (InstalledFontCollection col = new InstalledFontCollection())
               //{
               //    foreach (FontFamily fa in col.Families)
@@ -53,7 +54,7 @@ namespace ExpressBase.ServiceStack
             EbReport Report = null;
             try
             {
-                var myObjectservice = base.ResolveService<EbObjectService>();
+                EbObjectService myObjectservice = base.ResolveService<EbObjectService>();
                 EbObjectParticularVersionResponse resultlist = myObjectservice.Get(new EbObjectParticularVersionRequest { RefId = request.Refid }) as EbObjectParticularVersionResponse;
                 Report = EbSerializers.Json_Deserialize<EbReport>(resultlist.Data[0].Json);
                 Report.ReportService = this;
@@ -74,7 +75,7 @@ namespace ExpressBase.ServiceStack
                 iTextSharp.text.Rectangle rec = new iTextSharp.text.Rectangle(Report.WidthPt, Report.HeightPt);
                 Report.Doc = new Document(rec);
                 Report.Ms1 = new MemoryStream();
-                var myDataSourceservice = base.ResolveService<DataSourceService>();
+                DataSourceService myDataSourceservice = base.ResolveService<DataSourceService>();
                 if (Report.DataSourceRefId != string.Empty)
                 {
                     dsresp = myDataSourceservice.Any(new DataSourceDataSetRequest { RefId = Report.DataSourceRefId, Params = Report.Parameters });
@@ -192,15 +193,15 @@ namespace ExpressBase.ServiceStack
                     string LinkRefid = (field as EbDataField).LinkRefId;
                     if (!string.IsNullOrEmpty((field as EbDataField).LinkRefId))
                     {
-                        var myObjectservice = base.ResolveService<EbObjectService>();
-                        var res = (EbObjectParticularVersionResponse)myObjectservice.Get(new EbObjectParticularVersionRequest { RefId = LinkRefid });
+                        EbObjectService myObjectservice = base.ResolveService<EbObjectService>();
+                        EbObjectParticularVersionResponse res = (EbObjectParticularVersionResponse)myObjectservice.Get(new EbObjectParticularVersionRequest { RefId = LinkRefid });
                         EbReport linkreport = EbSerializers.Json_Deserialize<EbReport>(res.Data[0].Json);
                         try
                         {
                             EbDataSource LinkDatasource = Redis.Get<EbDataSource>(linkreport.DataSourceRefId);
                             if (LinkDatasource == null || LinkDatasource.Sql == null || LinkDatasource.Sql == string.Empty)
                             {
-                                var result = (EbObjectParticularVersionResponse)myObjectservice.Get(new EbObjectParticularVersionRequest { RefId = linkreport.DataSourceRefId });
+                                EbObjectParticularVersionResponse result = (EbObjectParticularVersionResponse)myObjectservice.Get(new EbObjectParticularVersionRequest { RefId = linkreport.DataSourceRefId });
                                 LinkDatasource = EbSerializers.Json_Deserialize(result.Data[1].Json);
                                 Redis.Set<EbDataSource>(linkreport.DataSourceRefId, LinkDatasource);
                             }
@@ -210,7 +211,7 @@ namespace ExpressBase.ServiceStack
                                 LinkDatasource.FilterDialog = Redis.Get<EbFilterDialog>(LinkDatasource.FilterDialogRefId);
                                 if (LinkDatasource.FilterDialog == null)
                                 {
-                                    var result = (EbObjectParticularVersionResponse)myObjectservice.Get(new EbObjectParticularVersionRequest { RefId = LinkDatasource.FilterDialogRefId });
+                                    EbObjectParticularVersionResponse result = (EbObjectParticularVersionResponse)myObjectservice.Get(new EbObjectParticularVersionRequest { RefId = LinkDatasource.FilterDialogRefId });
                                     LinkDatasource.FilterDialog = EbSerializers.Json_Deserialize(result.Data[1].Json);
                                     Redis.Set<EbFilterDialog>(LinkDatasource.FilterDialogRefId, LinkDatasource.FilterDialog);
                                 }
@@ -234,8 +235,8 @@ namespace ExpressBase.ServiceStack
             bool _isValid = true;
             string _excepMsg = string.Empty;
             int resultType_enum = 0;
-            var myObjectservice = base.ResolveService<EbObjectService>();
-            var myDataSourceservice = base.ResolveService<DataSourceService>();
+            EbObjectService myObjectservice = base.ResolveService<EbObjectService>();
+            DataSourceService myDataSourceservice = base.ResolveService<DataSourceService>();
             DataSourceColumnsResponse cresp = new DataSourceColumnsResponse();
             cresp = Redis.Get<DataSourceColumnsResponse>(string.Format("{0}_columns", request.DataSourceRefId));
             if (cresp == null || cresp.Columns.Count == 0)
@@ -257,112 +258,113 @@ namespace ExpressBase.ServiceStack
             try
             {
                 valscript.Compile();
-          
-            var matches = Regex.Matches(request.ValueExpression, @"T[0-9]{1}.\w+").OfType<Match>().Select(m => m.Groups[0].Value).Distinct();
-            string[] _dataFieldsUsed = new string[matches.Count()];
-            int i = 0;
-            foreach (var match in matches)
-                _dataFieldsUsed[i++] = match;
 
-            Globals globals = new Globals();
-            {
-                foreach (string calcfd in _dataFieldsUsed)
+                IEnumerable<string> matches = Regex.Matches(request.ValueExpression, @"T[0-9]{1}.\w+").OfType<Match>().Select(m => m.Groups[0].Value).Distinct();
+
+                string[] _dataFieldsUsed = new string[matches.Count()];
+                int i = 0;
+                foreach (string match in matches)
+                    _dataFieldsUsed[i++] = match;
+
+                Globals globals = new Globals();
                 {
-                    dynamic _value = null;
-                    string TName = calcfd.Split('.')[0];
-                    string fName = calcfd.Split('.')[1];
-                    EbDbTypes typ = cresp.Columns[Convert.ToInt32(TName.Replace(@"T", string.Empty))][fName].Type;
-                    switch (typ.ToString())
+                    foreach (string calcfd in _dataFieldsUsed)
                     {
-                        case "Int16":
-                            _value = 0;
-                            break;
-                        case "Int32":
-                            _value = 0;
-                            break;
-                        case "Int64":
-                            _value = 0;
-                            break;
-                        case "Decimal":
-                            _value = 0;
-                            break;
-                        case "Double":
-                            _value = 0;
-                            break;
-                        case "Single":
-                            _value = 0;
-                            break;
-                        case "String":
-                            _value = "Eb";
-                            break;
-                        case "Date":
-                            _value = DateTime.MinValue;
-                            break;
-                        case "Datetime":
-                            _value = DateTime.MinValue;
-                            break;
-                        default:
-                            _value = 0;
-                            break;
+                        dynamic _value = null;
+                        string TName = calcfd.Split('.')[0];
+                        string fName = calcfd.Split('.')[1];
+                        EbDbTypes typ = cresp.Columns[Convert.ToInt32(TName.Replace(@"T", string.Empty))][fName].Type;
+                        switch (typ.ToString())
+                        {
+                            case "Int16":
+                                _value = 0;
+                                break;
+                            case "Int32":
+                                _value = 0;
+                                break;
+                            case "Int64":
+                                _value = 0;
+                                break;
+                            case "Decimal":
+                                _value = 0;
+                                break;
+                            case "Double":
+                                _value = 0;
+                                break;
+                            case "Single":
+                                _value = 0;
+                                break;
+                            case "String":
+                                _value = "Eb";
+                                break;
+                            case "Date":
+                                _value = DateTime.MinValue;
+                                break;
+                            case "Datetime":
+                                _value = DateTime.MinValue;
+                                break;
+                            default:
+                                _value = 0;
+                                break;
+                        }
+                        globals[TName].Add(fName, new NTV { Name = fName, Type = typ, Value = _value as object });
                     }
-                    globals[TName].Add(fName, new NTV { Name = fName, Type = typ, Value = _value as object });
-                }
-                if (request.Parameters != null)
-                {
-                    foreach (Param p in request.Parameters)
+                    if (request.Parameters != null)
                     {
-                        globals["Params"].Add(p.Name, new NTV { Name = p.Name, Type = (EbDbTypes)Convert.ToInt32(p.Type), Value = p.Value });
+                        foreach (Param p in request.Parameters)
+                        {
+                            globals["Params"].Add(p.Name, new NTV { Name = p.Name, Type = (EbDbTypes)Convert.ToInt32(p.Type), Value = p.Value });
+                        }
                     }
-                }
-                var matches2 = Regex.Matches(request.ValueExpression, @"Calc.\w+").OfType<Match>()
-                        .Select(m => m.Groups[0].Value)
-                        .Distinct();
-                string[] _calcFieldsUsed = new string[matches2.Count()];
-                int j = 0;
-                foreach (var match in matches2)
-                    _calcFieldsUsed[j++] = match.Replace("Calc.",string.Empty);
-                foreach (string calcfd in _calcFieldsUsed)
-                {
-                    globals["Calc"].Add(calcfd, new NTV { Name = calcfd, Type = (EbDbTypes)11, Value = 0 });
-                }
+                    IEnumerable<string> matches2 = Regex.Matches(request.ValueExpression, @"Calc.\w+").OfType<Match>()
+                            .Select(m => m.Groups[0].Value)
+                            .Distinct();
+                    string[] _calcFieldsUsed = new string[matches2.Count()];
+                    int j = 0;
+                    foreach (string match in matches2)
+                        _calcFieldsUsed[j++] = match.Replace("Calc.", string.Empty);
+                    foreach (string calcfd in _calcFieldsUsed)
+                    {
+                        globals["Calc"].Add(calcfd, new NTV { Name = calcfd, Type = (EbDbTypes)11, Value = 0 });
+                    }
 
                     resultType = (valscript.RunAsync(globals)).Result.ReturnValue.GetType();
 
-                //return expression type
-                switch (resultType.FullName)
-                {
-                    case "System.Date":
-                        resultType_enum = 5;
-                        break;
-                    case "System.DateTime":
-                        resultType_enum = 6;
-                        break;
-                    case "System.Decimal":
-                        resultType_enum = 7;
-                        break;
-                    case "System.Double":
-                        resultType_enum = 8;
-                        break;
-                    case "System.Int16":
-                        resultType_enum = 10;
-                        break;
-                    case "System.Int32":
-                        resultType_enum = 11;
-                        break;
-                    case "System.Int64":
-                        resultType_enum = 12;
-                        break;
-                    case "System.Single":
-                        resultType_enum = 15;
-                        break;
-                    case "System.String":
-                        resultType_enum = 16;
-                        break;
-                    default:
-                        resultType_enum = 0;
-                        break;
+                    //return expression type
+                    switch (resultType.FullName)
+                    {
+                        case "System.Date":
+                            resultType_enum = 5;
+                            break;
+                        case "System.DateTime":
+                            resultType_enum = 6;
+                            break;
+                        case "System.Decimal":
+                            resultType_enum = 7;
+                            break;
+                        case "System.Double":
+                            resultType_enum = 8;
+                            break;
+                        case "System.Int16":
+                            resultType_enum = 10;
+                            break;
+                        case "System.Int32":
+                            resultType_enum = 11;
+                            break;
+                        case "System.Int64":
+                            resultType_enum = 12;
+                            break;
+                        case "System.Single":
+                            resultType_enum = 15;
+                            break;
+                        case "System.String":
+                            resultType_enum = 16;
+                            break;
+                        default:
+                            resultType_enum = 0;
+                            break;
+                    }
                 }
-            }
             }
             catch (Exception e)
             {
