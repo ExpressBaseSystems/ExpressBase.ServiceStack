@@ -232,9 +232,20 @@ namespace ExpressBase.ServiceStack.Services
             GetImageFtpRequest getImageFtp = new GetImageFtpRequest();
 
             getImageFtp.AddAuth(this.FileClient.BearerToken, this.FileClient.RefreshToken);
-            getImageFtp.FileUrls = Files;
+            
 
-            this.MessageProducer3.Publish(getImageFtp);
+            if (Files.Count > 0)
+            {
+                foreach (KeyValuePair<int, string> file in Files)
+                {
+                    if (!file.Value.Equals(string.Empty))
+                    {
+                        getImageFtp.FileUrl = file;
+                        this.MessageProducer3.Publish(getImageFtp);
+                    }
+                }
+            }
+
 
             //if (Files.Count > 0)
             //{
