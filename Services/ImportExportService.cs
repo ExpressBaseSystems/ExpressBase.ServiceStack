@@ -34,14 +34,15 @@ namespace ExpressBase.ServiceStack.Services
         {
             List<AppStore> _storeCollection = new List<AppStore>();
             EbDataTable dt = InfraConnectionFactory.ObjectsDB.DoQuery(string.Format(@"
-                                            SELECT EAS.id, EAS.app_name, EAS.status, EAS.user_solution_id, EAS.cost, EAS.created_by, EAS.created_at, EAS.json,
-                                                EAS.currency, EAS.eb_del, EAS.app_type, EAS.description, EAS.icon, 
-                                                ES.solution_name, EU.fullname
-                                                FROM eb_appstore EAS, eb_solutions ES, eb_users EU
-                                            WHERE(( EAS.user_solution_id = '{0}' AND EAS.status=1) OR EAS.status=2)
-                                                AND EAS.eb_del='F' AND
-											EAS.user_solution_id = ES.esolution_id AND 
-											ES.tenant_id = EU.id ;", request.TenantAccountId));
+            SELECT
+	            EAS.id, app_name, status, user_solution_id, cost, created_by, created_at, json, currency, EAS.eb_del, app_type,	EAS.description, icon, solution_name, fullname
+            FROM 
+	            eb_appstore EAS, eb_solutions ES, eb_tenants ET
+            WHERE 
+                EAS.user_solution_id = ES.esolution_id AND
+                ES.tenant_id = ET.id AND EAS.eb_del='F' AND
+                (EAS.status=2 OR ( EAS.status=1 AND ES.tenant_id=(SELECT ES.tenant_id from eb_solutions ES where ES.esolution_id = '{0}')));
+            ", request.TenantAccountId));
             foreach (EbDataRow _row in dt.Rows)
             {
                 AppStore _app = new AppStore
