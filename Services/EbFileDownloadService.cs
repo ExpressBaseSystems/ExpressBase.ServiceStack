@@ -14,6 +14,7 @@ using ExpressBase.Common.ServiceStack.ReqNRes;
 using System.Linq;
 using System.Data.Common;
 using ExpressBase.Common.Structures;
+using ServiceStack.Messaging;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -24,8 +25,8 @@ namespace ExpressBase.ServiceStack.Services
         public string Host { get; set; }
         public List<KeyValuePair<int, string>> Files { get; set; }
 
-        public EbFileDownloadService(IEbConnectionFactory _dbf, IEbStaticFileClient _sfc)
-        : base(_dbf, _sfc)
+        public EbFileDownloadService(IEbConnectionFactory _dbf, IEbStaticFileClient _sfc, IMessageProducer _mqp, IMessageQueueClient _mqc)
+        : base(_dbf, _sfc, _mqp, _mqc)
         {
         }
 
@@ -109,10 +110,10 @@ namespace ExpressBase.ServiceStack.Services
         //    return DirectoryListing;
         //}
 
-        private int GetFileNamesFromDb()
+        private void GetFileNamesFromDb()
         {
             int CustomerId = 0;
-            string UploadPath = FileDownloadConstants.HostName + @"files/SoftFiles_L/";
+            string UploadPath = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_FTP_HOST) + @"files/SoftFiles_L/";
             string ImageTableQuery = @"SELECT customervendor.id, customervendor.accountcode, customervendor.imageid, vddicommentry.filename from vddicommentry
             INNER JOIN customervendor ON customervendor.imagecount > 0 and vddicommentry.patientid=(customervendor.prehead||customervendor.accountcode)";
             string _imageId = string.Empty, _fileName = string.Empty, _accountCode = string.Empty;
@@ -126,7 +127,6 @@ namespace ExpressBase.ServiceStack.Services
                 _fileName = row[3].ToString();
                 Files.Add(new KeyValuePair<int, string>(CustomerId, UploadPath + _imageId + "/DICOM" + _fileName));
             }
-            return CustomerId;
         }
 
         //public void DownloadFile(string DirecStructure)//, List<string> fileNames)
@@ -210,81 +210,88 @@ namespace ExpressBase.ServiceStack.Services
         [Authenticate]
         public void Post(FileDownloadRequestObject req)
         {
-            string Uname = "ftpUser1";
-            string pwd = "ftpPassword1";
-            UserName = Uname;
-            Password = pwd;
+            //string Uname = "ftpUser1";
+            //string pwd = "ftpPassword1";
+            //UserName = Uname;
+            //Password = pwd;
             string FilerefId = string.Empty;
             //string BasePath = "";
-            Host = FileDownloadConstants.HostName;
+
             Files = new List<KeyValuePair<int, string>>();
 
-            int CustomerId = GetFileNamesFromDb();
+            GetFileNamesFromDb();
 
             //List<string> DirStructure = ListDirectory(BasePath);
             //foreach (var _file in Files)
             //{
             //    string Path = _file;
             //ListFilesDirectory(Path);
-            FtpWebRequest request;
-            FtpWebResponse response;
+            //FtpWebRequest request;
+            //FtpWebResponse response;
 
-            if (Files.Count > 0)
-            {
-                int count = 0, iter=0;
-                foreach (KeyValuePair<int, string> file in Files)
-                {
-                    iter++;
-                    if (!file.Value.Equals(string.Empty))
-                    {
-                        try
-                        {
-                            Console.WriteLine(iter.ToString() + ". FileName: " + file.Value);
-                            request = (FtpWebRequest)WebRequest.Create(file.Value);//fullpath + name);
-                            request.Method = WebRequestMethods.Ftp.DownloadFile;
-                            request.Credentials = new NetworkCredential(UserName, Password);
-                            response = (FtpWebResponse)request.GetResponse();
-                            Stream responseStream = response.GetResponseStream();
-                            byte[] FileContents = new byte[response.ContentLength];
-                            if (FileContents.Length == 0)
-                                throw new Exception("File returned empty");
-                            responseStream.ReadAsync(FileContents, 0, FileContents.Length);
+            GetImageFtpRequest getImageFtp = new GetImageFtpRequest();
 
-                            UploadImageAsyncRequest imgupreq = new UploadImageAsyncRequest();
-                            imgupreq.ImageByte = FileContents;
-                            imgupreq.ImageInfo = new ImageMeta();
-                            imgupreq.ImageInfo.FileCategory = EbFileCategory.Images;
-                            imgupreq.ImageInfo.FileName = file.Value;
-                            imgupreq.ImageInfo.FileType = file.Value.Split('.').Last();
-                            imgupreq.ImageInfo.ImageQuality = ImageQuality.original;
-                            imgupreq.ImageInfo.Length = FileContents.Length;
-                            imgupreq.ImageInfo.MetaDataDictionary = new Dictionary<string, List<string>>();
-                            imgupreq.ImageInfo.FileRefId = GetFileRefId();
+            getImageFtp.AddAuth(this.FileClient.BearerToken, this.FileClient.RefreshToken);
+            getImageFtp.FileUrls = Files;
 
-                            if (MapFilesWithUser(file.Key, imgupreq.ImageInfo.FileRefId) < 1)
-                                throw new Exception("File Mapping Failed");
+            this.MessageProducer3.Publish(getImageFtp);
 
-                            var x = FileClient.Post<UploadAsyncResponse>(imgupreq);
-                            Console.WriteLine("..........Success.........." + iter.ToString() + ". FileName: " + file.Value);
-                            response.Close();
+            //if (Files.Count > 0)
+            //{
+            //    int count = 0, iter=0;
+            //    foreach (KeyValuePair<int, string> file in Files)
+            //    {
+            //        iter++;
+            //        if (!file.Value.Equals(string.Empty))
+            //        {
+            //            try
+            //            {
+            //                Console.WriteLine(iter.ToString() + ". FileName: " + file.Value);
+            //                request = (FtpWebRequest)WebRequest.Create(file.Value);//fullpath + name);
+            //                request.Method = WebRequestMethods.Ftp.DownloadFile;
+            //                request.Credentials = new NetworkCredential(UserName, Password);
+            //                response = (FtpWebResponse)request.GetResponse();
+            //                Stream responseStream = response.GetResponseStream();
+            //                byte[] FileContents = new byte[response.ContentLength];
+            //                if (FileContents.Length == 0)
+            //                    throw new Exception("File returned empty");
+            //                responseStream.ReadAsync(FileContents, 0, FileContents.Length);
 
-                            if (count > 10)
-                                break;
-                            else
-                                count++;
-                        }
-                        catch(Exception ex)
-                        {
-                            continue;
-                        }
-                    }
-                }
-                Files.Clear();
-            }
-            else
-            {
-                Console.WriteLine("There were no files in that directory!\n\n");
-            }
+            //                UploadImageAsyncRequest imgupreq = new UploadImageAsyncRequest();
+            //                imgupreq.ImageByte = FileContents;
+            //                imgupreq.ImageInfo = new ImageMeta();
+            //                imgupreq.ImageInfo.FileCategory = EbFileCategory.Images;
+            //                imgupreq.ImageInfo.FileName = file.Value;
+            //                imgupreq.ImageInfo.FileType = file.Value.Split('.').Last();
+            //                imgupreq.ImageInfo.ImageQuality = ImageQuality.original;
+            //                imgupreq.ImageInfo.Length = FileContents.Length;
+            //                imgupreq.ImageInfo.MetaDataDictionary = new Dictionary<string, List<string>>();
+            //                imgupreq.ImageInfo.FileRefId = GetFileRefId();
+
+            //                if (MapFilesWithUser(file.Key, imgupreq.ImageInfo.FileRefId) < 1)
+            //                    throw new Exception("File Mapping Failed");
+
+            //                var x = FileClient.Post<UploadAsyncResponse>(imgupreq);
+            //                Console.WriteLine("..........Success.........." + iter.ToString() + ". FileName: " + file.Value);
+            //                response.Close();
+
+            //                if (count > 10)
+            //                    break;
+            //                else
+            //                    count++;
+            //            }
+            //            catch(Exception ex)
+            //            {
+            //                continue;
+            //            }
+            //        }
+            //    }
+            //    Files.Clear();
+            //}
+            //else
+            //{
+            //    Console.WriteLine("There were no files in that directory!\n\n");
+            //}
         }
     }
 }
