@@ -28,6 +28,7 @@ namespace ExpressBase.ServiceStack.Services
 			List<FeedbackEntry> Flist = new List<FeedbackEntry>();
 			List<BillingEntry> Blist = new List<BillingEntry>();
 			List<SurgeryEntry> Slist = new List<SurgeryEntry>();
+			int Mode = 0;
 			if (request.RequestMode == 1)//edit mode 
 			{
 				SqlQry += @"SELECT id, firmcode, trdate, genurl, name, dob, genphoffice, profession, genemail,
@@ -54,6 +55,7 @@ namespace ExpressBase.ServiceStack.Services
 
 			if (ds.Tables.Count > 3 && ds.Tables[3].Rows.Count > 0)
 			{
+				Mode = 1;
 				var dr = ds.Tables[3].Rows[0];
 				CustomerData.Add("accountid", dr[0].ToString());
 				CustomerData.Add("firmcode", dr[1].ToString());
@@ -139,6 +141,7 @@ namespace ExpressBase.ServiceStack.Services
 
 
 			return new GetManageLeadResponse {
+				RespMode = Mode,
 				CostCenterDict = CostCenter,
 				DoctorDict = DicDict,
 				StaffDict = StaffDict,
