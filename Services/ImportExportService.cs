@@ -277,6 +277,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             return new GetAppDetailsResponse { StoreCollection = _storeCollection };
         }
+
         public void GetRelated(string _refid, OrderedDictionary ObjDictionary)
         {
             EbObject obj = null;
@@ -290,19 +291,12 @@ namespace ExpressBase.ServiceStack.Services
                 obj = GetObjfromDB(_refid);
 
             ObjDictionary.Add(_refid, obj);
-
             string RefidS = obj.DiscoverRelatedRefids();
 
             string[] _refCollection = RefidS.Split(",");
             foreach (string _ref in _refCollection)
-            {
                 if (_ref.Trim() != string.Empty)
-                {
                     GetRelated(_ref, ObjDictionary);
-                    Console.WriteLine(_ref);
-                    Console.WriteLine(_ref);
-                }
-            }
         }
 
         public EbObject GetObjfromDB(string _refid)

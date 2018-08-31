@@ -1,4 +1,5 @@
-﻿using ExpressBase.Common.Data;
+﻿using ExpressBase.Common;
+using ExpressBase.Common.Data;
 using ExpressBase.Common.Structures;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using Newtonsoft.Json;
@@ -33,13 +34,13 @@ namespace ExpressBase.ServiceStack.Services
 								customertype, clcity, clcountry, city, typeofcustomer, sourcecategory, subcategory, consultation, picsrcvd
 								FROM customervendor WHERE id = :accountid AND prehead='50';
 							SELECT id,trdate,status,followupdate,narration, createdby FROM leaddetails
-								WHERE accountid=:accountid AND prehead='50' ORDER BY trdate DESC;
+								WHERE accountid=:accountid AND prehead='50' ORDER BY trdate DESC, id;
 							SELECT id,trdate,totalamount,advanceamount,balanceamount,cashreceived,paymentmode,bank,createddt,narration,createdby 
-								FROM leadpaymentdetails WHERE accountid=:accountid ORDER BY trdate DESC;
+								FROM leadpaymentdetails WHERE accountid=:accountid ORDER BY trdate DESC, balanceamount;
 							SELECT id,dateofsurgery,branch,patientinstructions,doctorsinstructions,createdby,createddt 
-								FROM leadsurgerydetails WHERE accountid=:accountid AND prehead='50';
+								FROM leadsurgerydetails WHERE accountid=:accountid AND prehead='50' ORDER BY createddt;
 							SELECT noofgrafts,totalrate,prpsessions,consulted,consultingfeepaid,consultingdoctor,closing,nature,consdate
-								FROM leadratedetails WHERE accountid=accountid AND prehead='50';";
+								FROM leadratedetails WHERE accountid=:accountid;";
 				paramList.Add(this.EbConnectionFactory.DataDB.GetNewParameter("accountid", EbDbTypes.Int32, request.AccId));
 			}			
 			var ds = this.EbConnectionFactory.DataDB.DoQueries(SqlQry, paramList.ToArray());	
@@ -74,16 +75,20 @@ namespace ExpressBase.ServiceStack.Services
 				CustomerData.Add("consultation", dr[16].ToString());
 				CustomerData.Add("picsrcvd", dr[17].ToString());
 
-				dr = ds.Tables[7].Rows[0];
-				CustomerData.Add("noofgrafts", dr[0].ToString());
-				CustomerData.Add("totalrate", dr[1].ToString());
-				CustomerData.Add("prpsessions", dr[2].ToString());
-				CustomerData.Add("consulted", dr[3].ToString());
-				CustomerData.Add("consultingfeepaid", dr[4].ToString());
-				CustomerData.Add("consultingdoctor", dr[5].ToString());
-				CustomerData.Add("closing", dr[6].ToString());
-				CustomerData.Add("nature", dr[7].ToString());
-				CustomerData.Add("consdate", Convert.ToDateTime(dr[8]).ToString("dd-MM-yyyy"));
+				if(ds.Tables[7].Rows.Count > 0)
+				{
+					dr = ds.Tables[7].Rows[0];
+					CustomerData.Add("noofgrafts", dr[0].ToString());
+					CustomerData.Add("totalrate", dr[1].ToString());
+					CustomerData.Add("prpsessions", dr[2].ToString());
+					CustomerData.Add("consulted", dr[3].ToString());
+					CustomerData.Add("consultingfeepaid", dr[4].ToString());
+					CustomerData.Add("consultingdoctor", dr[5].ToString());
+					CustomerData.Add("closing", dr[6].ToString());
+					CustomerData.Add("nature", dr[7].ToString());
+					CustomerData.Add("consdate", Convert.ToDateTime(dr[8]).ToString("dd-MM-yyyy"));
+				}
+				
 
 				//followup details
 				foreach (var i in ds.Tables[4].Rows)
@@ -150,78 +155,220 @@ namespace ExpressBase.ServiceStack.Services
 			var dict = Fields.ToDictionary(x => x.Key);
 			KeyValueType_Field found;
 			List<DbParameter> parameters = new List<DbParameter>();
+			List<DbParameter> parameters2 = new List<DbParameter>();
+			string cols = string.Empty, vals = string.Empty;
+			string cols2 = string.Empty, vals2 = string.Empty;
+			string upcolsvals = string.Empty;
+			string upcolsvals2 = string.Empty;
+
 			if (dict.TryGetValue("firmcode", out found))
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Int32, Convert.ToInt32(found.Value))); 
-			if (dict.TryGetValue("trdate", out found))
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Date, Convert.ToDateTime(found.Value)));
-			if (dict.TryGetValue("genurl", out found))
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
-			if (dict.TryGetValue("name", out found))
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
-			if (dict.TryGetValue("dob", out found))
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Date, Convert.ToDateTime(found.Value)));
-			if (dict.TryGetValue("age", out found))
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
-			if (dict.TryGetValue("genphoffice", out found))
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
-			if (dict.TryGetValue("profession", out found))
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
-			if (dict.TryGetValue("genemail", out found))
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
-			if (dict.TryGetValue("customertype", out found))
+			{
 				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Int32, Convert.ToInt32(found.Value)));
+				cols += "firmcode,";
+				vals += ":firmcode,";
+			}
+			if (dict.TryGetValue("trdate", out found))
+			{
+				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Date, Convert.ToDateTime(found.Value)));
+				cols += "trdate,";
+				vals += ":trdate,";
+			}
+			if (dict.TryGetValue("genurl", out found))
+			{
+				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
+				cols += "genurl,";
+				vals += ":genurl,";
+			}
+			if (dict.TryGetValue("name", out found))
+			{
+				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
+				cols += "name,";
+				vals += ":name,";
+				upcolsvals += "name=:name,";
+			}
+			if (dict.TryGetValue("dob", out found))
+			{
+				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Date, Convert.ToDateTime(found.Value)));
+				cols += "dob,";
+				vals += ":dob,";
+				upcolsvals += "dob=:dob,";
+			}
+			//if (dict.TryGetValue("age", out found))
+			//	parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
+			if (dict.TryGetValue("genphoffice", out found))
+			{
+				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
+				cols += "genphoffice,";
+				vals += ":genphoffice,";
+				upcolsvals += "genphoffice=:genphoffice,";
+			}
+			if (dict.TryGetValue("profession", out found))
+			{
+				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
+				cols += "profession,";
+				vals += ":profession,";
+				upcolsvals += "profession=:profession,";
+			}
+			if (dict.TryGetValue("genemail", out found))
+			{
+				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
+				cols += "genemail,";
+				vals += ":genemail,";
+				upcolsvals += "genemail=:genemail,";
+			}
+			if (dict.TryGetValue("customertype", out found))
+			{
+				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Int32, Convert.ToInt32(found.Value)));
+				cols += "customertype,";
+				vals += ":customertype,";
+				upcolsvals += "customertype=:customertype,";
+			}
 			if (dict.TryGetValue("clcity", out found))
+			{
 				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
+				cols += "clcity,";
+				vals += ":clcity,";
+				upcolsvals += "clcity=:clcity,";
+			}
 			if (dict.TryGetValue("clcountry", out found))
+			{
 				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
+				cols += "clcountry,";
+				vals += ":clcountry,";
+				upcolsvals += "clcountry=:clcountry,";
+			}
 			if (dict.TryGetValue("city", out found))
+			{
 				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
+				cols += "city,";
+				vals += ":city,";
+				upcolsvals += "city=:city,";
+			}
 			if (dict.TryGetValue("typeofcustomer", out found))
+			{
 				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
+				cols += "typeofcustomer,";
+				vals += ":typeofcustomer,";
+				upcolsvals += "typeofcustomer=:typeofcustomer,";
+			}
 			if (dict.TryGetValue("sourcecategory", out found))
+			{
 				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
+				cols += "sourcecategory,";
+				vals += ":sourcecategory,";
+				upcolsvals += "sourcecategory=:sourcecategory,";
+			}
 			if (dict.TryGetValue("subcategory", out found))
+			{
 				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
+				cols += "subcategory,";
+				vals += ":subcategory,";
+				upcolsvals += "subcategory=:subcategory,";
+			}
 			if (dict.TryGetValue("consultation", out found))
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
+			{
+				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.BooleanOriginal, Convert.ToBoolean(found.Value)));
+				cols += "consultation,";
+				vals += ":consultation,";
+				upcolsvals += "consultation=:consultation,";
+			}
 			if (dict.TryGetValue("picsrcvd", out found))
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
+			{
+				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.BooleanOriginal, Convert.ToBoolean(found.Value)));
+				cols += "picsrcvd,";
+				vals += ":picsrcvd,";
+				upcolsvals += "picsrcvd=:picsrcvd,";
+			}
 
 			if (dict.TryGetValue("consdate", out found))
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
+			{
+				parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Date, Convert.ToDateTime(found.Value)));
+				cols2 += "consdate,";
+				vals2 += ":consdate,";
+				upcolsvals2 += "consdate=:consdate,";
+			}
 			if (dict.TryGetValue("consultingdoctor", out found))
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
+			{
+				parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Int32, Convert.ToInt32(found.Value)));
+				cols2 += "consultingdoctor,";
+				vals2 += ":consultingdoctor,";
+				upcolsvals2 += "consultingdoctor=:consultingdoctor,";
+			}
 			if (dict.TryGetValue("noofgrafts", out found))
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
+			{
+				parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Int32, Convert.ToInt32(found.Value)));
+				cols2 += "noofgrafts,";
+				vals2 += ":noofgrafts,";
+				upcolsvals2 += "noofgrafts=:noofgrafts,";
+			}
 			if (dict.TryGetValue("totalrate", out found))
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
+			{
+				parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Int32, Convert.ToInt32(found.Value)));
+				cols2 += "totalrate,";
+				vals2 += ":totalrate,";
+				upcolsvals2 += "totalrate=:totalrate,";
+			}
 			if (dict.TryGetValue("prpsessions", out found))
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
+			{
+				parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Int32, Convert.ToInt32(found.Value)));
+				cols2 += "prpsessions,";
+				vals2 += ":prpsessions,";
+				upcolsvals2 += "prpsessions=:prpsessions,";
+			}
 			if (dict.TryGetValue("consultingfeepaid", out found))
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
+			{
+				parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.BooleanOriginal, Convert.ToBoolean(found.Value)));
+				cols2 += "consultingfeepaid,";
+				vals2 += ":consultingfeepaid,";
+				upcolsvals2 += "consultingfeepaid=:consultingfeepaid,";
+			}
 			if (dict.TryGetValue("closing", out found))
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
+			{
+				parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Int32, Convert.ToInt32(found.Value)));
+				cols2 += "closing,";
+				vals2 += ":closing,";
+				upcolsvals2 += "closing=:closing,";
+			}
 			if (dict.TryGetValue("nature", out found))
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
+			{
+				parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
+				cols2 += "nature,";
+				vals2 += ":nature,";
+				upcolsvals2 += "nature=:nature,";
+			}
 
-			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("prehead", EbDbTypes.String, "50"));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("prehead", EbDbTypes.Int32, 50));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("accountcode", EbDbTypes.String, Fields.Find(i => i.Key == "genurl").Value));
 
 			int rstatus = 0;
 			if (request.RequestMode == 0)//New Customer
 			{
-				string Qry = @"INSERT INTO customervendor(accountcode, prehead, firmcode, trdate, genurl, name, dob, age, genphoffice, profession, genemail, customertype, clcity, clcountry, city, typeofcustomer, sourcecategory, subcategory, consultation, picsrcvd) 
-										VALUES(:accountcode, :prehead, :firmcode, :trdate, :genurl, :name, :dob, :age, :genphoffice, :profession, :genemail, :customertype, :clcity, :clcountry, :city, :typeofcustomer, :sourcecategory, :subcategory, :consultation, :picsrcvd);
-								INSERT INTO leadratedetails(accountcode, noofgrafts, totalrate, prpsessions, consulted, consultingfeepaid, consultingdoctor, closing, nature, consdate)
-										VALUES (:accountcode, :noofgrafts, :totalrate, :prpsessions, :consulted, :consultingfeepaid, :consultingdoctor, :closing, :nature, :consdate);";
-				rstatus = this.EbConnectionFactory.ObjectsDB.InsertTable(Qry, parameters.ToArray());
+				string Qry = @"INSERT INTO customervendor("+cols+@"accountcode, prehead) 
+										VALUES("+vals+@":accountcode, :prehead)
+										 RETURNING id;";
+				EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery(Qry, parameters.ToArray());
+				rstatus= Convert.ToInt32(dt.Rows[0][0]);
+
+				string Qry2 = @"INSERT INTO leadratedetails("+cols2+@"accountid, accountcode)
+										VALUES ("+vals2+@":accountid, :accountcode);";
+				parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("accountid", EbDbTypes.Int32, rstatus));
+				parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("accountcode", EbDbTypes.String, Fields.Find(i => i.Key == "genurl").Value));
+				this.EbConnectionFactory.ObjectsDB.InsertTable(Qry2, parameters2.ToArray());
 			}			
 			else if (request.RequestMode == 1)
 			{
-				string Qry = @"UPDATE customervendor 
-								SET genphoffice=:genphoffice, profession=:profession, genemail=:genemail, customertype=:customertype, clcity=:clcity, clcountry=:clcountry, city=:city, typeofcustomer=:typeofcustomer, sourcecategory=:sourcecategory, subcategory=:subcategory, consultation=:consultation, picsrcv=:picsrcv 
-								WHERE prehead = :prehead AND accountcode = :accountcode;";
+				if (dict.TryGetValue("accountid", out found))
+				{
+					parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Int32, Convert.ToInt32(found.Value)));
+					parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Int32, Convert.ToInt32(found.Value)));
+				}
+				parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("prehead", EbDbTypes.Int32, 50));
+
+				string Qry = @"UPDATE customervendor SET "+ upcolsvals.Substring(0, upcolsvals.Length - 1) +" WHERE prehead = :prehead AND id = :accountid;";
 				rstatus = this.EbConnectionFactory.ObjectsDB.UpdateTable(Qry, parameters.ToArray());
+
+				string Qry2 = @"UPDATE leadratedetails SET "+ upcolsvals2.Substring(0, upcolsvals2.Length - 1) +" WHERE accountid = :accountid;";
+				rstatus = this.EbConnectionFactory.ObjectsDB.UpdateTable(Qry2, parameters2.ToArray());
 			}
 			return new SaveCustomerResponse { Status = rstatus };
 		}
@@ -232,27 +379,27 @@ namespace ExpressBase.ServiceStack.Services
 			FeedbackEntry F_Obj = JsonConvert.DeserializeObject<FeedbackEntry>(request.Data);
 			List<DbParameter> parameters = new List<DbParameter>();
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, F_Obj.Id));
-			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("accountcode", EbDbTypes.String, F_Obj.Account_Code));
-			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("trdate", EbDbTypes.String, F_Obj.Date));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("accountid", EbDbTypes.Int32, Convert.ToInt32(F_Obj.Account_Code)));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("trdate", EbDbTypes.Date, Convert.ToDateTime(F_Obj.Date)));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("status", EbDbTypes.String, F_Obj.Status));
-			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("followupdate", EbDbTypes.String, F_Obj.Followup_Date));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("followupdate", EbDbTypes.Date, Convert.ToDateTime(F_Obj.Followup_Date)));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("narration", EbDbTypes.String, F_Obj.Comments));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("createdby", EbDbTypes.String, request.UserName));
-			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("createddt", EbDbTypes.String, DateTime.Now.ToString("dd-MM-yyyy")));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("createddt", EbDbTypes.DateTime, DateTime.Now));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("modifiedby", EbDbTypes.String, request.UserName));
-			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("modifieddt", EbDbTypes.String, DateTime.Now.ToString("dd-MM-yyyy")));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("modifieddt", EbDbTypes.DateTime, DateTime.Now));
 
 			if (F_Obj.Id == 0)//new
 			{
-				string Qry = @"INSERT INTO leaddetails(prehead, accountcode, trdate, status, followupdate, narration, createdby, createddt) 
-									VALUES('50 , :accountcode, :trdate, :status, :followupdate, :narration, :createdby, :createddt);";
+				string Qry = @"INSERT INTO leaddetails(prehead, accountid, trdate, status, followupdate, narration, createdby, createddt) 
+									VALUES('50' , :accountid, :trdate, :status, :followupdate, :narration, :createdby, :createddt);";
 				rstatus = this.EbConnectionFactory.ObjectsDB.InsertTable(Qry, parameters.ToArray());
 			}
 			else//update
 			{
 				string Qry = @"UPDATE leaddetails 
 								SET status=:status, followupdate=:followupdate, narration=:narration, modifiedby = :modifiedby, modifieddt = :modifieddt  
-								WHERE prehead = '50' AND accountcode = :accountcode AND id=:id;";
+								WHERE prehead = '50' AND accountid = :accountid AND id=:id;";
 				rstatus = this.EbConnectionFactory.ObjectsDB.UpdateTable(Qry, parameters.ToArray());
 			}
 			return new SaveCustomerFollowupResponse { Status = rstatus };
@@ -264,31 +411,31 @@ namespace ExpressBase.ServiceStack.Services
 			BillingEntry B_Obj = JsonConvert.DeserializeObject<BillingEntry>(request.Data);
 			List<DbParameter> parameters = new List<DbParameter>();
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, B_Obj.Id));
-			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("accountcode", EbDbTypes.String, B_Obj.Account_Code));
-			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("trdate", EbDbTypes.String, B_Obj.Date));
-			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("totalamount", EbDbTypes.String, B_Obj.Total_Amount));
-			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("advanceamount", EbDbTypes.String, B_Obj.Amount_Received));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("accountid", EbDbTypes.Int32, B_Obj.Account_Code));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("trdate", EbDbTypes.Date, Convert.ToDateTime(B_Obj.Date)));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("totalamount", EbDbTypes.Int32, B_Obj.Total_Amount));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("advanceamount", EbDbTypes.Int32, B_Obj.Amount_Received));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("paymentmode", EbDbTypes.String, B_Obj.Payment_Mode));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("bank", EbDbTypes.String, B_Obj.Bank));
-			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("balanceamount", EbDbTypes.String, B_Obj.Balance_Amount));
-			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("cashreceived", EbDbTypes.String, B_Obj.Amount_Received));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("balanceamount", EbDbTypes.Int32, B_Obj.Balance_Amount));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("cashreceived", EbDbTypes.Int32, B_Obj.Cash_Paid));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("createdby", EbDbTypes.String, request.UserName));
-			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("createddt", EbDbTypes.String, DateTime.Now.ToString("dd-MM-yyyy")));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("createddt", EbDbTypes.DateTime, DateTime.Now));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("narration", EbDbTypes.String, B_Obj.Narration));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("modifiedby", EbDbTypes.String, request.UserName));
-			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("modifieddt", EbDbTypes.String, DateTime.Now.ToString("dd-MM-yyyy")));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("modifieddt", EbDbTypes.DateTime, DateTime.Now));
 			if (B_Obj.Id == 0)//new
 			{
-				string Qry = @"INSERT INTO leadpaymentdetails(prehead,accountcode,trdate,totalamount,advanceamount,paymentmode,bank,balanceamount,cashreceived,createdby,createddt,narration) 
-													VALUES (50,:accountcode,:trdate,:totalamount,:advanceamount,:paymentmode,:bank,:balanceamount,:cashreceived,:createdby,:createddt,:narration);";
+				string Qry = @"INSERT INTO leadpaymentdetails(prehead,accountid,trdate,totalamount,advanceamount,paymentmode,bank,balanceamount,cashreceived,createdby,createddt,narration) 
+									VALUES (50,:accountid,:trdate,:totalamount,:advanceamount,:paymentmode,:bank,:balanceamount,:cashreceived,:createdby,:createddt,:narration);";
 				rstatus = this.EbConnectionFactory.ObjectsDB.InsertTable(Qry, parameters.ToArray());
 			}
 			else//update
 			{
 				string Qry = @"UPDATE leadpaymentdetails 
-								SET paymentmode = :paymentmode, bank = :bank, balanceamount = :balanceamount, cashreceived = :cashreceived,
+								SET paymentmode = :paymentmode, bank = :bank, cashreceived = :cashreceived,
 									narration = :narration, modifiedby = :modifiedby, modifieddt = :modifieddt 
-								WHERE accountcode=:accountcode AND id = :id;";
+								WHERE accountid=:accountid AND id = :id;";
 				rstatus = this.EbConnectionFactory.ObjectsDB.UpdateTable(Qry, parameters.ToArray());
 			}
 			return new SaveCustomerPaymentResponse { Status = rstatus };
