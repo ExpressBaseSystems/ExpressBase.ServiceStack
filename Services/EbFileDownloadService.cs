@@ -231,8 +231,7 @@ namespace ExpressBase.ServiceStack.Services
 
             GetImageFtpRequest getImageFtp = new GetImageFtpRequest();
 
-            getImageFtp.AddAuth(this.FileClient.BearerToken, this.FileClient.RefreshToken);
-            
+            getImageFtp.AddAuth(req.UserId, req.TenantAccountId, this.FileClient.BearerToken, this.FileClient.RefreshToken);
 
             if (Files.Count > 0)
             {
