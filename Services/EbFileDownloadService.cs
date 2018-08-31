@@ -243,7 +243,7 @@ namespace ExpressBase.ServiceStack.Services
                         if (file.Value.Contains("82168907912896"))
                             Console.WriteLine("Match Found");
                         getImageFtp.FileUrl = file;
-                        //this.MessageProducer3.Publish(getImageFtp);
+                        this.MessageProducer3.Publish(getImageFtp);
                     }
                 }
             }
