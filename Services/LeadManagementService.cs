@@ -72,8 +72,8 @@ namespace ExpressBase.ServiceStack.Services
 				CustomerData.Add("typeofcustomer", dr[13].ToString());
 				CustomerData.Add("sourcecategory", dr[14].ToString());
 				CustomerData.Add("subcategory", dr[15].ToString());
-				CustomerData.Add("consultation", dr[16].ToString());
-				CustomerData.Add("picsrcvd", dr[17].ToString());
+				CustomerData.Add("consultation", dr[16].ToString().ToLower());
+				CustomerData.Add("picsrcvd", dr[17].ToString().ToLower());
 
 				if(ds.Tables[7].Rows.Count > 0)
 				{
@@ -81,8 +81,8 @@ namespace ExpressBase.ServiceStack.Services
 					CustomerData.Add("noofgrafts", dr[0].ToString());
 					CustomerData.Add("totalrate", dr[1].ToString());
 					CustomerData.Add("prpsessions", dr[2].ToString());
-					CustomerData.Add("consulted", dr[3].ToString());
-					CustomerData.Add("consultingfeepaid", dr[4].ToString());
+					//CustomerData.Add("consulted", dr[3].ToString().ToLower());
+					CustomerData.Add("consultingfeepaid", dr[4].ToString().ToLower());
 					CustomerData.Add("consultingdoctor", dr[5].ToString());
 					CustomerData.Add("closing", dr[6].ToString());
 					CustomerData.Add("nature", dr[7].ToString());
