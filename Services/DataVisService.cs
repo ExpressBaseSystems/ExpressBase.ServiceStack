@@ -336,7 +336,7 @@ namespace ExpressBase.ServiceStack
                 _ds.Sql = _ds.Sql.ReplaceAll(";", string.Empty);
                 _sql = _ds.Sql.Replace(":and_search", _c) + ";";
                 //}
-                if (request.Ispaging )
+                if (request.Ispaging)
                 {
                     var matches = Regex.Matches(_sql, @"\;\s*SELECT\s*COUNT\(\*\)\s*FROM");
                     if (matches.Count == 0)
@@ -403,7 +403,7 @@ namespace ExpressBase.ServiceStack
             //-- 
             EbDataTable _formattedDataTable = null;
             if (_dataset.Tables.Count > 0 && _dV != null)
-                _formattedDataTable = PreProcessing( ref _dataset, _dV, request.UserInfo);
+                _formattedDataTable = PreProcessing(ref _dataset, _dV, request.UserInfo);
 
             dsresponse = new DataSourceDataResponse
             {
@@ -493,12 +493,12 @@ namespace ExpressBase.ServiceStack
             return resp;
         }
 
-        public EbDataTable PreProcessing( ref EbDataSet _dataset, EbDataVisualization _dv, User _user)
+        public EbDataTable PreProcessing(ref EbDataSet _dataset, EbDataVisualization _dv, User _user)
         {
             dynamic result = null;
             var _user_culture = CultureInfo.GetCultureInfo(_user.Preference.Locale);
             var colCount = _dataset.Tables[0].Columns.Count;
-            Dictionary<string, int> dict = new Dictionary<string, int>();
+            //Dictionary<string, int> dict = new Dictionary<string, int>();
             if (this.EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.ORACLE && _dv.IsPaging)
             {
                 _dataset.Tables[0].Columns.RemoveAt(colCount - 1);// rownum deleted for oracle
@@ -570,24 +570,96 @@ namespace ExpressBase.ServiceStack
 
                     if (!string.IsNullOrEmpty(col.LinkRefId))
                     {
-                        if(col.LinkType == LinkTypeEnum.Popout)
+                        if (col.LinkType == LinkTypeEnum.Popout)
                             _formattedData = "<a href='#' oncontextmenu='return false' class ='tablelink' data-link='" + col.LinkRefId + "'>" + _formattedData + "</a>";
                         else if (col.LinkType == LinkTypeEnum.Inline)
-                            _formattedData = "< a href = '#' oncontextmenu = 'return false' class ='tablelink' data-link='"+ col.LinkRefId + "' data-inline='true' data-data='"+ _formattedData + "'><i class='fa fa-plus'></i></a>" + _formattedData ;
+                            _formattedData = "< a href = '#' oncontextmenu = 'return false' class ='tablelink' data-link='" + col.LinkRefId + "' data-inline='true' data-data='" + _formattedData + "'><i class='fa fa-plus'></i></a>" + _formattedData;
                         else if (col.LinkType == LinkTypeEnum.Both)
-                            _formattedData = "<a href ='#' oncontextmenu='return false' class='tablelink' data-link='"+ col.LinkRefId +"' data-inline='true' data-data='"+ _formattedData + "'> <i class='fa fa-plus'></i></a>" + "&nbsp;  <a href='#' oncontextmenu='return false' class ='tablelink' data-link='" + col.LinkRefId + "'>" + _formattedData + "</a>";
+                            _formattedData = "<a href ='#' oncontextmenu='return false' class='tablelink' data-link='" + col.LinkRefId + "' data-inline='true' data-data='" + _formattedData + "'> <i class='fa fa-plus'></i></a>" + "&nbsp;  <a href='#' oncontextmenu='return false' class ='tablelink' data-link='" + col.LinkRefId + "'>" + _formattedData + "</a>";
                     }
-					else if (col.Type == EbDbTypes.String && (col as DVStringColumn).RenderAs == StringRenderType.Link && col.LinkType == LinkTypeEnum.Tab)/////////////////
-					{
-						_formattedData = "<a href='../custompage/leadmanagement?ac="+ _dataset.Tables[0].Rows[i][0] + "' target='_blank'>" + _formattedData + "</a>";
-					}
+                    else if (col.Type == EbDbTypes.String && (col as DVStringColumn).RenderAs == StringRenderType.Link && col.LinkType == LinkTypeEnum.Tab)/////////////////
+                    {
+                        _formattedData = "<a href='../custompage/leadmanagement?ac=" + _dataset.Tables[0].Rows[i][0] + "' target='_blank'>" + _formattedData + "</a>";
+                    }
 
                     _formattedTable.Rows[i].Insert(col.Data, _formattedData);
 
                 }
             }
 
+            //Dictionary<int, string> dict = GetGroupInfo(_dataset.Tables[0], _dv);
+
             return _formattedTable;
+        }
+
+        public Dictionary<int, string> GetGroupInfo2(EbDataTable _table, EbDataVisualization _dv)
+        {
+            List<RowGroupParent> RowGroupColl = (_dv as EbTableVisualization).RowGroupCollection;
+            Dictionary<int, string> _dict = new Dictionary<int, string>();
+            var count = _dv.Columns.Count;
+
+            List<LevelInfo> _levels = new List<LevelInfo>();
+
+
+
+            string _last = string.Empty;
+            for (int i = 0; i < _table.Rows.Count; i++)
+            {
+                string _new = string.Empty;
+                foreach (DVBaseColumn col in RowGroupColl[0].RowGrouping) 
+                    _new += _table.Rows[i][col.Data];
+
+                if (_new != _last) // new group
+                {
+
+                }
+                else //same group
+                {
+                }
+
+                _last = _new;
+            }
+            return new Dictionary<int, string>();
+        }
+
+        public Dictionary<int, string> GetGroupInfo(EbDataTable _table, EbDataVisualization _dv)
+        {
+            List<RowGroupParent> RowGroupColl = (_dv as EbTableVisualization).RowGroupCollection;
+            Dictionary<int, string> _dict = new Dictionary<int, string>();
+            var count = _dv.Columns.Count;
+            if (RowGroupColl.Count > 0)
+            {
+                foreach (DVBaseColumn col in RowGroupColl[0].RowGrouping)
+                {
+                    var last = "";
+                    for (int i = 0; i < _table.Rows.Count; i++)
+                    {
+                        var groupString = (_table.Rows[i][col.Data].ToString().Trim() != "") ? _table.Rows[i][col.Data].ToString().Trim() : "(Blank)";
+                        if (last != groupString)
+                        {
+                            if (last == null)
+                            {
+                                var groupstr = getGroupRow(count, groupString, i, col.Data);
+                                _dict.Add(i, groupstr);
+                                //$(rows).eq(i).before(groupstr);
+                            }
+                            else
+                            {
+                            }
+                            last = groupString;
+
+                        }
+                    }
+                }
+            }
+
+            return new Dictionary<int, string>();
+        }
+
+        public string getGroupRow( int count, string groupString, int rowindex, int colIndex)
+        {
+            string groupRow = string.Empty;
+            return groupRow;
         }
 
         [CompressResponse]
@@ -661,6 +733,12 @@ namespace ExpressBase.ServiceStack
             var x = EbSerializers.Json_Serialize(dsresponse);
             return dsresponse;
         }
+    }
+
+    public class LevelInfo
+    {
+        public string LevelText { get; set; }
+        public int Count { get; set; }
     }
 }
 

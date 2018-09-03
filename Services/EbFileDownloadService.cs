@@ -113,7 +113,7 @@ namespace ExpressBase.ServiceStack.Services
         private void GetFileNamesFromDb()
         {
             int CustomerId = 0;
-            string UploadPath = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_FTP_HOST) + @"files/SoftFiles_L/";
+            string UploadPath = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_FTP_HOST) + @"files/Softfiles_L/";
             string ImageTableQuery = @"SELECT customervendor.id, customervendor.accountcode, customervendor.imageid, vddicommentry.filename from vddicommentry
             INNER JOIN customervendor ON customervendor.imagecount > 0 and vddicommentry.patientid=(customervendor.prehead||customervendor.accountcode)";
             string _imageId = string.Empty, _fileName = string.Empty, _accountCode = string.Empty;
@@ -125,7 +125,7 @@ namespace ExpressBase.ServiceStack.Services
                 _accountCode = row[1].ToString();
                 _imageId = row[2].ToString();
                 _fileName = row[3].ToString();
-                Files.Add(new KeyValuePair<int, string>(CustomerId, UploadPath + _imageId + "/DICOM/" + _fileName));
+                Files.Add(new KeyValuePair<int, string>(CustomerId, System.Web.HttpUtility.UrlPathEncode(UploadPath + _imageId + "/DICOM/" + _fileName)));
             }
         }
 
@@ -231,8 +231,7 @@ namespace ExpressBase.ServiceStack.Services
 
             GetImageFtpRequest getImageFtp = new GetImageFtpRequest();
 
-            getImageFtp.AddAuth(this.FileClient.BearerToken, this.FileClient.RefreshToken);
-            
+            getImageFtp.AddAuth(req.UserId, req.TenantAccountId, this.FileClient.BearerToken, this.FileClient.RefreshToken);
 
             if (Files.Count > 0)
             {
@@ -240,6 +239,8 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     if (!file.Value.Equals(string.Empty))
                     {
+                        if (file.Value.Contains("82168907912896"))
+                            Console.WriteLine("Match Found");
                         getImageFtp.FileUrl = file;
                         this.MessageProducer3.Publish(getImageFtp);
                     }
