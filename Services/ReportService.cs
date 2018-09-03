@@ -30,6 +30,9 @@ using ExpressBase.Common.Structures;
 using ExpressBase.Common.LocationNSolution;
 using ExpressBase.Common.Objects;
 using ExpressBase.Objects.Objects;
+using System.Net.Mail;
+using System.Net;
+using ServiceStack.Messaging;
 
 namespace ExpressBase.ServiceStack
 {
@@ -38,7 +41,7 @@ namespace ExpressBase.ServiceStack
         private DataSourceDataSetResponse dsresp = null;
 
         //private iTextSharp.text.Font f = FontFactory.GetFont(FontFactory.HELVETICA, 12);
-        public ReportService(IEbConnectionFactory _dbf, IEbStaticFileClient _sfc) : base(_dbf, _sfc) { }
+        public ReportService(IEbConnectionFactory _dbf, IEbStaticFileClient _sfc, IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_dbf, _sfc, _mqp, _mqc) { }
 
         public ReportRenderResponse Get(ReportRenderRequest request)
         {
@@ -121,6 +124,26 @@ namespace ExpressBase.ServiceStack
                     Report.DataSet.Tables.Clear();
                     Report.DataSet = null;
                 }
+           
+
+            MailMessage mm = new MailMessage("expressbasesystems@gmail.com", "donaullattil93@gmail.com")
+            {
+                Subject = "subject",
+                IsBodyHtml = true,
+                Body = "Hi, Please find the attachment."
+            };
+
+            mm.Attachments.Add(new Attachment(Report.Ms1, Report.Name + ".pdf"));
+            SmtpClient smtp = new SmtpClient
+            {
+                Host = "smtp.gmail.com",
+                Port = 587,
+                EnableSsl = true,
+                Credentials = new NetworkCredential { UserName = "expressbasesystems@gmail.com", Password = "ebsystems" }
+
+            };
+
+            smtp.Send(mm);
             }
             catch (Exception e)
             {
