@@ -19,12 +19,22 @@ namespace ExpressBase.ServiceStack.Services
 		{
 			string SqlQry = @"SELECT firmcode, fname FROM firmmaster;
 							  SELECT id, name FROM customervendor WHERE prehead=54 ORDER BY name;
-							  SELECT id, name FROM customervendor WHERE prehead=52 ORDER BY name;";
+							  SELECT id, name FROM customervendor WHERE prehead=52 ORDER BY name;
+							SELECT DISTINCT INITCAP(TRIM(BOTH FROM clcity)) AS clcity FROM customervendor WHERE LENGTH(clcity) > 2 ORDER BY clcity;
+							SELECT DISTINCT INITCAP(TRIM(BOTH FROM clcountry)) AS clcountry FROM customervendor WHERE LENGTH(clcountry) > 2 ORDER BY clcountry;
+							SELECT DISTINCT INITCAP(TRIM(BOTH FROM city)) AS city FROM customervendor WHERE LENGTH(city) > 2 ORDER BY city;
+							SELECT DISTINCT INITCAP(TRIM(BOTH FROM sourcecategory)) AS sourcecategory FROM customervendor WHERE LENGTH(sourcecategory) > 2 ORDER BY sourcecategory;
+							SELECT DISTINCT INITCAP(TRIM(BOTH FROM subcategory)) AS subcategory FROM customervendor WHERE LENGTH(subcategory) > 2 ORDER BY subcategory;";
 			List<DbParameter> paramList = new List<DbParameter>();
 			Dictionary<int, string> CostCenter = new Dictionary<int, string>();
 			Dictionary<string, int> DicDict = new Dictionary<string, int>();
 			Dictionary<string, int> StaffDict = new Dictionary<string, int>();
 			Dictionary<string, string> CustomerData = new Dictionary<string, string>();
+			List<string> clcityList = new List<string>();
+			List<string> clcountryList = new List<string>();
+			List<string> cityList = new List<string>();
+			List<string> sourcecategoryList = new List<string>();
+			List<string> subcategoryList = new List<string>();
 			List<FeedbackEntry> Flist = new List<FeedbackEntry>();
 			List<BillingEntry> Blist = new List<BillingEntry>();
 			List<SurgeryEntry> Slist = new List<SurgeryEntry>();
@@ -53,10 +63,21 @@ namespace ExpressBase.ServiceStack.Services
 			foreach (var dr in ds.Tables[2].Rows)
 				StaffDict.Add(dr[1].ToString(), Convert.ToInt32(dr[0]));
 
-			if (ds.Tables.Count > 3 && ds.Tables[3].Rows.Count > 0)
+			foreach (var dr in ds.Tables[3].Rows)
+				clcityList.Add(dr[0].ToString());
+			foreach (var dr in ds.Tables[4].Rows)
+				clcountryList.Add(dr[0].ToString());
+			foreach (var dr in ds.Tables[5].Rows)
+				cityList.Add(dr[0].ToString());
+			foreach (var dr in ds.Tables[6].Rows)
+				sourcecategoryList.Add(dr[0].ToString());
+			foreach (var dr in ds.Tables[7].Rows)
+				subcategoryList.Add(dr[0].ToString());
+
+			if (ds.Tables.Count > 8 && ds.Tables[8].Rows.Count > 0)
 			{
 				Mode = 1;
-				var dr = ds.Tables[3].Rows[0];
+				var dr = ds.Tables[8].Rows[0];
 				CustomerData.Add("accountid", dr[0].ToString());
 				CustomerData.Add("firmcode", dr[1].ToString());
 				CustomerData.Add("trdate", Convert.ToDateTime(dr[2]).ToString("dd-MM-yyyy"));
@@ -77,9 +98,9 @@ namespace ExpressBase.ServiceStack.Services
 				CustomerData.Add("consultation", dr[16].ToString().ToLower());
 				CustomerData.Add("picsrcvd", dr[17].ToString().ToLower());
 
-				if(ds.Tables[7].Rows.Count > 0)
+				if(ds.Tables[12].Rows.Count > 0)
 				{
-					dr = ds.Tables[7].Rows[0];
+					dr = ds.Tables[12].Rows[0];
 					CustomerData.Add("noofgrafts", dr[0].ToString());
 					CustomerData.Add("totalrate", dr[1].ToString());
 					CustomerData.Add("prpsessions", dr[2].ToString());
@@ -93,7 +114,7 @@ namespace ExpressBase.ServiceStack.Services
 				
 
 				//followup details
-				foreach (var i in ds.Tables[4].Rows)
+				foreach (var i in ds.Tables[9].Rows)
 				{
 					Flist.Add(new FeedbackEntry
 					{
@@ -107,7 +128,7 @@ namespace ExpressBase.ServiceStack.Services
 				}
 
 				//Billing details
-				foreach (var i in ds.Tables[5].Rows)
+				foreach (var i in ds.Tables[10].Rows)
 				{
 					Blist.Add(new BillingEntry
 					{
@@ -126,7 +147,7 @@ namespace ExpressBase.ServiceStack.Services
 				}
 
 				//surgery details
-				foreach (var i in ds.Tables[6].Rows)
+				foreach (var i in ds.Tables[11].Rows)
 				{
 					Slist.Add(new SurgeryEntry
 					{
@@ -148,7 +169,12 @@ namespace ExpressBase.ServiceStack.Services
 				CustomerDataDict = CustomerData,
 				FeedbackList = Flist,
 				BillingList = Blist,
-				SurgeryList = Slist
+				SurgeryList = Slist,
+				CrntCityList = clcityList,
+				CrntCountryList = clcountryList,
+				CityList = cityList,
+				SourceCategoryList = sourcecategoryList,
+				SubCategoryList = subcategoryList
 			};
 		}
 
