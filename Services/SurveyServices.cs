@@ -97,6 +97,11 @@ namespace ExpressBase.ServiceStack.Services
                         parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("chscore" + count, EbDbTypes.Int32, choice.Score));
                     }
                 }
+                var res = this.EbConnectionFactory.ObjectsDB.DoNonQuery(s.ToString(), parameters.ToArray());
+                if (res > 0)
+                {
+                    resp.Status = true;
+                }
             }
             else
             {
@@ -117,16 +122,17 @@ namespace ExpressBase.ServiceStack.Services
                     parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("score" + count, EbDbTypes.Int32, choice.Score));
                 }
                 s.Append(";SELECT currval('eb_survey_queries_id_seq');");
-            }
 
-            var res = this.EbConnectionFactory.ObjectsDB.DoQueries(s.ToString(), parameters.ToArray());
-            if (Convert.ToInt32(res.Tables[0].Rows[0][0]) > 0)
-            {
-                resp.Status = true;
-                resp.Quesid = Convert.ToInt32(res.Tables[0].Rows[0][0]);
+                var res = this.EbConnectionFactory.ObjectsDB.DoQueries(s.ToString(), parameters.ToArray());
+
+                if (Convert.ToInt32(res.Tables[0].Rows[0][0]) > 0)
+                {
+                    resp.Status = true;
+                    resp.Quesid = Convert.ToInt32(res.Tables[0].Rows[0][0]);
+                }
+                else
+                    resp.Status = false;
             }
-            else
-                resp.Status = false;
             return resp;
         }
 
