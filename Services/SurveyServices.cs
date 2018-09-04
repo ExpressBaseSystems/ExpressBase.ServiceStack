@@ -339,5 +339,10 @@ namespace ExpressBase.ServiceStack.Services
 
             return new SurveyLinesResponse { };
         }
+
+        public GetSurveyEnqResponse Get(GetSurveyEnqRequest request)
+        {
+            return new GetSurveyEnqResponse { };
+        }
     }
 }
