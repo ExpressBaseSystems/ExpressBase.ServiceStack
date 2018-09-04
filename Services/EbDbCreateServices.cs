@@ -379,7 +379,8 @@ namespace ExpressBase.ServiceStack.Services
 
                 //..............insert into client tbl eb_users............ to SOLUTION
                 string sql2 = @"INSERT INTO eb_users(email,pwd) VALUES ('anonymous@anonym.com','294de3557d9d00b3d2d8a1e6aab028cf'); 
-                                INSERT INTO eb_users(email, pwd, fullname,fbid) VALUES (:email, :pwd, :fullname, :socialid);";
+                                INSERT INTO eb_users(email, pwd, fullname,fbid) VALUES (:email, :pwd, :fullname, :socialid);
+                                INSERT INTO eb_locations(shortname,longname) VALUES ('default','default')";
 
                 string sql3 = string.Empty;
                 foreach (var role in Enum.GetValues(typeof(SystemRoles)))
@@ -410,6 +411,7 @@ namespace ExpressBase.ServiceStack.Services
                     var result2 = DataDB.DoNonQuery(sql3);
 
                 }
+
             }
             catch (Exception e)
             {
