@@ -221,7 +221,7 @@ namespace ExpressBase.ServiceStack
                 try
                 {
                     if (requestDto != null && requestDto.GetType() != typeof(Authenticate) && requestDto.GetType() != typeof(GetAccessToken) && requestDto.GetType() != typeof(UniqueRequest) && requestDto.GetType() != typeof(CreateAccountRequest) && requestDto.GetType() != typeof(EmailServicesMqRequest) && requestDto.GetType() != typeof(RegisterRequest) && requestDto.GetType() != typeof(AutoGenSidRequest) && requestDto.GetType() != typeof(JoinbetaReq) && requestDto.GetType() != typeof(GetBotsRequest)
-					&& requestDto.GetType() != typeof(GetEventSubscribers))
+                    && requestDto.GetType() != typeof(GetEventSubscribers) && requestDto.GetType() != typeof(GetParticularSurveyRequest))
                     {
                         var auth = req.Headers[HttpHeaders.Authorization];
                         if (string.IsNullOrEmpty(auth))
@@ -273,18 +273,18 @@ namespace ExpressBase.ServiceStack
                             }
                         }
                     }
-					else if(requestDto.GetType() == typeof(GetBotsRequest))
-					{
-						string x = req.Headers["SolId"].ToString();
-						if (!String.IsNullOrEmpty(x))
-						{
-							RequestContext.Instance.Items.Add(CoreConstants.SOLUTION_ID, x);
-							if (requestDto is IEbSSRequest)
-								(requestDto as IEbSSRequest).TenantAccountId = x;
-							if (requestDto is EbServiceStackRequest)
-								(requestDto as EbServiceStackRequest).TenantAccountId = x;
-						}
-					}
+                    else if (requestDto.GetType() == typeof(GetBotsRequest) || requestDto.GetType() == typeof(GetParticularSurveyRequest))
+                    {
+                        string x = req.Headers["SolId"].ToString();
+                        if (!String.IsNullOrEmpty(x))
+                        {
+                            RequestContext.Instance.Items.Add(CoreConstants.SOLUTION_ID, x);
+                            if (requestDto is IEbSSRequest)
+                                (requestDto as IEbSSRequest).TenantAccountId = x;
+                            if (requestDto is EbServiceStackRequest)
+                                (requestDto as EbServiceStackRequest).TenantAccountId = x;
+                        }
+                    }
                 }
                 catch (Exception e)
                 {
