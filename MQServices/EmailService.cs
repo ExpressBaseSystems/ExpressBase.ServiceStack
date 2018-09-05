@@ -15,82 +15,64 @@ using System.Text.RegularExpressions;
 using System.Data.Common;
 using ExpressBase.Common.Constants;
 using ExpressBase.Common.Structures;
+using ExpressBase.Common.ServiceClients;
+using ExpressBase.MessageQueue.Services;
 
 namespace ExpressBase.ServiceStack
 {
+    [Authenticate]
     public class EmailService : EbBaseService
     {
-        public EmailService(IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_mqp, _mqc) { }
+        public EmailService(IEbConnectionFactory _dbf, IMessageProducer _mqp, IMessageQueueClient _mqc, IEbServerEventClient _sec) : base(_dbf, _mqp, _mqc, _sec) { }
 
-        public class EmailServiceInternal : EbBaseService
+        public EmailServicesResponse Post(EmailServicesMqRequest request)
         {
-            public EmailServiceInternal(IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_mqp, _mqc) { }
+            EmailServicesResponse resp = new EmailServicesResponse();
 
-            public string Post(EmailServicesMqRequest request)
+            EbObjectService myService = base.ResolveService<EbObjectService>();
+            var res = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = request.Refid });
+            EbEmailTemplate ebEmailTemplate = new EbEmailTemplate();
+            foreach (var element in res.Data)
             {
-
-                var _InfraDb = new EbConnectionFactory(request.TenantAccountId, this.Redis);
-                var myService = base.ResolveService<EbObjectService>();
-                var res = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = request.refid });
-                EbEmailTemplate ebEmailTemplate = new EbEmailTemplate();
-                foreach (var element in res.Data)
-                {
-                    ebEmailTemplate = EbSerializers.Json_Deserialize(element.Json);
-                }
-
-
-
-                var myDs = base.ResolveService<EbObjectService>();
-                var myDsres = (EbObjectParticularVersionResponse)myDs.Get(new EbObjectParticularVersionRequest() { RefId = ebEmailTemplate.DataSourceRefId });
-                // get sql from ebdatasource and render the sql 
-                EbDataSource ebDataSource = new EbDataSource();
-                foreach (var element in myDsres.Data)
-                {
-                    ebDataSource = EbSerializers.Json_Deserialize(element.Json);
-                }
-                DbParameter[] parameters = { _InfraDb.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, 1) }; //change 1 by request.id
-                var ds = _InfraDb.ObjectsDB.DoQueries(ebDataSource.Sql, parameters);
-                //var pattern = @"\{{(.*?)\}}";
-                //var matches = Regex.Matches(ebEmailTemplate.Body, pattern);
-                //Dictionary<string, object> dict = new Dictionary<string, object>();
-                foreach (var dscol in ebEmailTemplate.DsColumnsCollection)
-                {
-                    string str = dscol.Title.Replace("{{", "").Replace("}}", "");
-
-
-                    foreach (var dt in ds.Tables)
-                    {
-
-                        string colname = dt.Rows[0][str.Split('.')[1]].ToString();
-                        ebEmailTemplate.Body = ebEmailTemplate.Body.Replace(dscol.Title, colname);
-                    }
-
-                }
-                var emailMessage = new MimeMessage();
-                emailMessage.From.Add(new MailboxAddress("EXPRESSbase", "info@expressbase.com"));
-                emailMessage.To.Add(new MailboxAddress("", request.To));
-                emailMessage.Subject = ebEmailTemplate.Subject;
-                emailMessage.Body = new TextPart("html") { Text = ebEmailTemplate.Body };
-                try
-                {
-                    using (var client = new SmtpClient())
-                    {// after completing connection manager implementation..take all credentials from connection object
-                        client.LocalDomain = "www.expressbase.com";
-                        client.Connect("smtp.gmail.com", 465, true);
-                        client.Authenticate(new System.Net.NetworkCredential() { UserName = "expressbasesystems@gmail.com", Password = "ebsystems" });
-                        client.Send(emailMessage);
-                        client.Disconnect(true);
-                    }
-                }
-                catch (Exception e)
-                {
-                    return e.Message;
-                }
-                return null;
+                ebEmailTemplate = EbSerializers.Json_Deserialize(element.Json);
             }
+
+            var myDs = base.ResolveService<EbObjectService>();
+            var myDsres = (EbObjectParticularVersionResponse)myDs.Get(new EbObjectParticularVersionRequest() { RefId = ebEmailTemplate.DataSourceRefId });
+            EbDataSource ebDataSource = new EbDataSource();
+            foreach (var element in myDsres.Data)
+            {
+                ebDataSource = EbSerializers.Json_Deserialize(element.Json);
+            }
+            DbParameter[] parameters = { EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, 1) }; //change 1 by request.id
+            var ds = EbConnectionFactory.ObjectsDB.DoQueries(ebDataSource.Sql, parameters);
+            //var pattern = @"\{{(.*?)\}}";
+            //var matches = Regex.Matches(ebEmailTemplate.Body, pattern);
+            //Dictionary<string, object> dict = new Dictionary<string, object>();
+            foreach (var dscol in ebEmailTemplate.DsColumnsCollection)
+            {
+                string str = dscol.Title.Replace("{{", "").Replace("}}", "");
+
+                foreach (var dt in ds.Tables)
+                {
+                    string colname = dt.Rows[0][str.Split('.')[1]].ToString();
+                    ebEmailTemplate.Body = ebEmailTemplate.Body.Replace(dscol.Title, colname);
+                }
+            }
+
+            this.MessageProducer3.Publish(new EmailServicesRequest()
+            {
+                From = request.From,
+                To = request.To,
+                Cc = request.Cc,
+                Message = ebEmailTemplate.Body,
+                Subject = ebEmailTemplate.Subject,
+                UserId = request.UserId,
+                UserAuthId = request.UserAuthId,
+                TenantAccountId = request.TenantAccountId
+            });
+
+            return resp;
         }
     }
-
-
-
 }

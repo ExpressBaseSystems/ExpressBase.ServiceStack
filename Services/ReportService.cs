@@ -124,26 +124,27 @@ namespace ExpressBase.ServiceStack
                     Report.DataSet.Tables.Clear();
                     Report.DataSet = null;
                 }
-           
 
-            MailMessage mm = new MailMessage("expressbasesystems@gmail.com", "donaullattil93@gmail.com")
-            {
-                Subject = "subject",
-                IsBodyHtml = true,
-                Body = "Hi, Please find the attachment."
-            };
 
-            mm.Attachments.Add(new Attachment(Report.Ms1, Report.Name + ".pdf"));
-            SmtpClient smtp = new SmtpClient
-            {
-                Host = "smtp.gmail.com",
-                Port = 587,
-                EnableSsl = true,
-                Credentials = new NetworkCredential { UserName = "expressbasesystems@gmail.com", Password = "ebsystems" }
+                //MailMessage mm = new MailMessage("expressbasesystems@gmail.com", "donaullattil93@gmail.com")
+                //{
+                //    Subject = "subject",
+                //    IsBodyHtml = true,
+                //    Body = "Hi, Please find the attachment."
+                //};
 
-            };
+                //mm.Attachments.Add(new Attachment(Report.Ms1, Report.Name + ".pdf"));
+                //SmtpClient smtp = new SmtpClient
+                //{
+                //    Host = "smtp.gmail.com",
+                //    Port = 587,
+                //    EnableSsl = true,
+                //    Credentials = new NetworkCredential { UserName = "expressbasesystems@gmail.com", Password = "ebsystems" }
 
-            smtp.Send(mm);
+                //};
+
+                //smtp.Send(mm);
+               // Report.Ms1.Position = 0;
             }
             catch (Exception e)
             {
@@ -151,7 +152,7 @@ namespace ExpressBase.ServiceStack
             }
             return new ReportRenderResponse { StreamWrapper = new MemorystreamWrapper(Report.Ms1), ReportName = Report.Name };
         }
-        
+
         private void FillLinkCollection(EbReport Report, List<EbReportField> fields)
         {
             foreach (EbReportField field in fields)
