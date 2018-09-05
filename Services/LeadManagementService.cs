@@ -6,6 +6,7 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -198,7 +199,7 @@ namespace ExpressBase.ServiceStack.Services
 			}
 			if (dict.TryGetValue("trdate", out found))
 			{
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Date, Convert.ToDateTime(found.Value)));
+				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Date, Convert.ToDateTime(DateTime.ParseExact(found.Value.ToString(), "dd-MM-yyyy", CultureInfo.InvariantCulture))));
 				cols += "trdate,";
 				vals += ":trdate,";
 			}
@@ -217,7 +218,7 @@ namespace ExpressBase.ServiceStack.Services
 			}
 			if (dict.TryGetValue("dob", out found))
 			{
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Date, Convert.ToDateTime(found.Value)));
+				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Date, Convert.ToDateTime(DateTime.ParseExact(found.Value.ToString(), "dd-MM-yyyy", CultureInfo.InvariantCulture))));
 				cols += "dob,";
 				vals += ":dob,";
 				upcolsvals += "dob=:dob,";
@@ -311,7 +312,7 @@ namespace ExpressBase.ServiceStack.Services
 
 			if (dict.TryGetValue("consdate", out found))
 			{
-				parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Date, Convert.ToDateTime(found.Value)));
+				parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Date, Convert.ToDateTime(DateTime.ParseExact(found.Value.ToString(), "dd-MM-yyyy", CultureInfo.InvariantCulture))));
 				cols2 += "consdate,";
 				vals2 += ":consdate,";
 				upcolsvals2 += "consdate=:consdate,";
@@ -409,9 +410,9 @@ namespace ExpressBase.ServiceStack.Services
 			List<DbParameter> parameters = new List<DbParameter>();
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, F_Obj.Id));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("accountid", EbDbTypes.Int32, Convert.ToInt32(F_Obj.Account_Code)));
-			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("trdate", EbDbTypes.Date, Convert.ToDateTime(F_Obj.Date)));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("trdate", EbDbTypes.Date, Convert.ToDateTime(DateTime.ParseExact(F_Obj.Date, "dd-MM-yyyy", CultureInfo.InvariantCulture))));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("status", EbDbTypes.String, F_Obj.Status));
-			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("followupdate", EbDbTypes.Date, Convert.ToDateTime(F_Obj.Followup_Date)));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("followupdate", EbDbTypes.Date, Convert.ToDateTime(DateTime.ParseExact(F_Obj.Followup_Date, "dd-MM-yyyy", CultureInfo.InvariantCulture))));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("narration", EbDbTypes.String, F_Obj.Comments));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("createdby", EbDbTypes.String, request.UserName));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("createddt", EbDbTypes.DateTime, DateTime.Now));
@@ -441,7 +442,7 @@ namespace ExpressBase.ServiceStack.Services
 			List<DbParameter> parameters = new List<DbParameter>();
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, B_Obj.Id));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("accountid", EbDbTypes.Int32, B_Obj.Account_Code));
-			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("trdate", EbDbTypes.Date, Convert.ToDateTime(B_Obj.Date)));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("trdate", EbDbTypes.Date, Convert.ToDateTime(DateTime.ParseExact(B_Obj.Date, "dd-MM-yyyy", CultureInfo.InvariantCulture))));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("totalamount", EbDbTypes.Int32, B_Obj.Total_Amount));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("advanceamount", EbDbTypes.Int32, B_Obj.Amount_Received));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("paymentmode", EbDbTypes.String, B_Obj.Payment_Mode));
