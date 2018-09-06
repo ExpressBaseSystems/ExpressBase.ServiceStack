@@ -129,62 +129,6 @@ namespace ExpressBase.ServiceStack.Services
             }
         }
 
-        //public void DownloadFile(string DirecStructure)//, List<string> fileNames)
-        //{
-        //    FtpWebRequest request;
-        //    FtpWebResponse response;
-
-        //    string path = Host + DirecStructure + "DICOM/";
-
-        //    foreach (string name in Files)
-        //    {
-        //        if (!name.Equals(string.Empty))
-        //        {
-        //            request = (FtpWebRequest)WebRequest.Create(path + name);
-        //            request.Method = WebRequestMethods.Ftp.DownloadFile;
-        //            request.Credentials = new NetworkCredential(UserName, Password);
-        //            response = (FtpWebResponse)request.GetResponse();
-        //            //WriteFile(response, name);
-        //            PushToQueue(response, name);
-        //            response.Close();
-        //        }
-        //    }
-        //}
-
-        //[Authenticate]
-        //private void Post(FileDownloadRequestObject req)
-        //{
-        //    string Uname = "ftpUser1";
-        //    string pwd = "ftpPassword1";
-        //    UserName = Uname;
-        //    Password = pwd;
-        //    string BasePath = "/files/Softfiles_L/";
-        //    List<string> DirStructure = ListDirectory(BasePath);
-        //    for (int i = 0; i < 10; i++)
-        //    {
-        //        string Path = BasePath + DirStructure[i] + "/";
-        //        ListFilesDirectory(Path);
-        //        DownloadFile(Path);
-        //        Files.Clear();
-        //    }
-        //}
-
-        //private void PushToQueue(FtpWebResponse response, string _fileName)
-        //{
-        //    Stream responseStream = response.GetResponseStream();
-        //    byte[] FileContents = new byte[response.ContentLength];
-        //    responseStream.ReadAsync(FileContents, 0, FileContents.Length);
-        //    base.MessageProducer3.Publish(new UploadImageRequest()
-        //    {
-        //        Byte = FileContents,
-        //        ImageInfo = new ImageMeta()
-        //        {
-        //            FileName = _fileName,
-
-        //        }
-        //    });
-        //}
-
         private int GetFileRefId()
         {
             string IdFetchQuery = @"INSERT into eb_files_ref(userid, filename) VALUES (1, 'test') RETURNING id";
@@ -210,26 +154,17 @@ namespace ExpressBase.ServiceStack.Services
         [Authenticate]
         public void Post(FileDownloadRequestObject req)
         {
-            //string Uname = "ftpUser1";
-            //string pwd = "ftpPassword1";
-            //UserName = Uname;
-            //Password = pwd;
+
             string FilerefId = string.Empty;
-            //string BasePath = "";
 
             Files = new List<KeyValuePair<int, string>>();
 
             GetFileNamesFromDb();
 
-            //List<string> DirStructure = ListDirectory(BasePath);
-            //foreach (var _file in Files)
-            //{
-            //    string Path = _file;
-            //ListFilesDirectory(Path);
-            //FtpWebRequest request;
-            //FtpWebResponse response;
-
-            GetImageFtpRequest getImageFtp = new GetImageFtpRequest();
+            GetImageFtpRequest getImageFtp = new GetImageFtpRequest()
+            {
+                CloudinaryAccount = req.Account
+            };
 
             getImageFtp.AddAuth(req.UserId, req.TenantAccountId, this.FileClient.BearerToken, this.FileClient.RefreshToken);
 
@@ -244,64 +179,6 @@ namespace ExpressBase.ServiceStack.Services
                     }
                 }
             }
-
-
-            //if (Files.Count > 0)
-            //{
-            //    int count = 0, iter=0;
-            //    foreach (KeyValuePair<int, string> file in Files)
-            //    {
-            //        iter++;
-            //        if (!file.Value.Equals(string.Empty))
-            //        {
-            //            try
-            //            {
-            //                Console.WriteLine(iter.ToString() + ". FileName: " + file.Value);
-            //                request = (FtpWebRequest)WebRequest.Create(file.Value);//fullpath + name);
-            //                request.Method = WebRequestMethods.Ftp.DownloadFile;
-            //                request.Credentials = new NetworkCredential(UserName, Password);
-            //                response = (FtpWebResponse)request.GetResponse();
-            //                Stream responseStream = response.GetResponseStream();
-            //                byte[] FileContents = new byte[response.ContentLength];
-            //                if (FileContents.Length == 0)
-            //                    throw new Exception("File returned empty");
-            //                responseStream.ReadAsync(FileContents, 0, FileContents.Length);
-
-            //                UploadImageAsyncRequest imgupreq = new UploadImageAsyncRequest();
-            //                imgupreq.ImageByte = FileContents;
-            //                imgupreq.ImageInfo = new ImageMeta();
-            //                imgupreq.ImageInfo.FileCategory = EbFileCategory.Images;
-            //                imgupreq.ImageInfo.FileName = file.Value;
-            //                imgupreq.ImageInfo.FileType = file.Value.Split('.').Last();
-            //                imgupreq.ImageInfo.ImageQuality = ImageQuality.original;
-            //                imgupreq.ImageInfo.Length = FileContents.Length;
-            //                imgupreq.ImageInfo.MetaDataDictionary = new Dictionary<string, List<string>>();
-            //                imgupreq.ImageInfo.FileRefId = GetFileRefId();
-
-            //                if (MapFilesWithUser(file.Key, imgupreq.ImageInfo.FileRefId) < 1)
-            //                    throw new Exception("File Mapping Failed");
-
-            //                var x = FileClient.Post<UploadAsyncResponse>(imgupreq);
-            //                Console.WriteLine("..........Success.........." + iter.ToString() + ". FileName: " + file.Value);
-            //                response.Close();
-
-            //                if (count > 10)
-            //                    break;
-            //                else
-            //                    count++;
-            //            }
-            //            catch(Exception ex)
-            //            {
-            //                continue;
-            //            }
-            //        }
-            //    }
-            //    Files.Clear();
-            //}
-            //else
-            //{
-            //    Console.WriteLine("There were no files in that directory!\n\n");
-            //}
         }
     }
 }
