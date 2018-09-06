@@ -69,7 +69,7 @@ namespace ExpressBase.ServiceStack
                 Subject = ebEmailTemplate.Subject,
                 UserId = request.UserId,
                 UserAuthId = request.UserAuthId,
-                TenantAccountId = request.TenantAccountId
+                SolnId = request.SolnId
             });
 
             return resp;
