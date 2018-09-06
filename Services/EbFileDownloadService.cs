@@ -79,10 +79,7 @@ namespace ExpressBase.ServiceStack.Services
 
             GetFileNamesFromDb();
 
-            GetImageFtpRequest getImageFtp = new GetImageFtpRequest()
-            {
-                CloudinaryAccount = req.Account
-            };
+            GetImageFtpRequest getImageFtp = new GetImageFtpRequest();
 
             getImageFtp.AddAuth(req.UserId, req.TenantAccountId, this.FileClient.BearerToken, this.FileClient.RefreshToken);
 
