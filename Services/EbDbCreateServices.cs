@@ -123,6 +123,21 @@ namespace ExpressBase.ServiceStack.Services
                     path = "ExpressBase.Common.sqlscripts.@vendor.datadb.tablecreate.eb_files.sql".Replace("@vendor", vendor.ToLower());
                     bool b23 = CreateOrAlter_Structure(con, path, DataDB);
 
+                    path = "ExpressBase.Common.sqlscripts.@vendor.datadb.tablecreate.eb_query_choices.sql".Replace("@vendor", vendor.ToLower());
+                    bool b52 = CreateOrAlter_Structure(con, path, DataDB);
+
+                    path = "ExpressBase.Common.sqlscripts.@vendor.datadb.tablecreate.eb_survey_lines.sql".Replace("@vendor", vendor.ToLower());
+                    bool b53 = CreateOrAlter_Structure(con, path, DataDB);
+
+                    path = "ExpressBase.Common.sqlscripts.@vendor.datadb.tablecreate.eb_survey_master.sql".Replace("@vendor", vendor.ToLower());
+                    bool b54 = CreateOrAlter_Structure(con, path, DataDB);
+
+                    path = "ExpressBase.Common.sqlscripts.@vendor.datadb.tablecreate.eb_survey_queries.sql".Replace("@vendor", vendor.ToLower());
+                    bool b55 = CreateOrAlter_Structure(con, path, DataDB);
+
+                    path = "ExpressBase.Common.sqlscripts.@vendor.datadb.tablecreate.eb_surveys.sql".Replace("@vendor", vendor.ToLower());
+                    bool b56 = CreateOrAlter_Structure(con, path, DataDB);
+
                     //.............DataDb Functions
                     path = "ExpressBase.Common.sqlscripts.@vendor.datadb.functioncreate.eb_authenticate_unified.sql".Replace("@vendor", vendor.ToLower());
                     bool b11 = CreateOrAlter_Structure(con, path, DataDB);
@@ -256,7 +271,7 @@ namespace ExpressBase.ServiceStack.Services
 
                     if (b1 & b2 & b3 & b4 & b5 & b6 & b7 & b8 & b9 & b10 & b11 & b12 & b13 & b14 & b15 & b16 & b17 & b18 & b19 &
                         b20 & b21 & b22 & b23 & b24 & b25 & b26 & b27 & b28 & b29 & b31 & b32 & b33 & b34 & b35 & b36 & b37 & b38 & b39 & b40 & b41 & b44 & b45 & b46 & b47 &
-                        b48 & b49 & b50 & b51)
+                        b48 & b49 & b50 & b51 & b52 & b53 & b54 & b55 & b56)
                     {
                         Console.WriteLine(".............Reached Commit");
                         con_trans.Commit();
