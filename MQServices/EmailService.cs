@@ -29,48 +29,50 @@ namespace ExpressBase.ServiceStack
         {
             EmailServicesResponse resp = new EmailServicesResponse();
 
-            EbObjectService myService = base.ResolveService<EbObjectService>();
-            var res = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = request.Refid });
-            EbEmailTemplate ebEmailTemplate = new EbEmailTemplate();
-            foreach (var element in res.Data)
-            {
-                ebEmailTemplate = EbSerializers.Json_Deserialize(element.Json);
-            }
+            //EbObjectService myService = base.ResolveService<EbObjectService>();
+            //var res = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = request.Refid });
+            //EbEmailTemplate ebEmailTemplate = new EbEmailTemplate();
+            //foreach (var element in res.Data)
+            //{
+            //    ebEmailTemplate = EbSerializers.Json_Deserialize(element.Json);
+            //}
 
-            var myDs = base.ResolveService<EbObjectService>();
-            var myDsres = (EbObjectParticularVersionResponse)myDs.Get(new EbObjectParticularVersionRequest() { RefId = ebEmailTemplate.DataSourceRefId });
-            EbDataSource ebDataSource = new EbDataSource();
-            foreach (var element in myDsres.Data)
-            {
-                ebDataSource = EbSerializers.Json_Deserialize(element.Json);
-            }
-            DbParameter[] parameters = { EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, 1) }; //change 1 by request.id
-            var ds = EbConnectionFactory.ObjectsDB.DoQueries(ebDataSource.Sql, parameters);
-            //var pattern = @"\{{(.*?)\}}";
-            //var matches = Regex.Matches(ebEmailTemplate.Body, pattern);
-            //Dictionary<string, object> dict = new Dictionary<string, object>();
-            foreach (var dscol in ebEmailTemplate.DsColumnsCollection)
-            {
-                string str = dscol.Title.Replace("{{", "").Replace("}}", "");
+            //var myDs = base.ResolveService<EbObjectService>();
+            //var myDsres = (EbObjectParticularVersionResponse)myDs.Get(new EbObjectParticularVersionRequest() { RefId = ebEmailTemplate.DataSourceRefId });
+            //EbDataSource ebDataSource = new EbDataSource();
+            //foreach (var element in myDsres.Data)
+            //{
+            //    ebDataSource = EbSerializers.Json_Deserialize(element.Json);
+            //}
+            //DbParameter[] parameters = { EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, 1) }; //change 1 by request.id
+            //var ds = EbConnectionFactory.ObjectsDB.DoQueries(ebDataSource.Sql, parameters);
+            ////var pattern = @"\{{(.*?)\}}";
+            ////var matches = Regex.Matches(ebEmailTemplate.Body, pattern);
+            ////Dictionary<string, object> dict = new Dictionary<string, object>();
+            //foreach (var dscol in ebEmailTemplate.DsColumnsCollection)
+            //{
+            //    string str = dscol.Title.Replace("{{", "").Replace("}}", "");
 
-                foreach (var dt in ds.Tables)
-                {
-                    string colname = dt.Rows[0][str.Split('.')[1]].ToString();
-                    ebEmailTemplate.Body = ebEmailTemplate.Body.Replace(dscol.Title, colname);
-                }
-            }
+            //    foreach (var dt in ds.Tables)
+            //    {
+            //        string colname = dt.Rows[0][str.Split('.')[1]].ToString();
+            //        ebEmailTemplate.Body = ebEmailTemplate.Body.Replace(dscol.Title, colname);
+            //    }
+            //}
 
-            this.MessageProducer3.Publish(new EmailServicesRequest()
-            {
-                From = request.From,
-                To = request.To,
-                Cc = request.Cc,
-                Message = ebEmailTemplate.Body,
-                Subject = ebEmailTemplate.Subject,
-                UserId = request.UserId,
-                UserAuthId = request.UserAuthId,
-                SolnId = request.SolnId
-            });
+            //this.MessageProducer3.Publish(new EmailServicesRequest()
+            //{
+            //    From = request.From,
+            //    To = ebEmailTemplate.To,
+            //    Cc = ebEmailTemplate.Cc,
+            //    Bcc = ebEmailTemplate.Bcc,
+            //    Message = ebEmailTemplate.Body,
+            //    Subject = ebEmailTemplate.Subject,
+            //    UserId = request.UserId,
+            //    UserAuthId = request.UserAuthId,
+            //    TenantAccountId = request.TenantAccountId,
+            //    AttachmentReport = ebEmailTemplate.AttachmentReport
+            //});
 
             return resp;
         }

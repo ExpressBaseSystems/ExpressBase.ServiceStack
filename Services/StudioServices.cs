@@ -588,9 +588,9 @@ namespace ExpressBase.ServiceStack
 
             try
             {
-                using (DbConnection con = EbConnectionFactory.ObjectsDB.GetNewConnection())
-                {
-                    refId = StaticMethods.CreateObject(con, EbConnectionFactory, request, SetAppId(request.Apps));
+                //using (DbConnection con = EbConnectionFactory.ObjectsDB.GetNewConnection())
+                //{
+                    refId = StaticMethods.CreateObject(EbConnectionFactory, request, SetAppId(request.Apps));
                     //{ 
                     //con.Open();
                     //DbCommand cmd = null;
@@ -642,7 +642,7 @@ namespace ExpressBase.ServiceStack
                         ChatbotServices myService = base.ResolveService<ChatbotServices>();
                         CreateWebFormTableResponse res = (CreateWebFormTableResponse)myService.Any(new CreateWebFormTableRequest() { WebObj = obj, Apps = request.Apps, SolnId = request.SolnId, UserId = request.UserId, WhichConsole = request.WhichConsole });
                     }
-                }
+                //}
             }
             catch (Exception e)
             {
