@@ -52,7 +52,7 @@ namespace ExpressBase.ServiceStack.Services
                     EbConnectionsConfig cons = new EbConnectionsConfig();
 
                     var ada = new Npgsql.NpgsqlDataAdapter(sql, con);
-                    ada.SelectCommand.Parameters.Add(new Npgsql.NpgsqlParameter("solution_id", NpgsqlTypes.NpgsqlDbType.Text) { Value = req.SolnId });
+                    ada.SelectCommand.Parameters.Add(new Npgsql.NpgsqlParameter("solution_id", NpgsqlTypes.NpgsqlDbType.Text) { Value = req.SolutionId });
                     ada.Fill(dt);
 
                     if (dt.Rows.Count != 0)
@@ -108,8 +108,8 @@ namespace ExpressBase.ServiceStack.Services
         [Authenticate]
         public void Post(ChangeSMTPConnectionRequest request)
         {
-            request.SMTPConnection.Persist(request.SolnId, this.InfraConnectionFactory, request.IsNew, request.UserId);
-            base.MessageProducer3.Publish(new RefreshSolutionConnectionsRequest() { SolnId = request.SolnId, UserId = request.UserId });
+            request.SMTPConnection.Persist(request.SolutionId, this.InfraConnectionFactory, request.IsNew, request.UserId);
+            base.MessageProducer3.Publish(new RefreshSolutionConnectionsRequest() { SolnId = request.SolutionId, UserId = request.UserId });
         }
 
         [Authenticate]
@@ -200,8 +200,11 @@ namespace ExpressBase.ServiceStack.Services
             ChangeConnectionResponse res = new ChangeConnectionResponse();
             try
             {
-                request.FTPConnection.Persist(request.SolnId, this.InfraConnectionFactory, request.IsNew, request.UserId);
-                base.MessageProducer3.Publish(new RefreshSolutionConnectionsRequest() { SolnId = request.SolnId, UserId = request.UserId });
+                request.FTPConnection.Persist(request.SolutionId, this.InfraConnectionFactory, request.IsNew, request.UserId);
+                base.MessageProducer3.Publish(new RefreshSolutionConnectionsRequest() { SolnId = request.SolutionId, UserId = request.UserId,
+                    BToken = (!String.IsNullOrEmpty(this.Request.Authorization)) ? this.Request.Authorization.Replace("Bearer", string.Empty).Trim() : String.Empty,
+                    RToken = (!String.IsNullOrEmpty(this.Request.Headers["rToken"])) ? this.Request.Headers["rToken"] : String.Empty
+                });
             }
             catch (Exception e)
             {
@@ -216,8 +219,8 @@ namespace ExpressBase.ServiceStack.Services
             ChangeConnectionResponse res = new ChangeConnectionResponse();
             try
             {
-                request.SMSConnection.Persist(request.SolnId, this.InfraConnectionFactory, request.IsNew, request.UserId);
-                base.MessageProducer3.Publish(new RefreshSolutionConnectionsRequest() { SolnId = request.SolnId, UserId = request.UserId });
+                request.SMSConnection.Persist(request.SolutionId, this.InfraConnectionFactory, request.IsNew, request.UserId);
+                base.MessageProducer3.Publish(new RefreshSolutionConnectionsRequest() { SolnId = request.SolutionId, UserId = request.UserId });
             }
             catch (Exception e)
             {

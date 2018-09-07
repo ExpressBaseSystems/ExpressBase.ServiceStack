@@ -78,7 +78,6 @@ namespace ExpressBase.ServiceStack.Services
             Files = new List<KeyValuePair<int, string>>();
 
             GetFileNamesFromDb();
-
             GetImageFtpRequest getImageFtp = new GetImageFtpRequest();
 
             getImageFtp.AddAuth(req.UserId, req.SolnId, this.FileClient.BearerToken, this.FileClient.RefreshToken);
