@@ -26,7 +26,7 @@ namespace ExpressBase.ServiceStack.MQServices
                 Refid = request.Refid,
                 UserId = request.UserId,
                 UserAuthId = request.UserAuthId,
-                TenantAccountId = request.TenantAccountId
+                SolnId = request.SolnId
             });
         }
     }
