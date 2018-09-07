@@ -541,7 +541,8 @@ namespace ExpressBase.ServiceStack
                             }
                         }
                         catch (Exception e)
-                        { }
+                        {
+                        }
                         try
                         {
                             result = valscript.RunAsync(globals).Result.ReturnValue.ToString();
