@@ -73,8 +73,10 @@ namespace ExpressBase.ServiceStack.Services
                                 cons.SMTPConnection = EbSerializers.Json_Deserialize<SMTPConnection>(dr["con_obj"].ToString());
                             else if (dr["con_type"].ToString() == EbConnectionTypes.SMS.ToString())
                                 cons.SMSConnection = EbSerializers.Json_Deserialize<SMSConnection>(dr["con_obj"].ToString());
-                            else if (dr["con_type"].ToString() == EbConnectionTypes.EbImageManipulation.ToString())
-                                cons.ImageManipulateConnection = EbSerializers.Json_Deserialize<ImageManipulateConnection>(dr["con_obj"].ToString());
+                            else if (dr["con_type"].ToString() == EbConnectionTypes.Cloudinary.ToString())
+                                cons.CloudinaryConnection = EbSerializers.Json_Deserialize<EbCloudinaryConnection>(dr["con_obj"].ToString());
+                            else if (dr["con_type"].ToString() == EbConnectionTypes.FTP.ToString())
+                                cons.FTPConnection = EbSerializers.Json_Deserialize<EbFTPConnection>(dr["con_obj"].ToString());
                             // ... More to come
                         }
 
