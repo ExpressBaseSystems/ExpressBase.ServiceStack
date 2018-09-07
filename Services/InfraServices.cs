@@ -91,9 +91,9 @@ namespace ExpressBase.ServiceStack.Services
             }
             if(resp.Solnid > 0) {
 
-                EbDbCreateResponse response =(EbDbCreateResponse)_dbService.Post(new EbDbCreateRequest { dbName = DbName,TenantAccountId = request.TenantAccountId ,UserId = request.UserId, Idbcon = this.EbConnectionFactory.DataDB, ischange = false  });
+                EbDbCreateResponse response =(EbDbCreateResponse)_dbService.Post(new EbDbCreateRequest { dbName = DbName,SolnId = request.SolnId ,UserId = request.UserId, Idbcon = this.EbConnectionFactory.DataDB, ischange = false  });
                 if (response.resp)
-                    _conService.Post(new InitialSolutionConnectionsRequest { SolutionId = DbName, TenantAccountId = request.TenantAccountId, UserId = request.UserId });              
+                    _conService.Post(new InitialSolutionConnectionsRequest { NewSolnId = DbName, SolnId = request.SolnId, UserId = request.UserId });              
             }
             return resp;
         }
@@ -134,7 +134,7 @@ namespace ExpressBase.ServiceStack.Services
             GetSolutioInfoResponse resp = new GetSolutioInfoResponse() { Data = _ebSolutions };
             if (resp.Data != null)
             {
-                GetConnectionsResponse response = (GetConnectionsResponse)_conService.Post(new GetConnectionsRequest { ConnectionType = 0, TenantAccountId = request.IsolutionId });
+                GetConnectionsResponse response = (GetConnectionsResponse)_conService.Post(new GetConnectionsRequest { ConnectionType = 0, SolutionId = request.IsolutionId });
                 resp.EBSolutionConnections = response.EBSolutionConnections;
             }
             return resp;

@@ -125,7 +125,7 @@ namespace ExpressBase.ServiceStack.Services
                     var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(query1.ToString(), parameters.ToArray());
                     result = Convert.ToInt32(dt.Rows[0][0]);
                 }
-                this.Post(new UpdateSolutionRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId, Token = request.Token });
+                this.Post(new UpdateSolutionRequest() { SolnId = request.SolnId, UserId = request.UserId, Token = request.Token });
                 return new SaveLocationMetaResponse { Id =  result};
             }
         }
@@ -142,12 +142,12 @@ namespace ExpressBase.ServiceStack.Services
         public UpdateSolutionResponse Post(UpdateSolutionRequest req)
         {
             var _infraService = base.ResolveService<InfraServices>();
-            GetSolutioInfoResponse res = (GetSolutioInfoResponse)_infraService.Get(new GetSolutioInfoRequest { IsolutionId = req.TenantAccountId });
+            GetSolutioInfoResponse res = (GetSolutioInfoResponse)_infraService.Get(new GetSolutioInfoRequest { IsolutionId = req.SolnId });
             EbSolutionsWrapper wrap_sol = res.Data;
             LocationInfoResponse Loc = this.Get(new LocationInfoRequest());
             Eb_Solution sol_Obj = new Eb_Solution
             {
-                SolutionID = req.TenantAccountId,
+                SolutionID = req.SolnId,
                 DateCreated = wrap_sol.DateCreated.ToString(),
                 Description = wrap_sol.Description.ToString(),
                 Locations = Loc.Locations,
@@ -156,8 +156,8 @@ namespace ExpressBase.ServiceStack.Services
                 LocationConfig = Loc.Config
             };
 
-            this.Redis.Set<Eb_Solution>(String.Format("solution_{0}", req.TenantAccountId), sol_Obj);
-            var x = this.Redis.Get<Eb_Solution>(String.Format("solution_{0}", req.TenantAccountId));
+            this.Redis.Set<Eb_Solution>(String.Format("solution_{0}", req.SolnId), sol_Obj);
+            var x = this.Redis.Get<Eb_Solution>(String.Format("solution_{0}", req.SolnId));
 
             return new UpdateSolutionResponse { };
         }

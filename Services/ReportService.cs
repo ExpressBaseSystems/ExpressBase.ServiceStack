@@ -61,7 +61,7 @@ namespace ExpressBase.ServiceStack
                 EbObjectParticularVersionResponse resultlist = myObjectservice.Get(new EbObjectParticularVersionRequest { RefId = request.Refid }) as EbObjectParticularVersionResponse;
                 Report = EbSerializers.Json_Deserialize<EbReport>(resultlist.Data[0].Json);
                 Report.ReportService = this;
-                Report.SolutionId = request.TenantAccountId;
+                Report.SolutionId = request.SolnId;
                 Report.IsLastpage = false;
                 Report.WatermarkImages = new Dictionary<string, byte[]>();
                 Report.WaterMarkList = new List<object>();
@@ -73,7 +73,7 @@ namespace ExpressBase.ServiceStack
                 Report.FileClient = new EbStaticFileClient();
                 Report.FileClient = FileClient;
                 Report.Parameters = request.Params;
-                Report.Solution = Redis.Get<Eb_Solution>(String.Format("solution_{0}", request.TenantAccountId));
+                Report.Solution = Redis.Get<Eb_Solution>(String.Format("solution_{0}", request.SolnId));
                 //-- END REPORT object INIT
                 iTextSharp.text.Rectangle rec = new iTextSharp.text.Rectangle(Report.WidthPt, Report.HeightPt);
                 Report.Doc = new Document(rec);

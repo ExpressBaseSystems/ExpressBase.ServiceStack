@@ -221,7 +221,7 @@ namespace ExpressBase.ServiceStack
                 try
                 {
                     if (requestDto != null && requestDto.GetType() != typeof(Authenticate) && requestDto.GetType() != typeof(GetAccessToken) && requestDto.GetType() != typeof(UniqueRequest) && requestDto.GetType() != typeof(CreateAccountRequest) /*&& requestDto.GetType() != typeof(EmailServicesMqRequest) */&& requestDto.GetType() != typeof(RegisterRequest) && requestDto.GetType() != typeof(AutoGenSidRequest) && requestDto.GetType() != typeof(JoinbetaReq) && requestDto.GetType() != typeof(GetBotsRequest)
-                    && requestDto.GetType() != typeof(GetEventSubscribers) && requestDto.GetType() != typeof(GetParticularSurveyRequest))
+                    && requestDto.GetType() != typeof(GetEventSubscribers))
                     {
                         var auth = req.Headers[HttpHeaders.Authorization];
                         if (string.IsNullOrEmpty(auth))
@@ -242,9 +242,9 @@ namespace ExpressBase.ServiceStack
                                 {
                                     RequestContext.Instance.Items.Add(CoreConstants.SOLUTION_ID, c.Value);
                                     if (requestDto is IEbSSRequest)
-                                        (requestDto as IEbSSRequest).TenantAccountId = c.Value;
-                                    if (requestDto is EbServiceStackRequest)
-                                        (requestDto as EbServiceStackRequest).TenantAccountId = c.Value;
+                                        (requestDto as IEbSSRequest).SolnId = c.Value;
+                                    if (requestDto is EbServiceStackAuthRequest)
+                                        (requestDto as EbServiceStackAuthRequest).SolnId = c.Value;
                                     continue;
                                 }
                                 if (c.Type == TokenConstants.UID && !string.IsNullOrEmpty(c.Value))
@@ -252,37 +252,37 @@ namespace ExpressBase.ServiceStack
                                     RequestContext.Instance.Items.Add("UserId", Convert.ToInt32(c.Value));
                                     if (requestDto is IEbSSRequest)
                                         (requestDto as IEbSSRequest).UserId = Convert.ToInt32(c.Value);
-                                    if (requestDto is EbServiceStackRequest)
-                                        (requestDto as EbServiceStackRequest).UserId = Convert.ToInt32(c.Value);
+                                    if (requestDto is EbServiceStackAuthRequest)
+                                        (requestDto as EbServiceStackAuthRequest).UserId = Convert.ToInt32(c.Value);
                                     continue;
                                 }
                                 if (c.Type == TokenConstants.WC && !string.IsNullOrEmpty(c.Value))
                                 {
                                     RequestContext.Instance.Items.Add(TokenConstants.WC, c.Value);
-                                    if (requestDto is EbServiceStackRequest)
-                                        (requestDto as EbServiceStackRequest).WhichConsole = c.Value.ToString();
+                                    if (requestDto is EbServiceStackAuthRequest)
+                                        (requestDto as EbServiceStackAuthRequest).WhichConsole = c.Value.ToString();
                                     continue;
                                 }
                                 if (c.Type == TokenConstants.SUB && !string.IsNullOrEmpty(c.Value))
                                 {
                                     RequestContext.Instance.Items.Add(TokenConstants.SUB, c.Value);
-                                    if (requestDto is EbServiceStackRequest)
-                                        (requestDto as EbServiceStackRequest).UserAuthId = c.Value.ToString();
+                                    if (requestDto is EbServiceStackAuthRequest)
+                                        (requestDto as EbServiceStackAuthRequest).UserAuthId = c.Value.ToString();
                                     continue;
                                 }
                             }
                         }
                     }
-                    else if (requestDto.GetType() == typeof(GetBotsRequest) || requestDto.GetType() == typeof(GetParticularSurveyRequest))
+                    else if (requestDto.GetType() == typeof(GetBotsRequest))
                     {
                         string x = req.Headers["SolId"].ToString();
                         if (!String.IsNullOrEmpty(x))
                         {
                             RequestContext.Instance.Items.Add(CoreConstants.SOLUTION_ID, x);
                             if (requestDto is IEbSSRequest)
-                                (requestDto as IEbSSRequest).TenantAccountId = x;
-                            if (requestDto is EbServiceStackRequest)
-                                (requestDto as EbServiceStackRequest).TenantAccountId = x;
+                                (requestDto as IEbSSRequest).SolnId = x;
+                            if (requestDto is EbServiceStackAuthRequest)
+                                (requestDto as EbServiceStackAuthRequest).SolnId = x;
                         }
                     }
                 }

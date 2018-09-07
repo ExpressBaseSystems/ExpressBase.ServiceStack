@@ -374,7 +374,7 @@ namespace ExpressBase.ServiceStack
                 this.EbConnectionFactory.ObjectsDB.GetNewParameter("apptype", EbDbTypes.Int32, request.AppType),
                 this.EbConnectionFactory.ObjectsDB.GetNewParameter("newsettings", EbDbTypes.String, request.Settings)
             };
-            this.Redis.Set<EbBotSettings>(string.Format("{0}-{1}_app_settings", request.TenantAccountId, request.AppId), JsonConvert.DeserializeObject<EbBotSettings>(request.Settings));
+            this.Redis.Set<EbBotSettings>(string.Format("{0}-{1}_app_settings", request.SolnId, request.AppId), JsonConvert.DeserializeObject<EbBotSettings>(request.Settings));
             return new SaveAppSettingsResponse()
             {
                 ResStatus = this.EbConnectionFactory.ObjectsDB.DoNonQuery(sql, parameters)
