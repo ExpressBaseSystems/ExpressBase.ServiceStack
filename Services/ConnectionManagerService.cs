@@ -135,7 +135,7 @@ namespace ExpressBase.ServiceStack.Services
         }
 
         [Authenticate]
-        public ChangeConnectionResponse Post(ChangeImageManipulationConnectionRequest request)
+        public ChangeConnectionResponse Post(ChangeCloudinaryConnectionRequest request)
         {
             ChangeConnectionResponse res = new ChangeConnectionResponse();
             try
@@ -183,6 +183,22 @@ namespace ExpressBase.ServiceStack.Services
             try
             {
                 request.FilesDBConnection.Persist(request.SolnId, this.InfraConnectionFactory, request.IsNew, request.UserId);
+                base.MessageProducer3.Publish(new RefreshSolutionConnectionsRequest() { SolnId = request.SolnId, UserId = request.UserId });
+            }
+            catch (Exception e)
+            {
+                res.ResponseStatus.Message = e.Message;
+            }
+            return res;
+        }
+
+        [Authenticate]
+        public ChangeConnectionResponse Post(ChangeFTPConnectionRequest request)
+        {
+            ChangeConnectionResponse res = new ChangeConnectionResponse();
+            try
+            {
+                request.FTPConnection.Persist(request.SolnId, this.InfraConnectionFactory, request.IsNew, request.UserId);
                 base.MessageProducer3.Publish(new RefreshSolutionConnectionsRequest() { SolnId = request.SolnId, UserId = request.UserId });
             }
             catch (Exception e)
