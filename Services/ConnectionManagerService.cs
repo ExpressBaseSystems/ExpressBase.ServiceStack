@@ -73,6 +73,8 @@ namespace ExpressBase.ServiceStack.Services
                                 cons.SMTPConnection = EbSerializers.Json_Deserialize<SMTPConnection>(dr["con_obj"].ToString());
                             else if (dr["con_type"].ToString() == EbConnectionTypes.SMS.ToString())
                                 cons.SMSConnection = EbSerializers.Json_Deserialize<SMSConnection>(dr["con_obj"].ToString());
+                            else if (dr["con_type"].ToString() == EbConnectionTypes.EbImageManipulation.ToString())
+                                cons.ImageManipulateConnection = EbSerializers.Json_Deserialize<ImageManipulateConnection>(dr["con_obj"].ToString());
                             // ... More to come
                         }
 
@@ -140,17 +142,15 @@ namespace ExpressBase.ServiceStack.Services
             ChangeConnectionResponse res = new ChangeConnectionResponse();
             try
             {
-                request.ImageManipulateConnection.Persist(request.SolnId, this.InfraConnectionFactory, request.IsNew, request.UserId);
+                request.ImageManipulateConnection.Persist(request.SolutionId, this.InfraConnectionFactory, request.IsNew, request.UserId);
 
                 base.MessageProducer3.Publish(new RefreshSolutionConnectionsRequest()
                 {
-                    SolnId = request.SolnId,
+                    SolnId = request.SolutionId,
                     UserId = request.UserId,
                     BToken = (!String.IsNullOrEmpty(this.Request.Authorization)) ? this.Request.Authorization.Replace("Bearer", string.Empty).Trim() : String.Empty,
                     RToken = (!String.IsNullOrEmpty(this.Request.Headers["rToken"])) ? this.Request.Headers["rToken"] : String.Empty
                 });
-
-                res.ResponseStatus.Message = "Success";
             }
             catch (Exception e)
             {
