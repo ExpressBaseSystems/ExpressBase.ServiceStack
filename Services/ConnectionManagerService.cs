@@ -27,7 +27,7 @@ namespace ExpressBase.ServiceStack.Services
             RefreshSolutionConnectionsAsyncResponse res = new RefreshSolutionConnectionsAsyncResponse();
             try
             {
-                res = this.MQClient.Post<RefreshSolutionConnectionsAsyncResponse>(new RefreshSolutionConnectionsBySolutionIdAsyncRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
+                res = this.MQClient.Post<RefreshSolutionConnectionsAsyncResponse>(new RefreshSolutionConnectionsBySolutionIdAsyncRequest() { SolutionId = request.SolutionId, UserId = request.UserId });
                 return res;
             }
             catch (Exception e)
@@ -42,7 +42,7 @@ namespace ExpressBase.ServiceStack.Services
         public GetConnectionsResponse Post(GetConnectionsRequest req)
         {
             GetConnectionsResponse resp = new GetConnectionsResponse();
-            resp.EBSolutionConnections = this.Redis.Get<EbConnectionsConfig>(string.Format(CoreConstants.SOLUTION_CONNECTION_REDIS_KEY, req.TenantAccountId));
+            resp.EBSolutionConnections = this.Redis.Get<EbConnectionsConfig>(string.Format(CoreConstants.SOLUTION_CONNECTION_REDIS_KEY, req.SolnId));
             if (resp.EBSolutionConnections == null)
                 using (var con = this.InfraConnectionFactory.DataDB.GetNewConnection() as Npgsql.NpgsqlConnection)
                 {
@@ -52,7 +52,7 @@ namespace ExpressBase.ServiceStack.Services
                     EbConnectionsConfig cons = new EbConnectionsConfig();
 
                     var ada = new Npgsql.NpgsqlDataAdapter(sql, con);
-                    ada.SelectCommand.Parameters.Add(new Npgsql.NpgsqlParameter("solution_id", NpgsqlTypes.NpgsqlDbType.Text) { Value = req.TenantAccountId });
+                    ada.SelectCommand.Parameters.Add(new Npgsql.NpgsqlParameter("solution_id", NpgsqlTypes.NpgsqlDbType.Text) { Value = req.SolnId });
                     ada.Fill(dt);
 
                     if (dt.Rows.Count != 0)
@@ -76,7 +76,7 @@ namespace ExpressBase.ServiceStack.Services
                             // ... More to come
                         }
 
-                        Redis.Set<EbConnectionsConfig>(string.Format(CoreConstants.SOLUTION_CONNECTION_REDIS_KEY, req.TenantAccountId), cons);
+                        Redis.Set<EbConnectionsConfig>(string.Format(CoreConstants.SOLUTION_CONNECTION_REDIS_KEY, req.SolnId), cons);
                         resp.EBSolutionConnections = cons;
                     }
                 }
@@ -88,24 +88,24 @@ namespace ExpressBase.ServiceStack.Services
         {
             EbConnectionsConfig _solutionConnections = EbConnectionsConfigProvider.DataCenterConnections;
 
-            _solutionConnections.ObjectsDbConnection.DatabaseName = request.SolutionId;
-            _solutionConnections.ObjectsDbConnection.NickName = request.SolutionId + "_Initial";
+            _solutionConnections.ObjectsDbConnection.DatabaseName = request.SolnId;
+            _solutionConnections.ObjectsDbConnection.NickName = request.SolnId + "_Initial";
 
-            _solutionConnections.DataDbConnection.DatabaseName = request.SolutionId;
-            _solutionConnections.DataDbConnection.NickName = request.SolutionId + "_Initial";
+            _solutionConnections.DataDbConnection.DatabaseName = request.SolnId;
+            _solutionConnections.DataDbConnection.NickName = request.SolnId + "_Initial";
 
-            _solutionConnections.ObjectsDbConnection.Persist(request.SolutionId, this.InfraConnectionFactory, true, request.UserId);
-            _solutionConnections.DataDbConnection.Persist(request.SolutionId, this.InfraConnectionFactory, true, request.UserId);
-            _solutionConnections.FilesDbConnection.Persist(request.SolutionId, this.InfraConnectionFactory, true, request.UserId);
+            _solutionConnections.ObjectsDbConnection.Persist(request.SolnId, this.InfraConnectionFactory, true, request.UserId);
+            _solutionConnections.DataDbConnection.Persist(request.SolnId, this.InfraConnectionFactory, true, request.UserId);
+            _solutionConnections.FilesDbConnection.Persist(request.SolnId, this.InfraConnectionFactory, true, request.UserId);
 
-            this.Redis.Set<EbConnectionsConfig>(string.Format(CoreConstants.SOLUTION_CONNECTION_REDIS_KEY, request.SolutionId), _solutionConnections);
+            this.Redis.Set<EbConnectionsConfig>(string.Format(CoreConstants.SOLUTION_CONNECTION_REDIS_KEY, request.SolnId), _solutionConnections);
         }
 
         [Authenticate]
         public void Post(ChangeSMTPConnectionRequest request)
         {
-            request.SMTPConnection.Persist(request.TenantAccountId, this.InfraConnectionFactory, request.IsNew, request.UserId);
-            base.MessageProducer3.Publish(new RefreshSolutionConnectionsRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
+            request.SMTPConnection.Persist(request.SolnId, this.InfraConnectionFactory, request.IsNew, request.UserId);
+            base.MessageProducer3.Publish(new RefreshSolutionConnectionsRequest() { SolnId = request.SolnId, UserId = request.UserId });
         }
 
         [Authenticate]
@@ -117,14 +117,40 @@ namespace ExpressBase.ServiceStack.Services
                 request.DataDBConnection.Persist(request.SolutionId, this.InfraConnectionFactory, request.IsNew, request.UserId);
 
                 var myService = base.ResolveService<EbDbCreateServices>();
-                var result = myService.Post(new EbDbCreateRequest() { dbName = request.DataDBConnection.DatabaseName, ischange = true, DataDBConnection = request.DataDBConnection, UserId = request.UserId, TenantAccountId = request.TenantAccountId });
+                var result = myService.Post(new EbDbCreateRequest() { dbName = request.DataDBConnection.DatabaseName, ischange = true, DataDBConnection = request.DataDBConnection, UserId = request.UserId, SolnId = request.SolutionId });
                 base.MessageProducer3.Publish(new RefreshSolutionConnectionsRequest()
                 {
-                    TenantAccountId = request.SolutionId,
+                    SolnId = request.SolutionId,
                     UserId = request.UserId,
                     BToken = (!String.IsNullOrEmpty(this.Request.Authorization)) ? this.Request.Authorization.Replace("Bearer", string.Empty).Trim() : String.Empty,
                     RToken = (!String.IsNullOrEmpty(this.Request.Headers["rToken"])) ? this.Request.Headers["rToken"] : String.Empty
                 });
+            }
+            catch (Exception e)
+            {
+                res.ResponseStatus.Message = e.Message;
+            }
+
+            return res;
+        }
+
+        [Authenticate]
+        public ChangeConnectionResponse Post(ChangeImageManipulationConnectionRequest request)
+        {
+            ChangeConnectionResponse res = new ChangeConnectionResponse();
+            try
+            {
+                request.ImageManipulateConnection.Persist(request.SolnId, this.InfraConnectionFactory, request.IsNew, request.UserId);
+
+                base.MessageProducer3.Publish(new RefreshSolutionConnectionsRequest()
+                {
+                    SolnId = request.SolnId,
+                    UserId = request.UserId,
+                    BToken = (!String.IsNullOrEmpty(this.Request.Authorization)) ? this.Request.Authorization.Replace("Bearer", string.Empty).Trim() : String.Empty,
+                    RToken = (!String.IsNullOrEmpty(this.Request.Headers["rToken"])) ? this.Request.Headers["rToken"] : String.Empty
+                });
+
+                res.ResponseStatus.Message = "Success";
             }
             catch (Exception e)
             {
@@ -141,7 +167,7 @@ namespace ExpressBase.ServiceStack.Services
             try
             {
                 request.ObjectsDBConnection.Persist(request.SolutionId, this.InfraConnectionFactory, request.IsNew, request.UserId);
-                base.MessageProducer3.Publish(new RefreshSolutionConnectionsRequest() { TenantAccountId = request.SolutionId, UserId = request.UserId });
+                base.MessageProducer3.Publish(new RefreshSolutionConnectionsRequest() { SolnId = request.SolutionId, UserId = request.UserId });
             }
             catch (Exception e)
             {
@@ -156,8 +182,8 @@ namespace ExpressBase.ServiceStack.Services
             ChangeConnectionResponse res = new ChangeConnectionResponse();
             try
             {
-                request.FilesDBConnection.Persist(request.TenantAccountId, this.InfraConnectionFactory, request.IsNew, request.UserId);
-                base.MessageProducer3.Publish(new RefreshSolutionConnectionsRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
+                request.FilesDBConnection.Persist(request.SolnId, this.InfraConnectionFactory, request.IsNew, request.UserId);
+                base.MessageProducer3.Publish(new RefreshSolutionConnectionsRequest() { SolnId = request.SolnId, UserId = request.UserId });
             }
             catch (Exception e)
             {
@@ -172,8 +198,8 @@ namespace ExpressBase.ServiceStack.Services
             ChangeConnectionResponse res = new ChangeConnectionResponse();
             try
             {
-                request.SMSConnection.Persist(request.TenantAccountId, this.InfraConnectionFactory, request.IsNew, request.UserId);
-                base.MessageProducer3.Publish(new RefreshSolutionConnectionsRequest() { TenantAccountId = request.TenantAccountId, UserId = request.UserId });
+                request.SMSConnection.Persist(request.SolnId, this.InfraConnectionFactory, request.IsNew, request.UserId);
+                base.MessageProducer3.Publish(new RefreshSolutionConnectionsRequest() { SolnId = request.SolnId, UserId = request.UserId });
             }
             catch (Exception e)
             {

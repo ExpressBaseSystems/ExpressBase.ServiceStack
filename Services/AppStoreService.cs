@@ -42,7 +42,7 @@ namespace ExpressBase.ServiceStack.Services
                 EAS.user_solution_id = ES.esolution_id AND
                 ES.tenant_id = ET.id AND EAS.eb_del='F' AND
                 (EAS.status=2 OR ( EAS.status=1 AND ES.tenant_id=(SELECT ES.tenant_id from eb_solutions ES where ES.esolution_id = '{0}')));
-            ", request.TenantAccountId));
+            ", request.SolnId));
             foreach (EbDataRow _row in dt.Rows)
             {
                 AppStore _app = new AppStore
@@ -77,7 +77,7 @@ namespace ExpressBase.ServiceStack.Services
                 DbCommand cmd = InfraConnectionFactory.ObjectsDB.GetNewCommand(con, sql);
                 cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":app_name", EbDbTypes.String, request.Store.Name));
                 cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":status", EbDbTypes.Int32, request.Store.Status));
-                cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":user_solution_id", EbDbTypes.String, request.TenantAccountId));
+                cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":user_solution_id", EbDbTypes.String, request.SolnId));
                 cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":cost", EbDbTypes.Decimal, request.Store.Cost));
                 cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":created_by", EbDbTypes.Int32, request.UserId));
                 cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":json", EbDbTypes.Json, request.Store.Json));
