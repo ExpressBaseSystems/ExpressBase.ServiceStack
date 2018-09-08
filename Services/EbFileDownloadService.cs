@@ -32,8 +32,15 @@ namespace ExpressBase.ServiceStack.Services
         {
             int CustomerId = 0;
             string UploadPath = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_FTP_HOST) + @"files/Softfiles_L/";
-            string ImageTableQuery = @"SELECT customervendor.id, customervendor.accountcode, customervendor.imageid, vddicommentry.filename from vddicommentry
-            INNER JOIN customervendor ON customervendor.imagecount > 0 and vddicommentry.patientid=(customervendor.prehead||customervendor.accountcode)";
+            string ImageTableQuery = @"
+SELECT 
+    customervendor.id, customervendor.accountcode, customervendor.imageid, vddicommentry.filename 
+FROM 
+    customervendor, vddicommentry
+WHERE
+	vddicommentry.patientid = (customervendor.prehead || customervendor.accountcode) 
+ORDER BY
+	vddicommentry.filename";
             string _imageId = string.Empty, _fileName = string.Empty, _accountCode = string.Empty;
 
             var table = this.EbConnectionFactory.ObjectsDB.DoQuery(ImageTableQuery);
