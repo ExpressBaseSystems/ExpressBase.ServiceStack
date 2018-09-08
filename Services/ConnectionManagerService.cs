@@ -47,7 +47,7 @@ namespace ExpressBase.ServiceStack.Services
                 using (var con = this.InfraConnectionFactory.DataDB.GetNewConnection() as Npgsql.NpgsqlConnection)
                 {
                     con.Open();
-                    string sql = @"SELECT con_type, con_obj FROM eb_connections WHERE solution_id = @solution_id AND eb_del = 'F'";
+                    string sql = @"SELECT id, con_type, con_obj FROM eb_connections WHERE solution_id = @solution_id AND eb_del = 'F'";
                     DataTable dt = new DataTable();
                     EbConnectionsConfig cons = new EbConnectionsConfig();
 
@@ -60,27 +60,50 @@ namespace ExpressBase.ServiceStack.Services
                         foreach (DataRow dr in dt.Rows)
                         {
                             if (dr["con_type"].ToString() == EbConnectionTypes.EbDATA.ToString())
+                            {
                                 cons.DataDbConnection = EbSerializers.Json_Deserialize<EbDataDbConnection>(dr["con_obj"].ToString());
+                                cons.DataDbConnection.Id = (int)dr["id"];
+                            }
                             else if (dr["con_type"].ToString() == EbConnectionTypes.EbDATA_RO.ToString())
+                            {
                                 cons.DataDbConnection = EbSerializers.Json_Deserialize<EbDataDbConnection>(dr["con_obj"].ToString());
+                                cons.DataDbConnection.Id = (int)dr["id"];
+                            }
                             else if (dr["con_type"].ToString() == EbConnectionTypes.EbOBJECTS.ToString())
+                            {
                                 cons.ObjectsDbConnection = EbSerializers.Json_Deserialize<EbObjectsDbConnection>(dr["con_obj"].ToString());
+                                cons.ObjectsDbConnection.Id = (int)dr["id"];
+                            }
                             //else if (dr["con_type"].ToString() == EbConnectionTypes.EbFILES.ToString())
                             //    cons.FilesDbConnection = EbSerializers.Json_Deserialize<EbFilesDbConnection>(dr["con_obj"].ToString());
                             else if (dr["con_type"].ToString() == EbConnectionTypes.EbLOGS.ToString())
+                            {
                                 cons.LogsDbConnection = EbSerializers.Json_Deserialize<EbLogsDbConnection>(dr["con_obj"].ToString());
+                                cons.LogsDbConnection.Id = (int)dr["id"];
+                            }
                             else if (dr["con_type"].ToString() == EbConnectionTypes.SMTP.ToString())
+                            {
                                 cons.SMTPConnection = EbSerializers.Json_Deserialize<SMTPConnection>(dr["con_obj"].ToString());
+                                cons.SMTPConnection.Id = (int)dr["id"];
+                            }
                             else if (dr["con_type"].ToString() == EbConnectionTypes.SMS.ToString())
+                            {
                                 cons.SMSConnection = EbSerializers.Json_Deserialize<SMSConnection>(dr["con_obj"].ToString());
+                                cons.SMSConnection.Id = (int)dr["id"];
+                            }
                             else if (dr["con_type"].ToString() == EbConnectionTypes.Cloudinary.ToString())
+                            {
                                 cons.CloudinaryConnection = EbSerializers.Json_Deserialize<EbCloudinaryConnection>(dr["con_obj"].ToString());
+                                cons.CloudinaryConnection.Id = (int)dr["id"];
+                            }
                             else if (dr["con_type"].ToString() == EbConnectionTypes.FTP.ToString())
+                            {
                                 cons.FTPConnection = EbSerializers.Json_Deserialize<EbFTPConnection>(dr["con_obj"].ToString());
-                            // ... More to come
+                                cons.FTPConnection.Id = (int)dr["id"];
+                            }// ... More to come
                         }
 
-                        Redis.Set<EbConnectionsConfig>(string.Format(CoreConstants.SOLUTION_CONNECTION_REDIS_KEY, req.SolnId), cons);
+                        Redis.Set<EbConnectionsConfig>(string.Format(CoreConstants.SOLUTION_CONNECTION_REDIS_KEY, req.SolutionId), cons);
                         resp.EBSolutionConnections = cons;
                     }
                 }
