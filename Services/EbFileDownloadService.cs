@@ -31,7 +31,7 @@ namespace ExpressBase.ServiceStack.Services
         private void GetFileNamesFromDb()
         {
             int CustomerId = 0;
-            string UploadPath = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_FTP_HOST) + @"files/Softfiles_L/";
+            string UploadPath = @"files/Softfiles_L/";
             string ImageTableQuery = @"
 SELECT 
     customervendor.id, customervendor.accountcode, customervendor.imageid, vddicommentry.filename 
@@ -91,6 +91,7 @@ ORDER BY
 
             if (Files.Count > 0)
             {
+
                 foreach (KeyValuePair<int, string> file in Files)
                 {
                     if (!file.Value.Equals(string.Empty))
