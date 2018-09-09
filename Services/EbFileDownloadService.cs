@@ -31,7 +31,7 @@ namespace ExpressBase.ServiceStack.Services
         private void GetFileNamesFromDb()
         {
             int CustomerId = 0;
-            string UploadPath = @"files/Softfiles_L/";
+            string UploadPath = @"Softfiles_L/";
             string ImageTableQuery = @"
 SELECT 
     customervendor.id, customervendor.accountcode, customervendor.imageid, vddicommentry.filename 
