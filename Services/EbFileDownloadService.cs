@@ -53,15 +53,6 @@ ORDER BY
                 Files.Add(new KeyValuePair<int, string>(CustomerId, System.Web.HttpUtility.UrlPathEncode(UploadPath + _imageId + "/DICOM/" + _fileName)));
             }
         }
-
-        private int GetFileRefId()
-        {
-            string IdFetchQuery = @"INSERT into eb_files_ref(userid, filename) VALUES (1, 'test') RETURNING id";
-            var table = this.EbConnectionFactory.ObjectsDB.DoQuery(IdFetchQuery);
-            int Id = (int)table.Rows[0][0];
-            return Id;
-        }
-
         private int MapFilesWithUser(int CustomerId, int FileRefId)
         {
             int res = 0;
