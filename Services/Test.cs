@@ -30,7 +30,8 @@ namespace ExpressBase.ServiceStack.Services
                 cmd.ExecuteNonQuery();
             }
             catch (Exception e)
-            { }
+            {
+            }
             
             return null;
         }

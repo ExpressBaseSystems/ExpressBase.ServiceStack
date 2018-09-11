@@ -702,7 +702,7 @@ WHERE
             ds.IsSave = false;
             ds.Tags = "";
             ds.Apps = request.Apps;
-            ds.TenantAccountId = request.TenantAccountId;
+            ds.SolnId = request.SolnId;
             ds.WhichConsole = request.WhichConsole;
             ds.UserId = request.UserId;
             var myService = base.ResolveService<EbObjectService>();
@@ -722,7 +722,7 @@ WHERE
             ds1.IsSave = false;
             ds1.Tags = "";
             ds1.Apps = request.Apps;
-            ds1.TenantAccountId = request.TenantAccountId;
+            ds1.SolnId = request.SolnId;
             ds1.WhichConsole = request.WhichConsole;
             ds1.UserId = request.UserId;
             var res1 = myService.Post(ds1);
@@ -742,7 +742,7 @@ WHERE
             ds.IsSave = false;
             ds.Tags = "";
             ds.Apps = request.Apps;
-            ds.TenantAccountId = request.TenantAccountId;
+            ds.SolnId = request.SolnId;
             ds.WhichConsole = request.WhichConsole;
             ds.UserId = request.UserId;
             var myService = base.ResolveService<EbObjectService>();
@@ -762,7 +762,7 @@ WHERE
             ds1.IsSave = false;
             ds1.Tags = "";
             ds1.Apps = request.Apps;
-            ds1.TenantAccountId = request.TenantAccountId;
+            ds1.SolnId = request.SolnId;
             ds1.WhichConsole = request.WhichConsole;
             ds1.UserId = request.UserId;
             var res1 = myService.Post(ds1);
