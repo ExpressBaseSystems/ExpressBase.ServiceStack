@@ -52,7 +52,7 @@ namespace ExpressBase.ServiceStack.Services
 								FROM leadpaymentdetails WHERE customers_id=:accountid ORDER BY trdate DESC, balanceamount;
 							SELECT id,dateofsurgery,branch,patientinstructions,doctorsinstructions,createdby,createddt 
 								FROM leadsurgerydetails WHERE customers_id=:accountid ORDER BY createddt;
-							SELECT noofgrafts,totalrate,prpsessions,consulted,consultingfeepaid,consultingdoctor,closing,nature,consdate
+							SELECT noofgrafts,totalrate,prpsessions,consulted,consultingfeepaid,consultingdoctor,closing,LOWER(TRIM(nature)),consdate
 								FROM leadratedetails WHERE customers_id=:accountid;
 
 							SELECT eb_files_ref.filestore_id 
