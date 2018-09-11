@@ -773,17 +773,6 @@ WHERE
 
         public object Any(InsertIntoBotFormTableRequest request)
         {
-
-			//this.Any(new UpdateBotFormTableRequest
-			//{
-			//	IdValue = 6,
-			//	FormRefId = "eb_dbpjl5pgxleq20180130063835-eb_dbpjl5pgxleq20180130063835-18-1829-2565",
-			//	Fields = request.Fields, 
-			//	UserId = request.UserId
-			//});
-
-			//return new InsertIntoBotFormTableResponse { RowAffected = 1 };
-
 			DbParameter parameter1;
 			List<DbParameter> paramlist = new List<DbParameter>();
 			string cols = "";
@@ -836,7 +825,7 @@ WHERE
 				}
 				else if (obj.Type == EbDbTypes.Json)
 				{
-					Dictionary<int, List<BotInsert>> ObjectLines = JsonConvert.DeserializeObject<Dictionary<int, List<BotInsert>>>(obj.Value);
+					Dictionary<int, List<BotFormField>> ObjectLines = JsonConvert.DeserializeObject<Dictionary<int, List<BotFormField>>>(obj.Value);
 					if (ObjectLines.Keys.Count > 0)
 					{
 						cols += obj.Name + ",";
@@ -846,7 +835,7 @@ WHERE
 					}
 
 					//Insert to table _lines
-					foreach (KeyValuePair<int, List<BotInsert>> card in ObjectLines)
+					foreach (KeyValuePair<int, List<BotFormField>> card in ObjectLines)
 					{
 						// do something with card.Value or card.Key
 						string Vals4SingleLine = "";
@@ -914,57 +903,82 @@ WHERE
 			return new InsertIntoBotFormTableResponse { RowAffected = rslt };
 		}
 
-		public UpdateBotFormTableResponse Any(UpdateBotFormTableRequest request)
+		public SubmitBotFormResponse Any(SubmitBotFormRequest request)
 		{
-			List<BotInsert> UpdateList = new List<BotInsert>();
-			List<DbParameter> parameters = new List<DbParameter>();
-
 			var myService = base.ResolveService<EbObjectService>();
-			var formObj = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = request.FormRefId });
-			var Obj = EbSerializers.Json_Deserialize(formObj.Data[0].Json);
-			if (Obj is EbBotForm)
+			var formObj = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = request.RefId });
+			var FormObj = EbSerializers.Json_Deserialize(formObj.Data[0].Json);
+			if (FormObj is EbBotForm)
 			{
-				string cols = string.Empty;
-				string colvals = string.Empty;
-				foreach(BotInsert item in request.Fields)
-				{
-					cols += item.Name + ",";
-				}
-				string selectQry = string.Format("SELECT {0} FROM {1} WHERE id=:id;", cols.Substring(0, cols.Length - 1), (Obj as EbBotForm).TableName );
+				var BotForm = FormObj as EbBotForm;
+				if(request.Id > 0)
+					UpdateBotFormTable(request.Id, BotForm.TableName, request.Fields, request.UserId);
 
-				var ds = this.EbConnectionFactory.DataDB.DoQueries(selectQry, new DbParameter[] { this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.IdValue) });
-				if(ds.Tables.Count > 0 && ds.Tables[0].Rows.Count > 0)
-				{
-					var dr = ds.Tables[0].Rows[0];
-					for(int i = 0; i < request.Fields.Count; i++)
-					{
-						if (request.Fields[i].Value != dr[i].ToString())
-						{
-							UpdateList.Add(new BotInsert {
-								Name = request.Fields[i].Name,
-								Type = request.Fields[i].Type,
-								Value = request.Fields[i].Value,
-								OldValue = dr[i].ToString()
-							});
-							colvals += request.Fields[i].Name + "=:" + request.Fields[i].Name + ",";
-							parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter(request.Fields[i].Name, request.Fields[i].Type, request.Fields[i].Value));
-						}
-					}
-					if (!colvals.IsNullOrEmpty())
-					{
-						parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.IdValue));
-						string Qry = string.Format("UPDATE {0} SET {1} WHERE id=:id;", (Obj as EbBotForm).TableName, colvals.Substring(0, colvals.Length-1));
-						var rstatus = this.EbConnectionFactory.ObjectsDB.UpdateTable(Qry, parameters.ToArray());
-					}
-					UpdateLog(UpdateList, (Obj as EbBotForm).TableName, request.UserId);
-				}
+			}		
+
+			return new SubmitBotFormResponse { };
+		}
+
+		private bool IsFormDataValid(dynamic FormObj, List<BotFormField> Fields)
+		{
+			var BotForm = FormObj as EbBotForm;
+			//var engine = new Jurassic.ScriptEngine();
+			foreach (EbControl control in BotForm.Controls)
+			{
+				var CurFld = Fields.Find(i => i.Name == control.Name);
+
+
 
 			}
 
-			return new UpdateBotFormTableResponse { };
+			return false;
 		}
 
-		public void UpdateLog(List<BotInsert> _Fields, string _FormId, int _UserId)
+
+		private int UpdateBotFormTable(int Id, string TableName, List<BotFormField> Fields, int UserId)
+		{
+			List<BotFormField> UpdateList = new List<BotFormField>();
+			List<DbParameter> parameters = new List<DbParameter>();
+			int rstatus = 0;
+			string cols = string.Empty;
+			string colvals = string.Empty;
+			foreach (BotFormField item in Fields)
+			{
+				cols += item.Name + ",";
+			}
+			string selectQry = string.Format("SELECT {0} FROM {1} WHERE id=:id;", cols.Substring(0, cols.Length - 1), TableName);
+
+			var ds = this.EbConnectionFactory.DataDB.DoQueries(selectQry, new DbParameter[] { this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, Id) });
+			if (ds.Tables.Count > 0 && ds.Tables[0].Rows.Count > 0)
+			{
+				var dr = ds.Tables[0].Rows[0];
+				for (int i = 0; i < Fields.Count; i++)
+				{
+					if (Fields[i].Value != dr[i].ToString())
+					{
+						UpdateList.Add(new BotFormField
+						{
+							Name = Fields[i].Name,
+							Type = Fields[i].Type,
+							Value = Fields[i].Value,
+							OldValue = dr[i].ToString()
+						});
+						colvals += Fields[i].Name + "=:" + Fields[i].Name + ",";
+						parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter(Fields[i].Name, Fields[i].Type, Fields[i].Value));
+					}
+				}
+				if (!colvals.IsNullOrEmpty())
+				{
+					parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, Id));
+					string Qry = string.Format("UPDATE {0} SET {1} WHERE id=:id;", TableName, colvals.Substring(0, colvals.Length - 1));
+					rstatus = this.EbConnectionFactory.ObjectsDB.UpdateTable(Qry, parameters.ToArray());
+				}
+				UpdateLog(UpdateList, TableName, UserId);
+			}
+			return rstatus;
+		}
+
+		public void UpdateLog(List<BotFormField> _Fields, string _FormId, int _UserId)
 		{
 			List<DbParameter> parameters = new List<DbParameter>();
 			parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("formid", EbDbTypes.String, _FormId));
