@@ -32,24 +32,30 @@ namespace ExpressBase.ServiceStack.Services
         {
             int CustomerId = 0;
             string UploadPath = @"Softfiles_L/";
+//            string ImageTableQuery_deprecated = @"
+//SELECT 
+//    customervendor.id, customervendor.accountcode, customervendor.imageid, vddicommentry.filename 
+//FROM 
+//    customervendor, vddicommentry
+//WHERE
+//	vddicommentry.patientid = (customervendor.prehead || customervendor.accountcode) 
+//ORDER BY
+//	vddicommentry.filename";
             string ImageTableQuery = @"
-SELECT 
-    customervendor.id, customervendor.accountcode, customervendor.imageid, vddicommentry.filename 
+SELECT
+    vddicommentry.customers_id, vddicommentry.imageid, vddicommentry.filename 
 FROM 
-    customervendor, vddicommentry
-WHERE
-	vddicommentry.patientid = (customervendor.prehead || customervendor.accountcode) 
+    vddicommentry
 ORDER BY
 	vddicommentry.filename";
-            string _imageId = string.Empty, _fileName = string.Empty, _accountCode = string.Empty;
+            string _imageId = string.Empty, _fileName = string.Empty;
 
             var table = this.EbConnectionFactory.ObjectsDB.DoQuery(ImageTableQuery);
             foreach (EbDataRow row in table.Rows)
             {
                 CustomerId = (int)row[0];
-                _accountCode = row[1].ToString();
-                _imageId = row[2].ToString();
-                _fileName = row[3].ToString();
+                _imageId = row[1].ToString();
+                _fileName = row[2].ToString();
                 Files.Add(new KeyValuePair<int, string>(CustomerId, System.Web.HttpUtility.UrlPathEncode(UploadPath + _imageId + "/DICOM/" + _fileName)));
             }
         }
