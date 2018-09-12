@@ -47,12 +47,12 @@ namespace ExpressBase.ServiceStack.Services
                 using (var con = this.InfraConnectionFactory.DataDB.GetNewConnection() as Npgsql.NpgsqlConnection)
                 {
                     con.Open();
-                    string sql = @"SELECT con_type, con_obj FROM eb_connections WHERE solution_id = @solution_id AND eb_del = 'F'";
+                    string sql = @"SELECT id, con_type, con_obj FROM eb_connections WHERE solution_id = @solution_id AND eb_del = 'F'";
                     DataTable dt = new DataTable();
                     EbConnectionsConfig cons = new EbConnectionsConfig();
 
                     var ada = new Npgsql.NpgsqlDataAdapter(sql, con);
-                    ada.SelectCommand.Parameters.Add(new Npgsql.NpgsqlParameter("solution_id", NpgsqlTypes.NpgsqlDbType.Text) { Value = req.SolnId });
+                    ada.SelectCommand.Parameters.Add(new Npgsql.NpgsqlParameter("solution_id", NpgsqlTypes.NpgsqlDbType.Text) { Value = req.SolutionId });
                     ada.Fill(dt);
 
                     if (dt.Rows.Count != 0)
@@ -60,23 +60,50 @@ namespace ExpressBase.ServiceStack.Services
                         foreach (DataRow dr in dt.Rows)
                         {
                             if (dr["con_type"].ToString() == EbConnectionTypes.EbDATA.ToString())
+                            {
                                 cons.DataDbConnection = EbSerializers.Json_Deserialize<EbDataDbConnection>(dr["con_obj"].ToString());
+                                cons.DataDbConnection.Id = (int)dr["id"];
+                            }
                             else if (dr["con_type"].ToString() == EbConnectionTypes.EbDATA_RO.ToString())
+                            {
                                 cons.DataDbConnection = EbSerializers.Json_Deserialize<EbDataDbConnection>(dr["con_obj"].ToString());
+                                cons.DataDbConnection.Id = (int)dr["id"];
+                            }
                             else if (dr["con_type"].ToString() == EbConnectionTypes.EbOBJECTS.ToString())
+                            {
                                 cons.ObjectsDbConnection = EbSerializers.Json_Deserialize<EbObjectsDbConnection>(dr["con_obj"].ToString());
+                                cons.ObjectsDbConnection.Id = (int)dr["id"];
+                            }
                             //else if (dr["con_type"].ToString() == EbConnectionTypes.EbFILES.ToString())
                             //    cons.FilesDbConnection = EbSerializers.Json_Deserialize<EbFilesDbConnection>(dr["con_obj"].ToString());
                             else if (dr["con_type"].ToString() == EbConnectionTypes.EbLOGS.ToString())
+                            {
                                 cons.LogsDbConnection = EbSerializers.Json_Deserialize<EbLogsDbConnection>(dr["con_obj"].ToString());
+                                cons.LogsDbConnection.Id = (int)dr["id"];
+                            }
                             else if (dr["con_type"].ToString() == EbConnectionTypes.SMTP.ToString())
+                            {
                                 cons.SMTPConnection = EbSerializers.Json_Deserialize<SMTPConnection>(dr["con_obj"].ToString());
+                                cons.SMTPConnection.Id = (int)dr["id"];
+                            }
                             else if (dr["con_type"].ToString() == EbConnectionTypes.SMS.ToString())
+                            {
                                 cons.SMSConnection = EbSerializers.Json_Deserialize<SMSConnection>(dr["con_obj"].ToString());
-                            // ... More to come
+                                cons.SMSConnection.Id = (int)dr["id"];
+                            }
+                            else if (dr["con_type"].ToString() == EbConnectionTypes.Cloudinary.ToString())
+                            {
+                                cons.CloudinaryConnection = EbSerializers.Json_Deserialize<EbCloudinaryConnection>(dr["con_obj"].ToString());
+                                cons.CloudinaryConnection.Id = (int)dr["id"];
+                            }
+                            else if (dr["con_type"].ToString() == EbConnectionTypes.FTP.ToString())
+                            {
+                                cons.FTPConnection = EbSerializers.Json_Deserialize<EbFTPConnection>(dr["con_obj"].ToString());
+                                cons.FTPConnection.Id = (int)dr["id"];
+                            }// ... More to come
                         }
 
-                        Redis.Set<EbConnectionsConfig>(string.Format(CoreConstants.SOLUTION_CONNECTION_REDIS_KEY, req.SolnId), cons);
+                        Redis.Set<EbConnectionsConfig>(string.Format(CoreConstants.SOLUTION_CONNECTION_REDIS_KEY, req.SolutionId), cons);
                         resp.EBSolutionConnections = cons;
                     }
                 }
@@ -104,8 +131,8 @@ namespace ExpressBase.ServiceStack.Services
         [Authenticate]
         public void Post(ChangeSMTPConnectionRequest request)
         {
-            request.SMTPConnection.Persist(request.SolnId, this.InfraConnectionFactory, request.IsNew, request.UserId);
-            base.MessageProducer3.Publish(new RefreshSolutionConnectionsRequest() { SolnId = request.SolnId, UserId = request.UserId });
+            request.SMTPConnection.Persist(request.SolutionId, this.InfraConnectionFactory, request.IsNew, request.UserId);
+            base.MessageProducer3.Publish(new RefreshSolutionConnectionsRequest() { SolnId = request.SolutionId, UserId = request.UserId });
         }
 
         [Authenticate]
@@ -135,22 +162,20 @@ namespace ExpressBase.ServiceStack.Services
         }
 
         [Authenticate]
-        public ChangeConnectionResponse Post(ChangeImageManipulationConnectionRequest request)
+        public ChangeConnectionResponse Post(ChangeCloudinaryConnectionRequest request)
         {
             ChangeConnectionResponse res = new ChangeConnectionResponse();
             try
             {
-                request.ImageManipulateConnection.Persist(request.SolnId, this.InfraConnectionFactory, request.IsNew, request.UserId);
+                request.ImageManipulateConnection.Persist(request.SolutionId, this.InfraConnectionFactory, request.IsNew, request.UserId);
 
                 base.MessageProducer3.Publish(new RefreshSolutionConnectionsRequest()
                 {
-                    SolnId = request.SolnId,
+                    SolnId = request.SolutionId,
                     UserId = request.UserId,
                     BToken = (!String.IsNullOrEmpty(this.Request.Authorization)) ? this.Request.Authorization.Replace("Bearer", string.Empty).Trim() : String.Empty,
                     RToken = (!String.IsNullOrEmpty(this.Request.Headers["rToken"])) ? this.Request.Headers["rToken"] : String.Empty
                 });
-
-                res.ResponseStatus.Message = "Success";
             }
             catch (Exception e)
             {
@@ -193,13 +218,32 @@ namespace ExpressBase.ServiceStack.Services
         }
 
         [Authenticate]
+        public ChangeConnectionResponse Post(ChangeFTPConnectionRequest request)
+        {
+            ChangeConnectionResponse res = new ChangeConnectionResponse();
+            try
+            {
+                request.FTPConnection.Persist(request.SolutionId, this.InfraConnectionFactory, request.IsNew, request.UserId);
+                base.MessageProducer3.Publish(new RefreshSolutionConnectionsRequest() { SolnId = request.SolutionId, UserId = request.UserId,
+                    BToken = (!String.IsNullOrEmpty(this.Request.Authorization)) ? this.Request.Authorization.Replace("Bearer", string.Empty).Trim() : String.Empty,
+                    RToken = (!String.IsNullOrEmpty(this.Request.Headers["rToken"])) ? this.Request.Headers["rToken"] : String.Empty
+                });
+            }
+            catch (Exception e)
+            {
+                res.ResponseStatus.Message = e.Message;
+            }
+            return res;
+        }
+
+        [Authenticate]
         public ChangeConnectionResponse Post(ChangeSMSConnectionRequest request)
         {
             ChangeConnectionResponse res = new ChangeConnectionResponse();
             try
             {
-                request.SMSConnection.Persist(request.SolnId, this.InfraConnectionFactory, request.IsNew, request.UserId);
-                base.MessageProducer3.Publish(new RefreshSolutionConnectionsRequest() { SolnId = request.SolnId, UserId = request.UserId });
+                request.SMSConnection.Persist(request.SolutionId, this.InfraConnectionFactory, request.IsNew, request.UserId);
+                base.MessageProducer3.Publish(new RefreshSolutionConnectionsRequest() { SolnId = request.SolutionId, UserId = request.UserId });
             }
             catch (Exception e)
             {

@@ -31,30 +31,34 @@ namespace ExpressBase.ServiceStack.Services
         private void GetFileNamesFromDb()
         {
             int CustomerId = 0;
-            string UploadPath = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_FTP_HOST) + @"files/Softfiles_L/";
-            string ImageTableQuery = @"SELECT customervendor.id, customervendor.accountcode, customervendor.imageid, vddicommentry.filename from vddicommentry
-            INNER JOIN customervendor ON customervendor.imagecount > 0 and vddicommentry.patientid=(customervendor.prehead||customervendor.accountcode)";
-            string _imageId = string.Empty, _fileName = string.Empty, _accountCode = string.Empty;
+            string UploadPath = @"Softfiles_L/";
+//            string ImageTableQuery_deprecated = @"
+//SELECT 
+//    customervendor.id, customervendor.accountcode, customervendor.imageid, vddicommentry.filename 
+//FROM 
+//    customervendor, vddicommentry
+//WHERE
+//	vddicommentry.patientid = (customervendor.prehead || customervendor.accountcode) 
+//ORDER BY
+//	vddicommentry.filename";
+            string ImageTableQuery = @"
+SELECT
+    vddicommentry.customers_id, vddicommentry.imageid, vddicommentry.filename 
+FROM 
+    vddicommentry
+ORDER BY
+	vddicommentry.filename";
+            string _imageId = string.Empty, _fileName = string.Empty;
 
             var table = this.EbConnectionFactory.ObjectsDB.DoQuery(ImageTableQuery);
             foreach (EbDataRow row in table.Rows)
             {
                 CustomerId = (int)row[0];
-                _accountCode = row[1].ToString();
-                _imageId = row[2].ToString();
-                _fileName = row[3].ToString();
+                _imageId = row[1].ToString();
+                _fileName = row[2].ToString();
                 Files.Add(new KeyValuePair<int, string>(CustomerId, System.Web.HttpUtility.UrlPathEncode(UploadPath + _imageId + "/DICOM/" + _fileName)));
             }
         }
-
-        private int GetFileRefId()
-        {
-            string IdFetchQuery = @"INSERT into eb_files_ref(userid, filename) VALUES (1, 'test') RETURNING id";
-            var table = this.EbConnectionFactory.ObjectsDB.DoQuery(IdFetchQuery);
-            int Id = (int)table.Rows[0][0];
-            return Id;
-        }
-
         private int MapFilesWithUser(int CustomerId, int FileRefId)
         {
             int res = 0;
@@ -78,13 +82,13 @@ namespace ExpressBase.ServiceStack.Services
             Files = new List<KeyValuePair<int, string>>();
 
             GetFileNamesFromDb();
-
             GetImageFtpRequest getImageFtp = new GetImageFtpRequest();
 
             getImageFtp.AddAuth(req.UserId, req.SolnId, this.FileClient.BearerToken, this.FileClient.RefreshToken);
 
             if (Files.Count > 0)
             {
+
                 foreach (KeyValuePair<int, string> file in Files)
                 {
                     if (!file.Value.Equals(string.Empty))
