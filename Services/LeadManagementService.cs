@@ -55,9 +55,8 @@ namespace ExpressBase.ServiceStack.Services
 							SELECT noofgrafts,totalrate,prpsessions,consulted,consultingfeepaid,consultingdoctor,closing,LOWER(TRIM(nature)),consdate
 								FROM leadratedetails WHERE customers_id=:accountid;
 
-							SELECT eb_files_ref.filestore_id 
-								FROM eb_files_ref, customer_files 
-								WHERE customer_files.customer_id=:accountid AND customer_files.eb_files_ref_id=eb_files_ref.id;";
+                            SELECT eb_files_ref_id
+                                FROM customer_files WHERE customer_id = :accountid;";
 				paramList.Add(this.EbConnectionFactory.DataDB.GetNewParameter("accountid", EbDbTypes.Int32, request.AccId));
 			}			
 			var ds = this.EbConnectionFactory.DataDB.DoQueries(SqlQry, paramList.ToArray());	
