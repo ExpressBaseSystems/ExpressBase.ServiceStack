@@ -186,6 +186,16 @@ namespace ExpressBase.ServiceStack
             rabitFactory.ConnectionFactory.VirtualHost = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_RABBIT_VHOST);
             var mqServer = new RabbitMqServer(rabitFactory);
 
+            mqServer.RetryCount = 1;
+
+            mqServer.RegisterHandler<ExportApplicationRequest>(base.ExecuteMessage);
+            mqServer.RegisterHandler<ImportApplicationRequest>(base.ExecuteMessage);
+
+            mqServer.RegisterHandler<EmailServicesRequest>(base.ExecuteMessage);
+            mqServer.RegisterHandler<PdfCreateServiceRequest>(base.ExecuteMessage);
+
+            mqServer.Start();
+
             container.AddScoped<IMessageProducer, RabbitMqProducer>(serviceProvider =>
             {
                 return mqServer.CreateMessageProducer() as RabbitMqProducer;

@@ -19,13 +19,13 @@ namespace ExpressBase.ServiceStack.Services
 		public GetManageLeadResponse Any(GetManageLeadRequest request)
 		{
 			string SqlQry = @"SELECT firmcode, fname FROM firmmaster;
-							  SELECT id, name FROM customervendor WHERE prehead=54 ORDER BY name;
-							  SELECT id, name FROM customervendor WHERE prehead=52 ORDER BY name;
-							SELECT DISTINCT INITCAP(TRIM(BOTH FROM clcity)) AS clcity FROM customervendor WHERE LENGTH(clcity) > 2 ORDER BY clcity;
-							SELECT DISTINCT INITCAP(TRIM(BOTH FROM clcountry)) AS clcountry FROM customervendor WHERE LENGTH(clcountry) > 2 ORDER BY clcountry;
-							SELECT DISTINCT INITCAP(TRIM(BOTH FROM city)) AS city FROM customervendor WHERE LENGTH(city) > 2 ORDER BY city;
-							SELECT DISTINCT INITCAP(TRIM(BOTH FROM sourcecategory)) AS sourcecategory FROM customervendor WHERE LENGTH(sourcecategory) > 2 ORDER BY sourcecategory;
-							SELECT DISTINCT INITCAP(TRIM(BOTH FROM subcategory)) AS subcategory FROM customervendor WHERE LENGTH(subcategory) > 2 ORDER BY subcategory;";
+							  SELECT id, name FROM doctors ORDER BY name;
+							  SELECT id, name FROM employees ORDER BY name;
+							SELECT DISTINCT INITCAP(TRIM(clcity)) AS clcity FROM customers WHERE LENGTH(clcity) > 2 ORDER BY clcity;
+							SELECT DISTINCT INITCAP(TRIM(clcountry)) AS clcountry FROM customers WHERE LENGTH(clcountry) > 2 ORDER BY clcountry;
+							SELECT DISTINCT INITCAP(TRIM(city)) AS city FROM customers WHERE LENGTH(city) > 2 ORDER BY city;
+							SELECT DISTINCT INITCAP(TRIM(sourcecategory)) AS sourcecategory FROM customers WHERE LENGTH(sourcecategory) > 2 ORDER BY sourcecategory;
+							SELECT DISTINCT INITCAP(TRIM(subcategory)) AS subcategory FROM customers WHERE LENGTH(subcategory) > 2 ORDER BY subcategory;";
 			List<DbParameter> paramList = new List<DbParameter>();
 			Dictionary<int, string> CostCenter = new Dictionary<int, string>();
 			Dictionary<string, int> DicDict = new Dictionary<string, int>();
@@ -39,20 +39,24 @@ namespace ExpressBase.ServiceStack.Services
 			List<FeedbackEntry> Flist = new List<FeedbackEntry>();
 			List<BillingEntry> Blist = new List<BillingEntry>();
 			List<SurgeryEntry> Slist = new List<SurgeryEntry>();
+			List<string> ImgIds = new List<string>();
 			int Mode = 0;
 			if (request.RequestMode == 1)//edit mode 
 			{
 				SqlQry += @"SELECT id, firmcode, trdate, genurl, name, dob, genphoffice, profession, genemail,
 								customertype, clcity, clcountry, city, typeofcustomer, sourcecategory, subcategory, consultation, picsrcvd
-								FROM customervendor WHERE id = :accountid AND prehead='50';
+								FROM customers WHERE id = :accountid;
 							SELECT id,trdate,status,followupdate,narration, createdby FROM leaddetails
-								WHERE accountid=:accountid AND prehead='50' ORDER BY trdate DESC, id;
+								WHERE customers_id=:accountid ORDER BY trdate DESC, id;
 							SELECT id,trdate,totalamount,advanceamount,balanceamount,cashreceived,paymentmode,bank,createddt,narration,createdby 
-								FROM leadpaymentdetails WHERE accountid=:accountid ORDER BY trdate DESC, balanceamount;
+								FROM leadpaymentdetails WHERE customers_id=:accountid ORDER BY trdate DESC, balanceamount;
 							SELECT id,dateofsurgery,branch,patientinstructions,doctorsinstructions,createdby,createddt 
-								FROM leadsurgerydetails WHERE accountid=:accountid AND prehead='50' ORDER BY createddt;
-							SELECT noofgrafts,totalrate,prpsessions,consulted,consultingfeepaid,consultingdoctor,closing,nature,consdate
-								FROM leadratedetails WHERE accountid=:accountid;";
+								FROM leadsurgerydetails WHERE customers_id=:accountid ORDER BY createddt;
+							SELECT noofgrafts,totalrate,prpsessions,consulted,consultingfeepaid,consultingdoctor,closing,LOWER(TRIM(nature)),consdate
+								FROM leadratedetails WHERE customers_id=:accountid;
+
+                            SELECT eb_files_ref_id
+                                FROM customer_files WHERE customer_id = :accountid;";
 				paramList.Add(this.EbConnectionFactory.DataDB.GetNewParameter("accountid", EbDbTypes.Int32, request.AccId));
 			}			
 			var ds = this.EbConnectionFactory.DataDB.DoQueries(SqlQry, paramList.ToArray());	
@@ -112,7 +116,9 @@ namespace ExpressBase.ServiceStack.Services
 					CustomerData.Add("nature", dr[7].ToString());
 					CustomerData.Add("consdate", Convert.ToDateTime(dr[8]).ToString("dd-MM-yyyy"));
 				}
-				
+
+				foreach (var i in ds.Tables[13].Rows)
+					ImgIds.Add(i[0].ToString());
 
 				//followup details
 				foreach (var i in ds.Tables[9].Rows)
@@ -175,7 +181,8 @@ namespace ExpressBase.ServiceStack.Services
 				CrntCountryList = clcountryList,
 				CityList = cityList,
 				SourceCategoryList = sourcecategoryList,
-				SubCategoryList = subcategoryList
+				SubCategoryList = subcategoryList,
+				ImageIdList = ImgIds				
 			};
 		}
 
@@ -370,20 +377,21 @@ namespace ExpressBase.ServiceStack.Services
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("prehead", EbDbTypes.Int32, 50));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("accountcode", EbDbTypes.String, Fields.Find(i => i.Key == "genurl").Value));
 
+			int accid = 0;
 			int rstatus = 0;
 			if (request.RequestMode == 0)//New Customer
 			{
-				string Qry = @"INSERT INTO customervendor("+cols+@"accountcode, prehead) 
+				string Qry = @"INSERT INTO customers("+cols+@"accountcode, prehead) 
 										VALUES("+vals+@":accountcode, :prehead)
 										 RETURNING id;";
 				EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery(Qry, parameters.ToArray());
-				rstatus= Convert.ToInt32(dt.Rows[0][0]);
+				accid = Convert.ToInt32(dt.Rows[0][0]);
 
-				string Qry2 = @"INSERT INTO leadratedetails("+cols2+@"accountid, accountcode)
-										VALUES ("+vals2+@":accountid, :accountcode);";
-				parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("accountid", EbDbTypes.Int32, rstatus));
+				string Qry2 = @"INSERT INTO leadratedetails("+cols2+ @"customers_id, accountcode)
+										VALUES (" + vals2+@":accountid, :accountcode);";
+				parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("accountid", EbDbTypes.Int32, accid));
 				parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("accountcode", EbDbTypes.String, Fields.Find(i => i.Key == "genurl").Value));
-				this.EbConnectionFactory.ObjectsDB.InsertTable(Qry2, parameters2.ToArray());
+				rstatus = this.EbConnectionFactory.ObjectsDB.InsertTable(Qry2, parameters2.ToArray());
 			}			
 			else if (request.RequestMode == 1)
 			{
@@ -391,16 +399,39 @@ namespace ExpressBase.ServiceStack.Services
 				{
 					parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Int32, Convert.ToInt32(found.Value)));
 					parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Int32, Convert.ToInt32(found.Value)));
+					accid = Convert.ToInt32(found.Value);
 				}
 				parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("prehead", EbDbTypes.Int32, 50));
 
-				string Qry = @"UPDATE customervendor SET "+ upcolsvals.Substring(0, upcolsvals.Length - 1) +" WHERE prehead = :prehead AND id = :accountid;";
+				string Qry = @"UPDATE customers SET "+ upcolsvals.Substring(0, upcolsvals.Length - 1) +" WHERE prehead = :prehead AND id = :accountid;";
 				rstatus = this.EbConnectionFactory.ObjectsDB.UpdateTable(Qry, parameters.ToArray());
 
-				string Qry2 = @"UPDATE leadratedetails SET "+ upcolsvals2.Substring(0, upcolsvals2.Length - 1) +" WHERE accountid = :accountid;";
+				string Qry2 = @"UPDATE leadratedetails SET "+ upcolsvals2.Substring(0, upcolsvals2.Length - 1) +" WHERE customers_id = :accountid;";
 				rstatus = this.EbConnectionFactory.ObjectsDB.UpdateTable(Qry2, parameters2.ToArray());
 			}
+			List<int> ImgRefId = JsonConvert.DeserializeObject<List<int>>(request.ImgRefId);
+			Update_Custmer_Files(accid, ImgRefId);
+
 			return new SaveCustomerResponse { Status = rstatus };
+		}
+
+		private int Update_Custmer_Files(int accountid, List<int> imagerefid)
+		{			
+			string query = @"INSERT INTO customer_files(customer_id, eb_files_ref_id) VALUES";
+			List<DbParameter> parameters = new List<DbParameter>();
+			int i = 0, rstatus = 0;
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("customer_id", EbDbTypes.Int32, accountid));
+			for (i = 0; i < imagerefid.Count; i++)
+			{
+				query += "(:customer_id, :eb_files_ref_id" + i + "),";
+				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_files_ref_id" + i, EbDbTypes.Int32, imagerefid[i]));
+			}
+			if (i > 0)
+			{
+				query = query.Substring(0, query.Length - 1) + ";";
+				rstatus = this.EbConnectionFactory.ObjectsDB.InsertTable(query, parameters.ToArray());
+			}
+			return rstatus;
 		}
 
 		public SaveCustomerFollowupResponse Any(SaveCustomerFollowupRequest request)
@@ -421,7 +452,7 @@ namespace ExpressBase.ServiceStack.Services
 
 			if (F_Obj.Id == 0)//new
 			{
-				string Qry = @"INSERT INTO leaddetails(prehead, accountid, trdate, status, followupdate, narration, createdby, createddt) 
+				string Qry = @"INSERT INTO leaddetails(prehead, customers_id, trdate, status, followupdate, narration, createdby, createddt) 
 									VALUES('50' , :accountid, :trdate, :status, :followupdate, :narration, :createdby, :createddt);";
 				rstatus = this.EbConnectionFactory.ObjectsDB.InsertTable(Qry, parameters.ToArray());
 			}
@@ -429,7 +460,7 @@ namespace ExpressBase.ServiceStack.Services
 			{
 				string Qry = @"UPDATE leaddetails 
 								SET status=:status, followupdate=:followupdate, narration=:narration, modifiedby = :modifiedby, modifieddt = :modifieddt  
-								WHERE prehead = '50' AND accountid = :accountid AND id=:id;";
+								WHERE prehead = '50' AND customers_id = :accountid AND id=:id;";
 				rstatus = this.EbConnectionFactory.ObjectsDB.UpdateTable(Qry, parameters.ToArray());
 			}
 			return new SaveCustomerFollowupResponse { Status = rstatus };
@@ -456,7 +487,7 @@ namespace ExpressBase.ServiceStack.Services
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("modifieddt", EbDbTypes.DateTime, DateTime.Now));
 			if (B_Obj.Id == 0)//new
 			{
-				string Qry = @"INSERT INTO leadpaymentdetails(prehead,accountid,trdate,totalamount,advanceamount,paymentmode,bank,balanceamount,cashreceived,createdby,createddt,narration) 
+				string Qry = @"INSERT INTO leadpaymentdetails(prehead,customers_id,trdate,totalamount,advanceamount,paymentmode,bank,balanceamount,cashreceived,createdby,createddt,narration) 
 									VALUES (50,:accountid,:trdate,:totalamount,:advanceamount,:paymentmode,:bank,:balanceamount,:cashreceived,:createdby,:createddt,:narration);";
 				rstatus = this.EbConnectionFactory.ObjectsDB.InsertTable(Qry, parameters.ToArray());
 			}
@@ -465,7 +496,7 @@ namespace ExpressBase.ServiceStack.Services
 				string Qry = @"UPDATE leadpaymentdetails 
 								SET paymentmode = :paymentmode, bank = :bank, cashreceived = :cashreceived,
 									narration = :narration, modifiedby = :modifiedby, modifieddt = :modifieddt 
-								WHERE accountid=:accountid AND id = :id;";
+								WHERE customers_id=:accountid AND id = :id;";
 				rstatus = this.EbConnectionFactory.ObjectsDB.UpdateTable(Qry, parameters.ToArray());
 			}
 			return new SaveCustomerPaymentResponse { Status = rstatus };
