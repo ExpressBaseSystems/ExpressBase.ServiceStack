@@ -9,6 +9,7 @@ using ExpressBase.Common;
 using ExpressBase.Security.Core;
 using ExpressBase.Common.Extensions;
 using ExpressBase.Common.Structures;
+using System.Globalization;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -277,7 +278,7 @@ namespace ExpressBase.ServiceStack.Services
 						this.EbConnectionFactory.DataDB.GetNewParameter("nickname", EbDbTypes.String, request.NickName),
 						this.EbConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, request.EmailPrimary),
 						this.EbConnectionFactory.DataDB.GetNewParameter("pwd", EbDbTypes.String,password),
-						this.EbConnectionFactory.DataDB.GetNewParameter("dob", EbDbTypes.Date,  DateTime.Parse(request.DateOfBirth)),
+						this.EbConnectionFactory.DataDB.GetNewParameter("dob", EbDbTypes.Date, Convert.ToDateTime(DateTime.ParseExact(request.DateOfBirth, "yyyy-MM-dd", CultureInfo.InvariantCulture))),
 						this.EbConnectionFactory.DataDB.GetNewParameter("sex", EbDbTypes.String, request.Sex),
 						this.EbConnectionFactory.DataDB.GetNewParameter("alternateemail", EbDbTypes.String, request.EmailSecondary),
 						this.EbConnectionFactory.DataDB.GetNewParameter("phprimary", EbDbTypes.String, request.PhonePrimary),
