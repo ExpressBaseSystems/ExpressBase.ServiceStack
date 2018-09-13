@@ -32,15 +32,15 @@ namespace ExpressBase.ServiceStack.Services
         {
             int CustomerId = 0;
             string UploadPath = @"Softfiles_L/";
-//            string ImageTableQuery_deprecated = @"
-//SELECT 
-//    customervendor.id, customervendor.accountcode, customervendor.imageid, vddicommentry.filename 
-//FROM 
-//    customervendor, vddicommentry
-//WHERE
-//	vddicommentry.patientid = (customervendor.prehead || customervendor.accountcode) 
-//ORDER BY
-//	vddicommentry.filename";
+            //            string ImageTableQuery_deprecated = @"
+            //SELECT 
+            //    customervendor.id, customervendor.accountcode, customervendor.imageid, vddicommentry.filename 
+            //FROM 
+            //    customervendor, vddicommentry
+            //WHERE
+            //	vddicommentry.patientid = (customervendor.prehead || customervendor.accountcode) 
+            //ORDER BY
+            //	vddicommentry.filename";
             string ImageTableQuery = @"
 SELECT
     vddicommentry.customers_id, vddicommentry.imageid, vddicommentry.filename 
@@ -65,12 +65,38 @@ ORDER BY
             string MapQuery = @"INSERT into customer_files(customer_id, eb_files_ref_id) values(customer_id=@cust_id, eb_files_ref_id=@ref_id) returning id";
             DbParameter[] MapParams =
             {
-                        this.InfraConnectionFactory.DataDB.GetNewParameter("cust_id", EbDbTypes.Int32, CustomerId),
-                        this.InfraConnectionFactory.DataDB.GetNewParameter("ref_id", EbDbTypes.Int32, FileRefId)
+                        this.EbConnectionFactory.DataDB.GetNewParameter("cust_id", EbDbTypes.Int32, CustomerId),
+                        this.EbConnectionFactory.DataDB.GetNewParameter("ref_id", EbDbTypes.Int32, FileRefId)
             };
             var table = this.EbConnectionFactory.ObjectsDB.DoQuery(MapQuery);
             res = (int)table.Rows[0][0];
             return res;
+        }
+
+        public bool AddEntry(string fname, int CustomerId)
+        {
+            int res = 0;
+
+            try
+            {
+                string AddQuery = @"
+INSERT INTO 
+       eb_image_migration_counter 
+      (filename, customer_id)
+VALUES
+      (@fname, @cid);";
+                DbParameter[] MapParams =
+                {
+                                this.EbConnectionFactory.DataDB.GetNewParameter("cid", EbDbTypes.Int32, CustomerId),
+                                this.EbConnectionFactory.DataDB.GetNewParameter("fname", EbDbTypes.String, fname),
+                    };
+                res = this.EbConnectionFactory.DataDB.DoNonQuery(AddQuery, MapParams);
+            }
+            catch (Exception e)
+            {
+                Log.Error("Counter: " + e.Message);
+            }
+            return res > 0;
         }
 
         [Authenticate]
@@ -95,6 +121,8 @@ ORDER BY
                     {
                         getImageFtp.FileUrl = file;
                         this.MessageProducer3.Publish(getImageFtp);
+
+                        AddEntry(fname: file.Value, CustomerId: file.Key);
                     }
                 }
             }

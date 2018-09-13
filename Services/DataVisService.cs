@@ -402,8 +402,12 @@ namespace ExpressBase.ServiceStack
             _recordsFiltered = (_recordsFiltered > 0) ? _recordsFiltered : _dataset.Tables[_dataset.Tables.Count - 1].Rows.Count;
             //-- 
             EbDataTable _formattedDataTable = null;
+            List<LevelInfo> _levels = new List<LevelInfo>();
             if (_dataset.Tables.Count > 0 && _dV != null)
-                _formattedDataTable = PreProcessing(ref _dataset, _dV, request.UserInfo);
+            {
+                _formattedDataTable = PreProcessing(ref _dataset, _dV, request.UserInfo, ref _levels);
+                //_levels = GetGroupInfo2(_dataset.Tables[0], _dV);
+            }
 
             dsresponse = new DataSourceDataResponse
             {
@@ -412,7 +416,8 @@ namespace ExpressBase.ServiceStack
                 FormattedData = (_formattedDataTable != null) ? _formattedDataTable.Rows : null,
                 RecordsTotal = _recordsTotal,
                 RecordsFiltered = _recordsFiltered,
-                Ispaged = _isPaged
+                Ispaged = _isPaged,
+                Levels = _levels
             };
             this.Log.Info("dsresponse*****" + dsresponse.Data);
             var x = EbSerializers.Json_Serialize(dsresponse);
@@ -493,7 +498,7 @@ namespace ExpressBase.ServiceStack
             return resp;
         }
 
-        public EbDataTable PreProcessing(ref EbDataSet _dataset, EbDataVisualization _dv, User _user)
+        public EbDataTable PreProcessing(ref EbDataSet _dataset, EbDataVisualization _dv, User _user, ref List<LevelInfo> _levels)
         {
             dynamic result = null;
             var _user_culture = CultureInfo.GetCultureInfo(_user.Preference.Locale);
@@ -587,40 +592,113 @@ namespace ExpressBase.ServiceStack
 
                 }
             }
-
-            //Dictionary<int, string> dict = GetGroupInfo(_dataset.Tables[0], _dv);
+            if((_dv as EbTableVisualization).RowGroupCollection.Count > 0 )
+                _levels = GetGroupInfo2(_dataset.Tables[0], _dv);
 
             return _formattedTable;
         }
 
-        public Dictionary<int, string> GetGroupInfo2(EbDataTable _table, EbDataVisualization _dv)
+        public List<LevelInfo> GetGroupInfo2(EbDataTable _table, EbDataVisualization _dv)
         {
             List<RowGroupParent> RowGroupColl = (_dv as EbTableVisualization).RowGroupCollection;
             Dictionary<int, string> _dict = new Dictionary<int, string>();
-            var count = _dv.Columns.Count;
+            var Colcount = _dv.Columns.Count;
 
             List<LevelInfo> _levels = new List<LevelInfo>();
+            Dictionary<int, decimal> IntIndex = new Dictionary<int, decimal>();
 
-
+            foreach (DVBaseColumn col in _dv.Columns)
+            {
+                if (col.Type == EbDbTypes.Int32 || col.Type == EbDbTypes.Int64 || col.Type == EbDbTypes.Decimal || col.Type == EbDbTypes.Int16)
+                    IntIndex.Add(col.Data, 0);
+                    //IntIndex.Add(col.Data);
+            }
 
             string _last = string.Empty;
-            for (int i = 0; i < _table.Rows.Count; i++)
+            int _savedindex = 0;
+            for (int i = 0, count=0; i < _table.Rows.Count; i++, count++)
             {
-                string _new = string.Empty;
+                string _new_colData = string.Empty;
                 foreach (DVBaseColumn col in RowGroupColl[0].RowGrouping) 
-                    _new += _table.Rows[i][col.Data];
+                    _new_colData += _table.Rows[i][col.Data];
 
-                if (_new != _last) // new group
+                if (_new_colData != _last) // new group
                 {
+                    List<LevelInfo> copy = new List<LevelInfo>(_levels);
 
+                    foreach (LevelInfo _lvl in copy)
+                    {
+                        if (_lvl.RowIndex == _savedindex)
+                        {
+                            _lvl.Count = count;
+                            UpdateHeaderHtml(_lvl);
+                            _levels.Add(new LevelInfo()
+                            {
+                                RowIndex = i,
+                                LevelText = GetFooterHtml(IntIndex, _dv)
+                            });
+                        }
+                    }
+                    count = 0;
+
+                    _levels.Add(new LevelInfo()
+                    {
+                        RowIndex = i,
+                        LevelText = GetHeaderHtml(_new_colData, Colcount),
+                        Count = count
+                    });
+
+                    var IntegerKeys = IntIndex.Keys.ToList<int>();
+
+                    foreach(var Key in IntegerKeys)
+                    {
+                        IntIndex[Key] = Convert.ToDecimal( _table.Rows[i][Key]);
+                    }
                 }
                 else //same group
                 {
+                    var IntegerKeys = IntIndex.Keys.ToList<int>();
+                    foreach (int Key in IntegerKeys)
+                    {
+                        IntIndex[Key] = IntIndex[Key] + Convert.ToDecimal(_table.Rows[i][Key]);
+                    }
                 }
 
-                _last = _new;
+                _last = _new_colData;
+                if (count == 0)
+                    _savedindex = i;
             }
-            return new Dictionary<int, string>();
+            return _levels;
+        }
+
+        public string GetHeaderHtml(string _htmlString, int _Colcount)
+        {
+            var str = "<tr class='group' group='0'><td> &nbsp;</td>";
+            str += "<td><i class='fa fa-minus-square-o' style='cursor:pointer;'></i></td><td colspan=" + _Colcount + ">" + _htmlString + "</td></tr>";
+            return str;
+        }
+
+        public void UpdateHeaderHtml(LevelInfo _level)
+        {
+            _level.LevelText += "(" + _level.Count + ")";
+        }
+
+        public string GetFooterHtml(Dictionary<int, decimal> _coll, EbDataVisualization _dv)
+        {
+            var str = "<tr class='group-sum'>";
+            foreach (DVBaseColumn col in (_dv as EbTableVisualization).RowGroupCollection[0].RowGrouping)
+                str += "<td></td>";
+            foreach (DVBaseColumn col in (_dv as EbTableVisualization).Columns)
+            {
+                if (col.bVisible)
+                {
+                    if((col is DVNumericColumn) && (col as DVNumericColumn).Aggregate)
+                        str += "<td>"+ _coll[col.Data] + "</td>";
+                    else
+                        str += "<td></td>";
+                }
+            }
+            return str + "</tr>";
         }
 
         public Dictionary<int, string> GetGroupInfo(EbDataTable _table, EbDataVisualization _dv)
@@ -736,10 +814,6 @@ namespace ExpressBase.ServiceStack
         }
     }
 
-    public class LevelInfo
-    {
-        public string LevelText { get; set; }
-        public int Count { get; set; }
-    }
+    
 }
 

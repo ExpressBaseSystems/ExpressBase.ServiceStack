@@ -58,6 +58,7 @@ namespace ExpressBase.ServiceStack
             try
             {
                 EbObjectService myObjectservice = base.ResolveService<EbObjectService>();
+                myObjectservice.EbConnectionFactory = this.EbConnectionFactory;
                 EbObjectParticularVersionResponse resultlist = myObjectservice.Get(new EbObjectParticularVersionRequest { RefId = request.Refid }) as EbObjectParticularVersionResponse;
                 Report = EbSerializers.Json_Deserialize<EbReport>(resultlist.Data[0].Json);
                 Report.ReportService = this;
@@ -79,6 +80,7 @@ namespace ExpressBase.ServiceStack
                 Report.Doc = new Document(rec);
                 Report.Ms1 = new MemoryStream();
                 DataSourceService myDataSourceservice = base.ResolveService<DataSourceService>();
+                myDataSourceservice.EbConnectionFactory = this.EbConnectionFactory;
                 if (Report.DataSourceRefId != string.Empty)
                 {
                     dsresp = myDataSourceservice.Any(new DataSourceDataSetRequest { RefId = Report.DataSourceRefId, Params = Report.Parameters });
@@ -144,13 +146,13 @@ namespace ExpressBase.ServiceStack
                 //};
 
                 //smtp.Send(mm);
-               // Report.Ms1.Position = 0;
+                // Report.Ms1.Position = 0;
             }
             catch (Exception e)
             {
                 Console.WriteLine("Exception-reportService " + e.ToString());
             }
-            return new ReportRenderResponse { StreamWrapper = new MemorystreamWrapper(Report.Ms1), ReportName = Report.Name };
+            return new ReportRenderResponse { StreamWrapper = new MemorystreamWrapper(Report.Ms1), ReportName = Report.Name , ReportBytea=Report.Ms1.ToArray()};
         }
 
         private void FillLinkCollection(EbReport Report, List<EbReportField> fields)
@@ -163,6 +165,7 @@ namespace ExpressBase.ServiceStack
                     if (!string.IsNullOrEmpty((field as EbDataField).LinkRefId))
                     {
                         EbObjectService myObjectservice = base.ResolveService<EbObjectService>();
+                        myObjectservice.EbConnectionFactory = this.EbConnectionFactory;
                         EbObjectParticularVersionResponse res = (EbObjectParticularVersionResponse)myObjectservice.Get(new EbObjectParticularVersionRequest { RefId = LinkRefid });
                         EbReport linkreport = EbSerializers.Json_Deserialize<EbReport>(res.Data[0].Json);
                         try
@@ -205,7 +208,9 @@ namespace ExpressBase.ServiceStack
             string _excepMsg = string.Empty;
             int resultType_enum = 0;
             EbObjectService myObjectservice = base.ResolveService<EbObjectService>();
+            myObjectservice.EbConnectionFactory = this.EbConnectionFactory;
             DataSourceService myDataSourceservice = base.ResolveService<DataSourceService>();
+            myDataSourceservice.EbConnectionFactory = this.EbConnectionFactory;
             DataSourceColumnsResponse cresp = new DataSourceColumnsResponse();
             cresp = Redis.Get<DataSourceColumnsResponse>(string.Format("{0}_columns", request.DataSourceRefId));
             if (cresp == null || cresp.Columns.Count == 0)
