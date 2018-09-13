@@ -55,9 +55,8 @@ namespace ExpressBase.ServiceStack.Services
 							SELECT noofgrafts,totalrate,prpsessions,consulted,consultingfeepaid,consultingdoctor,closing,LOWER(TRIM(nature)),consdate
 								FROM leadratedetails WHERE customers_id=:accountid;
 
-							SELECT eb_files_ref.filestore_id 
-								FROM eb_files_ref, customer_files 
-								WHERE customer_files.customer_id=:accountid AND customer_files.eb_files_ref_id=eb_files_ref.id";
+                            SELECT eb_files_ref_id
+                                FROM customer_files WHERE customer_id = :accountid;";
 				paramList.Add(this.EbConnectionFactory.DataDB.GetNewParameter("accountid", EbDbTypes.Int32, request.AccId));
 			}			
 			var ds = this.EbConnectionFactory.DataDB.DoQueries(SqlQry, paramList.ToArray());	
@@ -378,6 +377,7 @@ namespace ExpressBase.ServiceStack.Services
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("prehead", EbDbTypes.Int32, 50));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("accountcode", EbDbTypes.String, Fields.Find(i => i.Key == "genurl").Value));
 
+			int accid = 0;
 			int rstatus = 0;
 			if (request.RequestMode == 0)//New Customer
 			{
@@ -385,13 +385,13 @@ namespace ExpressBase.ServiceStack.Services
 										VALUES("+vals+@":accountcode, :prehead)
 										 RETURNING id;";
 				EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery(Qry, parameters.ToArray());
-				rstatus= Convert.ToInt32(dt.Rows[0][0]);
+				accid = Convert.ToInt32(dt.Rows[0][0]);
 
 				string Qry2 = @"INSERT INTO leadratedetails("+cols2+ @"customers_id, accountcode)
 										VALUES (" + vals2+@":accountid, :accountcode);";
-				parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("accountid", EbDbTypes.Int32, rstatus));
+				parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("accountid", EbDbTypes.Int32, accid));
 				parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("accountcode", EbDbTypes.String, Fields.Find(i => i.Key == "genurl").Value));
-				this.EbConnectionFactory.ObjectsDB.InsertTable(Qry2, parameters2.ToArray());
+				rstatus = this.EbConnectionFactory.ObjectsDB.InsertTable(Qry2, parameters2.ToArray());
 			}			
 			else if (request.RequestMode == 1)
 			{
@@ -399,6 +399,7 @@ namespace ExpressBase.ServiceStack.Services
 				{
 					parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Int32, Convert.ToInt32(found.Value)));
 					parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Int32, Convert.ToInt32(found.Value)));
+					accid = Convert.ToInt32(found.Value);
 				}
 				parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("prehead", EbDbTypes.Int32, 50));
 
@@ -408,7 +409,29 @@ namespace ExpressBase.ServiceStack.Services
 				string Qry2 = @"UPDATE leadratedetails SET "+ upcolsvals2.Substring(0, upcolsvals2.Length - 1) +" WHERE customers_id = :accountid;";
 				rstatus = this.EbConnectionFactory.ObjectsDB.UpdateTable(Qry2, parameters2.ToArray());
 			}
+			List<int> ImgRefId = JsonConvert.DeserializeObject<List<int>>(request.ImgRefId);
+			Update_Custmer_Files(accid, ImgRefId);
+
 			return new SaveCustomerResponse { Status = rstatus };
+		}
+
+		private int Update_Custmer_Files(int accountid, List<int> imagerefid)
+		{			
+			string query = @"INSERT INTO customer_files(customer_id, eb_files_ref_id) VALUES";
+			List<DbParameter> parameters = new List<DbParameter>();
+			int i = 0, rstatus = 0;
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("customer_id", EbDbTypes.Int32, accountid));
+			for (i = 0; i < imagerefid.Count; i++)
+			{
+				query += "(:customer_id, :eb_files_ref_id" + i + "),";
+				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_files_ref_id" + i, EbDbTypes.Int32, imagerefid[i]));
+			}
+			if (i > 0)
+			{
+				query = query.Substring(0, query.Length - 1) + ";";
+				rstatus = this.EbConnectionFactory.ObjectsDB.InsertTable(query, parameters.ToArray());
+			}
+			return rstatus;
 		}
 
 		public SaveCustomerFollowupResponse Any(SaveCustomerFollowupRequest request)
