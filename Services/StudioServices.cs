@@ -273,8 +273,8 @@ namespace ExpressBase.ServiceStack
         public object Get(EbObjectExploreObjectRequest request)
         {
             List<EbObjectWrapper> wrap = new List<EbObjectWrapper>();
-            DbParameter[] parameters = { EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, request.Id) };
-            EbDataTable dt = EbConnectionFactory.ObjectsDB.DoQuery(EbConnectionFactory.ObjectsDB.EB_EXPLORE_OBJECT, parameters);
+            DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, request.Id) };
+            EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery(EbConnectionFactory.ObjectsDB.EB_EXPLORE_OBJECT, parameters);
             foreach (EbDataRow dr in dt.Rows)
             {
                 try
