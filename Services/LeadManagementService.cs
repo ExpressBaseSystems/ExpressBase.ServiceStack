@@ -43,6 +43,7 @@ namespace ExpressBase.ServiceStack.Services
 			int Mode = 0;
 			if (request.RequestMode == 1)//edit mode 
 			{
+				//include dpid
 				SqlQry += @"SELECT id, firmcode, trdate, genurl, name, dob, genphoffice, profession, genemail,
 								customertype, clcity, clcountry, city, typeofcustomer, sourcecategory, subcategory, consultation, picsrcvd
 								FROM customers WHERE id = :accountid;
@@ -102,8 +103,9 @@ namespace ExpressBase.ServiceStack.Services
 				CustomerData.Add("subcategory", dr[15].ToString());
 				CustomerData.Add("consultation", dr[16].ToString().ToLower());
 				CustomerData.Add("picsrcvd", dr[17].ToString().ToLower());
-
-				if(ds.Tables[12].Rows.Count > 0)
+				//CustomerData.Add("dpid", dr[18].ToString());
+				CustomerData.Add("dpid", "9613"); //hardcoded for testing
+				if (ds.Tables[12].Rows.Count > 0)
 				{
 					dr = ds.Tables[12].Rows[0];
 					CustomerData.Add("noofgrafts", dr[0].ToString());
@@ -316,6 +318,13 @@ namespace ExpressBase.ServiceStack.Services
 				vals += ":picsrcvd,";
 				upcolsvals += "picsrcvd=:picsrcvd,";
 			}
+			//if (dict.TryGetValue("dpid", out found))
+			//{
+			//	parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
+			//	cols += "dpid,";
+			//	vals += ":dpid,";
+			//	upcolsvals += "dpid=:dpid,";
+			//}
 
 			if (dict.TryGetValue("consdate", out found))
 			{
@@ -372,7 +381,7 @@ namespace ExpressBase.ServiceStack.Services
 				cols2 += "nature,";
 				vals2 += ":nature,";
 				upcolsvals2 += "nature=:nature,";
-			}
+			}			
 
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("prehead", EbDbTypes.Int32, 50));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("accountcode", EbDbTypes.String, Fields.Find(i => i.Key == "genurl").Value));
