@@ -407,15 +407,15 @@ namespace ExpressBase.ServiceStack.Services
 				rstatus = this.EbConnectionFactory.ObjectsDB.UpdateTable(Qry, parameters.ToArray());
 
 				string Qry2 = @"UPDATE leadratedetails SET "+ upcolsvals2.Substring(0, upcolsvals2.Length - 1) +" WHERE customers_id = :accountid;";
-				rstatus = this.EbConnectionFactory.ObjectsDB.UpdateTable(Qry2, parameters2.ToArray());
+				rstatus += this.EbConnectionFactory.ObjectsDB.UpdateTable(Qry2, parameters2.ToArray()) * 10;
 			}
 			List<int> ImgRefId = JsonConvert.DeserializeObject<List<int>>(request.ImgRefId);
-			Update_Custmer_Files(accid, ImgRefId);
+			rstatus += Update_Table_Custmer_Files(accid, ImgRefId) * 100;
 
 			return new SaveCustomerResponse { Status = rstatus };
 		}
 
-		private int Update_Custmer_Files(int accountid, List<int> imagerefid)
+		private int Update_Table_Custmer_Files(int accountid, List<int> imagerefid)
 		{			
 			string query = @"INSERT INTO customer_files(customer_id, eb_files_ref_id) VALUES";
 			List<DbParameter> parameters = new List<DbParameter>();
