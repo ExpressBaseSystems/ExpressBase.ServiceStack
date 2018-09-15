@@ -44,12 +44,12 @@ namespace ExpressBase.ServiceStack.Services
 			if (request.RequestMode == 1)//edit mode 
 			{
 				SqlQry += @"SELECT id, firmcode, trdate, genurl, name, dob, genphoffice, profession, genemail,
-								customertype, clcity, clcountry, city, typeofcustomer, sourcecategory, subcategory, consultation, picsrcvd
+								customertype, clcity, clcountry, city, typeofcustomer, sourcecategory, subcategory, consultation, picsrcvd, dprefid
 								FROM customers WHERE id = :accountid;
 							SELECT id,trdate,status,followupdate,narration, createdby FROM leaddetails
-								WHERE customers_id=:accountid ORDER BY trdate DESC, id;
+								WHERE customers_id=:accountid ORDER BY trdate DESC, id DESC;
 							SELECT id,trdate,totalamount,advanceamount,balanceamount,cashreceived,paymentmode,bank,createddt,narration,createdby 
-								FROM leadpaymentdetails WHERE customers_id=:accountid ORDER BY trdate DESC, balanceamount;
+								FROM leadpaymentdetails WHERE customers_id=:accountid ORDER BY balanceamount;
 							SELECT id,dateofsurgery,branch,patientinstructions,doctorsinstructions,createdby,createddt 
 								FROM leadsurgerydetails WHERE customers_id=:accountid ORDER BY createddt;
 							SELECT noofgrafts,totalrate,prpsessions,consulted,consultingfeepaid,consultingdoctor,closing,LOWER(TRIM(nature)),consdate
@@ -102,8 +102,9 @@ namespace ExpressBase.ServiceStack.Services
 				CustomerData.Add("subcategory", dr[15].ToString());
 				CustomerData.Add("consultation", dr[16].ToString().ToLower());
 				CustomerData.Add("picsrcvd", dr[17].ToString().ToLower());
-
-				if(ds.Tables[12].Rows.Count > 0)
+				CustomerData.Add("dprefid", dr[18].ToString());
+				//CustomerData.Add("dprefid", "9613"); //hardcoded for testing
+				if (ds.Tables[12].Rows.Count > 0)
 				{
 					dr = ds.Tables[12].Rows[0];
 					CustomerData.Add("noofgrafts", dr[0].ToString());
@@ -316,6 +317,13 @@ namespace ExpressBase.ServiceStack.Services
 				vals += ":picsrcvd,";
 				upcolsvals += "picsrcvd=:picsrcvd,";
 			}
+			if (dict.TryGetValue("dprefid", out found))
+			{
+				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Int32, Convert.ToInt32(found.Value)));
+				cols += "dprefid,";
+				vals += ":dprefid,";
+				upcolsvals += "dprefid=:dprefid,";
+			}
 
 			if (dict.TryGetValue("consdate", out found))
 			{
@@ -372,50 +380,77 @@ namespace ExpressBase.ServiceStack.Services
 				cols2 += "nature,";
 				vals2 += ":nature,";
 				upcolsvals2 += "nature=:nature,";
-			}
+			}			
 
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("prehead", EbDbTypes.Int32, 50));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("accountcode", EbDbTypes.String, Fields.Find(i => i.Key == "genurl").Value));
+
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("createdby", EbDbTypes.Int32, request.UserId));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("createdat", EbDbTypes.DateTime, DateTime.Now));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("modifiedby", EbDbTypes.Int32, request.UserId));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("modifiedat", EbDbTypes.DateTime, DateTime.Now));
+
+			parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("createdby", EbDbTypes.String, request.UserId.ToString()));
+			parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("createdat", EbDbTypes.DateTime, DateTime.Now));
+			parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("modifiedby", EbDbTypes.String, request.UserId.ToString()));
+			parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("modifiedat", EbDbTypes.DateTime, DateTime.Now));
 
 			int accid = 0;
 			int rstatus = 0;
 			if (request.RequestMode == 0)//New Customer
 			{
-				string Qry = @"INSERT INTO customers("+cols+@"accountcode, prehead) 
-										VALUES("+vals+@":accountcode, :prehead)
+				string Qry = @"INSERT INTO customers("+cols+@"accountcode, prehead, createdby, createdat, modifiedby, modifiedat) 
+										VALUES("+vals+@":accountcode, :prehead, :createdby, :createdat, :modifiedby, :modifiedat)
 										 RETURNING id;";
 				EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery(Qry, parameters.ToArray());
 				accid = Convert.ToInt32(dt.Rows[0][0]);
 
-				string Qry2 = @"INSERT INTO leadratedetails("+cols2+ @"customers_id, accountcode)
-										VALUES (" + vals2+@":accountid, :accountcode);";
+				string Qry2 = @"INSERT INTO leadratedetails("+cols2+ @"customers_id, accountcode, createdby, createdat, modifiedby, modifiedat)
+										VALUES (" + vals2+ @":accountid, :accountcode, :createdby, :createdat, :modifiedby, :modifiedat);";
 				parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("accountid", EbDbTypes.Int32, accid));
 				parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("accountcode", EbDbTypes.String, Fields.Find(i => i.Key == "genurl").Value));
 				rstatus = this.EbConnectionFactory.ObjectsDB.InsertTable(Qry2, parameters2.ToArray());
 			}			
 			else if (request.RequestMode == 1)
 			{
+				List<DbParameter> tempParam = new List<DbParameter>();
 				if (dict.TryGetValue("accountid", out found))
 				{
 					parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Int32, Convert.ToInt32(found.Value)));
 					parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Int32, Convert.ToInt32(found.Value)));
+					tempParam.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Int32, Convert.ToInt32(found.Value)));
 					accid = Convert.ToInt32(found.Value);
 				}
 				parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("prehead", EbDbTypes.Int32, 50));
 
-				string Qry = @"UPDATE customers SET "+ upcolsvals.Substring(0, upcolsvals.Length - 1) +" WHERE prehead = :prehead AND id = :accountid;";
+				string Qry = @"UPDATE customers SET "+ upcolsvals + " modifiedby=:modifiedby, modifiedat=:modifiedat WHERE prehead = :prehead AND id = :accountid;";
 				rstatus = this.EbConnectionFactory.ObjectsDB.UpdateTable(Qry, parameters.ToArray());
 
-				string Qry2 = @"UPDATE leadratedetails SET "+ upcolsvals2.Substring(0, upcolsvals2.Length - 1) +" WHERE customers_id = :accountid;";
-				rstatus = this.EbConnectionFactory.ObjectsDB.UpdateTable(Qry2, parameters2.ToArray());
+				if(rstatus > 0)
+				{
+					EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery("SELECT id FROM leadratedetails WHERE customers_id = :accountid;", tempParam.ToArray());
+					if(dt.Rows.Count > 0)
+					{
+						string Qry2 = @"UPDATE leadratedetails SET " + upcolsvals2 + "modifiedby=:modifiedby, modifiedat=:modifiedat WHERE customers_id = :accountid;";
+						rstatus += this.EbConnectionFactory.ObjectsDB.UpdateTable(Qry2, parameters2.ToArray()) * 10;
+					}
+					else
+					{
+						string Qry2 = @"INSERT INTO leadratedetails(" + cols2 + @"customers_id, accountcode, createdby, createdat, modifiedby, modifiedat)
+										VALUES (" + vals2 + @":accountid, :accountcode, :createdby, :createdat, :modifiedby, :modifiedat);";
+						parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("accountid", EbDbTypes.Int32, accid));
+						parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("accountcode", EbDbTypes.String, Fields.Find(i => i.Key == "genurl").Value));
+						rstatus += this.EbConnectionFactory.ObjectsDB.InsertTable(Qry2, parameters2.ToArray()) * 10;
+					}
+				}				
 			}
 			List<int> ImgRefId = JsonConvert.DeserializeObject<List<int>>(request.ImgRefId);
-			Update_Custmer_Files(accid, ImgRefId);
+			rstatus += Update_Table_Customer_Files(accid, ImgRefId) * 100;
 
-			return new SaveCustomerResponse { Status = rstatus };
+			return new SaveCustomerResponse { Status = (request.RequestMode == 0)? accid :rstatus };
 		}
 
-		private int Update_Custmer_Files(int accountid, List<int> imagerefid)
+		private int Update_Table_Customer_Files(int accountid, List<int> imagerefid)
 		{			
 			string query = @"INSERT INTO customer_files(customer_id, eb_files_ref_id) VALUES";
 			List<DbParameter> parameters = new List<DbParameter>();

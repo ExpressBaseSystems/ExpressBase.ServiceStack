@@ -79,14 +79,13 @@ namespace ExpressBase.ServiceStack.Services
             using (var con = this.EbConnectionFactory.DataDB.GetNewConnection())
             {
                 con.Open();
-                string sql = "select * from eb_subscription_persist( @sname,@i_sid,@e_sid,@tenant_id,@descript,@js); ";
+                string sql = "select * from eb_create_solution( @sname,@i_sid,@e_sid,@tenant_id,@descript); ";
                 var cmd = this.EbConnectionFactory.DataDB.GetNewCommand(con, sql);
                 cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("@sname", EbDbTypes.String, request.SolutionName));
                 cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("@i_sid", EbDbTypes.String, request.Isid));
                 cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("@e_sid", EbDbTypes.String, request.Esid));
                 cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("@tenant_id", EbDbTypes.Int32, request.UserId));
                 cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("@descript", EbDbTypes.String, request.Description));
-                cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("@js", EbDbTypes.String, request.Subscription));
                 resp =  new CreateSolutionResponse { Solnid = Convert.ToInt32(cmd.ExecuteScalar()) };
             }
             if(resp.Solnid > 0) {
