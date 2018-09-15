@@ -56,7 +56,7 @@ ORDER BY
                 CustomerId = (int)row[0];
                 _imageId = row[1].ToString();
                 _fileName = row[2].ToString();
-                Files.Add(new KeyValuePair<int, string>(CustomerId, System.Web.HttpUtility.UrlPathEncode(UploadPath + _imageId + "/DICOM/" + _fileName)));
+                Files.Add(new KeyValuePair<int, string>(CustomerId, UploadPath + _imageId + "/DICOM/" + _fileName));
             }
         }
 
