@@ -50,7 +50,7 @@ ORDER BY
 	vddicommentry.filename";
             string _imageId = string.Empty, _fileName = string.Empty;
 
-            var table = this.EbConnectionFactory.ObjectsDB.DoQuery(ImageTableQuery);
+            var table = this.EbConnectionFactory.DataDB.DoQuery(ImageTableQuery);
             foreach (EbDataRow row in table.Rows)
             {
                 CustomerId = (int)row[0];
@@ -95,6 +95,9 @@ VALUES
             Files = new List<KeyValuePair<int, string>>();
 
             GetFileNamesFromDb();
+
+            Console.WriteLine("Got data from Vddi Comentry");
+
             GetImageFtpRequest getImageFtp = new GetImageFtpRequest();
 
             getImageFtp.AddAuth(req.UserId, req.SolnId, this.FileClient.BearerToken, this.FileClient.RefreshToken);
@@ -109,7 +112,7 @@ VALUES
                         getImageFtp.FileUrl = file;
                         this.MessageProducer3.Publish(getImageFtp);
 
-                        AddEntry(fname: file.Value, CustomerId: file.Key);
+                        AddEntry(fname: file.Value.SplitOnLast('/').Last(), CustomerId: file.Key);
                     }
                 }
             }
