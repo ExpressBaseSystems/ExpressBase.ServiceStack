@@ -59,19 +59,6 @@ ORDER BY
                 Files.Add(new KeyValuePair<int, string>(CustomerId, System.Web.HttpUtility.UrlPathEncode(UploadPath + _imageId + "/DICOM/" + _fileName)));
             }
         }
-        private int MapFilesWithUser(int CustomerId, int FileRefId)
-        {
-            int res = 0;
-            string MapQuery = @"INSERT into customer_files(customer_id, eb_files_ref_id) values(customer_id=@cust_id, eb_files_ref_id=@ref_id) returning id";
-            DbParameter[] MapParams =
-            {
-                        this.EbConnectionFactory.DataDB.GetNewParameter("cust_id", EbDbTypes.Int32, CustomerId),
-                        this.EbConnectionFactory.DataDB.GetNewParameter("ref_id", EbDbTypes.Int32, FileRefId)
-            };
-            var table = this.EbConnectionFactory.ObjectsDB.DoQuery(MapQuery);
-            res = (int)table.Rows[0][0];
-            return res;
-        }
 
         public bool AddEntry(string fname, int CustomerId)
         {
@@ -103,62 +90,29 @@ VALUES
         public void Post(FileDownloadRequestObject req)
         {
 
-            //string FilerefId = string.Empty;
+            string FilerefId = string.Empty;
 
-            //Files = new List<KeyValuePair<int, string>>();
+            Files = new List<KeyValuePair<int, string>>();
 
-            //GetFileNamesFromDb();
-            //GetImageFtpRequest getImageFtp = new GetImageFtpRequest();
+            GetFileNamesFromDb();
+            GetImageFtpRequest getImageFtp = new GetImageFtpRequest();
 
-            //getImageFtp.AddAuth(req.UserId, req.SolnId, this.FileClient.BearerToken, this.FileClient.RefreshToken);
+            getImageFtp.AddAuth(req.UserId, req.SolnId, this.FileClient.BearerToken, this.FileClient.RefreshToken);
 
-            //if (Files.Count > 0)
-            //{
-
-            //    foreach (KeyValuePair<int, string> file in Files)
-            //    {
-            //        if (!file.Value.Equals(string.Empty))
-            //        {
-            //            getImageFtp.FileUrl = file;
-            //            this.MessageProducer3.Publish(getImageFtp);
-
-            //            AddEntry(fname: file.Value, CustomerId: file.Key);
-            //        }
-            //    }
-            //}
-            string GetRefId = @"
-SELECT GRP.refid 
-FROM
-(SELECT 
- 	count(*) as cnt, eb_files_ref_id as refid
-FROM 
-	eb_files_ref_variations
-GROUP BY
-	eb_files_ref_variations.eb_files_ref_id
-)GRP
-WHERE
-	GRP.cnt < 2";
-
-            CloudinaryResizeReq resizeReq = new CloudinaryResizeReq()
+            if (Files.Count > 0)
             {
-                BToken = FileClient.BearerToken,
-                RToken = FileClient.RefreshToken,
 
-                UserId = req.UserId,
-                SolnId = req.SolnId
-            };
+                foreach (KeyValuePair<int, string> file in Files)
+                {
+                    if (!file.Value.Equals(string.Empty))
+                    {
+                        getImageFtp.FileUrl = file;
+                        this.MessageProducer3.Publish(getImageFtp);
 
-            var table = this.EbConnectionFactory.DataDB.DoQuery(GetRefId);
-
-
-            foreach (var rows in table.Rows)
-            {
-                resizeReq.RefId = (int)rows[0];
-                this.MessageProducer3.Publish(resizeReq);
+                        AddEntry(fname: file.Value, CustomerId: file.Key);
+                    }
+                }
             }
-
-            
-
         }
     }
 }
