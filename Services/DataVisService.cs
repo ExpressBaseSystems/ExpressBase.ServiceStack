@@ -583,7 +583,7 @@ namespace ExpressBase.ServiceStack
                         else if (col.LinkType == LinkTypeEnum.Both)
                             _formattedData = "<a href ='#' oncontextmenu='return false' class='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-inline='true' data-data='" + _formattedData + "'> <i class='fa fa-plus'></i></a>" + "&nbsp;  <a href='#' oncontextmenu='return false' class ='tablelink' data-link='" + col.LinkRefId + "'>" + _formattedData + "</a>";
                     }
-                    else if (col.Type == EbDbTypes.String && (col as DVStringColumn).RenderAs == StringRenderType.Link && col.LinkType == LinkTypeEnum.Tab)/////////////////
+                    if (col.Type == EbDbTypes.String && (col as DVStringColumn).RenderAs == StringRenderType.Link && col.LinkType == LinkTypeEnum.Tab)/////////////////
                     {
                         _formattedData = "<a href='../custompage/leadmanagement?ac=" + _dataset.Tables[0].Rows[i][0] + "' target='_blank'>" + _formattedData + "</a>";
                     }
@@ -722,7 +722,7 @@ namespace ExpressBase.ServiceStack
             RowGroupParent _currentGroup = (_dv as EbTableVisualization).CurrentRowGroup;
             Dictionary<int, string> _dict = new Dictionary<int, string>();
             var Colcount = _dv.Columns.Count;
-
+            List<string> groupList = new List<string>();
             LevelInfoCollection _levels = new LevelInfoCollection();
             Dictionary<int, double> IntIndex = new Dictionary<int, double>();
 
@@ -740,7 +740,10 @@ namespace ExpressBase.ServiceStack
             {
                 string _new_colData = string.Empty;
                 foreach (DVBaseColumn col in _currentGroup.RowGrouping)
+                {
+                    groupList.Add((_table.Rows[i][col.Data].ToString().Trim() == "") ? "(Blank)" : _table.Rows[i][col.Data].ToString().Trim());
                     _new_colData += (_table.Rows[i][col.Data].ToString().Trim() == "") ? "(Blank)" : _table.Rows[i][col.Data].ToString().Trim();
+                }
 
                 if (_new_colData.Trim() != _last) // new group
                 {
@@ -762,7 +765,7 @@ namespace ExpressBase.ServiceStack
                     {
                         Level = 1,
                         RowIndex = i,
-                        GroupString = GetHeaderHtml(_new_colData, Colcount),
+                        GroupString = GetHeaderHtml(_new_colData, Colcount, 1, null, _currentGroup, groupList),
                         Count = count
                     });
 
@@ -863,7 +866,7 @@ namespace ExpressBase.ServiceStack
                         {
                             Level = rowColCount,
                             RowIndex = i,
-                            GroupString = GetHeaderHtml(_new_colData, Colcount, rowColCount),
+                            GroupString = GetHeaderHtml(_new_colData, Colcount, rowColCount, col, null),
                             Count = count,
                             LevelText = _new_colData
                         });
@@ -872,7 +875,7 @@ namespace ExpressBase.ServiceStack
                         {
                             Level = rowColCount,
                             RowIndex = i,
-                            GroupString = GetHeaderHtml(_new_colData, Colcount, rowColCount),
+                            GroupString = GetHeaderHtml(_new_colData, Colcount, rowColCount, col, null),
                             Count = count,
                             LevelText = _new_colData
                         });
@@ -919,7 +922,7 @@ namespace ExpressBase.ServiceStack
                             {
                                 Level = rowColCount,
                                 RowIndex = i-1,
-                                GroupString = GetHeaderHtml(_new_colData, Colcount, rowColCount),
+                                GroupString = GetHeaderHtml(_new_colData, Colcount, rowColCount, col, null),
                                 Count = count,
                                 LevelText = _new_colData,
                                 Type = "Before",
@@ -929,7 +932,7 @@ namespace ExpressBase.ServiceStack
                             {
                                 Level = rowColCount,
                                 RowIndex = i,
-                                GroupString = GetHeaderHtml(_new_colData, Colcount, rowColCount),
+                                GroupString = GetHeaderHtml(_new_colData, Colcount, rowColCount, col, null),
                                 Count = count,
                                 LevelText = _new_colData
                             });
@@ -1039,14 +1042,39 @@ namespace ExpressBase.ServiceStack
             return _levels;
         }
 
-        public string GetHeaderHtml(string _htmlString, int _Colcount, int level = 1)
+        public string GetHeaderHtml(string _htmlString, int _Colcount, int level=1, DVBaseColumn col = null, RowGroupParent currentGroup = null, List<string> groupList =null)
         {
-            var str = "<tr class='group' group='0'>";
+            var str = "<tr class='group' group='"+ level + "'>";
             for (var i = 0; i <level; i++)
                 str += "<td> &nbsp;</td>";
-            str += "<td><i class='fa fa-minus-square-o' style='cursor:pointer;'></i></td><td colspan=" + _Colcount + ">" + _htmlString;
+            string tempstr = string.Empty; 
+
+            if (col != null)//multiple
+                tempstr = GetStringFromColumn(col, _htmlString);
+            else// single
+            {
+                int i = -1;
+                foreach (DVBaseColumn CurCol in currentGroup.RowGrouping) {
+                    i++;
+                    tempstr = GetStringFromColumn(CurCol, _htmlString, groupList[i]);
+                }
+            }
+
+            str += "<td><i class='fa fa-minus-square-o' style='cursor:pointer;'></i></td><td colspan=" + _Colcount + ">" + tempstr;
             return str;
         }
+
+        public string GetStringFromColumn(DVBaseColumn col, string _htmlString, string currentString = null)
+        {
+            string ColumnString = string.Empty;
+            if (col.LinkRefId != null)
+                ColumnString = col.sTitle + ": <b data-rowgroup='true' data-colname='" + col.Name + "' data-coltype='" + col.Type + "+'' data-data='" + ((currentString != null) ? currentString : _htmlString) + "' >< a href = '#' oncontextmenu='return false' class='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' tabindex='0'>" + _htmlString + "</a></b>";
+            else
+                ColumnString = col.sTitle + ": <b data-rowgroup='true' data-colname='" + col.Name + "' data-coltype='" + col.Type + "' data-data='" + ((currentString != null) ? currentString : _htmlString) + "'>" + ((currentString != null) ? currentString : _htmlString) + "</b>";
+
+            return ColumnString;
+        }
+
 
         public void UpdateHeaderHtml(LevelInfo _level, int maxlevel, int curlevel)
         {
