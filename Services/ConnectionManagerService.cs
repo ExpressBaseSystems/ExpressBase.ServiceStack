@@ -42,7 +42,7 @@ namespace ExpressBase.ServiceStack.Services
         public GetConnectionsResponse Post(GetConnectionsRequest req)
         {
             GetConnectionsResponse resp = new GetConnectionsResponse();
-            resp.EBSolutionConnections = this.Redis.Get<EbConnectionsConfig>(string.Format(CoreConstants.SOLUTION_CONNECTION_REDIS_KEY, req.SolnId));
+            resp.EBSolutionConnections = this.Redis.Get<EbConnectionsConfig>(string.Format(CoreConstants.SOLUTION_CONNECTION_REDIS_KEY, req.SolutionId));
             if (resp.EBSolutionConnections == null)
                 using (var con = this.InfraConnectionFactory.DataDB.GetNewConnection() as Npgsql.NpgsqlConnection)
                 {

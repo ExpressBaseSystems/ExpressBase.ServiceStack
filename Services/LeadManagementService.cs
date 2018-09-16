@@ -385,28 +385,33 @@ namespace ExpressBase.ServiceStack.Services
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("prehead", EbDbTypes.Int32, 50));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("accountcode", EbDbTypes.String, Fields.Find(i => i.Key == "genurl").Value));
 
-			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("createdby", EbDbTypes.Int32, request.UserId));
-			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("createdat", EbDbTypes.DateTime, DateTime.Now));
-			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("modifiedby", EbDbTypes.Int32, request.UserId));
-			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("modifiedat", EbDbTypes.DateTime, DateTime.Now));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_createdby", EbDbTypes.Int32, request.UserId));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_createdat", EbDbTypes.DateTime, DateTime.Now));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_modifiedby", EbDbTypes.Int32, request.UserId));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_modifiedat", EbDbTypes.DateTime, DateTime.Now));
 
-			parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("createdby", EbDbTypes.String, request.UserId.ToString()));
-			parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("createdat", EbDbTypes.DateTime, DateTime.Now));
-			parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("modifiedby", EbDbTypes.String, request.UserId.ToString()));
-			parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("modifiedat", EbDbTypes.DateTime, DateTime.Now));
+			parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("createdby", EbDbTypes.String, request.UserName));
+			parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("createddt", EbDbTypes.DateTime, DateTime.Now));
+			parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("modifiedby", EbDbTypes.String, request.UserName));
+			parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("modifieddt", EbDbTypes.DateTime, DateTime.Now));
+
+			parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_createdby", EbDbTypes.Int32, request.UserId));
+			parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_createdat", EbDbTypes.DateTime, DateTime.Now));
+			parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_modifiedby", EbDbTypes.Int32, request.UserId));
+			parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_modifiedat", EbDbTypes.DateTime, DateTime.Now));
 
 			int accid = 0;
 			int rstatus = 0;
 			if (request.RequestMode == 0)//New Customer
 			{
-				string Qry = @"INSERT INTO customers("+cols+@"accountcode, prehead, createdby, createdat, modifiedby, modifiedat) 
-										VALUES("+vals+@":accountcode, :prehead, :createdby, :createdat, :modifiedby, :modifiedat)
+				string Qry = @"INSERT INTO customers(" + cols + @"accountcode, prehead, eb_createdby, eb_createdat, eb_modifiedby, eb_modifiedat) 
+										VALUES(" + vals+ @":accountcode, :prehead, :eb_createdby, :eb_createdat, :eb_modifiedby, :eb_modifiedat)
 										 RETURNING id;";
 				EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery(Qry, parameters.ToArray());
 				accid = Convert.ToInt32(dt.Rows[0][0]);
 
-				string Qry2 = @"INSERT INTO leadratedetails("+cols2+ @"customers_id, accountcode, createdby, createdat, modifiedby, modifiedat)
-										VALUES (" + vals2+ @":accountid, :accountcode, :createdby, :createdat, :modifiedby, :modifiedat);";
+				string Qry2 = @"INSERT INTO leadratedetails("+cols2+ @"customers_id, accountcode, createdby, createddt, eb_createdby, eb_createdat, eb_modifiedby, eb_modifiedat)
+										VALUES (" + vals2+ @":accountid, :accountcode, :createdby, :createddt, :eb_createdby, :eb_createdat, :eb_modifiedby, :eb_modifiedat);";
 				parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("accountid", EbDbTypes.Int32, accid));
 				parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("accountcode", EbDbTypes.String, Fields.Find(i => i.Key == "genurl").Value));
 				rstatus = this.EbConnectionFactory.ObjectsDB.InsertTable(Qry2, parameters2.ToArray());
@@ -423,7 +428,7 @@ namespace ExpressBase.ServiceStack.Services
 				}
 				parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("prehead", EbDbTypes.Int32, 50));
 
-				string Qry = @"UPDATE customers SET "+ upcolsvals + " modifiedby=:modifiedby, modifiedat=:modifiedat WHERE prehead = :prehead AND id = :accountid;";
+				string Qry = @"UPDATE customers SET "+ upcolsvals + " eb_modifiedby=:eb_modifiedby, eb_modifiedat=:eb_modifiedat WHERE prehead = :prehead AND id = :accountid;";
 				rstatus = this.EbConnectionFactory.ObjectsDB.UpdateTable(Qry, parameters.ToArray());
 
 				if(rstatus > 0)
@@ -431,13 +436,13 @@ namespace ExpressBase.ServiceStack.Services
 					EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery("SELECT id FROM leadratedetails WHERE customers_id = :accountid;", tempParam.ToArray());
 					if(dt.Rows.Count > 0)
 					{
-						string Qry2 = @"UPDATE leadratedetails SET " + upcolsvals2 + "modifiedby=:modifiedby, modifiedat=:modifiedat WHERE customers_id = :accountid;";
+						string Qry2 = @"UPDATE leadratedetails SET " + upcolsvals2 + "modifiedby=:modifiedby, modifieddt=:modifieddt, eb_modifiedby=:eb_modifiedby, eb_modifiedat=:eb_modifiedat WHERE customers_id = :accountid;";
 						rstatus += this.EbConnectionFactory.ObjectsDB.UpdateTable(Qry2, parameters2.ToArray()) * 10;
 					}
 					else
 					{
-						string Qry2 = @"INSERT INTO leadratedetails(" + cols2 + @"customers_id, accountcode, createdby, createdat, modifiedby, modifiedat)
-										VALUES (" + vals2 + @":accountid, :accountcode, :createdby, :createdat, :modifiedby, :modifiedat);";
+						string Qry2 = @"INSERT INTO leadratedetails(" + cols2 + @"customers_id, accountcode, createdby, createddt, eb_createdby, eb_createdat, eb_modifiedby, eb_modifiedat)
+										VALUES (" + vals2 + @":accountid, :accountcode, :createdby, :createddt, :eb_createdby, :eb_createdat, :eb_modifiedby, :eb_modifiedat);";
 						parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("accountid", EbDbTypes.Int32, accid));
 						parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("accountcode", EbDbTypes.String, Fields.Find(i => i.Key == "genurl").Value));
 						rstatus += this.EbConnectionFactory.ObjectsDB.InsertTable(Qry2, parameters2.ToArray()) * 10;
