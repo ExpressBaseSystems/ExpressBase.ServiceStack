@@ -98,8 +98,10 @@ namespace ExpressBase.ServiceStack
 
                 };
                 mm.Attachments.Add(new Attachment(new MemoryStream(request.AttachmentReport)/*Memorystream*/, request.AttachmentName + ".pdf"));
-                mm.CC.Add(request.Cc);
-                mm.Bcc.Add(request.Bcc);
+                if(!request.Cc.IsEmpty())
+                    mm.CC.Add(request.Cc);
+                if (!request.Bcc.IsEmpty())
+                    mm.Bcc.Add(request.Bcc);
                 System.Net.Mail.SmtpClient smtp = new System.Net.Mail.SmtpClient
                 {
                     Host = "smtp.gmail.com",

@@ -12,6 +12,7 @@ using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace ExpressBase.ServiceStack.MQServices
@@ -25,6 +26,7 @@ namespace ExpressBase.ServiceStack.MQServices
             MessageProducer3.Publish(new PdfCreateServiceRequest()
             {
                 Refid = request.Refid,
+                Params = request.Params,
                 UserId = request.UserId,
                 UserAuthId = request.UserAuthId,
                 SolnId = request.SolnId
@@ -52,9 +54,9 @@ namespace ExpressBase.ServiceStack.MQServices
                 ebEmailTemplate = EbSerializers.Json_Deserialize(element.Json);
             }
 
-            List<Param> _param = new List<Param> { new Param { Name = "id", Type = ((int)EbDbTypes.Int32).ToString(), Value = "1" } };
+           // List<Param> _param = new List<Param> { new Param { Name = "id", Type = ((int)EbDbTypes.Int32).ToString(), Value = "1" } };
 
-            DataSourceDataResponse dsresp = (DataSourceDataResponse)dataservice.Any(new DataSourceDataRequest { Params = _param, RefId = ebEmailTemplate.DataSourceRefId });
+            DataSourceDataResponse dsresp = (DataSourceDataResponse)dataservice.Any(new DataSourceDataRequest { Params = request.Params, RefId = ebEmailTemplate.DataSourceRefId });
             var ds2 = dsresp.DataSet;
             EbObjectParticularVersionResponse myDsres = (EbObjectParticularVersionResponse)objservice.Get(new EbObjectParticularVersionRequest() { RefId = ebEmailTemplate.DataSourceRefId });
             EbDataSource ebDataSource = new EbDataSource();
@@ -62,22 +64,26 @@ namespace ExpressBase.ServiceStack.MQServices
             {
                 ebDataSource = EbSerializers.Json_Deserialize(element.Json);
             }
-            DbParameter[] parameters = { ebConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, 1) }; //change 1 by request.id
-            var ds = ebConnectionFactory.ObjectsDB.DoQueries(ebDataSource.Sql, parameters);
-            //var pattern = @"\{{(.*?)\}}";
-            //var matches = Regex.Matches(ebEmailTemplate.Body, pattern);
+            var parameters = DataHelper.GetParams(ebConnectionFactory, false, request.Params, 0, 0);
+            var ds = ebConnectionFactory.ObjectsDB.DoQueries(ebDataSource.Sql, parameters.ToArray());
+           // DbParameter[] parameters = { ebConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, 1) }; //change 1 by request.id
+           // var ds = ebConnectionFactory.ObjectsDB.DoQueries(ebDataSource.Sql, parameters);
+            var pattern = @"\{{(.*?)\}}";
+            IEnumerable<string> matches = Regex.Matches(ebEmailTemplate.Body, pattern).OfType<Match>()
+     .Select(m => m.Groups[0].Value)
+     .Distinct(); 
             //Dictionary<string, object> dict = new Dictionary<string, object>();
-            foreach (var dscol in ebEmailTemplate.DsColumnsCollection)
+            foreach (var _col in matches /*ebEmailTemplate.DsColumnsCollection*/)
             {
-                string str = dscol.Title.Replace("{{", "").Replace("}}", "");
+                string str = /*dscol.Title*/_col.Replace("{{", "").Replace("}}", "");
 
                 foreach (var dt in ds.Tables)
                 {
                     string colname = dt.Rows[0][str.Split('.')[1]].ToString();
-                    ebEmailTemplate.Body = ebEmailTemplate.Body.Replace(dscol.Title, colname);
+                    ebEmailTemplate.Body = ebEmailTemplate.Body.Replace(/*dscol.Title*/_col, colname);
                 }
             }
-            var RepRes = reportservice.Get(new ReportRenderRequest { Refid = ebEmailTemplate.AttachmentReportRefID, Fullname = "MQ", Params = null });
+                var RepRes = reportservice.Get(new ReportRenderRequest { Refid = ebEmailTemplate.AttachmentReportRefID, Fullname = "MQ", Params = request.Params });
             RepRes.StreamWrapper.Memorystream.Position = 0;
 
             MessageProducer3.Publish(new EmailServicesRequest()
