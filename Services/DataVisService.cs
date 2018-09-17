@@ -514,10 +514,13 @@ namespace ExpressBase.ServiceStack
             }
 
             EbDataTable _formattedTable = new EbDataTable();
-
-            _dv.Columns.Sort(new Comparison<DVBaseColumn>((x, y) => Decimal.Compare(x.Data, y.Data)));
-
-            foreach (DVBaseColumn col in _dv.Columns)
+            DVColumnCollection colColl = new DVColumnCollection();
+            foreach(DVBaseColumn col in _dv.Columns)
+            {
+                colColl.Add(col.ShallowCopy());
+            }
+            colColl.Sort(new Comparison<DVBaseColumn>((x, y) => Decimal.Compare(x.Data, y.Data)));
+            foreach (DVBaseColumn col in colColl)
             {
                 var cults = col.GetColumnCultureInfo(_user_culture);
                 _formattedTable.Columns.Add(new EbDataColumn { Type = col.Type, ColumnIndex = col.Data, ColumnName = col.Name });
@@ -595,16 +598,16 @@ namespace ExpressBase.ServiceStack
             if ((_dv as EbTableVisualization).RowGroupCollection.Count > 0)
             {
                 if ((_dv as EbTableVisualization).CurrentRowGroup.GetType().Name == "SingleLevelRowGroup")
-                    _levels = GetGroupInfoSingleLevel(_dataset.Tables[0], _dv);
+                    _levels = GetGroupInfoSingleLevel(_dataset.Tables[0], _dv, _user_culture);
                 else if ((_dv as EbTableVisualization).CurrentRowGroup.GetType().Name == "MultipleLevelRowGroup")
-                    _levels = GetGroupInfoMultiLevel(_dataset.Tables[0], _dv);
+                    _levels = GetGroupInfoMultiLevel(_dataset.Tables[0], _dv, _user_culture);
             }
 
 
-                return _formattedTable;
+            return _formattedTable;
         }
 
-        public LevelInfoCollection GetGroupInfoRecursive(EbDataTable Table, EbDataVisualization Visualisation, bool _multipleLevelGrouping = false, string Last = null, int LevelCount = 1)//TO DO: set defaults
+        public LevelInfoCollection GetGroupInfoRecursive(EbDataTable Table, EbDataVisualization Visualisation, CultureInfo _user_culture, bool _multipleLevelGrouping = false, string Last = null, int LevelCount = 1)//TO DO: set defaults
         {
             List<RowGroupParent> RowGroupColl = (Visualisation as EbTableVisualization).RowGroupCollection;
             LevelInfoCollection Levels = new LevelInfoCollection();
@@ -641,12 +644,12 @@ namespace ExpressBase.ServiceStack
                     if (_lvl != null)
                     {
                         if (_multipleLevelGrouping)
-                            rec = GetGroupInfoRecursive(Table, Visualisation, _isNextMultipleLevelGrouping, Last, LevelCount + 1);
+                            rec = GetGroupInfoRecursive(Table, Visualisation, _user_culture,_isNextMultipleLevelGrouping, Last, LevelCount + 1);
                         UpdateHeaderHtml(_lvl, 1, 1);
                         Levels.Add(new LevelInfo()
                         {
                             RowIndex = i,
-                            GroupString = GetFooterHtml(IntIndex, Visualisation)
+                            GroupString = GetFooterHtml(IntIndex, Visualisation, _user_culture)
                         });
                     }
 
@@ -661,7 +664,7 @@ namespace ExpressBase.ServiceStack
                             Levels.Add(new LevelInfo()
                             {
                                 RowIndex = _lastrow,
-                                GroupString = GetFooterHtml(IntIndex, Visualisation),
+                                GroupString = GetFooterHtml(IntIndex, Visualisation, _user_culture),
                                 Type = "After"
                             });
                         }
@@ -708,7 +711,7 @@ namespace ExpressBase.ServiceStack
                     Levels.Add(new LevelInfo()
                     {
                         RowIndex = _lastrow,
-                        GroupString = GetFooterHtml(IntIndex, Visualisation),
+                        GroupString = GetFooterHtml(IntIndex, Visualisation, _user_culture),
                         Type = "After"
                     });
                 }
@@ -717,7 +720,7 @@ namespace ExpressBase.ServiceStack
             return null;
         }
 
-        public LevelInfoCollection GetGroupInfoSingleLevel(EbDataTable _table, EbDataVisualization _dv)
+        public LevelInfoCollection GetGroupInfoSingleLevel(EbDataTable _table, EbDataVisualization _dv, CultureInfo _user_culture)
         {
             RowGroupParent _currentGroup = (_dv as EbTableVisualization).CurrentRowGroup;
             Dictionary<int, string> _dict = new Dictionary<int, string>();
@@ -739,6 +742,7 @@ namespace ExpressBase.ServiceStack
             for (int i = 0; i < _table.Rows.Count; i++, count++)
             {
                 string _new_colData = string.Empty;
+                groupList.Clear();
                 foreach (DVBaseColumn col in _currentGroup.RowGrouping)
                 {
                     groupList.Add((_table.Rows[i][col.Data].ToString().Trim() == "") ? "(Blank)" : _table.Rows[i][col.Data].ToString().Trim());
@@ -755,7 +759,7 @@ namespace ExpressBase.ServiceStack
                         {
                             Level = 1,
                             RowIndex = i,
-                            GroupString = GetFooterHtml(IntIndex, _dv)
+                            GroupString = GetFooterHtml(IntIndex, _dv, _user_culture)
                         });
                     }
 
@@ -799,7 +803,7 @@ namespace ExpressBase.ServiceStack
                 _levels.Add(new LevelInfo()
                 {
                     RowIndex = _lastrow,
-                    GroupString = GetFooterHtml(IntIndex, _dv),
+                    GroupString = GetFooterHtml(IntIndex, _dv, _user_culture),
                     Type = "After"
                 });
             }
@@ -807,7 +811,7 @@ namespace ExpressBase.ServiceStack
             return _levels;
         }
 
-        public LevelInfoCollection GetGroupInfoMultiLevel(EbDataTable _table, EbDataVisualization _dv)
+        public LevelInfoCollection GetGroupInfoMultiLevel(EbDataTable _table, EbDataVisualization _dv,CultureInfo _user_culture)
         {
             RowGroupParent _currentGroup = (_dv as EbTableVisualization).CurrentRowGroup;
             Dictionary<int, string> _dict = new Dictionary<int, string>();
@@ -855,7 +859,7 @@ namespace ExpressBase.ServiceStack
                             {
                                 Level = rowColCount,
                                 RowIndex = i-1,
-                                GroupString = GetFooterHtml(IntIndex, _dv),
+                                GroupString = GetFooterHtml(IntIndex, _dv, _user_culture),
                                 Type = "After",
                             });
                         }
@@ -890,7 +894,9 @@ namespace ExpressBase.ServiceStack
                     else //same group
                     {
                         LevelInfo Pre_lvl = _levels.PreviousLevelCheck(i, rowColCount);
-                        LevelInfo Cur_lvl = _levels.CurrentLevelDataCheck(rowColCount, _new_colData);
+                        LevelInfo Cur_lvl = null;
+                        if (rowColCount > 1)
+                             Cur_lvl = _levels.CurrentLevelDataCheck(rowColCount, _new_colData);
 
                         if (Pre_lvl != null)
                          PreviousLevel.Add(Pre_lvl);
@@ -914,7 +920,7 @@ namespace ExpressBase.ServiceStack
                             {
                                 Level = rowColCount,
                                 RowIndex = i-2,
-                                GroupString = GetFooterHtml(IntIndex, _dv),
+                                GroupString = GetFooterHtml(IntIndex, _dv, _user_culture),
                                 Type = "After",
                             });
                             count = 0;
@@ -966,7 +972,7 @@ namespace ExpressBase.ServiceStack
                     {
                         Level = rowColCount,
                         RowIndex = _lastrow,
-                        GroupString = GetFooterHtml(IntIndex, _dv),
+                        GroupString = GetFooterHtml(IntIndex, _dv, _user_culture),
                         Type = "After"
                     });
                 }
@@ -978,7 +984,7 @@ namespace ExpressBase.ServiceStack
                     {
                         Level = rowColCount,
                         RowIndex = _lastrow,
-                        GroupString = GetFooterHtml(IntIndex, _dv),
+                        GroupString = GetFooterHtml(IntIndex, _dv, _user_culture),
                         Type = "After"
                     });
                 }
@@ -1068,7 +1074,7 @@ namespace ExpressBase.ServiceStack
         {
             string ColumnString = string.Empty;
             if (col.LinkRefId != null)
-                ColumnString = col.sTitle + ": <b data-rowgroup='true' data-colname='" + col.Name + "' data-coltype='" + col.Type + "+'' data-data='" + ((currentString != null) ? currentString : _htmlString) + "' >< a href = '#' oncontextmenu='return false' class='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' tabindex='0'>" + _htmlString + "</a></b>";
+                ColumnString = col.sTitle + ": <b data-rowgroup='true' data-colname='" + col.Name + "' data-coltype='" + col.Type + "+'' data-data='" + ((currentString != null) ? currentString : _htmlString) + "' ><a href = '#' oncontextmenu='return false' class='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' tabindex='0'>" + _htmlString + "</a></b>";
             else
                 ColumnString = col.sTitle + ": <b data-rowgroup='true' data-colname='" + col.Name + "' data-coltype='" + col.Type + "' data-data='" + ((currentString != null) ? currentString : _htmlString) + "'>" + ((currentString != null) ? currentString : _htmlString) + "</b>";
 
@@ -1082,25 +1088,29 @@ namespace ExpressBase.ServiceStack
                 _level.GroupString += "(" + _level.Count + ")</td></tr>";
         }
 
-        public string GetFooterHtml(Dictionary<int, double> _coll, EbDataVisualization _dv)
+        public string GetFooterHtml(Dictionary<int, double> _coll, EbDataVisualization _dv, CultureInfo _user_culture)
         {
             var str = "<tr class='group-sum'>";
-            str += "<td></td>";//serial column
+
+            foreach (DVBaseColumn col in (_dv as EbTableVisualization).CurrentRowGroup.RowGrouping)
+                str += "<td>&nbsp;</td>";
+
             if ((_dv as EbTableVisualization).CurrentRowGroup.GetType().Name == "MultipleLevelRowGroup")
-                str += "<td></td>";
-            
+                str += "<td>&nbsp;</td>";
+
+            str += "<td>&nbsp;</td>";//serial column
+
             foreach (DVBaseColumn col in (_dv as EbTableVisualization).Columns)
             {
+                var cults = col.GetColumnCultureInfo(_user_culture);
                 if (col.bVisible)
                 {
                     if ((col is DVNumericColumn) && (col as DVNumericColumn).Aggregate)
-                        str += "<td class='dt-body-right'>" + _coll[col.Data] + "</td>";
+                        str += "<td class='dt-body-right'>" + Convert.ToDecimal(_coll[col.Data]).ToString("N",cults.NumberFormat) + "</td>";
                     else
-                        str += "<td></td>";
+                        str += "<td>&nbsp;</td>";
                 }
             }
-            foreach (DVBaseColumn col in (_dv as EbTableVisualization).CurrentRowGroup.RowGrouping)
-                str += "<td></td>";
             return str + "</tr>";
         }
 
