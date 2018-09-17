@@ -42,7 +42,7 @@ namespace ExpressBase.ServiceStack.Services
         public GetConnectionsResponse Post(GetConnectionsRequest req)
         {
             GetConnectionsResponse resp = new GetConnectionsResponse();
-            resp.EBSolutionConnections = this.Redis.Get<EbConnectionsConfig>(string.Format(CoreConstants.SOLUTION_CONNECTION_REDIS_KEY, req.SolnId));
+            resp.EBSolutionConnections = this.Redis.Get<EbConnectionsConfig>(string.Format(CoreConstants.SOLUTION_CONNECTION_REDIS_KEY, req.SolutionId));
             if (resp.EBSolutionConnections == null)
                 using (var con = this.InfraConnectionFactory.DataDB.GetNewConnection() as Npgsql.NpgsqlConnection)
                 {
@@ -115,17 +115,17 @@ namespace ExpressBase.ServiceStack.Services
         {
             EbConnectionsConfig _solutionConnections = EbConnectionsConfigProvider.DataCenterConnections;
 
-            _solutionConnections.ObjectsDbConnection.DatabaseName = request.SolnId;
-            _solutionConnections.ObjectsDbConnection.NickName = request.SolnId + "_Initial";
+            _solutionConnections.ObjectsDbConnection.DatabaseName = request.NewSolnId;
+            _solutionConnections.ObjectsDbConnection.NickName = request.NewSolnId + "_Initial";
 
-            _solutionConnections.DataDbConnection.DatabaseName = request.SolnId;
-            _solutionConnections.DataDbConnection.NickName = request.SolnId + "_Initial";
+            _solutionConnections.DataDbConnection.DatabaseName = request.NewSolnId;
+            _solutionConnections.DataDbConnection.NickName = request.NewSolnId + "_Initial";
 
-            _solutionConnections.ObjectsDbConnection.Persist(request.SolnId, this.InfraConnectionFactory, true, request.UserId);
-            _solutionConnections.DataDbConnection.Persist(request.SolnId, this.InfraConnectionFactory, true, request.UserId);
-            _solutionConnections.FilesDbConnection.Persist(request.SolnId, this.InfraConnectionFactory, true, request.UserId);
+            _solutionConnections.ObjectsDbConnection.Persist(request.NewSolnId, this.InfraConnectionFactory, true, request.UserId);
+            _solutionConnections.DataDbConnection.Persist(request.NewSolnId, this.InfraConnectionFactory, true, request.UserId);
+            _solutionConnections.FilesDbConnection.Persist(request.NewSolnId, this.InfraConnectionFactory, true, request.UserId);
 
-            this.Redis.Set<EbConnectionsConfig>(string.Format(CoreConstants.SOLUTION_CONNECTION_REDIS_KEY, request.SolnId), _solutionConnections);
+            this.Redis.Set<EbConnectionsConfig>(string.Format(CoreConstants.SOLUTION_CONNECTION_REDIS_KEY, request.NewSolnId), _solutionConnections);
         }
 
         [Authenticate]

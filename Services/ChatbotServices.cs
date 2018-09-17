@@ -199,7 +199,8 @@ WHERE
             return new BotListResponse { Data = res };
         }
 
-        private void addControlToColl(EbControl control , ref List<TableColumnMeta> _listNamesAndTypes, IVendorDbTypes vDbTypes) {
+        private void addControlToColl(EbControl control, ref List<TableColumnMeta> _listNamesAndTypes, IVendorDbTypes vDbTypes)
+        {
             if (!(control is EbControlContainer))
             {
                 if (control is EbNumeric)
@@ -227,7 +228,7 @@ WHERE
 
             foreach (EbControl control in _flatControls)
             {
-                this.addControlToColl(control,ref _listNamesAndTypes, vDbTypes);
+                this.addControlToColl(control, ref _listNamesAndTypes, vDbTypes);
             }
 
             _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_by", Type = vDbTypes.Decimal });
@@ -280,31 +281,31 @@ WHERE
                     listLine.Add(new TableColumnMeta { Name = "formid", Type = vDbTypes.Decimal });
                     listLine.Add(new TableColumnMeta { Name = "itemid", Type = vDbTypes.Decimal });//selected card id
 
-					CreateOrAlterTable((request.BotObj.TableName.ToLower() + "_lines"), listLine);					
-				}
-				else if(control is EbSurvey)
-				{
-					_listNamesAndTypes.Add(new TableColumnMeta { Name = control.Name, Type = vDbTypes.String });
-					List<TableColumnMeta> listLine = new List<TableColumnMeta>();
-					listLine.Add(new TableColumnMeta { Name = "formid", Type = vDbTypes.Decimal });
-					listLine.Add(new TableColumnMeta { Name = "itemid", Type = vDbTypes.Decimal });//survey id
-					listLine.Add(new TableColumnMeta { Name = "surveyid", Type = vDbTypes.Decimal });
-					listLine.Add(new TableColumnMeta { Name = "option", Type = vDbTypes.String });
-					CreateOrAlterTable((request.BotObj.TableName.ToLower() + "_lines"), listLine);
-				}
-				else //(control is EbTextBox || control is EbInputGeoLocation)
-					_listNamesAndTypes.Add(new TableColumnMeta { Name = control.Name, Type = vDbTypes.String });
-			}
-			_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_by", Type = vDbTypes.Decimal });
-			_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_aid", Type = vDbTypes.Decimal });
-			_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_at", Type = vDbTypes.DateTime });
-			_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_by", Type = vDbTypes.Decimal });
-			_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_aid", Type = vDbTypes.Decimal });
-			_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_at", Type = vDbTypes.DateTime });
-			_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_del", Type = vDbTypes.Boolean, Default = "F" });
-			_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_void", Type = vDbTypes.Boolean, Default = "F" });
-			_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_transaction_date", Type = vDbTypes.DateTime });
-			_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_autogen", Type = vDbTypes.Decimal });
+                    CreateOrAlterTable((request.BotObj.TableName.ToLower() + "_lines"), listLine);
+                }
+                else if (control is EbSurvey)
+                {
+                    _listNamesAndTypes.Add(new TableColumnMeta { Name = control.Name, Type = vDbTypes.String });
+                    List<TableColumnMeta> listLine = new List<TableColumnMeta>();
+                    listLine.Add(new TableColumnMeta { Name = "formid", Type = vDbTypes.Decimal });
+                    listLine.Add(new TableColumnMeta { Name = "itemid", Type = vDbTypes.Decimal });//survey id
+                    listLine.Add(new TableColumnMeta { Name = "surveyid", Type = vDbTypes.Decimal });
+                    listLine.Add(new TableColumnMeta { Name = "option", Type = vDbTypes.String });
+                    CreateOrAlterTable((request.BotObj.TableName.ToLower() + "_lines"), listLine);
+                }
+                else //(control is EbTextBox || control is EbInputGeoLocation)
+                    _listNamesAndTypes.Add(new TableColumnMeta { Name = control.Name, Type = vDbTypes.String });
+            }
+            _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_by", Type = vDbTypes.Decimal });
+            _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_aid", Type = vDbTypes.Decimal });
+            _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_at", Type = vDbTypes.DateTime });
+            _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_by", Type = vDbTypes.Decimal });
+            _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_aid", Type = vDbTypes.Decimal });
+            _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_at", Type = vDbTypes.DateTime });
+            _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_del", Type = vDbTypes.Boolean, Default = "F" });
+            _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_void", Type = vDbTypes.Boolean, Default = "F" });
+            _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_transaction_date", Type = vDbTypes.DateTime });
+            _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_autogen", Type = vDbTypes.Decimal });
 
             CreateOrAlterTable(request.BotObj.TableName.ToLower(), _listNamesAndTypes);
 
@@ -773,235 +774,272 @@ WHERE
 
         public object Any(InsertIntoBotFormTableRequest request)
         {
-			DbParameter parameter1;
-			List<DbParameter> paramlist = new List<DbParameter>();
-			string cols = "";
-			string vals = "";
+            DbParameter parameter1;
+            List<DbParameter> paramlist = new List<DbParameter>();
+            string cols = "";
+            string vals = "";
+            string colvals = string.Empty;
 
-			DbParameter Param4Lines;
-			string Cols4Lines = "";
-			List<string> Vals4Lines = new List<string>(); ;
-			int cardCount = 0;
+            string qry = string.Empty;
+            int rslt = 0;
 
-			foreach (var obj in request.Fields)
-			{
-				if (obj.Type == EbDbTypes.Decimal)
-				{
-					cols += obj.Name + ",";
-					if (obj.AutoIncrement)
-					{
-						vals += string.Format("(SELECT MAX({0})+1 FROM {1}),", obj.Name, request.TableName);
-					}
-					else
-					{
-						vals += ":" + obj.Name + ",";
-						parameter1 = this.EbConnectionFactory.ObjectsDB.GetNewParameter(obj.Name, EbDbTypes.Decimal, double.Parse(obj.Value));
-						paramlist.Add(parameter1);
-					}
-
-				}
-				else if (obj.Type == EbDbTypes.Date)
-				{
-					cols += obj.Name + ",";
-					vals += ":" + obj.Name + ",";
-					parameter1 = this.EbConnectionFactory.ObjectsDB.GetNewParameter(obj.Name, EbDbTypes.Date, DateTime.Parse(obj.Value));
-					paramlist.Add(parameter1);
-				}
-				else if (obj.Type == EbDbTypes.DateTime)
-				{
-					cols += obj.Name + ",";
-					vals += ":" + obj.Name + ",";
-					parameter1 = this.EbConnectionFactory.ObjectsDB.GetNewParameter(obj.Name, EbDbTypes.DateTime, DateTime.Parse(obj.Value));
-					paramlist.Add(parameter1);
-				}
-				else if (obj.Type == EbDbTypes.Time)
-				{
-					cols += obj.Name + ",";
-					vals += ":" + obj.Name + ",";
-					DateTime dt = DateTime.Parse(obj.Value);
-					//DateTime.ParseExact(obj.Value, "HH:mm:ss", CultureInfo.InvariantCulture)
-					parameter1 = this.EbConnectionFactory.ObjectsDB.GetNewParameter(obj.Name, EbDbTypes.Time, dt.ToString("HH:mm:ss"));
-					paramlist.Add(parameter1);
-				}
-				else if (obj.Type == EbDbTypes.Json)
-				{
-					Dictionary<int, List<BotFormField>> ObjectLines = JsonConvert.DeserializeObject<Dictionary<int, List<BotFormField>>>(obj.Value);
-					if (ObjectLines.Keys.Count > 0)
-					{
-						cols += obj.Name + ",";
-						vals += ":" + obj.Name + ",";
-						parameter1 = this.EbConnectionFactory.ObjectsDB.GetNewParameter(obj.Name, EbDbTypes.String, "LINES");
-						paramlist.Add(parameter1);
-					}
-
-					//Insert to table _lines
-					foreach (KeyValuePair<int, List<BotFormField>> card in ObjectLines)
-					{
-						// do something with card.Value or card.Key
-						string Vals4SingleLine = "";
-						foreach (var objLines in card.Value)
-						{
-							if (cardCount == 0)
-								Cols4Lines += objLines.Name + ",";
-							if (objLines.Type == EbDbTypes.Double)
-							{
-								Vals4SingleLine += ":line" + cardCount + objLines.Name + ",";
-								Param4Lines = this.EbConnectionFactory.ObjectsDB.GetNewParameter("line" + cardCount + objLines.Name, EbDbTypes.Double, double.Parse(objLines.Value));
-							}
-							else
-							{
-								Vals4SingleLine += ":line" + cardCount + objLines.Name + ",";
-								Param4Lines = this.EbConnectionFactory.ObjectsDB.GetNewParameter("line" + cardCount + objLines.Name, EbDbTypes.String, objLines.Value);
-							}
-							paramlist.Add(Param4Lines);
-						}
-						if (cardCount == 0)
-							Cols4Lines += "itemid";
-						Vals4SingleLine += ":line" + cardCount + "_item_id";
-						paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("line" + cardCount + "_item_id", EbDbTypes.Int32, card.Key));
-						Vals4Lines.Add(Vals4SingleLine);
-						cardCount++;
-					}
+            DbParameter Param4Lines;
+            string Cols4Lines = "";
+            List<string> Vals4Lines = new List<string>(); ;
+            int cardCount = 0;
 
 
-				}
-				else
-				{
-					cols += obj.Name + ",";
-					vals += ":" + obj.Name + ",";
-					parameter1 = this.EbConnectionFactory.ObjectsDB.GetNewParameter(obj.Name, EbDbTypes.String, obj.Value);
-					paramlist.Add(parameter1);
-				}
+            foreach (var obj in request.Fields)
+            {
+                if (obj.Type == EbDbTypes.Decimal)
+                {
+                    cols += obj.Name + ",";
+                    if (obj.AutoIncrement)
+                    {
+                        vals += string.Format("(SELECT MAX({0})+1 FROM {1}),", obj.Name, request.TableName);
+                    }
+                    else
+                    {
+                        vals += ":" + obj.Name + ",";
+                        colvals += obj.Name + " = :" + obj.Name + ", ";
+                        parameter1 = this.EbConnectionFactory.ObjectsDB.GetNewParameter(obj.Name, EbDbTypes.Decimal, double.Parse(obj.Value));
+                        paramlist.Add(parameter1);
+                    }
+                }
+                else if (obj.Type == EbDbTypes.Date)
+                {
+                    cols += obj.Name + ",";
+                    colvals += obj.Name + " = :" + obj.Name + ", ";
+                    vals += ":" + obj.Name + ",";
+                    parameter1 = this.EbConnectionFactory.ObjectsDB.GetNewParameter(obj.Name, EbDbTypes.Date, DateTime.Parse(obj.Value));
+                    paramlist.Add(parameter1);
+                }
+                else if (obj.Type == EbDbTypes.DateTime)
+                {
+                    cols += obj.Name + ",";
+                    colvals += obj.Name + " = :" + obj.Name + ", ";
+                    vals += ":" + obj.Name + ",";
+                    parameter1 = this.EbConnectionFactory.ObjectsDB.GetNewParameter(obj.Name, EbDbTypes.DateTime, DateTime.Parse(obj.Value));
+                    paramlist.Add(parameter1);
+                }
+                else if (obj.Type == EbDbTypes.Time)
+                {
+                    cols += obj.Name + ",";
+                    vals += ":" + obj.Name + ",";
+                    colvals += obj.Name + " = :" + obj.Name + ", ";
+                    DateTime dt = DateTime.Parse(obj.Value);
+                    //DateTime.ParseExact(obj.Value, "HH:mm:ss", CultureInfo.InvariantCulture)
+                    parameter1 = this.EbConnectionFactory.ObjectsDB.GetNewParameter(obj.Name, EbDbTypes.Time, dt.ToString("HH:mm:ss"));
+                    paramlist.Add(parameter1);
+                }
+                else if (obj.Type == EbDbTypes.Json)
+                {
+                    Dictionary<int, List<BotFormField>> ObjectLines = JsonConvert.DeserializeObject<Dictionary<int, List<BotFormField>>>(obj.Value);
+                    if (ObjectLines.Keys.Count > 0)
+                    {
+                        cols += obj.Name + ",";
+                        vals += ":" + obj.Name + ",";
+                        colvals += obj.Name + " = :" + obj.Name + ", ";
+                        parameter1 = this.EbConnectionFactory.ObjectsDB.GetNewParameter(obj.Name, EbDbTypes.String, "LINES");
+                        paramlist.Add(parameter1);
+                    }
 
-			}
-			cols = cols + "eb_created_by, eb_created_aid, eb_created_at, eb_lastmodified_by, eb_lastmodified_aid, eb_lastmodified_at, eb_transaction_date, eb_autogen";
-			vals = vals + ":eb_created_by,:eb_created_aid,:eb_created_at,:eb_lastmodified_by,:eb_lastmodified_aid,:eb_lastmodified_at,:eb_transaction_date,:eb_autogen";
-			paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_created_by", EbDbTypes.Int32, request.UserId));
-			paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_created_aid", EbDbTypes.Int32, request.AnonUserId));
-			paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_created_at", EbDbTypes.DateTime, DateTime.Now));
-			paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_lastmodified_by", EbDbTypes.Int32, request.UserId));
-			paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_lastmodified_aid", EbDbTypes.Int32, request.AnonUserId));
-			paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_lastmodified_at", EbDbTypes.DateTime, DateTime.Now));
-			paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_transaction_date", EbDbTypes.Date, DateTime.Now));
-			paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_autogen", EbDbTypes.Int64, new Random().Next()));
-			var qry = string.Format("insert into @tbl({0}) values({1})".Replace("@tbl", request.TableName), cols, vals);
+                    //Insert to table _lines
+                    foreach (KeyValuePair<int, List<BotFormField>> card in ObjectLines)
+                    {
+                        // do something with card.Value or card.Key
+                        string Vals4SingleLine = "";
+                        foreach (var objLines in card.Value)
+                        {
+                            if (cardCount == 0)
+                                Cols4Lines += objLines.Name + ",";
+                            if (objLines.Type == EbDbTypes.Double)
+                            {
+                                Vals4SingleLine += ":line" + cardCount + objLines.Name + ",";
+                                Param4Lines = this.EbConnectionFactory.ObjectsDB.GetNewParameter("line" + cardCount + objLines.Name, EbDbTypes.Double, double.Parse(objLines.Value));
+                            }
+                            else
+                            {
+                                Vals4SingleLine += ":line" + cardCount + objLines.Name + ",";
+                                Param4Lines = this.EbConnectionFactory.ObjectsDB.GetNewParameter("line" + cardCount + objLines.Name, EbDbTypes.String, objLines.Value);
+                            }
+                            paramlist.Add(Param4Lines);
+                        }
+                        if (cardCount == 0)
+                            Cols4Lines += "itemid";
+                        Vals4SingleLine += ":line" + cardCount + "_item_id";
+                        paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("line" + cardCount + "_item_id", EbDbTypes.Int32, card.Key));
+                        Vals4Lines.Add(Vals4SingleLine);
+                        cardCount++;
+                    }
+                }
+                else
+                {
+                    cols += obj.Name + ",";
+                    vals += ":" + obj.Name + ",";
+                    colvals += obj.Name + " = :" + obj.Name + ", ";
+                    parameter1 = this.EbConnectionFactory.ObjectsDB.GetNewParameter(obj.Name, EbDbTypes.String, obj.Value);
+                    paramlist.Add(parameter1);
+                }
 
-			//append second insert query
-			if (!Cols4Lines.IsNullOrEmpty())
-			{
-				qry = "WITH rows AS (" + qry + " returning id)";
-				qry += "INSERT INTO " + request.TableName + "_lines(formid," + Cols4Lines + ") ";
+            }
 
-				qry += "(SELECT rows.id," + Vals4Lines[0] + " FROM rows)";
-				for (int i = 1; i < Vals4Lines.Count; i++)
-				{
-					qry += " UNION ALL (SELECT rows.id," + Vals4Lines[i] + " FROM rows)";
-				}
-			}
+            if (request.Id == 0)
+            {
+                cols = cols + "eb_created_by, eb_created_aid, eb_created_at, eb_lastmodified_by, eb_lastmodified_aid, eb_lastmodified_at, eb_transaction_date, eb_autogen";
+                vals = vals + ":eb_created_by,:eb_created_aid,:eb_created_at,:eb_lastmodified_by,:eb_lastmodified_aid,:eb_lastmodified_at,:eb_transaction_date,:eb_autogen";
+                paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_created_by", EbDbTypes.Int32, request.UserId));
+                paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_created_aid", EbDbTypes.Int32, request.AnonUserId));
+                paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_created_at", EbDbTypes.DateTime, DateTime.Now));
+                paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_lastmodified_by", EbDbTypes.Int32, request.UserId));
+                paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_lastmodified_aid", EbDbTypes.Int32, request.AnonUserId));
+                paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_lastmodified_at", EbDbTypes.DateTime, DateTime.Now));
+                paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_transaction_date", EbDbTypes.Date, DateTime.Now));
+                paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_autogen", EbDbTypes.Int64, new Random().Next()));
+                qry = string.Format("insert into @tbl({0}) values({1})".Replace("@tbl", request.TableName), cols, vals);
 
-			var rslt = this.EbConnectionFactory.ObjectsDB.InsertTable(qry, paramlist.ToArray());
-			return new InsertIntoBotFormTableResponse { RowAffected = rslt };
-		}
+                //append second insert query
+                if (!Cols4Lines.IsNullOrEmpty())
+                {
+                    qry = "WITH rows AS (" + qry + " returning id)";
+                    qry += "INSERT INTO " + request.TableName + "_lines(formid," + Cols4Lines + ") ";
 
-		public SubmitBotFormResponse Any(SubmitBotFormRequest request)
-		{
-			var myService = base.ResolveService<EbObjectService>();
-			var formObj = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = request.RefId });
-			var FormObj = EbSerializers.Json_Deserialize(formObj.Data[0].Json);
-			if (FormObj is EbBotForm)
-			{
-				var BotForm = FormObj as EbBotForm;
-				if(request.Id > 0)
-					UpdateBotFormTable(request.Id, BotForm.TableName, request.Fields, request.UserId);
+                    qry += "(SELECT rows.id," + Vals4Lines[0] + " FROM rows)";
+                    for (int i = 1; i < Vals4Lines.Count; i++)
+                    {
+                        qry += " UNION ALL (SELECT rows.id," + Vals4Lines[i] + " FROM rows)";
+                    }
+                }
+                rslt = this.EbConnectionFactory.ObjectsDB.InsertTable(qry, paramlist.ToArray());
+            }
+            else
+            {
+                colvals += "eb_lastmodified_by = :eb_lastmodified_by, eb_lastmodified_at = :eb_lastmodified_at";
 
-			}		
+                paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, request.Id));
+                paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_lastmodified_by", EbDbTypes.Int32, request.UserId));
+                paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_lastmodified_at", EbDbTypes.DateTime, DateTime.Now));
 
-			return new SubmitBotFormResponse { };
-		}
+                qry = string.Format("UPDATE {0} SET {1} WHERE id = :id ;", request.TableName, colvals);
+                rslt = this.EbConnectionFactory.ObjectsDB.UpdateTable(qry, paramlist.ToArray());
+            }
+            return new InsertIntoBotFormTableResponse { RowAffected = rslt };
+        }
 
-		private bool IsFormDataValid(dynamic FormObj, List<BotFormField> Fields)
-		{
-			var BotForm = FormObj as EbBotForm;
-			//var engine = new Jurassic.ScriptEngine();
-			foreach (EbControl control in BotForm.Controls)
-			{
-				var CurFld = Fields.Find(i => i.Name == control.Name);
+        public GetRowDataResponse Any(GetRowDataRequest request)
+        {
+            var myService = base.ResolveService<EbObjectService>();
+            var formObj = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = request.RefId });
+            EbWebForm FormObj = EbSerializers.Json_Deserialize(formObj.Data[0].Json);
+            string TableName = FormObj.TableName;
+            string ColoumsStr = "";
+            IEnumerable<EbControl> controls = FormObj.Controls.FlattenEbControls();
+            foreach (var control in controls)
+            {
+                ColoumsStr += control.Name + ", ";
+            }
+            ColoumsStr = ColoumsStr.Substring(0, ColoumsStr.Length - 2);
+            string query = string.Format("SELECT {0} FROM {1} WHERE id={2};", ColoumsStr, TableName, request.RowId);
+            var dataRow = this.EbConnectionFactory.ObjectsDB.DoQuery(query);
+
+            return new GetRowDataResponse { RowValues = dataRow.Rows[0] };
+        }
+
+        public SubmitBotFormResponse Any(SubmitBotFormRequest request)
+        {
+            var myService = base.ResolveService<EbObjectService>();
+            var formObj = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = request.RefId });
+            var FormObj = EbSerializers.Json_Deserialize(formObj.Data[0].Json);
+            if (FormObj is EbBotForm)
+            {
+                var BotForm = FormObj as EbBotForm;
+                if (request.Id > 0)
+                    UpdateBotFormTable(request.Id, BotForm.TableName, request.Fields, request.UserId);
+            }
+
+            return new SubmitBotFormResponse { };
+        }
+
+        private bool IsFormDataValid(dynamic FormObj, List<BotFormField> Fields)
+        {
+            var BotForm = FormObj as EbBotForm;
+            //var engine = new Jurassic.ScriptEngine();
+            foreach (EbControl control in BotForm.Controls)
+            {
+                var CurFld = Fields.Find(i => i.Name == control.Name);
+            }
+
+            return false;
+        }
 
 
+        private int UpdateBotFormTable(int Id, string TableName, List<BotFormField> Fields, int UserId)
+        {
+            List<BotFormField> UpdateList = new List<BotFormField>();
+            List<DbParameter> parameters = new List<DbParameter>();
+            int rstatus = 0;
+            string cols = string.Empty;
+            string colvals = string.Empty;
+            foreach (BotFormField item in Fields)
+            {
+                cols += item.Name + ",";
+            }
+            string selectQry = string.Format("SELECT {0} FROM {1} WHERE id=:id;", cols.Substring(0, cols.Length - 1), TableName);
 
-			}
+            var ds = this.EbConnectionFactory.DataDB.DoQueries(selectQry, new DbParameter[] { this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, Id) });
+            if (ds.Tables.Count > 0 && ds.Tables[0].Rows.Count > 0)
+            {
+                var dr = ds.Tables[0].Rows[0];
+                for (int i = 0; i < Fields.Count; i++)
+                {
+                    if (Fields[i].Value != dr[i].ToString())
+                    {
+                        UpdateList.Add(new BotFormField
+                        {
+                            Name = Fields[i].Name,
+                            Type = Fields[i].Type,
+                            Value = Fields[i].Value,
+                            OldValue = dr[i].ToString()
+                        });
+                        colvals += Fields[i].Name + "=:" + Fields[i].Name + ",";
+                        parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter(Fields[i].Name, Fields[i].Type, Fields[i].Value));
+                    }
+                }
+                if (!colvals.IsNullOrEmpty())
+                {
+                    parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, Id));
+                    string Qry = string.Format("UPDATE {0} SET {1} WHERE id=:id;", TableName, colvals.Substring(0, colvals.Length - 1));
+                    rstatus = this.EbConnectionFactory.ObjectsDB.UpdateTable(Qry, parameters.ToArray());
+                }
+                UpdateLog(UpdateList, TableName, UserId);
+            }
+            return rstatus;
+        }
 
-			return false;
-		}
+        public void UpdateLog(List<BotFormField> _Fields, string _FormId, int _UserId)
+        {
+            List<DbParameter> parameters = new List<DbParameter>();
+            parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("formid", EbDbTypes.String, _FormId));
+            parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_createdby", EbDbTypes.Int32, _UserId));
+            parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_createdat", EbDbTypes.DateTime, DateTime.Now));
+            string Qry = "INSERT INTO eb_audit_master(formid, eb_createdby, eb_createdat) VALUES (:formid, :eb_createdby, :eb_createdat) RETURNING id;";
+            EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery(Qry, parameters.ToArray());
+            var id = Convert.ToInt32(dt.Rows[0][0]);
 
+            string lineQry = "INSERT INTO eb_audit_lines(masterid, fieldname, oldvalue, newvalue) VALUES ";
+            List<DbParameter> parameters1 = new List<DbParameter>();
+            parameters1.Add(this.EbConnectionFactory.DataDB.GetNewParameter("masterid", EbDbTypes.Int32, id));
+            for (int i = 0; i < _Fields.Count; i++)
+            {
+                lineQry += "(:masterid, :" + _Fields[i].Name + ", :old" + _Fields[i].Name + ", :new" + _Fields[i].Name + "),";
+                parameters1.Add(this.EbConnectionFactory.DataDB.GetNewParameter(_Fields[i].Name, EbDbTypes.String, _Fields[i].Name));
+                parameters1.Add(this.EbConnectionFactory.DataDB.GetNewParameter("new" + _Fields[i].Name, EbDbTypes.String, _Fields[i].Value));
+                parameters1.Add(this.EbConnectionFactory.DataDB.GetNewParameter("old" + _Fields[i].Name, EbDbTypes.String, _Fields[i].OldValue));
+            }
+            var rrr = this.EbConnectionFactory.ObjectsDB.DoNonQuery(lineQry.Substring(0, lineQry.Length - 1), parameters1.ToArray());
+        }
 
-		private int UpdateBotFormTable(int Id, string TableName, List<BotFormField> Fields, int UserId)
-		{
-			List<BotFormField> UpdateList = new List<BotFormField>();
-			List<DbParameter> parameters = new List<DbParameter>();
-			int rstatus = 0;
-			string cols = string.Empty;
-			string colvals = string.Empty;
-			foreach (BotFormField item in Fields)
-			{
-				cols += item.Name + ",";
-			}
-			string selectQry = string.Format("SELECT {0} FROM {1} WHERE id=:id;", cols.Substring(0, cols.Length - 1), TableName);
-
-			var ds = this.EbConnectionFactory.DataDB.DoQueries(selectQry, new DbParameter[] { this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, Id) });
-			if (ds.Tables.Count > 0 && ds.Tables[0].Rows.Count > 0)
-			{
-				var dr = ds.Tables[0].Rows[0];
-				for (int i = 0; i < Fields.Count; i++)
-				{
-					if (Fields[i].Value != dr[i].ToString())
-					{
-						UpdateList.Add(new BotFormField
-						{
-							Name = Fields[i].Name,
-							Type = Fields[i].Type,
-							Value = Fields[i].Value,
-							OldValue = dr[i].ToString()
-						});
-						colvals += Fields[i].Name + "=:" + Fields[i].Name + ",";
-						parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter(Fields[i].Name, Fields[i].Type, Fields[i].Value));
-					}
-				}
-				if (!colvals.IsNullOrEmpty())
-				{
-					parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, Id));
-					string Qry = string.Format("UPDATE {0} SET {1} WHERE id=:id;", TableName, colvals.Substring(0, colvals.Length - 1));
-					rstatus = this.EbConnectionFactory.ObjectsDB.UpdateTable(Qry, parameters.ToArray());
-				}
-				UpdateLog(UpdateList, TableName, UserId);
-			}
-			return rstatus;
-		}
-
-		public void UpdateLog(List<BotFormField> _Fields, string _FormId, int _UserId)
-		{
-			List<DbParameter> parameters = new List<DbParameter>();
-			parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("formid", EbDbTypes.String, _FormId));
-			parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_createdby", EbDbTypes.Int32, _UserId));
-			parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_createdat", EbDbTypes.DateTime, DateTime.Now));
-			string Qry = "INSERT INTO eb_audit_master(formid, eb_createdby, eb_createdat) VALUES (:formid, :eb_createdby, :eb_createdat) RETURNING id;";
-			EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery(Qry, parameters.ToArray());
-			var id = Convert.ToInt32(dt.Rows[0][0]);
-
-			string lineQry = "INSERT INTO eb_audit_lines(masterid, fieldname, oldvalue, newvalue) VALUES ";
-			List<DbParameter> parameters1 = new List<DbParameter>();
-			parameters1.Add(this.EbConnectionFactory.DataDB.GetNewParameter("masterid", EbDbTypes.Int32, id));
-			for (int i = 0; i < _Fields.Count; i++)
-			{
-				lineQry += "(:masterid, :"+ _Fields[i].Name + ", :old"+ _Fields[i].Name +", :new"+ _Fields[i].Name + "),";
-				parameters1.Add(this.EbConnectionFactory.DataDB.GetNewParameter(_Fields[i].Name, EbDbTypes.String, _Fields[i].Name));
-				parameters1.Add(this.EbConnectionFactory.DataDB.GetNewParameter("new" + _Fields[i].Name, EbDbTypes.String, _Fields[i].Value));
-				parameters1.Add(this.EbConnectionFactory.DataDB.GetNewParameter("old" + _Fields[i].Name, EbDbTypes.String, _Fields[i].OldValue));
-			}
-			var rrr = this.EbConnectionFactory.ObjectsDB.DoNonQuery(lineQry.Substring(0, lineQry.Length - 1), parameters1.ToArray());
-		}
-
-		public GetBotsResponse Get(GetBotsRequest request)
+        public GetBotsResponse Get(GetBotsRequest request)
         {
             List<BotDetails> list = new List<BotDetails>();
             string qry = @"SELECT id, applicationname, app_icon, app_settings FROM eb_applications WHERE application_type = 3 AND eb_del = 'F'";
