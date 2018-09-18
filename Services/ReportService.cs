@@ -64,7 +64,7 @@ namespace ExpressBase.ServiceStack
                 Report.ReportService = this;
                 Report.SolutionId = request.SolnId;
                 Report.IsLastpage = false;
-                Report.WatermarkImages = new Dictionary<string, byte[]>();
+                Report.WatermarkImages = new Dictionary<int, byte[]>();
                 Report.WaterMarkList = new List<object>();
                 Report.ValueScriptCollection = new Dictionary<string, Script>();
                 Report.AppearanceScriptCollection = new Dictionary<string, Script>();
