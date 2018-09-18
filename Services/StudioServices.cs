@@ -53,7 +53,7 @@ namespace ExpressBase.ServiceStack
         {
             List<EbObjectWrapper> wrap = new List<EbObjectWrapper>();
             DbParameter[] parameters = { EbConnectionFactory.ObjectsDB.GetNewParameter("refid", EbDbTypes.String, request.RefId) };
-            EbDataTable dt = EbConnectionFactory.DataDB.DoQuery(EbConnectionFactory.ObjectsDB.EB_PARTICULAR_VERSION_OF_AN_OBJ, parameters);
+            EbDataTable dt = EbConnectionFactory.ObjectsDB.DoQuery(EbConnectionFactory.ObjectsDB.EB_PARTICULAR_VERSION_OF_AN_OBJ, parameters);
 
             foreach (EbDataRow dr in dt.Rows)
             {
