@@ -575,7 +575,18 @@ namespace ExpressBase.ServiceStack.Services
 			return new SaveSurgeryDetailsResponse { Status = rstatus };
 		}
 
-
+		public LmUniqueCheckResponse Any(LmUniqueCheckRequest request)
+		{
+			bool rstatus = false;
+			DbParameter[] parameters = new DbParameter[] 
+			{
+				this.EbConnectionFactory.ObjectsDB.GetNewParameter("value", EbDbTypes.String, request.Value)
+			};
+			EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery("SELECT id FROM customers WHERE genurl = :value;", parameters);
+			if (dt.Rows.Count == 0)
+				rstatus = true;
+			return new LmUniqueCheckResponse { Status = rstatus };
+		}
 
 
 
