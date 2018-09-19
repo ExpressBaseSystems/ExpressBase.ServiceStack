@@ -926,25 +926,16 @@ WHERE
             return new InsertIntoBotFormTableResponse { RowAffected = rslt };
         }
 
-        public GetRowDataResponse Any(GetRowDataRequest request)
+        public EbDataSet Any(GetRowDataRequest request)
         {
             var myService = base.ResolveService<EbObjectService>();
             var formObj = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = request.RefId });
             EbWebForm FormObj = EbSerializers.Json_Deserialize(formObj.Data[0].Json);
             FormObj.TableRowId = request.RowId;
-            //string TableName = FormObj.TableName;
-            //string ColoumsStr = "";
-            //IEnumerable<EbControl> controls = FormObj.Controls.FlattenEbControls();
-            //foreach (var control in controls)
-            //{
-            //    ColoumsStr += control.Name + ", ";
-            //}
-            //ColoumsStr = ColoumsStr.Substring(0, ColoumsStr.Length - 2);
-            //string query = string.Format("SELECT {0} FROM {1} WHERE id={2};", ColoumsStr, TableName, request.RowId);
             string query = FormObj.GetQuery();
-            var dataRow = this.EbConnectionFactory.ObjectsDB.DoQuery(query);
+            EbDataSet dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(query);
 
-            return new GetRowDataResponse { RowValues = dataRow.Rows[0] };
+            return dataset;
         }
 
         public SubmitBotFormResponse Any(SubmitBotFormRequest request)
