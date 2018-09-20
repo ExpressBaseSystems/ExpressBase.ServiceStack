@@ -49,7 +49,7 @@ namespace ExpressBase.ServiceStack.Services
 								typeofcustomer, sourcecategory, subcategory, consultation, picsrcvd, dprefid, sex, district, leadowner
 								FROM customers WHERE id = :accountid;
 							SELECT id,trdate,status,followupdate,narration, createdby FROM leaddetails
-								WHERE customers_id=:accountid ORDER BY trdate DESC, id DESC;
+								WHERE customers_id=:accountid ORDER BY trdate DESC, followupdate DESC;
 							SELECT id,trdate,totalamount,advanceamount,balanceamount,cashreceived,paymentmode,bank,createddt,narration,createdby 
 								FROM leadpaymentdetails WHERE customers_id=:accountid ORDER BY balanceamount;
 							SELECT id,dateofsurgery,branch,patientinstructions,doctorsinstructions,createdby,createddt 
@@ -90,10 +90,10 @@ namespace ExpressBase.ServiceStack.Services
 				var dr = ds.Tables[9].Rows[0];
 				CustomerData.Add("accountid", dr[0].ToString());
 				CustomerData.Add("firmcode", dr[1].ToString());
-				CustomerData.Add("trdate", Convert.ToDateTime(dr[2]).ToString("dd-MM-yyyy"));
+				CustomerData.Add("trdate", getStringValue(dr[2]));
 				CustomerData.Add("genurl", dr[3].ToString());
 				CustomerData.Add("name", dr[4].ToString());
-				CustomerData.Add("dob", Convert.ToDateTime(dr[5]).ToString("dd-MM-yyyy"));
+				CustomerData.Add("dob", getStringValue(dr[5]));
 				//CustomerData.Add("age", dr[6].ToString());
 				CustomerData.Add("genphoffice", dr[6].ToString());
 				CustomerData.Add("profession", dr[7].ToString());
@@ -123,8 +123,8 @@ namespace ExpressBase.ServiceStack.Services
 					CustomerData.Add("consultingdoctor", dr[5].ToString());
 					CustomerData.Add("closing", dr[6].ToString());
 					CustomerData.Add("nature", dr[7].ToString());
-					CustomerData.Add("consdate", Convert.ToDateTime(dr[8]).ToString("dd-MM-yyyy"));
-					CustomerData.Add("probmonth", Convert.ToDateTime(dr[9]).ToString("MM/yyyy").Replace("-", "/"));
+					CustomerData.Add("consdate", getStringValue(dr[8]));
+					CustomerData.Add("probmonth", (string.IsNullOrEmpty(getStringValue(dr[9])) ? string.Empty: getStringValue(dr[9]).Substring(3).Replace("-", "/")));
 				}
 
 				foreach (var i in ds.Tables[14].Rows)
@@ -136,9 +136,9 @@ namespace ExpressBase.ServiceStack.Services
 					Flist.Add(new FeedbackEntry
 					{
 						Id = Convert.ToInt32(i[0]),
-						Date = Convert.ToDateTime(i[1]).ToString("dd-MM-yyyy"),
+						Date = getStringValue(i[1]),
 						Status = i[2].ToString(),
-						Followup_Date = Convert.ToDateTime(i[3]).ToString("dd-MM-yyyy"),						
+						Followup_Date = getStringValue(i[3]),						
 						Comments = i[4].ToString(),
 						Created_By = i[5].ToString()
 					});
@@ -150,14 +150,14 @@ namespace ExpressBase.ServiceStack.Services
 					Blist.Add(new BillingEntry
 					{
 						Id = Convert.ToInt32(i[0]),
-						Date = Convert.ToDateTime(i[1]).ToString("dd-MM-yyyy"),
+						Date = getStringValue(i[1]),
 						Total_Amount = Convert.ToInt32(i[2]),
 						Amount_Received = Convert.ToInt32(i[3]),
 						Balance_Amount = Convert.ToInt32(i[4]),
 						Cash_Paid = Convert.ToInt32(i[5]),
 						Payment_Mode = i[6].ToString(),
 						Bank = i[7].ToString(),
-						Clearence_Date = Convert.ToDateTime(i[8]).ToString("dd-MM-yyyy"),
+						Clearence_Date = getStringValue(i[8]),
 						Narration = i[9].ToString(),
 						Created_By = i[10].ToString()
 					});
@@ -169,7 +169,7 @@ namespace ExpressBase.ServiceStack.Services
 					Slist.Add(new SurgeryEntry
 					{
 						Id = Convert.ToInt32(i[0]),
-						Date = Convert.ToDateTime(i[1]).ToString("dd-MM-yyyy"),
+						Date = getStringValue(i[1]),
 						Branch = i[2].ToString(),
 						Created_By = i[5].ToString(),
 						Created_Date = i[6].ToString()
@@ -195,6 +195,12 @@ namespace ExpressBase.ServiceStack.Services
 				SubCategoryList = subcategoryList,
 				ImageIdList = ImgIds				
 			};
+		}
+
+		private string getStringValue(object obj)
+		{
+			obj = (obj == DBNull.Value) ? DateTime.MinValue : obj;
+			return (((DateTime)obj).Date != DateTime.MinValue) ? Convert.ToDateTime(obj).ToString("dd-MM-yyyy") : string.Empty;
 		}
 
 		public SaveCustomerResponse Any(SaveCustomerRequest request)
