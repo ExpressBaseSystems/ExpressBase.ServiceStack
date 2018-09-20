@@ -165,7 +165,7 @@ namespace ExpressBase.ServiceStack.MQServices
                     }
                     while (!uniqnameresp.IsUnique);
 
-                    obj.ReplaceRefid(RefidMap);
+
                     EbObject_Create_New_ObjectRequest ds = new EbObject_Create_New_ObjectRequest
                     {
                         Name = obj.Name,
@@ -186,6 +186,28 @@ namespace ExpressBase.ServiceStack.MQServices
                     };
                     EbObject_Create_New_ObjectResponse res = objservice.Post(ds);
                     RefidMap[obj.RefId] = res.RefId;
+
+                    // obj.ReplaceRefid(RefidMap);
+                }
+                for (int i = ObjectCollection.Count - 1; i >= 0; i--)
+                {
+                    EbObject obj = ObjectCollection[i];
+                    obj.ReplaceRefid(RefidMap);
+                    EbObject_SaveRequest ss= new EbObject_SaveRequest
+                    {
+                        RefId = RefidMap[obj.RefId],
+                        Name = obj.Name,
+                        Description = obj.Description,
+                        Json = EbSerializers.Json_Serialize(obj),
+                        Apps = appres.id.ToString(),
+                        SolnId = request.SolnId,
+                        UserId = request.UserId,
+                        UserAuthId = request.UserAuthId,
+                        WhichConsole = request.WhichConsole,
+                        Relations = "_rel_obj",
+                        Tags = "_tags"
+                    };
+                    EbObject_SaveResponse saveRes = objservice.Post(ss);
                 }
             }
             catch (Exception e)
@@ -198,21 +220,24 @@ namespace ExpressBase.ServiceStack.MQServices
         {
             EbObject obj = null;
 
-            if (ObjDictionary.Contains(_refid))
+            //if (ObjDictionary.Contains(_refid))
+            //{
+            //    obj = (EbObject)ObjDictionary[_refid];
+            //    ObjDictionary.Remove(_refid);
+            //}
+            //else
+            //    obj = GetObjfromDB(_refid, solid);
+            if (!ObjDictionary.Contains(_refid))
             {
-                obj = (EbObject)ObjDictionary[_refid];
-                ObjDictionary.Remove(_refid);
-            }
-            else
                 obj = GetObjfromDB(_refid, solid);
+                ObjDictionary.Add(_refid, obj);
+                string RefidS = obj.DiscoverRelatedRefids();
 
-            ObjDictionary.Add(_refid, obj);
-            string RefidS = obj.DiscoverRelatedRefids();
-
-            string[] _refCollection = RefidS.Split(",");
-            foreach (string _ref in _refCollection)
-                if (_ref.Trim() != string.Empty)
-                    GetRelated(_ref, ObjDictionary, solid);
+                string[] _refCollection = RefidS.Split(",");
+                foreach (string _ref in _refCollection)
+                    if (_ref.Trim() != string.Empty)
+                        GetRelated(_ref, ObjDictionary, solid);
+            }
         }
         public EbObject GetObjfromDB(string _refid, string solid)
         {
