@@ -260,6 +260,18 @@ namespace ExpressBase.ServiceStack.Services
 				isSuccess = this.EbConnectionFactory.ObjectsDB.DoNonQuery(sql, parameters) > 0 ? true : false
 			};
 		}
+		public ResetUserPasswordResponse Any(ResetUserPasswordRequest request)
+		{
+			string sql = "UPDATE eb_users SET pwd = :newpwd WHERE id = :userid;";
+			DbParameter[] parameters = new DbParameter[] {
+				this.EbConnectionFactory.ObjectsDB.GetNewParameter("userid", EbDbTypes.Int32, request.UserId),
+				this.EbConnectionFactory.ObjectsDB.GetNewParameter("newpwd", EbDbTypes.String, (request.NewPwd + request.Email).ToMD5Hash())
+			};
+			return new ResetUserPasswordResponse()
+			{
+				isSuccess = this.EbConnectionFactory.ObjectsDB.DoNonQuery(sql, parameters) > 0 ? true : false
+			};
+		}
 
 
 		public SaveUserResponse Post(SaveUserRequest request)
