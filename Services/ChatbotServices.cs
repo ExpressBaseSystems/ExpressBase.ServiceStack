@@ -797,6 +797,16 @@ WHERE
             return res1.RefId;
         }
 
+        public InsertDataFromWebformResponse Any(InsertDataFromWebformRequest request)
+        {
+            EbObjectService myService = base.ResolveService<EbObjectService>();
+            EbObjectParticularVersionResponse formObj = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = request.RefId });
+            EbWebForm FormObj = EbSerializers.Json_Deserialize(formObj.Data[0].Json);
+
+
+            return new InsertDataFromWebformResponse();
+        }
+
         public object Any(InsertIntoBotFormTableRequest request)
         {
             DbParameter parameter1;
