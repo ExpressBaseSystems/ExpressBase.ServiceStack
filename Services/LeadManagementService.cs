@@ -220,18 +220,21 @@ namespace ExpressBase.ServiceStack.Services
 				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Int32, Convert.ToInt32(found.Value)));
 				cols += "firmcode,";
 				vals += ":firmcode,";
+				upcolsvals += "firmcode=:firmcode,";
 			}
 			if (dict.TryGetValue("trdate", out found))
 			{
 				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Date, Convert.ToDateTime(DateTime.ParseExact(found.Value.ToString(), "dd-MM-yyyy", CultureInfo.InvariantCulture))));
 				cols += "trdate,";
 				vals += ":trdate,";
+				upcolsvals += "trdate=:trdate,";
 			}
 			if (dict.TryGetValue("genurl", out found))
 			{
 				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
 				cols += "genurl,";
 				vals += ":genurl,";
+				upcolsvals += "genurl=:genurl,";
 			}
 			if (dict.TryGetValue("name", out found))
 			{
