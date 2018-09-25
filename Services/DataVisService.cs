@@ -402,7 +402,8 @@ namespace ExpressBase.ServiceStack
             _recordsFiltered = (_recordsFiltered > 0) ? _recordsFiltered : _dataset.Tables[_dataset.Tables.Count - 1].Rows.Count;
             //-- 
             EbDataTable _formattedDataTable = null;
-            LevelInfoCollection _levels = new LevelInfoCollection();
+            //LevelInfoCollection _levels = new LevelInfoCollection();
+            List<GroupingDetails> _levels = new List<GroupingDetails>();
             if (_dataset.Tables.Count > 0 && _dV != null)
             {
                 _formattedDataTable = PreProcessing(ref _dataset, _dV, request.UserInfo, ref _levels);
@@ -498,7 +499,7 @@ namespace ExpressBase.ServiceStack
             return resp;
         }
 
-        public EbDataTable PreProcessing(ref EbDataSet _dataset, EbDataVisualization _dv, User _user, ref LevelInfoCollection _levels)
+        public EbDataTable PreProcessing(ref EbDataSet _dataset, EbDataVisualization _dv, User _user, ref List<GroupingDetails> _levels)
         {
             dynamic result = null;
             var _user_culture = CultureInfo.GetCultureInfo(_user.Preference.Locale);
@@ -595,19 +596,402 @@ namespace ExpressBase.ServiceStack
 
                 }
             }
+            //List<LevelDetails> Levels;
             if ((_dv as EbTableVisualization).RowGroupCollection.Count > 0)
             {
                 if ((_dv as EbTableVisualization).CurrentRowGroup.GetType().Name == "SingleLevelRowGroup")
-                    _levels = GetGroupInfoSingleLevel(_dataset.Tables[0], _dv, _user_culture);
+                    //_levels = GetGroupInfoRecursive(_dataset.Tables[0], _dv, _user_culture, false);
+                    _levels = RowGroupingSingleLevel(_dataset.Tables[0], _dv, _user_culture, false);
                 else if ((_dv as EbTableVisualization).CurrentRowGroup.GetType().Name == "MultipleLevelRowGroup")
-                    _levels = GetGroupInfoMultiLevel(_dataset.Tables[0], _dv, _user_culture);
+                    //_levels = GetGroupInfoRecursive(_dataset.Tables[0], _dv, _user_culture, true);//GetGroupInfoMultiLevel(_dataset.Tables[0], _dv, _user_culture);
+                    _levels = RowGroupingSingleLevel(_dataset.Tables[0], _dv, _user_culture, true);
             }
 
 
             return _formattedTable;
         }
 
-        public LevelInfoCollection GetGroupInfoRecursive(EbDataTable Table, EbDataVisualization Visualisation, CultureInfo _user_culture, bool _multipleLevelGrouping = false, string Last = null, int LevelCount = 1)//TO DO: set defaults
+        public string GetHeaderRecursive(GroupingDetails level, List<string> GroupsList, int colCount, RowGroupParent currentGroup = null)
+        {
+            //string headerHtml = string.Empty;
+
+            var str = "<tr class='group' group='" + level + "'>";
+            for (int itr = 0; itr < level.CurrentLevel; itr++)
+                str += "<td> &nbsp;</td>";
+            string tempstr = string.Empty;
+            
+            int i = -1;
+            foreach (DVBaseColumn CurCol in currentGroup.RowGrouping)
+            {
+                i++;
+                //tempstr = GetStringFromColumn(CurCol, level.LevelText, GroupsList[i]);
+                if (CurCol.LinkRefId != null)
+                    tempstr += CurCol.sTitle + ": <b data-rowgroup='true' data-colname='" + CurCol.Name + "' data-coltype='" + 
+                        CurCol.Type + "+'' data-data='" + ((GroupsList[i] != null) ? GroupsList[i] : level.LevelText) + 
+                        "' ><a href = '#' oncontextmenu='return false' class='tablelink' data-colindex='" + CurCol.Data +
+                        "' data-link='" + CurCol.LinkRefId + "' tabindex='0'>" + level.LevelText + "</a></b>";
+                else
+                    tempstr += CurCol.sTitle + ": <b data-rowgroup='true' data-colname='" + CurCol.Name + "' data-coltype='" + CurCol.Type + "' data-data='" + ((GroupsList[i] != null) ? GroupsList[i] : level.LevelText) + "'>" + ((GroupsList[i] != null) ? GroupsList[i] : level.LevelText) + "</b>";
+            }
+
+            str += "<td><i class='fa fa-minus-square-o' style='cursor:pointer;'></i></td><td colspan=" + colCount + ">" + tempstr;
+            return str;
+
+            //return headerHtml;
+        }
+
+        public string UpdateHeaderRecursive(GroupingDetails level)
+        {
+            return level.Html + level.LevelCount;
+        }
+
+        public string GetFooterRecursive(GroupingDetails level)
+        {
+            string footerHtml = string.Empty;
+
+
+
+            return footerHtml;
+        }
+
+        public string UpdateFooterRecursive(GroupingDetails level)
+        {
+            string footerHtml = string.Empty + level.Html;
+
+
+
+            return footerHtml;
+        }
+
+        /// <summary>
+        /// Method for row grouping part of preprocessing. The method iterates over the EbDataTable object exactly once
+        /// to return the row grouped preprocessed data. 
+        /// </summary>
+        /// <param name="Table"></param>
+        /// <param name="Visualization"></param>
+        /// <param name="Culture"></param>
+        /// <returns></returns>
+        public List<GroupingDetails> RowGroupingSingleLevel(EbDataTable Table, EbDataVisualization Visualization, CultureInfo Culture, bool IsMultiLevelRowGrouping=false)
+        {
+            List<GroupingDetails> RowGrouping = new List<GroupingDetails>();
+            const string AfterText = "After", BeforeText = "Before", BlankText= "(Blank)";
+            int finalHeaderIndex = 0;
+            ///Total number of levels - taken for multiple level row grouping. 
+            ///Not used in single level, and always equals 1.
+            int TotalLevels = (Visualization as EbTableVisualization).CurrentRowGroup.RowGrouping.Count,
+                TotalColumnCount = (Visualization as EbTableVisualization).Columns.Count;
+
+            List<DVBaseColumn> RowGroupingColumns = new List<DVBaseColumn>((Visualization as EbTableVisualization).CurrentRowGroup.RowGrouping);
+
+            GroupingDetails PreviousGrouping = new GroupingDetails();
+            string PreviousGroupingText = string.Empty;
+            for (int i = 0; i < Table.Rows.Count; i++)
+            {
+                GroupingDetails CurrentGrouping = new GroupingDetails();
+                string TempGroupingText = string.Empty;
+                int delimCount = 1;
+                foreach (DVBaseColumn Column in RowGroupingColumns)
+                {
+                    string tempValue = Table.Rows[i][Column.Data].ToString().Trim();
+                    CurrentGrouping.GroupingString += (tempValue == string.Empty) ? BlankText : tempValue;//gets combination of both current and parent column value
+
+                    TempGroupingText += (tempValue == string.Empty) ? BlankText : tempValue;//gets combination of both current and parent column value
+                    TempGroupingText += (delimCount == TotalLevels) ? string.Empty : ":-:";
+                    delimCount++;
+
+                    CurrentGrouping.GroupingTexts.Add((tempValue == string.Empty) ? BlankText : tempValue);
+                }
+
+                /*For the first element in the collection of rows. 
+                 * Here we push the row into the processed list directly because there are no other groupings
+                 * to compare it with.
+                 */
+                if(i==0)
+                {
+                    CurrentGrouping.PreviousGroupingString = string.Empty;
+                    CurrentGrouping.GroupingCount = 1;
+                    CurrentGrouping.CurrentLevel = 1;
+                    CurrentGrouping.IsHeader = true;
+                    CurrentGrouping.InsertionType = BeforeText;
+                    CurrentGrouping.Html = string.Empty;
+                    CurrentGrouping.RowIndex = i;
+                    DrawHeader(CurrentGrouping, RowGroupingColumns, IsMultiLevelRowGrouping, RowGrouping, TotalColumnCount);
+                    //if (IsMultiLevelRowGrouping == false)
+                    //    RowGrouping.Add(new GroupingDetails(CurrentGrouping));
+                    finalHeaderIndex = RowGrouping.Count - 1;
+                }
+                /*For the case where the element is not the first row in the collection of rows,
+                 * and also the grouping text at this row is the same as the grouping text at the previous row.
+                 * Here we modify the count to accomodate this value also.
+                 */
+                else if(TempGroupingText.Equals(PreviousGroupingText)==true)
+                {
+                    RowGrouping.Last().GroupingCount++;
+                }
+                /*For the case where the element is NOT the first row in the collection of rows,
+                 * and the grouping text for this row is different from the grouping text for the previous row.
+                 * Here we-
+                 * 1. Update the header of the previous row grouping to denote the row count at that grouping.
+                 * 2. Insert the footer for the previous grouping as a new object at the same row index as the new object, with keystring 'Before'.
+                 * 3. Create a new row grouping object, save the index, grouping text, and concatenated grouping texts.
+                 * 4. Set new grouping count to 1.
+                 * 5. Insert the new object to the new row index. 
+                 */
+                else if(TempGroupingText.Equals(PreviousGroupingText)==false)
+                {
+                    RowGrouping.Last().Html = UpdateHeader(RowGrouping.Last());
+                    int CurrentLevel = GetCurrentLevel(TempGroupingText, PreviousGroupingText);
+                    int iterCount = (TotalLevels - CurrentLevel) + 1;
+                    for(int iter=0; iter<iterCount; iter++)
+                    {
+                        GroupingDetails FooterObject = new GroupingDetails()
+                        {
+                            LevelCount = 1,
+                            IsHeader = false,
+                            Html = GetFooter(TotalColumnCount),
+                            InsertionType = BeforeText,
+                            RowIndex = i,
+                        };
+                        RowGrouping.Add(new GroupingDetails(FooterObject));
+                    }
+
+                    CurrentGrouping.GroupingCount = 1;
+                    CurrentGrouping.CurrentLevel = 1;
+                    CurrentGrouping.RowIndex = i;
+                    CurrentGrouping.IsHeader = true;
+                    CurrentGrouping.InsertionType = BeforeText;
+                    CurrentGrouping.Html = string.Empty;
+                    DrawHeader(CurrentGrouping, RowGroupingColumns, IsMultiLevelRowGrouping, RowGrouping, TotalColumnCount);
+                    finalHeaderIndex = RowGrouping.Count - 1;
+                    
+                }
+                /*For the case when the current row is the last row to be processed,
+                 * we have to update the header for the last row grouping and 
+                 * push a footer into the processed elements list for the last row grouping
+                 * at the row index of the last row grouping.
+                 */
+                if(i==Table.Rows.Count-1)
+                {
+                    RowGrouping[finalHeaderIndex].Html = UpdateHeader(RowGrouping[finalHeaderIndex]);
+                    GroupingDetails FinalFooter = new GroupingDetails()
+                    {
+                        Html = GetFooter(TotalColumnCount),
+                        IsHeader = false,
+                        InsertionType = AfterText,
+                        RowIndex = i,
+                        CurrentLevel = 1,
+                        GroupingCount = RowGrouping[finalHeaderIndex].GroupingCount
+                    };
+                    RowGrouping.Add(new GroupingDetails(FinalFooter));
+                }
+                PreviousGroupingText = TempGroupingText;
+            }
+            return RowGrouping;
+        }
+
+        public int GetCurrentLevel(string CurrentString, string PreviousString)
+        {
+            int CurrentLevel = 0;
+
+            string[] CurrentSplit = CurrentString.Split(":-:");
+            string[] PreviousSplit = PreviousString.Split(":-:");
+
+            for(int i=0; i<CurrentSplit.Length; i++)
+            {
+                if (CurrentSplit[i].Equals(PreviousSplit[i]))
+                    CurrentLevel++;
+            }
+
+            return CurrentLevel;
+        }
+
+        public string DrawHeader(GroupingDetails GroupingObject, List<DVBaseColumn> RowGroupingColumns, bool IsMultiLevelRowGrouping, List<GroupingDetails> groupings, int ColumnCount)
+        {
+            string str = string.Empty;
+            var _Colcount = ColumnCount;
+            int i = 0;
+            if (IsMultiLevelRowGrouping)
+            {
+                foreach(var Column in RowGroupingColumns)
+                {
+                    str = "<tr class='group' group='" + GroupingObject.CurrentLevel + "'>";
+                    for (int itr = 0; itr < GroupingObject.CurrentLevel; itr++)
+                        str += "<td> &nbsp;</td>";
+                    str += "<td><i class='fa fa-minus-square-o' style='cursor:pointer;'></i></td><td colspan=" + _Colcount + ">" + GroupingObject.GroupingTexts[i];
+                    i++;
+
+                    GroupingDetails HeaderObject = new GroupingDetails()
+                    {
+                        Html = str,
+                        InsertionType = "Before",
+                        IsHeader = true,
+                        RowIndex = GroupingObject.RowIndex,
+                        CurrentLevel = i + 1,
+                    };
+                    groupings.Add(HeaderObject);
+                }
+            }
+            else
+            {
+                string tempstr = string.Empty;
+                str = "<tr class='group' group='" + GroupingObject.CurrentLevel + "'>";
+                for (int itr = 0; itr < GroupingObject.CurrentLevel; itr++)
+                    str += "<td> &nbsp;</td>";
+                foreach (string groupString in GroupingObject.GroupingTexts)
+                {
+                    tempstr += groupString;
+                    if (groupString.Equals(GroupingObject.GroupingTexts.Last()) == false)
+                        tempstr += " - ";
+                }
+                str += "<td><i class='fa fa-minus-square-o' style='cursor:pointer;'></i></td><td colspan=" + _Colcount + ">" + tempstr;
+                i = 1;
+                GroupingDetails HeaderObject = new GroupingDetails()
+                {
+                    Html = str,
+                    InsertionType = "Before",
+                    IsHeader = true,
+                    RowIndex = GroupingObject.RowIndex,
+                    CurrentLevel = i + 1,
+                };
+                groupings.Add(HeaderObject);
+            }
+
+            return str;
+        }
+        
+        public string UpdateHeader(GroupingDetails GroupingObject)
+        {
+            return GroupingObject.Html + ": " + GroupingObject.GroupingCount + "</tr>";
+        }
+
+        public string GetFooter(int ColumnsCount)
+        {
+            string Footer = string.Empty;
+            Footer += "<tr class='group-sum'><td colspan='" + ColumnsCount+ "'></td></tr>";
+            return Footer;
+        }
+
+
+
+        /// <summary>
+        /// Function for preprocessing data table and finding the header and footer structure for row grouping.
+        /// For single level row grouping, it functions by iterating over the table exactly once.
+        /// For multi-level row grouping, the single level grouping functionality is recursively applied at different levels.
+        /// </summary>
+        /// <param name="Table">The data table to be processed.</param>
+        /// <param name="Visualisation">The object containing metadata for data visualization.</param>
+        /// <param name="_user_culture"></param>
+        /// <param name="_multipleLevelGrouping">Flag to check whether multi-level or single-level grouping must be performed.</param>
+        /// <param name="levelIterator">The current level of processing, to be used when recursing over the function in multi-level grouping.</param>
+        /// <param name="parentLevel">The level of the parent element. Same for single level grouping and different grouping of the same level 
+        ///                 in multi-level row grouping.</param>
+        /// <returns></returns>
+        public List<GroupingDetails> GetGroupInfoRecursive(EbDataTable Table, EbDataVisualization Visualisation, CultureInfo _user_culture, bool _multipleLevelGrouping = false, int levelIterator=1, int parentLevel=0)
+        {
+            string AfterText = "After", BeforeText = "Before";
+            ///The list containing details of preprocessed elements.
+            ///
+            List<GroupingDetails> RowGroupingLevelsDetails = new List<GroupingDetails>();
+            ///The list of group strings in a level.
+            ///Each element here is saved into each element of RowGroupingLevelsDetails as LevelText property.
+            List<string> GroupsList = new List<string>();
+            ///<summary>
+            /// Total number of levels in the row grouping.
+            ///</summary>
+            int TotalLevels = (Visualisation as EbTableVisualization).CurrentRowGroup.RowGrouping.Count;
+
+            try
+            {
+                ///The object that stores the previous grouping element for comparison. 
+                ///Based on this changes in grouping at the current level can be identified.
+                GroupingDetails PreviousGrouping = new GroupingDetails();
+                string _previousGroupingText = string.Empty;
+                //CurLevel.LevelCount = 0;
+                for (int i = 0; i < Table.Rows.Count; i++)
+                {
+                    ///The object that stores the details of the currently processed row from the data table.
+                    ///Later passed on to PreviousGrouping object once it is processed and acquires new data to process.
+                    GroupingDetails CurLevel = new GroupingDetails();
+
+                    CurLevel.RowIndex = i;//set row index to the param. At first call it's always 0.
+                    CurLevel.CurrentLevel = levelIterator;//Represents the current level for multiple RG. Default is set to 1. Changed during recursion
+                    CurLevel.InsertionType = BeforeText;
+                    CurLevel.ParentLevel = parentLevel;//Represents parent level. Default is 0. Incremented in recursion.
+                    CurLevel.ParentLevelText = string.Empty;//Used to detect level change. Will be updated only when the parent level text is changed in data table.
+                    CurLevel.Html = string.Empty;//html content generated to be passed to front end. Can be either header/footer. Header needs to be updated to 
+                    string TempGroupingText = string.Empty, TempParentLevelText = string.Empty;
+                    int textsIndex = 0;
+                    foreach (DVBaseColumn Column in (Visualisation as EbTableVisualization).CurrentRowGroup.RowGrouping)
+                    {
+                        if (textsIndex>=levelIterator)
+                        {
+                            textsIndex++;
+                            GroupsList.Add((Table.Rows[i][Column.Data].ToString().Trim() == "") ? "(Blank)" : Table.Rows[i][Column.Data].ToString().Trim());
+                            CurLevel.LevelText = (Table.Rows[i][Column.Data].ToString().Trim() == "") ? "(Blank)" : Table.Rows[i][Column.Data].ToString().Trim();//Gets the current column value
+                            TempGroupingText += (Table.Rows[i][Column.Data].ToString().Trim() == "") ? "(Blank)" : Table.Rows[i][Column.Data].ToString().Trim();//gets combination of both current and parent column value
+                            break;
+                        }
+                    }
+
+                    int tempIndex = TempGroupingText.IndexOf(CurLevel.LevelText);
+                    TempParentLevelText = TempGroupingText.Substring(0, (tempIndex));
+                    CurLevel.ParentLevelText = TempParentLevelText;
+                    CurLevel.LevelText = GroupsList[i];
+
+                    //if RowGroupingLevelsDetails is empty we need to create a new level and new grouping.
+                    if (RowGroupingLevelsDetails.Count == 0)
+                    {
+                        RowGroupingLevelsDetails.Add(new GroupingDetails()
+                        {
+                            CurrentLevel = CurLevel.CurrentLevel,
+                            RowIndex = CurLevel.RowIndex,
+                            LevelText = CurLevel.LevelText,
+                            ParentLevelText = CurLevel.ParentLevelText,
+                            InsertionType = BeforeText,
+                            LevelCount = 1,//s(_multipleLevelGrouping && TotalLevels > levelIterator) ? (CurLevel.LevelCount + 1) : CurLevel.LevelCount,
+                            ParentLevel = CurLevel.ParentLevel,
+                            Html = GetHeaderRecursive(CurLevel, GroupsList,
+                                1/*TotalLevels*/, (Visualisation as EbTableVisualization).CurrentRowGroup),
+                            IsHeader = true,
+                            GroupingCount = CurLevel.GroupingCount
+                        });
+                        RowGroupingLevelsDetails.Last().LevelCount += 1;
+                    }
+                    else//if RowGroupingLevelsDetails is not empty we check its elements to see which has to be updated.
+                    {
+                        //if the parent level text+current grouping text combination is not the same for previous row and same row, we create new row grouping
+                        //if the parent level texts of previous level and current level are not same, we increment the level
+                        if (_previousGroupingText.Equals(TempGroupingText) == false)
+                        {
+                            if(RowGroupingLevelsDetails.Last().IsHeader)
+                                RowGroupingLevelsDetails.Last().Html = UpdateHeaderRecursive(RowGroupingLevelsDetails.Last());
+                            RowGroupingLevelsDetails.Add(new GroupingDetails(CurLevel));
+                            RowGroupingLevelsDetails.Last().Html = GetHeaderRecursive(CurLevel, GroupsList, 1/*TotalLevels*/, (Visualisation as EbTableVisualization).CurrentRowGroup);
+                            GroupingDetails NewLevel = new GroupingDetails(CurLevel);
+                            NewLevel.IsHeader = false;
+                            NewLevel.InsertionType = BeforeText;
+                            NewLevel.Html = GetFooterRecursive(NewLevel);
+                            RowGroupingLevelsDetails.Add(new GroupingDetails(NewLevel));
+                        }
+                        else
+                        {
+                            CurLevel.LevelCount++;
+                            //RowGroupingLevelsDetails.Last().LevelCount += 1;
+                        }
+                    }
+                    _previousGroupingText = TempGroupingText;
+                    //RowGroupingLevelsDetails.Last().LevelCount += 1;
+                    PreviousGrouping = new GroupingDetails(CurLevel);
+                }
+            }
+            catch(Exception ex)
+            {
+                Console.WriteLine("Exception Thrown in Row Grouping: " + ex);
+            }
+            return RowGroupingLevelsDetails;
+        }
+
+        public LevelInfoCollection GetGroupInfoRecursiveTest(EbDataTable Table, EbDataVisualization Visualisation, CultureInfo _user_culture, bool _multipleLevelGrouping = false, string Last = null, int LevelCount = 1)//TO DO: set defaults
         {
             List<RowGroupParent> RowGroupColl = (Visualisation as EbTableVisualization).RowGroupCollection;
             LevelInfoCollection Levels = new LevelInfoCollection();
@@ -644,7 +1028,7 @@ namespace ExpressBase.ServiceStack
                     if (_lvl != null)
                     {
                         if (_multipleLevelGrouping)
-                            rec = GetGroupInfoRecursive(Table, Visualisation, _user_culture,_isNextMultipleLevelGrouping, Last, LevelCount + 1);
+                            rec = GetGroupInfoRecursiveTest(Table, Visualisation, _user_culture,_isNextMultipleLevelGrouping, Last, LevelCount + 1);
                         UpdateHeaderHtml(_lvl, 1, 1);
                         Levels.Add(new LevelInfo()
                         {
