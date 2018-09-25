@@ -679,13 +679,32 @@ namespace ExpressBase.ServiceStack
             int finalHeaderIndex = 0;
             ///Total number of levels - taken for multiple level row grouping. 
             ///Not used in single level, and always equals 1.
-            int TotalLevels = (Visualization as EbTableVisualization).CurrentRowGroup.RowGrouping.Count,
-                TotalColumnCount = (Visualization as EbTableVisualization).Columns.Count;
+            int TotalLevels = (IsMultiLevelRowGrouping) ? (Visualization as EbTableVisualization).CurrentRowGroup.RowGrouping.Count : 1,
+            TotalColumnCount = (Visualization as EbTableVisualization).Columns.Count;
 
             List<DVBaseColumn> RowGroupingColumns = new List<DVBaseColumn>((Visualization as EbTableVisualization).CurrentRowGroup.RowGrouping);
 
             GroupingDetails PreviousGrouping = new GroupingDetails();
             string PreviousGroupingText = string.Empty;
+            Dictionary<int, int> LevelCount = new Dictionary<int, int>();
+            Dictionary<int, double> NumericSum = new Dictionary<int, double>();
+            Dictionary<int, double> NumericMax = new Dictionary<int, double>();
+            Dictionary<int, double> NumericMin = new Dictionary<int, double>();
+            Dictionary<int, double> NumericAvg = new Dictionary<int, double>();
+
+            foreach (DVBaseColumn _column in Visualization.Columns)
+            {
+                if (_column.Type == EbDbTypes.Int32 || _column.Type == EbDbTypes.Int64 || _column.Type == EbDbTypes.Decimal || _column.Type == EbDbTypes.Int16)
+                {
+                    NumericSum.Add(_column.Data, 0.0);
+                    NumericMax.Add(_column.Data, 0.0);
+                    NumericMin.Add(_column.Data, 0.0);
+                    NumericAvg.Add(_column.Data, 0.0);
+                }
+            }
+
+            int CurrentLevel = 1;
+
             for (int i = 0; i < Table.Rows.Count; i++)
             {
                 GroupingDetails CurrentGrouping = new GroupingDetails();
@@ -703,159 +722,184 @@ namespace ExpressBase.ServiceStack
                     CurrentGrouping.GroupingTexts.Add((tempValue == string.Empty) ? BlankText : tempValue);
                 }
 
-                /*For the first element in the collection of rows. 
-                 * Here we push the row into the processed list directly because there are no other groupings
-                 * to compare it with.
-                 */
-                if(i==0)
+                //if(i==0)
+                //{
+                //    DrawHeader(CurrentGrouping, RowGroupingColumns, IsMultiLevelRowGrouping, RowGrouping, TotalColumnCount, TotalLevels);
+                //    finalHeaderIndex = RowGrouping.Count - 1;
+
+                //    if (LevelCount.Keys.Contains(CurrentLevel))
+                //        LevelCount[CurrentLevel] += 1;
+                //    else
+                //        LevelCount[CurrentLevel] = 1;
+
+                //    var IntegerKeys = NumericSum.Keys.ToList<int>();
+
+                //    foreach (var _key in IntegerKeys)
+                //    {
+                //        NumericSum[_key] += Convert.ToDouble(Table.Rows[i][_key]);
+                //        NumericMax[_key] += Convert.ToDouble(Table.Rows[i][_key]);
+                //        NumericMin[_key] += Convert.ToDouble(Table.Rows[i][_key]);
+                //        NumericAvg[_key] += Convert.ToDouble(Table.Rows[i][_key]);
+                //    }
+                //}
+
+                if (TempGroupingText.Equals(PreviousGroupingText) == false)
                 {
-                    CurrentGrouping.PreviousGroupingString = string.Empty;
-                    CurrentGrouping.GroupingCount = 1;
-                    CurrentGrouping.CurrentLevel = 1;
-                    CurrentGrouping.IsHeader = true;
-                    CurrentGrouping.InsertionType = BeforeText;
-                    CurrentGrouping.Html = string.Empty;
-                    CurrentGrouping.RowIndex = i;
-                    DrawHeader(CurrentGrouping, RowGroupingColumns, IsMultiLevelRowGrouping, RowGrouping, TotalColumnCount);
-                    //if (IsMultiLevelRowGrouping == false)
-                    //    RowGrouping.Add(new GroupingDetails(CurrentGrouping));
-                    finalHeaderIndex = RowGrouping.Count - 1;
-                }
-                /*For the case where the element is not the first row in the collection of rows,
-                 * and also the grouping text at this row is the same as the grouping text at the previous row.
-                 * Here we modify the count to accomodate this value also.
-                 */
-                else if(TempGroupingText.Equals(PreviousGroupingText)==true)
-                {
-                    RowGrouping.Last().GroupingCount++;
-                }
-                /*For the case where the element is NOT the first row in the collection of rows,
-                 * and the grouping text for this row is different from the grouping text for the previous row.
-                 * Here we-
-                 * 1. Update the header of the previous row grouping to denote the row count at that grouping.
-                 * 2. Insert the footer for the previous grouping as a new object at the same row index as the new object, with keystring 'Before'.
-                 * 3. Create a new row grouping object, save the index, grouping text, and concatenated grouping texts.
-                 * 4. Set new grouping count to 1.
-                 * 5. Insert the new object to the new row index. 
-                 */
-                else if(TempGroupingText.Equals(PreviousGroupingText)==false)
-                {
-                    RowGrouping.Last().Html = UpdateHeader(RowGrouping.Last());
-                    int CurrentLevel = GetCurrentLevel(TempGroupingText, PreviousGroupingText);
-                    int iterCount = (TotalLevels - CurrentLevel) + 1;
-                    for(int iter=0; iter<iterCount; iter++)
+                    if (i == 0)
                     {
-                        GroupingDetails FooterObject = new GroupingDetails()
-                        {
-                            LevelCount = 1,
-                            IsHeader = false,
-                            Html = GetFooter(TotalColumnCount),
-                            InsertionType = BeforeText,
-                            RowIndex = i,
-                        };
-                        RowGrouping.Add(new GroupingDetails(FooterObject));
+                        CurrentGrouping.GroupingCount = 1;
+                        CurrentGrouping.CurrentLevel = CurrentLevel;
+                        CurrentGrouping.RowIndex = i;
+                        CurrentGrouping.IsHeader = true;
+                        CurrentGrouping.InsertionType = BeforeText;
                     }
 
-                    CurrentGrouping.GroupingCount = 1;
-                    CurrentGrouping.CurrentLevel = 1;
-                    CurrentGrouping.RowIndex = i;
-                    CurrentGrouping.IsHeader = true;
-                    CurrentGrouping.InsertionType = BeforeText;
-                    CurrentGrouping.Html = string.Empty;
-                    DrawHeader(CurrentGrouping, RowGroupingColumns, IsMultiLevelRowGrouping, RowGrouping, TotalColumnCount);
-                    finalHeaderIndex = RowGrouping.Count - 1;
-                    
-                }
-                /*For the case when the current row is the last row to be processed,
-                 * we have to update the header for the last row grouping and 
-                 * push a footer into the processed elements list for the last row grouping
-                 * at the row index of the last row grouping.
-                 */
-                if(i==Table.Rows.Count-1)
-                {
-                    RowGrouping[finalHeaderIndex].Html = UpdateHeader(RowGrouping[finalHeaderIndex]);
-                    GroupingDetails FinalFooter = new GroupingDetails()
+                    else
                     {
-                        Html = GetFooter(TotalColumnCount),
-                        IsHeader = false,
-                        InsertionType = AfterText,
-                        RowIndex = i,
-                        CurrentLevel = 1,
-                        GroupingCount = RowGrouping[finalHeaderIndex].GroupingCount
-                    };
-                    RowGrouping.Add(new GroupingDetails(FinalFooter));
+                        CurrentLevel = GetCurrentLevel(TempGroupingText, PreviousGroupingText, false);
+                        RowGrouping.Last().Html = UpdateHeader(RowGrouping.Last());
+                        DrawFooter(RowGrouping, BeforeText, TotalLevels, TotalColumnCount, CurrentLevel, i);
+
+                        CurrentGrouping.GroupingCount = 1;
+                        CurrentGrouping.CurrentLevel = CurrentLevel;
+                        CurrentGrouping.RowIndex = i;
+                        CurrentGrouping.IsHeader = true;
+                        CurrentGrouping.InsertionType = BeforeText;
+                        CurrentGrouping.Html = string.Empty;
+                        finalHeaderIndex = RowGrouping.Count - 1;
+                    }
+
+                    if (i < Table.Rows.Count - 1)
+                        DrawHeader(CurrentGrouping, RowGroupingColumns, IsMultiLevelRowGrouping, RowGrouping, TotalColumnCount, TotalLevels);
                 }
-                PreviousGroupingText = TempGroupingText;
+                else if (TempGroupingText.Equals(PreviousGroupingText) == true)
+                {
+
+                    RowGrouping.Last().GroupingCount++;
+
+                    var IntegerKeys = NumericSum.Keys.ToList<int>();
+                    foreach (var _key in IntegerKeys)
+                    {
+                        NumericSum[_key] += Convert.ToDouble(Table.Rows[i][_key]);
+                        NumericMax[_key] += Convert.ToDouble(Table.Rows[i][_key]);
+                        NumericMin[_key] += Convert.ToDouble(Table.Rows[i][_key]);
+                        NumericAvg[_key] += Convert.ToDouble(Table.Rows[i][_key]);
+                    }
+
+
+                    if (i == Table.Rows.Count - 1)
+                    {
+                        CurrentLevel = GetCurrentLevel(TempGroupingText, PreviousGroupingText, true);
+                        RowGrouping.Last().Html = UpdateHeader(RowGrouping.Last());
+                        DrawFooter(RowGrouping, BeforeText, TotalLevels, TotalColumnCount, CurrentLevel, i);
+                    }
+                }
+                //if (i==Table.Rows.Count-1)
+                //{
+                //    CurrentLevel = TotalLevels;//GetCurrentLevel(TempGroupingText, PreviousGroupingText);
+
+                //    RowGrouping[finalHeaderIndex].Html = UpdateHeader(RowGrouping[finalHeaderIndex]);
+
+                //    for (int iter = 0; iter < CurrentLevel; iter++)
+                //    {
+                //        GroupingDetails FinalFooters = new GroupingDetails()
+                //        {
+                //            LevelCount = 1,
+                //            IsHeader = false,
+                //            Html = GetFooter(TotalColumnCount),
+                //            InsertionType = AfterText,
+                //            RowIndex = i,
+                //            CurrentLevel = CurrentLevel,
+                //            GroupingCount = RowGrouping[finalHeaderIndex].GroupingCount
+                //        };
+                //        RowGrouping.Add(new GroupingDetails(FinalFooters));
+                //    }
+                //}
+                    PreviousGroupingText = TempGroupingText;
             }
             return RowGrouping;
         }
 
-        public int GetCurrentLevel(string CurrentString, string PreviousString)
+        private void DrawFooter(List<GroupingDetails> RowGrouping, string BeforeText, int TotalLevels, int TotalColumnCount, int CurrentLevel, int TableRowIndex)
         {
-            int CurrentLevel = 0;
-
-            string[] CurrentSplit = CurrentString.Split(":-:");
-            string[] PreviousSplit = PreviousString.Split(":-:");
-
-            for(int i=0; i<CurrentSplit.Length; i++)
+            for (int j = TotalLevels; j >= CurrentLevel; j--)
             {
-                if (CurrentSplit[i].Equals(PreviousSplit[i]))
-                    CurrentLevel++;
+                GroupingDetails FooterObject = new GroupingDetails()
+                {
+                    IsHeader = false,
+                    Html = GetFooter(TotalColumnCount, "Level" + j + RowGrouping.Where(r => (r.IsHeader)).Last().GroupingTexts[j-1]),
+                    InsertionType = BeforeText,
+                    RowIndex = TableRowIndex,
+                };
+                RowGrouping.Add(new GroupingDetails(FooterObject));
             }
-
-            return CurrentLevel;
         }
 
-        public string DrawHeader(GroupingDetails GroupingObject, List<DVBaseColumn> RowGroupingColumns, bool IsMultiLevelRowGrouping, List<GroupingDetails> groupings, int ColumnCount)
+        public int GetCurrentLevel(string CurrentString, string PreviousString, bool isEnd)
+        {
+            if (!isEnd)
+            {
+                string[] CurrentSplit = CurrentString.Split(":-:");
+                string[] PreviousSplit = PreviousString.Split(":-:");
+                if (CurrentSplit.Length == PreviousSplit.Length)
+                {
+                    for (int i = 1; i <= CurrentSplit.Length; i++)
+                    {
+                        if (!CurrentSplit[i - 1].Equals(PreviousSplit[i - 1]))
+                            return i;
+                    }
+                }
+            }
+
+            return 1;
+        }
+
+        public string DrawHeader(GroupingDetails GroupingObject, List<DVBaseColumn> RowGroupingColumns, bool IsMultiLevelRowGrouping, List<GroupingDetails> groupings, int ColumnCount, int TotalLevels)
         {
             string str = string.Empty;
             var _Colcount = ColumnCount;
-            int i = 0;
-            if (IsMultiLevelRowGrouping)
-            {
-                foreach(var Column in RowGroupingColumns)
+                for (int j = GroupingObject.CurrentLevel-1; j < TotalLevels; j++)
                 {
                     str = "<tr class='group' group='" + GroupingObject.CurrentLevel + "'>";
                     for (int itr = 0; itr < GroupingObject.CurrentLevel; itr++)
                         str += "<td> &nbsp;</td>";
-                    str += "<td><i class='fa fa-minus-square-o' style='cursor:pointer;'></i></td><td colspan=" + _Colcount + ">" + GroupingObject.GroupingTexts[i];
-                    i++;
+                    str += "<td><i class='fa fa-minus-square-o' style='cursor:pointer;'></i></td><td colspan=" + _Colcount + ">" + GroupingObject.GroupingTexts[j];
 
-                    GroupingDetails HeaderObject = new GroupingDetails()
-                    {
-                        Html = str,
-                        InsertionType = "Before",
-                        IsHeader = true,
-                        RowIndex = GroupingObject.RowIndex,
-                        CurrentLevel = i + 1,
-                    };
-                    groupings.Add(HeaderObject);
-                }
-            }
-            else
-            {
-                string tempstr = string.Empty;
-                str = "<tr class='group' group='" + GroupingObject.CurrentLevel + "'>";
-                for (int itr = 0; itr < GroupingObject.CurrentLevel; itr++)
-                    str += "<td> &nbsp;</td>";
-                foreach (string groupString in GroupingObject.GroupingTexts)
-                {
-                    tempstr += groupString;
-                    if (groupString.Equals(GroupingObject.GroupingTexts.Last()) == false)
-                        tempstr += " - ";
-                }
-                str += "<td><i class='fa fa-minus-square-o' style='cursor:pointer;'></i></td><td colspan=" + _Colcount + ">" + tempstr;
-                i = 1;
                 GroupingDetails HeaderObject = new GroupingDetails()
                 {
                     Html = str,
                     InsertionType = "Before",
                     IsHeader = true,
                     RowIndex = GroupingObject.RowIndex,
-                    CurrentLevel = i + 1,
+                    CurrentLevel = j + 1,
+                    GroupingTexts = new List<string>(GroupingObject.GroupingTexts)
                 };
                 groupings.Add(HeaderObject);
-            }
+                }
+            //else
+            //{
+            //    string tempstr = string.Empty;
+            //    str = "<tr class='group' group='" + GroupingObject.CurrentLevel + "'>";
+            //    for (int itr = 0; itr < GroupingObject.CurrentLevel; itr++)
+            //        str += "<td> &nbsp;</td>";
+            //    foreach (string groupString in GroupingObject.GroupingTexts)
+            //    {
+            //        tempstr += groupString;
+            //        if (groupString.Equals(GroupingObject.GroupingTexts.Last()) == false)
+            //            tempstr += " - ";
+            //    }
+            //    str += "<td><i class='fa fa-minus-square-o' style='cursor:pointer;'></i></td><td colspan=" + _Colcount + ">" + tempstr;
+            //    i = 1;
+            //    GroupingDetails HeaderObject = new GroupingDetails()
+            //    {
+            //        Html = str,
+            //        InsertionType = "Before",
+            //        IsHeader = true,
+            //        RowIndex = GroupingObject.RowIndex,
+            //        CurrentLevel = i + 1,
+            //    };
+            //    groupings.Add(HeaderObject);
+            //}
 
             return str;
         }
@@ -865,10 +909,10 @@ namespace ExpressBase.ServiceStack
             return GroupingObject.Html + ": " + GroupingObject.GroupingCount + "</tr>";
         }
 
-        public string GetFooter(int ColumnsCount)
+        public string GetFooter(int ColumnsCount, string FooterText)
         {
             string Footer = string.Empty;
-            Footer += "<tr class='group-sum'><td colspan='" + ColumnsCount+ "'></td></tr>";
+            Footer += "<tr class='group-sum'><td colspan='" + ColumnsCount+ "'></td><td>" + FooterText +"</td></tr>";
             return Footer;
         }
 
