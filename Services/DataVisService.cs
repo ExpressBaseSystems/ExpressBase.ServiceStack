@@ -571,8 +571,9 @@ namespace ExpressBase.ServiceStack
 
                     if (col.Type == EbDbTypes.Date)
                     {
-                        _formattedData = Convert.ToDateTime(_unformattedData).ToString("d", cults.DateTimeFormat);
-                        _dataset.Tables[0].Rows[i][col.Data] = Convert.ToDateTime(_unformattedData).ToString("yyyy-MM-dd");
+						_unformattedData = (_unformattedData == DBNull.Value) ? DateTime.MinValue : _unformattedData;
+						_formattedData = (((DateTime)_unformattedData).Date != DateTime.MinValue) ? Convert.ToDateTime(_unformattedData).ToString("d", cults.DateTimeFormat) : string.Empty;
+						_dataset.Tables[0].Rows[i][col.Data] = Convert.ToDateTime(_unformattedData).ToString("yyyy-MM-dd");
                     }
                     else if (col.Type == EbDbTypes.Decimal || col.Type == EbDbTypes.Int32)
                         _formattedData = Convert.ToDecimal(_unformattedData).ToString("N", cults.NumberFormat);
@@ -1243,7 +1244,7 @@ namespace ExpressBase.ServiceStack
                             {
                                 Level = rowColCount,
                                 RowIndex = i-1,
-                                GroupString = GetFooterHtml(IntIndex, _dv, _user_culture),
+                                GroupString = GetFooterHtml(IntIndex, _dv, _user_culture, rowColCount),
                                 Type = "After",
                             });
                         }
@@ -1277,7 +1278,8 @@ namespace ExpressBase.ServiceStack
                     }
                     else //same group
                     {
-                        LevelInfo Pre_lvl = _levels.PreviousLevelCheck(i, rowColCount);
+                        int inx = (i == 1) ? 0 : i; 
+                        LevelInfo Pre_lvl = _levels.PreviousLevelCheck(inx, rowColCount-1);
                         LevelInfo Cur_lvl = null;
                         if (rowColCount > 1)
                              Cur_lvl = _levels.CurrentLevelDataCheck(rowColCount, _new_colData);
@@ -1289,29 +1291,29 @@ namespace ExpressBase.ServiceStack
 
                         if (PreviousLevel.Count == 2 && CurrentLevel.Count == 1)
                         {
-                            if (_savedindex != 0)
-                                _savedindex--;
-                            else
-                                count--;
+                            //if (_savedindex != 0)
+                            //    count--;
+                            //else
+                            //    count--;
                             LevelInfo _lvl = _levels.Update(_savedindex, count, rowColCount);
                             //if(_lvl != null)
                             //{
-                                UpdateHeaderHtml(_lvl, MaxLevel, rowColCount);
+                            UpdateHeaderHtml(_lvl, MaxLevel, rowColCount);
                             //}
                             PreviousLevel.RemoveAt(0);
                             CurrentLevel.RemoveAt(0);
                             _levels.Add(new LevelInfo()
                             {
                                 Level = rowColCount,
-                                RowIndex = i-2,
-                                GroupString = GetFooterHtml(IntIndex, _dv, _user_culture),
+                                RowIndex = i - 1,
+                                GroupString = GetFooterHtml(IntIndex, _dv, _user_culture, rowColCount),
                                 Type = "After",
                             });
                             count = 0;
                             _levels.Add(new LevelInfo()
                             {
                                 Level = rowColCount,
-                                RowIndex = i-1,
+                                RowIndex = i,
                                 GroupString = GetHeaderHtml(_new_colData, Colcount, rowColCount, col, null),
                                 Count = count,
                                 LevelText = _new_colData,
@@ -1334,11 +1336,14 @@ namespace ExpressBase.ServiceStack
                                 IntIndex[Key] = Convert.ToDouble(_table.Rows[i][Key]);
                             }
                         }
-                        var IntegerKeys = IntIndex.Keys.ToList<int>();
-
-                        foreach (var Key in IntegerKeys)
+                        else
                         {
-                            IntIndex[Key] += Convert.ToDouble(_table.Rows[i][Key]);
+                            var IntegerKeys = IntIndex.Keys.ToList<int>();
+
+                            foreach (var Key in IntegerKeys)
+                            {
+                                IntIndex[Key] += Convert.ToDouble(_table.Rows[i][Key]);
+                            }
                         }
                     }
 
@@ -1356,21 +1361,21 @@ namespace ExpressBase.ServiceStack
                     {
                         Level = rowColCount,
                         RowIndex = _lastrow,
-                        GroupString = GetFooterHtml(IntIndex, _dv, _user_culture),
+                        GroupString = GetFooterHtml(IntIndex, _dv, _user_culture, rowColCount),
                         Type = "After"
                     });
                 }
                 if (PreviousLevel.Count == 1 && CurrentLevel.Count == 1)
                 {
-                    LevelInfo _final_lvl = _levels.Update(_savedindex-1, count+1, rowColCount);
+                    LevelInfo _final_lvl = _levels.Update(_savedindex, count+1, rowColCount);
                     UpdateHeaderHtml(_final_lvl, MaxLevel, rowColCount);
-                    _levels.Add(new LevelInfo()
-                    {
-                        Level = rowColCount,
-                        RowIndex = _lastrow,
-                        GroupString = GetFooterHtml(IntIndex, _dv, _user_culture),
-                        Type = "After"
-                    });
+                    //_levels.Add(new LevelInfo()
+                    //{
+                    //    Level = rowColCount,
+                    //    RowIndex = _lastrow,
+                    //    GroupString = GetFooterHtml(IntIndex, _dv, _user_culture),
+                    //    Type = "After"
+                    //});
                 }
             }
 
@@ -1446,7 +1451,7 @@ namespace ExpressBase.ServiceStack
                 int i = -1;
                 foreach (DVBaseColumn CurCol in currentGroup.RowGrouping) {
                     i++;
-                    tempstr = GetStringFromColumn(CurCol, _htmlString, groupList[i]);
+                    tempstr += GetStringFromColumn(CurCol, _htmlString, groupList[i]);
                 }
             }
 
@@ -1472,9 +1477,9 @@ namespace ExpressBase.ServiceStack
                 _level.GroupString += "(" + _level.Count + ")</td></tr>";
         }
 
-        public string GetFooterHtml(Dictionary<int, double> _coll, EbDataVisualization _dv, CultureInfo _user_culture)
+        public string GetFooterHtml(Dictionary<int, double> _coll, EbDataVisualization _dv, CultureInfo _user_culture, int level = 1)
         {
-            var str = "<tr class='group-sum'>";
+            var str = "<tr class='group-sum' group="+level+">";
 
             foreach (DVBaseColumn col in (_dv as EbTableVisualization).CurrentRowGroup.RowGrouping)
                 str += "<td>&nbsp;</td>";

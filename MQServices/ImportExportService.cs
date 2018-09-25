@@ -1,9 +1,11 @@
 ﻿using ExpressBase.Common;
+using ExpressBase.Common.Data;
 using ExpressBase.Common.Objects;
 using ExpressBase.Common.ServiceClients;
 using ExpressBase.Objects;
 using ExpressBase.Objects.Services;
 using ExpressBase.Objects.ServiceStack_Artifacts;
+using ExpressBase.ServiceStack.Services;
 using ServiceStack;
 using ServiceStack.Messaging;
 using System;
@@ -59,25 +61,32 @@ namespace ExpressBase.ServiceStack.MQServices
     [Restrict(InternalOnly = true)]
     public class ImportExportInternalService : EbMqBaseService
     {
-        public ImportExportInternalService(IServiceClient _ssclient) : base(_ssclient) { }
+        public ImportExportInternalService() : base() { }
 
         public string Post(ExportApplicationRequest request)
         {
             OrderedDictionary ObjDictionary = new OrderedDictionary();
             try
             {
-                ServiceStackClient.RefreshToken = request.RToken;
-                ServiceStackClient.BearerToken = request.BToken;
-                AppWrapper AppObj = ServiceStackClient.Get(new GetApplicationRequest { Id = request.AppId }).AppInfo;
+                // ServiceStackClient.RefreshToken = request.RToken;
+                //ServiceStackClient.BearerToken = request.BToken;
+                EbConnectionFactory ebConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
+                var devservice = base.ResolveService<DevRelatedServices>();
+                devservice.EbConnectionFactory = ebConnectionFactory;
+                var appstoreService = base.ResolveService<AppStoreService>();
+                appstoreService.EbConnectionFactory = ebConnectionFactory;
+                AppWrapper AppObj = devservice.Get(new GetApplicationRequest { Id = request.AppId }).AppInfo;
                 AppObj.ObjCollection = new List<EbObject>();
+
                 string[] refs = request.Refids.Split(",");
                 foreach (string _refid in refs)
-                    GetRelated(_refid, ObjDictionary);
+                    GetRelated(_refid, ObjDictionary, request.SolnId);
 
                 ICollection ObjectList = ObjDictionary.Values;
                 foreach (object item in ObjectList)
                     AppObj.ObjCollection.Add(item as EbObject);
-                SaveToAppStoreResponse p = ServiceStackClient.Post(new SaveToAppStoreRequest
+
+                SaveToAppStoreResponse p = appstoreService.Post(new SaveToAppStoreRequest
                 {
                     Store = new AppStore
                     {
@@ -109,9 +118,16 @@ namespace ExpressBase.ServiceStack.MQServices
             Dictionary<string, string> RefidMap = new Dictionary<string, string>();
             try
             {
-                ServiceStackClient.RefreshToken = request.RToken;
-                ServiceStackClient.BearerToken = request.BToken;
-                AppWrapper AppObj = ServiceStackClient.Get(new GetOneFromAppStoreRequest
+                // ServiceStackClient.RefreshToken = request.RToken;
+                // ServiceStackClient.BearerToken = request.BToken;
+                EbConnectionFactory ebConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
+                var appstoreService = base.ResolveService<AppStoreService>();
+                appstoreService.EbConnectionFactory = ebConnectionFactory;
+                var devservice = base.ResolveService<DevRelatedServices>();
+                devservice.EbConnectionFactory = ebConnectionFactory;
+                var objservice = base.ResolveService<EbObjectService>();
+                objservice.EbConnectionFactory = ebConnectionFactory;
+                AppWrapper AppObj = appstoreService.Get(new GetOneFromAppStoreRequest
                 {
                     Id = request.Id,
                     SolnId = request.SolnId,
@@ -121,15 +137,14 @@ namespace ExpressBase.ServiceStack.MQServices
                 }).Wrapper;
                 List<EbObject> ObjectCollection = AppObj.ObjCollection;
                 UniqueApplicationNameCheckResponse uniq_appnameresp;
-
                 do
                 {
-                    uniq_appnameresp = ServiceStackClient.Get<UniqueApplicationNameCheckResponse>(new UniqueApplicationNameCheckRequest { AppName = AppObj.Name });
+                    uniq_appnameresp = devservice.Get(new UniqueApplicationNameCheckRequest { AppName = AppObj.Name });
                     if (!uniq_appnameresp.IsUnique)
                         AppObj.Name = AppObj.Name + "(1)";
                 }
                 while (!uniq_appnameresp.IsUnique);
-                CreateApplicationResponse appres = ServiceStackClient.Post(new CreateApplicationDevRequest
+                CreateApplicationResponse appres = devservice.Post(new CreateApplicationDevRequest
                 {
                     AppName = AppObj.Name,
                     AppType = AppObj.AppType,
@@ -144,13 +159,13 @@ namespace ExpressBase.ServiceStack.MQServices
 
                     do
                     {
-                        uniqnameresp = ServiceStackClient.Get(new UniqueObjectNameCheckRequest { ObjName = obj.Name });
+                        uniqnameresp = objservice.Get(new UniqueObjectNameCheckRequest { ObjName = obj.Name });
                         if (!uniqnameresp.IsUnique)
                             obj.Name = obj.Name + "(1)";
                     }
                     while (!uniqnameresp.IsUnique);
 
-                    obj.ReplaceRefid(RefidMap);
+
                     EbObject_Create_New_ObjectRequest ds = new EbObject_Create_New_ObjectRequest
                     {
                         Name = obj.Name,
@@ -169,8 +184,30 @@ namespace ExpressBase.ServiceStack.MQServices
                         UserAuthId = request.UserAuthId,
                         WhichConsole = request.WhichConsole
                     };
-                    EbObject_Create_New_ObjectResponse res = ServiceStackClient.Post(ds);
+                    EbObject_Create_New_ObjectResponse res = objservice.Post(ds);
                     RefidMap[obj.RefId] = res.RefId;
+
+                    // obj.ReplaceRefid(RefidMap);
+                }
+                for (int i = ObjectCollection.Count - 1; i >= 0; i--)
+                {
+                    EbObject obj = ObjectCollection[i];
+                    obj.ReplaceRefid(RefidMap);
+                    EbObject_SaveRequest ss= new EbObject_SaveRequest
+                    {
+                        RefId = RefidMap[obj.RefId],
+                        Name = obj.Name,
+                        Description = obj.Description,
+                        Json = EbSerializers.Json_Serialize(obj),
+                        Apps = appres.id.ToString(),
+                        SolnId = request.SolnId,
+                        UserId = request.UserId,
+                        UserAuthId = request.UserAuthId,
+                        WhichConsole = request.WhichConsole,
+                        Relations = "_rel_obj",
+                        Tags = "_tags"
+                    };
+                    EbObject_SaveResponse saveRes = objservice.Post(ss);
                 }
             }
             catch (Exception e)
@@ -179,30 +216,35 @@ namespace ExpressBase.ServiceStack.MQServices
             }
             return null;
         }
-        public void GetRelated(string _refid, OrderedDictionary ObjDictionary)
+        public void GetRelated(string _refid, OrderedDictionary ObjDictionary, string solid)
         {
             EbObject obj = null;
 
-            if (ObjDictionary.Contains(_refid))
+            //if (ObjDictionary.Contains(_refid))
+            //{
+            //    obj = (EbObject)ObjDictionary[_refid];
+            //    ObjDictionary.Remove(_refid);
+            //}
+            //else
+            //    obj = GetObjfromDB(_refid, solid);
+            if (!ObjDictionary.Contains(_refid))
             {
-                obj = (EbObject)ObjDictionary[_refid];
-                ObjDictionary.Remove(_refid);
+                obj = GetObjfromDB(_refid, solid);
+                ObjDictionary.Add(_refid, obj);
+                string RefidS = obj.DiscoverRelatedRefids();
+
+                string[] _refCollection = RefidS.Split(",");
+                foreach (string _ref in _refCollection)
+                    if (_ref.Trim() != string.Empty)
+                        GetRelated(_ref, ObjDictionary, solid);
             }
-            else
-                obj = GetObjfromDB(_refid);
-
-            ObjDictionary.Add(_refid, obj);
-            string RefidS = obj.DiscoverRelatedRefids();
-
-            string[] _refCollection = RefidS.Split(",");
-            foreach (string _ref in _refCollection)
-                if (_ref.Trim() != string.Empty)
-                    GetRelated(_ref, ObjDictionary);
         }
-        public EbObject GetObjfromDB(string _refid)
+        public EbObject GetObjfromDB(string _refid, string solid)
         {
-            // EbObjectService ObjectService = base.ResolveService<EbObjectService>();
-            EbObjectParticularVersionResponse res = ServiceStackClient.Get(new EbObjectParticularVersionRequest { RefId = _refid });
+            EbConnectionFactory ebConnectionFactory = new EbConnectionFactory(solid, this.Redis);
+            EbObjectService objservice = base.ResolveService<EbObjectService>();
+            objservice.EbConnectionFactory = ebConnectionFactory;
+            EbObjectParticularVersionResponse res = (EbObjectParticularVersionResponse)objservice.Get(new EbObjectParticularVersionRequest { RefId = _refid });
             EbObject obj = EbSerializers.Json_Deserialize(res.Data[0].Json);
             obj.RefId = _refid;
             return obj;

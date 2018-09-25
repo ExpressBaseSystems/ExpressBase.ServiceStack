@@ -24,6 +24,7 @@ namespace ExpressBase.ServiceStack.Services
 							SELECT DISTINCT INITCAP(TRIM(clcity)) AS clcity FROM customers WHERE LENGTH(clcity) > 2 ORDER BY clcity;
 							SELECT DISTINCT INITCAP(TRIM(clcountry)) AS clcountry FROM customers WHERE LENGTH(clcountry) > 2 ORDER BY clcountry;
 							SELECT DISTINCT INITCAP(TRIM(city)) AS city FROM customers WHERE LENGTH(city) > 2 ORDER BY city;
+							SELECT DISTINCT INITCAP(TRIM(district)) AS district FROM customers WHERE LENGTH(district) > 2 ORDER BY district;
 							SELECT DISTINCT INITCAP(TRIM(sourcecategory)) AS sourcecategory FROM customers WHERE LENGTH(sourcecategory) > 2 ORDER BY sourcecategory;
 							SELECT DISTINCT INITCAP(TRIM(subcategory)) AS subcategory FROM customers WHERE LENGTH(subcategory) > 2 ORDER BY subcategory;";
 			List<DbParameter> paramList = new List<DbParameter>();
@@ -34,6 +35,7 @@ namespace ExpressBase.ServiceStack.Services
 			List<string> clcityList = new List<string>();
 			List<string> clcountryList = new List<string>();
 			List<string> cityList = new List<string>();
+			List<string> districtList = new List<string>();
 			List<string> sourcecategoryList = new List<string>();
 			List<string> subcategoryList = new List<string>();
 			List<FeedbackEntry> Flist = new List<FeedbackEntry>();
@@ -43,16 +45,16 @@ namespace ExpressBase.ServiceStack.Services
 			int Mode = 0;
 			if (request.RequestMode == 1)//edit mode 
 			{
-				SqlQry += @"SELECT id, firmcode, trdate, genurl, name, dob, genphoffice, profession, genemail,
-								customertype, clcity, clcountry, city, typeofcustomer, sourcecategory, subcategory, consultation, picsrcvd, dprefid
+				SqlQry += @"SELECT id, firmcode, trdate, genurl, name, dob, genphoffice, profession, genemail, customertype, clcity, clcountry, city,
+								typeofcustomer, sourcecategory, subcategory, consultation, picsrcvd, dprefid, sex, district, leadowner
 								FROM customers WHERE id = :accountid;
 							SELECT id,trdate,status,followupdate,narration, createdby FROM leaddetails
-								WHERE customers_id=:accountid ORDER BY trdate DESC, id DESC;
+								WHERE customers_id=:accountid ORDER BY trdate DESC, followupdate DESC;
 							SELECT id,trdate,totalamount,advanceamount,balanceamount,cashreceived,paymentmode,bank,createddt,narration,createdby 
 								FROM leadpaymentdetails WHERE customers_id=:accountid ORDER BY balanceamount;
 							SELECT id,dateofsurgery,branch,patientinstructions,doctorsinstructions,createdby,createddt 
 								FROM leadsurgerydetails WHERE customers_id=:accountid ORDER BY createddt;
-							SELECT noofgrafts,totalrate,prpsessions,consulted,consultingfeepaid,consultingdoctor,closing,LOWER(TRIM(nature)),consdate
+							SELECT noofgrafts,totalrate,prpsessions,consulted,consultingfeepaid,consultingdoctor,closing,LOWER(TRIM(nature)),consdate,probmonth
 								FROM leadratedetails WHERE customers_id=:accountid;
 
                             SELECT eb_files_ref_id
@@ -75,20 +77,23 @@ namespace ExpressBase.ServiceStack.Services
 			foreach (var dr in ds.Tables[5].Rows)
 				cityList.Add(dr[0].ToString());
 			foreach (var dr in ds.Tables[6].Rows)
-				sourcecategoryList.Add(dr[0].ToString());
+				districtList.Add(dr[0].ToString());
+
 			foreach (var dr in ds.Tables[7].Rows)
+				sourcecategoryList.Add(dr[0].ToString());
+			foreach (var dr in ds.Tables[8].Rows)
 				subcategoryList.Add(dr[0].ToString());
 
-			if (ds.Tables.Count > 8 && ds.Tables[8].Rows.Count > 0)
+			if (ds.Tables.Count > 9 && ds.Tables[9].Rows.Count > 0)
 			{
 				Mode = 1;
-				var dr = ds.Tables[8].Rows[0];
+				var dr = ds.Tables[9].Rows[0];
 				CustomerData.Add("accountid", dr[0].ToString());
 				CustomerData.Add("firmcode", dr[1].ToString());
-				CustomerData.Add("trdate", Convert.ToDateTime(dr[2]).ToString("dd-MM-yyyy"));
+				CustomerData.Add("trdate", getStringValue(dr[2]));
 				CustomerData.Add("genurl", dr[3].ToString());
 				CustomerData.Add("name", dr[4].ToString());
-				CustomerData.Add("dob", Convert.ToDateTime(dr[5]).ToString("dd-MM-yyyy"));
+				CustomerData.Add("dob", getStringValue(dr[5]));
 				//CustomerData.Add("age", dr[6].ToString());
 				CustomerData.Add("genphoffice", dr[6].ToString());
 				CustomerData.Add("profession", dr[7].ToString());
@@ -103,10 +108,13 @@ namespace ExpressBase.ServiceStack.Services
 				CustomerData.Add("consultation", dr[16].ToString().ToLower());
 				CustomerData.Add("picsrcvd", dr[17].ToString().ToLower());
 				CustomerData.Add("dprefid", dr[18].ToString());
-				//CustomerData.Add("dprefid", "9613"); //hardcoded for testing
-				if (ds.Tables[12].Rows.Count > 0)
+				CustomerData.Add("sex", dr[19].ToString());
+				CustomerData.Add("district", dr[20].ToString());
+				CustomerData.Add("leadowner", dr[21].ToString());
+				
+				if (ds.Tables[13].Rows.Count > 0)
 				{
-					dr = ds.Tables[12].Rows[0];
+					dr = ds.Tables[13].Rows[0];
 					CustomerData.Add("noofgrafts", dr[0].ToString());
 					CustomerData.Add("totalrate", dr[1].ToString());
 					CustomerData.Add("prpsessions", dr[2].ToString());
@@ -115,52 +123,53 @@ namespace ExpressBase.ServiceStack.Services
 					CustomerData.Add("consultingdoctor", dr[5].ToString());
 					CustomerData.Add("closing", dr[6].ToString());
 					CustomerData.Add("nature", dr[7].ToString());
-					CustomerData.Add("consdate", Convert.ToDateTime(dr[8]).ToString("dd-MM-yyyy"));
+					CustomerData.Add("consdate", getStringValue(dr[8]));
+					CustomerData.Add("probmonth", (string.IsNullOrEmpty(getStringValue(dr[9])) ? string.Empty: getStringValue(dr[9]).Substring(3).Replace("-", "/")));
 				}
 
-				foreach (var i in ds.Tables[13].Rows)
+				foreach (var i in ds.Tables[14].Rows)
 					ImgIds.Add(i[0].ToString());
 
 				//followup details
-				foreach (var i in ds.Tables[9].Rows)
+				foreach (var i in ds.Tables[10].Rows)
 				{
 					Flist.Add(new FeedbackEntry
 					{
 						Id = Convert.ToInt32(i[0]),
-						Date = Convert.ToDateTime(i[1]).ToString("dd-MM-yyyy"),
+						Date = getStringValue(i[1]),
 						Status = i[2].ToString(),
-						Followup_Date = Convert.ToDateTime(i[3]).ToString("dd-MM-yyyy"),						
+						Followup_Date = getStringValue(i[3]),						
 						Comments = i[4].ToString(),
 						Created_By = i[5].ToString()
 					});
 				}
 
 				//Billing details
-				foreach (var i in ds.Tables[10].Rows)
+				foreach (var i in ds.Tables[11].Rows)
 				{
 					Blist.Add(new BillingEntry
 					{
 						Id = Convert.ToInt32(i[0]),
-						Date = Convert.ToDateTime(i[1]).ToString("dd-MM-yyyy"),
+						Date = getStringValue(i[1]),
 						Total_Amount = Convert.ToInt32(i[2]),
 						Amount_Received = Convert.ToInt32(i[3]),
 						Balance_Amount = Convert.ToInt32(i[4]),
 						Cash_Paid = Convert.ToInt32(i[5]),
 						Payment_Mode = i[6].ToString(),
 						Bank = i[7].ToString(),
-						Clearence_Date = Convert.ToDateTime(i[8]).ToString("dd-MM-yyyy"),
+						Clearence_Date = getStringValue(i[8]),
 						Narration = i[9].ToString(),
 						Created_By = i[10].ToString()
 					});
 				}
 
 				//surgery details
-				foreach (var i in ds.Tables[11].Rows)
+				foreach (var i in ds.Tables[12].Rows)
 				{
 					Slist.Add(new SurgeryEntry
 					{
 						Id = Convert.ToInt32(i[0]),
-						Date = Convert.ToDateTime(i[1]).ToString("dd-MM-yyyy"),
+						Date = getStringValue(i[1]),
 						Branch = i[2].ToString(),
 						Created_By = i[5].ToString(),
 						Created_Date = i[6].ToString()
@@ -181,10 +190,17 @@ namespace ExpressBase.ServiceStack.Services
 				CrntCityList = clcityList,
 				CrntCountryList = clcountryList,
 				CityList = cityList,
+				DistrictList = districtList,
 				SourceCategoryList = sourcecategoryList,
 				SubCategoryList = subcategoryList,
 				ImageIdList = ImgIds				
 			};
+		}
+
+		private string getStringValue(object obj)
+		{
+			obj = (obj == DBNull.Value) ? DateTime.MinValue : obj;
+			return (((DateTime)obj).Date != DateTime.MinValue) ? Convert.ToDateTime(obj).ToString("dd-MM-yyyy") : string.Empty;
 		}
 
 		public SaveCustomerResponse Any(SaveCustomerRequest request)
@@ -204,18 +220,21 @@ namespace ExpressBase.ServiceStack.Services
 				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Int32, Convert.ToInt32(found.Value)));
 				cols += "firmcode,";
 				vals += ":firmcode,";
+				upcolsvals += "firmcode=:firmcode,";
 			}
 			if (dict.TryGetValue("trdate", out found))
 			{
 				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Date, Convert.ToDateTime(DateTime.ParseExact(found.Value.ToString(), "dd-MM-yyyy", CultureInfo.InvariantCulture))));
 				cols += "trdate,";
 				vals += ":trdate,";
+				upcolsvals += "trdate=:trdate,";
 			}
 			if (dict.TryGetValue("genurl", out found))
 			{
 				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
 				cols += "genurl,";
 				vals += ":genurl,";
+				upcolsvals += "genurl=:genurl,";
 			}
 			if (dict.TryGetValue("name", out found))
 			{
@@ -324,7 +343,28 @@ namespace ExpressBase.ServiceStack.Services
 				vals += ":dprefid,";
 				upcolsvals += "dprefid=:dprefid,";
 			}
-
+			if (dict.TryGetValue("sex", out found))
+			{
+				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
+				cols += "sex,";
+				vals += ":sex,";
+				upcolsvals += "sex=:sex,";
+			}
+			if (dict.TryGetValue("district", out found))
+			{
+				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
+				cols += "district,";
+				vals += ":district,";
+				upcolsvals += "district=:district,";
+			}
+			if (dict.TryGetValue("leadowner", out found))
+			{
+				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Int32, Convert.ToInt32(found.Value)));
+				cols += "leadowner,";
+				vals += ":leadowner,";
+				upcolsvals += "leadowner=:leadowner,";
+			}
+			//------------------------------------------------------
 			if (dict.TryGetValue("consdate", out found))
 			{
 				parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Date, Convert.ToDateTime(DateTime.ParseExact(found.Value.ToString(), "dd-MM-yyyy", CultureInfo.InvariantCulture))));
@@ -380,7 +420,14 @@ namespace ExpressBase.ServiceStack.Services
 				cols2 += "nature,";
 				vals2 += ":nature,";
 				upcolsvals2 += "nature=:nature,";
-			}			
+			}
+			if (dict.TryGetValue("probmonth", out found))
+			{
+				parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Date, Convert.ToDateTime(DateTime.ParseExact(found.Value.ToString(), "MM/yyyy", CultureInfo.InvariantCulture))));
+				cols2 += "probmonth,";
+				vals2 += ":probmonth,";
+				upcolsvals2 += "probmonth=:probmonth,";
+			}
 
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("prehead", EbDbTypes.Int32, 50));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("accountcode", EbDbTypes.String, Fields.Find(i => i.Key == "genurl").Value));
@@ -575,7 +622,18 @@ namespace ExpressBase.ServiceStack.Services
 			return new SaveSurgeryDetailsResponse { Status = rstatus };
 		}
 
-
+		public LmUniqueCheckResponse Any(LmUniqueCheckRequest request)
+		{
+			bool rstatus = false;
+			DbParameter[] parameters = new DbParameter[] 
+			{
+				this.EbConnectionFactory.ObjectsDB.GetNewParameter("value", EbDbTypes.String, request.Value)
+			};
+			EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery("SELECT id FROM customers WHERE genurl = :value;", parameters);
+			if (dt.Rows.Count == 0)
+				rstatus = true;
+			return new LmUniqueCheckResponse { Status = rstatus };
+		}
 
 
 

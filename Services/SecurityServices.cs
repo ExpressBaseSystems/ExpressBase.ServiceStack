@@ -141,7 +141,7 @@ namespace ExpressBase.ServiceStack.Services
 			string sql = this.EbConnectionFactory.DataDB.EB_MANAGEUSER_FIRST_QUERY;
 			if (request.Id > 1)
 			{
-				sql += @"SELECT fullname,nickname,email,alternateemail,dob,sex,phnoprimary,phnosecondary,landline,phextension,fbid,fbname,statusid,hide,preferencesjson
+				sql += @"SELECT fullname,nickname,email,alternateemail,dob,sex,phnoprimary,phnosecondary,landline,phextension,fbid,fbname,statusid,hide,preferencesjson,dprefid
 						FROM eb_users WHERE id = :id;
 						SELECT role_id FROM eb_role2user WHERE user_id = :id AND eb_del = 'F';
 						SELECT groupid FROM eb_user2usergroup WHERE userid = :id AND eb_del = 'F';";
@@ -205,6 +205,7 @@ namespace ExpressBase.ServiceStack.Services
 					resp.UserData.Add("statusid", dr[12].ToString());
 					resp.UserData.Add("hide", dr[13].ToString());
 					resp.UserData.Add("preference", dr[14].ToString());
+					resp.UserData.Add("dprefid", dr[15].ToString());
 				}
 
 				resp.UserRoles = new List<int>();
@@ -257,6 +258,18 @@ namespace ExpressBase.ServiceStack.Services
 				this.EbConnectionFactory.ObjectsDB.GetNewParameter("newpwd", EbDbTypes.String, (request.NewPwd + request.Email).ToMD5Hash())
 			};
 			return new ChangeUserPasswordResponse() {
+				isSuccess = this.EbConnectionFactory.ObjectsDB.DoNonQuery(sql, parameters) > 0 ? true : false
+			};
+		}
+		public ResetUserPasswordResponse Any(ResetUserPasswordRequest request)
+		{
+			string sql = "UPDATE eb_users SET pwd = :newpwd WHERE id = :userid;";
+			DbParameter[] parameters = new DbParameter[] {
+				this.EbConnectionFactory.ObjectsDB.GetNewParameter("userid", EbDbTypes.Int32, request.UserId),
+				this.EbConnectionFactory.ObjectsDB.GetNewParameter("newpwd", EbDbTypes.String, (request.NewPwd + request.Email).ToMD5Hash())
+			};
+			return new ResetUserPasswordResponse()
+			{
 				isSuccess = this.EbConnectionFactory.ObjectsDB.DoNonQuery(sql, parameters) > 0 ? true : false
 			};
 		}

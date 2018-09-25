@@ -88,29 +88,31 @@ namespace ExpressBase.ServiceStack
 
         public string Post(EmailServicesRequest request)
         {
+            base.EbConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
             try
             {
-                MailMessage mm = new MailMessage("expressbasesystems@gmail.com", request.To)
-                {
-                    Subject = request.Subject,
-                    IsBodyHtml = true,
-                    Body = request.Message,
+                //MailMessage mm = new MailMessage("expressbasesystems@gmail.com", request.To)
+                //{
+                //    Subject = request.Subject,
+                //    IsBodyHtml = true,
+                //    Body = request.Message,
 
-                };
-                mm.Attachments.Add(new Attachment(new MemoryStream(request.AttachmentReport)/*Memorystream*/, request.AttachmentName + ".pdf"));
-                if(!request.Cc.IsEmpty())
-                    mm.CC.Add(request.Cc);
-                if (!request.Bcc.IsEmpty())
-                    mm.Bcc.Add(request.Bcc);
-                System.Net.Mail.SmtpClient smtp = new System.Net.Mail.SmtpClient
-                {
-                    Host = "smtp.gmail.com",
-                    Port = 587,
-                    EnableSsl = true,
-                    Credentials = new NetworkCredential { UserName = "expressbasesystems@gmail.com", Password = "ebsystems" }
+                //};
+                //mm.Attachments.Add(new Attachment(new MemoryStream(request.AttachmentReport)/*Memorystream*/, request.AttachmentName + ".pdf"));
+                //if(!request.Cc.IsEmpty())
+                //    mm.CC.Add(request.Cc);
+                //if (!request.Bcc.IsEmpty())
+                //    mm.Bcc.Add(request.Bcc);
+                //System.Net.Mail.SmtpClient smtp = new System.Net.Mail.SmtpClient
+                //{
+                //    Host = "smtp.gmail.com",
+                //    Port = 587,
+                //    EnableSsl = true,
+                //    Credentials = new NetworkCredential { UserName = "expressbasesystems@gmail.com", Password = "ebsystems" }
 
-                };
-                smtp.Send(mm);
+                //};
+                //smtp.Send(mm); 
+                this.EbConnectionFactory.Smtp.Send(request.To, request.Subject, request.Message);
             }
             catch (Exception e)
             {
