@@ -402,8 +402,8 @@ namespace ExpressBase.ServiceStack
             _recordsFiltered = (_recordsFiltered > 0) ? _recordsFiltered : _dataset.Tables[_dataset.Tables.Count - 1].Rows.Count;
             //-- 
             EbDataTable _formattedDataTable = null;
-            //LevelInfoCollection _levels = new LevelInfoCollection();
-            List<GroupingDetails> _levels = new List<GroupingDetails>();
+            LevelInfoCollection _levels = new LevelInfoCollection();
+            //List<GroupingDetails> _levels = new List<GroupingDetails>();
             if (_dataset.Tables.Count > 0 && _dV != null)
             {
                 _formattedDataTable = PreProcessing(ref _dataset, _dV, request.UserInfo, ref _levels);
@@ -499,7 +499,7 @@ namespace ExpressBase.ServiceStack
             return resp;
         }
 
-        public EbDataTable PreProcessing(ref EbDataSet _dataset, EbDataVisualization _dv, User _user, ref List<GroupingDetails> _levels)
+        public EbDataTable PreProcessing(ref EbDataSet _dataset, EbDataVisualization _dv, User _user, ref LevelInfoCollection _levels)
         {
             dynamic result = null;
             var _user_culture = CultureInfo.GetCultureInfo(_user.Preference.Locale);
@@ -601,11 +601,11 @@ namespace ExpressBase.ServiceStack
             if ((_dv as EbTableVisualization).RowGroupCollection.Count > 0)
             {
                 if ((_dv as EbTableVisualization).CurrentRowGroup.GetType().Name == "SingleLevelRowGroup")
-                    //_levels = GetGroupInfoRecursive(_dataset.Tables[0], _dv, _user_culture, false);
-                    _levels = RowGroupingSingleLevel(_dataset.Tables[0], _dv, _user_culture, false);
+                    _levels = GetGroupInfoSingleLevel(_dataset.Tables[0], _dv, _user_culture);
+                    //_levels = RowGroupingSingleLevel(_dataset.Tables[0], _dv, _user_culture, false);
                 else if ((_dv as EbTableVisualization).CurrentRowGroup.GetType().Name == "MultipleLevelRowGroup")
-                    //_levels = GetGroupInfoRecursive(_dataset.Tables[0], _dv, _user_culture, true);//GetGroupInfoMultiLevel(_dataset.Tables[0], _dv, _user_culture);
-                    _levels = RowGroupingSingleLevel(_dataset.Tables[0], _dv, _user_culture, true);
+                    _levels = GetGroupInfoMultiLevel(_dataset.Tables[0], _dv, _user_culture);//GetGroupInfoMultiLevel(_dataset.Tables[0], _dv, _user_culture);
+                    //_levels = RowGroupingSingleLevel(_dataset.Tables[0], _dv, _user_culture, true);
             }
 
 
