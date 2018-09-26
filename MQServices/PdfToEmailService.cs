@@ -53,9 +53,6 @@ namespace ExpressBase.ServiceStack.MQServices
             {
                 ebEmailTemplate = EbSerializers.Json_Deserialize(element.Json);
             }
-
-           // List<Param> _param = new List<Param> { new Param { Name = "id", Type = ((int)EbDbTypes.Int32).ToString(), Value = "1" } };
-
             DataSourceDataResponse dsresp = (DataSourceDataResponse)dataservice.Any(new DataSourceDataRequest { Params = request.Params, RefId = ebEmailTemplate.DataSourceRefId });
             var ds2 = dsresp.DataSet;
             EbObjectParticularVersionResponse myDsres = (EbObjectParticularVersionResponse)objservice.Get(new EbObjectParticularVersionRequest() { RefId = ebEmailTemplate.DataSourceRefId });
@@ -66,13 +63,10 @@ namespace ExpressBase.ServiceStack.MQServices
             }
             var parameters = DataHelper.GetParams(ebConnectionFactory, false, request.Params, 0, 0);
             var ds = ebConnectionFactory.ObjectsDB.DoQueries(ebDataSource.Sql, parameters.ToArray());
-           // DbParameter[] parameters = { ebConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, 1) }; //change 1 by request.id
-           // var ds = ebConnectionFactory.ObjectsDB.DoQueries(ebDataSource.Sql, parameters);
             var pattern = @"\{{(.*?)\}}";
             IEnumerable<string> matches = Regex.Matches(ebEmailTemplate.Body, pattern).OfType<Match>()
-     .Select(m => m.Groups[0].Value)
-     .Distinct(); 
-            //Dictionary<string, object> dict = new Dictionary<string, object>();
+             .Select(m => m.Groups[0].Value)
+             .Distinct(); 
             foreach (var _col in matches /*ebEmailTemplate.DsColumnsCollection*/)
             {
                 string str = /*dscol.Title*/_col.Replace("{{", "").Replace("}}", "");
@@ -90,8 +84,8 @@ namespace ExpressBase.ServiceStack.MQServices
             {
                 From = "request.from",
                 To = ebEmailTemplate.To,
-                Cc = ebEmailTemplate.Cc,
-                Bcc = ebEmailTemplate.Bcc,
+                Cc = ebEmailTemplate.Cc.Split(","),
+                Bcc = ebEmailTemplate.Bcc.Split(","),
                 Message = ebEmailTemplate.Body,
                 Subject = ebEmailTemplate.Subject,
                 UserId = request.UserId,
