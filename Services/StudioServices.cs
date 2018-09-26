@@ -13,6 +13,7 @@ using ExpressBase.Objects.EmailRelated;
 using System.Text.RegularExpressions;
 using ExpressBase.Common.Structures;
 using ExpressBase.Objects.Objects;
+using ExpressBase.ServiceStack.Services;
 
 namespace ExpressBase.ServiceStack
 {
@@ -503,7 +504,7 @@ namespace ExpressBase.ServiceStack
                     }
                     else if (obj is EbWebForm)
                     {
-                        ChatbotServices myService = base.ResolveService<ChatbotServices>();
+						WebFormServices myService = base.ResolveService<WebFormServices>();
                         CreateWebFormTableResponse res = (CreateWebFormTableResponse)myService.Any(new CreateWebFormTableRequest() { WebObj = obj as EbWebForm, Apps = request.Apps, SolnId = request.SolnId, UserId = request.UserId, WhichConsole = request.WhichConsole });
                     }
                 }
@@ -566,7 +567,7 @@ namespace ExpressBase.ServiceStack
                     }
                     else if (obj is EbWebForm)
                     {
-                        ChatbotServices myService = base.ResolveService<ChatbotServices>();
+						WebFormServices myService = base.ResolveService<WebFormServices>();
                         CreateWebFormTableResponse res = (CreateWebFormTableResponse)myService.Any(new CreateWebFormTableRequest() { WebObj = obj as EbWebForm, Apps = request.Apps, SolnId = request.SolnId, UserId = request.UserId, WhichConsole = request.WhichConsole });
                     }
                 }
@@ -640,7 +641,7 @@ namespace ExpressBase.ServiceStack
                     }
                     else if (obj is EbWebForm)
                     {
-                        ChatbotServices myService = base.ResolveService<ChatbotServices>();
+						WebFormServices myService = base.ResolveService<WebFormServices>();
                         CreateWebFormTableResponse res = (CreateWebFormTableResponse)myService.Any(new CreateWebFormTableRequest() { WebObj = obj, Apps = request.Apps, SolnId = request.SolnId, UserId = request.UserId, WhichConsole = request.WhichConsole });
                     }
                 }

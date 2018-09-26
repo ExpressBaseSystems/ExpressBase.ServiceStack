@@ -265,10 +265,7 @@ WHERE
             return new CreateWebFormTableResponse();
         }
 
-        public CreateWebFormTableResponse Any(CreateWebFormTableRequest request)
-        {            
-            return CreateWebFormTableRec(request);
-        }
+        
 
         public object Any(CreateBotFormTableRequest request)
         {
@@ -797,17 +794,17 @@ WHERE
             return res1.RefId;
         }
 
-        public InsertDataFromWebformResponse Any(InsertDataFromWebformRequest request)
-        {
-            EbObjectService myService = base.ResolveService<EbObjectService>();
-            EbObjectParticularVersionResponse formObj = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = request.RefId });
-            EbWebForm FormObj = EbSerializers.Json_Deserialize(formObj.Data[0].Json);
+		public InsertDataFromWebformResponse Any(InsertDataFromWebformRequest request)
+		{
+			EbObjectService myService = base.ResolveService<EbObjectService>();
+			EbObjectParticularVersionResponse formObj = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = request.RefId });
+			EbWebForm FormObj = EbSerializers.Json_Deserialize(formObj.Data[0].Json);
 
 
-            return new InsertDataFromWebformResponse();
-        }
+			return new InsertDataFromWebformResponse();
+		}
 
-        public object Any(InsertIntoBotFormTableRequest request)
+		public object Any(InsertIntoBotFormTableRequest request)
         {
             DbParameter parameter1;
             List<DbParameter> paramlist = new List<DbParameter>();
@@ -960,18 +957,7 @@ WHERE
             }
             return new InsertIntoBotFormTableResponse { RowAffected = rslt };
         }
-
-        public EbDataSet Any(GetRowDataRequest request)
-        {
-            var myService = base.ResolveService<EbObjectService>();
-            var formObj = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = request.RefId });
-            EbWebForm FormObj = EbSerializers.Json_Deserialize(formObj.Data[0].Json);
-            FormObj.TableRowId = request.RowId;
-            string query = FormObj.GetQuery();
-            EbDataSet dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(query);
-
-            return dataset;
-        }
+		
 
         public SubmitBotFormResponse Any(SubmitBotFormRequest request)
         {
