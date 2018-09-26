@@ -38,8 +38,6 @@ namespace ExpressBase.ServiceStack
 {
     public class ReportService : EbBaseService
     {
-        private DataSourceDataSetResponse dsresp = null;
-
         //private iTextSharp.text.Font f = FontFactory.GetFont(FontFactory.HELVETICA, 12);
         public ReportService(IEbConnectionFactory _dbf, IEbStaticFileClient _sfc, IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_dbf, _sfc, _mqp, _mqc) { }
 
@@ -59,8 +57,12 @@ namespace ExpressBase.ServiceStack
             {
                 EbObjectService myObjectservice = base.ResolveService<EbObjectService>();
                 myObjectservice.EbConnectionFactory = this.EbConnectionFactory;
+                DataSourceService myDataSourceservice = base.ResolveService<DataSourceService>();
+                myDataSourceservice.EbConnectionFactory = this.EbConnectionFactory;
+
                 EbObjectParticularVersionResponse resultlist = myObjectservice.Get(new EbObjectParticularVersionRequest { RefId = request.Refid }) as EbObjectParticularVersionResponse;
                 Report = EbSerializers.Json_Deserialize<EbReport>(resultlist.Data[0].Json);
+
                 Report.ReportService = this;
                 Report.SolutionId = request.SolnId;
                 Report.IsLastpage = false;
@@ -69,24 +71,18 @@ namespace ExpressBase.ServiceStack
                 Report.ValueScriptCollection = new Dictionary<string, Script>();
                 Report.AppearanceScriptCollection = new Dictionary<string, Script>();
                 Report.LinkCollection = new Dictionary<string, List<Common.Objects.EbControl>>();
-                Report.CurrentTimestamp = DateTime.Now;
-                Report.UserName = request.Fullname;
                 Report.FileClient = new EbStaticFileClient();
                 Report.FileClient = FileClient;
-                Report.Parameters = request.Params;
                 Report.Solution = Redis.Get<Eb_Solution>(String.Format("solution_{0}", request.SolnId));
+                Report.CurrentTimestamp = DateTime.Now;
+                Report.UserName = request.Fullname;
+                Report.Parameters = request.Params;
                 //-- END REPORT object INIT
                 iTextSharp.text.Rectangle rec = new iTextSharp.text.Rectangle(Report.WidthPt, Report.HeightPt);
                 Report.Doc = new Document(rec);
                 Report.Ms1 = new MemoryStream();
-                DataSourceService myDataSourceservice = base.ResolveService<DataSourceService>();
-                myDataSourceservice.EbConnectionFactory = this.EbConnectionFactory;
                 if (Report.DataSourceRefId != string.Empty)
-                {
-                    dsresp = myDataSourceservice.Any(new DataSourceDataSetRequest { RefId = Report.DataSourceRefId, Params = Report.Parameters });
-                    Report.DataSet = dsresp.DataSet;
-                }
-
+                    Report.DataSet = myDataSourceservice.Any(new DataSourceDataSetRequest { RefId = Report.DataSourceRefId, Params = Report.Parameters }).DataSet;
                 Report.Writer = PdfWriter.GetInstance(Report.Doc, Report.Ms1);
                 Report.Writer.Open();
                 Report.Doc.Open();
@@ -98,21 +94,7 @@ namespace ExpressBase.ServiceStack
                 Report.InitializeSummaryFields();
 
                 Report.GetWatermarkImages();
-                Report.FillingCollections();
-                foreach (EbReportHeader r_header in Report.ReportHeaders)
-                    FillLinkCollection(Report, r_header.Fields);
-
-                foreach (EbReportFooter r_footer in Report.ReportFooters)
-                    FillLinkCollection(Report, r_footer.Fields);
-
-                foreach (EbPageHeader p_header in Report.PageHeaders)
-                    FillLinkCollection(Report, p_header.Fields);
-
-                foreach (EbReportDetail detail in Report.Detail)
-                    FillLinkCollection(Report, detail.Fields);
-
-                foreach (EbPageFooter p_footer in Report.PageFooters)
-                    FillLinkCollection(Report, p_footer.Fields);
+                FillingCollections(Report);
 
                 Report.Doc.NewPage();
                 Report.DrawReportHeader();
@@ -126,56 +108,68 @@ namespace ExpressBase.ServiceStack
                     Report.DataSet.Tables.Clear();
                     Report.DataSet = null;
                 }
-
-
-                //MailMessage mm = new MailMessage("expressbasesystems@gmail.com", "donaullattil93@gmail.com")
-                //{
-                //    Subject = "subject",
-                //    IsBodyHtml = true,
-                //    Body = "Hi, Please find the attachment."
-                //};
-
-                //mm.Attachments.Add(new Attachment(Report.Ms1, Report.Name + ".pdf"));
-                //SmtpClient smtp = new SmtpClient
-                //{
-                //    Host = "smtp.gmail.com",
-                //    Port = 587,
-                //    EnableSsl = true,
-                //    Credentials = new NetworkCredential { UserName = "expressbasesystems@gmail.com", Password = "ebsystems" }
-
-                //};
-
-                //smtp.Send(mm);
-                // Report.Ms1.Position = 0;
             }
             catch (Exception e)
             {
                 Console.WriteLine("Exception-reportService " + e.ToString());
             }
-            return new ReportRenderResponse { StreamWrapper = new MemorystreamWrapper(Report.Ms1), ReportName = Report.Name , ReportBytea=Report.Ms1.ToArray()};
+            return new ReportRenderResponse
+            {
+                StreamWrapper = new MemorystreamWrapper(Report.Ms1),
+                ReportName = Report.Name,
+                ReportBytea = Report.Ms1.ToArray()
+            };
+        }
+        public void FillingCollections(EbReport Report)
+        {
+            foreach (EbReportHeader r_header in Report.ReportHeaders)
+                Fill(Report, r_header.Fields, false);
+
+            foreach (EbReportFooter r_footer in Report.ReportFooters)
+                Fill(Report, r_footer.Fields, false);
+
+            foreach (EbPageHeader p_header in Report.PageHeaders)
+                Fill(Report, p_header.Fields, false);
+
+            foreach (EbReportDetail detail in Report.Detail)
+                Fill(Report, detail.Fields, true);
+
+            foreach (EbPageFooter p_footer in Report.PageFooters)
+                Fill(Report, p_footer.Fields, false);
         }
 
-        private void FillLinkCollection(EbReport Report, List<EbReportField> fields)
+        private void Fill(EbReport Report, List<EbReportField> fields, bool isDetail)
         {
+            EbObjectService myObjectservice = base.ResolveService<EbObjectService>();
+            myObjectservice.EbConnectionFactory = this.EbConnectionFactory;
+
             foreach (EbReportField field in fields)
             {
                 if (field is EbDataField)
                 {
-                    string LinkRefid = (field as EbDataField).LinkRefId;
-                    if (!string.IsNullOrEmpty((field as EbDataField).LinkRefId))
+                    EbDataField field_org = field as EbDataField;
+                    //Finding the link's parameter controls
+                    try
                     {
-                        EbObjectService myObjectservice = base.ResolveService<EbObjectService>();
-                        myObjectservice.EbConnectionFactory = this.EbConnectionFactory;
-                        EbObjectParticularVersionResponse res = (EbObjectParticularVersionResponse)myObjectservice.Get(new EbObjectParticularVersionRequest { RefId = LinkRefid });
-                        EbReport linkreport = EbSerializers.Json_Deserialize<EbReport>(res.Data[0].Json);
-                        try
+                        if (!string.IsNullOrEmpty(field_org.LinkRefId) && !Report.LinkCollection.ContainsKey(field_org.LinkRefId))
                         {
-                            EbDataSource LinkDatasource = Redis.Get<EbDataSource>(linkreport.DataSourceRefId);
+                            string LinkRefid = field_org.LinkRefId;
+                            string linkDsRefid = string.Empty;
+
+                            EbObjectParticularVersionResponse res = (EbObjectParticularVersionResponse)myObjectservice.Get(new EbObjectParticularVersionRequest { RefId = LinkRefid });
+                            if (res.Data[0].EbObjectType == 3)
+                                linkDsRefid = EbSerializers.Json_Deserialize<EbReport>(res.Data[0].Json).DataSourceRefId;//Getting the linked report
+                            else if (res.Data[0].EbObjectType == 16)
+                                linkDsRefid = EbSerializers.Json_Deserialize<EbTableVisualization>(res.Data[0].Json).DataSourceRefId;//Getting the linked table viz
+                            else if (res.Data[0].EbObjectType == 17)
+                                linkDsRefid = EbSerializers.Json_Deserialize<EbChartVisualization>(res.Data[0].Json).DataSourceRefId;//Getting the linked chart viz
+
+                            EbDataSource LinkDatasource = Redis.Get<EbDataSource>(linkDsRefid);
                             if (LinkDatasource == null || LinkDatasource.Sql == null || LinkDatasource.Sql == string.Empty)
                             {
-                                EbObjectParticularVersionResponse result = (EbObjectParticularVersionResponse)myObjectservice.Get(new EbObjectParticularVersionRequest { RefId = linkreport.DataSourceRefId });
+                                EbObjectParticularVersionResponse result = (EbObjectParticularVersionResponse)myObjectservice.Get(new EbObjectParticularVersionRequest { RefId = linkDsRefid });
                                 LinkDatasource = EbSerializers.Json_Deserialize(result.Data[1].Json);
-                                Redis.Set<EbDataSource>(linkreport.DataSourceRefId, LinkDatasource);
+                                Redis.Set<EbDataSource>(linkDsRefid, LinkDatasource);
                             }
 
                             if (!string.IsNullOrEmpty(LinkDatasource.FilterDialogRefId))
@@ -190,11 +184,39 @@ namespace ExpressBase.ServiceStack
                                 Report.LinkCollection[LinkRefid] = LinkDatasource.FilterDialog.Controls;
                             }
                         }
-                        catch (Exception e)
-                        {
-                            Console.WriteLine("Exception: " + e.ToString());
-                        }
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine("Finding the link's parameter controls: " + e.ToString());
+                    }
 
+                    try
+                    {
+                        //value script is applicable only for calc field where as appearance script is for all the datafields
+                        if (field is EbCalcField && !Report.ValueScriptCollection.ContainsKey(field.Name))
+                        {
+                            Script valscript = CSharpScript.Create<dynamic>((field as EbCalcField).ValueExpression, ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System.Dynamic"), globalsType: typeof(Globals));
+                            valscript.Compile();
+                            Report.ValueScriptCollection.Add(field.Name, valscript);
+                        }
+                        if (!Report.AppearanceScriptCollection.ContainsKey(field.Name) && field_org.AppearanceExpression != "")
+                        {
+                            Script appearscript = CSharpScript.Create<dynamic>(field_org.AppearanceExpression, ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System.Dynamic"), globalsType: typeof(Globals));
+                            appearscript.Compile();
+                            Report.AppearanceScriptCollection.Add(field.Name, appearscript);
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e.Message + e.StackTrace);
+                    }
+                    // finding the table of highest rowcount from dataset
+                    if (isDetail)
+                    {
+                        Report.HasRows = true;
+                        int r_count = Report.DataSet.Tables[field_org.TableIndex].Rows.Count;
+                        Report.DetailTableIndex = (r_count > Report.MaxRowCount) ? field_org.TableIndex : Report.DetailTableIndex;
+                        Report.MaxRowCount = (r_count > Report.MaxRowCount) ? r_count : Report.MaxRowCount;
                     }
                 }
             }
@@ -207,10 +229,12 @@ namespace ExpressBase.ServiceStack
             bool _isValid = true;
             string _excepMsg = string.Empty;
             int resultType_enum = 0;
+
             EbObjectService myObjectservice = base.ResolveService<EbObjectService>();
             myObjectservice.EbConnectionFactory = this.EbConnectionFactory;
             DataSourceService myDataSourceservice = base.ResolveService<DataSourceService>();
             myDataSourceservice.EbConnectionFactory = this.EbConnectionFactory;
+
             DataSourceColumnsResponse cresp = new DataSourceColumnsResponse();
             cresp = Redis.Get<DataSourceColumnsResponse>(string.Format("{0}_columns", request.DataSourceRefId));
             if (cresp == null || cresp.Columns.Count == 0)
