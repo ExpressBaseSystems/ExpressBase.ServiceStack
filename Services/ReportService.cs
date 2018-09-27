@@ -71,6 +71,8 @@ namespace ExpressBase.ServiceStack
                 Report.ValueScriptCollection = new Dictionary<string, Script>();
                 Report.AppearanceScriptCollection = new Dictionary<string, Script>();
                 Report.LinkCollection = new Dictionary<string, List<Common.Objects.EbControl>>();
+                Report.PageSummaryFields = new Dictionary<string, List<EbDataField>>();
+                Report.ReportSummaryFields = new Dictionary<string, List<EbDataField>>();
                 Report.FileClient = new EbStaticFileClient();
                 Report.FileClient = FileClient;
                 Report.Solution = Redis.Get<Eb_Solution>(String.Format("solution_{0}", request.SolnId));
@@ -91,8 +93,6 @@ namespace ExpressBase.ServiceStack
                 Report.Writer.CloseStream = true;//important
                 Report.Canvas = Report.Writer.DirectContent;
                 Report.PageNumber = Report.Writer.PageNumber;
-                Report.InitializeSummaryFields();
-
                 Report.GetWatermarkImages();
                 FillingCollections(Report);
 
@@ -123,101 +123,120 @@ namespace ExpressBase.ServiceStack
         public void FillingCollections(EbReport Report)
         {
             foreach (EbReportHeader r_header in Report.ReportHeaders)
-                Fill(Report, r_header.Fields, false);
+                Fill(Report, r_header.Fields, EbReportSectionType.ReportHeader);
 
             foreach (EbReportFooter r_footer in Report.ReportFooters)
-                Fill(Report, r_footer.Fields, false);
+                Fill(Report, r_footer.Fields, EbReportSectionType.ReportFooter);
 
             foreach (EbPageHeader p_header in Report.PageHeaders)
-                Fill(Report, p_header.Fields, false);
+                Fill(Report, p_header.Fields, EbReportSectionType.PageHeader);
 
             foreach (EbReportDetail detail in Report.Detail)
-                Fill(Report, detail.Fields, true);
+                Fill(Report, detail.Fields, EbReportSectionType.Detail);
 
             foreach (EbPageFooter p_footer in Report.PageFooters)
-                Fill(Report, p_footer.Fields, false);
+                Fill(Report, p_footer.Fields, EbReportSectionType.ReportFooter);
         }
 
-        private void Fill(EbReport Report, List<EbReportField> fields, bool isDetail)
+        private void Fill(EbReport Report, List<EbReportField> fields, EbReportSectionType section_typ)
         {
-            EbObjectService myObjectservice = base.ResolveService<EbObjectService>();
-            myObjectservice.EbConnectionFactory = this.EbConnectionFactory;
-
             foreach (EbReportField field in fields)
             {
                 if (field is EbDataField)
                 {
                     EbDataField field_org = field as EbDataField;
-                    //Finding the link's parameter controls
-                    try
+                    if (!string.IsNullOrEmpty(field_org.LinkRefId) && !Report.LinkCollection.ContainsKey(field_org.LinkRefId))
+                        FindControls(Report, field_org);//Finding the link's parameter controls
+                    
+                    if (section_typ == EbReportSectionType.Detail)
+                        FindLargerDataTable(Report, field_org);// finding the table of highest rowcount from dataset
+
+                    if (field is IEbDataFieldSummary)
+                        FillSummaryCollection(Report, field_org, section_typ);
+
+                    if (field is EbCalcField && !Report.ValueScriptCollection.ContainsKey(field.Name))
                     {
-                        if (!string.IsNullOrEmpty(field_org.LinkRefId) && !Report.LinkCollection.ContainsKey(field_org.LinkRefId))
-                        {
-                            string LinkRefid = field_org.LinkRefId;
-                            string linkDsRefid = string.Empty;
-
-                            EbObjectParticularVersionResponse res = (EbObjectParticularVersionResponse)myObjectservice.Get(new EbObjectParticularVersionRequest { RefId = LinkRefid });
-                            if (res.Data[0].EbObjectType == 3)
-                                linkDsRefid = EbSerializers.Json_Deserialize<EbReport>(res.Data[0].Json).DataSourceRefId;//Getting the linked report
-                            else if (res.Data[0].EbObjectType == 16)
-                                linkDsRefid = EbSerializers.Json_Deserialize<EbTableVisualization>(res.Data[0].Json).DataSourceRefId;//Getting the linked table viz
-                            else if (res.Data[0].EbObjectType == 17)
-                                linkDsRefid = EbSerializers.Json_Deserialize<EbChartVisualization>(res.Data[0].Json).DataSourceRefId;//Getting the linked chart viz
-
-                            EbDataSource LinkDatasource = Redis.Get<EbDataSource>(linkDsRefid);
-                            if (LinkDatasource == null || LinkDatasource.Sql == null || LinkDatasource.Sql == string.Empty)
-                            {
-                                EbObjectParticularVersionResponse result = (EbObjectParticularVersionResponse)myObjectservice.Get(new EbObjectParticularVersionRequest { RefId = linkDsRefid });
-                                LinkDatasource = EbSerializers.Json_Deserialize(result.Data[1].Json);
-                                Redis.Set<EbDataSource>(linkDsRefid, LinkDatasource);
-                            }
-
-                            if (!string.IsNullOrEmpty(LinkDatasource.FilterDialogRefId))
-                            {
-                                LinkDatasource.FilterDialog = Redis.Get<EbFilterDialog>(LinkDatasource.FilterDialogRefId);
-                                if (LinkDatasource.FilterDialog == null)
-                                {
-                                    EbObjectParticularVersionResponse result = (EbObjectParticularVersionResponse)myObjectservice.Get(new EbObjectParticularVersionRequest { RefId = LinkDatasource.FilterDialogRefId });
-                                    LinkDatasource.FilterDialog = EbSerializers.Json_Deserialize(result.Data[1].Json);
-                                    Redis.Set<EbFilterDialog>(LinkDatasource.FilterDialogRefId, LinkDatasource.FilterDialog);
-                                }
-                                Report.LinkCollection[LinkRefid] = LinkDatasource.FilterDialog.Controls;
-                            }
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine("Finding the link's parameter controls: " + e.ToString());
+                        Script valscript = CSharpScript.Create<dynamic>((field as EbCalcField).ValueExpression, ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System.Dynamic"), globalsType: typeof(Globals));
+                        valscript.Compile();
+                        Report.ValueScriptCollection.Add(field.Name, valscript);
                     }
 
-                    try
+                    if (!Report.AppearanceScriptCollection.ContainsKey(field.Name) && field_org.AppearanceExpression != "")
                     {
-                        //value script is applicable only for calc field where as appearance script is for all the datafields
-                        if (field is EbCalcField && !Report.ValueScriptCollection.ContainsKey(field.Name))
-                        {
-                            Script valscript = CSharpScript.Create<dynamic>((field as EbCalcField).ValueExpression, ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System.Dynamic"), globalsType: typeof(Globals));
-                            valscript.Compile();
-                            Report.ValueScriptCollection.Add(field.Name, valscript);
-                        }
-                        if (!Report.AppearanceScriptCollection.ContainsKey(field.Name) && field_org.AppearanceExpression != "")
-                        {
-                            Script appearscript = CSharpScript.Create<dynamic>(field_org.AppearanceExpression, ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System.Dynamic"), globalsType: typeof(Globals));
-                            appearscript.Compile();
-                            Report.AppearanceScriptCollection.Add(field.Name, appearscript);
-                        }
+                        Script appearscript = CSharpScript.Create<dynamic>(field_org.AppearanceExpression, ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System.Dynamic"), globalsType: typeof(Globals));
+                        appearscript.Compile();
+                        Report.AppearanceScriptCollection.Add(field.Name, appearscript);
                     }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine(e.Message + e.StackTrace);
-                    }
-                    // finding the table of highest rowcount from dataset
-                    if (isDetail)
-                    {
-                        Report.HasRows = true;
-                        int r_count = Report.DataSet.Tables[field_org.TableIndex].Rows.Count;
-                        Report.DetailTableIndex = (r_count > Report.MaxRowCount) ? field_org.TableIndex : Report.DetailTableIndex;
-                        Report.MaxRowCount = (r_count > Report.MaxRowCount) ? r_count : Report.MaxRowCount;
-                    }
+                }
+            }
+        }
+        public void FindLargerDataTable(EbReport Report, EbDataField field)
+        {
+            Report.HasRows = true;
+            int r_count = Report.DataSet.Tables[field.TableIndex].Rows.Count;
+            Report.DetailTableIndex = (r_count > Report.MaxRowCount) ? field.TableIndex : Report.DetailTableIndex;
+            Report.MaxRowCount = (r_count > Report.MaxRowCount) ? r_count : Report.MaxRowCount;
+        }
+
+        public void FindControls(EbReport report, EbDataField field)
+        {
+            EbObjectService myObjectservice = base.ResolveService<EbObjectService>();
+            myObjectservice.EbConnectionFactory = this.EbConnectionFactory;
+
+            string LinkRefid = field.LinkRefId;
+            string linkDsRefid = string.Empty;
+
+            EbObjectParticularVersionResponse res = (EbObjectParticularVersionResponse)myObjectservice.Get(new EbObjectParticularVersionRequest { RefId = LinkRefid });
+            if (res.Data[0].EbObjectType == 3)
+                linkDsRefid = EbSerializers.Json_Deserialize<EbReport>(res.Data[0].Json).DataSourceRefId;//Getting the linked report
+            else if (res.Data[0].EbObjectType == 16)
+                linkDsRefid = EbSerializers.Json_Deserialize<EbTableVisualization>(res.Data[0].Json).DataSourceRefId;//Getting the linked table viz
+            else if (res.Data[0].EbObjectType == 17)
+                linkDsRefid = EbSerializers.Json_Deserialize<EbChartVisualization>(res.Data[0].Json).DataSourceRefId;//Getting the linked chart viz
+
+            EbDataSource LinkDatasource = Redis.Get<EbDataSource>(linkDsRefid);
+            if (LinkDatasource == null || LinkDatasource.Sql == null || LinkDatasource.Sql == string.Empty)
+            {
+                EbObjectParticularVersionResponse result = (EbObjectParticularVersionResponse)myObjectservice.Get(new EbObjectParticularVersionRequest { RefId = linkDsRefid });
+                LinkDatasource = EbSerializers.Json_Deserialize(result.Data[1].Json);
+                Redis.Set<EbDataSource>(linkDsRefid, LinkDatasource);
+            }
+
+            if (!string.IsNullOrEmpty(LinkDatasource.FilterDialogRefId))
+            {
+                LinkDatasource.FilterDialog = Redis.Get<EbFilterDialog>(LinkDatasource.FilterDialogRefId);
+                if (LinkDatasource.FilterDialog == null)
+                {
+                    EbObjectParticularVersionResponse result = (EbObjectParticularVersionResponse)myObjectservice.Get(new EbObjectParticularVersionRequest { RefId = LinkDatasource.FilterDialogRefId });
+                    LinkDatasource.FilterDialog = EbSerializers.Json_Deserialize(result.Data[1].Json);
+                    Redis.Set<EbFilterDialog>(LinkDatasource.FilterDialogRefId, LinkDatasource.FilterDialog);
+                }
+                report.LinkCollection[LinkRefid] = LinkDatasource.FilterDialog.Controls;
+            }
+        }
+
+        public void FillSummaryCollection(EbReport report, EbDataField field, EbReportSectionType section_typ)
+        {            
+            if (section_typ == EbReportSectionType.PageFooter)
+            {
+                if (!report.PageSummaryFields.ContainsKey(field.SummaryOf))
+                {
+                    report.PageSummaryFields.Add(field.SummaryOf, new List<EbDataField> { field });
+                }
+                else
+                {
+                    report.PageSummaryFields[field.SummaryOf].Add(field);
+                }
+            }
+            if (section_typ == EbReportSectionType.ReportFooter)
+            {
+                if (!report.ReportSummaryFields.ContainsKey(field.SummaryOf))
+                {
+                    report.ReportSummaryFields.Add(field.SummaryOf, new List<EbDataField> { field });
+                }
+                else
+                {
+                    report.ReportSummaryFields[field.SummaryOf].Add(field);
                 }
             }
         }
