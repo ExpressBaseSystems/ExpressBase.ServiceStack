@@ -410,8 +410,13 @@ namespace ExpressBase.ServiceStack.Services
 			Dictionary<string, object> _userGroupInfo = new Dictionary<string, object>();
 			if (request.id > 0)
 			{
-				string query = @"SELECT id,name,description FROM eb_usergroup WHERE id = :id;
-							SELECT U.id,U.fullname,U.email FROM eb_users U, eb_user2usergroup G WHERE G.groupid = :id AND U.id=G.userid AND G.eb_del = 'F';";
+				string query = @"	SELECT id,name,description 
+										FROM eb_usergroup 
+										WHERE id = :id;
+									SELECT U.id,U.fullname,U.email 
+										FROM eb_users U, eb_user2usergroup G 
+										WHERE G.groupid = :id AND U.id=G.userid 
+										AND G.eb_del = 'F' AND U.eb_del = 'F';";
 				parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.id));
 				var ds = this.EbConnectionFactory.DataDB.DoQueries(query, parameters.ToArray());
 				if (ds.Tables.Count > 0)
