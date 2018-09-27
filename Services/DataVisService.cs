@@ -403,6 +403,7 @@ namespace ExpressBase.ServiceStack
             //-- 
             EbDataTable _formattedDataTable = null;
             //LevelInfoCollection _levels = new LevelInfoCollection();
+            //List<GroupingDetails> _levels = new List<GroupingDetails>();
             List<GroupingDetails> _levels = new List<GroupingDetails>();
             if (_dataset.Tables.Count > 0 && _dV != null)
             {
@@ -499,7 +500,7 @@ namespace ExpressBase.ServiceStack
             return resp;
         }
 
-        public EbDataTable PreProcessing(ref EbDataSet _dataset, EbDataVisualization _dv, User _user, ref List<GroupingDetails> _levels)
+        public EbDataTable PreProcessing(ref EbDataSet _dataset, EbDataVisualization _dv, User _user, ref List< GroupingDetails> _levels)
         {
             dynamic result = null;
             var _user_culture = CultureInfo.GetCultureInfo(_user.Preference.Locale);
@@ -622,7 +623,8 @@ namespace ExpressBase.ServiceStack
         /// <returns></returns>
         public List<GroupingDetails> RowGroupingSingleLevel(EbDataTable Table, EbDataVisualization Visualization, CultureInfo Culture, bool IsMultiLevelRowGrouping=false)
         {
-            List<GroupingDetails> RowGrouping = new List<GroupingDetails>();
+            //List<GroupingDetails> RowGrouping = new List<GroupingDetails>();
+            Dictionary<string, GroupingDetails> RowGrouping = new Dictionary<string, GroupingDetails>();
             const string AfterText = "After", BeforeText = "Before", BlankText= "(Blank)";
             int finalHeaderIndex = 0;
             ///Total number of levels - taken for multiple level row grouping. 
@@ -672,62 +674,85 @@ namespace ExpressBase.ServiceStack
                     if (i > 0)
                     {
                         CurrentLevel = GetCurrentLevel(TempGroupingText, PreviousGroupingText, false);
-                        RowGrouping.Last().Html = UpdateHeader(RowGrouping.Last());
+                        RowGrouping[PreviousGroupingText].Html = UpdateHeader(RowGrouping[PreviousGroupingText]);
                         DrawFooter(currentRow, AggregateColumnIndexes, RowGrouping, Visualization, Culture, BeforeText, TotalLevels, TotalColumnCount, CurrentLevel, i);
                         finalHeaderIndex = RowGrouping.Count - 1;
                     }
 
                     if (i < Table.Rows.Count - 1)
-                        DrawHeader(RowGrouping, GroupingTexts, GroupingCount, RowIndex, CurrentLevel, BeforeText, RowGroupingColumns, IsMultiLevelRowGrouping, RowGrouping, TotalColumnCount, TotalLevels);
+                    {
+                        CreateHeaderAndFooterPairs(currentRow, AggregateColumnIndexes, 
+                            RowGroupingColumns, RowGrouping, CurrentLevel, TotalLevels);
+                        DrawHeader(currentRow, GroupingTexts, GroupingCount, RowIndex, 
+                            CurrentLevel, BeforeText, RowGroupingColumns, IsMultiLevelRowGrouping, 
+                            RowGrouping, TotalColumnCount, TotalLevels);
+                    }
                 }
                 else if (TempGroupingText.Equals(PreviousGroupingText) == true)
                 {
-                    RowGrouping.Last().GroupingCount++;
+                    RowGrouping[TempGroupingText].GroupingCount++;
                     if (i == Table.Rows.Count - 1)
                     {
                         CurrentLevel = GetCurrentLevel(TempGroupingText, PreviousGroupingText, true);
-                        RowGrouping.Last().Html = UpdateHeader(RowGrouping.Last());
+                        RowGrouping[TempGroupingText].Html = UpdateHeader(RowGrouping[TempGroupingText]);
                         DrawFooter(currentRow, AggregateColumnIndexes, RowGrouping, Visualization, Culture, AfterText, TotalLevels, TotalColumnCount, CurrentLevel, i);
                     }
                 }
 
                 PreviousGroupingText = TempGroupingText;
             }
-
-            return RowGrouping;
+            List<GroupingDetails> ResultGrouping = RowGrouping.Values.ToList();
+            ResultGrouping.Sort();
+            return ResultGrouping;
         }
 
-        private void DrawFooter(EbDataRow currentRow, List<int> AggregateColumnIndexes, List<GroupingDetails> RowGrouping, EbDataVisualization Visualization, CultureInfo Culture, string Text, int TotalLevels, int TotalColumnCount, int CurrentLevel, int TableRowIndex)
+        private void CreateHeaderAndFooterPairs(EbDataRow CurrentRow, List<int> AggregateIndexes, 
+            List<DVBaseColumn> RowGroupingColumns, Dictionary<string, GroupingDetails> RowGrouping, 
+            int CurrentLevel, int TotalLevels)
         {
-            List<GroupingDetails> LastElements = new List<GroupingDetails>();
+            List<string> TempKey = new List<string>();
+            foreach (var column in RowGroupingColumns)
+                TempKey.Add(TempKey.Last() + CurrentRow[column.Data]);
+
+            for (int j = CurrentLevel - 1; j < TotalLevels; j++)
+            {
+                RowGrouping.Add("H_" + TempKey[j], new HeaderGroupingDetails());
+            }
+
             for (int j = TotalLevels; j >= CurrentLevel; j--)
             {
-                FooterGroupingDetails FooterObject = new FooterGroupingDetails(AggregateColumnIndexes)
-                {
-                    Html = string.Empty,
-                    InsertionType = Text,
-                    RowIndex = TableRowIndex
-                };
+                RowGrouping.Add("F_" + TempKey[j], new FooterGroupingDetails(AggregateIndexes));
+            }
+        }
 
-                foreach(int columnKey in FooterObject.Aggregations.Keys)
+        private void DrawFooter(EbDataRow currentRow, List<int> AggregateColumnIndexes, 
+            Dictionary<string, GroupingDetails> RowGrouping, EbDataVisualization Visualization,
+            CultureInfo Culture, string Text, int TotalLevels, int TotalColumnCount, 
+            int CurrentLevel, int TableRowIndex)
+        {
+            List<DVBaseColumn> RowGroupingColumns = new List<DVBaseColumn>((Visualization as EbTableVisualization).CurrentRowGroup.RowGrouping);
+            List<string> TempKey = new List<string>();
+            string TempKeyBuilder = string.Empty;
+            foreach (var column in RowGroupingColumns)
+            {
+                TempKeyBuilder += currentRow[column.Data];
+                TempKey.Add("F_" + TempKeyBuilder);
+            }
+
+            for (int j = TotalLevels; j >= CurrentLevel; j--)
+            {
+                //FooterGroupingDetails FooterObject = new FooterGroupingDetails(AggregateColumnIndexes);
+                var FooterObject = (RowGrouping[TempKey[j - 1]] as FooterGroupingDetails);
+                foreach (int columnKey in FooterObject.Aggregations.Keys)
                 {
                     FooterObject.Aggregations[columnKey].SetValue(Convert.ToDouble(currentRow[columnKey]));
                 }
 
                 string HtmlTemp = GetFooter(FooterObject, Visualization, Culture, TotalColumnCount, TotalLevels, j);
                 FooterObject.Html = HtmlTemp;
-                if (Text.Equals("After"))
-                    LastElements.Add(FooterObject);
-                else
-                    RowGrouping.Add(FooterObject);
-            }
-
-            if(LastElements.Count > 0)
-            {
-                for(int i = LastElements.Count-1; i >= 0; i--)
-                {
-                    RowGrouping.Add(LastElements[i]);
-                }
+                FooterObject.InsertionType = Text;
+                FooterObject.RowIndex = TableRowIndex;
+                //.Html = HtmlTemp;//(TempKey[j - 1], FooterObject);
             }
         }
 
@@ -749,14 +774,25 @@ namespace ExpressBase.ServiceStack
 
             return 1;
         }
-        //to pass - grouping texts, collection
-        public string DrawHeader(List<GroupingDetails> RowGrouping, List<string> GroupingTexts, int GroupingCount, int RowIndex, int CurrentLevel, string InsertionType, List<DVBaseColumn> RowGroupingColumns, bool IsMultiLevelRowGrouping, List<GroupingDetails> groupings, int ColumnCount, int TotalLevels)
+
+        public string DrawHeader(EbDataRow currentRow, List<string> GroupingTexts, int GroupingCount, 
+            int RowIndex, int CurrentLevel, string InsertionType, List<DVBaseColumn> RowGroupingColumns,
+            bool IsMultiLevelRowGrouping, Dictionary<string, GroupingDetails> groupings, int ColumnCount,
+            int TotalLevels)
         {
+            List<string> TempKey = new List<string>();
+            string TempKeyBuilder = string.Empty;
+            foreach (var column in RowGroupingColumns)
+            {
+                TempKeyBuilder += currentRow[column.Data];
+                TempKey.Add("H_" + TempKeyBuilder);
+            }
+
             string str = string.Empty;
             var _Colcount = ColumnCount;
             for (int j = CurrentLevel-1; j < TotalLevels; j++)
             {
-                HeaderGroupingDetails HeaderObject = new HeaderGroupingDetails();
+                //HeaderGroupingDetails HeaderObject = 
                 str = "<tr class='group' group='" + (j+1) + "'>";
                 for (int itr = 0; itr < j+1; itr++)
                     str += "<td> &nbsp;</td>";
@@ -778,12 +814,12 @@ namespace ExpressBase.ServiceStack
                     str += tempstr;
                 }
 
-                HeaderObject.Html = str;
-                HeaderObject.InsertionType = "Before";
-                HeaderObject.RowIndex = RowIndex;
-                HeaderObject.CurrentLevel = j + 1;
-                HeaderObject.GroupingTexts = new List<string>(GroupingTexts);
-                groupings.Add(HeaderObject);
+                groupings[TempKey[j]].Html = str;
+                groupings[TempKey[j]].InsertionType = "Before";
+                groupings[TempKey[j]].RowIndex = RowIndex;
+                groupings[TempKey[j]].CurrentLevel = j + 1;
+                (groupings[TempKey[j]] as HeaderGroupingDetails).GroupingTexts = new List<string>(GroupingTexts);
+                //groupings.Add(TempKey[j], HeaderObject);
             }
 
             return str;
@@ -794,7 +830,9 @@ namespace ExpressBase.ServiceStack
             return GroupingObject.Html + ": " + GroupingObject.GroupingCount + "</tr>";
         }
 
-        public string GetFooter(FooterGroupingDetails FooterObject, EbDataVisualization Visualization, CultureInfo Culture, int ColumnsCount, int TotalLevels, int CurrentLevel, string FooterText="")
+        public string GetFooter(FooterGroupingDetails FooterObject, EbDataVisualization Visualization,
+            CultureInfo Culture, int ColumnsCount, int TotalLevels, int CurrentLevel,
+            string FooterText="")
         {
             string RowFooter = string.Empty;
             RowFooter += "<tr class='group-sum' group=" + CurrentLevel + ">";
