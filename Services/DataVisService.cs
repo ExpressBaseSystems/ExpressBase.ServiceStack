@@ -672,7 +672,6 @@ namespace ExpressBase.ServiceStack
                 {
                     GroupingCount = 1;
                     RowIndex = i;
-                    if(IsMultiLevelRowGrouping)
                     
                     if (i > 0)
                     {
@@ -680,11 +679,13 @@ namespace ExpressBase.ServiceStack
                         CurrentLevel = GetCurrentLevel(TempGroupingText, PreviousGroupingText, false);
                         foreach (var TempGroupingKey in TempRowGroupingKeys)
                         {
-                            RowGrouping["H_" + TempGroupingKey].Html = UpdateHeader(RowGrouping["H_" + TempGroupingKey], TotalLevels, IsMultiLevelRowGrouping);
+                            RowGrouping["H_" + TempGroupingKey].Html = 
+                                    UpdateHeader(RowGrouping["H_" + TempGroupingKey], TotalLevels, 
+                                    IsMultiLevelRowGrouping);
                         }
                         DrawFooter(previousRow, AggregateColumnIndexes, RowGrouping, Visualization, Culture, 
                             BeforeText, TotalLevels, TotalColumnCount, CurrentLevel, i);
-                        finalHeaderIndex = RowGrouping.Count - 1;
+                            finalHeaderIndex = RowGrouping.Count - 1;
                     }
 
                     if (i < Table.Rows.Count - 1)
@@ -702,6 +703,13 @@ namespace ExpressBase.ServiceStack
                     foreach (var TempGroupingKey in TempRowGroupingKeys)
                     {
                         RowGrouping["H_" + TempGroupingKey].GroupingCount++;
+                        foreach(var index in AggregateColumnIndexes)
+                        {
+                            (RowGrouping["F_" + TempGroupingKey] as FooterGroupingDetails).Aggregations[index].SetValue(Convert.ToDouble(currentRow[index]));
+                        }
+                        
+
+
                         if (i == Table.Rows.Count - 1)
                         {
                             CurrentLevel = GetCurrentLevel(TempGroupingText, PreviousGroupingText, true);
