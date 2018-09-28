@@ -643,12 +643,13 @@ namespace ExpressBase.ServiceStack
 
             string PreviousGroupingText = string.Empty;
             
-            int CurrentLevel = 1;
+            int CurrentLevel = 0;
             int GroupingCount = 1;
             int RowIndex = 0;
             List<string> GroupingTexts = new List<string>();
             EbDataRow previousRow = new EbDataRow();
             int previousLevel = 0;
+            int CurrentSortIndex = 0;
 
             for (int i = 0; i < Table.Rows.Count; i++)
             {
@@ -675,14 +676,21 @@ namespace ExpressBase.ServiceStack
                     
                     if (i > 0)
                     {
+                        if(GroupingTexts[0].Contains("ABDULLA"))
+                        {
+                            Console.WriteLine("Found match 2");
+                        }
                         List<string> TempRowGroupingKeys = CreateRowGroupingKeys(previousRow, RowGroupingColumns);
-                        CurrentLevel = GetCurrentLevel(TempGroupingText, PreviousGroupingText, false);
+                        CurrentLevel = GetCurrentLevel(TempGroupingText, PreviousGroupingText, false, i, TotalLevels);
                         foreach (var TempGroupingKey in TempRowGroupingKeys)
                         {
                             RowGrouping["H_" + TempGroupingKey].Html = 
-                                    UpdateHeader(RowGrouping["H_" + TempGroupingKey], TotalLevels, 
+                                    UpdateHeader(RowGrouping["H_" + TempGroupingKey], TotalLevels + 1, 
                                     IsMultiLevelRowGrouping);
                         }
+                        //UpdateSortIndex(previousRow, RowGroupingColumns, ref CurrentSortIndex, ref RowGrouping, TotalLevels);
+                        if(CurrentLevel == 0)
+                            ForcePushFirstLevelFooter(PreviousGroupingText, AggregateColumnIndexes, ref RowGrouping);
                         DrawFooter(previousRow, AggregateColumnIndexes, RowGrouping, Visualization, Culture, 
                             BeforeText, TotalLevels, TotalColumnCount, CurrentLevel, i);
                             finalHeaderIndex = RowGrouping.Count - 1;
@@ -690,7 +698,7 @@ namespace ExpressBase.ServiceStack
 
                     if (i < Table.Rows.Count - 1)
                     {
-                        CreateHeaderAndFooterPairs(currentRow, AggregateColumnIndexes,
+                        CreateHeaderAndFooterPairs(currentRow, ref CurrentSortIndex, AggregateColumnIndexes,
                             RowGroupingColumns, RowGrouping, CurrentLevel, TotalLevels);
                         DrawHeader(currentRow, GroupingTexts, GroupingCount, RowIndex,
                             CurrentLevel, BeforeText, RowGroupingColumns, IsMultiLevelRowGrouping,
@@ -705,15 +713,15 @@ namespace ExpressBase.ServiceStack
                         RowGrouping["H_" + TempGroupingKey].GroupingCount++;
                         foreach(var index in AggregateColumnIndexes)
                         {
-                            (RowGrouping["F_" + TempGroupingKey] as FooterGroupingDetails).Aggregations[index].SetValue(Convert.ToDouble(currentRow[index]));
+                            (RowGrouping["F_" + TempGroupingKey] as FooterGroupingDetails).Aggregations[index].SetValue(Convert.ToDecimal(currentRow[index]));
                         }
                         
-
-
                         if (i == Table.Rows.Count - 1)
                         {
-                            CurrentLevel = GetCurrentLevel(TempGroupingText, PreviousGroupingText, true);
-                            RowGrouping["H_" + TempGroupingKey].Html = UpdateHeader(RowGrouping["H_" + TempGroupingKey], TotalLevels, IsMultiLevelRowGrouping);
+                            CurrentLevel = GetCurrentLevel(TempGroupingText, PreviousGroupingText, true, i, TotalLevels);
+                            RowGrouping["H_" + TempGroupingKey].Html = UpdateHeader(RowGrouping["H_" + TempGroupingKey], TotalLevels + 1, IsMultiLevelRowGrouping);
+                            if (CurrentLevel == 0)
+                                ForcePushFirstLevelFooter(PreviousGroupingText, AggregateColumnIndexes, ref RowGrouping);
                             DrawFooter(currentRow, AggregateColumnIndexes, RowGrouping, Visualization, 
                                 Culture, AfterText, TotalLevels, TotalColumnCount, CurrentLevel, i);
                         }
@@ -724,33 +732,74 @@ namespace ExpressBase.ServiceStack
                 previousRow = currentRow;
                 previousLevel = CurrentLevel;
             }
-            List<GroupingDetails> ResultGrouping = RowGrouping.Values.ToList();
-            ResultGrouping.Sort();
-            return ResultGrouping;
+            //List<GroupingDetails> ResultGrouping = RowGrouping.Values.ToList();
+            //ResultGrouping.Sort();
+            return RowGrouping.Values.ToList();
         }
 
-        
+        private void ForcePushFirstLevelFooter(string PreviousGroupingText, List<int> AggregateIndexes, ref Dictionary<string, GroupingDetails> RowGrouping)
+        {
+            string FooterKey = string.Empty;
 
-        private void CreateHeaderAndFooterPairs(EbDataRow CurrentRow, List<int> AggregateIndexes, 
+            FooterKey = "F_" + PreviousGroupingText.Split(":-:")[0];
+            if(!RowGrouping.ContainsKey(FooterKey))
+                RowGrouping.Add(FooterKey, new FooterGroupingDetails(AggregateIndexes));
+        }
+
+        //private void UpdateSortIndex(EbDataRow CurrentRow, List<DVBaseColumn> RowGroupingColumns, ref int CurrentSortIndex, ref Dictionary<string, GroupingDetails> RowGrouping, int TotalLevels)
+        //{
+        //    List<string> TempKeys = CreateRowGroupingKeys(CurrentRow, RowGroupingColumns);
+        //    foreach(var _key in TempKeys)
+        //    {
+        //        GroupingDetails FooterObject = RowGrouping["F_" + _key];
+        //        if (FooterObject.CurrentLevel != TotalLevels)
+        //        {
+        //            CurrentSortIndex = FooterObject.SortIndex + ((TotalLevels - FooterObject.CurrentLevel) * 
+        //                (2*((FooterObject.LevelCount==1)?FooterObject.LevelCount+1:FooterObject.LevelCount)));
+        //            FooterObject.SortIndex = CurrentSortIndex;
+
+        //        }
+        //        else
+        //            continue;
+        //    }
+        //}
+
+        private void CreateHeaderAndFooterPairs(EbDataRow CurrentRow, ref int CurrentSortIndex, List<int> AggregateIndexes, 
             List<DVBaseColumn> RowGroupingColumns, Dictionary<string, GroupingDetails> RowGrouping, 
             int CurrentLevel, int TotalLevels)
         {
             List<string> TempKey = CreateRowGroupingKeys(CurrentRow, RowGroupingColumns);
 
-            for (int j = CurrentLevel - 1; j < TotalLevels; j++)
+            for (int j = 0; j < TotalLevels; j++)
             {
-                RowGrouping.Add("H_" + TempKey[j], new HeaderGroupingDetails());
-                RowGrouping["H_" + TempKey[j]].SortIndex = RowGrouping.Count;
-                RowGrouping["H_" + TempKey[j]].GroupingCount++;
-                //if (TotalLevels > 1)
-                RowGrouping["H_" + TempKey[j]].LevelCount++;
+                if (!RowGrouping.ContainsKey("H_" + TempKey[j]))
+                {
+                    RowGrouping.Add("H_" + TempKey[j], new HeaderGroupingDetails());
+                    RowGrouping["H_" + TempKey[j]].SortIndex = ++CurrentSortIndex;
+                    RowGrouping["H_" + TempKey[j]].GroupingCount++;
+                    RowGrouping["H_" + TempKey[j]].LevelCount++;
+                    RowGrouping["H_" + TempKey[j]].CurrentLevel = CurrentLevel;
+                }
             }
 
-            for (int j = TotalLevels; j >= CurrentLevel; j--)
+            //int IncludeCheck = -1;
+            //for (int j = TotalLevels; j >= TotalLevels - CurrentLevel + 1; j--)
+            //{
+            //    IncludeCheck = -1;
+            //    if (RowGrouping.Keys.Contains("H_"+TempKey[j-1]))
+            //        if(RowGrouping["H_" + TempKey[j - 1]].CurrentLevel)
+            if (CurrentLevel == 0)
             {
-                RowGrouping.Add("F_" + TempKey[j - 1], new FooterGroupingDetails(AggregateIndexes));
-                RowGrouping["F_" + TempKey[j - 1]].SortIndex = RowGrouping.Count;
+                RowGrouping.Add("F_" + TempKey[CurrentLevel+1], new FooterGroupingDetails(AggregateIndexes));
+                RowGrouping["F_" + TempKey[CurrentLevel+1]].SortIndex = ++CurrentSortIndex;
             }
+            else
+            {
+                RowGrouping.Add("F_" + TempKey[CurrentLevel], new FooterGroupingDetails(AggregateIndexes));
+                RowGrouping["F_" + TempKey[CurrentLevel]].SortIndex = ++CurrentSortIndex;
+            }
+
+            //}
         }
 
         private static List<string> CreateRowGroupingKeys(EbDataRow CurrentRow, List<DVBaseColumn> RowGroupingColumns)
@@ -775,25 +824,26 @@ namespace ExpressBase.ServiceStack
                 TempKey.Add("F_" + TempKeyBuilder);
             }
 
-            for (int j = TotalLevels; j >= CurrentLevel; j--)
+            for (int j = TotalLevels - 1; j >= CurrentLevel; j--)
             {
-                //FooterGroupingDetails FooterObject = new FooterGroupingDetails(AggregateColumnIndexes);
-                var FooterObject = (RowGrouping[TempKey[j - 1]] as FooterGroupingDetails);
-                foreach (int columnKey in FooterObject.Aggregations.Keys)
+                if (RowGrouping.Keys.Contains(TempKey[j]))
                 {
-                    FooterObject.Aggregations[columnKey].SetValue(Convert.ToDouble(currentRow[columnKey]));
-                }
+                    var FooterObject = (RowGrouping[TempKey[j]] as FooterGroupingDetails);
+                    foreach (int columnKey in FooterObject.Aggregations.Keys)
+                    {
+                        FooterObject.Aggregations[columnKey].SetValue(Convert.ToDecimal(currentRow[columnKey]));
+                    }
 
-                string HtmlTemp = GetFooter(FooterObject, Visualization, Culture, TotalColumnCount, 
-                    TotalLevels, j);
-                FooterObject.Html = HtmlTemp;
-                FooterObject.InsertionType = Text;
-                FooterObject.RowIndex = TableRowIndex;
-                //.Html = HtmlTemp;//(TempKey[j - 1], FooterObject);
+                    string HtmlTemp = GetFooter(FooterObject, Visualization, Culture, TotalColumnCount,
+                        TotalLevels, j);
+                    FooterObject.Html = HtmlTemp;
+                    FooterObject.InsertionType = Text;
+                    FooterObject.RowIndex = TableRowIndex;
+                }
             }
         }
 
-        public int GetCurrentLevel(string CurrentString, string PreviousString, bool isEnd)
+        public int GetCurrentLevel(string CurrentString, string PreviousString, bool isEnd, int currentRowIndex, int totalLevels)
         {
             if (!isEnd)
             {
@@ -801,15 +851,15 @@ namespace ExpressBase.ServiceStack
                 string[] PreviousSplit = PreviousString.Split(":-:");
                 if (CurrentSplit.Length == PreviousSplit.Length)
                 {
-                    for (int i = 1; i <= CurrentSplit.Length; i++)
+                    for (int i = 0; i < CurrentSplit.Length; i++)
                     {
-                        if (!CurrentSplit[i - 1].Equals(PreviousSplit[i - 1]))
+                        if (!CurrentSplit[i].Equals(PreviousSplit[i]))
                             return i;
                     }
                 }
             }
 
-            return 1;
+            return (currentRowIndex == 0) ? totalLevels - 1 : 0;
         }
 
         public string DrawHeader(EbDataRow currentRow, List<string> GroupingTexts, int GroupingCount, 
@@ -827,7 +877,7 @@ namespace ExpressBase.ServiceStack
 
             string str = string.Empty;
             var _Colcount = ColumnCount;
-            for (int j = CurrentLevel-1; j < TotalLevels; j++)
+            for (int j = CurrentLevel; j < TotalLevels; j++)
             {
                 //HeaderGroupingDetails HeaderObject = 
                 str = "<tr class='group' group='" + (j+1) + "'>";
