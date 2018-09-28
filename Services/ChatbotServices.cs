@@ -334,13 +334,6 @@ WHERE
             return new CreateBotFormTableResponse();
         }
 
-        public class TableColumnMeta
-        {
-            public string Name { get; set; }
-            public VendorDbType Type { get; set; }
-            public string Default { get; set; }
-        }
-
         private int CreateOrAlterTable(string tableName, List<TableColumnMeta> listNamesAndTypes)
         {
                 //checking for space in column name, table name
@@ -793,16 +786,6 @@ WHERE
 
             return res1.RefId;
         }
-
-		public InsertDataFromWebformResponse Any(InsertDataFromWebformRequest request)
-		{
-			EbObjectService myService = base.ResolveService<EbObjectService>();
-			EbObjectParticularVersionResponse formObj = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = request.RefId });
-			EbWebForm FormObj = EbSerializers.Json_Deserialize(formObj.Data[0].Json);
-
-
-			return new InsertDataFromWebformResponse();
-		}
 
 		public object Any(InsertIntoBotFormTableRequest request)
         {
