@@ -91,12 +91,12 @@ namespace ExpressBase.ServiceStack
                     if (sql.Trim() != "")
                     {
                         var curSql = tsql;
-                        if (!curSql.ToLower().Contains(":and_search"))
-                        {
-                            curSql = "SELECT * FROM (" + curSql + ") data WHERE 1=1 :and_search order by :orderby";
-                        }
-                        curSql = curSql.ReplaceAll(";", string.Empty);
-                        curSql = curSql.Replace(":and_search", _c) + ";";
+                        //if (!curSql.ToLower().Contains(":and_search"))
+                        //{
+                        //    curSql = "SELECT * FROM (" + curSql + ") data WHERE 1=1 :and_search order by :orderby";
+                        //}
+                        //curSql = curSql.ReplaceAll(";", string.Empty);
+                        //curSql = curSql.Replace(":and_search", _c) + ";";
                         var matches = Regex.Matches(curSql, @"\;\s*SELECT\s*COUNT\(\*\)\s*FROM");
                         if (matches.Count == 0)
                         {
