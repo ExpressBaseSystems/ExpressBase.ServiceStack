@@ -74,7 +74,7 @@ namespace ExpressBase.ServiceStack.Services
         {           
             EbDbCreateServices _dbService = base.ResolveService<EbDbCreateServices>();
             ConnectionManager _conService = base.ResolveService<ConnectionManager>();
-            string DbName = request.SolnId.ToString().ToLower();
+            string DbName = request.SolnUrl.ToString().ToLower();
             CreateSolutionResponse resp;
             using (var con = this.EbConnectionFactory.DataDB.GetNewConnection())
             {
@@ -84,11 +84,11 @@ namespace ExpressBase.ServiceStack.Services
                 cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("@sname", EbDbTypes.String, request.SolutionName));
                 cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("@tenant_id", EbDbTypes.Int32, request.UserId));
                 cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("@descript", EbDbTypes.String, request.Description));
-                cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("@solnid", EbDbTypes.String, request.SolnId));
+                cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("@solnid", EbDbTypes.String, request.SolnUrl));
 
-                resp =  new CreateSolutionResponse { Solnid = Convert.ToInt32(cmd.ExecuteScalar()) };
+                resp =  new CreateSolutionResponse { Status = Convert.ToInt32(cmd.ExecuteScalar()) };
             }
-            if(resp.Solnid > 0) {
+            if(resp.Status > 0) {
 
                 EbDbCreateResponse response =(EbDbCreateResponse)_dbService.Post(new EbDbCreateRequest { dbName = DbName,SolnId = request.SolnId ,UserId = request.UserId, Idbcon = this.EbConnectionFactory.DataDB, ischange = false  });
                 if (response.resp)
