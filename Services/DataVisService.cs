@@ -678,27 +678,13 @@ namespace ExpressBase.ServiceStack
                             CurrentLevel = GetCurrentLevel(TempGroupingText, PreviousGroupingText, false, i, TotalLevels, IsMultiLevelRowGrouping);
                         else
                             CurrentLevel = 1;
-                        if (IsMultiLevelRowGrouping)
+                        foreach (var TempGroupingKey in TempRowGroupingKeys)
                         {
-                            foreach (var TempGroupingKey in TempRowGroupingKeys)
-                            {
-                                if (RowGrouping.ContainsKey("H_" + TempGroupingKey) && (CurrentLevel==0 || (RowGrouping.ContainsKey("H_" + GroupingTexts[0]) && TempGroupingKey.Equals(GroupingTexts[0]))))
-                                    RowGrouping["H_" + TempGroupingKey].Html =
-                                        UpdateHeader(currentRow, RowGrouping["H_" + TempGroupingKey], TotalLevels + 1,
-                                        IsMultiLevelRowGrouping, GroupingTexts, GroupingCount, RowIndex, CurrentLevel,
-                                        BeforeText, RowGroupingColumns, IsMultiLevelRowGrouping, RowGrouping, TotalColumnCount);
-                            }
-                        }
-                        else
-                        {
-                            foreach (var TempGroupingKey in TempRowGroupingKeys)
-                            {
-                                if (RowGrouping.ContainsKey("H_" + TempGroupingKey))
-                                    RowGrouping["H_" + TempGroupingKey].Html =
-                                        UpdateHeader(currentRow, RowGrouping["H_" + TempGroupingKey], TotalLevels + 1,
-                                        IsMultiLevelRowGrouping, GroupingTexts, GroupingCount, RowIndex, CurrentLevel,
-                                        BeforeText, RowGroupingColumns, IsMultiLevelRowGrouping, RowGrouping, TotalColumnCount);
-                            }
+                            if (RowGrouping.ContainsKey("H_" + TempGroupingKey))
+                                RowGrouping["H_" + TempGroupingKey].Html =
+                                    UpdateHeader(currentRow, RowGrouping["H_" + TempGroupingKey], TotalLevels + 1,
+                                    IsMultiLevelRowGrouping, GroupingTexts, GroupingCount, RowIndex, CurrentLevel,
+                                    BeforeText, RowGroupingColumns, IsMultiLevelRowGrouping, RowGrouping, TotalColumnCount);
                         }
 
                         if (CurrentLevel == 0)
@@ -829,16 +815,7 @@ namespace ExpressBase.ServiceStack
                     if (!RowGrouping.ContainsKey("H_" + TempKey[j]))
                     {
                         RowGrouping.Add("H_" + TempKey[j], new HeaderGroupingDetails());
-                        RowGrouping["H_" + TempKey[j]].SortIndex = ++CurrentSortIndex;
                         RowGrouping["H_" + TempKey[j]].GroupingCount++;
-                        //RowGrouping["H_" + TempKey[j]].LevelCount++;
-                        //for(int itr=0;itr<=j;itr++)
-                        //{
-                        //    if(RowGrouping.ContainsKey("H_" + TempKey[itr]))
-                        //    {
-                        //        RowGrouping["H_" + TempKey[itr]].LevelCount++;
-                        //    }
-                        //}
                         RowGrouping["H_" + TempKey[j]].CurrentLevel = CurrentLevel;
                     }
                 }
@@ -846,21 +823,17 @@ namespace ExpressBase.ServiceStack
                 if (CurrentLevel == 0)
                 {
                     RowGrouping.Add("F_" + TempKey[CurrentLevel + 1], new FooterGroupingDetails(AggregateIndexes));
-                    RowGrouping["F_" + TempKey[CurrentLevel + 1]].SortIndex = ++CurrentSortIndex;
                 }
                 else
                 {
                     RowGrouping.Add("F_" + TempKey[CurrentLevel], new FooterGroupingDetails(AggregateIndexes));
-                    RowGrouping["F_" + TempKey[CurrentLevel]].SortIndex = ++CurrentSortIndex;
                 }
             }
             else
             {
                 RowGrouping.Add("H_" + TempKey[0], new HeaderGroupingDetails());
-                RowGrouping["H_" + TempKey[0]].SortIndex = ++CurrentSortIndex;
                 RowGrouping["H_" + TempKey[0]].GroupingCount++;
                 RowGrouping.Add("F_" + TempKey[0], new FooterGroupingDetails(AggregateIndexes));
-                RowGrouping["F_" + TempKey[0]].SortIndex = ++CurrentSortIndex;
             }
         }
 
@@ -1056,67 +1029,6 @@ namespace ExpressBase.ServiceStack
             int RowIndex, int CurrentLevel, string InsertionType, List<DVBaseColumn> RowGroupingColumns,
             bool IsMultiLevelRowGrouping, Dictionary<string, GroupingDetails> groupings, int ColumnCount)
         {
-            //List<string> TempKey = new List<string>();
-            //string TempKeyBuilder = string.Empty;
-
-            //if (IsMultiLevelGrouping)
-            //{
-            //    foreach (var column in RowGroupingColumns)
-            //    {
-            //        TempKeyBuilder += currentRow[column.Data];
-            //        TempKey.Add("H_" + TempKeyBuilder);
-            //    }
-            //}
-            //else
-            //{
-            //    foreach (var column in RowGroupingColumns)
-            //    {
-            //        TempKeyBuilder += currentRow[column.Data];
-            //    }
-            //    TempKey.Add("H_" + TempKeyBuilder);
-            //}
-
-            //string str = string.Empty;
-            //var _Colcount = ColumnCount;
-
-            //if (IsMultiLevelRowGrouping)
-            //{
-            //    for (int j = CurrentLevel; j < TotalLevels; j++)
-            //    {
-            //        str = "<tr class='group' group='" + (j + 1) + "'>";
-            //        for (int itr = 0; itr < j + 1; itr++)
-            //            str += "<td> &nbsp;</td>";
-            //        str += "<td><i class='fa fa-minus-square-o' style='cursor:pointer;'></i></td><td colspan=" + _Colcount + ">";
-            //        str += GroupingTexts[j];
-            //        //groupings[TempKey[j]].LevelCount++;
-
-            //        groupings[TempKey[j]].Html = str;
-            //        groupings[TempKey[j]].InsertionType = "Before";
-            //        groupings[TempKey[j]].RowIndex = RowIndex;
-            //        groupings[TempKey[j]].CurrentLevel = j + 1;
-            //        (groupings[TempKey[j]] as HeaderGroupingDetails).GroupingTexts = new List<string>(GroupingTexts);
-            //    }
-            //}
-            //else
-            //{
-            //    for (int j = (CurrentLevel == 0) ? CurrentLevel : CurrentLevel - 1; j <= TotalLevels && TempKey.IndexOf(TempKey.Last()) >= j; j++)
-            //    {
-            //        str = "<tr class='group' group='" + (j + 1) + "'>";
-            //        for (int itr = 0; itr < j + 1; itr++)
-            //            str += "<td> &nbsp;</td>";
-            //        str += "<td><i class='fa fa-minus-square-o' style='cursor:pointer;'></i></td><td colspan=" + _Colcount + ">";
-
-            //        string tempstr = string.Empty;
-            //        foreach (string groupString in GroupingTexts)
-            //        {
-            //            tempstr += groupString;
-            //            if (groupString.Equals(GroupingTexts.Last()) == false)
-            //                tempstr += " - ";
-            //        }
-            //        str += tempstr;
-            //    }
-            //}
-
                     string ret = GroupingObject.Html + ": " + ((IsMultiLevelGrouping)? ((GroupingObject.CurrentLevel==TotalLevels-1)?GroupingObject.GroupingCount:GroupingObject.LevelCount+1): GroupingObject.GroupingCount).ToString() + "</td></tr>";
             return ret;
         }
@@ -1150,403 +1062,403 @@ namespace ExpressBase.ServiceStack
             return RowFooter + "</tr>";
         }
 
-        public LevelInfoCollection GetGroupInfoSingleLevel(EbDataTable _table, EbDataVisualization _dv, CultureInfo _user_culture)
-        {
-            RowGroupParent _currentGroup = (_dv as EbTableVisualization).CurrentRowGroup;
-            Dictionary<int, string> _dict = new Dictionary<int, string>();
-            var Colcount = _dv.Columns.Count;
-            List<string> groupList = new List<string>();
-            LevelInfoCollection _levels = new LevelInfoCollection();
-            Dictionary<int, double> IntIndex = new Dictionary<int, double>();
+        //public LevelInfoCollection GetGroupInfoSingleLevel(EbDataTable _table, EbDataVisualization _dv, CultureInfo _user_culture)
+        //{
+        //    RowGroupParent _currentGroup = (_dv as EbTableVisualization).CurrentRowGroup;
+        //    Dictionary<int, string> _dict = new Dictionary<int, string>();
+        //    var Colcount = _dv.Columns.Count;
+        //    List<string> groupList = new List<string>();
+        //    LevelInfoCollection _levels = new LevelInfoCollection();
+        //    Dictionary<int, double> IntIndex = new Dictionary<int, double>();
 
-            foreach (DVBaseColumn col in _dv.Columns)
-            {
-                if (col.Type == EbDbTypes.Int32 || col.Type == EbDbTypes.Int64 || col.Type == EbDbTypes.Decimal || col.Type == EbDbTypes.Int16)
-                    IntIndex.Add(col.Data, 0);
-            }
+        //    foreach (DVBaseColumn col in _dv.Columns)
+        //    {
+        //        if (col.Type == EbDbTypes.Int32 || col.Type == EbDbTypes.Int64 || col.Type == EbDbTypes.Decimal || col.Type == EbDbTypes.Int16)
+        //            IntIndex.Add(col.Data, 0);
+        //    }
 
-            string _last = null;
-            int _savedindex = 0;
-            int _lastrow = 0;
-            int count = 0;
-            for (int i = 0; i < _table.Rows.Count; i++, count++)
-            {
-                string _new_colData = string.Empty;
-                groupList.Clear();
-                foreach (DVBaseColumn col in _currentGroup.RowGrouping)
-                {
-                    groupList.Add((_table.Rows[i][col.Data].ToString().Trim() == "") ? "(Blank)" : _table.Rows[i][col.Data].ToString().Trim());
-                    _new_colData += (_table.Rows[i][col.Data].ToString().Trim() == "") ? "(Blank)" : _table.Rows[i][col.Data].ToString().Trim();
-                }
+        //    string _last = null;
+        //    int _savedindex = 0;
+        //    int _lastrow = 0;
+        //    int count = 0;
+        //    for (int i = 0; i < _table.Rows.Count; i++, count++)
+        //    {
+        //        string _new_colData = string.Empty;
+        //        groupList.Clear();
+        //        foreach (DVBaseColumn col in _currentGroup.RowGrouping)
+        //        {
+        //            groupList.Add((_table.Rows[i][col.Data].ToString().Trim() == "") ? "(Blank)" : _table.Rows[i][col.Data].ToString().Trim());
+        //            _new_colData += (_table.Rows[i][col.Data].ToString().Trim() == "") ? "(Blank)" : _table.Rows[i][col.Data].ToString().Trim();
+        //        }
 
-                if (_new_colData.Trim() != _last) // new group
-                {
-                    LevelInfo _lvl = _levels.Update(_savedindex, count,1);
-                    if (_lvl != null)
-                    {
-                        UpdateHeaderHtml(_lvl, 1, 1);
-                        _levels.Add(new LevelInfo()
-                        {
-                            Level = 1,
-                            RowIndex = i,
-                            GroupString = GetFooterHtml(IntIndex, _dv, _user_culture)
-                        });
-                    }
+        //        if (_new_colData.Trim() != _last) // new group
+        //        {
+        //            LevelInfo _lvl = _levels.Update(_savedindex, count,1);
+        //            if (_lvl != null)
+        //            {
+        //                UpdateHeaderHtml(_lvl, 1, 1);
+        //                _levels.Add(new LevelInfo()
+        //                {
+        //                    Level = 1,
+        //                    RowIndex = i,
+        //                    GroupString = GetFooterHtml(IntIndex, _dv, _user_culture)
+        //                });
+        //            }
 
-                    count = 0;
+        //            count = 0;
 
-                    _levels.Add(new LevelInfo()
-                    {
-                        Level = 1,
-                        RowIndex = i,
-                        GroupString = GetHeaderHtml(_new_colData, Colcount, 1, null, _currentGroup, groupList),
-                        Count = count
-                    });
+        //            _levels.Add(new LevelInfo()
+        //            {
+        //                Level = 1,
+        //                RowIndex = i,
+        //                GroupString = GetHeaderHtml(_new_colData, Colcount, 1, null, _currentGroup, groupList),
+        //                Count = count
+        //            });
 
-                    var IntegerKeys = IntIndex.Keys.ToList<int>();
+        //            var IntegerKeys = IntIndex.Keys.ToList<int>();
 
-                    foreach (var Key in IntegerKeys)
-                    {
-                        IntIndex[Key] = Convert.ToDouble(_table.Rows[i][Key]);
-                    }
-                }
-                else //same group
-                {
-                    var IntegerKeys = IntIndex.Keys.ToList<int>();
+        //            foreach (var Key in IntegerKeys)
+        //            {
+        //                IntIndex[Key] = Convert.ToDouble(_table.Rows[i][Key]);
+        //            }
+        //        }
+        //        else //same group
+        //        {
+        //            var IntegerKeys = IntIndex.Keys.ToList<int>();
 
-                    foreach (var Key in IntegerKeys)
-                    {
-                        IntIndex[Key] += Convert.ToDouble(_table.Rows[i][Key]);
-                    }
-                }
+        //            foreach (var Key in IntegerKeys)
+        //            {
+        //                IntIndex[Key] += Convert.ToDouble(_table.Rows[i][Key]);
+        //            }
+        //        }
 
-                _last = _new_colData;
-                _lastrow = i;
-                if (count == 0)
-                    _savedindex = i;
-            }
+        //        _last = _new_colData;
+        //        _lastrow = i;
+        //        if (count == 0)
+        //            _savedindex = i;
+        //    }
 
-            LevelInfo _lastlvl = _levels.Update(_savedindex, count, 1);
-            if (_lastlvl != null)
-            {
-                UpdateHeaderHtml(_lastlvl, 1, 1);
-                _levels.Add(new LevelInfo()
-                {
-                    RowIndex = _lastrow,
-                    GroupString = GetFooterHtml(IntIndex, _dv, _user_culture),
-                    Type = "After"
-                });
-            }
+        //    LevelInfo _lastlvl = _levels.Update(_savedindex, count, 1);
+        //    if (_lastlvl != null)
+        //    {
+        //        UpdateHeaderHtml(_lastlvl, 1, 1);
+        //        _levels.Add(new LevelInfo()
+        //        {
+        //            RowIndex = _lastrow,
+        //            GroupString = GetFooterHtml(IntIndex, _dv, _user_culture),
+        //            Type = "After"
+        //        });
+        //    }
 
-            return _levels;
-        }
+        //    return _levels;
+        //}
 
-        public LevelInfoCollection GetGroupInfoMultiLevel(EbDataTable _table, EbDataVisualization _dv,CultureInfo _user_culture)
-        {
-            RowGroupParent _currentGroup = (_dv as EbTableVisualization).CurrentRowGroup;
-            Dictionary<int, string> _dict = new Dictionary<int, string>();
-            var Colcount = _dv.Columns.Count;
+        //public LevelInfoCollection GetGroupInfoMultiLevel(EbDataTable _table, EbDataVisualization _dv,CultureInfo _user_culture)
+        //{
+        //    RowGroupParent _currentGroup = (_dv as EbTableVisualization).CurrentRowGroup;
+        //    Dictionary<int, string> _dict = new Dictionary<int, string>();
+        //    var Colcount = _dv.Columns.Count;
 
-            int MaxLevel = _currentGroup.RowGrouping.Count;
+        //    int MaxLevel = _currentGroup.RowGrouping.Count;
 
-            LevelInfoCollection _levels = new LevelInfoCollection();
-            Dictionary<int, double> IntIndex = new Dictionary<int, double>();
+        //    LevelInfoCollection _levels = new LevelInfoCollection();
+        //    Dictionary<int, double> IntIndex = new Dictionary<int, double>();
 
-            foreach (DVBaseColumn col in _dv.Columns)
-            {
-                if (col.Type == EbDbTypes.Int32 || col.Type == EbDbTypes.Int64 || col.Type == EbDbTypes.Decimal || col.Type == EbDbTypes.Int16)
-                    IntIndex.Add(col.Data, 0);
-            }
-            LevelInfoCollection PreviousLevel = new LevelInfoCollection();
-            LevelInfoCollection CurrentLevel = new LevelInfoCollection(); 
-            string _last = null;
-            int _savedindex = 0;
-            int _lastrow = 0;
-            int count = 0;
-            int rowColCount = 0;
-            foreach (DVBaseColumn col in _currentGroup.RowGrouping)
-            {
-                rowColCount++;
-                _savedindex = 0;
-                _lastrow = 0;
-                count = 0;
-                _last = null;
-                PreviousLevel.Clear();
-                CurrentLevel.Clear();
-                for (int i = 0; i < _table.Rows.Count; i++, count++)
-                {
-                    string _new_colData = string.Empty;
+        //    foreach (DVBaseColumn col in _dv.Columns)
+        //    {
+        //        if (col.Type == EbDbTypes.Int32 || col.Type == EbDbTypes.Int64 || col.Type == EbDbTypes.Decimal || col.Type == EbDbTypes.Int16)
+        //            IntIndex.Add(col.Data, 0);
+        //    }
+        //    LevelInfoCollection PreviousLevel = new LevelInfoCollection();
+        //    LevelInfoCollection CurrentLevel = new LevelInfoCollection(); 
+        //    string _last = null;
+        //    int _savedindex = 0;
+        //    int _lastrow = 0;
+        //    int count = 0;
+        //    int rowColCount = 0;
+        //    foreach (DVBaseColumn col in _currentGroup.RowGrouping)
+        //    {
+        //        rowColCount++;
+        //        _savedindex = 0;
+        //        _lastrow = 0;
+        //        count = 0;
+        //        _last = null;
+        //        PreviousLevel.Clear();
+        //        CurrentLevel.Clear();
+        //        for (int i = 0; i < _table.Rows.Count; i++, count++)
+        //        {
+        //            string _new_colData = string.Empty;
 
-                    _new_colData += (_table.Rows[i][col.Data].ToString().Trim() == "") ? "(Blank)" : _table.Rows[i][col.Data].ToString().Trim();
+        //            _new_colData += (_table.Rows[i][col.Data].ToString().Trim() == "") ? "(Blank)" : _table.Rows[i][col.Data].ToString().Trim();
 
-                    if (_new_colData.Trim() != _last) // new group
-                    {
-                        LevelInfo _lvl = _levels.Update(_savedindex, count, rowColCount);
-                        if (_lvl != null)
-                        {
-                            UpdateHeaderHtml(_lvl, MaxLevel, rowColCount);
-                            _levels.Add(new LevelInfo()
-                            {
-                                Level = rowColCount,
-                                RowIndex = i-1,
-                                GroupString = GetFooterHtml(IntIndex, _dv, _user_culture, rowColCount),
-                                Type = "After",
-                            });
-                        }
+        //            if (_new_colData.Trim() != _last) // new group
+        //            {
+        //                LevelInfo _lvl = _levels.Update(_savedindex, count, rowColCount);
+        //                if (_lvl != null)
+        //                {
+        //                    UpdateHeaderHtml(_lvl, MaxLevel, rowColCount);
+        //                    _levels.Add(new LevelInfo()
+        //                    {
+        //                        Level = rowColCount,
+        //                        RowIndex = i-1,
+        //                        GroupString = GetFooterHtml(IntIndex, _dv, _user_culture, rowColCount),
+        //                        Type = "After",
+        //                    });
+        //                }
 
-                        count = 0;
+        //                count = 0;
 
-                        _levels.Add(new LevelInfo()
-                        {
-                            Level = rowColCount,
-                            RowIndex = i,
-                            GroupString = GetHeaderHtml(_new_colData, Colcount, rowColCount, col, null),
-                            Count = count,
-                            LevelText = _new_colData
-                        });
+        //                _levels.Add(new LevelInfo()
+        //                {
+        //                    Level = rowColCount,
+        //                    RowIndex = i,
+        //                    GroupString = GetHeaderHtml(_new_colData, Colcount, rowColCount, col, null),
+        //                    Count = count,
+        //                    LevelText = _new_colData
+        //                });
 
-                        CurrentLevel.Add(new LevelInfo()
-                        {
-                            Level = rowColCount,
-                            RowIndex = i,
-                            GroupString = GetHeaderHtml(_new_colData, Colcount, rowColCount, col, null),
-                            Count = count,
-                            LevelText = _new_colData
-                        });
+        //                CurrentLevel.Add(new LevelInfo()
+        //                {
+        //                    Level = rowColCount,
+        //                    RowIndex = i,
+        //                    GroupString = GetHeaderHtml(_new_colData, Colcount, rowColCount, col, null),
+        //                    Count = count,
+        //                    LevelText = _new_colData
+        //                });
 
-                        var IntegerKeys = IntIndex.Keys.ToList<int>();
+        //                var IntegerKeys = IntIndex.Keys.ToList<int>();
 
-                        foreach (var Key in IntegerKeys)
-                        {
-                            IntIndex[Key] = Convert.ToDouble(_table.Rows[i][Key]);
-                        }
-                    }
-                    else //same group
-                    {
-                        int inx = (i == 1) ? 0 : i; 
-                        LevelInfo Pre_lvl = _levels.PreviousLevelCheck(inx, rowColCount-1);
-                        LevelInfo Cur_lvl = null;
-                        if (rowColCount > 1)
-                             Cur_lvl = _levels.CurrentLevelDataCheck(rowColCount, _new_colData);
+        //                foreach (var Key in IntegerKeys)
+        //                {
+        //                    IntIndex[Key] = Convert.ToDouble(_table.Rows[i][Key]);
+        //                }
+        //            }
+        //            else //same group
+        //            {
+        //                int inx = (i == 1) ? 0 : i; 
+        //                LevelInfo Pre_lvl = _levels.PreviousLevelCheck(inx, rowColCount-1);
+        //                LevelInfo Cur_lvl = null;
+        //                if (rowColCount > 1)
+        //                     Cur_lvl = _levels.CurrentLevelDataCheck(rowColCount, _new_colData);
 
-                        if (Pre_lvl != null)
-                         PreviousLevel.Add(Pre_lvl);
-                        if (Cur_lvl != null)
-                            CurrentLevel.Add(Cur_lvl);
+        //                if (Pre_lvl != null)
+        //                 PreviousLevel.Add(Pre_lvl);
+        //                if (Cur_lvl != null)
+        //                    CurrentLevel.Add(Cur_lvl);
 
-                        if (PreviousLevel.Count == 2 && CurrentLevel.Count == 1)
-                        {
-                            //if (_savedindex != 0)
-                            //    count--;
-                            //else
-                            //    count--;
-                            LevelInfo _lvl = _levels.Update(_savedindex, count, rowColCount);
-                            //if(_lvl != null)
-                            //{
-                            UpdateHeaderHtml(_lvl, MaxLevel, rowColCount);
-                            //}
-                            PreviousLevel.RemoveAt(0);
-                            CurrentLevel.RemoveAt(0);
-                            _levels.Add(new LevelInfo()
-                            {
-                                Level = rowColCount,
-                                RowIndex = i - 1,
-                                GroupString = GetFooterHtml(IntIndex, _dv, _user_culture, rowColCount),
-                                Type = "After",
-                            });
-                            count = 0;
-                            _levels.Add(new LevelInfo()
-                            {
-                                Level = rowColCount,
-                                RowIndex = i,
-                                GroupString = GetHeaderHtml(_new_colData, Colcount, rowColCount, col, null),
-                                Count = count,
-                                LevelText = _new_colData,
-                                Type = "Before",
-                            });
+        //                if (PreviousLevel.Count == 2 && CurrentLevel.Count == 1)
+        //                {
+        //                    //if (_savedindex != 0)
+        //                    //    count--;
+        //                    //else
+        //                    //    count--;
+        //                    LevelInfo _lvl = _levels.Update(_savedindex, count, rowColCount);
+        //                    //if(_lvl != null)
+        //                    //{
+        //                    UpdateHeaderHtml(_lvl, MaxLevel, rowColCount);
+        //                    //}
+        //                    PreviousLevel.RemoveAt(0);
+        //                    CurrentLevel.RemoveAt(0);
+        //                    _levels.Add(new LevelInfo()
+        //                    {
+        //                        Level = rowColCount,
+        //                        RowIndex = i - 1,
+        //                        GroupString = GetFooterHtml(IntIndex, _dv, _user_culture, rowColCount),
+        //                        Type = "After",
+        //                    });
+        //                    count = 0;
+        //                    _levels.Add(new LevelInfo()
+        //                    {
+        //                        Level = rowColCount,
+        //                        RowIndex = i,
+        //                        GroupString = GetHeaderHtml(_new_colData, Colcount, rowColCount, col, null),
+        //                        Count = count,
+        //                        LevelText = _new_colData,
+        //                        Type = "Before",
+        //                    });
 
-                            CurrentLevel.Add(new LevelInfo()
-                            {
-                                Level = rowColCount,
-                                RowIndex = i,
-                                GroupString = GetHeaderHtml(_new_colData, Colcount, rowColCount, col, null),
-                                Count = count,
-                                LevelText = _new_colData
-                            });
+        //                    CurrentLevel.Add(new LevelInfo()
+        //                    {
+        //                        Level = rowColCount,
+        //                        RowIndex = i,
+        //                        GroupString = GetHeaderHtml(_new_colData, Colcount, rowColCount, col, null),
+        //                        Count = count,
+        //                        LevelText = _new_colData
+        //                    });
 
-                            var _IntegerKeys = IntIndex.Keys.ToList<int>();
+        //                    var _IntegerKeys = IntIndex.Keys.ToList<int>();
 
-                            foreach (var Key in _IntegerKeys)
-                            {
-                                IntIndex[Key] = Convert.ToDouble(_table.Rows[i][Key]);
-                            }
-                        }
-                        else
-                        {
-                            var IntegerKeys = IntIndex.Keys.ToList<int>();
+        //                    foreach (var Key in _IntegerKeys)
+        //                    {
+        //                        IntIndex[Key] = Convert.ToDouble(_table.Rows[i][Key]);
+        //                    }
+        //                }
+        //                else
+        //                {
+        //                    var IntegerKeys = IntIndex.Keys.ToList<int>();
 
-                            foreach (var Key in IntegerKeys)
-                            {
-                                IntIndex[Key] += Convert.ToDouble(_table.Rows[i][Key]);
-                            }
-                        }
-                    }
+        //                    foreach (var Key in IntegerKeys)
+        //                    {
+        //                        IntIndex[Key] += Convert.ToDouble(_table.Rows[i][Key]);
+        //                    }
+        //                }
+        //            }
 
-                    _last = _new_colData;
-                    _lastrow = i;
-                    if (count == 0)
-                        _savedindex = i;
-                }
+        //            _last = _new_colData;
+        //            _lastrow = i;
+        //            if (count == 0)
+        //                _savedindex = i;
+        //        }
 
-                LevelInfo _lastlvl = _levels.Update(_savedindex, count, rowColCount);
-                if (_lastlvl != null)
-                {
-                    UpdateHeaderHtml(_lastlvl, MaxLevel, rowColCount);
-                    _levels.Add(new LevelInfo()
-                    {
-                        Level = rowColCount,
-                        RowIndex = _lastrow,
-                        GroupString = GetFooterHtml(IntIndex, _dv, _user_culture, rowColCount),
-                        Type = "After"
-                    });
-                }
-                if (PreviousLevel.Count == 1 && CurrentLevel.Count == 1)
-                {
-                    LevelInfo _final_lvl = _levels.Update(_savedindex, count+1, rowColCount);
-                    UpdateHeaderHtml(_final_lvl, MaxLevel, rowColCount);
-                    //_levels.Add(new LevelInfo()
-                    //{
-                    //    Level = rowColCount,
-                    //    RowIndex = _lastrow,
-                    //    GroupString = GetFooterHtml(IntIndex, _dv, _user_culture),
-                    //    Type = "After"
-                    //});
-                }
-            }
+        //        LevelInfo _lastlvl = _levels.Update(_savedindex, count, rowColCount);
+        //        if (_lastlvl != null)
+        //        {
+        //            UpdateHeaderHtml(_lastlvl, MaxLevel, rowColCount);
+        //            _levels.Add(new LevelInfo()
+        //            {
+        //                Level = rowColCount,
+        //                RowIndex = _lastrow,
+        //                GroupString = GetFooterHtml(IntIndex, _dv, _user_culture, rowColCount),
+        //                Type = "After"
+        //            });
+        //        }
+        //        if (PreviousLevel.Count == 1 && CurrentLevel.Count == 1)
+        //        {
+        //            LevelInfo _final_lvl = _levels.Update(_savedindex, count+1, rowColCount);
+        //            UpdateHeaderHtml(_final_lvl, MaxLevel, rowColCount);
+        //            //_levels.Add(new LevelInfo()
+        //            //{
+        //            //    Level = rowColCount,
+        //            //    RowIndex = _lastrow,
+        //            //    GroupString = GetFooterHtml(IntIndex, _dv, _user_culture),
+        //            //    Type = "After"
+        //            //});
+        //        }
+        //    }
 
-            //int MaxLevel = _currentGroup.RowGrouping.Count, _preLevel = 0;
-            //Dictionary<int, Dictionary<int, int>> LevelCount = new Dictionary<int, Dictionary<int, int>>();//LevelCount[Level][RowIndex][Count]
+        //    //int MaxLevel = _currentGroup.RowGrouping.Count, _preLevel = 0;
+        //    //Dictionary<int, Dictionary<int, int>> LevelCount = new Dictionary<int, Dictionary<int, int>>();//LevelCount[Level][RowIndex][Count]
 
-            //foreach (LevelInfo level in _levels)
-            //{
-            //    if (level.Level == MaxLevel)
-            //        continue;
-            //    else
-            //    {
-            //        if(LevelCount.ContainsKey(level.Level))
-            //        {
-            //            foreach(int rowIndex in LevelCount[level.Level].Keys.ToList())
-            //            {
-            //                if(rowIndex == level.RowIndex)
-            //                {
-            //                    LevelCount[level.Level][level.RowIndex] += 1;
-            //                }
-            //                else
-            //                {
-            //                    if(!LevelCount[level.Level].Keys.ToList().Contains(level.RowIndex))
-            //                    //    LevelCount[level.Level][level.RowIndex] += 1;
-            //                    //else
-            //                        LevelCount[level.Level].Add(level.RowIndex, 1);
-            //                }
-            //            }
-            //           //if(LevelCount[level.Level].Keys.ToList().Contains(level.RowIndex))
-            //           // {
-            //           //     LevelCount[level.Level][level.RowIndex] += 1;
-            //           // }
-            //           //else
-            //           // {
-            //           //     LevelCount[level.Level].Add(level.RowIndex, 1);
-            //           // }
-            //        }
-            //        else
-            //        {
-            //            LevelCount.Add(level.Level, new Dictionary<int, int>());
+        //    //foreach (LevelInfo level in _levels)
+        //    //{
+        //    //    if (level.Level == MaxLevel)
+        //    //        continue;
+        //    //    else
+        //    //    {
+        //    //        if(LevelCount.ContainsKey(level.Level))
+        //    //        {
+        //    //            foreach(int rowIndex in LevelCount[level.Level].Keys.ToList())
+        //    //            {
+        //    //                if(rowIndex == level.RowIndex)
+        //    //                {
+        //    //                    LevelCount[level.Level][level.RowIndex] += 1;
+        //    //                }
+        //    //                else
+        //    //                {
+        //    //                    if(!LevelCount[level.Level].Keys.ToList().Contains(level.RowIndex))
+        //    //                    //    LevelCount[level.Level][level.RowIndex] += 1;
+        //    //                    //else
+        //    //                        LevelCount[level.Level].Add(level.RowIndex, 1);
+        //    //                }
+        //    //            }
+        //    //           //if(LevelCount[level.Level].Keys.ToList().Contains(level.RowIndex))
+        //    //           // {
+        //    //           //     LevelCount[level.Level][level.RowIndex] += 1;
+        //    //           // }
+        //    //           //else
+        //    //           // {
+        //    //           //     LevelCount[level.Level].Add(level.RowIndex, 1);
+        //    //           // }
+        //    //        }
+        //    //        else
+        //    //        {
+        //    //            LevelCount.Add(level.Level, new Dictionary<int, int>());
 
-            //            LevelCount[level.Level].Add(level.RowIndex, 1);
-            //        }
-            //    }
-            //    _preLevel = level.Level;
-            //}
+        //    //            LevelCount[level.Level].Add(level.RowIndex, 1);
+        //    //        }
+        //    //    }
+        //    //    _preLevel = level.Level;
+        //    //}
 
-            for (int j = 0; j < _levels.Count; j += 2)
-            {
-                if (_levels[j].Level < _currentGroup.RowGrouping.Count)
-                {
-                    int r1 = _levels[j].RowIndex;
-                    int r2 = _levels[j + 1].RowIndex;
-                    _levels[j].Count = _levels.GetCount(r1, r2, (_levels[j].Level + 1));
-                    UpdateHeaderHtml(_levels[j], 1, 1);
-                }
-            }
+        //    for (int j = 0; j < _levels.Count; j += 2)
+        //    {
+        //        if (_levels[j].Level < _currentGroup.RowGrouping.Count)
+        //        {
+        //            int r1 = _levels[j].RowIndex;
+        //            int r2 = _levels[j + 1].RowIndex;
+        //            _levels[j].Count = _levels.GetCount(r1, r2, (_levels[j].Level + 1));
+        //            UpdateHeaderHtml(_levels[j], 1, 1);
+        //        }
+        //    }
 
-            return _levels;
-        }
+        //    return _levels;
+        //}
 
-        public string GetHeaderHtml(string _htmlString, int _Colcount, int level=1, DVBaseColumn col = null, RowGroupParent currentGroup = null, List<string> groupList =null)
-        {
-            var str = "<tr class='group' group='"+ level + "'>";
-            for (var i = 0; i <level; i++)
-                str += "<td> &nbsp;</td>";
-            string tempstr = string.Empty; 
+        //public string GetHeaderHtml(string _htmlString, int _Colcount, int level=1, DVBaseColumn col = null, RowGroupParent currentGroup = null, List<string> groupList =null)
+        //{
+        //    var str = "<tr class='group' group='"+ level + "'>";
+        //    for (var i = 0; i <level; i++)
+        //        str += "<td> &nbsp;</td>";
+        //    string tempstr = string.Empty; 
 
-            if (col != null)//multiple
-                tempstr = GetStringFromColumn(col, _htmlString);
-            else// single
-            {
-                int i = -1;
-                foreach (DVBaseColumn CurCol in currentGroup.RowGrouping) {
-                    i++;
-                    tempstr += GetStringFromColumn(CurCol, _htmlString, groupList[i]);
-                }
-            }
+        //    if (col != null)//multiple
+        //        tempstr = GetStringFromColumn(col, _htmlString);
+        //    else// single
+        //    {
+        //        int i = -1;
+        //        foreach (DVBaseColumn CurCol in currentGroup.RowGrouping) {
+        //            i++;
+        //            tempstr += GetStringFromColumn(CurCol, _htmlString, groupList[i]);
+        //        }
+        //    }
 
-            str += "<td><i class='fa fa-minus-square-o' style='cursor:pointer;'></i></td><td colspan=" + _Colcount + ">" + tempstr;
-            return str;
-        }
+        //    str += "<td><i class='fa fa-minus-square-o' style='cursor:pointer;'></i></td><td colspan=" + _Colcount + ">" + tempstr;
+        //    return str;
+        //}
 
-        public string GetStringFromColumn(DVBaseColumn col, string _htmlString, string currentString = null)
-        {
-            string ColumnString = string.Empty;
-            if (col.LinkRefId != null)
-                ColumnString = col.sTitle + ": <b data-rowgroup='true' data-colname='" + col.Name + "' data-coltype='" + col.Type + "+'' data-data='" + ((currentString != null) ? currentString : _htmlString) + "' ><a href = '#' oncontextmenu='return false' class='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' tabindex='0'>" + _htmlString + "</a></b>";
-            else
-                ColumnString = col.sTitle + ": <b data-rowgroup='true' data-colname='" + col.Name + "' data-coltype='" + col.Type + "' data-data='" + ((currentString != null) ? currentString : _htmlString) + "'>" + ((currentString != null) ? currentString : _htmlString) + "</b>";
+        //public string GetStringFromColumn(DVBaseColumn col, string _htmlString, string currentString = null)
+        //{
+        //    string ColumnString = string.Empty;
+        //    if (col.LinkRefId != null)
+        //        ColumnString = col.sTitle + ": <b data-rowgroup='true' data-colname='" + col.Name + "' data-coltype='" + col.Type + "+'' data-data='" + ((currentString != null) ? currentString : _htmlString) + "' ><a href = '#' oncontextmenu='return false' class='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' tabindex='0'>" + _htmlString + "</a></b>";
+        //    else
+        //        ColumnString = col.sTitle + ": <b data-rowgroup='true' data-colname='" + col.Name + "' data-coltype='" + col.Type + "' data-data='" + ((currentString != null) ? currentString : _htmlString) + "'>" + ((currentString != null) ? currentString : _htmlString) + "</b>";
 
-            return ColumnString;
-        }
+        //    return ColumnString;
+        //}
 
 
-        public void UpdateHeaderHtml(LevelInfo _level, int maxlevel, int curlevel)
-        {
-            if (maxlevel == curlevel) 
-                _level.GroupString += "(" + _level.Count + ")</td></tr>";
-        }
+        //public void UpdateHeaderHtml(LevelInfo _level, int maxlevel, int curlevel)
+        //{
+        //    if (maxlevel == curlevel) 
+        //        _level.GroupString += "(" + _level.Count + ")</td></tr>";
+        //}
 
-        public string GetFooterHtml(Dictionary<int, double> _coll, EbDataVisualization _dv, CultureInfo _user_culture, int level = 1)
-        {
-            var str = "<tr class='group-sum' group="+level+">";
+        //public string GetFooterHtml(Dictionary<int, double> _coll, EbDataVisualization _dv, CultureInfo _user_culture, int level = 1)
+        //{
+        //    var str = "<tr class='group-sum' group="+level+">";
 
-            foreach (DVBaseColumn col in (_dv as EbTableVisualization).CurrentRowGroup.RowGrouping)
-                str += "<td>&nbsp;</td>";
+        //    foreach (DVBaseColumn col in (_dv as EbTableVisualization).CurrentRowGroup.RowGrouping)
+        //        str += "<td>&nbsp;</td>";
 
-            if ((_dv as EbTableVisualization).CurrentRowGroup.GetType().Name == "MultipleLevelRowGroup")
-                str += "<td>&nbsp;</td>";
+        //    if ((_dv as EbTableVisualization).CurrentRowGroup.GetType().Name == "MultipleLevelRowGroup")
+        //        str += "<td>&nbsp;</td>";
 
-            str += "<td>&nbsp;</td>";//serial column
+        //    str += "<td>&nbsp;</td>";//serial column
 
-            foreach (DVBaseColumn col in (_dv as EbTableVisualization).Columns)
-            {
-                var cults = col.GetColumnCultureInfo(_user_culture);
-                if (col.bVisible)
-                {
-                    if ((col is DVNumericColumn) && (col as DVNumericColumn).Aggregate)
-                        str += "<td class='dt-body-right'>" + Convert.ToDecimal(_coll[col.Data]).ToString("N",cults.NumberFormat) + "</td>";
-                    else
-                        str += "<td>&nbsp;</td>";
-                }
-            }
-            return str + "</tr>";
-        }
+        //    foreach (DVBaseColumn col in (_dv as EbTableVisualization).Columns)
+        //    {
+        //        var cults = col.GetColumnCultureInfo(_user_culture);
+        //        if (col.bVisible)
+        //        {
+        //            if ((col is DVNumericColumn) && (col as DVNumericColumn).Aggregate)
+        //                str += "<td class='dt-body-right'>" + Convert.ToDecimal(_coll[col.Data]).ToString("N",cults.NumberFormat) + "</td>";
+        //            else
+        //                str += "<td>&nbsp;</td>";
+        //        }
+        //    }
+        //    return str + "</tr>";
+        //}
 
         [CompressResponse]
         public DataSourceDataResponse Any(InlineTableDataRequest request)
