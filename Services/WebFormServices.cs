@@ -13,7 +13,8 @@ using System.Linq;
 
 namespace ExpressBase.ServiceStack.Services
 {
-    public class WebFormServices : EbBaseService
+	[Authenticate]
+	public class WebFormServices : EbBaseService
     {
         public WebFormServices(IEbConnectionFactory _dbf) : base(_dbf) { }
 
