@@ -173,7 +173,6 @@ namespace ExpressBase.ServiceStack.Services
             FormObj.TableRowId = request.RowId;
             string query = FormObj.GetSelectQuery(FormObj.TableName);
             EbDataSet dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(query);
-
             return dataset;
         }
 
@@ -182,8 +181,21 @@ namespace ExpressBase.ServiceStack.Services
             var myService = base.ResolveService<EbObjectService>();
             var formObj = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = RefId });
             return EbSerializers.Json_Deserialize(formObj.Data[0].Json);
-        }
+        }        
 
+        //======================================= SAVE OR UPDATE RECORD =============================================
+
+        public InsertDataFromWebformResponse Any(InsertDataFromWebformRequest request)
+        {
+            EbObjectService myService = base.ResolveService<EbObjectService>();
+            EbObjectParticularVersionResponse formObj = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = request.RefId });
+            EbWebForm FormObj = EbSerializers.Json_Deserialize(formObj.Data[0].Json);
+            FormObj.TableRowId = request.RowId;
+            if (FormObj.TableRowId > 0)
+                return UpdateDataFromWebformRec(request, FormObj);
+            else
+                return InsertDataFromWebformRec(request, FormObj);
+        }
 
         private InsertDataFromWebformResponse InsertDataFromWebformRec(InsertDataFromWebformRequest request, EbControlContainer FormObj)
         {
@@ -205,26 +217,45 @@ namespace ExpressBase.ServiceStack.Services
                 if (count == 0)
                     _qry = _qry.Replace("{3}", "").Replace("{4}", "");
                 else
-                    _qry = _qry.Replace("{3}", string.Concat(",", FormObj.TableName, "_id")).Replace("{4}", string.Concat(", (SELECT cur_val('" , FormObj.TableName ,"_id_seq'"+ "))"));
+                    _qry = _qry.Replace("{3}", string.Concat(",", FormObj.TableName, "_id")).Replace("{4}", string.Concat(", (SELECT cur_val('", FormObj.TableName, "_id_seq'" + "))"));
                 fullqry += string.Format(_qry, _tblname, _cols, _values);
                 count++;
             }
             param.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_createdby", EbDbTypes.Int32, 0));///////////////
-            param.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_createdat" , EbDbTypes.DateTime, System.DateTime.Now));
-            int res = EbConnectionFactory.DataDB.InsertTable(fullqry, param.ToArray());
+            param.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_createdat", EbDbTypes.DateTime, System.DateTime.Now));
+            int rowsAffected = EbConnectionFactory.DataDB.InsertTable(fullqry, param.ToArray());
 
-            return new InsertDataFromWebformResponse();
+            return new InsertDataFromWebformResponse { RowAffected = rowsAffected };
         }
 
-        //======================================= SAVE OR UPDATE RECORD =============================================
-
-        public InsertDataFromWebformResponse Any(InsertDataFromWebformRequest request)
+        private InsertDataFromWebformResponse UpdateDataFromWebformRec(InsertDataFromWebformRequest request, EbControlContainer FormObj)
         {
-            EbObjectService myService = base.ResolveService<EbObjectService>();
-            EbObjectParticularVersionResponse formObj = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = request.RefId });
-            EbWebForm FormObj = EbSerializers.Json_Deserialize(formObj.Data[0].Json);
-            return InsertDataFromWebformRec(request, FormObj);
-        }
+            string fullqry = string.Empty;
+            List<DbParameter> param = new List<DbParameter>();
+            int count = 0;
+            foreach (KeyValuePair<string, List<TableColumnMetaS>> entry in request.Values)
+            {
+                string _qry = "UPDATE {0} SET {1} eb_lastmodified_by = :eb_modified_by, eb_lastmodified_at = :eb_modified_at WHERE {2}={3};";
+                string _tblname = entry.Key;
+                string _colvals = string.Empty;
+                //_cols = FormObj.GetCtrlNamesOfTable(entry.Key);
+                foreach (TableColumnMetaS columnMeta in entry.Value)
+                {
+                    _colvals += string.Concat(columnMeta.Name, "=:", columnMeta.Name, ",");
+                    param.Add(this.EbConnectionFactory.DataDB.GetNewParameter(columnMeta.Name, (EbDbTypes)columnMeta.Type, columnMeta.Value));
+                }
+                if (count == 0)
+                    _qry = _qry.Replace("{2}", "id").Replace("{3}", FormObj.TableRowId.ToString());
+                else
+                    _qry = _qry.Replace("{2}", string.Concat(FormObj.TableName, "_id")).Replace("{3}", FormObj.TableRowId.ToString());
+                fullqry += string.Format(_qry, _tblname, _colvals);
+                count++;
+            }
+            param.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_modified_by", EbDbTypes.Int32, 0));///////////////
+            param.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_modified_at", EbDbTypes.DateTime, System.DateTime.Now));
+            int rowsAffected = EbConnectionFactory.DataDB.InsertTable(fullqry, param.ToArray());
 
+            return new InsertDataFromWebformResponse { RowAffected = rowsAffected };
+        }
     }
 }
