@@ -10,10 +10,12 @@ using ExpressBase.Security.Core;
 using ExpressBase.Common.Extensions;
 using ExpressBase.Common.Structures;
 using System.Globalization;
+using ServiceStack;
 
 namespace ExpressBase.ServiceStack.Services
 {
-    public class SecurityServices : EbBaseService
+	[Authenticate]
+	public class SecurityServices : EbBaseService
 	{
 		public SecurityServices(IEbConnectionFactory _dbf) : base(_dbf) { }
 

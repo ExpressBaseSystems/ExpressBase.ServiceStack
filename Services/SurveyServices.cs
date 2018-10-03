@@ -4,6 +4,7 @@ using ExpressBase.Common.Data;
 using ExpressBase.Common.Structures;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using Newtonsoft.Json;
+using ServiceStack;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
@@ -14,7 +15,8 @@ using System.Threading.Tasks;
 
 namespace ExpressBase.ServiceStack.Services
 {
-    public class SurveyServices : EbBaseService
+	[Authenticate]
+	public class SurveyServices : EbBaseService
     {
         public SurveyServices(IEbConnectionFactory _dbf) : base(_dbf) { }
 
