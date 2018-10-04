@@ -30,7 +30,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 var id = Convert.ToInt32(dr[0]);
                 if (!appColl.Keys.Contains<int>(id))
-                    appColl.Add(id, new AppObject { AppName = dr[1].ToString() });
+                    appColl.Add(id, new AppObject { AppName = dr[1].ToString(), AppIcon = dr[2].ToString() });
             }
 
             Dictionary<int, AppWrap> _Coll = new Dictionary<int, AppWrap>();
@@ -141,7 +141,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 var id = Convert.ToInt32(dr[0]);
                 if (!appColl.Keys.Contains<int>(id))
-                    appColl.Add(id, new AppObject { AppName = dr[1].ToString() });
+                    appColl.Add(id, new AppObject { AppName = dr[1].ToString(),AppIcon = dr[2].ToString() });
             }
 
             Dictionary<int, AppWrap> _Coll = new Dictionary<int, AppWrap>();

@@ -3,6 +3,7 @@ using ExpressBase.Common.Data;
 using ExpressBase.Common.Structures;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using Newtonsoft.Json;
+using ServiceStack;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
@@ -12,6 +13,7 @@ using System.Threading.Tasks;
 
 namespace ExpressBase.ServiceStack.Services
 {
+	[Authenticate]
 	public class LeadManagementService : EbBaseService
 	{
 		public LeadManagementService(IEbConnectionFactory _dbf) : base(_dbf) { }
