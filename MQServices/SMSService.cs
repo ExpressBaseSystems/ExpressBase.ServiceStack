@@ -9,6 +9,9 @@ using System.Threading.Tasks;
 using System.Data.Common;
 using ExpressBase.Common.Data;
 using ExpressBase.Common.Structures;
+using ExpressBase.Objects.Objects.SmsRelated;
+using ExpressBase.Common;
+using System.Text.RegularExpressions;
 
 namespace ExpressBase.ServiceStack.MQServices
 {
@@ -19,10 +22,37 @@ namespace ExpressBase.ServiceStack.MQServices
         [Authenticate]
         public void Post(SMSSentRequest request)
         {
+            EbConnectionFactory ebConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
+            EbObjectService objservice = base.ResolveService<EbObjectService>();
+            objservice.EbConnectionFactory = ebConnectionFactory;
+            EbObjectParticularVersionResponse res = (EbObjectParticularVersionResponse)objservice.Get(new EbObjectParticularVersionRequest() { RefId = request.Refid });
+            EbSmsTemplate SmsTemplate = new EbSmsTemplate();
+            SmsTemplate = EbSerializers.Json_Deserialize(res.Data[0].Json);
+            if (SmsTemplate.DataSourceRefId != string.Empty)
+            {
+                EbObjectParticularVersionResponse myDsres = (EbObjectParticularVersionResponse)objservice.Get(new EbObjectParticularVersionRequest() { RefId = SmsTemplate.DataSourceRefId });
+                EbDataSource ebDataSource = new EbDataSource();
+                ebDataSource = EbSerializers.Json_Deserialize(myDsres.Data[0].Json);
+                IEnumerable<DbParameter> parameters = DataHelper.GetParams(ebConnectionFactory, false, request.Params, 0, 0);
+                EbDataSet ds = ebConnectionFactory.ObjectsDB.DoQueries(ebDataSource.Sql, parameters.ToArray());
+                string pattern = @"\{{(.*?)\}}";
+                IEnumerable<string> matches = Regex.Matches(SmsTemplate.Body, pattern).OfType<Match>()
+                 .Select(m => m.Groups[0].Value)
+                 .Distinct();
+                foreach (string _col in matches)
+                {
+                    string str = _col.Replace("{{", "").Replace("}}", "");
 
+                    foreach (EbDataTable dt in ds.Tables)
+                    {
+                        string colname = dt.Rows[0][str.Split('.')[1]].ToString();
+                        SmsTemplate.Body = SmsTemplate.Body.Replace(_col, colname);
+                    }
+                }
+            }
             try
             {
-                this.MessageProducer3.Publish(new SMSSentMqRequest { To = request.To, From = request.From, Body = request.Body, SolnId = request.SolnId, UserId = request.UserId, WhichConsole = request.WhichConsole });
+                this.MessageProducer3.Publish(new SMSSentMqRequest { To = SmsTemplate.To, Body = SmsTemplate.Body, SolnId = request.SolnId, UserId = request.UserId, WhichConsole = request.WhichConsole });
                 //return true;
             }
             catch (Exception e)
@@ -42,7 +72,7 @@ namespace ExpressBase.ServiceStack.MQServices
         //public void Any(SMSService.String apikey)
         //{
 
-       // }
+        // }
 
         //[Restrict(InternalOnly = true)]
         //public class SMSServiceInternal : EbBaseService

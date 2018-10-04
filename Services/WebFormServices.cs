@@ -7,6 +7,7 @@ using ExpressBase.Common.Structures;
 using ExpressBase.Objects;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ServiceStack;
+using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
@@ -57,10 +58,8 @@ namespace ExpressBase.ServiceStack.Services
             }
 
             _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_by", Type = vDbTypes.Decimal });
-            _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_aid", Type = vDbTypes.Decimal });
             _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_at", Type = vDbTypes.DateTime });
             _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_by", Type = vDbTypes.Decimal });
-            _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_aid", Type = vDbTypes.Decimal });
             _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_at", Type = vDbTypes.DateTime });
             _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_del", Type = vDbTypes.Boolean, Default = "F" });
             _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_void", Type = vDbTypes.Boolean, Default = "F" });
@@ -168,16 +167,47 @@ namespace ExpressBase.ServiceStack.Services
 
         //================================== GET PARTICULAR RECORD ================================================
 
-        public EbDataSet Any(GetRowDataRequest request)
+        public GetRowDataResponse Any(GetRowDataRequest request)
         {
             EbWebForm FormObj = GetWebFormObject(request.RefId);
             FormObj.TableRowId = request.RowId;
             string query = FormObj.GetSelectQuery(FormObj.TableName);
             EbDataSet dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(query);
-            return dataset;
+
+			GetRowDataResponse _dataset = new GetRowDataResponse();
+			_dataset.RowValues = getDataSetAsRowCollection(dataset);
+
+			return _dataset;
         }
 
-        private EbWebForm GetWebFormObject(string RefId)
+		private List<object> getDataSetAsRowCollection(EbDataSet dataset)
+		{
+			List<object> rowColl = new List<object>();
+			foreach (EbDataTable dataTable in dataset.Tables)
+			{
+				foreach (EbDataRow dataRow in dataTable.Rows)
+				{
+					foreach (EbDataColumn dataColumn in dataTable.Columns)
+					{
+						object _unformattedData = dataRow[dataColumn.ColumnIndex];
+						object _formattedData = _unformattedData;
+
+						if (dataColumn.Type == EbDbTypes.Date)
+						{
+							_unformattedData = (_unformattedData == DBNull.Value) ? DateTime.MinValue : _unformattedData;
+							_formattedData = ((DateTime)_unformattedData).Date != DateTime.MinValue ? Convert.ToDateTime(_unformattedData).ToString("yyyy-MM-dd") : string.Empty;
+						}
+
+						rowColl.Add(_formattedData);
+					}
+				}
+
+			}
+
+			return rowColl;
+		}
+
+		private EbWebForm GetWebFormObject(string RefId)
         {
             var myService = base.ResolveService<EbObjectService>();
             var formObj = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = RefId });
@@ -188,10 +218,8 @@ namespace ExpressBase.ServiceStack.Services
 
         public InsertDataFromWebformResponse Any(InsertDataFromWebformRequest request)
         {
-            EbObjectService myService = base.ResolveService<EbObjectService>();
-            EbObjectParticularVersionResponse formObj = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = request.RefId });
-            EbWebForm FormObj = EbSerializers.Json_Deserialize(formObj.Data[0].Json);
-            FormObj.TableRowId = request.RowId;
+			EbWebForm FormObj = GetWebFormObject(request.RefId);
+			FormObj.TableRowId = request.RowId;
             if (FormObj.TableRowId > 0)
                 return UpdateDataFromWebformRec(request, FormObj);
             else
