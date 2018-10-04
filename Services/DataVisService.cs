@@ -593,7 +593,10 @@ namespace ExpressBase.ServiceStack
                     {
                         _formattedData = "<a href='../custompage/leadmanagement?ac=" + _dataset.Tables[0].Rows[i][0] + "' target='_blank'>" + _formattedData + "</a>";
                     }
-
+                    if(col.HideDataRowMoreThan >0 && col.HideDataRowMoreThan < _dataset.Tables[0].Rows.Count)
+                    {
+                        _formattedData = "xxxxxxx";
+                    }
                     _formattedTable.Rows[i].Insert(col.Data, _formattedData);
 
                 }
