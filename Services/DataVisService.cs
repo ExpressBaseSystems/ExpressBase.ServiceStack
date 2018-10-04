@@ -500,7 +500,7 @@ namespace ExpressBase.ServiceStack
             return resp;
         }
 
-        public EbDataTable PreProcessing(ref EbDataSet _dataset, EbDataVisualization _dv, User _user, ref List< GroupingDetails> _levels)
+        public EbDataTable PreProcessing(ref EbDataSet _dataset, EbDataVisualization _dv, User _user, ref List<GroupingDetails> _levels)
         {
             dynamic result = null;
             var _user_culture = CultureInfo.GetCultureInfo(_user.Preference.Locale);
@@ -517,7 +517,7 @@ namespace ExpressBase.ServiceStack
 
             EbDataTable _formattedTable = new EbDataTable();
             DVColumnCollection colColl = new DVColumnCollection();
-            foreach(DVBaseColumn col in _dv.Columns)
+            foreach (DVBaseColumn col in _dv.Columns)
             {
                 colColl.Add(col.ShallowCopy());
             }
@@ -572,9 +572,9 @@ namespace ExpressBase.ServiceStack
 
                     if (col.Type == EbDbTypes.Date)
                     {
-						_unformattedData = (_unformattedData == DBNull.Value) ? DateTime.MinValue : _unformattedData;
-						_formattedData = (((DateTime)_unformattedData).Date != DateTime.MinValue) ? Convert.ToDateTime(_unformattedData).ToString("d", cults.DateTimeFormat) : string.Empty;
-						_dataset.Tables[0].Rows[i][col.Data] = Convert.ToDateTime(_unformattedData).ToString("yyyy-MM-dd");
+                        _unformattedData = (_unformattedData == DBNull.Value) ? DateTime.MinValue : _unformattedData;
+                        _formattedData = (((DateTime)_unformattedData).Date != DateTime.MinValue) ? Convert.ToDateTime(_unformattedData).ToString("d", cults.DateTimeFormat) : string.Empty;
+                        _dataset.Tables[0].Rows[i][col.Data] = Convert.ToDateTime(_unformattedData).ToString("yyyy-MM-dd");
                     }
                     else if (col.Type == EbDbTypes.Decimal || col.Type == EbDbTypes.Int32)
                         _formattedData = Convert.ToDecimal(_unformattedData).ToString("N", cults.NumberFormat);
@@ -593,7 +593,7 @@ namespace ExpressBase.ServiceStack
                     {
                         _formattedData = "<a href='../custompage/leadmanagement?ac=" + _dataset.Tables[0].Rows[i][0] + "' target='_blank'>" + _formattedData + "</a>";
                     }
-                    if(col.HideDataRowMoreThan >0 && col.HideDataRowMoreThan < _dataset.Tables[0].Rows.Count)
+                    if (col.HideDataRowMoreThan > 0 && col.HideDataRowMoreThan < _dataset.Tables[0].Rows.Count)
                     {
                         _formattedData = "xxxxxxx";
                     }
@@ -616,14 +616,14 @@ namespace ExpressBase.ServiceStack
             return _formattedTable;
         }
 
-        public List<GroupingDetails> RowGroupingCommon(EbDataTable Table, EbDataVisualization Visualization, CultureInfo Culture, bool IsMultiLevelRowGrouping=false)
+        public List<GroupingDetails> RowGroupingCommon(EbDataTable Table, EbDataVisualization Visualization, CultureInfo Culture, bool IsMultiLevelRowGrouping = false)
         {
             Dictionary<string, GroupingDetails> RowGrouping = new Dictionary<string, GroupingDetails>();
-            const string AfterText = "After", BeforeText = "Before", BlankText= "(Blank)";
+            const string AfterText = "After", BeforeText = "Before", BlankText = "(Blank)";
 
             int finalHeaderIndex = 0;
             int TotalLevels = (IsMultiLevelRowGrouping) ? (Visualization as EbTableVisualization).CurrentRowGroup.RowGrouping.Count : 1,
-            
+
             TotalColumnCount = (Visualization as EbTableVisualization).Columns.Count;
             Dictionary<int, int> LevelCount = new Dictionary<int, int>();
 
@@ -636,7 +636,7 @@ namespace ExpressBase.ServiceStack
             List<DVBaseColumn> RowGroupingColumns = new List<DVBaseColumn>((Visualization as EbTableVisualization).CurrentRowGroup.RowGrouping);
 
             string PreviousGroupingText = string.Empty;
-            
+
             int CurrentLevel = 0;
             int GroupingCount = 1;
             int RowIndex = 0;
@@ -731,7 +731,7 @@ namespace ExpressBase.ServiceStack
         ////        }
         ////    }
         ////}
-        
+
         //private void CalculateLevelCount(Dictionary<string, GroupingDetails> RowGrouping, string CurrentGroupingText, 
         //    string PreviousGroupingText)
         //{
@@ -867,7 +867,7 @@ namespace ExpressBase.ServiceStack
                 }
                 else
                 {
-                    TempStr += (TempStr.Equals(string.Empty))? CurrentRow[column.Data] : ":-:" + CurrentRow[column.Data];
+                    TempStr += (TempStr.Equals(string.Empty)) ? CurrentRow[column.Data] : ":-:" + CurrentRow[column.Data];
                 }
             }
             if (!IsMultiLevelRowGrouping)
@@ -960,7 +960,7 @@ namespace ExpressBase.ServiceStack
         //    }
         //}
 
-        public int GetCurrentLevel(string CurrentString, string PreviousString, bool isEnd, int currentRowIndex, int totalLevels, bool IsMultiLevel)
+        public int GetCurrentLevel(string CurrentString, string PreviousString,  bool isEnd, int currentRowIndex, int totalLevels, bool IsMultiLevel)
         {
             if (IsMultiLevel)
             {
@@ -984,7 +984,7 @@ namespace ExpressBase.ServiceStack
 
                 return (currentRowIndex == 0) ? totalLevels - 1 : 0;
             }
-            
+
             return 1;
         }
 
