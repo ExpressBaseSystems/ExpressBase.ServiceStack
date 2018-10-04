@@ -617,8 +617,10 @@ namespace ExpressBase.ServiceStack
         {
             Dictionary<string, GroupingDetails> RowGrouping = new Dictionary<string, GroupingDetails>();
             const string AfterText = "After", BeforeText = "Before", BlankText= "(Blank)";
+
             int finalHeaderIndex = 0;
             int TotalLevels = (IsMultiLevelRowGrouping) ? (Visualization as EbTableVisualization).CurrentRowGroup.RowGrouping.Count : 1,
+            
             TotalColumnCount = (Visualization as EbTableVisualization).Columns.Count;
             Dictionary<int, int> LevelCount = new Dictionary<int, int>();
 
