@@ -421,7 +421,7 @@ namespace ExpressBase.ServiceStack
                 Ispaged = _isPaged,
                 Levels = _levels
             };
-            this.Log.Info("dsresponse*****" + dsresponse.Data);
+            //this.Log.Info("dsresponse*****" + dsresponse.Data);
             var x = EbSerializers.Json_Serialize(dsresponse);
             return dsresponse;
         }
@@ -1127,7 +1127,7 @@ namespace ExpressBase.ServiceStack
                 RecordsFiltered = _recordsFiltered,
                 Ispaged = _isPaged
             };
-            this.Log.Info("dsresponse*****" + dsresponse.Data);
+            //this.Log.Info("dsresponse*****" + dsresponse.Data);
             var x = EbSerializers.Json_Serialize(dsresponse);
             return dsresponse;
         }
