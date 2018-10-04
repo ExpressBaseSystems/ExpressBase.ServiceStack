@@ -874,9 +874,11 @@ namespace ExpressBase.ServiceStack
                     if (RowGrouping.Keys.Contains(TempKey[j]))
                     {
                         var FooterObject = (RowGrouping[TempKey[j]] as FooterGroupingDetails);
+                        SetFooterObjectParents(RowGrouping, GroupingTexts, TempKey, j, FooterObject);
+
                         foreach (int columnKey in FooterObject.Aggregations.Keys)
                         {
-                            FooterObject.Aggregations[columnKey].SetValue(Convert.ToDecimal(currentRow[columnKey]));
+                            FooterObject.Aggregations[columnKey].CascadingSetValue(Convert.ToDecimal(currentRow[columnKey]), currentRow);
                         }
 
                         FooterObject.GroupingTexts = GroupingTexts;
@@ -898,6 +900,29 @@ namespace ExpressBase.ServiceStack
                     FooterObject.GroupingTexts = GroupingTexts;
                     FooterObject.InsertionType = Text;
                     FooterObject.RowIndex = TableRowIndex;
+                }
+            }
+        }
+
+        private static void SetFooterObjectParents(Dictionary<string, GroupingDetails> RowGrouping, List<string> GroupingTexts,
+            List<string> TempKey, int j, FooterGroupingDetails FooterObject)
+        {
+            foreach (int columnKey in FooterObject.Aggregations.Keys)
+            {
+                if (TempKey[j].Equals("F_" + GroupingTexts[0]))
+                {
+                    FooterObject.Aggregations[columnKey].ParentFooter = null;// new FooterGroupingDetails();
+                }
+                else
+                {
+                    string prevGroupText = string.Empty;
+                    for (int groupTextItr = 0; groupTextItr < GroupingTexts.Count; groupTextItr++)
+                    {
+                        if (("F_" + GroupingTexts[groupTextItr]).Equals(TempKey[j]))
+                        {
+                            FooterObject.Aggregations[columnKey].ParentFooter = RowGrouping[TempKey[j]] as FooterGroupingDetails;
+                        }
+                    }
                 }
             }
         }
