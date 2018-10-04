@@ -42,7 +42,7 @@ namespace ExpressBase.ServiceStack.MQServices
         {
             EbConnectionFactory ebConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
             var objservice = base.ResolveService<EbObjectService>();
-           objservice.EbConnectionFactory = ebConnectionFactory;
+            objservice.EbConnectionFactory = ebConnectionFactory;
             var dataservice = base.ResolveService<DataSourceService>();
             dataservice.EbConnectionFactory = ebConnectionFactory;
             var reportservice = base.ResolveService<ReportService>();
@@ -53,31 +53,29 @@ namespace ExpressBase.ServiceStack.MQServices
             {
                 ebEmailTemplate = EbSerializers.Json_Deserialize(element.Json);
             }
-            DataSourceDataResponse dsresp = (DataSourceDataResponse)dataservice.Any(new DataSourceDataRequest { Params = request.Params, RefId = ebEmailTemplate.DataSourceRefId });
-            var ds2 = dsresp.DataSet;
-            EbObjectParticularVersionResponse myDsres = (EbObjectParticularVersionResponse)objservice.Get(new EbObjectParticularVersionRequest() { RefId = ebEmailTemplate.DataSourceRefId });
-            EbDataSource ebDataSource = new EbDataSource();
-            foreach (var element in myDsres.Data)
+            if (ebEmailTemplate.DataSourceRefId != string.Empty)
             {
-                ebDataSource = EbSerializers.Json_Deserialize(element.Json);
-            }
-            var parameters = DataHelper.GetParams(ebConnectionFactory, false, request.Params, 0, 0);
-            var ds = ebConnectionFactory.ObjectsDB.DoQueries(ebDataSource.Sql, parameters.ToArray());
-            var pattern = @"\{{(.*?)\}}";
-            IEnumerable<string> matches = Regex.Matches(ebEmailTemplate.Body, pattern).OfType<Match>()
-             .Select(m => m.Groups[0].Value)
-             .Distinct(); 
-            foreach (var _col in matches /*ebEmailTemplate.DsColumnsCollection*/)
-            {
-                string str = /*dscol.Title*/_col.Replace("{{", "").Replace("}}", "");
-
-                foreach (var dt in ds.Tables)
+                EbObjectParticularVersionResponse myDsres = (EbObjectParticularVersionResponse)objservice.Get(new EbObjectParticularVersionRequest() { RefId = ebEmailTemplate.DataSourceRefId });
+                EbDataSource ebDataSource = new EbDataSource();
+                ebDataSource = EbSerializers.Json_Deserialize(myDsres.Data[0].Json);
+                var parameters = DataHelper.GetParams(ebConnectionFactory, false, request.Params, 0, 0);
+                var ds = ebConnectionFactory.ObjectsDB.DoQueries(ebDataSource.Sql, parameters.ToArray());
+                var pattern = @"\{{(.*?)\}}";
+                IEnumerable<string> matches = Regex.Matches(ebEmailTemplate.Body, pattern).OfType<Match>()
+                 .Select(m => m.Groups[0].Value)
+                 .Distinct();
+                foreach (var _col in matches /*ebEmailTemplate.DsColumnsCollection*/)
                 {
-                    string colname = dt.Rows[0][str.Split('.')[1]].ToString();
-                    ebEmailTemplate.Body = ebEmailTemplate.Body.Replace(/*dscol.Title*/_col, colname);
+                    string str = /*dscol.Title*/_col.Replace("{{", "").Replace("}}", "");
+
+                    foreach (var dt in ds.Tables)
+                    {
+                        string colname = dt.Rows[0][str.Split('.')[1]].ToString();
+                        ebEmailTemplate.Body = ebEmailTemplate.Body.Replace(/*dscol.Title*/_col, colname);
+                    }
                 }
             }
-                var RepRes = reportservice.Get(new ReportRenderRequest { Refid = ebEmailTemplate.AttachmentReportRefID, Fullname = "MQ", Params = request.Params });
+            var RepRes = reportservice.Get(new ReportRenderRequest { Refid = ebEmailTemplate.AttachmentReportRefID, Fullname = "MQ", Params = request.Params });
             RepRes.StreamWrapper.Memorystream.Position = 0;
 
             MessageProducer3.Publish(new EmailServicesRequest()
