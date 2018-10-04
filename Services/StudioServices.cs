@@ -14,6 +14,7 @@ using System.Text.RegularExpressions;
 using ExpressBase.Common.Structures;
 using ExpressBase.Objects.Objects;
 using ExpressBase.ServiceStack.Services;
+using ExpressBase.Objects.Objects.SmsRelated;
 
 namespace ExpressBase.ServiceStack
 {
@@ -846,6 +847,8 @@ namespace ExpressBase.ServiceStack
                 return EbObjectTypes.EmailBuilder.IntCode;
             else if (obj is EbBotForm)
                 return EbObjectTypes.BotForm.IntCode;
+            else if (obj is EbSmsTemplate)
+                return EbObjectTypes.SmsBuilder.IntCode;
             else
                 return -1;
         }
@@ -883,6 +886,10 @@ namespace ExpressBase.ServiceStack
             else if (obj is EbEmailTemplate)
             {
                 Redis.Set(refId, (EbEmailTemplate)obj);
+            }
+            else if(obj is EbSmsTemplate)
+            {
+                Redis.Set(refId, (EbSmsTemplate)obj);
             }
         }
 
