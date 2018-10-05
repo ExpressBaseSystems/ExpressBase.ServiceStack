@@ -728,6 +728,7 @@ namespace ExpressBase.ServiceStack
                         rowGrouping.Add(footerKey, new FooterGroupingDetails(TotalLevels, AggregateIndexes, VisualizationColumns, culture) { CollectionKey = footerKey, RowGrouping = rowGrouping });
 
                         rowGrouping[headerKey].GroupingCount++;
+                        (rowGrouping[headerKey] as HeaderGroupingDetails).TotalLevels = TotalLevels;
                         rowGrouping[headerKey].IsMultiLevel = IsMultiLevelGrouping;
                         rowGrouping[footerKey].IsMultiLevel = IsMultiLevelGrouping;
                     }
