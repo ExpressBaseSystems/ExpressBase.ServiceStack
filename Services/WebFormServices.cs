@@ -212,6 +212,16 @@ namespace ExpressBase.ServiceStack.Services
             var myService = base.ResolveService<EbObjectService>();
             var formObj = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = RefId });
             return EbSerializers.Json_Deserialize(formObj.Data[0].Json);
+        }
+
+        public DoUniqueCheckResponse Any(DoUniqueCheckRequest Req)
+        {
+            string query = string.Format("SELECT id FROM {0} WHERE {1} = :value;", Req.TableName, Req.Field);
+            DbParameter[] param = {
+                this.EbConnectionFactory.DataDB.GetNewParameter("value",EbDbTypes.String, Req.Value)
+            };
+            EbDataTable datatbl = this.EbConnectionFactory.ObjectsDB.DoQuery(query, param);
+            return new DoUniqueCheckResponse { NoRowsWithSameValue = datatbl.Rows.Count };
         }        
 
         //======================================= SAVE OR UPDATE RECORD =============================================
