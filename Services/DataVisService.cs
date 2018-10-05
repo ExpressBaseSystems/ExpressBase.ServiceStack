@@ -633,17 +633,18 @@ namespace ExpressBase.ServiceStack
 
             for (int i = 0; i < Table.Rows.Count; i++)
             {
+                CurSortIndex += TotalLevels;
                 EbDataRow currentRow = Table.Rows[i];
                 int delimCount = 1;
 
                 string TempGroupingText = CreateCollectionKey(currentRow, IsMultiLevelRowGrouping, BlankText, TotalLevels, RowGroupingColumns, i, ref delimCount);
                 if (TempGroupingText.Equals(PreviousGroupingText) == false)
                 {
-                    CreateHeaderAndFooterPairs(currentRow, AggregateColumnIndexes, RowGroupingColumns, RowGrouping, Visualization.Columns, TotalLevels, IsMultiLevelRowGrouping, Culture, TempGroupingText);
+                    CreateHeaderAndFooterPairs(currentRow, AggregateColumnIndexes, RowGroupingColumns, RowGrouping, Visualization.Columns, TotalLevels, IsMultiLevelRowGrouping, Culture, TempGroupingText, ref CurSortIndex);
 
                     (RowGrouping["H_" + TempGroupingText] as HeaderGroupingDetails).SetRowIndex(i);
-                    if (i == 30)
-                        Console.WriteLine("Breakpoint");
+                    (RowGrouping["H_" + TempGroupingText] as HeaderGroupingDetails).InsertionType = BeforeText;
+                    (RowGrouping["F_" + TempGroupingText] as FooterGroupingDetails).InsertionType = BeforeText;
 
                     if (i > 0)
                     {
@@ -654,13 +655,23 @@ namespace ExpressBase.ServiceStack
                 else
                 {
                     (RowGrouping["H_" + TempGroupingText] as HeaderGroupingDetails).GroupingCount++;
+                    if (i == Table.Rows.Count - 1)
+                    {
+                        (RowGrouping["F_" + TempGroupingText] as FooterGroupingDetails).InsertionType = AfterText;
+                        FooterGroupingDetails finalFooter = RowGrouping["F_" + TempGroupingText.Split(":-:")[0]] as FooterGroupingDetails;
+                        finalFooter.InsertionType = AfterText;
+                        finalFooter.SetRowIndex(i);
+                        finalFooter.SetSortIndex(1);
+                    }
                 }
 
                 (RowGrouping["F_" + TempGroupingText] as FooterGroupingDetails).SetValue(currentRow);
 
                 PreviousGroupingText = TempGroupingText;
             }
-            return RowGrouping.Values.ToList();
+            List<GroupingDetails> SortedGroupings = RowGrouping.Values.ToList();
+            SortedGroupings.Sort();
+            return SortedGroupings;
         }
 
         private int GetChangedLevel(string CurrentString, string PreviousString)
@@ -689,18 +700,19 @@ namespace ExpressBase.ServiceStack
             foreach (DVBaseColumn Column in RowGroupingColumns)
             {
                 string tempValue = row[Column.Data].ToString().Trim();
-
                 TempGroupingText += (tempValue == string.Empty) ? BlankText : tempValue;
                 TempGroupingText += (delimCount == TotalLevels && IsMultiLevelRowGrouping) ? string.Empty : ":-:";
                 if (IsMultiLevelRowGrouping) delimCount++;
             }
+            if (!IsMultiLevelRowGrouping)
+                TempGroupingText = TempGroupingText.Substring(0, TempGroupingText.Length - 3);
 
             return TempGroupingText;
         }
 
         private void CreateHeaderAndFooterPairs(EbDataRow CurrentRow, List<int> AggregateIndexes,
             List<DVBaseColumn> RowGroupingColumns, Dictionary<string, GroupingDetails> rowGrouping, DVColumnCollection VisualizationColumns, 
-            int TotalLevels, bool IsMultiLevelGrouping, CultureInfo culture, string TempGroupingText)
+            int TotalLevels, bool IsMultiLevelGrouping, CultureInfo culture, string TempGroupingText, ref int CurSortIndex)
         {
             List<string> TempKey = CreateRowGroupingKeys(CurrentRow, RowGroupingColumns, (TotalLevels > 1) ? true : false);
             if (IsMultiLevelGrouping)
@@ -715,9 +727,20 @@ namespace ExpressBase.ServiceStack
                         rowGrouping.Add(headerKey, new HeaderGroupingDetails { CollectionKey = headerKey, RowGrouping = rowGrouping });
                         rowGrouping.Add(footerKey, new FooterGroupingDetails(TotalLevels, AggregateIndexes, VisualizationColumns, culture) { CollectionKey = footerKey, RowGrouping = rowGrouping });
 
-                        rowGrouping["H_" + TempKey[j]].GroupingCount++;
+                        rowGrouping[headerKey].GroupingCount++;
+                        rowGrouping[headerKey].IsMultiLevel = IsMultiLevelGrouping;
+                        rowGrouping[footerKey].IsMultiLevel = IsMultiLevelGrouping;
                     }
                 }
+                //int tempIndex = Regex.Matches(TempKey[TotalLevels - 1], ":-:").Count;
+                //if (tempIndex == 0)
+                //    tempIndex++;
+                //if (TempKey.Count == TotalLevels)
+                //{
+                    (rowGrouping["H_" + TempKey[TotalLevels - 1]] as HeaderGroupingDetails).SetSortIndex(CurSortIndex);
+                CurSortIndex++;
+                    (rowGrouping["F_" + TempKey[TotalLevels - 1]] as FooterGroupingDetails).SetSortIndex(CurSortIndex);
+                //}
             }
             else
             {
