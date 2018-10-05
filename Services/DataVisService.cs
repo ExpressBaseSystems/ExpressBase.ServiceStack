@@ -500,7 +500,7 @@ namespace ExpressBase.ServiceStack
             return resp;
         }
 
-        public EbDataTable PreProcessing(ref EbDataSet _dataset, EbDataVisualization _dv, User _user, ref List< GroupingDetails> _levels)
+        public EbDataTable PreProcessing(ref EbDataSet _dataset, EbDataVisualization _dv, User _user, ref List<GroupingDetails> _levels)
         {
             dynamic result = null;
             var _user_culture = CultureInfo.GetCultureInfo(_user.Preference.Locale);
@@ -517,7 +517,7 @@ namespace ExpressBase.ServiceStack
 
             EbDataTable _formattedTable = new EbDataTable();
             DVColumnCollection colColl = new DVColumnCollection();
-            foreach(DVBaseColumn col in _dv.Columns)
+            foreach (DVBaseColumn col in _dv.Columns)
             {
                 colColl.Add(col.ShallowCopy());
             }
@@ -572,9 +572,9 @@ namespace ExpressBase.ServiceStack
 
                     if (col.Type == EbDbTypes.Date)
                     {
-						_unformattedData = (_unformattedData == DBNull.Value) ? DateTime.MinValue : _unformattedData;
-						_formattedData = (((DateTime)_unformattedData).Date != DateTime.MinValue) ? Convert.ToDateTime(_unformattedData).ToString("d", cults.DateTimeFormat) : string.Empty;
-						_dataset.Tables[0].Rows[i][col.Data] = Convert.ToDateTime(_unformattedData).ToString("yyyy-MM-dd");
+                        _unformattedData = (_unformattedData == DBNull.Value) ? DateTime.MinValue : _unformattedData;
+                        _formattedData = (((DateTime)_unformattedData).Date != DateTime.MinValue) ? Convert.ToDateTime(_unformattedData).ToString("d", cults.DateTimeFormat) : string.Empty;
+                        _dataset.Tables[0].Rows[i][col.Data] = Convert.ToDateTime(_unformattedData).ToString("yyyy-MM-dd");
                     }
                     else if (col.Type == EbDbTypes.Decimal || col.Type == EbDbTypes.Int32)
                         _formattedData = Convert.ToDecimal(_unformattedData).ToString("N", cults.NumberFormat);
@@ -593,7 +593,7 @@ namespace ExpressBase.ServiceStack
                     {
                         _formattedData = "<a href='../custompage/leadmanagement?ac=" + _dataset.Tables[0].Rows[i][0] + "' target='_blank'>" + _formattedData + "</a>";
                     }
-                    if(col.HideDataRowMoreThan >0 && col.HideDataRowMoreThan < _dataset.Tables[0].Rows.Count)
+                    if (col.HideDataRowMoreThan > 0 && col.HideDataRowMoreThan < _dataset.Tables[0].Rows.Count)
                     {
                         _formattedData = "xxxxxxx";
                     }
@@ -616,208 +616,143 @@ namespace ExpressBase.ServiceStack
             return _formattedTable;
         }
 
-        public List<GroupingDetails> RowGroupingCommon(EbDataTable Table, EbDataVisualization Visualization, CultureInfo Culture, bool IsMultiLevelRowGrouping=false)
+        public List<GroupingDetails> RowGroupingCommon(EbDataTable Table, EbDataVisualization Visualization, CultureInfo Culture, bool IsMultiLevelRowGrouping = false)
         {
             Dictionary<string, GroupingDetails> RowGrouping = new Dictionary<string, GroupingDetails>();
-            const string AfterText = "After", BeforeText = "Before", BlankText= "(Blank)";
-            int finalHeaderIndex = 0;
-            int TotalLevels = (IsMultiLevelRowGrouping) ? (Visualization as EbTableVisualization).CurrentRowGroup.RowGrouping.Count : 1,
-            TotalColumnCount = (Visualization as EbTableVisualization).Columns.Count;
-            Dictionary<int, int> LevelCount = new Dictionary<int, int>();
+            const string AfterText = "After", BeforeText = "Before", BlankText = "(Blank)";
 
+            int HFinalIndex = 0,
+            TotalLevels = (IsMultiLevelRowGrouping) ? (Visualization as EbTableVisualization).CurrentRowGroup.RowGrouping.Count : 1,
+            CurSortIndex = 0;
+
+            Dictionary<int, int> LevelCount = new Dictionary<int, int>();
+            List<int> AggregateColumnIndexes = GetAggregateIndexes(Visualization.Columns);
+            List<DVBaseColumn> RowGroupingColumns = new List<DVBaseColumn>((Visualization as EbTableVisualization).CurrentRowGroup.RowGrouping);
+
+            string PreviousGroupingText = string.Empty;
+
+            for (int i = 0; i < Table.Rows.Count; i++)
+            {
+                CurSortIndex += TotalLevels;
+                EbDataRow currentRow = Table.Rows[i];
+                int delimCount = 1;
+
+                string TempGroupingText = CreateCollectionKey(currentRow, IsMultiLevelRowGrouping, BlankText, TotalLevels, RowGroupingColumns, i, ref delimCount);
+                if (TempGroupingText.Equals(PreviousGroupingText) == false)
+                {
+                    CreateHeaderAndFooterPairs(currentRow, AggregateColumnIndexes, RowGroupingColumns, RowGrouping, Visualization.Columns, TotalLevels, IsMultiLevelRowGrouping, Culture, TempGroupingText, ref CurSortIndex);
+
+                    (RowGrouping["H_" + TempGroupingText] as HeaderGroupingDetails).SetRowIndex(i);
+                    (RowGrouping["H_" + TempGroupingText] as HeaderGroupingDetails).InsertionType = BeforeText;
+                    (RowGrouping["F_" + TempGroupingText] as FooterGroupingDetails).InsertionType = BeforeText;
+
+                    if (i > 0)
+                    {
+                        HFinalIndex = RowGrouping.Count - 1;
+                        (RowGrouping["F_" + PreviousGroupingText] as FooterGroupingDetails).SetRowIndex(i);
+                    }
+                }
+                else
+                {
+                    (RowGrouping["H_" + TempGroupingText] as HeaderGroupingDetails).GroupingCount++;
+                    if (i == Table.Rows.Count - 1)
+                    {
+                        (RowGrouping["F_" + TempGroupingText] as FooterGroupingDetails).InsertionType = AfterText;
+                        FooterGroupingDetails finalFooter = RowGrouping["F_" + TempGroupingText.Split(":-:")[0]] as FooterGroupingDetails;
+                        finalFooter.InsertionType = AfterText;
+                        finalFooter.SetRowIndex(i);
+                        finalFooter.SetSortIndex(1);
+                    }
+                }
+
+                (RowGrouping["F_" + TempGroupingText] as FooterGroupingDetails).SetValue(currentRow);
+
+                PreviousGroupingText = TempGroupingText;
+            }
+            List<GroupingDetails> SortedGroupings = RowGrouping.Values.ToList();
+            SortedGroupings.Sort();
+            return SortedGroupings;
+        }
+
+        private int GetChangedLevel(string CurrentString, string PreviousString)
+        {
+            int Level = 0;
+
+
+
+            return Level;
+        }
+
+        private List<int> GetAggregateIndexes(DVColumnCollection VisualizationColumns)
+        {
             List<int> AggregateColumnIndexes = new List<int>();
-            foreach (DVBaseColumn _column in Visualization.Columns)
+            foreach (DVBaseColumn _column in VisualizationColumns)
             {
                 if (_column is DVNumericColumn && (_column as DVNumericColumn).Aggregate)
                     AggregateColumnIndexes.Add(_column.Data);
             }
-            List<DVBaseColumn> RowGroupingColumns = new List<DVBaseColumn>((Visualization as EbTableVisualization).CurrentRowGroup.RowGrouping);
-
-            string PreviousGroupingText = string.Empty;
-            
-            int CurrentLevel = 0;
-            int GroupingCount = 1;
-            int RowIndex = 0;
-            List<string> GroupingTexts = new List<string>();
-            EbDataRow previousRow = new EbDataRow();
-            int previousLevel = 0;
-
-            for (int i = 0; i < Table.Rows.Count; i++)
-            {
-                EbDataRow currentRow = Table.Rows[i];
-
-                string TempGroupingText = string.Empty;
-                GroupingTexts.Clear();
-                int delimCount = 1;
-
-                foreach (DVBaseColumn Column in RowGroupingColumns)
-                {
-                    string tempValue = Table.Rows[i][Column.Data].ToString().Trim();
-
-                    TempGroupingText += (tempValue == string.Empty) ? BlankText : tempValue;
-                    TempGroupingText += (delimCount == TotalLevels) ? string.Empty : ":-:";
-                    delimCount++;
-                    GroupingTexts.Add((tempValue == string.Empty) ? BlankText : tempValue);
-                }
-
-                if (TempGroupingText.Equals(PreviousGroupingText) == false)
-                {
-                    GroupingCount = 1;
-                    RowIndex = i;
-                    
-                    if (i > 0)
-                    {
-                        List<string> TempRowGroupingKeys = CreateRowGroupingKeys(previousRow, RowGroupingColumns, IsMultiLevelRowGrouping);
-                        if (IsMultiLevelRowGrouping)
-                            CurrentLevel = GetCurrentLevel(TempGroupingText, PreviousGroupingText, false, i, TotalLevels, IsMultiLevelRowGrouping);
-                        else
-                            CurrentLevel = 1;
-                        
-                        if (CurrentLevel == 0)
-                        {
-                            ForcePushFirstLevelFooter(TotalLevels, PreviousGroupingText, AggregateColumnIndexes, ref RowGrouping, Visualization,
-                                Culture);//(PreviousGroupingText, AggregateColumnIndexes, ref RowGrouping);
-                        }
-                        InitializeFooter(previousRow, AggregateColumnIndexes, RowGrouping, Visualization, Culture, 
-                            BeforeText, TotalLevels, TotalColumnCount, CurrentLevel, i, IsMultiLevelRowGrouping, GroupingTexts);
-                            finalHeaderIndex = RowGrouping.Count - 1;
-                        if (IsMultiLevelRowGrouping)
-                        {
-                            CalculateLevelCount(RowGrouping, TempGroupingText, PreviousGroupingText);
-                        }
-                    }
-
-                    if (i < Table.Rows.Count - 1)
-                    {
-                        CreateHeaderAndFooterPairs(currentRow, AggregateColumnIndexes,
-                            RowGroupingColumns, GroupingTexts, RowGrouping, Visualization, CurrentLevel, TotalLevels, IsMultiLevelRowGrouping, Culture);
-                        InitializeHeader(currentRow, GroupingTexts, GroupingCount, RowIndex,
-                            CurrentLevel, BeforeText, RowGroupingColumns, IsMultiLevelRowGrouping,
-                            RowGrouping, TotalColumnCount, TotalLevels);
-                    }
-                }
-                else if (TempGroupingText.Equals(PreviousGroupingText) == true)
-                {
-                    List<string> TempRowGroupingKeys = CreateRowGroupingKeys(currentRow, RowGroupingColumns, IsMultiLevelRowGrouping);
-                    foreach (var TempGroupingKey in TempRowGroupingKeys)
-                    {
-                        if (RowGrouping.ContainsKey("H_" + TempGroupingKey))
-                        {
-                            RowGrouping["H_" + TempGroupingKey].GroupingCount++;
-                            foreach (var index in AggregateColumnIndexes)
-                            {
-                                if (RowGrouping.ContainsKey("F_" + TempGroupingKey))
-                                    (RowGrouping["F_" + TempGroupingKey] as FooterGroupingDetails).Aggregations[index].SetValue(Convert.ToDecimal(currentRow[index]));
-                            }
-
-                            if (i == Table.Rows.Count - 1)
-                            {
-                                CurrentLevel = GetCurrentLevel(TempGroupingText, PreviousGroupingText, true, i, TotalLevels,
-                                    IsMultiLevelRowGrouping);
-                                
-                                if (CurrentLevel == 0 && IsMultiLevelRowGrouping)
-                                {
-                                    ForcePushFirstLevelFooter(TotalLevels, PreviousGroupingText, AggregateColumnIndexes, ref RowGrouping, Visualization,
-                                        Culture);
-                                }
-                                InitializeFooter(currentRow, AggregateColumnIndexes, RowGrouping, Visualization,
-                                    Culture, AfterText, TotalLevels, TotalColumnCount, CurrentLevel, i, IsMultiLevelRowGrouping, GroupingTexts);
-                            }
-                        }
-                    }
-                }
-
-                PreviousGroupingText = TempGroupingText;
-                previousRow = currentRow;
-                previousLevel = CurrentLevel;
-            }
-            return RowGrouping.Values.ToList();
+            return AggregateColumnIndexes;
         }
-        
-        private void CalculateLevelCount(Dictionary<string, GroupingDetails> RowGrouping, string CurrentGroupingText, 
-            string PreviousGroupingText)
+
+        private string CreateCollectionKey(EbDataRow row, bool IsMultiLevelRowGrouping, string BlankText, int TotalLevels, List<DVBaseColumn> RowGroupingColumns, int i, ref int delimCount)
         {
-            string ChangedLevelKey = GetKeyForChangedLevel(CurrentGroupingText, PreviousGroupingText);
-            if(RowGrouping.ContainsKey(ChangedLevelKey))
+            string TempGroupingText = string.Empty;
+            foreach (DVBaseColumn Column in RowGroupingColumns)
             {
-                RowGrouping[ChangedLevelKey].LevelCount++;
+                string tempValue = row[Column.Data].ToString().Trim();
+                TempGroupingText += (tempValue == string.Empty) ? BlankText : tempValue;
+                TempGroupingText += (delimCount == TotalLevels && IsMultiLevelRowGrouping) ? string.Empty : ":-:";
+                if (IsMultiLevelRowGrouping) delimCount++;
             }
+            if (!IsMultiLevelRowGrouping)
+                TempGroupingText = TempGroupingText.Substring(0, TempGroupingText.Length - 3);
+
+            return TempGroupingText;
         }
 
-        private string GetKeyForChangedLevel(string CurrentGroupingText, string PreviousGroupingText)
-        {
-            string ChangedKey = "H_";
-            int i = 0, StringIndex = 0;
-
-            string[] CurrentStringTokens = CurrentGroupingText.Split(":-:");
-            string[] PreviousStringTokens = PreviousGroupingText.Split(":-:");
-            for(i = 0; i < CurrentStringTokens.Length; i++)
-            {
-                if(PreviousStringTokens[i].Equals(CurrentStringTokens[i]) == false)
-                {
-                    break;
-                }
-            }
-
-            if (i > 0)
-            {
-                for (StringIndex = i; StringIndex > 0; StringIndex--)
-                {
-                    ChangedKey += PreviousStringTokens[i - 1];
-                }
-            }
-            if(i==0)
-            {
-                for (StringIndex = i; StringIndex >= 0; StringIndex--)
-                {
-                    ChangedKey += PreviousStringTokens[i];
-                }
-            }
-
-            return ChangedKey;
-        }
-
-        private void ForcePushFirstLevelFooter(int TotalLevels, string PreviousGroupingText, List<int> AggregateIndexes, ref Dictionary<string, GroupingDetails> RowGrouping, EbDataVisualization Visualization, CultureInfo culture)
-        {
-            string FooterKey = string.Empty;
-
-            FooterKey = "F_" + PreviousGroupingText.Split(":-:")[0];
-            if(!RowGrouping.ContainsKey(FooterKey))
-                RowGrouping.Add(FooterKey, new FooterGroupingDetails(TotalLevels, AggregateIndexes, Visualization, culture));
-        }
-
-        private void CreateHeaderAndFooterPairs(EbDataRow CurrentRow, List<int> AggregateIndexes, 
-            List<DVBaseColumn> RowGroupingColumns, List<string>GroupingTexts, Dictionary<string, GroupingDetails> RowGrouping, EbDataVisualization Visualization, 
-            int CurrentLevel, int TotalLevels, bool IsMultiLevelGrouping, CultureInfo culture)
+        private void CreateHeaderAndFooterPairs(EbDataRow CurrentRow, List<int> AggregateIndexes,
+            List<DVBaseColumn> RowGroupingColumns, Dictionary<string, GroupingDetails> rowGrouping, DVColumnCollection VisualizationColumns, 
+            int TotalLevels, bool IsMultiLevelGrouping, CultureInfo culture, string TempGroupingText, ref int CurSortIndex)
         {
             List<string> TempKey = CreateRowGroupingKeys(CurrentRow, RowGroupingColumns, (TotalLevels > 1) ? true : false);
             if (IsMultiLevelGrouping)
             {
                 for (int j = 0; j < TotalLevels; j++)
                 {
-                    if (!RowGrouping.ContainsKey("H_" + TempKey[j]))
+                    string headerKey = "H_" + TempKey[j];
+                    string footerKey = "F_" + TempKey[j];
+
+                    if (!rowGrouping.ContainsKey(headerKey))
                     {
-                        RowGrouping.Add("H_" + TempKey[j], new HeaderGroupingDetails());
-                        RowGrouping["H_" + TempKey[j]].GroupingCount++;
-                        RowGrouping["H_" + TempKey[j]].CurrentLevel = CurrentLevel;
-                        (RowGrouping["H_" + TempKey[j]] as HeaderGroupingDetails).GroupingTexts = new List<string>(GroupingTexts);
+                        rowGrouping.Add(headerKey, new HeaderGroupingDetails { CollectionKey = headerKey, RowGrouping = rowGrouping });
+                        rowGrouping.Add(footerKey, new FooterGroupingDetails(TotalLevels, AggregateIndexes, VisualizationColumns, culture) { CollectionKey = footerKey, RowGrouping = rowGrouping });
+
+                        rowGrouping[headerKey].GroupingCount++;
+                        (rowGrouping[headerKey] as HeaderGroupingDetails).TotalLevels = TotalLevels;
+                        rowGrouping[headerKey].IsMultiLevel = IsMultiLevelGrouping;
+                        rowGrouping[footerKey].IsMultiLevel = IsMultiLevelGrouping;
                     }
                 }
-
-                if (CurrentLevel == 0)
-                {
-                    RowGrouping.Add("F_" + TempKey[CurrentLevel + 1], new FooterGroupingDetails(TotalLevels, AggregateIndexes, Visualization, culture));
-                }
-                else
-                {
-                    RowGrouping.Add("F_" + TempKey[CurrentLevel], new FooterGroupingDetails(TotalLevels, AggregateIndexes, Visualization, culture));
-                }
+                //int tempIndex = Regex.Matches(TempKey[TotalLevels - 1], ":-:").Count;
+                //if (tempIndex == 0)
+                //    tempIndex++;
+                //if (TempKey.Count == TotalLevels)
+                //{
+                    (rowGrouping["H_" + TempKey[TotalLevels - 1]] as HeaderGroupingDetails).SetSortIndex(CurSortIndex);
+                CurSortIndex++;
+                    (rowGrouping["F_" + TempKey[TotalLevels - 1]] as FooterGroupingDetails).SetSortIndex(CurSortIndex);
+                //}
             }
             else
             {
-                RowGrouping.Add("H_" + TempKey[0], new HeaderGroupingDetails());
-                RowGrouping["H_" + TempKey[0]].GroupingCount++;
-                RowGrouping.Add("F_" + TempKey[0], new FooterGroupingDetails(TotalLevels, AggregateIndexes, Visualization, culture));
+                if (!rowGrouping.ContainsKey("H_" + TempKey.Last()))
+                {
+                    string headerKey = "H_" + TempKey.Last();
+                    string footerKey = "F_" + TempKey.Last();
+
+                    rowGrouping.Add(headerKey, new HeaderGroupingDetails { CollectionKey = headerKey, RowGrouping = rowGrouping });
+                    rowGrouping.Add(footerKey, new FooterGroupingDetails(TotalLevels, AggregateIndexes, VisualizationColumns, culture) { CollectionKey = footerKey, RowGrouping = rowGrouping });
+                }
             }
         }
 
@@ -829,81 +764,20 @@ namespace ExpressBase.ServiceStack
             {
                 if (IsMultiLevelRowGrouping)
                 {
-                    TempKey.Add(((TempKey.Count > 0) ? TempKey.Last() : string.Empty) + CurrentRow[column.Data]);
+                    TempKey.Add(((TempKey.Count > 0) ? TempKey.Last() + ":-:" : string.Empty) + CurrentRow[column.Data]);
                 }
                 else
                 {
-                    TempStr += CurrentRow[column.Data];
+                    TempStr += (TempStr.Equals(string.Empty)) ? CurrentRow[column.Data] : ":-:" + CurrentRow[column.Data];
                 }
             }
             if (!IsMultiLevelRowGrouping)
-            {
                 TempKey.Add(TempStr);
-            }
 
             return TempKey;
         }
-
-        private void InitializeFooter(EbDataRow currentRow, List<int> AggregateColumnIndexes, 
-            Dictionary<string, GroupingDetails> RowGrouping, EbDataVisualization Visualization,
-            CultureInfo Culture, string Text, int TotalLevels, int TotalColumnCount, 
-            int CurrentLevel, int TableRowIndex, bool IsMultiLevelGrouping, List<string> GroupingTexts)
-        {
-            List<DVBaseColumn> RowGroupingColumns = new List<DVBaseColumn>((Visualization as EbTableVisualization).CurrentRowGroup.RowGrouping);
-            List<string> TempKey = new List<string>();
-            string TempKeyBuilder = string.Empty;
-            if (IsMultiLevelGrouping)
-            {
-                foreach (var column in RowGroupingColumns)
-                {
-                    TempKeyBuilder += currentRow[column.Data];
-                    TempKey.Add("F_" + TempKeyBuilder);
-                }
-            }
-            else
-            {
-                foreach (var column in RowGroupingColumns)
-                {
-                    TempKeyBuilder += currentRow[column.Data];
-                }
-                TempKey.Add("F_" + TempKeyBuilder);
-            }
-            if (IsMultiLevelGrouping)
-            {
-                for (int j = TotalLevels - 1; j >= CurrentLevel; j--)
-                {
-                    if (RowGrouping.Keys.Contains(TempKey[j]))
-                    {
-                        var FooterObject = (RowGrouping[TempKey[j]] as FooterGroupingDetails);
-                        foreach (int columnKey in FooterObject.Aggregations.Keys)
-                        {
-                            FooterObject.Aggregations[columnKey].SetValue(Convert.ToDecimal(currentRow[columnKey]));
-                        }
-
-                        FooterObject.GroupingTexts = GroupingTexts;
-                        FooterObject.InsertionType = Text;
-                        FooterObject.RowIndex = TableRowIndex;
-                    }
-                }
-            }
-            else
-            {
-                if (RowGrouping.Keys.Contains(TempKey[0]))
-                {
-                    var FooterObject = (RowGrouping[TempKey[0]] as FooterGroupingDetails);
-                    foreach (int columnKey in FooterObject.Aggregations.Keys)
-                    {
-                        FooterObject.Aggregations[columnKey].SetValue(Convert.ToDecimal(currentRow[columnKey]));
-                    }
-
-                    FooterObject.GroupingTexts = GroupingTexts;
-                    FooterObject.InsertionType = Text;
-                    FooterObject.RowIndex = TableRowIndex;
-                }
-            }
-        }
-
-        public int GetCurrentLevel(string CurrentString, string PreviousString, bool isEnd, int currentRowIndex, int totalLevels, bool IsMultiLevel)
+        
+        public int GetCurrentLevel(string CurrentString, string PreviousString,  bool isEnd, int currentRowIndex, int totalLevels, bool IsMultiLevel)
         {
             if (IsMultiLevel)
             {
@@ -924,102 +798,11 @@ namespace ExpressBase.ServiceStack
                         return -1;
                     }
                 }
-
                 return (currentRowIndex == 0) ? totalLevels - 1 : 0;
             }
-            
+
             return 1;
         }
-
-        public void InitializeHeader(EbDataRow currentRow, List<string> GroupingTexts, int GroupingCount,
-            int RowIndex, int CurrentLevel, string InsertionType, List<DVBaseColumn> RowGroupingColumns,
-            bool IsMultiLevelRowGrouping, Dictionary<string, GroupingDetails> groupings, int ColumnCount,
-            int TotalLevels)
-        {
-            List<string> TempKey = new List<string>();
-            string TempKeyBuilder = string.Empty;
-
-            if (IsMultiLevelRowGrouping)
-            {
-                foreach (var column in RowGroupingColumns)
-                {
-                    TempKeyBuilder += currentRow[column.Data];
-                    TempKey.Add("H_" + TempKeyBuilder);
-                }
-            }
-            else
-            {
-                foreach (var column in RowGroupingColumns)
-                {
-                    TempKeyBuilder += currentRow[column.Data];
-                }
-                TempKey.Add("H_" + TempKeyBuilder);
-            }
-
-            if (IsMultiLevelRowGrouping)
-            {
-                for (int j = CurrentLevel; j < TotalLevels; j++)
-                {
-                    groupings[TempKey[j]].InsertionType = "Before";
-                    groupings[TempKey[j]].RowIndex = RowIndex;
-                    groupings[TempKey[j]].CurrentLevel = j + 1;
-                    groupings[TempKey[j]].ColumnCount = ColumnCount;
-                    groupings[TempKey[j]].IsMultiLevel = true;
-                    (groupings[TempKey[j]] as HeaderGroupingDetails).TotalLevels = TotalLevels;
-                    (groupings[TempKey[j]] as HeaderGroupingDetails).GroupingTexts = new List<string>(GroupingTexts);
-                }
-            }
-            else
-            {
-                for (int j = (CurrentLevel == 0) ? CurrentLevel : CurrentLevel - 1; j <= TotalLevels && TempKey.IndexOf(TempKey.Last()) >= j; j++)
-                {
-                    groupings[TempKey[j]].InsertionType = "Before";
-                    groupings[TempKey[j]].RowIndex = RowIndex;
-                    groupings[TempKey[j]].CurrentLevel = j + 1;
-                    groupings[TempKey[j]].ColumnCount = ColumnCount;
-                    groupings[TempKey[j]].IsMultiLevel = false;
-                    (groupings[TempKey[j]] as HeaderGroupingDetails).TotalLevels = TotalLevels;
-                    (groupings[TempKey[j]] as HeaderGroupingDetails).GroupingTexts = new List<string>(GroupingTexts);
-                }
-            }
-        }
-
-        //public string UpdateHeader(EbDataRow currentRow, GroupingDetails GroupingObject, int TotalLevels, bool IsMultiLevelGrouping, List<string> GroupingTexts, int GroupingCount,
-        //    int RowIndex, int CurrentLevel, string InsertionType, List<DVBaseColumn> RowGroupingColumns,
-        //    bool IsMultiLevelRowGrouping, Dictionary<string, GroupingDetails> groupings, int ColumnCount)
-        //{
-        //            string ret = (GroupingObject as HeaderGroupingDetails).Html + ": " + ((IsMultiLevelGrouping)? ((GroupingObject.CurrentLevel==TotalLevels-1)?GroupingObject.GroupingCount:GroupingObject.LevelCount+1): GroupingObject.GroupingCount).ToString() + "</td></tr>";
-        //    return ret;
-        //}
-
-        //public string GetFooter(FooterGroupingDetails FooterObject, EbDataVisualization Visualization,
-        //    CultureInfo Culture, int ColumnsCount, int TotalLevels, int CurrentLevel,
-        //    string FooterText="")
-        //{
-        //    string RowFooter = "<tr class='group-sum' group=" + CurrentLevel + ">"; ;
-        //    for (int i = 0; i < TotalLevels; i++)
-        //    {
-        //        RowFooter += "<td>&nbsp;</td>";
-        //    }
-        //    if (TotalLevels > 1)
-        //    {
-        //        RowFooter += "<td>&nbsp;</td>";
-        //    }
-        //    RowFooter += "<td>&nbsp;</td>";//serial column
-        //    //
-        //    foreach (DVBaseColumn col in (Visualization as EbTableVisualization).Columns)
-        //    {
-        //        var ColumnCulture = col.GetColumnCultureInfo(Culture);
-        //        if (col.bVisible)
-        //        {
-        //            if ((col is DVNumericColumn) && (col as DVNumericColumn).Aggregate)
-        //                RowFooter += "<td class='dt-body-right'>" + (FooterObject.Aggregations[col.Data].Sum).ToString("N", ColumnCulture.NumberFormat) + "</td>";
-        //            else
-        //                RowFooter += "<td>&nbsp;</td>";
-        //        }
-        //    }
-        //    return RowFooter + "</tr>";
-        //}
 
         [CompressResponse]
         public DataSourceDataResponse Any(InlineTableDataRequest request)
