@@ -20,15 +20,16 @@ namespace ExpressBase.ServiceStack.Services
 
 		public GetManageLeadResponse Any(GetManageLeadRequest request)
 		{
-			string SqlQry = @"SELECT firmcode, fname FROM firmmaster;
+			string SqlQry = @"SELECT firmcode, fname FROM firmmaster WHERE firmcode > 0;
 							  SELECT id, name FROM doctors ORDER BY name;
 							  SELECT id, name FROM employees ORDER BY name;
 							SELECT DISTINCT INITCAP(TRIM(clcity)) AS clcity FROM customers WHERE LENGTH(clcity) > 2 ORDER BY clcity;
 							SELECT DISTINCT INITCAP(TRIM(clcountry)) AS clcountry FROM customers WHERE LENGTH(clcountry) > 2 ORDER BY clcountry;
 							SELECT DISTINCT INITCAP(TRIM(city)) AS city FROM customers WHERE LENGTH(city) > 2 ORDER BY city;
-							SELECT DISTINCT INITCAP(TRIM(district)) AS district FROM customers WHERE LENGTH(district) > 2 ORDER BY district;
-							SELECT DISTINCT INITCAP(TRIM(sourcecategory)) AS sourcecategory FROM customers WHERE LENGTH(sourcecategory) > 2 ORDER BY sourcecategory;
-							SELECT DISTINCT INITCAP(TRIM(subcategory)) AS subcategory FROM customers WHERE LENGTH(subcategory) > 2 ORDER BY subcategory;";
+							SELECT district FROM lead_district ORDER BY district;
+							SELECT source FROM lead_source ORDER BY source;
+							SELECT DISTINCT INITCAP(TRIM(subcategory)) AS subcategory FROM customers WHERE LENGTH(subcategory) > 2 ORDER BY subcategory;
+							SELECT status FROM lead_status ORDER BY status;";
 			List<DbParameter> paramList = new List<DbParameter>();
 			Dictionary<int, string> CostCenter = new Dictionary<int, string>();
 			Dictionary<string, int> DicDict = new Dictionary<string, int>();
@@ -40,6 +41,7 @@ namespace ExpressBase.ServiceStack.Services
 			List<string> districtList = new List<string>();
 			List<string> sourcecategoryList = new List<string>();
 			List<string> subcategoryList = new List<string>();
+			List<string> statusList = new List<string>();
 			List<FeedbackEntry> Flist = new List<FeedbackEntry>();
 			List<BillingEntry> Blist = new List<BillingEntry>();
 			List<SurgeryEntry> Slist = new List<SurgeryEntry>();
@@ -85,11 +87,13 @@ namespace ExpressBase.ServiceStack.Services
 				sourcecategoryList.Add(dr[0].ToString());
 			foreach (var dr in ds.Tables[8].Rows)
 				subcategoryList.Add(dr[0].ToString());
+			foreach (var dr in ds.Tables[9].Rows)
+				statusList.Add(dr[0].ToString());
 
-			if (ds.Tables.Count > 9 && ds.Tables[9].Rows.Count > 0)
+			if (ds.Tables.Count > 10 && ds.Tables[10].Rows.Count > 0)
 			{
 				Mode = 1;
-				var dr = ds.Tables[9].Rows[0];
+				var dr = ds.Tables[10].Rows[0];
 				CustomerData.Add("accountid", dr[0].ToString());
 				CustomerData.Add("firmcode", dr[1].ToString());
 				CustomerData.Add("trdate", getStringValue(dr[2]));
@@ -114,9 +118,9 @@ namespace ExpressBase.ServiceStack.Services
 				CustomerData.Add("district", dr[20].ToString());
 				CustomerData.Add("leadowner", dr[21].ToString());
 				
-				if (ds.Tables[13].Rows.Count > 0)
+				if (ds.Tables[14].Rows.Count > 0)
 				{
-					dr = ds.Tables[13].Rows[0];
+					dr = ds.Tables[14].Rows[0];
 					CustomerData.Add("noofgrafts", dr[0].ToString());
 					CustomerData.Add("totalrate", dr[1].ToString());
 					CustomerData.Add("prpsessions", dr[2].ToString());
@@ -129,11 +133,11 @@ namespace ExpressBase.ServiceStack.Services
 					CustomerData.Add("probmonth", (string.IsNullOrEmpty(getStringValue(dr[9])) ? string.Empty: getStringValue(dr[9]).Substring(3).Replace("-", "/")));
 				}
 
-				foreach (var i in ds.Tables[14].Rows)
+				foreach (var i in ds.Tables[15].Rows)
 					ImgIds.Add(i[0].ToString());
 
 				//followup details
-				foreach (var i in ds.Tables[10].Rows)
+				foreach (var i in ds.Tables[11].Rows)
 				{
 					Flist.Add(new FeedbackEntry
 					{
@@ -147,7 +151,7 @@ namespace ExpressBase.ServiceStack.Services
 				}
 
 				//Billing details
-				foreach (var i in ds.Tables[11].Rows)
+				foreach (var i in ds.Tables[12].Rows)
 				{
 					Blist.Add(new BillingEntry
 					{
@@ -166,7 +170,7 @@ namespace ExpressBase.ServiceStack.Services
 				}
 
 				//surgery details
-				foreach (var i in ds.Tables[12].Rows)
+				foreach (var i in ds.Tables[13].Rows)
 				{
 					Slist.Add(new SurgeryEntry
 					{
@@ -195,7 +199,8 @@ namespace ExpressBase.ServiceStack.Services
 				DistrictList = districtList,
 				SourceCategoryList = sourcecategoryList,
 				SubCategoryList = subcategoryList,
-				ImageIdList = ImgIds				
+				ImageIdList = ImgIds,
+				StatusList = statusList
 			};
 		}
 
