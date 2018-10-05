@@ -3,6 +3,7 @@ using ExpressBase.Common.Connections;
 using ExpressBase.Common.Constants;
 using ExpressBase.Common.Data;
 using ExpressBase.Common.Data.MongoDB;
+using ExpressBase.Common.Messaging;
 using ExpressBase.Common.ServiceClients;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ServiceStack;
@@ -57,6 +58,7 @@ namespace ExpressBase.ServiceStack.Services
 
                     if (dt.Rows.Count != 0)
                     {
+                        EbSmsConCollection _smscollection = new EbSmsConCollection();
                         foreach (DataRow dr in dt.Rows)
                         {
                             if (dr["con_type"].ToString() == EbConnectionTypes.EbDATA.ToString())
@@ -88,8 +90,9 @@ namespace ExpressBase.ServiceStack.Services
                             }
                             else if (dr["con_type"].ToString() == EbConnectionTypes.SMS.ToString())
                             {
-                                cons.SMSConnection = EbSerializers.Json_Deserialize<SMSConnection>(dr["con_obj"].ToString());
-                                cons.SMSConnection.Id = (int)dr["id"];
+                                ISMSConnection temp = EbSerializers.Json_Deserialize<ISMSConnection>(dr["con_obj"].ToString());
+                                temp.Id = (int)dr["id"];
+                                _smscollection.Add(temp);
                             }
                             else if (dr["con_type"].ToString() == EbConnectionTypes.Cloudinary.ToString())
                             {
@@ -102,7 +105,7 @@ namespace ExpressBase.ServiceStack.Services
                                 cons.FTPConnection.Id = (int)dr["id"];
                             }// ... More to come
                         }
-
+                        cons.SMSConnections = _smscollection;
                         Redis.Set<EbConnectionsConfig>(string.Format(CoreConstants.SOLUTION_CONNECTION_REDIS_KEY, req.SolutionId), cons);
                         resp.EBSolutionConnections = cons;
                     }
@@ -224,7 +227,10 @@ namespace ExpressBase.ServiceStack.Services
             try
             {
                 request.FTPConnection.Persist(request.SolutionId, this.InfraConnectionFactory, request.IsNew, request.UserId);
-                base.MessageProducer3.Publish(new RefreshSolutionConnectionsRequest() { SolnId = request.SolutionId, UserId = request.UserId,
+                base.MessageProducer3.Publish(new RefreshSolutionConnectionsRequest()
+                {
+                    SolnId = request.SolutionId,
+                    UserId = request.UserId,
                     BToken = (!String.IsNullOrEmpty(this.Request.Authorization)) ? this.Request.Authorization.Replace("Bearer", string.Empty).Trim() : String.Empty,
                     RToken = (!String.IsNullOrEmpty(this.Request.Headers["rToken"])) ? this.Request.Headers["rToken"] : String.Empty
                 });
