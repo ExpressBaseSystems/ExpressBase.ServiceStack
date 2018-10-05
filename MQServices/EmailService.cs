@@ -23,7 +23,7 @@ using System.IO;
 
 namespace ExpressBase.ServiceStack
 {
-    [Authenticate]
+    
     public class EmailService : EbBaseService
     {
         public EmailService(IEbConnectionFactory _dbf, IMessageProducer _mqp, IMessageQueueClient _mqc, IEbServerEventClient _sec) : base(_dbf, _mqp, _mqc, _sec) { }
@@ -32,6 +32,30 @@ namespace ExpressBase.ServiceStack
         {
             EmailServicesResponse resp = new EmailServicesResponse();
             return resp;
+        }
+
+        public ResetPasswordMqResponse Post(ResetPasswordMqRequest request)
+        {
+            string q = "SELECT * FROM eb_reset_pw(:email)";
+            DbParameter[] parameters = {
+                this.EbConnectionFactory.DataDB.GetNewParameter("email",EbDbTypes.String,request.Email)
+            };
+            EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(q, parameters);
+
+            //MessageProducer3.Publish(new EmailServicesRequest()
+            //{
+            //    To = request.Email,
+            //    Cc = null,
+            //    Bcc = null,
+            //    Message = "Your new password is"+ dt.Rows[0][0],
+            //    Subject = "Reset Password",
+            //    UserId = request.UserId,
+            //    UserAuthId = request.UserAuthId,
+            //    SolnId = request.SolnId,
+            //    AttachmentReport = RepRes.ReportBytea,
+            //    AttachmentName = RepRes.ReportName
+            //});
+            return new ResetPasswordMqResponse { };
         }
     }
 
