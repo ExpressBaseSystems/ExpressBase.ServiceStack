@@ -52,8 +52,8 @@ namespace ExpressBase.ServiceStack.Services
 				SqlQry += @"SELECT id, firmcode, trdate, genurl, name, dob, genphoffice, profession, genemail, customertype, clcity, clcountry, city,
 								typeofcustomer, sourcecategory, subcategory, consultation, picsrcvd, dprefid, sex, district, leadowner
 								FROM customers WHERE id = :accountid;
-							SELECT id,trdate,status,followupdate,narration, createdby FROM leaddetails
-								WHERE customers_id=:accountid ORDER BY trdate DESC, followupdate DESC;
+							SELECT id,trdate,status,followupdate,narration, eb_createdby, eb_createddt FROM leaddetails
+								WHERE customers_id=:accountid ORDER BY eb_createddt DESC;
 							SELECT id,trdate,totalamount,advanceamount,balanceamount,cashreceived,paymentmode,bank,createddt,narration,createdby 
 								FROM leadpaymentdetails WHERE customers_id=:accountid ORDER BY balanceamount;
 							SELECT id,dateofsurgery,branch,patientinstructions,doctorsinstructions,createdby,createddt 
@@ -144,11 +144,12 @@ namespace ExpressBase.ServiceStack.Services
 					Flist.Add(new FeedbackEntry
 					{
 						Id = Convert.ToInt32(i[0]),
-						Date = getStringValue(i[1]),
+						Tr_Date = getStringValue(i[1]),
 						Status = i[2].ToString(),
-						Followup_Date = getStringValue(i[3]),						
+						Fup_Date = getStringValue(i[3]),						
 						Comments = i[4].ToString(),
-						Created_By = StaffDict.ContainsValue(Convert.ToInt32(i[5]))? StaffDict.FirstOrDefault(x => x.Value == Convert.ToInt32(i[5])).Key : string.Empty
+						Created_By = StaffDict.ContainsValue(Convert.ToInt32(i[5]))? StaffDict.FirstOrDefault(x => x.Value == Convert.ToInt32(i[5])).Key : string.Empty,
+						Created_Date = getStringValue(i[6])
 					});
 				}
 
@@ -537,9 +538,9 @@ namespace ExpressBase.ServiceStack.Services
 			List<DbParameter> parameters = new List<DbParameter>();
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, F_Obj.Id));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("accountid", EbDbTypes.Int32, Convert.ToInt32(F_Obj.Account_Code)));
-			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("trdate", EbDbTypes.Date, Convert.ToDateTime(DateTime.ParseExact(F_Obj.Date, "dd-MM-yyyy", CultureInfo.InvariantCulture))));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("trdate", EbDbTypes.Date, Convert.ToDateTime(DateTime.ParseExact(F_Obj.Tr_Date, "dd-MM-yyyy", CultureInfo.InvariantCulture))));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("status", EbDbTypes.String, F_Obj.Status));
-			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("followupdate", EbDbTypes.Date, Convert.ToDateTime(DateTime.ParseExact(F_Obj.Followup_Date, "dd-MM-yyyy", CultureInfo.InvariantCulture))));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("followupdate", EbDbTypes.Date, Convert.ToDateTime(DateTime.ParseExact(F_Obj.Fup_Date, "dd-MM-yyyy", CultureInfo.InvariantCulture))));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("narration", EbDbTypes.String, F_Obj.Comments));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("createdby", EbDbTypes.String, request.UserName));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("createddt", EbDbTypes.DateTime, DateTime.Now));
