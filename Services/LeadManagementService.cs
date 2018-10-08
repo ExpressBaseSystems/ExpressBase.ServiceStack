@@ -22,7 +22,7 @@ namespace ExpressBase.ServiceStack.Services
 		{
 			string SqlQry = @"SELECT firmcode, fname FROM firmmaster WHERE firmcode > 0;
 							  SELECT id, name FROM doctors ORDER BY name;
-							  SELECT id, name FROM employees ORDER BY name;
+							  SELECT id, INITCAP(TRIM(fullname)) FROM eb_users WHERE id > 1 ORDER BY fullname;
 							SELECT DISTINCT INITCAP(TRIM(clcity)) AS clcity FROM customers WHERE LENGTH(clcity) > 2 ORDER BY clcity;
 							SELECT DISTINCT INITCAP(TRIM(clcountry)) AS clcountry FROM customers WHERE LENGTH(clcountry) > 2 ORDER BY clcountry;
 							SELECT DISTINCT INITCAP(TRIM(city)) AS city FROM customers WHERE LENGTH(city) > 2 ORDER BY city;
@@ -32,7 +32,7 @@ namespace ExpressBase.ServiceStack.Services
 							SELECT status FROM lead_status ORDER BY status;";
 			List<DbParameter> paramList = new List<DbParameter>();
 			Dictionary<int, string> CostCenter = new Dictionary<int, string>();
-			Dictionary<string, int> DicDict = new Dictionary<string, int>();
+			Dictionary<string, int> DocDict = new Dictionary<string, int>();
 			Dictionary<string, int> StaffDict = new Dictionary<string, int>();
 			Dictionary<string, string> CustomerData = new Dictionary<string, string>();
 			List<string> clcityList = new List<string>();
@@ -58,7 +58,7 @@ namespace ExpressBase.ServiceStack.Services
 								FROM leadpaymentdetails WHERE customers_id=:accountid ORDER BY balanceamount;
 							SELECT id,dateofsurgery,branch,patientinstructions,doctorsinstructions,createdby,createddt 
 								FROM leadsurgerydetails WHERE customers_id=:accountid ORDER BY createddt;
-							SELECT noofgrafts,totalrate,prpsessions,consulted,consultingfeepaid,consultingdoctor,closing,LOWER(TRIM(nature)),consdate,probmonth
+							SELECT noofgrafts,totalrate,prpsessions,consulted,consultingfeepaid,consultingdoctor,eb_closing,LOWER(TRIM(nature)),consdate,probmonth
 								FROM leadratedetails WHERE customers_id=:accountid;
 
                             SELECT eb_files_ref_id
@@ -70,9 +70,11 @@ namespace ExpressBase.ServiceStack.Services
 			foreach (var dr in ds.Tables[0].Rows)
 				CostCenter.Add(Convert.ToInt32(dr[0]), dr[1].ToString());
 			foreach (var dr in ds.Tables[1].Rows)
-				DicDict.Add(dr[1].ToString(), Convert.ToInt32(dr[0]));
+				if(!DocDict.ContainsKey(dr[1].ToString()))
+					DocDict.Add(dr[1].ToString(), Convert.ToInt32(dr[0]));
 			foreach (var dr in ds.Tables[2].Rows)
-				StaffDict.Add(dr[1].ToString(), Convert.ToInt32(dr[0]));
+				if(!StaffDict.ContainsKey(dr[1].ToString()))
+					StaffDict.Add(dr[1].ToString(), Convert.ToInt32(dr[0]));
 
 			foreach (var dr in ds.Tables[3].Rows)
 				clcityList.Add(dr[0].ToString());
@@ -146,7 +148,7 @@ namespace ExpressBase.ServiceStack.Services
 						Status = i[2].ToString(),
 						Followup_Date = getStringValue(i[3]),						
 						Comments = i[4].ToString(),
-						Created_By = i[5].ToString()
+						Created_By = StaffDict.ContainsValue(Convert.ToInt32(i[5]))? StaffDict.FirstOrDefault(x => x.Value == Convert.ToInt32(i[5])).Key : string.Empty
 					});
 				}
 
@@ -187,7 +189,7 @@ namespace ExpressBase.ServiceStack.Services
 			return new GetManageLeadResponse {
 				RespMode = Mode,
 				CostCenterDict = CostCenter,
-				DoctorDict = DicDict,
+				DoctorDict = DocDict,
 				StaffDict = StaffDict,
 				CustomerDataDict = CustomerData,
 				FeedbackList = Flist,
@@ -417,9 +419,9 @@ namespace ExpressBase.ServiceStack.Services
 			if (dict.TryGetValue("closing", out found))
 			{
 				parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Int32, Convert.ToInt32(found.Value)));
-				cols2 += "closing,";
+				cols2 += "eb_closing,";
 				vals2 += ":closing,";
-				upcolsvals2 += "closing=:closing,";
+				upcolsvals2 += "eb_closing=:closing,";
 			}
 			if (dict.TryGetValue("nature", out found))
 			{
@@ -544,10 +546,13 @@ namespace ExpressBase.ServiceStack.Services
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("modifiedby", EbDbTypes.String, request.UserName));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("modifieddt", EbDbTypes.DateTime, DateTime.Now));
 
-			if(true)//update disabled  //if (F_Obj.Id == 0)//new
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_createdby", EbDbTypes.Int32, request.UserId));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_createddt", EbDbTypes.DateTime, DateTime.Now));
+
+			if (true)//update disabled  //if (F_Obj.Id == 0)//new
 			{
-				string Qry = @"INSERT INTO leaddetails(prehead, customers_id, trdate, status, followupdate, narration, createdby, createddt) 
-									VALUES('50' , :accountid, :trdate, :status, :followupdate, :narration, :createdby, :createddt);";
+				string Qry = @"INSERT INTO leaddetails(prehead, customers_id, trdate, status, followupdate, narration, createdby, createddt, eb_createdby, eb_createddt) 
+									VALUES('50' , :accountid, :trdate, :status, :followupdate, :narration, :createdby, :createddt, :eb_createdby, :eb_createddt);";
 				rstatus = this.EbConnectionFactory.ObjectsDB.InsertTable(Qry, parameters.ToArray());
 			}
 			else//update
@@ -579,6 +584,12 @@ namespace ExpressBase.ServiceStack.Services
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("narration", EbDbTypes.String, B_Obj.Narration));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("modifiedby", EbDbTypes.String, request.UserName));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("modifieddt", EbDbTypes.DateTime, DateTime.Now));
+
+			//parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_createdby", EbDbTypes.Int32, request.UserId));
+			//parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_createddt", EbDbTypes.DateTime, DateTime.Now));
+			//, eb_createdby, eb_createddt
+			//, :eb_createdby, :eb_createddt
+
 			if (true)//update disabled  //if (B_Obj.Id == 0)//new
 			{
 				string Qry = @"INSERT INTO leadpaymentdetails(prehead,customers_id,trdate,totalamount,advanceamount,paymentmode,bank,balanceamount,cashreceived,createdby,createddt,narration) 
