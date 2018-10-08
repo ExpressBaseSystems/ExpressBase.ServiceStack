@@ -472,7 +472,7 @@ namespace ExpressBase.ServiceStack.Services
 				accid = Convert.ToInt32(dt.Rows[0][0]);
 
 				string Qry2 = @"INSERT INTO leadratedetails("+cols2+ @"customers_id, accountcode, createdby, createddt, eb_createdby, eb_createdat, eb_modifiedby, eb_modifiedat)
-										VALUES (" + vals2+ @":accountid, :accountcode, :createdby, :createddt, :eb_createdby, NOW(), :eb_modifiedby, NOW());";
+										VALUES (" + vals2+ @":accountid, :accountcode, :createdby, NOW(), :eb_createdby, NOW(), :eb_modifiedby, NOW());";
 				parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("accountid", EbDbTypes.Int32, accid));
 				parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("accountcode", EbDbTypes.String, Fields.Find(i => i.Key == "genurl").Value));
 				rstatus = this.EbConnectionFactory.ObjectsDB.InsertTable(Qry2, parameters2.ToArray());
@@ -503,7 +503,7 @@ namespace ExpressBase.ServiceStack.Services
 					else
 					{
 						string Qry2 = @"INSERT INTO leadratedetails(" + cols2 + @"customers_id, accountcode, createdby, createddt, eb_createdby, eb_createdat, eb_modifiedby, eb_modifiedat)
-										VALUES (" + vals2 + @":accountid, :accountcode, :createdby, :createddt, :eb_createdby, NOW(), :eb_modifiedby, NOW());";
+										VALUES (" + vals2 + @":accountid, :accountcode, :createdby, NOW(), :eb_createdby, NOW(), :eb_modifiedby, NOW());";
 						parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("accountid", EbDbTypes.Int32, accid));
 						parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("accountcode", EbDbTypes.String, Fields.Find(i => i.Key == "genurl").Value));
 						rstatus += this.EbConnectionFactory.ObjectsDB.InsertTable(Qry2, parameters2.ToArray()) * 10;
