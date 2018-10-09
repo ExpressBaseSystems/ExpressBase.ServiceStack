@@ -215,7 +215,7 @@ namespace ExpressBase.ServiceStack.Services
         public DoUniqueCheckResponse Any(DoUniqueCheckRequest Req)
         {
             string query = string.Format("SELECT id FROM {0} WHERE {1} = :value;", Req.TableName, Req.Field);
-            EbControl obj = Activator.CreateInstance(Type.GetType("Eb" + Req.TypeS), true) as EbControl;
+            EbControl obj = Activator.CreateInstance(typeof(ExpressBase.Objects.Margin).Assembly.GetType("ExpressBase.Objects." + Req.TypeS, true), true) as EbControl;
             DbParameter[] param = {
                 this.EbConnectionFactory.DataDB.GetNewParameter("value",obj.EbDbType, Req.Value)
             };
