@@ -592,11 +592,11 @@ namespace ExpressBase.ServiceStack
                     }
                     if (col.Type == EbDbTypes.String && (col as DVStringColumn).RenderAs == StringRenderType.Link && col.LinkType == LinkTypeEnum.Tab)/////////////////
                     {
-                        _formattedData = "<a href='../custompage/leadmanagement?ac=" + _dataset.Tables[0].Rows[i][0] + "' target='_blank'>" + _formattedData + "</a>";
+                        _formattedData = "<a href='../leadmanagement/" + _dataset.Tables[0].Rows[i][0] + "' target='_blank'>" + _formattedData + "</a>";
                     }
                     if (col.HideDataRowMoreThan > 0 && col.HideDataRowMoreThan < _dataset.Tables[0].Rows.Count)
                     {
-                        _formattedData = "xxxxxxx";
+                        _formattedData = "********";
                     }
                     _formattedTable.Rows[i].Insert(col.Data, _formattedData);
 
@@ -694,8 +694,8 @@ namespace ExpressBase.ServiceStack
             foreach (DVBaseColumn Column in RowGroupingColumns)
             {
                 string tempValue = row[Column.Data].ToString().Trim();
-                TempGroupingText += (tempValue == string.Empty) ? BlankText : tempValue;
-                TempGroupingText += (delimCount == TotalLevels && IsMultiLevelRowGrouping) ? string.Empty : GroupDelimiter;
+                TempGroupingText += (tempValue.Trim().Equals(string.Empty) || tempValue.Trim().IsNullOrEmpty()) ? BlankText : tempValue.Trim();
+                TempGroupingText += (IsMultiLevelRowGrouping && delimCount == TotalLevels) ? string.Empty : GroupDelimiter;
 
                 if (IsMultiLevelRowGrouping)
                     delimCount++;
@@ -759,13 +759,14 @@ namespace ExpressBase.ServiceStack
             {
                 if (IsMultiLevelRowGrouping)
                 {
-                    TempKey.Add(((TempKey.Count > 0) ? TempKey.Last() + GroupDelimiter : string.Empty) + CurrentRow[column.Data]);
+                    TempKey.Add(((TempKey.Count > 0) ? TempKey.Last() + GroupDelimiter : string.Empty) + ((CurrentRow[column.Data].ToString().Trim().IsNullOrEmpty())?BlankText: CurrentRow[column.Data].ToString().Trim()));
                 }
                 else
                 {
-                    TempStr += (TempStr.Equals(string.Empty)) ? CurrentRow[column.Data] : GroupDelimiter + CurrentRow[column.Data];
+                    TempStr += (TempStr.Equals(string.Empty)) ? CurrentRow[column.Data] : GroupDelimiter + ((CurrentRow[column.Data].ToString().Trim().IsNullOrEmpty()) ? BlankText : CurrentRow[column.Data].ToString().Trim());
                 }
             }
+
             if (!IsMultiLevelRowGrouping)
                 TempKey.Add(TempStr);
 
