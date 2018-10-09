@@ -133,8 +133,8 @@ namespace ExpressBase.ServiceStack
                 {
                     new MyFacebookAuthProvider(AppSettings)
                     {
-                        AppId = "151550788692231",
-                        AppSecret = "94ec1a04342e5cf7e7a971f2eb7ad7bc",
+                        AppId = "683590648713089",//"151550788692231", 
+                        AppSecret = "61e674e06ae1b499a7b64b89454aa416",//"94ec1a04342e5cf7e7a971f2eb7ad7bc",
                         Permissions = new string[] { "email, public_profile" }
                     },
 
@@ -152,6 +152,7 @@ namespace ExpressBase.ServiceStack
                         ClientSecret = "d9c1c956a9fddd089798e0031851e93a8d0e5cc6",
                         RedirectUrl = "http://localhost:8000/"
                     },
+
 
                     new MyCredentialsAuthProvider(AppSettings) { PersistSession = true },
 
