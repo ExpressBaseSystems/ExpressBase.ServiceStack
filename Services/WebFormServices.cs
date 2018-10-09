@@ -215,8 +215,9 @@ namespace ExpressBase.ServiceStack.Services
         public DoUniqueCheckResponse Any(DoUniqueCheckRequest Req)
         {
             string query = string.Format("SELECT id FROM {0} WHERE {1} = :value;", Req.TableName, Req.Field);
+            EbControl obj = Activator.CreateInstance(Type.GetType("Eb" + Req.TypeS), true) as EbControl;
             DbParameter[] param = {
-                this.EbConnectionFactory.DataDB.GetNewParameter("value",EbDbTypes.String, Req.Value)
+                this.EbConnectionFactory.DataDB.GetNewParameter("value",obj.EbDbType, Req.Value)
             };
             EbDataTable datatbl = this.EbConnectionFactory.ObjectsDB.DoQuery(query, param);
             return new DoUniqueCheckResponse { NoRowsWithSameValue = datatbl.Rows.Count };
