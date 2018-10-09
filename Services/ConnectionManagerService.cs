@@ -126,7 +126,9 @@ namespace ExpressBase.ServiceStack.Services
 
             _solutionConnections.ObjectsDbConnection.Persist(request.NewSolnId, this.InfraConnectionFactory, true, request.UserId);
             _solutionConnections.DataDbConnection.Persist(request.NewSolnId, this.InfraConnectionFactory, true, request.UserId);
-            _solutionConnections.FilesDbConnection.Persist(request.NewSolnId, this.InfraConnectionFactory, true, request.UserId);
+
+            if (_solutionConnections.FilesDbConnection != null)
+                _solutionConnections.FilesDbConnection.Persist(request.NewSolnId, this.InfraConnectionFactory, true, request.UserId);
 
             this.Redis.Set<EbConnectionsConfig>(string.Format(CoreConstants.SOLUTION_CONNECTION_REDIS_KEY, request.NewSolnId), _solutionConnections);
         }
