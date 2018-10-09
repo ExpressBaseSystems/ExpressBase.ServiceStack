@@ -596,7 +596,7 @@ namespace ExpressBase.ServiceStack
                     }
                     if (col.HideDataRowMoreThan > 0 && col.HideDataRowMoreThan < _dataset.Tables[0].Rows.Count)
                     {
-                        _formattedData = "xxxxxxx";
+                        _formattedData = "********";
                     }
                     _formattedTable.Rows[i].Insert(col.Data, _formattedData);
 
