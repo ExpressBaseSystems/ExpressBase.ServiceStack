@@ -145,7 +145,7 @@ namespace ExpressBase.ServiceStack.Services
 					Flist.Add(new FeedbackEntry
 					{
 						Id = Convert.ToInt32(i[0]),
-						Tr_Date = getStringValue(i[1]),
+						Date = getStringValue(i[1]),
 						Status = i[2].ToString(),
 						Fup_Date = getStringValue(i[3]),						
 						Comments = i[4].ToString(),
@@ -543,7 +543,7 @@ namespace ExpressBase.ServiceStack.Services
 			//var CrntDateTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("India Standard Time"));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, F_Obj.Id));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("accountid", EbDbTypes.Int32, Convert.ToInt32(F_Obj.Account_Code)));
-			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("trdate", EbDbTypes.Date, Convert.ToDateTime(DateTime.ParseExact(F_Obj.Tr_Date, "dd-MM-yyyy", CultureInfo.InvariantCulture))));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("trdate", EbDbTypes.Date, Convert.ToDateTime(DateTime.ParseExact(F_Obj.Date, "dd-MM-yyyy", CultureInfo.InvariantCulture))));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("status", EbDbTypes.String, F_Obj.Status));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("followupdate", EbDbTypes.Date, Convert.ToDateTime(DateTime.ParseExact(F_Obj.Fup_Date, "dd-MM-yyyy", CultureInfo.InvariantCulture))));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("narration", EbDbTypes.String, F_Obj.Comments));
