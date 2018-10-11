@@ -194,12 +194,12 @@ namespace ExpressBase.ServiceStack
             else if (res.Data[0].EbObjectType == 17)
                 linkDsRefid = EbSerializers.Json_Deserialize<EbChartVisualization>(res.Data[0].Json).DataSourceRefId;//Getting the linked chart viz
 
-            EbDataSource LinkDatasource = Redis.Get<EbDataSource>(linkDsRefid);
+            EbDataReader LinkDatasource = Redis.Get<EbDataReader>(linkDsRefid);
             if (LinkDatasource == null || LinkDatasource.Sql == null || LinkDatasource.Sql == string.Empty)
             {
                 EbObjectParticularVersionResponse result = (EbObjectParticularVersionResponse)myObjectservice.Get(new EbObjectParticularVersionRequest { RefId = linkDsRefid });
                 LinkDatasource = EbSerializers.Json_Deserialize(result.Data[1].Json);
-                Redis.Set<EbDataSource>(linkDsRefid, LinkDatasource);
+                Redis.Set<EbDataReader>(linkDsRefid, LinkDatasource);
             }
 
             if (!string.IsNullOrEmpty(LinkDatasource.FilterDialogRefId))
@@ -244,7 +244,7 @@ namespace ExpressBase.ServiceStack
         public ValidateCalcExpressionResponse Get(ValidateCalcExpressionRequest request)
         {
             Type resultType;
-            EbDataSource ds = null;
+            EbDataReader ds = null;
             bool _isValid = true;
             string _excepMsg = string.Empty;
             int resultType_enum = 0;
@@ -258,11 +258,11 @@ namespace ExpressBase.ServiceStack
             cresp = Redis.Get<DataSourceColumnsResponse>(string.Format("{0}_columns", request.DataSourceRefId));
             if (cresp == null || cresp.Columns.Count == 0)
             {
-                ds = Redis.Get<EbDataSource>(request.DataSourceRefId);
+                ds = Redis.Get<EbDataReader>(request.DataSourceRefId);
                 if (ds == null)
                 {
                     EbObjectParticularVersionResponse dsresult = myObjectservice.Get(new EbObjectParticularVersionRequest { RefId = request.DataSourceRefId }) as EbObjectParticularVersionResponse;
-                    ds = EbSerializers.Json_Deserialize<EbDataSource>(dsresult.Data[0].Json);
+                    ds = EbSerializers.Json_Deserialize<EbDataReader>(dsresult.Data[0].Json);
                     Redis.Set(request.DataSourceRefId, ds);
                 }
                 if (ds.FilterDialogRefId != string.Empty)
