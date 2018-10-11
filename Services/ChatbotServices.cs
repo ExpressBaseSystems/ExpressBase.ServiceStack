@@ -707,7 +707,7 @@ WHERE
 
         public void CreateDsAndDv(CreateBotFormTableRequest request, DVColumnCollection Columns, string ColumnName)
         {
-            var dsobj = new EbDataSource();
+            var dsobj = new EbDataReader();
             dsobj.Sql = "SELECT @colname@ FROM @tbl".Replace("@tbl", request.BotObj.TableName).Replace("@colname@", ColumnName);
             var ds = new EbObject_Create_New_ObjectRequest();
             ds.Name = request.BotObj.Name + "_datasource";
@@ -747,7 +747,7 @@ WHERE
 
         public string CreateDsAndDv4Cards(CreateBotFormTableRequest request, DVColumnCollection Columns, string ColumnName)
         {
-            var dsobj = new EbDataSource();
+            var dsobj = new EbDataReader();
             dsobj.Sql = "SELECT @ColumnName@ FROM @tbl WHERE formid = :id".Replace("@tbl", request.BotObj.TableName + "_lines").Replace("@ColumnName@", ColumnName);
             var ds = new EbObject_Create_New_ObjectRequest();
             ds.Name = request.BotObj.Name + "_datasource4Card";

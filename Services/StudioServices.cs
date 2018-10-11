@@ -831,8 +831,8 @@ namespace ExpressBase.ServiceStack
 
         public int GetObjectType(object obj)
         {
-            if (obj is EbDataSource)
-                return EbObjectTypes.DataSource.IntCode;
+            if (obj is EbDataReader)
+                return EbObjectTypes.DataReader.IntCode;
             else if (obj is EbTableVisualization)
                 return EbObjectTypes.TableVisualization.IntCode;
             else if (obj is EbChartVisualization)
@@ -849,6 +849,8 @@ namespace ExpressBase.ServiceStack
                 return EbObjectTypes.BotForm.IntCode;
             else if (obj is EbSmsTemplate)
                 return EbObjectTypes.SmsBuilder.IntCode;
+            else if (obj is EbDataWriter)
+                return EbObjectTypes.DataWriter.IntCode;
             else
                 return -1;
         }
@@ -859,10 +861,12 @@ namespace ExpressBase.ServiceStack
             {
                 Redis.Set(refId, (EbFilterDialog)obj);
             }
-            else if (obj is EbDataSource)
+            else if (obj is EbDataReader)
             {
-                Redis.Set(refId, (EbDataSource)obj);
+                Redis.Set(refId, (EbDataReader)obj);
             }
+            else if(obj is EbDataWriter)
+                Redis.Set(refId, (EbDataWriter)obj);
             else if (obj is EbChart)
             {
                 Redis.Set(refId, (EbChart)obj);

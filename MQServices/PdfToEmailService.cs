@@ -56,7 +56,7 @@ namespace ExpressBase.ServiceStack.MQServices
             if (ebEmailTemplate.DataSourceRefId != string.Empty)
             {
                 EbObjectParticularVersionResponse myDsres = (EbObjectParticularVersionResponse)objservice.Get(new EbObjectParticularVersionRequest() { RefId = ebEmailTemplate.DataSourceRefId });
-                EbDataSource ebDataSource = new EbDataSource();
+                EbDataReader ebDataSource = new EbDataReader();
                 ebDataSource = EbSerializers.Json_Deserialize(myDsres.Data[0].Json);
                 var parameters = DataHelper.GetParams(ebConnectionFactory, false, request.Params, 0, 0);
                 var ds = ebConnectionFactory.ObjectsDB.DoQueries(ebDataSource.Sql, parameters.ToArray());

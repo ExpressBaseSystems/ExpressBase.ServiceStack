@@ -31,7 +31,7 @@ namespace ExpressBase.ServiceStack
 
             DataSourceDataResponse dsresponse = null;
 
-            var _ds = this.Redis.Get<EbDataSource>(request.RefId);
+            var _ds = this.Redis.Get<EbDataReader>(request.RefId);
             string _sql = string.Empty;
 
             if (_ds == null)
@@ -39,7 +39,7 @@ namespace ExpressBase.ServiceStack
                 var myService = base.ResolveService<EbObjectService>();
                 var result = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = request.RefId });
                 _ds = EbSerializers.Json_Deserialize(result.Data[0].Json);
-                Redis.Set<EbDataSource>(request.RefId, _ds);
+                Redis.Set<EbDataReader>(request.RefId, _ds);
             }
             if (_ds.FilterDialogRefId != string.Empty && _ds.FilterDialogRefId != null)
             {
@@ -194,13 +194,13 @@ namespace ExpressBase.ServiceStack
             {
                 resp = new DataSourceColumnsResponse();
                 resp.Columns = new List<ColumnColletion>();
-                EbDataSource _ds = null;
+                EbDataReader _ds = null;
                 if (_ds == null)
                 {
                     var myService = base.ResolveService<EbObjectService>();
                     var result = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = request.RefId });
                     _ds = EbSerializers.Json_Deserialize(result.Data[0].Json);
-                    Redis.Set<EbDataSource>(request.RefId, _ds);
+                    Redis.Set<EbDataReader>(request.RefId, _ds);
                 }
 
                 if (_ds != null)
@@ -256,7 +256,7 @@ namespace ExpressBase.ServiceStack
 
             DataSourceDataSetResponse dsresponse = null;
 
-            var _ds = this.Redis.Get<EbDataSource>(request.RefId);
+            var _ds = this.Redis.Get<EbDataReader>(request.RefId);
             string _sql = string.Empty;
 
             if (_ds == null)
@@ -264,7 +264,7 @@ namespace ExpressBase.ServiceStack
                 var myService = base.ResolveService<EbObjectService>();
                 var result = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = request.RefId });
                 _ds = EbSerializers.Json_Deserialize(result.Data[0].Json);
-                Redis.Set<EbDataSource>(request.RefId, _ds);
+                Redis.Set<EbDataReader>(request.RefId, _ds);
             }
             if (_ds.FilterDialogRefId != string.Empty && _ds.FilterDialogRefId !=null)
             {
