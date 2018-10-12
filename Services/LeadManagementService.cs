@@ -29,7 +29,8 @@ namespace ExpressBase.ServiceStack.Services
 							SELECT district FROM lead_district ORDER BY district;
 							SELECT source FROM lead_source ORDER BY source;
 							SELECT DISTINCT INITCAP(TRIM(subcategory)) AS subcategory FROM customers WHERE LENGTH(subcategory) > 2 ORDER BY subcategory;
-							SELECT status FROM lead_status ORDER BY status;";
+							SELECT status FROM lead_status ORDER BY status;
+							SELECT service FROM lead_service ORDER BY service;";
 			List<DbParameter> paramList = new List<DbParameter>();
 			Dictionary<int, string> CostCenter = new Dictionary<int, string>();
 			Dictionary<string, int> DocDict = new Dictionary<string, int>();
@@ -42,6 +43,7 @@ namespace ExpressBase.ServiceStack.Services
 			List<string> sourcecategoryList = new List<string>();
 			List<string> subcategoryList = new List<string>();
 			List<string> statusList = new List<string>();
+			List<string> serviceList = new List<string>();
 			List<FeedbackEntry> Flist = new List<FeedbackEntry>();
 			List<BillingEntry> Blist = new List<BillingEntry>();
 			List<SurgeryEntry> Slist = new List<SurgeryEntry>();
@@ -92,11 +94,14 @@ namespace ExpressBase.ServiceStack.Services
 				subcategoryList.Add(dr[0].ToString());
 			foreach (var dr in ds.Tables[9].Rows)
 				statusList.Add(dr[0].ToString());
+			foreach (var dr in ds.Tables[10].Rows)
+				serviceList.Add(dr[0].ToString());
 
-			if (ds.Tables.Count > 10 && ds.Tables[10].Rows.Count > 0)
+			int Qcnt = 11;//Query count first part
+			if (ds.Tables.Count > Qcnt && ds.Tables[Qcnt].Rows.Count > 0)
 			{
 				Mode = 1;
-				var dr = ds.Tables[10].Rows[0];
+				var dr = ds.Tables[Qcnt].Rows[0];
 				CustomerData.Add("accountid", dr[0].ToString());
 				CustomerData.Add("firmcode", dr[1].ToString());
 				CustomerData.Add("trdate", getStringValue(dr[2]));
@@ -121,9 +126,9 @@ namespace ExpressBase.ServiceStack.Services
 				CustomerData.Add("district", dr[20].ToString());
 				CustomerData.Add("leadowner", dr[21].ToString());
 				
-				if (ds.Tables[14].Rows.Count > 0)
+				if (ds.Tables[Qcnt + 4].Rows.Count > 0)
 				{
-					dr = ds.Tables[14].Rows[0];
+					dr = ds.Tables[Qcnt + 4].Rows[0];
 					CustomerData.Add("noofgrafts", dr[0].ToString());
 					CustomerData.Add("totalrate", dr[1].ToString());
 					CustomerData.Add("prpsessions", dr[2].ToString());
@@ -136,11 +141,11 @@ namespace ExpressBase.ServiceStack.Services
 					CustomerData.Add("probmonth", (string.IsNullOrEmpty(getStringValue(dr[9])) ? string.Empty: getStringValue(dr[9]).Substring(3).Replace("-", "/")));
 				}
 
-				foreach (var i in ds.Tables[15].Rows)
+				foreach (var i in ds.Tables[Qcnt + 5].Rows)
 					ImgIds.Add(i[0].ToString());
 
 				//followup details
-				foreach (var i in ds.Tables[11].Rows)
+				foreach (var i in ds.Tables[Qcnt + 1].Rows)
 				{
 					Flist.Add(new FeedbackEntry
 					{
@@ -155,7 +160,7 @@ namespace ExpressBase.ServiceStack.Services
 				}
 
 				//Billing details
-				foreach (var i in ds.Tables[12].Rows)
+				foreach (var i in ds.Tables[Qcnt + 2].Rows)
 				{
 					Blist.Add(new BillingEntry
 					{
@@ -174,7 +179,7 @@ namespace ExpressBase.ServiceStack.Services
 				}
 
 				//surgery details
-				foreach (var i in ds.Tables[13].Rows)
+				foreach (var i in ds.Tables[Qcnt + 3].Rows)
 				{
 					Slist.Add(new SurgeryEntry
 					{
@@ -204,7 +209,8 @@ namespace ExpressBase.ServiceStack.Services
 				SourceCategoryList = sourcecategoryList,
 				SubCategoryList = subcategoryList,
 				ImageIdList = ImgIds,
-				StatusList = statusList
+				StatusList = statusList,
+				ServiceList = serviceList
 			};
 		}
 
