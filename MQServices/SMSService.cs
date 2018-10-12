@@ -31,10 +31,10 @@ namespace ExpressBase.ServiceStack.MQServices
             if (SmsTemplate.DataSourceRefId != string.Empty)
             {
                 EbObjectParticularVersionResponse myDsres = (EbObjectParticularVersionResponse)objservice.Get(new EbObjectParticularVersionRequest() { RefId = SmsTemplate.DataSourceRefId });
-                EbDataReader ebDataSource = new EbDataReader();
-                ebDataSource = EbSerializers.Json_Deserialize(myDsres.Data[0].Json);
+                EbDataReader reader = new EbDataReader();
+                reader = EbSerializers.Json_Deserialize(myDsres.Data[0].Json);
                 IEnumerable<DbParameter> parameters = DataHelper.GetParams(ebConnectionFactory, false, request.Params, 0, 0);
-                EbDataSet ds = ebConnectionFactory.ObjectsDB.DoQueries(ebDataSource.Sql, parameters.ToArray());
+                EbDataSet ds = ebConnectionFactory.ObjectsDB.DoQueries(reader.Sql, parameters.ToArray());
                 string pattern = @"\{{(.*?)\}}";
                 IEnumerable<string> matches = Regex.Matches(SmsTemplate.Body, pattern).OfType<Match>()
                  .Select(m => m.Groups[0].Value)
@@ -43,23 +43,22 @@ namespace ExpressBase.ServiceStack.MQServices
                 {
                     string str = _col.Replace("{{", "").Replace("}}", "");
 
-                        foreach (EbDataTable dt in ds.Tables)
-                        {
-                            string colname = dt.Rows[0][str.Split('.')[1]].ToString();
-                            SmsTemplate.Body = SmsTemplate.Body.Replace(_col, colname);
-                        }
+                    foreach (EbDataTable dt in ds.Tables)
+                    {
+                        string colname = dt.Rows[0][str.Split('.')[1]].ToString();
+                        SmsTemplate.Body = SmsTemplate.Body.Replace(_col, colname);
                     }
                 }
-                try
-                {
-                    this.MessageProducer3.Publish(new SMSSentMqRequest { To = SmsTemplate.To, Body = SmsTemplate.Body, SolnId = request.SolnId, UserId = request.UserId, WhichConsole = request.WhichConsole });
-                    //return true;
-                }
-                catch (Exception e)
-                {
-                    Log.Info("Exception:" + e.ToString());
-                    //return false;
-                }
+            }
+            try
+            {
+                this.MessageProducer3.Publish(new SMSSentMqRequest { To = SmsTemplate.To, Body = SmsTemplate.Body, SolnId = request.SolnId, UserId = request.UserId, WhichConsole = request.WhichConsole });
+                //return true;
+            }
+            catch (Exception e)
+            {
+                Log.Info("Exception:" + e.ToString());
+                //return false;
             }
         }
 
