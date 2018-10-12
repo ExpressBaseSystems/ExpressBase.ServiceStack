@@ -49,23 +49,24 @@ namespace ExpressBase.ServiceStack.MQServices
             reportservice.EbConnectionFactory = ebConnectionFactory;
             EbObjectFetchLiveVersionResponse res = (EbObjectFetchLiveVersionResponse)objservice.Get(new EbObjectFetchLiveVersionRequest() { Id = request.Id });
             EbEmailTemplate ebEmailTemplate = new EbEmailTemplate();
-            if (res.Data.Count > 0)
+            foreach (var element in res.Data)
             {
-                ebEmailTemplate = EbSerializers.Json_Deserialize(res.Data[0].Json);
-                if (ebEmailTemplate.DataSourceRefId != string.Empty)
+                ebEmailTemplate = EbSerializers.Json_Deserialize(element.Json);
+            }
+            if (ebEmailTemplate.DataSourceRefId != string.Empty)
+            {
+                EbObjectParticularVersionResponse myDsres = (EbObjectParticularVersionResponse)objservice.Get(new EbObjectParticularVersionRequest() { RefId = ebEmailTemplate.DataSourceRefId });
+                EbDataReader ebDataSource = new EbDataReader();
+                ebDataSource = EbSerializers.Json_Deserialize(myDsres.Data[0].Json);
+                var parameters = DataHelper.GetParams(ebConnectionFactory, false, request.Params, 0, 0);
+                var ds = ebConnectionFactory.ObjectsDB.DoQueries(ebDataSource.Sql, parameters.ToArray());
+                var pattern = @"\{{(.*?)\}}";
+                IEnumerable<string> matches = Regex.Matches(ebEmailTemplate.Body, pattern).OfType<Match>()
+                 .Select(m => m.Groups[0].Value)
+                 .Distinct();
+                foreach (var _col in matches /*ebEmailTemplate.DsColumnsCollection*/)
                 {
-                    EbObjectParticularVersionResponse myDsres = (EbObjectParticularVersionResponse)objservice.Get(new EbObjectParticularVersionRequest() { RefId = ebEmailTemplate.DataSourceRefId });
-                    EbDataSource ebDataSource = new EbDataSource();
-                    ebDataSource = EbSerializers.Json_Deserialize(myDsres.Data[0].Json);
-                    var parameters = DataHelper.GetParams(ebConnectionFactory, false, request.Params, 0, 0);
-                    var ds = ebConnectionFactory.ObjectsDB.DoQueries(ebDataSource.Sql, parameters.ToArray());
-                    var pattern = @"\{{(.*?)\}}";
-                    IEnumerable<string> matches = Regex.Matches(ebEmailTemplate.Body, pattern).OfType<Match>()
-                     .Select(m => m.Groups[0].Value)
-                     .Distinct();
-                    foreach (var _col in matches /*ebEmailTemplate.DsColumnsCollection*/)
-                    {
-                        string str = /*dscol.Title*/_col.Replace("{{", "").Replace("}}", "");
+                    string str = /*dscol.Title*/_col.Replace("{{", "").Replace("}}", "");
 
                         foreach (var dt in ds.Tables)
                         {

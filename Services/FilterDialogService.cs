@@ -22,7 +22,7 @@ namespace ExpressBase.ServiceStack.Services
 
             FDDataResponse dsresponse = null;
 
-            var _ds = this.Redis.Get<EbDataSource>(request.RefId);
+            var _ds = this.Redis.Get<EbDataReader>(request.RefId);
             string _sql = string.Empty;
 
             if (_ds == null)
@@ -30,7 +30,7 @@ namespace ExpressBase.ServiceStack.Services
                 var myService = base.ResolveService<EbObjectService>();
                 var result = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = request.RefId });
                 _ds = EbSerializers.Json_Deserialize(result.Data[0].Json);
-                Redis.Set<EbDataSource>(request.RefId, _ds);
+                Redis.Set<EbDataReader>(request.RefId, _ds);
             }
             if (_ds.FilterDialogRefId != string.Empty && _ds.FilterDialogRefId != null)
             {

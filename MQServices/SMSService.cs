@@ -27,23 +27,21 @@ namespace ExpressBase.ServiceStack.MQServices
             objservice.EbConnectionFactory = ebConnectionFactory;
             EbObjectFetchLiveVersionResponse res = (EbObjectFetchLiveVersionResponse)objservice.Get(new EbObjectFetchLiveVersionRequest() { Id = request.ObjId });
             EbSmsTemplate SmsTemplate = new EbSmsTemplate();
-            if (res.Data.Count > 0)
+            SmsTemplate = EbSerializers.Json_Deserialize(res.Data[0].Json);
+            if (SmsTemplate.DataSourceRefId != string.Empty)
             {
-                SmsTemplate = EbSerializers.Json_Deserialize(res.Data[0].Json);
-                if (SmsTemplate.DataSourceRefId != string.Empty)
+                EbObjectParticularVersionResponse myDsres = (EbObjectParticularVersionResponse)objservice.Get(new EbObjectParticularVersionRequest() { RefId = SmsTemplate.DataSourceRefId });
+                EbDataReader ebDataSource = new EbDataReader();
+                ebDataSource = EbSerializers.Json_Deserialize(myDsres.Data[0].Json);
+                IEnumerable<DbParameter> parameters = DataHelper.GetParams(ebConnectionFactory, false, request.Params, 0, 0);
+                EbDataSet ds = ebConnectionFactory.ObjectsDB.DoQueries(ebDataSource.Sql, parameters.ToArray());
+                string pattern = @"\{{(.*?)\}}";
+                IEnumerable<string> matches = Regex.Matches(SmsTemplate.Body, pattern).OfType<Match>()
+                 .Select(m => m.Groups[0].Value)
+                 .Distinct();
+                foreach (string _col in matches)
                 {
-                    EbObjectParticularVersionResponse myDsres = (EbObjectParticularVersionResponse)objservice.Get(new EbObjectParticularVersionRequest() { RefId = SmsTemplate.DataSourceRefId });
-                    EbDataSource ebDataSource = new EbDataSource();
-                    ebDataSource = EbSerializers.Json_Deserialize(myDsres.Data[0].Json);
-                    IEnumerable<DbParameter> parameters = DataHelper.GetParams(ebConnectionFactory, false, request.Params, 0, 0);
-                    EbDataSet ds = ebConnectionFactory.ObjectsDB.DoQueries(ebDataSource.Sql, parameters.ToArray());
-                    string pattern = @"\{{(.*?)\}}";
-                    IEnumerable<string> matches = Regex.Matches(SmsTemplate.Body, pattern).OfType<Match>()
-                     .Select(m => m.Groups[0].Value)
-                     .Distinct();
-                    foreach (string _col in matches)
-                    {
-                        string str = _col.Replace("{{", "").Replace("}}", "");
+                    string str = _col.Replace("{{", "").Replace("}}", "");
 
                         foreach (EbDataTable dt in ds.Tables)
                         {

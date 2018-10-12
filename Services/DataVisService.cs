@@ -243,14 +243,14 @@ namespace ExpressBase.ServiceStack
 
             DataSourceDataResponse dsresponse = null;
 
-            var _ds = this.Redis.Get<EbDataSource>(request.RefId);
+            var _ds = this.Redis.Get<EbDataReader>(request.RefId);
 
             if (_ds == null)
             {
                 var myService = base.ResolveService<EbObjectService>();
                 var result = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = request.RefId });
                 _ds = EbSerializers.Json_Deserialize(result.Data[0].Json);
-                Redis.Set<EbDataSource>(request.RefId, _ds);
+                Redis.Set<EbDataReader>(request.RefId, _ds);
             }
             if (_ds.FilterDialogRefId != string.Empty)
             {
@@ -442,13 +442,13 @@ namespace ExpressBase.ServiceStack
                 resp = new DataSourceColumnsResponse();
                 resp.Columns = new List<ColumnColletion>();
                 //EbDataSource _ds = null;
-                var _ds = this.Redis.Get<EbDataSource>(request.RefId);
+                var _ds = this.Redis.Get<EbDataReader>(request.RefId);
                 if (_ds == null)
                 {
                     var myService = base.ResolveService<EbObjectService>();
                     var result = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = request.RefId });
                     _ds = EbSerializers.Json_Deserialize(result.Data[0].Json);
-                    Redis.Set<EbDataSource>(request.RefId, _ds);
+                    Redis.Set<EbDataReader>(request.RefId, _ds);
                 }
                 if (_ds.FilterDialogRefId != string.Empty)
                 {
@@ -650,6 +650,13 @@ namespace ExpressBase.ServiceStack
                     if (i > 0)
                     {
                         (RowGrouping[FooterPrefix + PreviousGroupingText] as FooterGroupingDetails).SetRowIndex(i);
+
+                        if (IsMultiLevelRowGrouping && i == Table.Rows.Count - 1 &&
+                            (RowGrouping[HeaderPrefix + TempGroupingText] as HeaderGroupingDetails).GroupingCount == 1 &&
+                            (RowGrouping[HeaderPrefix + TempGroupingText] as HeaderGroupingDetails).LevelCount == 0)
+                        {
+                            SetFinalFooterRow(IsMultiLevelRowGrouping, RowGrouping, i, TempGroupingText);
+                        }
                     }
                 }
                 else
@@ -657,14 +664,7 @@ namespace ExpressBase.ServiceStack
                     (RowGrouping[HeaderPrefix + TempGroupingText] as HeaderGroupingDetails).GroupingCount++;
                     if (i == Table.Rows.Count - 1)
                     {
-                        (RowGrouping[FooterPrefix + TempGroupingText] as FooterGroupingDetails).InsertionType = AfterText;
-                        if (IsMultiLevelRowGrouping)
-                        {
-                            FooterGroupingDetails finalFooter = RowGrouping[FooterPrefix + TempGroupingText.Split(GroupDelimiter)[0]] as FooterGroupingDetails;
-                            finalFooter.InsertionType = AfterText;
-                            finalFooter.SetRowIndex(i);
-                            finalFooter.SetSortIndex(1);
-                        }
+                        SetFinalFooterRow(IsMultiLevelRowGrouping, RowGrouping, i, TempGroupingText);
                     }
                 }
 
@@ -675,6 +675,18 @@ namespace ExpressBase.ServiceStack
             List<GroupingDetails> SortedGroupings = RowGrouping.Values.ToList();
             SortedGroupings.Sort();
             return SortedGroupings;
+        }
+
+        private void SetFinalFooterRow(bool IsMultiLevelRowGrouping, Dictionary<string, GroupingDetails> RowGrouping, int i, string TempGroupingText)
+        {
+            (RowGrouping[FooterPrefix + TempGroupingText] as FooterGroupingDetails).InsertionType = AfterText;
+            if (IsMultiLevelRowGrouping)
+            {
+                FooterGroupingDetails finalFooter = RowGrouping[FooterPrefix + TempGroupingText.Split(GroupDelimiter)[0]] as FooterGroupingDetails;
+                finalFooter.InsertionType = AfterText;
+                finalFooter.SetRowIndex(i);
+                finalFooter.SetSortIndex(1);
+            }
         }
 
         private List<int> GetAggregateIndexes(DVColumnCollection VisualizationColumns)
@@ -805,7 +817,7 @@ namespace ExpressBase.ServiceStack
         {
             DataSourceDataResponse dsresponse = null;
 
-            var _ds = this.Redis.Get<EbDataSource>(request.RefId);
+            var _ds = this.Redis.Get<EbDataReader>(request.RefId);
             string _sql = string.Empty;
 
             if (_ds == null)
@@ -813,7 +825,7 @@ namespace ExpressBase.ServiceStack
                 var myService = base.ResolveService<EbObjectService>();
                 var result = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = request.RefId });
                 _ds = EbSerializers.Json_Deserialize(result.Data[0].Json);
-                Redis.Set<EbDataSource>(request.RefId, _ds);
+                Redis.Set<EbDataReader>(request.RefId, _ds);
             }
             if (_ds.FilterDialogRefId != string.Empty && _ds.FilterDialogRefId != null)
             {
