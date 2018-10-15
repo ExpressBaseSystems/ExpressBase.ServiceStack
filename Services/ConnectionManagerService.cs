@@ -59,6 +59,7 @@ namespace ExpressBase.ServiceStack.Services
                     if (dt.Rows.Count != 0)
                     {
                         EbSmsConCollection _smscollection = new EbSmsConCollection();
+                        EbMailConCollection _mailcollection = new EbMailConCollection();
                         foreach (DataRow dr in dt.Rows)
                         {
                             if (dr["con_type"].ToString() == EbConnectionTypes.EbDATA.ToString())
@@ -85,8 +86,9 @@ namespace ExpressBase.ServiceStack.Services
                             }
                             else if (dr["con_type"].ToString() == EbConnectionTypes.SMTP.ToString())
                             {
-                                cons.SMTPConnection = EbSerializers.Json_Deserialize<SMTPConnection>(dr["con_obj"].ToString());
-                                cons.SMTPConnection.Id = (int)dr["id"];
+                                EbEmail temp = EbSerializers.Json_Deserialize<EbEmail>(dr["con_obj"].ToString());
+                                temp.Id = (int)dr["id"];
+                                _mailcollection.Add(temp);
                             }
                             else if (dr["con_type"].ToString() == EbConnectionTypes.SMS.ToString())
                             {
@@ -106,6 +108,7 @@ namespace ExpressBase.ServiceStack.Services
                             }// ... More to come
                         }
                         cons.SMSConnections = _smscollection;
+                        cons.EmailConnection = _mailcollection;
                         Redis.Set<EbConnectionsConfig>(string.Format(CoreConstants.SOLUTION_CONNECTION_REDIS_KEY, req.SolutionId), cons);
                         resp.EBSolutionConnections = cons;
                     }
@@ -136,7 +139,7 @@ namespace ExpressBase.ServiceStack.Services
         [Authenticate]
         public void Post(ChangeSMTPConnectionRequest request)
         {
-            request.SMTPConnection.Persist(request.SolutionId, this.InfraConnectionFactory, request.IsNew, request.UserId);
+            request.Email.Persist(request.SolutionId, this.InfraConnectionFactory, request.IsNew, request.UserId);
             base.MessageProducer3.Publish(new RefreshSolutionConnectionsRequest() { SolnId = request.SolutionId, UserId = request.UserId });
         }
 

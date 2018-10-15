@@ -125,7 +125,7 @@ namespace ExpressBase.ServiceStack.Services
                     var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(query1.ToString(), parameters.ToArray());
                     result = Convert.ToInt32(dt.Rows[0][0]);
                 }
-                this.Post(new UpdateSolutionRequest() { SolnId = request.SolnId, UserId = request.UserId, Token = request.Token });
+                this.Post(new UpdateSolutionRequest() { SolnId = request.SolnId, UserId = request.UserId});
                 return new SaveLocationMetaResponse { Id =  result};
             }
         }

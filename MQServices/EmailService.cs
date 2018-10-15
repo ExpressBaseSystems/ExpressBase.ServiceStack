@@ -69,7 +69,7 @@ namespace ExpressBase.ServiceStack
             base.EbConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
             try
             {               
-                this.EbConnectionFactory.Smtp.Send(request.To, request.Subject, request.Message, request.Cc, request.Bcc, request.AttachmentReport, request.AttachmentName);
+                this.EbConnectionFactory.EmailConnection.Send(request.To, request.Subject, request.Message, request.Cc, request.Bcc, request.AttachmentReport, request.AttachmentName);
             }
             catch (Exception e)
             {
