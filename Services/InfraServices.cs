@@ -74,6 +74,7 @@ namespace ExpressBase.ServiceStack.Services
         {           
             EbDbCreateServices _dbService = base.ResolveService<EbDbCreateServices>();
             ConnectionManager _conService = base.ResolveService<ConnectionManager>();
+            TenantUserServices _tenantUserService = base.ResolveService<TenantUserServices>();
             string DbName = request.SolnUrl.ToString().ToLower();
             CreateSolutionResponse resp;
             using (var con = this.EbConnectionFactory.DataDB.GetNewConnection())
@@ -88,11 +89,15 @@ namespace ExpressBase.ServiceStack.Services
 
                 resp =  new CreateSolutionResponse { Status = Convert.ToInt32(cmd.ExecuteScalar()) };
             }
-            if(resp.Status > 0) {
+            if (resp.Status > 0)
+            {
 
-                EbDbCreateResponse response =(EbDbCreateResponse)_dbService.Post(new EbDbCreateRequest { dbName = DbName,SolnId = request.SolnId ,UserId = request.UserId, Idbcon = this.EbConnectionFactory.DataDB, ischange = false  });
+                EbDbCreateResponse response = (EbDbCreateResponse)_dbService.Post(new EbDbCreateRequest { dbName = DbName, SolnId = request.SolnId, UserId = request.UserId, Idbcon = this.EbConnectionFactory.DataDB, ischange = false });
                 if (response.resp)
-                    _conService.Post(new InitialSolutionConnectionsRequest { NewSolnId = DbName, SolnId = request.SolnId, UserId = request.UserId });              
+                {
+                    _conService.Post(new InitialSolutionConnectionsRequest { NewSolnId = DbName, SolnId = request.SolnId, UserId = request.UserId });
+                    _tenantUserService.Post(new UpdateSolutionRequest() { SolnId = DbName, UserId = request.UserId});
+                }
             }
             return resp;
         }
