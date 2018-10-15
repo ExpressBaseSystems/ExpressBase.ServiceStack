@@ -627,7 +627,7 @@ namespace ExpressBase.ServiceStack
             List<int> AggregateColumnIndexes = GetAggregateIndexes(Visualization.Columns);
             List<DVBaseColumn> RowGroupingColumns = new List<DVBaseColumn>((Visualization as EbTableVisualization).CurrentRowGroup.RowGrouping);
             int ColCount = Visualization.Columns.Count;
-            string PreviousGroupingText = string.Empty;
+           string PreviousGroupingText = string.Empty;
 
             for (int i = 0; i < Table.Rows.Count; i++)
             {
@@ -655,7 +655,7 @@ namespace ExpressBase.ServiceStack
                             (RowGrouping[HeaderPrefix + TempGroupingText] as HeaderGroupingDetails).GroupingCount == 1 &&
                             (RowGrouping[HeaderPrefix + TempGroupingText] as HeaderGroupingDetails).LevelCount == 0)
                         {
-                            SetFinalFooterRow(IsMultiLevelRowGrouping, RowGrouping, i, TempGroupingText);
+                            SetFinalFooterRow(currentRow, RowGroupingColumns, IsMultiLevelRowGrouping, RowGrouping, i, TempGroupingText, CurSortIndex);
                         }
                     }
                 }
@@ -664,7 +664,7 @@ namespace ExpressBase.ServiceStack
                     (RowGrouping[HeaderPrefix + TempGroupingText] as HeaderGroupingDetails).GroupingCount++;
                     if (i == Table.Rows.Count - 1)
                     {
-                        SetFinalFooterRow(IsMultiLevelRowGrouping, RowGrouping, i, TempGroupingText);
+                        SetFinalFooterRow(currentRow, RowGroupingColumns, IsMultiLevelRowGrouping, RowGrouping, i, TempGroupingText, CurSortIndex);
                     }
                 }
 
@@ -677,14 +677,27 @@ namespace ExpressBase.ServiceStack
             return SortedGroupings;
         }
 
-        private void SetFinalFooterRow(bool IsMultiLevelRowGrouping, Dictionary<string, GroupingDetails> RowGrouping, int i, string TempGroupingText)
+        private void SetFinalFooterRow(EbDataRow currentRow, List<DVBaseColumn> rowGroupingColumns, bool IsMultiLevelRowGrouping, Dictionary<string, GroupingDetails> RowGrouping, int i, string TempGroupingText, int CurSortIndex)
         {
+            List<string> GroupingKeys = CreateRowGroupingKeys(currentRow, rowGroupingColumns, IsMultiLevelRowGrouping);
             (RowGrouping[FooterPrefix + TempGroupingText] as FooterGroupingDetails).InsertionType = AfterText;
+            (RowGrouping[FooterPrefix + TempGroupingText] as FooterGroupingDetails).SetRowIndex(i);
             if (IsMultiLevelRowGrouping)
             {
+                GroupingKeys.Reverse();
+                foreach (string key in GroupingKeys)
+                {
+                    (RowGrouping[FooterPrefix + key] as FooterGroupingDetails).InsertionType = AfterText;
+                    (RowGrouping[FooterPrefix + key] as FooterGroupingDetails).SetRowIndex(i);
+                    (RowGrouping[FooterPrefix + key] as FooterGroupingDetails).SetSortIndex(CurSortIndex);
+                }
+
+
+
+                //FooterGroupingDetails finalFooter = (RowGrouping[FooterPrefix + TempGroupingText] as FooterGroupingDetails);//.SetRowIndex(i);
                 FooterGroupingDetails finalFooter = RowGrouping[FooterPrefix + TempGroupingText.Split(GroupDelimiter)[0]] as FooterGroupingDetails;
-                finalFooter.InsertionType = AfterText;
-                finalFooter.SetRowIndex(i);
+                //finalFooter.InsertionType = AfterText;
+                //finalFooter.SetRowIndex(i);
                 finalFooter.SetSortIndex(1);
             }
         }
@@ -720,10 +733,10 @@ namespace ExpressBase.ServiceStack
         }
 
         private void CreateHeaderAndFooterPairs(EbDataRow CurrentRow, List<int> AggregateIndexes,
-            List<DVBaseColumn> RowGroupingColumns, Dictionary<string, GroupingDetails> rowGrouping, DVColumnCollection VisualizationColumns, 
+            List<DVBaseColumn> _rowGroupingColumns, Dictionary<string, GroupingDetails> rowGrouping, DVColumnCollection VisualizationColumns, 
             int TotalLevels, bool IsMultiLevelGrouping, CultureInfo culture, string TempGroupingText, ref int CurSortIndex, int ColumnCount)
         {
-            List<string> TempKey = CreateRowGroupingKeys(CurrentRow, RowGroupingColumns, (TotalLevels > 1) ? true : false);
+            List<string> TempKey = CreateRowGroupingKeys(CurrentRow, _rowGroupingColumns, (TotalLevels > 1) ? true : false);
             if (IsMultiLevelGrouping)
             {
                 for (int j = 0; j < TotalLevels; j++)
@@ -733,7 +746,7 @@ namespace ExpressBase.ServiceStack
 
                     if (!rowGrouping.ContainsKey(headerKey))
                     {
-                        rowGrouping.Add(headerKey, new HeaderGroupingDetails { CollectionKey = headerKey, RowGrouping = rowGrouping });
+                        rowGrouping.Add(headerKey, new HeaderGroupingDetails { CollectionKey = headerKey, RowGrouping = rowGrouping, RowGroupingColumns = _rowGroupingColumns });
                         rowGrouping.Add(footerKey, new FooterGroupingDetails(TotalLevels, AggregateIndexes, VisualizationColumns, culture) { CollectionKey = footerKey, RowGrouping = rowGrouping });
 
                         rowGrouping[headerKey].GroupingCount++;
@@ -754,7 +767,7 @@ namespace ExpressBase.ServiceStack
                     string headerKey = HeaderPrefix + TempKey.Last();
                     string footerKey = FooterPrefix + TempKey.Last();
 
-                    rowGrouping.Add(headerKey, new HeaderGroupingDetails { CollectionKey = headerKey, RowGrouping = rowGrouping });
+                    rowGrouping.Add(headerKey, new HeaderGroupingDetails { CollectionKey = headerKey, RowGrouping = rowGrouping, RowGroupingColumns = _rowGroupingColumns });
                     rowGrouping.Add(footerKey, new FooterGroupingDetails(TotalLevels, AggregateIndexes, VisualizationColumns, culture) { CollectionKey = footerKey, RowGrouping = rowGrouping });
                     (rowGrouping[headerKey] as HeaderGroupingDetails).ColumnCount = ColumnCount;
                     (rowGrouping[headerKey] as HeaderGroupingDetails).SetSortIndex(CurSortIndex);

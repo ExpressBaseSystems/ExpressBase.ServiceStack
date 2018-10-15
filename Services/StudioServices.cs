@@ -421,7 +421,11 @@ namespace ExpressBase.ServiceStack
             {
                 EbObjectWrapper _ebObject = (new EbObjectWrapper
                 {
-                    Json = dr[0].ToString()
+                    RefId=dr[11].ToString(),
+                    Name=dr[1].ToString(),
+                    EbObjectType=Convert.ToInt32(dr[2]),
+                    VersionNumber=dr[6].ToString(),
+                    Json = dr[10].ToString()
                 });
                 wrap.Add(_ebObject);
             }

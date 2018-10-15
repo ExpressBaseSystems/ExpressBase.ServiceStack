@@ -25,16 +25,16 @@ namespace ExpressBase.ServiceStack.MQServices
             EbConnectionFactory ebConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
             EbObjectService objservice = base.ResolveService<EbObjectService>();
             objservice.EbConnectionFactory = ebConnectionFactory;
-            EbObjectParticularVersionResponse res = (EbObjectParticularVersionResponse)objservice.Get(new EbObjectParticularVersionRequest() { RefId = request.Refid });
+            EbObjectFetchLiveVersionResponse res = (EbObjectFetchLiveVersionResponse)objservice.Get(new EbObjectFetchLiveVersionRequest() { Id = request.ObjId });
             EbSmsTemplate SmsTemplate = new EbSmsTemplate();
             SmsTemplate = EbSerializers.Json_Deserialize(res.Data[0].Json);
             if (SmsTemplate.DataSourceRefId != string.Empty)
             {
                 EbObjectParticularVersionResponse myDsres = (EbObjectParticularVersionResponse)objservice.Get(new EbObjectParticularVersionRequest() { RefId = SmsTemplate.DataSourceRefId });
-                EbDataReader ebDataSource = new EbDataReader();
-                ebDataSource = EbSerializers.Json_Deserialize(myDsres.Data[0].Json);
+                EbDataReader reader = new EbDataReader();
+                reader = EbSerializers.Json_Deserialize(myDsres.Data[0].Json);
                 IEnumerable<DbParameter> parameters = DataHelper.GetParams(ebConnectionFactory, false, request.Params, 0, 0);
-                EbDataSet ds = ebConnectionFactory.ObjectsDB.DoQueries(ebDataSource.Sql, parameters.ToArray());
+                EbDataSet ds = ebConnectionFactory.ObjectsDB.DoQueries(reader.Sql, parameters.ToArray());
                 string pattern = @"\{{(.*?)\}}";
                 IEnumerable<string> matches = Regex.Matches(SmsTemplate.Body, pattern).OfType<Match>()
                  .Select(m => m.Groups[0].Value)
