@@ -320,8 +320,9 @@ namespace ExpressBase.ServiceStack.Services
 		public GetMyProfileResponse Any(GetMyProfileRequest request)
 		{
 			Dictionary<string, string> userData = new Dictionary<string, string>();
+			string tblName = (request.WC == RoutingConstants.UC)? "eb_users": "eb_tenants";
 			string selQry = @"SELECT fullname,nickname,email,alternateemail,dob,sex,phnoprimary,phnosecondary,landline,phextension,preferencesjson
-						FROM eb_users WHERE id = :id";
+						FROM " + tblName + " WHERE id = :id";
 
 			DbParameter[] parameters = { this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.UserId) };
 			var dt = this.EbConnectionFactory.DataDB.DoQuery(selQry, parameters);
@@ -350,51 +351,55 @@ namespace ExpressBase.ServiceStack.Services
 			List<DbParameter> parameters = new List<DbParameter>();
 			string upcolsvals = string.Empty;
 
-			if (dict.TryGetValue("fullname", out found))
+			if (!request.PreferenceOnly)
 			{
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value.ToString()));
-				upcolsvals += "fullname=:fullname,";
+				if (dict.TryGetValue("fullname", out found))
+				{
+					parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value.ToString()));
+					upcolsvals += "fullname=:fullname,";
+				}
+				if (dict.TryGetValue("nickname", out found))
+				{
+					parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value.ToString()));
+					upcolsvals += "nickname=:nickname,";
+				}
+				if (dict.TryGetValue("alternateemail", out found))
+				{
+					parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value.ToString()));
+					upcolsvals += "alternateemail=:alternateemail,";
+				}
+				if (dict.TryGetValue("dob", out found))
+				{
+					parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Date, Convert.ToDateTime(DateTime.ParseExact(found.Value.ToString(), "dd-MM-yyyy", CultureInfo.InvariantCulture))));
+					upcolsvals += "dob=:dob,";
+				}
+				if (dict.TryGetValue("sex", out found))
+				{
+					parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value.ToString()));
+					upcolsvals += "sex=:sex,";
+				}
+				if (dict.TryGetValue("phnoprimary", out found))
+				{
+					parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value.ToString()));
+					upcolsvals += "phnoprimary=:phnoprimary,";
+				}
+				if (dict.TryGetValue("phnosecondary", out found))
+				{
+					parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value.ToString()));
+					upcolsvals += "phnosecondary=:phnosecondary,";
+				}
+				if (dict.TryGetValue("landline", out found))
+				{
+					parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value.ToString()));
+					upcolsvals += "landline=:landline,";
+				}
+				if (dict.TryGetValue("phextension", out found))
+				{
+					parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value.ToString()));
+					upcolsvals += "phextension=:phextension,";
+				}
 			}
-			if (dict.TryGetValue("nickname", out found))
-			{
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value.ToString()));
-				upcolsvals += "nickname=:nickname,";
-			}
-			if (dict.TryGetValue("alternateemail", out found))
-			{
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value.ToString()));
-				upcolsvals += "alternateemail=:alternateemail,";
-			}
-			if (dict.TryGetValue("dob", out found))
-			{
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Date, Convert.ToDateTime(DateTime.ParseExact(found.Value.ToString(), "dd-MM-yyyy", CultureInfo.InvariantCulture))));
-				upcolsvals += "dob=:dob,";
-			}
-			if (dict.TryGetValue("sex", out found))
-			{
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value.ToString()));
-				upcolsvals += "sex=:sex,";
-			}
-			if (dict.TryGetValue("phnoprimary", out found))
-			{
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value.ToString()));
-				upcolsvals += "phnoprimary=:phnoprimary,";
-			}
-			if (dict.TryGetValue("phnosecondary", out found))
-			{
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value.ToString()));
-				upcolsvals += "phnosecondary=:phnosecondary,";
-			}
-			if (dict.TryGetValue("landline", out found))
-			{
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value.ToString()));
-				upcolsvals += "landline=:landline,";
-			}
-			if (dict.TryGetValue("phextension", out found))
-			{
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value.ToString()));
-				upcolsvals += "phextension=:phextension,";
-			}
+			
 			if (dict.TryGetValue("preferencesjson", out found))
 			{
 				try
@@ -409,7 +414,7 @@ namespace ExpressBase.ServiceStack.Services
 				}
 			}
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, request.UserId));
-			string tblName = "eb_users";
+			string tblName = (request.WC == RoutingConstants.UC) ? "eb_users" : "eb_tenants";
 			string Qry = string.Format("UPDATE {0} SET {1} WHERE id=:id", tblName,upcolsvals.Substring(0, upcolsvals.Length - 1));
 
 			var rstatus = this.EbConnectionFactory.ObjectsDB.UpdateTable(Qry, parameters.ToArray());
@@ -419,7 +424,8 @@ namespace ExpressBase.ServiceStack.Services
 
 		public ChangeUserPasswordResponse Any(ChangeUserPasswordRequest request)
 		{
-			string sql = "UPDATE eb_users SET pwd = :newpwd WHERE id = :userid AND pwd = :oldpwd;";
+			string tblName = (request.WC == RoutingConstants.UC) ? "eb_users" : "eb_tenants";
+			string sql = string.Format("UPDATE {0} SET pwd = :newpwd WHERE id = :userid AND pwd = :oldpwd;", tblName);
 			DbParameter[] parameters = new DbParameter[] {
 				this.EbConnectionFactory.ObjectsDB.GetNewParameter("userid", EbDbTypes.Int32, request.UserId),
 				this.EbConnectionFactory.ObjectsDB.GetNewParameter("oldpwd", EbDbTypes.String, (request.OldPwd + request.Email).ToMD5Hash()),
