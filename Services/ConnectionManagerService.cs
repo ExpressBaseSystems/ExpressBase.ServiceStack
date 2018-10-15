@@ -108,7 +108,7 @@ namespace ExpressBase.ServiceStack.Services
                             }// ... More to come
                         }
                         cons.SMSConnections = _smscollection;
-                        cons.EmailConnection = _mailcollection;
+                        cons.EmailConnections = _mailcollection;
                         Redis.Set<EbConnectionsConfig>(string.Format(CoreConstants.SOLUTION_CONNECTION_REDIS_KEY, req.SolutionId), cons);
                         resp.EBSolutionConnections = cons;
                     }
