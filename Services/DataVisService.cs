@@ -408,7 +408,7 @@ namespace ExpressBase.ServiceStack
             List<GroupingDetails> _levels = new List<GroupingDetails>();
             if (_dataset.Tables.Count > 0 && _dV != null)
             {
-                _formattedDataTable = PreProcessing(ref _dataset, _dV, request.UserInfo, ref _levels);
+                _formattedDataTable = PreProcessing(ref _dataset, request.Params, _dV, request.UserInfo, ref _levels);
                 //_levels = GetGroupInfo2(_dataset.Tables[0], _dV);
             }
 
@@ -501,7 +501,7 @@ namespace ExpressBase.ServiceStack
             return resp;
         }
 
-        public EbDataTable PreProcessing(ref EbDataSet _dataset, EbDataVisualization _dv, User _user, ref List<GroupingDetails> _levels)
+        public EbDataTable PreProcessing(ref EbDataSet _dataset, List<Param> Parameters, EbDataVisualization _dv, User _user, ref List<GroupingDetails> _levels)
         {
             dynamic result = null;
             var _user_culture = CultureInfo.GetCultureInfo(_user.Preference.Locale);
@@ -537,6 +537,13 @@ namespace ExpressBase.ServiceStack
                     for (int i = 0; i < _dataset.Tables[0].Rows.Count; i++)
                     {
                         Globals globals = new Globals();
+                        if (Parameters != null)
+                        {
+                            foreach (Param p in Parameters)
+                            {
+                                globals["Params"].Add(p.Name, new NTV { Name = p.Name, Type = (EbDbTypes)Convert.ToInt32(p.Type), Value = p.ValueTo });
+                            }
+                        }
                         var matches = Regex.Matches(col.Formula, @"T[0-9]{1}.\w+").OfType<Match>().Select(m => m.Groups[0].Value).Distinct();
                         _dataFieldsUsed = new string[matches.Count()];
                         int j = 0;
@@ -558,7 +565,8 @@ namespace ExpressBase.ServiceStack
                         {
                             result = valscript.RunAsync(globals).Result.ReturnValue.ToString();
                         }
-                        catch (Exception) { }
+                        catch (Exception e) {
+                        }
                         _dataset.Tables[0].Rows[i].Insert(col.Data, result);
                     }
                 }
