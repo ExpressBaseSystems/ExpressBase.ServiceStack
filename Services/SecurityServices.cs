@@ -826,8 +826,8 @@ namespace ExpressBase.ServiceStack.Services
                 con.Open();
                 string sql = this.EbConnectionFactory.DataDB.EB_SAVEROLES_QUERY;
                 int[] emptyarr = new int[] { };
-                DbParameter[] parameters ={ this.EbConnectionFactory.DataDB.GetNewParameter("role_id", EbDbTypes.Int32, request.Colvalues["roleid"]),
-                                            this.EbConnectionFactory.DataDB.GetNewParameter("applicationid", EbDbTypes.Int32, request.Colvalues["applicationid"]),
+                DbParameter[] parameters ={ this.EbConnectionFactory.DataDB.GetNewParameter("role_id", EbDbTypes.Int32, Convert.ToInt32(request.Colvalues["roleid"])),
+                                            this.EbConnectionFactory.DataDB.GetNewParameter("applicationid", EbDbTypes.Int32, Convert.ToInt32(request.Colvalues["applicationid"])),
                                             this.EbConnectionFactory.DataDB.GetNewParameter("createdby", EbDbTypes.Int32, request.UserId),
                                             this.EbConnectionFactory.DataDB.GetNewParameter("role_name", EbDbTypes.String, request.Colvalues["role_name"]),
                                             this.EbConnectionFactory.DataDB.GetNewParameter("description", EbDbTypes.String, request.Colvalues["Description"]),
