@@ -563,7 +563,10 @@ namespace ExpressBase.ServiceStack
                         }
                         try
                         {
-                            result = valscript.RunAsync(globals).Result.ReturnValue.ToString();
+                            if (col is DVNumericColumn)
+                                result = Convert.ToDecimal(valscript.RunAsync(globals).Result.ReturnValue);
+                            else
+                                result = valscript.RunAsync(globals).Result.ReturnValue.ToString();
                         }
                         catch (Exception e) {
                         }
