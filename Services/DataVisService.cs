@@ -560,6 +560,7 @@ namespace ExpressBase.ServiceStack
                         }
                         catch (Exception e)
                         {
+                            Log.Info("c# Script Exception........." +e.StackTrace);
                         }
                         try
                         {
@@ -569,6 +570,7 @@ namespace ExpressBase.ServiceStack
                                 result = valscript.RunAsync(globals).Result.ReturnValue.ToString();
                         }
                         catch (Exception e) {
+                            Log.Info("c# Script Exception........." + e.StackTrace);
                         }
                         _dataset.Tables[0].Rows[i].Insert(col.Data, result);
                     }
