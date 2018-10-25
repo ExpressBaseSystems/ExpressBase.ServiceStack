@@ -35,5 +35,11 @@ namespace ExpressBase.ServiceStack.Services
             
             return null;
         }
+        
+        public SchedulerMQResponse Post(SchedulerMQRequest request)
+        {
+            MessageProducer3.Publish(new SchedulerRequest105 { Id = 1 });
+            return null;
+        }
     }
 }
