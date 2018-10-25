@@ -19,7 +19,7 @@ namespace ExpressBase.ServiceStack.Services
     {
         public WebFormServices(IEbConnectionFactory _dbf) : base(_dbf) { }
 
-        //===================================== TABLE CREATION  ==========================================
+        //========================================== FORM TABLE CREATION  ==========================================
 
         public CreateWebFormTableResponse Any(CreateWebFormTableRequest request)
         {
@@ -165,7 +165,7 @@ namespace ExpressBase.ServiceStack.Services
         }
 
 
-        //================================== GET PARTICULAR RECORD ================================================
+        //================================== GET RECORD FOR RENDERING ================================================
 
         public GetRowDataResponse Any(GetRowDataRequest request)
         {
@@ -223,7 +223,7 @@ namespace ExpressBase.ServiceStack.Services
             return new DoUniqueCheckResponse { NoRowsWithSameValue = datatbl.Rows.Count };
         }        
 
-        //======================================= SAVE OR UPDATE RECORD =============================================
+        //======================================= INSERT OR UPDATE RECORD =============================================
 
         public InsertDataFromWebformResponse Any(InsertDataFromWebformRequest request)
         {
@@ -231,50 +231,14 @@ namespace ExpressBase.ServiceStack.Services
 			FormObj.TableRowId = request.RowId;
 			if (FormObj.TableRowId > 0)
 			{
-
+				//Dictionary<string, List<SingleRecordField>> OldData = getFormDataAsColl(FormObj);
+				//UpdateAuditTrail(OldData, request.Values, request.RowId.ToString(), request.UserId);/////////////////////////
 				return UpdateDataFromWebformRec(request, FormObj);
 			}
 			else
 				return InsertDataFromWebformRec(request, FormObj);
         }
-
        
-
-		private Dictionary<string, List<SingleRecordField>> getFormDataAsColl(EbControlContainer FormObj)
-		{
-			Dictionary<string, List<SingleRecordField>> oldData = new Dictionary<string, List<SingleRecordField>>();
-			//FormObj.TableRowId = request.RowId;
-			string query = FormObj.GetSelectQuery(FormObj.TableName);
-			EbDataSet dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(query);
-
-			foreach (EbDataTable dataTable in dataset.Tables)
-			{
-				List<SingleRecordField> tblRecordColl = new List<SingleRecordField>();
-				foreach (EbDataRow dataRow in dataTable.Rows)
-				{					
-					foreach (EbDataColumn dataColumn in dataTable.Columns)
-					{
-						object _unformattedData = dataRow[dataColumn.ColumnIndex];
-						object _formattedData = _unformattedData;
-
-						if (dataColumn.Type == EbDbTypes.Date)
-						{
-							_unformattedData = (_unformattedData == DBNull.Value) ? DateTime.MinValue : _unformattedData;
-							_formattedData = ((DateTime)_unformattedData).Date != DateTime.MinValue ? Convert.ToDateTime(_unformattedData).ToString("yyyy-MM-dd") : string.Empty;
-						}
-						tblRecordColl.Add(new SingleRecordField
-						{
-							Name = dataColumn.ColumnName,
-							Type = (int)dataColumn.Type,
-							Value = _formattedData
-						});
-					}
-				}
-				oldData.Add(dataTable.TableName, tblRecordColl);
-			}
-			return oldData;
-		}
-
 		private InsertDataFromWebformResponse InsertDataFromWebformRec(InsertDataFromWebformRequest request, EbControlContainer FormObj)
 		{
 			string fullqry = string.Empty;
@@ -299,7 +263,7 @@ namespace ExpressBase.ServiceStack.Services
 				fullqry += string.Format(_qry, _tblname, _cols, _values);
 				count++;
 			}
-			param.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_createdby", EbDbTypes.Int32, 0));///////////////
+			param.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_createdby", EbDbTypes.Int32, request.UserId));
 			param.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_createdat", EbDbTypes.DateTime, System.DateTime.Now));
 			int rowsAffected = EbConnectionFactory.DataDB.InsertTable(fullqry, param.ToArray());
 
@@ -329,11 +293,98 @@ namespace ExpressBase.ServiceStack.Services
                 fullqry += string.Format(_qry, _tblname, _colvals);
                 count++;
             }
-            param.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_modified_by", EbDbTypes.Int32, 0));///////////////
+            param.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_modified_by", EbDbTypes.Int32, request.UserId));
             param.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_modified_at", EbDbTypes.DateTime, System.DateTime.Now));
             int rowsAffected = EbConnectionFactory.DataDB.InsertTable(fullqry, param.ToArray());
 
             return new InsertDataFromWebformResponse { RowAffected = rowsAffected };
         }
-    }
+		
+
+		// VALIDATION AND AUDIT TRAIL
+
+		private Dictionary<string, List<SingleRecordField>> getFormDataAsColl(EbControlContainer FormObj)
+		{
+			Dictionary<string, List<SingleRecordField>> oldData = new Dictionary<string, List<SingleRecordField>>();
+			//FormObj.TableRowId = request.RowId;
+			string query = FormObj.GetSelectQuery(FormObj.TableName);
+			EbDataSet dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(query);
+
+			foreach (EbDataTable dataTable in dataset.Tables)
+			{
+				List<SingleRecordField> tblRecordColl = new List<SingleRecordField>();
+				foreach (EbDataRow dataRow in dataTable.Rows)
+				{
+					foreach (EbDataColumn dataColumn in dataTable.Columns)
+					{
+						object _unformattedData = dataRow[dataColumn.ColumnIndex];
+						object _formattedData = _unformattedData;
+
+						if (dataColumn.Type == EbDbTypes.Date)
+						{
+							_unformattedData = (_unformattedData == DBNull.Value) ? DateTime.MinValue : _unformattedData;
+							_formattedData = ((DateTime)_unformattedData).Date != DateTime.MinValue ? Convert.ToDateTime(_unformattedData).ToString("yyyy-MM-dd") : string.Empty;
+						}
+						tblRecordColl.Add(new SingleRecordField
+						{
+							Name = dataColumn.ColumnName,
+							Type = (int)dataColumn.Type,
+							Value = _formattedData
+						});
+					}
+				}
+				oldData.Add(dataTable.TableName, tblRecordColl);
+			}
+			return oldData;
+		}
+
+		private void UpdateAuditTrail(Dictionary<string, List<SingleRecordField>> _OldData, Dictionary<string, List<SingleRecordField>> _NewData, string _FormId, int _UserId)
+		{
+			List<SingleRecordField> FormFields = new List<SingleRecordField>();
+			foreach(KeyValuePair<string, List<SingleRecordField>> entry in _OldData)
+			{
+				if (_NewData.ContainsKey(entry.Key))
+				{
+					foreach (SingleRecordField rField in entry.Value)
+					{
+						SingleRecordField nrF = _NewData[entry.Key].Find(e => e.Name == rField.Name);
+						if (nrF != null && nrF.Value != rField.Value)
+						{
+							FormFields.Add(new SingleRecordField {
+								Name = rField.Name,
+								Type = rField.Type,
+								Value = nrF.Value,
+								OldValue = rField.Value
+							});
+						}
+					}
+				}
+			}
+			if(FormFields.Count > 0)
+				UpdateAuditTrail(FormFields, _FormId, _UserId);
+		}
+
+		private void UpdateAuditTrail(List<SingleRecordField> _Fields, string _FormId, int _UserId)
+		{
+			List<DbParameter> parameters = new List<DbParameter>();
+			parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("formid", EbDbTypes.String, _FormId));
+			parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_createdby", EbDbTypes.Int32, _UserId));
+			parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_createdat", EbDbTypes.DateTime, DateTime.Now));
+			string Qry = "INSERT INTO eb_audit_master(formid, eb_createdby, eb_createdat) VALUES (:formid, :eb_createdby, :eb_createdat) RETURNING id;";
+			EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery(Qry, parameters.ToArray());
+			var id = Convert.ToInt32(dt.Rows[0][0]);
+
+			string lineQry = "INSERT INTO eb_audit_lines(masterid, fieldname, oldvalue, newvalue) VALUES ";
+			List<DbParameter> parameters1 = new List<DbParameter>();
+			parameters1.Add(this.EbConnectionFactory.DataDB.GetNewParameter("masterid", EbDbTypes.Int32, id));
+			for (int i = 0; i < _Fields.Count; i++)
+			{
+				lineQry += "(:masterid, :" + _Fields[i].Name + ", :old" + _Fields[i].Name + ", :new" + _Fields[i].Name + "),";
+				parameters1.Add(this.EbConnectionFactory.DataDB.GetNewParameter(_Fields[i].Name, EbDbTypes.String, _Fields[i].Name));
+				parameters1.Add(this.EbConnectionFactory.DataDB.GetNewParameter("new" + _Fields[i].Name, EbDbTypes.String, _Fields[i].Value));
+				parameters1.Add(this.EbConnectionFactory.DataDB.GetNewParameter("old" + _Fields[i].Name, EbDbTypes.String, _Fields[i].OldValue));
+			}
+			var rrr = this.EbConnectionFactory.ObjectsDB.DoNonQuery(lineQry.Substring(0, lineQry.Length - 1), parameters1.ToArray());
+		}
+	}
 }
