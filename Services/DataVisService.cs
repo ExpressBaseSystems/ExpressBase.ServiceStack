@@ -408,7 +408,7 @@ namespace ExpressBase.ServiceStack
             List<GroupingDetails> _levels = new List<GroupingDetails>();
             if (_dataset.Tables.Count > 0 && _dV != null)
             {
-                _formattedDataTable = PreProcessing(ref _dataset, _dV, request.UserInfo, ref _levels);
+                _formattedDataTable = PreProcessing(ref _dataset, request.Params, _dV, request.UserInfo, ref _levels);
                 //_levels = GetGroupInfo2(_dataset.Tables[0], _dV);
             }
 
@@ -501,12 +501,71 @@ namespace ExpressBase.ServiceStack
             return resp;
         }
 
-        public EbDataTable PreProcessing(ref EbDataSet _dataset, EbDataVisualization _dv, User _user, ref List<GroupingDetails> _levels)
+        public void CustomColumDoCalc(ref EbDataSet _dataset, List<Param> Parameters, EbDataVisualization _dv, User _user, ref List<GroupingDetails> _levels)
         {
             dynamic result = null;
+
+            foreach (DVBaseColumn col in _dv.Columns)
+            {
+                if (col.IsCustomColumn)
+                    _dataset.Tables[0].Columns.Add(new EbDataColumn { ColumnIndex = col.Data, ColumnName = col.Name, Type = col.Type });
+            }
+
+            Globals globals = new Globals();
+            if (Parameters != null)
+            {
+                foreach (Param p in Parameters)
+                {
+                    globals["Params"].Add(p.Name, new NTV { Name = p.Name, Type = (EbDbTypes)Convert.ToInt32(p.Type), Value = p.ValueTo });
+                }
+            }
+
+            var __customCols = _dv.Columns.Where(c => (c.IsCustomColumn == true || !string.IsNullOrEmpty(c.Formula))).ToList();
+
+            for (int i = 0; i < _dataset.Tables[0].Rows.Count; i++)
+            {
+                foreach (DVBaseColumn customCol in __customCols)
+                {
+                    try
+                    {
+                        foreach (FormulaPart formulaPart in customCol.FormulaParts)
+                        {
+                            object __value = null;
+                            var __partType = _dataset.Tables[0].Columns[formulaPart.FieldName].Type;
+                            if (__partType == EbDbTypes.Decimal || __partType == EbDbTypes.Int32)
+                                __value = (_dataset.Tables[0].Rows[i][formulaPart.FieldName] != DBNull.Value) ? _dataset.Tables[0].Rows[i][formulaPart.FieldName] : 0;
+                            else
+                                __value = _dataset.Tables[0].Rows[i][formulaPart.FieldName];
+
+                            globals[formulaPart.TableName].Add(formulaPart.FieldName, new NTV { Name = formulaPart.FieldName, Type = __partType, Value = __value });
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        Log.Info("c# Script Exception........." + e.StackTrace);
+                    }
+
+                    try
+                    {
+                        if (customCol is DVNumericColumn)
+                            result = Convert.ToDecimal(customCol.GetCodeAnalysisScript().RunAsync(globals).Result.ReturnValue);
+                        else
+                            result = customCol.GetCodeAnalysisScript().RunAsync(globals).Result.ReturnValue.ToString();
+                    }
+                    catch (Exception e)
+                    {
+                        Log.Info("c# Script Exception........." + e.StackTrace);
+                    }
+
+                    _dataset.Tables[0].Rows[i][customCol.Name] = result;
+                }
+            }
+        }
+
+        public EbDataTable PreProcessing(ref EbDataSet _dataset, List<Param> Parameters, EbDataVisualization _dv, User _user, ref List<GroupingDetails> _levels)
+        {
             var _user_culture = CultureInfo.GetCultureInfo(_user.Preference.Locale);
             var colCount = _dataset.Tables[0].Columns.Count;
-            //Dictionary<string, int> dict = new Dictionary<string, int>();
             if (this.EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.ORACLE && _dv.IsPaging)
             {
                 _dataset.Tables[0].Columns.RemoveAt(colCount - 1);// rownum deleted for oracle
@@ -516,60 +575,18 @@ namespace ExpressBase.ServiceStack
                 }
             }
 
-            EbDataTable _formattedTable = new EbDataTable();
-            DVColumnCollection colColl = new DVColumnCollection();
-            foreach (DVBaseColumn col in _dv.Columns)
-            {
-                colColl.Add(col.ShallowCopy());
-            }
-            colColl.Sort(new Comparison<DVBaseColumn>((x, y) => Decimal.Compare(x.Data, y.Data)));
-            foreach (DVBaseColumn col in colColl)
-            {
-                var cults = col.GetColumnCultureInfo(_user_culture);
-                _formattedTable.Columns.Add(new EbDataColumn { Type = col.Type, ColumnIndex = col.Data, ColumnName = col.Name });
+            this.CustomColumDoCalc(ref _dataset, Parameters, _dv, _user, ref _levels);
 
-                if (col.IsCustomColumn || (col.Formula != null && col.Formula != ""))
-                {
-                    string[] _dataFieldsUsed;
-                    Script valscript = CSharpScript.Create<dynamic>(col.Formula, ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System.Dynamic"), globalsType: typeof(Globals));
-                    valscript.Compile();
-                    _dataset.Tables[0].Columns.Add(new EbDataColumn { ColumnIndex = col.Data, ColumnName = col.Name, Type = col.Type });
-                    for (int i = 0; i < _dataset.Tables[0].Rows.Count; i++)
-                    {
-                        Globals globals = new Globals();
-                        var matches = Regex.Matches(col.Formula, @"T[0-9]{1}.\w+").OfType<Match>().Select(m => m.Groups[0].Value).Distinct();
-                        _dataFieldsUsed = new string[matches.Count()];
-                        int j = 0;
-                        foreach (var match in matches)
-                            _dataFieldsUsed[j++] = match;
-                        try
-                        {
-                            foreach (string calcfd in _dataFieldsUsed)
-                            {
-                                string TName = calcfd.Split('.')[0];
-                                string fName = calcfd.Split('.')[1];
-                                globals[TName].Add(fName, new NTV { Name = fName, Type = _dataset.Tables[0].Columns[fName].Type, Value = _dataset.Tables[0].Rows[i][fName] });
-                            }
-                        }
-                        catch (Exception e)
-                        {
-                        }
-                        try
-                        {
-                            result = valscript.RunAsync(globals).Result.ReturnValue.ToString();
-                        }
-                        catch (Exception) { }
-                        _dataset.Tables[0].Rows[i].Insert(col.Data, result);
-                    }
-                }
+            EbDataTable _formattedTable = _dataset.Tables[0].GetEmptyTable();
 
-                for (int i = 0; i < _dataset.Tables[0].Rows.Count; i++)
+            for (int i = 0; i < _dataset.Tables[0].Rows.Count; i++)
+            {
+                _formattedTable.Rows.Add(_formattedTable.NewDataRow2());
+                foreach (DVBaseColumn col in _dv.Columns)
                 {
+                    var cults = col.GetColumnCultureInfo(_user_culture);
                     object _unformattedData = _dataset.Tables[0].Rows[i][col.Data];
                     object _formattedData = _unformattedData;
-
-                    if (col.Data == 0)
-                        _formattedTable.Rows.Add(new EbDataRow());
 
                     if (col.Type == EbDbTypes.Date)
                     {
@@ -586,9 +603,9 @@ namespace ExpressBase.ServiceStack
                         if (col.LinkType == LinkTypeEnum.Popout)
                             _formattedData = "<a href='#' oncontextmenu='return false' class ='tablelink' data-link='" + col.LinkRefId + "'>" + _formattedData + "</a>";
                         else if (col.LinkType == LinkTypeEnum.Inline)
-                            _formattedData =  _formattedData + "&nbsp; <a href = '#' oncontextmenu = 'return false' class ='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-inline='true' data-data='" + _formattedData + "'><i class='fa fa-caret-down'></i></a>";
+                            _formattedData = _formattedData + "&nbsp; <a href = '#' oncontextmenu = 'return false' class ='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-inline='true' data-data='" + _formattedData + "'><i class='fa fa-caret-down'></i></a>";
                         else if (col.LinkType == LinkTypeEnum.Both)
-                            _formattedData =  "<a href='#' oncontextmenu='return false' class ='tablelink' data-link='" + col.LinkRefId + "'>" + _formattedData + "</a>" + "&nbsp; <a href ='#' oncontextmenu='return false' class='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-inline='true' data-data='" + _formattedData + "'> <i class='fa fa-caret-down'></i></a>";
+                            _formattedData = "<a href='#' oncontextmenu='return false' class ='tablelink' data-link='" + col.LinkRefId + "'>" + _formattedData + "</a>" + "&nbsp; <a href ='#' oncontextmenu='return false' class='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-inline='true' data-data='" + _formattedData + "'> <i class='fa fa-caret-down'></i></a>";
                     }
                     if (col.Type == EbDbTypes.String && (col as DVStringColumn).RenderAs == StringRenderType.Link && col.LinkType == LinkTypeEnum.Tab)/////////////////
                     {
@@ -598,7 +615,7 @@ namespace ExpressBase.ServiceStack
                     {
                         _formattedData = "********";
                     }
-                    _formattedTable.Rows[i].Insert(col.Data, _formattedData);
+                    _formattedTable.Rows[i][col.Data] = _formattedData;
 
                 }
             }
@@ -627,7 +644,7 @@ namespace ExpressBase.ServiceStack
             List<int> AggregateColumnIndexes = GetAggregateIndexes(Visualization.Columns);
             List<DVBaseColumn> RowGroupingColumns = new List<DVBaseColumn>((Visualization as EbTableVisualization).CurrentRowGroup.RowGrouping);
             int ColCount = Visualization.Columns.Count;
-           string PreviousGroupingText = string.Empty;
+            string PreviousGroupingText = string.Empty;
 
             for (int i = 0; i < Table.Rows.Count; i++)
             {
@@ -733,7 +750,7 @@ namespace ExpressBase.ServiceStack
         }
 
         private void CreateHeaderAndFooterPairs(EbDataRow CurrentRow, List<int> AggregateIndexes,
-            List<DVBaseColumn> _rowGroupingColumns, Dictionary<string, GroupingDetails> rowGrouping, DVColumnCollection VisualizationColumns, 
+            List<DVBaseColumn> _rowGroupingColumns, Dictionary<string, GroupingDetails> rowGrouping, DVColumnCollection VisualizationColumns,
             int TotalLevels, bool IsMultiLevelGrouping, CultureInfo culture, string TempGroupingText, ref int CurSortIndex, int ColumnCount)
         {
             List<string> TempKey = CreateRowGroupingKeys(CurrentRow, _rowGroupingColumns, (TotalLevels > 1) ? true : false);
@@ -784,7 +801,7 @@ namespace ExpressBase.ServiceStack
             {
                 if (IsMultiLevelRowGrouping)
                 {
-                    TempKey.Add(((TempKey.Count > 0) ? TempKey.Last() + GroupDelimiter : string.Empty) + ((CurrentRow[column.Data].ToString().Trim().IsNullOrEmpty())?BlankText: CurrentRow[column.Data].ToString().Trim()));
+                    TempKey.Add(((TempKey.Count > 0) ? TempKey.Last() + GroupDelimiter : string.Empty) + ((CurrentRow[column.Data].ToString().Trim().IsNullOrEmpty()) ? BlankText : CurrentRow[column.Data].ToString().Trim()));
                 }
                 else
                 {
@@ -797,8 +814,8 @@ namespace ExpressBase.ServiceStack
 
             return TempKey;
         }
-        
-        public int GetCurrentLevel(string CurrentString, string PreviousString,  bool isEnd, int currentRowIndex, int totalLevels, bool IsMultiLevel)
+
+        public int GetCurrentLevel(string CurrentString, string PreviousString, bool isEnd, int currentRowIndex, int totalLevels, bool IsMultiLevel)
         {
             if (IsMultiLevel)
             {
