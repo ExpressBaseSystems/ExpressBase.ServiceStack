@@ -1,4 +1,5 @@
-﻿using ExpressBase.Common.Data;
+﻿using ExpressBase.Common;
+using ExpressBase.Common.Data;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ServiceStack.Logging;
 using ServiceStack.Messaging;
@@ -36,12 +37,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             
             return null;
-        }
-        
-        public SchedulerMQResponse Post(SchedulerMQRequest request)
-        {
-            MessageProducer3.Publish(new SchedulerRequest105 { Id = 1 });
-            return null;
-        }
+        }        
+       
     }
 }

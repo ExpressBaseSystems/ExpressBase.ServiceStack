@@ -12,15 +12,35 @@ using ExpressBase.Common.Structures;
 using ExpressBase.Objects.Objects.SmsRelated;
 using ExpressBase.Common;
 using System.Text.RegularExpressions;
+using ExpressBase.Objects.Services;
 
 namespace ExpressBase.ServiceStack.MQServices
 {
-    public class SMSService : EbBaseService
+    [Authenticate]
+    public class  SmsCreateService: EbBaseService
+    {
+        public SmsCreateService(IMessageProducer _mqp) : base(_mqp) { }
+
+        public void Post(SMSInitialRequest request)
+        {
+            this.MessageProducer3.Publish(new SMSCreateRequest
+            {
+                ObjId = request.ObjId,
+                Params=request.Params,
+                SolnId=request.SolnId,
+                UserId=request.UserId,
+                UserAuthId=request.UserAuthId,
+                MediaUrl = request.MediaUrl
+            });
+        }
+    }
+
+    [Restrict(InternalOnly = true)]
+    public class SMSService : EbMqBaseService
     {
         public SMSService(IMessageProducer _mqp) : base(_mqp) { }
-
-        [Authenticate]
-        public void Post(SMSSentRequest request)
+        
+        public void Post(SMSCreateRequest request)
         {
             EbConnectionFactory ebConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
             EbObjectService objservice = base.ResolveService<EbObjectService>();
@@ -52,7 +72,13 @@ namespace ExpressBase.ServiceStack.MQServices
             }
             try
             {
-                this.MessageProducer3.Publish(new SMSSentMqRequest { To = SmsTemplate.To, Body = SmsTemplate.Body, SolnId = request.SolnId, UserId = request.UserId, WhichConsole = request.WhichConsole });
+                this.MessageProducer3.Publish(new SMSSentRequest {
+                    To = SmsTemplate.To,
+                    Body = SmsTemplate.Body,
+                    SolnId = request.SolnId,
+                    UserId = request.UserId,
+                    WhichConsole = request.WhichConsole
+                });
                 //return true;
             }
             catch (Exception e)
