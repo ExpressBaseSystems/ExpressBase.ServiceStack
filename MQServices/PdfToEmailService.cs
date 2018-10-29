@@ -19,13 +19,13 @@ namespace ExpressBase.ServiceStack.MQServices
 {
     public class PdfToEmailService : EbBaseService
     {
-        public PdfToEmailService(IEbConnectionFactory _dbf, IMessageProducer _mqp, IMessageQueueClient _mqc, IEbServerEventClient _sec) : base(_dbf, _mqp, _mqc, _sec) { }
+        public PdfToEmailService(IMessageProducer _mqp, IMessageQueueClient _mqc) : base( _mqp, _mqc) { }
 
         public void Post(PdfCreateServiceMqRequest request)
         {
             MessageProducer3.Publish(new PdfCreateServiceRequest()
             {
-                Id = request.ObjId,
+                ObjId = request.ObjId,
                 Params = request.Params,
                 UserId = request.UserId,
                 UserAuthId = request.UserAuthId,
@@ -47,7 +47,7 @@ namespace ExpressBase.ServiceStack.MQServices
             dataservice.EbConnectionFactory = ebConnectionFactory;
             var reportservice = base.ResolveService<ReportService>();
             reportservice.EbConnectionFactory = ebConnectionFactory;
-            EbObjectFetchLiveVersionResponse res = (EbObjectFetchLiveVersionResponse)objservice.Get(new EbObjectFetchLiveVersionRequest() { Id = request.Id });
+            EbObjectFetchLiveVersionResponse res = (EbObjectFetchLiveVersionResponse)objservice.Get(new EbObjectFetchLiveVersionRequest() { Id = request.ObjId });
             EbEmailTemplate ebEmailTemplate = new EbEmailTemplate();
             if (res.Data.Count > 0)
             {
