@@ -1,4 +1,5 @@
 ﻿using ExpressBase.Common;
+using ExpressBase.Common.Constants;
 using ExpressBase.Common.Data;
 using ExpressBase.Common.Objects;
 using ExpressBase.Common.Structures;
@@ -411,7 +412,7 @@ namespace ExpressBase.ServiceStack
                 _formattedDataTable = PreProcessing(ref _dataset, request.Params, _dV, request.UserInfo, ref _levels);
                 //_levels = GetGroupInfo2(_dataset.Tables[0], _dV);
             }
-
+            List<string> _permission = PermissionCheck(request.UserInfo, request.dvRefId);
             dsresponse = new DataSourceDataResponse
             {
                 Draw = request.Draw,
@@ -420,13 +421,13 @@ namespace ExpressBase.ServiceStack
                 RecordsTotal = _recordsTotal,
                 RecordsFiltered = _recordsFiltered,
                 Ispaged = _isPaged,
-                Levels = _levels
+                Levels = _levels,
+                Permission = _permission
             };
             this.Log.Info("dsresponse*****" + dsresponse.Data);
             var x = EbSerializers.Json_Serialize(dsresponse);
             return dsresponse;
         }
-
 
         [CompressResponse]
         public DataSourceColumnsResponse Any(TableColumnsRequest request)
@@ -842,11 +843,34 @@ namespace ExpressBase.ServiceStack
             return 1;
         }
 
+        public List<string> PermissionCheck(User _user, string refId)
+        {
+            List<string> permList = new List<string>();
+            var x = refId.Split("-");
+            var objid = x[3].PadLeft(5,'0');
+            List<string> liteperm = new List<string>();
+            foreach (var _permission in _user.Permissions)
+            {
+                liteperm.Add(_permission.Substring(4, 11));
+            }
+            foreach (var _eboperation in (TVOperations.Instance as EbOperations).Enumerator)
+            {
+               var _perm =  EbObjectTypes.TableVisualization.IntCode.ToString().PadLeft(2, '0') + "-" + objid+"-"+ _eboperation.IntCode.ToString().PadLeft(2, '0');
+                if (liteperm.Contains(_perm)) {
+                    if (_eboperation.ToString() == OperationConstants.EXCEL_EXPORT)
+                    {
+                        permList.Add("Excel");
+                    }
+                }
+            }
+            return permList;
+        }
+
         [CompressResponse]
-        public DataSourceDataResponse Any(InlineTableDataRequest request)
+        public DataSourceDataResponse Post(InlineTableDataRequest request)
         {
             DataSourceDataResponse dsresponse = null;
-
+            EbDataVisualization _dV = request.EbDataVisualization;
             var _ds = this.Redis.Get<EbDataReader>(request.RefId);
             string _sql = string.Empty;
 
@@ -901,10 +925,17 @@ namespace ExpressBase.ServiceStack
             _recordsTotal = (_recordsTotal > 0) ? _recordsTotal : _dataset.Tables[1].Rows.Count;
             _recordsFiltered = (_recordsFiltered > 0) ? _recordsFiltered : _dataset.Tables[1].Rows.Count;
             //-- 
-
+            //EbDataTable _formattedDataTable = null;
+            //List<GroupingDetails> _levels = new List<GroupingDetails>();
+            //if (_dataset.Tables.Count > 0 && _dV != null)
+            //{
+            //    _formattedDataTable = PreProcessing(ref _dataset, request.Params, _dV, request.UserInfo, ref _levels);
+            //    //_levels = GetGroupInfo2(_dataset.Tables[0], _dV);
+            //}
             dsresponse = new DataSourceDataResponse
             {
                 Data = _dataset.Tables[0].Rows,
+                //FormattedData = (_formattedDataTable != null) ? _formattedDataTable.Rows : null,
                 RecordsTotal = _recordsTotal,
                 RecordsFiltered = _recordsFiltered,
                 Ispaged = _isPaged
