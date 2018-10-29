@@ -1,6 +1,7 @@
 ﻿using ExpressBase.Common.Data;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ServiceStack.Logging;
+using ServiceStack.Messaging;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
@@ -11,7 +12,8 @@ namespace ExpressBase.ServiceStack.Services
 {
     public class Test : EbBaseService
     {
-        public Test(IEbConnectionFactory _dbf) : base(_dbf) { }
+        public Test(IEbConnectionFactory _dbf, IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_dbf,_mqp,_mqc) { }
+
         public TestResponse Any(TestRequest request)
         {
             ILog log = LogManager.GetLogger(GetType());
