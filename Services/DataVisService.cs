@@ -614,9 +614,12 @@ namespace ExpressBase.ServiceStack
                     {
                         _formattedData = "<a href='../leadmanagement/" + _dataset.Tables[0].Rows[i][0] + "' target='_blank'>" + _formattedData + "</a>";
                     }
-                    if (col.HideDataRowMoreThan > 0 && col.HideDataRowMoreThan < _dataset.Tables[0].Rows.Count)
+                    if (!_user.Roles.Contains(SystemRoles.SolutionOwner.ToString()) && !_user.Roles.Contains(SystemRoles.SolutionAdmin.ToString()))
                     {
-                        _formattedData = "********";
+                        if (col.HideDataRowMoreThan > 0 && col.HideDataRowMoreThan < _dataset.Tables[0].Rows.Count)
+                        {
+                            _formattedData = "********";
+                        }
                     }
                     _formattedTable.Rows[i][col.Data] = _formattedData;
 
