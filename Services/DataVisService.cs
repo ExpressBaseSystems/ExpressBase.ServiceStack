@@ -623,14 +623,17 @@ namespace ExpressBase.ServiceStack
                 }
             }
             //List<LevelDetails> Levels;
-            if ((_dv as EbTableVisualization).RowGroupCollection.Count > 0)
+            if ((_dv as EbTableVisualization) != null)
             {
-                if ((_dv as EbTableVisualization).CurrentRowGroup.GetType().Name == "SingleLevelRowGroup")
-                    //_levels = GetGroupInfoSingleLevel(_dataset.Tables[0], _dv, _user_culture);
-                    _levels = RowGroupingCommon(_dataset.Tables[0], _dv, _user_culture, false);
-                else if ((_dv as EbTableVisualization).CurrentRowGroup.GetType().Name == "MultipleLevelRowGroup")
-                    //_levels = GetGroupInfoMultiLevel(_dataset.Tables[0], _dv, _user_culture);//GetGroupInfoMultiLevel(_dataset.Tables[0], _dv, _user_culture);
-                    _levels = RowGroupingCommon(_dataset.Tables[0], _dv, _user_culture, true);
+                if ((_dv as EbTableVisualization).RowGroupCollection.Count > 0)
+                {
+                    if ((_dv as EbTableVisualization).CurrentRowGroup.GetType().Name == "SingleLevelRowGroup")
+                        //_levels = GetGroupInfoSingleLevel(_dataset.Tables[0], _dv, _user_culture);
+                        _levels = RowGroupingCommon(_dataset.Tables[0], _dv, _user_culture, false);
+                    else if ((_dv as EbTableVisualization).CurrentRowGroup.GetType().Name == "MultipleLevelRowGroup")
+                        //_levels = GetGroupInfoMultiLevel(_dataset.Tables[0], _dv, _user_culture);//GetGroupInfoMultiLevel(_dataset.Tables[0], _dv, _user_culture);
+                        _levels = RowGroupingCommon(_dataset.Tables[0], _dv, _user_culture, true);
+                }
             }
 
 
@@ -851,17 +854,39 @@ namespace ExpressBase.ServiceStack
             var x = refId.Split("-");
             var objid = x[3].PadLeft(5,'0');
             List<string> liteperm = new List<string>();
-            foreach (var _permission in _user.Permissions)
+            if (_user.Roles.Contains(SystemRoles.SolutionOwner.ToString()) || _user.Roles.Contains(SystemRoles.SolutionAdmin.ToString()))
             {
-                liteperm.Add(_permission.Substring(4, 11));
-            }
-            foreach (var _eboperation in (TVOperations.Instance as EbOperations).Enumerator)
-            {
-               var _perm =  EbObjectTypes.TableVisualization.IntCode.ToString().PadLeft(2, '0') + "-" + objid+"-"+ _eboperation.IntCode.ToString().PadLeft(2, '0');
-                if (liteperm.Contains(_perm)) {
+                foreach (var _eboperation in (TVOperations.Instance as EbOperations).Enumerator)
+                {
                     if (_eboperation.ToString() == OperationConstants.EXCEL_EXPORT)
                     {
                         permList.Add("Excel");
+                    }
+                    else if (_eboperation.ToString() == OperationConstants.SUMMARIZE)
+                    {
+                        permList.Add("SUMMARIZE");
+                    }
+                    else if (_eboperation.ToString() == OperationConstants.PDF_EXPORT)
+                    {
+                        permList.Add("Pdf");
+                    }
+                }
+            }
+            else
+            {
+                foreach (var _permission in _user.Permissions)
+                {
+                    liteperm.Add(_permission.Substring(4, 11));
+                }
+                foreach (var _eboperation in (TVOperations.Instance as EbOperations).Enumerator)
+                {
+                    var _perm = EbObjectTypes.TableVisualization.IntCode.ToString().PadLeft(2, '0') + "-" + objid + "-" + _eboperation.IntCode.ToString().PadLeft(2, '0');
+                    if (liteperm.Contains(_perm))
+                    {
+                        if (_eboperation.ToString() == OperationConstants.EXCEL_EXPORT)
+                        {
+                            permList.Add("Excel");
+                        }
                     }
                 }
             }
