@@ -412,7 +412,9 @@ namespace ExpressBase.ServiceStack
                 _formattedDataTable = PreProcessing(ref _dataset, request.Params, _dV, request.UserInfo, ref _levels);
                 //_levels = GetGroupInfo2(_dataset.Tables[0], _dV);
             }
-            List<string> _permission = PermissionCheck(request.UserInfo, request.dvRefId);
+            List<string> _permission = new List<string>();
+            if (request.dvRefId != null)
+                _permission = PermissionCheck(request.UserInfo, request.dvRefId);
             dsresponse = new DataSourceDataResponse
             {
                 Draw = request.Draw,
