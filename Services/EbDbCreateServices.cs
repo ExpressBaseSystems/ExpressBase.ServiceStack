@@ -123,6 +123,9 @@ namespace ExpressBase.ServiceStack.Services
                     path = "ExpressBase.Common.sqlscripts.@vendor.datadb.tablecreate.eb_files.sql".Replace("@vendor", vendor.ToLower());
                     bool b23 = CreateOrAlter_Structure(con, path, DataDB);
 
+                    path = "ExpressBase.Common.sqlscripts.@vendor.datadb.tablecreate.eb_role2location.sql".Replace("@vendor", vendor.ToLower());
+                    bool b48 = CreateOrAlter_Structure(con, path, DataDB);
+
                     path = "ExpressBase.Common.sqlscripts.@vendor.datadb.tablecreate.eb_query_choices.sql".Replace("@vendor", vendor.ToLower());
                     bool b52 = CreateOrAlter_Structure(con, path, DataDB);
 
@@ -137,6 +140,21 @@ namespace ExpressBase.ServiceStack.Services
 
                     path = "ExpressBase.Common.sqlscripts.@vendor.datadb.tablecreate.eb_surveys.sql".Replace("@vendor", vendor.ToLower());
                     bool b56 = CreateOrAlter_Structure(con, path, DataDB);
+
+                    path = "ExpressBase.Common.sqlscripts.@vendor.datadb.tablecreate.eb_audit_lines.sql".Replace("@vendor", vendor.ToLower());
+                    bool b57 = CreateOrAlter_Structure(con, path, DataDB);
+
+                    path = "ExpressBase.Common.sqlscripts.@vendor.datadb.tablecreate.eb_audit_master.sql".Replace("@vendor", vendor.ToLower());
+                    bool b58 = CreateOrAlter_Structure(con, path, DataDB);
+
+                    path = "ExpressBase.Common.sqlscripts.@vendor.datadb.tablecreate.eb_keys.sql".Replace("@vendor", vendor.ToLower());
+                    bool b59 = CreateOrAlter_Structure(con, path, DataDB);
+
+                    path = "ExpressBase.Common.sqlscripts.@vendor.datadb.tablecreate.eb_keyvalue.sql".Replace("@vendor", vendor.ToLower());
+                    bool b60 = CreateOrAlter_Structure(con, path, DataDB);
+
+                    path = "ExpressBase.Common.sqlscripts.@vendor.datadb.tablecreate.eb_languages.sql".Replace("@vendor", vendor.ToLower());
+                    bool b61 = CreateOrAlter_Structure(con, path, DataDB);
 
                     //.............DataDb Functions
                     path = "ExpressBase.Common.sqlscripts.@vendor.datadb.functioncreate.eb_authenticate_unified.sql".Replace("@vendor", vendor.ToLower());
@@ -169,12 +187,11 @@ namespace ExpressBase.ServiceStack.Services
                     path = "ExpressBase.Common.sqlscripts.@vendor.datadb.functioncreate.eb_getroles.sql".Replace("@vendor", vendor.ToLower());
                     bool b20 = CreateOrAlter_Structure(con, path, DataDB);
 
-
                     path = "ExpressBase.Common.sqlscripts.@vendor.datadb.functioncreate.eb_create_or_update_role2loc.sql".Replace("@vendor", vendor.ToLower());
                     bool b49 = CreateOrAlter_Structure(con, path, DataDB);
 
-                    path = "ExpressBase.Common.sqlscripts.@vendor.datadb.tablecreate.eb_role2location.sql".Replace("@vendor", vendor.ToLower());
-                    bool b48 = CreateOrAlter_Structure(con, path, DataDB);
+                    path = "ExpressBase.Common.sqlscripts.@vendor.datadb.functioncreate.eb_getconstraintstatus.sql".Replace("@vendor", vendor.ToLower());
+                    bool b62 = CreateOrAlter_Structure(con, path, DataDB);
 
                     //.............ObjectsDb Tables
 
@@ -271,7 +288,7 @@ namespace ExpressBase.ServiceStack.Services
 
                     if (b1 & b2 & b3 & b4 & b5 & b6 & b7 & b8 & b9 & b10 & b11 & b12 & b13 & b14 & b15 & b16 & b17 & b18 & b19 &
                         b20 & b21 & b22 & b23 & b24 & b25 & b26 & b27 & b28 & b29 & b31 & b32 & b33 & b34 & b35 & b36 & b37 & b38 & b39 & b40 & b41 & b44 & b45 & b46 & b47 &
-                        b48 & b49 & b50 & b51 & b52 & b53 & b54 & b55 & b56)
+                        b48 & b49 & b50 & b51 & b52 & b53 & b54 & b55 & b56 & b57 & b58 & b59 & b60 & b61 & b62)
                     {
                         Console.WriteLine(".............Reached Commit");
                         con_trans.Commit();

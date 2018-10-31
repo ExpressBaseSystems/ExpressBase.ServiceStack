@@ -96,7 +96,7 @@ namespace ExpressBase.ServiceStack.Services
                 if (response.resp)
                 {
                     _conService.Post(new InitialSolutionConnectionsRequest { NewSolnId = DbName, SolnId = request.SolnId, UserId = request.UserId });
-                    _tenantUserService.Post(new UpdateSolutionRequest() { SolnId = DbName, UserId = request.UserId});
+                    _tenantUserService.Post(new UpdateSolutionRequest() { DbName = DbName, UserId = request.UserId});
                 }
             }
             return resp;
