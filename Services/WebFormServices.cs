@@ -259,14 +259,17 @@ WHERE
         {
             EbWebForm FormObj = GetWebFormObject(request.RefId);
             FormObj.TableRowId = request.RowId;
-            if (FormObj.TableRowId > 0)
-            {
-                //Dictionary<string, List<SingleRecordField>> OldData = getFormDataAsColl(FormObj);
-                //UpdateAuditTrail(OldData, request.Values, request.RowId.ToString(), request.UserId);/////////////////////////
-                return UpdateDataFromWebformRec(request, FormObj);
-            }
-            else
-                return InsertDataFromWebformRec(request, FormObj);
+			if (FormObj.TableRowId > 0)
+			{
+				Dictionary<string, List<SingleRecordField>> OldData = getFormDataAsColl(FormObj);
+				UpdateAuditTrail(OldData, request.Values, request.RefId, request.UserId);/////////////////////////
+				return UpdateDataFromWebformRec(request, FormObj);
+			}
+			else
+			{
+				UpdateAuditTrail(request.Values, request.RefId, request.UserId);
+				return InsertDataFromWebformRec(request, FormObj);
+			}
         }
 
         private InsertDataFromWebformResponse InsertDataFromWebformRec(InsertDataFromWebformRequest request, EbControlContainer FormObj)
@@ -368,14 +371,34 @@ WHERE
             return oldData;
         }
 
+		private void UpdateAuditTrail(Dictionary<string, List<SingleRecordField>> _NewData, string _FormId, int _UserId)
+		{
+			List<SingleRecordField> FormFields = new List<SingleRecordField>();
+			foreach (KeyValuePair<string, List<SingleRecordField>> entry in _NewData)
+			{
+				foreach (SingleRecordField rField in entry.Value)
+				{
+					FormFields.Add(new SingleRecordField
+					{
+						Name = rField.Name,
+						Type = rField.Type,
+						Value = rField.Value,
+						OldValue = string.Empty
+					});
+				}
+			}
+			if (FormFields.Count > 0)
+				UpdateAuditTrail(FormFields, _FormId, _UserId);
+		}
+
         private void UpdateAuditTrail(Dictionary<string, List<SingleRecordField>> _OldData, Dictionary<string, List<SingleRecordField>> _NewData, string _FormId, int _UserId)
         {
             List<SingleRecordField> FormFields = new List<SingleRecordField>();
             foreach (KeyValuePair<string, List<SingleRecordField>> entry in _OldData)
             {
-                if (_NewData.ContainsKey(entry.Key))
-                {
-                    foreach (SingleRecordField rField in entry.Value)
+				if (_NewData.ContainsKey(entry.Key))
+				{
+					foreach (SingleRecordField rField in entry.Value)
                     {
                         SingleRecordField nrF = _NewData[entry.Key].Find(e => e.Name == rField.Name);
                         if (nrF != null && nrF.Value != rField.Value)
@@ -389,8 +412,8 @@ WHERE
                             });
                         }
                     }
-                }
-            }
+				}
+			}
             if (FormFields.Count > 0)
                 UpdateAuditTrail(FormFields, _FormId, _UserId);
         }
