@@ -582,6 +582,8 @@ namespace ExpressBase.ServiceStack
 
             EbDataTable _formattedTable = _dataset.Tables[0].GetEmptyTable();
 
+            bool bObfuscute = (!_user.Roles.Contains(SystemRoles.SolutionOwner.ToString()) && !_user.Roles.Contains(SystemRoles.SolutionAdmin.ToString()));
+
             for (int i = 0; i < _dataset.Tables[0].Rows.Count; i++)
             {
                 _formattedTable.Rows.Add(_formattedTable.NewDataRow2());
@@ -614,7 +616,7 @@ namespace ExpressBase.ServiceStack
                     {
                         _formattedData = "<a href='../leadmanagement/" + _dataset.Tables[0].Rows[i][0] + "' target='_blank'>" + _formattedData + "</a>";
                     }
-                    if (!_user.Roles.Contains(SystemRoles.SolutionOwner.ToString()) && !_user.Roles.Contains(SystemRoles.SolutionAdmin.ToString()))
+                    if (bObfuscute)
                     {
                         if (col.HideDataRowMoreThan > 0 && col.HideDataRowMoreThan < _dataset.Tables[0].Rows.Count)
                         {
@@ -859,21 +861,9 @@ namespace ExpressBase.ServiceStack
             List<string> liteperm = new List<string>();
             if (_user.Roles.Contains(SystemRoles.SolutionOwner.ToString()) || _user.Roles.Contains(SystemRoles.SolutionAdmin.ToString()))
             {
-                foreach (var _eboperation in (TVOperations.Instance as EbOperations).Enumerator)
-                {
-                    if (_eboperation.ToString() == OperationConstants.EXCEL_EXPORT)
-                    {
-                        permList.Add("Excel");
-                    }
-                    else if (_eboperation.ToString() == OperationConstants.SUMMARIZE)
-                    {
-                        permList.Add("SUMMARIZE");
-                    }
-                    else if (_eboperation.ToString() == OperationConstants.PDF_EXPORT)
-                    {
-                        permList.Add("Pdf");
-                    }
-                }
+                permList.Add("Excel");
+                permList.Add("SUMMARIZE");
+                permList.Add("Pdf");
             }
             else
             {
