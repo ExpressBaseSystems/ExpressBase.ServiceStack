@@ -404,13 +404,10 @@ namespace ExpressBase.ServiceStack
             _recordsFiltered = (_recordsFiltered > 0) ? _recordsFiltered : _dataset.Tables[_dataset.Tables.Count - 1].Rows.Count;
             //-- 
             EbDataTable _formattedDataTable = null;
-            //LevelInfoCollection _levels = new LevelInfoCollection();
-            //List<GroupingDetails> _levels = new List<GroupingDetails>();
             List<GroupingDetails> _levels = new List<GroupingDetails>();
             if (_dataset.Tables.Count > 0 && _dV != null)
             {
                 _formattedDataTable = PreProcessing(ref _dataset, request.Params, _dV, request.UserInfo, ref _levels);
-                //_levels = GetGroupInfo2(_dataset.Tables[0], _dV);
             }
             List<string> _permission = new List<string>();
             if (request.dvRefId != null)
@@ -587,7 +584,7 @@ namespace ExpressBase.ServiceStack
                     if (col.IsCustomColumn)
                         CustomColumDoCalc4Row(_dataset.Tables[0].Rows[i], _dv, globals, col);
 
-                    var cults = col.GetColumnCultureInfo(_user_culture); // NO NEED
+                    var cults = col.GetColumnCultureInfo(_user_culture); 
                     object _unformattedData = _dataset.Tables[0].Rows[i][col.Data];
                     object _formattedData = _unformattedData;
 
@@ -621,8 +618,8 @@ namespace ExpressBase.ServiceStack
                             _formattedData = "********";
                         }
                     }
-                    _formattedTable.Rows[i][col.Data] = _formattedData;
 
+                    _formattedTable.Rows[i][col.Data] = _formattedData;
                 }
             }
 
@@ -636,7 +633,6 @@ namespace ExpressBase.ServiceStack
                         _levels = RowGroupingCommon(_dataset.Tables[0], _dv, _user_culture, true);
                 }
             }
-
 
             return _formattedTable;
         }
