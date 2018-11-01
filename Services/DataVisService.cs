@@ -504,17 +504,14 @@ namespace ExpressBase.ServiceStack
             return resp;
         }
 
-        public void CustomColumDoCalc(ref EbDataSet _dataset, List<Param> Parameters, EbDataVisualization _dv, User _user, ref List<GroupingDetails> _levels)
+        public void PreCustomColumDoCalc(ref EbDataSet _dataset, List<Param> Parameters, EbDataVisualization _dv, Globals globals)
         {
-            dynamic result = null;
-
             foreach (DVBaseColumn col in _dv.Columns)
             {
                 if (col.IsCustomColumn)
                     _dataset.Tables[0].Columns.Add(new EbDataColumn { ColumnIndex = col.Data, ColumnName = col.Name, Type = col.Type });
             }
 
-            Globals globals = new Globals();
             if (Parameters != null)
             {
                 foreach (Param p in Parameters)
@@ -522,47 +519,44 @@ namespace ExpressBase.ServiceStack
                     globals["Params"].Add(p.Name, new NTV { Name = p.Name, Type = (EbDbTypes)Convert.ToInt32(p.Type), Value = p.ValueTo });
                 }
             }
+        }
 
-            var __customCols = _dv.Columns.Where(c => (c.IsCustomColumn == true || !string.IsNullOrEmpty(c.Formula))).ToList();
+        public void CustomColumDoCalc4Row(EbDataRow _datarow, EbDataVisualization _dv, Globals globals, DVBaseColumn customCol)
+        {
+            dynamic result = null;
 
-            for (int i = 0; i < _dataset.Tables[0].Rows.Count; i++)
-            {
-                foreach (DVBaseColumn customCol in __customCols)
+                try
                 {
-                    try
+                    foreach (FormulaPart formulaPart in customCol.FormulaParts)
                     {
-                        foreach (FormulaPart formulaPart in customCol.FormulaParts)
-                        {
-                            object __value = null;
-                            var __partType = _dataset.Tables[0].Columns[formulaPart.FieldName].Type;
-                            if (__partType == EbDbTypes.Decimal || __partType == EbDbTypes.Int32)
-                                __value = (_dataset.Tables[0].Rows[i][formulaPart.FieldName] != DBNull.Value) ? _dataset.Tables[0].Rows[i][formulaPart.FieldName] : 0;
-                            else
-                                __value = _dataset.Tables[0].Rows[i][formulaPart.FieldName];
-
-                            globals[formulaPart.TableName].Add(formulaPart.FieldName, new NTV { Name = formulaPart.FieldName, Type = __partType, Value = __value });
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        Log.Info("c# Script Exception........." + e.StackTrace);
-                    }
-
-                    try
-                    {
-                        if (customCol is DVNumericColumn)
-                            result = Convert.ToDecimal(customCol.GetCodeAnalysisScript().RunAsync(globals).Result.ReturnValue);
+                        object __value = null;
+                        var __partType = _datarow.Table.Columns[formulaPart.FieldName].Type;
+                        if (__partType == EbDbTypes.Decimal || __partType == EbDbTypes.Int32)
+                            __value = (_datarow[formulaPart.FieldName] != DBNull.Value) ? _datarow[formulaPart.FieldName] : 0;
                         else
-                            result = customCol.GetCodeAnalysisScript().RunAsync(globals).Result.ReturnValue.ToString();
-                    }
-                    catch (Exception e)
-                    {
-                        Log.Info("c# Script Exception........." + e.StackTrace);
-                    }
+                            __value = _datarow[formulaPart.FieldName];
 
-                    _dataset.Tables[0].Rows[i][customCol.Name] = result;
+                        globals[formulaPart.TableName].Add(formulaPart.FieldName, new NTV { Name = formulaPart.FieldName, Type = __partType, Value = __value });
+                    }
                 }
-            }
+                catch (Exception e)
+                {
+                    Log.Info("c# Script Exception........." + e.StackTrace);
+                }
+
+                try
+                {
+                    if (customCol is DVNumericColumn)
+                        result = Convert.ToDecimal(customCol.GetCodeAnalysisScript().RunAsync(globals).Result.ReturnValue);
+                    else
+                        result = customCol.GetCodeAnalysisScript().RunAsync(globals).Result.ReturnValue.ToString();
+                }
+                catch (Exception e)
+                {
+                    Log.Info("c# Script Exception........." + e.StackTrace);
+                }
+
+                _datarow[customCol.Name] = result;
         }
 
         public EbDataTable PreProcessing(ref EbDataSet _dataset, List<Param> Parameters, EbDataVisualization _dv, User _user, ref List<GroupingDetails> _levels)
@@ -578,7 +572,8 @@ namespace ExpressBase.ServiceStack
                 }
             }
 
-            this.CustomColumDoCalc(ref _dataset, Parameters, _dv, _user, ref _levels);
+            Globals globals = new Globals();
+            this.PreCustomColumDoCalc(ref _dataset, Parameters, _dv, globals);
 
             EbDataTable _formattedTable = _dataset.Tables[0].GetEmptyTable();
 
@@ -589,7 +584,10 @@ namespace ExpressBase.ServiceStack
                 _formattedTable.Rows.Add(_formattedTable.NewDataRow2());
                 foreach (DVBaseColumn col in _dv.Columns)
                 {
-                    var cults = col.GetColumnCultureInfo(_user_culture);
+                    if (col.IsCustomColumn)
+                        CustomColumDoCalc4Row(_dataset.Tables[0].Rows[i], _dv, globals, col);
+
+                    var cults = col.GetColumnCultureInfo(_user_culture); // NO NEED
                     object _unformattedData = _dataset.Tables[0].Rows[i][col.Data];
                     object _formattedData = _unformattedData;
 
@@ -627,16 +625,14 @@ namespace ExpressBase.ServiceStack
 
                 }
             }
-            //List<LevelDetails> Levels;
+
             if ((_dv as EbTableVisualization) != null)
             {
                 if ((_dv as EbTableVisualization).RowGroupCollection.Count > 0)
                 {
                     if ((_dv as EbTableVisualization).CurrentRowGroup.GetType().Name == "SingleLevelRowGroup")
-                        //_levels = GetGroupInfoSingleLevel(_dataset.Tables[0], _dv, _user_culture);
                         _levels = RowGroupingCommon(_dataset.Tables[0], _dv, _user_culture, false);
                     else if ((_dv as EbTableVisualization).CurrentRowGroup.GetType().Name == "MultipleLevelRowGroup")
-                        //_levels = GetGroupInfoMultiLevel(_dataset.Tables[0], _dv, _user_culture);//GetGroupInfoMultiLevel(_dataset.Tables[0], _dv, _user_culture);
                         _levels = RowGroupingCommon(_dataset.Tables[0], _dv, _user_culture, true);
                 }
             }
