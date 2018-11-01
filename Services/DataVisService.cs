@@ -522,38 +522,38 @@ namespace ExpressBase.ServiceStack
         {
             dynamic result = null;
 
-                try
+            try
+            {
+                foreach (FormulaPart formulaPart in customCol.FormulaParts)
                 {
-                    foreach (FormulaPart formulaPart in customCol.FormulaParts)
-                    {
-                        object __value = null;
-                        var __partType = _datarow.Table.Columns[formulaPart.FieldName].Type;
-                        if (__partType == EbDbTypes.Decimal || __partType == EbDbTypes.Int32)
-                            __value = (_datarow[formulaPart.FieldName] != DBNull.Value) ? _datarow[formulaPart.FieldName] : 0;
-                        else
-                            __value = _datarow[formulaPart.FieldName];
-
-                        globals[formulaPart.TableName].Add(formulaPart.FieldName, new NTV { Name = formulaPart.FieldName, Type = __partType, Value = __value });
-                    }
-                }
-                catch (Exception e)
-                {
-                    Log.Info("c# Script Exception........." + e.StackTrace);
-                }
-
-                try
-                {
-                    if (customCol is DVNumericColumn)
-                        result = Convert.ToDecimal(customCol.GetCodeAnalysisScript().RunAsync(globals).Result.ReturnValue);
+                    object __value = null;
+                    var __partType = _datarow.Table.Columns[formulaPart.FieldName].Type;
+                    if (__partType == EbDbTypes.Decimal || __partType == EbDbTypes.Int32)
+                        __value = (_datarow[formulaPart.FieldName] != DBNull.Value) ? _datarow[formulaPart.FieldName] : 0;
                     else
-                        result = customCol.GetCodeAnalysisScript().RunAsync(globals).Result.ReturnValue.ToString();
-                }
-                catch (Exception e)
-                {
-                    Log.Info("c# Script Exception........." + e.StackTrace);
-                }
+                        __value = _datarow[formulaPart.FieldName];
 
-                _datarow[customCol.Name] = result;
+                    globals[formulaPart.TableName].Add(formulaPart.FieldName, new NTV { Name = formulaPart.FieldName, Type = __partType, Value = __value });
+                }
+            }
+            catch (Exception e)
+            {
+                Log.Info("c# Script Exception........." + e.StackTrace);
+            }
+
+            try
+            {
+                if (customCol is DVNumericColumn)
+                    result = Convert.ToDecimal(customCol.GetCodeAnalysisScript().RunAsync(globals).Result.ReturnValue);
+                else
+                    result = customCol.GetCodeAnalysisScript().RunAsync(globals).Result.ReturnValue.ToString();
+            }
+            catch (Exception e)
+            {
+                Log.Info("c# Script Exception........." + e.StackTrace);
+            }
+
+            _datarow[customCol.Name] = result;
         }
 
         public EbDataTable PreProcessing(ref EbDataSet _dataset, List<Param> Parameters, EbDataVisualization _dv, User _user, ref List<GroupingDetails> _levels)
@@ -595,7 +595,12 @@ namespace ExpressBase.ServiceStack
                         _dataset.Tables[0].Rows[i][col.Data] = Convert.ToDateTime(_unformattedData).ToString("yyyy-MM-dd");
                     }
                     else if (col.Type == EbDbTypes.Decimal || col.Type == EbDbTypes.Int32)
-                        _formattedData = Convert.ToDecimal(_unformattedData).ToString("N", cults.NumberFormat);
+                    {
+                        if((col as DVNumericColumn).SuppresIfZero)
+                            _formattedData = (Convert.ToDecimal(_unformattedData) == 0) ? string.Empty: Convert.ToDecimal(_unformattedData).ToString("N", cults.NumberFormat);
+                        else
+                            _formattedData = Convert.ToDecimal(_unformattedData).ToString("N", cults.NumberFormat);
+                    }
 
 
                     if (!string.IsNullOrEmpty(col.LinkRefId))
