@@ -29,8 +29,8 @@ namespace ExpressBase.ServiceStack.Services
                 Wrapper = (AppWrapper)EbSerializers.Json_Deserialize(dt.Rows[0][7].ToString())
             };
         }
-
-        public GetAllFromAppstoreResponse Get(GetAllFromAppStoreRequest request)
+      
+        public GetAllFromAppstoreResponse Get(GetAllFromAppStoreExternalRequest request)
         {
             List<AppStore> _storeCollection = new List<AppStore>();
             EbDataTable dt = InfraConnectionFactory.ObjectsDB.DoQuery(string.Format(@"
@@ -41,7 +41,7 @@ namespace ExpressBase.ServiceStack.Services
             WHERE 
                 EAS.user_solution_id = ES.esolution_id AND
                 ES.tenant_id = ET.id AND EAS.eb_del='F' AND
-                (EAS.status=2 OR ( EAS.status=1 AND ES.tenant_id=(SELECT ES.tenant_id from eb_solutions ES where ES.esolution_id = '{0}')));
+                EAS.status=2;
             ", request.SolnId));
             foreach (EbDataRow _row in dt.Rows)
             {
@@ -66,7 +66,44 @@ namespace ExpressBase.ServiceStack.Services
             }
             return new GetAllFromAppstoreResponse { Apps = _storeCollection };
         }
-
+        [Authenticate]
+        public GetAllFromAppstoreResponse Get(GetAllFromAppStoreInternalRequest request)
+        {
+            List<AppStore> _storeCollection = new List<AppStore>();
+            EbDataTable dt = InfraConnectionFactory.ObjectsDB.DoQuery(string.Format(@"
+            SELECT
+	            EAS.id, app_name, status, user_solution_id, cost, created_by, created_at, json, currency, EAS.eb_del, app_type,	EAS.description, icon, solution_name, fullname
+            FROM 
+	            eb_appstore EAS, eb_solutions ES, eb_tenants ET
+            WHERE 
+                EAS.user_solution_id = ES.esolution_id AND
+                ES.tenant_id = ET.id AND EAS.eb_del='F' AND
+                EAS.status=1 AND 
+                ES.tenant_id=(SELECT ES.tenant_id from eb_solutions ES where ES.esolution_id = '{0}');
+            ", request.SolnId));
+            foreach (EbDataRow _row in dt.Rows)
+            {
+                AppStore _app = new AppStore
+                {
+                    Id = Convert.ToInt32(_row[0]),
+                    Name = _row[1].ToString(),
+                    Status = Convert.ToInt32(_row[2]),
+                    SolutionId = _row[3].ToString(),
+                    Cost = Convert.ToInt32(_row[4]),
+                    CreatedBy = Convert.ToInt32(_row[5]),
+                    CreatedAt = Convert.ToDateTime(_row[6]),
+                    Json = _row[7].ToString(),
+                    Currency = _row[8].ToString(),
+                    AppType = Convert.ToInt32(_row[10]),
+                    Description = _row[11].ToString(),
+                    Icon = _row[12].ToString(),
+                    SolutionName = _row[13].ToString(),
+                    TenantName = _row[14].ToString()
+                };
+                _storeCollection.Add(_app);
+            }
+            return new GetAllFromAppstoreResponse { Apps = _storeCollection };
+        }
         public SaveToAppStoreResponse Post(SaveToAppStoreRequest request)
         {
             using (DbConnection con = this.InfraConnectionFactory.ObjectsDB.GetNewConnection())
