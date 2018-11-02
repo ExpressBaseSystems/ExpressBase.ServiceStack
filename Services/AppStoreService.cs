@@ -129,6 +129,7 @@ namespace ExpressBase.ServiceStack.Services
 
         public ShareToPublicResponse Post(ShareToPublicRequest request)
         {
+            Log.Info("Entered ShareToPublicRequest");
             int _id;
             using (DbConnection con = this.InfraConnectionFactory.ObjectsDB.GetNewConnection())
             {
@@ -165,6 +166,7 @@ namespace ExpressBase.ServiceStack.Services
                 cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":cost", EbDbTypes.Decimal, request.Store.Cost));
                 _id = cmd.ExecuteNonQuery();
             }
+            Log.Info("ShareToPublicRequest returning id = " + _id);
             return new ShareToPublicResponse { ReturningId = _id };
         }
 
