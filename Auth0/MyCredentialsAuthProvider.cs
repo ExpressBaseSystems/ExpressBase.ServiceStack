@@ -55,7 +55,7 @@ namespace ExpressBase.ServiceStack.Auth0
 					_authUser = User.GetDetailsTenant(EbConnectionFactory.DataDB, UserName, password);
 					Logger.Info("TryAuthenticate -> Tenant");
 				}
-                else if (request.Meta.ContainsKey("anonymous") && whichContext.Equals("bc"))
+                else if (request.Meta.ContainsKey("anonymous"))// && whichContext.Equals("bc"))
                 {
                     var emailId = request.Meta.ContainsKey("emailId") ? request.Meta["emailId"] : string.Empty;//for anonymous
                     var phone = request.Meta.ContainsKey("phone") ? request.Meta["phone"] : string.Empty;//for anonymous
