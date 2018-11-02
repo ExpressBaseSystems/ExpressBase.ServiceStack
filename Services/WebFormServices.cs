@@ -223,20 +223,59 @@ namespace ExpressBase.ServiceStack.Services
             return new DoUniqueCheckResponse { NoRowsWithSameValue = datatbl.Rows.Count };
         }
 
+		public GetDictionaryValueResponse Any(GetDictionaryValueRequest request)
+		{
+			Dictionary<string, string> Dict = new Dictionary<string, string>();
+			string qry = @"
+SELECT 
+	k.key, v.value
+FROM 
+	eb_keys k, eb_languages l, eb_keyvalue v
+WHERE
+	k.id = v.key_id AND
+	l.id = v.lang_id AND
+	k.key IN ({0})
+	AND l.language LIKE '%({1})';";
+
+			string temp = string.Empty;
+			foreach(string t in request.Keys)
+			{
+				temp += "'" + t + "',";
+			}
+			qry = string.Format(qry, temp.Substring(0, temp.Length - 1), request.Locale);
+			EbDataTable datatbl = this.EbConnectionFactory.ObjectsDB.DoQuery(qry, new DbParameter[] { });
+
+			foreach(EbDataRow dr in datatbl.Rows)
+			{
+				Dict.Add(dr["key"].ToString(), dr["value"].ToString());
+			}
+
+			return new GetDictionaryValueResponse { Dict = Dict };
+		}
+
         //======================================= INSERT OR UPDATE RECORD =============================================
 
         public InsertDataFromWebformResponse Any(InsertDataFromWebformRequest request)
         {
             EbWebForm FormObj = GetWebFormObject(request.RefId);
             FormObj.TableRowId = request.RowId;
-            if (FormObj.TableRowId > 0)
-            {
-                //Dictionary<string, List<SingleRecordField>> OldData = getFormDataAsColl(FormObj);
-                //UpdateAuditTrail(OldData, request.Values, request.RowId.ToString(), request.UserId);/////////////////////////
-                return UpdateDataFromWebformRec(request, FormObj);
-            }
-            else
-                return InsertDataFromWebformRec(request, FormObj);
+			if (FormObj.TableRowId > 0)
+			{
+				Dictionary<string, List<SingleRecordField>> OldData = getFormDataAsColl(FormObj);
+				InsertDataFromWebformResponse resp = UpdateDataFromWebformRec(request, FormObj);
+				if(resp.RowAffected > 0)
+				{
+					UpdateAuditTrail(OldData, request.Values, request.RefId, FormObj.TableRowId, request.UserId);/////////////////////////
+				}				
+				return resp;
+			}
+			else
+			{
+				InsertDataFromWebformResponse resp = InsertDataFromWebformRec(request, FormObj);
+				if(resp.RowAffected > 0)
+					UpdateAuditTrail(request.Values, request.RefId, resp.RowAffected, request.UserId);
+				return resp;
+			}
         }
 
         private InsertDataFromWebformResponse InsertDataFromWebformRec(InsertDataFromWebformRequest request, EbControlContainer FormObj)
@@ -265,9 +304,11 @@ namespace ExpressBase.ServiceStack.Services
             }
             param.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_createdby", EbDbTypes.Int32, request.UserId));
             param.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_createdat", EbDbTypes.DateTime, System.DateTime.Now));
-            int rowsAffected = EbConnectionFactory.DataDB.InsertTable(fullqry, param.ToArray());
+			fullqry += string.Concat("SELECT cur_val('", FormObj.TableName, "_id_seq');");
 
-            return new InsertDataFromWebformResponse { RowAffected = rowsAffected };
+			var temp = EbConnectionFactory.DataDB.DoQuery(fullqry, param.ToArray());
+
+			return new InsertDataFromWebformResponse { RowAffected = temp.Rows.Count > 0 ? Convert.ToInt32(temp.Rows[0][0]): 0 };
         }
 
         private InsertDataFromWebformResponse UpdateDataFromWebformRec(InsertDataFromWebformRequest request, EbControlContainer FormObj)
@@ -338,14 +379,34 @@ namespace ExpressBase.ServiceStack.Services
             return oldData;
         }
 
-        private void UpdateAuditTrail(Dictionary<string, List<SingleRecordField>> _OldData, Dictionary<string, List<SingleRecordField>> _NewData, string _FormId, int _UserId)
+		private void UpdateAuditTrail(Dictionary<string, List<SingleRecordField>> _NewData, string _FormId, int _RecordId, int _UserId)
+		{
+			List<SingleRecordField> FormFields = new List<SingleRecordField>();
+			foreach (KeyValuePair<string, List<SingleRecordField>> entry in _NewData)
+			{
+				foreach (SingleRecordField rField in entry.Value)
+				{
+					FormFields.Add(new SingleRecordField
+					{
+						Name = rField.Name,
+						Type = rField.Type,
+						Value = rField.Value,
+						OldValue = string.Empty
+					});
+				}
+			}
+			if (FormFields.Count > 0)
+				UpdateAuditTrail(FormFields, _FormId, _RecordId, _UserId);
+		}
+
+        private void UpdateAuditTrail(Dictionary<string, List<SingleRecordField>> _OldData, Dictionary<string, List<SingleRecordField>> _NewData, string _FormId, int _RecordId, int _UserId)
         {
             List<SingleRecordField> FormFields = new List<SingleRecordField>();
             foreach (KeyValuePair<string, List<SingleRecordField>> entry in _OldData)
             {
-                if (_NewData.ContainsKey(entry.Key))
-                {
-                    foreach (SingleRecordField rField in entry.Value)
+				if (_NewData.ContainsKey(entry.Key))
+				{
+					foreach (SingleRecordField rField in entry.Value)
                     {
                         SingleRecordField nrF = _NewData[entry.Key].Find(e => e.Name == rField.Name);
                         if (nrF != null && nrF.Value != rField.Value)
@@ -359,19 +420,19 @@ namespace ExpressBase.ServiceStack.Services
                             });
                         }
                     }
-                }
-            }
+				}
+			}
             if (FormFields.Count > 0)
-                UpdateAuditTrail(FormFields, _FormId, _UserId);
+                UpdateAuditTrail(FormFields, _FormId, _RecordId, _UserId);
         }
 
-        private void UpdateAuditTrail(List<SingleRecordField> _Fields, string _FormId, int _UserId)
+        private void UpdateAuditTrail(List<SingleRecordField> _Fields, string _FormId, int _RecordId, int _UserId)
         {
             List<DbParameter> parameters = new List<DbParameter>();
             parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("formid", EbDbTypes.String, _FormId));
-            parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_createdby", EbDbTypes.Int32, _UserId));
-            parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_createdat", EbDbTypes.DateTime, DateTime.Now));
-            string Qry = "INSERT INTO eb_audit_master(formid, eb_createdby, eb_createdat) VALUES (:formid, :eb_createdby, :eb_createdat) RETURNING id;";
+			parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("dataid", EbDbTypes.Int32, _RecordId));
+			parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_createdby", EbDbTypes.Int32, _UserId));
+            string Qry = "INSERT INTO eb_audit_master(formid, dataid, eb_createdby, eb_createdat) VALUES (:formid, :dataid, :eb_createdby, NOW()) RETURNING id;";
             EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery(Qry, parameters.ToArray());
             var id = Convert.ToInt32(dt.Rows[0][0]);
 
@@ -387,5 +448,52 @@ namespace ExpressBase.ServiceStack.Services
             }
             var rrr = this.EbConnectionFactory.ObjectsDB.DoNonQuery(lineQry.Substring(0, lineQry.Length - 1), parameters1.ToArray());
         }
-    }
+
+		public GetAuditTrailResponse Any(GetAuditTrailRequest request)
+		{
+			string qry = @"	SELECT 
+								m.id, u.fullname, m.eb_createdat, l.fieldname, l.oldvalue, l.newvalue
+							FROM 
+								eb_audit_master m, eb_audit_lines l, eb_users u
+							WHERE
+								m.id = l.masterid AND m.eb_createdby = u.id AND m.formid = :formid AND m.dataid = :dataid
+							ORDER BY
+								m.id, l.fieldname;";
+			DbParameter[] parameters = new DbParameter[] {
+				this.EbConnectionFactory.DataDB.GetNewParameter("formid", EbDbTypes.String, request.FormId),
+				this.EbConnectionFactory.DataDB.GetNewParameter("dataid", EbDbTypes.Int32, request.RowId)
+			};
+			EbDataTable dt = EbConnectionFactory.DataDB.DoQuery(qry, parameters);
+
+			Dictionary<int, FormTransaction> logs = new Dictionary<int, FormTransaction>();
+
+			foreach(EbDataRow dr in dt.Rows)
+			{
+				if (logs.ContainsKey(Convert.ToInt32(dr["id"])))
+				{
+					logs[Convert.ToInt32(dr["id"])].Details.Add(new FormTransactionLine {
+						 FieldName = dr["fieldname"].ToString(),
+						 OldValue = dr["oldvalue"].ToString(),
+						 NewValue = dr["newvalue"].ToString()
+					});
+				}
+				else
+				{
+					logs.Add(Convert.ToInt32(dr["id"]), new FormTransaction {
+						CreatedBy = dr["fullname"].ToString(),
+						CreatedAt = Convert.ToDateTime(dr["eb_createdat"]).ToString("dd-MM-yyyy hh:mm:ss tt"),
+						Details = new List<FormTransactionLine>() {
+							new FormTransactionLine {
+								FieldName = dr["fieldname"].ToString(),
+								OldValue = dr["oldvalue"].ToString(),
+								NewValue = dr["newvalue"].ToString()
+							}
+						} 
+					});
+				}
+			}
+
+			return new GetAuditTrailResponse{ Logs = logs };
+		}
+	}
 }

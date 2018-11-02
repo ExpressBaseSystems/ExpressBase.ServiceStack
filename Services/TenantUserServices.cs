@@ -144,7 +144,7 @@ namespace ExpressBase.ServiceStack.Services
             var _infraService = base.ResolveService<InfraServices>();
             GetSolutioInfoResponse res = (GetSolutioInfoResponse)_infraService.Get(new GetSolutioInfoRequest { IsolutionId = req.SolnId });
             EbSolutionsWrapper wrap_sol = res.Data;
-            LocationInfoResponse Loc = this.Get(new LocationInfoRequest());
+            LocationInfoTenantResponse Loc = this.Get(new LocationInfoTenantRequest { DbName = req.DbName});
             Eb_Solution sol_Obj = new Eb_Solution
             {
                 SolutionID = req.SolnId,
@@ -160,6 +160,44 @@ namespace ExpressBase.ServiceStack.Services
             var x = this.Redis.Get<Eb_Solution>(String.Format("solution_{0}", req.SolnId));
 
             return new UpdateSolutionResponse { };
+        }
+
+        public LocationInfoTenantResponse Get(LocationInfoTenantRequest req)
+        {
+            List<EbLocationCustomField> Conf = new List<EbLocationCustomField>();
+            Dictionary<int, EbLocation> locs = new Dictionary<int, EbLocation>();
+
+            string query = "SELECT * FROM eb_location_config WHERE eb_del = 'F' ORDER BY id; SELECT * FROM eb_locations;";
+            EbConnectionFactory ebConnectionFactory = new EbConnectionFactory(req.DbName.ToLower(), this.Redis);
+            using (var con = ebConnectionFactory.DataDB.GetNewConnection(req.DbName.ToLower()))
+            {
+                EbDataSet dt = ebConnectionFactory.DataDB.DoQueries(query);
+
+                foreach (EbDataRow r in dt.Tables[0].Rows)
+                {
+                    Conf.Add(new EbLocationCustomField
+                    {
+                        Name = r[1].ToString(),
+                        IsRequired = (r[2].ToString() == "T") ? true : false,
+                        Id = r[0].ToString(),
+                        Type = r[3].ToString()
+                    });
+                }
+
+                foreach (var r in dt.Tables[1].Rows)
+                {
+                    locs.Add(Convert.ToInt32(r[0]), new EbLocation
+                    {
+                        LocId = Convert.ToInt32(r[0]),
+                        ShortName = r[1].ToString(),
+                        LongName = r[2].ToString(),
+                        Logo = r[3].ToString(),
+                        Meta = JsonConvert.DeserializeObject<Dictionary<string, string>>(r[4].ToString())
+                    });
+                }
+            }
+              
+            return new LocationInfoTenantResponse { Locations = locs, Config = Conf };
         }
 
         public LocationInfoResponse Get(LocationInfoRequest req)
