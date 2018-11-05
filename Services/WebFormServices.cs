@@ -458,7 +458,7 @@ WHERE
 							WHERE
 								m.id = l.masterid AND m.eb_createdby = u.id AND m.formid = :formid AND m.dataid = :dataid
 							ORDER BY
-								m.id, l.fieldname;";
+								m.id , l.fieldname;";
 			DbParameter[] parameters = new DbParameter[] {
 				this.EbConnectionFactory.DataDB.GetNewParameter("formid", EbDbTypes.String, request.FormId),
 				this.EbConnectionFactory.DataDB.GetNewParameter("dataid", EbDbTypes.Int32, request.RowId)
@@ -469,9 +469,10 @@ WHERE
 
 			foreach(EbDataRow dr in dt.Rows)
 			{
-				if (logs.ContainsKey(Convert.ToInt32(dr["id"])))
+				int id = 1048576 - Convert.ToInt32(dr["id"]);
+				if (logs.ContainsKey(id))
 				{
-					logs[Convert.ToInt32(dr["id"])].Details.Add(new FormTransactionLine {
+					logs[id].Details.Add(new FormTransactionLine {
 						 FieldName = dr["fieldname"].ToString(),
 						 OldValue = dr["oldvalue"].ToString(),
 						 NewValue = dr["newvalue"].ToString()
@@ -479,7 +480,7 @@ WHERE
 				}
 				else
 				{
-					logs.Add(Convert.ToInt32(dr["id"]), new FormTransaction {
+					logs.Add(id, new FormTransaction {
 						CreatedBy = dr["fullname"].ToString(),
 						CreatedAt = Convert.ToDateTime(dr["eb_createdat"]).ToString("dd-MM-yyyy hh:mm:ss tt"),
 						Details = new List<FormTransactionLine>() {

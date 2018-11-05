@@ -26,6 +26,7 @@ namespace ExpressBase.ServiceStack.MQServices
 
         public ExportApplicationResponse Post(ExportApplicationMqRequest request)
         {
+            
             ExportApplicationResponse resp = new ExportApplicationResponse();
             MessageProducer3.Publish(new ExportApplicationRequest
             {
@@ -38,7 +39,7 @@ namespace ExpressBase.ServiceStack.MQServices
                 UserAuthId = request.UserAuthId,
                 WhichConsole = request.WhichConsole
             });
-
+            Log.Info("ExportApplicationRequest published to Mq");
             return resp;
         }
         public ImportApplicationResponse Get(ImportApplicationMqRequest request)
@@ -54,6 +55,7 @@ namespace ExpressBase.ServiceStack.MQServices
                 UserAuthId = request.UserAuthId,
                 WhichConsole = request.WhichConsole
             });
+            Log.Info("ImportApplicationRequest published to Mq");
             return resp;
         }
     }
@@ -65,6 +67,7 @@ namespace ExpressBase.ServiceStack.MQServices
 
         public string Post(ExportApplicationRequest request)
         {
+            Log.Info("ExportApplicationRequest inside Mq");
             OrderedDictionary ObjDictionary = new OrderedDictionary();
             try
             {
@@ -104,10 +107,11 @@ namespace ExpressBase.ServiceStack.MQServices
                     UserAuthId = request.UserAuthId,
                     WhichConsole = request.WhichConsole
                 });
+                Console.WriteLine("ExportApplication success");
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.Message);
+                Console.WriteLine("ExportApplication"+ e.Message);
             }
 
             return null;
@@ -115,6 +119,7 @@ namespace ExpressBase.ServiceStack.MQServices
 
         public string Post(ImportApplicationRequest request)
         {
+            Log.Info("ExportApplicationRequest inside Mq");
             Dictionary<string, string> RefidMap = new Dictionary<string, string>();
             try
             {
@@ -209,10 +214,11 @@ namespace ExpressBase.ServiceStack.MQServices
                     };
                     EbObject_SaveResponse saveRes = objservice.Post(ss);
                 }
+                Console.WriteLine("ImportApplication success");
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.Message);
+                Console.WriteLine("ImportApplication" + e.Message);
             }
             return null;
         }
