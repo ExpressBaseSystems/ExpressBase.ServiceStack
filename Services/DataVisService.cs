@@ -936,23 +936,22 @@ namespace ExpressBase.ServiceStack
             int _recordsTotal = 0, _recordsFiltered = 0;
             if (_isPaged)
             {
-                Int32.TryParse(_dataset.Tables[1].Rows[0][0].ToString(), out _recordsTotal);
-                Int32.TryParse(_dataset.Tables[1].Rows[0][0].ToString(), out _recordsFiltered);
+                Int32.TryParse(_dataset.Tables[0].Rows[0][0].ToString(), out _recordsTotal);
+                Int32.TryParse(_dataset.Tables[0].Rows[0][0].ToString(), out _recordsFiltered);
             }
-            _recordsTotal = (_recordsTotal > 0) ? _recordsTotal : _dataset.Tables[1].Rows.Count;
-            _recordsFiltered = (_recordsFiltered > 0) ? _recordsFiltered : _dataset.Tables[1].Rows.Count;
+            _recordsTotal = (_recordsTotal > 0) ? _recordsTotal : _dataset.Tables[0].Rows.Count;
+            _recordsFiltered = (_recordsFiltered > 0) ? _recordsFiltered : _dataset.Tables[0].Rows.Count;
             //-- 
-            //EbDataTable _formattedDataTable = null;
-            //List<GroupingDetails> _levels = new List<GroupingDetails>();
-            //if (_dataset.Tables.Count > 0 && _dV != null)
-            //{
-            //    _formattedDataTable = PreProcessing(ref _dataset, request.Params, _dV, request.UserInfo, ref _levels);
-            //    //_levels = GetGroupInfo2(_dataset.Tables[0], _dV);
-            //}
+            EbDataTable _formattedDataTable = null;
+            List<GroupingDetails> _levels = new List<GroupingDetails>();
+            if (_dataset.Tables.Count > 0 && _dV != null)
+            {
+                _formattedDataTable = PreProcessing(ref _dataset, request.Params, _dV, request.UserInfo, ref _levels);
+            }
             dsresponse = new DataSourceDataResponse
             {
                 Data = _dataset.Tables[0].Rows,
-                //FormattedData = (_formattedDataTable != null) ? _formattedDataTable.Rows : null,
+                FormattedData = (_formattedDataTable != null) ? _formattedDataTable.Rows : null,
                 RecordsTotal = _recordsTotal,
                 RecordsFiltered = _recordsFiltered,
                 Ispaged = _isPaged
