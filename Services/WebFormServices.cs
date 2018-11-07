@@ -23,53 +23,54 @@ namespace ExpressBase.ServiceStack.Services
 
         public CreateWebFormTableResponse Any(CreateWebFormTableRequest request)
         {
-            return CreateWebFormTableRec(request);
+			CreateWebFormTableRec(request.WebObj, request.WebObj.TableName);
+			return new CreateWebFormTableResponse { };
         }
 
-        private CreateWebFormTableResponse CreateWebFormTableRec(CreateWebFormTableRequest request)
-        {
-            CreateWebFormTableResponse Response = CreateWebFormTableHelper(request);
-            foreach (EbControl _control in request.WebObj.Controls)
-            {
-                if (_control is EbControlContainer)
-                {
-                    EbControlContainer Container = _control as EbControlContainer;
-                    Container.TableName = Container.TableName.IsNullOrEmpty() ? request.WebObj.TableName : Container.TableName;
-                    request.WebObj = Container;
-                    Response = CreateWebFormTableHelper(request);
-                    CreateWebFormTableRec(request);
-                }
-            }
+		private void CreateWebFormTableRec(EbControlContainer _container, string _table)
+		{
+			CreateWebFormTableHelper(_container, _table);
+			foreach(EbControl _control in _container.Controls)
+			{
+				if(_control is EbControlContainer)
+				{
+					EbControlContainer Container = _control as EbControlContainer;
+					
+					if (Container.TableName.IsNullOrEmpty())
+					{
+						Container.TableName = _container.TableName;
+					}
+					CreateWebFormTableRec(Container, _container.TableName);					
+				}
+			}
+		}
 
-            return new CreateWebFormTableResponse();
-        }
+		private void CreateWebFormTableHelper(EbControlContainer _container, string _table)
+		{
+			IVendorDbTypes vDbTypes = this.EbConnectionFactory.ObjectsDB.VendorDbTypes;
+			List<TableColumnMeta> _listNamesAndTypes = new List<TableColumnMeta>();
+			IEnumerable<EbControl> _flatControls = _container.Controls.Get1stLvlControls();
 
-        private CreateWebFormTableResponse CreateWebFormTableHelper(CreateWebFormTableRequest request)
-        {
-            IVendorDbTypes vDbTypes = this.EbConnectionFactory.ObjectsDB.VendorDbTypes;
-            List<TableColumnMeta> _listNamesAndTypes = new List<TableColumnMeta>();
+			foreach (EbControl control in _flatControls)
+			{
+				_listNamesAndTypes.Add(new TableColumnMeta { Name = control.Name, Type = control.GetvDbType(vDbTypes) });
+			}
+			if (_listNamesAndTypes.Count > 0)
+			{
+				if (!_table.ToLower().Equals(_container.TableName.ToLower()))
+					_listNamesAndTypes.Add(new TableColumnMeta { Name = _table + "_id", Type = vDbTypes.Decimal });// id refernce to the parent table will store in this column - foreignkey
+				_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_by", Type = vDbTypes.Decimal });
+				_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_at", Type = vDbTypes.DateTime });
+				_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_by", Type = vDbTypes.Decimal });
+				_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_at", Type = vDbTypes.DateTime });
+				_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_del", Type = vDbTypes.Boolean, Default = "F" });
+				_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_void", Type = vDbTypes.Boolean, Default = "F" });
+				_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_transaction_date", Type = vDbTypes.DateTime });
+				_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_autogen", Type = vDbTypes.Decimal });
 
-            IEnumerable<EbControl> _flatControls = request.WebObj.Controls.Get1stLvlControls();
-
-            foreach (EbControl control in _flatControls)
-            {
-                //this.addControlToColl(control, ref _listNamesAndTypes, vDbTypes);
-                _listNamesAndTypes.Add(new TableColumnMeta { Name = control.Name, Type = control.GetvDbType(vDbTypes) });
-            }
-
-            _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_by", Type = vDbTypes.Decimal });
-            _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_at", Type = vDbTypes.DateTime });
-            _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_by", Type = vDbTypes.Decimal });
-            _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_at", Type = vDbTypes.DateTime });
-            _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_del", Type = vDbTypes.Boolean, Default = "F" });
-            _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_void", Type = vDbTypes.Boolean, Default = "F" });
-            _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_transaction_date", Type = vDbTypes.DateTime });
-            _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_autogen", Type = vDbTypes.Decimal });
-
-            CreateOrAlterTable(request.WebObj.TableName.ToLower(), _listNamesAndTypes);
-
-            return new CreateWebFormTableResponse();
-        }
+				CreateOrAlterTable(_container.TableName.ToLower(), _listNamesAndTypes);
+			}
+		}
 
         private int CreateOrAlterTable(string tableName, List<TableColumnMeta> listNamesAndTypes)
         {
