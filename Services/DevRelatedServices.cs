@@ -101,7 +101,7 @@ namespace ExpressBase.ServiceStack
             {
                 string sql = @" SELECT applicationname,description,app_icon,application_type, app_settings FROM eb_applications WHERE id=:appid;
 				                SELECT 
-				                     EO.id, EO.obj_type, EO.obj_name, EO.obj_desc
+				                     EO.id, EO.obj_type, EO.obj_name, EO.obj_desc, EO.display_name
 				                FROM
 				                     eb_objects EO
 				                INNER JOIN
@@ -154,7 +154,8 @@ namespace ExpressBase.ServiceStack
                             EbObjectType = (dr[1] != null) ? Convert.ToInt32(dr[1]) : 0,
                             ObjName = dr[2].ToString(),
                             Description = dr[3].ToString(),
-                            EbType = ___otyp.ToString()
+                            EbType = ___otyp.ToString(),
+                            DisplayName = dr[4].ToString()
                         });
                     }
                 }

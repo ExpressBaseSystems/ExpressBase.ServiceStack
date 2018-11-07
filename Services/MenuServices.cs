@@ -20,7 +20,7 @@ namespace ExpressBase.ServiceStack.Services
         public SidebarUserResponse Get(SidebarUserRequest request)
         {
             var ds = new EbDataSet();
-            if(request.SysRole.Contains("SolutionOwner"))
+            if (request.SysRole.Contains("SolutionOwner"))
                 ds = this.EbConnectionFactory.ObjectsDB.DoQueries(this.EbConnectionFactory.ObjectsDB.EB_SIDEBARUSER_REQUEST.Replace(this.EbConnectionFactory.ObjectsDB.EB_SIDEBARCHECK, string.Empty));
             else
                 ds = this.EbConnectionFactory.ObjectsDB.DoQueries(this.EbConnectionFactory.ObjectsDB.EB_SIDEBARUSER_REQUEST.Replace(":Ids", string.IsNullOrEmpty(request.Ids) ? "0" : request.Ids));
@@ -40,7 +40,7 @@ namespace ExpressBase.ServiceStack.Services
                 var appid = Convert.ToInt32(dr[5]);
 
                 if (!_Coll.Keys.Contains<int>(appid))
-                    _Coll.Add(appid, new AppWrap {  Types =new Dictionary<int, TypeWrap>() });
+                    _Coll.Add(appid, new AppWrap { Types = new Dictionary<int, TypeWrap>() });
 
                 Dictionary<int, TypeWrap> _types = new Dictionary<int, TypeWrap>();
                 var typeId = Convert.ToInt32(dr[1]);
@@ -60,74 +60,74 @@ namespace ExpressBase.ServiceStack.Services
                         Refid = dr[4].ToString(),
                         AppId = Convert.ToInt32(dr[5]),
                         Description = dr[6].ToString(),
-                        EbType = ___otyp.Name
-
+                        EbType = ___otyp.Name,
+                        DisplayName = dr[9].ToString()
                     });
 
                 }
-               
+
             }
 
             return new SidebarUserResponse { Data = _Coll, AppList = appColl };
         }
 
-   //     public object Get(SidebarDevRequest request)
-   //     {
-   //         var Query1 = @"
-   //         SELECT id, applicationname FROM eb_applications;
-   //         SELECT EO.id, EO.obj_type, EO.obj_name,EO.obj_desc,EO.applicationid FROM
-   //         eb_objects EO ORDER BY EO.obj_type;";
+        //     public object Get(SidebarDevRequest request)
+        //     {
+        //         var Query1 = @"
+        //         SELECT id, applicationname FROM eb_applications;
+        //         SELECT EO.id, EO.obj_type, EO.obj_name,EO.obj_desc,EO.applicationid FROM
+        //         eb_objects EO ORDER BY EO.obj_type;";
 
-   //         //parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@Ids", System.Data.DbType.String, request.Ids));
-   //         var ds = this.EbConnectionFactory.ObjectsDB.DoQueries(Query1);
+        //         //parameters.Add(this.TenantDbFactory.ObjectsDB.GetNewParameter("@Ids", System.Data.DbType.String, request.Ids));
+        //         var ds = this.EbConnectionFactory.ObjectsDB.DoQueries(Query1);
 
-   //         Dictionary<int, AppObject> appColl = new Dictionary<int, AppObject>();
+        //         Dictionary<int, AppObject> appColl = new Dictionary<int, AppObject>();
 
-   //         foreach (EbDataRow dr in ds.Tables[0].Rows)
-   //         {
-   //             var id = Convert.ToInt32(dr[0]);
-   //             if (!appColl.Keys.Contains<int>(id))
-   //                 appColl.Add(id, new AppObject { AppName = dr[1].ToString() });
-   //         }
+        //         foreach (EbDataRow dr in ds.Tables[0].Rows)
+        //         {
+        //             var id = Convert.ToInt32(dr[0]);
+        //             if (!appColl.Keys.Contains<int>(id))
+        //                 appColl.Add(id, new AppObject { AppName = dr[1].ToString() });
+        //         }
 
-   //         Dictionary<int, AppWrap> _Coll = new Dictionary<int, AppWrap>();
+        //         Dictionary<int, AppWrap> _Coll = new Dictionary<int, AppWrap>();
 
-   //         try
-			//{
-			//	foreach (EbDataRow dr in ds.Tables[1].Rows)
-			//	{
-   //                 var appid = Convert.ToInt32(dr[4]);
+        //         try
+        //{
+        //	foreach (EbDataRow dr in ds.Tables[1].Rows)
+        //	{
+        //                 var appid = Convert.ToInt32(dr[4]);
 
-   //                 if (!_Coll.Keys.Contains<int>(appid))
-   //                     _Coll.Add(appid, new AppWrap { Types = new Dictionary<int, TypeWrap>() });
+        //                 if (!_Coll.Keys.Contains<int>(appid))
+        //                     _Coll.Add(appid, new AppWrap { Types = new Dictionary<int, TypeWrap>() });
 
-   //                 Dictionary<int, TypeWrap> _types = new Dictionary<int, TypeWrap>();
-   //                 var typeId = Convert.ToInt32(dr[1]);
+        //                 Dictionary<int, TypeWrap> _types = new Dictionary<int, TypeWrap>();
+        //                 var typeId = Convert.ToInt32(dr[1]);
 
-   //                 if (!_Coll[appid].Types.Keys.Contains<int>(typeId))
-   //                     _Coll[appid].Types.Add(typeId, new TypeWrap { Objects = new List<ObjWrap>() });
+        //                 if (!_Coll[appid].Types.Keys.Contains<int>(typeId))
+        //                     _Coll[appid].Types.Add(typeId, new TypeWrap { Objects = new List<ObjWrap>() });
 
-   //                 var ___otyp = (EbObjectType)Convert.ToInt32(dr[1]);
+        //                 var ___otyp = (EbObjectType)Convert.ToInt32(dr[1]);
 
-   //                 _Coll[appid].Types[typeId].Objects.Add(new ObjWrap
-   //                 {
-   //                     Id = (dr[0] != null) ? Convert.ToInt32(dr[0]) : 0,
-   //                     EbObjectType = (dr[1] != null) ? Convert.ToInt32(dr[1]) : 0,
-   //                     ObjName = dr[2].ToString(),
-   //                     Description = dr[3].ToString(),
-   //                     EbType = ___otyp.ToString(),
-   //                     AppId = (Convert.ToInt32(dr[4]) == 0) ? 0 : Convert.ToInt32(dr[4])
+        //                 _Coll[appid].Types[typeId].Objects.Add(new ObjWrap
+        //                 {
+        //                     Id = (dr[0] != null) ? Convert.ToInt32(dr[0]) : 0,
+        //                     EbObjectType = (dr[1] != null) ? Convert.ToInt32(dr[1]) : 0,
+        //                     ObjName = dr[2].ToString(),
+        //                     Description = dr[3].ToString(),
+        //                     EbType = ___otyp.ToString(),
+        //                     AppId = (Convert.ToInt32(dr[4]) == 0) ? 0 : Convert.ToInt32(dr[4])
 
-   //                 });
+        //                 });
 
-			//	}
-			//}catch (Exception ee)
-			//{
+        //	}
+        //}catch (Exception ee)
+        //{
 
-			//}
+        //}
 
-   //         return new SidebarDevResponse{ Data = _Coll, AppList = appColl };
-   //     }
+        //         return new SidebarDevResponse{ Data = _Coll, AppList = appColl };
+        //     }
 
         public object Get(SidebarDevRequest request)
         {
@@ -141,7 +141,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 var id = Convert.ToInt32(dr[0]);
                 if (!appColl.Keys.Contains<int>(id))
-                    appColl.Add(id, new AppObject { AppName = dr[1].ToString(),AppIcon = dr[2].ToString() });
+                    appColl.Add(id, new AppObject { AppName = dr[1].ToString(), AppIcon = dr[2].ToString() });
             }
 
             Dictionary<int, AppWrap> _Coll = new Dictionary<int, AppWrap>();
@@ -170,16 +170,18 @@ namespace ExpressBase.ServiceStack.Services
                         ObjName = dr[2].ToString(),
                         Description = dr[3].ToString(),
                         EbType = ___otyp.ToString(),
-                        AppId = (Convert.ToInt32(dr[4]) == 0) ? 0 : Convert.ToInt32(dr[4])
-
+                        AppId = (Convert.ToInt32(dr[4]) == 0) ? 0 : Convert.ToInt32(dr[4]),
+                        DisplayName = dr[5].ToString(),
                     });
 
                 }
-               
+
             }
             catch (Exception ee)
             {
+                Console.BackgroundColor = ConsoleColor.Red;
                 Console.WriteLine("Exception:" + ee.Message);
+                Console.BackgroundColor = ConsoleColor.White;
             }
 
             return new SidebarDevResponse { Data = _Coll, AppList = appColl };
