@@ -6,6 +6,7 @@ using ExpressBase.Objects;
 using ExpressBase.Objects.EmailRelated;
 using ExpressBase.Objects.Services;
 using ExpressBase.Objects.ServiceStack_Artifacts;
+using ExpressBase.Security;
 using ServiceStack;
 using ServiceStack.Messaging;
 using System;
@@ -74,7 +75,7 @@ namespace ExpressBase.ServiceStack.MQServices
                         }
                     }
                 }
-                var RepRes = reportservice.Get(new ReportRenderRequest { Refid = ebEmailTemplate.AttachmentReportRefID, Fullname = "MQ", Params = request.Params });
+                var RepRes = reportservice.Get(new ReportRenderRequest { Refid = ebEmailTemplate.AttachmentReportRefID, User = new User { FullName="MQ"}, Params = request.Params });
                 RepRes.StreamWrapper.Memorystream.Position = 0;
 
                 MessageProducer3.Publish(new EmailServicesRequest()
