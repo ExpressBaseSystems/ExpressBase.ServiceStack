@@ -77,7 +77,7 @@ namespace ExpressBase.ServiceStack
                 Report.FileClient = FileClient;
                 Report.Solution = Redis.Get<Eb_Solution>(String.Format("solution_{0}", request.SolnId));
                 Report.CurrentTimestamp = DateTime.Now;
-                Report.UserName = request.Fullname;
+                Report.User = request.User;
                 Report.Parameters = request.Params;
                 //-- END REPORT object INIT
                 iTextSharp.text.Rectangle rec = new iTextSharp.text.Rectangle(Report.WidthPt, Report.HeightPt);
@@ -408,7 +408,7 @@ namespace ExpressBase.ServiceStack
             if (Report.IsLastpage == true)
                 Report.DrawReportFooter();
             Report.DrawWaterMark(d, writer);
-            Report.SetDetail();
+            Report.SetDetail(Report.User);
         }
 
         public HeaderFooter(EbReport _c) : base()
