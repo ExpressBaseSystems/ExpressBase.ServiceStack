@@ -13,6 +13,7 @@ using System.Globalization;
 using ServiceStack;
 using Newtonsoft.Json;
 using ExpressBase.Security;
+using ExpressBase.Common.Singletons;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -637,8 +638,8 @@ namespace ExpressBase.ServiceStack.Services
 					foreach (EbDataRow dr in ds.Tables[3].Rows)
 					{
 						int _type = Convert.ToInt32(dr["type"]);
-						DateTime _start = Convert.ToDateTime(dr["start_datetime"]);
-						DateTime _end = Convert.ToDateTime(dr["end_datetime"]);
+						DateTime _start = Convert.ToDateTime(dr["start_datetime"]).Add(CultureHelper.GetDifference(request.Timezone, true));
+						DateTime _end = Convert.ToDateTime(dr["end_datetime"]).Add(CultureHelper.GetDifference(request.Timezone, true));
 						int _days = Convert.ToInt32(dr["days_coded"]);
 						if (_type == 1)
 						{
@@ -745,13 +746,13 @@ namespace ExpressBase.ServiceStack.Services
 			{
 				if(_dtc.Type == 1)//One Time
 				{
-					_dtc.Start = Convert.ToDateTime(DateTime.ParseExact(_dtc.Start, "dd-MM-yyyy HH:mm", CultureInfo.InvariantCulture)).ToString("yyyy-MM-dd HH:mm:ss");
-					_dtc.End = Convert.ToDateTime(DateTime.ParseExact(_dtc.End, "dd-MM-yyyy HH:mm", CultureInfo.InvariantCulture)).ToString("yyyy-MM-dd HH:mm:ss");
+					_dtc.Start = Convert.ToDateTime(DateTime.ParseExact(_dtc.Start, "dd-MM-yyyy HH:mm", CultureInfo.InvariantCulture)).Add(CultureHelper.GetDifference(request.UsersTimezone)).ToString("yyyy-MM-dd HH:mm:ss");
+					_dtc.End = Convert.ToDateTime(DateTime.ParseExact(_dtc.End, "dd-MM-yyyy HH:mm", CultureInfo.InvariantCulture)).Add(CultureHelper.GetDifference(request.UsersTimezone)).ToString("yyyy-MM-dd HH:mm:ss");
 				}
 				else if(_dtc.Type == 2)//recurring
 				{
-					_dtc.Start = Convert.ToDateTime(DateTime.ParseExact(_dtc.Start, "HH:mm", CultureInfo.InvariantCulture)).ToString("yyyy-MM-dd HH:mm:ss");
-					_dtc.End = Convert.ToDateTime(DateTime.ParseExact(_dtc.End, "HH:mm", CultureInfo.InvariantCulture)).ToString("yyyy-MM-dd HH:mm:ss");
+					_dtc.Start = Convert.ToDateTime(DateTime.ParseExact(_dtc.Start, "HH:mm", CultureInfo.InvariantCulture)).Add(CultureHelper.GetDifference(request.UsersTimezone)).ToString("yyyy-MM-dd HH:mm:ss");
+					_dtc.End = Convert.ToDateTime(DateTime.ParseExact(_dtc.End, "HH:mm", CultureInfo.InvariantCulture)).Add(CultureHelper.GetDifference(request.UsersTimezone)).ToString("yyyy-MM-dd HH:mm:ss");
 				}
 				_sDtTitle += _dtc.Title.Replace(" ", "_") + ",";
 				_sDtDesc += _dtc.Description.Replace(" ", "_") + ",";
