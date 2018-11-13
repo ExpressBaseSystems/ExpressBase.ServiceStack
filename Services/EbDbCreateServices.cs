@@ -352,16 +352,31 @@ namespace ExpressBase.ServiceStack.Services
                 var cmdtxt = DataDB.GetNewCommand(con, sql2);
                 cmdtxt.ExecuteNonQuery();
 
-                return new EbDbCreateResponse
+                //return new EbDbCreateResponse
+                //{
+                //    resp = true,
+                //    AdminUserName = request.dbName + "_admin",
+                //    AdminPassword = dt.Rows[0][0].ToString(),
+                //    ReadOnlyUserName = request.dbName + "_ro",
+                //    ReadOnlyPassword = dt.Rows[0][1].ToString(),
+                //    ReadWriteUserName = request.dbName + "_rw",
+                //    ReadWritePassword = dt.Rows[0][2].ToString(),
+                //    dbname = request.dbName
+                //};
+                var ebdbusers = new EbDbUsers
                 {
-                    resp = true,
                     AdminUserName = request.dbName + "_admin",
                     AdminPassword = dt.Rows[0][0].ToString(),
                     ReadOnlyUserName = request.dbName + "_ro",
                     ReadOnlyPassword = dt.Rows[0][1].ToString(),
                     ReadWriteUserName = request.dbName + "_rw",
                     ReadWritePassword = dt.Rows[0][2].ToString(),
-                    dbname = request.dbName
+                };
+                return new EbDbCreateResponse
+                {
+                    resp = true,
+                    dbname = request.dbName,
+                    dbusers = ebdbusers
                 };
             }
             catch (Exception e)
