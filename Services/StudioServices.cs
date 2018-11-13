@@ -172,6 +172,7 @@ namespace ExpressBase.ServiceStack
                     Status = Enum.GetName(typeof(ObjectLifeCycleStatus), Convert.ToInt32(dr[3])),
                     VersionNumber = dr[7].ToString(),
                     RefId = dr[11].ToString(),
+                    DisplayName = dr[13].ToString()
                 });
             }
             return new EbObjectObjListAllVerResponse { Data = f_dict };
@@ -319,7 +320,8 @@ namespace ExpressBase.ServiceStack
                             OwnerUid = Convert.ToInt32(dr[31]),
                             OwnerTs = Convert.ToDateTime((dr[32].ToString()) == "0" || (dr[32].ToString()) == "" ? DateTime.MinValue : dr[32]),
                             OwnerName = dr[33].ToString()
-                        }
+                        },
+                        DisplayName = dr[34].ToString()
                     });
 
                     wrap.Add(_ebObject);
@@ -482,6 +484,7 @@ namespace ExpressBase.ServiceStack
                     cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter(":relations", EbDbTypes.String, (request.Relations != null) ? request.Relations : string.Empty));
                     cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter(":tags", EbDbTypes.String, (!string.IsNullOrEmpty(request.Tags)) ? request.Tags : string.Empty));
                     cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter(":app_id", EbDbTypes.String, SetAppId(request.Apps)));
+                    cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter(":disp_name", EbDbTypes.String, request.DisplayName));
 
                     if (sql.Contains(":obj_json"))
                     {
@@ -545,6 +548,7 @@ namespace ExpressBase.ServiceStack
                     cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter(":relations", EbDbTypes.String, (request.Relations != null) ? request.Relations : string.Empty));
                     cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter(":tags", EbDbTypes.String, (!string.IsNullOrEmpty(request.Tags)) ? request.Tags : string.Empty));
                     cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter(":app_id", EbDbTypes.String, SetAppId(request.Apps)));
+                    cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter(":disp_name", EbDbTypes.String, request.DisplayName));
 
 
                     if (sql.Contains(":obj_json"))
@@ -620,6 +624,7 @@ namespace ExpressBase.ServiceStack
                         cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter(":app_id", EbDbTypes.String, SetAppId(request.Apps)));
                         cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter(":s_obj_id", EbDbTypes.String, request.SourceObjId));
                         cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter(":s_ver_id", EbDbTypes.String, request.SourceVerID));
+                        cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter(":disp_name", EbDbTypes.String, request.DisplayName));
 
                         if (sql.Contains(":obj_json"))
                         {
