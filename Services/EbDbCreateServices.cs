@@ -156,6 +156,12 @@ namespace ExpressBase.ServiceStack.Services
                     path = "ExpressBase.Common.sqlscripts.@vendor.datadb.tablecreate.eb_languages.sql".Replace("@vendor", vendor.ToLower());
                     bool b61 = CreateOrAlter_Structure(con, path, DataDB);
 
+                    path = "ExpressBase.Common.sqlscripts.@vendor.datadb.tablecreate.eb_constraints_datetime.sql".Replace("@vendor", vendor.ToLower());
+                    bool b63 = CreateOrAlter_Structure(con, path, DataDB);
+
+                    path = "ExpressBase.Common.sqlscripts.@vendor.datadb.tablecreate.eb_constraints_ip.sql".Replace("@vendor", vendor.ToLower());
+                    bool b64 = CreateOrAlter_Structure(con, path, DataDB);
+
                     //.............DataDb Functions
                     path = "ExpressBase.Common.sqlscripts.@vendor.datadb.functioncreate.eb_authenticate_unified.sql".Replace("@vendor", vendor.ToLower());
                     bool b11 = CreateOrAlter_Structure(con, path, DataDB);
@@ -288,7 +294,7 @@ namespace ExpressBase.ServiceStack.Services
 
                     if (b1 & b2 & b3 & b4 & b5 & b6 & b7 & b8 & b9 & b10 & b11 & b12 & b13 & b14 & b15 & b16 & b17 & b18 & b19 &
                         b20 & b21 & b22 & b23 & b24 & b25 & b26 & b27 & b28 & b29 & b31 & b32 & b33 & b34 & b35 & b36 & b37 & b38 & b39 & b40 & b41 & b44 & b45 & b46 & b47 &
-                        b48 & b49 & b50 & b51 & b52 & b53 & b54 & b55 & b56 & b57 & b58 & b59 & b60 & b61 & b62)
+                        b48 & b49 & b50 & b51 & b52 & b53 & b54 & b55 & b56 & b57 & b58 & b59 & b60 & b61 & b62 & b63 & b64)
                     {
                         Console.WriteLine(".............Reached Commit");
                         con_trans.Commit();
