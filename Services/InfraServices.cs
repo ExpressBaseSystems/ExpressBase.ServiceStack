@@ -95,7 +95,7 @@ namespace ExpressBase.ServiceStack.Services
                 EbDbCreateResponse response = (EbDbCreateResponse)_dbService.Post(new EbDbCreateRequest { dbName = DbName, SolnId = request.SolnId, UserId = request.UserId, Idbcon = this.EbConnectionFactory.DataDB, ischange = false });
                 if (response.resp)
                 {
-                    _conService.Post(new InitialSolutionConnectionsRequest { NewSolnId = DbName, SolnId = request.SolnId, UserId = request.UserId });
+                    _conService.Post(new InitialSolutionConnectionsRequest { NewSolnId = DbName, SolnId = request.SolnId, UserId = request.UserId,DbUsers = response.dbusers });
                     _tenantUserService.Post(new UpdateSolutionRequest() { DbName = DbName, UserId = request.UserId});
                 }
             }
