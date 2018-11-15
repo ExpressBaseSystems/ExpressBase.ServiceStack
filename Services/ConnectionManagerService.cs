@@ -123,9 +123,13 @@ namespace ExpressBase.ServiceStack.Services
 
             _solutionConnections.ObjectsDbConnection.DatabaseName = request.NewSolnId;
             _solutionConnections.ObjectsDbConnection.NickName = request.NewSolnId + "_Initial";
+            _solutionConnections.ObjectsDbConnection.UserName = request.DbUsers.AdminUserName;
+            _solutionConnections.ObjectsDbConnection.Password = request.DbUsers.AdminPassword;
 
             _solutionConnections.DataDbConnection.DatabaseName = request.NewSolnId;
             _solutionConnections.DataDbConnection.NickName = request.NewSolnId + "_Initial";
+            _solutionConnections.DataDbConnection.UserName = request.DbUsers.AdminUserName;
+            _solutionConnections.DataDbConnection.Password = request.DbUsers.AdminPassword;
 
             _solutionConnections.ObjectsDbConnection.Persist(request.NewSolnId, this.InfraConnectionFactory, true, request.UserId);
             _solutionConnections.DataDbConnection.Persist(request.NewSolnId, this.InfraConnectionFactory, true, request.UserId);
