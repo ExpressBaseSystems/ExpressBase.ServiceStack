@@ -61,8 +61,9 @@ namespace ExpressBase.ServiceStack.Services
 								WHERE customers_id=:accountid ORDER BY eb_createddt DESC;
 							SELECT id,trdate,totalamount,advanceamount,balanceamount,cashreceived,paymentmode,bank,createddt,narration,createdby 
 								FROM leadpaymentdetails WHERE customers_id=:accountid ORDER BY balanceamount;
-							SELECT id,dateofsurgery,firmcode,createdby,createddt 
-								FROM leadsurgerydetails WHERE customers_id=:accountid ORDER BY createddt;
+							SELECT id,dateofsurgery,firmcode,createdby,createddt, extractiondone_by,
+									implantation_by,consent_by,anaesthesia_by,post_briefing_by,nurses_id
+								FROM leadsurgerystaffdetails WHERE customers_id=:accountid ORDER BY createddt;
 							SELECT noofgrafts,totalrate,prpsessions,consulted,consultingfeepaid,consultingdoctor,eb_closing,LOWER(TRIM(nature)),consdate,probmonth
 								FROM leadratedetails WHERE customers_id=:accountid;
 
@@ -160,7 +161,7 @@ namespace ExpressBase.ServiceStack.Services
 						Fup_Date = getStringValue(i[3]),						
 						Comments = i[4].ToString(),
 						Created_By = StaffDict.ContainsValue(Convert.ToInt32(i[5]))? StaffDict.FirstOrDefault(x => x.Value == Convert.ToInt32(i[5])).Key : string.Empty,
-						Created_Date = getStringValue(i[6], true, false)
+						Created_Date = getStringValue(i[6], true, true)
 					});
 				}
 
@@ -192,7 +193,13 @@ namespace ExpressBase.ServiceStack.Services
 						Date = getStringValue(i[1]),
 						Branch = CostCenter[Convert.ToInt32(i[2])],
 						Created_By = i[3].ToString(),
-						Created_Date = getStringValue(i[4])
+						Created_Date = getStringValue(i[4]),
+						Extract_By = Convert.ToInt32(i[5]),
+						Implant_By = Convert.ToInt32(i[6]),
+						Consent_By = Convert.ToInt32(i[7]),
+						Anaesthesia_By = Convert.ToInt32(i[8]),
+						Post_Brief_By = Convert.ToInt32(i[9]),
+						Nurse = Convert.ToInt32(i[10])
 					});
 				}
 			}
@@ -656,11 +663,11 @@ namespace ExpressBase.ServiceStack.Services
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("dateofsurgery", EbDbTypes.Date, Convert.ToDateTime(DateTime.ParseExact(S_Obj.Date, "dd-MM-yyyy", CultureInfo.InvariantCulture))));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("firmcode", EbDbTypes.Int32, S_Obj.Branch));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("createdby", EbDbTypes.String, request.UserName));
-			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("extractiondone_by", EbDbTypes.Int32, S_Obj.ExtractBy));
-			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("implantation_by", EbDbTypes.Int32, S_Obj.ImplantBy));
-			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("consent_by", EbDbTypes.Int32, S_Obj.ConsentBy));
-			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("anaesthesia_by", EbDbTypes.Int32, S_Obj.AnaesthesiaBy));
-			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("post_briefing_by", EbDbTypes.Int32, S_Obj.PostBriefBy));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("extractiondone_by", EbDbTypes.Int32, S_Obj.Extract_By));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("implantation_by", EbDbTypes.Int32, S_Obj.Implant_By));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("consent_by", EbDbTypes.Int32, S_Obj.Consent_By));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("anaesthesia_by", EbDbTypes.Int32, S_Obj.Anaesthesia_By));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("post_briefing_by", EbDbTypes.Int32, S_Obj.Post_Brief_By));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("nurses", EbDbTypes.Int32, S_Obj.Nurse));
 
 			
