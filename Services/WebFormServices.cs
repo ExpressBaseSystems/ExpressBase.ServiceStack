@@ -187,7 +187,7 @@ namespace ExpressBase.ServiceStack.Services
 
             foreach (EbDataTable dataTable in dataset.Tables)
             {
-                MultipleRows Table = new MultipleRows();
+                SingleTable Table = new SingleTable();
                 foreach (EbDataRow dataRow in dataTable.Rows)
                 {
                     SingleRow Row = new SingleRow();
@@ -207,11 +207,11 @@ namespace ExpressBase.ServiceStack.Services
                             Value = _formattedData
                         });
                     }
-                    //Row.RowId = dataRow["id"].ToString();
-                    Table.Rows.Add(Row);
+                    Row.RowId = dataRow[dataTable.Columns[0].ColumnIndex].ToString();
+                    Table.Add(Row);
                 }
-                if (!FormData.Tables.ContainsKey(dataTable.TableName))
-                    FormData.Tables.Add(dataTable.TableName, Table);
+                if (!FormData.MultipleTables.ContainsKey(dataTable.TableName))
+                    FormData.MultipleTables.Add(dataTable.TableName, Table);
             }
             FormData.MasterTable = dataset.Tables[0].TableName;
             return FormData;
@@ -319,10 +319,10 @@ WHERE
             string fullqry = string.Empty;
             List<DbParameter> param = new List<DbParameter>();
             int count = 0;
-            foreach (KeyValuePair<string, MultipleRows> entry in request.FormData.Tables)
+            foreach (KeyValuePair<string, SingleTable> entry in request.FormData.MultipleTables)
             {
                 int i = 0;
-                foreach (SingleRow row in entry.Value.Rows)
+                foreach (SingleRow row in entry.Value)
                 {
                     string _qry = "INSERT INTO {0} ({1}, eb_created_by, eb_created_at {3} ) VALUES ({2} :eb_createdby, :eb_createdat {4});";
                     string _tblname = entry.Key;
@@ -363,10 +363,10 @@ WHERE
             string fullqry = string.Empty;
             List<DbParameter> param = new List<DbParameter>();
             int count = 0;
-            foreach (KeyValuePair<string, MultipleRows> entry in request.FormData.Tables)
+            foreach (KeyValuePair<string, SingleTable> entry in request.FormData.MultipleTables)
             {
 
-                foreach (SingleRow row in entry.Value.Rows)
+                foreach (SingleRow row in entry.Value)
                 {
                     string _qry = "UPDATE {0} SET {1} eb_lastmodified_by = :eb_modified_by, eb_lastmodified_at = :eb_modified_at WHERE {2}={3};";
                     string _tblname = entry.Key;
