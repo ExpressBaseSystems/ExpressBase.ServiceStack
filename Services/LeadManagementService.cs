@@ -30,11 +30,13 @@ namespace ExpressBase.ServiceStack.Services
 							SELECT source FROM lead_source ORDER BY source;
 							SELECT DISTINCT INITCAP(TRIM(subcategory)) AS subcategory FROM customers WHERE LENGTH(subcategory) > 2 ORDER BY subcategory;
 							SELECT status FROM lead_status ORDER BY status;
-							SELECT service FROM lead_service ORDER BY service;";
+							SELECT service FROM lead_service ORDER BY service;
+							SELECT id, name FROM nurses ORDER BY name;";
 			List<DbParameter> paramList = new List<DbParameter>();
 			Dictionary<int, string> CostCenter = new Dictionary<int, string>();
 			Dictionary<string, int> DocDict = new Dictionary<string, int>();
 			Dictionary<string, int> StaffDict = new Dictionary<string, int>();
+			Dictionary<string, int> NurseDict = new Dictionary<string, int>();
 			Dictionary<string, string> CustomerData = new Dictionary<string, string>();
 			List<string> clcityList = new List<string>();
 			List<string> clcountryList = new List<string>();
@@ -59,8 +61,9 @@ namespace ExpressBase.ServiceStack.Services
 								WHERE customers_id=:accountid ORDER BY eb_createddt DESC;
 							SELECT id,trdate,totalamount,advanceamount,balanceamount,cashreceived,paymentmode,bank,createddt,narration,createdby 
 								FROM leadpaymentdetails WHERE customers_id=:accountid ORDER BY balanceamount;
-							SELECT id,dateofsurgery,branch,patientinstructions,doctorsinstructions,createdby,createddt 
-								FROM leadsurgerydetails WHERE customers_id=:accountid ORDER BY createddt;
+							SELECT id,dateofsurgery,firmcode,createdby,createddt, extractiondone_by,
+									implantation_by,consent_by,anaesthesia_by,post_briefing_by,nurses_id
+								FROM leadsurgerystaffdetails WHERE customers_id=:accountid ORDER BY createddt;
 							SELECT noofgrafts,totalrate,prpsessions,consulted,consultingfeepaid,consultingdoctor,eb_closing,LOWER(TRIM(nature)),consdate,probmonth
 								FROM leadratedetails WHERE customers_id=:accountid;
 
@@ -78,6 +81,9 @@ namespace ExpressBase.ServiceStack.Services
 			foreach (var dr in ds.Tables[2].Rows)
 				if(!StaffDict.ContainsKey(dr[1].ToString()))
 					StaffDict.Add(dr[1].ToString(), Convert.ToInt32(dr[0]));
+			foreach (var dr in ds.Tables[11].Rows)
+				if (!NurseDict.ContainsKey(dr[1].ToString()))
+					NurseDict.Add(dr[1].ToString(), Convert.ToInt32(dr[0]));
 
 			foreach (var dr in ds.Tables[3].Rows)
 				clcityList.Add(dr[0].ToString());
@@ -97,7 +103,7 @@ namespace ExpressBase.ServiceStack.Services
 			foreach (var dr in ds.Tables[10].Rows)
 				serviceList.Add(dr[0].ToString());
 
-			int Qcnt = 11;//Query count first part
+			int Qcnt = 12;//Query count first part
 			if (ds.Tables.Count > Qcnt && ds.Tables[Qcnt].Rows.Count > 0)
 			{
 				Mode = 1;
@@ -155,7 +161,7 @@ namespace ExpressBase.ServiceStack.Services
 						Fup_Date = getStringValue(i[3]),						
 						Comments = i[4].ToString(),
 						Created_By = StaffDict.ContainsValue(Convert.ToInt32(i[5]))? StaffDict.FirstOrDefault(x => x.Value == Convert.ToInt32(i[5])).Key : string.Empty,
-						Created_Date = getStringValue(i[6])
+						Created_Date = getStringValue(i[6], true, true)
 					});
 				}
 
@@ -185,9 +191,15 @@ namespace ExpressBase.ServiceStack.Services
 					{
 						Id = Convert.ToInt32(i[0]),
 						Date = getStringValue(i[1]),
-						Branch = i[2].ToString(),
-						Created_By = i[5].ToString(),
-						Created_Date = i[6].ToString()
+						Branch = CostCenter[Convert.ToInt32(i[2])],
+						Created_By = i[3].ToString(),
+						Created_Date = getStringValue(i[4]),
+						Extract_By = Convert.ToInt32(i[5]),
+						Implant_By = Convert.ToInt32(i[6]),
+						Consent_By = Convert.ToInt32(i[7]),
+						Anaesthesia_By = Convert.ToInt32(i[8]),
+						Post_Brief_By = Convert.ToInt32(i[9]),
+						Nurse = Convert.ToInt32(i[10])
 					});
 				}
 			}
@@ -210,7 +222,8 @@ namespace ExpressBase.ServiceStack.Services
 				SubCategoryList = subcategoryList,
 				ImageIdList = ImgIds,
 				StatusList = statusList,
-				ServiceList = serviceList
+				ServiceList = serviceList,
+				NurseDict = NurseDict
 			};
 		}
 
@@ -220,6 +233,19 @@ namespace ExpressBase.ServiceStack.Services
 			return (((DateTime)obj).Date != DateTime.MinValue) ? Convert.ToDateTime(obj).ToString("dd-MM-yyyy") : string.Empty;
 		}
 
+		private string getStringValue(object obj, bool includetime, bool tolocal)
+		{
+			obj = (obj == DBNull.Value) ? DateTime.MinValue : obj;
+			string format = "dd-MM-yyyy";
+			TimeSpan timeSpan = new TimeSpan(0, 0, 0);
+			if(includetime)
+				format = "dd-MM-yyyy hh:mm tt";
+			if(tolocal)
+				timeSpan = new TimeSpan(5, 30, 0);
+			
+			return (((DateTime)obj).Date != DateTime.MinValue) ? Convert.ToDateTime(obj).Add(timeSpan).ToString(format) : string.Empty;
+		}
+		
 		public SaveCustomerResponse Any(SaveCustomerRequest request)
 		{
 			List<KeyValueType_Field> Fields = JsonConvert.DeserializeObject<List<KeyValueType_Field>>(request.CustomerData);
@@ -590,6 +616,7 @@ namespace ExpressBase.ServiceStack.Services
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("advanceamount", EbDbTypes.Int32, B_Obj.Amount_Received));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("paymentmode", EbDbTypes.String, B_Obj.Payment_Mode));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("bank", EbDbTypes.String, B_Obj.Bank));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("pdc", EbDbTypes.BooleanOriginal, B_Obj.PDC));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("balanceamount", EbDbTypes.Int32, B_Obj.Balance_Amount));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("cashreceived", EbDbTypes.Int32, B_Obj.Cash_Paid));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("createdby", EbDbTypes.String, request.UserName));
@@ -605,8 +632,8 @@ namespace ExpressBase.ServiceStack.Services
 
 			if (true)//update disabled  //if (B_Obj.Id == 0)//new
 			{
-				string Qry = @"INSERT INTO leadpaymentdetails(prehead,customers_id,trdate,totalamount,advanceamount,paymentmode,bank,balanceamount,cashreceived,createdby,createddt,narration) 
-									VALUES (50,:accountid,:trdate,:totalamount,:advanceamount,:paymentmode,:bank,:balanceamount,:cashreceived,:createdby,NOW(),:narration);";
+				string Qry = @"INSERT INTO leadpaymentdetails(prehead,customers_id,trdate,totalamount,advanceamount,paymentmode,bank,balanceamount,cashreceived,createdby,createddt,narration,pdc) 
+									VALUES (50,:accountid,:trdate,:totalamount,:advanceamount,:paymentmode,:bank,:balanceamount,:cashreceived,:createdby,NOW(),:narration,:pdc);";
 				rstatus = this.EbConnectionFactory.ObjectsDB.InsertTable(Qry, parameters.ToArray());
 			}
 			else//update
@@ -620,36 +647,53 @@ namespace ExpressBase.ServiceStack.Services
 			return new SaveCustomerPaymentResponse { Status = rstatus };
 		}
 
-		public SaveSurgeryDetailsResponse Any(SaveSurgeryDetailsRequest request)//service disabled temporarily
+		public SaveSurgeryDetailsResponse Any(SaveSurgeryDetailsRequest request)
 		{
 			int rstatus = 0;
-			//SurgeryEntry S_Obj = JsonConvert.DeserializeObject<SurgeryEntry>(request.Data);
-			//List<DbParameter> parameters = new List<DbParameter>();
-			//parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, S_Obj.Id));
-			//parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("accountcode", EbDbTypes.String, S_Obj.Account_Code));
+			SurgeryEntry S_Obj = JsonConvert.DeserializeObject<SurgeryEntry>(request.Data);
+			DbParameter[] parameters1 = {
+				this.EbConnectionFactory.ObjectsDB.GetNewParameter("customers_id", EbDbTypes.Int32, S_Obj.Account_Code),
+				this.EbConnectionFactory.ObjectsDB.GetNewParameter("dateofsurgery", EbDbTypes.Date, Convert.ToDateTime(DateTime.ParseExact(S_Obj.Date, "dd-MM-yyyy", CultureInfo.InvariantCulture))),
+				this.EbConnectionFactory.ObjectsDB.GetNewParameter("firmcode", EbDbTypes.Int32, S_Obj.Branch),
+				this.EbConnectionFactory.ObjectsDB.GetNewParameter("createdby", EbDbTypes.String, request.UserName)
+			};
 
-			//parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("dateofsurgery", EbDbTypes.String, S_Obj.Date));
-			//parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("branch", EbDbTypes.String, S_Obj.Branch));
-			//parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("patientinstructions", EbDbTypes.String, ""));
-			//parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("doctorinstructions", EbDbTypes.String, ""));
-			//parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("createdby", EbDbTypes.String, request.UserName));
-			//parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("createddt", EbDbTypes.String, CrntDateTime.ToString("dd-MM-yyyy")));
-			//parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("modifiedby", EbDbTypes.String, request.UserName));
-			//parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("modifieddt", EbDbTypes.String, CrntDateTime.ToString("dd-MM-yyyy")));
-			//if (S_Obj.Id == 0)//new
-			//{
-			//	string Qry = @"INSERT INTO leadsurgerydetals(prehead,accountcode,dateofsurgery,branch,patientinstructions,doctorinstructions,createdby,createddt)
-			//										VALUES (50,:accountcode,:dateofsurgery,:branch,:patientinstructions,:doctorinstructions,:createdby,:createddt);";
-			//	rstatus = this.EbConnectionFactory.ObjectsDB.InsertTable(Qry, parameters.ToArray());
-			//}
-			//else//update
-			//{
-			//	string Qry = @"UPDATE leadsurgerydetails 
-			//					SET dateofsurgery = :dateofsurgery,branch = :branch,patientinstructions = :patientinstructions,doctorinstructions = :doctorinstructions,
-			//						createdby = :createdby,createddt = :createddt, modifiedby = :modifiedby, modifieddt = :modifieddt 
-			//					WHERE accountcode=:accountcode AND id = :id;";
-			//	rstatus = this.EbConnectionFactory.ObjectsDB.UpdateTable(Qry, parameters.ToArray());
-			//}
+			List<DbParameter> parameters = new List<DbParameter>();
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("customers_id", EbDbTypes.Int32, S_Obj.Account_Code));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("dateofsurgery", EbDbTypes.Date, Convert.ToDateTime(DateTime.ParseExact(S_Obj.Date, "dd-MM-yyyy", CultureInfo.InvariantCulture))));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("firmcode", EbDbTypes.Int32, S_Obj.Branch));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("createdby", EbDbTypes.String, request.UserName));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("extractiondone_by", EbDbTypes.Int32, S_Obj.Extract_By));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("implantation_by", EbDbTypes.Int32, S_Obj.Implant_By));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("consent_by", EbDbTypes.Int32, S_Obj.Consent_By));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("anaesthesia_by", EbDbTypes.Int32, S_Obj.Anaesthesia_By));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("post_briefing_by", EbDbTypes.Int32, S_Obj.Post_Brief_By));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("nurses", EbDbTypes.Int32, S_Obj.Nurse));
+
+			
+			if (true)//if (S_Obj.Id == 0)//new
+			{
+				string Qry1 = @"INSERT INTO 
+									leadsurgerydetails(customers_id, dateofsurgery, firmcode, createddt, createdby)
+								VALUES
+									(:customers_id, :dateofsurgery, :firmcode, NOW(), :createdby);";
+				this.EbConnectionFactory.ObjectsDB.InsertTable(Qry1, parameters1);
+				string Qry = @"INSERT INTO
+ 									leadsurgerystaffdetails(customers_id, dateofsurgery, firmcode, createddt, createdby, extractiondone_by,
+									implantation_by, consent_by, anaesthesia_by, post_briefing_by, nurses_id)
+								VALUES
+									(:customers_id, :dateofsurgery, :firmcode, NOW(), :createdby, :extractiondone_by,
+									:implantation_by, :consent_by, :anaesthesia_by, :post_briefing_by, :nurses);";
+				rstatus = this.EbConnectionFactory.ObjectsDB.InsertTable(Qry, parameters.ToArray());
+			}
+			else//update
+			{
+				string Qry = @"UPDATE leadsurgerydetails 
+								SET dateofsurgery = :dateofsurgery,branch = :branch,patientinstructions = :patientinstructions,doctorinstructions = :doctorinstructions,
+									createdby = :createdby,createddt = :createddt, modifiedby = :modifiedby, modifieddt = :modifieddt 
+								WHERE accountcode=:accountcode AND id = :id;";
+				rstatus = this.EbConnectionFactory.ObjectsDB.UpdateTable(Qry, parameters.ToArray());
+			}
 			return new SaveSurgeryDetailsResponse { Status = rstatus };
 		}
 
@@ -658,9 +702,9 @@ namespace ExpressBase.ServiceStack.Services
 			bool rstatus = false;
 			DbParameter[] parameters = new DbParameter[] 
 			{
-				this.EbConnectionFactory.ObjectsDB.GetNewParameter("value", EbDbTypes.String, request.Value)
+				this.EbConnectionFactory.ObjectsDB.GetNewParameter("value", EbDbTypes.String, request.Value.Trim())
 			};
-			EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery("SELECT id FROM customers WHERE genurl = :value;", parameters);
+			EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery("SELECT id FROM customers WHERE genurl = :value OR genphoffice = :value;", parameters);
 			if (dt.Rows.Count == 0)
 				rstatus = true;
 			return new LmUniqueCheckResponse { Status = rstatus };

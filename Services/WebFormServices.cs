@@ -177,7 +177,6 @@ namespace ExpressBase.ServiceStack.Services
 
             GetRowDataResponse _dataset = new GetRowDataResponse();
             _dataset.FormData = getDataSetAsRowCollection(dataset);
-
             return _dataset;
         }
 
@@ -201,7 +200,7 @@ namespace ExpressBase.ServiceStack.Services
                             _unformattedData = (_unformattedData == DBNull.Value) ? DateTime.MinValue : _unformattedData;
                             _formattedData = ((DateTime)_unformattedData).Date != DateTime.MinValue ? Convert.ToDateTime(_unformattedData).ToString("yyyy-MM-dd") : string.Empty;
                         }
-                        Row.Columns.Add(new SinglColumn() {
+                        Row.Columns.Add(new SingleColumn() {
                             Name = dataColumn.ColumnName,
                             Type = (int)dataColumn.Type,
                             Value = _formattedData
@@ -297,7 +296,7 @@ WHERE
             FormObj.TableRowId = request.RowId;
             if (FormObj.TableRowId > 0)
             {
-                Dictionary<string, List<SinglColumn>> OldData = getFormDataAsColl(FormObj);
+                Dictionary<string, List<SingleColumn>> OldData = getFormDataAsColl(FormObj);
                 InsertDataFromWebformResponse resp = UpdateDataFromWebformRec(request, FormObj);
                 //if(resp.RowAffected > 0)
                 //{
@@ -330,7 +329,7 @@ WHERE
                     string _values = string.Empty;
                     _cols = FormObj.GetCtrlNamesOfTable(entry.Key);
 
-                    foreach (SinglColumn rField in row.Columns)
+                    foreach (SingleColumn rField in row.Columns)
                     {
                         if (!rField.Name.Equals("id"))
                         {
@@ -374,7 +373,7 @@ WHERE
                     //_cols = FormObj.GetCtrlNamesOfTable(entry.Key);
 
                     int i = 0;
-                    foreach (SinglColumn rField in row.Columns)
+                    foreach (SingleColumn rField in row.Columns)
                     {
                         _colvals += string.Concat(rField.Name, "=:", rField.Name, ",");
                         param.Add(this.EbConnectionFactory.DataDB.GetNewParameter(rField.Name, (EbDbTypes)rField.Type, rField.Value));
@@ -400,16 +399,16 @@ WHERE
 
         // VALIDATION AND AUDIT TRAIL
 
-        private Dictionary<string, List<SinglColumn>> getFormDataAsColl(EbControlContainer FormObj)
+        private Dictionary<string, List<SingleColumn>> getFormDataAsColl(EbControlContainer FormObj)
         {
-            Dictionary<string, List<SinglColumn>> oldData = new Dictionary<string, List<SinglColumn>>();
+            Dictionary<string, List<SingleColumn>> oldData = new Dictionary<string, List<SingleColumn>>();
             //FormObj.TableRowId = request.RowId;
             string query = FormObj.GetSelectQuery(FormObj.TableName);
             EbDataSet dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(query);
 
             foreach (EbDataTable dataTable in dataset.Tables)
             {
-                List<SinglColumn> tblRecordColl = new List<SinglColumn>();
+                List<SingleColumn> tblRecordColl = new List<SingleColumn>();
                 foreach (EbDataRow dataRow in dataTable.Rows)
                 {
                     foreach (EbDataColumn dataColumn in dataTable.Columns)
@@ -422,7 +421,7 @@ WHERE
                             _unformattedData = (_unformattedData == DBNull.Value) ? DateTime.MinValue : _unformattedData;
                             _formattedData = ((DateTime)_unformattedData).Date != DateTime.MinValue ? Convert.ToDateTime(_unformattedData).ToString("yyyy-MM-dd") : string.Empty;
                         }
-                        tblRecordColl.Add(new SinglColumn
+                        tblRecordColl.Add(new SingleColumn
                         {
                             Name = dataColumn.ColumnName,
                             Type = (int)dataColumn.Type,
@@ -435,14 +434,14 @@ WHERE
             return oldData;
         }
 
-        private void UpdateAuditTrail(Dictionary<string, List<SinglColumn>> _NewData, string _FormId, int _RecordId, int _UserId)
+        private void UpdateAuditTrail(Dictionary<string, List<SingleColumn>> _NewData, string _FormId, int _RecordId, int _UserId)
         {
-            List<SinglColumn> FormFields = new List<SinglColumn>();
-            foreach (KeyValuePair<string, List<SinglColumn>> entry in _NewData)
+            List<SingleColumn> FormFields = new List<SingleColumn>();
+            foreach (KeyValuePair<string, List<SingleColumn>> entry in _NewData)
             {
-                foreach (SinglColumn rField in entry.Value)
+                foreach (SingleColumn rField in entry.Value)
                 {
-                    FormFields.Add(new SinglColumn
+                    FormFields.Add(new SingleColumn
                     {
                         Name = rField.Name,
                         Type = rField.Type,
@@ -455,19 +454,19 @@ WHERE
                 UpdateAuditTrail(FormFields, _FormId, _RecordId, _UserId);
         }
 
-        private void UpdateAuditTrail(Dictionary<string, List<SinglColumn>> _OldData, Dictionary<string, List<SinglColumn>> _NewData, string _FormId, int _RecordId, int _UserId)
+        private void UpdateAuditTrail(Dictionary<string, List<SingleColumn>> _OldData, Dictionary<string, List<SingleColumn>> _NewData, string _FormId, int _RecordId, int _UserId)
         {
-            List<SinglColumn> FormFields = new List<SinglColumn>();
-            foreach (KeyValuePair<string, List<SinglColumn>> entry in _OldData)
+            List<SingleColumn> FormFields = new List<SingleColumn>();
+            foreach (KeyValuePair<string, List<SingleColumn>> entry in _OldData)
             {
                 if (_NewData.ContainsKey(entry.Key))
                 {
-                    foreach (SinglColumn rField in entry.Value)
+                    foreach (SingleColumn rField in entry.Value)
                     {
-                        SinglColumn nrF = _NewData[entry.Key].Find(e => e.Name == rField.Name);
+                        SingleColumn nrF = _NewData[entry.Key].Find(e => e.Name == rField.Name);
                         if (nrF != null && nrF.Value != rField.Value)
                         {
-                            FormFields.Add(new SinglColumn
+                            FormFields.Add(new SingleColumn
                             {
                                 Name = rField.Name,
                                 Type = rField.Type,
@@ -482,7 +481,7 @@ WHERE
                 UpdateAuditTrail(FormFields, _FormId, _RecordId, _UserId);
         }
 
-        private void UpdateAuditTrail(List<SinglColumn> _Fields, string _FormId, int _RecordId, int _UserId)
+        private void UpdateAuditTrail(List<SingleColumn> _Fields, string _FormId, int _RecordId, int _UserId)
         {
             List<DbParameter> parameters = new List<DbParameter>();
             parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("formid", EbDbTypes.String, _FormId));
