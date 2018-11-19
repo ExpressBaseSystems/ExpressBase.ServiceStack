@@ -194,6 +194,7 @@ namespace ExpressBase.ServiceStack
             mqServer.RegisterHandler<ExportApplicationRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<ImportApplicationRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<SMSCreateRequest>(base.ExecuteMessage);
+            mqServer.RegisterHandler<ReportInternalRequest>(base.ExecuteMessage);
             
             mqServer.Start();
 
