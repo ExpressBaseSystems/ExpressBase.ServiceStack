@@ -380,10 +380,10 @@ WHERE
                     }
 
 
-                    if (count == 0)
-                        _qry = _qry.Replace("{2}", "id").Replace("{3}", FormObj.TableRowId.ToString());
-                    else
-                        _qry = _qry.Replace("{2}", string.Concat(FormObj.TableName, "_id")).Replace("{3}", FormObj.TableRowId.ToString());
+                    //if (count == 0)
+                        _qry = _qry.Replace("{2}", "id").Replace("{3}", row.RowId);
+                    //else
+                        //_qry = _qry.Replace("{2}", string.Concat(FormObj.TableName, "_id")).Replace("{3}", FormObj.TableRowId.ToString());
                     fullqry += string.Format(_qry, _tblname, _colvals);
                     count++;
                 }
