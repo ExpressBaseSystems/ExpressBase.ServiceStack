@@ -361,33 +361,23 @@ WHERE
         {
             string fullqry = string.Empty;
             List<DbParameter> param = new List<DbParameter>();
-            int count = 0;
             foreach (KeyValuePair<string, SingleTable> entry in request.FormData.MultipleTables)
             {
-
-                foreach (SingleRow row in entry.Value)
+				int i = 0;
+				foreach (SingleRow row in entry.Value)
                 {
-                    string _qry = "UPDATE {0} SET {1} eb_lastmodified_by = :eb_modified_by, eb_lastmodified_at = :eb_modified_at WHERE {2}={3};";
+                    string _qry = "UPDATE {0} SET {1} eb_lastmodified_by = :eb_modified_by, eb_lastmodified_at = :eb_modified_at WHERE id={2};";
                     string _tblname = entry.Key;
                     string _colvals = string.Empty;
-                    //_cols = FormObj.GetCtrlNamesOfTable(entry.Key);
 
-                    int i = 0;
                     foreach (SingleColumn rField in row.Columns)
                     {
-                        _colvals += string.Concat(rField.Name, "=:", rField.Name, ",");
-                        param.Add(this.EbConnectionFactory.DataDB.GetNewParameter(rField.Name, (EbDbTypes)rField.Type, rField.Value));
+                        _colvals += string.Concat(rField.Name, "=:", rField.Name, "_", i, ",");
+                        param.Add(this.EbConnectionFactory.DataDB.GetNewParameter(rField.Name + "_" + i, (EbDbTypes)rField.Type, rField.Value));
                     }
-
-
-                    //if (count == 0)
-                        _qry = _qry.Replace("{2}", "id").Replace("{3}", row.RowId);
-                    //else
-                        //_qry = _qry.Replace("{2}", string.Concat(FormObj.TableName, "_id")).Replace("{3}", FormObj.TableRowId.ToString());
-                    fullqry += string.Format(_qry, _tblname, _colvals);
-                    count++;
+					i++;
+                    fullqry += string.Format(_qry, _tblname, _colvals, row.RowId);                    
                 }
-
             }
             param.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_modified_by", EbDbTypes.Int32, request.UserId));
             param.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_modified_at", EbDbTypes.DateTime, System.DateTime.Now));
