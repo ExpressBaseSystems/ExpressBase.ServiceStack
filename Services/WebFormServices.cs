@@ -366,19 +366,37 @@ WHERE
 				int i = 0;
 				foreach (SingleRow row in entry.Value)
                 {
-                    string _qry = "UPDATE {0} SET {1} eb_lastmodified_by = :eb_modified_by, eb_lastmodified_at = :eb_modified_at WHERE id={2};";
                     string _tblname = entry.Key;
-                    string _colvals = string.Empty;
-
-                    foreach (SingleColumn rField in row.Columns)
+                    if (Convert.ToInt32(row.RowId) > 0)
                     {
-                        _colvals += string.Concat(rField.Name, "=:", rField.Name, "_", i, ",");
-                        param.Add(this.EbConnectionFactory.DataDB.GetNewParameter(rField.Name + "_" + i, (EbDbTypes)rField.Type, rField.Value));
+                        string _qry = "UPDATE {0} SET {1} eb_lastmodified_by = :eb_modified_by, eb_lastmodified_at = :eb_modified_at WHERE id={2};";                        
+                        string _colvals = string.Empty;
+
+                        foreach (SingleColumn rField in row.Columns)
+                        {
+                            _colvals += string.Concat(rField.Name, "=:", rField.Name, "_", i, ",");
+                            param.Add(this.EbConnectionFactory.DataDB.GetNewParameter(rField.Name + "_" + i, (EbDbTypes)rField.Type, rField.Value));
+                        }
+                        fullqry += string.Format(_qry, _tblname, _colvals, row.RowId);
                     }
-					i++;
-                    fullqry += string.Format(_qry, _tblname, _colvals, row.RowId);                    
+                    else
+                    {
+                        string _qry = "INSERT INTO {0} ({1} eb_created_by, eb_created_at, {3}_id ) VALUES ({2} :eb_createdby, :eb_createdat ,:{4}_id);";
+                        string _cols = string.Empty, _vals = string.Empty;
+                        foreach (SingleColumn rField in row.Columns)
+                        {
+                            _cols += string.Concat(rField.Name, ",");
+                            _vals += string.Concat(":", rField.Name, "_", i, ",");
+                            param.Add(this.EbConnectionFactory.DataDB.GetNewParameter(rField.Name + "_" + i, (EbDbTypes)rField.Type, rField.Value));
+                        }
+                        fullqry += string.Format(_qry, _tblname, _cols, _vals, request.FormData.MasterTable, request.FormData.MasterTable);
+                        param.Add(this.EbConnectionFactory.DataDB.GetNewParameter(request.FormData.MasterTable + "_id", EbDbTypes.Int32, request.FormData.MultipleTables[request.FormData.MasterTable][0].RowId));
+                    }
+                    i++;
                 }
             }
+            param.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_createdby", EbDbTypes.Int32, request.UserId));
+            param.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_createdat", EbDbTypes.DateTime, System.DateTime.Now));
             param.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_modified_by", EbDbTypes.Int32, request.UserId));
             param.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_modified_at", EbDbTypes.DateTime, System.DateTime.Now));
             int rowsAffected = EbConnectionFactory.DataDB.InsertTable(fullqry, param.ToArray());
