@@ -584,7 +584,7 @@ namespace ExpressBase.ServiceStack
                     if (col.IsCustomColumn)
                         CustomColumDoCalc4Row(_dataset.Tables[0].Rows[i], _dv, globals, col);
 
-                    var cults = col.GetColumnCultureInfo(_user_culture); 
+                    var cults = col.GetColumnCultureInfo(_user_culture);
                     object _unformattedData = _dataset.Tables[0].Rows[i][col.Data];
                     object _formattedData = _unformattedData;
 
@@ -596,10 +596,23 @@ namespace ExpressBase.ServiceStack
                     }
                     else if (col.Type == EbDbTypes.Decimal || col.Type == EbDbTypes.Int32)
                     {
-                        if((col as DVNumericColumn).SuppresIfZero)
-                            _formattedData = (Convert.ToDecimal(_unformattedData) == 0) ? string.Empty: Convert.ToDecimal(_unformattedData).ToString("N", cults.NumberFormat);
+                        if ((col as DVNumericColumn).SuppresIfZero)
+                            _formattedData = (Convert.ToDecimal(_unformattedData) == 0) ? string.Empty : Convert.ToDecimal(_unformattedData).ToString("N", cults.NumberFormat);
                         else
                             _formattedData = Convert.ToDecimal(_unformattedData).ToString("N", cults.NumberFormat);
+
+                        if ((col as DVNumericColumn).RenderAs == NumericRenderType.ProgressBar)
+                            _formattedData = "<div class='progress'><div class='progress-bar' role='progressbar' aria-valuenow='" + _formattedData + "' aria-valuemin='0' aria-valuemax='100' style='width:" + _unformattedData.ToString() + "%'>" + _formattedData + "</div></div>";
+                    }
+                    else if (col.Type == EbDbTypes.String)
+                    {
+                        if ((col as DVStringColumn).RenderAs == StringRenderType.Marker)
+                            _formattedData = "<a href = '#' class ='columnMarker' data-latlong='"+ _unformattedData + "'><i class='fa fa-map-marker fa-2x' style='color:red;'></i></a>";
+                        
+                    }
+                    else if (col.Type == EbDbTypes.Boolean)
+                    {
+
                     }
 
 
@@ -854,7 +867,7 @@ namespace ExpressBase.ServiceStack
         {
             List<string> permList = new List<string>();
             var x = refId.Split("-");
-            var objid = x[3].PadLeft(5,'0');
+            var objid = x[3].PadLeft(5, '0');
             List<string> liteperm = new List<string>();
             if (_user.Roles.Contains(SystemRoles.SolutionOwner.ToString()) || _user.Roles.Contains(SystemRoles.SolutionAdmin.ToString()))
             {
