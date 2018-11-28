@@ -404,10 +404,12 @@ namespace ExpressBase.ServiceStack
             _recordsFiltered = (_recordsFiltered > 0) ? _recordsFiltered : _dataset.Tables[_dataset.Tables.Count - 1].Rows.Count;
             //-- 
             EbDataTable _formattedDataTable = null;
+            PrePrcessorReturn ReturnObj = new PrePrcessorReturn();
             List<GroupingDetails> _levels = new List<GroupingDetails>();
+            object xx = new object();
             if (_dataset.Tables.Count > 0 && _dV != null)
             {
-                _formattedDataTable = PreProcessing(ref _dataset, request.Params, _dV, request.UserInfo, ref _levels);
+                ReturnObj = PreProcessing(ref _dataset, request.Params, _dV, request.UserInfo, ref _levels);
             }
             List<string> _permission = new List<string>();
             if (request.dvRefId != null)
@@ -416,12 +418,13 @@ namespace ExpressBase.ServiceStack
             {
                 Draw = request.Draw,
                 Data = _dataset.Tables[0].Rows,
-                FormattedData = (_formattedDataTable != null) ? _formattedDataTable.Rows : null,
+                FormattedData = (ReturnObj.FormattedTable != null) ? ReturnObj.FormattedTable.Rows : null,
                 RecordsTotal = _recordsTotal,
                 RecordsFiltered = _recordsFiltered,
                 Ispaged = _isPaged,
                 Levels = _levels,
-                Permission = _permission
+                Permission = _permission,
+                Summary = ReturnObj.Summary
             };
             this.Log.Info("dsresponse*****" + dsresponse.Data);
             var x = EbSerializers.Json_Serialize(dsresponse);
@@ -556,7 +559,7 @@ namespace ExpressBase.ServiceStack
             _datarow[customCol.Name] = result;
         }
 
-        public EbDataTable PreProcessing(ref EbDataSet _dataset, List<Param> Parameters, EbDataVisualization _dv, User _user, ref List<GroupingDetails> _levels)
+        public PrePrcessorReturn PreProcessing(ref EbDataSet _dataset, List<Param> Parameters, EbDataVisualization _dv, User _user, ref List<GroupingDetails> _levels)
         {
             var _user_culture = CultureInfo.GetCultureInfo(_user.Preference.Locale);
             var colCount = _dataset.Tables[0].Columns.Count;
@@ -573,6 +576,7 @@ namespace ExpressBase.ServiceStack
             this.PreCustomColumDoCalc(ref _dataset, Parameters, _dv, globals);
 
             EbDataTable _formattedTable = _dataset.Tables[0].GetEmptyTable();
+            Dictionary<int, List<object>> Summary = new Dictionary<int, List<object>>();
 
             bool bObfuscute = (!_user.Roles.Contains(SystemRoles.SolutionOwner.ToString()) && !_user.Roles.Contains(SystemRoles.SolutionAdmin.ToString()));
 
@@ -594,7 +598,7 @@ namespace ExpressBase.ServiceStack
                         _formattedData = (((DateTime)_unformattedData).Date != DateTime.MinValue) ? Convert.ToDateTime(_unformattedData).ToString("d", cults.DateTimeFormat) : string.Empty;
                         _dataset.Tables[0].Rows[i][col.Data] = Convert.ToDateTime(_unformattedData).ToString("yyyy-MM-dd");
                     }
-                    else if (col.Type == EbDbTypes.Decimal || col.Type == EbDbTypes.Int32)
+                    else if (col.Type == EbDbTypes.Decimal || col.Type == EbDbTypes.Int32 || col.Type == EbDbTypes.Int64)
                     {
                         if ((col as DVNumericColumn).SuppresIfZero)
                             _formattedData = (Convert.ToDecimal(_unformattedData) == 0) ? string.Empty : Convert.ToDecimal(_unformattedData).ToString("N", cults.NumberFormat);
@@ -603,6 +607,7 @@ namespace ExpressBase.ServiceStack
 
                         if ((col as DVNumericColumn).RenderAs == NumericRenderType.ProgressBar)
                             _formattedData = "<div class='progress'><div class='progress-bar' role='progressbar' aria-valuenow='" + _formattedData + "' aria-valuemin='0' aria-valuemax='100' style='width:" + _unformattedData.ToString() + "%'>" + _formattedData + "</div></div>";
+                        SummaryCalc(ref Summary, col, _unformattedData, cults);
                     }
                     else if (col.Type == EbDbTypes.String)
                     {
@@ -638,9 +643,15 @@ namespace ExpressBase.ServiceStack
                     }
 
                     _formattedTable.Rows[i][col.Data] = _formattedData;
+
+                    if(i+1 == _dataset.Tables[0].Rows.Count)
+                    {
+                        SummaryCalcAverage(ref Summary, col, cults, _dataset.Tables[0].Rows.Count);
+                    }
                 }
             }
 
+            
             if ((_dv as EbTableVisualization) != null)
             {
                 if ((_dv as EbTableVisualization).RowGroupCollection.Count > 0)
@@ -652,7 +663,31 @@ namespace ExpressBase.ServiceStack
                 }
             }
 
-            return _formattedTable;
+            return new PrePrcessorReturn { FormattedTable =  _formattedTable, Summary = Summary };
+        }
+
+        public void SummaryCalc(ref Dictionary<int, List<object>> Summary ,DVBaseColumn col, object _unformattedData, CultureInfo cults)
+        {
+            if ((col as DVNumericColumn).Aggregate)
+            {
+                if (Summary.Keys.Contains(col.Data))
+                {
+                    Summary[col.Data][0] = (Convert.ToDecimal(Summary[col.Data][0]) + Convert.ToDecimal(_unformattedData)).ToString("N", cults.NumberFormat);
+                }
+                else
+                {
+                    Summary.Add(col.Data, new List<object> { 0, 0 });
+                    Summary[col.Data][0] = (Convert.ToDecimal(Summary[col.Data][0]) + Convert.ToDecimal(_unformattedData)).ToString("N", cults.NumberFormat);
+                }
+            }
+        }
+
+        public void SummaryCalcAverage(ref Dictionary<int, List<object>> Summary, DVBaseColumn col, CultureInfo cults, int count)
+        {
+            if (Summary.Keys.Contains(col.Data))
+            {
+                Summary[col.Data][1] = (Convert.ToDecimal(Summary[col.Data][0]) / count).ToString("N", cults.NumberFormat);
+            }
         }
 
         public List<GroupingDetails> RowGroupingCommon(EbDataTable Table, EbDataVisualization Visualization, CultureInfo Culture, bool IsMultiLevelRowGrouping = false)
@@ -957,14 +992,15 @@ namespace ExpressBase.ServiceStack
             //-- 
             EbDataTable _formattedDataTable = null;
             List<GroupingDetails> _levels = new List<GroupingDetails>();
+            PrePrcessorReturn returnObj = new PrePrcessorReturn();
             if (_dataset.Tables.Count > 0 && _dV != null)
             {
-                _formattedDataTable = PreProcessing(ref _dataset, request.Params, _dV, request.UserInfo, ref _levels);
+                returnObj = PreProcessing(ref _dataset, request.Params, _dV, request.UserInfo, ref _levels);
             }
             dsresponse = new DataSourceDataResponse
             {
                 Data = _dataset.Tables[0].Rows,
-                FormattedData = (_formattedDataTable != null) ? _formattedDataTable.Rows : null,
+                FormattedData = (returnObj.FormattedTable != null) ? returnObj.FormattedTable.Rows : null,
                 RecordsTotal = _recordsTotal,
                 RecordsFiltered = _recordsFiltered,
                 Ispaged = _isPaged
@@ -973,6 +1009,12 @@ namespace ExpressBase.ServiceStack
             var x = EbSerializers.Json_Serialize(dsresponse);
             return dsresponse;
         }
+    }
+
+    public class PrePrcessorReturn
+    {
+        public EbDataTable FormattedTable;
+        public Dictionary<int, List<object>> Summary;
     }
 }
 
