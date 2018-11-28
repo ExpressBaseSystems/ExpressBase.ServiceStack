@@ -63,12 +63,20 @@ namespace ExpressBase.ServiceStack.Services
 								FROM leadpaymentdetails WHERE customers_id=:accountid ORDER BY balanceamount;
 							SELECT id,dateofsurgery,eb_loc_id,createdby,createddt, extractiondone_by,
 									implantation_by,consent_by,anaesthesia_by,post_briefing_by,nurses_id
-								FROM leadsurgerystaffdetails WHERE customers_id=:accountid ORDER BY createddt;
+								FROM leadsurgerystaffdetails WHERE customers_id=:accountid ORDER BY createddt DESC;
 							SELECT noofgrafts,totalrate,prpsessions,consulted,consultingfeepaid,consultingdoctor,eb_closing,LOWER(TRIM(nature)),consdate,probmonth
 								FROM leadratedetails WHERE customers_id=:accountid;
 
                             SELECT eb_files_ref_id
                                 FROM customer_files WHERE customer_id = :accountid;";
+//SELECT 
+//	B.id, B.filename, B.tags 
+//FROM
+//	customer_files A,
+//	eb_files_ref B
+//WHERE
+//	A.eb_files_ref_id = B.id AND
+//	A.customer_id = :accountid;
 				paramList.Add(this.EbConnectionFactory.DataDB.GetNewParameter("accountid", EbDbTypes.Int32, request.AccId));
 			}			
 			var ds = this.EbConnectionFactory.DataDB.DoQueries(SqlQry, paramList.ToArray());	
