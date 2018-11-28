@@ -20,7 +20,7 @@ namespace ExpressBase.ServiceStack.Services
 
 		public GetManageLeadResponse Any(GetManageLeadRequest request)
 		{
-			string SqlQry = @"SELECT firmcode, fname FROM firmmaster WHERE firmcode > 0;
+			string SqlQry = @"SELECT id, longname FROM eb_locations WHERE id > 1;
 							  SELECT id, name FROM doctors ORDER BY name;
 							  SELECT id, INITCAP(TRIM(fullname)) FROM eb_users WHERE id > 1 ORDER BY fullname;
 							SELECT DISTINCT INITCAP(TRIM(clcity)) AS clcity FROM customers WHERE LENGTH(clcity) > 2 ORDER BY clcity;
@@ -54,14 +54,14 @@ namespace ExpressBase.ServiceStack.Services
 			int Mode = 0;
 			if (request.RequestMode == 1)//edit mode 
 			{
-				SqlQry += @"SELECT id, firmcode, trdate, genurl, name, dob, genphoffice, profession, genemail, customertype, clcity, clcountry, city,
+				SqlQry += @"SELECT id, eb_loc_id, trdate, genurl, name, dob, genphoffice, profession, genemail, customertype, clcity, clcountry, city,
 								typeofcustomer, sourcecategory, subcategory, consultation, picsrcvd, dprefid, sex, district, leadowner
 								FROM customers WHERE id = :accountid;
 							SELECT id,trdate,status,followupdate,narration, eb_createdby, eb_createddt FROM leaddetails
 								WHERE customers_id=:accountid ORDER BY eb_createddt DESC;
 							SELECT id,trdate,totalamount,advanceamount,balanceamount,cashreceived,paymentmode,bank,createddt,narration,createdby 
 								FROM leadpaymentdetails WHERE customers_id=:accountid ORDER BY balanceamount;
-							SELECT id,dateofsurgery,firmcode,createdby,createddt, extractiondone_by,
+							SELECT id,dateofsurgery,eb_loc_id,createdby,createddt, extractiondone_by,
 									implantation_by,consent_by,anaesthesia_by,post_briefing_by,nurses_id
 								FROM leadsurgerystaffdetails WHERE customers_id=:accountid ORDER BY createddt;
 							SELECT noofgrafts,totalrate,prpsessions,consulted,consultingfeepaid,consultingdoctor,eb_closing,LOWER(TRIM(nature)),consdate,probmonth
@@ -109,7 +109,7 @@ namespace ExpressBase.ServiceStack.Services
 				Mode = 1;
 				var dr = ds.Tables[Qcnt].Rows[0];
 				CustomerData.Add("accountid", dr[0].ToString());
-				CustomerData.Add("firmcode", dr[1].ToString());
+				CustomerData.Add("eb_loc_id", dr[1].ToString());
 				CustomerData.Add("trdate", getStringValue(dr[2]));
 				CustomerData.Add("genurl", dr[3].ToString());
 				CustomerData.Add("name", dr[4].ToString());
@@ -258,12 +258,12 @@ namespace ExpressBase.ServiceStack.Services
 			string upcolsvals = string.Empty;
 			string upcolsvals2 = string.Empty;
 
-			if (dict.TryGetValue("firmcode", out found))
+			if (dict.TryGetValue("eb_loc_id", out found))
 			{
 				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Int32, Convert.ToInt32(found.Value)));
-				cols += "firmcode,";
-				vals += ":firmcode,";
-				upcolsvals += "firmcode=:firmcode,";
+				cols += "eb_loc_id,";
+				vals += ":eb_loc_id,";
+				upcolsvals += "eb_loc_id=:eb_loc_id,";
 			}
 			if (dict.TryGetValue("trdate", out found))
 			{
@@ -654,14 +654,14 @@ namespace ExpressBase.ServiceStack.Services
 			DbParameter[] parameters1 = {
 				this.EbConnectionFactory.ObjectsDB.GetNewParameter("customers_id", EbDbTypes.Int32, S_Obj.Account_Code),
 				this.EbConnectionFactory.ObjectsDB.GetNewParameter("dateofsurgery", EbDbTypes.Date, Convert.ToDateTime(DateTime.ParseExact(S_Obj.Date, "dd-MM-yyyy", CultureInfo.InvariantCulture))),
-				this.EbConnectionFactory.ObjectsDB.GetNewParameter("firmcode", EbDbTypes.Int32, S_Obj.Branch),
+				this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_loc_id", EbDbTypes.Int32, S_Obj.Branch),
 				this.EbConnectionFactory.ObjectsDB.GetNewParameter("createdby", EbDbTypes.String, request.UserName)
 			};
 
 			List<DbParameter> parameters = new List<DbParameter>();
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("customers_id", EbDbTypes.Int32, S_Obj.Account_Code));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("dateofsurgery", EbDbTypes.Date, Convert.ToDateTime(DateTime.ParseExact(S_Obj.Date, "dd-MM-yyyy", CultureInfo.InvariantCulture))));
-			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("firmcode", EbDbTypes.Int32, S_Obj.Branch));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_loc_id", EbDbTypes.Int32, S_Obj.Branch));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("createdby", EbDbTypes.String, request.UserName));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("extractiondone_by", EbDbTypes.Int32, S_Obj.Extract_By));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("implantation_by", EbDbTypes.Int32, S_Obj.Implant_By));
@@ -674,15 +674,15 @@ namespace ExpressBase.ServiceStack.Services
 			if (true)//if (S_Obj.Id == 0)//new
 			{
 				string Qry1 = @"INSERT INTO 
-									leadsurgerydetails(customers_id, dateofsurgery, firmcode, createddt, createdby)
+									leadsurgerydetails(customers_id, dateofsurgery, eb_loc_id, createddt, createdby)
 								VALUES
-									(:customers_id, :dateofsurgery, :firmcode, NOW(), :createdby);";
+									(:customers_id, :dateofsurgery, :eb_loc_id, NOW(), :createdby);";
 				this.EbConnectionFactory.ObjectsDB.InsertTable(Qry1, parameters1);
 				string Qry = @"INSERT INTO
- 									leadsurgerystaffdetails(customers_id, dateofsurgery, firmcode, createddt, createdby, extractiondone_by,
+ 									leadsurgerystaffdetails(customers_id, dateofsurgery, eb_loc_id, createddt, createdby, extractiondone_by,
 									implantation_by, consent_by, anaesthesia_by, post_briefing_by, nurses_id)
 								VALUES
-									(:customers_id, :dateofsurgery, :firmcode, NOW(), :createdby, :extractiondone_by,
+									(:customers_id, :dateofsurgery, :eb_loc_id, NOW(), :createdby, :extractiondone_by,
 									:implantation_by, :consent_by, :anaesthesia_by, :post_briefing_by, :nurses);";
 				rstatus = this.EbConnectionFactory.ObjectsDB.InsertTable(Qry, parameters.ToArray());
 			}

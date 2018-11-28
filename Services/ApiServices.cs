@@ -1,7 +1,10 @@
 ﻿using ExpressBase.Common;
 using ExpressBase.Common.Data;
 using ExpressBase.Common.Structures;
+using ExpressBase.Objects;
 using ExpressBase.Objects.ServiceStack_Artifacts;
+using Newtonsoft.Json;
+using Npgsql;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -11,14 +14,16 @@ using System.Threading.Tasks;
 
 namespace ExpressBase.ServiceStack.Services
 {
-    public class ApiServices: EbBaseService
+    public class ApiServices : EbBaseService
     {
         public ApiServices(IEbConnectionFactory _dbf) : base(_dbf) { }
 
         public FormDataJsonResponse Post(FormDataJsonRequest request)
         {
+            WebformData data = JsonConvert.DeserializeObject<WebformData>(request.JsonData);
 
-
+            EbSqlFunction func = new EbSqlFunction(data);
+            string ins_json = JsonConvert.SerializeObject(func.JsonColoumsInsert);
             return new FormDataJsonResponse { };
         }
     }
