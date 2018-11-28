@@ -20,7 +20,7 @@ namespace ExpressBase.ServiceStack.MQServices
 {
     public class PdfToEmailService : EbBaseService
     {
-        public PdfToEmailService(IMessageProducer _mqp, IMessageQueueClient _mqc) : base( _mqp, _mqc) { }
+        public PdfToEmailService(IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_mqp, _mqc) { }
 
         public void Post(PdfCreateServiceMqRequest request)
         {
@@ -75,7 +75,12 @@ namespace ExpressBase.ServiceStack.MQServices
                         }
                     }
                 }
-                var RepRes = reportservice.Get(new ReportRenderRequest { Refid = ebEmailTemplate.AttachmentReportRefID, User = new User { FullName="MQ"}, Params = request.Params });
+                var RepRes = reportservice.Get(new ReportRenderRequest
+                {
+                    Refid = ebEmailTemplate.AttachmentReportRefID,
+                    RenderingUser = new User { FullName = "MQ" },
+                    Params = request.Params
+                });
                 RepRes.StreamWrapper.Memorystream.Position = 0;
 
                 MessageProducer3.Publish(new EmailServicesRequest()

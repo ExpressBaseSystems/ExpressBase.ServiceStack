@@ -77,7 +77,7 @@ namespace ExpressBase.ServiceStack
                 Report.FileClient = FileClient;
                 Report.Solution = Redis.Get<Eb_Solution>(String.Format("solution_{0}", request.SolnId));
                 Report.CurrentTimestamp = DateTime.Now;
-                Report.User = request.User;
+                Report.User = request.RenderingUser;
                 Report.Parameters = request.Params;
                 //-- END REPORT object INIT
                 iTextSharp.text.Rectangle rec = new iTextSharp.text.Rectangle(Report.WidthPt, Report.HeightPt);
@@ -116,7 +116,7 @@ namespace ExpressBase.ServiceStack
             return new ReportRenderResponse
             {
                 StreamWrapper = new MemorystreamWrapper(Report.Ms1),
-                ReportName = Report.Name,
+                ReportName = Report.DisplayName,
                 ReportBytea = Report.Ms1.ToArray()
             };
         }
