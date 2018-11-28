@@ -1,6 +1,7 @@
 ﻿using ExpressBase.Common;
 using ExpressBase.Common.Data;
 using ExpressBase.Common.Structures;
+using ExpressBase.Objects;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using Newtonsoft.Json;
 using Npgsql;
@@ -21,6 +22,8 @@ namespace ExpressBase.ServiceStack.Services
         {
             WebformData data = JsonConvert.DeserializeObject<WebformData>(request.JsonData);
 
+            EbSqlFunction func = new EbSqlFunction(data);
+            string ins_json = JsonConvert.SerializeObject(func.JsonColoumsInsert);
             return new FormDataJsonResponse { };
         }
     }
