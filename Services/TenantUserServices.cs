@@ -141,24 +141,32 @@ namespace ExpressBase.ServiceStack.Services
 
         public UpdateSolutionResponse Post(UpdateSolutionRequest req)
         {
-            var _infraService = base.ResolveService<InfraServices>();
-            GetSolutioInfoResponse res = (GetSolutioInfoResponse)_infraService.Get(new GetSolutioInfoRequest { IsolutionId = req.SolnId });
-            EbSolutionsWrapper wrap_sol = res.Data;
-            LocationInfoTenantResponse Loc = this.Get(new LocationInfoTenantRequest { DbName = req.DbName});
-            Eb_Solution sol_Obj = new Eb_Solution
+            try
             {
-                SolutionID = req.SolnId,
-                DateCreated = wrap_sol.DateCreated.ToString(),
-                Description = wrap_sol.Description.ToString(),
-                Locations = Loc.Locations,
-                NumberOfUsers = 2,
-                SolutionName = wrap_sol.SolutionName.ToString(),
-                LocationConfig = Loc.Config
-            };
+                var _infraService = base.ResolveService<InfraServices>();
+                GetSolutioInfoResponse res = (GetSolutioInfoResponse)_infraService.Get(new GetSolutioInfoRequest { IsolutionId = req.SolnId });
+                EbSolutionsWrapper wrap_sol = res.Data;
+                LocationInfoTenantResponse Loc = this.Get(new LocationInfoTenantRequest { DbName = req.DbName });
+                Eb_Solution sol_Obj = new Eb_Solution
+                {
+                    SolutionID = req.SolnId,
+                    DateCreated = wrap_sol.DateCreated.ToString(),
+                    Description = wrap_sol.Description.ToString(),
+                    Locations = Loc.Locations,
+                    NumberOfUsers = 2,
+                    SolutionName = wrap_sol.SolutionName.ToString(),
+                    LocationConfig = Loc.Config
+                };
 
-            this.Redis.Set<Eb_Solution>(String.Format("solution_{0}", req.SolnId), sol_Obj);
-            var x = this.Redis.Get<Eb_Solution>(String.Format("solution_{0}", req.SolnId));
-
+                this.Redis.Set<Eb_Solution>(String.Format("solution_{0}", req.SolnId), sol_Obj);
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine("sol_Obj Updated : " + sol_Obj.ToString());
+                Console.ForegroundColor = ConsoleColor.White;
+            }
+            catch(Exception e)
+            {
+                Console.WriteLine("Error UpdateSolutionRequest: " +e.StackTrace);
+            }
             return new UpdateSolutionResponse { };
         }
 
