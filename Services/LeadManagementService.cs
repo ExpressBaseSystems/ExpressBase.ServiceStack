@@ -20,7 +20,7 @@ namespace ExpressBase.ServiceStack.Services
 
 		public GetManageLeadResponse Any(GetManageLeadRequest request)
 		{
-			string SqlQry = @"SELECT id, longname FROM eb_locations WHERE id > 1;
+			string SqlQry = @"SELECT id, longname FROM eb_locations WHERE id > 0;
 							  SELECT id, name FROM doctors ORDER BY name;
 							  SELECT id, INITCAP(TRIM(fullname)) FROM eb_users WHERE id > 1 ORDER BY fullname;
 							SELECT DISTINCT INITCAP(TRIM(clcity)) AS clcity FROM customers WHERE LENGTH(clcity) > 2 ORDER BY clcity;
