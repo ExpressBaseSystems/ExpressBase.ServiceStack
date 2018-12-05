@@ -576,6 +576,7 @@ namespace ExpressBase.ServiceStack
             this.PreCustomColumDoCalc(ref _dataset, Parameters, _dv, globals);
 
             EbDataTable _formattedTable = _dataset.Tables[0].GetEmptyTable();
+            _formattedTable.Columns.Add(_formattedTable.NewDataColumn(_dv.Columns.Count,"serial", EbDbTypes.Int32));
             Dictionary<int, List<object>> Summary = new Dictionary<int, List<object>>();
 
             bool bObfuscute = (!_user.Roles.Contains(SystemRoles.SolutionOwner.ToString()) && !_user.Roles.Contains(SystemRoles.SolutionAdmin.ToString()));
@@ -583,6 +584,7 @@ namespace ExpressBase.ServiceStack
             for (int i = 0; i < _dataset.Tables[0].Rows.Count; i++)
             {
                 _formattedTable.Rows.Add(_formattedTable.NewDataRow2());
+                _formattedTable.Rows[i][_formattedTable.Columns.Count - 1] = i+1;
                 foreach (DVBaseColumn col in _dv.Columns)
                 {
                     if (col.IsCustomColumn)
@@ -657,9 +659,9 @@ namespace ExpressBase.ServiceStack
                 if ((_dv as EbTableVisualization).RowGroupCollection.Count > 0)
                 {
                     if ((_dv as EbTableVisualization).CurrentRowGroup.GetType().Name == "SingleLevelRowGroup")
-                        _levels = RowGroupingCommon(_dataset.Tables[0], _dv, _user_culture, false);
+                        _levels = RowGroupingCommon(_dataset.Tables[0], _dv, _user_culture, ref _formattedTable, false);
                     else if ((_dv as EbTableVisualization).CurrentRowGroup.GetType().Name == "MultipleLevelRowGroup")
-                        _levels = RowGroupingCommon(_dataset.Tables[0], _dv, _user_culture, true);
+                        _levels = RowGroupingCommon(_dataset.Tables[0], _dv, _user_culture, ref _formattedTable, true);
                 }
             }
 
@@ -690,7 +692,7 @@ namespace ExpressBase.ServiceStack
             }
         }
 
-        public List<GroupingDetails> RowGroupingCommon(EbDataTable Table, EbDataVisualization Visualization, CultureInfo Culture, bool IsMultiLevelRowGrouping = false)
+        public List<GroupingDetails> RowGroupingCommon(EbDataTable Table, EbDataVisualization Visualization, CultureInfo Culture, ref EbDataTable FormattedTable, bool IsMultiLevelRowGrouping = false)
         {
             Dictionary<string, GroupingDetails> RowGrouping = new Dictionary<string, GroupingDetails>();
 
@@ -701,7 +703,7 @@ namespace ExpressBase.ServiceStack
             List<DVBaseColumn> RowGroupingColumns = new List<DVBaseColumn>((Visualization as EbTableVisualization).CurrentRowGroup.RowGrouping);
             int ColCount = Visualization.Columns.Count;
             string PreviousGroupingText = string.Empty;
-
+            int SerialCount = 0;
             for (int i = 0; i < Table.Rows.Count; i++)
             {
                 CurSortIndex += TotalLevels + 30;
@@ -712,6 +714,8 @@ namespace ExpressBase.ServiceStack
 
                 if (TempGroupingText.Equals(PreviousGroupingText) == false)
                 {
+                    SerialCount = 0;
+                    FormattedTable.Rows[i][Table.Columns.Count] = ++SerialCount;
                     CreateHeaderAndFooterPairs(currentRow, AggregateColumnIndexes, RowGroupingColumns, RowGrouping, Visualization.Columns, TotalLevels, IsMultiLevelRowGrouping, Culture, TempGroupingText, ref CurSortIndex, ColCount);
 
                     HeaderGroupingDetails HeaderObject = RowGrouping[HeaderPrefix + TempGroupingText] as HeaderGroupingDetails;
@@ -734,6 +738,8 @@ namespace ExpressBase.ServiceStack
                 }
                 else
                 {
+                    FormattedTable.Rows[i][Table.Columns.Count] = ++SerialCount;
+
                     (RowGrouping[HeaderPrefix + TempGroupingText] as HeaderGroupingDetails).GroupingCount++;
                     if (i == Table.Rows.Count - 1)
                     {
