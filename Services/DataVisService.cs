@@ -703,7 +703,7 @@ namespace ExpressBase.ServiceStack
             List<DVBaseColumn> RowGroupingColumns = new List<DVBaseColumn>((Visualization as EbTableVisualization).CurrentRowGroup.RowGrouping);
             int ColCount = Visualization.Columns.Count;
             string PreviousGroupingText = string.Empty;
-            int SerialCount = 0;
+            int SerialCount = 0, PrevRowIndex = 0;
             for (int i = 0; i < Table.Rows.Count; i++)
             {
                 CurSortIndex += TotalLevels + 30;
@@ -735,6 +735,10 @@ namespace ExpressBase.ServiceStack
                             SetFinalFooterRow(currentRow, RowGroupingColumns, IsMultiLevelRowGrouping, RowGrouping, i, TempGroupingText, CurSortIndex);
                         }
                     }
+                    if (!IsMultiLevelRowGrouping && i == PrevRowIndex + 1 && i == Table.Rows.Count - 1)
+                    {
+                        SetFinalFooterRow(currentRow, RowGroupingColumns, IsMultiLevelRowGrouping, RowGrouping, i, TempGroupingText, CurSortIndex);
+                    }
                 }
                 else
                 {
@@ -750,6 +754,7 @@ namespace ExpressBase.ServiceStack
                 (RowGrouping[FooterPrefix + TempGroupingText] as FooterGroupingDetails).SetValue(currentRow);
 
                 PreviousGroupingText = TempGroupingText;
+                PrevRowIndex = i;
             }
             List<GroupingDetails> SortedGroupings = RowGrouping.Values.ToList();
             SortedGroupings.Sort();
