@@ -20,7 +20,7 @@ namespace ExpressBase.ServiceStack.Services
 
 		public GetManageLeadResponse Any(GetManageLeadRequest request)
 		{
-			string SqlQry = @"SELECT id, longname FROM eb_locations WHERE id > 1;
+			string SqlQry = @"SELECT id, longname FROM eb_locations WHERE id > 0;
 							  SELECT id, name FROM doctors ORDER BY name;
 							  SELECT id, INITCAP(TRIM(fullname)) FROM eb_users WHERE id > 1 ORDER BY fullname;
 							SELECT DISTINCT INITCAP(TRIM(clcity)) AS clcity FROM customers WHERE LENGTH(clcity) > 2 ORDER BY clcity;
@@ -234,6 +234,45 @@ namespace ExpressBase.ServiceStack.Services
 				NurseDict = NurseDict
 			};
 		}
+
+        public GetImageInfoResponse Any(GetImageInfoRequest request)
+        {
+
+            string Qry = @"
+SELECT 
+	B.id, B.filename, B.tags, B.uploadts
+FROM
+	customer_files A,
+	eb_files_ref B
+WHERE
+	A.eb_files_ref_id = B.id AND
+	A.customer_id = :accountid;";
+
+            List<FileMetaInfo> _list = new List<FileMetaInfo>();
+
+            DbParameter[] param = new DbParameter[]
+            {
+                this.EbConnectionFactory.DataDB.GetNewParameter("accountid", EbDbTypes.Int32, request.CustomerId)
+            };
+
+            var dt = this.EbConnectionFactory.DataDB.DoQuery(Qry, param);
+
+            foreach(EbDataRow dr in dt.Rows)
+            {
+                FileMetaInfo info = new FileMetaInfo
+                {
+                    FileRefId = Convert.ToInt32(dr["id"]),
+                    FileName = dr["filename"] as string,
+                    Meta = JsonConvert.DeserializeObject<Dictionary<string, List<string>>>(dr["tags"] as string),
+                    UploadTime = Convert.ToDateTime(dr["uploadts"]).ToString("dd-MM-yyyy hh:mm tt")
+                };
+
+                if (!_list.Contains(info))
+                    _list.Add(info);
+            }
+
+            return new GetImageInfoResponse { Data = _list };
+        }
 
 		private string getStringValue(object obj)
 		{
