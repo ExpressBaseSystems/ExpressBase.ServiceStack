@@ -578,7 +578,7 @@ namespace ExpressBase.ServiceStack
             EbDataTable _formattedTable = _dataset.Tables[0].GetEmptyTable();
             _formattedTable.Columns.Add(_formattedTable.NewDataColumn(_dv.Columns.Count,"serial", EbDbTypes.Int32));
             Dictionary<int, List<object>> Summary = new Dictionary<int, List<object>>();
-
+            bool AllowLinkforZero = true;
             bool bObfuscute = (!_user.Roles.Contains(SystemRoles.SolutionOwner.ToString()) && !_user.Roles.Contains(SystemRoles.SolutionAdmin.ToString()));
 
             for (int i = 0; i < _dataset.Tables[0].Rows.Count; i++)
@@ -587,6 +587,7 @@ namespace ExpressBase.ServiceStack
                 _formattedTable.Rows[i][_formattedTable.Columns.Count - 1] = i+1;
                 foreach (DVBaseColumn col in _dv.Columns)
                 {
+                    AllowLinkforZero = true;
                     if (col.IsCustomColumn)
                         CustomColumDoCalc4Row(_dataset.Tables[0].Rows[i], _dv, globals, col);
 
@@ -603,10 +604,14 @@ namespace ExpressBase.ServiceStack
                     else if (col.Type == EbDbTypes.Decimal || col.Type == EbDbTypes.Int32 || col.Type == EbDbTypes.Int64)
                     {
                         if ((col as DVNumericColumn).SuppresIfZero)
+                        {
                             _formattedData = (Convert.ToDecimal(_unformattedData) == 0) ? string.Empty : Convert.ToDecimal(_unformattedData).ToString("N", cults.NumberFormat);
+
+                            if (_formattedData == string.Empty)
+                                AllowLinkforZero = false;
+                        }
                         else
                             _formattedData = Convert.ToDecimal(_unformattedData).ToString("N", cults.NumberFormat);
-
                         if ((col as DVNumericColumn).RenderAs == NumericRenderType.ProgressBar)
                             _formattedData = "<div class='progress'><div class='progress-bar' role='progressbar' aria-valuenow='" + _formattedData + "' aria-valuemin='0' aria-valuemax='100' style='width:" + _unformattedData.ToString() + "%'>" + _formattedData + "</div></div>";
                         SummaryCalc(ref Summary, col, _unformattedData, cults);
@@ -625,12 +630,15 @@ namespace ExpressBase.ServiceStack
 
                     if (!string.IsNullOrEmpty(col.LinkRefId))
                     {
-                        if (col.LinkType == LinkTypeEnum.Popout)
-                            _formattedData = "<a href='#' oncontextmenu='return false' class ='tablelink' data-link='" + col.LinkRefId + "'>" + _formattedData + "</a>";
-                        else if (col.LinkType == LinkTypeEnum.Inline)
-                            _formattedData = _formattedData + "&nbsp; <a style='float:right;' href= '#' oncontextmenu= 'return false' class ='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-inline='true' data-data='" + _formattedData + "'><i class='fa fa-caret-down'></i></a>";
-                        else if (col.LinkType == LinkTypeEnum.Both)
-                            _formattedData = "<a href='#' oncontextmenu='return false' class ='tablelink' data-link='" + col.LinkRefId + "'>" + _formattedData + "</a>" + "&nbsp; <a style='float:right;' href ='#' oncontextmenu='return false' class='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-inline='true' data-data='" + _formattedData + "'> <i class='fa fa-caret-down'></i></a>";
+                        if (AllowLinkforZero)
+                        {
+                            if (col.LinkType == LinkTypeEnum.Popout)
+                                _formattedData = "<a href='#' oncontextmenu='return false' class ='tablelink' data-link='" + col.LinkRefId + "'>" + _formattedData + "</a>";
+                            else if (col.LinkType == LinkTypeEnum.Inline)
+                                _formattedData = _formattedData + "&nbsp; <a style='float:right;' href= '#' oncontextmenu= 'return false' class ='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-inline='true' data-data='" + _formattedData + "'><i class='fa fa-caret-down'></i></a>";
+                            else if (col.LinkType == LinkTypeEnum.Both)
+                                _formattedData = "<a href='#' oncontextmenu='return false' class ='tablelink' data-link='" + col.LinkRefId + "'>" + _formattedData + "</a>" + "&nbsp; <a style='float:right;' href ='#' oncontextmenu='return false' class='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-inline='true' data-data='" + _formattedData + "'> <i class='fa fa-caret-down'></i></a>";
+                        }
                     }
                     if (col.Type == EbDbTypes.String && (col as DVStringColumn).RenderAs == StringRenderType.Link && col.LinkType == LinkTypeEnum.Tab)/////////////////
                     {

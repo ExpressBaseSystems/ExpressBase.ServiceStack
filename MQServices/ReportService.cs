@@ -28,7 +28,12 @@ namespace ExpressBase.ServiceStack.MQServices
             reportservice.EbConnectionFactory = ebConnectionFactory;
             var schedulerservice = base.ResolveService<SchedulerServices>();
             schedulerservice.EbConnectionFactory = ebConnectionFactory;
-            EbObjectFetchLiveVersionResponse res = ((EbObjectFetchLiveVersionResponse)objservice.Get(new EbObjectFetchLiveVersionRequest() { Id = request.JobArgs.ObjId }));
+            Dictionary<string, List<User>> LocaleUser = new Dictionary<string, List<User>>();
+            Dictionary<string, byte[]> LocaleReport = new Dictionary<string, byte[]>();
+            EbObjectFetchLiveVersionResponse res = ((EbObjectFetchLiveVersionResponse)objservice.Get(new EbObjectFetchLiveVersionRequest()
+            {
+                Id = request.JobArgs.ObjId
+            }));
             if (res.Data.Count > 0)
             {
                 EbObjectWrapper Live_ver = res.Data[0];
@@ -37,35 +42,55 @@ namespace ExpressBase.ServiceStack.MQServices
                     UserIds = request.JobArgs.ToUserIds,
                     UserGroupIds = request.JobArgs.ToUserGroupIds
                 });
-                var MailIds = mailres.UserEmails.Concat(mailres.UserGroupEmails).GroupBy(d => d.Key).ToDictionary(d => d.Key, d => d.First().Value);
+                var MailIds = mailres.UserEmails
+                    .Concat(mailres.UserGroupEmails)
+                    .GroupBy(d => d.Key)
+                    .ToDictionary(d => d.Key, d => d.First().Value);
+
                 foreach (var u in MailIds)
                 {
-                    User _readinguser = this.Redis.Get<User>(string.Format(TokenConstants.SUB_FORMAT, request.JobArgs.SolnId, u.Value, "uc"));
-                    var RepRes = reportservice.Get(new ReportRenderRequest
+                    User usr = this.Redis.Get<User>(string.Format(TokenConstants.SUB_FORMAT, request.JobArgs.SolnId, u.Value, "uc"));
+                    if (LocaleUser.ContainsKey(usr.Preference.Locale))
+                        LocaleUser[usr.Preference.Locale].Add(usr);
+                    else LocaleUser.Add(usr.Preference.Locale, new List<User> { usr });
+                }
+                foreach (var locale in LocaleUser)
+                {
+                    ReportRenderResponse RepRes = reportservice.Get(new ReportRenderRequest
                     {
                         Refid = Live_ver.RefId,
-                        RenderingUser = new User { FullName = "MQ" },
-                        ReadingUser = _readinguser,
-                        Params = request.JobArgs.Params
+                        RenderingUser = /*new User { FullName = "MQ", },*/ locale.Value[0],
+                        ReadingUser = locale.Value[0],
+                        Params = request.JobArgs.Params,
+                        SolnId = request.JobArgs.SolnId,
+                        UserAuthId = request.JobArgs.UserAuthId,
+                        UserId = request.JobArgs.UserId,
+                        WhichConsole = "uc"
                     });
                     Console.WriteLine("Inside MQService/ReportServiceInternal in SS \n After Report Render");
                     RepRes.StreamWrapper.Memorystream.Position = 0;
-                    MessageProducer3.Publish(new EmailServicesRequest()
+                    foreach (var _u in locale.Value)
                     {
-                        From = "request.from",
-                        To = /*ebEmailTemplate.To*/ u.Value,
-                        Cc = /*ebEmailTemplate.Cc.Split(",")*/ null,
-                        Bcc = /*ebEmailTemplate.Bcc.Split(",")*/ null,
-                        Message = "ebEmailTemplate.Body",
-                        Subject = "ebEmailTemplate.Subject",
-                        UserId = request.JobArgs.UserId,
-                        UserAuthId = request.JobArgs.UserAuthId,
-                        SolnId = request.JobArgs.SolnId,
-                        AttachmentReport = RepRes.ReportBytea,
-                        AttachmentName = RepRes.ReportName
-                    });
-                    Console.WriteLine("Inside MQService/ReportServiceInternal in SS \n After Mail MQ Request");
+                        MessageProducer3.Publish(new EmailServicesRequest()
+                        {
+                            From = "request.from",
+                            To = _u.Email,
+                            Cc = /*ebEmailTemplate.Cc.Split(",")*/ null,
+                            Bcc = /*ebEmailTemplate.Bcc.Split(",")*/ null,
+                            Message = "ebEmailTemplate.Body",
+                            Subject = "ebEmailTemplate.Subject",
+                            UserId = request.JobArgs.UserId,
+                            UserAuthId = request.JobArgs.UserAuthId,
+                            SolnId = request.JobArgs.SolnId,
+                            AttachmentReport = RepRes.ReportBytea,
+                            AttachmentName = RepRes.ReportName
+                        });
+                    }
+                    //LocaleReport.Add(locale.Key, RepRes.ReportBytea);
                 }
+
+
+
             }
             return new ReportInternalResponse() { };
         }
