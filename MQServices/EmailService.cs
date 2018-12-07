@@ -23,7 +23,7 @@ using System.IO;
 
 namespace ExpressBase.ServiceStack
 {
-    
+
     public class EmailService : EbBaseService
     {
         public EmailService(IEbConnectionFactory _dbf, IMessageProducer _mqp, IMessageQueueClient _mqc, IEbServerEventClient _sec) : base(_dbf, _mqp, _mqc, _sec) { }
@@ -68,8 +68,10 @@ namespace ExpressBase.ServiceStack
         {
             base.EbConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
             try
-            {               
+            {
+                Console.WriteLine("Inside EmailService/EmailServiceInternal in SS \n Before Email");
                 this.EbConnectionFactory.EmailConnection.Send(request.To, request.Subject, request.Message, request.Cc, request.Bcc, request.AttachmentReport, request.AttachmentName);
+                Console.WriteLine("Inside EmailService/EmailServiceInternal in SS \n After Email \nSend To:" + request.To);
             }
             catch (Exception e)
             {

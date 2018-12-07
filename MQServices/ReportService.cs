@@ -20,6 +20,7 @@ namespace ExpressBase.ServiceStack.MQServices
         public ReportInternalService(IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_mqp, _mqc) { }
         public ReportInternalResponse Post(ReportInternalRequest request)
         {
+            Console.WriteLine("Inside MQService/ReportServiceInternal in SS \n Before Report Render");
             EbConnectionFactory ebConnectionFactory = new EbConnectionFactory(request.JobArgs.SolnId, this.Redis);
             var objservice = base.ResolveService<EbObjectService>();
             objservice.EbConnectionFactory = ebConnectionFactory;
@@ -47,11 +48,12 @@ namespace ExpressBase.ServiceStack.MQServices
                         ReadingUser = _readinguser,
                         Params = request.JobArgs.Params
                     });
+                    Console.WriteLine("Inside MQService/ReportServiceInternal in SS \n After Report Render");
                     RepRes.StreamWrapper.Memorystream.Position = 0;
                     MessageProducer3.Publish(new EmailServicesRequest()
                     {
                         From = "request.from",
-                        To = /*ebEmailTemplate.To*/ "donaullattil93@gmail.com",
+                        To = /*ebEmailTemplate.To*/ u.Value,
                         Cc = /*ebEmailTemplate.Cc.Split(",")*/ null,
                         Bcc = /*ebEmailTemplate.Bcc.Split(",")*/ null,
                         Message = "ebEmailTemplate.Body",
@@ -62,7 +64,9 @@ namespace ExpressBase.ServiceStack.MQServices
                         AttachmentReport = RepRes.ReportBytea,
                         AttachmentName = RepRes.ReportName
                     });
-                }            }
+                    Console.WriteLine("Inside MQService/ReportServiceInternal in SS \n After Mail MQ Request");
+                }
+            }
             return new ReportInternalResponse() { };
         }
     }
