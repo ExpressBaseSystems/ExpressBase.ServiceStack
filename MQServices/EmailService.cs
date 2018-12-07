@@ -69,7 +69,7 @@ namespace ExpressBase.ServiceStack
             base.EbConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
             try
             {
-                Console.WriteLine("Inside EmailService/EmailServiceInternal in SS \n Before Email");
+                Console.WriteLine("Inside EmailService/EmailServiceInternal in SS \n Before Email \n To: " + request.To + "\nEmail Connections: " + EbConnectionFactory.EmailConnection.Capacity);
                 this.EbConnectionFactory.EmailConnection.Send(request.To, request.Subject, request.Message, request.Cc, request.Bcc, request.AttachmentReport, request.AttachmentName);
                 Console.WriteLine("Inside EmailService/EmailServiceInternal in SS \n After Email \nSend To:" + request.To);
             }
