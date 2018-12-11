@@ -20,11 +20,59 @@ namespace ExpressBase.ServiceStack.Services
 
         public FormDataJsonResponse Post(FormDataJsonRequest request)
         {
-            WebformData data = JsonConvert.DeserializeObject<WebformData>(request.JsonData);
+            WebFormSchema schema = JsonConvert.DeserializeObject<WebFormSchema>(request.JsonData);
 
-            EbSqlFunction func = new EbSqlFunction(data);
-            string ins_json = JsonConvert.SerializeObject(func.JsonColoumsInsert);
+            EbSqlFunction func = new EbSqlFunction(schema);
+
             return new FormDataJsonResponse { };
+        }
+
+        //generate insert obj and update object
+        private void GenJsonColumns(WebformData data)
+        {
+            FormSqlData sqlData = new FormSqlData();
+
+            foreach (KeyValuePair<string, SingleTable> kp in data.MultipleTables)
+            {
+                List<JsonColVal> insertcols = new List<JsonColVal>();
+                List<JsonColVal> updatecols = new List<JsonColVal>();
+
+                foreach (SingleRow _row in kp.Value)
+                {
+                    JsonColVal jsoncols_ins = new JsonColVal();
+                    JsonColVal jsoncols_upd = new JsonColVal();
+
+                    if (_row.IsUpdate)
+                        updatecols.Add(this.GetCols(jsoncols_upd, _row));
+                    else
+                        insertcols.Add(this.GetCols(jsoncols_ins, _row));
+                }
+                if (insertcols.Count > 0)
+                {
+                    sqlData.JsonColoumsInsert.Add(new JsonTable
+                    {
+                        TableName = kp.Key,
+                        Rows = insertcols
+                    });
+                }
+                if (updatecols.Count > 0)
+                {
+                    sqlData.JsonColoumsUpdate.Add(new JsonTable
+                    {
+                        TableName = kp.Key,
+                        Rows = updatecols
+                    });
+                }
+            }
+        }
+
+        private JsonColVal GetCols(JsonColVal col, SingleRow row)
+        {
+            foreach (SingleColumn _cols in row.Columns)
+            {
+                col.Add(_cols.Name, _cols.Value);
+            }
+            return col;
         }
     }
 }
