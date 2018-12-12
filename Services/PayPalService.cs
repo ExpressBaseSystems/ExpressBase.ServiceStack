@@ -6,15 +6,12 @@ using ExpressBase.Objects.ServiceStack_Artifacts;
 using Flurl.Http;
 using Newtonsoft.Json;
 using RestSharp;
-using RestSharp.Extensions;
 using RestSharp.Authenticators;
 using ServiceStack;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
 using System.Threading.Tasks;
 using ExpressBase.Common.Structures;
@@ -28,47 +25,55 @@ namespace ExpressBase.ServiceStack.Services
     public class PayPalService : EbBaseService
     {
         string OAuthResponse;
+
         int OAuthStatusCode = 0;
+
         volatile int UserCount = 0;
+
         int PricePerUser = 5;
+
         string Currency = "USD";
-        string CancelPage = "/PayPal/CancelAgreement/",
-            ReturnPage = "/PayPal/ReturnSuccess/",
-            CancelUrl = string.Empty,
-            ReturnUrl = string.Empty;
+
+        string CancelPage = "/PayPal/CancelAgreement/";
+        string ReturnPage = "/PayPal/ReturnSuccess/";
+        string CancelUrl = string.Empty;
+        string ReturnUrl = string.Empty;
 
         private PayPalOauthObject _payPalOAuth = null;
+
         PayPalPaymentResponse PayPalResponse;
 
         FlurlClient flurlClient = new FlurlClient(PayPalConstants.UriString);
 
         private PayPalOauthObject MakeNewOAuth()
         {
-            string UserID = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_PAYPAL_USERID),
-            UserSecret = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_PAYPAL_USERSECRET);
-            var client = new RestClient(new Uri(PayPalConstants.UriString));
-            CookieContainer CookieJar = new CookieContainer();
-            client.Authenticator = new HttpBasicAuthenticator(UserID, UserSecret);
-            client.CookieContainer = CookieJar;
+            string UserID = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_PAYPAL_USERID);// user id from EnvironmentVariables
+            string UserSecret = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_PAYPAL_USERSECRET);// like password
 
-            var OAuthRequest = new RestRequest("v1/oauth2/token", Method.POST);
-            OAuthRequest.AddHeader("Accept", "application/json");
-            OAuthRequest.AddHeader("Accept-Language", "en_US");
-            OAuthRequest.AddHeader("Content-Type", "application/x-www-form-urlencoded");
-            OAuthRequest.AddParameter("grant_type", "client_credentials");
-            client.ExecuteAsyncPost(OAuthRequest, PayPalCallback, "POST");
+            RestClient client = new RestClient(new Uri(PayPalConstants.UriString));// RestClient Object created to make restricted http client for initial basic authentication
+            client.Authenticator = new HttpBasicAuthenticator(UserID, UserSecret); // to create HttpBasicAuthenticator Object for initial basic authentication
+            client.CookieContainer = new CookieContainer();// to save cookies
 
-            int _timeout = 0;
-            while (OAuthStatusCode.Equals(0))
-            {
-                if (_timeout >= 60000)
-                    break;
-                System.Threading.Thread.Sleep(500);
-                _timeout += 500;
+            RestRequest OAuthRequest = new RestRequest("v1/oauth2/token", Method.POST);// RestRequest  Object created to send authentication request
+            OAuthRequest.AddHeader("Accept", "application/json");// add key value pair to http request header
+            OAuthRequest.AddHeader("Accept-Language", "en_US");// add key value pair to http request header
+            OAuthRequest.AddHeader("Content-Type", "application/x-www-form-urlencoded");// add key value pair to http request header
+            OAuthRequest.AddParameter("grant_type", "client_credentials");// add key value pair to http Parameters
+            client.ExecuteAsyncPost(OAuthRequest, PayPalCallback, "POST"); // posting http basic authentication request
+
+            {// looking for response from pay pal  for restSharp basic authentication request
+                int _timeout = 0;
+                while (OAuthStatusCode.Equals(0))
+                {
+                    if (_timeout >= 60000)
+                        break;
+                    System.Threading.Thread.Sleep(500);
+                    _timeout += 500;
+                }
             }
 
-            var StreamData = GenerateStreamFromString(OAuthResponse);
-            PayPalOauthObject OAuth = new DataContractJsonSerializer(typeof(PayPalOauthObject)).ReadObject(StreamData) as PayPalOauthObject;
+            System.IO.Stream StreamData = GenerateStreamFromString(OAuthResponse);// made stream
+            PayPalOauthObject OAuth = new DataContractJsonSerializer(typeof(PayPalOauthObject)).ReadObject(StreamData) as PayPalOauthObject;// creating object from memory stream
             this.Redis.Set<PayPalOauthObject>("EB_PAYPAL_OAUTH", OAuth);
             return OAuth;
         }
@@ -100,12 +105,13 @@ namespace ExpressBase.ServiceStack.Services
 
         public System.IO.Stream GenerateStreamFromString(string s)
         {
-            var stream = new System.IO.MemoryStream();
-            var writer = new System.IO.StreamWriter(stream);
+            System.IO.MemoryStream Mstream = new System.IO.MemoryStream();// creates a MemoryStream Object whose Backing store is memory
+            System.IO.StreamWriter writer = new System.IO.StreamWriter(Mstream);//  creates a StreamWriter Object to write charecters to the stream in a  particular encoding
             writer.Write(s);
-            writer.Flush();
-            stream.Position = 0;
-            return stream;
+            writer.Flush();// force push to stream and  clear memmory buffer
+            Mstream.Position = 0;//Sets current possition at begining
+            return Mstream;
+
         }
 
         async Task<string> GetResponseContents(HttpResponseMessage Response)
@@ -173,17 +179,17 @@ namespace ExpressBase.ServiceStack.Services
 
             string JsonBody = JsonConvert.SerializeObject(Plan, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
 
-            FlurlRequest flurlRequest = new FlurlRequest(PayPalConstants.BillingPlanPath);
+            FlurlRequest flurlRequest = new FlurlRequest(PayPalConstants.BillingPlanPath);// create FlurlRequest to create billing plan
             flurlRequest.Client = flurlClient;
             var PaymentPlanResult = Send(HttpMethod.Post, flurlRequest, JsonBody).Result;
-            var ResultContents = GetResponseContents(PaymentPlanResult).Result;
+            string ResultContents = GetResponseContents(PaymentPlanResult).Result;
             Console.WriteLine("Payment Plan Create Request :: ");
             Console.WriteLine("Response Code :: " + PaymentPlanResult.StatusCode);
             Console.WriteLine("Response :: " + ResultContents);
             BillingPlanResponse BillPlanResponse = new BillingPlanResponse();
             BillPlanResponse = JsonConvert.DeserializeObject<BillingPlanResponse>(ResultContents);
-            Console.WriteLine("\nBilling Plan Response ID :: " + BillPlanResponse.PlanID);
             string PaymentPlanID = BillPlanResponse.PlanID;
+            Console.WriteLine("\nBilling Plan Response ID :: " + PaymentPlanID);
             if (ActivatePlan(flurlClient, PaymentPlanID))
             {
                 BillPlanResponse.CurrentState = BillingPlanResponse.PlanStateStrings[(int)PlanState.ACTIVE];
@@ -216,7 +222,7 @@ namespace ExpressBase.ServiceStack.Services
             BillingAgreementRequest BillAgreementRequest = new BillingAgreementRequest()
             {
                 Name = "Billing Agreement - Solution ID: " + TenantAccountId + " Price: " + TotalPrice + " " + Currency,
-                Description = "Billing agreement for client: " + TenantAccountId + " Number of users: " + UserCount.ToString() + " Total amount charged: " 
+                Description = "Billing agreement for client: " + TenantAccountId + " Number of users: " + UserCount.ToString() + " Total amount charged: "
                 + (TotalPrice).ToString() + " " + Currency + " Starting from: " + _startDate,
                 StartDate = _startDate,//"2020-01-01T09:13:49Z",
                 BillingPlan = new BillingPlanResponse(BillingPlanID),
@@ -250,7 +256,7 @@ namespace ExpressBase.ServiceStack.Services
         private bool SaveFinalBillingAgreement(BillingAgreementResponse FinalResponse, string ResponseContents, string SolutionId)
         {
             string sql = @"INSERT INTO eb_pp_subscriptions(solution_id, pp_billing_plan_id, agreement_creation_date, is_canceled, start_date, raw_json) VALUES(@solution_id, @billing_plan_id, @agc_date, @canceled, @s_date, @json) RETURNING id";
-            
+
             DbParameter[] parameters =
             {
                         this.InfraConnectionFactory.DataDB.GetNewParameter("solution_id", EbDbTypes.String, SolutionId),
@@ -296,7 +302,7 @@ namespace ExpressBase.ServiceStack.Services
             int state = 0;
             string[] ActionComponents = handler.Action.Split('.'); ;
             SavePayPalWebHookJson(handler.JsonBody, state, ActionComponents);
-            if (handler.JsonBody==string.Empty)
+            if (handler.JsonBody == string.Empty)
             {
                 Console.WriteLine("The JSON body is empty");
             }
@@ -334,7 +340,7 @@ namespace ExpressBase.ServiceStack.Services
                         state -= 3500;
                 }
 
-                if(state < 0)
+                if (state < 0)
                 {
                     responseBuilder.Append(" ");
                     responseBuilder.Append(ActionComponents[1]);
@@ -365,27 +371,27 @@ namespace ExpressBase.ServiceStack.Services
 
                     else
                     {
-                        if(state.Equals(1011))
+                        if (state.Equals(1011))
                         {
                             Console.WriteLine("Instantiating Handle for Billing Plan Created Event");
                         }
-                        else if(state.Equals(1012))
+                        else if (state.Equals(1012))
                         {
                             Console.WriteLine("Instantiating Handle for Billing Plan Updated Event");
                         }
-                        else if(state.Equals(2011))
+                        else if (state.Equals(2011))
                         {
                             Console.WriteLine("Instantiating Handle for Billing Subscription Created Event");
                         }
-                        else if(state.Equals(2012))
+                        else if (state.Equals(2012))
                         {
                             Console.WriteLine("Instantiating Handle for Billing Subscription Updated Event");
                         }
-                        else if(state.Equals(2013))
+                        else if (state.Equals(2013))
                         {
                             Console.WriteLine("Instantiating Handle for Billing Subscription Cancelled Event");
                         }
-                        else if(state.Equals(2014))
+                        else if (state.Equals(2014))
                         {
                             Console.WriteLine("Instantiating Handle for Billing Subscription Reactivated Event");
                         }
@@ -410,7 +416,7 @@ namespace ExpressBase.ServiceStack.Services
         [Authenticate]
         public void Post(PayPalFailureReturnRequest req)
         {
-            
+
         }
 
 
@@ -443,13 +449,13 @@ namespace ExpressBase.ServiceStack.Services
             PayPalResponse = new PayPalPaymentResponse();
             try
             {
-                CancelUrl = req.Environment + CancelPage + req.SolutionId;
-                ReturnUrl = req.Environment + ReturnPage + req.SolutionId;
+                CancelUrl = req.Environment + CancelPage + req.SolutionId;// contructing url for Canceling payment
+                ReturnUrl = req.Environment + ReturnPage + req.SolutionId;// contructing url for proceeding payment
                 UserCount = req.UserCount;
                 string ppBillingId = GetBillingPlanId(UserCount, 5);//(UserCount, 5);
                 string BillingAgreementID = string.Empty;
-                var Agreement = CreateBillingAgreement(req.SolutionId, ppBillingId);
-                foreach (var _link in Agreement.Links)
+                BillingAgreementResponse Agreement = CreateBillingAgreement(req.SolutionId, ppBillingId);
+                foreach (LinkDescription _link in Agreement.Links)
                 {
                     if (_link.Rel.Equals("approval_url"))
                         PayPalResponse.ApprovalUrl = _link.Href;
@@ -457,7 +463,7 @@ namespace ExpressBase.ServiceStack.Services
                         PayPalResponse.ExecuteUrl = _link.Href;
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 Console.WriteLine("Exception thrown : " + ex);
             }
@@ -469,9 +475,9 @@ namespace ExpressBase.ServiceStack.Services
 
             string sql = @"INSERT INTO eb_pp_billing_plans(pp_billingplan_id, num_users, amount_per_user, currency) VALUES(@plan_id, @num, @amount, @curr_code) RETURNING id";
             string _currencyCode = string.Empty;
-            foreach(var _temp in plan.PlanResponse.PaymentDefinitions)
+            foreach (var _temp in plan.PlanResponse.PaymentDefinitions)
             {
-                if (_temp.PaymentType=="REGULAR")
+                if (_temp.PaymentType == "REGULAR")
                     _currencyCode = _temp.Amount["currency"];
             }
             DbParameter[] parameters =
@@ -479,7 +485,7 @@ namespace ExpressBase.ServiceStack.Services
                         this.InfraConnectionFactory.DataDB.GetNewParameter("plan_id", EbDbTypes.String, plan.PlanResponse.PlanID),
                         this.InfraConnectionFactory.DataDB.GetNewParameter("num",EbDbTypes.Int16, plan.NumUsers),
                         this.InfraConnectionFactory.DataDB.GetNewParameter("amount",EbDbTypes.Decimal, plan.AmountperUser),
-                        this.InfraConnectionFactory.DataDB.GetNewParameter("curr_code",EbDbTypes.String, _currencyCode), 
+                        this.InfraConnectionFactory.DataDB.GetNewParameter("curr_code",EbDbTypes.String, _currencyCode),
 
             };
             var id = this.EbConnectionFactory.DataDB.DoNonQuery(sql, parameters);
@@ -492,6 +498,7 @@ namespace ExpressBase.ServiceStack.Services
             string ppBillingId = null;
 
             string sql = "SELECT pp_billingplan_id FROM eb_pp_billing_plans WHERE num_users=@num AND amount_per_user = @amount"; // Include currency and Merchent ID
+
             DbParameter[] parameters =
             {
                         this.InfraConnectionFactory.DataDB.GetNewParameter("num", EbDbTypes.Int16, users),

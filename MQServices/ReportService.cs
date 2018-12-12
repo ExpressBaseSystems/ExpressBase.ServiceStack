@@ -20,6 +20,7 @@ namespace ExpressBase.ServiceStack.MQServices
         public ReportInternalService(IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_mqp, _mqc) { }
         public ReportInternalResponse Post(ReportInternalRequest request)
         {
+            Console.WriteLine("Inside MQService/ReportServiceInternal in SS \n Before Report Render");
             EbConnectionFactory ebConnectionFactory = new EbConnectionFactory(request.JobArgs.SolnId, this.Redis);
             var objservice = base.ResolveService<EbObjectService>();
             objservice.EbConnectionFactory = ebConnectionFactory;
@@ -66,7 +67,7 @@ namespace ExpressBase.ServiceStack.MQServices
                         UserId = request.JobArgs.UserId,
                         WhichConsole = "uc"
                     });
-                    
+                    Console.WriteLine("Inside MQService/ReportServiceInternal in SS \n After Report Render");
                     RepRes.StreamWrapper.Memorystream.Position = 0;
                     foreach (var _u in locale.Value)
                     {
