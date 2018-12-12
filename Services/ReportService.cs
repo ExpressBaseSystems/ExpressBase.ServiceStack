@@ -33,6 +33,7 @@ using ExpressBase.Objects.Objects;
 using System.Net.Mail;
 using System.Net;
 using ServiceStack.Messaging;
+using System.Globalization;
 
 namespace ExpressBase.ServiceStack
 {
@@ -78,6 +79,7 @@ namespace ExpressBase.ServiceStack
                 Report.Solution = Redis.Get<Eb_Solution>(String.Format("solution_{0}", request.SolnId));
                 Report.CurrentTimestamp = DateTime.Now;
                 Report.User = request.ReadingUser;
+                Report.CultureInfo =  CultureInfo.GetCultureInfo(Report.User.Preference.Locale);
                 Report.Parameters = request.Params;
                 //-- END REPORT object INIT
                 iTextSharp.text.Rectangle rec = new iTextSharp.text.Rectangle(Report.WidthPt, Report.HeightPt);
@@ -111,7 +113,9 @@ namespace ExpressBase.ServiceStack
             }
             catch (Exception e)
             {
+                Console.ForegroundColor = ConsoleColor.Red;
                 Console.WriteLine("Exception-reportService " + e.ToString());
+                Console.ForegroundColor = ConsoleColor.White;
             }
             return new ReportRenderResponse
             {
@@ -408,7 +412,7 @@ namespace ExpressBase.ServiceStack
             if (Report.IsLastpage == true)
                 Report.DrawReportFooter();
             Report.DrawWaterMark(d, writer);
-            Report.SetDetail(Report.User);
+            Report.SetDetail();
         }
 
         public HeaderFooter(EbReport _c) : base()

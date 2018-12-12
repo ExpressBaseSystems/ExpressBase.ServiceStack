@@ -26,11 +26,18 @@ namespace ExpressBase.ServiceStack.Services
                EbConnectionFactory.DataDB.GetNewParameter("created_by", EbDbTypes.Int32,  request.Task.JobArgs.UserId) };
                 var dt = EbConnectionFactory.DataDB.DoNonQuery(sql, parameters);
             }
-            MessageProducer3.Publish(new SchedulerRequest { Task = request.Task });
+            MessageProducer3.Publish(new ScheduleRequest { Task = request.Task });
             return null;
         }
+        public UnschedulerMQResponse Post(UnschedulerMQRequest request)
+        {
+            UnschedulerMQResponse res = new UnschedulerMQResponse();
+            MessageProducer3.Publish(new UnscheduleRequest { TriggerKey = request.TriggerKey }); 
+            return res;
 
-        public GetAllUsersResponse Get(GetAllUsersRequest request)
+        }
+
+            public GetAllUsersResponse Get(GetAllUsersRequest request)
         {
             GetAllUsersResponse res = new GetAllUsersResponse();
             using (var con = this.EbConnectionFactory.DataDB.GetNewConnection())
