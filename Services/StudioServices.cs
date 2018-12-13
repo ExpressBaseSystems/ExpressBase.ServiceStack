@@ -606,6 +606,17 @@ WHERE
 						WebFormServices myService = base.ResolveService<WebFormServices>();
                         CreateWebFormTableResponse res = (CreateWebFormTableResponse)myService.Any(new CreateWebFormTableRequest() { WebObj = obj as EbWebForm, Apps = request.Apps, SolnId = request.SolnId, UserId = request.UserId, WhichConsole = request.WhichConsole });
                     }
+                    else if (obj is EbSqlFunction)
+                    {
+                        EbObjectRunSqlFunctionResponse resp = this.Post(new EbObjectRunSqlFunctionRequest
+                        {
+                            SolnId = request.SolnId,
+                            UserId = request.UserId,
+                            WhichConsole = request.WhichConsole,
+                            UserAuthId = request.UserAuthId,
+                            Json = request.Json
+                        });
+                    }
                 }
             }
             catch (Exception e)
@@ -669,6 +680,17 @@ WHERE
                     {
 						WebFormServices myService = base.ResolveService<WebFormServices>();
                         CreateWebFormTableResponse res = (CreateWebFormTableResponse)myService.Any(new CreateWebFormTableRequest() { WebObj = obj as EbWebForm, Apps = request.Apps, SolnId = request.SolnId, UserId = request.UserId, WhichConsole = request.WhichConsole });
+                    }
+                    else if (obj is EbSqlFunction)
+                    {
+                        EbObjectRunSqlFunctionResponse resp = this.Post(new EbObjectRunSqlFunctionRequest
+                        {
+                            SolnId = request.SolnId,
+                            UserId = request.UserId,
+                            WhichConsole = request.WhichConsole,
+                            UserAuthId = request.UserAuthId,
+                            Json = request.Json
+                        });
                     }
                 }
             }
@@ -745,6 +767,16 @@ WHERE
 						WebFormServices myService = base.ResolveService<WebFormServices>();
                         CreateWebFormTableResponse res = (CreateWebFormTableResponse)myService.Any(new CreateWebFormTableRequest() { WebObj = obj, Apps = request.Apps, SolnId = request.SolnId, UserId = request.UserId, WhichConsole = request.WhichConsole });
                     }
+                    else if(obj is EbSqlFunction)
+                    {
+                        EbObjectRunSqlFunctionResponse resp = this.Post(new EbObjectRunSqlFunctionRequest{
+                            SolnId = request.SolnId,
+                            UserId = request.UserId,
+                            WhichConsole = request.WhichConsole,
+                            UserAuthId = request.UserAuthId,
+                            Json = request.Json
+                        }); 
+                    }
                 }
             }
             catch (Exception e)
@@ -767,7 +799,6 @@ WHERE
 
             try
             {
-
                 using (DbConnection con = EbConnectionFactory.ObjectsDB.GetNewConnection())
                 {
                     con.Open();
@@ -894,12 +925,17 @@ WHERE
             {
                 con.Open();
                 DbCommand cmd = null;
-                string[] arr = { };
-                string code = EbSerializers.Json_Deserialize<EbSqlFunction>(request.Json).Sql;
-                cmd = EbConnectionFactory.ObjectsDB.GetNewCommand(con, code);
-                string refId = cmd.ExecuteScalar().ToString();
-
-                return new EbObjectRunSqlFunctionResponse() { RefId = refId };
+                int status = 0;
+                try {
+                    string code = EbSerializers.Json_Deserialize<EbSqlFunction>(request.Json).Sql;
+                    cmd = EbConnectionFactory.ObjectsDB.GetNewCommand(con, code);
+                    status = cmd.ExecuteNonQuery();
+                }
+                catch(Exception e)
+                {
+                    status = 0;
+                }
+                return new EbObjectRunSqlFunctionResponse() { Status = status };
             };
         }
 
@@ -953,6 +989,8 @@ WHERE
                 return EbObjectTypes.SmsBuilder.IntCode;
             else if (obj is EbDataWriter)
                 return EbObjectTypes.DataWriter.IntCode;
+            else if (obj is EbSqlFunction)
+                return EbObjectTypes.SqlFunction.IntCode;
             else
                 return -1;
         }
@@ -1000,6 +1038,10 @@ WHERE
             else if(obj is EbSmsTemplate)
             {
                 Redis.Set(refId, (EbSmsTemplate)obj);
+            }
+            else if(obj is EbSqlFunction)
+            {
+                Redis.Set(refId, (EbSqlFunction)obj);
             }
         }
 

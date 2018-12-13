@@ -22,7 +22,7 @@ namespace ExpressBase.ServiceStack.Services
         {
             WebFormSchema schema = JsonConvert.DeserializeObject<WebFormSchema>(request.JsonData);
 
-            EbSqlFunction func = new EbSqlFunction(schema);
+            EbSqlFunction func = new EbSqlFunction(schema,this.EbConnectionFactory);
 
             return new FormDataJsonResponse { };
         }
