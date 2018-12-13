@@ -49,7 +49,7 @@ namespace ExpressBase.ServiceStack.Services
 			List<FeedbackEntry> Flist = new List<FeedbackEntry>();
 			List<BillingEntry> Blist = new List<BillingEntry>();
 			List<SurgeryEntry> Slist = new List<SurgeryEntry>();
-			List<string> ImgIds = new List<string>();
+			//List<string> ImgIds = new List<string>();
 			
 			int Mode = 0;
 			if (request.RequestMode == 1)//edit mode 
@@ -65,19 +65,20 @@ namespace ExpressBase.ServiceStack.Services
 									implantation_by,consent_by,anaesthesia_by,post_briefing_by,nurses_id
 								FROM leadsurgerystaffdetails WHERE customers_id=:accountid ORDER BY createddt DESC;
 							SELECT noofgrafts,totalrate,prpsessions,consulted,consultingfeepaid,consultingdoctor,eb_closing,LOWER(TRIM(nature)),consdate,probmonth
-								FROM leadratedetails WHERE customers_id=:accountid;
+								FROM leadratedetails WHERE customers_id=:accountid;";
 
-                            SELECT eb_files_ref_id
-                                FROM customer_files WHERE customer_id = :accountid;";
-//SELECT 
-//	B.id, B.filename, B.tags 
-//FROM
-//	customer_files A,
-//	eb_files_ref B
-//WHERE
-//	A.eb_files_ref_id = B.id AND
-//	A.customer_id = :accountid;
-				paramList.Add(this.EbConnectionFactory.DataDB.GetNewParameter("accountid", EbDbTypes.Int32, request.AccId));
+                //SELECT eb_files_ref_id
+                //    FROM customer_files WHERE customer_id = :accountid AND eb_del = false;
+
+                //SELECT 
+                //	B.id, B.filename, B.tags 
+                //FROM
+                //	customer_files A,
+                //	eb_files_ref B
+                //WHERE
+                //	A.eb_files_ref_id = B.id AND
+                //	A.customer_id = :accountid;
+                paramList.Add(this.EbConnectionFactory.DataDB.GetNewParameter("accountid", EbDbTypes.Int32, request.AccId));
 			}			
 			var ds = this.EbConnectionFactory.DataDB.DoQueries(SqlQry, paramList.ToArray());	
 			
@@ -155,8 +156,8 @@ namespace ExpressBase.ServiceStack.Services
 					CustomerData.Add("probmonth", (string.IsNullOrEmpty(getStringValue(dr[9])) ? string.Empty: getStringValue(dr[9]).Substring(3).Replace("-", "/")));
 				}
 
-				foreach (var i in ds.Tables[Qcnt + 5].Rows)
-					ImgIds.Add(i[0].ToString());
+				//foreach (var i in ds.Tables[Qcnt + 5].Rows)
+				//	ImgIds.Add(i[0].ToString());
 
 				//followup details
 				foreach (var i in ds.Tables[Qcnt + 1].Rows)
@@ -228,7 +229,7 @@ namespace ExpressBase.ServiceStack.Services
 				DistrictList = districtList,
 				SourceCategoryList = sourcecategoryList,
 				SubCategoryList = subcategoryList,
-				ImageIdList = ImgIds,
+				//ImageIdList = ImgIds,
 				StatusList = statusList,
 				ServiceList = serviceList,
 				NurseDict = NurseDict
@@ -246,7 +247,7 @@ FROM
 	eb_files_ref B
 WHERE
 	A.eb_files_ref_id = B.id AND
-	A.customer_id = :accountid;";
+	A.customer_id = :accountid AND A.eb_del = false;";
 
             List<FileMetaInfo> _list = new List<FileMetaInfo>();
 
@@ -589,30 +590,30 @@ WHERE
 					}
 				}				
 			}
-			List<int> ImgRefId = JsonConvert.DeserializeObject<List<int>>(request.ImgRefId);
-			rstatus += Update_Table_Customer_Files(accid, ImgRefId) * 100;
+			//List<int> ImgRefId = JsonConvert.DeserializeObject<List<int>>(request.ImgRefId);
+			//rstatus += Update_Table_Customer_Files(accid, ImgRefId) * 100;
 
 			return new SaveCustomerResponse { Status = (request.RequestMode == 0)? accid :rstatus };
 		}
 
-		private int Update_Table_Customer_Files(int accountid, List<int> imagerefid)
-		{			
-			string query = @"INSERT INTO customer_files(customer_id, eb_files_ref_id) VALUES";
-			List<DbParameter> parameters = new List<DbParameter>();
-			int i = 0, rstatus = 0;
-			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("customer_id", EbDbTypes.Int32, accountid));
-			for (i = 0; i < imagerefid.Count; i++)
-			{
-				query += "(:customer_id, :eb_files_ref_id" + i + "),";
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_files_ref_id" + i, EbDbTypes.Int32, imagerefid[i]));
-			}
-			if (i > 0)
-			{
-				query = query.Substring(0, query.Length - 1) + ";";
-				rstatus = this.EbConnectionFactory.ObjectsDB.InsertTable(query, parameters.ToArray());
-			}
-			return rstatus;
-		}
+		//private int Update_Table_Customer_Files(int accountid, List<int> imagerefid)
+		//{			
+		//	string query = @"INSERT INTO customer_files(customer_id, eb_files_ref_id) VALUES";
+		//	List<DbParameter> parameters = new List<DbParameter>();
+		//	int i = 0, rstatus = 0;
+		//	parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("customer_id", EbDbTypes.Int32, accountid));
+		//	for (i = 0; i < imagerefid.Count; i++)
+		//	{
+		//		query += "(:customer_id, :eb_files_ref_id" + i + "),";
+		//		parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_files_ref_id" + i, EbDbTypes.Int32, imagerefid[i]));
+		//	}
+		//	if (i > 0)
+		//	{
+		//		query = query.Substring(0, query.Length - 1) + ";";
+		//		rstatus = this.EbConnectionFactory.ObjectsDB.InsertTable(query, parameters.ToArray());
+		//	}
+		//	return rstatus;
+		//}
 
 		public SaveCustomerFollowupResponse Any(SaveCustomerFollowupRequest request)
 		{
@@ -757,49 +758,70 @@ WHERE
 			return new LmUniqueCheckResponse { Status = rstatus };
 		}
 
+        public LmDeleteImageResponse Any(LmDeleteImageRequest request)
+        {
+            string query = @"
+UPDATE 
+    customer_files 
+SET 
+    eb_del = true 
+WHERE 
+    customer_id = :customer_id AND 
+    eb_del = false AND 
+    eb_files_ref_id = ANY(STRING_TO_ARRAY(:ids, ',')::INT[]);";
+
+            int[] refIds = JsonConvert.DeserializeObject<int[]>(request.ImgRefIds);
+            DbParameter[] parameters = new DbParameter[] {
+                this.EbConnectionFactory.ObjectsDB.GetNewParameter("customer_id", EbDbTypes.Int32, request.CustId),
+                this.EbConnectionFactory.ObjectsDB.GetNewParameter("ids", EbDbTypes.String, refIds.Join(","))
+            };
+
+            int rstatus = this.EbConnectionFactory.ObjectsDB.UpdateTable(query, parameters);
+
+            return new LmDeleteImageResponse { RowsAffected = rstatus};
+        }
 
 
+        //private int InsertToTable(string TblName, List<KeyValueType_Field> Fields)
+        //{
+        //	List<DbParameter> parameters = new List<DbParameter>();
+        //	string cols = string.Empty;
+        //	string vals = string.Empty;
+        //	foreach (KeyValueType_Field item in Fields)
+        //	{
+        //		parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(item.Key, item.Type, item.Value));
+        //		cols += item.Key + ",";
+        //		vals += ":" + item.Key + ",";
+        //	}
+        //	string strQry = @"INSERT INTO @tblname@(@cols@) VALUES(@vals@);"
+        //						.Replace("@tblname@", TblName)
+        //						.Replace("@cols@", cols.Substring(0, cols.Length - 1))
+        //						.Replace("@vals@", vals.Substring(0, vals.Length - 1));
+        //	this.EbConnectionFactory.ObjectsDB.InsertTable(strQry, parameters.ToArray());
+        //	return 1;
+        //}
 
-		//private int InsertToTable(string TblName, List<KeyValueType_Field> Fields)
-		//{
-		//	List<DbParameter> parameters = new List<DbParameter>();
-		//	string cols = string.Empty;
-		//	string vals = string.Empty;
-		//	foreach (KeyValueType_Field item in Fields)
-		//	{
-		//		parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(item.Key, item.Type, item.Value));
-		//		cols += item.Key + ",";
-		//		vals += ":" + item.Key + ",";
-		//	}
-		//	string strQry = @"INSERT INTO @tblname@(@cols@) VALUES(@vals@);"
-		//						.Replace("@tblname@", TblName)
-		//						.Replace("@cols@", cols.Substring(0, cols.Length - 1))
-		//						.Replace("@vals@", vals.Substring(0, vals.Length - 1));
-		//	this.EbConnectionFactory.ObjectsDB.InsertTable(strQry, parameters.ToArray());
-		//	return 1;
-		//}
-
-		//private int UpdateToTable(string TblName, List<KeyValueType_Field> Fields, List<KeyValueType_Field> WhereFields)
-		//{
-		//	List<DbParameter> parameters = new List<DbParameter>();
-		//	string s_set = string.Empty;
-		//	string s_where = string.Empty;
-		//	foreach (KeyValueType_Field item in Fields)
-		//	{
-		//		parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(item.Key, item.Type, item.Value));
-		//		s_set += item.Key + "=:" + item.Key + ",";
-		//	}
-		//	foreach (KeyValueType_Field item in WhereFields)
-		//	{
-		//		parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(item.Key, item.Type, item.Value));
-		//		s_where += item.Key + "=:" + item.Key + " AND ";
-		//	}
-		//	string strQry = @"UPDATE @tblname@ SET @str_set@ WHERE @str_where@;"
-		//						.Replace("@tblname@", TblName)
-		//						.Replace("@str_set@", s_set.Substring(0, s_set.Length - 1))
-		//						.Replace("@str_where@", s_where.Substring(0, s_where.Length - 4));
-		//	this.EbConnectionFactory.ObjectsDB.UpdateTable(strQry, parameters.ToArray());
-		//	return 1;
-		//}
-	}
+        //private int UpdateToTable(string TblName, List<KeyValueType_Field> Fields, List<KeyValueType_Field> WhereFields)
+        //{
+        //	List<DbParameter> parameters = new List<DbParameter>();
+        //	string s_set = string.Empty;
+        //	string s_where = string.Empty;
+        //	foreach (KeyValueType_Field item in Fields)
+        //	{
+        //		parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(item.Key, item.Type, item.Value));
+        //		s_set += item.Key + "=:" + item.Key + ",";
+        //	}
+        //	foreach (KeyValueType_Field item in WhereFields)
+        //	{
+        //		parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(item.Key, item.Type, item.Value));
+        //		s_where += item.Key + "=:" + item.Key + " AND ";
+        //	}
+        //	string strQry = @"UPDATE @tblname@ SET @str_set@ WHERE @str_where@;"
+        //						.Replace("@tblname@", TblName)
+        //						.Replace("@str_set@", s_set.Substring(0, s_set.Length - 1))
+        //						.Replace("@str_where@", s_where.Substring(0, s_where.Length - 4));
+        //	this.EbConnectionFactory.ObjectsDB.UpdateTable(strQry, parameters.ToArray());
+        //	return 1;
+        //}
+    }
 }
