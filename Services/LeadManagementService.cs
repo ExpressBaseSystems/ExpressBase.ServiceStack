@@ -590,32 +590,32 @@ WHERE
 					}
 				}				
 			}
-			//List<int> ImgRefId = JsonConvert.DeserializeObject<List<int>>(request.ImgRefId);
-			//rstatus += Update_Table_Customer_Files(accid, ImgRefId) * 100;
+			List<int> ImgRefId = JsonConvert.DeserializeObject<List<int>>(request.ImgRefId);
+			rstatus += Update_Table_Customer_Files(accid, ImgRefId) * 100;
 
 			return new SaveCustomerResponse { Status = (request.RequestMode == 0)? accid :rstatus };
 		}
 
-		//private int Update_Table_Customer_Files(int accountid, List<int> imagerefid)
-		//{			
-		//	string query = @"INSERT INTO customer_files(customer_id, eb_files_ref_id) VALUES";
-		//	List<DbParameter> parameters = new List<DbParameter>();
-		//	int i = 0, rstatus = 0;
-		//	parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("customer_id", EbDbTypes.Int32, accountid));
-		//	for (i = 0; i < imagerefid.Count; i++)
-		//	{
-		//		query += "(:customer_id, :eb_files_ref_id" + i + "),";
-		//		parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_files_ref_id" + i, EbDbTypes.Int32, imagerefid[i]));
-		//	}
-		//	if (i > 0)
-		//	{
-		//		query = query.Substring(0, query.Length - 1) + ";";
-		//		rstatus = this.EbConnectionFactory.ObjectsDB.InsertTable(query, parameters.ToArray());
-		//	}
-		//	return rstatus;
-		//}
+        private int Update_Table_Customer_Files(int accountid, List<int> imagerefid)
+        {
+            string query = @"INSERT INTO customer_files(customer_id, eb_files_ref_id) VALUES";
+            List<DbParameter> parameters = new List<DbParameter>();
+            int i = 0, rstatus = 0;
+            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("customer_id", EbDbTypes.Int32, accountid));
+            for (i = 0; i < imagerefid.Count; i++)
+            {
+                query += "(:customer_id, :eb_files_ref_id" + i + "),";
+                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_files_ref_id" + i, EbDbTypes.Int32, imagerefid[i]));
+            }
+            if (i > 0)
+            {
+                query = query.Substring(0, query.Length - 1) + ";";
+                rstatus = this.EbConnectionFactory.ObjectsDB.InsertTable(query, parameters.ToArray());
+            }
+            return rstatus;
+        }
 
-		public SaveCustomerFollowupResponse Any(SaveCustomerFollowupRequest request)
+        public SaveCustomerFollowupResponse Any(SaveCustomerFollowupRequest request)
 		{
 			int rstatus = 0;
 			FeedbackEntry F_Obj = JsonConvert.DeserializeObject<FeedbackEntry>(request.Data);
