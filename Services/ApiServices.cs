@@ -1,5 +1,6 @@
 ﻿using ExpressBase.Common;
 using ExpressBase.Common.Data;
+using ExpressBase.Common.Objects;
 using ExpressBase.Common.Structures;
 using ExpressBase.Objects;
 using ExpressBase.Objects.ServiceStack_Artifacts;
@@ -20,11 +21,45 @@ namespace ExpressBase.ServiceStack.Services
 
         public FormDataJsonResponse Post(FormDataJsonRequest request)
         {
+            int _name_c = 1;
+            UniqueObjectNameCheckResponse uniqnameresp;
+            EbObjectService _studio_serv = base.ResolveService<EbObjectService>();
             WebFormSchema schema = JsonConvert.DeserializeObject<WebFormSchema>(request.JsonData);
+            EbSqlFunction obj = new EbSqlFunction(schema, this.EbConnectionFactory);
+            string _json = EbSerializers.Json_Serialize(obj);
 
-            EbSqlFunction func = new EbSqlFunction(schema,this.EbConnectionFactory);
+            do
+            {
+                uniqnameresp = _studio_serv.Get(new UniqueObjectNameCheckRequest { ObjName = obj.Name });
+                if (!uniqnameresp.IsUnique)
+                {
+                    obj.Name = obj.Name.Remove(obj.Name.Length - 1) + _name_c++;
+                    obj.DisplayName = obj.Name;
+                }
+            }
+            while (uniqnameresp.IsUnique);
 
-            return new FormDataJsonResponse { };
+            EbObject_Create_New_ObjectRequest ds = new EbObject_Create_New_ObjectRequest
+            {
+                Name = obj.Name,
+                Description = obj.Description,
+                Json = _json,
+                Status = ObjectLifeCycleStatus.Live,
+                Relations = null,
+                IsSave = true,
+                Tags = null,
+                Apps = string.Empty,
+                SourceSolutionId = request.SolnId,
+                SourceObjId = "0",
+                SourceVerID = "0",
+                DisplayName = obj.DisplayName,
+                SolnId = request.SolnId,
+                UserId = request.UserId
+            };
+
+            EbObject_Create_New_ObjectResponse res = _studio_serv.Post(ds);
+
+            return new FormDataJsonResponse { RefId =res.RefId};
         }
 
         //generate insert obj and update object
