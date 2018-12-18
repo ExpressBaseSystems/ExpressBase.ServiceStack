@@ -14,6 +14,7 @@ using Npgsql;
 using ExpressBase.Common.Structures;
 using System.Data.Common;
 using System.Text.RegularExpressions;
+using ExpressBase.Common.Constants;
 
 namespace ExpressBase.ServiceStack
 {
@@ -101,7 +102,7 @@ namespace ExpressBase.ServiceStack
                         if (matches.Count == 0)
                         {
                             tempsql = curSql.ReplaceAll(";", string.Empty);
-                            tempsql = "SELECT COUNT(*) FROM (" + tempsql + ") data"+i+";";
+                            tempsql = "SELECT COUNT(*) FROM (" + tempsql + ") data" + i + ";";
                         }
 
                         var sql1 = curSql.ReplaceAll(";", string.Empty);
@@ -266,7 +267,7 @@ namespace ExpressBase.ServiceStack
                 _ds = EbSerializers.Json_Deserialize(result.Data[0].Json);
                 Redis.Set<EbDataReader>(request.RefId, _ds);
             }
-            if (_ds.FilterDialogRefId != string.Empty && _ds.FilterDialogRefId !=null)
+            if (_ds.FilterDialogRefId != string.Empty && _ds.FilterDialogRefId != null)
             {
                 var _dsf = this.Redis.Get<EbFilterDialog>(_ds.FilterDialogRefId);
                 if (_dsf == null)
@@ -293,6 +294,28 @@ namespace ExpressBase.ServiceStack
                 DataSet = _dataset
             };
             return dsresponse;
+        }
+
+        public SqlFuncTestResponse Post(SqlFuncTestRequest request)
+        {
+            SqlFuncTestResponse resp = new SqlFuncTestResponse();
+            try
+            {
+                List<DbParameter> parameter = new List<DbParameter>();
+                List<string> _params = new List<string>();
+                foreach (InputParam p in request.Parameters)
+                {
+                    _params.Add(":" + p.Column);
+                    parameter.Add(this.EbConnectionFactory.DataDB.GetNewParameter(p.Column, (EbDbTypes)p.Type, p.Value));
+                }
+                string sql = string.Format(@"SELECT * FROM {0}({1})", request.FunctionName, string.Join(",", _params));
+                var res = this.EbConnectionFactory.ObjectsDB.DoQuery(sql,parameter.ToArray());
+            }
+            catch (Exception e)
+            {
+
+            }
+            return resp;
         }
     }
 }
