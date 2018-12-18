@@ -33,6 +33,7 @@ namespace ExpressBase.ServiceStack.Services
         private WebFormSchema GetWebFormSchema(EbControlContainer _container)
         {
             WebFormSchema _formSchema = new WebFormSchema();
+            _formSchema.FormName = _container.Name;
             _formSchema.MasterTable = _container.TableName;
             _formSchema.Tables = new List<TableSchema>();
             _formSchema = GetWebFormSchemaRec(_formSchema, _container);
