@@ -24,7 +24,55 @@ namespace ExpressBase.ServiceStack.Services
         public CreateWebFormTableResponse Any(CreateWebFormTableRequest request)
         {
             CreateWebFormTableRec(request.WebObj, request.WebObj.TableName);
+
+            WebFormSchema _temp = GetWebFormSchema(request.WebObj);/////////
+
             return new CreateWebFormTableResponse { };
+        }
+
+        private WebFormSchema GetWebFormSchema(EbControlContainer _container)
+        {
+            WebFormSchema _formSchema = new WebFormSchema();
+            _formSchema.MasterTable = _container.TableName;
+            _formSchema.Tables = new List<TableSchema>();
+            _formSchema = GetWebFormSchemaRec(_formSchema, _container);
+            return _formSchema;
+        }
+
+        private WebFormSchema GetWebFormSchemaRec(WebFormSchema _schema, EbControlContainer _container)
+        {
+            IEnumerable<EbControl> _flatControls = _container.Controls.Get1stLvlControls();
+            TableSchema _table = _schema.Tables.FirstOrDefault(tbl => tbl.TableName == _container.TableName);
+            if (_table == null)
+            {
+                List<ColumSchema> _columns = new List<ColumSchema>();
+                foreach (EbControl control in _flatControls)
+                {
+                    _columns.Add(new ColumSchema { ColumName = control.Name, EbDbType = (int)control.EbDbType });
+                }
+                _schema.Tables.Add(new TableSchema { TableName = _container.TableName, Colums = _columns });
+            }
+            else
+            {
+                foreach (EbControl control in _flatControls)
+                {
+                    _table.Colums.Add(new ColumSchema { ColumName = control.Name, EbDbType = (int)control.EbDbType });
+                }
+            }
+            foreach (EbControl _control in _container.Controls)
+            {
+                if (_control is EbControlContainer)
+                {
+                    EbControlContainer Container = _control as EbControlContainer;
+
+                    if (Container.TableName.IsNullOrEmpty())
+                    {
+                        Container.TableName = _container.TableName;
+                    }
+                    _schema = GetWebFormSchemaRec(_schema, Container);
+                }
+            }
+            return _schema;
         }
 
         private void CreateWebFormTableRec(EbControlContainer _container, string _table)
