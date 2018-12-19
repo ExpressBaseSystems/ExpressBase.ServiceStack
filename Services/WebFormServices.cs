@@ -23,6 +23,9 @@ namespace ExpressBase.ServiceStack.Services
 
         public CreateWebFormTableResponse Any(CreateWebFormTableRequest request)
         {
+            if (request.WebObj is EbWebForm)
+                (request.WebObj as EbWebForm).AfterRedisGet(this);
+
             CreateWebFormTableRec(request.WebObj, request.WebObj.TableName);
 
             WebFormSchema _temp = GetWebFormSchema(request.WebObj);/////////
@@ -293,7 +296,9 @@ namespace ExpressBase.ServiceStack.Services
         {
             var myService = base.ResolveService<EbObjectService>();
             EbObjectParticularVersionResponse formObj = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = RefId });
-            return EbSerializers.Json_Deserialize(formObj.Data[0].Json);
+            EbWebForm _form = EbSerializers.Json_Deserialize(formObj.Data[0].Json);
+            _form.AfterRedisGet(this);
+            return _form;
         }
 
         public DoUniqueCheckResponse Any(DoUniqueCheckRequest Req)
@@ -372,16 +377,17 @@ WHERE
                 int i = 0;
                 foreach (SingleRow row in entry.Value)
                 {
-                    string _qry = "INSERT INTO {0} ({1}, eb_created_by, eb_created_at {3} ) VALUES ({2} :eb_createdby, :eb_createdat {4});";
+                    string _qry = "INSERT INTO {0} ({1} eb_created_by, eb_created_at {3} ) VALUES ({2} :eb_createdby, :eb_createdat {4});";
                     string _tblname = entry.Key;
                     string _cols = string.Empty;
                     string _values = string.Empty;
-                    _cols = FormObj.GetCtrlNamesOfTable(entry.Key);
+                    //_cols = FormObj.GetCtrlNamesOfTable(entry.Key);
 
                     foreach (SingleColumn rField in row.Columns)
                     {
                         if (!rField.Name.Equals("id"))
                         {
+                            _cols += string.Concat(rField.Name, ", ");
                             _values += string.Concat(":", rField.Name, "_", i, ", ");
                             param.Add(this.EbConnectionFactory.DataDB.GetNewParameter(rField.Name + "_" + i, (EbDbTypes)rField.Type, rField.Value));                 
                         }
@@ -618,6 +624,20 @@ WHERE
             }
 
             return new GetAuditTrailResponse { Logs = logs };
+        }
+
+        //=============================================== MISCELLANEOUS ====================================================
+
+        public GetDesignHtmlResponse Post(GetDesignHtmlRequest request)
+        {
+            var myService = base.ResolveService<EbObjectService>();
+            EbObjectParticularVersionResponse formObj = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = request.RefId });
+
+            EbUserControl _uc = EbSerializers.Json_Deserialize(formObj.Data[0].Json);
+            //_form.AfterRedisGet(this);
+            string _temp = _uc.GetDHtml();
+
+            return new GetDesignHtmlResponse {Html = _temp };
         }
     }
 }
