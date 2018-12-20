@@ -77,13 +77,14 @@ namespace ExpressBase.ServiceStack.MQServices
                             To = _u.Email,
                             Cc = /*ebEmailTemplate.Cc.Split(",")*/ null,
                             Bcc = /*ebEmailTemplate.Bcc.Split(",")*/ null,
-                            Message = "ebEmailTemplate.Body",
-                            Subject = "ebEmailTemplate.Subject",
+                            Subject = RepRes.ReportName + " - " + RepRes.CurrentTimestamp.ToShortDateString(),
+                            Message = "<div>Hi, </div><div>&nbsp;The report " + RepRes.ReportName + " generated on " +
+                            RepRes.CurrentTimestamp.ToShortDateString() + " at " + RepRes.CurrentTimestamp.ToShortTimeString() + ". Please find the attachment for the same. </div><div><br>Thanks.<br></div>",
                             UserId = request.JobArgs.UserId,
                             UserAuthId = request.JobArgs.UserAuthId,
                             SolnId = request.JobArgs.SolnId,
                             AttachmentReport = RepRes.ReportBytea,
-                            AttachmentName = RepRes.ReportName
+                            AttachmentName = RepRes.ReportName + " - " + RepRes.CurrentTimestamp.ToShortDateString()
                         });
                     }
                     //LocaleReport.Add(locale.Key, RepRes.ReportBytea);

@@ -1,7 +1,9 @@
 ﻿using ExpressBase.Common;
 using ExpressBase.Common.Data;
 using ExpressBase.Common.Structures;
+using ExpressBase.Objects.Services;
 using ExpressBase.Objects.ServiceStack_Artifacts;
+using ServiceStack;
 using ServiceStack.Messaging;
 using System;
 using System.Collections.Generic;
@@ -13,31 +15,32 @@ namespace ExpressBase.ServiceStack.Services
 {
     public class SchedulerServices : EbBaseService
     {
-        public SchedulerServices(IEbConnectionFactory _dbf, IMessageProducer _mqp, IMessageQueueClient _mqc):base(_dbf, _mqp, _mqc) { }
+        public SchedulerServices(IEbConnectionFactory _dbf, IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_dbf, _mqp, _mqc) { }
 
         public SchedulerMQResponse Post(SchedulerMQRequest request)
         {
-            using (var con = this.EbConnectionFactory.DataDB.GetNewConnection())
-            {
-                con.Open();
-                string sql = @"INSERT INTO eb_schedules(task, created_by, created_at, eb_del)
-                VALUES(:task, :created_by, NOW(), 'F')";
-                DbParameter[] parameters = { EbConnectionFactory.DataDB.GetNewParameter("task", EbDbTypes.Json,EbSerializers.Json_Serialize(request.Task)),
-               EbConnectionFactory.DataDB.GetNewParameter("created_by", EbDbTypes.Int32,  request.Task.JobArgs.UserId) };
-                var dt = EbConnectionFactory.DataDB.DoNonQuery(sql, parameters);
-            }
+            //using (var con = this.EbConnectionFactory.DataDB.GetNewConnection())
+            //{
+            //    con.Open();
+            //    string sql = @"INSERT INTO eb_schedules(task, created_by, created_at, eb_del)
+            //    VALUES(:task, :created_by, NOW(), 'F')";
+            //    DbParameter[] parameters = { EbConnectionFactory.DataDB.GetNewParameter("task", EbDbTypes.Json,EbSerializers.Json_Serialize(request.Task)),
+            //   EbConnectionFactory.DataDB.GetNewParameter("created_by", EbDbTypes.Int32,  request.Task.JobArgs.UserId) };
+            //    var dt = EbConnectionFactory.DataDB.DoNonQuery(sql, parameters);
+            //}
             MessageProducer3.Publish(new ScheduleRequest { Task = request.Task });
             return null;
         }
+
         public UnschedulerMQResponse Post(UnschedulerMQRequest request)
         {
             UnschedulerMQResponse res = new UnschedulerMQResponse();
-            MessageProducer3.Publish(new UnscheduleRequest { TriggerKey = request.TriggerKey }); 
+            MessageProducer3.Publish(new UnscheduleRequest { TriggerKey = request.TriggerKey });
             return res;
 
         }
 
-            public GetAllUsersResponse Get(GetAllUsersRequest request)
+        public GetAllUsersResponse Get(GetAllUsersRequest request)
         {
             GetAllUsersResponse res = new GetAllUsersResponse();
             using (var con = this.EbConnectionFactory.DataDB.GetNewConnection())
@@ -60,7 +63,7 @@ namespace ExpressBase.ServiceStack.Services
                 res.Users = Users;
                 res.UserGroups = UserGroups;
             }
-            return res ;
+            return res;
         }
         public GetUserEmailsResponse Get(GetUserEmailsRequest request)
         {
@@ -74,7 +77,7 @@ namespace ExpressBase.ServiceStack.Services
                                 groupid = ANY(string_to_array(:groupids,',')::int[])) ;";
                 DbParameter[] parameters = { EbConnectionFactory.DataDB.GetNewParameter("userids", EbDbTypes.String, (request.UserIds==null)?string.Empty:request.UserIds),
                EbConnectionFactory.DataDB.GetNewParameter("groupids", EbDbTypes.String, ( request.UserGroupIds == null)?string.Empty:request.UserGroupIds) };
-                
+
                 var dt = this.EbConnectionFactory.DataDB.DoQueries(sql, parameters);
                 Dictionary<int, string> Users = new Dictionary<int, string>();
                 Dictionary<int, string> UserGroups = new Dictionary<int, string>();
@@ -89,7 +92,30 @@ namespace ExpressBase.ServiceStack.Services
                 res.UserEmails = Users;
                 res.UserGroupEmails = UserGroups;
             }
-                return res;
+            return res;
         }
     }
+
+    [Restrict(InternalOnly = true)]
+    class UpdateSolutionSchedulesServices : EbMqBaseService
+    {
+        public UpdateSolutionSchedulesServices(IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_mqp, _mqc) { }
+
+        public SchedulerMQResponse Post(UpdateSolutionSchedulesRequest request)
+    {
+            EbConnectionFactory _ebConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
+            using (var con = _ebConnectionFactory.DataDB.GetNewConnection())
+        {
+            con.Open();
+            string sql = @"INSERT INTO eb_schedules(task, created_by, created_at, eb_del, jobkey, triggerkey)
+                VALUES(:task, :created_by, NOW(), 'F', :jobkey, :triggerkey)";
+            DbParameter[] parameters = { _ebConnectionFactory.DataDB.GetNewParameter("task", EbDbTypes.Json,EbSerializers.Json_Serialize(request.Task)),
+               _ebConnectionFactory.DataDB.GetNewParameter("created_by", EbDbTypes.Int32,  request.Task.JobArgs.UserId),
+               _ebConnectionFactory.DataDB.GetNewParameter("jobkey", EbDbTypes.String,  request.JobKey),
+               _ebConnectionFactory.DataDB.GetNewParameter("triggerkey", EbDbTypes.String,  request.TriggerKey) };
+            var dt = _ebConnectionFactory.DataDB.DoNonQuery(sql, parameters);
+        }
+        return null;
+    }
+}
 }
