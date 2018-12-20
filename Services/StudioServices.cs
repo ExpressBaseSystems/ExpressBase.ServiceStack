@@ -74,6 +74,12 @@ namespace ExpressBase.ServiceStack
         }
 
         [CompressResponse]
+        public object Any(EbObjectParticularVersionRequest request)
+        {
+            return this.Get(request);
+        }
+
+        [CompressResponse]
         public object Get(EbObjectLatestCommitedRequest request) // Fetch latest committed version with json - for Execute/Run/Consume a particular Object
         {
             List<EbObjectWrapper> wrap = new List<EbObjectWrapper>();
@@ -189,7 +195,9 @@ FROM
 WHERE
     EO.id = EOV.eb_objects_id AND
     EOV.working_mode = 'F' AND
-    EO.obj_type = 14;
+    EO.obj_type = 14 
+ORDER BY 
+    EO.display_name ASC, EOV.version_num DESC;
 ";//14-usercontrol, 2-datareader
             List<DbParameter> parameters = new List<DbParameter>();
             if (!request.EbObjectRefId.IsNullOrEmpty())
@@ -210,7 +218,9 @@ WHERE
 	    UNION
 	    SELECT a.dominant FROM eb_objects_relations a, objects_relations b WHERE a.eb_del='F' AND a.dependant = b.dominant
         )SELECT * FROM objects_relations
-    );    
+    )
+ORDER BY 
+    EO.display_name ASC, EOV.version_num DESC;    
 ";
                 parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("dependant", EbDbTypes.String, request.EbObjectRefId));
             }
