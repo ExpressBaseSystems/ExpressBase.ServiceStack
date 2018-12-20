@@ -77,9 +77,8 @@ namespace ExpressBase.ServiceStack
                 Report.FileClient = new EbStaticFileClient();
                 Report.FileClient = FileClient;
                 Report.Solution = Redis.Get<Eb_Solution>(String.Format("solution_{0}", request.SolnId));
-                Report.CurrentTimestamp = DateTime.Now;
                 Report.User = request.ReadingUser;
-                Report.CultureInfo =  CultureInfo.GetCultureInfo(Report.User.Preference.Locale);
+                Report.CultureInfo = CultureInfo.GetCultureInfo(Report.User.Preference.Locale);
                 Report.Parameters = request.Params;
                 //-- END REPORT object INIT
                 iTextSharp.text.Rectangle rec = new iTextSharp.text.Rectangle(Report.WidthPt, Report.HeightPt);
@@ -121,7 +120,8 @@ namespace ExpressBase.ServiceStack
             {
                 StreamWrapper = new MemorystreamWrapper(Report.Ms1),
                 ReportName = Report.DisplayName,
-                ReportBytea = Report.Ms1.ToArray()
+                ReportBytea = Report.Ms1.ToArray(),
+                CurrentTimestamp = Report.CurrentTimestamp
             };
         }
         public void FillingCollections(EbReport Report)
@@ -151,7 +151,7 @@ namespace ExpressBase.ServiceStack
                     EbDataField field_org = field as EbDataField;
                     if (!string.IsNullOrEmpty(field_org.LinkRefId) && !Report.LinkCollection.ContainsKey(field_org.LinkRefId))
                         FindControls(Report, field_org);//Finding the link's parameter controls
-                    
+
                     if (section_typ == EbReportSectionType.Detail)
                         FindLargerDataTable(Report, field_org);// finding the table of highest rowcount from dataset
 
@@ -220,7 +220,7 @@ namespace ExpressBase.ServiceStack
         }
 
         public void FillSummaryCollection(EbReport report, EbDataField field, EbReportSectionType section_typ)
-        {            
+        {
             if (section_typ == EbReportSectionType.PageFooter)
             {
                 if (!report.PageSummaryFields.ContainsKey(field.SummaryOf))

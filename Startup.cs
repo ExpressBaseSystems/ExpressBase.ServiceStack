@@ -195,7 +195,8 @@ namespace ExpressBase.ServiceStack
             mqServer.RegisterHandler<ImportApplicationRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<SMSCreateRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<ReportInternalRequest>(base.ExecuteMessage);
-            
+            mqServer.RegisterHandler<UpdateSolutionSchedulesRequest>(base.ExecuteMessage);
+
             mqServer.Start();
 
             container.AddScoped<IMessageProducer, RabbitMqProducer>(serviceProvider =>
