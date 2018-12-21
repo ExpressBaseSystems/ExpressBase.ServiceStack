@@ -303,17 +303,27 @@ namespace ExpressBase.ServiceStack
             {
                 List<DbParameter> parameter = new List<DbParameter>();
                 List<string> _params = new List<string>();
-                foreach (InputParam p in request.Parameters)
+                string sql = string.Empty;
+                if (request.Parameters.Count > 0)
                 {
-                    _params.Add(":" + p.Column);
-                    parameter.Add(this.EbConnectionFactory.DataDB.GetNewParameter(p.Column, (EbDbTypes)p.Type, p.Value));
+                    foreach (InputParam p in request.Parameters)
+                    {
+                        _params.Add(":" + p.Column);
+                        parameter.Add(this.EbConnectionFactory.DataDB.GetNewParameter(p.Column, (EbDbTypes)p.Type, p.Value));
+                    }
+                    sql = string.Format(@"SELECT * FROM {0}({1})", request.FunctionName, string.Join(",", _params));
+                    resp.Data = this.EbConnectionFactory.ObjectsDB.DoQuery(sql, parameter.ToArray());
                 }
-                string sql = string.Format(@"SELECT * FROM {0}({1})", request.FunctionName, string.Join(",", _params));
-                var res = this.EbConnectionFactory.ObjectsDB.DoQuery(sql,parameter.ToArray());
+                else
+                {
+                    sql = string.Format(@"SELECT * FROM {0}()", request.FunctionName);
+                    resp.Data = this.EbConnectionFactory.ObjectsDB.DoQuery(sql);
+                }
             }
             catch (Exception e)
             {
-
+                resp.ResponseStatus.Message = e.Message;
+                resp.Data = new EbDataTable();
             }
             return resp;
         }

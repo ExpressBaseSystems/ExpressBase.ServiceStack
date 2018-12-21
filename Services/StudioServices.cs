@@ -214,15 +214,15 @@ WHERE
     EO.obj_type = 14 AND
     EOV.refid NOT IN (
         WITH RECURSIVE objects_relations AS (
-	    SELECT dominant FROM eb_objects_relations WHERE eb_del='F' AND dependant = :dependant
+	    SELECT dependant FROM eb_objects_relations WHERE eb_del='F' AND dominant = :dominant
 	    UNION
-	    SELECT a.dominant FROM eb_objects_relations a, objects_relations b WHERE a.eb_del='F' AND a.dependant = b.dominant
+	    SELECT a.dependant FROM eb_objects_relations a, objects_relations b WHERE a.eb_del='F' AND a.dominant = b.dependant
         )SELECT * FROM objects_relations
     )
 ORDER BY 
     EO.display_name ASC, EOV.version_num DESC;    
 ";
-                parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("dependant", EbDbTypes.String, request.EbObjectRefId));
+                parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("dominant", EbDbTypes.String, request.EbObjectRefId));
             }
             
             EbDataTable dt = EbConnectionFactory.ObjectsDB.DoQuery(query, parameters.ToArray());
