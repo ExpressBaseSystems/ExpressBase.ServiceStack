@@ -634,8 +634,9 @@ WHERE
             EbObjectParticularVersionResponse formObj = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = request.RefId });
 
             EbUserControl _uc = EbSerializers.Json_Deserialize(formObj.Data[0].Json);
-            //_form.AfterRedisGet(this);
-            string _temp = _uc.GetDHtml();
+            _uc.AfterRedisGet(this);
+            _uc.VersionNumber = formObj.Data[0].VersionNumber;//Version number(w) in EbObject is not updated when it is commited
+            string _temp = _uc.GetInnerHtml();
 
             return new GetDesignHtmlResponse {Html = _temp };
         }
