@@ -77,8 +77,9 @@ namespace ExpressBase.ServiceStack
                 Report.FileClient = new EbStaticFileClient();
                 Report.FileClient = FileClient;
                 Report.Solution = Redis.Get<Eb_Solution>(String.Format("solution_{0}", request.SolnId));
-                Report.User = request.ReadingUser;
-                Report.CultureInfo = CultureInfo.GetCultureInfo(Report.User.Preference.Locale);
+                Report.ReadingUser = request.ReadingUser;
+                Report.RenderingUser = request.RenderingUser;
+                Report.CultureInfo = CultureInfo.GetCultureInfo(Report.ReadingUser.Preference.Locale);
                 Report.Parameters = request.Params;
                 //-- END REPORT object INIT
                 iTextSharp.text.Rectangle rec = new iTextSharp.text.Rectangle(Report.WidthPt, Report.HeightPt);
