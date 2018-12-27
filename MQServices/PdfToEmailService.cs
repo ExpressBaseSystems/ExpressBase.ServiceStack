@@ -79,6 +79,7 @@ namespace ExpressBase.ServiceStack.MQServices
                 {
                     Refid = ebEmailTemplate.AttachmentReportRefID,
                     RenderingUser = new User { FullName = "MQ" },
+                    ReadingUser= new User { Preference=new Preferences {Locale="en-US",TimeZone= "(UTC) Coordinated Universal Time" } },
                     Params = request.Params
                 });
                 RepRes.StreamWrapper.Memorystream.Position = 0;
