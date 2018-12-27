@@ -55,7 +55,8 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     _columns.Add(new ColumSchema { ColumName = control.Name, EbDbType = (int)control.EbDbType });
                 }
-                _schema.Tables.Add(new TableSchema { TableName = _container.TableName.ToLower(), Colums = _columns });
+                if(_columns.Count > 0)
+                    _schema.Tables.Add(new TableSchema { TableName = _container.TableName.ToLower(), Colums = _columns });
             }
             else
             {
