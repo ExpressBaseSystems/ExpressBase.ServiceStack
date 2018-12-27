@@ -26,9 +26,10 @@ namespace ExpressBase.ServiceStack.Services
             if (request.WebObj is EbWebForm)
                 (request.WebObj as EbWebForm).AfterRedisGet(this);
 
-            CreateWebFormTableRec(request.WebObj, request.WebObj.TableName);
+            //CreateWebFormTableRec(request.WebObj, request.WebObj.TableName);
 
             WebFormSchema _temp = GetWebFormSchema(request.WebObj);/////////
+            CreateWebFormTables(_temp);
 
             return new CreateWebFormTableResponse { };
         }
@@ -37,7 +38,7 @@ namespace ExpressBase.ServiceStack.Services
         {
             WebFormSchema _formSchema = new WebFormSchema();
             _formSchema.FormName = _container.Name;
-            _formSchema.MasterTable = _container.TableName;
+            _formSchema.MasterTable = _container.TableName.ToLower();
             _formSchema.Tables = new List<TableSchema>();
             _formSchema = GetWebFormSchemaRec(_formSchema, _container);
             return _formSchema;
@@ -54,7 +55,7 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     _columns.Add(new ColumSchema { ColumName = control.Name, EbDbType = (int)control.EbDbType });
                 }
-                _schema.Tables.Add(new TableSchema { TableName = _container.TableName, Colums = _columns });
+                _schema.Tables.Add(new TableSchema { TableName = _container.TableName.ToLower(), Colums = _columns });
             }
             else
             {
@@ -79,50 +80,78 @@ namespace ExpressBase.ServiceStack.Services
             return _schema;
         }
 
-        private void CreateWebFormTableRec(EbControlContainer _container, string _table)
-        {
-            CreateWebFormTableHelper(_container, _table);
-            foreach (EbControl _control in _container.Controls)
-            {
-                if (_control is EbControlContainer)
-                {
-                    EbControlContainer Container = _control as EbControlContainer;
-
-                    if (Container.TableName.IsNullOrEmpty())
-                    {
-                        Container.TableName = _container.TableName;
-                    }
-                    CreateWebFormTableRec(Container, _container.TableName);
-                }
-            }
-        }
-
-        private void CreateWebFormTableHelper(EbControlContainer _container, string _table)
+        private void CreateWebFormTables(WebFormSchema _schema)
         {
             IVendorDbTypes vDbTypes = this.EbConnectionFactory.ObjectsDB.VendorDbTypes;
-            List<TableColumnMeta> _listNamesAndTypes = new List<TableColumnMeta>();
-            IEnumerable<EbControl> _flatControls = _container.Controls.Get1stLvlControls();
-
-            foreach (EbControl control in _flatControls)
+            foreach (TableSchema _table in _schema.Tables)
             {
-                _listNamesAndTypes.Add(new TableColumnMeta { Name = control.Name, Type = control.GetvDbType(vDbTypes) });
-            }
-            if (_listNamesAndTypes.Count > 0)
-            {
-                if (!_table.ToLower().Equals(_container.TableName.ToLower()))
-                    _listNamesAndTypes.Add(new TableColumnMeta { Name = _table + "_id", Type = vDbTypes.Decimal });// id refernce to the parent table will store in this column - foreignkey
-                _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_by", Type = vDbTypes.Decimal });
-                _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_at", Type = vDbTypes.DateTime });
-                _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_by", Type = vDbTypes.Decimal });
-                _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_at", Type = vDbTypes.DateTime });
-                _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_del", Type = vDbTypes.Boolean, Default = "F" });
-                _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_void", Type = vDbTypes.Boolean, Default = "F" });
-                _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_transaction_date", Type = vDbTypes.DateTime });
-                _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_autogen", Type = vDbTypes.Decimal });
+                List<TableColumnMeta> _listNamesAndTypes = new List<TableColumnMeta>();
+                if(_table.Colums.Count > 0)
+                {
+                    foreach (ColumSchema _column in _table.Colums)
+                    {
+                        _listNamesAndTypes.Add(new TableColumnMeta { Name = _column.ColumName, Type = vDbTypes.GetVendorDbTypeStruct((EbDbTypes)_column.EbDbType) });
+                    }
+                    if(_table.TableName != _schema.MasterTable)
+                        _listNamesAndTypes.Add(new TableColumnMeta { Name = _table + "_id", Type = vDbTypes.Decimal });// id refernce to the parent table will store in this column - foreignkey
+                    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_by", Type = vDbTypes.Decimal });
+                    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_at", Type = vDbTypes.DateTime });
+                    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_by", Type = vDbTypes.Decimal });
+                    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_at", Type = vDbTypes.DateTime });
+                    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_del", Type = vDbTypes.Boolean, Default = "F" });
+                    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_void", Type = vDbTypes.Boolean, Default = "F" });
+                    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_transaction_date", Type = vDbTypes.DateTime });
+                    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_autogen", Type = vDbTypes.Decimal });
 
-                CreateOrAlterTable(_container.TableName.ToLower(), _listNamesAndTypes);
+                    CreateOrAlterTable(_table.TableName, _listNamesAndTypes);
+                }                
             }
         }
+
+        //private void CreateWebFormTableRec(EbControlContainer _container, string _table)
+        //{
+        //    CreateWebFormTableHelper(_container, _table);
+        //    foreach (EbControl _control in _container.Controls)
+        //    {
+        //        if (_control is EbControlContainer)
+        //        {
+        //            EbControlContainer Container = _control as EbControlContainer;
+
+        //            if (Container.TableName.IsNullOrEmpty())
+        //            {
+        //                Container.TableName = _container.TableName;
+        //            }
+        //            CreateWebFormTableRec(Container, _container.TableName);
+        //        }
+        //    }
+        //}
+
+        //private void CreateWebFormTableHelper(EbControlContainer _container, string _table)
+        //{
+        //    IVendorDbTypes vDbTypes = this.EbConnectionFactory.ObjectsDB.VendorDbTypes;
+        //    List<TableColumnMeta> _listNamesAndTypes = new List<TableColumnMeta>();
+        //    IEnumerable<EbControl> _flatControls = _container.Controls.Get1stLvlControls();
+
+        //    foreach (EbControl control in _flatControls)
+        //    {
+        //        _listNamesAndTypes.Add(new TableColumnMeta { Name = control.Name, Type = control.GetvDbType(vDbTypes) });
+        //    }
+        //    if (_listNamesAndTypes.Count > 0)
+        //    {
+        //        if (!_table.ToLower().Equals(_container.TableName.ToLower()))
+        //            _listNamesAndTypes.Add(new TableColumnMeta { Name = _table + "_id", Type = vDbTypes.Decimal });// id refernce to the parent table will store in this column - foreignkey
+        //        _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_by", Type = vDbTypes.Decimal });
+        //        _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_at", Type = vDbTypes.DateTime });
+        //        _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_by", Type = vDbTypes.Decimal });
+        //        _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_at", Type = vDbTypes.DateTime });
+        //        _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_del", Type = vDbTypes.Boolean, Default = "F" });
+        //        _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_void", Type = vDbTypes.Boolean, Default = "F" });
+        //        _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_transaction_date", Type = vDbTypes.DateTime });
+        //        _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_autogen", Type = vDbTypes.Decimal });
+
+        //        CreateOrAlterTable(_container.TableName.ToLower(), _listNamesAndTypes);
+        //    }
+        //}
 
         private int CreateOrAlterTable(string tableName, List<TableColumnMeta> listNamesAndTypes)
         {
@@ -221,18 +250,42 @@ namespace ExpressBase.ServiceStack.Services
         //================================== GET RECORD FOR RENDERING ================================================
 
         public GetRowDataResponse Any(GetRowDataRequest request)
-        {
+        {            
             GetRowDataResponse _dataset = new GetRowDataResponse();
-            _dataset.FormData = getDataSetAsRowCollection(request.RefId, request.RowId);
+            _dataset.FormData = GetWebformData(request.RefId, request.RowId);
             return _dataset;
         }
 
-        private WebformData getDataSetAsRowCollection(string _refid, int _rowid)
+        private string GetSelectQuery(WebFormSchema _schema)
         {
-            EbWebForm FormObj = GetWebFormObject(_refid);
-            FormObj.TableRowId = _rowid;
-            string query = FormObj.GetSelectQuery(FormObj.TableName);
-            EbDataSet dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(query);
+            string query = string.Empty;
+
+            foreach(TableSchema _table in _schema.Tables)
+            {
+                string _cols = string.Empty;
+                string _id = "id";
+                if(_table.Colums.Count > 0)
+                {
+                    foreach (ColumSchema _column in _table.Colums)
+                    {
+                        _cols += "," + _column.ColumName;
+                    }
+                    if (_table.TableName != _schema.MasterTable)
+                        _id = _schema.MasterTable + "_id";
+                    query += string.Format("SELECT id {0} FROM {1} WHERE {2} = :id;", _cols, _table.TableName, _id);
+                }                
+            }
+            
+            return query;
+        }
+
+        private WebformData GetWebformData(string _refId, int _rowid)
+        {
+            EbWebForm FormObj = GetWebFormObject(_refId);
+            WebFormSchema _schema = GetWebFormSchema(FormObj);
+            string query = GetSelectQuery(_schema);
+
+            EbDataSet dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(query, new DbParameter[] { this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, _rowid) });
 
             WebformData FormData = new WebformData();
 
@@ -252,7 +305,8 @@ namespace ExpressBase.ServiceStack.Services
                             _unformattedData = (_unformattedData == DBNull.Value) ? DateTime.MinValue : _unformattedData;
                             _formattedData = ((DateTime)_unformattedData).Date != DateTime.MinValue ? Convert.ToDateTime(_unformattedData).ToString("yyyy-MM-dd") : string.Empty;
                         }
-                        Row.Columns.Add(new SingleColumn() {
+                        Row.Columns.Add(new SingleColumn()
+                        {
                             Name = dataColumn.ColumnName,
                             Type = (int)dataColumn.Type,
                             Value = _formattedData
@@ -267,6 +321,47 @@ namespace ExpressBase.ServiceStack.Services
             FormData.MasterTable = dataset.Tables[0].TableName;
             return FormData;
         }
+
+        //private WebformData getDataSetAsRowCollection(string _refid, int _rowid)
+        //{
+        //    EbWebForm FormObj = GetWebFormObject(_refid);
+        //    FormObj.TableRowId = _rowid;
+        //    string query = FormObj.GetSelectQuery(FormObj.TableName);
+        //    EbDataSet dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(query);
+
+        //    WebformData FormData = new WebformData();
+
+        //    foreach (EbDataTable dataTable in dataset.Tables)
+        //    {
+        //        SingleTable Table = new SingleTable();
+        //        foreach (EbDataRow dataRow in dataTable.Rows)
+        //        {
+        //            SingleRow Row = new SingleRow();
+        //            foreach (EbDataColumn dataColumn in dataTable.Columns)
+        //            {
+        //                object _unformattedData = dataRow[dataColumn.ColumnIndex];
+        //                object _formattedData = _unformattedData;
+
+        //                if (dataColumn.Type == EbDbTypes.Date)
+        //                {
+        //                    _unformattedData = (_unformattedData == DBNull.Value) ? DateTime.MinValue : _unformattedData;
+        //                    _formattedData = ((DateTime)_unformattedData).Date != DateTime.MinValue ? Convert.ToDateTime(_unformattedData).ToString("yyyy-MM-dd") : string.Empty;
+        //                }
+        //                Row.Columns.Add(new SingleColumn() {
+        //                    Name = dataColumn.ColumnName,
+        //                    Type = (int)dataColumn.Type,
+        //                    Value = _formattedData
+        //                });
+        //            }
+        //            Row.RowId = dataRow[dataTable.Columns[0].ColumnIndex].ToString();
+        //            Table.Add(Row);
+        //        }
+        //        if (!FormData.MultipleTables.ContainsKey(dataTable.TableName))
+        //            FormData.MultipleTables.Add(dataTable.TableName, Table);
+        //    }
+        //    FormData.MasterTable = dataset.Tables[0].TableName;
+        //    return FormData;
+        //}
 
         //private List<object> getDataSetAsRowCollection(EbDataSet dataset)
         //{
@@ -294,9 +389,14 @@ namespace ExpressBase.ServiceStack.Services
 
         private EbWebForm GetWebFormObject(string RefId)
         {
-            var myService = base.ResolveService<EbObjectService>();
-            EbObjectParticularVersionResponse formObj = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = RefId });
-            EbWebForm _form = EbSerializers.Json_Deserialize(formObj.Data[0].Json);
+            EbWebForm _form = this.Redis.Get<EbWebForm>(RefId);
+            if(_form == null)
+            {
+                var myService = base.ResolveService<EbObjectService>();
+                EbObjectParticularVersionResponse formObj = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = RefId });
+                _form = EbSerializers.Json_Deserialize(formObj.Data[0].Json);
+                this.Redis.Set<EbWebForm>(RefId, _form);
+            }            
             _form.AfterRedisGet(this);
             return _form;
         }
@@ -350,7 +450,7 @@ WHERE
             FormObj.TableRowId = request.RowId;
             if (FormObj.TableRowId > 0)
             {
-                WebformData FormData = getDataSetAsRowCollection(request.RefId, request.RowId);
+                WebformData FormData = GetWebformData(request.RefId, request.RowId);
                 InsertDataFromWebformResponse resp = UpdateDataFromWebformRec(request, FormObj);
                 //if(resp.RowAffected > 0)
                 //{
