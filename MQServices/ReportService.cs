@@ -85,7 +85,7 @@ namespace ExpressBase.ServiceStack.MQServices
                             UserAuthId = request.JobArgs.UserAuthId,
                             SolnId = request.JobArgs.SolnId,
                             AttachmentReport = RepRes.ReportBytea,
-                            AttachmentName = RepRes.ReportName + " - " + RepRes.CurrentTimestamp.ToShortDateString()
+                            AttachmentName = RepRes.ReportName + " - " + RepRes.CurrentTimestamp.ToString("dd-MM-yy")
                         });
                     }
                     //LocaleReport.Add(locale.Key, RepRes.ReportBytea);
