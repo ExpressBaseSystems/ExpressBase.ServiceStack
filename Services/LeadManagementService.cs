@@ -56,7 +56,7 @@ namespace ExpressBase.ServiceStack.Services
 			{
 				SqlQry += @"SELECT id, eb_loc_id, trdate, genurl, name, dob, genphoffice, profession, genemail, customertype, clcity, clcountry, city,
 								typeofcustomer, sourcecategory, subcategory, consultation, picsrcvd, dprefid, sex, district, leadowner
-								FROM customers WHERE id = :accountid;
+								FROM customers WHERE id = :accountid AND eb_del='F';
 							SELECT id,trdate,status,followupdate,narration, eb_createdby, eb_createddt FROM leaddetails
 								WHERE customers_id=:accountid ORDER BY eb_createddt DESC;
 							SELECT id,trdate,totalamount,advanceamount,balanceamount,cashreceived,paymentmode,bank,createddt,narration,createdby 
