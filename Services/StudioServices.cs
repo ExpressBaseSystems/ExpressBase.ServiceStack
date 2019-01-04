@@ -212,6 +212,7 @@ WHERE
     EO.id = EOV.eb_objects_id AND
     EOV.working_mode = 'F' AND
     EO.obj_type = :obj_type AND
+    EOV.refid != :dominant AND
     EOV.refid NOT IN (
         WITH RECURSIVE objects_relations AS (
 	    SELECT dependant FROM eb_objects_relations WHERE eb_del='F' AND dominant = :dominant
