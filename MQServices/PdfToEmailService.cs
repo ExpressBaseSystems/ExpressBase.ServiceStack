@@ -41,6 +41,7 @@ namespace ExpressBase.ServiceStack.MQServices
 
         public void Post(PdfCreateServiceRequest request)
         {
+            string mailTo = string.Empty;
             EbConnectionFactory ebConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
             var objservice = base.ResolveService<EbObjectService>();
             objservice.EbConnectionFactory = ebConnectionFactory;
@@ -74,11 +75,19 @@ namespace ExpressBase.ServiceStack.MQServices
                             ebEmailTemplate.Body = ebEmailTemplate.Body.Replace(/*dscol.Title*/_col, colname);
                         }
                     }
-                }
+                    if (ebEmailTemplate.To != string.Empty)
+                    {
+                        foreach (var dt in ds.Tables)
+                        {
+                            mailTo = dt.Rows[0][ebEmailTemplate.To.Split('.')[1]].ToString();
+                        }
+                    }
+                    }
                 var RepRes = reportservice.Get(new ReportRenderRequest
                 {
                     Refid = ebEmailTemplate.AttachmentReportRefID,
-                    RenderingUser = new User { FullName = "MQ" },
+                    RenderingUser = new User { FullName = "Machine User" },
+                    ReadingUser= new User { Preference=new Preferences {Locale="en-US",TimeZone= "(UTC) Coordinated Universal Time" } },
                     Params = request.Params
                 });
                 RepRes.StreamWrapper.Memorystream.Position = 0;
@@ -86,7 +95,7 @@ namespace ExpressBase.ServiceStack.MQServices
                 MessageProducer3.Publish(new EmailServicesRequest()
                 {
                     From = "request.from",
-                    To = ebEmailTemplate.To,
+                    To = mailTo,
                     Cc = ebEmailTemplate.Cc.Split(","),
                     Bcc = ebEmailTemplate.Bcc.Split(","),
                     Message = ebEmailTemplate.Body,

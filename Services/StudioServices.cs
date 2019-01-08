@@ -185,7 +185,7 @@ namespace ExpressBase.ServiceStack
             return new EbObjectObjListAllVerResponse { Data = f_dict };
         }
 
-        public EbUsrCtrlObjLisAllVerResponse Get(EbUsrCtrlObjLisAllVerRequest request)// Get all latest committed versions User Control without json - circular reference situation avoided on query
+        public EbObjAllVerWithoutCircularRefResp Get(EbObjAllVerWithoutCircularRefRqst request)// Get all latest committed versions of EbObject without json - circular reference situation avoided on query
         {
             string query = @"
 SELECT 
@@ -196,10 +196,10 @@ FROM
 WHERE
     EO.id = EOV.eb_objects_id AND
     EOV.working_mode = 'F' AND
-    EO.obj_type = 14 
+    EO.obj_type = :obj_type 
 ORDER BY 
     EO.display_name ASC, EOV.version_num DESC;
-";//14-usercontrol, 2-datareader
+";
             List<DbParameter> parameters = new List<DbParameter>();
             if (!request.EbObjectRefId.IsNullOrEmpty())
             {
@@ -212,20 +212,22 @@ FROM
 WHERE
     EO.id = EOV.eb_objects_id AND
     EOV.working_mode = 'F' AND
-    EO.obj_type = 14 AND
+    EO.obj_type = :obj_type AND
+    EOV.refid != :dominant AND
     EOV.refid NOT IN (
         WITH RECURSIVE objects_relations AS (
-	    SELECT dominant FROM eb_objects_relations WHERE eb_del='F' AND dependant = :dependant
+	    SELECT dependant FROM eb_objects_relations WHERE eb_del='F' AND dominant = :dominant
 	    UNION
-	    SELECT a.dominant FROM eb_objects_relations a, objects_relations b WHERE a.eb_del='F' AND a.dependant = b.dominant
+	    SELECT a.dependant FROM eb_objects_relations a, objects_relations b WHERE a.eb_del='F' AND a.dominant = b.dependant
         )SELECT * FROM objects_relations
     )
 ORDER BY 
     EO.display_name ASC, EOV.version_num DESC;    
 ";
-                parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("dependant", EbDbTypes.String, request.EbObjectRefId));
+                parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("dominant", EbDbTypes.String, request.EbObjectRefId));
             }
-            
+
+            parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("obj_type", EbDbTypes.Int32, request.EbObjType));
             EbDataTable dt = EbConnectionFactory.ObjectsDB.DoQuery(query, parameters.ToArray());
 
             Dictionary<string, List<EbObjectWrapper>> obj_dict = new Dictionary<string, List<EbObjectWrapper>>();
@@ -249,35 +251,7 @@ ORDER BY
                 });
             }
 
-            return new EbUsrCtrlObjLisAllVerResponse { Data = obj_dict };
-
-            //string Qry = @"
-            //            SELECT 
-            //                EO.id, EO.obj_name, EO.obj_type, EO.obj_cur_status,EO.obj_desc,
-            //                EOV.id, EOV.eb_objects_id, EOV.version_num, EOV.obj_changelog, EOV.commit_ts, EOV.commit_uid, EOV.refid,
-            //                EU.fullname, EO.display_name
-            //            FROM 
-            //                eb_objects EO, eb_objects_ver EOV
-            //            LEFT JOIN
-	           //             eb_users EU
-            //            ON 
-	           //             EOV.commit_uid=EU.id
-            //            WHERE
-            //                EO.id = EOV.eb_objects_id  AND EO.obj_type=:type AND COALESCE(EOV.working_mode, 'F') <> 'T'
-            //            ORDER BY
-            //                EO.obj_name 
-            //    ";
-
-            //string Qry1 = @"SELECT 
-	           //             EO.obj_name, EOV.refid, EOV.version_num, EO.obj_type,EOS.status
-            //            FROM 
-	           //             eb_objects EO, eb_objects_ver EOV,eb_objects_status EOS
-            //            WHERE 
-	           //             EO.id = ANY (SELECT eb_objects_id FROM eb_objects_ver WHERE refid IN(SELECT dependant FROM eb_objects_relations
-            //                                      WHERE dominant=:dominant))
-            //                AND EOV.refid =ANY(SELECT dependant FROM eb_objects_relations WHERE dominant=:dominant)    
-            //                AND EO.id =EOV.eb_objects_id  AND EOS.eb_obj_ver_id = EOV.id AND EOS.status = 3 AND EO.obj_type IN(16 ,17)
-            //    ";
+            return new EbObjAllVerWithoutCircularRefResp { Data = obj_dict };
         }
 
         [CompressResponse]

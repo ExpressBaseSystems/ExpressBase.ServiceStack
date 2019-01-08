@@ -56,7 +56,7 @@ namespace ExpressBase.ServiceStack.Services
 			{
 				SqlQry += @"SELECT id, eb_loc_id, trdate, genurl, name, dob, genphoffice, profession, genemail, customertype, clcity, clcountry, city,
 								typeofcustomer, sourcecategory, subcategory, consultation, picsrcvd, dprefid, sex, district, leadowner
-								FROM customers WHERE id = :accountid;
+								FROM customers WHERE id = :accountid AND eb_del='F';
 							SELECT id,trdate,status,followupdate,narration, eb_createdby, eb_createddt FROM leaddetails
 								WHERE customers_id=:accountid ORDER BY eb_createddt DESC;
 							SELECT id,trdate,totalamount,advanceamount,balanceamount,cashreceived,paymentmode,bank,createddt,narration,createdby 
@@ -633,18 +633,18 @@ WHERE
 			//parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("modifieddt", EbDbTypes.DateTime, CrntDateTime));
 
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_createdby", EbDbTypes.Int32, request.UserId));
-			//parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_createddt", EbDbTypes.DateTime, CrntDateTime));
+            //parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_createddt", EbDbTypes.DateTime, CrntDateTime));
 
-			if (true)//update disabled  //if (F_Obj.Id == 0)//new
-			{
+            if (F_Obj.Id == 0)//new   //if (true)//update disabled
+            {
 				string Qry = @"INSERT INTO leaddetails(prehead, customers_id, trdate, status, followupdate, narration, createdby, createddt, eb_createdby, eb_createddt) 
 									VALUES('50' , :accountid, :trdate, :status, :followupdate, :narration, :createdby, NOW(), :eb_createdby, NOW());";
 				rstatus = this.EbConnectionFactory.ObjectsDB.InsertTable(Qry, parameters.ToArray());
 			}
-			else//update
+			else if(request.Permission)//update
 			{
 				string Qry = @"UPDATE leaddetails 
-								SET status=:status, followupdate=:followupdate, narration=:narration, modifiedby = :modifiedby, modifieddt = :modifieddt  
+								SET trdate=:trdate, status=:status, followupdate=:followupdate, narration=:narration, modifiedby = :modifiedby, modifieddt = NOW()
 								WHERE prehead = '50' AND customers_id = :accountid AND id=:id;";
 				rstatus = this.EbConnectionFactory.ObjectsDB.UpdateTable(Qry, parameters.ToArray());
 			}
@@ -779,6 +779,22 @@ WHERE
             int rstatus = this.EbConnectionFactory.ObjectsDB.UpdateTable(query, parameters);
 
             return new LmDeleteImageResponse { RowsAffected = rstatus};
+        }
+
+        public LmDeleteCustomerResponse Any(LmDeleteCustomerRequest request)
+        {
+            string query = @"
+update customers set eb_del='T' where id=:id;
+update leaddetails set eb_del='T' where customers_id=:id;
+update leadratedetails set eb_del='T' where customers_id=:id;";
+
+            DbParameter[] parameters = new DbParameter[] {
+                this.EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, request.CustId)
+            };
+
+            int rstatus = this.EbConnectionFactory.ObjectsDB.UpdateTable(query, parameters);
+
+            return new LmDeleteCustomerResponse { Status = rstatus > 0 };
         }
 
 

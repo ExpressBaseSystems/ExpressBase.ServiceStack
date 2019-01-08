@@ -3,6 +3,7 @@ using ExpressBase.Common.Data;
 using ExpressBase.Common.Structures;
 using ExpressBase.Objects.Services;
 using ExpressBase.Objects.ServiceStack_Artifacts;
+using ExpressBase.Scheduler.Jobs;
 using ServiceStack;
 using ServiceStack.Messaging;
 using System;
@@ -65,6 +66,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             return res;
         }
+
         public GetUserEmailsResponse Get(GetUserEmailsRequest request)
         {
             GetUserEmailsResponse res = new GetUserEmailsResponse();
@@ -94,6 +96,35 @@ namespace ExpressBase.ServiceStack.Services
             }
             return res;
         }
+
+        public GetSchedulesOfSolutionResponse Get(GetSchedulesOfSolutionRequest request)
+        {
+            GetSchedulesOfSolutionResponse resp = new GetSchedulesOfSolutionResponse();
+            List<EbSchedule> scheduleList = new List<EbSchedule>();
+            using (var con = this.EbConnectionFactory.DataDB.GetNewConnection())
+            {
+                con.Open();
+                string sql = @"SELECT * FROM eb_schedules ES ,eb_users EU
+                               WHERE EU.id =ES.created_by;";
+                EbDataSet dt = this.EbConnectionFactory.DataDB.DoQueries(sql);
+                foreach (EbDataRow dr in dt.Tables[0].Rows)
+                {
+                    EbSchedule sch = new EbSchedule
+                    {
+                        Id = Convert.ToInt32(dr[0]),
+                        Task = EbSerializers.Json_Deserialize<EbTask>(dr[1].ToString()),
+                        CreatedBy = dr[33].ToString(),
+                        CreatedAt = Convert.ToDateTime(dr[3]),
+                        JobKey = dr[5].ToString(),
+                        TriggerKey = dr[6].ToString(),
+                        Status = (ScheduleStatuses)Convert.ToInt32(dr[7])
+                    };
+                    scheduleList.Add(sch);
+                }
+                resp.Schedules = scheduleList;
+            }
+            return resp;
+        }
     }
 
     [Restrict(InternalOnly = true)]
@@ -102,20 +133,23 @@ namespace ExpressBase.ServiceStack.Services
         public UpdateSolutionSchedulesServices(IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_mqp, _mqc) { }
 
         public SchedulerMQResponse Post(UpdateSolutionSchedulesRequest request)
-    {
+        {
             EbConnectionFactory _ebConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
             using (var con = _ebConnectionFactory.DataDB.GetNewConnection())
-        {
-            con.Open();
-            string sql = @"INSERT INTO eb_schedules(task, created_by, created_at, eb_del, jobkey, triggerkey)
-                VALUES(:task, :created_by, NOW(), 'F', :jobkey, :triggerkey)";
-            DbParameter[] parameters = { _ebConnectionFactory.DataDB.GetNewParameter("task", EbDbTypes.Json,EbSerializers.Json_Serialize(request.Task)),
+            {
+                con.Open();
+                string sql = @"INSERT INTO eb_schedules(task, created_by, created_at, eb_del, jobkey, triggerkey, status)
+                VALUES(:task, :created_by, NOW(), 'F', :jobkey, :triggerkey, :status)";
+                DbParameter[] parameters = { _ebConnectionFactory.DataDB.GetNewParameter("task", EbDbTypes.Json,EbSerializers.Json_Serialize(request.Task)),
                _ebConnectionFactory.DataDB.GetNewParameter("created_by", EbDbTypes.Int32,  request.Task.JobArgs.UserId),
                _ebConnectionFactory.DataDB.GetNewParameter("jobkey", EbDbTypes.String,  request.JobKey),
-               _ebConnectionFactory.DataDB.GetNewParameter("triggerkey", EbDbTypes.String,  request.TriggerKey) };
-            var dt = _ebConnectionFactory.DataDB.DoNonQuery(sql, parameters);
+               _ebConnectionFactory.DataDB.GetNewParameter("triggerkey", EbDbTypes.String,  request.TriggerKey),
+                _ebConnectionFactory.DataDB.GetNewParameter("status", EbDbTypes.Int32, (int)request.Status) };
+                var dt = _ebConnectionFactory.DataDB.DoNonQuery(sql, parameters);
+            }
+            return null;
         }
-        return null;
+
+
     }
-}
 }

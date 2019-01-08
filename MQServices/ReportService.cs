@@ -59,7 +59,7 @@ namespace ExpressBase.ServiceStack.MQServices
                     ReportRenderResponse RepRes = reportservice.Get(new ReportRenderRequest
                     {
                         Refid = Live_ver.RefId,
-                        RenderingUser = /*new User { FullName = "MQ", },*/ locale.Value[0],
+                        RenderingUser = new User { FullName = "Machine User" },
                         ReadingUser = locale.Value[0],
                         Params = request.JobArgs.Params,
                         SolnId = request.JobArgs.SolnId,
@@ -67,7 +67,8 @@ namespace ExpressBase.ServiceStack.MQServices
                         UserId = request.JobArgs.UserId,
                         WhichConsole = "uc"
                     });
-                    Console.WriteLine("Inside MQService/ReportServiceInternal in SS \n After Report Render");
+                   Console.WriteLine(locale.Key);
+                   Console.WriteLine("Inside MQService/ReportServiceInternal in SS \n After Report Render");
                     RepRes.StreamWrapper.Memorystream.Position = 0;
                     foreach (var _u in locale.Value)
                     {
@@ -84,7 +85,7 @@ namespace ExpressBase.ServiceStack.MQServices
                             UserAuthId = request.JobArgs.UserAuthId,
                             SolnId = request.JobArgs.SolnId,
                             AttachmentReport = RepRes.ReportBytea,
-                            AttachmentName = RepRes.ReportName + " - " + RepRes.CurrentTimestamp.ToShortDateString()
+                            AttachmentName = RepRes.ReportName + " - " + RepRes.CurrentTimestamp.ToString("dd-MM-yy")
                         });
                     }
                     //LocaleReport.Add(locale.Key, RepRes.ReportBytea);
