@@ -53,7 +53,9 @@ namespace ExpressBase.ServiceStack.Services
                 List<ColumSchema> _columns = new List<ColumSchema>();
                 foreach (EbControl control in _flatControls)
                 {
-                    if(!(control is EbAutoId))
+                    if(control is EbAutoId)
+                        _columns.Add(new ColumSchema { ColumName = "eb_auto_id", EbDbType = (int)EbDbTypes.String });
+                    else
                         _columns.Add(new ColumSchema { ColumName = control.Name, EbDbType = (int)control.EbDbType });
                 }
                 if(_columns.Count > 0)
@@ -63,7 +65,9 @@ namespace ExpressBase.ServiceStack.Services
             {
                 foreach (EbControl control in _flatControls)
                 {
-                    if (!(control is EbAutoId))
+                    if (control is EbAutoId)
+                        _table.Colums.Add(new ColumSchema { ColumName = "eb_auto_id", EbDbType = (int)EbDbTypes.String });
+                    else
                         _table.Colums.Add(new ColumSchema { ColumName = control.Name, EbDbType = (int)control.EbDbType });
                 }
             }
@@ -331,7 +335,13 @@ namespace ExpressBase.ServiceStack.Services
                 SingleRow _masterRow = FormData.MultipleTables[FormData.MasterTable][0];
                 SingleColumn _idval = _masterRow.Columns.FirstOrDefault(c => c.Name.Equals("eb_auto_id"));
                 FormData.AutoIdText = _idval.Value;
-                //_masterRow.Columns.Remove(_idval);
+
+                var temp1 = _schema.Tables.FirstOrDefault(t => t.TableName == _schema.MasterTable);
+                var temp2 = temp1.Colums.FirstOrDefault(c => c.ColumName.Equals("eb_auto_id"));
+                if (temp2 == null)
+                {
+                    _masterRow.Columns.Remove(_idval);
+                }
             }
             catch(Exception Ex)
             {
