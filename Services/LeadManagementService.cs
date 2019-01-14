@@ -29,7 +29,7 @@ namespace ExpressBase.ServiceStack.Services
 							SELECT district FROM lead_district ORDER BY district;
 							SELECT source FROM lead_source ORDER BY source;
 							SELECT DISTINCT INITCAP(TRIM(subcategory)) AS subcategory FROM customers WHERE LENGTH(subcategory) > 2 ORDER BY subcategory;
-							SELECT status FROM lead_status ORDER BY status;
+							SELECT status,nextstatus FROM lead_status ORDER BY status;
 							SELECT service FROM lead_service ORDER BY service;
 							SELECT id, name FROM nurses ORDER BY name;";
 			List<DbParameter> paramList = new List<DbParameter>();
@@ -44,7 +44,7 @@ namespace ExpressBase.ServiceStack.Services
 			List<string> districtList = new List<string>();
 			List<string> sourcecategoryList = new List<string>();
 			List<string> subcategoryList = new List<string>();
-			List<string> statusList = new List<string>();
+            Dictionary<string, string> statusDict = new Dictionary<string, string>();
 			List<string> serviceList = new List<string>();
 			List<FeedbackEntry> Flist = new List<FeedbackEntry>();
 			List<BillingEntry> Blist = new List<BillingEntry>();
@@ -62,7 +62,7 @@ namespace ExpressBase.ServiceStack.Services
 							SELECT id,trdate,totalamount,advanceamount,balanceamount,cashreceived,paymentmode,bank,createddt,narration,createdby 
 								FROM leadpaymentdetails WHERE customers_id=:accountid ORDER BY balanceamount;
 							SELECT id,dateofsurgery,eb_loc_id,createdby,createddt, extractiondone_by,
-									implantation_by,consent_by,anaesthesia_by,post_briefing_by,nurses_id
+									implantation_by,consent_by,anaesthesia_by,post_briefing_by,nurses_id,complementry,method
 								FROM leadsurgerystaffdetails WHERE customers_id=:accountid ORDER BY createddt DESC;
 							SELECT noofgrafts,totalrate,prpsessions,consulted,consultingfeepaid,consultingdoctor,eb_closing,LOWER(TRIM(nature)),consdate,probmonth
 								FROM leadratedetails WHERE customers_id=:accountid;";
@@ -108,7 +108,8 @@ namespace ExpressBase.ServiceStack.Services
 			foreach (var dr in ds.Tables[8].Rows)
 				subcategoryList.Add(dr[0].ToString());
 			foreach (var dr in ds.Tables[9].Rows)
-				statusList.Add(dr[0].ToString());
+                if(!statusDict.ContainsKey(dr[0].ToString()))
+				    statusDict.Add(dr[0].ToString(), dr[1].ToString());
 			foreach (var dr in ds.Tables[10].Rows)
 				serviceList.Add(dr[0].ToString());
 
@@ -208,7 +209,9 @@ namespace ExpressBase.ServiceStack.Services
 						Consent_By = Convert.ToInt32(i[7]),
 						Anaesthesia_By = Convert.ToInt32(i[8]),
 						Post_Brief_By = Convert.ToInt32(i[9]),
-						Nurse = Convert.ToInt32(i[10])
+						Nurse = Convert.ToInt32(i[10]),
+                        Complimentary = i[11].ToString(),
+                        Method = i[12].ToString()
 					});
 				}
 			}
@@ -230,7 +233,7 @@ namespace ExpressBase.ServiceStack.Services
 				SourceCategoryList = sourcecategoryList,
 				SubCategoryList = subcategoryList,
 				//ImageIdList = ImgIds,
-				StatusList = statusList,
+				StatusDict = statusDict,
 				ServiceList = serviceList,
 				NurseDict = NurseDict
 			};
@@ -717,9 +720,10 @@ WHERE
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("anaesthesia_by", EbDbTypes.Int32, S_Obj.Anaesthesia_By));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("post_briefing_by", EbDbTypes.Int32, S_Obj.Post_Brief_By));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("nurses", EbDbTypes.Int32, S_Obj.Nurse));
+            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("complimentary", EbDbTypes.String, S_Obj.Complimentary));
+            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("method", EbDbTypes.String, S_Obj.Method));
 
-			
-			if (true)//if (S_Obj.Id == 0)//new
+            if (true)//if (S_Obj.Id == 0)//new
 			{
 				string Qry1 = @"INSERT INTO 
 									leadsurgerydetails(customers_id, dateofsurgery, eb_loc_id, createddt, createdby)
@@ -728,10 +732,10 @@ WHERE
 				this.EbConnectionFactory.ObjectsDB.InsertTable(Qry1, parameters1);
 				string Qry = @"INSERT INTO
  									leadsurgerystaffdetails(customers_id, dateofsurgery, eb_loc_id, createddt, createdby, extractiondone_by,
-									implantation_by, consent_by, anaesthesia_by, post_briefing_by, nurses_id)
+									implantation_by, consent_by, anaesthesia_by, post_briefing_by, nurses_id, complementry, method)
 								VALUES
 									(:customers_id, :dateofsurgery, :eb_loc_id, NOW(), :createdby, :extractiondone_by,
-									:implantation_by, :consent_by, :anaesthesia_by, :post_briefing_by, :nurses);";
+									:implantation_by, :consent_by, :anaesthesia_by, :post_briefing_by, :nurses, :complimentary, :method);";
 				rstatus = this.EbConnectionFactory.ObjectsDB.InsertTable(Qry, parameters.ToArray());
 			}
 			else//update
@@ -786,7 +790,9 @@ WHERE
             string query = @"
 update customers set eb_del='T' where id=:id;
 update leaddetails set eb_del='T' where customers_id=:id;
-update leadratedetails set eb_del='T' where customers_id=:id;";
+update leadratedetails set eb_del='T' where customers_id=:id;
+update leadsurgerydetails set eb_del='T' where customers_id=:id;
+update leadsurgerystaffdetails set eb_del='T' where customers_id=:id;";
 
             DbParameter[] parameters = new DbParameter[] {
                 this.EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, request.CustId)
