@@ -30,7 +30,7 @@ namespace ExpressBase.ServiceStack.Services
 							SELECT source FROM lead_source ORDER BY source;
 							SELECT DISTINCT INITCAP(TRIM(subcategory)) AS subcategory FROM customers WHERE LENGTH(subcategory) > 2 ORDER BY subcategory;
 							SELECT status,nextstatus FROM lead_status ORDER BY status;
-							SELECT service FROM lead_service ORDER BY service;
+							SELECT service FROM lead_service WHERE eb_del='F' ORDER BY service;
 							SELECT id, name FROM nurses ORDER BY name;";
 			List<DbParameter> paramList = new List<DbParameter>();
 			Dictionary<int, string> CostCenter = new Dictionary<int, string>();
@@ -57,7 +57,7 @@ namespace ExpressBase.ServiceStack.Services
 				SqlQry += @"SELECT id, eb_loc_id, trdate, genurl, name, dob, genphoffice, profession, genemail, customertype, clcity, clcountry, city,
 								typeofcustomer, sourcecategory, subcategory, consultation, picsrcvd, dprefid, sex, district, leadowner
 								FROM customers WHERE id = :accountid AND eb_del='F';
-							SELECT id,trdate,status,followupdate,narration, eb_createdby, eb_createddt FROM leaddetails
+							SELECT id,trdate,status,followupdate,narration, eb_createdby, eb_createddt,isnotpickedup FROM leaddetails
 								WHERE customers_id=:accountid ORDER BY eb_createddt DESC;
 							SELECT id,trdate,totalamount,advanceamount,balanceamount,cashreceived,paymentmode,bank,createddt,narration,createdby 
 								FROM leadpaymentdetails WHERE customers_id=:accountid ORDER BY balanceamount;
@@ -171,7 +171,8 @@ namespace ExpressBase.ServiceStack.Services
 						Fup_Date = getStringValue(i[3]),						
 						Comments = i[4].ToString(),
 						Created_By = StaffDict.ContainsValue(Convert.ToInt32(i[5]))? StaffDict.FirstOrDefault(x => x.Value == Convert.ToInt32(i[5])).Key : string.Empty,
-						Created_Date = getStringValue(i[6], true, true)
+						Created_Date = getStringValue(i[6], true, true),
+                        Is_Picked_Up = Convert.ToBoolean(i[7])? "No": "Yes"
 					});
 				}
 
@@ -637,17 +638,18 @@ WHERE
 
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_createdby", EbDbTypes.Int32, request.UserId));
             //parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_createddt", EbDbTypes.DateTime, CrntDateTime));
+            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("isnotpickedup", EbDbTypes.BooleanOriginal, F_Obj.Is_Picked_Up.Equals("Yes")? false: true));
 
             if (F_Obj.Id == 0)//new   //if (true)//update disabled
             {
-				string Qry = @"INSERT INTO leaddetails(prehead, customers_id, trdate, status, followupdate, narration, createdby, createddt, eb_createdby, eb_createddt) 
-									VALUES('50' , :accountid, :trdate, :status, :followupdate, :narration, :createdby, NOW(), :eb_createdby, NOW());";
+				string Qry = @"INSERT INTO leaddetails(prehead, customers_id, trdate, status, followupdate, narration, createdby, createddt, eb_createdby, eb_createddt, isnotpickedup) 
+									VALUES('50' , :accountid, :trdate, :status, :followupdate, :narration, :createdby, NOW(), :eb_createdby, NOW(), :isnotpickedup);";
 				rstatus = this.EbConnectionFactory.ObjectsDB.InsertTable(Qry, parameters.ToArray());
 			}
 			else if(request.Permission)//update
 			{
 				string Qry = @"UPDATE leaddetails 
-								SET trdate=:trdate, status=:status, followupdate=:followupdate, narration=:narration, modifiedby = :modifiedby, modifieddt = NOW()
+								SET trdate=:trdate, status=:status, followupdate=:followupdate, narration=:narration, modifiedby = :modifiedby, modifieddt = NOW(), isnotpickedup = :isnotpickedup
 								WHERE prehead = '50' AND customers_id = :accountid AND id=:id;";
 				rstatus = this.EbConnectionFactory.ObjectsDB.UpdateTable(Qry, parameters.ToArray());
 			}
