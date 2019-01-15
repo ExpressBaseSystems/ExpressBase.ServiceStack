@@ -15,6 +15,7 @@ using ExpressBase.Common.Structures;
 using ExpressBase.Objects.Objects;
 using ExpressBase.ServiceStack.Services;
 using ExpressBase.Objects.Objects.SmsRelated;
+using ExpressBase.Objects.ApiBuilderRelated;
 
 namespace ExpressBase.ServiceStack
 {
@@ -975,6 +976,8 @@ ORDER BY
                 return EbObjectTypes.DataWriter.IntCode;
             else if (obj is EbSqlFunction)
                 return EbObjectTypes.SqlFunction.IntCode;
+            else if (obj is EbApi)
+                return EbObjectTypes.Api.IntCode;
             else
                 return -1;
         }
@@ -1026,6 +1029,10 @@ ORDER BY
             else if(obj is EbSqlFunction)
             {
                 Redis.Set(refId, (EbSqlFunction)obj);
+            }
+            else if (obj is EbApi)
+            {
+                Redis.Set(refId, (EbApi)obj);
             }
         }
 

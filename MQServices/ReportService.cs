@@ -59,7 +59,7 @@ namespace ExpressBase.ServiceStack.MQServices
                     ReportRenderResponse RepRes = reportservice.Get(new ReportRenderRequest
                     {
                         Refid = Live_ver.RefId,
-                        RenderingUser = new User { FullName = "MQ" },
+                        RenderingUser = new User { FullName = "Machine User" },
                         ReadingUser = locale.Value[0],
                         Params = request.JobArgs.Params,
                         SolnId = request.JobArgs.SolnId,

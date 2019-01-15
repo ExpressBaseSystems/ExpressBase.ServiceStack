@@ -53,7 +53,10 @@ namespace ExpressBase.ServiceStack.Services
                 List<ColumSchema> _columns = new List<ColumSchema>();
                 foreach (EbControl control in _flatControls)
                 {
-                    _columns.Add(new ColumSchema { ColumName = control.Name, EbDbType = (int)control.EbDbType });
+                    if(control is EbAutoId)
+                        _columns.Add(new ColumSchema { ColumName = "eb_auto_id", EbDbType = (int)EbDbTypes.String });
+                    else
+                        _columns.Add(new ColumSchema { ColumName = control.Name, EbDbType = (int)control.EbDbType });
                 }
                 if(_columns.Count > 0)
                     _schema.Tables.Add(new TableSchema { TableName = _container.TableName.ToLower(), Colums = _columns });
@@ -62,7 +65,10 @@ namespace ExpressBase.ServiceStack.Services
             {
                 foreach (EbControl control in _flatControls)
                 {
-                    _table.Colums.Add(new ColumSchema { ColumName = control.Name, EbDbType = (int)control.EbDbType });
+                    if (control is EbAutoId)
+                        _table.Colums.Add(new ColumSchema { ColumName = "eb_auto_id", EbDbType = (int)EbDbTypes.String });
+                    else
+                        _table.Colums.Add(new ColumSchema { ColumName = control.Name, EbDbType = (int)control.EbDbType });
                 }
             }
             foreach (EbControl _control in _container.Controls)
@@ -95,14 +101,16 @@ namespace ExpressBase.ServiceStack.Services
                     }
                     if(_table.TableName != _schema.MasterTable)
                         _listNamesAndTypes.Add(new TableColumnMeta { Name = _schema.MasterTable + "_id", Type = vDbTypes.Decimal });// id refernce to the parent table will store in this column - foreignkey
+                    else
+                        _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_auto_id", Type = vDbTypes.String });
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_by", Type = vDbTypes.Decimal });
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_at", Type = vDbTypes.DateTime });
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_by", Type = vDbTypes.Decimal });
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_at", Type = vDbTypes.DateTime });
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_del", Type = vDbTypes.Boolean, Default = "F" });
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_void", Type = vDbTypes.Boolean, Default = "F" });
-                    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_transaction_date", Type = vDbTypes.DateTime });
-                    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_autogen", Type = vDbTypes.Decimal });
+                    //_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_transaction_date", Type = vDbTypes.DateTime });
+                    //_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_autogen", Type = vDbTypes.Decimal });
 
                     CreateOrAlterTable(_table.TableName, _listNamesAndTypes);
                 }                
@@ -273,6 +281,8 @@ namespace ExpressBase.ServiceStack.Services
                     }
                     if (_table.TableName != _schema.MasterTable)
                         _id = _schema.MasterTable + "_id";
+                    else
+                        _cols = ",eb_auto_id" + _cols;
                     query += string.Format("SELECT id {0} FROM {1} WHERE {2} = :id;", _cols, _table.TableName, _id);
                 }                
             }
@@ -320,6 +330,23 @@ namespace ExpressBase.ServiceStack.Services
                     FormData.MultipleTables.Add(dataTable.TableName, Table);
             }
             FormData.MasterTable = dataset.Tables[0].TableName;
+            try
+            {
+                SingleRow _masterRow = FormData.MultipleTables[FormData.MasterTable][0];
+                SingleColumn _idval = _masterRow.Columns.FirstOrDefault(c => c.Name.Equals("eb_auto_id"));
+                FormData.AutoIdText = _idval.Value;
+
+                var temp1 = _schema.Tables.FirstOrDefault(t => t.TableName == _schema.MasterTable);
+                var temp2 = temp1.Colums.FirstOrDefault(c => c.ColumName.Equals("eb_auto_id"));
+                if (temp2 == null)
+                {
+                    _masterRow.Columns.Remove(_idval);
+                }
+            }
+            catch(Exception Ex)
+            {
+                Console.WriteLine("Exception - eb_auto_id not found: From WebFormService - " + Ex.Message);
+            }            
             return FormData;
         }
 
@@ -506,6 +533,8 @@ WHERE
             }
             param.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_createdby", EbDbTypes.Int32, request.UserId));
             param.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_createdat", EbDbTypes.DateTime, System.DateTime.Now));
+            param.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_auto_id", EbDbTypes.String, request.FormData.AutoIdText?? string.Empty));
+            fullqry += string.Format("UPDATE {0} SET eb_auto_id = :eb_auto_id || cur_val('{0}_id_seq')::text WHERE id = cur_val('{0}_id_seq');", FormObj.TableName);
             fullqry += string.Concat("SELECT cur_val('", FormObj.TableName, "_id_seq');");
 
             var temp = EbConnectionFactory.DataDB.DoQuery(fullqry, param.ToArray());
