@@ -273,12 +273,14 @@ namespace ExpressBase.ServiceStack.Services
             {
                 string _cols = string.Empty;
                 string _id = "id";
-                if(_table.Colums.Count > 0)
+                
+                if (_table.Colums.Count > 0)
                 {
-                    foreach (ColumSchema _column in _table.Colums)
-                    {
-                        _cols += "," + _column.ColumName;
-                    }
+                    _cols = String.Join(", ", _table.Colums.Select(x => x.ColumName));
+                    //foreach (ColumSchema _column in _table.Colums)
+                    //{
+                    //    _cols += "," + _column.ColumName;
+                    //}
                     if (_table.TableName != _schema.MasterTable)
                         _id = _schema.MasterTable + "_id";
                     else
