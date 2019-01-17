@@ -539,9 +539,18 @@ WHERE
             fullqry += string.Format("UPDATE {0} SET eb_auto_id = :eb_auto_id || cur_val('{0}_id_seq')::text WHERE id = cur_val('{0}_id_seq');", FormObj.TableName);
             fullqry += string.Concat("SELECT cur_val('", FormObj.TableName, "_id_seq');");
 
-            var temp = EbConnectionFactory.DataDB.DoQuery(fullqry, param.ToArray());
+            EbDataTable temp = EbConnectionFactory.DataDB.DoQuery(fullqry, param.ToArray());
+            int _rowid = temp.Rows.Count > 0 ? Convert.ToInt32(temp.Rows[0][0]) : 0;
+            WebformData _formdata = new WebformData();
+            if (_rowid > 0)
+            {
+                _formdata = GetWebformData(request.RefId, _rowid);
+            }
 
-            return new InsertDataFromWebformResponse { RowAffected = temp.Rows.Count > 0 ? Convert.ToInt32(temp.Rows[0][0]) : 0 };
+            return new InsertDataFromWebformResponse {
+                RowId = _rowid,
+                FormData = _formdata
+            };
         }
 
         private InsertDataFromWebformResponse UpdateDataFromWebformRec(InsertDataFromWebformRequest request, EbControlContainer FormObj)
