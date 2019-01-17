@@ -26,10 +26,10 @@ namespace ExpressBase.ServiceStack.Services
 							SELECT DISTINCT INITCAP(TRIM(clcity)) AS clcity FROM customers WHERE LENGTH(clcity) > 2 ORDER BY clcity;
 							SELECT DISTINCT INITCAP(TRIM(clcountry)) AS clcountry FROM customers WHERE LENGTH(clcountry) > 2 ORDER BY clcountry;
 							SELECT DISTINCT INITCAP(TRIM(city)) AS city FROM customers WHERE LENGTH(city) > 2 ORDER BY city;
-							SELECT district FROM lead_district ORDER BY district;
-							SELECT source FROM lead_source ORDER BY source;
+							SELECT district FROM lead_district WHERE eb_del='F' ORDER BY district;
+							SELECT source FROM lead_source WHERE eb_del='F' ORDER BY source;
 							SELECT DISTINCT INITCAP(TRIM(subcategory)) AS subcategory FROM customers WHERE LENGTH(subcategory) > 2 ORDER BY subcategory;
-							SELECT status,nextstatus FROM lead_status ORDER BY status;
+							SELECT status,nextstatus FROM lead_status WHERE eb_del='F' ORDER BY status;
 							SELECT service FROM lead_service WHERE eb_del='F' ORDER BY service;
 							SELECT id, name FROM nurses ORDER BY name;";
 			List<DbParameter> paramList = new List<DbParameter>();
