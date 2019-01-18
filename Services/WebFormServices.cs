@@ -284,7 +284,7 @@ namespace ExpressBase.ServiceStack.Services
                     if (_table.TableName != _schema.MasterTable)
                         _id = _schema.MasterTable + "_id";
                     else
-                        _cols = ",eb_auto_id" + _cols;
+                        _cols = ",eb_auto_id," + _cols;
                     query += string.Format("SELECT id {0} FROM {1} WHERE {2} = :id;", _cols, _table.TableName, _id);
                 }                
             }
