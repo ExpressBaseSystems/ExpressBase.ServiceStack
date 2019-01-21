@@ -283,7 +283,6 @@ namespace ExpressBase.ServiceStack
             if (_ds != null)
             {
                 string _c = string.Empty;
-
                 _sql = _ds.Sql;
             }
             var parameters = DataHelper.GetParams(this.EbConnectionFactory, false, request.Params, 0, 0);
@@ -306,10 +305,10 @@ namespace ExpressBase.ServiceStack
                 string sql = string.Empty;
                 if (request.Parameters.Count > 0)
                 {
-                    foreach (InputParam p in request.Parameters)
+                    foreach (Param p in request.Parameters)
                     {
-                        _params.Add(":" + p.Column);
-                        parameter.Add(this.EbConnectionFactory.DataDB.GetNewParameter(p.Column, (EbDbTypes)p.Type, p.Value));
+                        _params.Add(":" + p.Name);
+                        parameter.Add(this.EbConnectionFactory.DataDB.GetNewParameter(p.Name, (EbDbTypes)Convert.ToInt32(p.Type), p.Value));
                     }
                     sql = string.Format(@"SELECT * FROM {0}({1})", request.FunctionName, string.Join(",", _params));
                     resp.Data = this.EbConnectionFactory.ObjectsDB.DoQuery(sql, parameter.ToArray());
