@@ -26,11 +26,11 @@ namespace ExpressBase.ServiceStack.Services
 							SELECT DISTINCT INITCAP(TRIM(clcity)) AS clcity FROM customers WHERE LENGTH(clcity) > 2 ORDER BY clcity;
 							SELECT DISTINCT INITCAP(TRIM(clcountry)) AS clcountry FROM customers WHERE LENGTH(clcountry) > 2 ORDER BY clcountry;
 							SELECT DISTINCT INITCAP(TRIM(city)) AS city FROM customers WHERE LENGTH(city) > 2 ORDER BY city;
-							SELECT district FROM lead_district ORDER BY district;
-							SELECT source FROM lead_source ORDER BY source;
+							SELECT district FROM lead_district WHERE eb_del='F' ORDER BY district;
+							SELECT source FROM lead_source WHERE eb_del='F' ORDER BY source;
 							SELECT DISTINCT INITCAP(TRIM(subcategory)) AS subcategory FROM customers WHERE LENGTH(subcategory) > 2 ORDER BY subcategory;
-							SELECT status FROM lead_status ORDER BY status;
-							SELECT service FROM lead_service ORDER BY service;
+							SELECT status,nextstatus FROM lead_status WHERE eb_del='F' ORDER BY status;
+							SELECT service FROM lead_service WHERE eb_del='F' ORDER BY service;
 							SELECT id, name FROM nurses ORDER BY name;";
 			List<DbParameter> paramList = new List<DbParameter>();
 			Dictionary<int, string> CostCenter = new Dictionary<int, string>();
@@ -44,7 +44,7 @@ namespace ExpressBase.ServiceStack.Services
 			List<string> districtList = new List<string>();
 			List<string> sourcecategoryList = new List<string>();
 			List<string> subcategoryList = new List<string>();
-			List<string> statusList = new List<string>();
+            Dictionary<string, string> statusDict = new Dictionary<string, string>();
 			List<string> serviceList = new List<string>();
 			List<FeedbackEntry> Flist = new List<FeedbackEntry>();
 			List<BillingEntry> Blist = new List<BillingEntry>();
@@ -57,12 +57,12 @@ namespace ExpressBase.ServiceStack.Services
 				SqlQry += @"SELECT id, eb_loc_id, trdate, genurl, name, dob, genphoffice, profession, genemail, customertype, clcity, clcountry, city,
 								typeofcustomer, sourcecategory, subcategory, consultation, picsrcvd, dprefid, sex, district, leadowner
 								FROM customers WHERE id = :accountid AND eb_del='F';
-							SELECT id,trdate,status,followupdate,narration, eb_createdby, eb_createddt FROM leaddetails
+							SELECT id,trdate,status,followupdate,narration, eb_createdby, eb_createddt,isnotpickedup FROM leaddetails
 								WHERE customers_id=:accountid ORDER BY eb_createddt DESC;
 							SELECT id,trdate,totalamount,advanceamount,balanceamount,cashreceived,paymentmode,bank,createddt,narration,createdby 
 								FROM leadpaymentdetails WHERE customers_id=:accountid ORDER BY balanceamount;
 							SELECT id,dateofsurgery,eb_loc_id,createdby,createddt, extractiondone_by,
-									implantation_by,consent_by,anaesthesia_by,post_briefing_by,nurses_id
+									implantation_by,consent_by,anaesthesia_by,post_briefing_by,nurses_id,complementry,method
 								FROM leadsurgerystaffdetails WHERE customers_id=:accountid ORDER BY createddt DESC;
 							SELECT noofgrafts,totalrate,prpsessions,consulted,consultingfeepaid,consultingdoctor,eb_closing,LOWER(TRIM(nature)),consdate,probmonth
 								FROM leadratedetails WHERE customers_id=:accountid;";
@@ -108,7 +108,8 @@ namespace ExpressBase.ServiceStack.Services
 			foreach (var dr in ds.Tables[8].Rows)
 				subcategoryList.Add(dr[0].ToString());
 			foreach (var dr in ds.Tables[9].Rows)
-				statusList.Add(dr[0].ToString());
+                if(!statusDict.ContainsKey(dr[0].ToString()))
+				    statusDict.Add(dr[0].ToString(), dr[1].ToString());
 			foreach (var dr in ds.Tables[10].Rows)
 				serviceList.Add(dr[0].ToString());
 
@@ -170,7 +171,8 @@ namespace ExpressBase.ServiceStack.Services
 						Fup_Date = getStringValue(i[3]),						
 						Comments = i[4].ToString(),
 						Created_By = StaffDict.ContainsValue(Convert.ToInt32(i[5]))? StaffDict.FirstOrDefault(x => x.Value == Convert.ToInt32(i[5])).Key : string.Empty,
-						Created_Date = getStringValue(i[6], true, true)
+						Created_Date = getStringValue(i[6], true, true),
+                        Is_Picked_Up = Convert.ToBoolean(i[7])? "No": "Yes"
 					});
 				}
 
@@ -208,7 +210,9 @@ namespace ExpressBase.ServiceStack.Services
 						Consent_By = Convert.ToInt32(i[7]),
 						Anaesthesia_By = Convert.ToInt32(i[8]),
 						Post_Brief_By = Convert.ToInt32(i[9]),
-						Nurse = Convert.ToInt32(i[10])
+						Nurse = Convert.ToInt32(i[10]),
+                        Complimentary = i[11].ToString(),
+                        Method = i[12].ToString()
 					});
 				}
 			}
@@ -230,7 +234,7 @@ namespace ExpressBase.ServiceStack.Services
 				SourceCategoryList = sourcecategoryList,
 				SubCategoryList = subcategoryList,
 				//ImageIdList = ImgIds,
-				StatusList = statusList,
+				StatusDict = statusDict,
 				ServiceList = serviceList,
 				NurseDict = NurseDict
 			};
@@ -634,17 +638,18 @@ WHERE
 
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_createdby", EbDbTypes.Int32, request.UserId));
             //parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_createddt", EbDbTypes.DateTime, CrntDateTime));
+            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("isnotpickedup", EbDbTypes.BooleanOriginal, F_Obj.Is_Picked_Up.Equals("Yes")? false: true));
 
             if (F_Obj.Id == 0)//new   //if (true)//update disabled
             {
-				string Qry = @"INSERT INTO leaddetails(prehead, customers_id, trdate, status, followupdate, narration, createdby, createddt, eb_createdby, eb_createddt) 
-									VALUES('50' , :accountid, :trdate, :status, :followupdate, :narration, :createdby, NOW(), :eb_createdby, NOW());";
+				string Qry = @"INSERT INTO leaddetails(prehead, customers_id, trdate, status, followupdate, narration, createdby, createddt, eb_createdby, eb_createddt, isnotpickedup) 
+									VALUES('50' , :accountid, :trdate, :status, :followupdate, :narration, :createdby, NOW(), :eb_createdby, NOW(), :isnotpickedup);";
 				rstatus = this.EbConnectionFactory.ObjectsDB.InsertTable(Qry, parameters.ToArray());
 			}
 			else if(request.Permission)//update
 			{
 				string Qry = @"UPDATE leaddetails 
-								SET trdate=:trdate, status=:status, followupdate=:followupdate, narration=:narration, modifiedby = :modifiedby, modifieddt = NOW()
+								SET trdate=:trdate, status=:status, followupdate=:followupdate, narration=:narration, modifiedby = :modifiedby, modifieddt = NOW(), isnotpickedup = :isnotpickedup
 								WHERE prehead = '50' AND customers_id = :accountid AND id=:id;";
 				rstatus = this.EbConnectionFactory.ObjectsDB.UpdateTable(Qry, parameters.ToArray());
 			}
@@ -717,9 +722,10 @@ WHERE
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("anaesthesia_by", EbDbTypes.Int32, S_Obj.Anaesthesia_By));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("post_briefing_by", EbDbTypes.Int32, S_Obj.Post_Brief_By));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("nurses", EbDbTypes.Int32, S_Obj.Nurse));
+            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("complimentary", EbDbTypes.String, S_Obj.Complimentary));
+            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("method", EbDbTypes.String, S_Obj.Method));
 
-			
-			if (true)//if (S_Obj.Id == 0)//new
+            if (true)//if (S_Obj.Id == 0)//new
 			{
 				string Qry1 = @"INSERT INTO 
 									leadsurgerydetails(customers_id, dateofsurgery, eb_loc_id, createddt, createdby)
@@ -728,10 +734,10 @@ WHERE
 				this.EbConnectionFactory.ObjectsDB.InsertTable(Qry1, parameters1);
 				string Qry = @"INSERT INTO
  									leadsurgerystaffdetails(customers_id, dateofsurgery, eb_loc_id, createddt, createdby, extractiondone_by,
-									implantation_by, consent_by, anaesthesia_by, post_briefing_by, nurses_id)
+									implantation_by, consent_by, anaesthesia_by, post_briefing_by, nurses_id, complementry, method)
 								VALUES
 									(:customers_id, :dateofsurgery, :eb_loc_id, NOW(), :createdby, :extractiondone_by,
-									:implantation_by, :consent_by, :anaesthesia_by, :post_briefing_by, :nurses);";
+									:implantation_by, :consent_by, :anaesthesia_by, :post_briefing_by, :nurses, :complimentary, :method);";
 				rstatus = this.EbConnectionFactory.ObjectsDB.InsertTable(Qry, parameters.ToArray());
 			}
 			else//update
@@ -786,7 +792,9 @@ WHERE
             string query = @"
 update customers set eb_del='T' where id=:id;
 update leaddetails set eb_del='T' where customers_id=:id;
-update leadratedetails set eb_del='T' where customers_id=:id;";
+update leadratedetails set eb_del='T' where customers_id=:id;
+update leadsurgerydetails set eb_del='T' where customers_id=:id;
+update leadsurgerystaffdetails set eb_del='T' where customers_id=:id;";
 
             DbParameter[] parameters = new DbParameter[] {
                 this.EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, request.CustId)
