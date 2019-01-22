@@ -180,13 +180,18 @@ namespace ExpressBase.ServiceStack.Services
                     else if (step != r_count)
                     {
                         Dictionary<string, object> _data = this.ObjectToDict(api_o.Resources[step], api_o.Resources[step - 1].Result);
-                        if(_data.Any())
+                        if (_data.Any())
                             api_o.Resources[step].Result = this.GetResult(api_o.Resources[step], _data);
                     }
                     step++;
                 }
+                return new ApiResponse { Result = JsonConvert.SerializeObject(api_o.Resources[step - 1].Result) };
             }
-            return new ApiResponse { Result = JsonConvert.SerializeObject(api_o.Resources[step-1].Result) };
+            else
+            {
+                return new ApiResponse { Message = "Api does not exist!", Result = null };
+            }
+
         }
 
         private object GetResult(EbApiWrapper resource, Dictionary<string, object> data)
