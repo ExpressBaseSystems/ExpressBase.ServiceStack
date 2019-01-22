@@ -284,8 +284,8 @@ namespace ExpressBase.ServiceStack.Services
                     if (_table.TableName != _schema.MasterTable)
                         _id = _schema.MasterTable + "_id";
                     else
-                        _cols = ",eb_auto_id," + _cols;
-                    query += string.Format("SELECT id {0} FROM {1} WHERE {2} = :id;", _cols, _table.TableName, _id);
+                        _cols = "eb_auto_id," + _cols;
+                    query += string.Format("SELECT id, {0} FROM {1} WHERE {2} = :id;", _cols, _table.TableName, _id);
                 }
             }
 
@@ -598,7 +598,14 @@ WHERE
             param.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_modified_at", EbDbTypes.DateTime, System.DateTime.Now));
             int rowsAffected = EbConnectionFactory.DataDB.InsertTable(fullqry, param.ToArray());
 
-            return new InsertDataFromWebformResponse { RowAffected = rowsAffected };
+            WebformData _formdata = GetWebformData(request.RefId, request.RowId);
+
+            return new InsertDataFromWebformResponse
+            {
+                RowAffected = rowsAffected,
+                FormData = _formdata,
+                RowId = request.RowId
+            };
         }
 
 
