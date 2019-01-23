@@ -24,67 +24,17 @@ namespace ExpressBase.ServiceStack.Services
         public CreateWebFormTableResponse Any(CreateWebFormTableRequest request)
         {
             if (request.WebObj is EbWebForm)
+            {
                 (request.WebObj as EbWebForm).AfterRedisGet(this);
+                CreateWebFormTables((request.WebObj as EbWebForm).GetWebFormSchema());
+            }                
 
             //CreateWebFormTableRec(request.WebObj, request.WebObj.TableName);
 
-            WebFormSchema _temp = GetWebFormSchema(request.WebObj);/////////
-            CreateWebFormTables(_temp);
+            //WebFormSchema _temp = GetWebFormSchema(request.WebObj);/////////
+            //CreateWebFormTables(_temp);
 
             return new CreateWebFormTableResponse { };
-        }
-
-        private WebFormSchema GetWebFormSchema(EbControlContainer _container)
-        {
-            WebFormSchema _formSchema = new WebFormSchema();
-            _formSchema.FormName = _container.Name;
-            _formSchema.MasterTable = _container.TableName.ToLower();
-            _formSchema.Tables = new List<TableSchema>();
-            _formSchema = GetWebFormSchemaRec(_formSchema, _container);
-            return _formSchema;
-        }
-
-        private WebFormSchema GetWebFormSchemaRec(WebFormSchema _schema, EbControlContainer _container)
-        {
-            IEnumerable<EbControl> _flatControls = _container.Controls.Get1stLvlControls();
-            TableSchema _table = _schema.Tables.FirstOrDefault(tbl => tbl.TableName == _container.TableName);
-            if (_table == null)
-            {
-                List<ColumSchema> _columns = new List<ColumSchema>();
-                foreach (EbControl control in _flatControls)
-                {
-                    if (control is EbAutoId)
-                        _columns.Add(new ColumSchema { ColumName = "eb_auto_id", EbDbType = (int)EbDbTypes.String });
-                    else
-                        _columns.Add(new ColumSchema { ColumName = control.Name, EbDbType = (int)control.EbDbType });
-                }
-                if (_columns.Count > 0)
-                    _schema.Tables.Add(new TableSchema { TableName = _container.TableName.ToLower(), Colums = _columns });
-            }
-            else
-            {
-                foreach (EbControl control in _flatControls)
-                {
-                    if (control is EbAutoId)
-                        _table.Colums.Add(new ColumSchema { ColumName = "eb_auto_id", EbDbType = (int)EbDbTypes.String });
-                    else
-                        _table.Colums.Add(new ColumSchema { ColumName = control.Name, EbDbType = (int)control.EbDbType });
-                }
-            }
-            foreach (EbControl _control in _container.Controls)
-            {
-                if (_control is EbControlContainer)
-                {
-                    EbControlContainer Container = _control as EbControlContainer;
-
-                    if (Container.TableName.IsNullOrEmpty())
-                    {
-                        Container.TableName = _container.TableName;
-                    }
-                    _schema = GetWebFormSchemaRec(_schema, Container);
-                }
-            }
-            return _schema;
         }
 
         private void CreateWebFormTables(WebFormSchema _schema)
@@ -218,40 +168,13 @@ namespace ExpressBase.ServiceStack.Services
             GetRowDataResponse _dataset = new GetRowDataResponse();
             _dataset.FormData = GetWebformData(request.RefId, request.RowId);
             return _dataset;
-        }
-
-        private string GetSelectQuery(WebFormSchema _schema)
-        {
-            string query = string.Empty;
-
-            foreach (TableSchema _table in _schema.Tables)
-            {
-                string _cols = string.Empty;
-                string _id = "id";
-
-                if (_table.Colums.Count > 0)
-                {
-                    _cols = String.Join(", ", _table.Colums.Select(x => x.ColumName));
-                    //foreach (ColumSchema _column in _table.Colums)
-                    //{
-                    //    _cols += "," + _column.ColumName;
-                    //}
-                    if (_table.TableName != _schema.MasterTable)
-                        _id = _schema.MasterTable + "_id";
-                    else
-                        _cols = "eb_auto_id," + _cols;
-                    query += string.Format("SELECT id, {0} FROM {1} WHERE {2} = :id;", _cols, _table.TableName, _id);
-                }
-            }
-
-            return query;
-        }
+        }       
 
         private WebformData GetWebformData(string _refId, int _rowid)
         {
             EbWebForm FormObj = GetWebFormObject(_refId);
-            WebFormSchema _schema = GetWebFormSchema(FormObj);
-            string query = GetSelectQuery(_schema);
+            WebFormSchema _schema = FormObj.GetWebFormSchema();
+            string query = FormObj.GetSelectQuery(_schema);
 
             EbDataSet dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(query, new DbParameter[] { this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, _rowid) });
 
@@ -397,7 +320,7 @@ WHERE
                 int i = 0;
                 foreach (SingleRow row in entry.Value)
                 {
-                    string _qry = "INSERT INTO {0} ({1} eb_created_by, eb_created_at {3} ) VALUES ({2} :eb_createdby, :eb_createdat {4});";
+                    string _qry = "INSERT INTO {0} ({1} eb_created_by, eb_created_at {3} ) VALUES ({2} :eb_createdby, NOW() {4});";
                     string _tblname = entry.Key;
                     string _cols = string.Empty;
                     string _values = string.Empty;
@@ -424,7 +347,7 @@ WHERE
 
             }
             param.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_createdby", EbDbTypes.Int32, request.UserId));
-            param.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_createdat", EbDbTypes.DateTime, System.DateTime.Now));
+            //param.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_createdat", EbDbTypes.DateTime, System.DateTime.Now));
             param.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_auto_id", EbDbTypes.String, request.FormData.AutoIdText ?? string.Empty));
             fullqry += string.Format("UPDATE {0} SET eb_auto_id = :eb_auto_id || cur_val('{0}_id_seq')::text WHERE id = cur_val('{0}_id_seq');", FormObj.TableName);
             fullqry += string.Concat("SELECT cur_val('", FormObj.TableName, "_id_seq');");
@@ -456,7 +379,7 @@ WHERE
                     string _tblname = entry.Key;
                     if (Convert.ToInt32(row.RowId) > 0)
                     {
-                        string _qry = "UPDATE {0} SET {1} eb_lastmodified_by = :eb_modified_by, eb_lastmodified_at = :eb_modified_at WHERE id={2};";
+                        string _qry = "UPDATE {0} SET {1} eb_lastmodified_by = :eb_modified_by, eb_lastmodified_at = NOW() WHERE id={2};";
                         string _colvals = string.Empty;
 
                         foreach (SingleColumn rField in row.Columns)
@@ -468,7 +391,7 @@ WHERE
                     }
                     else
                     {
-                        string _qry = "INSERT INTO {0} ({1} eb_created_by, eb_created_at, {3}_id ) VALUES ({2} :eb_createdby, :eb_createdat ,:{4}_id);";
+                        string _qry = "INSERT INTO {0} ({1} eb_created_by, eb_created_at, {3}_id ) VALUES ({2} :eb_createdby, NOW() ,:{4}_id);";
                         string _cols = string.Empty, _vals = string.Empty;
                         foreach (SingleColumn rField in row.Columns)
                         {
@@ -483,9 +406,9 @@ WHERE
                 }
             }
             param.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_createdby", EbDbTypes.Int32, request.UserId));
-            param.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_createdat", EbDbTypes.DateTime, System.DateTime.Now));
+            //param.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_createdat", EbDbTypes.DateTime, System.DateTime.Now));
             param.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_modified_by", EbDbTypes.Int32, request.UserId));
-            param.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_modified_at", EbDbTypes.DateTime, System.DateTime.Now));
+            //param.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_modified_at", EbDbTypes.DateTime, System.DateTime.Now));
             int rowsAffected = EbConnectionFactory.DataDB.InsertTable(fullqry, param.ToArray());
 
             WebformData _formdata = GetWebformData(request.RefId, request.RowId);
@@ -792,5 +715,88 @@ WHERE
         //        CreateOrAlterTable(_container.TableName.ToLower(), _listNamesAndTypes);
         //    }
         //}
+
+
+
+        //private WebFormSchema GetWebFormSchema(EbControlContainer _container)
+        //{
+        //    WebFormSchema _formSchema = new WebFormSchema();
+        //    _formSchema.FormName = _container.Name;
+        //    _formSchema.MasterTable = _container.TableName.ToLower();
+        //    _formSchema.Tables = new List<TableSchema>();
+        //    _formSchema = GetWebFormSchemaRec(_formSchema, _container);
+        //    return _formSchema;
+        //}
+
+        //private WebFormSchema GetWebFormSchemaRec(WebFormSchema _schema, EbControlContainer _container)
+        //{
+        //    IEnumerable<EbControl> _flatControls = _container.Controls.Get1stLvlControls();
+        //    TableSchema _table = _schema.Tables.FirstOrDefault(tbl => tbl.TableName == _container.TableName);
+        //    if (_table == null)
+        //    {
+        //        List<ColumSchema> _columns = new List<ColumSchema>();
+        //        foreach (EbControl control in _flatControls)
+        //        {
+        //            if (control is EbAutoId)
+        //                _columns.Add(new ColumSchema { ColumName = "eb_auto_id", EbDbType = (int)EbDbTypes.String });
+        //            else
+        //                _columns.Add(new ColumSchema { ColumName = control.Name, EbDbType = (int)control.EbDbType });
+        //        }
+        //        if (_columns.Count > 0)
+        //            _schema.Tables.Add(new TableSchema { TableName = _container.TableName.ToLower(), Colums = _columns });
+        //    }
+        //    else
+        //    {
+        //        foreach (EbControl control in _flatControls)
+        //        {
+        //            if (control is EbAutoId)
+        //                _table.Colums.Add(new ColumSchema { ColumName = "eb_auto_id", EbDbType = (int)EbDbTypes.String });
+        //            else
+        //                _table.Colums.Add(new ColumSchema { ColumName = control.Name, EbDbType = (int)control.EbDbType });
+        //        }
+        //    }
+        //    foreach (EbControl _control in _container.Controls)
+        //    {
+        //        if (_control is EbControlContainer)
+        //        {
+        //            EbControlContainer Container = _control as EbControlContainer;
+
+        //            if (Container.TableName.IsNullOrEmpty())
+        //            {
+        //                Container.TableName = _container.TableName;
+        //            }
+        //            _schema = GetWebFormSchemaRec(_schema, Container);
+        //        }
+        //    }
+        //    return _schema;
+        //}
+
+        //private string GetSelectQuery(WebFormSchema _schema)
+        //{
+        //    string query = string.Empty;
+
+        //    foreach (TableSchema _table in _schema.Tables)
+        //    {
+        //        string _cols = string.Empty;
+        //        string _id = "id";
+
+        //        if (_table.Colums.Count > 0)
+        //        {
+        //            _cols = String.Join(", ", _table.Colums.Select(x => x.ColumName));
+        //            //foreach (ColumSchema _column in _table.Colums)
+        //            //{
+        //            //    _cols += "," + _column.ColumName;
+        //            //}
+        //            if (_table.TableName != _schema.MasterTable)
+        //                _id = _schema.MasterTable + "_id";
+        //            else
+        //                _cols = "eb_auto_id," + _cols;
+        //            query += string.Format("SELECT id, {0} FROM {1} WHERE {2} = :id;", _cols, _table.TableName, _id);
+        //        }
+        //    }
+
+        //    return query;
+        //}
+
     }
 }
