@@ -252,4 +252,3 @@ paket-files/
 *.sln.iml
 *.ps1
 /Properties/PublishProfiles/publish-module.psm1
-/Properties/launchSettings.json

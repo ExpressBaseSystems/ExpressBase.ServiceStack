@@ -7,7 +7,6 @@ using ExpressBase.Data;
 using ExpressBase.Objects;
 using ExpressBase.Objects.Objects;
 using ExpressBase.Objects.Objects.DVRelated;
-using ExpressBase.Objects.Objects.ReportRelated;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ExpressBase.Security;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
@@ -333,7 +332,7 @@ namespace ExpressBase.ServiceStack
 
                 if (!_ds.Sql.ToLower().Contains(":and_search"))
                 {
-                    _ds.Sql = "SELECT * FROM (" + _ds.Sql + ") data WHERE 1=1 :and_search order by :orderby";
+                    _ds.Sql = "SELECT * FROM (" + _ds.Sql + "\n ) data WHERE 1=1 :and_search order by :orderby";
                 }
                 _ds.Sql = _ds.Sql.ReplaceAll(";", string.Empty);
                 _sql = _ds.Sql.Replace(":and_search", _c) + ";";
@@ -633,11 +632,11 @@ namespace ExpressBase.ServiceStack
                         if (AllowLinkforZero)
                         {
                             if (col.LinkType == LinkTypeEnum.Popout)
-                                _formattedData = "<a href='#' oncontextmenu='return false' class ='tablelink' data-link='" + col.LinkRefId + "'>" + _formattedData + "</a>";
+                                _formattedData = "<a href='#' oncontextmenu='return false' class ='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "'>" + _formattedData + "</a>";
                             else if (col.LinkType == LinkTypeEnum.Inline)
                                 _formattedData = _formattedData + "&nbsp; <a  href= '#' oncontextmenu= 'return false' class ='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-inline='true' data-data='" + _formattedData + "'><i class='fa fa-caret-down'></i></a>";
                             else if (col.LinkType == LinkTypeEnum.Both)
-                                _formattedData = "<a href='#' oncontextmenu='return false' class ='tablelink' data-link='" + col.LinkRefId + "'>" + _formattedData + "</a>" + "&nbsp; <a  href ='#' oncontextmenu='return false' class='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-inline='true' data-data='" + _formattedData + "'> <i class='fa fa-caret-down'></i></a>";
+                                _formattedData = "<a href='#' oncontextmenu='return false' class ='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "'>" + _formattedData + "</a>" + "&nbsp; <a  href ='#' oncontextmenu='return false' class='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-inline='true' data-data='" + _formattedData + "'> <i class='fa fa-caret-down'></i></a>";
                         }
                     }
                     if (col.Type == EbDbTypes.String && (col as DVStringColumn).RenderAs == StringRenderType.Link && col.LinkType == LinkTypeEnum.Tab)/////////////////

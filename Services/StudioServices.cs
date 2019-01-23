@@ -975,6 +975,8 @@ ORDER BY
                 return EbObjectTypes.DataWriter.IntCode;
             else if (obj is EbSqlFunction)
                 return EbObjectTypes.SqlFunction.IntCode;
+            else if (obj is EbApi)
+                return EbObjectTypes.Api.IntCode;
             else
                 return -1;
         }
@@ -1026,6 +1028,10 @@ ORDER BY
             else if(obj is EbSqlFunction)
             {
                 Redis.Set(refId, (EbSqlFunction)obj);
+            }
+            else if (obj is EbApi)
+            {
+                Redis.Set(refId, (EbApi)obj);
             }
         }
 

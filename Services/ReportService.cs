@@ -2,7 +2,6 @@
 using ExpressBase.Common.Data;
 using ExpressBase.Common.EbServiceStack.ReqNRes;
 using ExpressBase.Objects;
-using ExpressBase.Objects.ReportRelated;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using iTextSharp.text;
 using iTextSharp.text.pdf;
