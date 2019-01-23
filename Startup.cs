@@ -195,7 +195,7 @@ namespace ExpressBase.ServiceStack
             mqServer.RegisterHandler<ImportApplicationRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<SMSCreateRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<ReportInternalRequest>(base.ExecuteMessage);
-            mqServer.RegisterHandler<UpdateSolutionSchedulesRequest>(base.ExecuteMessage);
+            mqServer.RegisterHandler<AddSchedulesToSolutionRequest>(base.ExecuteMessage);
 
             mqServer.Start();
 

@@ -185,13 +185,10 @@ namespace ExpressBase.ServiceStack.Services
                     }
                     step++;
                 }
-                return new ApiResponse { Result = JsonConvert.SerializeObject(api_o.Resources[step - 1].Result) };
+                return new ApiResponse { Result = api_o.Resources[step - 1].Result,Message="Success" };
             }
             else
-            {
                 return new ApiResponse { Message = "Api does not exist!", Result = null };
-            }
-
         }
 
         private object GetResult(EbApiWrapper resource, Dictionary<string, object> data)
@@ -227,7 +224,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 p.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(pr.Name, (EbDbTypes)Convert.ToInt32(pr.Type), pr.ValueTo));
             }
-            return this.EbConnectionFactory.ObjectsDB.DoQueries(dr.Sql, p.ToArray());
+            return this.EbConnectionFactory.ObjectsDB.DoNonQuery(dr.Sql, p.ToArray());
         }
 
         public object ExcSqlFunction(EbSqlFunc func, Dictionary<string, object> data)
