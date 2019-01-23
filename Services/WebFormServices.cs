@@ -285,7 +285,7 @@ WHERE
             return new GetDictionaryValueResponse { Dict = Dict };
         }
 
-        //======================================= INSERT OR UPDATE RECORD =============================================
+        //======================================= INSERT OR UPDATE OR DELETE RECORD =============================================
 
         public InsertDataFromWebformResponse Any(InsertDataFromWebformRequest request)
         {
@@ -381,12 +381,20 @@ WHERE
                     {
                         string _qry = "UPDATE {0} SET {1} eb_lastmodified_by = :eb_modified_by, eb_lastmodified_at = NOW() WHERE id={2};";
                         string _colvals = string.Empty;
-
-                        foreach (SingleColumn rField in row.Columns)
+                        if (row.IsDelete && !_tblname.Equals(request.FormData.MasterTable))
                         {
-                            _colvals += string.Concat(rField.Name, "=:", rField.Name, "_", i, ",");
-                            param.Add(this.EbConnectionFactory.DataDB.GetNewParameter(rField.Name + "_" + i, (EbDbTypes)rField.Type, rField.Value));
+                            _qry = "UPDATE {0} SET {1}, eb_lastmodified_by = :eb_modified_by, eb_lastmodified_at = NOW() WHERE id={2} AND eb_del='F';";
+                            _colvals = "eb_del='T'";
                         }
+                        else
+                        {
+                            foreach (SingleColumn rField in row.Columns)
+                            {
+                                _colvals += string.Concat(rField.Name, "=:", rField.Name, "_", i, ",");
+                                param.Add(this.EbConnectionFactory.DataDB.GetNewParameter(rField.Name + "_" + i, (EbDbTypes)rField.Type, rField.Value));
+                            }
+                        }
+                        
                         fullqry += string.Format(_qry, _tblname, _colvals, row.RowId);
                     }
                     else
@@ -421,6 +429,17 @@ WHERE
             };
         }
 
+        public DeleteDataFromWebformResponse Any(DeleteDataFromWebformRequest request)
+        {
+            EbWebForm FormObj = GetWebFormObject(request.RefId);
+            string query = FormObj.GetDeleteQuery();
+            DbParameter[] param = new DbParameter[] {
+                this.EbConnectionFactory.DataDB.GetNewParameter("eb_modified_by", EbDbTypes.Int32, request.UserId),
+                this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.RowId)
+            };
+            int rowsAffected = EbConnectionFactory.DataDB.UpdateTable(query, param);
+            return new DeleteDataFromWebformResponse { RowAffected = rowsAffected };
+        }
 
         //============================== VALIDATION AND AUDIT TRAIL ================================================
 
