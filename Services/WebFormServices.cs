@@ -27,7 +27,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 (request.WebObj as EbWebForm).AfterRedisGet(this);
                 CreateWebFormTables((request.WebObj as EbWebForm).GetWebFormSchema());
-            }                
+            }
 
             //CreateWebFormTableRec(request.WebObj, request.WebObj.TableName);
 
@@ -65,7 +65,7 @@ namespace ExpressBase.ServiceStack.Services
                     CreateOrAlterTable(_table.TableName, _listNamesAndTypes);
                 }
             }
-        }       
+        }
 
         private int CreateOrAlterTable(string tableName, List<TableColumnMeta> listNamesAndTypes)
         {
@@ -168,7 +168,7 @@ namespace ExpressBase.ServiceStack.Services
             GetRowDataResponse _dataset = new GetRowDataResponse();
             _dataset.FormData = GetWebformData(request.RefId, request.RowId);
             return _dataset;
-        }       
+        }
 
         private WebformData GetWebformData(string _refId, int _rowid)
         {
@@ -206,10 +206,11 @@ namespace ExpressBase.ServiceStack.Services
                     Row.RowId = dataRow[dataTable.Columns[0].ColumnIndex].ToString();
                     Table.Add(Row);
                 }
-                if (!FormData.MultipleTables.ContainsKey(dataTable.TableName))
+                if (!FormData.MultipleTables.ContainsKey(dataTable.TableName) && Table.Count > 0)
                     FormData.MultipleTables.Add(dataTable.TableName, Table);
             }
-            FormData.MasterTable = dataset.Tables[0].TableName;
+            if (FormData.MultipleTables.Count > 0)
+                FormData.MasterTable = dataset.Tables[0].TableName;
             try
             {
                 SingleRow _masterRow = FormData.MultipleTables[FormData.MasterTable][0];
@@ -228,7 +229,7 @@ namespace ExpressBase.ServiceStack.Services
                 Console.WriteLine("Exception - eb_auto_id not found: From WebFormService - " + Ex.Message);
             }
             return FormData;
-        }        
+        }
 
         private EbWebForm GetWebFormObject(string RefId)
         {
@@ -394,7 +395,7 @@ WHERE
                                 param.Add(this.EbConnectionFactory.DataDB.GetNewParameter(rField.Name + "_" + i, (EbDbTypes)rField.Type, rField.Value));
                             }
                         }
-                        
+
                         fullqry += string.Format(_qry, _tblname, _colvals, row.RowId);
                     }
                     else
