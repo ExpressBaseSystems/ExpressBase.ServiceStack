@@ -169,7 +169,7 @@ namespace ExpressBase.ServiceStack
             _recordsFiltered = (_recordsFiltered > 0) ? _recordsFiltered : _dataset.Tables[1].Rows.Count;
             //-- 
             TimeSpan T = _dataset.EndTime - _dataset.StartTime;
-            Queryinsert(_dataset.RowNumbers, T, _dataset.StartTime, request.UserId, request.Params);
+            InsertExecutionLog(_dataset.RowNumbers, T, _dataset.StartTime, request.UserId, request.Params, request.RefId);
 
             dsresponse = new DataSourceDataResponse
             {
