@@ -174,43 +174,43 @@ namespace ExpressBase.ServiceStack.Services
         {
             EbWebForm FormObj = GetWebFormObject(_refId);
             WebFormSchema _schema = FormObj.GetWebFormSchema();
-            string query = FormObj.GetSelectQuery(_schema);
+            string query = FormObj.GetSelectQuery(_schema, this);
 
             EbDataSet dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(query, new DbParameter[] { this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, _rowid) });
 
             WebformData FormData = new WebformData();
 
-            foreach (EbDataTable dataTable in dataset.Tables)
+            for (int i = 0; i < _schema.Tables.Count && dataset.Tables.Count >= _schema.Tables.Count; i++)
             {
+                EbDataTable dataTable = dataset.Tables[i];////
                 SingleTable Table = new SingleTable();
-                foreach (EbDataRow dataRow in dataTable.Rows)
-                {
-                    SingleRow Row = new SingleRow();
-                    foreach (EbDataColumn dataColumn in dataTable.Columns)
-                    {
-                        object _unformattedData = dataRow[dataColumn.ColumnIndex];
-                        object _formattedData = _unformattedData;
 
-                        if (dataColumn.Type == EbDbTypes.Date)
-                        {
-                            _unformattedData = (_unformattedData == DBNull.Value) ? DateTime.MinValue : _unformattedData;
-                            _formattedData = ((DateTime)_unformattedData).Date != DateTime.MinValue ? Convert.ToDateTime(_unformattedData).ToString("yyyy-MM-dd") : string.Empty;
-                        }
-                        Row.Columns.Add(new SingleColumn()
-                        {
-                            Name = dataColumn.ColumnName,
-                            Type = (int)dataColumn.Type,
-                            Value = _formattedData
-                        });
-                    }
-                    Row.RowId = dataRow[dataTable.Columns[0].ColumnIndex].ToString();
-                    Table.Add(Row);
-                }
+                GetFormattedData(dataTable, Table);
+
                 if (!FormData.MultipleTables.ContainsKey(dataTable.TableName) && Table.Count > 0)
                     FormData.MultipleTables.Add(dataTable.TableName, Table);
             }
             if (FormData.MultipleTables.Count > 0)
                 FormData.MasterTable = dataset.Tables[0].TableName;
+
+            if(dataset.Tables.Count > _schema.Tables.Count)
+            {
+                int tableIndex = _schema.Tables.Count;
+                foreach(TableSchema Tbl in _schema.Tables)
+                {
+                    foreach(ColumSchema Col in Tbl.Colums)
+                    {
+                        if (Col.Control.GetType().Equals(typeof(EbPowerSelect)))
+                        {
+                            SingleTable Table = new SingleTable();
+                            GetFormattedData(dataset.Tables[tableIndex], Table);
+                            FormData.ExtendedTables.Add((Col.Control as EbControl).EbSid, Table);
+                            tableIndex++;
+                        }
+                    }
+                }
+            }
+
             try
             {
                 SingleRow _masterRow = FormData.MultipleTables[FormData.MasterTable][0];
@@ -228,8 +228,57 @@ namespace ExpressBase.ServiceStack.Services
             {
                 Console.WriteLine("Exception - eb_auto_id not found: From WebFormService - " + Ex.Message);
             }
+            //if (_extend)
+            //    GetWebformData_Extended(FormObj, FormData);
             return FormData;
         }
+
+        private void GetFormattedData(EbDataTable dataTable, SingleTable Table)
+        {
+            foreach (EbDataRow dataRow in dataTable.Rows)
+            {
+                SingleRow Row = new SingleRow();
+                foreach (EbDataColumn dataColumn in dataTable.Columns)
+                {
+                    object _unformattedData = dataRow[dataColumn.ColumnIndex];
+                    object _formattedData = _unformattedData;
+
+                    if (dataColumn.Type == EbDbTypes.Date)
+                    {
+                        _unformattedData = (_unformattedData == DBNull.Value) ? DateTime.MinValue : _unformattedData;
+                        _formattedData = ((DateTime)_unformattedData).Date != DateTime.MinValue ? Convert.ToDateTime(_unformattedData).ToString("yyyy-MM-dd") : string.Empty;
+                    }
+                    Row.Columns.Add(new SingleColumn()
+                    {
+                        Name = dataColumn.ColumnName,
+                        Type = (int)dataColumn.Type,
+                        Value = _formattedData
+                    });
+                }
+                Row.RowId = dataRow[dataTable.Columns[0].ColumnIndex].ToString();
+                Table.Add(Row);
+            }
+        }
+
+        //private void GetWebformData_Extended(EbControlContainer _formObj, WebformData _formData)
+        //{
+        //    string qry = string.Empty;
+        //    IEnumerable<EbControl> _flatControls = _formObj.Controls.Get1stLvlControls();
+        //    foreach (EbControl control in _flatControls)
+        //    {
+        //        if(control is EbPowerSelect)
+        //        {
+        //            SingleColumn col =  _formData.MultipleTables[_formObj.TableName][0].Columns.FirstOrDefault(c => c.Name == control.Name);
+        //            string val = col.Value.ToString();
+        //            (control as EbPowerSelect).Values = val.Split(',').Select(int.Parse).ToList();
+        //            qry  = (control as EbPowerSelect).GetSelectQuery(this);
+        //        }
+        //        else if(control is EbFileUploader)
+        //        {
+
+        //        }
+        //    }
+        //}
 
         private EbWebForm GetWebFormObject(string RefId)
         {
