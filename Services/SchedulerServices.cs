@@ -31,11 +31,30 @@ namespace ExpressBase.ServiceStack.Services
             return res;
 
         }
+        public RescheduleMQResponse Post(RescheduleMQRequest request)
+        {
+            RescheduleMQResponse res = new RescheduleMQResponse();
+
+            MessageProducer3.Publish(new RescheduleRequest { Task = request.Task, JobKey = request.JobKey, TriggerKey = request.TriggerKey });
+
+            EbConnectionFactory _ebConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
+            using (var con = _ebConnectionFactory.DataDB.GetNewConnection())
+            {
+                con.Open();
+                string sql = "UPDATE eb_schedules SET task = :task, name=:name WHERE id = :id";
+                DbParameter[] parameters = {
+                    _ebConnectionFactory.DataDB.GetNewParameter("task", EbDbTypes.Json,EbSerializers.Json_Serialize(request.Task)),
+                    _ebConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32,request.Id),
+                    _ebConnectionFactory.DataDB.GetNewParameter("name", EbDbTypes.String,  request.Task.Name)};
+                var r = _ebConnectionFactory.DataDB.DoNonQuery(sql, parameters);
+            }
+            return res;
+        }
 
         public DeleteJobMQResponse Post(DeleteJobMQRequest request)
         {
             DeleteJobMQResponse res = new DeleteJobMQResponse();
-            MessageProducer3.Publish(new DeleteJobRequest { JobKey =request.JobKey});
+            MessageProducer3.Publish(new DeleteJobRequest { JobKey = request.JobKey });
 
             EbConnectionFactory _ebConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
             using (var con = _ebConnectionFactory.DataDB.GetNewConnection())
@@ -47,7 +66,7 @@ namespace ExpressBase.ServiceStack.Services
                     _ebConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32,request.Id) };
                 var r = _ebConnectionFactory.DataDB.DoNonQuery(sql, parameters);
             }
-                return res;
+            return res;
         }
         public GetAllUsersResponse Get(GetAllUsersRequest request)
         {
