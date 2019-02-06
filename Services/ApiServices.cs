@@ -36,6 +36,8 @@ namespace ExpressBase.ServiceStack.Services
 
         public string Message { set; get; }
 
+        public string SolutionId { set; get; }
+
         public ApiServices(IEbConnectionFactory _dbf) : base(_dbf)
         {
             StudioServices = base.ResolveService<EbObjectService>();
@@ -188,6 +190,7 @@ namespace ExpressBase.ServiceStack.Services
 
         public ApiResponse Any(ApiRequest request)
         {
+            this.SolutionId = request.SolnId;
             this.GlobalParams = request.Data;
             var o = new object();
             int r_count = 0;
@@ -314,6 +317,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 EmailService.Post(new PdfCreateServiceMqRequest
                 {
+                    SolnId = this.SolutionId,
                     Params = i_param,
                     ObjId = Convert.ToInt32(refid.Split(CharConstants.DASH)[3])
                 });
