@@ -6,6 +6,7 @@ using ExpressBase.Common.Objects;
 using ExpressBase.Common.Structures;
 using ExpressBase.Objects;
 using ExpressBase.Objects.ServiceStack_Artifacts;
+using Newtonsoft.Json;
 using ServiceStack;
 using System;
 using System.Collections.Generic;
@@ -176,7 +177,7 @@ namespace ExpressBase.ServiceStack.Services
             EbWebForm FormObj = GetWebFormObject(_refId);
             WebFormSchema _schema = FormObj.GetWebFormSchema();
             string query = FormObj.GetSelectQuery(_schema, this);
-            string context = _refId.Split("-")[2] + "_" + _rowid.ToString();
+            string context = _refId.Split("-")[3] + "_" + _rowid.ToString();
 
             EbDataSet dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(query, new DbParameter[] 
             {
@@ -219,7 +220,30 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     SingleTable Table = new SingleTable();
                     GetFormattedData(dataset.Tables[tableIndex], Table);
-                    FormData.ExtendedTables.Add((Ctrl as EbControl).EbSid, Table);
+                    //--------------
+                    List<FileMetaInfo> _list = new List<FileMetaInfo>();
+                    foreach (SingleRow dr in Table)
+                    {
+                        FileMetaInfo info = new FileMetaInfo
+                        {
+                            FileRefId = dr["id"],
+                            FileName = dr["filename"],
+                            Meta = JsonConvert.DeserializeObject<Dictionary<string, List<string>>>(dr["tags"] as string),
+                            UploadTime = dr["uploadts"]
+                        };
+
+                        if (!_list.Contains(info))
+                            _list.Add(info);
+                    }
+                    SingleTable _Table = new SingleTable {
+                        new SingleRow() {
+                            Columns = new List<SingleColumn> {
+                                new SingleColumn { Name = "Files", Type = (int)EbDbTypes.Json, Value = JsonConvert.SerializeObject(_list) }
+                            }
+                        }
+                    };
+                    //--------------
+                    FormData.ExtendedTables.Add((Ctrl as EbControl).EbSid, _Table);
                     tableIndex++;
                 }
             }
@@ -414,6 +438,20 @@ WHERE
                 count++;
 
             }
+            foreach (KeyValuePair<string, SingleTable> entry in request.FormData.ExtendedTables)
+            {
+                string zzz = @" UPDATE 
+                                    eb_files_ref AS t 
+                                SET 
+                                    context=:c.context 
+                                FROM 
+                                    (VALUES (12312, '12_32_ps1'),(34344, '12_32_ps1')) AS c(id, context)
+                                WHERE 
+                                    c.id = t.id AND t.eb_del='F'";
+
+                string yyy = @"UPDATE eb_files_ref SET eb_del='T' WHERE context = '12_32_ps1' AND eb_del='F' AND id NOT IN (ids)";
+            }
+
             param.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_createdby", EbDbTypes.Int32, request.UserId));
             //param.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_createdat", EbDbTypes.DateTime, System.DateTime.Now));
             param.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_auto_id", EbDbTypes.String, request.FormData.AutoIdText ?? string.Empty));
