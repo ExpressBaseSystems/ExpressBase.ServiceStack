@@ -356,6 +356,7 @@ namespace ExpressBase.ServiceStack.Services
                 if (!string.IsNullOrEmpty((o as EbDataReader).FilterDialogRefId))
                     isFilter = true;
             }
+
             if (!isFilter)
             {
                 if ((o.InputParams != null) && (o.InputParams.Any()))
