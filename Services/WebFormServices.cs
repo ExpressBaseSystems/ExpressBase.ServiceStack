@@ -10,6 +10,7 @@ using ServiceStack;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.Globalization;
 using System.Linq;
 
 namespace ExpressBase.ServiceStack.Services
@@ -43,11 +44,11 @@ namespace ExpressBase.ServiceStack.Services
             foreach (TableSchema _table in _schema.Tables)
             {
                 List<TableColumnMeta> _listNamesAndTypes = new List<TableColumnMeta>();
-                if (_table.Colums.Count > 0)
+                if (_table.Columns.Count > 0)
                 {
-                    foreach (ColumSchema _column in _table.Colums)
+                    foreach (ColumnSchema _column in _table.Columns)
                     {
-                        _listNamesAndTypes.Add(new TableColumnMeta { Name = _column.ColumName, Type = vDbTypes.GetVendorDbTypeStruct((EbDbTypes)_column.EbDbType) });
+                        _listNamesAndTypes.Add(new TableColumnMeta { Name = _column.ColumnName, Type = vDbTypes.GetVendorDbTypeStruct((EbDbTypes)_column.EbDbType) });
                     }
                     if (_table.TableName != _schema.MasterTable)
                         _listNamesAndTypes.Add(new TableColumnMeta { Name = _schema.MasterTable + "_id", Type = vDbTypes.Decimal });// id refernce to the parent table will store in this column - foreignkey
@@ -175,8 +176,13 @@ namespace ExpressBase.ServiceStack.Services
             EbWebForm FormObj = GetWebFormObject(_refId);
             WebFormSchema _schema = FormObj.GetWebFormSchema();
             string query = FormObj.GetSelectQuery(_schema, this);
+            string context = _refId.Split("-")[2] + "_" + _rowid.ToString();
 
-            EbDataSet dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(query, new DbParameter[] { this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, _rowid) });
+            EbDataSet dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(query, new DbParameter[] 
+            {
+                this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, _rowid),
+                this.EbConnectionFactory.DataDB.GetNewParameter("context", EbDbTypes.String, context)
+            });
 
             WebformData FormData = new WebformData();
 
@@ -198,7 +204,7 @@ namespace ExpressBase.ServiceStack.Services
                 int tableIndex = _schema.Tables.Count;
                 foreach(TableSchema Tbl in _schema.Tables)
                 {
-                    foreach(ColumSchema Col in Tbl.Colums)
+                    foreach(ColumnSchema Col in Tbl.Columns)
                     {
                         if (Col.Control.GetType().Equals(typeof(EbPowerSelect)))
                         {
@@ -209,6 +215,13 @@ namespace ExpressBase.ServiceStack.Services
                         }
                     }
                 }
+                foreach(Object Ctrl in _schema.ExtendedControls)//FileUpaloder Controls
+                {
+                    SingleTable Table = new SingleTable();
+                    GetFormattedData(dataset.Tables[tableIndex], Table);
+                    FormData.ExtendedTables.Add((Ctrl as EbControl).EbSid, Table);
+                    tableIndex++;
+                }
             }
 
             try
@@ -218,7 +231,7 @@ namespace ExpressBase.ServiceStack.Services
                 FormData.AutoIdText = _idval.Value;
 
                 var temp1 = _schema.Tables.FirstOrDefault(t => t.TableName == _schema.MasterTable);
-                var temp2 = temp1.Colums.FirstOrDefault(c => c.ColumName.Equals("eb_auto_id"));
+                var temp2 = temp1.Columns.FirstOrDefault(c => c.ColumnName.Equals("eb_auto_id"));
                 if (temp2 == null)
                 {
                     _masterRow.Columns.Remove(_idval);
@@ -246,7 +259,12 @@ namespace ExpressBase.ServiceStack.Services
                     if (dataColumn.Type == EbDbTypes.Date)
                     {
                         _unformattedData = (_unformattedData == DBNull.Value) ? DateTime.MinValue : _unformattedData;
-                        _formattedData = ((DateTime)_unformattedData).Date != DateTime.MinValue ? Convert.ToDateTime(_unformattedData).ToString("yyyy-MM-dd") : string.Empty;
+                        _formattedData = ((DateTime)_unformattedData).Date != DateTime.MinValue ? Convert.ToDateTime(_unformattedData).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) : string.Empty;
+                    }
+                    else if(dataColumn.Type == EbDbTypes.DateTime)
+                    {
+                        _unformattedData = (_unformattedData == DBNull.Value) ? DateTime.MinValue : _unformattedData;
+                        _formattedData = ((DateTime)_unformattedData).Date != DateTime.MinValue ? Convert.ToDateTime(_unformattedData).ToString("yyyy-MM-dd hh:mm tt", CultureInfo.InvariantCulture) : string.Empty;
                     }
                     Row.Columns.Add(new SingleColumn()
                     {
