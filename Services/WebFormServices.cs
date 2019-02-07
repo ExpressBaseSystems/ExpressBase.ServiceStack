@@ -460,11 +460,11 @@ WHERE
                 {
                     string cn = entry.Key + "_" + i.ToString();
                     i++;
-                    InnerVals.Add(string.Format("(:{0}, '{1}_SELECT cur_val('{2}_id_seq')_{3}')", cn, EbObId, FormObj.TableName, entry.Key));
+                    InnerVals.Add(string.Format("(:{0}, '{1}_' || cur_val('{2}_id_seq')::text || '_{3}')", cn, EbObId, FormObj.TableName, entry.Key));
                     param.Add(this.EbConnectionFactory.DataDB.GetNewParameter(cn, EbDbTypes.Decimal, row.Columns[0].Value));
                     InnerIds.Add(":" + cn);
                 }
-                Innercxt.Add("context = " + EbObId + "_SELECT cur_val('"+ FormObj.TableName + "_id_seq')_" + entry.Key);
+                Innercxt.Add("context = '" + EbObId + "_' || cur_val('"+ FormObj.TableName + "_id_seq')::text || '_" + entry.Key + "'");
             }
             fullqry += string.Format(@"UPDATE 
                                             eb_files_ref AS t
