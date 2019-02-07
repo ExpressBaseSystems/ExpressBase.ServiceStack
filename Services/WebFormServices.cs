@@ -407,9 +407,9 @@ WHERE
             string fullqry = string.Empty;
             List<DbParameter> param = new List<DbParameter>();
             int count = 0;
+            int i = 0;
             foreach (KeyValuePair<string, SingleTable> entry in request.FormData.MultipleTables)
             {
-                int i = 0;
                 foreach (SingleRow row in entry.Value)
                 {
                     string _qry = "INSERT INTO {0} ({1} eb_created_by, eb_created_at {3} ) VALUES ({2} :eb_createdby, NOW() {4});";
@@ -504,9 +504,9 @@ WHERE
         {
             string fullqry = string.Empty;
             List<DbParameter> param = new List<DbParameter>();
+            int i = 0;
             foreach (KeyValuePair<string, SingleTable> entry in request.FormData.MultipleTables)
             {
-                int i = 0;
                 foreach (SingleRow row in entry.Value)
                 {
                     string _tblname = entry.Key;
