@@ -62,7 +62,7 @@ namespace ExpressBase.ServiceStack.Services
 							SELECT id,trdate,totalamount,advanceamount,balanceamount,cashreceived,paymentmode,bank,createddt,narration,createdby 
 								FROM leadpaymentdetails WHERE customers_id=:accountid ORDER BY balanceamount;
 							SELECT id,dateofsurgery,eb_loc_id,createdby,createddt, extractiondone_by,
-									implantation_by,consent_by,anaesthesia_by,post_briefing_by,nurses_id,complementry,method
+									implantation_by,consent_by,anaesthesia_by,post_briefing_by,nurses_id,complementry,method,narration
 								FROM leadsurgerystaffdetails WHERE customers_id=:accountid ORDER BY createddt DESC;
 							SELECT noofgrafts,totalrate,prpsessions,consulted,consultingfeepaid,consultingdoctor,eb_closing,LOWER(TRIM(nature)),consdate,probmonth
 								FROM leadratedetails WHERE customers_id=:accountid;";
@@ -212,7 +212,8 @@ namespace ExpressBase.ServiceStack.Services
 						Post_Brief_By = Convert.ToInt32(i[9]),
 						Nurse = Convert.ToInt32(i[10]),
                         Complimentary = i[11].ToString(),
-                        Method = i[12].ToString()
+                        Method = i[12].ToString(),
+                        Comment = i[13].ToString()
 					});
 				}
 			}
@@ -724,6 +725,7 @@ WHERE
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("nurses", EbDbTypes.Int32, S_Obj.Nurse));
             parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("complimentary", EbDbTypes.String, S_Obj.Complimentary));
             parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("method", EbDbTypes.String, S_Obj.Method));
+            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("narration", EbDbTypes.String, S_Obj.Comment));
 
             if (true)//if (S_Obj.Id == 0)//new
 			{
@@ -734,10 +736,10 @@ WHERE
 				this.EbConnectionFactory.ObjectsDB.InsertTable(Qry1, parameters1);
 				string Qry = @"INSERT INTO
  									leadsurgerystaffdetails(customers_id, dateofsurgery, eb_loc_id, createddt, createdby, extractiondone_by,
-									implantation_by, consent_by, anaesthesia_by, post_briefing_by, nurses_id, complementry, method)
+									implantation_by, consent_by, anaesthesia_by, post_briefing_by, nurses_id, complementry, method, narration)
 								VALUES
 									(:customers_id, :dateofsurgery, :eb_loc_id, NOW(), :createdby, :extractiondone_by,
-									:implantation_by, :consent_by, :anaesthesia_by, :post_briefing_by, :nurses, :complimentary, :method);";
+									:implantation_by, :consent_by, :anaesthesia_by, :post_briefing_by, :nurses, :complimentary, :method, :narration);";
 				rstatus = this.EbConnectionFactory.ObjectsDB.InsertTable(Qry, parameters.ToArray());
 			}
 			else//update

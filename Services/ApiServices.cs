@@ -1,10 +1,13 @@
 ﻿using ExpressBase.Common;
+using ExpressBase.Common.Constants;
 using ExpressBase.Common.Data;
 using ExpressBase.Common.Extensions;
 using ExpressBase.Common.Objects;
 using ExpressBase.Common.Structures;
 using ExpressBase.Objects;
+using ExpressBase.Objects.EmailRelated;
 using ExpressBase.Objects.ServiceStack_Artifacts;
+using ExpressBase.ServiceStack.MQServices;
 using Newtonsoft.Json;
 using Npgsql;
 using ServiceStack.Redis;
@@ -23,10 +26,23 @@ namespace ExpressBase.ServiceStack.Services
 
         DataSourceService DSService { set; get; }
 
+        PdfToEmailService EmailService { set; get; }
+
+        Dictionary<string, object> GlobalParams { set; get; }
+
+        Dictionary<string, object> TempParams { set; get; }
+
+        public EbApi Api { set; get; }
+
+        public string Message { set; get; }
+
+        public string SolutionId { set; get; }
+
         public ApiServices(IEbConnectionFactory _dbf) : base(_dbf)
         {
             StudioServices = base.ResolveService<EbObjectService>();
             DSService = base.ResolveService<DataSourceService>();
+            EmailService = base.ResolveService<PdfToEmailService>();
         }
 
         public FormDataJsonResponse Post(FormDataJsonRequest request)
@@ -162,96 +178,181 @@ namespace ExpressBase.ServiceStack.Services
             return new ApiByNameResponse { Api = api_o };
         }
 
+        private ObjWrapperInt GetObjectByVer(string refid)
+        {
+            EbObjectParticularVersionResponse resp = (EbObjectParticularVersionResponse)StudioServices.Get(new EbObjectParticularVersionRequest { RefId = refid });
+            return new ObjWrapperInt
+            {
+                ObjectType = resp.Data[0].EbObjectType,
+                EbObj = EbSerializers.Json_Deserialize(resp.Data[0].Json)
+            };
+        }
+
         public ApiResponse Any(ApiRequest request)
         {
+            this.SolutionId = request.SolnId;
+            this.GlobalParams = request.Data;
             var o = new object();
             int r_count = 0;
             string message = string.Empty;
             int step = 0;
-            EbApi api_o = this.Get(new ApiByNameRequest { Name = request.Name, Version = request.Version }).Api;
-            if (api_o != null)
+            this.Api = this.Get(new ApiByNameRequest { Name = request.Name, Version = request.Version }).Api;
+            try
             {
-                r_count = api_o.Resources.Count;
-
-                while (step < r_count)
+                if (Api != null)
                 {
-                    if (step == 0)
-                        api_o.Resources[step].Result = this.GetResult(api_o.Resources[step], request.Data);
-                    else if (step != r_count)
+                    r_count = this.Api.Resources.Count;
+                    while (step < r_count)
                     {
-                        Dictionary<string, object> _data = this.ObjectToDict(api_o.Resources[step], api_o.Resources[step - 1].Result);
-                        if (_data.Any())
-                            api_o.Resources[step].Result = this.GetResult(api_o.Resources[step], _data);
+                        this.Api.Resources[step].Result = this.GetResult(this.Api.Resources[step], step);
+                        step++;
                     }
-                    step++;
+                    return new ApiResponse { Result = this.Api.Resources[step - 1].Result, Message = Message };
                 }
-                return new ApiResponse { Result = api_o.Resources[step - 1].Result,Message="Success" };
+                else
+                    return new ApiResponse { Message = "Api does not exist!", Result = null };
             }
-            else
-                return new ApiResponse { Message = "Api does not exist!", Result = null };
+            catch (Exception e)
+            {
+                return new ApiResponse { Result = null, Message = e.Message };
+            }
         }
 
-        private object GetResult(EbApiWrapper resource, Dictionary<string, object> data)
+        private object GetResult(EbApiWrapper resource, int index)
         {
+            ObjWrapperInt o_wrapper = null;
+            ResultWrapper res = new ResultWrapper();
+            List<Param> i_param = null;
+
             if (resource is EbSqlReader)
-                return this.ExcDataReader(resource as EbSqlReader, data);
+            {
+                o_wrapper = this.GetObjectByVer(resource.Refid);
+                i_param = this.GetInputParams(o_wrapper.EbObj, o_wrapper.ObjectType, index);
+                res.Result = this.ExcDataReader(o_wrapper, i_param);
+            }
             else if (resource is EbSqlWriter)
-                return this.ExcDataWriter(resource as EbSqlWriter, data);
+            {
+                o_wrapper = this.GetObjectByVer(resource.Refid);
+                i_param = this.GetInputParams(o_wrapper.EbObj, o_wrapper.ObjectType, index);
+                res.Result = this.ExcDataWriter(o_wrapper, i_param);
+            }
             else if (resource is EbSqlFunc)
-                return this.ExcSqlFunction(resource as EbSqlFunc, data);
+            {
+                o_wrapper = this.GetObjectByVer(resource.Refid);
+                i_param = this.GetInputParams(o_wrapper.EbObj, o_wrapper.ObjectType, index);
+                res.Result = this.ExcSqlFunction(o_wrapper, i_param);
+            }
+            else if (resource is EbEmailNode)
+            {
+                o_wrapper = this.GetObjectByVer(resource.Refid);
+                i_param = this.GetInputParams(o_wrapper.EbObj, o_wrapper.ObjectType, index);
+                res.Result = this.ExcEmail(o_wrapper, i_param, resource.Refid);
+            }
+            else
+            {
+
+            }
+            return res.Result;
+        }
+
+        private object ExcDataReader(ObjWrapperInt wrapper, List<Param> i_param)
+        {
+            this.FillParams(i_param);
+            List<DbParameter> p = new List<DbParameter>();
+            EbDataSet dt = null;
+            try
+            {
+                foreach (Param pr in i_param)
+                {
+                    p.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(pr.Name, (EbDbTypes)Convert.ToInt32(pr.Type), pr.ValueTo));
+                }
+                dt = this.EbConnectionFactory.ObjectsDB.DoQueries((wrapper.EbObj as EbDataReader).Sql, p.ToArray());
+                this.Message = "Success";
+            }
+            catch(Exception e)
+            {
+                throw new ApiException(e.Message);
+            }
+            return dt;
+        }
+
+        private void FillParams(List<Param> _param)
+        {
+            foreach (Param p in _param)
+            {
+                if (this.GlobalParams.ContainsKey(p.Name))
+                    p.Value = this.GlobalParams[p.Name].ToString();
+                else if (this.TempParams != null && this.TempParams.ContainsKey(p.Name))
+                    p.Value = this.TempParams[p.Name].ToString();
+
+                if (string.IsNullOrEmpty(p.Value))
+                {
+                    throw new ApiException("Parameter " + p.Name + " must be set!");
+                }
+            }
+        }
+
+        public object ExcDataWriter(ObjWrapperInt wrapper, List<Param> i_param)
+        {
+            this.FillParams(i_param);
+            List<DbParameter> p = new List<DbParameter>();
+            foreach (Param pr in i_param)
+            {
+                p.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(pr.Name, (EbDbTypes)Convert.ToInt32(pr.Type), pr.ValueTo));
+            }
+            return this.EbConnectionFactory.ObjectsDB.DoNonQuery((wrapper.EbObj as EbDataWriter).Sql, p.ToArray());
+        }
+
+        private object ExcSqlFunction(ObjWrapperInt wrapper, List<Param> i_param)
+        {
+            this.FillParams(i_param);
+            return this.DSService.Post(new SqlFuncTestRequest { FunctionName = (wrapper.EbObj as EbSqlFunction).Name, Parameters = i_param });
+        }
+
+        private bool ExcEmail(ObjWrapperInt wrapper, List<Param> i_param,string refid)
+        {
+            bool stat = false;
+            this.FillParams(i_param);
+            try
+            {
+                EmailService.Post(new PdfCreateServiceMqRequest
+                {
+                    SolnId = this.SolutionId,
+                    Params = i_param,
+                    ObjId = Convert.ToInt32(refid.Split(CharConstants.DASH)[3])
+                });
+                stat = true;
+                this.Message = "Mail sent";
+            }
+            catch(Exception e) {
+                stat = false;
+                throw new ApiException(e.Message);
+            }
+            return stat;
+        }
+
+        private List<Param> GetInputParams(object ar, int obj_type, int step_c)
+        {
+            List<Param> p = null;
+            if (ar is EbDataReader || ar is EbDataWriter || ar is EbSqlFunction)
+            {
+                p = GetSqlParams(ar as EbDataSourceMain, obj_type);
+            }
+            else if (ar is EbEmailTemplate)
+            {
+                p = this.GetEmailParams(ar as EbEmailTemplate);
+            }
             else
                 return null;
-        }
 
-        public EbDataSet ExcDataReader(EbSqlReader reader, Dictionary<string, object> data)
-        {
-            var dr = this.GetSql_Params(reader, data);
-
-            List<DbParameter> p = new List<DbParameter>();
-            foreach (Param pr in dr.Parameter)
+            if (step_c != 0)
             {
-                p.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(pr.Name, (EbDbTypes)Convert.ToInt32(pr.Type), pr.ValueTo));
+                this.SetOutParams(p, step_c);
             }
-            return this.EbConnectionFactory.ObjectsDB.DoQueries(dr.Sql, p.ToArray());
+            return p;
         }
 
-        public object ExcDataWriter(EbSqlWriter writer, Dictionary<string, object> data)
-        {
-            var dr = this.GetSql_Params(writer, data);
-
-            List<DbParameter> p = new List<DbParameter>();
-            foreach (Param pr in dr.Parameter)
-            {
-                p.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(pr.Name, (EbDbTypes)Convert.ToInt32(pr.Type), pr.ValueTo));
-            }
-            return this.EbConnectionFactory.ObjectsDB.DoNonQuery(dr.Sql, p.ToArray());
-        }
-
-        public object ExcSqlFunction(EbSqlFunc func, Dictionary<string, object> data)
-        {
-            var dr = this.GetSql_Params(func, data);
-            return this.DSService.Post(new SqlFuncTestRequest { FunctionName = (dr.Object as EbSqlFunction).Name, Parameters = dr.Parameter });
-        }
-
-        public SqlParams GetSql_Params(EbApiWrapper o, Dictionary<string, object> data)
-        {
-            EbObjectParticularVersionResponse o_ver = this.GetObjectByVer(o.Refid);
-            EbDataReader dr = EbSerializers.Json_Deserialize(o_ver.Data[0].Json);
-
-            return new SqlParams
-            {
-                Sql = dr.Sql,
-                Parameter = this.FillParams(GetParams(dr, o_ver.Data[0].EbObjectType), data),
-                Object = dr
-            };
-        }
-
-        private EbObjectParticularVersionResponse GetObjectByVer(string refid)
-        {
-            return (EbObjectParticularVersionResponse)StudioServices.Get(new EbObjectParticularVersionRequest { RefId = refid });
-        }
-
-        private List<Param> GetParams(EbDataSourceMain o, int obj_type)
+        private List<Param> GetSqlParams(EbDataSourceMain o, int obj_type)
         {
             bool isFilter = false;
             if (o is EbDataReader)
@@ -259,6 +360,7 @@ namespace ExpressBase.ServiceStack.Services
                 if (!string.IsNullOrEmpty((o as EbDataReader).FilterDialogRefId))
                     isFilter = true;
             }
+
             if (!isFilter)
             {
                 if ((o.InputParams != null) && (o.InputParams.Any()))
@@ -282,42 +384,55 @@ namespace ExpressBase.ServiceStack.Services
             }
         }
 
-        private List<Param> FillParams(List<Param> _param, Dictionary<string, object> data)
+        private void SetOutParams(List<Param> p, int step)
         {
-            foreach (Param p in _param)
+            Dictionary<string, object> temp = new Dictionary<string, object>();
+            if (this.Api.Resources[step - 1].Result != null)
             {
-                if (data.ContainsKey(p.Name))
-                    p.Value = data[p.Name].ToString();
-            }
-            return _param;
-        }
+                var o = this.Api.Resources[step - 1].GetOutParams(p);
 
-        private Dictionary<string, object> ObjectToDict(EbApiWrapper cur_step, object prev_step)
-        {
-            Dictionary<string, object> dict = new Dictionary<string, object>();
-
-            if (prev_step is EbDataSet)
-            {
-                prev_step = (prev_step as EbDataSet);
-
-                if (cur_step is EbSqlReader || cur_step is EbSqlWriter || cur_step is EbSqlFunc)
+                foreach (Param pr in (o as List<Param>))
                 {
-                    var o = this.GetObjectByVer(cur_step.Refid);
-                    EbDataReader dr = EbSerializers.Json_Deserialize(o.Data[0].Json);
-                    List<Param> _param = this.GetParams(dr, o.Data[0].EbObjectType);
-
-                    foreach (EbDataTable table in (prev_step as EbDataSet).Tables)
+                    if (!temp.ContainsKey(pr.Name))
                     {
-                        string[] c = _param.Select(item => item.Name).ToArray();
-                        foreach (EbDataColumn cl in table.Columns)
-                        {
-                            if (c.Contains(cl.ColumnName))
-                                dict.Add(cl.ColumnName, table.Rows[0][cl.ColumnIndex]);
-                        }
+                        temp.Add(pr.Name, pr.ValueTo);
                     }
                 }
             }
-            return dict;
+            this.TempParams = temp;
+        }
+
+        private List<Param> GetEmailParams(EbEmailTemplate enode)
+        {
+            List<Param> p = new List<Param>();
+            if (!string.IsNullOrEmpty(enode.AttachmentReportRefID))
+            {
+                EbReport o = this.GetObjectByVer(enode.AttachmentReportRefID).EbObj as EbReport;
+                if (!string.IsNullOrEmpty(o.DataSourceRefId))
+                {
+                    ObjWrapperInt ob = this.GetObjectByVer(o.DataSourceRefId);
+                    p = p.Merge(this.GetSqlParams(ob.EbObj as EbDataSourceMain, ob.ObjectType)).ToList();
+                }
+            }
+            if (!string.IsNullOrEmpty(enode.DataSourceRefId))
+            {
+                ObjWrapperInt ob = this.GetObjectByVer(enode.DataSourceRefId);
+                p = p.Merge(this.GetSqlParams(ob.EbObj as EbDataSourceMain, ob.ObjectType)).ToList();
+            }
+            return p;
+        }
+    }
+
+    public static class ApiExtensions
+    {
+        public static List<Param> Merge(this List<Param> to, List<Param> from)
+        {
+            foreach (Param p1 in from)
+            {
+                if (to.Find(x => x.Name == p1.Name) == null)
+                    to.Add(p1);
+            }
+            return to;
         }
     }
 }
