@@ -18,15 +18,15 @@ namespace ExpressBase.ServiceStack.Services
     {
         public SchedulerServices(IEbConnectionFactory _dbf, IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_dbf, _mqp, _mqc) { }
 
-        public SchedulerMQResponse Post(SchedulerMQRequest request)
+        public ScheduleMQResponse Post(ScheduleMQRequest request)
         {
             MessageProducer3.Publish(new ScheduleRequest { Task = request.Task });
             return null;
         }
 
-        public UnschedulerMQResponse Post(UnschedulerMQRequest request)
+        public UnscheduleMQResponse Post(UnscheduleMQRequest request)
         {
-            UnschedulerMQResponse res = new UnschedulerMQResponse();
+            UnscheduleMQResponse res = new UnscheduleMQResponse();
             MessageProducer3.Publish(new UnscheduleRequest { TriggerKey = request.TriggerKey });
             return res;
 
@@ -136,7 +136,8 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     sql = @"SELECT * FROM eb_schedules ES ,eb_users EU
                                WHERE EU.id = ES.created_by
-                               AND obj_id = :obj_id;";
+                               AND obj_id = :obj_id
+                                ORDER BY ES.id;";
                 }
                 else
                 {
@@ -174,7 +175,7 @@ namespace ExpressBase.ServiceStack.Services
     {
         public SchedulesAndSolutionServices(IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_mqp, _mqc) { }
 
-        public SchedulerMQResponse Post(AddSchedulesToSolutionRequest request)
+        public ScheduleMQResponse Post(AddSchedulesToSolutionRequest request)
         {
             EbConnectionFactory _ebConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
             using (var con = _ebConnectionFactory.DataDB.GetNewConnection())
