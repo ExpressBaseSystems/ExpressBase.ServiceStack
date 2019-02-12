@@ -190,7 +190,7 @@ namespace ExpressBase.ServiceStack
             mqServer.RetryCount = 1;
 
             mqServer.RegisterHandler<EmailServicesRequest>(base.ExecuteMessage);
-            mqServer.RegisterHandler<PdfCreateServiceRequest>(base.ExecuteMessage);
+            mqServer.RegisterHandler<EmailAttachmenRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<ExportApplicationRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<ImportApplicationRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<SMSCreateRequest>(base.ExecuteMessage);
