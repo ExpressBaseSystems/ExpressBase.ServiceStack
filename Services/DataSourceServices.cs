@@ -149,7 +149,7 @@ namespace ExpressBase.ServiceStack
             Console.WriteLine("Before :  " + DateTime.Now);
             var dtStart = DateTime.Now;
             Console.WriteLine("................................................datasourceDSrequeststart " + DateTime.Now);
-            var _dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray<System.Data.Common.DbParameter>());
+            EbDataSet _dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray<System.Data.Common.DbParameter>());
             Console.WriteLine("................................................datasourceDSrequeststart " + DateTime.Now);
             var dtstop = DateTime.Now;
             Console.WriteLine("..................................totaltimeinSeconds" + dtstop.Subtract(dtStart).Seconds);
@@ -168,6 +168,8 @@ namespace ExpressBase.ServiceStack
             _recordsTotal = (_recordsTotal > 0) ? _recordsTotal : _dataset.Tables[1].Rows.Count;
             _recordsFiltered = (_recordsFiltered > 0) ? _recordsFiltered : _dataset.Tables[1].Rows.Count;
             //-- 
+            TimeSpan T = _dataset.EndTime - _dataset.StartTime;
+            InsertExecutionLog(_dataset.RowNumbers, T, _dataset.StartTime, request.UserId, request.Params, request.RefId);
 
             dsresponse = new DataSourceDataResponse
             {
@@ -283,7 +285,6 @@ namespace ExpressBase.ServiceStack
             if (_ds != null)
             {
                 string _c = string.Empty;
-
                 _sql = _ds.Sql;
             }
             var parameters = DataHelper.GetParams(this.EbConnectionFactory, false, request.Params, 0, 0);
@@ -306,10 +307,10 @@ namespace ExpressBase.ServiceStack
                 string sql = string.Empty;
                 if (request.Parameters.Count > 0)
                 {
-                    foreach (InputParam p in request.Parameters)
+                    foreach (Param p in request.Parameters)
                     {
-                        _params.Add(":" + p.Column);
-                        parameter.Add(this.EbConnectionFactory.DataDB.GetNewParameter(p.Column, (EbDbTypes)p.Type, p.Value));
+                        _params.Add(":" + p.Name);
+                        parameter.Add(this.EbConnectionFactory.DataDB.GetNewParameter(p.Name, (EbDbTypes)Convert.ToInt32(p.Type), p.Value));
                     }
                     sql = string.Format(@"SELECT * FROM {0}({1})", request.FunctionName, string.Join(",", _params));
                     resp.Data = this.EbConnectionFactory.ObjectsDB.DoQuery(sql, parameter.ToArray());
