@@ -17,11 +17,19 @@ using ServiceStack.Logging;
 using ServiceStack.Redis;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Globalization;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using OfficeOpenXml;
+using System.IO;
+using Newtonsoft.Json;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Hosting;
+using System.Threading.Tasks;
 
 namespace ExpressBase.ServiceStack
 {
@@ -29,6 +37,8 @@ namespace ExpressBase.ServiceStack
     public class DataVisService : EbBaseService
     {
         private const string HeaderPrefix = "H_", FooterPrefix = "F_", GroupDelimiter = ":-:", AfterText = "After", BeforeText = "Before", BlankText = "(Blank)";
+
+
         public DataVisService(IEbConnectionFactory _dbf) : base(_dbf) { }
 
         //[CompressResponse]
@@ -409,8 +419,9 @@ namespace ExpressBase.ServiceStack
             object xx = new object();
             if (_dataset.Tables.Count > 0 && _dV != null)
             {
-                ReturnObj = PreProcessing(ref _dataset, request.Params, _dV, request.UserInfo, ref _levels);
+                ReturnObj = PreProcessing(ref _dataset, request.Params, _dV, request.UserInfo, ref _levels, request.IsExcel);
             }
+
             List<string> _permission = new List<string>();
             if (request.dvRefId != null)
                 _permission = PermissionCheck(request.UserInfo, request.dvRefId);
@@ -424,7 +435,8 @@ namespace ExpressBase.ServiceStack
                 Ispaged = _isPaged,
                 Levels = _levels,
                 Permission = _permission,
-                Summary = ReturnObj.Summary
+                Summary = ReturnObj.Summary,
+                excel_file = ReturnObj.excel_file
             };
             this.Log.Info("dsresponse*****" + dsresponse.Data);
             var x = EbSerializers.Json_Serialize(dsresponse);
@@ -559,7 +571,7 @@ namespace ExpressBase.ServiceStack
             _datarow[customCol.Name] = result;
         }
 
-        public PrePrcessorReturn PreProcessing(ref EbDataSet _dataset, List<Param> Parameters, EbDataVisualization _dv, User _user, ref List<GroupingDetails> _levels)
+        public PrePrcessorReturn PreProcessing(ref EbDataSet _dataset, List<Param> Parameters, EbDataVisualization _dv, User _user, ref List<GroupingDetails> _levels,Boolean _isexcel)
         {
             var _user_culture = CultureInfo.GetCultureInfo(_user.Preference.Locale);
             var colCount = _dataset.Tables[0].Columns.Count;
@@ -576,15 +588,29 @@ namespace ExpressBase.ServiceStack
             this.PreCustomColumDoCalc(ref _dataset, Parameters, _dv, globals);
 
             EbDataTable _formattedTable = _dataset.Tables[0].GetEmptyTable();
-            _formattedTable.Columns.Add(_formattedTable.NewDataColumn(_dv.Columns.Count,"serial", EbDbTypes.Int32));
+            _formattedTable.Columns.Add(_formattedTable.NewDataColumn(_dv.Columns.Count, "serial", EbDbTypes.Int32));
             Dictionary<int, List<object>> Summary = new Dictionary<int, List<object>>();
             bool AllowLinkforZero = true;
             bool bObfuscute = (!_user.Roles.Contains(SystemRoles.SolutionOwner.ToString()) && !_user.Roles.Contains(SystemRoles.SolutionAdmin.ToString()));
 
+            FileInfo file = null;
+            ExcelPackage package = null;
+            ExcelWorksheet worksheet = null;
+            string sFileName = _dv.DisplayName + ".xlsx";
+
+            if (_isexcel)
+            {
+                file = PreExcelCalculation(sFileName);
+                package = new ExcelPackage(file);
+                worksheet = package.Workbook.Worksheets.Add("Report");
+                PreExcelAddHeader(ref worksheet, _dv);
+            }
+
             for (int i = 0; i < _dataset.Tables[0].Rows.Count; i++)
             {
                 _formattedTable.Rows.Add(_formattedTable.NewDataRow2());
-                _formattedTable.Rows[i][_formattedTable.Columns.Count - 1] = i+1;
+                _formattedTable.Rows[i][_formattedTable.Columns.Count - 1] = i + 1;
+                int j = 0;
                 foreach (DVBaseColumn col in _dv.Columns)
                 {
                     AllowLinkforZero = true;
@@ -603,7 +629,7 @@ namespace ExpressBase.ServiceStack
                     }
                     else if (col.Type == EbDbTypes.Decimal || col.Type == EbDbTypes.Int32 || col.Type == EbDbTypes.Int64)
                     {
-                        if ((col as DVNumericColumn).SuppresIfZero)
+                        if ((col as DVNumericColumn).SuppresIfZero && (_isexcel == false))
                         {
                             _formattedData = (Convert.ToDecimal(_unformattedData) == 0) ? string.Empty : Convert.ToDecimal(_unformattedData).ToString("N", cults.NumberFormat);
 
@@ -612,15 +638,16 @@ namespace ExpressBase.ServiceStack
                         }
                         else
                             _formattedData = Convert.ToDecimal(_unformattedData).ToString("N", cults.NumberFormat);
-                        if ((col as DVNumericColumn).RenderAs == NumericRenderType.ProgressBar)
+                        if (((col as DVNumericColumn).RenderAs == NumericRenderType.ProgressBar) &&(_isexcel==false))
                             _formattedData = "<div class='progress'><div class='progress-bar' role='progressbar' aria-valuenow='" + _formattedData + "' aria-valuemin='0' aria-valuemax='100' style='width:" + _unformattedData.ToString() + "%'>" + _formattedData + "</div></div>";
-                        SummaryCalc(ref Summary, col, _unformattedData, cults);
+                       
+                            SummaryCalc(ref Summary, col, _unformattedData, cults);
                     }
-                    else if (col.Type == EbDbTypes.String)
+                    else if (col.Type == EbDbTypes.String && (_isexcel == false))
                     {
-                        if ((col as DVStringColumn).RenderAs == StringRenderType.Marker)
-                            _formattedData = "<a href = '#' class ='columnMarker' data-latlong='"+ _unformattedData + "'><i class='fa fa-map-marker fa-2x' style='color:red;'></i></a>";
-                        
+                        if (((col as DVStringColumn).RenderAs == StringRenderType.Marker) )
+                            _formattedData = "<a href = '#' class ='columnMarker' data-latlong='" + _unformattedData + "'><i class='fa fa-map-marker fa-2x' style='color:red;'></i></a>";
+
                     }
                     else if (col.Type == EbDbTypes.Boolean)
                     {
@@ -628,7 +655,7 @@ namespace ExpressBase.ServiceStack
                     }
 
 
-                    if (!string.IsNullOrEmpty(col.LinkRefId))
+                    if (!string.IsNullOrEmpty(col.LinkRefId) && (_isexcel == false))
                     {
                         if (AllowLinkforZero)
                         {
@@ -640,11 +667,11 @@ namespace ExpressBase.ServiceStack
                                 _formattedData = "<a href='#' oncontextmenu='return false' class ='tablelink' data-link='" + col.LinkRefId + "'>" + _formattedData + "</a>" + "&nbsp; <a  href ='#' oncontextmenu='return false' class='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-inline='true' data-data='" + _formattedData + "'> <i class='fa fa-caret-down'></i></a>";
                         }
                     }
-                    if (col.Type == EbDbTypes.String && (col as DVStringColumn).RenderAs == StringRenderType.Link && col.LinkType == LinkTypeEnum.Tab)/////////////////
+                    if (col.Type == EbDbTypes.String && (col as DVStringColumn).RenderAs == StringRenderType.Link && col.LinkType == LinkTypeEnum.Tab && (_isexcel == false))/////////////////
                     {
                         _formattedData = "<a href='../leadmanagement/" + _dataset.Tables[0].Rows[i][0] + "' target='_blank'>" + _formattedData + "</a>";
                     }
-                    if (bObfuscute)
+                    if (bObfuscute && (_isexcel == false))
                     {
                         if (col.HideDataRowMoreThan > 0 && col.HideDataRowMoreThan < _dataset.Tables[0].Rows.Count)
                         {
@@ -653,15 +680,18 @@ namespace ExpressBase.ServiceStack
                     }
 
                     _formattedTable.Rows[i][col.Data] = _formattedData;
+                    if(_isexcel)
+                        worksheet.Cells[i + 2, j + 1].Value = _formattedData;
 
-                    if(i+1 == _dataset.Tables[0].Rows.Count)
+                    if (i + 1 == _dataset.Tables[0].Rows.Count)
                     {
                         SummaryCalcAverage(ref Summary, col, cults, _dataset.Tables[0].Rows.Count);
                     }
+                    j++;
                 }
             }
 
-            
+
             if ((_dv as EbTableVisualization) != null)
             {
                 if ((_dv as EbTableVisualization).RowGroupCollection.Count > 0)
@@ -672,11 +702,14 @@ namespace ExpressBase.ServiceStack
                         _levels = RowGroupingCommon(_dataset.Tables[0], _dv, _user_culture, ref _formattedTable, true);
                 }
             }
+            byte[] bytes = null;
+            if (_isexcel)
+                bytes = package.GetAsByteArray();
 
-            return new PrePrcessorReturn { FormattedTable =  _formattedTable, Summary = Summary };
+            return new PrePrcessorReturn { FormattedTable = _formattedTable, Summary = Summary, excel_file = bytes };
         }
 
-        public void SummaryCalc(ref Dictionary<int, List<object>> Summary ,DVBaseColumn col, object _unformattedData, CultureInfo cults)
+        public void SummaryCalc(ref Dictionary<int, List<object>> Summary, DVBaseColumn col, object _unformattedData, CultureInfo cults)
         {
             if ((col as DVNumericColumn).Aggregate)
             {
@@ -957,7 +990,7 @@ namespace ExpressBase.ServiceStack
             EbDataVisualization _dV = request.EbDataVisualization;
             var _ds = this.Redis.Get<EbDataReader>(request.RefId);
             string _sql = string.Empty;
-
+            request.IsExcel = false;
             if (_ds == null)
             {
                 var myService = base.ResolveService<EbObjectService>();
@@ -1014,7 +1047,7 @@ namespace ExpressBase.ServiceStack
             PrePrcessorReturn returnObj = new PrePrcessorReturn();
             if (_dataset.Tables.Count > 0 && _dV != null)
             {
-                returnObj = PreProcessing(ref _dataset, request.Params, _dV, request.UserInfo, ref _levels);
+                returnObj = PreProcessing(ref _dataset, request.Params, _dV, request.UserInfo, ref _levels, request.IsExcel);
             }
             dsresponse = new DataSourceDataResponse
             {
@@ -1028,12 +1061,28 @@ namespace ExpressBase.ServiceStack
             var x = EbSerializers.Json_Serialize(dsresponse);
             return dsresponse;
         }
+
+        public FileInfo PreExcelCalculation(string sFileName)
+        {
+            MemoryStream stream = new MemoryStream();
+            FileInfo file = new FileInfo(Path.Combine(sFileName));
+            return file;
+        }
+
+        public void PreExcelAddHeader(ref ExcelWorksheet worksheet, EbDataVisualization _dv)
+        {
+            for (var i = 0; i < _dv.Columns.Count; i++)
+            {
+                worksheet.Cells[1, i + 1].Value = _dv.Columns[i].Name;
+            }
+        }
+
     }
 
     public class PrePrcessorReturn
     {
         public EbDataTable FormattedTable;
         public Dictionary<int, List<object>> Summary;
-    }
+        public byte[] excel_file;
+    }  
 }
-
