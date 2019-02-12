@@ -592,6 +592,32 @@ namespace ExpressBase.ServiceStack
             bool AllowLinkforZero = true;
             bool bObfuscute = (!_user.Roles.Contains(SystemRoles.SolutionOwner.ToString()) && !_user.Roles.Contains(SystemRoles.SolutionAdmin.ToString()));
 
+            bool isRowgrouping = false;
+            bool IsMultiLevelRowGrouping = false;
+            Dictionary<string, GroupingDetails> RowGrouping = new Dictionary<string, GroupingDetails>();
+            int TotalLevels = 0, CurSortIndex = 0;
+            List<int> AggregateColumnIndexes = GetAggregateIndexes(_dv.Columns);
+            List<DVBaseColumn> RowGroupingColumns = new List<DVBaseColumn>();
+            int dvColCount = _dv.Columns.Count;
+            string PreviousGroupingText = string.Empty;
+            int SerialCount = 0, PrevRowIndex = 0;
+
+            if ((_dv as EbTableVisualization) != null)
+            {
+                if ((_dv as EbTableVisualization).RowGroupCollection.Count > 0)
+                {
+                    isRowgrouping = true;
+                    RowGroupingColumns = (_dv as EbTableVisualization).CurrentRowGroup.RowGrouping;
+                    if ((_dv as EbTableVisualization).CurrentRowGroup.GetType().Name == "SingleLevelRowGroup")
+                        TotalLevels = 1;
+                    else if ((_dv as EbTableVisualization).CurrentRowGroup.GetType().Name == "MultipleLevelRowGroup")
+                    {
+                        TotalLevels = (_dv as EbTableVisualization).CurrentRowGroup.RowGrouping.Count;
+                        IsMultiLevelRowGrouping = true;
+                    }
+                }
+            }
+
             FileInfo file = null;
             ExcelPackage package = null;
             ExcelWorksheet worksheet = null;
@@ -644,7 +670,7 @@ namespace ExpressBase.ServiceStack
                     }
                     else if (col.Type == EbDbTypes.String && (_isexcel == false))
                     {
-                        if (((col as DVStringColumn).RenderAs == StringRenderType.Marker) )
+                        if ((col as DVStringColumn).RenderAs == StringRenderType.Marker)
                             _formattedData = "<a href = '#' class ='columnMarker' data-latlong='" + _unformattedData + "'><i class='fa fa-map-marker fa-2x' style='color:red;'></i></a>";
 
                     }
@@ -688,19 +714,25 @@ namespace ExpressBase.ServiceStack
                     }
                     j++;
                 }
+                if (isRowgrouping)
+                   DoRowGroupingCommon(_dataset.Tables[0].Rows[i], _dv, _user_culture, ref _formattedTable, IsMultiLevelRowGrouping,ref RowGrouping,ref PreviousGroupingText, ref CurSortIndex, ref SerialCount, i, dvColCount, TotalLevels, ref AggregateColumnIndexes, ref RowGroupingColumns, _dataset.Tables[0].Rows.Count);
             }
 
-
-            if ((_dv as EbTableVisualization) != null)
             {
-                if ((_dv as EbTableVisualization).RowGroupCollection.Count > 0)
-                {
-                    if ((_dv as EbTableVisualization).CurrentRowGroup.GetType().Name == "SingleLevelRowGroup")
-                        _levels = RowGroupingCommon(_dataset.Tables[0], _dv, _user_culture, ref _formattedTable, false);
-                    else if ((_dv as EbTableVisualization).CurrentRowGroup.GetType().Name == "MultipleLevelRowGroup")
-                        _levels = RowGroupingCommon(_dataset.Tables[0], _dv, _user_culture, ref _formattedTable, true);
-                }
+                //if ((_dv as EbTableVisualization) != null)
+                //{
+                //    if ((_dv as EbTableVisualization).RowGroupCollection.Count > 0)
+                //    {
+                //        if ((_dv as EbTableVisualization).CurrentRowGroup.GetType().Name == "SingleLevelRowGroup")
+                //            _levels = RowGroupingCommon(_dataset.Tables[0], _dv, _user_culture, ref _formattedTable, false);
+                //        else if ((_dv as EbTableVisualization).CurrentRowGroup.GetType().Name == "MultipleLevelRowGroup")
+                //            _levels = RowGroupingCommon(_dataset.Tables[0], _dv, _user_culture, ref _formattedTable, true);
+                //    }
+                //}
             }
+            List<GroupingDetails> SortedGroupings = RowGrouping.Values.ToList();
+            SortedGroupings.Sort();
+            _levels =  SortedGroupings;
             byte[] bytes = null;
             if (_isexcel)
                 bytes = package.GetAsByteArray();
@@ -799,6 +831,58 @@ namespace ExpressBase.ServiceStack
             List<GroupingDetails> SortedGroupings = RowGrouping.Values.ToList();
             SortedGroupings.Sort();
             return SortedGroupings;
+        }
+
+        public void DoRowGroupingCommon(EbDataRow currentRow, EbDataVisualization Visualization, CultureInfo Culture, ref EbDataTable FormattedTable, bool IsMultiLevelRowGrouping, ref Dictionary<string, GroupingDetails> RowGrouping, ref string PreviousGroupingText, ref int CurSortIndex, ref int SerialCount, int PrevRowIndex, int dvColCount, int TotalLevels, ref List<int> AggregateColumnIndexes, ref List<DVBaseColumn> RowGroupingColumns, int RowCount )
+        {
+                CurSortIndex += TotalLevels + 30;
+
+                int delimCount = 1;
+                string TempGroupingText = CreateCollectionKey(currentRow, IsMultiLevelRowGrouping, BlankText, TotalLevels, RowGroupingColumns, PrevRowIndex, ref delimCount);
+
+                if (TempGroupingText.Equals(PreviousGroupingText) == false)
+                {
+                    SerialCount = 0;
+                    FormattedTable.Rows[PrevRowIndex][dvColCount] = ++SerialCount;
+                    CreateHeaderAndFooterPairs(currentRow, AggregateColumnIndexes, RowGroupingColumns, RowGrouping, Visualization.Columns, TotalLevels, IsMultiLevelRowGrouping, Culture, TempGroupingText, ref CurSortIndex, dvColCount);
+
+                    HeaderGroupingDetails HeaderObject = RowGrouping[HeaderPrefix + TempGroupingText] as HeaderGroupingDetails;
+                    HeaderObject.SetRowIndex(PrevRowIndex);
+                    HeaderObject.InsertionType = BeforeText;
+
+                    (RowGrouping[FooterPrefix + TempGroupingText] as FooterGroupingDetails).InsertionType = BeforeText;
+
+                    if (PrevRowIndex > 0)
+                    {
+                        (RowGrouping[FooterPrefix + PreviousGroupingText] as FooterGroupingDetails).SetRowIndex(PrevRowIndex);
+
+                        if (IsMultiLevelRowGrouping && PrevRowIndex == dvColCount - 1 &&
+                            (RowGrouping[HeaderPrefix + TempGroupingText] as HeaderGroupingDetails).GroupingCount == 1 &&
+                            (RowGrouping[HeaderPrefix + TempGroupingText] as HeaderGroupingDetails).LevelCount == 0)
+                        {
+                            SetFinalFooterRow(currentRow, RowGroupingColumns, IsMultiLevelRowGrouping, RowGrouping, PrevRowIndex, TempGroupingText, CurSortIndex);
+                        }
+                    }
+                    if (!IsMultiLevelRowGrouping && PrevRowIndex == PrevRowIndex + 1 && PrevRowIndex == RowCount - 1)
+                    {
+                        SetFinalFooterRow(currentRow, RowGroupingColumns, IsMultiLevelRowGrouping, RowGrouping, PrevRowIndex, TempGroupingText, CurSortIndex);
+                    }
+                }
+                else
+                {
+                    FormattedTable.Rows[PrevRowIndex][dvColCount] = ++SerialCount;
+
+                    (RowGrouping[HeaderPrefix + TempGroupingText] as HeaderGroupingDetails).GroupingCount++;
+                    if (PrevRowIndex == RowCount - 1)
+                    {
+                        SetFinalFooterRow(currentRow, RowGroupingColumns, IsMultiLevelRowGrouping, RowGrouping, PrevRowIndex, TempGroupingText, CurSortIndex);
+                    }
+                }
+
+                (RowGrouping[FooterPrefix + TempGroupingText] as FooterGroupingDetails).SetValue(currentRow);
+
+                PreviousGroupingText = TempGroupingText;
+                PrevRowIndex = PrevRowIndex;
         }
 
         private void SetFinalFooterRow(EbDataRow currentRow, List<DVBaseColumn> rowGroupingColumns, bool IsMultiLevelRowGrouping, Dictionary<string, GroupingDetails> RowGrouping, int i, string TempGroupingText, int CurSortIndex)
