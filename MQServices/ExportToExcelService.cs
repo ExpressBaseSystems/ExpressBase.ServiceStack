@@ -64,7 +64,7 @@ namespace ExpressBase.ServiceStack.MQServices
                 this.ServerEventClient.RefreshTokenUri = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GET_ACCESS_TOKEN_URL);
                 this.ServerEventClient.Post<NotifyResponse>(new NotifyUserIdRequest
                 {
-                    Msg = "../DV/GetExcel?refid=" + (request.EbDataVisualization.RefId+request.UserInfo.UserId),
+                    Msg = "../DV/GetExcel?refid=" + (request.EbDataVisualization.RefId + request.UserInfo.UserId) + "&filename=" + request.EbDataVisualization.DisplayName,
                     Selector = StaticFileConstants.EXPORTTOEXCELSUCCESS,
                     ToUserAuthId = request.UserAuthId,
                 });
