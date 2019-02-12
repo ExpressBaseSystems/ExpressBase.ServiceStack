@@ -22,9 +22,9 @@ namespace ExpressBase.ServiceStack.MQServices
     {
         public PdfToEmailService(IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_mqp, _mqc) { }
 
-        public void Post(PdfCreateServiceMqRequest request)
+        public void Post(EmailAttachmentMqRequest request)
         {
-            MessageProducer3.Publish(new PdfCreateServiceRequest()
+            MessageProducer3.Publish(new EmailAttachmenRequest()
             {
                 ObjId = request.ObjId,
                 Params = request.Params,
@@ -39,7 +39,7 @@ namespace ExpressBase.ServiceStack.MQServices
     {
         public PdfToEmailInternalService(IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_mqp, _mqc) { }
 
-        public void Post(PdfCreateServiceRequest request)
+        public void Post(EmailAttachmenRequest request)
         {
             string mailTo = string.Empty;
             EbConnectionFactory ebConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
@@ -49,6 +49,7 @@ namespace ExpressBase.ServiceStack.MQServices
             dataservice.EbConnectionFactory = ebConnectionFactory;
             var reportservice = base.ResolveService<ReportService>();
             reportservice.EbConnectionFactory = ebConnectionFactory;
+            ReportRenderResponse RepRes = new ReportRenderResponse();
             EbObjectFetchLiveVersionResponse res = (EbObjectFetchLiveVersionResponse)objservice.Get(new EbObjectFetchLiveVersionRequest() { Id = request.ObjId });
             EbEmailTemplate ebEmailTemplate = new EbEmailTemplate();
             if (res.Data.Count > 0)
@@ -83,15 +84,17 @@ namespace ExpressBase.ServiceStack.MQServices
                         }
                     }
                     }
-                var RepRes = reportservice.Get(new ReportRenderRequest
+                if (ebEmailTemplate.DataSourceRefId != string.Empty)
                 {
-                    Refid = ebEmailTemplate.AttachmentReportRefID,
-                    RenderingUser = new User { FullName = "Machine User" },
-                    ReadingUser= new User { Preference=new Preferences {Locale="en-US",TimeZone= "(UTC) Coordinated Universal Time" } },
-                    Params = request.Params
-                });
-                RepRes.StreamWrapper.Memorystream.Position = 0;
-
+                     RepRes = reportservice.Get(new ReportRenderRequest
+                    {
+                        Refid = ebEmailTemplate.AttachmentReportRefID,
+                        RenderingUser = new User { FullName = "Machine User" },
+                        ReadingUser = new User { Preference = new Preferences { Locale = "en-US", TimeZone = "(UTC) Coordinated Universal Time" } },
+                        Params = request.Params
+                    });
+                    RepRes.StreamWrapper.Memorystream.Position = 0;
+                }
                 MessageProducer3.Publish(new EmailServicesRequest()
                 {
                     From = "request.from",

@@ -18,29 +18,56 @@ namespace ExpressBase.ServiceStack.Services
     {
         public SchedulerServices(IEbConnectionFactory _dbf, IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_dbf, _mqp, _mqc) { }
 
-        public SchedulerMQResponse Post(SchedulerMQRequest request)
+        public ScheduleMQResponse Post(ScheduleMQRequest request)
         {
-            //using (var con = this.EbConnectionFactory.DataDB.GetNewConnection())
-            //{
-            //    con.Open();
-            //    string sql = @"INSERT INTO eb_schedules(task, created_by, created_at, eb_del)
-            //    VALUES(:task, :created_by, NOW(), 'F')";
-            //    DbParameter[] parameters = { EbConnectionFactory.DataDB.GetNewParameter("task", EbDbTypes.Json,EbSerializers.Json_Serialize(request.Task)),
-            //   EbConnectionFactory.DataDB.GetNewParameter("created_by", EbDbTypes.Int32,  request.Task.JobArgs.UserId) };
-            //    var dt = EbConnectionFactory.DataDB.DoNonQuery(sql, parameters);
-            //}
             MessageProducer3.Publish(new ScheduleRequest { Task = request.Task });
             return null;
         }
 
-        public UnschedulerMQResponse Post(UnschedulerMQRequest request)
+        public UnscheduleMQResponse Post(UnscheduleMQRequest request)
         {
-            UnschedulerMQResponse res = new UnschedulerMQResponse();
+            UnscheduleMQResponse res = new UnscheduleMQResponse();
             MessageProducer3.Publish(new UnscheduleRequest { TriggerKey = request.TriggerKey });
             return res;
 
         }
+        public RescheduleMQResponse Post(RescheduleMQRequest request)
+        {
+            RescheduleMQResponse res = new RescheduleMQResponse();
 
+            MessageProducer3.Publish(new RescheduleRequest { Task = request.Task, JobKey = request.JobKey, TriggerKey = request.TriggerKey });
+
+            EbConnectionFactory _ebConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
+            using (var con = _ebConnectionFactory.DataDB.GetNewConnection())
+            {
+                con.Open();
+                string sql = "UPDATE eb_schedules SET task = :task, name=:name WHERE id = :id";
+                DbParameter[] parameters = {
+                    _ebConnectionFactory.DataDB.GetNewParameter("task", EbDbTypes.Json,EbSerializers.Json_Serialize(request.Task)),
+                    _ebConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32,request.Id),
+                    _ebConnectionFactory.DataDB.GetNewParameter("name", EbDbTypes.String,  request.Task.Name)};
+                var r = _ebConnectionFactory.DataDB.DoNonQuery(sql, parameters);
+            }
+            return res;
+        }
+
+        public DeleteJobMQResponse Post(DeleteJobMQRequest request)
+        {
+            DeleteJobMQResponse res = new DeleteJobMQResponse();
+            MessageProducer3.Publish(new DeleteJobRequest { JobKey = request.JobKey });
+
+            EbConnectionFactory _ebConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
+            using (var con = _ebConnectionFactory.DataDB.GetNewConnection())
+            {
+                con.Open();
+                string sql = "UPDATE eb_schedules SET status = :stat WHERE id = :id";
+                DbParameter[] parameters = {
+                    _ebConnectionFactory.DataDB.GetNewParameter("stat", EbDbTypes.Int32,(int)ScheduleStatuses.Deleted),
+                    _ebConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32,request.Id) };
+                var r = _ebConnectionFactory.DataDB.DoNonQuery(sql, parameters);
+            }
+            return res;
+        }
         public GetAllUsersResponse Get(GetAllUsersRequest request)
         {
             GetAllUsersResponse res = new GetAllUsersResponse();
@@ -101,23 +128,39 @@ namespace ExpressBase.ServiceStack.Services
         {
             GetSchedulesOfSolutionResponse resp = new GetSchedulesOfSolutionResponse();
             List<EbSchedule> scheduleList = new List<EbSchedule>();
+            string sql = "";
             using (var con = this.EbConnectionFactory.DataDB.GetNewConnection())
             {
                 con.Open();
-                string sql = @"SELECT * FROM eb_schedules ES ,eb_users EU
-                               WHERE EU.id =ES.created_by;";
-                EbDataSet dt = this.EbConnectionFactory.DataDB.DoQueries(sql);
+                if (request.ObjectId > 0)
+                {
+                    sql = @"SELECT * FROM eb_schedules ES ,eb_users EU
+                               WHERE EU.id = ES.created_by
+                               AND obj_id = :obj_id
+                                ORDER BY ES.id;";
+                }
+                else
+                {
+                    sql = @"SELECT * FROM eb_schedules ES ,eb_users EU
+                               WHERE EU.id = ES.created_by;";
+                }
+
+                DbParameter[] parameters = {
+                    EbConnectionFactory.DataDB.GetNewParameter("obj_id", EbDbTypes.Int32,request.ObjectId)
+                };
+                EbDataSet dt = this.EbConnectionFactory.DataDB.DoQueries(sql, parameters);
                 foreach (EbDataRow dr in dt.Tables[0].Rows)
                 {
                     EbSchedule sch = new EbSchedule
                     {
                         Id = Convert.ToInt32(dr[0]),
                         Task = EbSerializers.Json_Deserialize<EbTask>(dr[1].ToString()),
-                        CreatedBy = dr[33].ToString(),
+                        CreatedBy = dr[34].ToString(),
                         CreatedAt = Convert.ToDateTime(dr[3]),
                         JobKey = dr[5].ToString(),
                         TriggerKey = dr[6].ToString(),
-                        Status = (ScheduleStatuses)Convert.ToInt32(dr[7])
+                        Status = (ScheduleStatuses)Convert.ToInt32(dr[7]),
+                        Name = dr[9].ToString()
                     };
                     scheduleList.Add(sch);
                 }
@@ -128,28 +171,28 @@ namespace ExpressBase.ServiceStack.Services
     }
 
     [Restrict(InternalOnly = true)]
-    class UpdateSolutionSchedulesServices : EbMqBaseService
+    class SchedulesAndSolutionServices : EbMqBaseService
     {
-        public UpdateSolutionSchedulesServices(IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_mqp, _mqc) { }
+        public SchedulesAndSolutionServices(IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_mqp, _mqc) { }
 
-        public SchedulerMQResponse Post(UpdateSolutionSchedulesRequest request)
+        public ScheduleMQResponse Post(AddSchedulesToSolutionRequest request)
         {
             EbConnectionFactory _ebConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
             using (var con = _ebConnectionFactory.DataDB.GetNewConnection())
             {
                 con.Open();
-                string sql = @"INSERT INTO eb_schedules(task, created_by, created_at, eb_del, jobkey, triggerkey, status)
-                VALUES(:task, :created_by, NOW(), 'F', :jobkey, :triggerkey, :status)";
+                string sql = @"INSERT INTO eb_schedules(task, created_by, created_at, eb_del, jobkey, triggerkey, status, obj_id, name)
+                VALUES(:task, :created_by, NOW(), 'F', :jobkey, :triggerkey, :status, :obj_id, :name)";
                 DbParameter[] parameters = { _ebConnectionFactory.DataDB.GetNewParameter("task", EbDbTypes.Json,EbSerializers.Json_Serialize(request.Task)),
                _ebConnectionFactory.DataDB.GetNewParameter("created_by", EbDbTypes.Int32,  request.Task.JobArgs.UserId),
                _ebConnectionFactory.DataDB.GetNewParameter("jobkey", EbDbTypes.String,  request.JobKey),
                _ebConnectionFactory.DataDB.GetNewParameter("triggerkey", EbDbTypes.String,  request.TriggerKey),
-                _ebConnectionFactory.DataDB.GetNewParameter("status", EbDbTypes.Int32, (int)request.Status) };
+                _ebConnectionFactory.DataDB.GetNewParameter("status", EbDbTypes.Int32, (int)request.Status) ,
+                _ebConnectionFactory.DataDB.GetNewParameter("obj_id", EbDbTypes.Int32, (int)request.ObjId),
+               _ebConnectionFactory.DataDB.GetNewParameter("name", EbDbTypes.String,  request.Name)};
                 var dt = _ebConnectionFactory.DataDB.DoNonQuery(sql, parameters);
             }
             return null;
         }
-
-
     }
 }

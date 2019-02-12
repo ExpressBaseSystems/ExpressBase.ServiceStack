@@ -149,7 +149,7 @@ namespace ExpressBase.ServiceStack
             Console.WriteLine("Before :  " + DateTime.Now);
             var dtStart = DateTime.Now;
             Console.WriteLine("................................................datasourceDSrequeststart " + DateTime.Now);
-            var _dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray<System.Data.Common.DbParameter>());
+            EbDataSet _dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray<System.Data.Common.DbParameter>());
             Console.WriteLine("................................................datasourceDSrequeststart " + DateTime.Now);
             var dtstop = DateTime.Now;
             Console.WriteLine("..................................totaltimeinSeconds" + dtstop.Subtract(dtStart).Seconds);
@@ -168,6 +168,8 @@ namespace ExpressBase.ServiceStack
             _recordsTotal = (_recordsTotal > 0) ? _recordsTotal : _dataset.Tables[1].Rows.Count;
             _recordsFiltered = (_recordsFiltered > 0) ? _recordsFiltered : _dataset.Tables[1].Rows.Count;
             //-- 
+            TimeSpan T = _dataset.EndTime - _dataset.StartTime;
+            InsertExecutionLog(_dataset.RowNumbers, T, _dataset.StartTime, request.UserId, request.Params, request.RefId);
 
             dsresponse = new DataSourceDataResponse
             {
