@@ -18,7 +18,7 @@ namespace ExpressBase.ServiceStack.Services
         {
             List<EbExecutionLogs> _logs = new List<EbExecutionLogs>();
             List<DbParameter> parameters = new List<DbParameter>();
-            string query = @"select * from executionlogs where refid=:refid";
+            string query = @"select * from eb_executionlogs where refid=:refid";
             parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("refid", EbDbTypes.String, request.RefId));
             EbDataTable dt = EbConnectionFactory.ObjectsDB.DoQuery(query, parameters.ToArray());
             foreach (var item in dt.Rows)
@@ -34,13 +34,13 @@ namespace ExpressBase.ServiceStack.Services
             List<EbExecutionLogs> _logs = new List<EbExecutionLogs>();
             List<DbParameter> parameters = new List<DbParameter>();
             Profiler profiler = new Profiler();
-            string query = @"select id,exec_time from executionlogs where exec_time=(select max(exec_time) from executionlogs where refid=:refid);
-                             select id,exec_time from executionlogs where exec_time=(select min(exec_time) from executionlogs where refid=:refid);
-                             select id,exec_time from executionlogs where exec_time=(select max(exec_time) from executionlogs where refid=:refid and extract (month from created_at) = extract(month from current_date));
-                             select id,exec_time from executionlogs where exec_time=(select min(exec_time) from executionlogs where refid=:refid and extract (month from created_at) = extract(month from current_date));
-                             select count(*) from executionlogs where refid=:refid;
-                             select count(*) from executionlogs where created_at::date = current_date;
-                             select count(*) from executionlogs where extract (month from created_at) = extract(month from current_date) and refid=:refid;";
+            string query = @"select id,exec_time from eb_executionlogs where exec_time=(select max(exec_time) from eb_executionlogs where refid=:refid);
+                             select id,exec_time from eb_executionlogs where exec_time=(select min(exec_time) from eb_executionlogs where refid=:refid);
+                             select id,exec_time from eb_executionlogs where exec_time=(select max(exec_time) from eb_executionlogs where refid=:refid and extract (month from created_at) = extract(month from current_date));
+                             select id,exec_time from eb_executionlogs where exec_time=(select min(exec_time) from eb_executionlogs where refid=:refid and extract (month from created_at) = extract(month from current_date));
+                             select count(*) from eb_executionlogs where refid=:refid;
+                             select count(*) from eb_executionlogs where created_at::date = current_date;
+                             select count(*) from eb_executionlogs where extract (month from created_at) = extract(month from current_date) and refid=:refid;";
             parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("refid", EbDbTypes.String, request.RefId));
             EbDataSet dt = EbConnectionFactory.ObjectsDB.DoQueries(query, parameters.ToArray());
             if (dt.Tables.Count > 0)
