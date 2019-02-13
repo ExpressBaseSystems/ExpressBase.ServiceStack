@@ -9,6 +9,8 @@ using ServiceStack;
 using ServiceStack.Messaging;
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -57,14 +59,16 @@ namespace ExpressBase.ServiceStack.MQServices
                 _req.RefId = request.RefId;
                 _req.IsExcel = true;
                 _req.Params = request.Params;
+
                 res = (DataSourceDataResponse)dataservice.Any(_req);
-                this.Redis.Set("excel" + (request.EbDataVisualization.RefId + request.UserInfo.UserId), res.excel_file);
+                byte[] compressedData = Compress(res.excel_file);
+                this.Redis.Set("excel" + (request.EbDataVisualization.RefId + request.UserInfo.UserId), compressedData);
                 this.ServerEventClient.BearerToken = request.BToken;
                 this.ServerEventClient.RefreshToken = request.RToken;
                 this.ServerEventClient.RefreshTokenUri = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GET_ACCESS_TOKEN_URL);
                 this.ServerEventClient.Post<NotifyResponse>(new NotifyUserIdRequest
                 {
-                    Msg = "../DV/GetExcel?refid=" + (request.EbDataVisualization.RefId + request.UserInfo.UserId) + "&filename=" + request.EbDataVisualization.DisplayName,
+                    Msg = "../DV/GetExcel?refid=" + (request.EbDataVisualization.RefId + request.UserInfo.UserId) + "&filename=" + request.EbDataVisualization.DisplayName+".xlsx",
                     Selector = StaticFileConstants.EXPORTTOEXCELSUCCESS,
                     ToUserAuthId = request.UserAuthId,
                 });
@@ -75,5 +79,19 @@ namespace ExpressBase.ServiceStack.MQServices
             }
 
         }
+
+        public static byte[] Compress(byte[] data)
+        {
+            using (MemoryStream memory = new MemoryStream())
+            {
+                using (GZipStream gzip = new GZipStream(memory,
+                    CompressionMode.Compress, true))
+                {
+                    gzip.Write(data, 0, data.Length);
+                }
+                return memory.ToArray();
+            }
+        }
+
     }
 }
