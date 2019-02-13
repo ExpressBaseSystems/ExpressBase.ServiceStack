@@ -184,7 +184,6 @@ namespace ExpressBase.ServiceStack
             return dsresponse;
         }
 
-
         [CompressResponse]
         public DataSourceColumnsResponse Any(DataSourceColumnsRequest request)
         {
@@ -240,6 +239,8 @@ namespace ExpressBase.ServiceStack
 
                         resp.IsPaged = _isPaged;
                         this.Redis.Set<DataSourceColumnsResponse>(_dsRedisKey, resp);
+                        TimeSpan T = _dataset.EndTime - _dataset.StartTime;
+                        InsertExecutionLog(_dataset.RowNumbers, T, _dataset.StartTime, request.UserId, request.Params, request.RefId);
                     }
                     catch (Exception e)
                     {
@@ -289,7 +290,8 @@ namespace ExpressBase.ServiceStack
             }
             var parameters = DataHelper.GetParams(this.EbConnectionFactory, false, request.Params, 0, 0);
             var _dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray<System.Data.Common.DbParameter>());
-
+              TimeSpan T = _dataset.EndTime - _dataset.StartTime;
+            InsertExecutionLog(_dataset.RowNumbers, T, _dataset.StartTime, request.UserId, request.Params, request.RefId);
             dsresponse = new DataSourceDataSetResponse
             {
                 DataSet = _dataset

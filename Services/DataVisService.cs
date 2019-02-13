@@ -398,6 +398,8 @@ namespace ExpressBase.ServiceStack
             var dtstop = DateTime.Now;
             Console.WriteLine("..................................totaltimeinSeconds" + dtstop.Subtract(dtStart).Seconds);
 
+            TimeSpan T = _dataset.EndTime - _dataset.StartTime;
+            InsertExecutionLog(_dataset.RowNumbers, T, _dataset.StartTime, request.UserId, request.Params, request.RefId);
             //-- 
             Console.WriteLine(DateTime.Now);
             var dtEnd = DateTime.Now;
@@ -497,6 +499,9 @@ namespace ExpressBase.ServiceStack
                         _dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray<System.Data.Common.DbParameter>());
 
                         Console.WriteLine("................................................datasourcecolumnrequestfinish " + System.DateTime.Now);
+
+                        TimeSpan T = _dataset.EndTime - _dataset.StartTime;
+                        InsertExecutionLog(_dataset.RowNumbers, T, _dataset.StartTime, request.UserId, request.Params, request.RefId);
 
                         foreach (var dt in _dataset.Tables)
                             resp.Columns.Add(dt.Columns);
@@ -1110,7 +1115,8 @@ namespace ExpressBase.ServiceStack
             Console.WriteLine("................................................datasourceDSrequeststart " + DateTime.Now);
             var dtstop = DateTime.Now;
             Console.WriteLine("..................................totaltimeinSeconds" + dtstop.Subtract(dtStart).Seconds);
-
+            TimeSpan T = _dataset.EndTime - _dataset.StartTime;
+            InsertExecutionLog(_dataset.RowNumbers, T, _dataset.StartTime, request.UserId, request.Params, request.RefId);
             //-- 
             Console.WriteLine(DateTime.Now);
             var dtEnd = DateTime.Now;
