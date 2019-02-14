@@ -352,7 +352,7 @@ namespace ExpressBase.ServiceStack.Services
             this.FillParams(i_param);
             try
             {
-                EmailService.Post(new PdfCreateServiceMqRequest
+                EmailService.Post(new EmailAttachmentMqRequest
                 {
                     SolnId = this.SolutionId,
                     Params = i_param,

@@ -407,9 +407,9 @@ WHERE
             string fullqry = string.Empty;
             List<DbParameter> param = new List<DbParameter>();
             int count = 0;
+            int i = 0;
             foreach (KeyValuePair<string, SingleTable> entry in request.FormData.MultipleTables)
             {
-                int i = 0;
                 foreach (SingleRow row in entry.Value)
                 {
                     string _qry = "INSERT INTO {0} ({1} eb_created_by, eb_created_at {3} ) VALUES ({2} :eb_createdby, NOW() {4});";
@@ -438,20 +438,47 @@ WHERE
                 count++;
 
             }
+            //------------------
+            //string zzz = @" UPDATE 
+            //                    eb_files_ref AS t 
+            //                SET 
+            //                    context=:c.context 
+            //                FROM 
+            //                    (VALUES (12312, '12_32_ps1'),(34344, '12_32_ps1')) AS c(id, context)
+            //                WHERE 
+            //                    c.id = t.id AND t.eb_del='F'";
+
+            //string yyy = @"UPDATE eb_files_ref SET eb_del='T' WHERE (context = '12_32_ps1' OR context = '12_32_ps2') AND eb_del='F' AND id NOT IN (ids)";
+
+            string EbObId = request.RefId.Split("-")[3];
+            List<string> InnerVals = new List<string>();
+            List<string> Innercxt = new List<string>();
+            List<string> InnerIds = new List<string>();
             foreach (KeyValuePair<string, SingleTable> entry in request.FormData.ExtendedTables)
             {
-                string zzz = @" UPDATE 
-                                    eb_files_ref AS t 
-                                SET 
-                                    context=:c.context 
-                                FROM 
-                                    (VALUES (12312, '12_32_ps1'),(34344, '12_32_ps1')) AS c(id, context)
-                                WHERE 
-                                    c.id = t.id AND t.eb_del='F'";
-
-                string yyy = @"UPDATE eb_files_ref SET eb_del='T' WHERE context = '12_32_ps1' AND eb_del='F' AND id NOT IN (ids)";
+                foreach (SingleRow row in entry.Value)
+                {
+                    string cn = entry.Key + "_" + i.ToString();
+                    i++;
+                    InnerVals.Add(string.Format("(:{0}, '{1}_' || cur_val('{2}_id_seq')::text || '_{3}')", cn, EbObId, FormObj.TableName, entry.Key));
+                    param.Add(this.EbConnectionFactory.DataDB.GetNewParameter(cn, EbDbTypes.Decimal, row.Columns[0].Value));
+                    InnerIds.Add(":" + cn);
+                }
+                Innercxt.Add("context = '" + EbObId + "_' || cur_val('"+ FormObj.TableName + "_id_seq')::text || '_" + entry.Key + "'");
             }
+            fullqry += string.Format(@"UPDATE 
+                                            eb_files_ref AS t
+                                        SET
+                                            context = c.context
+                                        FROM
+                                            (VALUES{0}) AS c(id, context)
+                                        WHERE
+                                            c.id = t.id AND t.eb_del = 'F';", InnerVals.Join(","));
+            fullqry += string.Format(@"UPDATE eb_files_ref 
+                                        SET eb_del='T' 
+                                        WHERE ({0}) AND eb_del='F' AND id NOT IN ({1});", Innercxt.Join(" OR "), InnerIds.Join(","));
 
+            //-------------------------
             param.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_createdby", EbDbTypes.Int32, request.UserId));
             //param.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_createdat", EbDbTypes.DateTime, System.DateTime.Now));
             param.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_auto_id", EbDbTypes.String, request.FormData.AutoIdText ?? string.Empty));
@@ -477,9 +504,9 @@ WHERE
         {
             string fullqry = string.Empty;
             List<DbParameter> param = new List<DbParameter>();
+            int i = 0;
             foreach (KeyValuePair<string, SingleTable> entry in request.FormData.MultipleTables)
             {
-                int i = 0;
                 foreach (SingleRow row in entry.Value)
                 {
                     string _tblname = entry.Key;
@@ -519,6 +546,38 @@ WHERE
                     i++;
                 }
             }
+
+            //------------------
+            string EbObId = request.RefId.Split("-")[3];
+            List<string> InnerVals = new List<string>();
+            List<string> Innercxt = new List<string>();
+            List<string> InnerIds = new List<string>();
+            foreach (KeyValuePair<string, SingleTable> entry in request.FormData.ExtendedTables)
+            {
+                foreach (SingleRow row in entry.Value)
+                {
+                    string cn = entry.Key + "_" + i.ToString();
+                    i++;
+                    InnerVals.Add(string.Format("(:{0}, '{1}_{2}_{3}')", cn, EbObId, request.RowId, entry.Key));
+                    param.Add(this.EbConnectionFactory.DataDB.GetNewParameter(cn, EbDbTypes.Decimal, row.Columns[0].Value));
+                    InnerIds.Add(":" + cn);
+                }
+                Innercxt.Add("context = '" + EbObId + "_" + request.RowId + "_" + entry.Key + "'");
+            }
+            fullqry += string.Format(@"UPDATE 
+                                            eb_files_ref AS t
+                                        SET
+                                            context = c.context
+                                        FROM
+                                            (VALUES{0}) AS c(id, context)
+                                        WHERE
+                                            c.id = t.id AND t.eb_del = 'F';", InnerVals.Join(","));
+            fullqry += string.Format(@"UPDATE eb_files_ref 
+                                        SET eb_del='T' 
+                                        WHERE ({0}) AND eb_del='F' AND id NOT IN ({1});", Innercxt.Join(" OR "), InnerIds.Join(","));
+
+            //-------------------------
+
             param.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_createdby", EbDbTypes.Int32, request.UserId));
             //param.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_createdat", EbDbTypes.DateTime, System.DateTime.Now));
             param.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_modified_by", EbDbTypes.Int32, request.UserId));
