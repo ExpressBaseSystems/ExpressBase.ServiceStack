@@ -138,6 +138,28 @@ namespace ExpressBase.ServiceStack.Services
             return col;
         }
 
+        public ApiResponse Post(ApiComponetRequest request)
+        {
+            ApiResponse resp = new ApiResponse();
+            try
+            {
+                this.GlobalParams = request.Params.Select(p => new { prop = p.Name, val = p.ValueTo })
+                    .ToDictionary(x => x.prop, x => x.val as object);
+                ObjWrapperInt ow = this.GetObjectByVer(request.Component.RefId);
+                if (request.Component is EbSqlReader)
+                    resp.Result = this.ExcDataReader(ow, request.Params, (request.Component as EbSqlReader).ResultType);
+                else if (request.Component is EbSqlWriter)
+                    resp.Result = this.ExcDataWriter(ow, request.Params);
+                else if (request.Component is EbSqlFunc)
+                    resp.Result = this.ExcSqlFunction(ow, request.Params);
+            }
+            catch (Exception e)
+            {
+                resp.Result = null;
+            }
+            return resp;
+        }
+
         public ApiByNameResponse Get(ApiByNameRequest request)
         {
             EbApi api_o = null;
@@ -223,7 +245,6 @@ namespace ExpressBase.ServiceStack.Services
                     resp.Message.Description = "Api does not exist!";
                     resp.Message.ExecutionTime = watch.ElapsedMilliseconds.ToString() + " ms";
                 }
-                return resp;
             }
             catch (Exception e)
             {
@@ -231,8 +252,8 @@ namespace ExpressBase.ServiceStack.Services
                 resp.Message.Status = "Error";
                 resp.Message.Description = e.Message;
                 resp.Message.ExecutionTime = watch.ElapsedMilliseconds.ToString() + " ms";
-                return resp;
             }
+            return resp;
         }
 
         private object GetResult(EbApiWrapper resource, int index)
