@@ -22,27 +22,29 @@ namespace ExpressBase.ServiceStack.Services
 {
     public class ApiServices : EbBaseService
     {
-        EbObjectService StudioServices { set; get; }
+        private EbObjectService StudioServices { set; get; }
 
-        DataSourceService DSService { set; get; }
+        private DataSourceService DSService { set; get; }
 
-        PdfToEmailService EmailService { set; get; }
+        private PdfToEmailService EmailService { set; get; }
 
-        Dictionary<string, object> GlobalParams { set; get; }
+        private Dictionary<string, object> GlobalParams { set; get; }
 
-        Dictionary<string, object> TempParams { set; get; }
+        private Dictionary<string, object> TempParams { set; get; }
 
-        public EbApi Api { set; get; }
+        private EbApi Api { set; get; }
 
-        public string Message { set; get; }
+        private string Message { set; get; }
 
-        public string SolutionId { set; get; }
+        private string Status { set; get; }
+
+        private string SolutionId { set; get; }
 
         public ApiServices(IEbConnectionFactory _dbf) : base(_dbf)
         {
-            StudioServices = base.ResolveService<EbObjectService>();
-            DSService = base.ResolveService<DataSourceService>();
-            EmailService = base.ResolveService<PdfToEmailService>();
+            this.StudioServices = base.ResolveService<EbObjectService>();
+            this.DSService = base.ResolveService<DataSourceService>();
+            this.EmailService = base.ResolveService<PdfToEmailService>();
         }
 
         public FormDataJsonResponse Post(FormDataJsonRequest request)
@@ -190,31 +192,46 @@ namespace ExpressBase.ServiceStack.Services
 
         public ApiResponse Any(ApiRequest request)
         {
+            ApiResponse resp = new ApiResponse { Name=request.Name,Version=request.Version};
+            resp.Message.ExecutedOn = DateTime.UtcNow.ToString();
+            var watch = new System.Diagnostics.Stopwatch();
+            watch.Start();
             this.SolutionId = request.SolnId;
             this.GlobalParams = request.Data;
-            var o = new object();
-            int r_count = 0;
-            string message = string.Empty;
             int step = 0;
             this.Api = this.Get(new ApiByNameRequest { Name = request.Name, Version = request.Version }).Api;
             try
             {
                 if (Api != null)
                 {
-                    r_count = this.Api.Resources.Count;
+                    int r_count = this.Api.Resources.Count;
                     while (step < r_count)
                     {
                         this.Api.Resources[step].Result = this.GetResult(this.Api.Resources[step], step);
                         step++;
                     }
-                    return new ApiResponse { Result = this.Api.Resources[step - 1].Result, Message = Message };
+                    watch.Stop();
+                    resp.Result = this.Api.Resources[step - 1].Result;
+                    resp.Message.Status = "Success";
+                    resp.Message.Description = this.Message;
+                    resp.Message.ExecutionTime = watch.ElapsedMilliseconds.ToString() + " ms";
                 }
                 else
-                    return new ApiResponse { Message = "Api does not exist!", Result = null };
+                {
+                    watch.Stop();
+                    resp.Message.Status = "Error";
+                    resp.Message.Description = "Api does not exist!";
+                    resp.Message.ExecutionTime = watch.ElapsedMilliseconds.ToString() + " ms";
+                }
+                return resp;
             }
             catch (Exception e)
             {
-                return new ApiResponse { Result = null, Message = e.Message };
+                watch.Stop();
+                resp.Message.Status = "Error";
+                resp.Message.Description = e.Message;
+                resp.Message.ExecutionTime = watch.ElapsedMilliseconds.ToString() + " ms";
+                return resp;
             }
         }
 
@@ -228,7 +245,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 o_wrapper = this.GetObjectByVer(resource.Refid);
                 i_param = this.GetInputParams(o_wrapper.EbObj, o_wrapper.ObjectType, index);
-                res.Result = this.ExcDataReader(o_wrapper, i_param);
+                res.Result = this.ExcDataReader(o_wrapper, i_param, (resource as EbSqlReader).ResultType);
             }
             else if (resource is EbSqlWriter)
             {
@@ -255,7 +272,7 @@ namespace ExpressBase.ServiceStack.Services
             return res.Result;
         }
 
-        private object ExcDataReader(ObjWrapperInt wrapper, List<Param> i_param)
+        private object ExcDataReader(ObjWrapperInt wrapper, List<Param> i_param, DataReaderResult result_type)
         {
             this.FillParams(i_param);
             List<DbParameter> p = new List<DbParameter>();
@@ -269,11 +286,34 @@ namespace ExpressBase.ServiceStack.Services
                 dt = this.EbConnectionFactory.ObjectsDB.DoQueries((wrapper.EbObj as EbDataReader).Sql, p.ToArray());
                 this.Message = "Success";
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 throw new ApiException(e.Message);
             }
-            return dt;
+            if (result_type == DataReaderResult.Formated)
+                return FormatDr(dt);
+            else
+                return dt;
+        }
+
+        private JsonTableSet FormatDr(EbDataSet dt)
+        {
+            JsonTableSet table = new JsonTableSet();
+            foreach(EbDataTable t in dt.Tables)
+            {
+                JsonTable jt = new JsonTable { TableName = t.TableName};
+                for (int k = 0; k < t.Rows.Count; k++)
+                {
+                    JsonColVal d = new JsonColVal();
+                    for (int i = 0; i < t.Columns.Count; i++)
+                    {
+                        d.Add(t.Columns[i].ColumnName, t.Rows[k][t.Columns[i].ColumnIndex]);
+                    }
+                    jt.Rows.Add(d);
+                }
+                table.Tables.Add(jt);
+            }
+            return table;
         }
 
         private void FillParams(List<Param> _param)
@@ -284,11 +324,8 @@ namespace ExpressBase.ServiceStack.Services
                     p.Value = this.GlobalParams[p.Name].ToString();
                 else if (this.TempParams != null && this.TempParams.ContainsKey(p.Name))
                     p.Value = this.TempParams[p.Name].ToString();
-
-                if (string.IsNullOrEmpty(p.Value))
-                {
+                else
                     throw new ApiException("Parameter " + p.Name + " must be set!");
-                }
             }
         }
 
@@ -309,7 +346,7 @@ namespace ExpressBase.ServiceStack.Services
             return this.DSService.Post(new SqlFuncTestRequest { FunctionName = (wrapper.EbObj as EbSqlFunction).Name, Parameters = i_param });
         }
 
-        private bool ExcEmail(ObjWrapperInt wrapper, List<Param> i_param,string refid)
+        private bool ExcEmail(ObjWrapperInt wrapper, List<Param> i_param, string refid)
         {
             bool stat = false;
             this.FillParams(i_param);
@@ -324,7 +361,8 @@ namespace ExpressBase.ServiceStack.Services
                 stat = true;
                 this.Message = "Mail sent";
             }
-            catch(Exception e) {
+            catch (Exception e)
+            {
                 stat = false;
                 throw new ApiException(e.Message);
             }
@@ -420,19 +458,6 @@ namespace ExpressBase.ServiceStack.Services
                 p = p.Merge(this.GetSqlParams(ob.EbObj as EbDataSourceMain, ob.ObjectType)).ToList();
             }
             return p;
-        }
-    }
-
-    public static class ApiExtensions
-    {
-        public static List<Param> Merge(this List<Param> to, List<Param> from)
-        {
-            foreach (Param p1 in from)
-            {
-                if (to.Find(x => x.Name == p1.Name) == null)
-                    to.Add(p1);
-            }
-            return to;
         }
     }
 }

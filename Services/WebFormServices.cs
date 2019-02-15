@@ -177,7 +177,7 @@ namespace ExpressBase.ServiceStack.Services
             EbWebForm FormObj = GetWebFormObject(_refId);
             WebFormSchema _schema = FormObj.GetWebFormSchema();
             string query = FormObj.GetSelectQuery(_schema, this);
-            string context = _refId.Split("-")[3] + "_" + _rowid.ToString();
+            string context = _refId.Split("-")[3] + "_" + _rowid.ToString();//context format = objectId_rowId_ControlId
 
             EbDataSet dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(query, new DbParameter[] 
             {
@@ -216,7 +216,7 @@ namespace ExpressBase.ServiceStack.Services
                         }
                     }
                 }
-                foreach(Object Ctrl in _schema.ExtendedControls)//FileUpaloder Controls
+                foreach(Object Ctrl in _schema.ExtendedControls)//FileUploader Controls
                 {
                     SingleTable Table = new SingleTable();
                     GetFormattedData(dataset.Tables[tableIndex], Table);
@@ -285,11 +285,11 @@ namespace ExpressBase.ServiceStack.Services
                         _unformattedData = (_unformattedData == DBNull.Value) ? DateTime.MinValue : _unformattedData;
                         _formattedData = ((DateTime)_unformattedData).Date != DateTime.MinValue ? Convert.ToDateTime(_unformattedData).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) : string.Empty;
                     }
-                    else if(dataColumn.Type == EbDbTypes.DateTime)
-                    {
-                        _unformattedData = (_unformattedData == DBNull.Value) ? DateTime.MinValue : _unformattedData;
-                        _formattedData = ((DateTime)_unformattedData).Date != DateTime.MinValue ? Convert.ToDateTime(_unformattedData).ToString("yyyy-MM-dd hh:mm tt", CultureInfo.InvariantCulture) : string.Empty;
-                    }
+                    //else if(dataColumn.Type == EbDbTypes.DateTime)
+                    //{
+                    //    _unformattedData = (_unformattedData == DBNull.Value) ? DateTime.MinValue : _unformattedData;
+                    //    _formattedData = ((DateTime)_unformattedData).Date != DateTime.MinValue ? Convert.ToDateTime(_unformattedData).ToString("yyyy-MM-dd hh:mm tt", CultureInfo.InvariantCulture) : string.Empty;
+                    //}
                     Row.Columns.Add(new SingleColumn()
                     {
                         Name = dataColumn.ColumnName,
