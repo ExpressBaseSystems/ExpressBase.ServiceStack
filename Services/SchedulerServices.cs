@@ -139,7 +139,7 @@ namespace ExpressBase.ServiceStack.Services
                                AND obj_id = :obj_id
                                 ORDER BY ES.id;";
                 }
-                else
+                else if(request.ObjectId ==-1)
                 {
                     sql = @"SELECT * FROM eb_schedules ES ,eb_users EU
                                WHERE EU.id = ES.created_by;";

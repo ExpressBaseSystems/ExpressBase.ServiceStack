@@ -139,7 +139,7 @@ namespace ExpressBase.ServiceStack
                 Fill(Report, detail.Fields, EbReportSectionType.Detail);
 
             foreach (EbPageFooter p_footer in Report.PageFooters)
-                Fill(Report, p_footer.Fields, EbReportSectionType.ReportFooter);
+                Fill(Report, p_footer.Fields, EbReportSectionType.PageFooter);
         }
 
         private void Fill(EbReport Report, List<EbReportField> fields, EbReportSectionType section_typ)
