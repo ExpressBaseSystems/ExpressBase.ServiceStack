@@ -8,6 +8,8 @@ using ExpressBase.Objects;
 using ExpressBase.Objects.EmailRelated;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ExpressBase.ServiceStack.MQServices;
+using Microsoft.CodeAnalysis.CSharp.Scripting;
+using Microsoft.CodeAnalysis.Scripting;
 using Newtonsoft.Json;
 using Npgsql;
 using ServiceStack.Redis;
@@ -138,6 +140,28 @@ namespace ExpressBase.ServiceStack.Services
             return col;
         }
 
+        public ApiResponse Post(ApiComponetRequest request)
+        {
+            ApiResponse resp = new ApiResponse();
+            try
+            {
+                this.GlobalParams = request.Params.Select(p => new { prop = p.Name, val = p.ValueTo })
+                    .ToDictionary(x => x.prop, x => x.val as object);
+                ObjWrapperInt ow = this.GetObjectByVer(request.Component.RefId);
+                if (request.Component is EbSqlReader)
+                    resp.Result = this.ExcDataReader(ow, request.Params, (request.Component as EbSqlReader).ResultType);
+                else if (request.Component is EbSqlWriter)
+                    resp.Result = this.ExcDataWriter(ow, request.Params);
+                else if (request.Component is EbSqlFunc)
+                    resp.Result = this.ExcSqlFunction(ow, request.Params);
+            }
+            catch (Exception e)
+            {
+                resp.Result = null;
+            }
+            return resp;
+        }
+
         public ApiByNameResponse Get(ApiByNameRequest request)
         {
             EbApi api_o = null;
@@ -192,7 +216,7 @@ namespace ExpressBase.ServiceStack.Services
 
         public ApiResponse Any(ApiRequest request)
         {
-            ApiResponse resp = new ApiResponse { Name=request.Name,Version=request.Version};
+            ApiResponse resp = new ApiResponse { Name = request.Name, Version = request.Version };
             resp.Message.ExecutedOn = DateTime.UtcNow.ToString();
             var watch = new System.Diagnostics.Stopwatch();
             watch.Start();
@@ -211,7 +235,7 @@ namespace ExpressBase.ServiceStack.Services
                         step++;
                     }
                     watch.Stop();
-                    resp.Result = this.Api.Resources[step - 1].Result;
+                    resp.Result = this.Api.Resources[step - 1].GetResult();
                     resp.Message.Status = "Success";
                     resp.Message.Description = this.Message;
                     resp.Message.ExecutionTime = watch.ElapsedMilliseconds.ToString() + " ms";
@@ -223,7 +247,6 @@ namespace ExpressBase.ServiceStack.Services
                     resp.Message.Description = "Api does not exist!";
                     resp.Message.ExecutionTime = watch.ElapsedMilliseconds.ToString() + " ms";
                 }
-                return resp;
             }
             catch (Exception e)
             {
@@ -231,8 +254,8 @@ namespace ExpressBase.ServiceStack.Services
                 resp.Message.Status = "Error";
                 resp.Message.Description = e.Message;
                 resp.Message.ExecutionTime = watch.ElapsedMilliseconds.ToString() + " ms";
-                return resp;
             }
+            return resp;
         }
 
         private object GetResult(EbApiWrapper resource, int index)
@@ -265,9 +288,9 @@ namespace ExpressBase.ServiceStack.Services
                 i_param = this.GetInputParams(o_wrapper.EbObj, o_wrapper.ObjectType, index);
                 res.Result = this.ExcEmail(o_wrapper, i_param, resource.Refid);
             }
-            else
+            else if(resource is EbProcessor)
             {
-
+                res.Result = this.ExecScript((resource as EbProcessor).Script, index);
             }
             return res.Result;
         }
@@ -290,30 +313,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 throw new ApiException(e.Message);
             }
-            if (result_type == DataReaderResult.Formated)
-                return FormatDr(dt);
-            else
-                return dt;
-        }
-
-        private JsonTableSet FormatDr(EbDataSet dt)
-        {
-            JsonTableSet table = new JsonTableSet();
-            foreach(EbDataTable t in dt.Tables)
-            {
-                JsonTable jt = new JsonTable { TableName = t.TableName};
-                for (int k = 0; k < t.Rows.Count; k++)
-                {
-                    JsonColVal d = new JsonColVal();
-                    for (int i = 0; i < t.Columns.Count; i++)
-                    {
-                        d.Add(t.Columns[i].ColumnName, t.Rows[k][t.Columns[i].ColumnIndex]);
-                    }
-                    jt.Rows.Add(d);
-                }
-                table.Tables.Add(jt);
-            }
-            return table;
+            return dt;
         }
 
         private void FillParams(List<Param> _param)
@@ -369,24 +369,35 @@ namespace ExpressBase.ServiceStack.Services
             return stat;
         }
 
+        private bool ExecScript(string code, int step_c)
+        {
+            Script valscript = CSharpScript.Create<dynamic>(code,
+                   ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core")
+                   .WithImports("System.Dynamic", "System", "System.Collections.Generic", "System.Diagnostics", "System.Linq"));
+            try
+            {
+                valscript.Compile();
+            }
+            catch (Exception e)
+            {
+
+            }
+            return true;
+        }
+
         private List<Param> GetInputParams(object ar, int obj_type, int step_c)
         {
             List<Param> p = null;
+
             if (ar is EbDataReader || ar is EbDataWriter || ar is EbSqlFunction)
-            {
                 p = GetSqlParams(ar as EbDataSourceMain, obj_type);
-            }
             else if (ar is EbEmailTemplate)
-            {
                 p = this.GetEmailParams(ar as EbEmailTemplate);
-            }
             else
                 return null;
 
             if (step_c != 0)
-            {
                 this.SetOutParams(p, step_c);
-            }
             return p;
         }
 
