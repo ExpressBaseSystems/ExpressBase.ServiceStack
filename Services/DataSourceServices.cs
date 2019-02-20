@@ -239,8 +239,8 @@ namespace ExpressBase.ServiceStack
 
                         resp.IsPaged = _isPaged;
                         this.Redis.Set<DataSourceColumnsResponse>(_dsRedisKey, resp);
-                        TimeSpan T = _dataset.EndTime - _dataset.StartTime;
-                        InsertExecutionLog(_dataset.RowNumbers, T, _dataset.StartTime, request.UserId, request.Params, request.RefId);
+                        //TimeSpan T = _dataset.EndTime - _dataset.StartTime;
+                        //InsertExecutionLog(_dataset.RowNumbers, T, _dataset.StartTime, request.UserId, request.Params, request.RefId);
                     }
                     catch (Exception e)
                     {
