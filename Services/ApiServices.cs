@@ -6,6 +6,7 @@ using ExpressBase.Common.Objects;
 using ExpressBase.Common.Structures;
 using ExpressBase.Objects;
 using ExpressBase.Objects.EmailRelated;
+using ExpressBase.Objects.Objects;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ExpressBase.ServiceStack.MQServices;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
@@ -18,6 +19,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace ExpressBase.ServiceStack.Services
@@ -373,14 +375,17 @@ namespace ExpressBase.ServiceStack.Services
         {
             Script valscript = CSharpScript.Create<dynamic>(code,
                    ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core")
-                   .WithImports("System.Dynamic", "System", "System.Collections.Generic", "System.Diagnostics", "System.Linq"));
+                   .WithImports("System.Dynamic", "System", "System.Collections.Generic", "System.Diagnostics", "System.Linq")
+                   ,globalsType: typeof(Globals));
             try
             {
                 valscript.Compile();
+                IEnumerable<string> matches = Regex.Matches(code, @"T[0-9]{1}.\w+").OfType<Match>().Select(m => m.Groups[0].Value).Distinct();
+
             }
             catch (Exception e)
             {
-
+                throw new ApiException(e.Message);
             }
             return true;
         }
