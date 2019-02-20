@@ -498,10 +498,10 @@ ORDER BY
             {
                 EbObjectWrapper _ebObject = (new EbObjectWrapper
                 {
-                    RefId=dr[11].ToString(),
-                    Name=dr[1].ToString(),
-                    EbObjectType=Convert.ToInt32(dr[2]),
-                    VersionNumber=dr[6].ToString(),
+                    RefId = dr[11].ToString(),
+                    Name = dr[1].ToString(),
+                    EbObjectType = Convert.ToInt32(dr[2]),
+                    VersionNumber = dr[6].ToString(),
                     Json = dr[10].ToString()
                 });
                 wrap.Add(_ebObject);
@@ -587,12 +587,12 @@ ORDER BY
                     }
                     else if (obj is EbWebForm)
                     {
-						WebFormServices myService = base.ResolveService<WebFormServices>();
+                        WebFormServices myService = base.ResolveService<WebFormServices>();
                         CreateWebFormTableResponse res = (CreateWebFormTableResponse)myService.Any(new CreateWebFormTableRequest() { WebObj = obj as EbWebForm, Apps = request.Apps, SolnId = request.SolnId, UserId = request.UserId, WhichConsole = request.WhichConsole });
                     }
                     else if (obj is EbSqlFunction)
                     {
-                        EbObjectRunSqlFunctionResponse resp = this.Post(new EbObjectRunSqlFunctionRequest
+                        RunSqlFunctionResponse resp = this.Post(new RunSqlFunctionRequest
                         {
                             SolnId = request.SolnId,
                             UserId = request.UserId,
@@ -662,12 +662,12 @@ ORDER BY
                     }
                     else if (obj is EbWebForm)
                     {
-						WebFormServices myService = base.ResolveService<WebFormServices>();
+                        WebFormServices myService = base.ResolveService<WebFormServices>();
                         CreateWebFormTableResponse res = (CreateWebFormTableResponse)myService.Any(new CreateWebFormTableRequest() { WebObj = obj as EbWebForm, Apps = request.Apps, SolnId = request.SolnId, UserId = request.UserId, WhichConsole = request.WhichConsole });
                     }
                     else if (obj is EbSqlFunction)
                     {
-                        EbObjectRunSqlFunctionResponse resp = this.Post(new EbObjectRunSqlFunctionRequest
+                        RunSqlFunctionResponse resp = this.Post(new RunSqlFunctionRequest
                         {
                             SolnId = request.SolnId,
                             UserId = request.UserId,
@@ -691,7 +691,7 @@ ORDER BY
             //dynamic _type = obj.GetType();
             string refId = null;
             string exception_msg = string.Empty;
-              ILog log = LogManager.GetLogger(GetType());
+            ILog log = LogManager.GetLogger(GetType());
 
             try
             {
@@ -748,18 +748,19 @@ ORDER BY
                     }
                     else if (obj is EbWebForm)
                     {
-						WebFormServices myService = base.ResolveService<WebFormServices>();
+                        WebFormServices myService = base.ResolveService<WebFormServices>();
                         CreateWebFormTableResponse res = (CreateWebFormTableResponse)myService.Any(new CreateWebFormTableRequest() { WebObj = obj, Apps = request.Apps, SolnId = request.SolnId, UserId = request.UserId, WhichConsole = request.WhichConsole });
                     }
-                    else if(obj is EbSqlFunction)
+                    else if (obj is EbSqlFunction)
                     {
-                        EbObjectRunSqlFunctionResponse resp = this.Post(new EbObjectRunSqlFunctionRequest{
+                        RunSqlFunctionResponse resp = this.Post(new RunSqlFunctionRequest
+                        {
                             SolnId = request.SolnId,
                             UserId = request.UserId,
                             WhichConsole = request.WhichConsole,
                             UserAuthId = request.UserAuthId,
                             Json = request.Json
-                        }); 
+                        });
                     }
                 }
             }
@@ -900,7 +901,7 @@ ORDER BY
             }
         }
 
-        public EbObjectRunSqlFunctionResponse Post(EbObjectRunSqlFunctionRequest request)
+        public RunSqlFunctionResponse Post(RunSqlFunctionRequest request)
         {
             ILog log = LogManager.GetLogger(GetType());
             log.Info("Run sql -- started");
@@ -910,16 +911,17 @@ ORDER BY
                 con.Open();
                 DbCommand cmd = null;
                 int status = 0;
-                try {
+                try
+                {
                     string code = EbSerializers.Json_Deserialize<EbSqlFunction>(request.Json).Sql;
                     cmd = EbConnectionFactory.ObjectsDB.GetNewCommand(con, code);
                     status = cmd.ExecuteNonQuery();
                 }
-                catch(Exception e)
+                catch (Exception e)
                 {
                     status = 0;
                 }
-                return new EbObjectRunSqlFunctionResponse() { Status = status };
+                return new RunSqlFunctionResponse() { Status = status };
             };
         }
 
@@ -949,6 +951,13 @@ ORDER BY
             return new EbObjectChangeStatusResponse { Id = id };
         }
 
+        public DeleteObjectResponse Post(DeleteEbObjectRequest request)
+        {
+            string sql = "UPDATE eb_objects SET eb_del='T' WHERE id = :id";
+            DbParameter[] p = { EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, request.ObjId) };
+            int _rows = EbConnectionFactory.ObjectsDB.DoNonQuery(sql, p);
+            return new DeleteObjectResponse { RowsDeleted = _rows };
+        }
         public int GetObjectType(object obj)
         {
             if (obj is EbDataReader)
@@ -991,7 +1000,7 @@ ORDER BY
             {
                 Redis.Set(refId, (EbDataReader)obj);
             }
-            else if(obj is EbDataWriter)
+            else if (obj is EbDataWriter)
                 Redis.Set(refId, (EbDataWriter)obj);
             else if (obj is EbChart)
             {
@@ -1021,11 +1030,11 @@ ORDER BY
             {
                 Redis.Set(refId, (EbEmailTemplate)obj);
             }
-            else if(obj is EbSmsTemplate)
+            else if (obj is EbSmsTemplate)
             {
                 Redis.Set(refId, (EbSmsTemplate)obj);
             }
-            else if(obj is EbSqlFunction)
+            else if (obj is EbSqlFunction)
             {
                 Redis.Set(refId, (EbSqlFunction)obj);
             }
