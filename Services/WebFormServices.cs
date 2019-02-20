@@ -391,6 +391,7 @@ WHERE
                 //{
                 //	//UpdateAuditTrail(OldData, request.Values, request.RefId, FormObj.TableRowId, request.UserId);/////////////////////////
                 //}				
+                //JurassicTest();
                 return resp;
             }
             else
@@ -466,7 +467,9 @@ WHERE
                 }
                 Innercxt.Add("context = '" + EbObId + "_' || cur_val('"+ FormObj.TableName + "_id_seq')::text || '_" + entry.Key + "'");
             }
-            fullqry += string.Format(@"UPDATE 
+            if (InnerVals.Count > 0)
+            {
+                fullqry += string.Format(@"UPDATE 
                                             eb_files_ref AS t
                                         SET
                                             context = c.context
@@ -474,9 +477,10 @@ WHERE
                                             (VALUES{0}) AS c(id, context)
                                         WHERE
                                             c.id = t.id AND t.eb_del = 'F';", InnerVals.Join(","));
-            fullqry += string.Format(@"UPDATE eb_files_ref 
+                fullqry += string.Format(@"UPDATE eb_files_ref 
                                         SET eb_del='T' 
                                         WHERE ({0}) AND eb_del='F' AND id NOT IN ({1});", Innercxt.Join(" OR "), InnerIds.Join(","));
+            }
 
             //-------------------------
             param.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_createdby", EbDbTypes.Int32, request.UserId));
@@ -564,7 +568,9 @@ WHERE
                 }
                 Innercxt.Add("context = '" + EbObId + "_" + request.RowId + "_" + entry.Key + "'");
             }
-            fullqry += string.Format(@"UPDATE 
+            if (InnerVals.Count > 0)
+            {
+                fullqry += string.Format(@"UPDATE 
                                             eb_files_ref AS t
                                         SET
                                             context = c.context
@@ -572,9 +578,10 @@ WHERE
                                             (VALUES{0}) AS c(id, context)
                                         WHERE
                                             c.id = t.id AND t.eb_del = 'F';", InnerVals.Join(","));
-            fullqry += string.Format(@"UPDATE eb_files_ref 
+                fullqry += string.Format(@"UPDATE eb_files_ref 
                                         SET eb_del='T' 
                                         WHERE ({0}) AND eb_del='F' AND id NOT IN ({1});", Innercxt.Join(" OR "), InnerIds.Join(","));
+            }
 
             //-------------------------
 
@@ -606,7 +613,32 @@ WHERE
             return new DeleteDataFromWebformResponse { RowAffected = rowsAffected };
         }
 
-        //============================== VALIDATION AND AUDIT TRAIL ================================================
+        //================================= FORMULA AND VALIDATION =================================================
+
+        //private void JurassicTest()
+        //{
+        //    var engine = new Jurassic.ScriptEngine();
+        //    //engine.Execute("console.log('testing')");
+        //    //engine.SetGlobalValue("interop", 15);
+
+        //    var segment = engine.Object.Construct();
+        //    segment["type"] = "Feature";
+        //    segment["properties"] = engine.Object.Construct();
+        //    var geometry = engine.Object.Construct();
+        //    geometry["type"] = "LineString";
+        //    geometry["coordinates"] = engine.Array.Construct(
+        //      engine.Array.Construct(-37.3, 121.5),
+        //      engine.Array.Construct(-38.1, 122.6)
+        //    );
+        //    segment["geometry"] = geometry;
+
+        //    engine.SetGlobalValue("form", segment);
+
+        //    engine.Execute("console.log(form.type)");
+        //}
+
+
+        //===================================== AUDIT TRAIL ========================================================
 
         private void UpdateAuditTrail(WebformData _NewData, string _FormId, int _RecordId, int _UserId)
         {
