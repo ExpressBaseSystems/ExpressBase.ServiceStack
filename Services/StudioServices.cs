@@ -397,7 +397,7 @@ ORDER BY
                             OwnerName = dr[33].ToString()
                         },
                         DisplayName = dr[34].ToString(),
-                        IsLogEnabled = Convert.ToBoolean(dr[35])
+                        IsLogEnabled = (dr[35].ToString() == "F")?false:true
                     });
 
                     wrap.Add(_ebObject);
@@ -732,7 +732,7 @@ ORDER BY
                         else
                         {
                             refId = cmd.ExecuteScalar().ToString();
-                            string sql1 = "update eb_objects_ver set obj_json=:jsonobj where refid=:refid";
+                            string sql1 = "update eb_objects_ver set obj_json = :jsonobj where refid = :refid";
 
                             NTV[] parms = new NTV[2];
                             parms[0] = new NTV() { Name = ":jsonobj", Type = EbDbTypes.Json, Value = request.Json };
@@ -774,7 +774,7 @@ ORDER BY
                         exception_msg = "The Operation Can't be completed because an item with the name \"" + request.Name + "\"" + " already exists. Specify a diffrent name.";
                 }
             }
-            return new EbObject_Create_New_ObjectResponse() { RefId = refId, ExceptionMessage = exception_msg };
+            return new EbObject_Create_New_ObjectResponse() { RefId = refId, Message = exception_msg };
         }
 
         public EbObject_Create_Major_VersionResponse Post(EbObject_Create_Major_VersionRequest request)
