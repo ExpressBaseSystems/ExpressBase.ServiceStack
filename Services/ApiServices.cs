@@ -290,7 +290,7 @@ namespace ExpressBase.ServiceStack.Services
                 i_param = this.GetInputParams(o_wrapper.EbObj, o_wrapper.ObjectType, index);
                 res.Result = this.ExcEmail(o_wrapper, i_param, resource.Refid);
             }
-            else if(resource is EbProcessor)
+            else if (resource is EbProcessor)
             {
                 res.Result = this.ExecScript((resource as EbProcessor).Script, index);
             }
@@ -376,12 +376,22 @@ namespace ExpressBase.ServiceStack.Services
             Script valscript = CSharpScript.Create<dynamic>(code,
                    ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core")
                    .WithImports("System.Dynamic", "System", "System.Collections.Generic", "System.Diagnostics", "System.Linq")
-                   ,globalsType: typeof(Globals));
+                   , globalsType: typeof(Globals));
+
+            var _dataInput = this.Api.Resources[step_c - 1];
             try
             {
                 valscript.Compile();
-                IEnumerable<string> matches = Regex.Matches(code, @"T[0-9]{1}.\w+").OfType<Match>().Select(m => m.Groups[0].Value).Distinct();
-
+                string[] matches = Regex.Matches(code, @"T[0-9]{1}.\w+").OfType<Match>().Select(m => m.Groups[0].Value).Distinct().ToArray<string>();
+                ApiGlobals globals = new ApiGlobals();
+                foreach (string item in matches)
+                {
+                    string TName = item.Split('.')[0];
+                    string fName = item.Split('.')[1];
+                    int index = Convert.ToInt32(TName.Replace(@"T", string.Empty));
+                    EbDataColumn col = _dataInput.GetColumn(index, fName);
+                    globals[TName].Add(fName, new NTV { Name = fName, Type = col.Type, Value = null });
+                }
             }
             catch (Exception e)
             {
