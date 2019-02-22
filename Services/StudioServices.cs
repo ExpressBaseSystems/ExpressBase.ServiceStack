@@ -396,7 +396,8 @@ ORDER BY
                             OwnerTs = Convert.ToDateTime((dr[32].ToString()) == "0" || (dr[32].ToString()) == "" ? DateTime.MinValue : dr[32]),
                             OwnerName = dr[33].ToString()
                         },
-                        DisplayName = dr[34].ToString()
+                        DisplayName = dr[34].ToString(),
+                        IsLogEnabled = Convert.ToBoolean(dr[35])
                     });
 
                     wrap.Add(_ebObject);
