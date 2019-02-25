@@ -15,6 +15,7 @@ using ExpressBase.Common.Structures;
 using ExpressBase.Objects.Objects;
 using ExpressBase.ServiceStack.Services;
 using ExpressBase.Objects.Objects.SmsRelated;
+using ExpressBase.Common.SqlProfiler;
 
 namespace ExpressBase.ServiceStack
 {
@@ -964,6 +965,24 @@ namespace ExpressBase.ServiceStack
             DbParameter[] p = { EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, request.ObjId) };
             int _rows = EbConnectionFactory.ObjectsDB.DoNonQuery(sql, p);
             return new DeleteObjectResponse { RowsDeleted = _rows };
+        }
+
+        public EnableLogResponse Post(EnableLogRequest request)
+        {
+            string sql = "UPDATE eb_objects SET is_logenabled=:log WHERE id = :id";
+            DbParameter[] p = { EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, request.ObjId) ,
+            EbConnectionFactory.ObjectsDB.GetNewParameter("log",EbDbTypes.String,(request.Islog==true)? "T":"F")};
+            int _rows = EbConnectionFactory.ObjectsDB.DoNonQuery(sql, p);
+            return new EnableLogResponse { RowsDeleted = _rows };
+        }
+
+        public GetLogdetailsResponse Get(GetLogdetailsRequest request)
+        {
+            string sql = "SELECT * FROM eb_executionlogs WHERE id = :id";
+            DbParameter[] p = { EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, request.Index) };
+            EbDataTable _logdetails = EbConnectionFactory.ObjectsDB.DoQuery(sql, p);
+            EbExecutionLogs ebObj = new EbExecutionLogs { Rows = _logdetails.Rows[0][1].ToString(), Exec_time = Convert.ToInt32(_logdetails.Rows[0][2]), Created_by = Convert.ToInt32(_logdetails.Rows[0][3]), Created_at = Convert.ToDateTime(_logdetails.Rows[0][4]), Params = _logdetails.Rows[0][6].ToString() };
+            return new GetLogdetailsResponse { logdetails = ebObj };
         }
         public int GetObjectType(object obj)
         {

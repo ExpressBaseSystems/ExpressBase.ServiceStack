@@ -397,9 +397,11 @@ namespace ExpressBase.ServiceStack
             Console.WriteLine("................................................datasourceDSrequeststart " + DateTime.Now);
             var dtstop = DateTime.Now;
             Console.WriteLine("..................................totaltimeinSeconds" + dtstop.Subtract(dtStart).Seconds);
-
-            TimeSpan T = _dataset.EndTime - _dataset.StartTime;
-            InsertExecutionLog(_dataset.RowNumbers, T, _dataset.StartTime, request.UserId, request.Params, request.RefId);
+            if (GetLogEnabled(request.RefId))
+            {
+                TimeSpan T = _dataset.EndTime - _dataset.StartTime;
+                InsertExecutionLog(_dataset.RowNumbers, T, _dataset.StartTime, request.UserId, request.Params, request.RefId);
+            }
             //-- 
             Console.WriteLine(DateTime.Now);
             var dtEnd = DateTime.Now;
@@ -500,9 +502,11 @@ namespace ExpressBase.ServiceStack
 
                         Console.WriteLine("................................................datasourcecolumnrequestfinish " + System.DateTime.Now);
 
-                        TimeSpan T = _dataset.EndTime - _dataset.StartTime;
-                        InsertExecutionLog(_dataset.RowNumbers, T, _dataset.StartTime, request.UserId, request.Params, request.RefId);
-
+                        if (GetLogEnabled(request.RefId))
+                        {
+                            TimeSpan T = _dataset.EndTime - _dataset.StartTime;
+                            InsertExecutionLog(_dataset.RowNumbers, T, _dataset.StartTime, request.UserId, request.Params, request.RefId);
+                        }
                         foreach (var dt in _dataset.Tables)
                             resp.Columns.Add(dt.Columns);
 
@@ -1123,8 +1127,11 @@ namespace ExpressBase.ServiceStack
             Console.WriteLine("................................................datasourceDSrequeststart " + DateTime.Now);
             var dtstop = DateTime.Now;
             Console.WriteLine("..................................totaltimeinSeconds" + dtstop.Subtract(dtStart).Seconds);
-            TimeSpan T = _dataset.EndTime - _dataset.StartTime;
-            InsertExecutionLog(_dataset.RowNumbers, T, _dataset.StartTime, request.UserId, request.Params, request.RefId);
+            if (GetLogEnabled(request.RefId))
+            {
+                TimeSpan T = _dataset.EndTime - _dataset.StartTime;
+                InsertExecutionLog(_dataset.RowNumbers, T, _dataset.StartTime, request.UserId, request.Params, request.RefId);
+            }
             //-- 
             Console.WriteLine(DateTime.Now);
             var dtEnd = DateTime.Now;
