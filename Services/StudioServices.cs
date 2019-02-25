@@ -186,43 +186,43 @@ namespace ExpressBase.ServiceStack
 
         public EbObjAllVerWithoutCircularRefResp Get(EbObjAllVerWithoutCircularRefRqst request)// Get all latest committed versions of EbObject without json - circular reference situation avoided on query
         {
-            string query = @"
-SELECT 
-    EO.id, EO.obj_name, EO.display_name, 
-    EOV.id, EOV.version_num, EOV.refid
-FROM
-    eb_objects EO, eb_objects_ver EOV
-WHERE
-    EO.id = EOV.eb_objects_id AND
-    EOV.working_mode = 'F' AND
-    EO.obj_type = :obj_type 
-ORDER BY 
-    EO.display_name ASC, EOV.version_num DESC;
-";
+                        string query = @"
+            SELECT 
+                EO.id, EO.obj_name, EO.display_name, 
+                EOV.id, EOV.version_num, EOV.refid
+            FROM
+                eb_objects EO, eb_objects_ver EOV
+            WHERE
+                EO.id = EOV.eb_objects_id AND
+                EOV.working_mode = 'F' AND
+                EO.obj_type = :obj_type 
+            ORDER BY 
+                EO.display_name ASC, EOV.version_num DESC;
+            ";
             List<DbParameter> parameters = new List<DbParameter>();
             if (!request.EbObjectRefId.IsNullOrEmpty())
             {
-                query = @"
-SELECT 
-    EO.id, EO.obj_name, EO.display_name, 
-    EOV.id, EOV.version_num, EOV.refid
-FROM
-    eb_objects EO, eb_objects_ver EOV
-WHERE
-    EO.id = EOV.eb_objects_id AND
-    EOV.working_mode = 'F' AND
-    EO.obj_type = :obj_type AND
-    EOV.refid != :dominant AND
-    EOV.refid NOT IN (
-        WITH RECURSIVE objects_relations AS (
-	    SELECT dependant FROM eb_objects_relations WHERE eb_del='F' AND dominant = :dominant
-	    UNION
-	    SELECT a.dependant FROM eb_objects_relations a, objects_relations b WHERE a.eb_del='F' AND a.dominant = b.dependant
-        )SELECT * FROM objects_relations
-    )
-ORDER BY 
-    EO.display_name ASC, EOV.version_num DESC;    
-";
+                                query = @"
+                SELECT 
+                    EO.id, EO.obj_name, EO.display_name, 
+                    EOV.id, EOV.version_num, EOV.refid
+                FROM
+                    eb_objects EO, eb_objects_ver EOV
+                WHERE
+                    EO.id = EOV.eb_objects_id AND
+                    EOV.working_mode = 'F' AND
+                    EO.obj_type = :obj_type AND
+                    EOV.refid != :dominant AND
+                    EOV.refid NOT IN (
+                        WITH RECURSIVE objects_relations AS (
+	                    SELECT dependant FROM eb_objects_relations WHERE eb_del='F' AND dominant = :dominant
+	                    UNION
+	                    SELECT a.dependant FROM eb_objects_relations a, objects_relations b WHERE a.eb_del='F' AND a.dominant = b.dependant
+                        )SELECT * FROM objects_relations
+                    )
+                ORDER BY 
+                    EO.display_name ASC, EOV.version_num DESC;    
+                ";
                 parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("dominant", EbDbTypes.String, request.EbObjectRefId));
             }
 
@@ -397,7 +397,7 @@ ORDER BY
                             OwnerName = dr[33].ToString()
                         },
                         DisplayName = dr[34].ToString(),
-                        IsLogEnabled = (dr[35].ToString() == "F")?false:true
+                        IsLogEnabled = (dr[35].ToString() == "F") ? false : true
                     });
 
                     wrap.Add(_ebObject);
@@ -538,6 +538,7 @@ ORDER BY
         {
             EbObject obj = EbSerializers.Json_Deserialize(request.Json);
             string refId = null;
+            string exception_msg = string.Empty;
             ILog log = LogManager.GetLogger(GetType());
             log.Info("Commit Object-- started");
 
@@ -606,15 +607,17 @@ ORDER BY
             }
             catch (Exception e)
             {
+                exception_msg = e.Message;
                 Console.WriteLine("Exception: " + e.ToString());
             }
-            return new EbObject_CommitResponse() { RefId = refId };
+            return new EbObject_CommitResponse() { RefId = refId,Message = exception_msg };
         }
 
         public EbObject_SaveResponse Post(EbObject_SaveRequest request)
         {
             EbObject obj = EbSerializers.Json_Deserialize(request.Json);
             string refId = null;
+            string exception_msg = string.Empty;
             ILog log = LogManager.GetLogger(GetType());
             log.Info("Save Object -- started");
             try
@@ -681,9 +684,10 @@ ORDER BY
             }
             catch (Exception e)
             {
+                exception_msg = e.Message;
                 Console.WriteLine("Exception: " + e.ToString());
             }
-            return new EbObject_SaveResponse() { RefId = refId };
+            return new EbObject_SaveResponse() { RefId = refId, Message = exception_msg };
         }
 
         public EbObject_Create_New_ObjectResponse Post(EbObject_Create_New_ObjectRequest request)
@@ -773,6 +777,8 @@ ORDER BY
                     if ((e as Npgsql.PostgresException).SqlState == "23505")
                         exception_msg = "The Operation Can't be completed because an item with the name \"" + request.Name + "\"" + " already exists. Specify a diffrent name.";
                 }
+                else
+                    exception_msg = e.Message;
             }
             return new EbObject_Create_New_ObjectResponse() { RefId = refId, Message = exception_msg };
         }
