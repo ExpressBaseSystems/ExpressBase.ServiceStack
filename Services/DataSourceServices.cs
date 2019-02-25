@@ -168,9 +168,11 @@ namespace ExpressBase.ServiceStack
             _recordsTotal = (_recordsTotal > 0) ? _recordsTotal : _dataset.Tables[1].Rows.Count;
             _recordsFiltered = (_recordsFiltered > 0) ? _recordsFiltered : _dataset.Tables[1].Rows.Count;
             //-- 
-            TimeSpan T = _dataset.EndTime - _dataset.StartTime;
-            InsertExecutionLog(_dataset.RowNumbers, T, _dataset.StartTime, request.UserId, request.Params, request.RefId);
-
+            if (GetLogEnabled(request.RefId))
+            {
+                TimeSpan T = _dataset.EndTime - _dataset.StartTime;
+                InsertExecutionLog(_dataset.RowNumbers, T, _dataset.StartTime, request.UserId, request.Params, request.RefId);
+            }
             dsresponse = new DataSourceDataResponse
             {
                 Draw = request.Draw,
@@ -290,8 +292,11 @@ namespace ExpressBase.ServiceStack
             }
             var parameters = DataHelper.GetParams(this.EbConnectionFactory, false, request.Params, 0, 0);
             var _dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray<System.Data.Common.DbParameter>());
-              TimeSpan T = _dataset.EndTime - _dataset.StartTime;
-            InsertExecutionLog(_dataset.RowNumbers, T, _dataset.StartTime, request.UserId, request.Params, request.RefId);
+            if (GetLogEnabled(request.RefId))
+            {
+                TimeSpan T = _dataset.EndTime - _dataset.StartTime;
+                InsertExecutionLog(_dataset.RowNumbers, T, _dataset.StartTime, request.UserId, request.Params, request.RefId);
+            }
             dsresponse = new DataSourceDataSetResponse
             {
                 DataSet = _dataset

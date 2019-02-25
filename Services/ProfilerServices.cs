@@ -18,12 +18,19 @@ namespace ExpressBase.ServiceStack.Services
         {
             List<EbExecutionLogs> _logs = new List<EbExecutionLogs>();
             List<DbParameter> parameters = new List<DbParameter>();
-            string query = @"SELECT id, rows, exec_time, created_by, created_at, refid, params FROM eb_executionlogs WHERE refid = :refid";
+            string query = @"SELECT id, rows, exec_time, created_by, created_at, refid FROM eb_executionlogs WHERE refid = :refid";
             parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("refid", EbDbTypes.String, request.RefId));
             EbDataTable dt = EbConnectionFactory.ObjectsDB.DoQuery(query, parameters.ToArray());
             foreach (var item in dt.Rows)
             {
-                EbExecutionLogs eb = new EbExecutionLogs { Id = Convert.ToInt32(item[0]), Rows = item[1].ToString(), Exec_time = Convert.ToDecimal(item[2]), Created_by = Convert.ToInt32(item[3]), Created_at = Convert.ToDateTime(item[4]), Params = Convert.ToString(item[6]) };
+                EbExecutionLogs eb = new EbExecutionLogs
+                {
+                    Id = Convert.ToInt32(item[0]),
+                    Rows = item[1].ToString(),
+                    Exec_time = Convert.ToDecimal(item[2]),
+                    Created_by = Convert.ToInt32(item[3]),
+                    Created_at = Convert.ToDateTime(item[4])
+                };
                 _logs.Add(eb);
             }
             return new GetExecLogsResponse { Logs = _logs };
