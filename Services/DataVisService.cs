@@ -1072,6 +1072,14 @@ namespace ExpressBase.ServiceStack
         }
 
         [CompressResponse]
+        public DbClientQueryResponse Post(DbClientQueryRequest request)
+        {
+            var _dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(request.Query, new System.Data.Common.DbParameter[0]);
+
+            return new DbClientQueryResponse { Dataset = _dataset };
+        }
+
+        [CompressResponse]
         public DataSourceDataResponse Post(InlineTableDataRequest request)
         {
             DataSourceDataResponse dsresponse = null;
