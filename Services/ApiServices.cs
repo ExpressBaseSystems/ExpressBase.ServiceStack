@@ -260,7 +260,7 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
-        private object GetResult(EbApiWrapper resource, int index)
+        private object GetResult(ApiResources resource, int index)
         {
             ObjWrapperInt o_wrapper = null;
             ResultWrapper res = new ResultWrapper();
@@ -379,18 +379,31 @@ namespace ExpressBase.ServiceStack.Services
                    , globalsType: typeof(Globals));
 
             var _dataInput = this.Api.Resources[step_c - 1];
+            object res = null;
             try
             {
                 valscript.Compile();
                 string[] matches = Regex.Matches(code, @"T[0-9]{1}.\w+").OfType<Match>().Select(m => m.Groups[0].Value).Distinct().ToArray<string>();
                 ApiGlobals globals = new ApiGlobals();
-                foreach (string item in matches)
+
+                for(int i=0;i<(_dataInput.Result as EbDataSet).Tables.Count;i++)
                 {
-                    string TName = item.Split('.')[0];
-                    string fName = item.Split('.')[1];
-                    int index = Convert.ToInt32(TName.Replace(@"T", string.Empty));
-                    EbDataColumn col = _dataInput.GetColumn(index, fName);
-                    globals[TName].Add(fName, new NTV { Name = fName, Type = col.Type, Value = null });
+                    EbDataTable _t = (_dataInput.Result as EbDataSet).Tables[i];
+                    if(matches.Any(c=> c.Contains("T" + i)))
+                    {
+                        string[] _tparams = matches.Where(c => c.Contains("T" + i)).ToArray();
+                        for(int j=0;j<_t.Rows.Count; j++)
+                        {
+                            foreach(string item in _tparams)
+                            {
+                                string TName = item.Split('.')[0];
+                                string fName = item.Split('.')[1];
+                                EbDataColumn col = _dataInput.GetColumn(i, fName);
+                                globals[TName].Add(fName, new NTV { Name = fName, Type = col.Type, Value = _t.Rows[j][col.ColumnIndex] });
+                            }
+                            res = valscript.RunAsync(globals);
+                        }
+                    }
                 }
             }
             catch (Exception e)
