@@ -151,14 +151,18 @@ namespace ExpressBase.ServiceStack.Services
                     .ToDictionary(x => x.prop, x => x.val as object);
                 ObjWrapperInt ow = this.GetObjectByVer(request.Component.RefId);
                 if (request.Component is EbSqlReader)
-                    resp.Result = this.ExcDataReader(ow, request.Params, (request.Component as EbSqlReader).ResultType);
+                    request.Component.Result = this.ExcDataReader(ow, request.Params);
                 else if (request.Component is EbSqlWriter)
-                    resp.Result = this.ExcDataWriter(ow, request.Params);
+                    request.Component.Result = this.ExcDataWriter(ow, request.Params);
                 else if (request.Component is EbSqlFunc)
-                    resp.Result = this.ExcSqlFunction(ow, request.Params);
+                    request.Component.Result = this.ExcSqlFunction(ow, request.Params);
+
+                resp.Result = request.Component.GetResult();
             }
             catch (Exception e)
             {
+                resp.Message.Status = "Error";
+                resp.Message.Description = e.Message;
                 resp.Result = null;
             }
             return resp;
@@ -270,7 +274,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 o_wrapper = this.GetObjectByVer(resource.Refid);
                 i_param = this.GetInputParams(o_wrapper.EbObj, o_wrapper.ObjectType, index);
-                res.Result = this.ExcDataReader(o_wrapper, i_param, (resource as EbSqlReader).ResultType);
+                res.Result = this.ExcDataReader(o_wrapper, i_param);
             }
             else if (resource is EbSqlWriter)
             {
@@ -292,12 +296,12 @@ namespace ExpressBase.ServiceStack.Services
             }
             else if (resource is EbProcessor)
             {
-                res.Result = this.ExecScript((resource as EbProcessor).Script, index);
+                res.Result = this.ExecScript((resource as EbProcessor), index);
             }
             return res.Result;
         }
 
-        private object ExcDataReader(ObjWrapperInt wrapper, List<Param> i_param, DataReaderResult result_type)
+        private object ExcDataReader(ObjWrapperInt wrapper, List<Param> i_param)
         {
             this.FillParams(i_param);
             List<DbParameter> p = new List<DbParameter>();
@@ -371,46 +375,18 @@ namespace ExpressBase.ServiceStack.Services
             return stat;
         }
 
-        private bool ExecScript(string code, int step_c)
+        private object ExecScript(EbProcessor script, int step_c)
         {
-            Script valscript = CSharpScript.Create<dynamic>(code,
-                   ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core")
-                   .WithImports("System.Dynamic", "System", "System.Collections.Generic", "System.Diagnostics", "System.Linq")
-                   , globalsType: typeof(Globals));
-
-            var _dataInput = this.Api.Resources[step_c - 1];
-            object res = null;
+            object result = null;
             try
             {
-                valscript.Compile();
-                string[] matches = Regex.Matches(code, @"T[0-9]{1}.\w+").OfType<Match>().Select(m => m.Groups[0].Value).Distinct().ToArray<string>();
-                ApiGlobals globals = new ApiGlobals();
-
-                for(int i=0;i<(_dataInput.Result as EbDataSet).Tables.Count;i++)
-                {
-                    EbDataTable _t = (_dataInput.Result as EbDataSet).Tables[i];
-                    if(matches.Any(c=> c.Contains("T" + i)))
-                    {
-                        string[] _tparams = matches.Where(c => c.Contains("T" + i)).ToArray();
-                        for(int j=0;j<_t.Rows.Count; j++)
-                        {
-                            foreach(string item in _tparams)
-                            {
-                                string TName = item.Split('.')[0];
-                                string fName = item.Split('.')[1];
-                                EbDataColumn col = _dataInput.GetColumn(i, fName);
-                                globals[TName].Add(fName, new NTV { Name = fName, Type = col.Type, Value = _t.Rows[j][col.ColumnIndex] });
-                            }
-                            res = valscript.RunAsync(globals);
-                        }
-                    }
-                }
+                result = script.Evaluate(this.Api.Resources[step_c - 1]);
             }
             catch (Exception e)
             {
                 throw new ApiException(e.Message);
             }
-            return true;
+            return result;
         }
 
         private List<Param> GetInputParams(object ar, int obj_type, int step_c)
