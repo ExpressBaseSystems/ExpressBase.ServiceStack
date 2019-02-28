@@ -296,7 +296,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             else if (resource is EbProcessor)
             {
-                res.Result = this.ExecScript((resource as EbProcessor), index);
+                res.Result = (resource as EbProcessor).Evaluate(this.Api.Resources[index - 1]);
             }
             return res.Result;
         }
@@ -373,20 +373,6 @@ namespace ExpressBase.ServiceStack.Services
                 throw new ApiException(e.Message);
             }
             return stat;
-        }
-
-        private object ExecScript(EbProcessor script, int step_c)
-        {
-            object result = null;
-            try
-            {
-                result = script.Evaluate(this.Api.Resources[step_c - 1]);
-            }
-            catch (Exception e)
-            {
-                throw new ApiException(e.Message);
-            }
-            return result;
         }
 
         private List<Param> GetInputParams(object ar, int obj_type, int step_c)
