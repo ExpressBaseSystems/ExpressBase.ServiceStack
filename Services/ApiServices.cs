@@ -38,9 +38,7 @@ namespace ExpressBase.ServiceStack.Services
 
         private EbApi Api { set; get; }
 
-        private string Message { set; get; }
-
-        private string Status { set; get; }
+        private ApiResponse ApiResponse { set;get;}
 
         private string SolutionId { set; get; }
 
@@ -49,6 +47,7 @@ namespace ExpressBase.ServiceStack.Services
             this.StudioServices = base.ResolveService<EbObjectService>();
             this.DSService = base.ResolveService<DataSourceService>();
             this.EmailService = base.ResolveService<PdfToEmailService>();
+            this.ApiResponse = new ApiResponse();
         }
 
         public FormDataJsonResponse Post(FormDataJsonRequest request)
@@ -144,7 +143,6 @@ namespace ExpressBase.ServiceStack.Services
 
         public ApiResponse Post(ApiComponetRequest request)
         {
-            ApiResponse resp = new ApiResponse();
             try
             {
                 this.GlobalParams = request.Params.Select(p => new { prop = p.Name, val = p.ValueTo })
@@ -157,15 +155,15 @@ namespace ExpressBase.ServiceStack.Services
                 else if (request.Component is EbSqlFunc)
                     request.Component.Result = this.ExcSqlFunction(ow, request.Params);
 
-                resp.Result = request.Component.GetResult();
+                this.ApiResponse.Result = request.Component.GetResult();
             }
             catch (Exception e)
             {
-                resp.Message.Status = "Error";
-                resp.Message.Description = e.Message;
-                resp.Result = null;
+                this.ApiResponse.Message.Status = "Error";
+                this.ApiResponse.Message.Description = e.Message;
+                this.ApiResponse.Result = null;
             }
-            return resp;
+            return this.ApiResponse;
         }
 
         public ApiByNameResponse Get(ApiByNameRequest request)
@@ -222,10 +220,10 @@ namespace ExpressBase.ServiceStack.Services
 
         public ApiResponse Any(ApiRequest request)
         {
-            ApiResponse resp = new ApiResponse { Name = request.Name, Version = request.Version };
-            resp.Message.ExecutedOn = DateTime.UtcNow.ToString();
-            var watch = new System.Diagnostics.Stopwatch();
-            watch.Start();
+            this.ApiResponse.Name = request.Name;
+            this.ApiResponse.Version = request.Version;
+            this.ApiResponse.Message.ExecutedOn = DateTime.UtcNow.ToString();
+            var watch = new System.Diagnostics.Stopwatch(); watch.Start();
             this.SolutionId = request.SolnId;
             this.GlobalParams = request.Data;
             int step = 0;
@@ -241,27 +239,27 @@ namespace ExpressBase.ServiceStack.Services
                         step++;
                     }
                     watch.Stop();
-                    resp.Result = this.Api.Resources[step - 1].GetResult();
-                    resp.Message.Status = "Success";
-                    resp.Message.Description = this.Message;
-                    resp.Message.ExecutionTime = watch.ElapsedMilliseconds.ToString() + " ms";
+
+                    this.ApiResponse.Result = this.Api.Resources[step - 1].GetResult();
+                    this.ApiResponse.Message.Status = "Success";
+                    this.ApiResponse.Message.ExecutionTime = watch.ElapsedMilliseconds.ToString() + " ms";
                 }
                 else
                 {
                     watch.Stop();
-                    resp.Message.Status = "Error";
-                    resp.Message.Description = "Api does not exist!";
-                    resp.Message.ExecutionTime = watch.ElapsedMilliseconds.ToString() + " ms";
+                    this.ApiResponse.Message.Status = "Failed";
+                    this.ApiResponse.Message.Description = "Api does not exist!";
+                    this.ApiResponse.Message.ExecutionTime = watch.ElapsedMilliseconds.ToString() + " ms";
                 }
             }
             catch (Exception e)
             {
                 watch.Stop();
-                resp.Message.Status = "Error";
-                resp.Message.Description = e.Message;
-                resp.Message.ExecutionTime = watch.ElapsedMilliseconds.ToString() + " ms";
+                this.ApiResponse.Message.Status = "Error";
+                this.ApiResponse.Message.Description = e.Message;
+                this.ApiResponse.Message.ExecutionTime = watch.ElapsedMilliseconds.ToString() + " ms";
             }
-            return resp;
+            return this.ApiResponse;
         }
 
         private object GetResult(ApiResources resource, int index)
@@ -313,7 +311,7 @@ namespace ExpressBase.ServiceStack.Services
                     p.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(pr.Name, (EbDbTypes)Convert.ToInt32(pr.Type), pr.ValueTo));
                 }
                 dt = this.EbConnectionFactory.ObjectsDB.DoQueries((wrapper.EbObj as EbDataReader).Sql, p.ToArray());
-                this.Message = "Success";
+                this.ApiResponse.Message.Description = "Success";
             }
             catch (Exception e)
             {
@@ -365,7 +363,7 @@ namespace ExpressBase.ServiceStack.Services
                     ObjId = Convert.ToInt32(refid.Split(CharConstants.DASH)[3])
                 });
                 stat = true;
-                this.Message = "Mail sent";
+                this.ApiResponse.Message.Description = "Mail sent";
             }
             catch (Exception e)
             {
