@@ -239,7 +239,6 @@ namespace ExpressBase.ServiceStack.Services
                         step++;
                     }
                     watch.Stop();
-
                     this.ApiResponse.Result = this.Api.Resources[step - 1].GetResult();
                     this.ApiResponse.Message.Status = "Success";
                     this.ApiResponse.Message.ExecutionTime = watch.ElapsedMilliseconds.ToString() + " ms";
