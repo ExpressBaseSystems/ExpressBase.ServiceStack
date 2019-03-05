@@ -5,12 +5,18 @@ using ExpressBase.Common.Extensions;
 using ExpressBase.Common.Objects;
 using ExpressBase.Common.Structures;
 using ExpressBase.Objects;
+using ExpressBase.Objects.Objects;
 using ExpressBase.Objects.ServiceStack_Artifacts;
+using Jurassic;
+using Jurassic.Library;
+using Microsoft.CodeAnalysis.CSharp.Scripting;
+using Microsoft.CodeAnalysis.Scripting;
 using Newtonsoft.Json;
 using ServiceStack;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.Dynamic;
 using System.Globalization;
 using System.Linq;
 
@@ -72,11 +78,12 @@ namespace ExpressBase.ServiceStack.Services
         private int CreateOrAlterTable(string tableName, List<TableColumnMeta> listNamesAndTypes)
         {
             //checking for space in column name, table name
+            if(tableName.Contains(CharConstants.SPACE))
+                throw new FormException("Table creation failed - Invalid table name: " + tableName);
             foreach (TableColumnMeta entry in listNamesAndTypes)
-            {
-                if (entry.Name.Contains(CharConstants.SPACE) || tableName.Contains(CharConstants.SPACE))
-                    return -1;
-            }
+                if (entry.Name.Contains(CharConstants.SPACE))
+                    throw new FormException("Table creation failed : Invalid column name" + entry.Name);
+            
             var isTableExists = this.EbConnectionFactory.ObjectsDB.IsTableExists(this.EbConnectionFactory.ObjectsDB.IS_TABLE_EXIST, new DbParameter[] { this.EbConnectionFactory.ObjectsDB.GetNewParameter("tbl", EbDbTypes.String, tableName) });
             if (!isTableExists)
             {
@@ -106,6 +113,8 @@ namespace ExpressBase.ServiceStack.Services
                     {
                         if (entry.Name.ToLower() == (dr.ColumnName.ToLower()))
                         {
+                            if(entry.Type.EbDbType != dr.Type)
+                                throw new FormException("Table "+ tableName + " creation failed - Column type mismatch : " + entry.Name);
                             isFound = true;
                             break;
                         }
@@ -143,10 +152,10 @@ namespace ExpressBase.ServiceStack.Services
                             this.EbConnectionFactory.ObjectsDB.UpdateTable(sql);
                         }
                     }
-                    return (0);
+                    return 0;
                 }
             }
-            return -1;
+            throw new FormException("Table creation failed - Table name: " + tableName);
         }
 
         private void CreateSquenceAndTrigger(string tableName)
@@ -391,6 +400,8 @@ WHERE
                 //{
                 //	//UpdateAuditTrail(OldData, request.Values, request.RefId, FormObj.TableRowId, request.UserId);/////////////////////////
                 //}				
+                //dynamic zz = FormObj.GetFormAsGlobal(FormData);
+                //CSTest();
                 //JurassicTest();
                 return resp;
             }
@@ -615,27 +626,142 @@ WHERE
 
         //================================= FORMULA AND VALIDATION =================================================
 
-        //private void JurassicTest()
-        //{
-        //    var engine = new Jurassic.ScriptEngine();
-        //    //engine.Execute("console.log('testing')");
-        //    //engine.SetGlobalValue("interop", 15);
+        //not complete
+        private ObjectInstance GetJsFormGlobal(WebformData _formData, EbControlContainer _container, ScriptEngine _engine, ObjectInstance _globals)
+        {
+            if (_formData.MultipleTables.ContainsKey(_container.TableName))
+            {
+                if (_formData.MultipleTables[_container.TableName].Count > 0)
+                {
+                    foreach (EbControl control in _container.Controls)
+                    {
+                        if (_container is EbDataGrid)
+                        {
+                            EbDataGrid dg = _container as EbDataGrid;
+                            ArrayInstance a = _engine.Array.Construct(_formData.MultipleTables[_container.TableName].Count);
+                            _globals[control.Name] = a;
+                            for (int i = 0; i < _formData.MultipleTables[_container.TableName].Count; i++)
+                            {
+                                ObjectInstance g = _engine.Object.Construct();
+                                a[i] = g;
+                                foreach(EbControl c in dg.Controls)
+                                {
+                                    g[c.Name] = GetDataByControlName(_formData, dg.TableName, c.Name, i);
+                                }
+                            }
+                        }
+                        else if (control is EbControlContainer)
+                        {
+                            ObjectInstance g = _engine.Object.Construct();
+                            _globals[control.Name] = g;
+                            GetJsFormGlobal(_formData, control as EbControlContainer, _engine, g);
+                        }
+                        else
+                        {
+                            _globals[control.Name] = GetDataByControlName(_formData, _container.TableName, control.Name, 0);
+                        }
+                    }
+                }
+            }
+            return _globals;
+        }
 
-        //    var segment = engine.Object.Construct();
-        //    segment["type"] = "Feature";
-        //    segment["properties"] = engine.Object.Construct();
-        //    var geometry = engine.Object.Construct();
-        //    geometry["type"] = "LineString";
-        //    geometry["coordinates"] = engine.Array.Construct(
-        //      engine.Array.Construct(-37.3, 121.5),
-        //      engine.Array.Construct(-38.1, 122.6)
-        //    );
-        //    segment["geometry"] = geometry;
+        private dynamic GetDataByControlName(WebformData _formData, string _table, string _column, int _row = 0)
+        {
+            dynamic val = null;
+            if (_formData.MultipleTables.ContainsKey(_table))
+            {
+                foreach (SingleColumn col in _formData.MultipleTables[_table][_row].Columns)
+                {
+                    if (col.Name.Equals(_column))
+                    {
+                        val = col.Value;
+                        break;
+                    }
+                }
+            }
+            return val;
+        }
 
-        //    engine.SetGlobalValue("form", segment);
 
-        //    engine.Execute("console.log(form.type)");
-        //}
+        private void JurassicTest()
+        {
+            //var engine = new ScriptEngine();
+            ////engine.Execute("console.log('testing')");
+            ////engine.SetGlobalValue("interop", 15);
+
+            //var segment = engine.Object.Construct();
+            //segment["type"] = "Feature";
+            //segment["properties"] = engine.Object.Construct();
+            //var geometry = engine.Object.Construct();
+            //geometry["type"] = "LineString";
+            //geometry["coordinates"] = engine.Array.Construct(
+            //  engine.Array.Construct(-37.3, 121.5),
+            //  engine.Array.Construct(-38.1, 122.6)
+            //);
+            //segment["geometry"] = geometry;
+
+            //engine.SetGlobalValue("form", segment);
+            //engine.SetGlobalValue("console", new Jurassic.Library.FirebugConsole(engine));
+
+            //engine.Execute("console.log(form.properties.type)");
+
+            var engine2 = new ScriptEngine();
+            engine2.Evaluate("function test(a, b) { if(a%2 === 0) return true;else return false; }");
+            Console.WriteLine(engine2.CallGlobalFunction<bool>("test", 5, 6));
+        }
+
+        private void CSTest()
+        {            
+            //FormGlobals temp = new FormGlobals();
+
+            //ListNTV t1 = new ListNTV() {
+            //    Columns = new List<NTV>() {
+            //    new NTV { Name = "demo11", Type = EbDbTypes.String, Value = "febin11" }
+            //} };
+            //ListNTV t2 = new ListNTV() {
+            //    Columns = new List<NTV>() {
+            //    new NTV { Name = "demo22", Type = EbDbTypes.String, Value = "febin22" },
+            //    new NTV { Name = "demo33", Type = EbDbTypes.String, Value = "febin33" }
+            //} };
+            //ListNTV t3 = new ListNTV()
+            //{
+            //    Columns = new List<NTV>() {
+            //    new NTV { Name = "demo44", Type = EbDbTypes.String, Value = "febin44" },
+            //    new NTV { Name = "demo55", Type = EbDbTypes.String, Value = "febin55" }
+            //}
+            //};
+
+            //temp.FORM.Rows.Add(t1);
+            //var xxx = new FormAsGlobal
+            //{
+            //    Name = "demo66",
+            //    Rows = new List<ListNTV> { t3 },
+            //    Containers = new List<FormAsGlobal>()
+            //};
+            //temp.FORM.Containers.Add(new FormAsGlobal
+            //{
+            //    Name = "demo33",
+            //    Rows = new List<ListNTV> { t2},
+            //    Containers = new List<FormAsGlobal>() { xxx}
+            //});
+
+            //var xxxx = temp.FORM.demo33.demo22;
+
+            string CsCode = "return FORM.demo33.demo22;";
+            Script valscript = CSharpScript.Create<dynamic>(
+                CsCode,
+                ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System.Dynamic", "System", "System.Collections.Generic",
+                "System.Diagnostics", "System.Linq"),
+                globalsType: typeof(FormGlobals));
+
+            valscript.Compile();
+            FormGlobals globals = new FormGlobals();
+            var result = (valscript.RunAsync(globals)).Result.ReturnValue;
+
+        }
+
+
 
 
         //===================================== AUDIT TRAIL ========================================================
