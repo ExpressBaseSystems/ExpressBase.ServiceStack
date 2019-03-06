@@ -103,6 +103,15 @@ namespace ExpressBase.ServiceStack.Services
             DbParameter[] p = { EbConnectionFactory.ObjectsDB.GetNewParameter("refid", EbDbTypes.String, request.Refid) };
             EbDataTable _chartdetails = EbConnectionFactory.ObjectsDB.DoQuery(sql, p);
             return new GetChart2DetailsResponse { data = _chartdetails.Rows };
-        }        
+        }
+
+        public GetExplainResponse Get(GetExplainRequest request)
+        {
+            string query = request.Query.Split(";")[0];
+            string sql = "explain (format json, analyze on) " + query + ";";
+            var parameters = DataHelper.GetParams(this.EbConnectionFactory, false, request.Params, 0, 0);
+            EbDataTable _explain = EbConnectionFactory.ObjectsDB.DoQuery(sql, parameters.ToArray<System.Data.Common.DbParameter>());
+            return new GetExplainResponse { Explain = _explain.Rows[0][0].ToString() };
+        }
     }
 }
