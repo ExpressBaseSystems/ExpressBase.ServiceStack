@@ -6,21 +6,14 @@ using ExpressBase.Common.Objects;
 using ExpressBase.Common.Structures;
 using ExpressBase.Objects;
 using ExpressBase.Objects.EmailRelated;
-using ExpressBase.Objects.Objects;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ExpressBase.ServiceStack.MQServices;
-using Microsoft.CodeAnalysis.CSharp.Scripting;
-using Microsoft.CodeAnalysis.Scripting;
 using Newtonsoft.Json;
-using Npgsql;
 using ServiceStack.Redis;
 using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Data.Common;
 using System.Linq;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 
 namespace ExpressBase.ServiceStack.Services
 {
