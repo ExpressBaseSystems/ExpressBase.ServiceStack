@@ -6,21 +6,14 @@ using ExpressBase.Common.Objects;
 using ExpressBase.Common.Structures;
 using ExpressBase.Objects;
 using ExpressBase.Objects.EmailRelated;
-using ExpressBase.Objects.Objects;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ExpressBase.ServiceStack.MQServices;
-using Microsoft.CodeAnalysis.CSharp.Scripting;
-using Microsoft.CodeAnalysis.Scripting;
 using Newtonsoft.Json;
-using Npgsql;
 using ServiceStack.Redis;
 using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Data.Common;
 using System.Linq;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -38,9 +31,7 @@ namespace ExpressBase.ServiceStack.Services
 
         private EbApi Api { set; get; }
 
-        private string Message { set; get; }
-
-        private string Status { set; get; }
+        private ApiResponse ApiResponse { set; get; }
 
         private string SolutionId { set; get; }
 
@@ -49,6 +40,7 @@ namespace ExpressBase.ServiceStack.Services
             this.StudioServices = base.ResolveService<EbObjectService>();
             this.DSService = base.ResolveService<DataSourceService>();
             this.EmailService = base.ResolveService<PdfToEmailService>();
+            this.ApiResponse = new ApiResponse();
         }
 
         public FormDataJsonResponse Post(FormDataJsonRequest request)
@@ -133,6 +125,48 @@ namespace ExpressBase.ServiceStack.Services
             }
         }
 
+        public ApiReqJsonResponse Get(ApiReqJsonRequest request)
+        {
+            List<Param> p = new List<Param>();
+            foreach (ApiResources r in request.Components)
+            {
+                if (r is EbSqlReader || r is EbSqlWriter || r is EbSqlFunc)
+                {
+                    ObjWrapperInt obj = this.GetObjectByVer(r.Reference);
+                    if ((obj.EbObj as EbDataSourceMain).InputParams == null || (obj.EbObj as EbDataSourceMain).InputParams.Count <= 0)
+                        p.Merge((obj.EbObj as EbDataSourceMain).GetParams(this.Redis as RedisClient));
+                    else
+                        p.Merge((obj.EbObj as EbDataSourceMain).InputParams);
+                }
+                else if (r is EbEmailNode)
+                {
+                    ObjWrapperInt obj = this.GetObjectByVer(r.Reference);
+                    EbEmailTemplate enode = (EbEmailTemplate)obj.EbObj;
+                    if (!string.IsNullOrEmpty(enode.AttachmentReportRefID))
+                    {
+                        ObjWrapperInt rep = this.GetObjectByVer(enode.AttachmentReportRefID);
+                        EbReport o = (EbReport)rep.EbObj;
+                        if (!string.IsNullOrEmpty(o.DataSourceRefId))
+                        {
+                            ObjWrapperInt ds = this.GetObjectByVer(o.DataSourceRefId);
+                            p = p.Merge((ds.EbObj as EbDataSourceMain).GetParams(this.Redis as RedisClient));
+                        }
+                    }
+                    if (!string.IsNullOrEmpty(enode.DataSourceRefId))
+                    {
+                        ObjWrapperInt ob = this.GetObjectByVer(enode.DataSourceRefId);
+                        p = p.Merge((ob.EbObj as EbDataSourceMain).GetParams(this.Redis as RedisClient));
+                    }
+                }
+                else if (r is EbConnectApi)
+                {
+                    ObjWrapperInt ob = this.GetObjectByVer(r.Reference);
+                    p = p.Merge(this.Get(new ApiReqJsonRequest { Components = (ob.EbObj as EbApi).Resources }).Params);
+                }
+            }
+            return new ApiReqJsonResponse { Params = p };
+        }
+
         private JsonColVal GetCols(JsonColVal col, SingleRow row)
         {
             foreach (SingleColumn _cols in row.Columns)
@@ -144,28 +178,35 @@ namespace ExpressBase.ServiceStack.Services
 
         public ApiResponse Post(ApiComponetRequest request)
         {
-            ApiResponse resp = new ApiResponse();
             try
             {
                 this.GlobalParams = request.Params.Select(p => new { prop = p.Name, val = p.ValueTo })
                     .ToDictionary(x => x.prop, x => x.val as object);
-                ObjWrapperInt ow = this.GetObjectByVer(request.Component.RefId);
+                ObjWrapperInt ow = this.GetObjectByVer(request.Component.Reference);
                 if (request.Component is EbSqlReader)
-                    request.Component.Result = this.ExcDataReader(ow, request.Params);
+                    request.Component.Result = this.ExcDataReader(ow, request.Params, request.Component.RouteIndex);
                 else if (request.Component is EbSqlWriter)
                     request.Component.Result = this.ExcDataWriter(ow, request.Params);
                 else if (request.Component is EbSqlFunc)
                     request.Component.Result = this.ExcSqlFunction(ow, request.Params);
-
-                resp.Result = request.Component.GetResult();
+                else if (request.Component is EbConnectApi)
+                {
+                    request.Component.Result = this.Any(new ApiRequest
+                    {
+                        Name = (request.Component as EbConnectApi).RefName,
+                        Version = (request.Component as EbConnectApi).Version,
+                        Data = this.GlobalParams
+                    });
+                }
+                this.ApiResponse.Result = request.Component.GetResult();
             }
             catch (Exception e)
             {
-                resp.Message.Status = "Error";
-                resp.Message.Description = e.Message;
-                resp.Result = null;
+                this.ApiResponse.Message.Status = "Error";
+                this.ApiResponse.Message.Description = e.Message;
+                this.ApiResponse.Result = null;
             }
-            return resp;
+            return this.ApiResponse;
         }
 
         public ApiByNameResponse Get(ApiByNameRequest request)
@@ -222,10 +263,10 @@ namespace ExpressBase.ServiceStack.Services
 
         public ApiResponse Any(ApiRequest request)
         {
-            ApiResponse resp = new ApiResponse { Name = request.Name, Version = request.Version };
-            resp.Message.ExecutedOn = DateTime.UtcNow.ToString();
-            var watch = new System.Diagnostics.Stopwatch();
-            watch.Start();
+            this.ApiResponse.Name = request.Name;
+            this.ApiResponse.Version = request.Version;
+            this.ApiResponse.Message.ExecutedOn = DateTime.UtcNow.ToString();
+            var watch = new System.Diagnostics.Stopwatch(); watch.Start();
             this.SolutionId = request.SolnId;
             this.GlobalParams = request.Data;
             int step = 0;
@@ -241,27 +282,30 @@ namespace ExpressBase.ServiceStack.Services
                         step++;
                     }
                     watch.Stop();
-                    resp.Result = this.Api.Resources[step - 1].GetResult();
-                    resp.Message.Status = "Success";
-                    resp.Message.Description = this.Message;
-                    resp.Message.ExecutionTime = watch.ElapsedMilliseconds.ToString() + " ms";
+                    this.ApiResponse.Result = this.Api.Resources[step - 1].GetResult();
+                    this.ApiResponse.Message.Status = ApiConstants.SUCCESS;
+                    this.ApiResponse.Message.ExecutionTime = watch.ElapsedMilliseconds.ToString() + " ms";
+                    if (this.ApiResponse.Result != null)
+                        this.ApiResponse.Message.ErrorCode = ApiErrorCode.Success;
                 }
                 else
                 {
                     watch.Stop();
-                    resp.Message.Status = "Error";
-                    resp.Message.Description = "Api does not exist!";
-                    resp.Message.ExecutionTime = watch.ElapsedMilliseconds.ToString() + " ms";
+                    this.ApiResponse.Message.Status = "Unknown";
+                    this.ApiResponse.Message.Description = string.Format(ApiConstants.API_NOTFOUND, request.Name);
+                    this.ApiResponse.Message.ErrorCode = ApiErrorCode.NotFound;
+                    this.ApiResponse.Message.ExecutionTime = watch.ElapsedMilliseconds.ToString() + " ms";
                 }
             }
             catch (Exception e)
             {
                 watch.Stop();
-                resp.Message.Status = "Error";
-                resp.Message.Description = e.Message;
-                resp.Message.ExecutionTime = watch.ElapsedMilliseconds.ToString() + " ms";
+                this.ApiResponse.Message.ExecutionTime = watch.ElapsedMilliseconds.ToString() + " ms";
+                this.ApiResponse.Message.Status = string.Format(ApiConstants.FAIL);
+                Console.WriteLine(this.ApiResponse.Message.Status);
+                Console.WriteLine(this.ApiResponse.Message.Description);
             }
-            return resp;
+            return this.ApiResponse;
         }
 
         private object GetResult(ApiResources resource, int index)
@@ -272,36 +316,50 @@ namespace ExpressBase.ServiceStack.Services
 
             if (resource is EbSqlReader)
             {
-                o_wrapper = this.GetObjectByVer(resource.Refid);
-                i_param = this.GetInputParams(o_wrapper.EbObj, o_wrapper.ObjectType, index);
-                res.Result = this.ExcDataReader(o_wrapper, i_param);
+                o_wrapper = this.GetObjectByVer(resource.Reference);
+                i_param = this.GetInputParams(o_wrapper.EbObj, index);
+                res.Result = this.ExcDataReader(o_wrapper, i_param, index);
             }
             else if (resource is EbSqlWriter)
             {
-                o_wrapper = this.GetObjectByVer(resource.Refid);
-                i_param = this.GetInputParams(o_wrapper.EbObj, o_wrapper.ObjectType, index);
+                o_wrapper = this.GetObjectByVer(resource.Reference);
+                i_param = this.GetInputParams(o_wrapper.EbObj, index);
                 res.Result = this.ExcDataWriter(o_wrapper, i_param);
             }
             else if (resource is EbSqlFunc)
             {
-                o_wrapper = this.GetObjectByVer(resource.Refid);
-                i_param = this.GetInputParams(o_wrapper.EbObj, o_wrapper.ObjectType, index);
+                o_wrapper = this.GetObjectByVer(resource.Reference);
+                i_param = this.GetInputParams(o_wrapper.EbObj, index);
                 res.Result = this.ExcSqlFunction(o_wrapper, i_param);
             }
             else if (resource is EbEmailNode)
             {
-                o_wrapper = this.GetObjectByVer(resource.Refid);
-                i_param = this.GetInputParams(o_wrapper.EbObj, o_wrapper.ObjectType, index);
-                res.Result = this.ExcEmail(o_wrapper, i_param, resource.Refid);
+                o_wrapper = this.GetObjectByVer(resource.Reference);
+                i_param = this.GetInputParams(o_wrapper.EbObj, index);
+                res.Result = this.ExcEmail(o_wrapper, i_param, resource.Reference,index);
             }
             else if (resource is EbProcessor)
             {
-                res.Result = this.ExecScript((resource as EbProcessor), index);
+                res.Result = (resource as EbProcessor).Evaluate(this.Api.Resources[index - 1]);
+            }
+            else if (resource is EbConnectApi)
+            {
+                o_wrapper = this.GetObjectByVer(resource.Reference);
+                if ((o_wrapper.EbObj as EbApi).Name.Equals(this.Api.Name))
+                {
+                    this.ApiResponse.Message.Description = string.Format(ApiConstants.CIRCULAR_REF, this.Api.Name)+", " + string.Format(ApiConstants.DESCRPT_ERR, index, "ConnectApi", this.Api.Name);
+                    throw new ApiException();
+                }
+                else
+                {
+                    i_param = this.GetInputParams(o_wrapper.EbObj, index);
+                    res.Result = this.ExecuteConnectApi((resource as EbConnectApi), i_param);
+                }
             }
             return res.Result;
         }
 
-        private object ExcDataReader(ObjWrapperInt wrapper, List<Param> i_param)
+        private object ExcDataReader(ObjWrapperInt wrapper, List<Param> i_param, int step_c)
         {
             this.FillParams(i_param);
             List<DbParameter> p = new List<DbParameter>();
@@ -313,10 +371,11 @@ namespace ExpressBase.ServiceStack.Services
                     p.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(pr.Name, (EbDbTypes)Convert.ToInt32(pr.Type), pr.ValueTo));
                 }
                 dt = this.EbConnectionFactory.ObjectsDB.DoQueries((wrapper.EbObj as EbDataReader).Sql, p.ToArray());
-                this.Message = "Success";
+                this.ApiResponse.Message.Description = ApiConstants.EXE_SUCCESS;
             }
             catch (Exception e)
             {
+                this.ApiResponse.Message.Description = string.Format(ApiConstants.DESCRPT_ERR, step_c, "DataReader", wrapper.EbObj.Name);
                 throw new ApiException(e.Message);
             }
             return dt;
@@ -326,12 +385,20 @@ namespace ExpressBase.ServiceStack.Services
         {
             foreach (Param p in _param)
             {
-                if (this.GlobalParams.ContainsKey(p.Name))
-                    p.Value = this.GlobalParams[p.Name].ToString();
-                else if (this.TempParams != null && this.TempParams.ContainsKey(p.Name))
+                if (this.TempParams != null && this.TempParams.ContainsKey(p.Name))
                     p.Value = this.TempParams[p.Name].ToString();
+                else if (this.GlobalParams.ContainsKey(p.Name))
+                    p.Value = this.GlobalParams[p.Name].ToString();
                 else
-                    throw new ApiException("Parameter " + p.Name + " must be set!");
+                {
+                    this.ApiResponse.Message.Description = string.Format(ApiConstants.UNSET_PARAM, p.Name);
+                    throw new ApiException(((int)ApiErrorCode.Failed).ToString());
+                }
+                if (string.IsNullOrEmpty(p.Value))
+                {
+                    this.ApiResponse.Message.Description = string.Format(ApiConstants.UNSET_PARAM, p.Name);
+                    throw new ApiException(((int)ApiErrorCode.Failed).ToString());
+                }
             }
         }
 
@@ -352,7 +419,7 @@ namespace ExpressBase.ServiceStack.Services
             return this.DSService.Post(new SqlFuncTestRequest { FunctionName = (wrapper.EbObj as EbSqlFunction).Name, Parameters = i_param });
         }
 
-        private bool ExcEmail(ObjWrapperInt wrapper, List<Param> i_param, string refid)
+        private bool ExcEmail(ObjWrapperInt wrapper, List<Param> i_param, string refid,int step_c)
         {
             bool stat = false;
             this.FillParams(i_param);
@@ -365,38 +432,63 @@ namespace ExpressBase.ServiceStack.Services
                     ObjId = Convert.ToInt32(refid.Split(CharConstants.DASH)[3])
                 });
                 stat = true;
-                this.Message = "Mail sent";
+                this.ApiResponse.Message.Description = string.Format(ApiConstants.MAIL_SUCCESS,
+                                                        (wrapper.EbObj as EbEmailTemplate).To, 
+                                                        (wrapper.EbObj as EbEmailTemplate).Subject,
+                                                        (wrapper.EbObj as EbEmailTemplate).Cc);
             }
             catch (Exception e)
             {
                 stat = false;
+                this.ApiResponse.Message.Description = string.Format(ApiConstants.DESCRPT_ERR, step_c, "Mail", wrapper.EbObj.Name);
                 throw new ApiException(e.Message);
             }
             return stat;
         }
 
-        private object ExecScript(EbProcessor script, int step_c)
+        private object ExecuteConnectApi(EbConnectApi c_api, List<Param> i_param)
         {
-            object result = null;
+            ApiResponse resp = null;
+            this.FillParams(i_param);
+            Dictionary<string, object> d = i_param.Select(p => new { prop = p.Name, val = p.Value })
+                   .ToDictionary(x => x.prop, x => x.val as object);
             try
             {
-                result = script.Evaluate(this.Api.Resources[step_c - 1]);
+                ApiServices s = base.ResolveService<ApiServices>();
+                resp = s.Any(new ApiRequest
+                {
+                    Name = c_api.RefName,
+                    Version = c_api.Version,
+                    Data = d
+                });
+
+                if (resp.Message.ErrorCode == ApiErrorCode.NotFound)
+                {
+                    this.ApiResponse.Message.Description = string.Format(ApiConstants.DESCRPT_ERR, c_api.RouteIndex, "Api", c_api.RefName);
+                    throw new ApiException(ApiConstants.API_NOTFOUND);
+                }
+                else if (resp.Message.ErrorCode == ApiErrorCode.Success)
+                {
+                    this.ApiResponse.Message.Description = ApiConstants.EXE_SUCCESS;
+                }
             }
             catch (Exception e)
             {
+                this.ApiResponse.Message.Description = string.Format(ApiConstants.DESCRPT_ERR, c_api.RouteIndex, "Api", c_api.RefName);
                 throw new ApiException(e.Message);
             }
-            return result;
+            return resp;
         }
 
-        private List<Param> GetInputParams(object ar, int obj_type, int step_c)
+        private List<Param> GetInputParams(object ar, int step_c)
         {
             List<Param> p = null;
-
             if (ar is EbDataReader || ar is EbDataWriter || ar is EbSqlFunction)
-                p = GetSqlParams(ar as EbDataSourceMain, obj_type);
+                p = (ar as EbDataSourceMain).GetParams(this.Redis as RedisClient);
             else if (ar is EbEmailTemplate)
                 p = this.GetEmailParams(ar as EbEmailTemplate);
+            else if (ar is EbApi)
+                p = this.Get(new ApiReqJsonRequest { Components = (ar as EbApi).Resources }).Params;
             else
                 return null;
 
@@ -405,54 +497,15 @@ namespace ExpressBase.ServiceStack.Services
             return p;
         }
 
-        private List<Param> GetSqlParams(EbDataSourceMain o, int obj_type)
-        {
-            bool isFilter = false;
-            if (o is EbDataReader)
-            {
-                if (!string.IsNullOrEmpty((o as EbDataReader).FilterDialogRefId))
-                    isFilter = true;
-            }
-
-            if (!isFilter)
-            {
-                if ((o.InputParams != null) && (o.InputParams.Any()))
-                    return o.InputParams;
-                else
-                    return SqlHelper.GetSqlParams(o.Sql, obj_type);
-            }
-            else
-            {
-                (o as EbDataReader).AfterRedisGet(Redis as RedisClient);
-                List<Param> p = new List<Param>();
-                foreach (EbControl ctrl in (o as EbDataReader).FilterDialog.Controls)
-                {
-                    p.Add(new Param
-                    {
-                        Name = ctrl.Name,
-                        Type = ((int)ctrl.EbDbType).ToString(),
-                    });
-                }
-                return p;
-            }
-        }
-
         private void SetOutParams(List<Param> p, int step)
         {
-            Dictionary<string, object> temp = new Dictionary<string, object>();
             if (this.Api.Resources[step - 1].Result != null)
             {
-                var o = this.Api.Resources[step - 1].GetOutParams(p);
+                List<Param> out_params = this.Api.Resources[step - 1].GetOutParams(p);
+                this.TempParams = out_params.Select(i => new { prop = i.Name, val = i.ValueTo })
+                        .ToDictionary(x => x.prop, x => x.val as object);
 
-                foreach (Param pr in (o as List<Param>))
-                {
-                    if (!temp.ContainsKey(pr.Name))
-                    {
-                        temp.Add(pr.Name, pr.ValueTo);
-                    }
-                }
             }
-            this.TempParams = temp;
         }
 
         private List<Param> GetEmailParams(EbEmailTemplate enode)
@@ -464,13 +517,13 @@ namespace ExpressBase.ServiceStack.Services
                 if (!string.IsNullOrEmpty(o.DataSourceRefId))
                 {
                     ObjWrapperInt ob = this.GetObjectByVer(o.DataSourceRefId);
-                    p = p.Merge(this.GetSqlParams(ob.EbObj as EbDataSourceMain, ob.ObjectType)).ToList();
+                    p = p.Merge((ob.EbObj as EbDataSourceMain).GetParams(this.Redis as RedisClient)).ToList();
                 }
             }
             if (!string.IsNullOrEmpty(enode.DataSourceRefId))
             {
                 ObjWrapperInt ob = this.GetObjectByVer(enode.DataSourceRefId);
-                p = p.Merge(this.GetSqlParams(ob.EbObj as EbDataSourceMain, ob.ObjectType)).ToList();
+                p = p.Merge((ob.EbObj as EbDataSourceMain).GetParams(this.Redis as RedisClient)).ToList();
             }
             return p;
         }

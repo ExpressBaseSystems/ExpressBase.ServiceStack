@@ -187,7 +187,7 @@ namespace ExpressBase.ServiceStack
 
         public EbObjAllVerWithoutCircularRefResp Get(EbObjAllVerWithoutCircularRefRqst request)// Get all latest committed versions of EbObject without json - circular reference situation avoided on query
         {
-                        string query = @"
+            string query = @"
             SELECT 
                 EO.id, EO.obj_name, EO.display_name, 
                 EOV.id, EOV.version_num, EOV.refid
@@ -203,7 +203,7 @@ namespace ExpressBase.ServiceStack
             List<DbParameter> parameters = new List<DbParameter>();
             if (!request.EbObjectRefId.IsNullOrEmpty())
             {
-                                query = @"
+                query = @"
                 SELECT 
                     EO.id, EO.obj_name, EO.display_name, 
                     EOV.id, EOV.version_num, EOV.refid
@@ -611,7 +611,7 @@ namespace ExpressBase.ServiceStack
                 exception_msg = e.Message;
                 Console.WriteLine("Exception: " + e.ToString());
             }
-            return new EbObject_CommitResponse() { RefId = refId,Message = exception_msg };
+            return new EbObject_CommitResponse() { RefId = refId, Message = exception_msg };
         }
 
         public EbObject_SaveResponse Post(EbObject_SaveRequest request)
@@ -975,15 +975,7 @@ namespace ExpressBase.ServiceStack
             int _rows = EbConnectionFactory.ObjectsDB.DoNonQuery(sql, p);
             return new EnableLogResponse { RowsDeleted = _rows };
         }
-
-        public GetLogdetailsResponse Get(GetLogdetailsRequest request)
-        {
-            string sql = "SELECT * FROM eb_executionlogs WHERE id = :id";
-            DbParameter[] p = { EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, request.Index) };
-            EbDataTable _logdetails = EbConnectionFactory.ObjectsDB.DoQuery(sql, p);
-            EbExecutionLogs ebObj = new EbExecutionLogs { Rows = _logdetails.Rows[0][1].ToString(), Exec_time = Convert.ToInt32(_logdetails.Rows[0][2]), Created_by = Convert.ToInt32(_logdetails.Rows[0][3]), Created_at = Convert.ToDateTime(_logdetails.Rows[0][4]), Params = _logdetails.Rows[0][6].ToString() };
-            return new GetLogdetailsResponse { logdetails = ebObj };
-        }
+        
         public int GetObjectType(object obj)
         {
             if (obj is EbDataReader)
