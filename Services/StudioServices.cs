@@ -975,26 +975,6 @@ namespace ExpressBase.ServiceStack
             int _rows = EbConnectionFactory.ObjectsDB.DoNonQuery(sql, p);
             return new EnableLogResponse { RowsDeleted = _rows };
         }
-
-        public GetLogdetailsResponse Get(GetLogdetailsRequest request)
-        {
-            string sql = "SELECT * FROM eb_executionlogs WHERE id = :id";
-            DbParameter[] p = { EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, request.Index) };
-            EbDataTable _logdetails = EbConnectionFactory.ObjectsDB.DoQuery(sql, p);
-            EbExecutionLogs ebObj = new EbExecutionLogs { Rows = _logdetails.Rows[0][1].ToString(), Exec_time = Convert.ToInt32(_logdetails.Rows[0][2]), Created_by = Convert.ToInt32(_logdetails.Rows[0][3]), Created_at = Convert.ToDateTime(_logdetails.Rows[0][4]), Params = _logdetails.Rows[0][6].ToString() };
-            return new GetLogdetailsResponse { logdetails = ebObj };
-
-        }
-
-        public GetExplainResponse Get(GetExplainRequest request)
-        {
-           string query =  request.Query.Split(";")[0];
-            string sql = "explain (format json, analyze on) " + query + ";";
-            var parameters = DataHelper.GetParams(this.EbConnectionFactory, false, request.Params, 0, 0);
-            EbDataTable _explain = EbConnectionFactory.ObjectsDB.DoQuery(sql, parameters.ToArray<System.Data.Common.DbParameter>());
-            var x = _explain.Rows[0].ToString();
-            return new GetExplainResponse { Explain = _explain.Rows[0][0].ToString() };
-        }
         
         public int GetObjectType(object obj)
         {
