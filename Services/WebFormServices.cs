@@ -78,12 +78,12 @@ namespace ExpressBase.ServiceStack.Services
         private int CreateOrAlterTable(string tableName, List<TableColumnMeta> listNamesAndTypes)
         {
             //checking for space in column name, table name
-            if(tableName.Contains(CharConstants.SPACE))
+            if (tableName.Contains(CharConstants.SPACE))
                 throw new FormException("Table creation failed - Invalid table name: " + tableName);
             foreach (TableColumnMeta entry in listNamesAndTypes)
                 if (entry.Name.Contains(CharConstants.SPACE))
                     throw new FormException("Table creation failed : Invalid column name" + entry.Name);
-            
+
             var isTableExists = this.EbConnectionFactory.ObjectsDB.IsTableExists(this.EbConnectionFactory.ObjectsDB.IS_TABLE_EXIST, new DbParameter[] { this.EbConnectionFactory.ObjectsDB.GetNewParameter("tbl", EbDbTypes.String, tableName) });
             if (!isTableExists)
             {
@@ -113,8 +113,8 @@ namespace ExpressBase.ServiceStack.Services
                     {
                         if (entry.Name.ToLower() == (dr.ColumnName.ToLower()))
                         {
-                            if(entry.Type.EbDbType != dr.Type)
-                                throw new FormException("Table "+ tableName + " creation failed - Column type mismatch : " + entry.Name);
+                            if (entry.Type.EbDbType != dr.Type)
+                                throw new FormException("Table " + tableName + " creation failed - Column type mismatch : " + entry.Name);
                             isFound = true;
                             break;
                         }
@@ -188,7 +188,7 @@ namespace ExpressBase.ServiceStack.Services
             string query = FormObj.GetSelectQuery(_schema, this);
             string context = _refId.Split("-")[3] + "_" + _rowid.ToString();//context format = objectId_rowId_ControlId
 
-            EbDataSet dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(query, new DbParameter[] 
+            EbDataSet dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(query, new DbParameter[]
             {
                 this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, _rowid),
                 this.EbConnectionFactory.DataDB.GetNewParameter("context", EbDbTypes.String, context)
@@ -209,12 +209,12 @@ namespace ExpressBase.ServiceStack.Services
             if (FormData.MultipleTables.Count > 0)
                 FormData.MasterTable = dataset.Tables[0].TableName;
 
-            if(dataset.Tables.Count > _schema.Tables.Count)
+            if (dataset.Tables.Count > _schema.Tables.Count)
             {
                 int tableIndex = _schema.Tables.Count;
-                foreach(TableSchema Tbl in _schema.Tables)
+                foreach (TableSchema Tbl in _schema.Tables)
                 {
-                    foreach(ColumnSchema Col in Tbl.Columns)
+                    foreach (ColumnSchema Col in Tbl.Columns)
                     {
                         if (Col.Control.GetType().Equals(typeof(EbPowerSelect)))
                         {
@@ -225,7 +225,7 @@ namespace ExpressBase.ServiceStack.Services
                         }
                     }
                 }
-                foreach(Object Ctrl in _schema.ExtendedControls)//FileUploader Controls
+                foreach (Object Ctrl in _schema.ExtendedControls)//FileUploader Controls
                 {
                     SingleTable Table = new SingleTable();
                     GetFormattedData(dataset.Tables[tableIndex], Table);
@@ -476,7 +476,7 @@ WHERE
                     param.Add(this.EbConnectionFactory.DataDB.GetNewParameter(cn, EbDbTypes.Decimal, row.Columns[0].Value));
                     InnerIds.Add(":" + cn);
                 }
-                Innercxt.Add("context = '" + EbObId + "_' || cur_val('"+ FormObj.TableName + "_id_seq')::text || '_" + entry.Key + "'");
+                Innercxt.Add("context = '" + EbObId + "_' || cur_val('" + FormObj.TableName + "_id_seq')::text || '_" + entry.Key + "'");
             }
             if (InnerVals.Count > 0)
             {
@@ -626,9 +626,111 @@ WHERE
 
         //================================= FORMULA AND VALIDATION =================================================
 
-        //not complete
-        private ObjectInstance GetJsFormGlobal(WebformData _formData, EbControlContainer _container, ScriptEngine _engine, ObjectInstance _globals)
+        public WebformData CalcFormula(WebformData _formData, EbWebForm _formObj)
         {
+            Dictionary<int, EbControlWrapper> ctrls = EbWebForm.GetControlsAsDict(_formObj, "FORM");
+            List<int> ExeOrder = GetExecutionOrder(ctrls);
+
+            for(int i = 0; i < ExeOrder.Count; i++)
+            {
+                EbControlWrapper cw = ctrls[ExeOrder[i]];
+                Script valscript = CSharpScript.Create<dynamic>(
+                    cw.Control.ValueExpression,
+                    ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System.Dynamic", "System", "System.Collections.Generic",
+                    "System.Diagnostics", "System.Linq"),
+                    globalsType: typeof(FormGlobals)
+                );
+                valscript.Compile();
+
+                FormAsGlobal g = _formObj.GetFormAsGlobal(_formData);
+                FormGlobals globals = new FormGlobals() { FORM = g };
+                var result = (valscript.RunAsync(globals)).Result.ReturnValue;
+
+                _formData.MultipleTables[cw.TableName][0].Columns.Add(new SingleColumn {
+                    Name = cw.Control.Name,
+                    Type = (int)cw.Control.EbDbType,
+                    Value = result
+                });
+            }
+            return _formData;
+        }
+
+        private List<int> GetExecutionOrder(Dictionary<int, EbControlWrapper> ctrls)
+        {
+            List<int> CalcFlds = new List<int>() { 1, 2, 4 };//
+            List<int> ExeOrd = new List<int>();
+            List<KeyValuePair<int, int>> dpndcy = new List<KeyValuePair<int, int>>();
+            for (int i = 0; i < CalcFlds.Count; i++)
+            {
+                if (ctrls[CalcFlds[i]].Control.ValueExpression.Contains("FORM"))//testing purpose
+                {
+                    for (int j = 0; j < CalcFlds.Count; j++ )
+                    {
+                        if (i != j)
+                        {
+                            if (ctrls[CalcFlds[i]].Control.ValueExpression.Contains(ctrls[CalcFlds[i]].Path))
+                                dpndcy.Add(new KeyValuePair<int, int>(i, j));
+                        }
+                    }
+                }
+            }
+            int count = 0;
+            while (dpndcy.Count > 0 && count < CalcFlds.Count)
+            {
+                for (int i = 0; i < CalcFlds.Count; i++)
+                {
+                    var t = dpndcy.FindIndex(x => x.Key == CalcFlds[i]);
+                    if (t == -1)
+                    {
+                        ExeOrd.Add(CalcFlds[i]);
+                        dpndcy.RemoveAll(x => x.Value == CalcFlds[i]);
+                    }
+                }
+                count++;
+            }
+
+            return ExeOrd;
+        }
+
+        //incomplete
+        public bool ValidateFormData(WebformData _formData, EbWebForm _formObj)
+        {
+            var engine = new ScriptEngine();
+            ObjectInstance globals = GetJsFormGlobal(_formData, _formObj, engine);
+            engine.SetGlobalValue("FORM", globals);
+            List<EbValidator> warnings = new List<EbValidator>();
+            List<EbValidator> errors = new List<EbValidator>();
+            Dictionary<int, EbControlWrapper> ctrls = EbWebForm.GetControlsAsDict(_formObj, "FORM");
+            foreach (KeyValuePair<int, EbControlWrapper> ctrl in ctrls)
+            {
+                for (int i = 0; i < ctrl.Value.Control.Validators.Count; i++)
+                {
+                    EbValidator v = ctrl.Value.Control.Validators[i];
+                    if (!v.IsDisabled)
+                    {
+                        string fn = v.Name + ctrl.Key;
+                        engine.Evaluate("function " + fn + "() { " + v.JScode + " }");
+                        if (!engine.CallGlobalFunction<bool>(fn))
+                        {
+                            if (v.IsWarningOnly)
+                                warnings.Add(v);
+                            else
+                                errors.Add(v);
+                        }
+                    }
+                }
+            }
+            return (errors.Count > 0);
+        }
+
+
+        //get formdata as globals for Jurassic script engine
+        private ObjectInstance GetJsFormGlobal(WebformData _formData, EbControlContainer _container, ScriptEngine _engine, ObjectInstance _globals = null)
+        {
+            if (_globals == null)
+            {
+                _globals = _engine.Object.Construct();
+            }
             if (_formData.MultipleTables.ContainsKey(_container.TableName))
             {
                 if (_formData.MultipleTables[_container.TableName].Count > 0)
@@ -644,7 +746,7 @@ WHERE
                             {
                                 ObjectInstance g = _engine.Object.Construct();
                                 a[i] = g;
-                                foreach(EbControl c in dg.Controls)
+                                foreach (EbControl c in dg.Controls)
                                 {
                                     g[c.Name] = GetDataByControlName(_formData, dg.TableName, c.Name, i);
                                 }
@@ -654,7 +756,7 @@ WHERE
                         {
                             ObjectInstance g = _engine.Object.Construct();
                             _globals[control.Name] = g;
-                            GetJsFormGlobal(_formData, control as EbControlContainer, _engine, g);
+                            g = GetJsFormGlobal(_formData, control as EbControlContainer, _engine, g);
                         }
                         else
                         {
@@ -712,7 +814,7 @@ WHERE
         }
 
         private void CSTest()
-        {            
+        {
             //FormGlobals temp = new FormGlobals();
 
             //ListNTV t1 = new ListNTV() {
