@@ -18,16 +18,19 @@ namespace ExpressBase.ServiceStack.Services
         public GetDbTablesResponse Get(GetDbTablesRequest request)
         {
             string sql = @"
-                SELECT 
-                    tablename, schemaname, indexname
+               SELECT Q1.table_name, Q1.table_schema, i.indexname FROM
+				(SELECT 
+                    table_name, table_schema
                 FROM 
-                    information_schema.tables s, pg_indexes i
-                WHERE 
-                    table_schema='public'
-                    AND table_type='BASE TABLE'
-                    AND  schemaname != 'pg_catalog' 
-                    AND schemaname != 'information_schema'
-                    AND s.table_name = i.tablename ORDER BY tablename;
+                    information_schema.tables s
+				where
+					table_schema != 'pg_catalog'
+					AND table_schema != 'information_schema'
+                    AND table_type='BASE TABLE')Q1
+				left join 
+					pg_indexes i
+				ON
+   				Q1.table_name = i.tablename ORDER BY tablename;
 
                SELECT
                     table_name, column_name, data_type
