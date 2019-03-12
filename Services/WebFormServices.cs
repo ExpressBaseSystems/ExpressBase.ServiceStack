@@ -635,7 +635,7 @@ WHERE
             {
                 EbControlWrapper cw = ctrls[ExeOrder[i]];
                 Script valscript = CSharpScript.Create<dynamic>(
-                    cw.Control.ValueExpression,
+                    cw.Control.ValueExpression.Code,
                     ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System.Dynamic", "System", "System.Collections.Generic",
                     "System.Diagnostics", "System.Linq"),
                     globalsType: typeof(FormGlobals)
@@ -662,13 +662,13 @@ WHERE
             List<KeyValuePair<int, int>> dpndcy = new List<KeyValuePair<int, int>>();
             for (int i = 0; i < CalcFlds.Count; i++)
             {
-                if (ctrls[CalcFlds[i]].Control.ValueExpression.Contains("FORM"))//testing purpose
+                if (ctrls[CalcFlds[i]].Control.ValueExpression.Code.Contains("FORM"))//testing purpose
                 {
                     for (int j = 0; j < CalcFlds.Count; j++ )
                     {
                         if (i != j)
                         {
-                            if (ctrls[CalcFlds[i]].Control.ValueExpression.Contains(ctrls[CalcFlds[i]].Path))
+                            if (ctrls[CalcFlds[i]].Control.ValueExpression.Code.Contains(ctrls[CalcFlds[i]].Path))
                                 dpndcy.Add(new KeyValuePair<int, int>(i, j));
                         }
                     }
