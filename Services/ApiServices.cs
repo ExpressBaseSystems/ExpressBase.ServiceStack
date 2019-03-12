@@ -1,4 +1,5 @@
 ﻿using ExpressBase.Common;
+using ExpressBase.Common.Connections;
 using ExpressBase.Common.Constants;
 using ExpressBase.Common.Data;
 using ExpressBase.Common.Extensions;
@@ -41,6 +42,26 @@ namespace ExpressBase.ServiceStack.Services
             this.DSService = base.ResolveService<DataSourceService>();
             this.EmailService = base.ResolveService<PdfToEmailService>();
             this.ApiResponse = new ApiResponse();
+        }
+
+        public ApiMetaResponse Get(ApiMetaRequest request)
+        {   
+            this.EbConnectionFactory = new EbConnectionFactory(request.SolutionId, this.Redis);
+            this.StudioServices.EbConnectionFactory = this.EbConnectionFactory;
+            ApiByNameResponse resp = this.Get(new ApiByNameRequest
+            {
+                Name = request.Name,
+                Version = request.Version,
+                SolnId = request.SolutionId
+            });
+
+            List<Param> p = this.Get(new ApiReqJsonRequest
+            {
+                SolnId = request.SolutionId,
+                Components = resp.Api.Resources
+            }).Params;
+
+            return new ApiMetaResponse { Params = p ,Name=request.Name,Version=request.Version};
         }
 
         public FormDataJsonResponse Post(FormDataJsonRequest request)
@@ -336,7 +357,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 o_wrapper = this.GetObjectByVer(resource.Reference);
                 i_param = this.GetInputParams(o_wrapper.EbObj, index);
-                res.Result = this.ExcEmail(o_wrapper, i_param, resource.Reference,index);
+                res.Result = this.ExcEmail(o_wrapper, i_param, resource.Reference, index);
             }
             else if (resource is EbProcessor)
             {
@@ -347,7 +368,7 @@ namespace ExpressBase.ServiceStack.Services
                 o_wrapper = this.GetObjectByVer(resource.Reference);
                 if ((o_wrapper.EbObj as EbApi).Name.Equals(this.Api.Name))
                 {
-                    this.ApiResponse.Message.Description = string.Format(ApiConstants.CIRCULAR_REF, this.Api.Name)+", " + string.Format(ApiConstants.DESCRPT_ERR, index, "ConnectApi", this.Api.Name);
+                    this.ApiResponse.Message.Description = string.Format(ApiConstants.CIRCULAR_REF, this.Api.Name) + ", " + string.Format(ApiConstants.DESCRPT_ERR, index, "ConnectApi", this.Api.Name);
                     throw new ApiException();
                 }
                 else
@@ -419,7 +440,7 @@ namespace ExpressBase.ServiceStack.Services
             return this.DSService.Post(new SqlFuncTestRequest { FunctionName = (wrapper.EbObj as EbSqlFunction).Name, Parameters = i_param });
         }
 
-        private bool ExcEmail(ObjWrapperInt wrapper, List<Param> i_param, string refid,int step_c)
+        private bool ExcEmail(ObjWrapperInt wrapper, List<Param> i_param, string refid, int step_c)
         {
             bool stat = false;
             this.FillParams(i_param);
@@ -433,7 +454,7 @@ namespace ExpressBase.ServiceStack.Services
                 });
                 stat = true;
                 this.ApiResponse.Message.Description = string.Format(ApiConstants.MAIL_SUCCESS,
-                                                        (wrapper.EbObj as EbEmailTemplate).To, 
+                                                        (wrapper.EbObj as EbEmailTemplate).To,
                                                         (wrapper.EbObj as EbEmailTemplate).Subject,
                                                         (wrapper.EbObj as EbEmailTemplate).Cc);
             }
