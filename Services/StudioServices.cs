@@ -961,7 +961,8 @@ namespace ExpressBase.ServiceStack
 
         public DeleteObjectResponse Post(DeleteEbObjectRequest request)
         {
-            string sql = "UPDATE eb_objects SET eb_del='T' WHERE id = :id";
+            string sql = @"UPDATE eb_objects SET eb_del='T' WHERE id = :id;
+                           UPDATE eb_objects_ver SET eb_del='T' WHERE eb_objects_id = :id";
             DbParameter[] p = { EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, request.ObjId) };
             int _rows = EbConnectionFactory.ObjectsDB.DoNonQuery(sql, p);
             return new DeleteObjectResponse { RowsDeleted = _rows };
