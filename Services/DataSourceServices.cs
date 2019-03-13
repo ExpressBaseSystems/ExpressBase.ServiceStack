@@ -272,15 +272,21 @@ namespace ExpressBase.ServiceStack
 
             if (_ds != null)
             {
-                string _sql = string.Empty;
-                _sql = _ds.Sql.Replace("@and_search", string.Empty).Replace("@orderby", "1");
+                string sql = string.Empty;
+                var sqlArray = _ds.Sql.Split(";");
+                foreach(string _sql in sqlArray)
+                {
+                    if (_sql != string.Empty && !_sql.ToLower().Contains(":limit"))
+                            sql += _sql + " LIMIT :limit OFFSET :offset;";
+                }
+                sql = sql.Replace("@and_search", string.Empty).Replace("@orderby", "1");
                 bool _isPaged = true;
 
                 var parameters = DataHelper.GetParams(this.EbConnectionFactory, _isPaged, request.Params, 0, 0);
 
                 try
                 {
-                    _dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray<System.Data.Common.DbParameter>());
+                    _dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(sql, parameters.ToArray<System.Data.Common.DbParameter>());
 
                     foreach (var dt in _dataset.Tables)
                         resp.ColumnsCollection.Add(dt.Columns);
@@ -425,7 +431,7 @@ namespace ExpressBase.ServiceStack
             {
                 __order = string.Format("{0} {1}", request.OrderBy.Column, (request.OrderBy.Direction == 2) ? "DESC" : "ASC");
             }
-            sql = sql.Replace(":orderby", (string.IsNullOrEmpty(__order)) ? "2" : __order);
+            sql = sql.Replace(":orderby", (string.IsNullOrEmpty(__order)) ? "1" : __order);
             bool _isPaged = true;
             var parameters = DataHelper.GetParams(this.EbConnectionFactory, _isPaged, request.Params, request.Length, request.Start);
             var _dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(sql, parameters.ToArray<System.Data.Common.DbParameter>());
