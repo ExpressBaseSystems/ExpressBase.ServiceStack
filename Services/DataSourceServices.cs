@@ -256,13 +256,13 @@ namespace ExpressBase.ServiceStack
         }
 
         [CompressResponse]
-        public DataSourceDataSetColumnsResponse Get(DataSourceDataSetColumnsRequest request)
+        public DataSourceColumnsResponse Get(DataSourceDataSetColumnsRequest request)
         {
             string _dsRedisKey = string.Format("{0}_columns", request.RefId);
             EbDataSet _dataset = null;
 
-            DataSourceDataSetColumnsResponse resp = new DataSourceDataSetColumnsResponse();
-            resp.ColumnsCollection = new List<ColumnColletion>();
+            DataSourceColumnsResponse resp = new DataSourceColumnsResponse();
+            resp.Columns = new List<ColumnColletion>();
 
             EbDataReader _ds = null;
             var myService = base.ResolveService<EbObjectService>();
@@ -289,9 +289,9 @@ namespace ExpressBase.ServiceStack
                     _dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(sql, parameters.ToArray<System.Data.Common.DbParameter>());
 
                     foreach (var dt in _dataset.Tables)
-                        resp.ColumnsCollection.Add(dt.Columns);
+                        resp.Columns.Add(dt.Columns);
 
-                    this.Redis.Set<DataSourceDataSetColumnsResponse>(_dsRedisKey, resp);
+                    this.Redis.Set<DataSourceColumnsResponse>(_dsRedisKey, resp);
                 }
                 catch (Exception e)
                 {
