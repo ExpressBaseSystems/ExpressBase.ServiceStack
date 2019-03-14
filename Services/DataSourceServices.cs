@@ -84,7 +84,7 @@ namespace ExpressBase.ServiceStack
                 //    _sql = _ds.Sql.Replace("@and_search", _c);
                 //else
                 //    _sql = _ds.Sql.Replace(":and_search", _c);
-                var sqlArray = _ds.Sql.Split(";");
+                var sqlArray = _ds.Sql.Trim().Split(";");
                 foreach (var tsql in sqlArray)
                 {
                     var i = 0;
@@ -273,11 +273,11 @@ namespace ExpressBase.ServiceStack
             if (_ds != null)
             {
                 string sql = string.Empty;
-                var sqlArray = _ds.Sql.Split(";");
-                foreach(string _sql in sqlArray)
-                {
+                var sqlArray = _ds.Sql.Trim().Split(";");
+                foreach (string _sql in sqlArray)
+                {                  
                     if (_sql != string.Empty && !_sql.ToLower().Contains(":limit"))
-                            sql += _sql + " LIMIT :limit OFFSET :offset;";
+                        sql += _sql + " LIMIT :limit OFFSET :offset;";
                 }
                 sql = sql.Replace("@and_search", string.Empty).Replace("@orderby", "1");
                 bool _isPaged = true;
@@ -308,7 +308,7 @@ namespace ExpressBase.ServiceStack
         {
             this.Log.Info("data request");
 
-            DataSourceDataSetDataResponse dsresponse =  new DataSourceDataSetDataResponse();
+            DataSourceDataSetDataResponse dsresponse = new DataSourceDataSetDataResponse();
 
             var _ds = this.Redis.Get<EbDataReader>(request.RefId);
 
@@ -334,7 +334,7 @@ namespace ExpressBase.ServiceStack
             }
             string sql = string.Empty;
             string countsql = string.Empty;
-            var sqlArray = _ds.Sql.Split(";");
+            var sqlArray = _ds.Sql.Trim().Split(";");
             sql = sqlArray[request.QueryIndex];
             if (request.QueryIndex == 0)
             {
@@ -425,7 +425,7 @@ namespace ExpressBase.ServiceStack
                 }
                 sql = countsql + firstsql;
             }
-            
+
             string __order = string.Empty;
             if (request.OrderBy != null)
             {
