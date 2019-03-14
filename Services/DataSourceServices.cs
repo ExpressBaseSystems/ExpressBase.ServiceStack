@@ -84,7 +84,7 @@ namespace ExpressBase.ServiceStack
                 //    _sql = _ds.Sql.Replace("@and_search", _c);
                 //else
                 //    _sql = _ds.Sql.Replace(":and_search", _c);
-                var sqlArray = _ds.Sql.Split(";");
+                var sqlArray = _ds.Sql.Trim().Split(";");
                 foreach (var tsql in sqlArray)
                 {
                     var i = 0;
@@ -256,13 +256,13 @@ namespace ExpressBase.ServiceStack
         }
 
         [CompressResponse]
-        public DataSourceDataSetColumnsResponse Get(DataSourceDataSetColumnsRequest request)
+        public DataSourceColumnsResponse Get(DataSourceDataSetColumnsRequest request)
         {
             string _dsRedisKey = string.Format("{0}_columns", request.RefId);
             EbDataSet _dataset = null;
 
-            DataSourceDataSetColumnsResponse resp = new DataSourceDataSetColumnsResponse();
-            resp.ColumnsCollection = new List<ColumnColletion>();
+            DataSourceColumnsResponse resp = new DataSourceColumnsResponse();
+            resp.Columns = new List<ColumnColletion>();
 
             EbDataReader _ds = null;
             var myService = base.ResolveService<EbObjectService>();
@@ -272,20 +272,26 @@ namespace ExpressBase.ServiceStack
 
             if (_ds != null)
             {
-                string _sql = string.Empty;
-                _sql = _ds.Sql.Replace("@and_search", string.Empty).Replace("@orderby", "1");
+                string sql = string.Empty;
+                var sqlArray = _ds.Sql.Trim().Split(";");
+                foreach (string _sql in sqlArray)
+                {                  
+                    if (_sql != string.Empty && !_sql.ToLower().Contains(":limit"))
+                        sql += _sql + " LIMIT :limit OFFSET :offset;";
+                }
+                sql = sql.Replace("@and_search", string.Empty).Replace("@orderby", "1");
                 bool _isPaged = true;
 
                 var parameters = DataHelper.GetParams(this.EbConnectionFactory, _isPaged, request.Params, 0, 0);
 
                 try
                 {
-                    _dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray<System.Data.Common.DbParameter>());
+                    _dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(sql, parameters.ToArray<System.Data.Common.DbParameter>());
 
                     foreach (var dt in _dataset.Tables)
-                        resp.ColumnsCollection.Add(dt.Columns);
+                        resp.Columns.Add(dt.Columns);
 
-                    this.Redis.Set<DataSourceDataSetColumnsResponse>(_dsRedisKey, resp);
+                    this.Redis.Set<DataSourceColumnsResponse>(_dsRedisKey, resp);
                 }
                 catch (Exception e)
                 {
@@ -302,7 +308,7 @@ namespace ExpressBase.ServiceStack
         {
             this.Log.Info("data request");
 
-            DataSourceDataSetDataResponse dsresponse =  new DataSourceDataSetDataResponse();
+            DataSourceDataSetDataResponse dsresponse = new DataSourceDataSetDataResponse();
 
             var _ds = this.Redis.Get<EbDataReader>(request.RefId);
 
@@ -328,7 +334,7 @@ namespace ExpressBase.ServiceStack
             }
             string sql = string.Empty;
             string countsql = string.Empty;
-            var sqlArray = _ds.Sql.Split(";");
+            var sqlArray = _ds.Sql.Trim().Split(";");
             sql = sqlArray[request.QueryIndex];
             if (request.QueryIndex == 0)
             {
@@ -419,13 +425,13 @@ namespace ExpressBase.ServiceStack
                 }
                 sql = countsql + firstsql;
             }
-            
+
             string __order = string.Empty;
             if (request.OrderBy != null)
             {
                 __order = string.Format("{0} {1}", request.OrderBy.Column, (request.OrderBy.Direction == 2) ? "DESC" : "ASC");
             }
-            sql = sql.Replace(":orderby", (string.IsNullOrEmpty(__order)) ? "2" : __order);
+            sql = sql.Replace(":orderby", (string.IsNullOrEmpty(__order)) ? "1" : __order);
             bool _isPaged = true;
             var parameters = DataHelper.GetParams(this.EbConnectionFactory, _isPaged, request.Params, request.Length, request.Start);
             var _dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(sql, parameters.ToArray<System.Data.Common.DbParameter>());
