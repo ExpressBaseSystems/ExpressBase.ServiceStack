@@ -613,7 +613,7 @@ namespace ExpressBase.ServiceStack
 
             if ((_dv as EbTableVisualization) != null)
             {
-                if ((_dv as EbTableVisualization).RowGroupCollection.Count > 0)
+                if ((_dv as EbTableVisualization).RowGroupCollection.Count > 0 && (_dv as EbTableVisualization).CurrentRowGroup.RowGrouping.Count > 0)
                 {
                     isRowgrouping = true;
                     RowGroupingColumns = (_dv as EbTableVisualization).CurrentRowGroup.RowGrouping;
