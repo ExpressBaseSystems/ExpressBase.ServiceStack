@@ -113,8 +113,9 @@ namespace ExpressBase.ServiceStack.Services
                     {
                         if (entry.Name.ToLower() == (dr.ColumnName.ToLower()))
                         {
-                            if (entry.Type.EbDbType != dr.Type)
-                                throw new FormException("Table " + tableName + " creation failed - Column type mismatch : " + entry.Name);
+                            //commented due to datetime and date issue//eb_created_at
+                            //if (entry.Type.EbDbType != dr.Type)
+                            //    throw new FormException("Table " + tableName + " creation failed - Column type mismatch : " + entry.Name);
                             isFound = true;
                             break;
                         }

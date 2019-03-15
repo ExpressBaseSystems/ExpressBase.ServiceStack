@@ -64,6 +64,31 @@ namespace ExpressBase.ServiceStack.Services
             return new ApiMetaResponse { Params = p ,Name=request.Name,Version=request.Version};
         }
 
+        public ApiAllMetaResponse Get(ApiAllMetaRequest request)
+        {
+            ApiAllMetaResponse resp = new ApiAllMetaResponse();
+            this.EbConnectionFactory = new EbConnectionFactory(request.SolutionId, this.Redis);
+            string sql = @"SELECT 
+	                            EO.obj_name,EOV.version_num
+                            FROM
+	                            eb_objects_ver EOV
+                            INNER JOIN
+	                            eb_objects EO ON EOV.eb_objects_id = EO.id
+                            INNER JOIN
+	                            eb_objects_status EOS ON EOS.eb_obj_ver_id = EOV.id
+                            WHERE
+	                            EO.obj_type=20 
+                            AND
+	                            EOS.status = 3";
+            var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(sql);
+            foreach(EbDataRow row in dt.Rows)
+            {
+                resp.AllMetas.Add(new EbObjectWrapper {Name = row[0].ToString(),VersionNumber=row["version_num"].ToString() });
+            }
+
+            return resp;
+        }
+
         public FormDataJsonResponse Post(FormDataJsonRequest request)
         {
             int _name_c = 1;
