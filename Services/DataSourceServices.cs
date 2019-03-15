@@ -267,39 +267,41 @@ namespace ExpressBase.ServiceStack
             EbDataReader _ds = null;
             var myService = base.ResolveService<EbObjectService>();
             var result = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = request.RefId });
-            _ds = EbSerializers.Json_Deserialize(result.Data[0].Json);
-            Redis.Set<EbDataReader>(request.RefId, _ds);
-
-            if (_ds != null)
+            if (result.Data.Count > 0)
             {
-                string sql = string.Empty;
-                var sqlArray = _ds.Sql.Trim().Split(";");
-                foreach (string _sql in sqlArray)
-                {                  
-                    if (_sql != string.Empty && !_sql.ToLower().Contains(":limit"))
-                        sql += _sql + " LIMIT :limit OFFSET :offset;";
-                }
-                sql = sql.Replace("@and_search", string.Empty).Replace("@orderby", "1");
-                bool _isPaged = true;
+                _ds = EbSerializers.Json_Deserialize(result.Data[0].Json);
+                Redis.Set<EbDataReader>(request.RefId, _ds);
 
-                var parameters = DataHelper.GetParams(this.EbConnectionFactory, _isPaged, request.Params, 0, 0);
-
-                try
+                if (_ds != null)
                 {
-                    _dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(sql, parameters.ToArray<System.Data.Common.DbParameter>());
+                    string sql = string.Empty;
+                    var sqlArray = _ds.Sql.Trim().Split(";");
+                    foreach (string _sql in sqlArray)
+                    {
+                        if (_sql != string.Empty && !_sql.ToLower().Contains(":limit"))
+                            sql += _sql + " LIMIT :limit OFFSET :offset;";
+                    }
+                    sql = sql.Replace("@and_search", string.Empty).Replace("@orderby", "1");
+                    bool _isPaged = true;
 
-                    foreach (var dt in _dataset.Tables)
-                        resp.Columns.Add(dt.Columns);
+                    var parameters = DataHelper.GetParams(this.EbConnectionFactory, _isPaged, request.Params, 0, 0);
 
-                    this.Redis.Set<DataSourceColumnsResponse>(_dsRedisKey, resp);
-                }
-                catch (Exception e)
-                {
-                    Log.Info(">>>>>>>>>>>>>>>>>>>>>>>> dscolumns e.Message: " + e.Message);
-                    this.Redis.Remove(_dsRedisKey);
+                    try
+                    {
+                        _dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(sql, parameters.ToArray<System.Data.Common.DbParameter>());
+
+                        foreach (var dt in _dataset.Tables)
+                            resp.Columns.Add(dt.Columns);
+
+                        this.Redis.Set<DataSourceColumnsResponse>(_dsRedisKey, resp);
+                    }
+                    catch (Exception e)
+                    {
+                        Log.Info(">>>>>>>>>>>>>>>>>>>>>>>> dscolumns e.Message: " + e.Message);
+                        this.Redis.Remove(_dsRedisKey);
+                    }
                 }
             }
-
             return resp;
         }
 
