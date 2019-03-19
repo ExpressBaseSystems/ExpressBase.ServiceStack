@@ -10,11 +10,14 @@ using ExpressBase.Objects.EmailRelated;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ExpressBase.ServiceStack.MQServices;
 using Newtonsoft.Json;
+using RestSharp;
 using ServiceStack.Redis;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
+using System.Net.Http;
+using System.Threading.Tasks;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -402,6 +405,11 @@ namespace ExpressBase.ServiceStack.Services
                     res.Result = this.ExecuteConnectApi((resource as EbConnectApi), i_param);
                 }
             }
+            else if(resource is EbThirdPartyApi)
+            {
+                i_param = this.GetInputParams((resource as EbThirdPartyApi), index);
+                res.Result = this.Exec3rdPartyApi((resource as EbThirdPartyApi),i_param);
+            }
             return res.Result;
         }
 
@@ -526,6 +534,27 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
+        public string Exec3rdPartyApi(EbThirdPartyApi tpa,List<Param> param)
+        {
+            var uri = new Uri(tpa.Url);
+            HttpResponseMessage response = null;
+            using (var client = new HttpClient())
+            {
+                client.BaseAddress = new Uri(uri.GetLeftPart(System.UriPartial.Authority));
+                if (tpa.Method == ApiMethods.POST)
+                {
+                    var parameters = param.Select(i => new { prop = i.Name, val = i.Value })
+                            .ToDictionary(x => x.prop, x => x.val);
+                    response = client.PostAsync(uri.PathAndQuery, new FormUrlEncodedContent(parameters)).Result;
+                }
+                else if (tpa.Method == ApiMethods.GET)
+                {
+                    response = client.GetAsync(uri.PathAndQuery).Result;
+                }
+            }
+            return response.Content.ReadAsStringAsync().Result;
+        }
+
         private List<Param> GetInputParams(object ar, int step_c)
         {
             List<Param> p = null;
@@ -535,6 +564,11 @@ namespace ExpressBase.ServiceStack.Services
                 p = this.GetEmailParams(ar as EbEmailTemplate);
             else if (ar is EbApi)
                 p = this.Get(new ApiReqJsonRequest { Components = (ar as EbApi).Resources }).Params;
+            else if(ar is EbThirdPartyApi)
+            {
+                p = (ar as EbThirdPartyApi).Parameters.Select(i => new Param { Name = i.Name, Type = i.Type.ToString(), Value = i.Value })
+                    .ToList();
+            }
             else
                 return null;
 
