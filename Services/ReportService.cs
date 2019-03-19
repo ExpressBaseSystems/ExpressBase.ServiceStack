@@ -160,14 +160,14 @@ namespace ExpressBase.ServiceStack
 
                     if (field is EbCalcField && !Report.ValueScriptCollection.ContainsKey(field.Name))
                     {
-                        Script valscript = CSharpScript.Create<dynamic>((field as EbCalcField).ValueExpression, ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System.Dynamic", "System", "System.Collections.Generic", "System.Diagnostics", "System.Linq"), globalsType: typeof(Globals));
+                        Script valscript = CSharpScript.Create<dynamic>((field as EbCalcField).ValExpression.Code, ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System.Dynamic", "System", "System.Collections.Generic", "System.Diagnostics", "System.Linq"), globalsType: typeof(Globals));
                         valscript.Compile();
                         Report.ValueScriptCollection.Add(field.Name, valscript);
                     }
 
-                    if (!Report.AppearanceScriptCollection.ContainsKey(field.Name) && field_org.AppearanceExpression != "")
+                    if (!Report.AppearanceScriptCollection.ContainsKey(field.Name) && field_org.AppearExpression.Code != "")
                     {
-                        Script appearscript = CSharpScript.Create<dynamic>(field_org.AppearanceExpression, ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System.Dynamic", "System", "System.Collections.Generic", "System.Diagnostics", "System.Linq"), globalsType: typeof(Globals));
+                        Script appearscript = CSharpScript.Create<dynamic>(field_org.AppearExpression.Code, ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System.Dynamic", "System", "System.Collections.Generic", "System.Diagnostics", "System.Linq"), globalsType: typeof(Globals));
                         appearscript.Compile();
                         Report.AppearanceScriptCollection.Add(field.Name, appearscript);
                     }
