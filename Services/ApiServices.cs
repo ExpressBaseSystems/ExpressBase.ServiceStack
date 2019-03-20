@@ -540,6 +540,14 @@ namespace ExpressBase.ServiceStack.Services
             HttpResponseMessage response = null;
             using (var client = new HttpClient())
             {
+                if (tpa.Headers != null && tpa.Headers.Any())
+                {
+                    foreach (RequestHeader header in tpa.Headers)
+                    {
+                        client.DefaultRequestHeaders.Add(header.Name, header.Value);
+                    }
+                }
+
                 client.BaseAddress = new Uri(uri.GetLeftPart(System.UriPartial.Authority));
                 if (tpa.Method == ApiMethods.POST)
                 {
