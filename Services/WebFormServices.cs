@@ -171,167 +171,21 @@ namespace ExpressBase.ServiceStack.Services
             this.EbConnectionFactory.ObjectsDB.CreateTable(sqnceSql);//Sequence Creation
             this.EbConnectionFactory.ObjectsDB.CreateTable(trgrSql);//Trigger Creation
         }
-
+        
 
         //================================== GET RECORD FOR RENDERING ================================================
 
         public GetRowDataResponse Any(GetRowDataRequest request)
         {
             GetRowDataResponse _dataset = new GetRowDataResponse();
-            _dataset.FormData = GetWebformData(request.RefId, request.RowId);
+            EbWebForm form = GetWebFormObject(request.RefId);
+            form.TableRowId = request.RowId;
+            form.RefId = request.RefId;
+            form.RefreshformData(EbConnectionFactory.DataDB, this);
+            _dataset.FormData = form.FormData;
             return _dataset;
-        }
-
-        private WebformData GetWebformData(string _refId, int _rowid)
-        {
-            EbWebForm FormObj = GetWebFormObject(_refId);
-            WebFormSchema _schema = FormObj.GetWebFormSchema();
-            string query = FormObj.GetSelectQuery(_schema, this);
-            string context = _refId.Split("-")[3] + "_" + _rowid.ToString();//context format = objectId_rowId_ControlId
-
-            EbDataSet dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(query, new DbParameter[]
-            {
-                this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, _rowid),
-                this.EbConnectionFactory.DataDB.GetNewParameter("context", EbDbTypes.String, context)
-            });
-
-            WebformData FormData = new WebformData();
-
-            for (int i = 0; i < _schema.Tables.Count && dataset.Tables.Count >= _schema.Tables.Count; i++)
-            {
-                EbDataTable dataTable = dataset.Tables[i];////
-                SingleTable Table = new SingleTable();
-
-                GetFormattedData(dataTable, Table);
-
-                if (!FormData.MultipleTables.ContainsKey(dataTable.TableName) && Table.Count > 0)
-                    FormData.MultipleTables.Add(dataTable.TableName, Table);
-            }
-            if (FormData.MultipleTables.Count > 0)
-                FormData.MasterTable = dataset.Tables[0].TableName;
-
-            if (dataset.Tables.Count > _schema.Tables.Count)
-            {
-                int tableIndex = _schema.Tables.Count;
-                foreach (TableSchema Tbl in _schema.Tables)
-                {
-                    foreach (ColumnSchema Col in Tbl.Columns)
-                    {
-                        if (Col.Control.GetType().Equals(typeof(EbPowerSelect)))
-                        {
-                            SingleTable Table = new SingleTable();
-                            GetFormattedData(dataset.Tables[tableIndex], Table);
-                            FormData.ExtendedTables.Add((Col.Control as EbControl).EbSid, Table);
-                            tableIndex++;
-                        }
-                    }
-                }
-                foreach (Object Ctrl in _schema.ExtendedControls)//FileUploader Controls
-                {
-                    SingleTable Table = new SingleTable();
-                    GetFormattedData(dataset.Tables[tableIndex], Table);
-                    //--------------
-                    List<FileMetaInfo> _list = new List<FileMetaInfo>();
-                    foreach (SingleRow dr in Table)
-                    {
-                        FileMetaInfo info = new FileMetaInfo
-                        {
-                            FileRefId = dr["id"],
-                            FileName = dr["filename"],
-                            Meta = JsonConvert.DeserializeObject<Dictionary<string, List<string>>>(dr["tags"] as string),
-                            UploadTime = dr["uploadts"]
-                        };
-
-                        if (!_list.Contains(info))
-                            _list.Add(info);
-                    }
-                    SingleTable _Table = new SingleTable {
-                        new SingleRow() {
-                            Columns = new List<SingleColumn> {
-                                new SingleColumn { Name = "Files", Type = (int)EbDbTypes.Json, Value = JsonConvert.SerializeObject(_list) }
-                            }
-                        }
-                    };
-                    //--------------
-                    FormData.ExtendedTables.Add((Ctrl as EbControl).EbSid, _Table);
-                    tableIndex++;
-                }
-            }
-
-            try
-            {
-                SingleRow _masterRow = FormData.MultipleTables[FormData.MasterTable][0];
-                SingleColumn _idval = _masterRow.Columns.FirstOrDefault(c => c.Name.Equals("eb_auto_id"));
-                FormData.AutoIdText = _idval.Value;
-
-                var temp1 = _schema.Tables.FirstOrDefault(t => t.TableName == _schema.MasterTable);
-                var temp2 = temp1.Columns.FirstOrDefault(c => c.ColumnName.Equals("eb_auto_id"));
-                if (temp2 == null)
-                {
-                    _masterRow.Columns.Remove(_idval);
-                }
-            }
-            catch (Exception Ex)
-            {
-                Console.WriteLine("Exception - eb_auto_id not found: From WebFormService - " + Ex.Message);
-            }
-            //if (_extend)
-            //    GetWebformData_Extended(FormObj, FormData);
-            return FormData;
-        }
-
-        private void GetFormattedData(EbDataTable dataTable, SingleTable Table)
-        {
-            foreach (EbDataRow dataRow in dataTable.Rows)
-            {
-                SingleRow Row = new SingleRow();
-                foreach (EbDataColumn dataColumn in dataTable.Columns)
-                {
-                    object _unformattedData = dataRow[dataColumn.ColumnIndex];
-                    object _formattedData = _unformattedData;
-
-                    if (dataColumn.Type == EbDbTypes.Date)
-                    {
-                        _unformattedData = (_unformattedData == DBNull.Value) ? DateTime.MinValue : _unformattedData;
-                        _formattedData = ((DateTime)_unformattedData).Date != DateTime.MinValue ? Convert.ToDateTime(_unformattedData).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) : string.Empty;
-                    }
-                    //else if(dataColumn.Type == EbDbTypes.DateTime)
-                    //{
-                    //    _unformattedData = (_unformattedData == DBNull.Value) ? DateTime.MinValue : _unformattedData;
-                    //    _formattedData = ((DateTime)_unformattedData).Date != DateTime.MinValue ? Convert.ToDateTime(_unformattedData).ToString("yyyy-MM-dd hh:mm tt", CultureInfo.InvariantCulture) : string.Empty;
-                    //}
-                    Row.Columns.Add(new SingleColumn()
-                    {
-                        Name = dataColumn.ColumnName,
-                        Type = (int)dataColumn.Type,
-                        Value = _formattedData
-                    });
-                }
-                Row.RowId = dataRow[dataTable.Columns[0].ColumnIndex].ToString();
-                Table.Add(Row);
-            }
-        }
-
-        //private void GetWebformData_Extended(EbControlContainer _formObj, WebformData _formData)
-        //{
-        //    string qry = string.Empty;
-        //    IEnumerable<EbControl> _flatControls = _formObj.Controls.Get1stLvlControls();
-        //    foreach (EbControl control in _flatControls)
-        //    {
-        //        if(control is EbPowerSelect)
-        //        {
-        //            SingleColumn col =  _formData.MultipleTables[_formObj.TableName][0].Columns.FirstOrDefault(c => c.Name == control.Name);
-        //            string val = col.Value.ToString();
-        //            (control as EbPowerSelect).Values = val.Split(',').Select(int.Parse).ToList();
-        //            qry  = (control as EbPowerSelect).GetSelectQuery(this);
-        //        }
-        //        else if(control is EbFileUploader)
-        //        {
-
-        //        }
-        //    }
-        //}
-
+        }       
+        
         private EbWebForm GetWebFormObject(string RefId)
         {
             EbWebForm _form = this.Redis.Get<EbWebForm>(RefId);
@@ -392,238 +246,31 @@ WHERE
         public InsertDataFromWebformResponse Any(InsertDataFromWebformRequest request)
         {
             EbWebForm FormObj = GetWebFormObject(request.RefId);
+            FormObj.RefId = request.RefId;
             FormObj.TableRowId = request.RowId;
-            if (FormObj.TableRowId > 0)
+            FormObj.FormData = request.FormData;
+            FormObj.UserId = request.UserId;
+            FormObj.MergeFormData();
+            int r = FormObj.Save(EbConnectionFactory.DataDB, this);
+            return new InsertDataFromWebformResponse()
             {
-                WebformData FormData = GetWebformData(request.RefId, request.RowId);
-                InsertDataFromWebformResponse resp = UpdateDataFromWebformRec(request, FormObj);
-                //if(resp.RowAffected > 0)
-                //{
-                //	//UpdateAuditTrail(OldData, request.Values, request.RefId, FormObj.TableRowId, request.UserId);/////////////////////////
-                //}				
-                //dynamic zz = FormObj.GetFormAsGlobal(FormData);
-                //CSTest();
-                //JurassicTest();
-                return resp;
-            }
-            else
-            {
-                InsertDataFromWebformResponse resp = InsertDataFromWebformRec(request, FormObj);
-                //if(resp.RowAffected > 0)
-                //	UpdateAuditTrail(request.Values, request.RefId, resp.RowAffected, request.UserId);
-                return resp;
-            }
-        }
-
-        private InsertDataFromWebformResponse InsertDataFromWebformRec(InsertDataFromWebformRequest request, EbControlContainer FormObj)
-        {
-            string fullqry = string.Empty;
-            List<DbParameter> param = new List<DbParameter>();
-            int count = 0;
-            int i = 0;
-            foreach (KeyValuePair<string, SingleTable> entry in request.FormData.MultipleTables)
-            {
-                foreach (SingleRow row in entry.Value)
-                {
-                    string _qry = "INSERT INTO {0} ({1} eb_created_by, eb_created_at {3} ) VALUES ({2} :eb_createdby, NOW() {4});";
-                    string _tblname = entry.Key;
-                    string _cols = string.Empty;
-                    string _values = string.Empty;
-                    //_cols = FormObj.GetCtrlNamesOfTable(entry.Key);
-
-                    foreach (SingleColumn rField in row.Columns)
-                    {
-                        if (!rField.Name.Equals("id"))
-                        {
-                            _cols += string.Concat(rField.Name, ", ");
-                            _values += string.Concat(":", rField.Name, "_", i, ", ");
-                            param.Add(this.EbConnectionFactory.DataDB.GetNewParameter(rField.Name + "_" + i, (EbDbTypes)rField.Type, rField.Value));
-                        }
-                    }
-                    i++;
-
-                    if (count == 0)
-                        _qry = _qry.Replace("{3}", "").Replace("{4}", "");
-                    else
-                        _qry = _qry.Replace("{3}", string.Concat(",", FormObj.TableName, "_id")).Replace("{4}", string.Concat(", (SELECT cur_val('", FormObj.TableName, "_id_seq'" + "))"));
-                    fullqry += string.Format(_qry, _tblname, _cols, _values);
-                }
-                count++;
-
-            }
-            //------------------
-            //string zzz = @" UPDATE 
-            //                    eb_files_ref AS t 
-            //                SET 
-            //                    context=:c.context 
-            //                FROM 
-            //                    (VALUES (12312, '12_32_ps1'),(34344, '12_32_ps1')) AS c(id, context)
-            //                WHERE 
-            //                    c.id = t.id AND t.eb_del='F'";
-
-            //string yyy = @"UPDATE eb_files_ref SET eb_del='T' WHERE (context = '12_32_ps1' OR context = '12_32_ps2') AND eb_del='F' AND id NOT IN (ids)";
-
-            string EbObId = request.RefId.Split("-")[3];
-            List<string> InnerVals = new List<string>();
-            List<string> Innercxt = new List<string>();
-            List<string> InnerIds = new List<string>();
-            foreach (KeyValuePair<string, SingleTable> entry in request.FormData.ExtendedTables)
-            {
-                foreach (SingleRow row in entry.Value)
-                {
-                    string cn = entry.Key + "_" + i.ToString();
-                    i++;
-                    InnerVals.Add(string.Format("(:{0}, '{1}_' || cur_val('{2}_id_seq')::text || '_{3}')", cn, EbObId, FormObj.TableName, entry.Key));
-                    param.Add(this.EbConnectionFactory.DataDB.GetNewParameter(cn, EbDbTypes.Decimal, row.Columns[0].Value));
-                    InnerIds.Add(":" + cn);
-                }
-                Innercxt.Add("context = '" + EbObId + "_' || cur_val('" + FormObj.TableName + "_id_seq')::text || '_" + entry.Key + "'");
-            }
-            if (InnerVals.Count > 0)
-            {
-                fullqry += string.Format(@"UPDATE 
-                                            eb_files_ref AS t
-                                        SET
-                                            context = c.context
-                                        FROM
-                                            (VALUES{0}) AS c(id, context)
-                                        WHERE
-                                            c.id = t.id AND t.eb_del = 'F';", InnerVals.Join(","));
-                fullqry += string.Format(@"UPDATE eb_files_ref 
-                                        SET eb_del='T' 
-                                        WHERE ({0}) AND eb_del='F' AND id NOT IN ({1});", Innercxt.Join(" OR "), InnerIds.Join(","));
-            }
-
-            //-------------------------
-            param.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_createdby", EbDbTypes.Int32, request.UserId));
-            //param.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_createdat", EbDbTypes.DateTime, System.DateTime.Now));
-            param.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_auto_id", EbDbTypes.String, request.FormData.AutoIdText ?? string.Empty));
-            fullqry += string.Format("UPDATE {0} SET eb_auto_id = :eb_auto_id || cur_val('{0}_id_seq')::text WHERE id = cur_val('{0}_id_seq');", FormObj.TableName);
-            fullqry += string.Concat("SELECT cur_val('", FormObj.TableName, "_id_seq');");
-
-            EbDataTable temp = EbConnectionFactory.DataDB.DoQuery(fullqry, param.ToArray());
-            int _rowid = temp.Rows.Count > 0 ? Convert.ToInt32(temp.Rows[0][0]) : 0;
-            WebformData _formdata = new WebformData();
-            if (_rowid > 0)
-            {
-                _formdata = GetWebformData(request.RefId, _rowid);
-            }
-
-            return new InsertDataFromWebformResponse
-            {
-                RowId = _rowid,
-                FormData = _formdata
-            };
-        }
-
-        private InsertDataFromWebformResponse UpdateDataFromWebformRec(InsertDataFromWebformRequest request, EbControlContainer FormObj)
-        {
-            string fullqry = string.Empty;
-            List<DbParameter> param = new List<DbParameter>();
-            int i = 0;
-            foreach (KeyValuePair<string, SingleTable> entry in request.FormData.MultipleTables)
-            {
-                foreach (SingleRow row in entry.Value)
-                {
-                    string _tblname = entry.Key;
-                    if (Convert.ToInt32(row.RowId) > 0)
-                    {
-                        string _qry = "UPDATE {0} SET {1} eb_lastmodified_by = :eb_modified_by, eb_lastmodified_at = NOW() WHERE id={2};";
-                        string _colvals = string.Empty;
-                        if (row.IsDelete && !_tblname.Equals(request.FormData.MasterTable))
-                        {
-                            _qry = "UPDATE {0} SET {1}, eb_lastmodified_by = :eb_modified_by, eb_lastmodified_at = NOW() WHERE id={2} AND eb_del='F';";
-                            _colvals = "eb_del='T'";
-                        }
-                        else
-                        {
-                            foreach (SingleColumn rField in row.Columns)
-                            {
-                                _colvals += string.Concat(rField.Name, "=:", rField.Name, "_", i, ",");
-                                param.Add(this.EbConnectionFactory.DataDB.GetNewParameter(rField.Name + "_" + i, (EbDbTypes)rField.Type, rField.Value));
-                            }
-                        }
-
-                        fullqry += string.Format(_qry, _tblname, _colvals, row.RowId);
-                    }
-                    else
-                    {
-                        string _qry = "INSERT INTO {0} ({1} eb_created_by, eb_created_at, {3}_id ) VALUES ({2} :eb_createdby, NOW() ,:{4}_id);";
-                        string _cols = string.Empty, _vals = string.Empty;
-                        foreach (SingleColumn rField in row.Columns)
-                        {
-                            _cols += string.Concat(rField.Name, ",");
-                            _vals += string.Concat(":", rField.Name, "_", i, ",");
-                            param.Add(this.EbConnectionFactory.DataDB.GetNewParameter(rField.Name + "_" + i, (EbDbTypes)rField.Type, rField.Value));
-                        }
-                        fullqry += string.Format(_qry, _tblname, _cols, _vals, request.FormData.MasterTable, request.FormData.MasterTable);
-                        param.Add(this.EbConnectionFactory.DataDB.GetNewParameter(request.FormData.MasterTable + "_id", EbDbTypes.Int32, request.FormData.MultipleTables[request.FormData.MasterTable][0].RowId));
-                    }
-                    i++;
-                }
-            }
-
-            //------------------
-            string EbObId = request.RefId.Split("-")[3];
-            List<string> InnerVals = new List<string>();
-            List<string> Innercxt = new List<string>();
-            List<string> InnerIds = new List<string>();
-            foreach (KeyValuePair<string, SingleTable> entry in request.FormData.ExtendedTables)
-            {
-                foreach (SingleRow row in entry.Value)
-                {
-                    string cn = entry.Key + "_" + i.ToString();
-                    i++;
-                    InnerVals.Add(string.Format("(:{0}, '{1}_{2}_{3}')", cn, EbObId, request.RowId, entry.Key));
-                    param.Add(this.EbConnectionFactory.DataDB.GetNewParameter(cn, EbDbTypes.Decimal, row.Columns[0].Value));
-                    InnerIds.Add(":" + cn);
-                }
-                Innercxt.Add("context = '" + EbObId + "_" + request.RowId + "_" + entry.Key + "'");
-            }
-            if (InnerVals.Count > 0)
-            {
-                fullqry += string.Format(@"UPDATE 
-                                            eb_files_ref AS t
-                                        SET
-                                            context = c.context
-                                        FROM
-                                            (VALUES{0}) AS c(id, context)
-                                        WHERE
-                                            c.id = t.id AND t.eb_del = 'F';", InnerVals.Join(","));
-                fullqry += string.Format(@"UPDATE eb_files_ref 
-                                        SET eb_del='T' 
-                                        WHERE ({0}) AND eb_del='F' AND id NOT IN ({1});", Innercxt.Join(" OR "), InnerIds.Join(","));
-            }
-
-            //-------------------------
-
-            param.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_createdby", EbDbTypes.Int32, request.UserId));
-            //param.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_createdat", EbDbTypes.DateTime, System.DateTime.Now));
-            param.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_modified_by", EbDbTypes.Int32, request.UserId));
-            //param.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_modified_at", EbDbTypes.DateTime, System.DateTime.Now));
-            int rowsAffected = EbConnectionFactory.DataDB.InsertTable(fullqry, param.ToArray());
-
-            WebformData _formdata = GetWebformData(request.RefId, request.RowId);
-
-            return new InsertDataFromWebformResponse
-            {
-                RowAffected = rowsAffected,
-                FormData = _formdata,
-                RowId = request.RowId
+                RowId = FormObj.TableRowId,
+                FormData = FormObj.FormData,
+                RowAffected = r
             };
         }
 
         public DeleteDataFromWebformResponse Any(DeleteDataFromWebformRequest request)
         {
             EbWebForm FormObj = GetWebFormObject(request.RefId);
-            string query = FormObj.GetDeleteQuery();
-            DbParameter[] param = new DbParameter[] {
-                this.EbConnectionFactory.DataDB.GetNewParameter("eb_modified_by", EbDbTypes.Int32, request.UserId),
-                this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.RowId)
+            FormObj.TableRowId = request.RowId;
+            FormObj.UserId = request.UserId;            
+            return new DeleteDataFromWebformResponse
+            {
+                RowAffected = FormObj.Delete(EbConnectionFactory.DataDB)
             };
-            int rowsAffected = EbConnectionFactory.DataDB.UpdateTable(query, param);
-            return new DeleteDataFromWebformResponse { RowAffected = rowsAffected };
         }
+
 
         //================================= FORMULA AND VALIDATION =================================================
 
@@ -636,7 +283,7 @@ WHERE
             {
                 EbControlWrapper cw = ctrls[ExeOrder[i]];
                 Script valscript = CSharpScript.Create<dynamic>(
-                    cw.Control.ValueExpression,
+                    cw.Control.ValueExpr.Code,
                     ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System.Dynamic", "System", "System.Collections.Generic",
                     "System.Diagnostics", "System.Linq"),
                     globalsType: typeof(FormGlobals)
@@ -663,13 +310,13 @@ WHERE
             List<KeyValuePair<int, int>> dpndcy = new List<KeyValuePair<int, int>>();
             for (int i = 0; i < CalcFlds.Count; i++)
             {
-                if (ctrls[CalcFlds[i]].Control.ValueExpression.Contains("FORM"))//testing purpose
+                if (ctrls[CalcFlds[i]].Control.ValueExpr.Code.Contains("FORM"))//testing purpose
                 {
                     for (int j = 0; j < CalcFlds.Count; j++ )
                     {
                         if (i != j)
                         {
-                            if (ctrls[CalcFlds[i]].Control.ValueExpression.Contains(ctrls[CalcFlds[i]].Path))
+                            if (ctrls[CalcFlds[i]].Control.ValueExpr.Code.Contains(ctrls[CalcFlds[i]].Path))
                                 dpndcy.Add(new KeyValuePair<int, int>(i, j));
                         }
                     }
@@ -771,19 +418,15 @@ WHERE
 
         private dynamic GetDataByControlName(WebformData _formData, string _table, string _column, int _row = 0)
         {
-            dynamic val = null;
-            if (_formData.MultipleTables.ContainsKey(_table))
+            try
             {
-                foreach (SingleColumn col in _formData.MultipleTables[_table][_row].Columns)
-                {
-                    if (col.Name.Equals(_column))
-                    {
-                        val = col.Value;
-                        break;
-                    }
-                }
+                return _formData.MultipleTables[_table][_row][_column];
             }
-            return val;
+            catch(Exception e)
+            {
+                Console.WriteLine("Exception!!! : " + e.Message);
+                return null;
+            }
         }
 
 
@@ -1012,236 +655,6 @@ WHERE
 
             return new GetDesignHtmlResponse { Html = _temp };
         }
-
-
-        //=================================================== TRASH ==========================================================
-
-        //private Dictionary<string, List<SingleColumn>> getFormDataAsColl(EbControlContainer FormObj)
-        //{
-        //    Dictionary<string, List<SingleColumn>> oldData = new Dictionary<string, List<SingleColumn>>();
-        //    //FormObj.TableRowId = request.RowId;
-        //    string query = FormObj.GetSelectQuery(FormObj.TableName);
-        //    EbDataSet dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(query);
-
-        //    foreach (EbDataTable dataTable in dataset.Tables)
-        //    {
-        //        List<SingleColumn> tblRecordColl = new List<SingleColumn>();
-        //        foreach (EbDataRow dataRow in dataTable.Rows)
-        //        {
-        //            foreach (EbDataColumn dataColumn in dataTable.Columns)
-        //            {
-        //                object _unformattedData = dataRow[dataColumn.ColumnIndex];
-        //                object _formattedData = _unformattedData;
-
-        //                if (dataColumn.Type == EbDbTypes.Date)
-        //                {
-        //                    _unformattedData = (_unformattedData == DBNull.Value) ? DateTime.MinValue : _unformattedData;
-        //                    _formattedData = ((DateTime)_unformattedData).Date != DateTime.MinValue ? Convert.ToDateTime(_unformattedData).ToString("yyyy-MM-dd") : string.Empty;
-        //                }
-        //                tblRecordColl.Add(new SingleColumn
-        //                {
-        //                    Name = dataColumn.ColumnName,
-        //                    Type = (int)dataColumn.Type,
-        //                    Value = _formattedData
-        //                });
-        //            }
-        //        }
-        //        oldData.Add(dataTable.TableName, tblRecordColl);
-        //    }
-        //    return oldData;
-        //}
-
-        //private WebformData getDataSetAsRowCollection(string _refid, int _rowid)
-        //{
-        //    EbWebForm FormObj = GetWebFormObject(_refid);
-        //    FormObj.TableRowId = _rowid;
-        //    string query = FormObj.GetSelectQuery(FormObj.TableName);
-        //    EbDataSet dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(query);
-
-        //    WebformData FormData = new WebformData();
-
-        //    foreach (EbDataTable dataTable in dataset.Tables)
-        //    {
-        //        SingleTable Table = new SingleTable();
-        //        foreach (EbDataRow dataRow in dataTable.Rows)
-        //        {
-        //            SingleRow Row = new SingleRow();
-        //            foreach (EbDataColumn dataColumn in dataTable.Columns)
-        //            {
-        //                object _unformattedData = dataRow[dataColumn.ColumnIndex];
-        //                object _formattedData = _unformattedData;
-
-        //                if (dataColumn.Type == EbDbTypes.Date)
-        //                {
-        //                    _unformattedData = (_unformattedData == DBNull.Value) ? DateTime.MinValue : _unformattedData;
-        //                    _formattedData = ((DateTime)_unformattedData).Date != DateTime.MinValue ? Convert.ToDateTime(_unformattedData).ToString("yyyy-MM-dd") : string.Empty;
-        //                }
-        //                Row.Columns.Add(new SingleColumn() {
-        //                    Name = dataColumn.ColumnName,
-        //                    Type = (int)dataColumn.Type,
-        //                    Value = _formattedData
-        //                });
-        //            }
-        //            Row.RowId = dataRow[dataTable.Columns[0].ColumnIndex].ToString();
-        //            Table.Add(Row);
-        //        }
-        //        if (!FormData.MultipleTables.ContainsKey(dataTable.TableName))
-        //            FormData.MultipleTables.Add(dataTable.TableName, Table);
-        //    }
-        //    FormData.MasterTable = dataset.Tables[0].TableName;
-        //    return FormData;
-        //}
-
-        //private List<object> getDataSetAsRowCollection(EbDataSet dataset)
-        //{
-        //    List<object> rowColl = new List<object>();
-        //    foreach (EbDataTable dataTable in dataset.Tables)
-        //    {
-        //        foreach (EbDataRow dataRow in dataTable.Rows)
-        //        {
-        //            foreach (EbDataColumn dataColumn in dataTable.Columns)
-        //            {
-        //                object _unformattedData = dataRow[dataColumn.ColumnIndex];
-        //                object _formattedData = _unformattedData;
-
-        //                if (dataColumn.Type == EbDbTypes.Date)
-        //                {
-        //                    _unformattedData = (_unformattedData == DBNull.Value) ? DateTime.MinValue : _unformattedData;
-        //                    _formattedData = ((DateTime)_unformattedData).Date != DateTime.MinValue ? Convert.ToDateTime(_unformattedData).ToString("yyyy-MM-dd") : string.Empty;
-        //                }
-        //                rowColl.Add(_formattedData);
-        //            }
-        //        }
-        //    }
-        //    return rowColl;
-        //}
-
-        //private void CreateWebFormTableRec(EbControlContainer _container, string _table)
-        //{
-        //    CreateWebFormTableHelper(_container, _table);
-        //    foreach (EbControl _control in _container.Controls)
-        //    {
-        //        if (_control is EbControlContainer)
-        //        {
-        //            EbControlContainer Container = _control as EbControlContainer;
-
-        //            if (Container.TableName.IsNullOrEmpty())
-        //            {
-        //                Container.TableName = _container.TableName;
-        //            }
-        //            CreateWebFormTableRec(Container, _container.TableName);
-        //        }
-        //    }
-        //}
-
-        //private void CreateWebFormTableHelper(EbControlContainer _container, string _table)
-        //{
-        //    IVendorDbTypes vDbTypes = this.EbConnectionFactory.ObjectsDB.VendorDbTypes;
-        //    List<TableColumnMeta> _listNamesAndTypes = new List<TableColumnMeta>();
-        //    IEnumerable<EbControl> _flatControls = _container.Controls.Get1stLvlControls();
-
-        //    foreach (EbControl control in _flatControls)
-        //    {
-        //        _listNamesAndTypes.Add(new TableColumnMeta { Name = control.Name, Type = control.GetvDbType(vDbTypes) });
-        //    }
-        //    if (_listNamesAndTypes.Count > 0)
-        //    {
-        //        if (!_table.ToLower().Equals(_container.TableName.ToLower()))
-        //            _listNamesAndTypes.Add(new TableColumnMeta { Name = _table + "_id", Type = vDbTypes.Decimal });// id refernce to the parent table will store in this column - foreignkey
-        //        _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_by", Type = vDbTypes.Decimal });
-        //        _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_at", Type = vDbTypes.DateTime });
-        //        _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_by", Type = vDbTypes.Decimal });
-        //        _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_at", Type = vDbTypes.DateTime });
-        //        _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_del", Type = vDbTypes.Boolean, Default = "F" });
-        //        _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_void", Type = vDbTypes.Boolean, Default = "F" });
-        //        _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_transaction_date", Type = vDbTypes.DateTime });
-        //        _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_autogen", Type = vDbTypes.Decimal });
-
-        //        CreateOrAlterTable(_container.TableName.ToLower(), _listNamesAndTypes);
-        //    }
-        //}
-
-
-
-        //private WebFormSchema GetWebFormSchema(EbControlContainer _container)
-        //{
-        //    WebFormSchema _formSchema = new WebFormSchema();
-        //    _formSchema.FormName = _container.Name;
-        //    _formSchema.MasterTable = _container.TableName.ToLower();
-        //    _formSchema.Tables = new List<TableSchema>();
-        //    _formSchema = GetWebFormSchemaRec(_formSchema, _container);
-        //    return _formSchema;
-        //}
-
-        //private WebFormSchema GetWebFormSchemaRec(WebFormSchema _schema, EbControlContainer _container)
-        //{
-        //    IEnumerable<EbControl> _flatControls = _container.Controls.Get1stLvlControls();
-        //    TableSchema _table = _schema.Tables.FirstOrDefault(tbl => tbl.TableName == _container.TableName);
-        //    if (_table == null)
-        //    {
-        //        List<ColumSchema> _columns = new List<ColumSchema>();
-        //        foreach (EbControl control in _flatControls)
-        //        {
-        //            if (control is EbAutoId)
-        //                _columns.Add(new ColumSchema { ColumName = "eb_auto_id", EbDbType = (int)EbDbTypes.String });
-        //            else
-        //                _columns.Add(new ColumSchema { ColumName = control.Name, EbDbType = (int)control.EbDbType });
-        //        }
-        //        if (_columns.Count > 0)
-        //            _schema.Tables.Add(new TableSchema { TableName = _container.TableName.ToLower(), Colums = _columns });
-        //    }
-        //    else
-        //    {
-        //        foreach (EbControl control in _flatControls)
-        //        {
-        //            if (control is EbAutoId)
-        //                _table.Colums.Add(new ColumSchema { ColumName = "eb_auto_id", EbDbType = (int)EbDbTypes.String });
-        //            else
-        //                _table.Colums.Add(new ColumSchema { ColumName = control.Name, EbDbType = (int)control.EbDbType });
-        //        }
-        //    }
-        //    foreach (EbControl _control in _container.Controls)
-        //    {
-        //        if (_control is EbControlContainer)
-        //        {
-        //            EbControlContainer Container = _control as EbControlContainer;
-
-        //            if (Container.TableName.IsNullOrEmpty())
-        //            {
-        //                Container.TableName = _container.TableName;
-        //            }
-        //            _schema = GetWebFormSchemaRec(_schema, Container);
-        //        }
-        //    }
-        //    return _schema;
-        //}
-
-        //private string GetSelectQuery(WebFormSchema _schema)
-        //{
-        //    string query = string.Empty;
-
-        //    foreach (TableSchema _table in _schema.Tables)
-        //    {
-        //        string _cols = string.Empty;
-        //        string _id = "id";
-
-        //        if (_table.Colums.Count > 0)
-        //        {
-        //            _cols = String.Join(", ", _table.Colums.Select(x => x.ColumName));
-        //            //foreach (ColumSchema _column in _table.Colums)
-        //            //{
-        //            //    _cols += "," + _column.ColumName;
-        //            //}
-        //            if (_table.TableName != _schema.MasterTable)
-        //                _id = _schema.MasterTable + "_id";
-        //            else
-        //                _cols = "eb_auto_id," + _cols;
-        //            query += string.Format("SELECT id, {0} FROM {1} WHERE {2} = :id;", _cols, _table.TableName, _id);
-        //        }
-        //    }
-
-        //    return query;
-        //}
 
     }
 }
