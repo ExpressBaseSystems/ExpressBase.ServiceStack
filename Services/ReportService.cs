@@ -158,14 +158,14 @@ namespace ExpressBase.ServiceStack
                     if (field is IEbDataFieldSummary)
                         FillSummaryCollection(Report, field_org, section_typ);
 
-                    if (field is EbCalcField && !Report.ValueScriptCollection.ContainsKey(field.Name))
+                    if (field is EbCalcField && !Report.ValueScriptCollection.ContainsKey(field.Name) && (field_org as EbCalcField).ValExpression != null && (field_org as EbCalcField).ValExpression.Code != "" && (field_org as EbCalcField).ValExpression.Code != null)
                     {
                         Script valscript = CSharpScript.Create<dynamic>((field as EbCalcField).ValExpression.Code, ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System.Dynamic", "System", "System.Collections.Generic", "System.Diagnostics", "System.Linq"), globalsType: typeof(Globals));
                         valscript.Compile();
                         Report.ValueScriptCollection.Add(field.Name, valscript);
                     }
 
-                    if (!Report.AppearanceScriptCollection.ContainsKey(field.Name) && field_org.AppearExpression.Code != "")
+                    if (!Report.AppearanceScriptCollection.ContainsKey(field.Name) && field_org.AppearExpression != null && field_org.AppearExpression.Code != "" && field_org.AppearExpression.Code != null)
                     {
                         Script appearscript = CSharpScript.Create<dynamic>(field_org.AppearExpression.Code, ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System.Dynamic", "System", "System.Collections.Generic", "System.Diagnostics", "System.Linq"), globalsType: typeof(Globals));
                         appearscript.Compile();
