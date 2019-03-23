@@ -59,14 +59,15 @@ namespace ExpressBase.ServiceStack.Services
                     }
                     if (_table.TableName != _schema.MasterTable)
                         _listNamesAndTypes.Add(new TableColumnMeta { Name = _schema.MasterTable + "_id", Type = vDbTypes.Decimal });// id refernce to the parent table will store in this column - foreignkey
-                    else
-                        _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_auto_id", Type = vDbTypes.String });
+                    //else
+                    //    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_auto_id", Type = vDbTypes.String });
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_by", Type = vDbTypes.Decimal });
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_at", Type = vDbTypes.DateTime });
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_by", Type = vDbTypes.Decimal });
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_at", Type = vDbTypes.DateTime });
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_del", Type = vDbTypes.Boolean, Default = "F" });
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_void", Type = vDbTypes.Boolean, Default = "F" });
+                    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_loc_id", Type = vDbTypes.Int32 });
                     //_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_transaction_date", Type = vDbTypes.DateTime });
                     //_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_autogen", Type = vDbTypes.Decimal });
 
@@ -250,6 +251,7 @@ WHERE
             FormObj.TableRowId = request.RowId;
             FormObj.FormData = request.FormData;
             FormObj.UserId = request.UserId;
+            FormObj.LocationId = request.CurrentLoc;
             FormObj.MergeFormData();
             int r = FormObj.Save(EbConnectionFactory.DataDB, this);
             return new InsertDataFromWebformResponse()
