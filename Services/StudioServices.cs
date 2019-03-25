@@ -1088,10 +1088,4 @@ namespace ExpressBase.ServiceStack
             return appids;
         }
     }
-
-    //public class MappedValue
-    //{
-    //    public EbDbTypes type_ { get; set; }
-    //    public object val_ { get; set; }
-    //}
 }
