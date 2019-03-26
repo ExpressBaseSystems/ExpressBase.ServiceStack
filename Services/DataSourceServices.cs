@@ -278,8 +278,11 @@ namespace ExpressBase.ServiceStack
                     var sqlArray = _ds.Sql.Trim().Split(";");
                     foreach (string _sql in sqlArray)
                     {
-                        if (_sql != string.Empty && !_sql.ToLower().Contains(":limit"))
+
+                        if (_sql != string.Empty && !_sql.ToLower().Contains("limit") && !_sql.ToLower().Contains("offset"))
                             sql += _sql + " LIMIT :limit OFFSET :offset;";
+                        else
+                            sql += _sql;
                     }
                     sql = sql.Replace("@and_search", string.Empty).Replace("@orderby", "1");
                     bool _isPaged = true;
@@ -422,7 +425,7 @@ namespace ExpressBase.ServiceStack
                 }
                 else
                 {
-                    if (!firstsql.ToLower().Contains(":limit"))
+                    if (!firstsql.ToLower().Contains("limit") && !firstsql.ToLower().Contains("offset"))
                         firstsql = firstsql + " LIMIT :limit OFFSET :offset;";
                 }
                 sql = countsql + firstsql;

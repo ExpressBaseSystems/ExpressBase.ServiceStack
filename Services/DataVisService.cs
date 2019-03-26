@@ -597,6 +597,8 @@ namespace ExpressBase.ServiceStack
 
             EbDataTable _formattedTable = _dataset.Tables[0].GetEmptyTable();
             _formattedTable.Columns.Add(_formattedTable.NewDataColumn(_dv.Columns.Count, "serial", EbDbTypes.Int32));
+            if((_dv as EbTableVisualization).IsTree)
+                _formattedTable.Columns.Add(_formattedTable.NewDataColumn(_dv.Columns.Count +1, "tree", EbDbTypes.String));
             Dictionary<int, List<object>> Summary = new Dictionary<int, List<object>>();
             bool AllowLinkforZero = true;
             bool bObfuscute = (!_user.Roles.Contains(SystemRoles.SolutionOwner.ToString()) && !_user.Roles.Contains(SystemRoles.SolutionAdmin.ToString()));
@@ -643,7 +645,10 @@ namespace ExpressBase.ServiceStack
             for (int i = 0; i < _dataset.Tables[0].Rows.Count; i++)
             {
                 _formattedTable.Rows.Add(_formattedTable.NewDataRow2());
-                _formattedTable.Rows[i][_formattedTable.Columns.Count - 1] = i + 1;
+                if ((_dv as EbTableVisualization).IsTree)
+                    _formattedTable.Rows[i][_formattedTable.Columns.Count - 2] = i + 1;
+                else
+                    _formattedTable.Rows[i][_formattedTable.Columns.Count - 1] = i + 1;
                 int j = 0;
                 foreach (DVBaseColumn col in _dv.Columns)
                 {
@@ -724,7 +729,9 @@ namespace ExpressBase.ServiceStack
                     j++;
                 }
                 if (isRowgrouping)
-                   DoRowGroupingCommon(_dataset.Tables[0].Rows[i], _dv, _user_culture, ref _formattedTable, IsMultiLevelRowGrouping,ref RowGrouping,ref PreviousGroupingText, ref CurSortIndex, ref SerialCount, i, dvColCount, TotalLevels, ref AggregateColumnIndexes, ref RowGroupingColumns, _dataset.Tables[0].Rows.Count);
+                    DoRowGroupingCommon(_dataset.Tables[0].Rows[i], _dv, _user_culture, ref _formattedTable, IsMultiLevelRowGrouping, ref RowGrouping, ref PreviousGroupingText, ref CurSortIndex, ref SerialCount, i, dvColCount, TotalLevels, ref AggregateColumnIndexes, ref RowGroupingColumns, _dataset.Tables[0].Rows.Count);
+                else if ((_dv as EbTableVisualization).IsTree)
+                    TreeGeneration(_dataset.Tables[0].Rows[i], _dv, _user_culture, ref _formattedTable, IsMultiLevelRowGrouping, ref RowGrouping, ref PreviousGroupingText, ref CurSortIndex, ref SerialCount, i, dvColCount, TotalLevels, ref AggregateColumnIndexes, ref RowGroupingColumns, _dataset.Tables[0].Rows.Count);
             }
 
             {
@@ -1073,6 +1080,11 @@ namespace ExpressBase.ServiceStack
                 }
             }
             return permList;
+        }
+
+        public void TreeGeneration(EbDataRow currentRow, EbDataVisualization Visualization, CultureInfo Culture, ref EbDataTable FormattedTable, bool IsMultiLevelRowGrouping, ref Dictionary<string, GroupingDetails> RowGrouping, ref string PreviousGroupingText, ref int CurSortIndex, ref int SerialCount, int PrevRowIndex, int dvColCount, int TotalLevels, ref List<int> AggregateColumnIndexes, ref List<DVBaseColumn> RowGroupingColumns, int RowCount)
+        {
+           
         }
         
         [CompressResponse]
