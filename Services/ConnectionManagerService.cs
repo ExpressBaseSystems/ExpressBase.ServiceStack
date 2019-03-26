@@ -119,7 +119,7 @@ namespace ExpressBase.ServiceStack.Services
         [Authenticate]
         public void Post(InitialSolutionConnectionsRequest request)
         {
-            EbConnectionsConfig _solutionConnections = EbConnectionsConfigProvider.DataCenterConnections;
+            EbConnectionsConfig _solutionConnections = EbConnectionsConfigProvider.GetDataCenterConnections();
 
             _solutionConnections.ObjectsDbConnection.DatabaseName = request.NewSolnId;
             _solutionConnections.ObjectsDbConnection.NickName = request.NewSolnId + "_Initial";
@@ -276,6 +276,8 @@ namespace ExpressBase.ServiceStack.Services
                 DataDB = new PGSQLDatabase(request.DataDBConnection);
             else if (request.DataDBConnection.DatabaseVendor == DatabaseVendors.ORACLE)
                 DataDB = new OracleDB(request.DataDBConnection);
+            else if (request.DataDBConnection.DatabaseVendor == DatabaseVendors.MYSQL)
+                DataDB = new MySqlDB(request.DataDBConnection);
 
             try
             {
@@ -302,6 +304,26 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     string[] adminroles = Enum.GetNames(typeof(OracleSysRoles));
                     List<string> adroleslist = adminroles.OfType<string>().ToList();
+                    foreach (var dr in dt.Rows)
+                    {
+                        if (adroleslist.Contains(dr[0]))
+                            IsAdmin = true;
+                        else
+                        {
+                            IsAdmin = false;
+                            break;
+                        }
+
+                    }
+                    res.ConnectionStatus = IsAdmin;
+
+                }
+
+                else if (request.DataDBConnection.DatabaseVendor == DatabaseVendors.MYSQL)
+                {
+                    string[] adminroles = Enum.GetNames(typeof(MySqlSysRoles));
+                    List<string> adroleslist = adminroles.OfType<string>().ToList();
+                    adroleslist = adroleslist.ConvertAll(s => s.Replace("_", " "));
                     foreach (var dr in dt.Rows)
                     {
                         if (adroleslist.Contains(dr[0]))

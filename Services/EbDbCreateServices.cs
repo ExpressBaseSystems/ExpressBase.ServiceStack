@@ -22,7 +22,7 @@ namespace ExpressBase.ServiceStack.Services
             get
             {
                 if (_dcConnectionFactory == null)
-                    _dcConnectionFactory = new EbConnectionFactory(EbConnectionsConfigProvider.DataCenterConnections, CoreConstants.EXPRESSBASE);
+                    _dcConnectionFactory = new EbConnectionFactory(EbConnectionsConfigProvider.GetDataCenterConnections(), CoreConstants.EXPRESSBASE);
 
                 return _dcConnectionFactory;
             }
@@ -32,7 +32,7 @@ namespace ExpressBase.ServiceStack.Services
 
         public EbDbCreateResponse Post(EbDbCreateRequest request)
         {
-            EbConnectionsConfig _solutionConnections = EbConnectionsConfigProvider.DataCenterConnections;
+            EbConnectionsConfig _solutionConnections = EbConnectionsConfigProvider.GetDataCenterConnections();
 
             _solutionConnections.ObjectsDbConnection.DatabaseName = request.dbName;
 
@@ -52,15 +52,17 @@ namespace ExpressBase.ServiceStack.Services
                     DataDB = new PGSQLDatabase(request.DataDBConnection);
                 else if (request.DataDBConnection.DatabaseVendor == DatabaseVendors.ORACLE)
                     DataDB = new OracleDB(request.DataDBConnection);
+                else if (request.DataDBConnection.DatabaseVendor == DatabaseVendors.MYSQL)
+                    DataDB = new MySqlDB(request.DataDBConnection);
             }
-            using (var con = this.InfraConnectionFactory.DataDB.GetNewConnection())
+            using (var con = this.EbConnectionFactory.DataDB.GetNewConnection())
             {
                 try
                 {
                     if (DataDB.Vendor == DatabaseVendors.PGSQL && !request.ischange)
                     {
                         con.Open();
-                        var cmd = this.InfraConnectionFactory.DataDB.GetNewCommand(con, string.Format("CREATE DATABASE {0};", request.dbName));
+                        var cmd = this.EbConnectionFactory.DataDB.GetNewCommand(con, string.Format("CREATE DATABASE {0};", request.dbName));
                         cmd.ExecuteNonQuery();
                     }
                     return DbOperations(request, DataDB);
@@ -409,6 +411,7 @@ namespace ExpressBase.ServiceStack.Services
 
                     var cmdtxt1 = DataDB.GetNewCommand(con, result);
                     cmdtxt1.ExecuteNonQuery();
+
                 }
             }
             catch (Exception e)
@@ -432,8 +435,7 @@ namespace ExpressBase.ServiceStack.Services
 
                 //..............insert into client tbl eb_users............ to SOLUTION
                 string sql2 = @"INSERT INTO eb_users(email,pwd) VALUES ('anonymous@anonym.com','294de3557d9d00b3d2d8a1e6aab028cf'); 
-                                INSERT INTO eb_users(email, pwd, fullname,fbid) VALUES (:email, :pwd, :fullname, :socialid);
-                                INSERT INTO eb_locations(shortname,longname) VALUES ('default','default')";
+                                INSERT INTO eb_locations(shortname,longname) VALUES ('default','default');";
 
                 string sql3 = string.Empty;
                 foreach (var role in Enum.GetValues(typeof(SystemRoles)))
@@ -444,6 +446,7 @@ namespace ExpressBase.ServiceStack.Services
 
                 if (DataDB.Vendor == DatabaseVendors.PGSQL)
                 {
+                    sql2 += "INSERT INTO eb_users(email, pwd, fullname,fbid) VALUES (:email, :pwd, :fullname, :socialid)";
                     var cmdtxt3 = DataDB.GetNewCommand(con, sql2);
                     cmdtxt3.Parameters.Add(DataDB.GetNewParameter("email", EbDbTypes.String, rslt.Rows[0][0]));
                     cmdtxt3.Parameters.Add(DataDB.GetNewParameter("pwd", EbDbTypes.String, rslt.Rows[0][1]));
@@ -455,6 +458,7 @@ namespace ExpressBase.ServiceStack.Services
                 }
                 else if (DataDB.Vendor == DatabaseVendors.ORACLE)
                 {
+                    sql2 += "INSERT INTO eb_users(email, pwd, fullname,fbid) VALUES (:email, :pwd, :fullname, :socialid)";
                     DbParameter[] parameters = { DataDB.GetNewParameter("email", EbDbTypes.String, rslt.Rows[0][0]),
                                                  DataDB.GetNewParameter("pwd", EbDbTypes.String, rslt.Rows[0][1]),
                                                  DataDB.GetNewParameter("fullname", EbDbTypes.String, rslt.Rows[0][2]),
@@ -463,6 +467,18 @@ namespace ExpressBase.ServiceStack.Services
                     var result1 = DataDB.DoNonQuery(sql2, parameters);
                     var result2 = DataDB.DoNonQuery(sql3);
 
+                }
+                if (DataDB.Vendor == DatabaseVendors.MYSQL)
+                {
+                    sql2 += "INSERT INTO eb_users(email, pwd, fullname,fbid) VALUES (@email, @pwd, @fullname, @socialid);";
+                    var cmdtxt3 = DataDB.GetNewCommand(con, sql2);
+                    cmdtxt3.Parameters.Add(DataDB.GetNewParameter("email", EbDbTypes.String, rslt.Rows[0][0]));
+                    cmdtxt3.Parameters.Add(DataDB.GetNewParameter("pwd", EbDbTypes.String, rslt.Rows[0][1]));
+                    cmdtxt3.Parameters.Add(DataDB.GetNewParameter("fullname", EbDbTypes.String, rslt.Rows[0][2]));
+                    cmdtxt3.Parameters.Add(DataDB.GetNewParameter("socialid", EbDbTypes.String, rslt.Rows[0][3]));
+                    cmdtxt3.ExecuteScalar();
+                    var cmdtxt5 = DataDB.GetNewCommand(con, sql3);
+                    cmdtxt5.ExecuteNonQuery();
                 }
 
             }

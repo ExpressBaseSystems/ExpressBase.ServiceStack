@@ -27,12 +27,12 @@ namespace ExpressBase.ServiceStack
                 string sql = "";
                 if (request.Id > 0)
                 {
-                    sql = "SELECT id, applicationname, description, application_type, app_icon, app_settings FROM eb_applications WHERE id = :id";
+                    sql = "SELECT id, applicationname, description, application_type, app_icon, app_settings FROM eb_applications WHERE id = :id AND eb_del = 'F'";
 
                 }
                 else
                 {
-                    sql = "SELECT id, applicationname FROM eb_applications";
+                    sql = "SELECT id, applicationname FROM eb_applications WHERE eb_del = 'F'";
                 }
                 DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, request.Id) };
 
@@ -99,7 +99,7 @@ namespace ExpressBase.ServiceStack
             GetObjectsByAppIdResponse resp = new GetObjectsByAppIdResponse();
             try
             {
-                string sql = @" SELECT applicationname,description,app_icon,application_type, app_settings FROM eb_applications WHERE id=:appid;
+                string sql = @" SELECT applicationname,description,app_icon,application_type, app_settings FROM eb_applications WHERE id=:appid AND  eb_del = 'F';
 				                SELECT 
 				                     EO.id, EO.obj_type, EO.obj_name, EO.obj_desc, EO.display_name
 				                FROM
@@ -208,6 +208,15 @@ namespace ExpressBase.ServiceStack
         {
             string DbName = request.Sid;
             CreateApplicationResponse resp;
+            UniqueApplicationNameCheckResponse uniq_appnameresp;
+            do
+            {
+                uniq_appnameresp = Get(new UniqueApplicationNameCheckRequest { AppName = request.AppName });
+                if (!uniq_appnameresp.IsUnique)
+                    request.AppName = request.AppName + "(1)";
+            }
+            while (!uniq_appnameresp.IsUnique);
+
             using (var con = this.EbConnectionFactory.DataDB.GetNewConnection(DbName.ToLower()))
             {
                 con.Open();
@@ -271,6 +280,16 @@ namespace ExpressBase.ServiceStack
 
             //return resp;
             CreateApplicationResponse resp;
+            UniqueApplicationNameCheckResponse uniq_appnameresp;
+
+            do
+            {
+                uniq_appnameresp = Get(new UniqueApplicationNameCheckRequest { AppName = request.AppName });
+                if (!uniq_appnameresp.IsUnique)
+                    request.AppName = request.AppName + "(1)";
+            }
+            while (!uniq_appnameresp.IsUnique);
+
             try
             {
                 string sql = "INSERT INTO eb_applications (applicationname,application_type, description,app_icon) VALUES (:applicationname,:apptype, :description,:appicon) RETURNING id;";
