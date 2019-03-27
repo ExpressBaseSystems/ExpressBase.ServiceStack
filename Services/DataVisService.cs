@@ -644,8 +644,11 @@ namespace ExpressBase.ServiceStack
             }
 
             RowColletion rows = _dataset.Tables[0].Rows;
+
             if ((_dv as EbTableVisualization).IsTree)
-                rows = TreeGeneration(_dataset.Tables[0], _dv as EbTableVisualization);
+            {
+                var tree = TreeGeneration(_dataset.Tables[0], _dv as EbTableVisualization);
+            }
 
             for (int i = 0; i < rows.Count; i++)
             {
@@ -1084,36 +1087,10 @@ namespace ExpressBase.ServiceStack
             return permList;
         }
 
-        public RowColletion TreeGeneration(EbDataTable _table, EbTableVisualization dv)
+        public List<Node<EbDataRow>> TreeGeneration(EbDataTable _table, EbTableVisualization dv)
         {
-            var tree = _table.AsEnumerable().ToHierarchy(row => true,
+            return  _table.Enumerate().ToTree(row => true,
                             (parent, child) => Convert.ToInt32(parent["id"]) == Convert.ToInt32(child[dv.ParentColumn[0].Name]));
-            RowColletion Rows = new RowColletion();
-            List<int> processed = new List<int>();
-            List<Node<EbDataRow>> nodelist = tree.ToList<Node<EbDataRow>>();
-            foreach (Node<EbDataRow> node in nodelist)
-            {
-                int id = Convert.ToInt32(node.Item[0]);
-                if (!processed.Contains(id))
-                    this.AddRowRecursive(Rows, node, processed);
-                else
-                    continue;
-            }
-            return Rows;
-        }
-
-        private void AddRowRecursive(RowColletion Rows, Node<EbDataRow> node, List<int> processed)
-        {
-            int id = Convert.ToInt32(node.Item[0]);
-            Rows.Add(node.Item);
-            processed.Add(id);
-            if (node.Children.Any())
-            {
-                foreach (Node<EbDataRow> node1 in node.Children)
-                {
-                    this.AddRowRecursive(Rows, node1, processed);
-                }
-            }
         }
 
         [CompressResponse]
