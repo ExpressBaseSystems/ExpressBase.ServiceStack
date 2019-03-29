@@ -434,7 +434,7 @@ namespace ExpressBase.ServiceStack.Services
                 var rslt = this.InfraConnectionFactory.DataDB.DoQuery(sql1, parameter);
 
                 //..............insert into client tbl eb_users............ to SOLUTION
-                string sql2 = @"INSERT INTO eb_users(email,pwd) VALUES ('anonymous@anonym.com','294de3557d9d00b3d2d8a1e6aab028cf'); 
+                string sql2 = @"INSERT INTO eb_users(email,pwd,statusid) VALUES ('anonymous@anonym.com','294de3557d9d00b3d2d8a1e6aab028cf',0); 
                                 INSERT INTO eb_locations(shortname,longname) VALUES ('default','default');";
 
                 string sql3 = string.Empty;
@@ -446,7 +446,7 @@ namespace ExpressBase.ServiceStack.Services
 
                 if (DataDB.Vendor == DatabaseVendors.PGSQL)
                 {
-                    sql2 += "INSERT INTO eb_users(email, pwd, fullname,fbid) VALUES (:email, :pwd, :fullname, :socialid)";
+                    sql2 += "INSERT INTO eb_users(email, pwd, fullname,fbid,statusid) VALUES (:email, :pwd, :fullname, :socialid, 0)";
                     var cmdtxt3 = DataDB.GetNewCommand(con, sql2);
                     cmdtxt3.Parameters.Add(DataDB.GetNewParameter("email", EbDbTypes.String, rslt.Rows[0][0]));
                     cmdtxt3.Parameters.Add(DataDB.GetNewParameter("pwd", EbDbTypes.String, rslt.Rows[0][1]));
@@ -458,7 +458,7 @@ namespace ExpressBase.ServiceStack.Services
                 }
                 else if (DataDB.Vendor == DatabaseVendors.ORACLE)
                 {
-                    sql2 += "INSERT INTO eb_users(email, pwd, fullname,fbid) VALUES (:email, :pwd, :fullname, :socialid)";
+                    sql2 += "INSERT INTO eb_users(email, pwd, fullname,fbid,statusid) VALUES (:email, :pwd, :fullname, :socialid,0)";
                     DbParameter[] parameters = { DataDB.GetNewParameter("email", EbDbTypes.String, rslt.Rows[0][0]),
                                                  DataDB.GetNewParameter("pwd", EbDbTypes.String, rslt.Rows[0][1]),
                                                  DataDB.GetNewParameter("fullname", EbDbTypes.String, rslt.Rows[0][2]),
@@ -470,7 +470,7 @@ namespace ExpressBase.ServiceStack.Services
                 }
                 if (DataDB.Vendor == DatabaseVendors.MYSQL)
                 {
-                    sql2 += "INSERT INTO eb_users(email, pwd, fullname,fbid) VALUES (@email, @pwd, @fullname, @socialid);";
+                    sql2 += "INSERT INTO eb_users(email, pwd, fullname,fbid,statusid) VALUES (@email, @pwd, @fullname, @socialid,0);";
                     var cmdtxt3 = DataDB.GetNewCommand(con, sql2);
                     cmdtxt3.Parameters.Add(DataDB.GetNewParameter("email", EbDbTypes.String, rslt.Rows[0][0]));
                     cmdtxt3.Parameters.Add(DataDB.GetNewParameter("pwd", EbDbTypes.String, rslt.Rows[0][1]));
