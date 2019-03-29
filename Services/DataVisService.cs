@@ -432,7 +432,7 @@ namespace ExpressBase.ServiceStack
             dsresponse = new DataSourceDataResponse
             {
                 Draw = request.Draw,
-                Data = _dataset.Tables[0].Rows,
+                Data = ReturnObj.rows,
                 FormattedData = (ReturnObj.FormattedTable != null) ? ReturnObj.FormattedTable.Rows : null,
                 RecordsTotal = _recordsTotal,
                 RecordsFiltered = _recordsFiltered,
@@ -569,6 +569,8 @@ namespace ExpressBase.ServiceStack
             {
                 if (customCol is DVNumericColumn)
                     result = Convert.ToDecimal(customCol.GetCodeAnalysisScript().RunAsync(globals).Result.ReturnValue);
+                else if (customCol is DVBooleanColumn)
+                    result = Convert.ToBoolean(customCol.GetCodeAnalysisScript().RunAsync(globals).Result.ReturnValue);
                 else
                     result = customCol.GetCodeAnalysisScript().RunAsync(globals).Result.ReturnValue.ToString();
             }
@@ -598,12 +600,9 @@ namespace ExpressBase.ServiceStack
 
             EbDataTable _formattedTable = _dataset.Tables[0].GetEmptyTable();
             _formattedTable.Columns.Add(_formattedTable.NewDataColumn(_dv.Columns.Count, "serial", EbDbTypes.Int32));
-            if ((_dv as EbTableVisualization).IsTree)
-                _formattedTable.Columns.Add(_formattedTable.NewDataColumn(_dv.Columns.Count + 1, "tree", EbDbTypes.String));
             Dictionary<int, List<object>> Summary = new Dictionary<int, List<object>>();
-            bool AllowLinkforZero = true;
-            bool bObfuscute = (!_user.Roles.Contains(SystemRoles.SolutionOwner.ToString()) && !_user.Roles.Contains(SystemRoles.SolutionAdmin.ToString()));
 
+            bool bObfuscute = (!_user.Roles.Contains(SystemRoles.SolutionOwner.ToString()) && !_user.Roles.Contains(SystemRoles.SolutionAdmin.ToString()));
             bool isRowgrouping = false;
             bool IsMultiLevelRowGrouping = false;
             Dictionary<string, GroupingDetails> RowGrouping = new Dictionary<string, GroupingDetails>();
@@ -613,6 +612,7 @@ namespace ExpressBase.ServiceStack
             int dvColCount = _dv.Columns.Count;
             string PreviousGroupingText = string.Empty;
             int SerialCount = 0, PrevRowIndex = 0;
+            bool isTree = false;
 
             if ((_dv as EbTableVisualization) != null)
             {
@@ -643,114 +643,36 @@ namespace ExpressBase.ServiceStack
                 PreExcelAddHeader(ref worksheet, _dv);
             }
 
-            RowColletion rows = _dataset.Tables[0].Rows;
+            RowColletion rows = _dataset.Tables[0].Rows;            
 
-            if ((_dv as EbTableVisualization).IsTree)
-            {
-                var tree = TreeGeneration(_dataset.Tables[0], _dv as EbTableVisualization);
-            }
+            var Treecol = this.Check4Tree((_dv as EbTableVisualization));
 
-            for (int i = 0; i < rows.Count; i++)
+            if (Treecol != null)
             {
-                _formattedTable.Rows.Add(_formattedTable.NewDataRow2());
-                if ((_dv as EbTableVisualization).IsTree)
-                    _formattedTable.Rows[i][_formattedTable.Columns.Count - 2] = i + 1;
-                else
-                    _formattedTable.Rows[i][_formattedTable.Columns.Count - 1] = i + 1;
-                int j = 0;
-                foreach (DVBaseColumn col in _dv.Columns)
+                isTree = true;
+                TreeData<EbDataRow> tree = TreeGeneration(_formattedTable, _dataset.Tables[0], Treecol);
+                rows = (tree.RowsOrdered as RowColletion);
+                int i = 0;
+                foreach (Node<EbDataRow> Nodedr in tree.Tree)
                 {
-                    AllowLinkforZero = true;
-                    if (col.IsCustomColumn)
-                        CustomColumDoCalc4Row(rows[i], _dv, globals, col);
-
-                    var cults = col.GetColumnCultureInfo(_user_culture);
-                    object _unformattedData = rows[i][col.Data];
-                    object _formattedData = _unformattedData;
-
-                    if (col.Type == EbDbTypes.Date)
+                    DataTable2FormatedTable(Nodedr.Item, _dv, _user_culture, ref _formattedTable, ref globals, bObfuscute, _isexcel, ref Summary, ref worksheet, i, rows.Count,Nodedr.IsGroup,Nodedr.Level, isTree);
+                    if (Nodedr.Children.Count > 0)
                     {
-                        _unformattedData = (_unformattedData == DBNull.Value) ? DateTime.MinValue : _unformattedData;
-                        _formattedData = (((DateTime)_unformattedData).Date != DateTime.MinValue) ? Convert.ToDateTime(_unformattedData).ToString("d", cults.DateTimeFormat) : string.Empty;
-                        rows[i][col.Data] = Convert.ToDateTime(_unformattedData).ToString("yyyy-MM-dd");
+                        RecursiveGetTreeChilds(Nodedr, _dv, _user_culture, ref _formattedTable, ref globals, bObfuscute, _isexcel, ref Summary, ref worksheet, ref i, rows.Count, isTree);
                     }
-                    else if (col.Type == EbDbTypes.Decimal || col.Type == EbDbTypes.Int32 || col.Type == EbDbTypes.Int64)
-                    {
-                        if ((col as DVNumericColumn).SuppresIfZero && (_isexcel == false))
-                        {
-                            _formattedData = (Convert.ToDecimal(_unformattedData) == 0) ? string.Empty : Convert.ToDecimal(_unformattedData).ToString("N", cults.NumberFormat);
-
-                            if (_formattedData == string.Empty)
-                                AllowLinkforZero = false;
-                        }
-                        else
-                            _formattedData = Convert.ToDecimal(_unformattedData).ToString("N", cults.NumberFormat);
-                        if (((col as DVNumericColumn).RenderAs == NumericRenderType.ProgressBar) && (_isexcel == false))
-                            _formattedData = "<div class='progress'><div class='progress-bar' role='progressbar' aria-valuenow='" + _formattedData + "' aria-valuemin='0' aria-valuemax='100' style='width:" + _unformattedData.ToString() + "%'>" + _formattedData + "</div></div>";
-
-                        SummaryCalc(ref Summary, col, _unformattedData, cults);
-                    }
-                    else if (col.Type == EbDbTypes.String && (_isexcel == false))
-                    {
-                        if ((col as DVStringColumn).RenderAs == StringRenderType.Marker)
-                            _formattedData = "<a href = '#' class ='columnMarker' data-latlong='" + _unformattedData + "'><i class='fa fa-map-marker fa-2x' style='color:red;'></i></a>";
-
-                    }
-                    else if (col.Type == EbDbTypes.Boolean)
-                    {
-
-                    }
-
-
-                    if (!string.IsNullOrEmpty(col.LinkRefId) && (_isexcel == false))
-                    {
-                        if (AllowLinkforZero)
-                        {
-                            if (col.LinkType == LinkTypeEnum.Popout)
-                                _formattedData = "<a href='#' oncontextmenu='return false' class ='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "'>" + _formattedData + "</a>";
-                            else if (col.LinkType == LinkTypeEnum.Inline)
-                                _formattedData = _formattedData + "&nbsp; <a  href= '#' oncontextmenu= 'return false' class ='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-inline='true' data-data='" + _formattedData + "'><i class='fa fa-caret-down'></i></a>";
-                            else if (col.LinkType == LinkTypeEnum.Both)
-                                _formattedData = "<a href='#' oncontextmenu='return false' class ='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "'>" + _formattedData + "</a>" + "&nbsp; <a  href ='#' oncontextmenu='return false' class='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-inline='true' data-data='" + _formattedData + "'> <i class='fa fa-caret-down'></i></a>";
-                        }
-                    }
-                    if (col.Type == EbDbTypes.String && (col as DVStringColumn).RenderAs == StringRenderType.Link && col.LinkType == LinkTypeEnum.Tab && (_isexcel == false))/////////////////
-                    {
-                        _formattedData = "<a href='../leadmanagement/" + rows[i][0] + "' target='_blank'>" + _formattedData + "</a>";
-                    }
-                    if (bObfuscute && (_isexcel == false))
-                    {
-                        if (col.HideDataRowMoreThan > 0 && col.HideDataRowMoreThan < rows.Count)
-                        {
-                            _formattedData = "********";
-                        }
-                    }
-
-                    _formattedTable.Rows[i][col.Data] = _formattedData;
-                    if (_isexcel)
-                        worksheet.Cells[i + 2, j + 1].Value = _formattedData;
-
-                    if (i + 1 == rows.Count)
-                    {
-                        SummaryCalcAverage(ref Summary, col, cults, rows.Count);
-                    }
-                    j++;
+                    i++;
                 }
-                if (isRowgrouping)
-                    DoRowGroupingCommon(rows[i], _dv, _user_culture, ref _formattedTable, IsMultiLevelRowGrouping, ref RowGrouping, ref PreviousGroupingText, ref CurSortIndex, ref SerialCount, i, dvColCount, TotalLevels, ref AggregateColumnIndexes, ref RowGroupingColumns, rows.Count);
             }
+            else
             {
-                //if ((_dv as EbTableVisualization) != null)
-                //{
-                //    if ((_dv as EbTableVisualization).RowGroupCollection.Count > 0)
-                //    {
-                //        if ((_dv as EbTableVisualization).CurrentRowGroup.GetType().Name == "SingleLevelRowGroup")
-                //            _levels = RowGroupingCommon(_dataset.Tables[0], _dv, _user_culture, ref _formattedTable, false);
-                //        else if ((_dv as EbTableVisualization).CurrentRowGroup.GetType().Name == "MultipleLevelRowGroup")
-                //            _levels = RowGroupingCommon(_dataset.Tables[0], _dv, _user_culture, ref _formattedTable, true);
-                //    }
-                //}
+                for (int i = 0; i < rows.Count; i++)
+                {
+                    DataTable2FormatedTable(rows[i], _dv, _user_culture, ref _formattedTable, ref globals, bObfuscute, _isexcel, ref Summary, ref worksheet, i, rows.Count);
+                    if (isRowgrouping)
+                        DoRowGroupingCommon(rows[i], _dv, _user_culture, ref _formattedTable, IsMultiLevelRowGrouping, ref RowGrouping, ref PreviousGroupingText, ref CurSortIndex, ref SerialCount, i, dvColCount, TotalLevels, ref AggregateColumnIndexes, ref RowGroupingColumns, rows.Count);
+                }
             }
+
             List<GroupingDetails> SortedGroupings = RowGrouping.Values.ToList();
             SortedGroupings.Sort();
             _levels = SortedGroupings;
@@ -758,7 +680,144 @@ namespace ExpressBase.ServiceStack
             if (_isexcel)
                 bytes = package.GetAsByteArray();
 
-            return new PrePrcessorReturn { FormattedTable = _formattedTable, Summary = Summary, excel_file = bytes };
+            return new PrePrcessorReturn { FormattedTable = _formattedTable, Summary = Summary, excel_file = bytes, rows = rows };
+        }
+
+        public DVBaseColumn Check4Tree(EbTableVisualization dv)
+        {
+            return dv.Columns.FirstOrDefault(e => e.IsTree == true);
+        }
+
+        public void FormatTreecolData(Node<EbDataRow> Node, ref EbDataTable _formattedTable, DVBaseColumn treecol, int i)
+        {
+            _formattedTable.Rows[i][treecol.Data] = GetTreeHtml(_formattedTable.Rows[i][treecol.Data], Node.IsGroup, Node.Level);
+
+        }
+
+        public void RecursiveGetTreeChilds(Node<EbDataRow> Nodedr, EbDataVisualization _dv, CultureInfo _user_culture, ref EbDataTable _formattedTable, ref Globals globals, bool bObfuscute, bool _isexcel, ref Dictionary<int, List<object>> Summary, ref ExcelWorksheet worksheet, ref int i, int count, bool isTree)
+        {
+            foreach (Node<EbDataRow> dr in Nodedr.Children)
+            {
+                i++;
+                DataTable2FormatedTable(dr.Item, _dv, _user_culture, ref _formattedTable, ref globals, bObfuscute, _isexcel, ref Summary, ref worksheet, i, count, dr.IsGroup, dr.Level, isTree);
+                if (dr.Children.Count > 0)
+                {
+                    RecursiveGetTreeChilds(dr, _dv, _user_culture, ref _formattedTable, ref globals, bObfuscute, _isexcel, ref Summary, ref worksheet, ref i, count, isTree);
+                }
+
+            }
+
+        }
+
+        public void DataTable2FormatedTable(EbDataRow row, EbDataVisualization _dv, CultureInfo _user_culture, ref EbDataTable _formattedTable, ref Globals globals, bool bObfuscute, bool _isexcel, ref Dictionary<int, List<object>> Summary, ref ExcelWorksheet worksheet, int i, int count, bool isgroup = false, int level = 0, bool isTree = false)
+        {
+            bool AllowLinkforZero = true;
+
+            _formattedTable.Rows.Add(_formattedTable.NewDataRow2());
+            _formattedTable.Rows[i][_formattedTable.Columns.Count - 1] = i + 1;
+            int j = 0;
+            foreach (DVBaseColumn col in _dv.Columns)
+            {
+                AllowLinkforZero = true;
+                if (col.IsCustomColumn)
+                    CustomColumDoCalc4Row(row, _dv, globals, col);
+
+                var cults = col.GetColumnCultureInfo(_user_culture);
+                object _unformattedData = row[col.Data];
+                object _formattedData = _unformattedData;
+
+                if (col.Type == EbDbTypes.Date)
+                {
+                    _unformattedData = (_unformattedData == DBNull.Value) ? DateTime.MinValue : _unformattedData;
+                    _formattedData = (((DateTime)_unformattedData).Date != DateTime.MinValue) ? Convert.ToDateTime(_unformattedData).ToString("d", cults.DateTimeFormat) : string.Empty;
+                    row[col.Data] = Convert.ToDateTime(_unformattedData).ToString("yyyy-MM-dd");
+                }
+                else if (col.Type == EbDbTypes.Decimal || col.Type == EbDbTypes.Int32 || col.Type == EbDbTypes.Int64)
+                {
+                    if ((col as DVNumericColumn).SuppresIfZero && (_isexcel == false))
+                    {
+                        _formattedData = (Convert.ToDecimal(_unformattedData) == 0) ? string.Empty : Convert.ToDecimal(_unformattedData).ToString("N", cults.NumberFormat);
+
+                        if (_formattedData.ToString() == string.Empty)
+                            AllowLinkforZero = false;
+                    }
+                    else
+                        _formattedData = Convert.ToDecimal(_unformattedData).ToString("N", cults.NumberFormat);
+                    if (((col as DVNumericColumn).RenderAs == NumericRenderType.ProgressBar) && (_isexcel == false))
+                        _formattedData = "<div class='progress'><div class='progress-bar' role='progressbar' aria-valuenow='" + _formattedData + "' aria-valuemin='0' aria-valuemax='100' style='width:" + _unformattedData.ToString() + "%'>" + _formattedData + "</div></div>";
+
+                    SummaryCalc(ref Summary, col, _unformattedData, cults);
+                }
+                else if (col.Type == EbDbTypes.String && (_isexcel == false))
+                {
+                    if ((col as DVStringColumn).RenderAs == StringRenderType.Marker)
+                        _formattedData = "<a href = '#' class ='columnMarker' data-latlong='" + _unformattedData + "'><i class='fa fa-map-marker fa-2x' style='color:red;'></i></a>";
+
+                }
+                else if (col.Type == EbDbTypes.Boolean)
+                {
+
+                }
+
+
+                if (!string.IsNullOrEmpty(col.LinkRefId) && (_isexcel == false))
+                {
+                    if (AllowLinkforZero)
+                    {
+                        if (col.LinkType == LinkTypeEnum.Popout)
+                            _formattedData = "<a href='#' oncontextmenu='return false' class ='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "'>" + _formattedData + "</a>";
+                        else if (col.LinkType == LinkTypeEnum.Inline)
+                            _formattedData = _formattedData + "&nbsp; <a  href= '#' oncontextmenu= 'return false' class ='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-inline='true' data-data='" + _formattedData + "'><i class='fa fa-caret-down'></i></a>";
+                        else if (col.LinkType == LinkTypeEnum.Both)
+                            _formattedData = "<a href='#' oncontextmenu='return false' class ='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "'>" + _formattedData + "</a>" + "&nbsp; <a  href ='#' oncontextmenu='return false' class='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-inline='true' data-data='" + _formattedData + "'> <i class='fa fa-caret-down'></i></a>";
+                    }
+                }
+                if (col.Type == EbDbTypes.String && (col as DVStringColumn).RenderAs == StringRenderType.Link && col.LinkType == LinkTypeEnum.Tab && (_isexcel == false))/////////////////
+                {
+                    _formattedData = "<a href='../leadmanagement/" + row[0] + "' target='_blank'>" + _formattedData + "</a>";
+                }
+                if (bObfuscute && (_isexcel == false))
+                {
+                    if (col.HideDataRowMoreThan > 0 && col.HideDataRowMoreThan < count)
+                    {
+                        _formattedData = "********";
+                    }
+                }
+
+                _formattedTable.Rows[i][col.Data] = _formattedData;
+                if (_isexcel)
+                    worksheet.Cells[i + 2, j + 1].Value = _formattedData;
+
+                if (i + 1 == count)
+                {
+                    SummaryCalcAverage(ref Summary, col, cults, count);
+                }
+                j++;
+            }
+
+            if (isTree)
+            {
+                var treecol = _dv.Columns.FirstOrDefault(e => e.IsTree == true);
+                _formattedTable.Rows[i][treecol.Data] = GetTreeHtml(_formattedTable.Rows[i][treecol.Data], isgroup, level);
+            }
+
+        }
+
+        public string GetTreeHtml(object data, bool isgroup, int level)
+        {
+            string html = string.Empty;
+            for (int i = 0; i < level; i++)
+            {
+                html += "&emsp;&emsp;";
+            }
+            if (isgroup)
+            {
+                html += "<i class='fa fa-minus-square-o groupform' style='cursor:pointer;' data-group=" + isgroup + " data-level=" + level + ">&emsp;" + data + "</i>";
+            }
+            else
+                html += "<i class='itemform' data-group=" + isgroup + " data-level=" + level + ">" + data + "</i>";
+
+            return html;
         }
 
         public void SummaryCalc(ref Dictionary<int, List<object>> Summary, DVBaseColumn col, object _unformattedData, CultureInfo cults)
@@ -1087,10 +1146,16 @@ namespace ExpressBase.ServiceStack
             return permList;
         }
 
-        public List<Node<EbDataRow>> TreeGeneration(EbDataTable _table, EbTableVisualization dv)
+        public TreeData<EbDataRow> TreeGeneration(EbDataTable _formattedtable, EbDataTable _unformatted, DVBaseColumn col)
         {
-            return  _table.Enumerate().ToTree(row => true,
-                            (parent, child) => Convert.ToInt32(parent["id"]) == Convert.ToInt32(child[dv.ParentColumn[0].Name]));
+            if (col.ParentColumn.Count > 0 && col.GroupingColumn.Count > 0)
+            {
+                var tree = _unformatted.Enumerate().ToTree(row => true,
+                           (parent, child) => Convert.ToInt32(parent["id"]) == Convert.ToInt32(child[col.ParentColumn[0].Name]),
+                           col.GroupingColumn[0].Name);
+                return tree;
+            }
+            return new TreeData<EbDataRow>();
         }
 
         [CompressResponse]
@@ -1198,5 +1263,6 @@ namespace ExpressBase.ServiceStack
         public EbDataTable FormattedTable;
         public Dictionary<int, List<object>> Summary;
         public byte[] excel_file;
+        public RowColletion rows;
     }
 }
