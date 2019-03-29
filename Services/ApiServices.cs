@@ -98,7 +98,7 @@ namespace ExpressBase.ServiceStack.Services
                 else if (resource is EbEmailNode)
                     res.Result = this.ExcEmail(resource as EbEmailNode, index);
                 else if (resource is EbProcessor)
-                    res.Result = (resource as EbProcessor).Evaluate(this.Api.Resources[index - 1]);
+                    res.Result = (resource as EbProcessor).Evaluate(this.Api.Resources[index - 1],this.GlobalParams);
                 else if (resource is EbConnectApi)
                     res.Result = this.ExecuteConnectApi((resource as EbConnectApi), index);
                 else if (resource is EbThirdPartyApi)
