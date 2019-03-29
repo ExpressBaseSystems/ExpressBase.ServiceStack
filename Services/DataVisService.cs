@@ -29,6 +29,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 using System.Threading.Tasks;
+using ExpressBase.Common.Extensions;
 
 namespace ExpressBase.ServiceStack
 {
@@ -579,7 +580,7 @@ namespace ExpressBase.ServiceStack
             _datarow[customCol.Name] = result;
         }
 
-        public PrePrcessorReturn PreProcessing(ref EbDataSet _dataset, List<Param> Parameters, EbDataVisualization _dv, User _user, ref List<GroupingDetails> _levels,Boolean _isexcel)
+        public PrePrcessorReturn PreProcessing(ref EbDataSet _dataset, List<Param> Parameters, EbDataVisualization _dv, User _user, ref List<GroupingDetails> _levels, Boolean _isexcel)
         {
             var _user_culture = CultureInfo.GetCultureInfo(_user.Preference.Locale);
             var colCount = _dataset.Tables[0].Columns.Count;
@@ -597,8 +598,8 @@ namespace ExpressBase.ServiceStack
 
             EbDataTable _formattedTable = _dataset.Tables[0].GetEmptyTable();
             _formattedTable.Columns.Add(_formattedTable.NewDataColumn(_dv.Columns.Count, "serial", EbDbTypes.Int32));
-            if((_dv as EbTableVisualization).IsTree)
-                _formattedTable.Columns.Add(_formattedTable.NewDataColumn(_dv.Columns.Count +1, "tree", EbDbTypes.String));
+            if ((_dv as EbTableVisualization).IsTree)
+                _formattedTable.Columns.Add(_formattedTable.NewDataColumn(_dv.Columns.Count + 1, "tree", EbDbTypes.String));
             Dictionary<int, List<object>> Summary = new Dictionary<int, List<object>>();
             bool AllowLinkforZero = true;
             bool bObfuscute = (!_user.Roles.Contains(SystemRoles.SolutionOwner.ToString()) && !_user.Roles.Contains(SystemRoles.SolutionAdmin.ToString()));
@@ -642,7 +643,14 @@ namespace ExpressBase.ServiceStack
                 PreExcelAddHeader(ref worksheet, _dv);
             }
 
-            for (int i = 0; i < _dataset.Tables[0].Rows.Count; i++)
+            RowColletion rows = _dataset.Tables[0].Rows;
+
+            if ((_dv as EbTableVisualization).IsTree)
+            {
+                var tree = TreeGeneration(_dataset.Tables[0], _dv as EbTableVisualization);
+            }
+
+            for (int i = 0; i < rows.Count; i++)
             {
                 _formattedTable.Rows.Add(_formattedTable.NewDataRow2());
                 if ((_dv as EbTableVisualization).IsTree)
@@ -654,17 +662,17 @@ namespace ExpressBase.ServiceStack
                 {
                     AllowLinkforZero = true;
                     if (col.IsCustomColumn)
-                        CustomColumDoCalc4Row(_dataset.Tables[0].Rows[i], _dv, globals, col);
+                        CustomColumDoCalc4Row(rows[i], _dv, globals, col);
 
                     var cults = col.GetColumnCultureInfo(_user_culture);
-                    object _unformattedData = _dataset.Tables[0].Rows[i][col.Data];
+                    object _unformattedData = rows[i][col.Data];
                     object _formattedData = _unformattedData;
 
                     if (col.Type == EbDbTypes.Date)
                     {
                         _unformattedData = (_unformattedData == DBNull.Value) ? DateTime.MinValue : _unformattedData;
                         _formattedData = (((DateTime)_unformattedData).Date != DateTime.MinValue) ? Convert.ToDateTime(_unformattedData).ToString("d", cults.DateTimeFormat) : string.Empty;
-                        _dataset.Tables[0].Rows[i][col.Data] = Convert.ToDateTime(_unformattedData).ToString("yyyy-MM-dd");
+                        rows[i][col.Data] = Convert.ToDateTime(_unformattedData).ToString("yyyy-MM-dd");
                     }
                     else if (col.Type == EbDbTypes.Decimal || col.Type == EbDbTypes.Int32 || col.Type == EbDbTypes.Int64)
                     {
@@ -677,10 +685,10 @@ namespace ExpressBase.ServiceStack
                         }
                         else
                             _formattedData = Convert.ToDecimal(_unformattedData).ToString("N", cults.NumberFormat);
-                        if (((col as DVNumericColumn).RenderAs == NumericRenderType.ProgressBar) &&(_isexcel==false))
+                        if (((col as DVNumericColumn).RenderAs == NumericRenderType.ProgressBar) && (_isexcel == false))
                             _formattedData = "<div class='progress'><div class='progress-bar' role='progressbar' aria-valuenow='" + _formattedData + "' aria-valuemin='0' aria-valuemax='100' style='width:" + _unformattedData.ToString() + "%'>" + _formattedData + "</div></div>";
-                       
-                            SummaryCalc(ref Summary, col, _unformattedData, cults);
+
+                        SummaryCalc(ref Summary, col, _unformattedData, cults);
                     }
                     else if (col.Type == EbDbTypes.String && (_isexcel == false))
                     {
@@ -708,32 +716,29 @@ namespace ExpressBase.ServiceStack
                     }
                     if (col.Type == EbDbTypes.String && (col as DVStringColumn).RenderAs == StringRenderType.Link && col.LinkType == LinkTypeEnum.Tab && (_isexcel == false))/////////////////
                     {
-                        _formattedData = "<a href='../leadmanagement/" + _dataset.Tables[0].Rows[i][0] + "' target='_blank'>" + _formattedData + "</a>";
+                        _formattedData = "<a href='../leadmanagement/" + rows[i][0] + "' target='_blank'>" + _formattedData + "</a>";
                     }
                     if (bObfuscute && (_isexcel == false))
                     {
-                        if (col.HideDataRowMoreThan > 0 && col.HideDataRowMoreThan < _dataset.Tables[0].Rows.Count)
+                        if (col.HideDataRowMoreThan > 0 && col.HideDataRowMoreThan < rows.Count)
                         {
                             _formattedData = "********";
                         }
                     }
 
                     _formattedTable.Rows[i][col.Data] = _formattedData;
-                    if(_isexcel)
+                    if (_isexcel)
                         worksheet.Cells[i + 2, j + 1].Value = _formattedData;
 
-                    if (i + 1 == _dataset.Tables[0].Rows.Count)
+                    if (i + 1 == rows.Count)
                     {
-                        SummaryCalcAverage(ref Summary, col, cults, _dataset.Tables[0].Rows.Count);
+                        SummaryCalcAverage(ref Summary, col, cults, rows.Count);
                     }
                     j++;
                 }
                 if (isRowgrouping)
-                    DoRowGroupingCommon(_dataset.Tables[0].Rows[i], _dv, _user_culture, ref _formattedTable, IsMultiLevelRowGrouping, ref RowGrouping, ref PreviousGroupingText, ref CurSortIndex, ref SerialCount, i, dvColCount, TotalLevels, ref AggregateColumnIndexes, ref RowGroupingColumns, _dataset.Tables[0].Rows.Count);
-                else if ((_dv as EbTableVisualization).IsTree)
-                    TreeGeneration(_dataset.Tables[0].Rows[i], _dv, _user_culture, ref _formattedTable, IsMultiLevelRowGrouping, ref RowGrouping, ref PreviousGroupingText, ref CurSortIndex, ref SerialCount, i, dvColCount, TotalLevels, ref AggregateColumnIndexes, ref RowGroupingColumns, _dataset.Tables[0].Rows.Count);
+                    DoRowGroupingCommon(rows[i], _dv, _user_culture, ref _formattedTable, IsMultiLevelRowGrouping, ref RowGrouping, ref PreviousGroupingText, ref CurSortIndex, ref SerialCount, i, dvColCount, TotalLevels, ref AggregateColumnIndexes, ref RowGroupingColumns, rows.Count);
             }
-
             {
                 //if ((_dv as EbTableVisualization) != null)
                 //{
@@ -748,7 +753,7 @@ namespace ExpressBase.ServiceStack
             }
             List<GroupingDetails> SortedGroupings = RowGrouping.Values.ToList();
             SortedGroupings.Sort();
-            _levels =  SortedGroupings;
+            _levels = SortedGroupings;
             byte[] bytes = null;
             if (_isexcel)
                 bytes = package.GetAsByteArray();
@@ -849,56 +854,56 @@ namespace ExpressBase.ServiceStack
             return SortedGroupings;
         }
 
-        public void DoRowGroupingCommon(EbDataRow currentRow, EbDataVisualization Visualization, CultureInfo Culture, ref EbDataTable FormattedTable, bool IsMultiLevelRowGrouping, ref Dictionary<string, GroupingDetails> RowGrouping, ref string PreviousGroupingText, ref int CurSortIndex, ref int SerialCount, int PrevRowIndex, int dvColCount, int TotalLevels, ref List<int> AggregateColumnIndexes, ref List<DVBaseColumn> RowGroupingColumns, int RowCount )
+        public void DoRowGroupingCommon(EbDataRow currentRow, EbDataVisualization Visualization, CultureInfo Culture, ref EbDataTable FormattedTable, bool IsMultiLevelRowGrouping, ref Dictionary<string, GroupingDetails> RowGrouping, ref string PreviousGroupingText, ref int CurSortIndex, ref int SerialCount, int PrevRowIndex, int dvColCount, int TotalLevels, ref List<int> AggregateColumnIndexes, ref List<DVBaseColumn> RowGroupingColumns, int RowCount)
         {
-                CurSortIndex += TotalLevels + 30;
+            CurSortIndex += TotalLevels + 30;
 
-                int delimCount = 1;
-                string TempGroupingText = CreateCollectionKey(currentRow, IsMultiLevelRowGrouping, BlankText, TotalLevels, RowGroupingColumns, PrevRowIndex, ref delimCount);
+            int delimCount = 1;
+            string TempGroupingText = CreateCollectionKey(currentRow, IsMultiLevelRowGrouping, BlankText, TotalLevels, RowGroupingColumns, PrevRowIndex, ref delimCount);
 
-                if (TempGroupingText.Equals(PreviousGroupingText) == false)
+            if (TempGroupingText.Equals(PreviousGroupingText) == false)
+            {
+                SerialCount = 0;
+                FormattedTable.Rows[PrevRowIndex][dvColCount] = ++SerialCount;
+                CreateHeaderAndFooterPairs(currentRow, AggregateColumnIndexes, RowGroupingColumns, RowGrouping, Visualization.Columns, TotalLevels, IsMultiLevelRowGrouping, Culture, TempGroupingText, ref CurSortIndex, dvColCount);
+
+                HeaderGroupingDetails HeaderObject = RowGrouping[HeaderPrefix + TempGroupingText] as HeaderGroupingDetails;
+                HeaderObject.SetRowIndex(PrevRowIndex);
+                HeaderObject.InsertionType = BeforeText;
+
+                (RowGrouping[FooterPrefix + TempGroupingText] as FooterGroupingDetails).InsertionType = BeforeText;
+
+                if (PrevRowIndex > 0)
                 {
-                    SerialCount = 0;
-                    FormattedTable.Rows[PrevRowIndex][dvColCount] = ++SerialCount;
-                    CreateHeaderAndFooterPairs(currentRow, AggregateColumnIndexes, RowGroupingColumns, RowGrouping, Visualization.Columns, TotalLevels, IsMultiLevelRowGrouping, Culture, TempGroupingText, ref CurSortIndex, dvColCount);
+                    (RowGrouping[FooterPrefix + PreviousGroupingText] as FooterGroupingDetails).SetRowIndex(PrevRowIndex);
 
-                    HeaderGroupingDetails HeaderObject = RowGrouping[HeaderPrefix + TempGroupingText] as HeaderGroupingDetails;
-                    HeaderObject.SetRowIndex(PrevRowIndex);
-                    HeaderObject.InsertionType = BeforeText;
-
-                    (RowGrouping[FooterPrefix + TempGroupingText] as FooterGroupingDetails).InsertionType = BeforeText;
-
-                    if (PrevRowIndex > 0)
-                    {
-                        (RowGrouping[FooterPrefix + PreviousGroupingText] as FooterGroupingDetails).SetRowIndex(PrevRowIndex);
-
-                        if (IsMultiLevelRowGrouping && PrevRowIndex == dvColCount - 1 &&
-                            (RowGrouping[HeaderPrefix + TempGroupingText] as HeaderGroupingDetails).GroupingCount == 1 &&
-                            (RowGrouping[HeaderPrefix + TempGroupingText] as HeaderGroupingDetails).LevelCount == 0)
-                        {
-                            SetFinalFooterRow(currentRow, RowGroupingColumns, IsMultiLevelRowGrouping, RowGrouping, PrevRowIndex, TempGroupingText, CurSortIndex);
-                        }
-                    }
-                    if (!IsMultiLevelRowGrouping && PrevRowIndex == PrevRowIndex + 1 && PrevRowIndex == RowCount - 1)
+                    if (IsMultiLevelRowGrouping && PrevRowIndex == dvColCount - 1 &&
+                        (RowGrouping[HeaderPrefix + TempGroupingText] as HeaderGroupingDetails).GroupingCount == 1 &&
+                        (RowGrouping[HeaderPrefix + TempGroupingText] as HeaderGroupingDetails).LevelCount == 0)
                     {
                         SetFinalFooterRow(currentRow, RowGroupingColumns, IsMultiLevelRowGrouping, RowGrouping, PrevRowIndex, TempGroupingText, CurSortIndex);
                     }
                 }
-                else
+                if (!IsMultiLevelRowGrouping && PrevRowIndex == PrevRowIndex + 1 && PrevRowIndex == RowCount - 1)
                 {
-                    FormattedTable.Rows[PrevRowIndex][dvColCount] = ++SerialCount;
-
-                    (RowGrouping[HeaderPrefix + TempGroupingText] as HeaderGroupingDetails).GroupingCount++;
-                    if (PrevRowIndex == RowCount - 1)
-                    {
-                        SetFinalFooterRow(currentRow, RowGroupingColumns, IsMultiLevelRowGrouping, RowGrouping, PrevRowIndex, TempGroupingText, CurSortIndex);
-                    }
+                    SetFinalFooterRow(currentRow, RowGroupingColumns, IsMultiLevelRowGrouping, RowGrouping, PrevRowIndex, TempGroupingText, CurSortIndex);
                 }
+            }
+            else
+            {
+                FormattedTable.Rows[PrevRowIndex][dvColCount] = ++SerialCount;
+
+                (RowGrouping[HeaderPrefix + TempGroupingText] as HeaderGroupingDetails).GroupingCount++;
+                if (PrevRowIndex == RowCount - 1)
+                {
+                    SetFinalFooterRow(currentRow, RowGroupingColumns, IsMultiLevelRowGrouping, RowGrouping, PrevRowIndex, TempGroupingText, CurSortIndex);
+                }
+            }
 
                 (RowGrouping[FooterPrefix + TempGroupingText] as FooterGroupingDetails).SetValue(currentRow);
 
-                PreviousGroupingText = TempGroupingText;
-                PrevRowIndex = PrevRowIndex;
+            PreviousGroupingText = TempGroupingText;
+            PrevRowIndex = PrevRowIndex;
         }
 
         private void SetFinalFooterRow(EbDataRow currentRow, List<DVBaseColumn> rowGroupingColumns, bool IsMultiLevelRowGrouping, Dictionary<string, GroupingDetails> RowGrouping, int i, string TempGroupingText, int CurSortIndex)
@@ -1082,11 +1087,12 @@ namespace ExpressBase.ServiceStack
             return permList;
         }
 
-        public void TreeGeneration(EbDataRow currentRow, EbDataVisualization Visualization, CultureInfo Culture, ref EbDataTable FormattedTable, bool IsMultiLevelRowGrouping, ref Dictionary<string, GroupingDetails> RowGrouping, ref string PreviousGroupingText, ref int CurSortIndex, ref int SerialCount, int PrevRowIndex, int dvColCount, int TotalLevels, ref List<int> AggregateColumnIndexes, ref List<DVBaseColumn> RowGroupingColumns, int RowCount)
+        public List<Node<EbDataRow>> TreeGeneration(EbDataTable _table, EbTableVisualization dv)
         {
-           
+            return  _table.Enumerate().ToTree(row => true,
+                            (parent, child) => Convert.ToInt32(parent["id"]) == Convert.ToInt32(child[dv.ParentColumn[0].Name]));
         }
-        
+
         [CompressResponse]
         public DataSourceDataResponse Post(InlineTableDataRequest request)
         {
@@ -1192,5 +1198,5 @@ namespace ExpressBase.ServiceStack
         public EbDataTable FormattedTable;
         public Dictionary<int, List<object>> Summary;
         public byte[] excel_file;
-    }  
+    }
 }

@@ -157,7 +157,8 @@ namespace ExpressBase.ServiceStack.Services
                     return 0;
                 }
             }
-            throw new FormException("Table creation failed - Table name: " + tableName);
+            return -1;
+            //throw new FormException("Table creation failed - Table name: " + tableName);
         }
 
         private void CreateSquenceAndTrigger(string tableName)
