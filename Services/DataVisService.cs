@@ -432,7 +432,7 @@ namespace ExpressBase.ServiceStack
             dsresponse = new DataSourceDataResponse
             {
                 Draw = request.Draw,
-                Data = ReturnObj.rows,
+                Data = (ReturnObj.rows != null) ? ReturnObj.rows : _dataset.Tables[0].Rows,
                 FormattedData = (ReturnObj.FormattedTable != null) ? ReturnObj.FormattedTable.Rows : null,
                 RecordsTotal = _recordsTotal,
                 RecordsFiltered = _recordsFiltered,
