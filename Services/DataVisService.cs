@@ -812,7 +812,7 @@ namespace ExpressBase.ServiceStack
             }
             if (isgroup)
             {
-                html += "<i class='fa fa-minus-square-o groupform' style='cursor:pointer;' data-group=" + isgroup + " data-level=" + level + ">&emsp;" + data + "</i>";
+                html += "<i class='fa fa-minus-square-o groupform' style='cursor:pointer;' data-group=" + isgroup + " data-level=" + level + ">&emsp;<b>" + data + "</b></i>";
             }
             else
                 html += "<i class='itemform' data-group=" + isgroup + " data-level=" + level + ">" + data + "</i>";
