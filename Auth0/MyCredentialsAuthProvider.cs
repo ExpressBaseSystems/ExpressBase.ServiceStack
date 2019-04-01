@@ -92,7 +92,7 @@ namespace ExpressBase.ServiceStack.Auth0
                 }
                 else
                 {
-                    _authUser = User.GetDetailsNormal(EbConnectionFactory.DataDB, UserName, password, whichContext);
+                    _authUser = User.GetDetailsNormal(EbConnectionFactory.DataDB, UserName, password, whichContext,"","");
                     Logger.Info("TryAuthenticate -> Normal");
 
                 }

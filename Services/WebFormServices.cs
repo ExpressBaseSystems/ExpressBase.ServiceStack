@@ -157,7 +157,8 @@ namespace ExpressBase.ServiceStack.Services
                     return 0;
                 }
             }
-            throw new FormException("Table creation failed - Table name: " + tableName);
+            return -1;
+            //throw new FormException("Table creation failed - Table name: " + tableName);
         }
 
         private void CreateSquenceAndTrigger(string tableName)
@@ -182,11 +183,21 @@ namespace ExpressBase.ServiceStack.Services
             EbWebForm form = GetWebFormObject(request.RefId);
             form.TableRowId = request.RowId;
             form.RefId = request.RefId;
-            form.RefreshformData(EbConnectionFactory.DataDB, this);
+            form.RefreshFormData(EbConnectionFactory.DataDB, this);
             _dataset.FormData = form.FormData;
             return _dataset;
-        }       
-        
+        }
+
+        public GetPrefillDataResponse Any(GetPrefillDataRequest request)
+        {
+            GetPrefillDataResponse _dataset = new GetPrefillDataResponse();
+            EbWebForm form = GetWebFormObject(request.RefId);
+            form.RefId = request.RefId;
+            form.RefreshFormData(EbConnectionFactory.DataDB, this, request.Params);
+            _dataset.FormData = form.FormData;
+            return _dataset;
+        }
+
         private EbWebForm GetWebFormObject(string RefId)
         {
             EbWebForm _form = this.Redis.Get<EbWebForm>(RefId);
