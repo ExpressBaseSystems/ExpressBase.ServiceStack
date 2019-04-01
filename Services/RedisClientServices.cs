@@ -34,7 +34,7 @@ namespace ExpressBase.ServiceStack.Services
         {
             List<EbRedisLogs> r_logs = new List<EbRedisLogs>();
             List<DbParameter> parameters = new List<DbParameter>();
-            string query = @"SELECT changed_by, operation, changed_at, soln_id, key, id FROM eb_redis_logs WHERE soln_id = :slnid";
+            string query = @"SELECT changed_by, operation, changed_at, soln_id, key, id FROM eb_redis_logs WHERE soln_id = :slnid order by changed_at desc";
             parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("slnid", EbDbTypes.Int32, request.SolutionId));
             EbDataTable dt = EbConnectionFactory.ObjectsDB.DoQuery(query, parameters.ToArray());
             foreach (var item in dt.Rows)
