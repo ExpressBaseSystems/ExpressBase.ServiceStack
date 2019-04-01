@@ -284,6 +284,17 @@ WHERE
             };
         }
 
+        public CancelDataFromWebformResponse Any(CancelDataFromWebformRequest request)
+        {
+            EbWebForm FormObj = GetWebFormObject(request.RefId);
+            FormObj.TableRowId = request.RowId;
+            FormObj.UserId = request.UserId;            
+            return new CancelDataFromWebformResponse
+            {
+                RowAffected = FormObj.Cancel(EbConnectionFactory.DataDB)
+            };
+        }
+
 
         //================================= FORMULA AND VALIDATION =================================================
 
