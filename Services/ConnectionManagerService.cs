@@ -5,6 +5,7 @@ using ExpressBase.Common.Data;
 using ExpressBase.Common.Data.MongoDB;
 using ExpressBase.Common.Messaging;
 using ExpressBase.Common.ServiceClients;
+using ExpressBase.Common.Structures;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ServiceStack;
 using ServiceStack.Messaging;
@@ -313,7 +314,6 @@ namespace ExpressBase.ServiceStack.Services
                             IsAdmin = false;
                             break;
                         }
-
                     }
                     res.ConnectionStatus = IsAdmin;
 
@@ -333,19 +333,15 @@ namespace ExpressBase.ServiceStack.Services
                             IsAdmin = false;
                             break;
                         }
-
                     }
                     res.ConnectionStatus = IsAdmin;
-
                 }
-
             }
             catch (Exception e)
             {
                 Console.WriteLine("Exception:" + e.ToString());
                 res.ConnectionStatus = IsAdmin;
             }
-
             return res;
         }
 
@@ -361,6 +357,121 @@ namespace ExpressBase.ServiceStack.Services
             {
                 Console.WriteLine("Exception:" + e.ToString());
                 res.ConnectionStatus = false;
+            }
+            return res;
+        }
+
+        //--------------------------------------------------------------------------------Integrations-----------------------------------------------------
+        public AddDBResponse Post(AddDBRequest request)
+        {
+            AddDBResponse res = new AddDBResponse();
+            try
+            {
+                request.DbConfig.PersistIntegrationConf(request.SolnId, this.InfraConnectionFactory/*, request.IsNew*/, request.UserId);
+            }
+            catch (Exception e)
+            {
+                res.ResponseStatus.Message = e.Message;
+            }
+            return res;
+        }
+
+        public AddTwilioResponse Post(AddTwilioRequest request)
+        {
+            AddTwilioResponse res = new AddTwilioResponse();
+            try
+            {
+                request.Config.PersistIntegrationConf(request.SolnId, this.InfraConnectionFactory, /*request.IsNew,*/ request.UserId);
+            }
+            catch (Exception e)
+            {
+                res.ResponseStatus.Message = e.Message;
+            }
+            return res;
+        }
+
+        public AddETResponse Post(AddETRequest request)
+        {
+            AddETResponse res = new AddETResponse();
+            try
+            {
+                request.Config.PersistIntegrationConf(request.SolnId, this.InfraConnectionFactory, request.UserId);
+            }
+            catch (Exception e)
+            {
+                res.ResponseStatus.Message = e.Message;
+            }
+            return res;
+        }
+
+        public AddMongoResponse Post(AddMongoRequest request)
+        {
+            AddMongoResponse res = new AddMongoResponse();
+            try
+            {
+                request.Config.PersistIntegrationConf(request.SolnId, this.InfraConnectionFactory, request.UserId);
+            }
+            catch (Exception e)
+            {
+                res.ResponseStatus.Message = e.Message;
+            }
+            return res;
+        }
+        public AddSmtpResponse Post(AddSmtpRequest request)
+        {
+            AddSmtpResponse res = new AddSmtpResponse();
+            try
+            {
+                request.Config.PersistIntegrationConf(request.SolnId, this.InfraConnectionFactory, request.UserId);
+            }
+            catch (Exception e)
+            {
+                res.ResponseStatus.Message = e.Message;
+            }
+            return res;
+        }
+
+        public GetIntegrationConfigsResponse Get(GetIntegrationConfigsRequest request)
+        {
+            GetIntegrationConfigsResponse res = new GetIntegrationConfigsResponse();
+            try
+            {
+                string sql = "SELECT * FROM eb_integration_configs where solution_id = @solution_id";
+                DbParameter[] parameters = new DbParameter[] { this.InfraConnectionFactory.DataDB.GetNewParameter("solution_id", EbDbTypes.String, request.SolnId) };
+                EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(sql, parameters);
+            }
+            catch (Exception e)
+            {
+                res.ResponseStatus.Message = e.Message;
+            }
+            return res;
+        }
+
+        public GetIntegrationsResponse Get(GetIntegrationsRequest request)
+        {
+            GetIntegrationsResponse res = new GetIntegrationsResponse();
+            try
+            {
+                string sql = "SELECT * FROM eb_integrations where solution_id = @solution_id";
+                DbParameter[] parameters = new DbParameter[] { this.InfraConnectionFactory.DataDB.GetNewParameter("solution_id", EbDbTypes.String, request.SolnId) };
+                EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(sql, parameters);
+            }
+            catch (Exception e)
+            {
+                res.ResponseStatus.Message = e.Message;
+            }
+            return res;
+        }
+        
+        public EbIntegrationResponse Post(EbIntegrationRequest request)
+        {
+            EbIntegrationResponse res = new EbIntegrationResponse();
+            try {
+                request.IntegrationO.PersistIntegration(request.SolnId, this.InfraConnectionFactory, request.UserId);
+            }
+            catch(Exception e)
+            {
+                res.ResponseStatus.Message = e.Message;
             }
             return res;
         }
