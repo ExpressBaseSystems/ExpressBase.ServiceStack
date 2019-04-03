@@ -68,6 +68,7 @@ namespace ExpressBase.ServiceStack.Services
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_del", Type = vDbTypes.Boolean, Default = "F" });
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_void", Type = vDbTypes.Boolean, Default = "F" });
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_loc_id", Type = vDbTypes.Int32 });
+                    //_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_default", Type = vDbTypes.Boolean, Default = "F" });
                     //_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_transaction_date", Type = vDbTypes.DateTime });
                     //_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_autogen", Type = vDbTypes.Decimal });
 
@@ -381,7 +382,7 @@ WHERE
                     if (!v.IsDisabled)
                     {
                         string fn = v.Name + ctrl.Key;
-                        engine.Evaluate("function " + fn + "() { " + v.JScode + " }");
+                        engine.Evaluate("function " + fn + "() { " + v.Script.Code + " }");
                         if (!engine.CallGlobalFunction<bool>(fn))
                         {
                             if (v.IsWarningOnly)
