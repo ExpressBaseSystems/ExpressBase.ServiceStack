@@ -56,10 +56,10 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     foreach (ColumnSchema _column in _table.Columns)
                     {
-                        if((_column.Control as EbControl).Unique)
+                        if(_column.Control is EbAutoId)
                         {
                             _listNamesAndTypes.Add(new TableColumnMeta { Name = _column.ColumnName, Type = vDbTypes.GetVendorDbTypeStruct((EbDbTypes)_column.EbDbType), Unique = true });
-                            _listNamesAndTypes.Add(new TableColumnMeta { Name = _column.ColumnName + "_old", Type = vDbTypes.GetVendorDbTypeStruct((EbDbTypes)_column.EbDbType) });
+                            _listNamesAndTypes.Add(new TableColumnMeta { Name = _column.ColumnName + "_ebbkup", Type = vDbTypes.GetVendorDbTypeStruct((EbDbTypes)_column.EbDbType) });
                         }
                         else
                             _listNamesAndTypes.Add(new TableColumnMeta { Name = _column.ColumnName, Type = vDbTypes.GetVendorDbTypeStruct((EbDbTypes)_column.EbDbType) });
