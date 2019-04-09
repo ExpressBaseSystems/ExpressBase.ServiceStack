@@ -45,75 +45,75 @@ namespace ExpressBase.ServiceStack.Services
         {
             GetConnectionsResponse resp = new GetConnectionsResponse();
             resp.EBSolutionConnections = this.Redis.Get<EbConnectionsConfig>(string.Format(CoreConstants.SOLUTION_INTEGRATION_REDIS_KEY, req.SolutionId));
-           // if (resp.EBSolutionConnections == null)
-                //using (var con = this.InfraConnectionFactory.DataDB.GetNewConnection() as Npgsql.NpgsqlConnection)
-                //{
-                //    con.Open();
-                //    string sql = @"SELECT id, con_type, con_obj FROM eb_connections WHERE solution_id = @solution_id AND eb_del = 'F'";
-                //    DataTable dt = new DataTable();
-                //    EbConnectionsConfig cons = new EbConnectionsConfig();
+            // if (resp.EBSolutionConnections == null)
+            //using (var con = this.InfraConnectionFactory.DataDB.GetNewConnection() as Npgsql.NpgsqlConnection)
+            //{
+            //    con.Open();
+            //    string sql = @"SELECT id, con_type, con_obj FROM eb_connections WHERE solution_id = @solution_id AND eb_del = 'F'";
+            //    DataTable dt = new DataTable();
+            //    EbConnectionsConfig cons = new EbConnectionsConfig();
 
-                //    var ada = new Npgsql.NpgsqlDataAdapter(sql, con);
-                //    ada.SelectCommand.Parameters.Add(new Npgsql.NpgsqlParameter("solution_id", NpgsqlTypes.NpgsqlDbType.Text) { Value = req.SolutionId });
-                //    ada.Fill(dt);
+            //    var ada = new Npgsql.NpgsqlDataAdapter(sql, con);
+            //    ada.SelectCommand.Parameters.Add(new Npgsql.NpgsqlParameter("solution_id", NpgsqlTypes.NpgsqlDbType.Text) { Value = req.SolutionId });
+            //    ada.Fill(dt);
 
-                //    if (dt.Rows.Count != 0)
-                //    {
-                //        EbSmsConCollection _smscollection = new EbSmsConCollection();
-                //        EbMailConCollection _mailcollection = new EbMailConCollection();
-                //        foreach (DataRow dr in dt.Rows)
-                //        {
-                //            if (dr["con_type"].ToString() == EbConnectionTypes.EbDATA.ToString())
-                //            {
-                //                cons.DataDbConfig = EbSerializers.Json_Deserialize<EbDataDbConnection>(dr["con_obj"].ToString());
-                //                cons.DataDbConfig.Id = (int)dr["id"];
-                //            }
-                //            else if (dr["con_type"].ToString() == EbConnectionTypes.EbDATA_RO.ToString())
-                //            {
-                //                cons.DataDbConfig = EbSerializers.Json_Deserialize<EbDataDbConnection>(dr["con_obj"].ToString());
-                //                cons.DataDbConfig.Id = (int)dr["id"];
-                //            }
-                //            else if (dr["con_type"].ToString() == EbConnectionTypes.EbOBJECTS.ToString())
-                //            {
-                //                cons.ObjectsDbConfig = EbSerializers.Json_Deserialize<EbObjectsDbConnection>(dr["con_obj"].ToString());
-                //                cons.ObjectsDbConfig.Id = (int)dr["id"];
-                //            }
-                //            //else if (dr["con_type"].ToString() == EbConnectionTypes.EbFILES.ToString())
-                //            //    cons.FilesDbConnection = EbSerializers.Json_Deserialize<EbFilesDbConnection>(dr["con_obj"].ToString());
-                //            else if (dr["con_type"].ToString() == EbConnectionTypes.EbLOGS.ToString())
-                //            {
-                //                cons.LogsDbConnection = EbSerializers.Json_Deserialize<EbLogsDbConnection>(dr["con_obj"].ToString());
-                //                cons.LogsDbConnection.Id = (int)dr["id"];
-                //            }
-                //            else if (dr["con_type"].ToString() == EbConnectionTypes.SMTP.ToString())
-                //            {
-                //                EbEmail temp = EbSerializers.Json_Deserialize<EbEmail>(dr["con_obj"].ToString());
-                //                temp.Id = (int)dr["id"];
-                //                _mailcollection.Add(temp);
-                //            }
-                //            else if (dr["con_type"].ToString() == EbConnectionTypes.SMS.ToString())
-                //            {
-                //                ISMSConnection temp = EbSerializers.Json_Deserialize<ISMSConnection>(dr["con_obj"].ToString());
-                //                temp.Id = (int)dr["id"];
-                //                _smscollection.Add(temp);
-                //            }
-                //            else if (dr["con_type"].ToString() == EbConnectionTypes.Cloudinary.ToString())
-                //            {
-                //                cons.CloudinaryConnection = EbSerializers.Json_Deserialize<EbCloudinaryConnection>(dr["con_obj"].ToString());
-                //                cons.CloudinaryConnection.Id = (int)dr["id"];
-                //            }
-                //            else if (dr["con_type"].ToString() == EbConnectionTypes.FTP.ToString())
-                //            {
-                //                cons.FTPConnection = EbSerializers.Json_Deserialize<EbFTPConnection>(dr["con_obj"].ToString());
-                //                cons.FTPConnection.Id = (int)dr["id"];
-                //            }// ... More to come
-                //        }
-                //        cons.SMSConnections = _smscollection;
-                //        cons.EmailConnections = _mailcollection;
-                //        Redis.Set<EbConnectionsConfig>(string.Format(CoreConstants.SOLUTION_CONNECTION_REDIS_KEY, req.SolutionId), cons);
-                //        resp.EBSolutionConnections = cons;
-                //    }
-                //}
+            //    if (dt.Rows.Count != 0)
+            //    {
+            //        EbSmsConCollection _smscollection = new EbSmsConCollection();
+            //        EbMailConCollection _mailcollection = new EbMailConCollection();
+            //        foreach (DataRow dr in dt.Rows)
+            //        {
+            //            if (dr["con_type"].ToString() == EbConnectionTypes.EbDATA.ToString())
+            //            {
+            //                cons.DataDbConfig = EbSerializers.Json_Deserialize<EbDataDbConnection>(dr["con_obj"].ToString());
+            //                cons.DataDbConfig.Id = (int)dr["id"];
+            //            }
+            //            else if (dr["con_type"].ToString() == EbConnectionTypes.EbDATA_RO.ToString())
+            //            {
+            //                cons.DataDbConfig = EbSerializers.Json_Deserialize<EbDataDbConnection>(dr["con_obj"].ToString());
+            //                cons.DataDbConfig.Id = (int)dr["id"];
+            //            }
+            //            else if (dr["con_type"].ToString() == EbConnectionTypes.EbOBJECTS.ToString())
+            //            {
+            //                cons.ObjectsDbConfig = EbSerializers.Json_Deserialize<EbObjectsDbConnection>(dr["con_obj"].ToString());
+            //                cons.ObjectsDbConfig.Id = (int)dr["id"];
+            //            }
+            //            //else if (dr["con_type"].ToString() == EbConnectionTypes.EbFILES.ToString())
+            //            //    cons.FilesDbConnection = EbSerializers.Json_Deserialize<EbFilesDbConnection>(dr["con_obj"].ToString());
+            //            else if (dr["con_type"].ToString() == EbConnectionTypes.EbLOGS.ToString())
+            //            {
+            //                cons.LogsDbConnection = EbSerializers.Json_Deserialize<EbLogsDbConnection>(dr["con_obj"].ToString());
+            //                cons.LogsDbConnection.Id = (int)dr["id"];
+            //            }
+            //            else if (dr["con_type"].ToString() == EbConnectionTypes.SMTP.ToString())
+            //            {
+            //                EbEmail temp = EbSerializers.Json_Deserialize<EbEmail>(dr["con_obj"].ToString());
+            //                temp.Id = (int)dr["id"];
+            //                _mailcollection.Add(temp);
+            //            }
+            //            else if (dr["con_type"].ToString() == EbConnectionTypes.SMS.ToString())
+            //            {
+            //                ISMSConnection temp = EbSerializers.Json_Deserialize<ISMSConnection>(dr["con_obj"].ToString());
+            //                temp.Id = (int)dr["id"];
+            //                _smscollection.Add(temp);
+            //            }
+            //            else if (dr["con_type"].ToString() == EbConnectionTypes.Cloudinary.ToString())
+            //            {
+            //                cons.CloudinaryConnection = EbSerializers.Json_Deserialize<EbCloudinaryConnection>(dr["con_obj"].ToString());
+            //                cons.CloudinaryConnection.Id = (int)dr["id"];
+            //            }
+            //            else if (dr["con_type"].ToString() == EbConnectionTypes.FTP.ToString())
+            //            {
+            //                cons.FTPConnection = EbSerializers.Json_Deserialize<EbFTPConnection>(dr["con_obj"].ToString());
+            //                cons.FTPConnection.Id = (int)dr["id"];
+            //            }// ... More to come
+            //        }
+            //        cons.SMSConnections = _smscollection;
+            //        cons.EmailConnections = _mailcollection;
+            //        Redis.Set<EbConnectionsConfig>(string.Format(CoreConstants.SOLUTION_CONNECTION_REDIS_KEY, req.SolutionId), cons);
+            //        resp.EBSolutionConnections = cons;
+            //    }
+            //}
             return resp;
         }
 
@@ -122,13 +122,13 @@ namespace ExpressBase.ServiceStack.Services
         {
             EbConnectionsConfig _solutionConnections = EbConnectionsConfigProvider.GetDataCenterConnections();
 
-           
+
 
             _solutionConnections.DataDbConfig.DatabaseName = request.NewSolnId;
             _solutionConnections.DataDbConfig.NickName = request.NewSolnId + "_Initial";
             _solutionConnections.DataDbConfig.UserName = request.DbUsers.AdminUserName;
             _solutionConnections.DataDbConfig.Password = request.DbUsers.AdminPassword;
-          
+
             _solutionConnections.DataDbConfig.PersistIntegrationConf(request.NewSolnId, this.InfraConnectionFactory, request.UserId);
 
             this.Redis.Set<EbConnectionsConfig>(string.Format(CoreConstants.SOLUTION_INTEGRATION_REDIS_KEY, request.NewSolnId), _solutionConnections);
@@ -487,31 +487,27 @@ namespace ExpressBase.ServiceStack.Services
         public _GetConectionsResponse Get(_GetConectionsRequest request)
         {
             _GetConectionsResponse res = new _GetConectionsResponse();
-            // Dictionary<string, IEbConnection> ConList = new Dictionary<string, IEbConnection>();
+            int migrated = 0;
             try
             {
                 string sql = @"SELECT * FROM eb_connections WHERE eb_del='F' AND
-                                con_type  in ( 'Cloudinary','EbDATA','EbOBJECTS','SMTP');";
+                                con_type  in ( 'Cloudinary','EbDATA' ,'SMTP');";
                 EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(sql);
                 int return_id = -1;
                 if (dt.Rows.Count > 0)
                 {
                     foreach (EbDataRow dr in dt.Rows)
                     {
-                        if (!string.IsNullOrEmpty(dr["con_obj"].ToString()) && dr["con_type"].ToString() != "EbImageManipulation")
+                        migrated++;
+                        if (!string.IsNullOrEmpty(dr["con_obj"].ToString()))
                         {
-                            Console.WriteLine(dr["id"]);
+                            Console.Write(dr["id"]);
                             IEbConnection con = EbSerializers.Json_Deserialize(dr["con_obj"].ToString());
                             Console.WriteLine("- " + dr["id"]);
-                            // if (con is )
-                            // ConList.Add(dr["solution_id"].ToString(),con);
-
-                            //foreach (KeyValuePair<string,IEbConnection> con in ConList)
-                            //{
                             if (con.EbConnectionType == EbConnectionTypes.EbDATA)
                             {
                                 EbDataDbConnection _connection = (con as EbDataDbConnection);
-                                if (_connection.DatabaseVendor == DatabaseVendors.PGSQL)
+                                if (Convert.ToInt32(_connection.DatabaseVendor) == 0)
                                 {
                                     PostgresConfig c = new PostgresConfig
                                     {
@@ -531,7 +527,7 @@ namespace ExpressBase.ServiceStack.Services
                                     };
                                     return_id = c.PersistConfForHelper(dr["solution_id"].ToString(), this.InfraConnectionFactory, Convert.ToInt32(dr["eb_user_id"]), Convert.ToDateTime(dr["date_created"]));
                                 }
-                                if (_connection.DatabaseVendor == DatabaseVendors.ORACLE)
+                                if (Convert.ToInt32(_connection.DatabaseVendor) == 3)
                                 {
                                     OracleConfig c = new OracleConfig
                                     {
@@ -550,7 +546,7 @@ namespace ExpressBase.ServiceStack.Services
                                     };
                                     return_id = (c as OracleConfig).PersistConfForHelper(dr["solution_id"].ToString(), this.InfraConnectionFactory, Convert.ToInt32(dr["eb_user_id"]), Convert.ToDateTime(dr["date_created"]));
                                 }
-                                if (_connection.DatabaseVendor == DatabaseVendors.MYSQL)
+                                if (Convert.ToInt32(_connection.DatabaseVendor) == 1)
                                 {
                                     MySqlConfig c = new MySqlConfig
                                     {
@@ -600,7 +596,7 @@ namespace ExpressBase.ServiceStack.Services
                                     };
                                     return_id = c.PersistConfForHelper(dr["solution_id"].ToString(), this.InfraConnectionFactory, Convert.ToInt32(dr["eb_user_id"]), Convert.ToDateTime(dr["date_created"]));
                                 }
-                                if (_connection.DatabaseVendor == DatabaseVendors.ORACLE)
+                                if (Convert.ToInt32(_connection.DatabaseVendor) == 3)
                                 {
                                     OracleConfig c = new OracleConfig
                                     {
@@ -620,7 +616,7 @@ namespace ExpressBase.ServiceStack.Services
                                     };
                                     return_id = (c as OracleConfig).PersistConfForHelper(dr["solution_id"].ToString(), this.InfraConnectionFactory, Convert.ToInt32(dr["eb_user_id"]), Convert.ToDateTime(dr["date_created"]));
                                 }
-                                if (_connection.DatabaseVendor == DatabaseVendors.MYSQL)
+                                if (Convert.ToInt32(_connection.DatabaseVendor) == 1)
                                 {
                                     MySqlConfig c = new MySqlConfig
                                     {
@@ -692,19 +688,23 @@ namespace ExpressBase.ServiceStack.Services
                                 };
                                 _obj.PersistIntegration(dr["solution_id"].ToString(), this.InfraConnectionFactory, Convert.ToInt32(dr["eb_user_id"]));
                             }
-                            else
-                            {
-                                Console.ForegroundColor = ConsoleColor.Red;
-                                Console.WriteLine("- " + dr["id"]);
-                                Console.ForegroundColor = ConsoleColor.White;
-                            }
+
                         }
-                    }//Cloudinary,EbDATA,EbFILES,EbOBJECTS,SMTP
+                    }
+
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine("-----Migrated Integrations :  ------ " + migrated);
+                    Console.ForegroundColor = ConsoleColor.White;
+
+                    //Cloudinary,EbDATA,EbFILES,EbOBJECTS,SMTP
                     //Cloudinary,EbDATA,,EbFILES,EbImageManipulation,EbLOGS,EbOBJECTS,FTP,SMS,SMTP
                 }
             }
             catch (Exception e)
             {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("-----Error at Integrations :  ------ " + migrated);
+                Console.ForegroundColor = ConsoleColor.White;
                 res.ResponseStatus.Message = e.Message;
             }
             return res;
