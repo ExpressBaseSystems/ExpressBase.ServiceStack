@@ -34,9 +34,9 @@ namespace ExpressBase.ServiceStack.Services
         {
             EbConnectionsConfig _solutionConnections = EbConnectionsConfigProvider.GetDataCenterConnections();
 
-            _solutionConnections.ObjectsDbConnection.DatabaseName = request.dbName;
+            _solutionConnections.ObjectsDbConfig.DatabaseName = request.dbName;
 
-            _solutionConnections.DataDbConnection.DatabaseName = request.dbName;
+            _solutionConnections.DataDbConfig.DatabaseName = request.dbName;
 
             EbConnectionFactory NewCon = new EbConnectionFactory(_solutionConnections, request.dbName);
 
@@ -48,12 +48,12 @@ namespace ExpressBase.ServiceStack.Services
             }
             else
             {
-                if (request.DataDBConnection.DatabaseVendor == DatabaseVendors.PGSQL)
-                    DataDB = new PGSQLDatabase(request.DataDBConnection);
-                else if (request.DataDBConnection.DatabaseVendor == DatabaseVendors.ORACLE)
-                    DataDB = new OracleDB(request.DataDBConnection);
-                else if (request.DataDBConnection.DatabaseVendor == DatabaseVendors.MYSQL)
-                    DataDB = new MySqlDB(request.DataDBConnection);
+                if (request.DataDBConfig.DatabaseVendor == DatabaseVendors.PGSQL)
+                    DataDB = new PGSQLDatabase(request.DataDBConfig);
+                else if (request.DataDBConfig.DatabaseVendor == DatabaseVendors.ORACLE)
+                    DataDB = new OracleDB(request.DataDBConfig);
+                else if (request.DataDBConfig.DatabaseVendor == DatabaseVendors.MYSQL)
+                    DataDB = new MySqlDB(request.DataDBConfig);
             }
             using (var con = this.EbConnectionFactory.DataDB.GetNewConnection())
             {
