@@ -48,6 +48,7 @@ namespace ExpressBase.ServiceStack.Services
         private void CreateWebFormTables(WebFormSchema _schema)
         {
             IVendorDbTypes vDbTypes = this.EbConnectionFactory.ObjectsDB.VendorDbTypes;
+            string Msg = string.Empty;
             foreach (TableSchema _table in _schema.Tables)
             {
                 List<TableColumnMeta> _listNamesAndTypes = new List<TableColumnMeta>();
@@ -55,12 +56,17 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     foreach (ColumnSchema _column in _table.Columns)
                     {
-                        _listNamesAndTypes.Add(new TableColumnMeta { Name = _column.ColumnName, Type = vDbTypes.GetVendorDbTypeStruct((EbDbTypes)_column.EbDbType) });
+                        if(_column.Control is EbAutoId)
+                        {
+                            _listNamesAndTypes.Add(new TableColumnMeta { Name = _column.ColumnName, Type = vDbTypes.GetVendorDbTypeStruct((EbDbTypes)_column.EbDbType), Unique = true });
+                            _listNamesAndTypes.Add(new TableColumnMeta { Name = _column.ColumnName + "_ebbkup", Type = vDbTypes.GetVendorDbTypeStruct((EbDbTypes)_column.EbDbType) });
+                        }
+                        else
+                            _listNamesAndTypes.Add(new TableColumnMeta { Name = _column.ColumnName, Type = vDbTypes.GetVendorDbTypeStruct((EbDbTypes)_column.EbDbType) });
                     }
                     if (_table.TableName != _schema.MasterTable)
                         _listNamesAndTypes.Add(new TableColumnMeta { Name = _schema.MasterTable + "_id", Type = vDbTypes.Decimal });// id refernce to the parent table will store in this column - foreignkey
-                    //else
-                    //    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_auto_id", Type = vDbTypes.String });
+                    
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_by", Type = vDbTypes.Decimal });
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_at", Type = vDbTypes.DateTime });
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_by", Type = vDbTypes.Decimal });
@@ -68,15 +74,18 @@ namespace ExpressBase.ServiceStack.Services
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_del", Type = vDbTypes.Boolean, Default = "F" });
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_void", Type = vDbTypes.Boolean, Default = "F" });
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_loc_id", Type = vDbTypes.Int32 });
+                    //_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_default", Type = vDbTypes.Boolean, Default = "F" });
                     //_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_transaction_date", Type = vDbTypes.DateTime });
                     //_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_autogen", Type = vDbTypes.Decimal });
 
-                    CreateOrAlterTable(_table.TableName, _listNamesAndTypes);
+                    CreateOrAlterTable(_table.TableName, _listNamesAndTypes, ref Msg);
                 }
             }
+            if(!Msg.IsEmpty())
+                throw new FormException(Msg);
         }
 
-        private int CreateOrAlterTable(string tableName, List<TableColumnMeta> listNamesAndTypes)
+        private int CreateOrAlterTable(string tableName, List<TableColumnMeta> listNamesAndTypes, ref string Msg)
         {
             //checking for space in column name, table name
             if (tableName.Contains(CharConstants.SPACE))
@@ -114,9 +123,10 @@ namespace ExpressBase.ServiceStack.Services
                     {
                         if (entry.Name.ToLower() == (dr.ColumnName.ToLower()))
                         {
-                            //commented due to datetime and date issue//eb_created_at
-                            //if (entry.Type.EbDbType != dr.Type)
-                            //    throw new FormException("Table " + tableName + " creation failed - Column type mismatch : " + entry.Name);
+                            if (entry.Type.EbDbType != dr.Type && !(entry.Name.Equals("eb_created_at") || 
+                                entry.Name.Equals("eb_lastmodified_at") || entry.Name.Equals("eb_del") ||
+                                entry.Name.Equals("eb_void") || entry.Name.Equals("eb_default")))
+                                Msg += string.Format("Already exists '{0}' Column for {1}.{2}({3}); ", dr.Type.ToString(), tableName, entry.Name, entry.Type.ToString());
                             isFound = true;
                             break;
                         }
@@ -381,7 +391,7 @@ WHERE
                     if (!v.IsDisabled)
                     {
                         string fn = v.Name + ctrl.Key;
-                        engine.Evaluate("function " + fn + "() { " + v.JScode + " }");
+                        engine.Evaluate("function " + fn + "() { " + v.Script.Code + " }");
                         if (!engine.CallGlobalFunction<bool>(fn))
                         {
                             if (v.IsWarningOnly)

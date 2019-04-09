@@ -468,14 +468,242 @@ namespace ExpressBase.ServiceStack.Services
             }
             return res;
         }
-        
+
         public EbIntegrationResponse Post(EbIntegrationRequest request)
         {
             EbIntegrationResponse res = new EbIntegrationResponse();
-            try {
+            try
+            {
                 request.IntegrationO.PersistIntegration(request.SolnId, this.InfraConnectionFactory, request.UserId);
             }
-            catch(Exception e)
+            catch (Exception e)
+            {
+                res.ResponseStatus.Message = e.Message;
+            }
+            return res;
+        }
+        //--------------------------------------------------------------------------------------------------------------------------------------------------------
+        //--------------------------------------------------------------------------------------------------------------------------------------------------------
+        public _GetConectionsResponse Get(_GetConectionsRequest request)
+        {
+            _GetConectionsResponse res = new _GetConectionsResponse();
+            // Dictionary<string, IEbConnection> ConList = new Dictionary<string, IEbConnection>();
+            try
+            {
+                string sql = @"SELECT * FROM eb_connections WHERE eb_del='F' AND
+                                con_type  in ( 'Cloudinary','EbDATA','EbOBJECTS','SMTP');";
+                EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(sql);
+                int return_id = -1;
+                if (dt.Rows.Count > 0)
+                {
+                    foreach (EbDataRow dr in dt.Rows)
+                    {
+                        if (!string.IsNullOrEmpty(dr["con_obj"].ToString()) && dr["con_type"].ToString() != "EbImageManipulation")
+                        {
+                            Console.WriteLine(dr["id"]);
+                            IEbConnection con = EbSerializers.Json_Deserialize(dr["con_obj"].ToString());
+                            Console.WriteLine("- " + dr["id"]);
+                            // if (con is )
+                            // ConList.Add(dr["solution_id"].ToString(),con);
+
+                            //foreach (KeyValuePair<string,IEbConnection> con in ConList)
+                            //{
+                            if (con.EbConnectionType == EbConnectionTypes.EbDATA)
+                            {
+                                EbDataDbConnection _connection = (con as EbDataDbConnection);
+                                if (_connection.DatabaseVendor == DatabaseVendors.PGSQL)
+                                {
+                                    PostgresConfig c = new PostgresConfig
+                                    {
+                                        DatabaseName = _connection.DatabaseName,
+                                        Id = _connection.Id,
+                                        IsSSL = _connection.IsSSL,
+                                        NickName = _connection.NickName,
+                                        Password = _connection.Password,
+                                        Port = _connection.Port,
+                                        ReadOnlyPassword = _connection.ReadOnlyPassword,
+                                        ReadOnlyUserName = _connection.ReadOnlyUserName,
+                                        ReadWritePassword = _connection.ReadWritePassword,
+                                        ReadWriteUserName = _connection.ReadWriteUserName,
+                                        Server = _connection.Server,
+                                        Timeout = _connection.Timeout,
+                                        UserName = _connection.UserName
+                                    };
+                                    return_id = c.PersistConfForHelper(dr["solution_id"].ToString(), this.InfraConnectionFactory, Convert.ToInt32(dr["eb_user_id"]), Convert.ToDateTime(dr["date_created"]));
+                                }
+                                if (_connection.DatabaseVendor == DatabaseVendors.ORACLE)
+                                {
+                                    OracleConfig c = new OracleConfig
+                                    {
+                                        DatabaseName = _connection.DatabaseName,
+                                        IsSSL = _connection.IsSSL,
+                                        NickName = _connection.NickName,
+                                        Password = _connection.Password,
+                                        Port = _connection.Port,
+                                        ReadOnlyPassword = _connection.ReadOnlyPassword,
+                                        ReadOnlyUserName = _connection.ReadOnlyUserName,
+                                        ReadWritePassword = _connection.ReadWritePassword,
+                                        ReadWriteUserName = _connection.ReadWriteUserName,
+                                        Server = _connection.Server,
+                                        Timeout = _connection.Timeout,
+                                        UserName = _connection.UserName
+                                    };
+                                    return_id = (c as OracleConfig).PersistConfForHelper(dr["solution_id"].ToString(), this.InfraConnectionFactory, Convert.ToInt32(dr["eb_user_id"]), Convert.ToDateTime(dr["date_created"]));
+                                }
+                                if (_connection.DatabaseVendor == DatabaseVendors.MYSQL)
+                                {
+                                    MySqlConfig c = new MySqlConfig
+                                    {
+                                        DatabaseName = _connection.DatabaseName,
+                                        IsSSL = _connection.IsSSL,
+                                        NickName = _connection.NickName,
+                                        Password = _connection.Password,
+                                        Port = _connection.Port,
+                                        ReadOnlyPassword = _connection.ReadOnlyPassword,
+                                        ReadOnlyUserName = _connection.ReadOnlyUserName,
+                                        ReadWritePassword = _connection.ReadWritePassword,
+                                        ReadWriteUserName = _connection.ReadWriteUserName,
+                                        Server = _connection.Server,
+                                        Timeout = _connection.Timeout,
+                                        UserName = _connection.UserName
+                                    };
+                                    return_id = (c as MySqlConfig).PersistConfForHelper(dr["solution_id"].ToString(), this.InfraConnectionFactory, Convert.ToInt32(dr["eb_user_id"]), Convert.ToDateTime(dr["date_created"]));
+                                }
+                                EbIntegration _obj = new EbIntegration
+                                {
+                                    ConfigId = return_id,
+                                    Preference = ConPreferences.PRIMARY,
+                                    Type = EbConnections.EbDATA
+                                };
+                                _obj.PersistIntegrationForHelper(dr["solution_id"].ToString(), this.InfraConnectionFactory, Convert.ToInt32(dr["eb_user_id"]), Convert.ToDateTime(dr["date_created"]));
+                            }
+
+                          else  if (con.EbConnectionType == EbConnectionTypes.EbOBJECTS)
+                            {
+                                EbObjectsDbConnection _connection = (con as EbObjectsDbConnection);
+                                if (_connection.DatabaseVendor == DatabaseVendors.PGSQL)
+                                {
+                                    PostgresConfig c = new PostgresConfig
+                                    {
+                                        DatabaseName = _connection.DatabaseName,
+                                        IsSSL = _connection.IsSSL,
+                                        NickName = _connection.NickName,
+                                        Password = _connection.Password,
+                                        Port = _connection.Port,
+                                        ReadOnlyPassword = _connection.ReadOnlyPassword,
+                                        ReadOnlyUserName = _connection.ReadOnlyUserName,
+                                        ReadWritePassword = _connection.ReadWritePassword,
+                                        ReadWriteUserName = _connection.ReadWriteUserName,
+                                        Server = _connection.Server,
+                                        Timeout = _connection.Timeout,
+                                        UserName = _connection.UserName
+                                    };
+                                    return_id = c.PersistConfForHelper(dr["solution_id"].ToString(), this.InfraConnectionFactory, Convert.ToInt32(dr["eb_user_id"]), Convert.ToDateTime(dr["date_created"]));
+                                }
+                                if (_connection.DatabaseVendor == DatabaseVendors.ORACLE)
+                                {
+                                    OracleConfig c = new OracleConfig
+                                    {
+                                        DatabaseName = _connection.DatabaseName,
+                                        Id = _connection.Id,
+                                        IsSSL = _connection.IsSSL,
+                                        NickName = _connection.NickName,
+                                        Password = _connection.Password,
+                                        Port = _connection.Port,
+                                        ReadOnlyPassword = _connection.ReadOnlyPassword,
+                                        ReadOnlyUserName = _connection.ReadOnlyUserName,
+                                        ReadWritePassword = _connection.ReadWritePassword,
+                                        ReadWriteUserName = _connection.ReadWriteUserName,
+                                        Server = _connection.Server,
+                                        Timeout = _connection.Timeout,
+                                        UserName = _connection.UserName
+                                    };
+                                    return_id = (c as OracleConfig).PersistConfForHelper(dr["solution_id"].ToString(), this.InfraConnectionFactory, Convert.ToInt32(dr["eb_user_id"]), Convert.ToDateTime(dr["date_created"]));
+                                }
+                                if (_connection.DatabaseVendor == DatabaseVendors.MYSQL)
+                                {
+                                    MySqlConfig c = new MySqlConfig
+                                    {
+                                        DatabaseName = _connection.DatabaseName,
+                                        Id = _connection.Id,
+                                        IsSSL = _connection.IsSSL,
+                                        NickName = _connection.NickName,
+                                        Password = _connection.Password,
+                                        Port = _connection.Port,
+                                        ReadOnlyPassword = _connection.ReadOnlyPassword,
+                                        ReadOnlyUserName = _connection.ReadOnlyUserName,
+                                        ReadWritePassword = _connection.ReadWritePassword,
+                                        ReadWriteUserName = _connection.ReadWriteUserName,
+                                        Server = _connection.Server,
+                                        Timeout = _connection.Timeout,
+                                        UserName = _connection.UserName
+                                    };
+                                    return_id = (c as MySqlConfig).PersistConfForHelper(dr["solution_id"].ToString(), this.InfraConnectionFactory, Convert.ToInt32(dr["eb_user_id"]), Convert.ToDateTime(dr["date_created"]));
+                                }
+                                EbIntegration _obj = new EbIntegration
+                                {
+                                    ConfigId = return_id,
+                                    Preference = ConPreferences.PRIMARY,
+                                    Type = EbConnections.EbOBJECTS
+                                };
+                                _obj.PersistIntegration(dr["solution_id"].ToString(), this.InfraConnectionFactory, Convert.ToInt32(dr["eb_user_id"]));
+                            }
+
+                            else if (con.EbConnectionType == EbConnectionTypes.Cloudinary)
+                            {
+                                EbCloudinaryConnection _connection = con as EbCloudinaryConnection;
+                                EbCloudinaryConfig c = new EbCloudinaryConfig
+                                {
+                                    ApiKey = _connection.Account.ApiKey,
+                                    ApiSecret = _connection.Account.ApiSecret,
+                                    Cloud = _connection.Account.Cloud,
+                                    NickName = _connection.NickName
+                                };
+                                return_id = c.PersistConfForHelper(dr["solution_id"].ToString(), this.InfraConnectionFactory, Convert.ToInt32(dr["eb_user_id"]), Convert.ToDateTime(dr["date_created"]));
+
+                                EbIntegration _obj = new EbIntegration
+                                {
+                                    ConfigId = return_id,
+                                    Preference = ConPreferences.PRIMARY,
+                                    Type = EbConnections.Cloudinary
+                                };
+                                _obj.PersistIntegration(dr["solution_id"].ToString(), this.InfraConnectionFactory, Convert.ToInt32(dr["eb_user_id"]));
+                            }
+
+                            else if (con.EbConnectionType == EbConnectionTypes.SMTP)
+                            {
+                                EbEmail _connection = con as EbEmail;
+                                EbSmtpConfig c = new EbSmtpConfig
+                                {
+                                    EmailAddress = _connection.EmailAddress,
+                                    EnableSsl = _connection.EnableSsl,
+                                    Host = _connection.Host,
+                                    NickName = _connection.NickName,
+                                    Password = _connection.Password,
+                                    Port = _connection.Port,
+                                    ProviderName = SmtpProviders.Gmail
+                                };
+                                return_id = c.PersistConfForHelper(dr["solution_id"].ToString(), this.InfraConnectionFactory, Convert.ToInt32(dr["eb_user_id"]), Convert.ToDateTime(dr["date_created"]));
+                                EbIntegration _obj = new EbIntegration
+                                {
+                                    ConfigId = return_id,
+                                    Preference = ConPreferences.PRIMARY,
+                                    Type = EbConnections.SMTP
+                                };
+                                _obj.PersistIntegration(dr["solution_id"].ToString(), this.InfraConnectionFactory, Convert.ToInt32(dr["eb_user_id"]));
+                            }
+                            else
+                            {
+                                Console.ForegroundColor = ConsoleColor.Red;
+                                Console.WriteLine("- " + dr["id"]);
+                                Console.ForegroundColor = ConsoleColor.White;
+                            }
+                        }
+                    }//Cloudinary,EbDATA,EbFILES,EbOBJECTS,SMTP
+                    //Cloudinary,EbDATA,,EbFILES,EbImageManipulation,EbLOGS,EbOBJECTS,FTP,SMS,SMTP
+                }
+            }
+            catch (Exception e)
             {
                 res.ResponseStatus.Message = e.Message;
             }
