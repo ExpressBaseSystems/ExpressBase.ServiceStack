@@ -578,7 +578,7 @@ namespace ExpressBase.ServiceStack.Services
                                 _obj.PersistIntegrationForHelper(dr["solution_id"].ToString(), this.InfraConnectionFactory, Convert.ToInt32(dr["eb_user_id"]), Convert.ToDateTime(dr["date_created"]));
                             }
 
-                          else  if (con.EbConnectionType == EbConnectionTypes.EbOBJECTS)
+                            else if (con.EbConnectionType == EbConnectionTypes.EbOBJECTS)
                             {
                                 EbObjectsDbConnection _connection = (con as EbObjectsDbConnection);
                                 if (_connection.DatabaseVendor == DatabaseVendors.PGSQL)
@@ -709,27 +709,6 @@ namespace ExpressBase.ServiceStack.Services
             }
             return res;
         }
-        public _GetConectionsResponse Get(_GetConectionsRequest request)
-        {
-            _GetConectionsResponse res = new _GetConectionsResponse();
-
-            try
-            {
-                string sql = "SELECT * FROM eb_connections";
-                EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(sql);
-                if (dt.Rows.Count > 0)
-                {
-                    foreach(EbDataRow dr in dt.Rows)
-                    {
-
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                res.ResponseStatus.Message = e.Message;
-            }
-            return res;
-        }
     }
 }
+
