@@ -125,7 +125,8 @@ namespace ExpressBase.ServiceStack.Services
                         {
                             if (entry.Type.EbDbType != dr.Type && !(entry.Name.Equals("eb_created_at") || 
                                 entry.Name.Equals("eb_lastmodified_at") || entry.Name.Equals("eb_del") ||
-                                entry.Name.Equals("eb_void") || entry.Name.Equals("eb_default")))
+                                entry.Name.Equals("eb_void") || entry.Name.Equals("eb_default")) ||
+                                (entry.Type.EbDbType.ToString().Equals("Boolean")  && dr.Type.ToString().Equals("String")))
                                 Msg += string.Format("Already exists '{0}' Column for {1}.{2}({3}); ", dr.Type.ToString(), tableName, entry.Name, entry.Type.EbDbType);
                             isFound = true;
                             break;
@@ -193,6 +194,7 @@ namespace ExpressBase.ServiceStack.Services
             EbWebForm form = GetWebFormObject(request.RefId);
             form.TableRowId = request.RowId;
             form.RefId = request.RefId;
+            form.UserObj = request.UserObj;
             form.RefreshFormData(EbConnectionFactory.DataDB, this);
             _dataset.FormData = form.FormData;
             return _dataset;
@@ -271,7 +273,7 @@ WHERE
             FormObj.RefId = request.RefId;
             FormObj.TableRowId = request.RowId;
             FormObj.FormData = request.FormData;
-            FormObj.UserId = request.UserId;
+            FormObj.UserObj = request.UserObj;
             FormObj.LocationId = request.CurrentLoc;
             FormObj.MergeFormData();
             int r = FormObj.Save(EbConnectionFactory.DataDB, this);
@@ -287,7 +289,7 @@ WHERE
         {
             EbWebForm FormObj = GetWebFormObject(request.RefId);
             FormObj.TableRowId = request.RowId;
-            FormObj.UserId = request.UserId;            
+            FormObj.UserObj = request.UserObj;            
             return new DeleteDataFromWebformResponse
             {
                 RowAffected = FormObj.Delete(EbConnectionFactory.DataDB)
@@ -298,7 +300,7 @@ WHERE
         {
             EbWebForm FormObj = GetWebFormObject(request.RefId);
             FormObj.TableRowId = request.RowId;
-            FormObj.UserId = request.UserId;            
+            FormObj.UserObj = request.UserObj;            
             return new CancelDataFromWebformResponse
             {
                 RowAffected = FormObj.Cancel(EbConnectionFactory.DataDB)
