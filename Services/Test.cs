@@ -13,7 +13,7 @@ namespace ExpressBase.ServiceStack.Services
 {
     public class Test : EbBaseService
     {
-        public Test(IEbConnectionFactory _dbf, IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_dbf,_mqp,_mqc) { }
+        public Test(IEbConnectionFactory _dbf, IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_dbf, _mqp, _mqc) { }
 
         public TestResponse Any(TestRequest request)
         {
@@ -21,7 +21,7 @@ namespace ExpressBase.ServiceStack.Services
             var con = EbConnectionFactory.DataDB.GetNewConnection();
             log.Info("Connection");
             con.Open();
-            log.Info(".............."+con+"Connection Opened");
+            log.Info(".............." + con + "Connection Opened");
             // string sql = "INSERT INTO testtb (name) VALUES ('BINI')";
 
             try
@@ -35,9 +35,13 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception e)
             {
             }
-            
+
             return null;
-        }        
-       
+        }
+
+
+
     }
+
+    
 }

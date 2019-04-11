@@ -126,7 +126,7 @@ namespace ExpressBase.ServiceStack.Services
                             if (entry.Type.EbDbType != dr.Type && !(entry.Name.Equals("eb_created_at") || 
                                 entry.Name.Equals("eb_lastmodified_at") || entry.Name.Equals("eb_del") ||
                                 entry.Name.Equals("eb_void") || entry.Name.Equals("eb_default")))
-                                Msg += string.Format("Already exists '{0}' Column for {1}.{2}({3}); ", dr.Type.ToString(), tableName, entry.Name, entry.Type.ToString());
+                                Msg += string.Format("Already exists '{0}' Column for {1}.{2}({3}); ", dr.Type.ToString(), tableName, entry.Name, entry.Type.EbDbType);
                             isFound = true;
                             break;
                         }
