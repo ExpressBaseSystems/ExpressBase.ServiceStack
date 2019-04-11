@@ -192,7 +192,7 @@ namespace ExpressBase.ServiceStack.Services
                 ObjectWrapper = this.GetObjectByVer(sqlfunction.Reference);
                 if (ObjectWrapper.EbObj == null)
                     throw new ApiException("SqlFunction not found");
-                InputParams = (ObjectWrapper.EbObj as EbDataReader).GetParams(null);
+                InputParams = (ObjectWrapper.EbObj as EbSqlFunction).GetParams(null);
 
                 this.FillParams(InputParams, step);//fill parameter value from prev component
             }
