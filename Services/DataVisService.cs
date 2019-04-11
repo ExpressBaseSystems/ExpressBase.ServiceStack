@@ -729,8 +729,16 @@ namespace ExpressBase.ServiceStack
                 if (col.Type == EbDbTypes.Date)
                 {
                     _unformattedData = (_unformattedData == DBNull.Value) ? DateTime.MinValue : _unformattedData;
-                    _formattedData = (((DateTime)_unformattedData).Date != DateTime.MinValue) ? Convert.ToDateTime(_unformattedData).ToString("d", cults.DateTimeFormat) : string.Empty;
-                    row[col.Data] = Convert.ToDateTime(_unformattedData).ToString("yyyy-MM-dd");
+                    if ((col as DVDateTimeColumn).Format == DateFormat.Date)
+                    {
+                        _formattedData = (((DateTime)_unformattedData).Date != DateTime.MinValue) ? Convert.ToDateTime(_unformattedData).ToString("d", cults.DateTimeFormat) : string.Empty;
+                        row[col.Data] = Convert.ToDateTime(_unformattedData).ToString("yyyy-MM-dd");
+                    }
+                    else if ((col as DVDateTimeColumn).Format == DateFormat.DateTime)
+                    {
+                        _formattedData = (((DateTime)_unformattedData).Date != DateTime.MinValue) ? Convert.ToDateTime(_unformattedData).ToString("dd MM yyyy hh: mm tt", cults.DateTimeFormat) : string.Empty;
+                        row[col.Data] = Convert.ToDateTime(_unformattedData);
+                    }
                 }
                 else if (col.Type == EbDbTypes.Decimal || col.Type == EbDbTypes.Int32 || col.Type == EbDbTypes.Int64)
                 {
