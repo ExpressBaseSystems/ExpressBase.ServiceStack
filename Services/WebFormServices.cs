@@ -125,8 +125,8 @@ namespace ExpressBase.ServiceStack.Services
                         {
                             if (entry.Type.EbDbType != dr.Type && !(entry.Name.Equals("eb_created_at") || 
                                 entry.Name.Equals("eb_lastmodified_at") || entry.Name.Equals("eb_del") ||
-                                entry.Name.Equals("eb_void") || entry.Name.Equals("eb_default")) ||
-                                (entry.Type.EbDbType.ToString().Equals("Boolean")  && dr.Type.ToString().Equals("String")))
+                                entry.Name.Equals("eb_void") || entry.Name.Equals("eb_default") ||
+                                (entry.Type.EbDbType.ToString().Equals("Boolean")  && dr.Type.ToString().Equals("String"))))
                                 Msg += string.Format("Already exists '{0}' Column for {1}.{2}({3}); ", dr.Type.ToString(), tableName, entry.Name, entry.Type.EbDbType);
                             isFound = true;
                             break;
@@ -190,6 +190,7 @@ namespace ExpressBase.ServiceStack.Services
 
         public GetRowDataResponse Any(GetRowDataRequest request)
         {
+            Console.WriteLine("Requesting for WebFormData( Refid : " + request.RefId + ", Rowid : " + request.RowId + " ).................");
             GetRowDataResponse _dataset = new GetRowDataResponse();
             EbWebForm form = GetWebFormObject(request.RefId);
             form.TableRowId = request.RowId;
