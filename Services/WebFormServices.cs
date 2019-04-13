@@ -276,13 +276,18 @@ WHERE
             FormObj.FormData = request.FormData;
             FormObj.UserObj = request.UserObj;
             FormObj.LocationId = request.CurrentLoc;
+            Console.WriteLine("Insert/Update WebFormData : MergeFormData start");
             FormObj.MergeFormData();
+            Console.WriteLine("Insert/Update WebFormData : Save start");
             int r = FormObj.Save(EbConnectionFactory.DataDB, this);
+            Console.WriteLine("Insert/Update WebFormData : AfterSave start");
+            int a = FormObj.AfterSave(EbConnectionFactory.DataDB, request.RowId > 0);
             return new InsertDataFromWebformResponse()
             {
                 RowId = FormObj.TableRowId,
                 FormData = FormObj.FormData,
-                RowAffected = r
+                RowAffected = r,
+                AfterSaveStatus = a
             };
         }
 
