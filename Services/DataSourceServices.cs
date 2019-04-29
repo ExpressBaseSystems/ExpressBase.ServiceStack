@@ -550,5 +550,45 @@ namespace ExpressBase.ServiceStack
             }
             return resp;
         }
+
+        public DatawriterResponse Post(DatawriterRequest request)
+        {
+            EbDataTable t = new EbDataTable();
+            DatawriterResponse resp = new DatawriterResponse();
+            try
+            {
+                List<DbParameter> parameter = new List<DbParameter>();
+                List<string> _params = new List<string>();
+                int trans = 0;
+                if (request.Parameters.Count > 0)
+                {
+                    foreach (Param p in request.Parameters)
+                    {
+                        _params.Add(":" + p.Name);
+                        parameter.Add(this.EbConnectionFactory.DataDB.GetNewParameter(p.Name, (EbDbTypes)Convert.ToInt32(p.Type), p.ValueTo));
+                    }
+                    trans = this.EbConnectionFactory.ObjectsDB.DoNonQuery(request.Sql, parameter.ToArray());
+                }
+                else
+                {
+                    trans = this.EbConnectionFactory.ObjectsDB.DoNonQuery(request.Sql);
+                }
+                t.Columns.Add(new EbDataColumn(0, "status", EbDbTypes.BooleanOriginal));
+                t.Rows.Add(new EbDataRow());
+                if (trans > 0)
+                    t.Rows[0].Add(true);
+                else
+                    t.Rows[0].Add(false);
+
+                resp.Data = t;
+            }
+            catch (Exception e)
+            {
+                resp.ResponseStatus.Message = e.Message;
+                t.Rows[0].Add(false);
+                resp.Data = t;
+            }
+            return resp;
+        }
     }
 }
