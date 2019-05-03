@@ -9,6 +9,7 @@ using ExpressBase.Objects.EmailRelated;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ExpressBase.ServiceStack.MQServices;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using ServiceStack.Redis;
 using System;
 using System.Collections.Generic;
@@ -37,6 +38,23 @@ namespace ExpressBase.ServiceStack.Services
             this.ApiResponse = new ApiResponse();
         }
 
+        public Dictionary<string, object> Proc(Dictionary<string, object> _d)
+        {
+            Dictionary<string, object> gp = new Dictionary<string, object>();
+            foreach (var kp in _d)
+            {
+                if ((kp.Value as string).StartsWith("{") && (kp.Value as string).EndsWith("}")||
+                    (kp.Value as string).StartsWith("[") && (kp.Value as string).EndsWith("]"))
+                {
+                    string formated = (kp.Value as string).Replace(@"\", string.Empty);
+                    gp.Add(kp.Key, JObject.Parse(formated));
+                }
+                else
+                    gp.Add(kp.Key, kp.Value);
+            }
+            return gp;
+        }
+
         public ApiResponse Any(ApiRequest request)
         {
             this.ApiResponse.Name = request.Name;
@@ -44,7 +62,7 @@ namespace ExpressBase.ServiceStack.Services
             this.ApiResponse.Message.ExecutedOn = DateTime.UtcNow.ToString();
             var watch = new System.Diagnostics.Stopwatch(); watch.Start();
             this.SolutionId = request.SolnId;
-            this.GlobalParams = request.Data;
+            this.GlobalParams = this.Proc(request.Data);
             int step = 0;
             this.Api = this.Get(new ApiByNameRequest { Name = request.Name, Version = request.Version }).Api;
             try
@@ -98,7 +116,7 @@ namespace ExpressBase.ServiceStack.Services
                 else if (resource is EbEmailNode)
                     res.Result = this.ExcEmail(resource as EbEmailNode, index);
                 else if (resource is EbProcessor)
-                    res.Result = (resource as EbProcessor).Evaluate(this.Api.Resources[index - 1],this.GlobalParams);
+                    res.Result = (resource as EbProcessor).Evaluate((index != 0) ? this.Api.Resources[index - 1] : null, this.GlobalParams);
                 else if (resource is EbConnectApi)
                     res.Result = this.ExecuteConnectApi((resource as EbConnectApi), index);
                 else if (resource is EbThirdPartyApi)
@@ -148,7 +166,7 @@ namespace ExpressBase.ServiceStack.Services
                 ObjectWrapper = this.GetObjectByVer(writer.Reference);
                 if (ObjectWrapper.EbObj == null)
                     throw new ApiException("DataWriter not found");
-                List<Param> InputParams = (ObjectWrapper.EbObj as EbDataReader).GetParams(null);
+                List<Param> InputParams = (ObjectWrapper.EbObj as EbDataWriter).GetParams(null);
 
                 this.FillParams(InputParams, step);//fill parameter value from prev component
 
@@ -161,7 +179,17 @@ namespace ExpressBase.ServiceStack.Services
             {
                 throw new ApiException("Excecution Failed:");
             }
-            return this.EbConnectionFactory.ObjectsDB.DoNonQuery((ObjectWrapper.EbObj as EbDataWriter).Sql, p.ToArray());
+            int status = this.EbConnectionFactory.ObjectsDB.DoNonQuery((ObjectWrapper.EbObj as EbDataWriter).Sql, p.ToArray());
+            if (status > 0)
+            {
+                this.ApiResponse.Message.Description = status + "row inserted";
+                return true;
+            }
+            else
+            {
+                this.ApiResponse.Message.Description = status + "row inserted";
+                return false;
+            }
         }
 
         private object ExcSqlFunction(EbSqlFunc sqlfunction, int step)
@@ -174,7 +202,7 @@ namespace ExpressBase.ServiceStack.Services
                 ObjectWrapper = this.GetObjectByVer(sqlfunction.Reference);
                 if (ObjectWrapper.EbObj == null)
                     throw new ApiException("SqlFunction not found");
-                InputParams = (ObjectWrapper.EbObj as EbDataReader).GetParams(null);
+                InputParams = (ObjectWrapper.EbObj as EbSqlFunction).GetParams(null);
 
                 this.FillParams(InputParams, step);//fill parameter value from prev component
             }

@@ -15,9 +15,11 @@ namespace ExpressBase.ServiceStack.Services
         public DbClientServices(IEbConnectionFactory _dbf) : base(_dbf) { }
         EbDbExplorerTablesDict Table = new EbDbExplorerTablesDict();
         List<object> Row = new List<object>();
+        
 
         public GetDbTablesResponse Get(GetDbTablesRequest request)
         {
+            int TableCount = 0;
             string sql = @"
                 SELECT Q1.table_name, Q1.table_schema, i.indexname FROM 
                 (SELECT
@@ -27,7 +29,8 @@ namespace ExpressBase.ServiceStack.Services
                 WHERE
                     table_schema != 'pg_catalog'
                     AND table_schema != 'information_schema'
-                    AND table_type='BASE TABLE')Q1
+                    AND table_type='BASE TABLE'
+                    AND table_name NOT LIKE 'eb_%')Q1
                 LEFT JOIN
                     pg_indexes i
                 ON
@@ -39,7 +42,8 @@ namespace ExpressBase.ServiceStack.Services
                     information_schema.columns
                 WHERE
                     table_schema != 'pg_catalog' AND
-                    table_schema != 'information_schema'
+                    table_schema != 'information_schema' AND 
+                    table_name NOT LIKE 'eb_%'
                 ORDER BY table_name;
 
                SELECT
@@ -62,6 +66,8 @@ namespace ExpressBase.ServiceStack.Services
                     pg_namespace sch ON sch.oid = tbl.relnamespace
                JOIN 
                     pg_attribute col ON(col.attrelid = tbl.oid AND col.attnum = u.attnum)
+               WHERE
+                    tbl.relname NOT LIKE 'eb_%'
                GROUP BY 
                     constraint_name, constraint_type, tabless, definition
                ORDER BY 
@@ -82,13 +88,17 @@ namespace ExpressBase.ServiceStack.Services
                 }
                 else
                 {
-                    EbDbExplorerTable tab = new EbDbExplorerTable()
+                    //if(Row[0].ToString().IndexOf("eb_ ", StringComparison.OrdinalIgnoreCase) == 0)
                     {
-                        Name = Row[0].ToString(),
-                        Schema = Row[1].ToString()
-                    };
-                    Table.TableCollection.Add(Row[0].ToString(), tab);
-                    Table.TableCollection[Row[0].ToString()].Index.Add(Row[2].ToString());
+                        EbDbExplorerTable tab = new EbDbExplorerTable()
+                        {
+                            Name = Row[0].ToString(),
+                            Schema = Row[1].ToString()
+                        };
+                        Table.TableCollection.Add(Row[0].ToString(), tab);
+                        Table.TableCollection[Row[0].ToString()].Index.Add(Row[2].ToString());
+                        TableCount++;
+                    }                    
                 }
             }
             Data = dt.Tables[1];
@@ -133,6 +143,7 @@ namespace ExpressBase.ServiceStack.Services
                             obj.ColumnKey = "Foreign key";
                             string definition = Row[4].ToString();
                             string[] df = definition.Split("REFERENCES ");
+                            df[1] = ":: " + df[1];
                             obj.ColumnTable = df[df.Length - 1];
                         }
                     }
@@ -153,8 +164,9 @@ namespace ExpressBase.ServiceStack.Services
             return new GetDbTablesResponse
             {
                 Tables = Table,
-                DB_Name = DB_Name
-            };
+                DB_Name = DB_Name,
+                TableCount = TableCount
+        };
         }
 
         [CompressResponse]
