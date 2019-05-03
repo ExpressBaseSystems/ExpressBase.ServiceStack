@@ -27,8 +27,7 @@ namespace ExpressBase.ServiceStack
                 string sql = "";
                 if (request.Id > 0)
                 {
-                    sql = "SELECT id, applicationname, description, application_type, app_icon, app_settings FROM eb_applications WHERE id = :id AND eb_del = 'F'";
-
+                        sql = "SELECT id, applicationname, description, application_type, app_icon, app_settings FROM eb_applications WHERE id = :id AND eb_del = 'F'";
                 }
                 else
                 {
@@ -193,7 +192,6 @@ namespace ExpressBase.ServiceStack
                         Description = dr[3].ToString(),
                         EbType = ___otyp.ToString(),
                         AppId = Convert.ToInt32(dr[4])
-
                     });
                 }
             }
@@ -217,14 +215,12 @@ namespace ExpressBase.ServiceStack
             }
             while (!uniq_appnameresp.IsUnique);
 
-            using (var con = this.EbConnectionFactory.DataDB.GetNewConnection(DbName.ToLower()))
+            using (var con = this.EbConnectionFactory.ObjectsDB.GetNewConnection(DbName.ToLower()))
             {
                 con.Open();
                 if (!string.IsNullOrEmpty(request.AppName))
                 {
-                    string sql = "INSERT INTO eb_applications (applicationname,application_type, description,app_icon) VALUES (:applicationname,:apptype, :description,:appicon) RETURNING id";
-
-                    var cmd = EbConnectionFactory.DataDB.GetNewCommand(con, sql);
+                    DbCommand cmd = EbConnectionFactory.ObjectsDB.GetNewCommand(con, EbConnectionFactory.ObjectsDB.EB_CREATEAPPLICATION);
                     cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("applicationname", EbDbTypes.String, request.AppName));
                     cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("apptype", EbDbTypes.Int32, request.AppType));
                     cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("description", EbDbTypes.String, request.Description));
@@ -292,15 +288,13 @@ namespace ExpressBase.ServiceStack
 
             try
             {
-                string sql = "INSERT INTO eb_applications (applicationname,application_type, description,app_icon) VALUES (:applicationname,:apptype, :description,:appicon) RETURNING id;";
-
                 DbParameter[] parameters = {
-                    this.EbConnectionFactory.DataDB.GetNewParameter("applicationname", EbDbTypes.String, request.AppName),
-                    this.EbConnectionFactory.DataDB.GetNewParameter("apptype", EbDbTypes.Int32, request.AppType),
-                    this.EbConnectionFactory.DataDB.GetNewParameter("description", EbDbTypes.String, request.Description),
-                    this.EbConnectionFactory.DataDB.GetNewParameter("appicon", EbDbTypes.String, request.AppIcon)
+                    this.EbConnectionFactory.ObjectsDB.GetNewParameter("applicationname", EbDbTypes.String, request.AppName),
+                    this.EbConnectionFactory.ObjectsDB.GetNewParameter("apptype", EbDbTypes.Int32, request.AppType),
+                    this.EbConnectionFactory.ObjectsDB.GetNewParameter("description", EbDbTypes.String, request.Description),
+                    this.EbConnectionFactory.ObjectsDB.GetNewParameter("appicon", EbDbTypes.String, request.AppIcon)
                 };
-                var dt = this.EbConnectionFactory.DataDB.DoQuery(sql, parameters);
+                var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(EbConnectionFactory.ObjectsDB.EB_CREATEAPPLICATION_DEV, parameters);
 
                 resp = new CreateApplicationResponse() { id = Convert.ToInt32(dt.Rows[0][0]) };
 
