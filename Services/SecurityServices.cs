@@ -795,28 +795,29 @@ namespace ExpressBase.ServiceStack.Services
 			{
 				sDtConstr = _sDtTitle.Substring(0, _sDtTitle.Length - 1) + "$$" + _sDtDesc.Substring(0, _sDtDesc.Length - 1) + "$$" + _sDtType.Substring(0, _sDtType.Length - 1) + "$$" + _sDtStart.Substring(0, _sDtStart.Length - 1) + "$$" + _sDtEnd.Substring(0, _sDtEnd.Length - 1) + "$$" + _sDtDays.Substring(0, _sDtDays.Length - 1);
 			}
-			
-			string sql = this.EbConnectionFactory.DataDB.EB_SAVEUSERGROUP_QUERY;
-			using (var con = this.EbConnectionFactory.DataDB.GetNewConnection())
-			{
-				con.Open();
-				
-				int[] emptyarr = new int[] { };
-				DbParameter[] parameters =
-					{
-						this.EbConnectionFactory.DataDB.GetNewParameter("userid", EbDbTypes.Int32, request.UserId),
-						this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.Id),
-						this.EbConnectionFactory.DataDB.GetNewParameter("name", EbDbTypes.String, request.Name),
-						this.EbConnectionFactory.DataDB.GetNewParameter("description", EbDbTypes.String, request.Description),
-						this.EbConnectionFactory.DataDB.GetNewParameter("users", EbDbTypes.String,(request.Users != string.Empty? request.Users : string.Empty)),
-						this.EbConnectionFactory.DataDB.GetNewParameter("ipconstrnw", EbDbTypes.String, sIpConstr),
-						this.EbConnectionFactory.DataDB.GetNewParameter("ipconstrold", EbDbTypes.String, request.IpConstraintOld),
-						this.EbConnectionFactory.DataDB.GetNewParameter("dtconstrnw", EbDbTypes.String, sDtConstr),
-						this.EbConnectionFactory.DataDB.GetNewParameter("dtconstrold", EbDbTypes.String, request.DtConstraintOld)
-					};
 
-				EbDataSet dt = this.EbConnectionFactory.DataDB.DoQueries(sql, parameters);
-
+            string sql = this.EbConnectionFactory.DataDB.EB_SAVEUSERGROUP_QUERY;
+            using (var con = this.EbConnectionFactory.DataDB.GetNewConnection())
+            {
+                con.Open();
+                int id = 0;
+                int[] emptyarr = new int[] { };
+                List<DbParameter> parameters = new List<DbParameter>
+                    {
+                        this.EbConnectionFactory.DataDB.GetNewParameter("userid", EbDbTypes.Int32, request.UserId),
+                        this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.Id),
+                        this.EbConnectionFactory.DataDB.GetNewParameter("name", EbDbTypes.String, request.Name),
+                        this.EbConnectionFactory.DataDB.GetNewParameter("description", EbDbTypes.String, request.Description),
+                        this.EbConnectionFactory.DataDB.GetNewParameter("users", EbDbTypes.String,(request.Users != string.Empty? request.Users : string.Empty)),
+                        this.EbConnectionFactory.DataDB.GetNewParameter("ipconstrnw", EbDbTypes.String, sIpConstr),
+                        this.EbConnectionFactory.DataDB.GetNewParameter("ipconstrold", EbDbTypes.String, request.IpConstraintOld),
+                        this.EbConnectionFactory.DataDB.GetNewParameter("dtconstrnw", EbDbTypes.String, sDtConstr),
+                        this.EbConnectionFactory.DataDB.GetNewParameter("dtconstrold", EbDbTypes.String, request.DtConstraintOld)
+                    };
+                if (EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.MYSQL)
+                {
+                    parameters.Add(this.EbConnectionFactory.DataDB.GetNewOutParameter("out_gid", EbDbTypes.Int32));
+                    EbDataTable ds = EbConnectionFactory.ObjectsDB.DoProcedure(EbConnectionFactory.ObjectsDB.EB_SAVEUSERGROUP_QUERY, parameters.ToArray());
                     if (ds.Rows.Count > 0)
                     {
                         id = Int32.Parse(ds.Rows[0][0].ToString());
