@@ -34,7 +34,7 @@ namespace ExpressBase.ServiceStack.Services
         {
             EbConnectionsConfig _solutionConnections = EbConnectionsConfigProvider.GetDataCenterConnections();
 
-            _solutionConnections.ObjectsDbConfig.DatabaseName = request.dbName;
+            //_solutionConnections.ObjectsDbConfig.DatabaseName = request.dbName;
 
             _solutionConnections.DataDbConfig.DatabaseName = request.dbName;
 
