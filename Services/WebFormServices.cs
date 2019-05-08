@@ -644,7 +644,7 @@ WHERE
             FormObj.TableRowId = request.RowId;
             FormObj.UserObj = request.UserObj;
 
-            string temp = FormObj.GetAuditTrail(EbConnectionFactory.DataDB);
+            string temp = FormObj.GetAuditTrail(EbConnectionFactory.DataDB, this);
 
             return new GetAuditTrailResponse() { Json = temp };
 
