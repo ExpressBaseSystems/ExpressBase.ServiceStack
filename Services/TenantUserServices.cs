@@ -108,15 +108,15 @@ namespace ExpressBase.ServiceStack.Services
                 con.Open();
                 List<DbParameter> parameters = new List<DbParameter>();
                 int result = 0;
-                var query1 = "INSERT INTO eb_locations(longname,shortname,image,meta_json) VALUES(:lname,:sname,:img,:meta) RETURNING id;";
+                var query1 = EbConnectionFactory.ObjectsDB.EB_SAVELOCATION;
                 var query2 = "UPDATE eb_locations SET longname= :lname, shortname = :sname, image = :img, meta_json = :meta WHERE id = :lid;";
-                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":lname", EbDbTypes.String, request.Longname));
-                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":sname", EbDbTypes.String, request.Shortname));
-                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":img", EbDbTypes.String, request.Img));
-                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":meta", EbDbTypes.String, request.ConfMeta));
+                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("lname", EbDbTypes.String, request.Longname));
+                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("sname", EbDbTypes.String, request.Shortname));
+                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("img", EbDbTypes.String, request.Img));
+                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("meta", EbDbTypes.String, request.ConfMeta));
                 if (request.Locid > 0)
                 {
-                    parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":lid", EbDbTypes.Int32, request.Locid));
+                    parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("lid", EbDbTypes.Int32, request.Locid));
                     var t = this.EbConnectionFactory.ObjectsDB.DoNonQuery(query2.ToString(), parameters.ToArray());
                     result = t;
                 }
@@ -125,8 +125,8 @@ namespace ExpressBase.ServiceStack.Services
                     var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(query1.ToString(), parameters.ToArray());
                     result = Convert.ToInt32(dt.Rows[0][0]);
                 }
-                this.Post(new UpdateSolutionRequest() { SolnId = request.SolnId, UserId = request.UserId, DbName = request.SolnId});
-                return new SaveLocationMetaResponse { Id =  result};
+                this.Post(new UpdateSolutionRequest() { SolnId = request.SolnId, UserId = request.UserId, DbName = request.SolnId });
+                return new SaveLocationMetaResponse { Id = result };
             }
         }
 
@@ -136,7 +136,7 @@ namespace ExpressBase.ServiceStack.Services
             string query = "UPDATE eb_location_config SET eb_del = 'T' WHERE id=:id RETURNING id";
             parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":id", EbDbTypes.Int32, request.Id));
             var dt = this.EbConnectionFactory.ObjectsDB.DoNonQuery(query.ToString(), parameters.ToArray());
-            return new DeleteLocResponse {id=(dt==1)?request.Id:0 };
+            return new DeleteLocResponse { id = (dt == 1) ? request.Id : 0 };
         }
 
         public UpdateSolutionResponse Post(UpdateSolutionRequest req)
@@ -163,9 +163,9 @@ namespace ExpressBase.ServiceStack.Services
                 Console.WriteLine("sol_Obj Updated : " + sol_Obj.ToString());
                 Console.ForegroundColor = ConsoleColor.White;
             }
-            catch(Exception e)
+            catch (Exception e)
             {
-                Console.WriteLine("Error UpdateSolutionRequest: " +e.StackTrace);
+                Console.WriteLine("Error UpdateSolutionRequest: " + e.StackTrace);
             }
             return new UpdateSolutionResponse { };
         }
@@ -204,14 +204,14 @@ namespace ExpressBase.ServiceStack.Services
                     });
                 }
             }
-              
+
             return new LocationInfoTenantResponse { Locations = locs, Config = Conf };
         }
 
         public LocationInfoResponse Get(LocationInfoRequest req)
         {
             List<EbLocationCustomField> Conf = new List<EbLocationCustomField>();
-            Dictionary<int,EbLocation> locs = new Dictionary<int,EbLocation>();
+            Dictionary<int, EbLocation> locs = new Dictionary<int, EbLocation>();
 
             string query = "SELECT * FROM eb_location_config WHERE eb_del = 'F' ORDER BY id; SELECT * FROM eb_locations;";
             EbDataSet dt = this.EbConnectionFactory.ObjectsDB.DoQueries(query);
@@ -229,7 +229,7 @@ namespace ExpressBase.ServiceStack.Services
 
             foreach (var r in dt.Tables[1].Rows)
             {
-                locs.Add(Convert.ToInt32(r[0]),new EbLocation
+                locs.Add(Convert.ToInt32(r[0]), new EbLocation
                 {
                     LocId = Convert.ToInt32(r[0]),
                     ShortName = r[1].ToString(),

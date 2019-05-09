@@ -166,7 +166,7 @@ namespace ExpressBase.ServiceStack.Services
                 ObjectWrapper = this.GetObjectByVer(writer.Reference);
                 if (ObjectWrapper.EbObj == null)
                     throw new ApiException("DataWriter not found");
-                List<Param> InputParams = (ObjectWrapper.EbObj as EbDataReader).GetParams(null);
+                List<Param> InputParams = (ObjectWrapper.EbObj as EbDataWriter).GetParams(null);
 
                 this.FillParams(InputParams, step);//fill parameter value from prev component
 
@@ -179,7 +179,17 @@ namespace ExpressBase.ServiceStack.Services
             {
                 throw new ApiException("Excecution Failed:");
             }
-            return this.EbConnectionFactory.ObjectsDB.DoNonQuery((ObjectWrapper.EbObj as EbDataWriter).Sql, p.ToArray());
+            int status = this.EbConnectionFactory.ObjectsDB.DoNonQuery((ObjectWrapper.EbObj as EbDataWriter).Sql, p.ToArray());
+            if (status > 0)
+            {
+                this.ApiResponse.Message.Description = status + "row inserted";
+                return true;
+            }
+            else
+            {
+                this.ApiResponse.Message.Description = status + "row inserted";
+                return false;
+            }
         }
 
         private object ExcSqlFunction(EbSqlFunc sqlfunction, int step)
@@ -192,7 +202,7 @@ namespace ExpressBase.ServiceStack.Services
                 ObjectWrapper = this.GetObjectByVer(sqlfunction.Reference);
                 if (ObjectWrapper.EbObj == null)
                     throw new ApiException("SqlFunction not found");
-                InputParams = (ObjectWrapper.EbObj as EbDataReader).GetParams(null);
+                InputParams = (ObjectWrapper.EbObj as EbSqlFunction).GetParams(null);
 
                 this.FillParams(InputParams, step);//fill parameter value from prev component
             }
