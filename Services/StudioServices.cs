@@ -745,7 +745,7 @@ namespace ExpressBase.ServiceStack
                     {
                         cmd.Parameters.AddRange(dbParameter.ToArray());
                         refId = cmd.ExecuteScalar().ToString();
-                        string sql1 = "UPDATE eb_objects_ver SET obj_json=:jsonobj WHERES refid=:refid";
+                        string sql1 = "UPDATE eb_objects_ver SET obj_json=:jsonobj WHERE refid=:refid";
 
                         NTV[] parms = new NTV[2];
                         parms[0] = new NTV() { Name = ":jsonobj", Type = EbDbTypes.Json, Value = request.Json };
