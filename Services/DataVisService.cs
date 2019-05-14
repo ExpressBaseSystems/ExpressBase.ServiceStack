@@ -196,6 +196,12 @@ namespace ExpressBase.ServiceStack
         //    return resp;
         //}
 
+        public object Any(UpdateTreeColumnRequest request)
+        {
+            var _dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(request.sql);
+            return new object();
+        }
+
         public object Any(EbObjectWithRelatedDVRequest request)
         {
             EbDataVisualization dsobj = null;
@@ -440,7 +446,9 @@ namespace ExpressBase.ServiceStack
                 Levels = _levels,
                 Permission = _permission,
                 Summary = ReturnObj.Summary,
-                excel_file = ReturnObj.excel_file
+                excel_file = ReturnObj.excel_file,
+                TableName = _dataset.Tables[0].TableName,
+                Tree = ReturnObj.tree
             };
             this.Log.Info("dsresponse*****" + dsresponse.Data);
             var x = EbSerializers.Json_Serialize(dsresponse);
@@ -613,7 +621,7 @@ namespace ExpressBase.ServiceStack
             string PreviousGroupingText = string.Empty;
             int SerialCount = 0, PrevRowIndex = 0;
             bool isTree = false;
-
+            List<DVBaseColumn> dependencyTable = this.CreateDependencyTable(_dv);
             if ((_dv as EbTableVisualization) != null)
             {
                 if ((_dv as EbTableVisualization).RowGroupCollection.Count > 0 && (_dv as EbTableVisualization).CurrentRowGroup.RowGrouping.Count > 0)
@@ -646,19 +654,19 @@ namespace ExpressBase.ServiceStack
             RowColletion rows = _dataset.Tables[0].Rows;            
 
             var Treecol = this.Check4Tree((_dv as EbTableVisualization));
-
+            TreeData<EbDataRow> tree = new TreeData<EbDataRow>();
             if (Treecol != null)
             {
                 isTree = true;
-                TreeData<EbDataRow> tree = TreeGeneration(_formattedTable, _dataset.Tables[0], Treecol);
+                tree = TreeGeneration(_formattedTable, _dataset.Tables[0], Treecol);
                 rows = (tree.RowsOrdered as RowColletion);
                 int i = 0;
                 foreach (Node<EbDataRow> Nodedr in tree.Tree)
                 {
-                    DataTable2FormatedTable(Nodedr.Item, _dv, _user_culture, ref _formattedTable, ref globals, bObfuscute, _isexcel, ref Summary, ref worksheet, i, rows.Count,Nodedr.IsGroup,Nodedr.Level, isTree);
+                    DataTable2FormatedTable(Nodedr.Item, _dv, dependencyTable, _user_culture, ref _formattedTable, ref globals, bObfuscute, _isexcel, ref Summary, ref worksheet, i, rows.Count,Nodedr.IsGroup,Nodedr.Level, isTree);
                     if (Nodedr.Children.Count > 0)
                     {
-                        RecursiveGetTreeChilds(Nodedr, _dv, _user_culture, ref _formattedTable, ref globals, bObfuscute, _isexcel, ref Summary, ref worksheet, ref i, rows.Count, isTree);
+                        RecursiveGetTreeChilds(Nodedr, _dv, dependencyTable, _user_culture, ref _formattedTable, ref globals, bObfuscute, _isexcel, ref Summary, ref worksheet, ref i, rows.Count, isTree);
                     }
                     i++;
                 }
@@ -667,9 +675,9 @@ namespace ExpressBase.ServiceStack
             {
                 for (int i = 0; i < rows.Count; i++)
                 {
-                    DataTable2FormatedTable(rows[i], _dv, _user_culture, ref _formattedTable, ref globals, bObfuscute, _isexcel, ref Summary, ref worksheet, i, rows.Count);
+                    DataTable2FormatedTable(rows[i], _dv, dependencyTable, _user_culture, ref _formattedTable, ref globals, bObfuscute, _isexcel, ref Summary, ref worksheet, i, rows.Count);
                     if (isRowgrouping)
-                        DoRowGroupingCommon(rows[i], _dv, _user_culture, ref _formattedTable, IsMultiLevelRowGrouping, ref RowGrouping, ref PreviousGroupingText, ref CurSortIndex, ref SerialCount, i, dvColCount, TotalLevels, ref AggregateColumnIndexes, ref RowGroupingColumns, rows.Count);
+                        DoRowGroupingCommon(rows[i], _dv, dependencyTable, _user_culture, ref _formattedTable, IsMultiLevelRowGrouping, ref RowGrouping, ref PreviousGroupingText, ref CurSortIndex, ref SerialCount, i, dvColCount, TotalLevels, ref AggregateColumnIndexes, ref RowGroupingColumns, rows.Count);
                 }
             }
 
@@ -680,7 +688,49 @@ namespace ExpressBase.ServiceStack
             if (_isexcel)
                 bytes = package.GetAsByteArray();
 
-            return new PrePrcessorReturn { FormattedTable = _formattedTable, Summary = Summary, excel_file = bytes, rows = rows };
+            return new PrePrcessorReturn { FormattedTable = _formattedTable, Summary = Summary, excel_file = bytes, rows = rows, tree = tree.Tree};
+        }
+
+        public List<DVBaseColumn> CreateDependencyTable(EbDataVisualization _dv)
+        {
+            List<DVBaseColumn> noncustom = _dv.Columns.Where(item => !item.IsCustomColumn).ToList<DVBaseColumn>();
+            List<DVBaseColumn> custom = _dv.Columns.Where(item => item.IsCustomColumn).ToList<DVBaseColumn>();
+            List<DVBaseColumn> Columns = new List<DVBaseColumn>(noncustom);
+            foreach (DVBaseColumn col in custom)
+            {
+                List<DVBaseColumn> curcustom = new List<DVBaseColumn>();
+
+                foreach (FormulaPart formulaPart in col.FormulaParts)
+                {
+                    List<DVBaseColumn> curObj = noncustom.Where(item => item.Name == formulaPart.FieldName).ToList<DVBaseColumn>();
+                    if (curObj.Count == 0)
+                    {
+                        curObj = custom.Where(item => item.Name == formulaPart.FieldName).ToList<DVBaseColumn>();
+                        RecursiveCustomColumn(ref Columns, curObj[0], noncustom, custom);
+                    }
+                }
+
+                curcustom = Columns.Where(item => item.Name == col.Name).ToList<DVBaseColumn>();
+                if (curcustom.Count == 0)
+                    Columns.Add(col);
+            }
+            return Columns;
+        }
+
+        public void RecursiveCustomColumn(ref List<DVBaseColumn> Columns, DVBaseColumn _column, List<DVBaseColumn> noncustom, List<DVBaseColumn> custom)
+        {
+            foreach (FormulaPart formulaPart in _column.FormulaParts)
+            {
+                List<DVBaseColumn> curObj = noncustom.Where(item => item.Name == formulaPart.FieldName).ToList<DVBaseColumn>();
+                if (curObj.Count == 0)
+                {
+                    curObj = custom.Where(item => item.Name == formulaPart.FieldName).ToList<DVBaseColumn>();
+                    RecursiveCustomColumn(ref Columns, curObj[0], noncustom, custom);
+                    List<DVBaseColumn> curcustom = Columns.Where(item => item.Name == curObj[0].Name).ToList<DVBaseColumn>();
+                    if (curcustom.Count == 0)
+                        Columns.Add(curObj[0]);
+                }
+            }
         }
 
         public DVBaseColumn Check4Tree(EbTableVisualization dv)
@@ -694,29 +744,29 @@ namespace ExpressBase.ServiceStack
 
         }
 
-        public void RecursiveGetTreeChilds(Node<EbDataRow> Nodedr, EbDataVisualization _dv, CultureInfo _user_culture, ref EbDataTable _formattedTable, ref Globals globals, bool bObfuscute, bool _isexcel, ref Dictionary<int, List<object>> Summary, ref ExcelWorksheet worksheet, ref int i, int count, bool isTree)
+        public void RecursiveGetTreeChilds(Node<EbDataRow> Nodedr, EbDataVisualization _dv, List<DVBaseColumn> dependencyTable, CultureInfo _user_culture, ref EbDataTable _formattedTable, ref Globals globals, bool bObfuscute, bool _isexcel, ref Dictionary<int, List<object>> Summary, ref ExcelWorksheet worksheet, ref int i, int count, bool isTree)
         {
             foreach (Node<EbDataRow> dr in Nodedr.Children)
             {
                 i++;
-                DataTable2FormatedTable(dr.Item, _dv, _user_culture, ref _formattedTable, ref globals, bObfuscute, _isexcel, ref Summary, ref worksheet, i, count, dr.IsGroup, dr.Level, isTree);
+                DataTable2FormatedTable(dr.Item, _dv, dependencyTable, _user_culture, ref _formattedTable, ref globals, bObfuscute, _isexcel, ref Summary, ref worksheet, i, count, dr.IsGroup, dr.Level, isTree);
                 if (dr.Children.Count > 0)
                 {
-                    RecursiveGetTreeChilds(dr, _dv, _user_culture, ref _formattedTable, ref globals, bObfuscute, _isexcel, ref Summary, ref worksheet, ref i, count, isTree);
+                    RecursiveGetTreeChilds(dr, _dv, dependencyTable, _user_culture, ref _formattedTable, ref globals, bObfuscute, _isexcel, ref Summary, ref worksheet, ref i, count, isTree);
                 }
 
             }
 
         }
 
-        public void DataTable2FormatedTable(EbDataRow row, EbDataVisualization _dv, CultureInfo _user_culture, ref EbDataTable _formattedTable, ref Globals globals, bool bObfuscute, bool _isexcel, ref Dictionary<int, List<object>> Summary, ref ExcelWorksheet worksheet, int i, int count, bool isgroup = false, int level = 0, bool isTree = false)
+        public void DataTable2FormatedTable(EbDataRow row, EbDataVisualization _dv, List<DVBaseColumn> dependencyTable, CultureInfo _user_culture, ref EbDataTable _formattedTable, ref Globals globals, bool bObfuscute, bool _isexcel, ref Dictionary<int, List<object>> Summary, ref ExcelWorksheet worksheet, int i, int count, bool isgroup = false, int level = 0, bool isTree = false)
         {
             bool AllowLinkforZero = true;
 
             _formattedTable.Rows.Add(_formattedTable.NewDataRow2());
             _formattedTable.Rows[i][_formattedTable.Columns.Count - 1] = i + 1;
             int j = 0;
-            foreach (DVBaseColumn col in _dv.Columns)
+            foreach (DVBaseColumn col in dependencyTable)
             {
                 AllowLinkforZero = true;
                 if (col.IsCustomColumn)
@@ -921,7 +971,7 @@ namespace ExpressBase.ServiceStack
             return SortedGroupings;
         }
 
-        public void DoRowGroupingCommon(EbDataRow currentRow, EbDataVisualization Visualization, CultureInfo Culture, ref EbDataTable FormattedTable, bool IsMultiLevelRowGrouping, ref Dictionary<string, GroupingDetails> RowGrouping, ref string PreviousGroupingText, ref int CurSortIndex, ref int SerialCount, int PrevRowIndex, int dvColCount, int TotalLevels, ref List<int> AggregateColumnIndexes, ref List<DVBaseColumn> RowGroupingColumns, int RowCount)
+        public void DoRowGroupingCommon(EbDataRow currentRow, EbDataVisualization Visualization, List<DVBaseColumn> dependencyTable, CultureInfo Culture, ref EbDataTable FormattedTable, bool IsMultiLevelRowGrouping, ref Dictionary<string, GroupingDetails> RowGrouping, ref string PreviousGroupingText, ref int CurSortIndex, ref int SerialCount, int PrevRowIndex, int dvColCount, int TotalLevels, ref List<int> AggregateColumnIndexes, ref List<DVBaseColumn> RowGroupingColumns, int RowCount)
         {
             CurSortIndex += TotalLevels + 30;
 
@@ -1272,5 +1322,6 @@ namespace ExpressBase.ServiceStack
         public Dictionary<int, List<object>> Summary;
         public byte[] excel_file;
         public RowColletion rows;
+        public List<Node<EbDataRow>> tree;
     }
 }
