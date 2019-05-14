@@ -50,9 +50,12 @@ namespace ExpressBase.ServiceStack.MQServices
                 foreach (var u in MailIds)
                 {
                     User usr = this.Redis.Get<User>(string.Format(TokenConstants.SUB_FORMAT, request.JobArgs.SolnId, u.Value, "uc"));
-                    if (LocaleUser.ContainsKey(usr.Preference.Locale))
-                        LocaleUser[usr.Preference.Locale].Add(usr);
-                    else LocaleUser.Add(usr.Preference.Locale, new List<User> { usr });
+                    if (usr != null)
+                    {
+                        if (LocaleUser.ContainsKey(usr.Preference.Locale))
+                            LocaleUser[usr.Preference.Locale].Add(usr);
+                        else LocaleUser.Add(usr.Preference.Locale, new List<User> { usr });
+                    }
                 }
                 foreach (var locale in LocaleUser)
                 {
@@ -67,8 +70,8 @@ namespace ExpressBase.ServiceStack.MQServices
                         UserId = request.JobArgs.UserId,
                         WhichConsole = "uc"
                     });
-                   Console.WriteLine(locale.Key);
-                   Console.WriteLine("Inside MQService/ReportServiceInternal in SS \n After Report Render");
+                    Console.WriteLine(locale.Key);
+                    Console.WriteLine("Inside MQService/ReportServiceInternal in SS \n After Report Render");
                     RepRes.StreamWrapper.Memorystream.Position = 0;
                     foreach (var _u in locale.Value)
                     {
