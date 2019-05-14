@@ -536,17 +536,20 @@ namespace ExpressBase.ServiceStack
                     }
                     sql = string.Format(@"SELECT * FROM {0}({1})", request.FunctionName, string.Join(",", _params));
                     resp.Data = this.EbConnectionFactory.ObjectsDB.DoQuery(sql, parameter.ToArray());
+                    resp.Reponse = true;
                 }
                 else
                 {
                     sql = string.Format(@"SELECT * FROM {0}()", request.FunctionName);
                     resp.Data = this.EbConnectionFactory.ObjectsDB.DoQuery(sql);
+                    resp.Reponse = true;
                 }
             }
             catch (Exception e)
             {
-                resp.ResponseStatus.Message = e.Message;
-                resp.Data = new EbDataTable();
+                Console.WriteLine("Exception  at sql function execution::" + e.Message);
+                resp.Reponse = false;
+                resp.Data = null;
             }
             return resp;
         }

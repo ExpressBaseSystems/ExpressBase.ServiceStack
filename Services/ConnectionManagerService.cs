@@ -123,11 +123,14 @@ namespace ExpressBase.ServiceStack.Services
             EbConnectionsConfig _solutionConnections = EbConnectionsConfigProvider.GetDataCenterConnections();
 
 
-
             _solutionConnections.DataDbConfig.DatabaseName = request.NewSolnId;
             _solutionConnections.DataDbConfig.NickName = request.NewSolnId + "_Initial";
             _solutionConnections.DataDbConfig.UserName = request.DbUsers.AdminUserName;
             _solutionConnections.DataDbConfig.Password = request.DbUsers.AdminPassword;
+            _solutionConnections.DataDbConfig.ReadOnlyUserName = (request.DbUsers.ReadOnlyUserName != String.Empty) ? request.DbUsers.ReadOnlyUserName : request.DbUsers.AdminUserName;
+            _solutionConnections.DataDbConfig.ReadOnlyPassword = (request.DbUsers.ReadOnlyPassword != string.Empty) ? request.DbUsers.ReadOnlyPassword : request.DbUsers.AdminPassword;
+            _solutionConnections.DataDbConfig.ReadWriteUserName = (request.DbUsers.ReadWriteUserName != string.Empty) ? request.DbUsers.ReadWriteUserName : request.DbUsers.AdminUserName;
+            _solutionConnections.DataDbConfig.ReadWritePassword = (request.DbUsers.ReadWritePassword != string.Empty) ? request.DbUsers.ReadWritePassword : request.DbUsers.AdminPassword;
 
             _solutionConnections.DataDbConfig.PersistIntegrationConf(request.NewSolnId, this.InfraConnectionFactory, request.UserId);
 
