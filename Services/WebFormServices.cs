@@ -711,6 +711,15 @@ WHERE
 
             return new GetDesignHtmlResponse { Html = _temp };
         }
+        public GetCtrlsFlatResponse Post(GetCtrlsFlatRequest request)
+        {
+            EbWebForm form = this.GetWebFormObject(request.RefId);
+
+            IEnumerable<EbControl> ctrls = form.Controls.FlattenEbControls();
+
+            return new GetCtrlsFlatResponse { Controls = ctrls.ToList<EbControl>() };
+        }
+
 
     }
 }

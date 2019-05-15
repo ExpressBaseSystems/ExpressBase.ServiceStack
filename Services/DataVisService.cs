@@ -870,7 +870,10 @@ namespace ExpressBase.ServiceStack
             }
             if (isgroup)
             {
-                html += "<i class='fa fa-minus-square-o groupform' style='cursor:pointer;' data-group=" + isgroup + " data-level=" + level + ">&nbsp; &nbsp;<b>" + data + "</b></i>";
+                string classs = string.Empty;
+                if (level == 0)
+                    classs = "levelzero";
+                html += "<i class='fa fa-minus-square-o groupform "+ classs + "' style='cursor:pointer;' data-group=" + isgroup + " data-level=" + level + ">&nbsp; &nbsp;<b>" + data + "</b></i>";
             }
             else
                 html += "<i class='itemform' data-group=" + isgroup + " data-level=" + level + ">" + data + "</i>";
