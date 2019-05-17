@@ -276,6 +276,7 @@ WHERE
             FormObj.FormData = request.FormData;
             FormObj.UserObj = request.UserObj;
             FormObj.LocationId = request.CurrentLoc;
+            FormObj.SolutionObj = request.SolutionObj;
 
             Console.WriteLine("Insert/Update WebFormData : MergeFormData start");
             FormObj.MergeFormData();
