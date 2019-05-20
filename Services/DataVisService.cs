@@ -30,6 +30,8 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 using System.Threading.Tasks;
 using ExpressBase.Common.Extensions;
+using ExpressBase.Common.Singletons;
+using ExpressBase.Common.Helpers;
 
 namespace ExpressBase.ServiceStack
 {
@@ -592,7 +594,8 @@ namespace ExpressBase.ServiceStack
 
         public PrePrcessorReturn PreProcessing(ref EbDataSet _dataset, List<Param> Parameters, EbDataVisualization _dv, User _user, ref List<GroupingDetails> _levels, Boolean _isexcel)
         {
-            var _user_culture = CultureInfo.GetCultureInfo(_user.Preference.Locale);
+            var _user_culture = CultureHelper.GetSerializedCultureInfo(_user.Preference.Locale).GetCultureInfo();
+
             var colCount = _dataset.Tables[0].Columns.Count;
             if (this.EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.ORACLE && _dv.IsPaging)
             {
@@ -786,7 +789,7 @@ namespace ExpressBase.ServiceStack
                     }
                     else if ((col as DVDateTimeColumn).Format == DateFormat.DateTime)
                     {
-                        _formattedData = (((DateTime)_unformattedData).Date != DateTime.MinValue) ? Convert.ToDateTime(_unformattedData).ToString("dd MM yyyy hh: mm tt", cults.DateTimeFormat) : string.Empty;
+                        _formattedData = (((DateTime)_unformattedData).Date != DateTime.MinValue) ? Convert.ToDateTime(_unformattedData).ToString(cults.DateTimeFormat.ShortDatePattern + " " + cults.DateTimeFormat.ShortTimePattern) : string.Empty;
                         row[col.Data] = Convert.ToDateTime(_unformattedData);
                     }
                 }
@@ -795,7 +798,7 @@ namespace ExpressBase.ServiceStack
                     if ((col as DVNumericColumn).SuppresIfZero && (_isexcel == false))
                     {
                         _formattedData = (Convert.ToDecimal(_unformattedData) == 0) ? string.Empty : Convert.ToDecimal(_unformattedData).ToString("N", cults.NumberFormat);
-
+                        
                         if (_formattedData.ToString() == string.Empty)
                             AllowLinkforZero = false;
                     }
@@ -808,6 +811,10 @@ namespace ExpressBase.ServiceStack
                 }
                 else if (col.Type == EbDbTypes.String && (_isexcel == false))
                 {
+                    if (col.AllowTooltip)
+                    {
+                        _formattedData = _unformattedData.ToString().Length > col.AllowedCharacterLength ? "<span title='" + _unformattedData + "'>" + _unformattedData.ToString().Substring(0, col.AllowedCharacterLength) + "...</span>" : _unformattedData;
+                    }
                     if ((col as DVStringColumn).RenderAs == StringRenderType.Marker)
                         _formattedData = "<a href = '#' class ='columnMarker' data-latlong='" + _unformattedData + "'><i class='fa fa-map-marker fa-2x' style='color:red;'></i></a>";
 
