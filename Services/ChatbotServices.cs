@@ -28,12 +28,10 @@ namespace ExpressBase.ServiceStack
 
         public GetAppListResponse Get(AppListRequest request)
         {
-            string Query1 = @"
-                            SELECT
+            string Query1 = @"SELECT
                                     applicationname, application_type, id
                             FROM    
-                                    eb_applications;
-                        ";
+                                    eb_applications;";
             var table = this.EbConnectionFactory.ObjectsDB.DoQuery(Query1);
             GetAppListResponse resp = new GetAppListResponse();
             foreach (EbDataRow row in table.Rows)
@@ -64,19 +62,11 @@ namespace ExpressBase.ServiceStack
 
         public GetBotDetailsResponse Get(BotDetailsRequest request)
         {
-            var Query1 = @"
-SELECT 
-	name, 
-	url, 
-	welcome_msg, 
-	fullname, 
-	botid,
-    id
-    
-FROM 
-	eb_bots 
-WHERE 
-	app_id = @appid;";
+            string Query1 = @"SELECT name,	url, welcome_msg, fullname,	botid, id    
+                            FROM 
+	                            eb_bots 
+                            WHERE 
+	                            app_id = :appid;";
             EbDataTable table = this.EbConnectionFactory.ObjectsDB.DoQuery(Query1.Replace("@appid", request.AppId.ToString()));
             GetBotDetailsResponse resp = new GetBotDetailsResponse();
             foreach (EbDataRow row in table.Rows)
@@ -137,15 +127,15 @@ WHERE
                 {
                     con.Open();
                     DbCommand cmd = null;
-                    string sql = "SELECT * FROM eb_createbot(@solid, @name, @fullname, @url, @welcome_msg, @uid, @botid)";
+                    string sql = EbConnectionFactory.ObjectsDB.EB_CREATEBOT;
                     cmd = this.EbConnectionFactory.ObjectsDB.GetNewCommand(con, sql);
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@solid", EbDbTypes.String, request.SolutionId));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@name", EbDbTypes.String, request.BotName));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@fullname", EbDbTypes.String, request.FullName));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@url", EbDbTypes.String, request.WebURL));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@welcome_msg", EbDbTypes.String, request.WelcomeMsg));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@uid", EbDbTypes.Int32, request.UserId));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@botid", EbDbTypes.Int32, (request.BotId != null) ? request.BotId : "0"));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("solid", EbDbTypes.String, request.SolutionId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("name", EbDbTypes.String, request.BotName));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("fullname", EbDbTypes.String, request.FullName));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("url", EbDbTypes.String, request.WebURL));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("welcome_msg", EbDbTypes.String, request.WelcomeMsg));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("uid", EbDbTypes.Int32, request.UserId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("botid", EbDbTypes.Int32, (request.BotId != null) ? request.BotId : "0"));
 
                     botid = cmd.ExecuteScalar().ToString();
                 }
@@ -163,21 +153,16 @@ WHERE
         public object Get(BotListRequest request)
         {
             List<ChatBot> res = new List<ChatBot>();
-            string sql = @"
-SELECT 
-    id,
-	name, 
-	url, 
-	botid, 
-	(SELECT firstname FROM eb_users WHERE id = eb_bots.created_by) AS created_by, 
-	created_at, 
-	(SELECT firstname FROM eb_users WHERE id = eb_bots.modified_by) AS modified_by, 
-	modified_at, welcome_msg 
-FROM 
-	eb_bots 
-WHERE 
-	solution_id = @solid;";
-            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@solid", EbDbTypes.Int32, 100));//request.SolutionId));
+            string sql = @"SELECT id, name,	url, botid, 
+	                        (SELECT firstname FROM eb_users WHERE id = eb_bots.created_by) AS created_by, 
+	                        created_at, 
+	                        (SELECT firstname FROM eb_users WHERE id = eb_bots.modified_by) AS modified_by, 
+	                        modified_at, welcome_msg 
+                        FROM 
+	                        eb_bots 
+                        WHERE 
+                            solution_id = :solid;";
+            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("solid", EbDbTypes.Int32, 100));//request.SolutionId));
             var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(sql, parameters.ToArray());
 
             foreach (var dr in dt.Rows)
@@ -265,8 +250,6 @@ WHERE
             return new CreateWebFormTableResponse();
         }
 
-        
-
         public object Any(CreateBotFormTableRequest request)
         {
             var vDbTypes = this.EbConnectionFactory.ObjectsDB.VendorDbTypes;
@@ -336,80 +319,95 @@ WHERE
 
         private int CreateOrAlterTable(string tableName, List<TableColumnMeta> listNamesAndTypes)
         {
-                //checking for space in column name, table name
+            //checking for space in column name, table name
+            foreach (TableColumnMeta entry in listNamesAndTypes)
+            {
+                if (entry.Name.Contains(CharConstants.SPACE) || tableName.Contains(CharConstants.SPACE))
+                    return -1;
+            }
+            var isTableExists = this.EbConnectionFactory.ObjectsDB.IsTableExists(this.EbConnectionFactory.ObjectsDB.IS_TABLE_EXIST, new DbParameter[] { this.EbConnectionFactory.ObjectsDB.GetNewParameter("tbl", EbDbTypes.String, tableName) });
+            if (!isTableExists)
+            {
+                string cols = string.Join(CharConstants.COMMA + CharConstants.SPACE.ToString(), listNamesAndTypes.Select(x => x.Name + CharConstants.SPACE + x.Type.VDbType.ToString() + (x.Default.IsNullOrEmpty() ? "" : (" DEFAULT '" + x.Default + "'"))).ToArray());
+                string sql = string.Empty;
+                if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.ORACLE)////////////
+                {
+                    sql = "CREATE TABLE @tbl(id NUMBER(10), @cols)".Replace("@cols", cols).Replace("@tbl", tableName);
+                    this.EbConnectionFactory.ObjectsDB.CreateTable(sql);//Table Creation
+                    CreateSquenceAndTrigger(tableName);//
+                }
+                else if(this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.PGSQL)
+                {
+                    sql = "CREATE TABLE @tbl( id SERIAL PRIMARY KEY, @cols)".Replace("@cols", cols).Replace("@tbl", tableName);
+                    this.EbConnectionFactory.ObjectsDB.CreateTable(sql);
+                }
+                else if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.MYSQL)
+                {
+                    sql = "CREATE TABLE @tbl( id INTEGER AUTO_INCREMENT PRIMARY KEY, @cols)".Replace("@cols", cols).Replace("@tbl", tableName);
+                    this.EbConnectionFactory.ObjectsDB.CreateTable(sql);
+                }
+                return 0;
+            }
+            else
+            {
+                var colSchema = this.EbConnectionFactory.ObjectsDB.GetColumnSchema(tableName);
+                string sql = string.Empty;
                 foreach (TableColumnMeta entry in listNamesAndTypes)
                 {
-                    if (entry.Name.Contains(CharConstants.SPACE) || tableName.Contains(CharConstants.SPACE))
-                        return -1;
+                    bool isFound = false;
+                    foreach (EbDataColumn dr in colSchema)
+                    {
+                        if (entry.Name.ToLower() == (dr.ColumnName.ToLower()))
+                        {
+                            isFound = true;
+                            break;
+                        }
+                    }
+                    if (!isFound)
+                    {
+                        sql += entry.Name + " " + entry.Type.VDbType.ToString() + " " + (entry.Default.IsNullOrEmpty() ? "" : (" DEFAULT '" + entry.Default + "'")) + ",";
+                    }
                 }
-                var isTableExists = this.EbConnectionFactory.ObjectsDB.IsTableExists(this.EbConnectionFactory.ObjectsDB.IS_TABLE_EXIST, new DbParameter[] { this.EbConnectionFactory.ObjectsDB.GetNewParameter("tbl", EbDbTypes.String, tableName) });
-                if (!isTableExists)
+                bool appendId = false;
+                var existingIdCol = colSchema.FirstOrDefault(o => o.ColumnName.ToLower() == "id");
+                if (existingIdCol == null)
+                    appendId = true;
+                if (!sql.IsEmpty() || appendId)
                 {
-                    string cols = string.Join(CharConstants.COMMA + CharConstants.SPACE.ToString(), listNamesAndTypes.Select(x => x.Name + CharConstants.SPACE + x.Type.VDbType.ToString() + (x.Default.IsNullOrEmpty() ? "" : (" DEFAULT '" + x.Default + "'"))).ToArray());
-                    string sql = string.Empty;
-                    if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.ORACLE)////////////
+                    if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.ORACLE)/////////////////////////
                     {
-                        sql = "CREATE TABLE @tbl(id NUMBER(10), @cols)".Replace("@cols", cols).Replace("@tbl", tableName);
-                        this.EbConnectionFactory.ObjectsDB.CreateTable(sql);//Table Creation
-                        CreateSquenceAndTrigger(tableName);//
+                        sql = (appendId ? "id NUMBER(10)," : "") + sql;
+                        if (!sql.IsEmpty())
+                        {
+                            sql = "ALTER TABLE @tbl ADD (" + sql.Substring(0, sql.Length - 1) + ")";
+                            sql = sql.Replace("@tbl", tableName);
+                            this.EbConnectionFactory.ObjectsDB.UpdateTable(sql);
+                            if (appendId)
+                                CreateSquenceAndTrigger(tableName);
+                        }
                     }
-                    else
+                    else if(this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.PGSQL)
                     {
-                        sql = "CREATE TABLE @tbl( id SERIAL PRIMARY KEY, @cols)".Replace("@cols", cols).Replace("@tbl", tableName);
-                        this.EbConnectionFactory.ObjectsDB.CreateTable(sql);
+                        sql = (appendId ? "id SERIAL PRIMARY KEY," : "") + sql;
+                        if (!sql.IsEmpty())
+                        {
+                            sql = "ALTER TABLE @tbl ADD COLUMN " + (sql.Substring(0, sql.Length - 1)).Replace(",", ", ADD COLUMN ");
+                            sql = sql.Replace("@tbl", tableName);
+                            this.EbConnectionFactory.ObjectsDB.UpdateTable(sql);
+                        }
                     }
-                    return 0;
+                    else if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.MYSQL)
+                    {
+                        sql = (appendId ? "id INTEGER AUTO_INCREMENT PRIMARY KEY," : "") + sql;
+                        if (!sql.IsEmpty())
+                        {
+                            sql = "ALTER TABLE @tbl ADD COLUMN " + (sql.Substring(0, sql.Length - 1)).Replace(",", ", ADD COLUMN ");
+                            sql = sql.Replace("@tbl", tableName);
+                            this.EbConnectionFactory.ObjectsDB.UpdateTable(sql);
+                        }
+                    }
+                    return (0);
                 }
-                else
-                {
-                    var colSchema = this.EbConnectionFactory.ObjectsDB.GetColumnSchema(tableName);
-                    string sql = string.Empty;
-                    foreach (TableColumnMeta entry in listNamesAndTypes)
-                    {
-                        bool isFound = false;
-                        foreach (EbDataColumn dr in colSchema)
-                        {
-                            if (entry.Name.ToLower() == (dr.ColumnName.ToLower()))
-                            {
-                                isFound = true;
-                                break;
-                            }
-                        }
-                        if (!isFound)
-                        {
-                            sql += entry.Name + " " + entry.Type.VDbType.ToString() + " " + (entry.Default.IsNullOrEmpty() ? "" : (" DEFAULT '" + entry.Default + "'")) + ",";
-                        }
-                    }
-                    bool appendId = false;
-                    var existingIdCol = colSchema.FirstOrDefault(o => o.ColumnName.ToLower() == "id");
-                    if (existingIdCol == null)
-                        appendId = true;
-                    if (!sql.IsEmpty() || appendId)
-                    {
-                        if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.ORACLE)/////////////////////////
-                        {
-                            sql = (appendId ? "id NUMBER(10)," : "") + sql;
-                            if (!sql.IsEmpty())
-                            {
-                                sql = "ALTER TABLE @tbl ADD (" + sql.Substring(0, sql.Length - 1) + ")";
-                                sql = sql.Replace("@tbl", tableName);
-                                this.EbConnectionFactory.ObjectsDB.UpdateTable(sql);
-                                if (appendId)
-                                    CreateSquenceAndTrigger(tableName);
-                            }
-                        }
-                        else
-                        {
-                            sql = (appendId ? "id SERIAL," : "") + sql;
-                            if (!sql.IsEmpty())
-                            {
-                                sql = "ALTER TABLE @tbl ADD COLUMN " + (sql.Substring(0, sql.Length - 1)).Replace(",", ", ADD COLUMN ");
-                                sql = sql.Replace("@tbl", tableName);
-                                this.EbConnectionFactory.ObjectsDB.UpdateTable(sql);
-                            }
-                        }
-                        return (0);
-                    }
             }
             return -1;
         }
@@ -787,7 +785,7 @@ WHERE
             return res1.RefId;
         }
 
-		public object Any(InsertIntoBotFormTableRequest request)
+        public object Any(InsertIntoBotFormTableRequest request)
         {
             DbParameter parameter1;
             List<DbParameter> paramlist = new List<DbParameter>();
@@ -940,7 +938,7 @@ WHERE
             }
             return new InsertIntoBotFormTableResponse { RowAffected = rslt };
         }
-		
+
 
         public SubmitBotFormResponse Any(SubmitBotFormRequest request)
         {

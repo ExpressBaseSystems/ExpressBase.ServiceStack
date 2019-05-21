@@ -45,15 +45,7 @@ namespace ExpressBase.ServiceStack.Services
             List<EbExecutionLogs> _logs = new List<EbExecutionLogs>();
             List<DbParameter> parameters = new List<DbParameter>();
             Profiler profiler = new Profiler();
-            string query = @"SELECT id, exec_time FROM eb_executionlogs WHERE exec_time=(SELECT MAX(exec_time) FROM eb_executionlogs WHERE refid = :refid);
-                             SELECT id, exec_time FROM eb_executionlogs WHERE exec_time=(SELECT MIN(exec_time) FROM eb_executionlogs WHERE refid = :refid);
-                             SELECT id, exec_time FROM eb_executionlogs WHERE exec_time=(SELECT MAX(exec_time) FROM eb_executionlogs WHERE refid = :refid AND EXTRACT (month FROM created_at) = EXTRACT(month FROM current_date));
-                             SELECT id, exec_time FROM eb_executionlogs WHERE exec_time=(SELECT MIN(exec_time) FROM eb_executionlogs WHERE refid = :refid AND EXTRACT (month FROM created_at) = EXTRACT(month FROM current_date));
-                             SELECT id, exec_time FROM eb_executionlogs WHERE exec_time=(SELECT MAX(exec_time) FROM eb_executionlogs WHERE refid= :refid and created_at::date = current_date);
-                             SELECT id, exec_time FROM eb_executionlogs WHERE exec_time=(SELECT MIN(exec_time) FROM eb_executionlogs WHERE refid= :refid and created_at::date = current_date);
-                             SELECT COUNT(*) FROM eb_executionlogs WHERE refid = :refid;
-                             SELECT COUNT(*) FROM eb_executionlogs WHERE created_at::date = current_date AND refid = :refid;
-                             SELECT COUNT(*) FROM eb_executionlogs WHERE extract (month FROM created_at) = extract(month FROM current_date) and refid = :refid;";
+            string query = EbConnectionFactory.ObjectsDB.EB_GETPROFILERS;
             parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("refid", EbDbTypes.String, request.RefId));
             EbDataSet dt = EbConnectionFactory.ObjectsDB.DoQueries(query, parameters.ToArray());
             if (dt.Tables.Count > 0)
@@ -99,7 +91,7 @@ namespace ExpressBase.ServiceStack.Services
 
         public GetChart2DetailsResponse Get(GetChart2DetailsRequest request)
         {
-            string sql = "SELECT created_at FROM eb_executionlogs WHERE refid = :refid AND created_at::TIMESTAMP::DATE =current_date";
+            string sql = EbConnectionFactory.ObjectsDB.EB_GETCHART2DETAILS;
             DbParameter[] p = { EbConnectionFactory.ObjectsDB.GetNewParameter("refid", EbDbTypes.String, request.Refid) };
             EbDataTable _chartdetails = EbConnectionFactory.ObjectsDB.DoQuery(sql, p);
             return new GetChart2DetailsResponse { data = _chartdetails.Rows };
