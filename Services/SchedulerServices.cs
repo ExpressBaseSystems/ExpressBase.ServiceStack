@@ -100,10 +100,7 @@ namespace ExpressBase.ServiceStack.Services
             using (var con = this.EbConnectionFactory.DataDB.GetNewConnection())
             {
                 con.Open();
-                string sql = @"SELECT id, email FROM eb_users WHERE id = ANY
-                             (string_to_array(:userids,',')::int[]);
-                           SELECT distinct id, email FROM eb_users WHERE id = ANY(SELECT userid FROM eb_user2usergroup WHERE 
-                                groupid = ANY(string_to_array(:groupids,',')::int[])) ;";
+                string sql = EbConnectionFactory.DataDB.EB_GETUSEREMAILS;
                 DbParameter[] parameters = { EbConnectionFactory.DataDB.GetNewParameter("userids", EbDbTypes.String, (request.UserIds==null)?string.Empty:request.UserIds),
                EbConnectionFactory.DataDB.GetNewParameter("groupids", EbDbTypes.String, ( request.UserGroupIds == null)?string.Empty:request.UserGroupIds) };
 

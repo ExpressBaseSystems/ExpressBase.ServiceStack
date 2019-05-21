@@ -27,7 +27,7 @@ namespace ExpressBase.ServiceStack.Services
             string sql = @"SELECT Q.id,Q.query,Q.q_type,C.id,C.choice,C.score from eb_survey_queries Q 
                            INNER JOIN eb_query_choices C ON C.q_id = q.id WHERE C.eb_del = 'F';";
 
-            var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(sql);
+            EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery(sql);
             foreach (EbDataRow dr in dt.Rows)
             {
                 int id = Convert.ToInt32(dr[0]);
@@ -116,16 +116,25 @@ namespace ExpressBase.ServiceStack.Services
                 foreach (QueryChoices choice in ques.Choices)
                 {
                     int count = c_count++;
-                    s.Append("(currval('eb_survey_queries_id_seq'),:choice" + count + ",:score" + count + ")");
-
+                    if (EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.MYSQL)
+                    {
+                        s.Append("SELECT last_insert_id(),:choice" + count + ",:score" + count + ")");
+                    }
+                    else
+                    {
+                        s.Append("(currval('eb_survey_queries_id_seq'),:choice" + count + ",:score" + count + ")");
+                    }
                     if (choice != ques.Choices.Last())
                         s.Append(",");
                     parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("choice" + count, EbDbTypes.String, choice.Choice));
                     parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("score" + count, EbDbTypes.Int32, choice.Score));
                 }
-                s.Append(";SELECT currval('eb_survey_queries_id_seq');");
+                if (EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.MYSQL)
+                    s.Append(";SELECT last_insert_id();");
+                else
+                    s.Append(";SELECT currval('eb_survey_queries_id_seq');");
 
-                var res = this.EbConnectionFactory.ObjectsDB.DoQueries(s.ToString(), parameters.ToArray());
+                EbDataSet res = this.EbConnectionFactory.ObjectsDB.DoQueries(s.ToString(), parameters.ToArray());
 
                 if (Convert.ToInt32(res.Tables[0].Rows[0][0]) > 0)
                 {
@@ -166,19 +175,12 @@ namespace ExpressBase.ServiceStack.Services
                 surveyObj.QuesIds = dt.Tables[1].Rows[0][5].ToString().Split(",").Select(Int32.Parse).ToList();
             }
 
-
             return new ManageSurveyResponse() { Obj = surveyObj, AllQuestions = questionList };
         }
 
         public GetParticularSurveyResponse Post(GetParticularSurveyRequest request)
         {
-            string qryStr = @"SELECT name,startdate,enddate,status FROM eb_surveys WHERE id=:id;
-							SELECT * FROM
-								(SELECT UNNEST(string_to_array(S.questions, ',')::int[]) AS q_id FROM eb_surveys S WHERE id=:id) QUES_IDS, 
-								(SELECT Q.id, Q.query, Q.q_type FROM eb_survey_queries Q) QUES_ANS,
-								(SELECT C.choice,C.score,C.id, C.q_id from eb_query_choices C WHERE eb_del='F' ) QUES_QRY
-								WHERE QUES_IDS.q_id=QUES_ANS.id
-									AND QUES_QRY.q_id = QUES_ANS.id";
+            string qryStr = EbConnectionFactory.DataDB.EB_GETPARTICULARSSURVEY;
 
             EbDataSet dt = this.EbConnectionFactory.DataDB.DoQueries(qryStr, new DbParameter[] {
                 this.EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, request.SurveyId)
@@ -235,7 +237,7 @@ namespace ExpressBase.ServiceStack.Services
 
         public SaveSurveyResponse Post(SaveSurveyRequest request)
         {
-            var rstatus = 0;
+            int rstatus = 0;
             Eb_Survey surveyObj = JsonConvert.DeserializeObject<Eb_Survey>(request.Data);
             List<DbParameter> parameters = new List<DbParameter>();
             parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, surveyObj.Id));
@@ -278,7 +280,7 @@ namespace ExpressBase.ServiceStack.Services
             string quesid = string.Empty;
             try
             {
-                var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(query);
+                EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery(query);
                 foreach (EbDataRow row in dt.Rows)
                 {
                     quesid = row[5].ToString();
@@ -307,16 +309,16 @@ namespace ExpressBase.ServiceStack.Services
             int id;
             string q = "SELECT id FROM eb_survey_master WHERE userid=:userid AND anonid=:aid AND surveyid=:surid;";
 
-            var mid = this.EbConnectionFactory.DataDB.DoQuery(q, new DbParameter[] {
+            EbDataTable mid = this.EbConnectionFactory.DataDB.DoQuery(q, new DbParameter[] {
                 this.EbConnectionFactory.ObjectsDB.GetNewParameter("userid", EbDbTypes.Int32, request.UserId),
                 this.EbConnectionFactory.ObjectsDB.GetNewParameter("aid", EbDbTypes.Int32, request.AnonId),
                 this.EbConnectionFactory.ObjectsDB.GetNewParameter("surid", EbDbTypes.Int32, request.SurveyId)
             });
             if (mid.Rows.Count <= 0)
             {
-                string q1 = @"INSERT INTO eb_survey_master(surveyid,userid,anonid,eb_createdate) VALUES(:sid,:uid,:anid,now()) RETURNING id;";
+                string q1 = EbConnectionFactory.ObjectsDB.EB_SURVEYMASTER;
 
-                var dt = this.EbConnectionFactory.DataDB.DoQuery(q1, new DbParameter[] {
+                EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(q1, new DbParameter[] {
                     this.EbConnectionFactory.ObjectsDB.GetNewParameter("sid", EbDbTypes.Int32, request.SurveyId),
                     this.EbConnectionFactory.ObjectsDB.GetNewParameter("uid", EbDbTypes.Int32, request.UserId),
                     this.EbConnectionFactory.ObjectsDB.GetNewParameter("anid", EbDbTypes.Int32, request.AnonId)

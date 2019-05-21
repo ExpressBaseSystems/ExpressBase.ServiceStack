@@ -15,64 +15,12 @@ namespace ExpressBase.ServiceStack.Services
         public DbClientServices(IEbConnectionFactory _dbf) : base(_dbf) { }
         EbDbExplorerTablesDict Table = new EbDbExplorerTablesDict();
         List<object> Row = new List<object>();
-        
+
 
         public GetDbTablesResponse Get(GetDbTablesRequest request)
         {
             int TableCount = 0;
-            string sql = @"
-                SELECT Q1.table_name, Q1.table_schema, i.indexname FROM 
-                (SELECT
-                    table_name, table_schema
-                FROM
-                    information_schema.tables s
-                WHERE
-                    table_schema != 'pg_catalog'
-                    AND table_schema != 'information_schema'
-                    AND table_type='BASE TABLE'
-                    AND table_name NOT LIKE 'eb_%')Q1
-                LEFT JOIN
-                    pg_indexes i
-                ON
-                   Q1.table_name = i.tablename ORDER BY tablename;
-
-                SELECT 
-                    table_name, column_name, data_type
-                FROM
-                    information_schema.columns
-                WHERE
-                    table_schema != 'pg_catalog' AND
-                    table_schema != 'information_schema' AND 
-                    table_name NOT LIKE 'eb_%'
-                ORDER BY table_name;
-
-               SELECT
-                   c.conname AS constraint_name,
-                   c.contype AS constraint_type,
-                   tbl.relname AS tabless,
-                   ARRAY_AGG(col.attname
-                   ORDER BY
-                   u.attposition)
-                   AS columns,
-                   pg_get_constraintdef(c.oid) AS definition
-               FROM 
-                    pg_constraint c
-               JOIN 
-                    LATERAL UNNEST(c.conkey) WITH
-                    ORDINALITY AS u(attnum, attposition) ON TRUE
-               JOIN 
-                    pg_class tbl ON tbl.oid = c.conrelid
-               JOIN 
-                    pg_namespace sch ON sch.oid = tbl.relnamespace
-               JOIN 
-                    pg_attribute col ON(col.attrelid = tbl.oid AND col.attnum = u.attnum)
-               WHERE
-                    tbl.relname NOT LIKE 'eb_%'
-               GROUP BY 
-                    constraint_name, constraint_type, tabless, definition
-               ORDER BY 
-                    tabless;
-             ";
+            string sql = EbConnectionFactory.DataDB.EB_GETDBCLIENTTTABLES;
 
             EbDataSet dt = this.EbConnectionFactory.DataDB.DoQueries(sql);
             var Data = dt.Tables[0];
@@ -98,7 +46,7 @@ namespace ExpressBase.ServiceStack.Services
                         Table.TableCollection.Add(Row[0].ToString(), tab);
                         Table.TableCollection[Row[0].ToString()].Index.Add(Row[2].ToString());
                         TableCount++;
-                    }                    
+                    }
                 }
             }
             Data = dt.Tables[1];
@@ -114,10 +62,17 @@ namespace ExpressBase.ServiceStack.Services
             Data = dt.Tables[2];
             foreach (var Row in Data.Rows)
             {
-                ArrayList column = new ArrayList
-                    {
-                        Row[3]
-                    };
+                ArrayList column;
+
+                if (EbConnectionFactory.DataDB.Vendor == DatabaseVendors.MYSQL)
+                {
+                    string s = Row[3].ToString();
+                    column = new ArrayList { s.Split(',') };
+                }
+                else
+                {
+                    column = new ArrayList {Row[3]};
+                }
                 var t = Row[3];
                 var col = column[0];
                 var x = (col as string[])[0];
@@ -166,7 +121,7 @@ namespace ExpressBase.ServiceStack.Services
                 Tables = Table,
                 DB_Name = DB_Name,
                 TableCount = TableCount
-        };
+            };
         }
 
         [CompressResponse]

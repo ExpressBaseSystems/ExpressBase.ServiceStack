@@ -248,7 +248,7 @@ namespace ExpressBase.ServiceStack.Services
 
             if (!string.IsNullOrEmpty(request.email))
             {
-                sql = "SELECT id FROM eb_users WHERE LOWER(email) LIKE LOWER('%' || :email || '%') AND eb_del = 'F'";
+                sql = EbConnectionFactory.DataDB.EB_UNIQUEEMAILCHECK;
                 parameters = new DbParameter[] { this.EbConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, string.IsNullOrEmpty(request.email) ? "" : request.email) };
             }
 
@@ -605,23 +605,6 @@ namespace ExpressBase.ServiceStack.Services
             };
             return new UpdateAnonymousUserResponse { RowAffected = this.EbConnectionFactory.ObjectsDB.DoNonQuery(sql, parameters) };
         }
-
-        public ConvertAnonymousUserResponse Any(ConvertAnonymousUserRequest request)
-        {
-            //WORK NOT COMPLETED
-            string sql = @"SELECT * FROM eb_convertanonymoususer2user(:userid, :id, :fullname, :email, :phnoprimary, :remarks);";
-            DbParameter[] parameters = {
-                this.EbConnectionFactory.ObjectsDB.GetNewParameter("userid", EbDbTypes.Int32, request.UserId),
-                this.EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, request.Id),
-                this.EbConnectionFactory.ObjectsDB.GetNewParameter("fullname", EbDbTypes.String, request.FullName),
-                this.EbConnectionFactory.ObjectsDB.GetNewParameter("email", EbDbTypes.String, request.EmailID),
-                this.EbConnectionFactory.ObjectsDB.GetNewParameter("phnoprimary", EbDbTypes.String, request.PhoneNumber),
-                this.EbConnectionFactory.ObjectsDB.GetNewParameter("remarks", EbDbTypes.String, request.Remarks)
-            };
-            EbDataSet dt = this.EbConnectionFactory.ObjectsDB.DoQueries(sql, parameters);
-            return new ConvertAnonymousUserResponse { status = (dt.Tables.Count > 0) ? Convert.ToInt32(dt.Tables[0].Rows[0][0]) : 0 };
-        }
-
 
         //------MANAGE USER GROUP START------------------------------
 

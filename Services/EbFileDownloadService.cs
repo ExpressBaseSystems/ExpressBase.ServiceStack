@@ -41,13 +41,12 @@ namespace ExpressBase.ServiceStack.Services
             //	vddicommentry.patientid = (customervendor.prehead || customervendor.accountcode) 
             //ORDER BY
             //	vddicommentry.filename";
-            string ImageTableQuery = @"
-SELECT
-    vddicommentry.customers_id, vddicommentry.imageid, vddicommentry.filename 
-FROM 
-    vddicommentry
-ORDER BY
-	vddicommentry.filename";
+            string ImageTableQuery = @" SELECT
+                                            vddicommentry.customers_id, vddicommentry.imageid, vddicommentry.filename 
+                                        FROM 
+                                            vddicommentry
+                                        ORDER BY
+	                                        vddicommentry.filename";
             string _imageId = string.Empty, _fileName = string.Empty;
 
             var table = this.EbConnectionFactory.DataDB.DoQuery(ImageTableQuery);
@@ -66,12 +65,10 @@ ORDER BY
 
             try
             {
-                string AddQuery = @"
-INSERT INTO 
-       eb_image_migration_counter 
-      (filename, customer_id)
-VALUES
-      (@fname, @cid);";
+                string AddQuery = @"INSERT INTO 
+                                        eb_image_migration_counter(filename, customer_id)
+                                    VALUES 
+                                        (@fname, @cid);";
                 DbParameter[] MapParams =
                 {
                                 this.EbConnectionFactory.DataDB.GetNewParameter("cid", EbDbTypes.Int32, CustomerId),
@@ -89,7 +86,6 @@ VALUES
         [Authenticate]
         public void Post(FileDownloadRequestObject req)
         {
-
             string FilerefId = string.Empty;
 
             Files = new List<KeyValuePair<int, string>>();
@@ -104,7 +100,6 @@ VALUES
 
             if (Files.Count > 0)
             {
-
                 foreach (KeyValuePair<int, string> file in Files)
                 {
                     if (!file.Value.Equals(string.Empty))
