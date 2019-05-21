@@ -41,7 +41,7 @@ namespace ExpressBase.ServiceStack.Services
                 else
                     resp.Status = false;
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 Console.WriteLine("Exception: " + e.ToString());
                 resp.Status = false;
@@ -51,12 +51,12 @@ namespace ExpressBase.ServiceStack.Services
 
         public CreateAccountResponse Post(CreateAccountRequest request)
         {
-			CreateAccountResponse resp = new CreateAccountResponse();
+            CreateAccountResponse resp = new CreateAccountResponse();
             if (request.Op == "updatetenant")
             {
                 string sql = "SELECT * FROM eb_tenantprofile_setup(@fullname, @company, @country, @pwd, @email);";
                 DbParameter[] parameters = {
-					this.EbConnectionFactory.DataDB.GetNewParameter("fullname", EbDbTypes.String, request.Name),
+                    this.EbConnectionFactory.DataDB.GetNewParameter("fullname", EbDbTypes.String, request.Name),
                     this.EbConnectionFactory.DataDB.GetNewParameter("company", EbDbTypes.String, request.Company),
                     this.EbConnectionFactory.DataDB.GetNewParameter("country", EbDbTypes.String, request.Country),
                     this.EbConnectionFactory.DataDB.GetNewParameter("pwd", EbDbTypes.String, (request.Password.ToString() + request.Email.ToString()).ToMD5Hash()),
@@ -64,40 +64,60 @@ namespace ExpressBase.ServiceStack.Services
                 };
 
                 var ds = this.EbConnectionFactory.DataDB.DoQuery(sql, parameters);
-				resp.id = Convert.ToInt32(ds.Rows[0][0]);
+                resp.id = Convert.ToInt32(ds.Rows[0][0]);
             }
-                
+
             return resp;
         }
 
         public CreateSolutionResponse Post(CreateSolutionRequest request)
-        {           
+        {
             EbDbCreateServices _dbService = base.ResolveService<EbDbCreateServices>();
             ConnectionManager _conService = base.ResolveService<ConnectionManager>();
             TenantUserServices _tenantUserService = base.ResolveService<TenantUserServices>();
             string DbName = request.SolnUrl.ToString().ToLower();
             CreateSolutionResponse resp;
-            using (var con = this.EbConnectionFactory.DataDB.GetNewConnection())
+            try
             {
-                con.Open();
-                string sql = "select * from eb_create_solution_new(@sname,@tenant_id,@descript,@solnid);";
-                var cmd = this.EbConnectionFactory.DataDB.GetNewCommand(con, sql);
-                cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("@sname", EbDbTypes.String, request.SolutionName));
-                cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("@tenant_id", EbDbTypes.Int32, request.UserId));
-                cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("@descript", EbDbTypes.String, request.Description));
-                cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("@solnid", EbDbTypes.String, request.SolnUrl));
-
-                resp =  new CreateSolutionResponse { Status = Convert.ToInt32(cmd.ExecuteScalar()) };
-            }
-            if (resp.Status > 0)
-            {
-
-                EbDbCreateResponse response = (EbDbCreateResponse)_dbService.Post(new EbDbCreateRequest { dbName = DbName, SolnId = request.SolnId, UserId = request.UserId, Idbcon = this.EbConnectionFactory.DataDB, ischange = false });
-                if (response.resp)
+                using (var con = this.EbConnectionFactory.DataDB.GetNewConnection())
                 {
-                    _conService.Post(new InitialSolutionConnectionsRequest { NewSolnId = DbName, SolnId = request.SolnId, UserId = request.UserId,DbUsers = response.dbusers });
-                    _tenantUserService.Post(new UpdateSolutionRequest() { DbName = DbName, UserId = request.UserId});
+                    con.Open();
+                    string sql = "select * from eb_create_solution_new(@sname,@tenant_id,@descript,@solnid);";
+                    var cmd = this.EbConnectionFactory.DataDB.GetNewCommand(con, sql);
+                    cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("@sname", EbDbTypes.String, request.SolutionName));
+                    cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("@tenant_id", EbDbTypes.Int32, request.UserId));
+                    cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("@descript", EbDbTypes.String, request.Description));
+                    cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("@solnid", EbDbTypes.String, request.SolnUrl));
+                    resp = new CreateSolutionResponse { Status = Convert.ToInt32(cmd.ExecuteScalar()) };
                 }
+            }
+
+            catch (Exception e)
+            {
+                //resp = new CreateSolutionResponse { ErrSolMessage = e.Message };
+                resp = new CreateSolutionResponse { ErrSolMessage = "Cannot create solution" };
+                return resp;
+            }
+            try
+            {
+                if (resp.Status > 0)
+                {
+                    if (request.DeployDB)
+                    {
+                        EbDbCreateResponse response = (EbDbCreateResponse)_dbService.Post(new EbDbCreateRequest { dbName = DbName, SolnId = request.SolnId, UserId = request.UserId, Idbcon = this.EbConnectionFactory.DataDB, ischange = false });
+                        if (response.resp)
+                        {
+                            _conService.Post(new InitialSolutionConnectionsRequest { NewSolnId = DbName, SolnId = request.SolnId, UserId = request.UserId, DbUsers = response.dbusers });
+                            _tenantUserService.Post(new UpdateSolutionRequest() { DbName = DbName, UserId = request.UserId });
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                //resp = new CreateSolutionResponse { ErrDbMessage = e.Message };
+                resp = new CreateSolutionResponse { ErrDbMessage = "Cannot deploy DataBase" };
+                return resp;
             }
             return resp;
         }
@@ -119,7 +139,7 @@ namespace ExpressBase.ServiceStack.Services
                 });
                 temp.Add(_ebSolutions);
             }
-            GetSolutionResponse resp = new GetSolutionResponse() { Data = temp };          
+            GetSolutionResponse resp = new GetSolutionResponse() { Data = temp };
             return resp;
         }
 
@@ -171,7 +191,7 @@ namespace ExpressBase.ServiceStack.Services
         //{
         //    string sql =string.Format(@"SELECT A.socialid, A.id, A.fullname, A.email, A.phoneno, A.firstvisit, A.lastvisit, A.totalvisits, 
         //                        A.city, A.region, A.country, B.applicationname , concat(A.latitude::text,',' ,A.longitude::text) AS latlong
-								//FROM eb_usersanonymous A, eb_applications B WHERE A.appid = B.id AND A.ebuserid = 1 AND A.appid = {0}", request.appid);
+        //FROM eb_usersanonymous A, eb_applications B WHERE A.appid = B.id AND A.ebuserid = 1 AND A.appid = {0}", request.appid);
 
         //    var dsobj = new EbDataSource();
         //    dsobj.Sql = sql;
@@ -1126,7 +1146,7 @@ namespace ExpressBase.ServiceStack.Services
                 res.isUniq = false;
             else
                 res.isUniq = true;
-           
+
             return res;
         }
 

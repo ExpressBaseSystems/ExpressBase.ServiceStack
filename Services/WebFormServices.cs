@@ -289,6 +289,7 @@ namespace ExpressBase.ServiceStack.Services
             FormObj.FormData = request.FormData;
             FormObj.UserObj = request.UserObj;
             FormObj.LocationId = request.CurrentLoc;
+            FormObj.SolutionObj = request.SolutionObj;
 
             Console.WriteLine("Insert/Update WebFormData : MergeFormData start");
             FormObj.MergeFormData();
@@ -724,6 +725,15 @@ namespace ExpressBase.ServiceStack.Services
 
             return new GetDesignHtmlResponse { Html = _temp };
         }
+        public GetCtrlsFlatResponse Post(GetCtrlsFlatRequest request)
+        {
+            EbWebForm form = this.GetWebFormObject(request.RefId);
+
+            IEnumerable<EbControl> ctrls = form.Controls.FlattenEbControls();
+
+            return new GetCtrlsFlatResponse { Controls = ctrls.ToList<EbControl>() };
+        }
+
 
     }
 }
