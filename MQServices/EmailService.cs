@@ -42,22 +42,22 @@ namespace ExpressBase.ServiceStack
             };
             EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(q, parameters);
 
-            //MessageProducer3.Publish(new EmailServicesRequest()
-            //{
-            //    To = request.Email,
-            //    Cc = null,
-            //    Bcc = null,
-            //    Message = "Your new password is"+ dt.Rows[0][0],
-            //    Subject = "Reset Password",
-            //    UserId = request.UserId,
-            //    UserAuthId = request.UserAuthId,
-            //    SolnId = request.SolnId,
-            //    AttachmentReport = RepRes.ReportBytea,
-            //    AttachmentName = RepRes.ReportName
-            //});
+            MessageProducer3.Publish(new EmailServicesRequest()
+            {
+                To = request.Email,
+                Cc = null,
+                Bcc = null,
+                Message = "Your new password is" + dt.Rows[0][0],
+                Subject = "Reset Password",
+                //UserId = request.UserId,
+                //UserAuthId = request.UserAuthId,
+                SolnId = CoreConstants.EXPRESSBASE,
+                //AttachmentReport = RepRes.ReportBytea,
+                //AttachmentName = RepRes.ReportName
+            });
             return new ResetPasswordMqResponse { };
         }
-    }
+    } 
 
     [Restrict(InternalOnly = true)]
     public class EmailInternalService : EbMqBaseService
@@ -66,11 +66,20 @@ namespace ExpressBase.ServiceStack
 
         public string Post(EmailServicesRequest request)
         {
-            base.EbConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
             try
             {
-                Console.WriteLine("Inside EmailService/EmailServiceInternal in SS \n Before Email \n To: " + request.To + "\nEmail Connections: " + EbConnectionFactory.EmailConnection.Capacity);
-                this.EbConnectionFactory.EmailConnection.Send(request.To, request.Subject, request.Message, request.Cc, request.Bcc, request.AttachmentReport, request.AttachmentName);
+                if (request.SolnId == CoreConstants.EXPRESSBASE)
+                {
+                    Console.WriteLine("Inside EmailService/EmailServiceInternal in SS \n Before Email \n To: " + request.To + "\nEmail Connections - infra: " + InfraConnectionFactory.EmailConnection.Capacity);
+                    this.InfraConnectionFactory.EmailConnection.Send(request.To, request.Subject, request.Message, request.Cc, request.Bcc, request.AttachmentReport, request.AttachmentName);
+                }
+                else
+                {
+                    base.EbConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
+                    Console.WriteLine("Inside EmailService/EmailServiceInternal in SS \n Before Email \n To: " + request.To + "\nEmail Connections - solution: " + EbConnectionFactory.EmailConnection.Capacity);
+                    this.EbConnectionFactory.EmailConnection.Send(request.To, request.Subject, request.Message, request.Cc, request.Bcc, request.AttachmentReport, request.AttachmentName);
+                }
+
                 Console.WriteLine("Inside EmailService/EmailServiceInternal in SS \n After Email \nSend To:" + request.To);
             }
             catch (Exception e)
