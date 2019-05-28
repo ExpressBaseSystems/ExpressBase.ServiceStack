@@ -83,14 +83,14 @@ namespace ExpressBase.ServiceStack.Services
                 string exeq = "";
 
                 List<DbParameter> parameters = new List<DbParameter>();
-                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":keys", EbDbTypes.String, conf.Name));
-                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":isrequired", EbDbTypes.String, conf.IsRequired));
-                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":type", EbDbTypes.String, conf.Type));
+                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("keys", EbDbTypes.String, conf.Name));
+                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("isrequired", EbDbTypes.String, conf.IsRequired));
+                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("type", EbDbTypes.String, conf.Type));
 
                 if (conf.Id != null)
                 {
                     exeq = query2;
-                    parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":keyid", EbDbTypes.String, conf.Id));
+                    parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("keyid", EbDbTypes.String, conf.Id));
                 }
                 else
                     exeq = query;
@@ -133,8 +133,8 @@ namespace ExpressBase.ServiceStack.Services
         public DeleteLocResponse Post(DeleteLocRequest request)
         {
             List<DbParameter> parameters = new List<DbParameter>();
-            string query = "UPDATE eb_location_config SET eb_del = 'T' WHERE id=:id RETURNING id";
-            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(":id", EbDbTypes.Int32, request.Id));
+            string query = "UPDATE eb_location_config SET eb_del = 'T' WHERE id=:id";//RETURNING id is removed
+            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, request.Id));
             int dt = this.EbConnectionFactory.ObjectsDB.DoNonQuery(query.ToString(), parameters.ToArray());
             return new DeleteLocResponse { id = (dt == 1) ? request.Id : 0 };
         }

@@ -596,7 +596,7 @@ namespace ExpressBase.ServiceStack
         [CompressResponse]
         public UniqueObjectNameCheckResponse Get(UniqueObjectNameCheckRequest request)
         {
-            DbParameter[] parameters = { EbConnectionFactory.ObjectsDB.GetNewParameter(":name", EbDbTypes.String, request.ObjName) };
+            DbParameter[] parameters = { EbConnectionFactory.ObjectsDB.GetNewParameter("name", EbDbTypes.String, request.ObjName) };
             EbDataTable dt = EbConnectionFactory.ObjectsDB.DoQuery("SELECT id FROM eb_objects WHERE obj_name = :name ;", parameters);
             bool _isunique = (dt.Rows.Count > 0) ? false : true;
             return new UniqueObjectNameCheckResponse { IsUnique = _isunique };
@@ -821,7 +821,7 @@ namespace ExpressBase.ServiceStack
                         };
                         if (EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.PGSQL)
                         {
-                            dbParameter.Add(EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_json", EbDbTypes.Json, request.Json));
+                            dbParameter.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("obj_json", EbDbTypes.Json, request.Json));
                             cmd.Parameters.AddRange(dbParameter.ToArray());
                             refId = cmd.ExecuteScalar().ToString();
                         }

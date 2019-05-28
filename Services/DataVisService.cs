@@ -386,7 +386,7 @@ namespace ExpressBase.ServiceStack
             {
                 foreach (OrderBy order in request.OrderBy)
                 {
-                    __order += string.Format("{0} {1},", order.Column, (order.Direction == 2) ? "DESC" : "ASC");
+                    __order += string.Format("{0} {1},", order.Column, (order.Direction == 1) ? "DESC" : "ASC");
                 }
                 int indx = __order.LastIndexOf(",");
                 __order = __order.Substring(0, indx);
@@ -624,7 +624,15 @@ namespace ExpressBase.ServiceStack
             string PreviousGroupingText = string.Empty;
             int SerialCount = 0, PrevRowIndex = 0;
             bool isTree = false;
+            FileInfo file = null;
+            ExcelPackage package = null;
+            ExcelWorksheet worksheet = null;
+            byte[] bytes = null;
+
+            TreeData<EbDataRow> tree = new TreeData<EbDataRow>();
             List<DVBaseColumn> dependencyTable = this.CreateDependencyTable(_dv);
+
+            RowColletion rows = _dataset.Tables[0].Rows;
             if ((_dv as EbTableVisualization) != null)
             {
                 if ((_dv as EbTableVisualization).RowGroupCollection.Count > 0 && (_dv as EbTableVisualization).CurrentRowGroup.RowGrouping.Count > 0)
@@ -639,59 +647,62 @@ namespace ExpressBase.ServiceStack
                         IsMultiLevelRowGrouping = true;
                     }
                 }
-            }
+                string sFileName = _dv.DisplayName + ".xlsx";
 
-            FileInfo file = null;
-            ExcelPackage package = null;
-            ExcelWorksheet worksheet = null;
-            string sFileName = _dv.DisplayName + ".xlsx";
-
-            if (_isexcel)
-            {
-                file = PreExcelCalculation(sFileName);
-                package = new ExcelPackage(file);
-                worksheet = package.Workbook.Worksheets.Add("Report");
-                PreExcelAddHeader(ref worksheet, _dv);
-            }
-
-            RowColletion rows = _dataset.Tables[0].Rows;            
-
-            var Treecol = this.Check4Tree((_dv as EbTableVisualization));
-            TreeData<EbDataRow> tree = new TreeData<EbDataRow>();
-            if (Treecol != null)
-            {
-                isTree = true;
-                tree = TreeGeneration(_formattedTable, _dataset.Tables[0], Treecol);
-                rows = (tree.RowsOrdered as RowColletion);
-                int i = 0;
-                foreach (Node<EbDataRow> Nodedr in tree.Tree)
+                if (_isexcel)
                 {
-                    DataTable2FormatedTable(Nodedr.Item, _dv, dependencyTable, _user_culture, ref _formattedTable, ref globals, bObfuscute, _isexcel, ref Summary, ref worksheet, i, rows.Count,Nodedr.IsGroup,Nodedr.Level, isTree);
-                    if (Nodedr.Children.Count > 0)
-                    {
-                        RecursiveGetTreeChilds(Nodedr, _dv, dependencyTable, _user_culture, ref _formattedTable, ref globals, bObfuscute, _isexcel, ref Summary, ref worksheet, ref i, rows.Count, isTree);
-                    }
-                    i++;
+                    file = PreExcelCalculation(sFileName);
+                    package = new ExcelPackage(file);
+                    worksheet = package.Workbook.Worksheets.Add("Report");
+                    PreExcelAddHeader(ref worksheet, _dv);
                 }
+
+                var Treecol = this.Check4Tree((_dv as EbTableVisualization));
+                if (Treecol != null)
+                {
+                    isTree = true;
+                    tree = TreeGeneration(_formattedTable, _dataset.Tables[0], Treecol);
+                    rows = (tree.RowsOrdered as RowColletion);
+                    int i = 0;
+                    foreach (Node<EbDataRow> Nodedr in tree.Tree)
+                    {
+                        DataTable2FormatedTable(Nodedr.Item, _dv, dependencyTable, _user_culture, _user, ref _formattedTable, ref globals, bObfuscute, _isexcel, ref Summary, ref worksheet, i, rows.Count, Nodedr.IsGroup, Nodedr.Level, isTree);
+                        if (Nodedr.Children.Count > 0)
+                        {
+                            RecursiveGetTreeChilds(Nodedr, _dv, dependencyTable, _user_culture, _user, ref _formattedTable, ref globals, bObfuscute, _isexcel, ref Summary, ref worksheet, ref i, rows.Count, isTree);
+                        }
+                        i++;
+                    }
+                }
+                else
+                {
+                    for (int i = 0; i < rows.Count; i++)
+                    {
+                        DataTable2FormatedTable(rows[i], _dv, dependencyTable, _user_culture, _user, ref _formattedTable, ref globals, bObfuscute, _isexcel, ref Summary, ref worksheet, i, rows.Count);
+                        if (isRowgrouping)
+                            DoRowGroupingCommon(rows[i], _dv, dependencyTable, _user_culture, _user, ref _formattedTable, IsMultiLevelRowGrouping, ref RowGrouping, ref PreviousGroupingText, ref CurSortIndex, ref SerialCount, i, dvColCount, TotalLevels, ref AggregateColumnIndexes, ref RowGroupingColumns, rows.Count);
+                    }
+                }
+
+                List<GroupingDetails> SortedGroupings = RowGrouping.Values.ToList();
+                SortedGroupings.Sort();
+                _levels = SortedGroupings;
+                if (_isexcel)
+                    bytes = package.GetAsByteArray();
             }
             else
             {
-                for (int i = 0; i < rows.Count; i++)
+                if ((_dv as EbChartVisualization) != null)
                 {
-                    DataTable2FormatedTable(rows[i], _dv, dependencyTable, _user_culture, ref _formattedTable, ref globals, bObfuscute, _isexcel, ref Summary, ref worksheet, i, rows.Count);
-                    if (isRowgrouping)
-                        DoRowGroupingCommon(rows[i], _dv, dependencyTable, _user_culture, ref _formattedTable, IsMultiLevelRowGrouping, ref RowGrouping, ref PreviousGroupingText, ref CurSortIndex, ref SerialCount, i, dvColCount, TotalLevels, ref AggregateColumnIndexes, ref RowGroupingColumns, rows.Count);
+                    for (int i = 0; i < rows.Count; i++)
+                    {
+                        DataTable2FormatedTable(rows[i], _dv, dependencyTable, _user_culture, _user, ref _formattedTable, ref globals, bObfuscute, _isexcel, ref Summary, ref worksheet, i, rows.Count);
+
+                    }                    
                 }
             }
+            return new PrePrcessorReturn { FormattedTable = _formattedTable, Summary = Summary, excel_file = bytes, rows = rows, tree = tree.Tree };
 
-            List<GroupingDetails> SortedGroupings = RowGrouping.Values.ToList();
-            SortedGroupings.Sort();
-            _levels = SortedGroupings;
-            byte[] bytes = null;
-            if (_isexcel)
-                bytes = package.GetAsByteArray();
-
-            return new PrePrcessorReturn { FormattedTable = _formattedTable, Summary = Summary, excel_file = bytes, rows = rows, tree = tree.Tree};
         }
 
         public List<DVBaseColumn> CreateDependencyTable(EbDataVisualization _dv)
@@ -747,22 +758,22 @@ namespace ExpressBase.ServiceStack
 
         }
 
-        public void RecursiveGetTreeChilds(Node<EbDataRow> Nodedr, EbDataVisualization _dv, List<DVBaseColumn> dependencyTable, CultureInfo _user_culture, ref EbDataTable _formattedTable, ref Globals globals, bool bObfuscute, bool _isexcel, ref Dictionary<int, List<object>> Summary, ref ExcelWorksheet worksheet, ref int i, int count, bool isTree)
+        public void RecursiveGetTreeChilds(Node<EbDataRow> Nodedr, EbDataVisualization _dv, List<DVBaseColumn> dependencyTable, CultureInfo _user_culture, User _user, ref EbDataTable _formattedTable, ref Globals globals, bool bObfuscute, bool _isexcel, ref Dictionary<int, List<object>> Summary, ref ExcelWorksheet worksheet, ref int i, int count, bool isTree)
         {
             foreach (Node<EbDataRow> dr in Nodedr.Children)
             {
                 i++;
-                DataTable2FormatedTable(dr.Item, _dv, dependencyTable, _user_culture, ref _formattedTable, ref globals, bObfuscute, _isexcel, ref Summary, ref worksheet, i, count, dr.IsGroup, dr.Level, isTree);
+                DataTable2FormatedTable(dr.Item, _dv, dependencyTable, _user_culture, _user, ref _formattedTable, ref globals, bObfuscute, _isexcel, ref Summary, ref worksheet, i, count, dr.IsGroup, dr.Level, isTree);
                 if (dr.Children.Count > 0)
                 {
-                    RecursiveGetTreeChilds(dr, _dv, dependencyTable, _user_culture, ref _formattedTable, ref globals, bObfuscute, _isexcel, ref Summary, ref worksheet, ref i, count, isTree);
+                    RecursiveGetTreeChilds(dr, _dv, dependencyTable, _user_culture, _user, ref _formattedTable, ref globals, bObfuscute, _isexcel, ref Summary, ref worksheet, ref i, count, isTree);
                 }
 
             }
 
         }
 
-        public void DataTable2FormatedTable(EbDataRow row, EbDataVisualization _dv, List<DVBaseColumn> dependencyTable, CultureInfo _user_culture, ref EbDataTable _formattedTable, ref Globals globals, bool bObfuscute, bool _isexcel, ref Dictionary<int, List<object>> Summary, ref ExcelWorksheet worksheet, int i, int count, bool isgroup = false, int level = 0, bool isTree = false)
+        public void DataTable2FormatedTable(EbDataRow row, EbDataVisualization _dv, List<DVBaseColumn> dependencyTable, CultureInfo _user_culture, User _user, ref EbDataTable _formattedTable, ref Globals globals, bool bObfuscute, bool _isexcel, ref Dictionary<int, List<object>> Summary, ref ExcelWorksheet worksheet, int i, int count, bool isgroup = false, int level = 0, bool isTree = false)
         {
             bool AllowLinkforZero = true;
 
@@ -789,7 +800,10 @@ namespace ExpressBase.ServiceStack
                     }
                     else if ((col as DVDateTimeColumn).Format == DateFormat.DateTime)
                     {
-                        _formattedData = (((DateTime)_unformattedData).Date != DateTime.MinValue) ? Convert.ToDateTime(_unformattedData).ToString(cults.DateTimeFormat.ShortDatePattern + " " + cults.DateTimeFormat.ShortTimePattern) : string.Empty;
+                        if((col as DVDateTimeColumn).ConvretToUsersTimeZone)
+                            _formattedData = (((DateTime)_unformattedData).Date != DateTime.MinValue) ? Convert.ToDateTime(_unformattedData).ConvertFromUtc(_user.TimeZone).ToString(cults.DateTimeFormat.ShortDatePattern + " " + cults.DateTimeFormat.ShortTimePattern) : string.Empty;
+                        else
+                            _formattedData = (((DateTime)_unformattedData).Date != DateTime.MinValue) ? Convert.ToDateTime(_unformattedData).ToString(cults.DateTimeFormat.ShortDatePattern + " " + cults.DateTimeFormat.ShortTimePattern) : string.Empty;
                         row[col.Data] = Convert.ToDateTime(_unformattedData);
                     }
                 }
@@ -798,7 +812,7 @@ namespace ExpressBase.ServiceStack
                     if ((col as DVNumericColumn).SuppresIfZero && (_isexcel == false))
                     {
                         _formattedData = (Convert.ToDecimal(_unformattedData) == 0) ? string.Empty : Convert.ToDecimal(_unformattedData).ToString("N", cults.NumberFormat);
-                        
+
                         if (_formattedData.ToString() == string.Empty)
                             AllowLinkforZero = false;
                     }
@@ -880,7 +894,7 @@ namespace ExpressBase.ServiceStack
                 string classs = string.Empty;
                 if (level == 0)
                     classs = "levelzero";
-                html += "<i class='fa fa-minus-square-o groupform "+ classs + "' style='cursor:pointer;' data-group=" + isgroup + " data-level=" + level + ">&nbsp; &nbsp;<b>" + data + "</b></i>";
+                html += "<i class='fa fa-minus-square-o groupform " + classs + "' style='cursor:pointer;' data-group=" + isgroup + " data-level=" + level + ">&nbsp; &nbsp;<b>" + data + "</b></i>";
             }
             else
                 html += "<i class='itemform' data-group=" + isgroup + " data-level=" + level + ">" + data + "</i>";
@@ -981,7 +995,7 @@ namespace ExpressBase.ServiceStack
             return SortedGroupings;
         }
 
-        public void DoRowGroupingCommon(EbDataRow currentRow, EbDataVisualization Visualization, List<DVBaseColumn> dependencyTable, CultureInfo Culture, ref EbDataTable FormattedTable, bool IsMultiLevelRowGrouping, ref Dictionary<string, GroupingDetails> RowGrouping, ref string PreviousGroupingText, ref int CurSortIndex, ref int SerialCount, int PrevRowIndex, int dvColCount, int TotalLevels, ref List<int> AggregateColumnIndexes, ref List<DVBaseColumn> RowGroupingColumns, int RowCount)
+        public void DoRowGroupingCommon(EbDataRow currentRow, EbDataVisualization Visualization, List<DVBaseColumn> dependencyTable, CultureInfo Culture, User _user,ref EbDataTable FormattedTable, bool IsMultiLevelRowGrouping, ref Dictionary<string, GroupingDetails> RowGrouping, ref string PreviousGroupingText, ref int CurSortIndex, ref int SerialCount, int PrevRowIndex, int dvColCount, int TotalLevels, ref List<int> AggregateColumnIndexes, ref List<DVBaseColumn> RowGroupingColumns, int RowCount)
         {
             CurSortIndex += TotalLevels + 30;
 
