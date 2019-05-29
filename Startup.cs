@@ -234,8 +234,18 @@ namespace ExpressBase.ServiceStack
                 }
                 try
                 {
-                    if (requestDto != null && requestDto.GetType() != typeof(Authenticate) && requestDto.GetType() != typeof(GetAccessToken) && requestDto.GetType() != typeof(UniqueRequest) && requestDto.GetType() != typeof(CreateAccountRequest) /*&& requestDto.GetType() != typeof(EmailServicesMqRequest) */&& requestDto.GetType() != typeof(RegisterRequest) && requestDto.GetType() != typeof(AutoGenSidRequest) && requestDto.GetType() != typeof(JoinbetaReq) && requestDto.GetType() != typeof(GetBotsRequest)
-                    && requestDto.GetType() != typeof(GetEventSubscribers) && requestDto.GetType() != typeof(GetAllFromAppStoreExternalRequest) && requestDto.GetType() != typeof(GetOneFromAppStoreRequest) && !(requestDto is EbServiceStackNoAuthRequest))
+                    if (requestDto != null && requestDto.GetType() != typeof(Authenticate) 
+                    && requestDto.GetType() != typeof(GetAccessToken) && 
+                    requestDto.GetType() != typeof(UniqueRequest) && 
+                    requestDto.GetType() != typeof(CreateAccountRequest) /*&& requestDto.GetType() != typeof(EmailServicesMqRequest) */&& 
+                    requestDto.GetType() != typeof(RegisterRequest) && 
+                    requestDto.GetType() != typeof(AutoGenSidRequest) && 
+                    requestDto.GetType() != typeof(JoinbetaReq) && 
+                    requestDto.GetType() != typeof(GetBotsRequest)&& 
+                    requestDto.GetType() != typeof(GetEventSubscribers) && 
+                    requestDto.GetType() != typeof(GetAllFromAppStoreExternalRequest) && 
+                    requestDto.GetType() != typeof(GetOneFromAppStoreRequest) && 
+                    !(requestDto is EbServiceStackNoAuthRequest))
                     {
                         var auth = req.Headers[HttpHeaders.Authorization];
                         if (string.IsNullOrEmpty(auth))
@@ -259,6 +269,8 @@ namespace ExpressBase.ServiceStack
                                         (requestDto as IEbSSRequest).SolnId = c.Value;
                                     if (requestDto is EbServiceStackAuthRequest)
                                         (requestDto as EbServiceStackAuthRequest).SolnId = c.Value;
+                                    if (requestDto is IEbTenentRequest)
+                                        (requestDto as IEbTenentRequest).SolnId = c.Value;
                                     continue;
                                 }
                                 if (c.Type == TokenConstants.UID && !string.IsNullOrEmpty(c.Value))
@@ -268,6 +280,8 @@ namespace ExpressBase.ServiceStack
                                         (requestDto as IEbSSRequest).UserId = Convert.ToInt32(c.Value);
                                     if (requestDto is EbServiceStackAuthRequest)
                                         (requestDto as EbServiceStackAuthRequest).UserId = Convert.ToInt32(c.Value);
+                                    if (requestDto is IEbTenentRequest)
+                                        (requestDto as IEbTenentRequest).UserId = Convert.ToInt32(c.Value);
                                     continue;
                                 }
                                 if (c.Type == TokenConstants.WC && !string.IsNullOrEmpty(c.Value))
