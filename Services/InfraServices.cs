@@ -35,7 +35,7 @@ namespace ExpressBase.ServiceStack.Services
             try
             {
                 string sql = string.Format("INSERT INTO eb_beta_enq(email,time) values('{0}','now()') RETURNING id", r.Email);
-                var f = this.EbConnectionFactory.DataDB.DoQuery(sql);
+                var f = this.InfraConnectionFactory.DataDB.DoQuery(sql);
                 if (f.Rows.Count > 0)
                     resp.Status = true;
                 else
@@ -56,14 +56,14 @@ namespace ExpressBase.ServiceStack.Services
             {
                 string sql = "SELECT * FROM eb_tenantprofile_setup(@fullname, @company, @country, @pwd, @email);";
                 DbParameter[] parameters = {
-                    this.EbConnectionFactory.DataDB.GetNewParameter("fullname", EbDbTypes.String, request.Name),
-                    this.EbConnectionFactory.DataDB.GetNewParameter("company", EbDbTypes.String, request.Company),
-                    this.EbConnectionFactory.DataDB.GetNewParameter("country", EbDbTypes.String, request.Country),
-                    this.EbConnectionFactory.DataDB.GetNewParameter("pwd", EbDbTypes.String, (request.Password.ToString() + request.Email.ToString()).ToMD5Hash()),
-                    this.EbConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, request.Email)
+                    this.InfraConnectionFactory.DataDB.GetNewParameter("fullname", EbDbTypes.String, request.Name),
+                    this.InfraConnectionFactory.DataDB.GetNewParameter("company", EbDbTypes.String, request.Company),
+                    this.InfraConnectionFactory.DataDB.GetNewParameter("country", EbDbTypes.String, request.Country),
+                    this.InfraConnectionFactory.DataDB.GetNewParameter("pwd", EbDbTypes.String, (request.Password.ToString() + request.Email.ToString()).ToMD5Hash()),
+                    this.InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, request.Email)
                 };
 
-                var ds = this.EbConnectionFactory.DataDB.DoQuery(sql, parameters);
+                var ds = this.InfraConnectionFactory.DataDB.DoQuery(sql, parameters);
                 resp.id = Convert.ToInt32(ds.Rows[0][0]);
             }
 
@@ -79,32 +79,31 @@ namespace ExpressBase.ServiceStack.Services
             CreateSolutionResponse resp;
             try
             {
-                using (var con = this.EbConnectionFactory.DataDB.GetNewConnection())
+                string sql = "select * from eb_create_solution_new(@sname,@tenant_id,@descript,@solnid);";
+                DbParameter[] parameters = new DbParameter[] {
+                    InfraConnectionFactory.DataDB.GetNewParameter("@sname", EbDbTypes.String, request.SolutionName),
+                    InfraConnectionFactory.DataDB.GetNewParameter("@tenant_id", EbDbTypes.Int32, request.UserId),
+                    InfraConnectionFactory.DataDB.GetNewParameter("@descript", EbDbTypes.String, request.Description),
+                    InfraConnectionFactory.DataDB.GetNewParameter("@solnid", EbDbTypes.String, request.SolnUrl)
+                    };
+                resp = new CreateSolutionResponse
                 {
-                    con.Open();
-                    string sql = "select * from eb_create_solution_new(@sname,@tenant_id,@descript,@solnid);";
-                    var cmd = this.EbConnectionFactory.DataDB.GetNewCommand(con, sql);
-                    cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("@sname", EbDbTypes.String, request.SolutionName));
-                    cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("@tenant_id", EbDbTypes.Int32, request.UserId));
-                    cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("@descript", EbDbTypes.String, request.Description));
-                    cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("@solnid", EbDbTypes.String, request.SolnUrl));
-                    resp = new CreateSolutionResponse { Status = Convert.ToInt32(cmd.ExecuteScalar()) };
-                }
+                    Status = this.InfraConnectionFactory.DataDB.DoNonQuery(sql, parameters)
+                };
             }
-
             catch (Exception e)
-            {
-                //resp = new CreateSolutionResponse { ErrSolMessage = e.Message };
+            {               
                 resp = new CreateSolutionResponse { ErrSolMessage = "Cannot create solution" };
                 return resp;
             }
+
             try
             {
                 if (resp.Status > 0)
                 {
                     if (request.DeployDB)
                     {
-                        EbDbCreateResponse response = (EbDbCreateResponse)_dbService.Post(new EbDbCreateRequest { dbName = DbName, SolnId = request.SolnId, UserId = request.UserId, Idbcon = this.EbConnectionFactory.DataDB, ischange = false });
+                        EbDbCreateResponse response = (EbDbCreateResponse)_dbService.Post(new EbDbCreateRequest { dbName = DbName, SolnId = request.SolnId, UserId = request.UserId, ischange = false });
                         if (response.resp)
                         {
                             _conService.Post(new InitialSolutionConnectionsRequest { NewSolnId = DbName, SolnId = request.SolnId, UserId = request.UserId, DbUsers = response.dbusers });
@@ -126,7 +125,7 @@ namespace ExpressBase.ServiceStack.Services
         {
             List<EbSolutionsWrapper> temp = new List<EbSolutionsWrapper>();
             string sql = string.Format("SELECT * FROM eb_solutions WHERE tenant_id={0}", request.UserId);
-            var dt = this.EbConnectionFactory.DataDB.DoQuery(sql);
+            var dt = this.InfraConnectionFactory.DataDB.DoQuery(sql);
             foreach (EbDataRow dr in dt.Rows)
             {
                 EbSolutionsWrapper _ebSolutions = (new EbSolutionsWrapper

@@ -17,15 +17,15 @@ namespace ExpressBase.ServiceStack.Auth0
 
         public RegisterResponse Post(RegisterRequest request)
         {
-            var response = new RegisterResponse();
-            var _InfraDb = base.ResolveService<IEbConnectionFactory>() as EbConnectionFactory;
-
+            RegisterResponse response = new RegisterResponse();
+         //   var _InfraDb = base.ResolveService<IEbConnectionFactory>() as EbConnectionFactory;
+            
             DbParameter[] parameters = {
-                _InfraDb.DataDB.GetNewParameter("email", EbDbTypes.String, request.Email)
+                this.InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, request.Email)
                // _InfraDb.DataDB.GetNewParameter("pwd", System.Data.DbType.String, (request.Password + request.Email).ToMD5Hash())
             };
 
-            EbDataTable dt = _InfraDb.DataDB.DoQuery("INSERT INTO eb_tenants (email) VALUES ( @email) RETURNING id;", parameters);
+            EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery("INSERT INTO eb_tenants (email) VALUES ( @email) RETURNING id;", parameters);
 
             if (dt.Rows.Count > 0)
             {
