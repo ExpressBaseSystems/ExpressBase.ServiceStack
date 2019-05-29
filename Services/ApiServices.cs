@@ -43,7 +43,7 @@ namespace ExpressBase.ServiceStack.Services
             Dictionary<string, object> gp = new Dictionary<string, object>();
             foreach (var kp in _d)
             {
-                if ((kp.Value as string).StartsWith("{") && (kp.Value as string).EndsWith("}")||
+                if ((kp.Value as string).StartsWith("{") && (kp.Value as string).EndsWith("}") ||
                     (kp.Value as string).StartsWith("[") && (kp.Value as string).EndsWith("]"))
                 {
                     string formated = (kp.Value as string).Replace(@"\", string.Empty);
@@ -57,10 +57,6 @@ namespace ExpressBase.ServiceStack.Services
 
         public ApiResponse Any(ApiRequest request)
         {
-            this.ApiResponse.Name = request.Name;
-            this.ApiResponse.Version = request.Version;
-            this.ApiResponse.Message.ExecutedOn = DateTime.UtcNow.ToString();
-            var watch = new System.Diagnostics.Stopwatch(); watch.Start();
             this.SolutionId = request.SolnId;
             this.GlobalParams = this.Proc(request.Data);
             int step = 0;
@@ -75,29 +71,22 @@ namespace ExpressBase.ServiceStack.Services
                         this.Api.Resources[step].Result = this.GetResult(this.Api.Resources[step], step);
                         step++;
                     }
-                    watch.Stop();
                     this.ApiResponse.Result = this.Api.Resources[step - 1].GetResult();
                     this.ApiResponse.Message.Status = ApiConstants.SUCCESS;
-                    this.ApiResponse.Message.ExecutionTime = watch.ElapsedMilliseconds.ToString() + " ms";
                     if (this.ApiResponse.Result != null)
                         this.ApiResponse.Message.ErrorCode = ApiErrorCode.Success;
                 }
                 else
                 {
-                    watch.Stop();
-                    this.ApiResponse.Message.Status = "Unknown";
+                    this.ApiResponse.Message.Status = "Unknown Api";
                     this.ApiResponse.Message.Description = string.Format(ApiConstants.API_NOTFOUND, request.Name);
                     this.ApiResponse.Message.ErrorCode = ApiErrorCode.NotFound;
-                    this.ApiResponse.Message.ExecutionTime = watch.ElapsedMilliseconds.ToString() + " ms";
                 }
             }
             catch (Exception e)
             {
-                watch.Stop();
-                this.ApiResponse.Message.ExecutionTime = watch.ElapsedMilliseconds.ToString() + " ms";
-                //this.ApiResponse.Message.Status = string.Format(ApiConstants.FAIL);
-                Console.WriteLine(this.ApiResponse.Message.Status);
-                Console.WriteLine(this.ApiResponse.Message.Description);
+                this.ApiResponse.Message.ErrorCode = ApiErrorCode.Failed;
+                Console.WriteLine(e.Message);
             }
             return this.ApiResponse;
         }
@@ -137,8 +126,10 @@ namespace ExpressBase.ServiceStack.Services
             {
                 ObjectWrapper = this.GetObjectByVer(sqlreader.Reference);
                 if (ObjectWrapper.EbObj == null)
+                {
+                    this.ApiResponse.Message.Description = "DataReader not found";
                     throw new ApiException("DataReader not found");
-
+                }
                 List<DbParameter> p = new List<DbParameter>();
                 List<Param> InputParams = (ObjectWrapper.EbObj as EbDataReader).GetParams(this.Redis as RedisClient);
                 this.FillParams(InputParams, step_c);//fill parameter value from prev component
@@ -152,7 +143,7 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception e)
             {
                 this.ApiResponse.Message.Description = string.Format(ApiConstants.DESCRPT_ERR, step_c, "DataReader", ObjectWrapper.EbObj.Name);
-                throw new ApiException(e.Message);
+                throw new ApiException("Excecution Failed");
             }
             return dt;
         }
@@ -165,7 +156,10 @@ namespace ExpressBase.ServiceStack.Services
             {
                 ObjectWrapper = this.GetObjectByVer(writer.Reference);
                 if (ObjectWrapper.EbObj == null)
-                    throw new ApiException("DataWriter not found");
+                {
+                    this.ApiResponse.Message.Description = "DataWriter not found";
+                    throw new ApiException();
+                }
                 List<Param> InputParams = (ObjectWrapper.EbObj as EbDataWriter).GetParams(null);
 
                 this.FillParams(InputParams, step);//fill parameter value from prev component
@@ -174,21 +168,25 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     p.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(pr.Name, (EbDbTypes)Convert.ToInt32(pr.Type), pr.ValueTo));
                 }
+
+                int status = this.EbConnectionFactory.ObjectsDB.DoNonQuery((ObjectWrapper.EbObj as EbDataWriter).Sql, p.ToArray());
+
+                if (status > 0)
+                {
+                    this.ApiResponse.Message.Description = status + "row inserted";
+                    return true;
+                }
+                else
+                {
+                    this.ApiResponse.Message.Description = status + "row inserted";
+                    return false;
+                }
             }
             catch (Exception e)
             {
-                throw new ApiException("Excecution Failed:");
-            }
-            int status = this.EbConnectionFactory.ObjectsDB.DoNonQuery((ObjectWrapper.EbObj as EbDataWriter).Sql, p.ToArray());
-            if (status > 0)
-            {
-                this.ApiResponse.Message.Description = status + "row inserted";
-                return true;
-            }
-            else
-            {
-                this.ApiResponse.Message.Description = status + "row inserted";
-                return false;
+                this.ApiResponse.Message.Description = string.Format(ApiConstants.DESCRPT_ERR, step, " DataWriter", ObjectWrapper.EbObj.Name);
+                Console.WriteLine(e.Message);
+                throw new ApiException("Excecution Failed");
             }
         }
 
@@ -201,13 +199,17 @@ namespace ExpressBase.ServiceStack.Services
             {
                 ObjectWrapper = this.GetObjectByVer(sqlfunction.Reference);
                 if (ObjectWrapper.EbObj == null)
+                {
+                    this.ApiResponse.Message.Description = "SqlFunction not found";
                     throw new ApiException("SqlFunction not found");
+                }
                 InputParams = (ObjectWrapper.EbObj as EbSqlFunction).GetParams(null);
 
                 this.FillParams(InputParams, step);//fill parameter value from prev component
             }
             catch
             {
+                this.ApiResponse.Message.Description = string.Format(ApiConstants.DESCRPT_ERR, step, " SqlFunction", ObjectWrapper.EbObj.Name);
                 throw new ApiException("Execution Failed:");
             }
             return DSService.Post(new SqlFuncTestRequest { FunctionName = (ObjectWrapper.EbObj as EbSqlFunction).Name, Parameters = InputParams });
@@ -222,7 +224,11 @@ namespace ExpressBase.ServiceStack.Services
             {
                 ObjectWrapper = this.GetObjectByVer(template.Reference);
                 if (ObjectWrapper.EbObj == null)
-                    throw new ApiException("SqlFunction not found");
+                {
+                    this.ApiResponse.Message.Description = "EmailTemplate not found";
+                    throw new ApiException("EmailTemplate not found");
+                }
+
                 List<Param> InputParams = this.GetEmailParams((ObjectWrapper.EbObj as EbEmailTemplate));
 
                 this.FillParams(InputParams, step);//fill parameter value from prev component
@@ -335,7 +341,7 @@ namespace ExpressBase.ServiceStack.Services
                 }
                 else
                 {
-                    this.ApiResponse.Message.Description = string.Format(ApiConstants.UNSET_PARAM, p.Name);
+                    this.ApiResponse.Message.Status = string.Format(ApiConstants.UNSET_PARAM, p.Name);
                     throw new ApiException(((int)ApiErrorCode.Failed).ToString());
                 }
 
