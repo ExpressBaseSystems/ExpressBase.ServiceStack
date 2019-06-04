@@ -22,6 +22,7 @@ using ServiceStack.RabbitMq;
 using ServiceStack.Redis;
 using System;
 using System.IdentityModel.Tokens.Jwt;
+using System.Reflection;
 
 namespace ExpressBase.ServiceStack
 {
@@ -179,6 +180,12 @@ namespace ExpressBase.ServiceStack
             container.Register<IEbMqClient>(c => new EbMqClient()).ReusedWithin(ReuseScope.Request);
             container.Register<IEbStaticFileClient>(c => new EbStaticFileClient()).ReusedWithin(ReuseScope.Request);
 
+            //Setting Assembly version in Redis
+            RedisClient client = (container.Resolve<IRedisClientsManager>() as RedisManagerPool).GetClient() as RedisClient;
+            AssemblyName assembly = Assembly.GetExecutingAssembly().GetName();
+            String version = assembly.Name.ToString() + " - " + assembly.Version.ToString();
+            client.Set("ServiceStackAssembly", version);
+
             RabbitMqMessageFactory rabitFactory = new RabbitMqMessageFactory();
             rabitFactory.ConnectionFactory.UserName = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_RABBIT_USER);
             rabitFactory.ConnectionFactory.Password = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_RABBIT_PASSWORD);
@@ -234,17 +241,17 @@ namespace ExpressBase.ServiceStack
                 }
                 try
                 {
-                    if (requestDto != null && requestDto.GetType() != typeof(Authenticate) 
-                    && requestDto.GetType() != typeof(GetAccessToken) && 
-                    requestDto.GetType() != typeof(UniqueRequest) && 
-                    requestDto.GetType() != typeof(CreateAccountRequest) /*&& requestDto.GetType() != typeof(EmailServicesMqRequest) */&& 
-                    requestDto.GetType() != typeof(RegisterRequest) && 
-                    requestDto.GetType() != typeof(AutoGenSidRequest) && 
-                    requestDto.GetType() != typeof(JoinbetaReq) && 
-                    requestDto.GetType() != typeof(GetBotsRequest)&& 
-                    requestDto.GetType() != typeof(GetEventSubscribers) && 
-                    requestDto.GetType() != typeof(GetAllFromAppStoreExternalRequest) && 
-                    requestDto.GetType() != typeof(GetOneFromAppStoreRequest) && 
+                    if (requestDto != null && requestDto.GetType() != typeof(Authenticate)
+                    && requestDto.GetType() != typeof(GetAccessToken) &&
+                    requestDto.GetType() != typeof(UniqueRequest) &&
+                    requestDto.GetType() != typeof(CreateAccountRequest) /*&& requestDto.GetType() != typeof(EmailServicesMqRequest) */&&
+                    requestDto.GetType() != typeof(RegisterRequest) &&
+                    requestDto.GetType() != typeof(AutoGenSidRequest) &&
+                    requestDto.GetType() != typeof(JoinbetaReq) &&
+                    requestDto.GetType() != typeof(GetBotsRequest) &&
+                    requestDto.GetType() != typeof(GetEventSubscribers) &&
+                    requestDto.GetType() != typeof(GetAllFromAppStoreExternalRequest) &&
+                    requestDto.GetType() != typeof(GetOneFromAppStoreRequest) &&
                     !(requestDto is EbServiceStackNoAuthRequest))
                     {
                         var auth = req.Headers[HttpHeaders.Authorization];
