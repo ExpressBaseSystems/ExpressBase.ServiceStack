@@ -61,6 +61,8 @@ namespace ExpressBase.ServiceStack.Services
                             _listNamesAndTypes.Add(new TableColumnMeta { Name = _column.ColumnName, Type = vDbTypes.GetVendorDbTypeStruct((EbDbTypes)_column.EbDbType), Unique = true });
                             _listNamesAndTypes.Add(new TableColumnMeta { Name = _column.ColumnName + "_ebbkup", Type = vDbTypes.GetVendorDbTypeStruct((EbDbTypes)_column.EbDbType) });
                         }
+                        else if (_column.Control is EbSysLocation || _column.Control is EbSysCreatedBy || _column.Control is EbSysCreatedAt)
+                            continue;
                         else
                             _listNamesAndTypes.Add(new TableColumnMeta { Name = _column.ColumnName, Type = vDbTypes.GetVendorDbTypeStruct((EbDbTypes)_column.EbDbType) });
                     }
