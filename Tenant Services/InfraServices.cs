@@ -109,7 +109,7 @@ namespace ExpressBase.ServiceStack.Services
 
                 MessageProducer3.Publish(new EmailServicesRequest
                 {
-                    To = "vrgstestb@gmail.com",
+                    To = request.Email,
                     Subject = "testing email",
                     Message = body,
                     SolnId = CoreConstants.EXPRESSBASE,
@@ -313,7 +313,7 @@ namespace ExpressBase.ServiceStack.Services
 
                 MessageProducer3.Publish(new EmailServicesRequest
                 {
-                    To = "vrgstestb@gmail.com",
+                    To = reques.Email,
                     Subject = "testing email for reset password",
                     Message = body,
                     //Message = bodyMsg.ToString(),
