@@ -785,7 +785,7 @@ namespace ExpressBase.ServiceStack.Services
                                     Password = _connection.Password,
                                     Port = _connection.Port,
                                     //ProviderName = SmtpProviders.Gmail
-                                    ProviderName = _connection.ProviderName
+                                    ProviderName = (SmtpProviders)Enum.Parse(typeof(SmtpProviders), _connection.ProviderName)
                                 };
                                 return_id = c.PersistConfForHelper(dr["solution_id"].ToString(), this.InfraConnectionFactory, Convert.ToInt32(dr["eb_user_id"]), Convert.ToDateTime(dr["date_created"]));
                                 EbIntegration _obj = new EbIntegration
