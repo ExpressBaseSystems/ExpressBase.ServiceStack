@@ -83,16 +83,11 @@ namespace ExpressBase.ServiceStack.Services
 		public object Get(MLGetSearchResultRqst request)
 		{
 			Dictionary<int, List<MLSearchResult>> dict = new Dictionary<int, List<MLSearchResult>>();
-			string query = string.Format(@"SELECT count(*) FROM (SELECT * FROM eb_keys WHERE LOWER(key) LIKE LOWER(@KEY)) AS Temp;
-											SELECT A.id, A.key, B.id, B.language, C.id, C.value
-											FROM (SELECT * FROM eb_keys WHERE LOWER(key) LIKE LOWER(@KEY) ORDER BY key ASC OFFSET @OFFSET LIMIT @LIMIT) A,
-													eb_languages B, eb_keyvalue C
-											WHERE A.id=C.key_id AND B.id=C.lang_id  
-											ORDER BY A.key ASC, B.language ASC;");
+            string query = string.Format(EbConnectionFactory.ObjectsDB.EB_GET_MLSEARCHRESULT);
 			List<DbParameter> parameters = new List<DbParameter>();
-			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@KEY", EbDbTypes.String, (request.Key_String + "%")));
-			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@OFFSET", EbDbTypes.Int32, request.Offset));
-			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@LIMIT", EbDbTypes.Int32, request.Limit));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("KEY", EbDbTypes.String, (request.Key_String + "%")));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("OFFSET", EbDbTypes.Int32, request.Offset));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("LIMIT", EbDbTypes.Int32, request.Limit));
 			var ds = this.EbConnectionFactory.ObjectsDB.DoQueries(query, parameters.ToArray());
 			int i = -1;
 			Dictionary<long, int> map = new Dictionary<long, int>();
@@ -129,7 +124,7 @@ namespace ExpressBase.ServiceStack.Services
 											WHERE A.id=C.key_id AND B.id=C.lang_id AND LOWER(A.key) LIKE LOWER(@KEY) 
 											ORDER BY B.language ASC");
 			List<DbParameter> parameters = new List<DbParameter>();
-			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@KEY", EbDbTypes.String, request.Key));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("KEY", EbDbTypes.String, request.Key));
 			var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(query, parameters.ToArray());
 			int i = 0;
 			foreach (EbDataRow dr in dt.Rows)
@@ -188,11 +183,12 @@ namespace ExpressBase.ServiceStack.Services
 		public object Get(MLAddKeyRequest request)
 		{
 			List<MLAddKey> list = request.Data;
-			string query1 = "INSERT INTO eb_keys (key) VALUES(@KEY) RETURNING id;";
+            
+			string query1 =EbConnectionFactory.ObjectsDB.EB_MLADDKEY;
 			var con = this.EbConnectionFactory.ObjectsDB.GetNewConnection();
 			con.Open();
 			DbCommand cmd = this.EbConnectionFactory.ObjectsDB.GetNewCommand(con, query1);
-			cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@KEY", EbDbTypes.String, request.Key));
+			cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("KEY", EbDbTypes.String, request.Key));
 			var key_id = cmd.ExecuteScalar().ToString();
 
 			StringBuilder query2 = new StringBuilder();

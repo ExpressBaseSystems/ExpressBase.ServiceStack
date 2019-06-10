@@ -22,6 +22,7 @@ using ServiceStack.RabbitMq;
 using ServiceStack.Redis;
 using System;
 using System.IdentityModel.Tokens.Jwt;
+using System.Reflection;
 
 namespace ExpressBase.ServiceStack
 {
@@ -179,6 +180,12 @@ namespace ExpressBase.ServiceStack
             container.Register<IEbMqClient>(c => new EbMqClient()).ReusedWithin(ReuseScope.Request);
             container.Register<IEbStaticFileClient>(c => new EbStaticFileClient()).ReusedWithin(ReuseScope.Request);
 
+            //Setting Assembly version in Redis
+            RedisClient client = (container.Resolve<IRedisClientsManager>() as RedisManagerPool).GetClient() as RedisClient;
+            AssemblyName assembly = Assembly.GetExecutingAssembly().GetName();
+            String version = assembly.Name.ToString() + " - " + assembly.Version.ToString();
+            client.Set("ServiceStackAssembly", version);
+
             RabbitMqMessageFactory rabitFactory = new RabbitMqMessageFactory();
             rabitFactory.ConnectionFactory.UserName = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_RABBIT_USER);
             rabitFactory.ConnectionFactory.Password = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_RABBIT_PASSWORD);
@@ -259,6 +266,8 @@ namespace ExpressBase.ServiceStack
                                         (requestDto as IEbSSRequest).SolnId = c.Value;
                                     if (requestDto is EbServiceStackAuthRequest)
                                         (requestDto as EbServiceStackAuthRequest).SolnId = c.Value;
+                                    if (requestDto is IEbTenentRequest)
+                                        (requestDto as IEbTenentRequest).SolnId = c.Value;
                                     continue;
                                 }
                                 if (c.Type == TokenConstants.UID && !string.IsNullOrEmpty(c.Value))

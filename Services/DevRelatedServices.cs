@@ -27,8 +27,7 @@ namespace ExpressBase.ServiceStack
                 string sql = "";
                 if (request.Id > 0)
                 {
-                    sql = "SELECT id, applicationname, description, application_type, app_icon, app_settings FROM eb_applications WHERE id = :id AND eb_del = 'F'";
-
+                        sql = "SELECT id, applicationname, description, application_type, app_icon, app_settings FROM eb_applications WHERE id = :id AND eb_del = 'F'";
                 }
                 else
                 {
@@ -193,7 +192,6 @@ namespace ExpressBase.ServiceStack
                         Description = dr[3].ToString(),
                         EbType = ___otyp.ToString(),
                         AppId = Convert.ToInt32(dr[4])
-
                     });
                 }
             }
@@ -217,14 +215,12 @@ namespace ExpressBase.ServiceStack
             }
             while (!uniq_appnameresp.IsUnique);
 
-            using (var con = this.EbConnectionFactory.DataDB.GetNewConnection(DbName.ToLower()))
+            using (var con = this.EbConnectionFactory.ObjectsDB.GetNewConnection(DbName.ToLower()))
             {
                 con.Open();
                 if (!string.IsNullOrEmpty(request.AppName))
                 {
-                    string sql = "INSERT INTO eb_applications (applicationname,application_type, description,app_icon) VALUES (:applicationname,:apptype, :description,:appicon) RETURNING id";
-
-                    var cmd = EbConnectionFactory.DataDB.GetNewCommand(con, sql);
+                    DbCommand cmd = EbConnectionFactory.ObjectsDB.GetNewCommand(con, EbConnectionFactory.ObjectsDB.EB_CREATEAPPLICATION);
                     cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("applicationname", EbDbTypes.String, request.AppName));
                     cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("apptype", EbDbTypes.Int32, request.AppType));
                     cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("description", EbDbTypes.String, request.Description));
@@ -292,15 +288,13 @@ namespace ExpressBase.ServiceStack
 
             try
             {
-                string sql = "INSERT INTO eb_applications (applicationname,application_type, description,app_icon) VALUES (:applicationname,:apptype, :description,:appicon) RETURNING id;";
-
                 DbParameter[] parameters = {
-                    this.EbConnectionFactory.DataDB.GetNewParameter("applicationname", EbDbTypes.String, request.AppName),
-                    this.EbConnectionFactory.DataDB.GetNewParameter("apptype", EbDbTypes.Int32, request.AppType),
-                    this.EbConnectionFactory.DataDB.GetNewParameter("description", EbDbTypes.String, request.Description),
-                    this.EbConnectionFactory.DataDB.GetNewParameter("appicon", EbDbTypes.String, request.AppIcon)
+                    this.EbConnectionFactory.ObjectsDB.GetNewParameter("applicationname", EbDbTypes.String, request.AppName),
+                    this.EbConnectionFactory.ObjectsDB.GetNewParameter("apptype", EbDbTypes.Int32, request.AppType),
+                    this.EbConnectionFactory.ObjectsDB.GetNewParameter("description", EbDbTypes.String, request.Description),
+                    this.EbConnectionFactory.ObjectsDB.GetNewParameter("appicon", EbDbTypes.String, request.AppIcon)
                 };
-                var dt = this.EbConnectionFactory.DataDB.DoQuery(sql, parameters);
+                var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(EbConnectionFactory.ObjectsDB.EB_CREATEAPPLICATION_DEV, parameters);
 
                 resp = new CreateApplicationResponse() { id = Convert.ToInt32(dt.Rows[0][0]) };
 
@@ -317,56 +311,7 @@ namespace ExpressBase.ServiceStack
         public GetTbaleSchemaResponse Get(GetTableSchemaRequest request)
         {
             Dictionary<string, List<Coloums>> Dict = new Dictionary<string, List<Coloums>>();
-            string query = @"
-               SELECT 
-              ACols.*,
-                 BCols.foreign_table_name,
-                    BCols.foreign_column_name 
-            FROM
-                    (SELECT 
-                        TCols.*, CCols.constraint_type FROM
-                            (SELECT
-                             T.table_name, C.column_name, C.data_type
-                            FROM 
-                                information_schema.tables T,
-                             information_schema.columns C
-                            WHERE
-                              T.table_name = C.table_name AND
-                                 T.table_schema='public') TCols
-                            LEFT JOIN
-                            (SELECT 
-                               TC.table_name,TC.constraint_type,KCU.column_name 
-                             FROM
-                              information_schema.table_constraints TC,
-                              information_schema.key_column_usage KCU
-                             WHERE
-                              TC.constraint_name=KCU.constraint_name AND
-                              (TC.constraint_type = 'PRIMARY KEY' OR TC.constraint_type = 'FOREIGN KEY') AND
-                              TC.table_schema='public') CCols
-                             ON 
-                             CCols.table_name=TCols.table_name AND
-                                CCols.column_name=TCols.column_name) ACols
-             LEFT JOIN
-                        (SELECT
-                     tc.constraint_name, tc.table_name, kcu.column_name, 
-                   ccu.table_name AS foreign_table_name,
-                      ccu.column_name AS foreign_column_name 
-               FROM 
-             information_schema.table_constraints AS tc 
-                  JOIN 
-                       information_schema.key_column_usage AS kcu
-                        ON 
-                       tc.constraint_name = kcu.constraint_name
-                     JOIN  
-                       information_schema.constraint_column_usage AS ccu
-                        ON 
-                       ccu.constraint_name = tc.constraint_name
-                        WHERE 
-                       constraint_type = 'FOREIGN KEY' AND tc.table_schema='public') BCols
-                     ON
-                      ACols.table_name=BCols.table_name AND  ACols.column_name=BCols.column_name
-                ORDER BY
-                 table_name, column_name";
+            string query = EbConnectionFactory.DataDB.EB_GETTABLESCHEMA;
 
             var res = this.EbConnectionFactory.DataDB.DoQuery(query);
             string key = "";

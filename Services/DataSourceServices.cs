@@ -210,7 +210,7 @@ namespace ExpressBase.ServiceStack
                 if (_ds != null)
                 {
                     string _sql = string.Empty;
-                    if (this.EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.PGSQL)
+                    /*if (this.EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.PGSQL)
                     {
                         _sql = _ds.Sql.Replace("@and_search", string.Empty).Replace("@orderby", "1");
                         _isPaged = (_sql.ToLower().Contains("@offset") && _sql.ToLower().Contains("@limit"));
@@ -220,14 +220,14 @@ namespace ExpressBase.ServiceStack
                             _sql = _sql.Replace("@id", "0");
                     }
                     else
-                    {
+                    {*/
                         _sql = _ds.Sql.Replace(":and_search", string.Empty).Replace(":orderby", "1");
                         _isPaged = (_sql.ToLower().Contains(":offset") && _sql.ToLower().Contains(":limit"));
 
 
                         if (request.Params == null)
                             _sql = _sql.Replace(":id", "0");
-                    }
+                   // }
                     var parameters = DataHelper.GetParams(this.EbConnectionFactory, _isPaged, request.Params, 0, 0);
 
                     try
@@ -269,7 +269,7 @@ namespace ExpressBase.ServiceStack
             var result = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = request.RefId });
             if (result.Data.Count > 0)
             {
-                _ds = EbSerializers.Json_Deserialize(result.Data[0].Json);
+                _ds = EbSerializers.Json_Deserialize<EbDataReader>(result.Data[0].Json);
                 Redis.Set<EbDataReader>(request.RefId, _ds);
 
                 if (_ds != null)
@@ -284,7 +284,7 @@ namespace ExpressBase.ServiceStack
                         else
                             sql += _sql;
                     }
-                    sql = sql.Replace("@and_search", string.Empty).Replace("@orderby", "1");
+                    sql = sql.Replace(":and_search", string.Empty).Replace(":orderby", "1");
                     bool _isPaged = true;
 
                     var parameters = DataHelper.GetParams(this.EbConnectionFactory, _isPaged, request.Params, 0, 0);
@@ -536,17 +536,20 @@ namespace ExpressBase.ServiceStack
                     }
                     sql = string.Format(@"SELECT * FROM {0}({1})", request.FunctionName, string.Join(",", _params));
                     resp.Data = this.EbConnectionFactory.ObjectsDB.DoQuery(sql, parameter.ToArray());
+                    resp.Reponse = true;
                 }
                 else
                 {
                     sql = string.Format(@"SELECT * FROM {0}()", request.FunctionName);
                     resp.Data = this.EbConnectionFactory.ObjectsDB.DoQuery(sql);
+                    resp.Reponse = true;
                 }
             }
             catch (Exception e)
             {
-                resp.ResponseStatus.Message = e.Message;
-                resp.Data = new EbDataTable();
+                Console.WriteLine("Exception  at sql function execution::" + e.Message);
+                resp.Reponse = false;
+                resp.Data = null;
             }
             return resp;
         }

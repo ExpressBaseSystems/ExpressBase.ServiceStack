@@ -61,19 +61,26 @@ namespace ExpressBase.ServiceStack.Services
                             _listNamesAndTypes.Add(new TableColumnMeta { Name = _column.ColumnName, Type = vDbTypes.GetVendorDbTypeStruct((EbDbTypes)_column.EbDbType), Unique = true });
                             _listNamesAndTypes.Add(new TableColumnMeta { Name = _column.ColumnName + "_ebbkup", Type = vDbTypes.GetVendorDbTypeStruct((EbDbTypes)_column.EbDbType) });
                         }
+                        else if (_column.Control is EbSysLocation || _column.Control is EbSysCreatedBy || _column.Control is EbSysCreatedAt)
+                            continue;
                         else
                             _listNamesAndTypes.Add(new TableColumnMeta { Name = _column.ColumnName, Type = vDbTypes.GetVendorDbTypeStruct((EbDbTypes)_column.EbDbType) });
                     }
                     if (_table.TableName != _schema.MasterTable)
                         _listNamesAndTypes.Add(new TableColumnMeta { Name = _schema.MasterTable + "_id", Type = vDbTypes.Decimal });// id refernce to the parent table will store in this column - foreignkey
+                    if(_table.IsGridTable)
+                        _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_row_num", Type = vDbTypes.Decimal });
 
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_by", Type = vDbTypes.Decimal });
+                    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_by_s", Type = vDbTypes.String });
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_at", Type = vDbTypes.DateTime });
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_by", Type = vDbTypes.Decimal });
+                    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_by_s", Type = vDbTypes.String });
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_at", Type = vDbTypes.DateTime });
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_del", Type = vDbTypes.Boolean, Default = "F" });
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_void", Type = vDbTypes.Boolean, Default = "F" });
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_loc_id", Type = vDbTypes.Int32 });
+                    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_loc_s", Type = vDbTypes.String });
                     //_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_default", Type = vDbTypes.Boolean, Default = "F" });
                     //_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_transaction_date", Type = vDbTypes.DateTime });
                     //_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_autogen", Type = vDbTypes.Decimal });
@@ -105,9 +112,14 @@ namespace ExpressBase.ServiceStack.Services
                     this.EbConnectionFactory.ObjectsDB.CreateTable(sql);//Table Creation
                     CreateSquenceAndTrigger(tableName);//
                 }
-                else
+                else if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.PGSQL)
                 {
                     sql = "CREATE TABLE @tbl( id SERIAL PRIMARY KEY, @cols)".Replace("@cols", cols).Replace("@tbl", tableName);
+                    this.EbConnectionFactory.ObjectsDB.CreateTable(sql);
+                }
+                else if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.MYSQL)
+                {
+                    sql = "CREATE TABLE @tbl( id INTEGER AUTO_INCREMENT PRIMARY KEY, @cols)".Replace("@cols", cols).Replace("@tbl", tableName);
                     this.EbConnectionFactory.ObjectsDB.CreateTable(sql);
                 }
                 return 0;
@@ -155,9 +167,19 @@ namespace ExpressBase.ServiceStack.Services
                                 CreateSquenceAndTrigger(tableName);
                         }
                     }
-                    else
+                    else if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.PGSQL)
                     {
-                        sql = (appendId ? "id SERIAL," : "") + sql;
+                        sql = (appendId ? "id SERIAL PRIMARY KEY," : "") + sql;
+                        if (!sql.IsEmpty())
+                        {
+                            sql = "ALTER TABLE @tbl ADD COLUMN " + (sql.Substring(0, sql.Length - 1)).Replace(",", ", ADD COLUMN ");
+                            sql = sql.Replace("@tbl", tableName);
+                            this.EbConnectionFactory.ObjectsDB.UpdateTable(sql);
+                        }
+                    }
+                    else if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.MYSQL)
+                    {
+                        sql = (appendId ? "id INTEGER AUTO_INCREMENT PRIMARY KEY," : "") + sql;
                         if (!sql.IsEmpty())
                         {
                             sql = "ALTER TABLE @tbl ADD COLUMN " + (sql.Substring(0, sql.Length - 1)).Replace(",", ", ADD COLUMN ");
@@ -239,16 +261,14 @@ namespace ExpressBase.ServiceStack.Services
         public GetDictionaryValueResponse Any(GetDictionaryValueRequest request)
         {
             Dictionary<string, string> Dict = new Dictionary<string, string>();
-            string qry = @"
-SELECT 
-	k.key, v.value
-FROM 
-	eb_keys k, eb_languages l, eb_keyvalue v
-WHERE
-	k.id = v.key_id AND
-	l.id = v.lang_id AND
-	k.key IN ({0})
-	AND l.language LIKE '%({1})';";
+            string qry = @"SELECT k.key, v.value 
+                            FROM 
+	                            eb_keys k, eb_languages l, eb_keyvalue v
+                            WHERE
+	                            k.id = v.key_id AND
+	                            l.id = v.lang_id AND
+	                            k.key IN ({0})
+	                            AND l.language LIKE '%({1})';";
 
             string temp = string.Empty;
             foreach (string t in request.Keys)
@@ -276,6 +296,7 @@ WHERE
             FormObj.FormData = request.FormData;
             FormObj.UserObj = request.UserObj;
             FormObj.LocationId = request.CurrentLoc;
+            FormObj.SolutionObj = request.SolutionObj;
 
             Console.WriteLine("Insert/Update WebFormData : MergeFormData start");
             FormObj.MergeFormData();
@@ -644,7 +665,7 @@ WHERE
             FormObj.TableRowId = request.RowId;
             FormObj.UserObj = request.UserObj;
 
-            string temp = FormObj.GetAuditTrail(EbConnectionFactory.DataDB);
+            string temp = FormObj.GetAuditTrail(EbConnectionFactory.DataDB, this);
 
             return new GetAuditTrailResponse() { Json = temp };
 
@@ -711,6 +732,15 @@ WHERE
 
             return new GetDesignHtmlResponse { Html = _temp };
         }
+        public GetCtrlsFlatResponse Post(GetCtrlsFlatRequest request)
+        {
+            EbWebForm form = this.GetWebFormObject(request.RefId);
+
+            IEnumerable<EbControl> ctrls = form.Controls.FlattenEbControls();
+
+            return new GetCtrlsFlatResponse { Controls = ctrls.ToList<EbControl>() };
+        }
+
 
     }
 }

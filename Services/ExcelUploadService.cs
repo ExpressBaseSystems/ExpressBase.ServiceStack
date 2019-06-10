@@ -22,8 +22,8 @@ namespace ExpressBase.ServiceStack.Services
         //.......check table name already exist.......
         public CheckTblResponse Any(CheckTblRequest request)
         {
-            string qry = "SELECT EXISTS (SELECT 1 FROM   information_schema.tables WHERE  table_schema = 'public' AND table_name = @tbl); ";
-            DbParameter[] parameter = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("@tbl", EbDbTypes.String, request.tblName.ToLower()) };
+            string qry = "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = :tbl); ";
+            DbParameter[] parameter = { this.EbConnectionFactory.ObjectsDB.GetNewParameter(":tbl", EbDbTypes.String, request.tblName.ToLower()) };
             var rslt = this.EbConnectionFactory.ObjectsDB.DoQuery(qry, parameter);
             CheckTblResponse response = new CheckTblResponse();
             response.msg = rslt.Rows[0];

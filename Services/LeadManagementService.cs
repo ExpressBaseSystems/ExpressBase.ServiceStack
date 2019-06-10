@@ -710,13 +710,16 @@ WHERE
 				this.EbConnectionFactory.ObjectsDB.GetNewParameter("dateofsurgery", EbDbTypes.Date, Convert.ToDateTime(DateTime.ParseExact(S_Obj.Date, "dd-MM-yyyy", CultureInfo.InvariantCulture))),
 				this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_loc_id", EbDbTypes.Int32, S_Obj.Branch),
 				this.EbConnectionFactory.ObjectsDB.GetNewParameter("createdby", EbDbTypes.String, request.UserName)
-			};
+                //this.EbConnectionFactory.ObjectsDB.GetNewParameter("modifiedby", EbDbTypes.String, request.UserName),
+                //this.EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, S_Obj.Id )
+            };
 
 			List<DbParameter> parameters = new List<DbParameter>();
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("customers_id", EbDbTypes.Int32, S_Obj.Account_Code));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("dateofsurgery", EbDbTypes.Date, Convert.ToDateTime(DateTime.ParseExact(S_Obj.Date, "dd-MM-yyyy", CultureInfo.InvariantCulture))));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_loc_id", EbDbTypes.Int32, S_Obj.Branch));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("createdby", EbDbTypes.String, request.UserName));
+            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("modifiedby", EbDbTypes.String, request.UserName));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("extractiondone_by", EbDbTypes.Int32, S_Obj.Extract_By));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("implantation_by", EbDbTypes.Int32, S_Obj.Implant_By));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("consent_by", EbDbTypes.Int32, S_Obj.Consent_By));
@@ -726,8 +729,9 @@ WHERE
             parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("complimentary", EbDbTypes.String, S_Obj.Complimentary));
             parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("method", EbDbTypes.String, S_Obj.Method));
             parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("narration", EbDbTypes.String, S_Obj.Comment));
+            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, S_Obj.Id));
 
-            if (true)//if (S_Obj.Id == 0)//new
+            if (S_Obj.Id == 0)//new
 			{
 				string Qry1 = @"INSERT INTO 
 									leadsurgerydetails(customers_id, dateofsurgery, eb_loc_id, createddt, createdby)
@@ -742,12 +746,21 @@ WHERE
 									:implantation_by, :consent_by, :anaesthesia_by, :post_briefing_by, :nurses, :complimentary, :method, :narration);";
 				rstatus = this.EbConnectionFactory.ObjectsDB.InsertTable(Qry, parameters.ToArray());
 			}
-			else//update
+			else if(request.Permission)//update
 			{
-				string Qry = @"UPDATE leadsurgerydetails 
-								SET dateofsurgery = :dateofsurgery,branch = :branch,patientinstructions = :patientinstructions,doctorinstructions = :doctorinstructions,
-									createdby = :createdby,createddt = :createddt, modifiedby = :modifiedby, modifieddt = :modifieddt 
-								WHERE accountcode=:accountcode AND id = :id;";
+                //string Qry1 = @"UPDATE leadsurgerydetails
+                //                SET dateofsurgery = :dateofsurgery, eb_loc_id = :eb_loc_id,
+                //                    modifiedby = :modifiedby, modifieddt = NOW()
+                //                WHERE id = :id AND customers_id=:customers_id;";
+                //this.EbConnectionFactory.ObjectsDB.UpdateTable(Qry1, parameters1);
+
+                string Qry = @"UPDATE leadsurgerystaffdetails 
+								SET dateofsurgery = :dateofsurgery, eb_loc_id = :eb_loc_id, extractiondone_by = :extractiondone_by,
+                                    implantation_by = :implantation_by, consent_by = :consent_by, anaesthesia_by = :anaesthesia_by,
+									post_briefing_by = :post_briefing_by, nurses_id = :nurses, complementry = :complimentary,
+                                    method = :method, narration = :narration,
+                                    modifiedby = :modifiedby, modifieddt = NOW() 
+								WHERE id = :id AND customers_id=:customers_id;";
 				rstatus = this.EbConnectionFactory.ObjectsDB.UpdateTable(Qry, parameters.ToArray());
 			}
 			return new SaveSurgeryDetailsResponse { Status = rstatus };
