@@ -19,6 +19,8 @@ using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Runtime.Loader;
+using ServiceStack.Messaging;
+using System.Text;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -27,7 +29,7 @@ namespace ExpressBase.ServiceStack.Services
     [Authenticate]
     public class InfraServices : EbBaseService
     {
-        public InfraServices(IEbConnectionFactory _dbf) : base(_dbf) { }
+        public InfraServices(IEbConnectionFactory _dbf, IMessageProducer _mqp) : base(_dbf, _mqp) { }
 
         public JoinbetaResponse Post(JoinbetaReq r)
         {
@@ -54,17 +56,70 @@ namespace ExpressBase.ServiceStack.Services
             CreateAccountResponse resp = new CreateAccountResponse();
             if (request.Op == "updatetenant")
             {
-                string sql = "SELECT * FROM eb_tenantprofile_setup(@fullname, @company, @country, @pwd, @email);";
+                string sql = "SELECT * FROM eb_tenantprofile_setup(:fullname, :company, :country, :pwd, :email,:activationcode);";
                 DbParameter[] parameters = {
                     this.InfraConnectionFactory.DataDB.GetNewParameter("fullname", EbDbTypes.String, request.Name),
                     this.InfraConnectionFactory.DataDB.GetNewParameter("company", EbDbTypes.String, request.Company),
                     this.InfraConnectionFactory.DataDB.GetNewParameter("country", EbDbTypes.String, request.Country),
                     this.InfraConnectionFactory.DataDB.GetNewParameter("pwd", EbDbTypes.String, (request.Password.ToString() + request.Email.ToString()).ToMD5Hash()),
-                    this.InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, request.Email)
+                    this.InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, request.Email),
+                    this.EbConnectionFactory.DataDB.GetNewParameter("activationcode", EbDbTypes.String, request.ActivationCode)
                 };
+                EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(sql, parameters);
+                resp.id = Convert.ToInt32(dt.Rows[0][0]);
+            }
+            if (resp.id >= 0)
+            {
+                //uin=unique identification number
+                //uic=unique identification code
+                string aq = "$" + resp.id + "$" + request.ActivationCode + "$";
+                byte[] plaintxt = System.Text.Encoding.UTF8.GetBytes(aq);
+                string ai = System.Convert.ToBase64String(plaintxt);
+                string elinks2 = string.Format("https://{0}/em?emv={1}", request.PageUrl, ai);
+                string body = @"<html>
+												<head>
+													<title></title>
+												</head>
+												<body>
+													<div style='border: 3px solid #22BCE5'>
+														<figure style='text-align: center;'>
+															<img src='https://expressbase.com/images/logos/EB_Logo.png' /><br />
+														</figure>
+														<br />
+														Hello <b>{UserName}</b>,<br />
+														<br />
+														Thanks for registering with EXPRESSbase Systems Private Limited.<br />
+															<br />
+															Please verify your email address to confirm your account registration by clicking bleow<br />
+ 
+														<br />
+														<a style='color: #22BCE5' href='{Url}'>Verify Account</a><br />
+														<br />
+														<br />
+														Thanks<br />
+														EXPRESSbase Systems Private Limited.
+      
+													</div>
+												</body>
+												</html>";
 
-                var ds = this.InfraConnectionFactory.DataDB.DoQuery(sql, parameters);
-                resp.id = Convert.ToInt32(ds.Rows[0][0]);
+                body = body.Replace("{UserName}", request.Name);
+                body = body.Replace("{Url}", elinks2);
+
+
+                MessageProducer3.Publish(new EmailServicesRequest
+                {
+                    To = request.Email,
+                    Subject = "testing email",
+                    Message = body,
+                    SolnId = CoreConstants.EXPRESSBASE,
+
+                });
+                string quer = string.Format("UPDATE eb_tenants SET is_email_sent = 'true'  WHERE id = '{0}'", resp.id);
+                EbDataTable dtb = this.EbConnectionFactory.DataDB.DoQuery(quer);
+                string sid = "SELECT * from eb_sid_gen();";
+                EbDataTable dt1 = this.EbConnectionFactory.DataDB.DoQuery(sid);
+                resp.Sol_id_autogen = Convert.ToString(dt1.Rows[0][0]);
             }
 
             return resp;
@@ -80,19 +135,21 @@ namespace ExpressBase.ServiceStack.Services
             try
             {
                 string sql = "select * from eb_create_solution_new(@sname,@tenant_id,@descript,@solnid);";
-                DbParameter[] parameters = new DbParameter[] {
+                DbParameter[] parameters = new DbParameter[]
+                {
                     InfraConnectionFactory.DataDB.GetNewParameter("@sname", EbDbTypes.String, request.SolutionName),
                     InfraConnectionFactory.DataDB.GetNewParameter("@tenant_id", EbDbTypes.Int32, request.UserId),
                     InfraConnectionFactory.DataDB.GetNewParameter("@descript", EbDbTypes.String, request.Description),
                     InfraConnectionFactory.DataDB.GetNewParameter("@solnid", EbDbTypes.String, request.SolnUrl)
                     };
+                EbDataTable res = this.InfraConnectionFactory.DataDB.DoQuery(sql, parameters);
                 resp = new CreateSolutionResponse
                 {
-                    Status = this.InfraConnectionFactory.DataDB.DoNonQuery(sql, parameters)
+                    Status = Convert.ToInt32(res.Rows[0][0])
                 };
             }
             catch (Exception e)
-            {               
+            {
                 resp = new CreateSolutionResponse { ErrSolMessage = "Cannot create solution" };
                 return resp;
             }
@@ -125,7 +182,7 @@ namespace ExpressBase.ServiceStack.Services
         {
             List<EbSolutionsWrapper> temp = new List<EbSolutionsWrapper>();
             string sql = string.Format("SELECT * FROM eb_solutions WHERE tenant_id={0}", request.UserId);
-            var dt = this.InfraConnectionFactory.DataDB.DoQuery(sql);
+            EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(sql);
             foreach (EbDataRow dr in dt.Rows)
             {
                 EbSolutionsWrapper _ebSolutions = (new EbSolutionsWrapper
@@ -146,7 +203,7 @@ namespace ExpressBase.ServiceStack.Services
         {
             ConnectionManager _conService = base.ResolveService<ConnectionManager>();
             string sql = string.Format("SELECT * FROM eb_solutions WHERE isolution_id='{0}'", request.IsolutionId);
-            var dt = (new EbConnectionFactory(CoreConstants.EXPRESSBASE, this.Redis)).DataDB.DoQuery(sql);
+            EbDataTable dt = (new EbConnectionFactory(CoreConstants.EXPRESSBASE, this.Redis)).DataDB.DoQuery(sql);
             EbSolutionsWrapper _ebSolutions = new EbSolutionsWrapper
             {
                 SolutionName = dt.Rows[0][6].ToString(),
@@ -163,6 +220,147 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
+        public EmailverifyResponse Post(EmailverifyRequest request)
+        {
+            string qur = String.Format(@"UPDATE 
+										eb_tenants 
+										SET
+											is_verified = true,
+											activation_code=null 
+										WHERE 
+											id = :id AND
+											activation_code= :codes");
+
+            DbParameter[] parameters = {
+                    EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, request.Id),
+                    EbConnectionFactory.ObjectsDB.GetNewParameter("codes", EbDbTypes.String, request.ActvCode)
+            };
+            int dt = this.EbConnectionFactory.DataDB.DoNonQuery(qur, parameters);
+            EmailverifyResponse re = new EmailverifyResponse();
+            if (dt == 1)
+            {
+
+                re.VerifyStatus = true;
+            }
+            else
+            {
+                re.VerifyStatus = false;
+            }
+
+            return re;
+        }
+
+        public ForgotPasswordResponse Post(ForgotPasswordRequest reques)
+        {
+            string k = String.Format(@"UPDATE 
+										eb_tenants 
+										SET
+											resetpsw_code = :code
+										WHERE 
+											email=:mail");
+            DbParameter[] parameters = {
+                    this.EbConnectionFactory.DataDB.GetNewParameter("code", EbDbTypes.String, reques.Resetcode),
+                    this.EbConnectionFactory.DataDB.GetNewParameter("mail", EbDbTypes.String, reques.Email)
+                    };
+            int dt = this.EbConnectionFactory.DataDB.DoNonQuery(k, parameters);
+            ForgotPasswordResponse re = new ForgotPasswordResponse();
+            if (dt == 1)
+            {
+                //uin=unique identification number
+                //uic=unique identification code
+                string aq = "$" + reques.Email + "$" + reques.Resetcode + "$";
+                byte[] plaintxt = System.Text.Encoding.UTF8.GetBytes(aq);
+                string ai = System.Convert.ToBase64String(plaintxt);
+                string resetlink = string.Format("https://{0}/resetpassword?rep={1}", reques.PageUrl, ai);
+
+                //using (StreamReader reader = new StreamReader("\\Ext\\EmailVerifyStructure.cshtml")) 
+                //{
+                //	body = reader.ReadToEnd();
+                //}
+
+                string body = @"<html >
+<head>
+    <title></title>
+</head>
+<body>
+    <div style='border: 3px solid #22BCE5; padding:10px;'>
+        <figure style='text-align: center;'>
+            <img src='https://expressbase.com/images/logos/EB_Logo.png' /><br />
+        </figure>
+        <br />
+
+      
+        Hello <b>{UserName}</b>,<br />
+        <br />
+        Reset your password by clicking below.<br />
+        <a  href='{Url}'>Reset password</a><br />
+        <br />
+        Thanks<br />
+        EXPRESSbase Systems Private Limited.
+       
+    </div>
+</body>
+</html>";
+                body = body.Replace("{UserName}", reques.Email);
+                body = body.Replace("{Url}", resetlink);
+
+                //StringBuilder bodyMsg = new StringBuilder();
+                //bodyMsg.Append( " <img src = "+ "https://expressbase.com/images/logos/EB_Logo.png" + " />");
+                //bodyMsg.Append("<p style="+"color: red;"+"><b>Please follow this link to reset your password: <b></p>");
+                //            bodyMsg.Append("<br />");
+                //            bodyMsg.Append("next3");
+                //            bodyMsg.Append("<a href=https://" + resetlink + ">Account</a>");
+                //            bodyMsg.Append("<br />");
+                //            bodyMsg.Append("next4");
+
+                MessageProducer3.Publish(new EmailServicesRequest
+                {
+                    To = reques.Email,
+                    Subject = "testing email for reset password",
+                    Message = body,
+                    //Message = bodyMsg.ToString(),
+                    SolnId = CoreConstants.EXPRESSBASE,
+
+                });
+                re.VerifyStatus = true;
+            }
+            else
+            {
+                re.VerifyStatus = false;
+            }
+            return re;
+        }
+        public ResetPasswordResponse Post(ResetPasswordRequest reqst)
+        {
+            string hshpassword = (reqst.Password + reqst.Email).ToMD5Hash();
+            string qur = String.Format(@"UPDATE 
+										eb_tenants 
+										SET
+											pwd = :pswrd,
+											resetpsw_code=null 
+										WHERE 
+											email = :id AND
+											resetpsw_code= :codes");
+
+            DbParameter[] parameters = {
+                EbConnectionFactory.ObjectsDB.GetNewParameter("pswrd",EbDbTypes.String,hshpassword),
+                    EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.String, reqst.Email),
+                    EbConnectionFactory.ObjectsDB.GetNewParameter("codes", EbDbTypes.String, reqst.Resetcode)
+            };
+            int dt = this.EbConnectionFactory.DataDB.DoNonQuery(qur, parameters);
+            ResetPasswordResponse rests = new ResetPasswordResponse();
+            if (dt == 1)
+            {
+
+                rests.VerifyStatus = true;
+            }
+            else
+            {
+                rests.VerifyStatus = false;
+            }
+
+            return rests;
+        }
         //public EditAccountResponse Post(EditAccountRequest request)
         //{
         //    EditAccountResponse resp;
@@ -1055,13 +1253,13 @@ namespace ExpressBase.ServiceStack.Services
             //}
             //else
             {
-                using (var con = EbConnectionFactory.DataDB.GetNewConnection())
+                using (DbConnection con = EbConnectionFactory.DataDB.GetNewConnection())
                 {
                     con.Open();
                     if (request.restype == "img")
                     {
                         string sql = string.Format("SELECT id,profileimg FROM eb_tenants WHERE id={0}", request.Uid);
-                        var dt = EbConnectionFactory.DataDB.DoQuery(sql);
+                        EbDataTable dt = EbConnectionFactory.DataDB.DoQuery(sql);
                         // Dictionary<int, string> list = new Dictionary<int, string>();
                         List<List<object>> list = new List<List<object>>();
                         foreach (EbDataRow dr in dt.Rows)
@@ -1077,7 +1275,7 @@ namespace ExpressBase.ServiceStack.Services
                     else
                     {
                         string sql = string.Format("SELECT id,profileimg FROM eb_tenants WHERE cname={0}", request.Uname);
-                        var dt = EbConnectionFactory.DataDB.DoQuery(sql);
+                        EbDataTable dt = EbConnectionFactory.DataDB.DoQuery(sql);
                         List<List<object>> list = new List<List<object>>();
                         foreach (EbDataRow dr in dt.Rows)
                         {
@@ -1098,7 +1296,7 @@ namespace ExpressBase.ServiceStack.Services
         public void TableInsertsDataDB(EbConnectionFactory dbf, EbDataTable dt, DbConnection _con_d1)
         {
             string result;
-            var assembly = typeof(Common.sqlscripts).GetAssembly();
+            Assembly assembly = typeof(sqlscripts).GetAssembly();
             using (Stream stream = assembly.GetManifestResourceStream("ExpressBase.Data.SqlScripts.PostGreSql.DataDb.postgres_eb_users.sql"))
             {
                 using (StreamReader reader = new StreamReader(stream))
@@ -1138,13 +1336,17 @@ namespace ExpressBase.ServiceStack.Services
         {
             UniqueRequestResponse res = new UniqueRequestResponse();
             ILog log = LogManager.GetLogger(GetType());
-            string sql = "SELECT id FROM eb_tenants WHERE email ~* @email";
+            string sql = "SELECT id, pwd FROM eb_tenants WHERE email ~* @email";
             DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("email", EbDbTypes.String, request.email) };
             var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(sql, parameters);
             if (dt.Rows.Count > 0)
-                res.isUniq = false;
+            {
+                res.Unique = false;
+                res.Id = Convert.ToInt32(dt.Rows[0]["id"]);
+                res.HasPassword = (string.IsNullOrEmpty(dt.Rows[0]["pwd"].ToString())) ? false : true;
+            }
             else
-                res.isUniq = true;
+                res.Unique = true;
 
             return res;
         }
@@ -1203,3 +1405,5 @@ namespace ExpressBase.ServiceStack.Services
     }
 
 }
+
+

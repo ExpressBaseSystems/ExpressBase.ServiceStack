@@ -34,29 +34,31 @@ namespace ExpressBase.ServiceStack.Services
         {
             IDatabase DataDB = null;
 
-            if (request.ischange)
-            {
-                if (request.DataDBConfig.DatabaseVendor == DatabaseVendors.PGSQL)
-                    DataDB = new PGSQLDatabase(request.DataDBConfig);
-                else if (request.DataDBConfig.DatabaseVendor == DatabaseVendors.ORACLE)
-                    DataDB = new OracleDB(request.DataDBConfig);
-                else if (request.DataDBConfig.DatabaseVendor == DatabaseVendors.MYSQL)
-                    DataDB = new MySqlDB(request.DataDBConfig);
-            }
-            else
-            {
-                EbConnectionsConfig _solutionConnections = EbConnectionsConfigProvider.GetDataCenterConnections();
-                _solutionConnections.DataDbConfig.DatabaseName = request.dbName;
-
-                DataDB = new EbConnectionFactory(_solutionConnections, request.dbName).DataDB;
-                DbConnection con = DataDB.GetNewConnection();
-                con.Open();
-                DbCommand cmd = DataDB.GetNewCommand(con, string.Format("CREATE DATABASE {0};", request.dbName));
-                cmd.ExecuteNonQuery();
-            }
-
             try
             {
+                if (request.ischange)
+                {
+                    if (request.DataDBConfig.DatabaseVendor == DatabaseVendors.PGSQL)
+                        DataDB = new PGSQLDatabase(request.DataDBConfig);
+                    else if (request.DataDBConfig.DatabaseVendor == DatabaseVendors.ORACLE)
+                        DataDB = new OracleDB(request.DataDBConfig);
+                    else if (request.DataDBConfig.DatabaseVendor == DatabaseVendors.MYSQL)
+                        DataDB = new MySqlDB(request.DataDBConfig);
+                }
+                else
+                {
+                    EbConnectionsConfig _solutionConnections = EbConnectionsConfigProvider.GetDataCenterConnections();
+
+                    DataDB = new EbConnectionFactory(_solutionConnections, request.dbName).DataDB;
+                    DbConnection con = DataDB.GetNewConnection();
+                    con.Open();
+                    DbCommand cmd = DataDB.GetNewCommand(con, string.Format("CREATE DATABASE {0};", request.dbName));
+                    cmd.ExecuteNonQuery();
+
+                    _solutionConnections.DataDbConfig.DatabaseName = request.dbName;
+                    DataDB = new EbConnectionFactory(_solutionConnections, request.dbName).DataDB;
+                }
+
                 return DbOperations(request, DataDB);
             }
             catch (Exception e)
@@ -181,7 +183,7 @@ namespace ExpressBase.ServiceStack.Services
 
                 DbCommand cmdtxt = DataDB.GetNewCommand(con, sql2);
                 cmdtxt.ExecuteNonQuery();
-                
+
                 EbDbUsers ebdbusers = new EbDbUsers
                 {
                     AdminUserName = _dbname + "_admin",
@@ -233,7 +235,7 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception e)
             {
                 //return false;
-                Console.WriteLine("Exception: " + e.ToString());
+                Console.WriteLine("Exception: " + path + e.ToString());
                 throw new Exception("Already Exists");
             }
 

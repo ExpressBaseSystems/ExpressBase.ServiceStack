@@ -801,7 +801,7 @@ namespace ExpressBase.ServiceStack
                     else if ((col as DVDateTimeColumn).Format == DateFormat.DateTime)
                     {
                         if((col as DVDateTimeColumn).ConvretToUsersTimeZone)
-                            _formattedData = (((DateTime)_unformattedData).Date != DateTime.MinValue) ? Convert.ToDateTime(_unformattedData).ConvertFromUtc(_user.TimeZone).ToString(cults.DateTimeFormat.ShortDatePattern + " " + cults.DateTimeFormat.ShortTimePattern) : string.Empty;
+                            _formattedData = (((DateTime)_unformattedData).Date != DateTime.MinValue) ? Convert.ToDateTime(_unformattedData).ConvertFromUtc(_user.Preference.TimeZone).ToString(cults.DateTimeFormat.ShortDatePattern + " " + cults.DateTimeFormat.ShortTimePattern) : string.Empty;
                         else
                             _formattedData = (((DateTime)_unformattedData).Date != DateTime.MinValue) ? Convert.ToDateTime(_unformattedData).ToString(cults.DateTimeFormat.ShortDatePattern + " " + cults.DateTimeFormat.ShortTimePattern) : string.Empty;
                         row[col.Data] = Convert.ToDateTime(_unformattedData);
@@ -849,6 +849,8 @@ namespace ExpressBase.ServiceStack
                             _formattedData = _formattedData + "&nbsp; <a  href= '#' oncontextmenu= 'return false' class ='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-inline='true' data-data='" + _formattedData + "'><i class='fa fa-caret-down'></i></a>";
                         else if (col.LinkType == LinkTypeEnum.Both)
                             _formattedData = "<a href='#' oncontextmenu='return false' class ='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "'>" + _formattedData + "</a>" + "&nbsp; <a  href ='#' oncontextmenu='return false' class='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-inline='true' data-data='" + _formattedData + "'> <i class='fa fa-caret-down'></i></a>";
+                        else if (col.LinkType == LinkTypeEnum.Popup)
+                            _formattedData = _formattedData = _formattedData + "&nbsp; <a  href= '#' oncontextmenu= 'return false' class ='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-popup='true' data-data='" + _formattedData + "'><i class='fa fa-window-maximize'></i></a>";
                     }
                 }
                 if (col.Type == EbDbTypes.String && (col as DVStringColumn).RenderAs == StringRenderType.Link && col.LinkType == LinkTypeEnum.Tab && (_isexcel == false))/////////////////
