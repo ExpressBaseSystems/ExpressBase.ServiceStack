@@ -124,7 +124,7 @@ namespace ExpressBase.ServiceStack.Services
 											WHERE A.id=C.key_id AND B.id=C.lang_id AND LOWER(A.key) LIKE LOWER(@KEY) 
 											ORDER BY B.language ASC");
 			List<DbParameter> parameters = new List<DbParameter>();
-			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@KEY", EbDbTypes.String, request.Key));
+			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("KEY", EbDbTypes.String, request.Key));
 			var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(query, parameters.ToArray());
 			int i = 0;
 			foreach (EbDataRow dr in dt.Rows)

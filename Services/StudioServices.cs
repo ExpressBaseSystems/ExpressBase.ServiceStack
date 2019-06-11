@@ -260,23 +260,9 @@ namespace ExpressBase.ServiceStack
         {
             EbDataTable dt;
 
-            string query = @"SELECT 
-                            EO.id, EO.obj_name, EO.obj_type, EO.obj_cur_status,EO.obj_desc,
-                            EOV.id, EOV.eb_objects_id, EOV.version_num, EOV.obj_changelog, EOV.commit_ts, EOV.commit_uid, EOV.refid,
-                            EU.fullname
-                        FROM 
-                            eb_objects EO, eb_objects_ver EOV
-                        LEFT JOIN
-	                        eb_users EU
-                        ON 
-	                        EOV.commit_uid=EU.id
-                        WHERE
-                            EO.id = ANY(string_to_array(:ids,',')::int[]) AND
-                            EO.id = EOV.eb_objects_id AND COALESCE(EOV.working_mode, 'F') <> 'T'
-                        ORDER BY
-                            EO.obj_name;";
+            string query = EbConnectionFactory.ObjectsDB.Eb_ALLOBJNVER;
 
-            DbParameter[] parameters = { EbConnectionFactory.ObjectsDB.GetNewParameter(":ids", EbDbTypes.String, request.ObjectIds) };
+            DbParameter[] parameters = { EbConnectionFactory.ObjectsDB.GetNewParameter("ids", EbDbTypes.String, request.ObjectIds) };
             dt = EbConnectionFactory.ObjectsDB.DoQuery(query, parameters);
 
             Dictionary<string, List<EbObjectWrapper>> f_dict = new Dictionary<string, List<EbObjectWrapper>>();
@@ -289,7 +275,7 @@ namespace ExpressBase.ServiceStack
                     wrap_list = new List<EbObjectWrapper>();
                     f_dict.Add(_nameKey, wrap_list);
                 }
-
+                
                 wrap_list.Add(new EbObjectWrapper
                 {
                     Id = Convert.ToInt32(dr[0]),
@@ -610,7 +596,7 @@ namespace ExpressBase.ServiceStack
         [CompressResponse]
         public UniqueObjectNameCheckResponse Get(UniqueObjectNameCheckRequest request)
         {
-            DbParameter[] parameters = { EbConnectionFactory.ObjectsDB.GetNewParameter(":name", EbDbTypes.String, request.ObjName) };
+            DbParameter[] parameters = { EbConnectionFactory.ObjectsDB.GetNewParameter("name", EbDbTypes.String, request.ObjName) };
             EbDataTable dt = EbConnectionFactory.ObjectsDB.DoQuery("SELECT id FROM eb_objects WHERE obj_name = :name ;", parameters);
             bool _isunique = (dt.Rows.Count > 0) ? false : true;
             return new UniqueObjectNameCheckResponse { IsUnique = _isunique };
@@ -835,7 +821,7 @@ namespace ExpressBase.ServiceStack
                         };
                         if (EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.PGSQL)
                         {
-                            dbParameter.Add(EbConnectionFactory.ObjectsDB.GetNewParameter(":obj_json", EbDbTypes.Json, request.Json));
+                            dbParameter.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("obj_json", EbDbTypes.Json, request.Json));
                             cmd.Parameters.AddRange(dbParameter.ToArray());
                             refId = cmd.ExecuteScalar().ToString();
                         }
@@ -1130,17 +1116,8 @@ namespace ExpressBase.ServiceStack
 
         public DeleteObjectResponse Post(DeleteEbObjectRequest request)
         {
-            string sql;
-            if (EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.MYSQL)
-            {
-                sql = @"UPDATE eb_objects SET eb_del='T' WHERE id = @id;
-                           UPDATE eb_objects_ver SET eb_del='T' WHERE eb_objects_id = @id";
-            }
-            else
-            {
-                sql = @"UPDATE eb_objects SET eb_del='T' WHERE id = :id;
-                           UPDATE eb_objects_ver SET eb_del='T' WHERE eb_objects_id = :id";
-            }
+             string sql = @"UPDATE eb_objects SET eb_del='T' WHERE id = :id;             
+                           UPDATE eb_objects_ver SET eb_del='T' WHERE eb_objects_id = :id";            
 
             DbParameter[] p = { EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, request.ObjId) };
             int _rows = EbConnectionFactory.ObjectsDB.DoNonQuery(sql, p);
@@ -1149,15 +1126,8 @@ namespace ExpressBase.ServiceStack
 
         public EnableLogResponse Post(EnableLogRequest request)
         {
-            string sql;
-            if (EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.MYSQL)
-            {
-                sql = "UPDATE eb_objects SET is_logenabled=@log WHERE id = @id";
-            }
-            else
-            {
-                sql = "UPDATE eb_objects SET is_logenabled=:log WHERE id = :id";
-            }
+            string sql = "UPDATE eb_objects SET is_logenabled=:log WHERE id = :id";
+            
             DbParameter[] p = { EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, request.ObjId) ,
             EbConnectionFactory.ObjectsDB.GetNewParameter("log",EbDbTypes.String,(request.Islog==true)? "T":"F")};
             int _rows = EbConnectionFactory.ObjectsDB.DoNonQuery(sql, p);
