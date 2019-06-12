@@ -26,7 +26,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 string query = @"
             INSERT INTO 
-            eb_wiki2 (
+            wiki (
                     category, title, html, created_by, eb_tags) 
             VALUES (
                     @category, @title, @html, @createdby , @tags)
@@ -64,7 +64,7 @@ namespace ExpressBase.ServiceStack.Services
             try
             {
                 string query = @"
-            UPDATE eb_wiki2 SET
+            UPDATE wiki SET
                 category= @category, title = @title , html = @html , eb_updated_by = @createdby, eb_updated_on = @updatedtime, eb_tags = @tags
             WHERE 
                 id= @id
@@ -109,7 +109,7 @@ namespace ExpressBase.ServiceStack.Services
                 string query = @"
                  SELECT *
                  FROM
-                    eb_wiki2  
+                    wiki  
                  WHERE
                    id = @id AND eb_del='false' ";
 
@@ -141,7 +141,7 @@ namespace ExpressBase.ServiceStack.Services
                 string query = @"
                 SELECT *
                 FROM
-                    eb_wiki2
+                    wiki
                 WHERE
                     title LIKE '%' || @search_wiki || '%'  ";
 
@@ -180,7 +180,7 @@ namespace ExpressBase.ServiceStack.Services
                 string query = @"
                 SELECT *
                 FROM
-                    eb_wiki2 
+                    wiki 
                 WHERE 
                     eb_del='false'";
                 EbDataTable table = InfraConnectionFactory.DataDB.DoQuery(query);
@@ -222,7 +222,7 @@ namespace ExpressBase.ServiceStack.Services
                 string query = @"
                  SELECT *
                  FROM
-                    eb_wiki2  
+                    wiki  
                  WHERE
                     id = @id AND eb_del='false' ";
 
