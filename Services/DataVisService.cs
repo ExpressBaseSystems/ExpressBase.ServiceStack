@@ -801,7 +801,7 @@ namespace ExpressBase.ServiceStack
                     else if ((col as DVDateTimeColumn).Format == DateFormat.DateTime)
                     {
                         if((col as DVDateTimeColumn).ConvretToUsersTimeZone)
-                            _formattedData = (((DateTime)_unformattedData).Date != DateTime.MinValue) ? Convert.ToDateTime(_unformattedData).ConvertFromUtc(_user.TimeZone).ToString(cults.DateTimeFormat.ShortDatePattern + " " + cults.DateTimeFormat.ShortTimePattern) : string.Empty;
+                            _formattedData = (((DateTime)_unformattedData).Date != DateTime.MinValue) ? Convert.ToDateTime(_unformattedData).ConvertFromUtc(_user.Preference.TimeZone).ToString(cults.DateTimeFormat.ShortDatePattern + " " + cults.DateTimeFormat.ShortTimePattern) : string.Empty;
                         else
                             _formattedData = (((DateTime)_unformattedData).Date != DateTime.MinValue) ? Convert.ToDateTime(_unformattedData).ToString(cults.DateTimeFormat.ShortDatePattern + " " + cults.DateTimeFormat.ShortTimePattern) : string.Empty;
                         row[col.Data] = Convert.ToDateTime(_unformattedData);
@@ -827,7 +827,7 @@ namespace ExpressBase.ServiceStack
                 {
                     if (col.AllowTooltip)
                     {
-                        _formattedData = _unformattedData.ToString().Length > col.AllowedCharacterLength ? "<span title='" + _unformattedData + "'>" + _unformattedData.ToString().Substring(0, col.AllowedCharacterLength) + "...</span>" : _unformattedData;
+                        _formattedData = _unformattedData.ToString().Length > col.AllowedCharacterLength ? "<span class='columntooltip' data-toggle='popover' data-content='"+ _unformattedData.ToString().ToBase64() + "'>" + _unformattedData.ToString().Substring(0, col.AllowedCharacterLength) + "...</span>" : _unformattedData;
                     }
                     if ((col as DVStringColumn).RenderAs == StringRenderType.Marker)
                         _formattedData = "<a href = '#' class ='columnMarker' data-latlong='" + _unformattedData + "'><i class='fa fa-map-marker fa-2x' style='color:red;'></i></a>";
