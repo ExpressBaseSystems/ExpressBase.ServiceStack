@@ -133,8 +133,15 @@ namespace ExpressBase.ServiceStack.Services
             _solutionConnections.DataDbConfig.ReadWriteUserName = (request.DbUsers.ReadWriteUserName != string.Empty) ? request.DbUsers.ReadWriteUserName : request.DbUsers.AdminUserName;
             _solutionConnections.DataDbConfig.ReadWritePassword = (request.DbUsers.ReadWritePassword != string.Empty) ? request.DbUsers.ReadWritePassword : request.DbUsers.AdminPassword;
 
-            _solutionConnections.DataDbConfig.PersistIntegrationConf(request.NewSolnId, this.InfraConnectionFactory, request.UserId);
-
+            int confid =_solutionConnections.DataDbConfig.PersistIntegrationConf(request.NewSolnId, this.InfraConnectionFactory, request.UserId);
+            EbIntegration _obj = new EbIntegration
+            {
+                Id = 0,
+                ConfigId = confid,
+                Preference = ConPreferences.PRIMARY,
+                Type =EbConnections.EbDATA
+            };
+          int conid =  _obj.PersistIntegration(request.NewSolnId, this.InfraConnectionFactory, request.UserId);
             this.Redis.Set<EbConnectionsConfig>(string.Format(CoreConstants.SOLUTION_INTEGRATION_REDIS_KEY, request.NewSolnId), _solutionConnections);
         }
 
