@@ -109,7 +109,7 @@ namespace ExpressBase.ServiceStack.Services
 
                 MessageProducer3.Publish(new EmailServicesRequest
                 {
-                    To = "vrgstestb@gmail.com",
+                    To = request.Email,
                     Subject = "testing email",
                     Message = body,
                     SolnId = CoreConstants.EXPRESSBASE,
@@ -135,15 +135,17 @@ namespace ExpressBase.ServiceStack.Services
             try
             {
                 string sql = "select * from eb_create_solution_new(@sname,@tenant_id,@descript,@solnid);";
-                DbParameter[] parameters = new DbParameter[] {
+                DbParameter[] parameters = new DbParameter[]
+                {
                     InfraConnectionFactory.DataDB.GetNewParameter("@sname", EbDbTypes.String, request.SolutionName),
                     InfraConnectionFactory.DataDB.GetNewParameter("@tenant_id", EbDbTypes.Int32, request.UserId),
                     InfraConnectionFactory.DataDB.GetNewParameter("@descript", EbDbTypes.String, request.Description),
                     InfraConnectionFactory.DataDB.GetNewParameter("@solnid", EbDbTypes.String, request.SolnUrl)
-            };
+                    };
+                EbDataTable res = this.InfraConnectionFactory.DataDB.DoQuery(sql, parameters);
                 resp = new CreateSolutionResponse
                 {
-                    Status = this.InfraConnectionFactory.DataDB.DoNonQuery(sql, parameters)
+                    Status = Convert.ToInt32(res.Rows[0][0])
                 };
             }
             catch (Exception e)
@@ -313,7 +315,7 @@ namespace ExpressBase.ServiceStack.Services
 
                 MessageProducer3.Publish(new EmailServicesRequest
                 {
-                    To = "vrgstestb@gmail.com",
+                    To = reques.Email,
                     Subject = "testing email for reset password",
                     Message = body,
                     //Message = bodyMsg.ToString(),
