@@ -25,21 +25,60 @@ namespace ExpressBase.ServiceStack.Services
             try
             {
                 string query = @"
-INSERT INTO 
-    eb_wiki2 (
-        feature,
-        contenttitle,
-        content) 
-VALUES (
-        @feature, @contenttitle, @content)
-RETURNING 
-    id";
+            INSERT INTO 
+            wiki (
+                    category, title, html, created_by, eb_tags) 
+            VALUES (
+                    @category, @title, @html, @createdby , @tags)
+            RETURNING id";
 
                 DbParameter[] parameters = new DbParameter[]
                 {
-                this.InfraConnectionFactory.DataDB.GetNewParameter("feature", EbDbTypes.String, request.Wiki.Category),
-                this.InfraConnectionFactory.DataDB.GetNewParameter("contenttitle", EbDbTypes.String, request.Wiki.Title),
-                this.InfraConnectionFactory.DataDB.GetNewParameter("content", EbDbTypes.String, request.Wiki.HTML)
+                this.InfraConnectionFactory.DataDB.GetNewParameter("category", EbDbTypes.String, request.Wiki.Category),
+                this.InfraConnectionFactory.DataDB.GetNewParameter("title", EbDbTypes.String, request.Wiki.Title),
+                this.InfraConnectionFactory.DataDB.GetNewParameter("html", EbDbTypes.String, request.Wiki.HTML),
+                this.InfraConnectionFactory.DataDB.GetNewParameter("createdby", EbDbTypes.Int32, request.Wiki.CreatedBy),
+                this.InfraConnectionFactory.DataDB.GetNewParameter("tags", EbDbTypes.String, request.Wiki.Tags)
+                };
+
+                EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(query, parameters);
+
+                resp.Wiki.Id = (int)dt.Rows[0][0];
+
+                resp.ResponseStatus = true;
+            }
+            catch (Exception e)
+            {
+                resp.ResponseStatus = false;
+            }
+
+            return resp;
+        }
+
+        public UpdateWikiResponse Post(UpdateWikiRequest request)
+        {
+            UpdateWikiResponse resp = new UpdateWikiResponse()
+            {
+                Wiki = request.Wiki
+            };
+            try
+            {
+                string query = @"
+            UPDATE wiki SET
+                category= @category, title = @title , html = @html , eb_updated_by = @createdby, eb_updated_on = @updatedtime, eb_tags = @tags
+            WHERE 
+                id= @id
+            RETURNING id";
+
+                DbParameter[] parameters = new DbParameter[]
+                {
+                this.InfraConnectionFactory.DataDB.GetNewParameter("category", EbDbTypes.String, request.Wiki.Category),
+                this.InfraConnectionFactory.DataDB.GetNewParameter("title", EbDbTypes.String, request.Wiki.Title),
+                this.InfraConnectionFactory.DataDB.GetNewParameter("html", EbDbTypes.String, request.Wiki.HTML),
+                this.InfraConnectionFactory.DataDB.GetNewParameter("createdby", EbDbTypes.Int32, request.Wiki.CreatedBy),
+                this.InfraConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.Wiki.Id),
+                 this.InfraConnectionFactory.DataDB.GetNewParameter("tags", EbDbTypes.String, request.Wiki.Tags),
+                 this.InfraConnectionFactory.DataDB.GetNewParameter("updatedtime", EbDbTypes.DateTime, DateTime.Now)
                 };
 
                 EbDataTable x = InfraConnectionFactory.DataDB.DoQuery(query, parameters);
@@ -60,30 +99,71 @@ RETURNING
         {
             GetWikiByIdResponse resp = new GetWikiByIdResponse();
 
-            resp.Wiki = request.Wiki;
+            resp.Wiki = new Wiki();
             try
             {
                 DbParameter[] parameters = new DbParameter[]
                     {
-                this.InfraConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.Wiki.Id)
+                this.InfraConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.Id)
                     };
                 string query = @"
                  SELECT *
                  FROM
-                 eb_wiki2  
+                    wiki  
                  WHERE
-                   id = @id";
+                   id = @id AND eb_del='false' ";
 
                 EbDataTable table = InfraConnectionFactory.DataDB.DoQuery(query, parameters);
 
-                resp.Wiki.Category = table.Rows[0]["feature"].ToString();
-                resp.Wiki.Title = table.Rows[0]["contenttitle"].ToString();
-                resp.Wiki.HTML = table.Rows[0]["content"].ToString();
+                resp.Wiki.Category = table.Rows[0]["category"].ToString();
+                resp.Wiki.Title = table.Rows[0]["title"].ToString();
+                resp.Wiki.HTML = table.Rows[0]["html"].ToString();
+                resp.Wiki.Tags = table.Rows[0]["eb_tags"].ToString();
+
 
             }
             catch (Exception e)
             {
 
+            }
+            return resp;
+        }
+
+        public GetWikiBySearchResponse Get(GetWikiBySearchRequest request)
+        {
+            GetWikiBySearchResponse resp = new GetWikiBySearchResponse();       
+            try
+            {
+                DbParameter[] parameters = new DbParameter[]
+                    {
+                this.InfraConnectionFactory.DataDB.GetNewParameter("search_wiki", EbDbTypes.String, request.Wiki_Search)
+                    };
+                string query = @"
+                SELECT *
+                FROM
+                    wiki
+                WHERE
+                    title LIKE '%' || @search_wiki || '%'  ";
+
+                EbDataTable table = InfraConnectionFactory.DataDB.DoQuery(query, parameters);
+
+                int capacity = table.Rows.Capacity;
+
+                for (int i = 0; i < capacity; i++)
+                {
+                    resp.WikiListBySearch.Add(
+                        new Wiki()
+                        {
+                            Category = table.Rows[i]["category"].ToString(),
+                            HTML = table.Rows[i]["html"].ToString(),
+                            Title = table.Rows[i]["title"].ToString(),
+                            Id = (int)table.Rows[i]["id"]
+                        });
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("ERROR: GetWikiList Exception: " + e.Message);
             }
             return resp;
         }
@@ -100,7 +180,9 @@ RETURNING
                 string query = @"
                 SELECT *
                 FROM
-                eb_wiki2";
+                    wiki 
+                WHERE 
+                    eb_del='false'";
                 EbDataTable table = InfraConnectionFactory.DataDB.DoQuery(query);
 
                 int capacity = table.Rows.Capacity;
@@ -110,9 +192,9 @@ RETURNING
                     resp.WikiList.Add(
                         new Wiki()
                         {
-                            Category = table.Rows[i]["feature"].ToString(),
-                            HTML = table.Rows[i]["content"].ToString(),
-                            Title = table.Rows[i]["contenttitle"].ToString(),
+                            Category = table.Rows[i]["category"].ToString(),
+                            HTML = table.Rows[i]["html"].ToString(),
+                            Title = table.Rows[i]["title"].ToString(),
                             Id = (int) table.Rows[i]["id"]
                         });
                 }
@@ -126,47 +208,38 @@ RETURNING
 
 
 
+        public GetWikiResponse Get(GetWikiRequest request)
+        {
+            GetWikiResponse resp = new GetWikiResponse();
 
+            resp.Wiki = new Wiki();
+            try
+            {
+                DbParameter[] parameters = new DbParameter[]
+                    {
+                this.InfraConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.Id)
+                    };
+                string query = @"
+                 SELECT *
+                 FROM
+                    wiki  
+                 WHERE
+                    id = @id AND eb_del='false' ";
 
-        //public GetTitleResponse Post(GetTitleRequest request)
-        //{
-        //    GetTitleResponse gtr = new GetTitleResponse();
-        //    using (DbConnection con = this.InfraConnectionFactory.DataDB.GetNewConnection())
-        //    {
-        //        int i = 0;
-        //        con.Open();
-        //        string query = "select feature from eb_wiki2";
-        //        // DbCommand cmd1 = new EbConnectionFactory(EbConnectionsConfigProvider.InfraConnections, "").DataDB.GetNewCommand(con, query);
-        //        EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(query);
-        //        foreach (EbDataRow row in dt.Rows)
-        //        {
-        //            gtr.Title.Add(row[0].ToString());
-        //        }
+                EbDataTable table = InfraConnectionFactory.DataDB.DoQuery(query, parameters);
 
-        //    }
-        //    return gtr;
-        //}
+                resp.Wiki.Category = table.Rows[0]["category"].ToString();
+                resp.Wiki.Title = table.Rows[0]["title"].ToString();
+                resp.Wiki.HTML = table.Rows[0]["html"].ToString();
 
-        //public GetContentResponse Post(GetContentRequest request)
-        //{
-        //    GetContentResponse gcr = new GetContentResponse();
-        //    using (DbConnection con = this.InfraConnectionFactory.DataDB.GetNewConnection())
-        //    {
-        //        int i = 0;
-        //        con.Open();
-        //        string query = "select content from eb_wiki2";
-        //        // DbCommand cmd1 = new EbConnectionFactory(EbConnectionsConfigProvider.InfraConnections, "").DataDB.GetNewCommand(con, query);
-        //        EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(query);
-        //        foreach (EbDataRow row in dt.Rows)
-        //        {
-        //            gcr.Content.Add(row[0].ToString());
-        //        }
+            }
+            catch (Exception e)
+            {
 
-        //    }
-        //    return gcr;
-        //}
+            }
+            return resp;
+        }
 
     }
-
 }
 

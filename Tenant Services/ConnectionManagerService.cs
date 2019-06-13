@@ -7,6 +7,7 @@ using ExpressBase.Common.Messaging;
 using ExpressBase.Common.ServiceClients;
 using ExpressBase.Common.Structures;
 using ExpressBase.Objects.ServiceStack_Artifacts;
+using Newtonsoft.Json;
 using ServiceStack;
 using ServiceStack.Messaging;
 using System;
@@ -132,8 +133,15 @@ namespace ExpressBase.ServiceStack.Services
             _solutionConnections.DataDbConfig.ReadWriteUserName = (request.DbUsers.ReadWriteUserName != string.Empty) ? request.DbUsers.ReadWriteUserName : request.DbUsers.AdminUserName;
             _solutionConnections.DataDbConfig.ReadWritePassword = (request.DbUsers.ReadWritePassword != string.Empty) ? request.DbUsers.ReadWritePassword : request.DbUsers.AdminPassword;
 
-            _solutionConnections.DataDbConfig.PersistIntegrationConf(request.NewSolnId, this.InfraConnectionFactory, request.UserId);
-
+            int confid =_solutionConnections.DataDbConfig.PersistIntegrationConf(request.NewSolnId, this.InfraConnectionFactory, request.UserId);
+            EbIntegration _obj = new EbIntegration
+            {
+                Id = 0,
+                ConfigId = confid,
+                Preference = ConPreferences.PRIMARY,
+                Type =EbConnections.EbDATA
+            };
+          int conid =  _obj.PersistIntegration(request.NewSolnId, this.InfraConnectionFactory, request.UserId);
             this.Redis.Set<EbConnectionsConfig>(string.Format(CoreConstants.SOLUTION_INTEGRATION_REDIS_KEY, request.NewSolnId), _solutionConnections);
         }
 
@@ -319,10 +327,11 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     string[] adminroles = Enum.GetNames(typeof(MySqlSysRoles));
                     List<string> adroleslist = adminroles.OfType<string>().ToList();
+                    List<string> adroleslistv1 = Enum.GetNames(typeof(MySqlSysRolesv1)).ToList(); 
                     adroleslist = adroleslist.ConvertAll(s => s.Replace("_", " "));
                     foreach (var dr in dt.Rows)
                     {
-                        if (adroleslist.Contains(dr[0]))
+                        if (adroleslist.Contains(dr[0]) || adroleslistv1.Contains(dr[0]))
                             IsAdmin = true;
                         else
                         {
@@ -484,6 +493,108 @@ namespace ExpressBase.ServiceStack.Services
                 res.ResponseStatus.Message = e.Message;
             }
             return res;
+        }
+
+        public GetSolutioInfoResponses Get(GetSolutioInfoRequests request)
+        {
+            GetSolutioInfoResponses resp = new GetSolutioInfoResponses();
+
+            string sql = string.Format(@"SELECT * FROM eb_solutions WHERE isolution_id='{0}';
+                SELECT * FROM eb_integration_configs WHERE solution_id = '{0}' AND eb_del = 'F';
+                SELECT * FROM
+                    eb_integration_configs EC,
+                    eb_integrations EI 
+                where 
+                     EC.id = EI.eb_integration_conf_id AND 
+                     EC.solution_id = '{0}' AND
+                     EI.solution_id = '{0}' 
+                    AND EI.eb_del = 'F' AND EC.eb_del = 'F';", request.IsolutionId);
+            try
+            {
+                EbDataSet dt = this.InfraConnectionFactory.DataDB.DoQueries(sql);
+                EbDataTable _temp = dt.Tables[0];
+                if(_temp != null)
+                {
+                    resp.SolutionInfo = new EbSolutionsWrapper
+                    {
+                        SolutionName = _temp.Rows[0][6].ToString(),
+                        Description = _temp.Rows[0][2].ToString(),
+                        DateCreated = _temp.Rows[0][1].ToString(),
+                        EsolutionId = _temp.Rows[0][5].ToString()
+                    };
+
+                    _temp = dt.Tables[1];
+                    Dictionary<string, List<EbIntegrationConfData>> _conf = new Dictionary<string, List<EbIntegrationConfData>>();
+                    foreach (var _row in _temp.Rows)
+                    {
+                        string type = _row[3].ToString();
+
+                        if (!_conf.ContainsKey(type))
+                        {
+                            _conf.Add(type, new List<EbIntegrationConfData>());
+                            _conf[type].Add(new EbIntegrationConfData
+                            {
+                                Id = Convert.ToInt32(_row[0]),
+                                SolutionId = _row[1].ToString(),
+                                NickName = _row[2].ToString(),
+                                ConObject = _row[4].ToString(),
+                                Type = _row[3].ToString(),
+                                CreatedOn = Convert.ToDateTime(_row[6]).ToString("dddd, dd MMMM yyyy"),
+                            });
+                        }
+                        else
+                        {
+                            _conf[type].Add(new EbIntegrationConfData
+                            {
+                                Id = Convert.ToInt32(_row[0]),
+                                SolutionId = _row[1].ToString(),
+                                NickName = _row[2].ToString(),
+                                ConObject = _row[4].ToString(),
+                                Type = _row[3].ToString(),
+                                CreatedOn = Convert.ToDateTime(_row[6]).ToString("dddd, dd MMMM yyyy"),
+                            });
+                        }
+                    }
+                    resp.IntegrationsConfig = _conf;
+                    _temp = dt.Tables[2];
+                    Dictionary<string, List<EbIntegrationData>> _intgre = new Dictionary<string, List<EbIntegrationData>>();
+                    foreach (var _row in _temp.Rows)
+                    {
+                        string Type = _row[12].ToString();
+                        if (!_intgre.ContainsKey(Type))
+                        {
+                            _intgre.Add(Type, new List<EbIntegrationData>());
+                            _intgre[Type].Add(new EbIntegrationData
+                            {
+                                Id = _row[0].ToString(),
+                                ConfId = _row[10].ToString(),
+                                NickName = _row[2].ToString(),
+                                Ctype = _row[3].ToString(),
+                                Type = _row[12].ToString(),
+                                Preference = _row[13].ToString()
+                            });
+                        }
+                        else
+                        {
+                            _intgre[Type].Add(new EbIntegrationData
+                            {
+                                Id = _row[0].ToString(),
+                                ConfId = _row[10].ToString(),
+                                NickName = _row[2].ToString(),
+                                Ctype = _row[3].ToString(),
+                                Type = _row[12].ToString(),
+                                Preference = _row[13].ToString()
+                            });
+                        }
+                    }
+                    resp.Integrations = _intgre;
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
+            return resp;
         }
         //--------------------------------------------------------------------------------------------------------------------------------------------------------
         //--------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -680,7 +791,8 @@ namespace ExpressBase.ServiceStack.Services
                                     NickName = _connection.NickName,
                                     Password = _connection.Password,
                                     Port = _connection.Port,
-                                    ProviderName = SmtpProviders.Gmail
+                                    //ProviderName = SmtpProviders.Gmail
+                                    ProviderName = (SmtpProviders)Enum.Parse(typeof(SmtpProviders), _connection.ProviderName)
                                 };
                                 return_id = c.PersistConfForHelper(dr["solution_id"].ToString(), this.InfraConnectionFactory, Convert.ToInt32(dr["eb_user_id"]), Convert.ToDateTime(dr["date_created"]));
                                 EbIntegration _obj = new EbIntegration

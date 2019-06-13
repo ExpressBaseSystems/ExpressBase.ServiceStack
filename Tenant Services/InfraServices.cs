@@ -75,33 +75,51 @@ namespace ExpressBase.ServiceStack.Services
                 string aq = "$" + resp.id + "$" + request.ActivationCode + "$";
                 byte[] plaintxt = System.Text.Encoding.UTF8.GetBytes(aq);
                 string ai = System.Convert.ToBase64String(plaintxt);
+                string elinks2 = string.Format("https://{0}/em?emv={1}", request.PageUrl, ai);
+                string body = @"<html>
+												<head>
+													<title></title>
+												</head>
+												<body>
+													<div style='border: 3px solid #22BCE5'>
+														<figure style='text-align: center;'>
+															<img src='https://expressbase.com/images/logos/EB_Logo.png' /><br />
+														</figure>
+														<br />
+														Hello <b>{UserName}</b>,<br />
+														<br />
+														Thanks for registering with EXPRESSbase Systems Private Limited.<br />
+															<br />
+															Please verify your email address to confirm your account registration by clicking bleow<br />
+ 
+														<br />
+														<a style='color: #22BCE5' href='{Url}'>Verify Account</a><br />
+														<br />
+														<br />
+														Thanks<br />
+														EXPRESSbase Systems Private Limited.
+      
+													</div>
+												</body>
+												</html>";
 
-                StringBuilder bodyMsg = new StringBuilder();
-                string elinks = string.Format("{0}/em?uin={1}&uic={2}", request.PageUrl, resp.id, request.ActivationCode);
+                body = body.Replace("{UserName}", request.Name);
+                body = body.Replace("{Url}", elinks2);
 
-                string elinks2 = string.Format("{0}/em?emv={1}", request.PageUrl, ai);
-                bodyMsg.Append("Please follow this link to activate: ");
-                bodyMsg.Append("<br />");
-                bodyMsg.Append("next3");
-                bodyMsg.Append("<a href=https://" + elinks + ">Account</a>");
-                bodyMsg.Append("<br />");
-                bodyMsg.Append("next4");
-
-                bodyMsg.Append("<br />");
-                bodyMsg.Append("<a href=https://" + elinks2 + ">Accountbase64</a>");
-                bodyMsg.Append("<br />");
-                bodyMsg.Append("next1");
 
                 MessageProducer3.Publish(new EmailServicesRequest
                 {
-                    To = "vrgstestb@gmail.com",
+                    To = request.Email,
                     Subject = "testing email",
-                    Message = "Thanks  for signing up! Your account has been created" + bodyMsg.ToString() + " asdad",
+                    Message = body,
                     SolnId = CoreConstants.EXPRESSBASE,
 
                 });
                 string quer = string.Format("UPDATE eb_tenants SET is_email_sent = 'true'  WHERE id = '{0}'", resp.id);
                 EbDataTable dtb = this.EbConnectionFactory.DataDB.DoQuery(quer);
+                string sid = "SELECT * from eb_sid_gen();";
+                EbDataTable dt1 = this.EbConnectionFactory.DataDB.DoQuery(sid);
+                resp.Sol_id_autogen = Convert.ToString(dt1.Rows[0][0]);
             }
 
             return resp;
@@ -117,15 +135,17 @@ namespace ExpressBase.ServiceStack.Services
             try
             {
                 string sql = "select * from eb_create_solution_new(@sname,@tenant_id,@descript,@solnid);";
-                DbParameter[] parameters = new DbParameter[] {
+                DbParameter[] parameters = new DbParameter[]
+                {
                     InfraConnectionFactory.DataDB.GetNewParameter("@sname", EbDbTypes.String, request.SolutionName),
                     InfraConnectionFactory.DataDB.GetNewParameter("@tenant_id", EbDbTypes.Int32, request.UserId),
                     InfraConnectionFactory.DataDB.GetNewParameter("@descript", EbDbTypes.String, request.Description),
                     InfraConnectionFactory.DataDB.GetNewParameter("@solnid", EbDbTypes.String, request.SolnUrl)
-            };
+                    };
+                EbDataTable res = this.InfraConnectionFactory.DataDB.DoQuery(sql, parameters);
                 resp = new CreateSolutionResponse
                 {
-                    Status = this.InfraConnectionFactory.DataDB.DoNonQuery(sql, parameters)
+                    Status = Convert.ToInt32(res.Rows[0][0])
                 };
             }
             catch (Exception e)
@@ -251,21 +271,54 @@ namespace ExpressBase.ServiceStack.Services
                 string aq = "$" + reques.Email + "$" + reques.Resetcode + "$";
                 byte[] plaintxt = System.Text.Encoding.UTF8.GetBytes(aq);
                 string ai = System.Convert.ToBase64String(plaintxt);
+                string resetlink = string.Format("https://{0}/resetpassword?rep={1}", reques.PageUrl, ai);
 
-                StringBuilder bodyMsg = new StringBuilder();
-                string resetlink = string.Format("{0}/resetpassword?rep={1}", reques.PageUrl, ai);
-                bodyMsg.Append("Please follow this link to reset your password: ");
-                bodyMsg.Append("<br />");
-                bodyMsg.Append("next3");
-                bodyMsg.Append("<a href=https://" + resetlink + ">Account</a>");
-                bodyMsg.Append("<br />");
-                bodyMsg.Append("next4");
+                //using (StreamReader reader = new StreamReader("\\Ext\\EmailVerifyStructure.cshtml")) 
+                //{
+                //	body = reader.ReadToEnd();
+                //}
+
+                string body = @"<html >
+<head>
+    <title></title>
+</head>
+<body>
+    <div style='border: 3px solid #22BCE5; padding:10px;'>
+        <figure style='text-align: center;'>
+            <img src='https://expressbase.com/images/logos/EB_Logo.png' /><br />
+        </figure>
+        <br />
+
+      
+        Hello <b>{UserName}</b>,<br />
+        <br />
+        Reset your password by clicking below.<br />
+        <a  href='{Url}'>Reset password</a><br />
+        <br />
+        Thanks<br />
+        EXPRESSbase Systems Private Limited.
+       
+    </div>
+</body>
+</html>";
+                body = body.Replace("{UserName}", reques.Email);
+                body = body.Replace("{Url}", resetlink);
+
+                //StringBuilder bodyMsg = new StringBuilder();
+                //bodyMsg.Append( " <img src = "+ "https://expressbase.com/images/logos/EB_Logo.png" + " />");
+                //bodyMsg.Append("<p style="+"color: red;"+"><b>Please follow this link to reset your password: <b></p>");
+                //            bodyMsg.Append("<br />");
+                //            bodyMsg.Append("next3");
+                //            bodyMsg.Append("<a href=https://" + resetlink + ">Account</a>");
+                //            bodyMsg.Append("<br />");
+                //            bodyMsg.Append("next4");
 
                 MessageProducer3.Publish(new EmailServicesRequest
                 {
-                    To = "vrgstestb@gmail.com",
+                    To = reques.Email,
                     Subject = "testing email for reset password",
-                    Message = bodyMsg.ToString(),
+                    Message = body,
+                    //Message = bodyMsg.ToString(),
                     SolnId = CoreConstants.EXPRESSBASE,
 
                 });
@@ -1352,3 +1405,5 @@ namespace ExpressBase.ServiceStack.Services
     }
 
 }
+
+
