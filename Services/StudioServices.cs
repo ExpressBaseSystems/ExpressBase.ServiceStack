@@ -258,16 +258,25 @@ namespace ExpressBase.ServiceStack
         [CompressResponse]
         public object Get(EbAllObjNVerRequest request)// Get All latest committed versions of this Object Type without json
         {
-            EbDataTable dt;
-
+            EbDataSet dt;
+            EbDataTable tbl;
             string query = EbConnectionFactory.ObjectsDB.Eb_ALLOBJNVER;
 
             DbParameter[] parameters = { EbConnectionFactory.ObjectsDB.GetNewParameter("ids", EbDbTypes.String, request.ObjectIds) };
-            dt = EbConnectionFactory.ObjectsDB.DoQuery(query, parameters);
+            dt = EbConnectionFactory.ObjectsDB.DoQueries(query, parameters);
 
             Dictionary<string, List<EbObjectWrapper>> f_dict = new Dictionary<string, List<EbObjectWrapper>>();
             List<EbObjectWrapper> wrap_list = null;
-            foreach (EbDataRow dr in dt.Rows)
+
+            if(EbConnectionFactory.ObjectsDB.Vendor==DatabaseVendors.MYSQL)
+            {
+                tbl = dt.Tables[1];
+            }
+            else
+            {
+                tbl = dt.Tables[0];
+            }
+            foreach (EbDataRow dr in tbl.Rows)
             {
                 string _nameKey = dr[1].ToString();
                 if (!f_dict.ContainsKey(_nameKey))

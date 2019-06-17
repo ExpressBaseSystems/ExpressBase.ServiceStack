@@ -36,7 +36,7 @@ namespace ExpressBase.ServiceStack.Services
 
             try
             {
-                if (request.ischange)
+                if (request.IsChange)
                 {
                     if (request.DataDBConfig.DatabaseVendor == DatabaseVendors.PGSQL)
                         DataDB = new PGSQLDatabase(request.DataDBConfig);
@@ -49,14 +49,14 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     EbConnectionsConfig _solutionConnections = EbConnectionsConfigProvider.GetDataCenterConnections();
 
-                    DataDB = new EbConnectionFactory(_solutionConnections, request.dbName).DataDB;
+                    DataDB = new EbConnectionFactory(_solutionConnections, request.DBName).DataDB;
                     DbConnection con = DataDB.GetNewConnection();
                     con.Open();
-                    DbCommand cmd = DataDB.GetNewCommand(con, string.Format("CREATE DATABASE {0};", request.dbName));
+                    DbCommand cmd = DataDB.GetNewCommand(con, string.Format("CREATE DATABASE {0};", request.DBName));
                     cmd.ExecuteNonQuery();
 
-                    _solutionConnections.DataDbConfig.DatabaseName = request.dbName;
-                    DataDB = new EbConnectionFactory(_solutionConnections, request.dbName).DataDB;
+                    _solutionConnections.DataDbConfig.DatabaseName = request.DBName;
+                    DataDB = new EbConnectionFactory(_solutionConnections, request.DBName).DataDB;
                 }
 
                 return DbOperations(request, DataDB);
@@ -93,13 +93,13 @@ namespace ExpressBase.ServiceStack.Services
                     {
                         IsInsertComplete = InsertIntoTables(request, con, DataDB);
                     }
-                    EbDbCreateResponse _res = request.ischange ? null : CreateUsers4DataBase(con, request.dbName, DataDB);
+                    EbDbCreateResponse _res = request.IsChange ? null : CreateUsers4DataBase(con, request.DBName, DataDB);
 
                     if (IsCreateComplete & IsInsertComplete)
                     {
                         Console.WriteLine(".............Reached Commit");
                         con_trans.Commit();
-                        EbDbCreateResponse success = request.ischange ? new EbDbCreateResponse() { resp = true } : _res;
+                        EbDbCreateResponse success = request.IsChange ? new EbDbCreateResponse() { Resp = true } : _res;
                         return success;
                     }
                     else
@@ -195,9 +195,9 @@ namespace ExpressBase.ServiceStack.Services
                 };
                 return new EbDbCreateResponse
                 {
-                    resp = true,
-                    dbname = _dbname,
-                    dbusers = ebdbusers
+                    Resp = true,
+                    DbName = _dbname,
+                    DbUsers = ebdbusers
                 };
             }
             catch (Exception e)
