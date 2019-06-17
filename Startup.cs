@@ -267,19 +267,52 @@ namespace ExpressBase.ServiceStack
                                 Resolve<IEbMqClient>().AddAuthentication(req);
 
                             }
-                            var jwtoken = new JwtSecurityToken();
 
-                            CustomUserSession csession = req.Items["__session"] as CustomUserSession;
+                            string solId = "";
+                            int userId = 0;
+                            string wc = "";
+                            string sub = "";
 
-                            string solId = csession.CId;
-                            int userId = csession.Uid;
-                            string wc = csession.WhichConsole;
-                            string sub = csession.UserAuthId;
+                            if (req.Items.ContainsKey("__session"))
+                            {
+                                CustomUserSession csession = req.Items["__session"] as CustomUserSession;
+
+                                solId = csession.CId;
+                                userId = csession.Uid;
+                                wc = csession.WhichConsole;
+                                sub = csession.UserAuthId;
+                            }
+                            else
+                            {
+                                var jwtoken = new JwtSecurityToken(auth.Replace(CacheConstants.BEARER, string.Empty).Trim());
+                                foreach (var c in jwtoken.Claims)
+                                {
+                                    if (!string.IsNullOrEmpty(c.Value))
+                                    {
+                                        if (c.Type == TokenConstants.CID)
+                                        {
+                                            solId = c.Value;
+                                        }
+                                        else if (c.Type == TokenConstants.UID)
+                                        {
+                                            userId = int.Parse(c.Value);
+                                        }
+                                        else if (c.Type == TokenConstants.WC)
+                                        {
+                                            wc = c.Value;
+                                        }
+                                        else if (c.Type == TokenConstants.SUB)
+                                        {
+                                            sub = c.Value;
+                                        }
+                                    }
+                                }
+                            }
 
                             RequestContext.Instance.Items.Add(CoreConstants.SOLUTION_ID, solId);
-                            RequestContext.Instance.Items.Add("UserId", userId);
+                            RequestContext.Instance.Items.Add(CoreConstants.USER_ID, userId);
                             RequestContext.Instance.Items.Add(TokenConstants.WC, wc);
-                            RequestContext.Instance.Items.Add(TokenConstants.SUB, csession.UserAuthId);
+                            RequestContext.Instance.Items.Add(TokenConstants.SUB, sub);
 
 
                             if (requestDto is IEbSSRequest)
@@ -299,6 +332,7 @@ namespace ExpressBase.ServiceStack
                                 (requestDto as IEbTenentRequest).SolnId = solId;
                                 (requestDto as IEbTenentRequest).UserId = userId;
                             }
+
 
                             //foreach (var c in jwtoken.Claims)
                             //{
