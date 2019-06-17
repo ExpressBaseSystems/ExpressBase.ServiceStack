@@ -125,7 +125,7 @@ namespace ExpressBase.ServiceStack.Services
                     EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery(query1.ToString(), parameters.ToArray());
                     result = Convert.ToInt32(dt.Rows[0][0]);
                 }
-                this.Post(new UpdateSolutionRequest() { SolnId = request.SolnId, UserId = request.UserId, DbName = request.SolnId });
+                this.Post(new UpdateSolutionRequest() { SolnId = request.SolnId, UserId = request.UserId });
                 return new SaveLocationMetaResponse { Id = result };
             }
         }
@@ -146,7 +146,7 @@ namespace ExpressBase.ServiceStack.Services
                 var _infraService = base.ResolveService<InfraServices>();
                 GetSolutioInfoResponse res = (GetSolutioInfoResponse)_infraService.Get(new GetSolutioInfoRequest { IsolutionId = req.SolnId });
                 EbSolutionsWrapper wrap_sol = res.Data;
-                LocationInfoTenantResponse Loc = this.Get(new LocationInfoTenantRequest { DbName = req.DbName });
+                LocationInfoTenantResponse Loc = this.Get(new LocationInfoTenantRequest { SolnId = req.SolnId, UserId = req.UserId });
                 Eb_Solution sol_Obj = new Eb_Solution
                 {
                     SolutionID = req.SolnId,
@@ -176,33 +176,30 @@ namespace ExpressBase.ServiceStack.Services
             Dictionary<int, EbLocation> locs = new Dictionary<int, EbLocation>();
 
             string query = "SELECT * FROM eb_location_config WHERE eb_del = 'F' ORDER BY id; SELECT * FROM eb_locations;";
-            EbConnectionFactory ebConnectionFactory = new EbConnectionFactory(req.DbName.ToLower(), this.Redis);
-            using (var con = ebConnectionFactory.DataDB.GetNewConnection(req.DbName.ToLower()))
+            EbConnectionFactory ebConnectionFactory = new EbConnectionFactory(req.SolnId.ToLower(), this.Redis);
+            EbDataSet dt = ebConnectionFactory.DataDB.DoQueries(query);
+
+            foreach (EbDataRow r in dt.Tables[0].Rows)
             {
-                EbDataSet dt = ebConnectionFactory.DataDB.DoQueries(query);
-
-                foreach (EbDataRow r in dt.Tables[0].Rows)
+                Conf.Add(new EbLocationCustomField
                 {
-                    Conf.Add(new EbLocationCustomField
-                    {
-                        Name = r[1].ToString(),
-                        IsRequired = (r[2].ToString() == "T") ? true : false,
-                        Id = r[0].ToString(),
-                        Type = r[3].ToString()
-                    });
-                }
+                    Name = r[1].ToString(),
+                    IsRequired = (r[2].ToString() == "T") ? true : false,
+                    Id = r[0].ToString(),
+                    Type = r[3].ToString()
+                });
+            }
 
-                foreach (var r in dt.Tables[1].Rows)
+            foreach (var r in dt.Tables[1].Rows)
+            {
+                locs.Add(Convert.ToInt32(r[0]), new EbLocation
                 {
-                    locs.Add(Convert.ToInt32(r[0]), new EbLocation
-                    {
-                        LocId = Convert.ToInt32(r[0]),
-                        ShortName = r[1].ToString(),
-                        LongName = r[2].ToString(),
-                        Logo = r[3].ToString(),
-                        Meta = JsonConvert.DeserializeObject<Dictionary<string, string>>(r[4].ToString())
-                    });
-                }
+                    LocId = Convert.ToInt32(r[0]),
+                    ShortName = r[1].ToString(),
+                    LongName = r[2].ToString(),
+                    Logo = r[3].ToString(),
+                    Meta = JsonConvert.DeserializeObject<Dictionary<string, string>>(r[4].ToString())
+                });
             }
 
             return new LocationInfoTenantResponse { Locations = locs, Config = Conf };
