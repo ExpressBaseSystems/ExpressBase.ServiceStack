@@ -276,7 +276,7 @@ namespace ExpressBase.ServiceStack.Services
                 }
                 else if (DataDB.Vendor == DatabaseVendors.ORACLE)
                 {
-                    sql2 += "INSERT INTO eb_users(email, pwd, fullname,fbid,statusid) VALUES (:email, :pwd, :fullname, :socialid,0)";
+                    sql2 += "INSERT INTO eb_users(email, pwd, fullname,fbid,statusid) VALUES (:email, :pwd, :fullname, :socialid, 0)";
                     DbParameter[] parameters = { DataDB.GetNewParameter("email", EbDbTypes.String, rslt.Rows[0][0]),
                                                  DataDB.GetNewParameter("pwd", EbDbTypes.String, rslt.Rows[0][1]),
                                                  DataDB.GetNewParameter("fullname", EbDbTypes.String, rslt.Rows[0][2]),
@@ -288,7 +288,7 @@ namespace ExpressBase.ServiceStack.Services
                 }
                 if (DataDB.Vendor == DatabaseVendors.MYSQL)
                 {
-                    sql2 += "INSERT INTO eb_users(email, pwd, fullname,fbid,statusid) VALUES (@email, @pwd, @fullname, @socialid,0);";
+                    sql2 += "INSERT INTO eb_users(email, pwd, fullname,fbid,statusid) VALUES (@email, @pwd, @fullname, @socialid, 0);";
                     DbCommand cmdtxt3 = DataDB.GetNewCommand(con, sql2);
                     cmdtxt3.Parameters.Add(DataDB.GetNewParameter("email", EbDbTypes.String, rslt.Rows[0][0]));
                     cmdtxt3.Parameters.Add(DataDB.GetNewParameter("pwd", EbDbTypes.String, rslt.Rows[0][1]));

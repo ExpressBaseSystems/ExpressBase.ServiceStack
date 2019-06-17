@@ -74,7 +74,7 @@ namespace ExpressBase.ServiceStack.Services
             using (var con = this.EbConnectionFactory.DataDB.GetNewConnection())
             {
                 con.Open();
-                string sql = @"SELECT id, fullname FROM eb_users WHERE statusid = 0 ;
+                string sql = @"SELECT id, fullname FROM eb_users WHERE statusid = 0 AND eb_del ='F';
                              SELECT id, name FROM eb_usergroup WHERE eb_del ='F'";
                 var dt = this.EbConnectionFactory.DataDB.DoQueries(sql);
 
@@ -133,13 +133,14 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     sql = @"SELECT * FROM eb_schedules ES ,eb_users EU
                                WHERE EU.id = ES.created_by
-                               AND obj_id = :obj_id
+                               AND obj_id = :obj_id AND status != 3
                                 ORDER BY ES.id;";
                 }
                 else if(request.ObjectId ==-1)
                 {
                     sql = @"SELECT * FROM eb_schedules ES ,eb_users EU
-                               WHERE EU.id = ES.created_by;";
+                               WHERE EU.id = ES.created_by AND status != 3
+                               ORDER BY ES.id;;";
                 }
 
                 DbParameter[] parameters = {

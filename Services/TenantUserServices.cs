@@ -146,6 +146,7 @@ namespace ExpressBase.ServiceStack.Services
                 var _infraService = base.ResolveService<InfraServices>();
                 GetSolutioInfoResponse res = (GetSolutioInfoResponse)_infraService.Get(new GetSolutioInfoRequest { IsolutionId = req.SolnId });
                 EbSolutionsWrapper wrap_sol = res.Data;
+
                 LocationInfoTenantResponse Loc = this.Get(new LocationInfoTenantRequest { DbName = req.DbName });
                 Eb_Solution sol_Obj = new Eb_Solution
                 {
@@ -153,7 +154,7 @@ namespace ExpressBase.ServiceStack.Services
                     DateCreated = wrap_sol.DateCreated.ToString(),
                     Description = wrap_sol.Description.ToString(),
                     Locations = Loc.Locations,
-                    NumberOfUsers = 2,
+                    NumberOfUsers = GetUserCount(),
                     SolutionName = wrap_sol.SolutionName.ToString(),
                     LocationConfig = Loc.Config
                 };
@@ -170,6 +171,14 @@ namespace ExpressBase.ServiceStack.Services
             return new UpdateSolutionResponse { };
         }
 
+        public int GetUserCount()
+        {
+            string sql = @"SELECT COUNT(*) FROM eb_users WHERE statusid = 0 AND eb_del ='F';";
+            EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(sql);
+            if (dt.Rows.Count > 0)
+                return Convert.ToInt32(dt.Rows[0][0]);
+            return 0;
+        }
         public LocationInfoTenantResponse Get(LocationInfoTenantRequest req)
         {
             List<EbLocationCustomField> Conf = new List<EbLocationCustomField>();
