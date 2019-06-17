@@ -77,6 +77,7 @@ namespace ExpressBase.ServiceStack.Services
 
                     if (_favids.Contains(owrap.Id))
                     {
+                        owrap.Favourite = true;
                         _fav.Add(owrap);
                     }
                 }
