@@ -133,15 +133,15 @@ namespace ExpressBase.ServiceStack.Services
             _solutionConnections.DataDbConfig.ReadWriteUserName = (request.DbUsers.ReadWriteUserName != string.Empty) ? request.DbUsers.ReadWriteUserName : request.DbUsers.AdminUserName;
             _solutionConnections.DataDbConfig.ReadWritePassword = (request.DbUsers.ReadWritePassword != string.Empty) ? request.DbUsers.ReadWritePassword : request.DbUsers.AdminPassword;
 
-            int confid =_solutionConnections.DataDbConfig.PersistIntegrationConf(request.NewSolnId, this.InfraConnectionFactory, request.UserId);
+            int confid = _solutionConnections.DataDbConfig.PersistIntegrationConf(request.NewSolnId, this.InfraConnectionFactory, request.UserId);
             EbIntegration _obj = new EbIntegration
             {
                 Id = 0,
                 ConfigId = confid,
                 Preference = ConPreferences.PRIMARY,
-                Type =EbConnections.EbDATA
+                Type = EbConnections.EbDATA
             };
-          int conid =  _obj.PersistIntegration(request.NewSolnId, this.InfraConnectionFactory, request.UserId);
+            int conid = _obj.PersistIntegration(request.NewSolnId, this.InfraConnectionFactory, request.UserId);
             this.Redis.Set<EbConnectionsConfig>(string.Format(CoreConstants.SOLUTION_INTEGRATION_REDIS_KEY, request.NewSolnId), _solutionConnections);
         }
 
@@ -327,7 +327,7 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     string[] adminroles = Enum.GetNames(typeof(MySqlSysRoles));
                     List<string> adroleslist = adminroles.OfType<string>().ToList();
-                    List<string> adroleslistv1 = Enum.GetNames(typeof(MySqlSysRolesv1)).ToList(); 
+                    List<string> adroleslistv1 = Enum.GetNames(typeof(MySqlSysRolesv1)).ToList();
                     adroleslist = adroleslist.ConvertAll(s => s.Replace("_", " "));
                     foreach (var dr in dt.Rows)
                     {
@@ -487,12 +487,42 @@ namespace ExpressBase.ServiceStack.Services
             try
             {
                 request.IntegrationO.PersistIntegration(request.SolnId, this.InfraConnectionFactory, request.UserId);
+                if (request.IntegrationO.Type == EbConnections.EbDATA)
+                {
+                    InitializeDataDb(request.IntegrationO.ConfigId, request.SolnId, request.UserId);
+                }
             }
             catch (Exception e)
             {
                 res.ResponseStatus.Message = e.Message;
             }
             return res;
+        }
+
+        public void InitializeDataDb(int confid, string solid, int uid)
+        {
+            try
+            {
+                EbDbCreateServices _dbService = base.ResolveService<EbDbCreateServices>();
+                TenantUserServices _tenantUserService = base.ResolveService<TenantUserServices>();
+
+                string query = string.Format("SELECT * FROM eb_integration_configs where id ={0};", confid);
+                EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(query);
+
+                EbIntegrationConf conf = EbSerializers.Json_Deserialize(dt.Rows[0][4].ToString());
+
+                EbDbCreateResponse response = _dbService.Post(new EbDbCreateRequest { DataDBConfig = conf as EbDbConfig, SolnId = solid, UserId = uid, IsChange = true });
+                if (response.Resp)
+                {
+                    //Post(new InitialSolutionConnectionsRequest { NewSolnId = DbName, SolnId = request.SolnId, UserId = request.UserId, DbUsers = response.dbusers });
+                    _tenantUserService.Post(new UpdateSolutionRequest() { UserId = uid, SolnId = solid, });
+                    RefreshSolutionConnectionsAsyncResponse res = this.MQClient.Post<RefreshSolutionConnectionsAsyncResponse>(new RefreshSolutionConnectionsBySolutionIdAsyncRequest()
+                    {
+                        SolutionId = solid
+                    });
+                }
+            }
+            catch (Exception e) { Console.WriteLine(e.Message); }
         }
 
         public GetSolutioInfoResponses Get(GetSolutioInfoRequests request)
@@ -513,7 +543,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 EbDataSet dt = this.InfraConnectionFactory.DataDB.DoQueries(sql);
                 EbDataTable _temp = dt.Tables[0];
-                if(_temp != null)
+                if (_temp != null)
                 {
                     resp.SolutionInfo = new EbSolutionsWrapper
                     {

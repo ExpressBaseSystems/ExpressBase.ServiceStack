@@ -160,11 +160,11 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     if (request.DeployDB)
                     {
-                        EbDbCreateResponse response = (EbDbCreateResponse)_dbService.Post(new EbDbCreateRequest { dbName = DbName, SolnId = request.SolnId, UserId = request.UserId, ischange = false });
-                        if (response.resp)
+                        EbDbCreateResponse response = (EbDbCreateResponse)_dbService.Post(new EbDbCreateRequest { DBName = DbName, SolnId = request.SolnId, UserId = request.UserId, IsChange = false });
+                        if (response.Resp)
                         {
-                            _conService.Post(new InitialSolutionConnectionsRequest { NewSolnId = DbName, SolnId = request.SolnId, UserId = request.UserId, DbUsers = response.dbusers });
-                            _tenantUserService.Post(new UpdateSolutionRequest() { DbName = DbName, UserId = request.UserId });
+                            _conService.Post(new InitialSolutionConnectionsRequest { NewSolnId = DbName, SolnId = request.SolnId, UserId = request.UserId, DbUsers = response.DbUsers });
+                            _tenantUserService.Post(new UpdateSolutionRequest() {SolnId=request.SolnId, UserId = request.UserId });
                         }
                     }
                 }
