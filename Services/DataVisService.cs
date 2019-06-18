@@ -827,7 +827,7 @@ namespace ExpressBase.ServiceStack
                 {
                     if (col.AllowTooltip)
                     {
-                        _formattedData = _unformattedData.ToString().Length > col.AllowedCharacterLength ? "<span title='" + _unformattedData + "'>" + _unformattedData.ToString().Substring(0, col.AllowedCharacterLength) + "...</span>" : _unformattedData;
+                        _formattedData = _unformattedData.ToString().Length > col.AllowedCharacterLength ? "<span class='columntooltip' data-toggle='popover' data-content='"+ _unformattedData.ToString().ToBase64() + "'>" + _unformattedData.ToString().Substring(0, col.AllowedCharacterLength) + "...</span>" : _unformattedData;
                     }
                     if ((col as DVStringColumn).RenderAs == StringRenderType.Marker)
                         _formattedData = "<a href = '#' class ='columnMarker' data-latlong='" + _unformattedData + "'><i class='fa fa-map-marker fa-2x' style='color:red;'></i></a>";
