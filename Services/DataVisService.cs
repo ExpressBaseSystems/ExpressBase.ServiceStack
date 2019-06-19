@@ -295,7 +295,7 @@ namespace ExpressBase.ServiceStack
                 {
                     foreach (TFilters _dic in request.TFilters)
                     {
-                        var op = _dic.Operator; var col = _dic.Column; var val = _dic.Value; var type = _dic.Type;
+                        var op = _dic.Operator.Trim(); var col = _dic.Column; var val = _dic.Value; var type = _dic.Type;
                         var array = _dic.Value.Split("|");
                         if (array.Length == 0)
                         {
