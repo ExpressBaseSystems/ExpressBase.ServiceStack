@@ -27,9 +27,9 @@ namespace ExpressBase.ServiceStack.Services
                 string query = @"
             INSERT INTO 
             wiki (
-                    category, title, html, created_by, eb_tags) 
+                    category, title, html, eb_created_at, eb_created_by, eb_tags) 
             VALUES (
-                    @category, @title, @html, @createdby , @tags)
+                    @category, @title, @html, @createdon, @createdby, @tags)
             RETURNING id";
 
                 DbParameter[] parameters = new DbParameter[]
@@ -37,6 +37,7 @@ namespace ExpressBase.ServiceStack.Services
                 this.InfraConnectionFactory.DataDB.GetNewParameter("category", EbDbTypes.String, request.Wiki.Category),
                 this.InfraConnectionFactory.DataDB.GetNewParameter("title", EbDbTypes.String, request.Wiki.Title),
                 this.InfraConnectionFactory.DataDB.GetNewParameter("html", EbDbTypes.String, request.Wiki.HTML),
+                 this.InfraConnectionFactory.DataDB.GetNewParameter("createdon", EbDbTypes.DateTime, DateTime.Now),
                 this.InfraConnectionFactory.DataDB.GetNewParameter("createdby", EbDbTypes.Int32, request.Wiki.CreatedBy),
                 this.InfraConnectionFactory.DataDB.GetNewParameter("tags", EbDbTypes.String, request.Wiki.Tags)
                 };
@@ -65,7 +66,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 string query = @"
             UPDATE wiki SET
-                category= @category, title = @title , html = @html , eb_updated_by = @createdby, eb_updated_on = @updatedtime, eb_tags = @tags
+                category= @category, title = @title , html = @html , eb_last_modified_by = @modified_by, eb_last_modified_at = @updatedtime, eb_tags = @tags
             WHERE 
                 id= @id
             RETURNING id";
@@ -75,7 +76,7 @@ namespace ExpressBase.ServiceStack.Services
                 this.InfraConnectionFactory.DataDB.GetNewParameter("category", EbDbTypes.String, request.Wiki.Category),
                 this.InfraConnectionFactory.DataDB.GetNewParameter("title", EbDbTypes.String, request.Wiki.Title),
                 this.InfraConnectionFactory.DataDB.GetNewParameter("html", EbDbTypes.String, request.Wiki.HTML),
-                this.InfraConnectionFactory.DataDB.GetNewParameter("createdby", EbDbTypes.Int32, request.Wiki.CreatedBy),
+                this.InfraConnectionFactory.DataDB.GetNewParameter("modified_by", EbDbTypes.Int32, request.Wiki.CreatedBy),
                 this.InfraConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.Wiki.Id),
                  this.InfraConnectionFactory.DataDB.GetNewParameter("tags", EbDbTypes.String, request.Wiki.Tags),
                  this.InfraConnectionFactory.DataDB.GetNewParameter("updatedtime", EbDbTypes.DateTime, DateTime.Now)
@@ -124,7 +125,8 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
-
+                Console.WriteLine("Exception inside Getting Wiki By Id");
+                return null;
             }
             return resp;
         }
@@ -182,7 +184,7 @@ namespace ExpressBase.ServiceStack.Services
                 FROM
                     wiki 
                 WHERE 
-                    eb_del='false'";
+                    eb_del='false' ORDER BY id ";
                 EbDataTable table = InfraConnectionFactory.DataDB.DoQuery(query);
 
                 int capacity = table.Rows.Capacity;

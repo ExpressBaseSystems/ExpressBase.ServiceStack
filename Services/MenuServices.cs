@@ -139,21 +139,61 @@ namespace ExpressBase.ServiceStack.Services
         public AddFavouriteResponse Post(AddFavouriteRequest request)
         {
             AddFavouriteResponse resp = new AddFavouriteResponse();
-            string sql = @"INSERT INTO 
+            try
+            {
+                string sql = @"INSERT INTO 
                                 eb_objects_favourites(userid,object_id)
                             VALUES(:userid,:objectid)";
-            DbParameter[] parameter =
-            {
+                DbParameter[] parameter =
+                {
                 this.EbConnectionFactory.ObjectsDB.GetNewParameter("userid",EbDbTypes.Int32,request.UserId),
                 this.EbConnectionFactory.ObjectsDB.GetNewParameter("objectid",EbDbTypes.Int32,request.ObjId)
             };
 
-            int rows_affected = this.EbConnectionFactory.ObjectsDB.DoNonQuery(sql, parameter);
+                int rows_affected = this.EbConnectionFactory.ObjectsDB.DoNonQuery(sql, parameter);
 
-            if (rows_affected > 0)
-                resp.Status = true;
-            else
+                if (rows_affected > 0)
+                    resp.Status = true;
+                else
+                    resp.Status = false;
+            }
+            catch(Exception e)
+            {
+                Console.WriteLine("Exception at Adding to Fav: " + e.Message);
                 resp.Status = false;
+            }
+            return resp;
+        }
+
+        public RemoveFavouriteResponse Post(RemoveFavouriteRequest request)
+        {
+            RemoveFavouriteResponse resp = new RemoveFavouriteResponse();
+            try
+            {
+                string sql = @"UPDATE 
+                                eb_objects_favourites SET eb_del= 'T' 
+                           WHERE 
+                                userid = :userid 
+                           AND 
+                                object_id = :objectid";
+
+                DbParameter[] parameter = {
+                    this.EbConnectionFactory.ObjectsDB.GetNewParameter("userid",EbDbTypes.Int32,request.UserId),
+                    this.EbConnectionFactory.ObjectsDB.GetNewParameter("objectid",EbDbTypes.Int32,request.ObjId)
+                };
+
+                int rows_affected = this.EbConnectionFactory.ObjectsDB.DoNonQuery(sql, parameter);
+
+                if (rows_affected > 0)
+                    resp.Status = true;
+                else
+                    resp.Status = false;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Exception at Remove From Fav: " + e.Message);
+                resp.Status = false;
+            }
             return resp;
         }
     }
