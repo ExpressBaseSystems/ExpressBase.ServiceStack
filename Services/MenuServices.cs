@@ -29,7 +29,7 @@ namespace ExpressBase.ServiceStack.Services
                 this.EbConnectionFactory.ObjectsDB.GetNewParameter("user_id",EbDbTypes.Int32,request.UserId)
             };
 
-            if (request.SysRole.Contains("SolutionOwner"))
+            if (request.SysRole.Contains("SolutionOwner") || request.SysRole.Contains("SolutionAdmin"))
                 ds = this.EbConnectionFactory.ObjectsDB.DoQueries(this.EbConnectionFactory.ObjectsDB.EB_SIDEBARUSER_REQUEST.Replace(this.EbConnectionFactory.ObjectsDB.EB_SIDEBARCHECK, string.Empty), parameters);
             else
                 ds = this.EbConnectionFactory.ObjectsDB.DoQueries(this.EbConnectionFactory.ObjectsDB.EB_SIDEBARUSER_REQUEST.Replace(":Ids", string.IsNullOrEmpty(request.Ids) ? "0" : request.Ids), parameters);
@@ -82,7 +82,6 @@ namespace ExpressBase.ServiceStack.Services
                     }
                 }
             }
-
             return new SidebarUserResponse { Data = _Coll, AppList = appColl, Favourites = _fav };
         }
 
