@@ -29,7 +29,7 @@ namespace ExpressBase.ServiceStack.Services
                 this.EbConnectionFactory.ObjectsDB.GetNewParameter("user_id",EbDbTypes.Int32,request.UserId)
             };
 
-            if (request.SysRole.Contains("SolutionOwner"))
+            if (request.SysRole.Contains("SolutionOwner") || request.SysRole.Contains("SolutionAdmin"))
                 ds = this.EbConnectionFactory.ObjectsDB.DoQueries(this.EbConnectionFactory.ObjectsDB.EB_SIDEBARUSER_REQUEST.Replace(this.EbConnectionFactory.ObjectsDB.EB_SIDEBARCHECK, string.Empty), parameters);
             else
                 ds = this.EbConnectionFactory.ObjectsDB.DoQueries(this.EbConnectionFactory.ObjectsDB.EB_SIDEBARUSER_REQUEST.Replace(":Ids", string.IsNullOrEmpty(request.Ids) ? "0" : request.Ids), parameters);
@@ -82,7 +82,6 @@ namespace ExpressBase.ServiceStack.Services
                     }
                 }
             }
-
             return new SidebarUserResponse { Data = _Coll, AppList = appColl, Favourites = _fav };
         }
 
@@ -139,21 +138,61 @@ namespace ExpressBase.ServiceStack.Services
         public AddFavouriteResponse Post(AddFavouriteRequest request)
         {
             AddFavouriteResponse resp = new AddFavouriteResponse();
-            string sql = @"INSERT INTO 
+            try
+            {
+                string sql = @"INSERT INTO 
                                 eb_objects_favourites(userid,object_id)
                             VALUES(:userid,:objectid)";
-            DbParameter[] parameter =
-            {
+                DbParameter[] parameter =
+                {
                 this.EbConnectionFactory.ObjectsDB.GetNewParameter("userid",EbDbTypes.Int32,request.UserId),
                 this.EbConnectionFactory.ObjectsDB.GetNewParameter("objectid",EbDbTypes.Int32,request.ObjId)
             };
 
-            int rows_affected = this.EbConnectionFactory.ObjectsDB.DoNonQuery(sql, parameter);
+                int rows_affected = this.EbConnectionFactory.ObjectsDB.DoNonQuery(sql, parameter);
 
-            if (rows_affected > 0)
-                resp.Status = true;
-            else
+                if (rows_affected > 0)
+                    resp.Status = true;
+                else
+                    resp.Status = false;
+            }
+            catch(Exception e)
+            {
+                Console.WriteLine("Exception at Adding to Fav: " + e.Message);
                 resp.Status = false;
+            }
+            return resp;
+        }
+
+        public RemoveFavouriteResponse Post(RemoveFavouriteRequest request)
+        {
+            RemoveFavouriteResponse resp = new RemoveFavouriteResponse();
+            try
+            {
+                string sql = @"UPDATE 
+                                eb_objects_favourites SET eb_del= 'T' 
+                           WHERE 
+                                userid = :userid 
+                           AND 
+                                object_id = :objectid";
+
+                DbParameter[] parameter = {
+                    this.EbConnectionFactory.ObjectsDB.GetNewParameter("userid",EbDbTypes.Int32,request.UserId),
+                    this.EbConnectionFactory.ObjectsDB.GetNewParameter("objectid",EbDbTypes.Int32,request.ObjId)
+                };
+
+                int rows_affected = this.EbConnectionFactory.ObjectsDB.DoNonQuery(sql, parameter);
+
+                if (rows_affected > 0)
+                    resp.Status = true;
+                else
+                    resp.Status = false;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Exception at Remove From Fav: " + e.Message);
+                resp.Status = false;
+            }
             return resp;
         }
     }

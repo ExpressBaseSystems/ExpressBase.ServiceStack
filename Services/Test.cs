@@ -1,6 +1,8 @@
 ﻿using ExpressBase.Common;
 using ExpressBase.Common.Data;
 using ExpressBase.Objects.ServiceStack_Artifacts;
+using ServiceStack;
+using ServiceStack.Auth;
 using ServiceStack.Logging;
 using ServiceStack.Messaging;
 using System;
@@ -41,7 +43,27 @@ namespace ExpressBase.ServiceStack.Services
 
 
 
+
     }
 
-    
+    [Authenticate]
+    public class ReqstarsService : Service
+    {
+        public object Get(ApiTestReq request)
+        {
+    //        var authProvider = (ApiKeyAuthProvider)
+    //AuthenticateService.GetAuthProvider(ApiKeyAuthProvider.Name);
+
+    //        var auth_api = (ApiKeyAuthProvider)AuthenticateService.GetAuthProvider(ApiKeyAuthProvider.Name);
+
+    //        var authRepo = TryResolve<IManageApiKeys>();
+
+    //        List<ApiKey> apiKeys = auth_api.GenerateNewApiKeys("hairocraft_stagging:hairocraft123@gmail.com:uc");
+
+    //        authRepo.StoreAll(apiKeys);
+
+
+            return new UnniTest();
+        }
+    }
 }

@@ -15,6 +15,7 @@ using ExpressBase.Common.Structures;
 using System.Data.Common;
 using System.Text.RegularExpressions;
 using ExpressBase.Common.Constants;
+using ExpressBase.Objects.Objects.DVRelated;
 
 namespace ExpressBase.ServiceStack
 {
@@ -578,7 +579,7 @@ namespace ExpressBase.ServiceStack
             {
                 Console.WriteLine("Exception  at sql function execution::" + e.Message);
                 resp.Reponse = false;
-                resp.Data = null;
+                resp.Data = new EbDataTable();
             }
             return resp;
         }
@@ -586,6 +587,8 @@ namespace ExpressBase.ServiceStack
         public DatawriterResponse Post(DatawriterRequest request)
         {
             EbDataTable t = new EbDataTable();
+            t.Columns.Add(new EbDataColumn(0, "status", EbDbTypes.BooleanOriginal));
+            t.Rows.Add(new EbDataRow());
             DatawriterResponse resp = new DatawriterResponse();
             try
             {
@@ -605,19 +608,19 @@ namespace ExpressBase.ServiceStack
                 {
                     trans = this.EbConnectionFactory.ObjectsDB.DoNonQuery(request.Sql);
                 }
-                t.Columns.Add(new EbDataColumn(0, "status", EbDbTypes.BooleanOriginal));
-                t.Rows.Add(new EbDataRow());
                 if (trans > 0)
                     t.Rows[0].Add(true);
                 else
                     t.Rows[0].Add(false);
-
                 resp.Data = t;
             }
             catch (Exception e)
             {
+                Console.WriteLine("Exception on executing datawriter:" + e.Message);
                 resp.ResponseStatus = new ResponseStatus { Message = e.Message };
                 t.Rows[0].Add(false);
+                t.Columns.Add(new EbDataColumn(1, "error", EbDbTypes.String));
+                t.Rows[0].Add(e.Message);
                 resp.Data = t;
             }
             return resp;
