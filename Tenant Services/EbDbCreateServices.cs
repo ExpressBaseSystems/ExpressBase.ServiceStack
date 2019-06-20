@@ -253,7 +253,8 @@ namespace ExpressBase.ServiceStack.Services
 
                 //..............insert into client tbl eb_users............ to SOLUTION
                 string sql2 = @"INSERT INTO eb_users(email,pwd,statusid) VALUES ('anonymous@anonym.com','294de3557d9d00b3d2d8a1e6aab028cf',0); 
-                                INSERT INTO eb_locations(shortname,longname) VALUES ('default','default');";
+                                INSERT INTO eb_locations(shortname,longname) VALUES ('default','default');
+                                INSERT INTO eb_languages(language) VALUES ('English (en-US)');";
 
                 string sql3 = string.Empty;
                 foreach (var role in Enum.GetValues(typeof(SystemRoles)))
