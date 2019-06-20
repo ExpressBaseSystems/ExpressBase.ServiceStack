@@ -164,7 +164,7 @@ namespace ExpressBase.ServiceStack.Services
                         if (response.Resp)
                         {
                             _conService.Post(new InitialSolutionConnectionsRequest { NewSolnId = DbName, SolnId = request.SolnId, UserId = request.UserId, DbUsers = response.DbUsers });
-                            _tenantUserService.Post(new UpdateSolutionRequest() {SolnId=request.SolnId, UserId = request.UserId });
+                            _tenantUserService.Post(new UpdateSolutionRequest() { SolnId = request.SolnId, UserId = request.UserId });
                         }
                     }
                 }
@@ -202,14 +202,15 @@ namespace ExpressBase.ServiceStack.Services
         public GetSolutioInfoResponse Get(GetSolutioInfoRequest request)
         {
             ConnectionManager _conService = base.ResolveService<ConnectionManager>();
-            string sql = string.Format("SELECT * FROM eb_solutions WHERE isolution_id='{0}'", request.IsolutionId);
+            string sql = string.Format("SELECT solution_name, description, date_created, esolution_id, pricing_tier  FROM eb_solutions WHERE isolution_id='{0}'", request.IsolutionId);
             EbDataTable dt = (new EbConnectionFactory(CoreConstants.EXPRESSBASE, this.Redis)).DataDB.DoQuery(sql);
             EbSolutionsWrapper _ebSolutions = new EbSolutionsWrapper
             {
-                SolutionName = dt.Rows[0][6].ToString(),
-                Description = dt.Rows[0][2].ToString(),
-                DateCreated = dt.Rows[0][1].ToString(),
-                EsolutionId = dt.Rows[0][5].ToString()
+                SolutionName = dt.Rows[0][0].ToString(),
+                Description = dt.Rows[0][1].ToString(),
+                DateCreated = dt.Rows[0][2].ToString(),
+                EsolutionId = dt.Rows[0][3].ToString(),
+                PricingTier = (PricingTiers)Convert.ToInt32(dt.Rows[0][4])
             };
             GetSolutioInfoResponse resp = new GetSolutioInfoResponse() { Data = _ebSolutions };
             if (resp.Data != null)
