@@ -155,7 +155,8 @@ namespace ExpressBase.ServiceStack.Services
                     Locations = Loc.Locations,
                     NumberOfUsers = GetUserCount(),
                     SolutionName = wrap_sol.SolutionName.ToString(),
-                    LocationConfig = Loc.Config
+                    LocationConfig = Loc.Config,
+                    PricingTier = wrap_sol.PricingTier
                 };
 
                 this.Redis.Set<Eb_Solution>(String.Format("solution_{0}", req.SolnId), sol_Obj);
@@ -172,7 +173,8 @@ namespace ExpressBase.ServiceStack.Services
 
         public int GetUserCount()
         {
-            string sql = @"SELECT COUNT(*) FROM eb_users WHERE statusid = 0 AND eb_del ='F';";
+            // statusid 0 - active users, 1- suspended users
+            string sql = @"SELECT COUNT(*) FROM eb_users WHERE statusid = 0 OR statusid =1 AND eb_del ='F';";
             EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(sql);
             if (dt.Rows.Count > 0)
                 return Convert.ToInt32(dt.Rows[0][0]);
