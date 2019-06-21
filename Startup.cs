@@ -21,6 +21,8 @@ using ServiceStack.ProtoBuf;
 using ServiceStack.RabbitMq;
 using ServiceStack.Redis;
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Reflection;
 
@@ -91,7 +93,7 @@ namespace ExpressBase.ServiceStack
 
             LogManager.LogFactory = new ConsoleLogFactory(debugEnabled: true);
 
-            var jwtprovider = new MyJwtAuthProvider
+            MyJwtAuthProvider jwtprovider = new MyJwtAuthProvider
             {
                 HashAlgorithm = "RS256",
                 PrivateKeyXml = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_JWT_PRIVATE_KEY_XML),
@@ -123,6 +125,14 @@ namespace ExpressBase.ServiceStack
                 }
             };
 
+            EbApiAuthProvider apiprovider = new EbApiAuthProvider(AppSettings)
+            {
+#if (DEBUG)
+                RequireSecureConnection = false,
+                //EncryptPayload = true,
+#endif
+            };
+
             this.Plugins.Add(new CorsFeature(allowedHeaders: "Content-Type, Authorization, Access-Control-Allow-Origin, Access-Control-Allow-Credentials"));
 
             this.Plugins.Add(new ProtoBufFormat());
@@ -132,32 +142,32 @@ namespace ExpressBase.ServiceStack
                 new CustomUserSession(),
                 new IAuthProvider[]
                 {
-                    new MyFacebookAuthProvider(AppSettings)
-                    {
-                        AppId = "683590648713089",//"151550788692231", 
-                        AppSecret = "61e674e06ae1b499a7b64b89454aa416",//"94ec1a04342e5cf7e7a971f2eb7ad7bc",
-                        Permissions = new string[] { "email, public_profile" }
-                    },
-
-                    new MyTwitterAuthProvider(AppSettings)
-                    {
-                        ConsumerKey = "6G9gaYo7DMx1OHYRAcpmkPfvu",
-                        ConsumerSecret = "Jx8uUIPeo5D0agjUnqkKHGQ4o6zTrwze9EcLtjDlOgLnuBaf9x",
-                       // CallbackUrl = "http://localhost:8000/auth/twitter",
-                       // RequestTokenUrl= "https://api.twitter.com/oauth/authenticate",
-                    },
-
-                    new MyGithubAuthProvider(AppSettings)
-                    {
-                        ClientId = "4504eefeb8f027c810dd",
-                        ClientSecret = "d9c1c956a9fddd089798e0031851e93a8d0e5cc6",
-                        RedirectUrl = "http://localhost:8000/"
-                    },
-
-
                     new MyCredentialsAuthProvider(AppSettings) { PersistSession = true },
-
                     jwtprovider
+                    //apiprovider,
+
+
+                    //new MyFacebookAuthProvider(AppSettings)
+                    //{
+                    //    AppId = "683590648713089",//"151550788692231", 
+                    //    AppSecret = "61e674e06ae1b499a7b64b89454aa416",//"94ec1a04342e5cf7e7a971f2eb7ad7bc",
+                    //    Permissions = new string[] { "email, public_profile" }
+                    //},
+
+                    //new MyTwitterAuthProvider(AppSettings)
+                    //{
+                    //    ConsumerKey = "6G9gaYo7DMx1OHYRAcpmkPfvu",
+                    //    ConsumerSecret = "Jx8uUIPeo5D0agjUnqkKHGQ4o6zTrwze9EcLtjDlOgLnuBaf9x",
+                    //   // CallbackUrl = "http://localhost:8000/auth/twitter",
+                    //   // RequestTokenUrl= "https://api.twitter.com/oauth/authenticate",
+                    //},
+
+                    //new MyGithubAuthProvider(AppSettings)
+                    //{
+                    //    ClientId = "4504eefeb8f027c810dd",
+                    //    ClientSecret = "d9c1c956a9fddd089798e0031851e93a8d0e5cc6",
+                    //    RedirectUrl = "http://localhost:8000/"
+                    //}
                 }));
 
             this.ContentTypes.Register(MimeTypes.ProtoBuf, (reqCtx, res, stream) => ProtoBuf.Serializer.NonGeneric.Serialize(stream, res), ProtoBuf.Serializer.NonGeneric.Deserialize);
@@ -172,7 +182,9 @@ namespace ExpressBase.ServiceStack
 
             container.Register<IRedisClientsManager>(c => new RedisManagerPool(redisConnectionString));
 
-            container.Register<IUserAuthRepository>(c => new MyRedisAuthRepository(c.Resolve<IRedisClientsManager>()));
+            container.Register<IAuthRepository>(c => new MyRedisAuthRepository(c.Resolve<IRedisClientsManager>()));
+            container.Register<IManageApiKeys>(c => new EbApiRedisAuthRepository(c.Resolve<IRedisClientsManager>()));
+
             container.Register<ICacheClient>(c => new RedisClientManagerCacheClient(c.Resolve<IRedisClientsManager>()));
             container.Register<JwtAuthProvider>(jwtprovider);
             container.Register<IEbConnectionFactory>(c => new EbConnectionFactory(c)).ReusedWithin(ReuseScope.Request);
@@ -242,7 +254,7 @@ namespace ExpressBase.ServiceStack
                 try
                 {
                     if (requestDto != null && requestDto.GetType() != typeof(Authenticate) && requestDto.GetType() != typeof(GetAccessToken) && requestDto.GetType() != typeof(UniqueRequest) && requestDto.GetType() != typeof(CreateAccountRequest) /*&& requestDto.GetType() != typeof(EmailServicesMqRequest) */&& requestDto.GetType() != typeof(RegisterRequest) && requestDto.GetType() != typeof(AutoGenSidRequest) && requestDto.GetType() != typeof(JoinbetaReq) && requestDto.GetType() != typeof(GetBotsRequest)
-                    && requestDto.GetType() != typeof(GetEventSubscribers) && requestDto.GetType() != typeof(GetAllFromAppStoreExternalRequest) && requestDto.GetType() != typeof(GetOneFromAppStoreRequest) && !(requestDto is EbServiceStackNoAuthRequest) && !(requestDto is IEbTenentRequest))
+                    && requestDto.GetType() != typeof(GetEventSubscribers) && requestDto.GetType() != typeof(GetAllFromAppStoreExternalRequest) && requestDto.GetType() != typeof(GetOneFromAppStoreRequest) && !(requestDto is EbServiceStackNoAuthRequest)/* && !(requestDto is IEbTenentRequest)*/)
                     {
                         var auth = req.Headers[HttpHeaders.Authorization];
                         if (string.IsNullOrEmpty(auth))
@@ -256,46 +268,113 @@ namespace ExpressBase.ServiceStack
                                 Resolve<IEbMqClient>().AddAuthentication(req);
 
                             }
-                            var jwtoken = new JwtSecurityToken(auth.Replace(CacheConstants.BEARER, string.Empty).Trim());
-                            foreach (var c in jwtoken.Claims)
+
+                            string solId = "";
+                            int userId = 0;
+                            string wc = "";
+                            string sub = "";
+
+                            if (req.Items.ContainsKey("__session"))
                             {
-                                if (c.Type == TokenConstants.CID && !string.IsNullOrEmpty(c.Value))
+                                CustomUserSession csession = req.Items["__session"] as CustomUserSession;
+
+                                solId = csession.CId;
+                                userId = csession.Uid;
+                                wc = csession.WhichConsole;
+                                sub = csession.UserAuthId;
+                            }
+                            else
+                            {
+                                var jwtoken = new JwtSecurityToken(auth.Replace(CacheConstants.BEARER, string.Empty).Trim());
+                                foreach (var c in jwtoken.Claims)
                                 {
-                                    RequestContext.Instance.Items.Add(CoreConstants.SOLUTION_ID, c.Value);
-                                    if (requestDto is IEbSSRequest)
-                                        (requestDto as IEbSSRequest).SolnId = c.Value;
-                                    if (requestDto is EbServiceStackAuthRequest)
-                                        (requestDto as EbServiceStackAuthRequest).SolnId = c.Value;
-                                    if (requestDto is IEbTenentRequest)
-                                        (requestDto as IEbTenentRequest).SolnId = c.Value;
-                                    continue;
-                                }
-                                if (c.Type == TokenConstants.UID && !string.IsNullOrEmpty(c.Value))
-                                {
-                                    RequestContext.Instance.Items.Add("UserId", Convert.ToInt32(c.Value));
-                                    if (requestDto is IEbSSRequest)
-                                        (requestDto as IEbSSRequest).UserId = Convert.ToInt32(c.Value);
-                                    if (requestDto is IEbTenentRequest)
-                                        (requestDto as IEbTenentRequest).UserId = Convert.ToInt32(c.Value);
-                                    if (requestDto is EbServiceStackAuthRequest)
-                                        (requestDto as EbServiceStackAuthRequest).UserId = Convert.ToInt32(c.Value);
-                                    continue;
-                                }
-                                if (c.Type == TokenConstants.WC && !string.IsNullOrEmpty(c.Value))
-                                {
-                                    RequestContext.Instance.Items.Add(TokenConstants.WC, c.Value);
-                                    if (requestDto is EbServiceStackAuthRequest)
-                                        (requestDto as EbServiceStackAuthRequest).WhichConsole = c.Value.ToString();
-                                    continue;
-                                }
-                                if (c.Type == TokenConstants.SUB && !string.IsNullOrEmpty(c.Value))
-                                {
-                                    RequestContext.Instance.Items.Add(TokenConstants.SUB, c.Value);
-                                    if (requestDto is EbServiceStackAuthRequest)
-                                        (requestDto as EbServiceStackAuthRequest).UserAuthId = c.Value.ToString();
-                                    continue;
+                                    if (!string.IsNullOrEmpty(c.Value))
+                                    {
+                                        if (c.Type == TokenConstants.CID)
+                                        {
+                                            solId = c.Value;
+                                        }
+                                        else if (c.Type == TokenConstants.UID)
+                                        {
+                                            userId = int.Parse(c.Value);
+                                        }
+                                        else if (c.Type == TokenConstants.WC)
+                                        {
+                                            wc = c.Value;
+                                        }
+                                        else if (c.Type == TokenConstants.SUB)
+                                        {
+                                            sub = c.Value;
+                                        }
+                                    }
                                 }
                             }
+
+                            RequestContext.Instance.Items.Add(CoreConstants.SOLUTION_ID, solId);
+                            RequestContext.Instance.Items.Add(CoreConstants.USER_ID, userId);
+                            RequestContext.Instance.Items.Add(TokenConstants.WC, wc);
+                            RequestContext.Instance.Items.Add(TokenConstants.SUB, sub);
+
+
+                            if (requestDto is IEbSSRequest)
+                            {
+                                (requestDto as IEbSSRequest).SolnId = solId;
+                                (requestDto as IEbSSRequest).UserId = userId;
+                            }
+                            else if (requestDto is EbServiceStackAuthRequest)
+                            {
+                                (requestDto as EbServiceStackAuthRequest).SolnId = solId;
+                                (requestDto as EbServiceStackAuthRequest).UserId = userId;
+                                (requestDto as EbServiceStackAuthRequest).WhichConsole = wc;
+                                (requestDto as EbServiceStackAuthRequest).UserAuthId = sub;
+                            }
+                            else if (requestDto is IEbTenentRequest)
+                            {
+                                (requestDto as IEbTenentRequest).SolnId = solId;
+                                (requestDto as IEbTenentRequest).UserId = userId;
+                            }
+
+
+                            //foreach (var c in jwtoken.Claims)
+                            //{
+                            //    if (c.Type == TokenConstants.CID && !string.IsNullOrEmpty(c.Value))
+                            //    {
+
+                            //        RequestContext.Instance.Items.Add(CoreConstants.SOLUTION_ID, c.Value);
+                            //        if (requestDto is IEbSSRequest)
+                            //            (requestDto as IEbSSRequest).SolnId = solutionId;
+                            //        if (requestDto is EbServiceStackAuthRequest)
+                            //            (requestDto as EbServiceStackAuthRequest).SolnId = solutionId;
+                            //        if (requestDto is IEbTenentRequest)
+                            //            (requestDto as IEbTenentRequest).SolnId = solutionId;
+                            //        continue;
+                            //    }
+                            //    if (c.Type == TokenConstants.UID && !string.IsNullOrEmpty(c.Value))
+                            //    {
+                            //        RequestContext.Instance.Items.Add("UserId", Convert.ToInt32(c.Value));
+                            //        if (requestDto is IEbSSRequest)
+                            //            (requestDto as IEbSSRequest).UserId = userId;
+                            //        if (requestDto is IEbTenentRequest)
+                            //            (requestDto as IEbTenentRequest).UserId = userId;
+                            //        if (requestDto is EbServiceStackAuthRequest)
+                            //            (requestDto as EbServiceStackAuthRequest).UserId = userId;
+                            //        continue;
+                            //    }
+                            //    if (c.Type == TokenConstants.WC && !string.IsNullOrEmpty(c.Value))
+                            //    {
+                            //        RequestContext.Instance.Items.Add(TokenConstants.WC, c.Value);
+                            //        if (requestDto is EbServiceStackAuthRequest)
+                            //            (requestDto as EbServiceStackAuthRequest).WhichConsole = c.Value.ToString();
+                            //        continue;
+                            //    }
+                            //    if (c.Type == TokenConstants.SUB && !string.IsNullOrEmpty(c.Value))
+                            //    {
+                            //        RequestContext.Instance.Items.Add(TokenConstants.SUB, c.Value);
+                            //        if (requestDto is EbServiceStackAuthRequest)
+                            //            (requestDto as EbServiceStackAuthRequest).UserAuthId = c.Value.ToString();
+                            //        continue;
+                            //    }
+                            //}
                         }
                     }
                     else if (requestDto.GetType() == typeof(GetBotsRequest))
