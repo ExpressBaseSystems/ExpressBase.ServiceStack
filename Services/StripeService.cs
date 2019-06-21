@@ -14,10 +14,10 @@ namespace ExpressBase.ServiceStack.Services
     public class StripeService : EbBaseService
     {
         public StripeService(IEbConnectionFactory _dbf) : base(_dbf) { }
-        public StripeGateway gateway = new StripeGateway("");
+        public StripeGateway gateway = new StripeGateway(Environment.GetEnvironmentVariable(EnvironmentConstants.EB_STRIPE_SECRET_KEY));
         public static int i = 1;
         public const string USD = "USD";
-        
+
 
         public CheckCustomerResponse Post(CheckCustomerRequest request)
         {
@@ -431,7 +431,7 @@ namespace ExpressBase.ServiceStack.Services
                 //    Quantity = 1
                 //});
 
-                StripeConfiguration.SetApiKey("");
+                StripeConfiguration.SetApiKey(Environment.GetEnvironmentVariable(EnvironmentConstants.EB_STRIPE_SECRET_KEY));
                 var items = new List<SubscriptionItemOption>
                 {
                     new SubscriptionItemOption
@@ -451,9 +451,9 @@ namespace ExpressBase.ServiceStack.Services
                 string inv_id = subscription.LatestInvoiceId;
                 string sub_item_id = subscription.Items.Data[0].Id;
 
-                var service1 = new InvoiceService();
-                var invoice = service1.Get(inv_id);
-                string url = invoice.HostedInvoiceUrl;
+                //var service1 = new InvoiceService();
+                //var invoice = service1.Get(inv_id);
+                //string url = invoice.HostedInvoiceUrl;
                 //return url;
 
 
@@ -489,8 +489,8 @@ namespace ExpressBase.ServiceStack.Services
                 resp.UseageType = subscription.Plan.UsageType;
                 resp.BillingScheme = subscription.Plan.BillingScheme;
                 resp.Quantity = usageRecord.Quantity;
-                resp.Url
             }
+
             return resp;
         }
 
@@ -638,7 +638,7 @@ namespace ExpressBase.ServiceStack.Services
         public GetCustomerInvoiceResponse Post(GetCustomerInvoiceRequest request)
         {
             GetCustomerInvoiceResponse resp = new GetCustomerInvoiceResponse();
-            StripeConfiguration.SetApiKey("");
+            StripeConfiguration.SetApiKey(Environment.GetEnvironmentVariable(EnvironmentConstants.EB_STRIPE_SECRET_KEY));
 
             StripeCollection<StripeInvoice> invoices = gateway.Get(new GetStripeInvoices
             {
@@ -651,7 +651,7 @@ namespace ExpressBase.ServiceStack.Services
             });
 
             var service1 = new InvoiceService();
-            
+
 
             int count = invoices.Data.Count;
             List<Eb_StripeInvoice> List = new List<Eb_StripeInvoice>();
