@@ -295,7 +295,7 @@ namespace ExpressBase.ServiceStack
                 {
                     foreach (TFilters _dic in request.TFilters)
                     {
-                        var op = _dic.Operator; var col = _dic.Column; var val = _dic.Value; var type = _dic.Type;
+                        var op = _dic.Operator.Trim(); var col = _dic.Column; var val = _dic.Value; var type = _dic.Type;
                         var array = _dic.Value.Split("|");
                         if (array.Length == 0)
                         {
@@ -827,7 +827,7 @@ namespace ExpressBase.ServiceStack
                 {
                     if (col.AllowTooltip)
                     {
-                        _formattedData = _unformattedData.ToString().Length > col.AllowedCharacterLength ? "<span title='" + _unformattedData + "'>" + _unformattedData.ToString().Substring(0, col.AllowedCharacterLength) + "...</span>" : _unformattedData;
+                        _formattedData = _unformattedData.ToString().Length > col.AllowedCharacterLength ? "<span class='columntooltip' data-toggle='popover' data-content='"+ _unformattedData.ToString().ToBase64() + "'>" + _unformattedData.ToString().Substring(0, col.AllowedCharacterLength) + "...</span>" : _unformattedData;
                     }
                     if ((col as DVStringColumn).RenderAs == StringRenderType.Marker)
                         _formattedData = "<a href = '#' class ='columnMarker' data-latlong='" + _unformattedData + "'><i class='fa fa-map-marker fa-2x' style='color:red;'></i></a>";

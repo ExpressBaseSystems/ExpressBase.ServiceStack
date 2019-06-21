@@ -36,7 +36,7 @@ namespace ExpressBase.ServiceStack.Services
 
             try
             {
-                if (request.ischange)
+                if (request.IsChange)
                 {
                     if (request.DataDBConfig.DatabaseVendor == DatabaseVendors.PGSQL)
                         DataDB = new PGSQLDatabase(request.DataDBConfig);
@@ -49,14 +49,14 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     EbConnectionsConfig _solutionConnections = EbConnectionsConfigProvider.GetDataCenterConnections();
 
-                    DataDB = new EbConnectionFactory(_solutionConnections, request.dbName).DataDB;
+                    DataDB = new EbConnectionFactory(_solutionConnections, request.DBName).DataDB;
                     DbConnection con = DataDB.GetNewConnection();
                     con.Open();
-                    DbCommand cmd = DataDB.GetNewCommand(con, string.Format("CREATE DATABASE {0};", request.dbName));
+                    DbCommand cmd = DataDB.GetNewCommand(con, string.Format("CREATE DATABASE {0};", request.DBName));
                     cmd.ExecuteNonQuery();
 
-                    _solutionConnections.DataDbConfig.DatabaseName = request.dbName;
-                    DataDB = new EbConnectionFactory(_solutionConnections, request.dbName).DataDB;
+                    _solutionConnections.DataDbConfig.DatabaseName = request.DBName;
+                    DataDB = new EbConnectionFactory(_solutionConnections, request.DBName).DataDB;
                 }
 
                 return DbOperations(request, DataDB);
@@ -93,13 +93,13 @@ namespace ExpressBase.ServiceStack.Services
                     {
                         IsInsertComplete = InsertIntoTables(request, con, DataDB);
                     }
-                    EbDbCreateResponse _res = request.ischange ? null : CreateUsers4DataBase(con, request.dbName, DataDB);
+                    EbDbCreateResponse _res = request.IsChange ? null : CreateUsers4DataBase(con, request.DBName, DataDB);
 
                     if (IsCreateComplete & IsInsertComplete)
                     {
                         Console.WriteLine(".............Reached Commit");
                         con_trans.Commit();
-                        EbDbCreateResponse success = request.ischange ? new EbDbCreateResponse() { resp = true } : _res;
+                        EbDbCreateResponse success = request.IsChange ? new EbDbCreateResponse() { Resp = true } : _res;
                         return success;
                     }
                     else
@@ -195,9 +195,9 @@ namespace ExpressBase.ServiceStack.Services
                 };
                 return new EbDbCreateResponse
                 {
-                    resp = true,
-                    dbname = _dbname,
-                    dbusers = ebdbusers
+                    Resp = true,
+                    DbName = _dbname,
+                    DbUsers = ebdbusers
                 };
             }
             catch (Exception e)
@@ -253,7 +253,8 @@ namespace ExpressBase.ServiceStack.Services
 
                 //..............insert into client tbl eb_users............ to SOLUTION
                 string sql2 = @"INSERT INTO eb_users(email,pwd,statusid) VALUES ('anonymous@anonym.com','294de3557d9d00b3d2d8a1e6aab028cf',0); 
-                                INSERT INTO eb_locations(shortname,longname) VALUES ('default','default');";
+                                INSERT INTO eb_locations(shortname,longname) VALUES ('default','default');
+                                INSERT INTO eb_languages(language) VALUES ('English (en-US)');";
 
                 string sql3 = string.Empty;
                 foreach (var role in Enum.GetValues(typeof(SystemRoles)))
@@ -276,7 +277,7 @@ namespace ExpressBase.ServiceStack.Services
                 }
                 else if (DataDB.Vendor == DatabaseVendors.ORACLE)
                 {
-                    sql2 += "INSERT INTO eb_users(email, pwd, fullname,fbid,statusid) VALUES (:email, :pwd, :fullname, :socialid,0)";
+                    sql2 += "INSERT INTO eb_users(email, pwd, fullname,fbid,statusid) VALUES (:email, :pwd, :fullname, :socialid, 0)";
                     DbParameter[] parameters = { DataDB.GetNewParameter("email", EbDbTypes.String, rslt.Rows[0][0]),
                                                  DataDB.GetNewParameter("pwd", EbDbTypes.String, rslt.Rows[0][1]),
                                                  DataDB.GetNewParameter("fullname", EbDbTypes.String, rslt.Rows[0][2]),
@@ -288,7 +289,7 @@ namespace ExpressBase.ServiceStack.Services
                 }
                 if (DataDB.Vendor == DatabaseVendors.MYSQL)
                 {
-                    sql2 += "INSERT INTO eb_users(email, pwd, fullname,fbid,statusid) VALUES (@email, @pwd, @fullname, @socialid,0);";
+                    sql2 += "INSERT INTO eb_users(email, pwd, fullname,fbid,statusid) VALUES (@email, @pwd, @fullname, @socialid, 0);";
                     DbCommand cmdtxt3 = DataDB.GetNewCommand(con, sql2);
                     cmdtxt3.Parameters.Add(DataDB.GetNewParameter("email", EbDbTypes.String, rslt.Rows[0][0]));
                     cmdtxt3.Parameters.Add(DataDB.GetNewParameter("pwd", EbDbTypes.String, rslt.Rows[0][1]));

@@ -196,31 +196,29 @@ namespace ExpressBase.ServiceStack.Services
 				return resp;
 			}
 
-			try
-			{
-				if (resp.Status > 0)
-				{
-                    EbDbCreateResponse response = (EbDbCreateResponse)_dbService.Post(new EbDbCreateRequest { dbName = DbName, SolnId = request.SolnId, UserId = request.UserId, ischange = false });
-						if (response.resp)
-						{
-							_conService.Post(new InitialSolutionConnectionsRequest { NewSolnId = DbName, SolnId = request.SolnId, UserId = request.UserId, DbUsers = response.dbusers });
-							_tenantUserService.Post(new UpdateSolutionRequest() { DbName = DbName, UserId = request.UserId });
-						}
-				}
-				else
-				{
-					resp = new CreateSolutionResponse { ErrDbMessage = "Cannot deploy DataBase" };
-				}
-			}
-			catch (Exception e)
-			{
-				Console.WriteLine("Exception: " + e.Message + e.StackTrace);
-				//resp = new CreateSolutionResponse { ErrDbMessage = e.Message };
-				resp = new CreateSolutionResponse { ErrDbMessage = "Cannot deploy DataBase" };
-				return resp;
-			}
-			return resp;
-		}
+            try
+            {
+                if (resp.Status > 0)
+                {
+                    if (request.DeployDB)
+                    {
+                        EbDbCreateResponse response = (EbDbCreateResponse)_dbService.Post(new EbDbCreateRequest { DBName = DbName, SolnId = request.SolnId, UserId = request.UserId, IsChange = false });
+                        if (response.Resp)
+                        {
+                            _conService.Post(new InitialSolutionConnectionsRequest { NewSolnId = DbName, SolnId = request.SolnId, UserId = request.UserId, DbUsers = response.DbUsers });
+                            _tenantUserService.Post(new UpdateSolutionRequest() { SolnId = request.SolnId, UserId = request.UserId });
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                //resp = new CreateSolutionResponse { ErrDbMessage = e.Message };
+                resp = new CreateSolutionResponse { ErrDbMessage = "Cannot deploy DataBase" };
+                return resp;
+            }
+            return resp;
+        }
 
 		public GetSolutionResponse Get(GetSolutionRequest request)
 		{
@@ -243,26 +241,27 @@ namespace ExpressBase.ServiceStack.Services
 			return resp;
 		}
 
-		public GetSolutioInfoResponse Get(GetSolutioInfoRequest request)
-		{
-			ConnectionManager _conService = base.ResolveService<ConnectionManager>();
-			string sql = string.Format("SELECT * FROM eb_solutions WHERE isolution_id='{0}'", request.IsolutionId);
-			EbDataTable dt = (new EbConnectionFactory(CoreConstants.EXPRESSBASE, this.Redis)).DataDB.DoQuery(sql);
-			EbSolutionsWrapper _ebSolutions = new EbSolutionsWrapper
-			{
-				SolutionName = dt.Rows[0][6].ToString(),
-				Description = dt.Rows[0][2].ToString(),
-				DateCreated = dt.Rows[0][1].ToString(),
-				EsolutionId = dt.Rows[0][5].ToString()
-			};
-			GetSolutioInfoResponse resp = new GetSolutioInfoResponse() { Data = _ebSolutions };
-			if (resp.Data != null)
-			{
-				GetConnectionsResponse response = (GetConnectionsResponse)_conService.Post(new GetConnectionsRequest { ConnectionType = 0, SolutionId = request.IsolutionId });
-				resp.EBSolutionConnections = response.EBSolutionConnections;
-			}
-			return resp;
-		}
+        public GetSolutioInfoResponse Get(GetSolutioInfoRequest request)
+        {
+            ConnectionManager _conService = base.ResolveService<ConnectionManager>();
+            string sql = string.Format("SELECT solution_name, description, date_created, esolution_id, pricing_tier  FROM eb_solutions WHERE isolution_id='{0}'", request.IsolutionId);
+            EbDataTable dt = (new EbConnectionFactory(CoreConstants.EXPRESSBASE, this.Redis)).DataDB.DoQuery(sql);
+            EbSolutionsWrapper _ebSolutions = new EbSolutionsWrapper
+            {
+                SolutionName = dt.Rows[0][0].ToString(),
+                Description = dt.Rows[0][1].ToString(),
+                DateCreated = dt.Rows[0][2].ToString(),
+                EsolutionId = dt.Rows[0][3].ToString(),
+                PricingTier = (PricingTiers)Convert.ToInt32(dt.Rows[0][4])
+            };
+            GetSolutioInfoResponse resp = new GetSolutioInfoResponse() { Data = _ebSolutions };
+            if (resp.Data != null)
+            {
+                GetConnectionsResponse response = (GetConnectionsResponse)_conService.Post(new GetConnectionsRequest { ConnectionType = 0, SolutionId = request.IsolutionId });
+                resp.EBSolutionConnections = response.EBSolutionConnections;
+            }
+            return resp;
+        }
 
 		public EmailverifyResponse Post(EmailverifyRequest request)
 		{

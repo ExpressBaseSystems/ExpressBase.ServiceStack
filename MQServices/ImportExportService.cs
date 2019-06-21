@@ -174,6 +174,7 @@ namespace ExpressBase.ServiceStack.MQServices
                     EbObject_Create_New_ObjectRequest ds = new EbObject_Create_New_ObjectRequest
                     {
                         Name = obj.Name,
+                        DisplayName=obj.DisplayName,
                         Description = obj.Description,
                         Json = EbSerializers.Json_Serialize(obj),
                         Status = ObjectLifeCycleStatus.Dev,
@@ -202,6 +203,7 @@ namespace ExpressBase.ServiceStack.MQServices
                     {
                         RefId = RefidMap[obj.RefId],
                         Name = obj.Name,
+                        DisplayName = obj.DisplayName,
                         Description = obj.Description,
                         Json = EbSerializers.Json_Serialize(obj),
                         Apps = appres.id.ToString(),
