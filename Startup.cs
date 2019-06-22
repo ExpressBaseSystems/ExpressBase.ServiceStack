@@ -93,7 +93,7 @@ namespace ExpressBase.ServiceStack
 
             LogManager.LogFactory = new ConsoleLogFactory(debugEnabled: true);
 
-            var jwtprovider = new MyJwtAuthProvider
+            MyJwtAuthProvider jwtprovider = new MyJwtAuthProvider
             {
                 HashAlgorithm = "RS256",
                 PrivateKeyXml = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_JWT_PRIVATE_KEY_XML),
@@ -125,6 +125,14 @@ namespace ExpressBase.ServiceStack
                 }
             };
 
+            EbApiAuthProvider apiprovider = new EbApiAuthProvider(AppSettings)
+            {
+#if (DEBUG)
+                RequireSecureConnection = false,
+                //EncryptPayload = true,
+#endif
+            };
+
             this.Plugins.Add(new CorsFeature(allowedHeaders: "Content-Type, Authorization, Access-Control-Allow-Origin, Access-Control-Allow-Credentials"));
 
             this.Plugins.Add(new ProtoBufFormat());
@@ -134,39 +142,32 @@ namespace ExpressBase.ServiceStack
                 new CustomUserSession(),
                 new IAuthProvider[]
                 {
-                    new MyFacebookAuthProvider(AppSettings)
-                    {
-                        AppId = "683590648713089",//"151550788692231", 
-                        AppSecret = "61e674e06ae1b499a7b64b89454aa416",//"94ec1a04342e5cf7e7a971f2eb7ad7bc",
-                        Permissions = new string[] { "email, public_profile" }
-                    },
-
-                    new MyTwitterAuthProvider(AppSettings)
-                    {
-                        ConsumerKey = "6G9gaYo7DMx1OHYRAcpmkPfvu",
-                        ConsumerSecret = "Jx8uUIPeo5D0agjUnqkKHGQ4o6zTrwze9EcLtjDlOgLnuBaf9x",
-                       // CallbackUrl = "http://localhost:8000/auth/twitter",
-                       // RequestTokenUrl= "https://api.twitter.com/oauth/authenticate",
-                    },
-
-                    new MyGithubAuthProvider(AppSettings)
-                    {
-                        ClientId = "4504eefeb8f027c810dd",
-                        ClientSecret = "d9c1c956a9fddd089798e0031851e93a8d0e5cc6",
-                        RedirectUrl = "http://localhost:8000/"
-                    },
-
-
                     new MyCredentialsAuthProvider(AppSettings) { PersistSession = true },
-                    new EbApiAuthProvider(AppSettings)
-                    {
-#if (DEBUG)
-                RequireSecureConnection = false,
-                //EncryptPayload = true,
-#endif
-                    },
-
                     jwtprovider
+                    //apiprovider,
+
+
+                    //new MyFacebookAuthProvider(AppSettings)
+                    //{
+                    //    AppId = "683590648713089",//"151550788692231", 
+                    //    AppSecret = "61e674e06ae1b499a7b64b89454aa416",//"94ec1a04342e5cf7e7a971f2eb7ad7bc",
+                    //    Permissions = new string[] { "email, public_profile" }
+                    //},
+
+                    //new MyTwitterAuthProvider(AppSettings)
+                    //{
+                    //    ConsumerKey = "6G9gaYo7DMx1OHYRAcpmkPfvu",
+                    //    ConsumerSecret = "Jx8uUIPeo5D0agjUnqkKHGQ4o6zTrwze9EcLtjDlOgLnuBaf9x",
+                    //   // CallbackUrl = "http://localhost:8000/auth/twitter",
+                    //   // RequestTokenUrl= "https://api.twitter.com/oauth/authenticate",
+                    //},
+
+                    //new MyGithubAuthProvider(AppSettings)
+                    //{
+                    //    ClientId = "4504eefeb8f027c810dd",
+                    //    ClientSecret = "d9c1c956a9fddd089798e0031851e93a8d0e5cc6",
+                    //    RedirectUrl = "http://localhost:8000/"
+                    //}
                 }));
 
             this.ContentTypes.Register(MimeTypes.ProtoBuf, (reqCtx, res, stream) => ProtoBuf.Serializer.NonGeneric.Serialize(stream, res), ProtoBuf.Serializer.NonGeneric.Deserialize);
