@@ -268,10 +268,10 @@ namespace ExpressBase.ServiceStack
 
                             }
 
-                            string solId = "";
+                            string solId = string.Empty;
                             int userId = 0;
-                            string wc = "";
-                            string sub = "";
+                            string wc = string.Empty;
+                            string sub = string.Empty;
 
                             if (req.Items.ContainsKey("__session"))
                             {
