@@ -166,7 +166,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
-                Console.WriteLine("Error UpdateSolutionRequest: " + e.StackTrace);
+                Console.WriteLine("Error UpdateSolutionRequest: " + e.Message + e.StackTrace);
             }
             return new UpdateSolutionResponse { };
         }
@@ -184,32 +184,40 @@ namespace ExpressBase.ServiceStack.Services
         {
             List<EbLocationCustomField> Conf = new List<EbLocationCustomField>();
             Dictionary<int, EbLocation> locs = new Dictionary<int, EbLocation>();
-
-            string query = "SELECT * FROM eb_location_config WHERE eb_del = 'F' ORDER BY id; SELECT * FROM eb_locations;";
-            EbConnectionFactory ebConnectionFactory = new EbConnectionFactory(req.SolnId.ToLower(), this.Redis);
-            EbDataSet dt = ebConnectionFactory.DataDB.DoQueries(query);
-
-            foreach (EbDataRow r in dt.Tables[0].Rows)
+            try
             {
-                Conf.Add(new EbLocationCustomField
+                string query = "SELECT * FROM eb_location_config WHERE eb_del = 'F' ORDER BY id; SELECT * FROM eb_locations;";
+                EbConnectionFactory ebConnectionFactory = new EbConnectionFactory(req.SolnId.ToLower(), this.Redis);
+                EbDataSet dt = ebConnectionFactory.DataDB.DoQueries(query);
+                if (dt != null && dt.Tables.Count > 0)
                 {
-                    Name = r[1].ToString(),
-                    IsRequired = (r[2].ToString() == "T") ? true : false,
-                    Id = r[0].ToString(),
-                    Type = r[3].ToString()
-                });
+                    foreach (EbDataRow r in dt.Tables[0].Rows)
+                    {
+                        Conf.Add(new EbLocationCustomField
+                        {
+                            Name = r[1].ToString(),
+                            IsRequired = (r[2].ToString() == "T") ? true : false,
+                            Id = r[0].ToString(),
+                            Type = r[3].ToString()
+                        });
+                    }
+
+                    foreach (var r in dt.Tables[1].Rows)
+                    {
+                        locs.Add(Convert.ToInt32(r[0]), new EbLocation
+                        {
+                            LocId = Convert.ToInt32(r[0]),
+                            ShortName = r[1].ToString(),
+                            LongName = r[2].ToString(),
+                            Logo = r[3].ToString(),
+                            Meta = JsonConvert.DeserializeObject<Dictionary<string, string>>(r[4].ToString())
+                        });
+                    }
+                }
             }
-
-            foreach (var r in dt.Tables[1].Rows)
+            catch (Exception e)
             {
-                locs.Add(Convert.ToInt32(r[0]), new EbLocation
-                {
-                    LocId = Convert.ToInt32(r[0]),
-                    ShortName = r[1].ToString(),
-                    LongName = r[2].ToString(),
-                    Logo = r[3].ToString(),
-                    Meta = JsonConvert.DeserializeObject<Dictionary<string, string>>(r[4].ToString())
-                });
+                Console.WriteLine("Erron in Getting location info" + e.Message + e.StackTrace);
             }
 
             return new LocationInfoTenantResponse { Locations = locs, Config = Conf };
