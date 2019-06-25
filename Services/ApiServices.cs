@@ -360,11 +360,9 @@ namespace ExpressBase.ServiceStack.Services
                 SolnId = request.SolutionId
             });
 
-            List<Param> p = this.Get(new ApiReqJsonRequest
-            {
-                SolnId = request.SolutionId,
-                Components = resp.Api.Resources
-            }).Params;
+            List<Param> p = new List<Param>();
+            resp.Api.Request.Custom.ForEach(n => p.Add(n));
+            resp.Api.Request.Default.ForEach(n => p.Add(n));
 
             return new ApiMetaResponse { Params = p, Name = request.Name, Version = request.Version };
         }
