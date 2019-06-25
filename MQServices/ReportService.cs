@@ -20,82 +20,90 @@ namespace ExpressBase.ServiceStack.MQServices
         public ReportInternalService(IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_mqp, _mqc) { }
         public ReportInternalResponse Post(ReportInternalRequest request)
         {
-            Console.WriteLine("Inside MQService/ReportServiceInternal in SS \n Before Report Render");
-            EbConnectionFactory ebConnectionFactory = new EbConnectionFactory(request.JobArgs.SolnId, this.Redis);
-            var objservice = base.ResolveService<EbObjectService>();
-            objservice.EbConnectionFactory = ebConnectionFactory;
-            var reportservice = base.ResolveService<ReportService>();
-            reportservice.EbConnectionFactory = ebConnectionFactory;
-            var schedulerservice = base.ResolveService<SchedulerServices>();
-            schedulerservice.EbConnectionFactory = ebConnectionFactory;
-            Dictionary<string, List<User>> LocaleUser = new Dictionary<string, List<User>>();
-            Dictionary<string, byte[]> LocaleReport = new Dictionary<string, byte[]>();
-            EbObjectFetchLiveVersionResponse res = ((EbObjectFetchLiveVersionResponse)objservice.Get(new EbObjectFetchLiveVersionRequest()
+            try
             {
-                Id = request.JobArgs.ObjId
-            }));
-            if (res.Data.Count > 0)
-            {
-                EbObjectWrapper Live_ver = res.Data[0];
-                GetUserEmailsResponse mailres = schedulerservice.Get(new GetUserEmailsRequest()
+                Console.WriteLine("           Reached Inside MQService/ReportServiceInternal in SS .. Before Report Render");
+                EbConnectionFactory ebConnectionFactory = new EbConnectionFactory(request.JobArgs.SolnId, this.Redis);
+                var objservice = base.ResolveService<EbObjectService>();
+                objservice.EbConnectionFactory = ebConnectionFactory;
+                var reportservice = base.ResolveService<ReportService>();
+                reportservice.EbConnectionFactory = ebConnectionFactory;
+                var schedulerservice = base.ResolveService<SchedulerServices>();
+                schedulerservice.EbConnectionFactory = ebConnectionFactory;
+                Dictionary<string, List<User>> LocaleUser = new Dictionary<string, List<User>>();
+                Dictionary<string, byte[]> LocaleReport = new Dictionary<string, byte[]>();
+                Console.WriteLine("         Fetching Live version  "+ request.JobArgs.ObjId);
+                EbObjectFetchLiveVersionResponse res = ((EbObjectFetchLiveVersionResponse)objservice.Get(new EbObjectFetchLiveVersionRequest()
                 {
-                    UserIds = request.JobArgs.ToUserIds,
-                    UserGroupIds = request.JobArgs.ToUserGroupIds
-                });
-                var MailIds = mailres.UserEmails
-                    .Concat(mailres.UserGroupEmails)
-                    .GroupBy(d => d.Key)
-                    .ToDictionary(d => d.Key, d => d.First().Value);
+                    Id = request.JobArgs.ObjId
+                }));
 
-                foreach (var u in MailIds)
+                if (res.Data!=null && res.Data.Count > 0)
                 {
-                    User usr = this.Redis.Get<User>(string.Format(TokenConstants.SUB_FORMAT, request.JobArgs.SolnId, u.Value, "uc"));
-                    if (usr != null)
+                    Console.WriteLine("         Got Live Version   Getting mail ids");
+                    EbObjectWrapper Live_ver = res.Data[0];
+                    GetUserEmailsResponse mailres = schedulerservice.Get(new GetUserEmailsRequest()
                     {
-                        if (LocaleUser.ContainsKey(usr.Preference.Locale))
-                            LocaleUser[usr.Preference.Locale].Add(usr);
-                        else LocaleUser.Add(usr.Preference.Locale, new List<User> { usr });
-                    }
-                }
-                foreach (var locale in LocaleUser)
-                {
-                    ReportRenderResponse RepRes = reportservice.Get(new ReportRenderRequest
-                    {
-                        Refid = Live_ver.RefId,
-                        RenderingUser = new User { FullName = "Machine User" },
-                        ReadingUser = locale.Value[0],
-                        Params = request.JobArgs.Params,
-                        SolnId = request.JobArgs.SolnId,
-                        UserAuthId = request.JobArgs.UserAuthId,
-                        UserId = request.JobArgs.UserId,
-                        WhichConsole = "uc"
+                        UserIds = request.JobArgs.ToUserIds,
+                        UserGroupIds = request.JobArgs.ToUserGroupIds
                     });
-                    Console.WriteLine(locale.Key);
-                    Console.WriteLine("Inside MQService/ReportServiceInternal in SS \n After Report Render");
-                    RepRes.StreamWrapper.Memorystream.Position = 0;
-                    foreach (var _u in locale.Value)
+                    var MailIds = mailres.UserEmails
+                        .Concat(mailres.UserGroupEmails)
+                        .GroupBy(d => d.Key)
+                        .ToDictionary(d => d.Key, d => d.First().Value);
+
+                    foreach (var u in MailIds)
                     {
-                        MessageProducer3.Publish(new EmailServicesRequest()
+                        User usr = this.Redis.Get<User>(string.Format(TokenConstants.SUB_FORMAT, request.JobArgs.SolnId, u.Value, "uc"));
+                        if (usr != null)
                         {
-                            From = "request.from",
-                            To = _u.Email,
-                            Cc = /*ebEmailTemplate.Cc.Split(",")*/ null,
-                            Bcc = /*ebEmailTemplate.Bcc.Split(",")*/ null,
-                            Subject = RepRes.ReportName + " - " + RepRes.CurrentTimestamp.ToShortDateString(),
-                            Message = "<div>Hi, </div><div>&nbsp;The report " + RepRes.ReportName + " generated on " +
-                            RepRes.CurrentTimestamp.ToShortDateString() + " at " + RepRes.CurrentTimestamp.ToShortTimeString() + ". Please find the attachment for the same. </div><div><br>Thanks.<br></div>",
-                            UserId = request.JobArgs.UserId,
-                            UserAuthId = request.JobArgs.UserAuthId,
-                            SolnId = request.JobArgs.SolnId,
-                            AttachmentReport = RepRes.ReportBytea,
-                            AttachmentName = RepRes.ReportName + " - " + RepRes.CurrentTimestamp.ToString("dd-MM-yy")
-                        });
+                            if (LocaleUser.ContainsKey(usr.Preference.Locale))
+                                LocaleUser[usr.Preference.Locale].Add(usr);
+                            else LocaleUser.Add(usr.Preference.Locale, new List<User> { usr });
+                        }
                     }
-                    //LocaleReport.Add(locale.Key, RepRes.ReportBytea);
+                    foreach (var locale in LocaleUser)
+                    {
+                        ReportRenderResponse RepRes = reportservice.Get(new ReportRenderRequest
+                        {
+                            Refid = Live_ver.RefId,
+                            RenderingUser = new User { FullName = "Machine User" },
+                            ReadingUser = locale.Value[0],
+                            Params = request.JobArgs.Params,
+                            SolnId = request.JobArgs.SolnId,
+                            UserAuthId = request.JobArgs.UserAuthId,
+                            UserId = request.JobArgs.UserId,
+                            WhichConsole = "uc"
+                        });
+                        Console.WriteLine(locale.Key);
+                        Console.WriteLine("Inside MQService/ReportServiceInternal in SS \n After Report Render .Going to send email");
+                        RepRes.StreamWrapper.Memorystream.Position = 0;
+                        foreach (var _u in locale.Value)
+                        {
+                            MessageProducer3.Publish(new EmailServicesRequest()
+                            {
+                                From = "request.from",
+                                To = _u.Email,
+                                Cc = /*ebEmailTemplate.Cc.Split(",")*/ null,
+                                Bcc = /*ebEmailTemplate.Bcc.Split(",")*/ null,
+                                Subject = RepRes.ReportName + " - " + RepRes.CurrentTimestamp.ToShortDateString(),
+                                Message = "<div>Hi, </div><div>&nbsp;The report " + RepRes.ReportName + " generated on " +
+                                RepRes.CurrentTimestamp.ToShortDateString() + " at " + RepRes.CurrentTimestamp.ToShortTimeString() + ". Please find the attachment for the same. </div><div><br>Thanks.<br></div>",
+                                UserId = request.JobArgs.UserId,
+                                UserAuthId = request.JobArgs.UserAuthId,
+                                SolnId = request.JobArgs.SolnId,
+                                AttachmentReport = RepRes.ReportBytea,
+                                AttachmentName = RepRes.ReportName + " - " + RepRes.CurrentTimestamp.ToString("dd-MM-yy")
+                            });
+                            Console.WriteLine("Email to "+ _u.Email +" pushed.....");
+                        }
+                        //LocaleReport.Add(locale.Key, RepRes.ReportBytea);
+                    }
                 }
-
-
-
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("     Error in ReportInternal " + e.Message + e.StackTrace);
             }
             return new ReportInternalResponse() { };
         }
