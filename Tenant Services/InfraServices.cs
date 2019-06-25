@@ -54,29 +54,60 @@ namespace ExpressBase.ServiceStack.Services
         public CreateAccountResponse Post(CreateAccountRequest request)
         {
             CreateAccountResponse resp = new CreateAccountResponse();
-            if (request.Op == "updatetenant")
+
+            //****FOR INSERTING EMAIL OF TENANT ?USER INTO DATABAE
+            try
             {
-                string sql = "SELECT * FROM eb_tenantprofile_setup(:fullname, :company, :country, :pwd, :email,:activationcode);";
-                DbParameter[] parameters = {
+                Console.WriteLine("Reached...  INSERTING EMAIL OF TENANT  ");
+                DbParameter[] parameter1 = {
+                this.InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, request.Email)
+            };
+
+                EbDataTable dtbl = this.InfraConnectionFactory.DataDB.DoQuery("INSERT INTO eb_tenants (email) VALUES ( :email) RETURNING id;", parameter1);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Exception: " + e.Message + e.StackTrace);
+            }
+
+
+            //   ******FOR CREATING TENENT ACCCOUNT OR PROFILE
+
+
+            try
+            {
+                Console.WriteLine("Reached...  Updating tenant table with name ,activationcode,type etc  ");
+                if (request.Op == "updatetenant")
+                {
+                    string sql = "SELECT * FROM eb_tenantprofile_setup(:fullname, :country, :pwd, :email,:activationcode,:accounttype);";
+                    DbParameter[] parameters = {
                     this.InfraConnectionFactory.DataDB.GetNewParameter("fullname", EbDbTypes.String, request.Name),
-                    this.InfraConnectionFactory.DataDB.GetNewParameter("company", EbDbTypes.String, request.Company),
                     this.InfraConnectionFactory.DataDB.GetNewParameter("country", EbDbTypes.String, request.Country),
                     this.InfraConnectionFactory.DataDB.GetNewParameter("pwd", EbDbTypes.String, (request.Password.ToString() + request.Email.ToString()).ToMD5Hash()),
                     this.InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, request.Email),
-                    this.EbConnectionFactory.DataDB.GetNewParameter("activationcode", EbDbTypes.String, request.ActivationCode)
+                    this.InfraConnectionFactory.DataDB.GetNewParameter("activationcode", EbDbTypes.String, request.ActivationCode),
+                    this.InfraConnectionFactory.DataDB.GetNewParameter("accounttype", EbDbTypes.String, request.Account_type)
                 };
-                EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(sql, parameters);
-                resp.id = Convert.ToInt32(dt.Rows[0][0]);
+                    EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(sql, parameters);
+                    resp.id = Convert.ToInt32(dt.Rows[0][0]);
+                }
             }
-            if (resp.id >= 0)
+            catch (Exception e)
             {
-                //uin=unique identification number
-                //uic=unique identification code
-                string aq = "$" + resp.id + "$" + request.ActivationCode + "$";
-                byte[] plaintxt = System.Text.Encoding.UTF8.GetBytes(aq);
-                string ai = System.Convert.ToBase64String(plaintxt);
-                string elinks2 = string.Format("https://{0}/em?emv={1}", request.PageUrl, ai);
-                string body = @"<html>
+                Console.WriteLine("Exception: " + e.Message + e.StackTrace);
+            }
+            try
+            {
+                Console.WriteLine("Reached...  sending verifing email to tenant");
+                if (resp.id >= 0)
+                {
+                    //uin=unique identification number
+                    //uic=unique identification code
+                    string aq = "$" + resp.id + "$" + request.ActivationCode + "$";
+                    byte[] plaintxt = System.Text.Encoding.UTF8.GetBytes(aq);
+                    string ai = System.Convert.ToBase64String(plaintxt);
+                    string elinks2 = string.Format("https://{0}/em?emv={1}", request.PageUrl, ai);
+                    string body = @"<html>
 												<head>
 													<title></title>
 												</head>
@@ -103,45 +134,66 @@ namespace ExpressBase.ServiceStack.Services
 												</body>
 												</html>";
 
-                body = body.Replace("{UserName}", request.Name);
-                body = body.Replace("{Url}", elinks2);
+                    body = body.Replace("{UserName}", request.Name);
+                    body = body.Replace("{Url}", elinks2);
 
 
-                MessageProducer3.Publish(new EmailServicesRequest
-                {
-                    To = request.Email,
-                    Subject = "testing email",
-                    Message = body,
-                    SolnId = CoreConstants.EXPRESSBASE,
+                    MessageProducer3.Publish(new EmailServicesRequest
+                    {
+                        To = request.Email,
+                        Subject = "testing email",
+                        Message = body,
+                        SolnId = CoreConstants.EXPRESSBASE,
 
-                });
-                string quer = string.Format("UPDATE eb_tenants SET is_email_sent = 'true'  WHERE id = '{0}'", resp.id);
-                EbDataTable dtb = this.EbConnectionFactory.DataDB.DoQuery(quer);
-                string sid = "SELECT * from eb_sid_gen();";
-                EbDataTable dt1 = this.EbConnectionFactory.DataDB.DoQuery(sid);
-                resp.Sol_id_autogen = Convert.ToString(dt1.Rows[0][0]);
+                    });
+                    string quer = string.Format("UPDATE eb_tenants SET is_email_sent = 'true'  WHERE id = '{0}'", resp.id);
+                    EbDataTable dtb = this.EbConnectionFactory.DataDB.DoQuery(quer);
+
+                }
             }
-
+            catch (Exception e)
+            {
+                Console.WriteLine("Exception: " + e.Message + e.StackTrace);
+            }
             return resp;
         }
 
+
+
+        //******** CREATE DEFAULT SOLUTION AND DEPLOY DATABLE FOR THE USER
         public CreateSolutionResponse Post(CreateSolutionRequest request)
         {
+
+
             EbDbCreateServices _dbService = base.ResolveService<EbDbCreateServices>();
             ConnectionManager _conService = base.ResolveService<ConnectionManager>();
             TenantUserServices _tenantUserService = base.ResolveService<TenantUserServices>();
-            string DbName = request.SolnUrl.ToString().ToLower();
             CreateSolutionResponse resp;
+
+
+            //    USE TRY CATCH 
+
+
+            string sid = "SELECT * from eb_sid_gen();";
+            EbDataTable dt1 = this.EbConnectionFactory.DataDB.DoQuery(sid);
+            string Sol_id_autogen = Convert.ToString(dt1.Rows[0][0]);
+
+            string DbName = Sol_id_autogen;
+            string description = "";
             try
             {
+                Console.WriteLine("Reached.... Creating solution for TENANT  ");
+
+                string SolName = "My First Solution";
                 string sql = "select * from eb_create_solution_new(@sname,@tenant_id,@descript,@solnid);";
+
                 DbParameter[] parameters = new DbParameter[]
                 {
-                    InfraConnectionFactory.DataDB.GetNewParameter("@sname", EbDbTypes.String, request.SolutionName),
+                    InfraConnectionFactory.DataDB.GetNewParameter("@sname", EbDbTypes.String, SolName),
                     InfraConnectionFactory.DataDB.GetNewParameter("@tenant_id", EbDbTypes.Int32, request.UserId),
-                    InfraConnectionFactory.DataDB.GetNewParameter("@descript", EbDbTypes.String, request.Description),
-                    InfraConnectionFactory.DataDB.GetNewParameter("@solnid", EbDbTypes.String, request.SolnUrl)
-                    };
+                    InfraConnectionFactory.DataDB.GetNewParameter("@descript", EbDbTypes.String, description),
+                    InfraConnectionFactory.DataDB.GetNewParameter("@solnid", EbDbTypes.String,Sol_id_autogen)
+            };
                 EbDataTable res = this.InfraConnectionFactory.DataDB.DoQuery(sql, parameters);
                 resp = new CreateSolutionResponse
                 {
@@ -150,12 +202,14 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
+                Console.WriteLine("Exception: " + e.Message + e.StackTrace);
                 resp = new CreateSolutionResponse { ErrSolMessage = "Cannot create solution" };
                 return resp;
             }
 
             try
             {
+                Console.WriteLine("Reached... Deploying DB for tenant  ");
                 if (resp.Status > 0)
                 {
                     if (request.DeployDB)
@@ -164,7 +218,7 @@ namespace ExpressBase.ServiceStack.Services
                         if (response.Resp)
                         {
                             _conService.Post(new InitialSolutionConnectionsRequest { NewSolnId = DbName, SolnId = request.SolnId, UserId = request.UserId, DbUsers = response.DbUsers });
-                            _tenantUserService.Post(new UpdateSolutionRequest() {SolnId=request.SolnId, UserId = request.UserId });
+                            _tenantUserService.Post(new UpdateSolutionRequest() { SolnId = DbName, UserId = request.UserId });
                         }
                     }
                 }
@@ -202,14 +256,15 @@ namespace ExpressBase.ServiceStack.Services
         public GetSolutioInfoResponse Get(GetSolutioInfoRequest request)
         {
             ConnectionManager _conService = base.ResolveService<ConnectionManager>();
-            string sql = string.Format("SELECT * FROM eb_solutions WHERE isolution_id='{0}'", request.IsolutionId);
+            string sql = string.Format("SELECT solution_name, description, date_created, esolution_id, pricing_tier  FROM eb_solutions WHERE isolution_id='{0}'", request.IsolutionId);
             EbDataTable dt = (new EbConnectionFactory(CoreConstants.EXPRESSBASE, this.Redis)).DataDB.DoQuery(sql);
             EbSolutionsWrapper _ebSolutions = new EbSolutionsWrapper
             {
-                SolutionName = dt.Rows[0][6].ToString(),
-                Description = dt.Rows[0][2].ToString(),
-                DateCreated = dt.Rows[0][1].ToString(),
-                EsolutionId = dt.Rows[0][5].ToString()
+                SolutionName = dt.Rows[0][0].ToString(),
+                Description = dt.Rows[0][1].ToString(),
+                DateCreated = dt.Rows[0][2].ToString(),
+                EsolutionId = dt.Rows[0][3].ToString(),
+                PricingTier = (PricingTiers)Convert.ToInt32(dt.Rows[0][4])
             };
             GetSolutioInfoResponse resp = new GetSolutioInfoResponse() { Data = _ebSolutions };
             if (resp.Data != null)
@@ -222,7 +277,10 @@ namespace ExpressBase.ServiceStack.Services
 
         public EmailverifyResponse Post(EmailverifyRequest request)
         {
-            string qur = String.Format(@"UPDATE 
+            EmailverifyResponse re = new EmailverifyResponse();
+            try
+            {
+                string qur = String.Format(@"UPDATE 
 										eb_tenants 
 										SET
 											is_verified = true,
@@ -231,20 +289,26 @@ namespace ExpressBase.ServiceStack.Services
 											id = :id AND
 											activation_code= :codes");
 
-            DbParameter[] parameters = {
+                DbParameter[] parameters = {
                     EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, request.Id),
                     EbConnectionFactory.ObjectsDB.GetNewParameter("codes", EbDbTypes.String, request.ActvCode)
             };
-            int dt = this.EbConnectionFactory.DataDB.DoNonQuery(qur, parameters);
-            EmailverifyResponse re = new EmailverifyResponse();
-            if (dt == 1)
-            {
+                int dt = this.EbConnectionFactory.DataDB.DoNonQuery(qur, parameters);
 
-                re.VerifyStatus = true;
+                if (dt == 1)
+                {
+
+                    re.VerifyStatus = true;
+                }
+                else
+                {
+                    re.VerifyStatus = false;
+                }
+
             }
-            else
+            catch (Exception e)
             {
-                re.VerifyStatus = false;
+                Console.WriteLine("Exception: " + e.Message + e.StackTrace);
             }
 
             return re;
@@ -252,88 +316,100 @@ namespace ExpressBase.ServiceStack.Services
 
         public ForgotPasswordResponse Post(ForgotPasswordRequest reques)
         {
-            string k = String.Format(@"UPDATE 
+            ForgotPasswordResponse re = new ForgotPasswordResponse();
+            try
+            {
+                string k = String.Format(@"UPDATE 
 										eb_tenants 
 										SET
 											resetpsw_code = :code
 										WHERE 
 											email=:mail");
-            DbParameter[] parameters = {
+                DbParameter[] parameters = {
                     this.EbConnectionFactory.DataDB.GetNewParameter("code", EbDbTypes.String, reques.Resetcode),
                     this.EbConnectionFactory.DataDB.GetNewParameter("mail", EbDbTypes.String, reques.Email)
                     };
-            int dt = this.EbConnectionFactory.DataDB.DoNonQuery(k, parameters);
-            ForgotPasswordResponse re = new ForgotPasswordResponse();
-            if (dt == 1)
-            {
-                //uin=unique identification number
-                //uic=unique identification code
-                string aq = "$" + reques.Email + "$" + reques.Resetcode + "$";
-                byte[] plaintxt = System.Text.Encoding.UTF8.GetBytes(aq);
-                string ai = System.Convert.ToBase64String(plaintxt);
-                string resetlink = string.Format("https://{0}/resetpassword?rep={1}", reques.PageUrl, ai);
+                int dt = this.EbConnectionFactory.DataDB.DoNonQuery(k, parameters);
 
-                //using (StreamReader reader = new StreamReader("\\Ext\\EmailVerifyStructure.cshtml")) 
-                //{
-                //	body = reader.ReadToEnd();
-                //}
+                if (dt == 1)
+                {
+                    //uin=unique identification number
+                    //uic=unique identification code
+                    string aq = "$" + reques.Email + "$" + reques.Resetcode + "$";
+                    byte[] plaintxt = System.Text.Encoding.UTF8.GetBytes(aq);
+                    string ai = System.Convert.ToBase64String(plaintxt);
+                    string resetlink = string.Format("https://{0}/resetpassword?rep={1}", reques.PageUrl, ai);
 
-                string body = @"<html >
-<head>
-    <title></title>
-</head>
-<body>
-    <div style='border: 3px solid #22BCE5; padding:10px;'>
-        <figure style='text-align: center;'>
-            <img src='https://expressbase.com/images/logos/EB_Logo.png' /><br />
-        </figure>
-        <br />
+                    //using (StreamReader reader = new StreamReader("\\Ext\\EmailVerifyStructure.cshtml")) 
+                    //{
+                    //	body = reader.ReadToEnd();
+                    //}
+
+                    string body = @"<html >
+							<head>
+								<title></title>
+							</head>
+							<body>
+								<div style='border: 3px solid #22BCE5; padding:10px;'>
+									<figure style='text-align: center;'>
+										<img src='https://expressbase.com/images/logos/EB_Logo.png' /><br />
+									</figure>
+									<br />
 
       
-        Hello <b>{UserName}</b>,<br />
-        <br />
-        Reset your password by clicking below.<br />
-        <a  href='{Url}'>Reset password</a><br />
-        <br />
-        Thanks<br />
-        EXPRESSbase Systems Private Limited.
+									Hello <b>{UserName}</b>,<br />
+									<br />
+									Reset your password by clicking below.<br />
+									<a  href='{Url}'>Reset password</a><br />
+									<br />
+									Thanks<br />
+									EXPRESSbase Systems Private Limited.
        
-    </div>
-</body>
-</html>";
-                body = body.Replace("{UserName}", reques.Email);
-                body = body.Replace("{Url}", resetlink);
+								</div>
+							</body>
+							</html>";
+                    body = body.Replace("{UserName}", reques.Email);
+                    body = body.Replace("{Url}", resetlink);
 
-                //StringBuilder bodyMsg = new StringBuilder();
-                //bodyMsg.Append( " <img src = "+ "https://expressbase.com/images/logos/EB_Logo.png" + " />");
-                //bodyMsg.Append("<p style="+"color: red;"+"><b>Please follow this link to reset your password: <b></p>");
-                //            bodyMsg.Append("<br />");
-                //            bodyMsg.Append("next3");
-                //            bodyMsg.Append("<a href=https://" + resetlink + ">Account</a>");
-                //            bodyMsg.Append("<br />");
-                //            bodyMsg.Append("next4");
+                    //StringBuilder bodyMsg = new StringBuilder();
+                    //bodyMsg.Append( " <img src = "+ "https://expressbase.com/images/logos/EB_Logo.png" + " />");
+                    //bodyMsg.Append("<p style="+"color: red;"+"><b>Please follow this link to reset your password: <b></p>");
+                    //            bodyMsg.Append("<br />");
+                    //            bodyMsg.Append("next3");
+                    //            bodyMsg.Append("<a href=https://" + resetlink + ">Account</a>");
+                    //            bodyMsg.Append("<br />");
+                    //            bodyMsg.Append("next4");
 
-                MessageProducer3.Publish(new EmailServicesRequest
+                    MessageProducer3.Publish(new EmailServicesRequest
+                    {
+                        To = reques.Email,
+                        Subject = "testing email for reset password",
+                        Message = body,
+                        //Message = bodyMsg.ToString(),
+                        SolnId = CoreConstants.EXPRESSBASE,
+
+                    });
+                    re.VerifyStatus = true;
+                }
+                else
                 {
-                    To = reques.Email,
-                    Subject = "testing email for reset password",
-                    Message = body,
-                    //Message = bodyMsg.ToString(),
-                    SolnId = CoreConstants.EXPRESSBASE,
-
-                });
-                re.VerifyStatus = true;
+                    re.VerifyStatus = false;
+                }
             }
-            else
+            catch (Exception e)
             {
-                re.VerifyStatus = false;
+                Console.WriteLine("Exception: " + e.Message + e.StackTrace);
             }
+
             return re;
         }
         public ResetPasswordResponse Post(ResetPasswordRequest reqst)
         {
-            string hshpassword = (reqst.Password + reqst.Email).ToMD5Hash();
-            string qur = String.Format(@"UPDATE 
+            ResetPasswordResponse rests = new ResetPasswordResponse();
+            try
+            {
+                string hshpassword = (reqst.Password + reqst.Email).ToMD5Hash();
+                string qur = String.Format(@"UPDATE 
 										eb_tenants 
 										SET
 											pwd = :pswrd,
@@ -342,21 +418,26 @@ namespace ExpressBase.ServiceStack.Services
 											email = :id AND
 											resetpsw_code= :codes");
 
-            DbParameter[] parameters = {
+                DbParameter[] parameters = {
                 EbConnectionFactory.ObjectsDB.GetNewParameter("pswrd",EbDbTypes.String,hshpassword),
                     EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.String, reqst.Email),
                     EbConnectionFactory.ObjectsDB.GetNewParameter("codes", EbDbTypes.String, reqst.Resetcode)
             };
-            int dt = this.EbConnectionFactory.DataDB.DoNonQuery(qur, parameters);
-            ResetPasswordResponse rests = new ResetPasswordResponse();
-            if (dt == 1)
-            {
+                int dt = this.EbConnectionFactory.DataDB.DoNonQuery(qur, parameters);
+                if (dt == 1)
+                {
 
-                rests.VerifyStatus = true;
+                    rests.VerifyStatus = true;
+                }
+                else
+                {
+                    rests.VerifyStatus = false;
+                }
+
             }
-            else
+            catch (Exception e)
             {
-                rests.VerifyStatus = false;
+                Console.WriteLine("Exception: " + e.Message + e.StackTrace);
             }
 
             return rests;
@@ -1405,5 +1486,3 @@ namespace ExpressBase.ServiceStack.Services
     }
 
 }
-
-

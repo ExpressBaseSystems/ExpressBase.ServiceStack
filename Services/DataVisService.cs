@@ -295,7 +295,7 @@ namespace ExpressBase.ServiceStack
                 {
                     foreach (TFilters _dic in request.TFilters)
                     {
-                        var op = _dic.Operator; var col = _dic.Column; var val = _dic.Value; var type = _dic.Type;
+                        var op = _dic.Operator.Trim(); var col = _dic.Column; var val = _dic.Value; var type = _dic.Type;
                         var array = _dic.Value.Split("|");
                         if (array.Length == 0)
                         {
@@ -850,7 +850,7 @@ namespace ExpressBase.ServiceStack
                         else if (col.LinkType == LinkTypeEnum.Both)
                             _formattedData = "<a href='#' oncontextmenu='return false' class ='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "'>" + _formattedData + "</a>" + "&nbsp; <a  href ='#' oncontextmenu='return false' class='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-inline='true' data-data='" + _formattedData + "'> <i class='fa fa-caret-down'></i></a>";
                         else if (col.LinkType == LinkTypeEnum.Popup)
-                            _formattedData = _formattedData = _formattedData + "&nbsp; <a  href= '#' oncontextmenu= 'return false' class ='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-popup='true' data-data='" + _formattedData + "'><i class='fa fa-window-maximize'></i></a>";
+                            _formattedData =  "<a  href= '#' oncontextmenu= 'return false' class ='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-popup='true' data-data='" + _formattedData + "'>"+ _formattedData + "</a>";
                     }
                 }
                 if (col.Type == EbDbTypes.String && (col as DVStringColumn).RenderAs == StringRenderType.Link && col.LinkType == LinkTypeEnum.Tab && (_isexcel == false))/////////////////

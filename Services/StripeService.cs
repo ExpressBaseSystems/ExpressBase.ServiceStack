@@ -1,19 +1,12 @@
 ﻿using ExpressBase.Common;
 using ExpressBase.Common.Data;
 using ExpressBase.Objects.ServiceStack_Artifacts;
-using MySqlX.XDevAPI;
-using ServiceStack;
 using ServiceStack.Stripe;
 using ServiceStack.Stripe.Types;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
-using System.Data.SqlClient;
 using Stripe;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
 using ExpressBase.Common.Stripe;
 
 namespace ExpressBase.ServiceStack.Services
@@ -21,9 +14,10 @@ namespace ExpressBase.ServiceStack.Services
     public class StripeService : EbBaseService
     {
         public StripeService(IEbConnectionFactory _dbf) : base(_dbf) { }
-        public StripeGateway gateway = new StripeGateway("");
+        public StripeGateway gateway = new StripeGateway(Environment.GetEnvironmentVariable(EnvironmentConstants.EB_STRIPE_SECRET_KEY));
         public static int i = 1;
         public const string USD = "USD";
+
 
         public CheckCustomerResponse Post(CheckCustomerRequest request)
         {
@@ -137,6 +131,18 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
+        public GetCustomerResponse Post(GetCustomerRequest request)
+        {
+            GetCustomerResponse resp = new GetCustomerResponse();
+            StripeCustomer customer = gateway.Get(new GetStripeCustomer
+            {
+                Id = request.CustId
+            });
+
+            resp.Email = customer.Email;
+            return resp;
+        }
+
         public void Post(UpdateCardRequest request)
         {
             //UpdateCardResponse resp = new UpdateCardResponse();
@@ -146,12 +152,12 @@ namespace ExpressBase.ServiceStack.Services
                 CustomerId = request.CustId,
                 CardId = request.CardId,
                 Name = request.Name,
-                AddressLine1 = request.Address1,
-                AddressLine2 = request.Address2,
-                AddressZip = "",
+                AddressLine1 = request.Address,
+                AddressZip = request.Zip,
                 AddressCity = request.City,
                 AddressState = request.State,
-                AddressCountry = request.Country
+                AddressCountry = request.Country,
+
             });
 
             using (DbConnection con = this.InfraConnectionFactory.DataDB.GetNewConnection())
@@ -169,8 +175,8 @@ namespace ExpressBase.ServiceStack.Services
 
                 cmd.Parameters.Add(InfraConnectionFactory.DataDB.GetNewParameter("@custid", Common.Structures.EbDbTypes.String, request.CustId));
                 cmd.Parameters.Add(InfraConnectionFactory.DataDB.GetNewParameter("@name", Common.Structures.EbDbTypes.String, request.Name));
-                cmd.Parameters.Add(InfraConnectionFactory.DataDB.GetNewParameter("@add1", Common.Structures.EbDbTypes.String, request.Address1));
-                cmd.Parameters.Add(InfraConnectionFactory.DataDB.GetNewParameter("@add2", Common.Structures.EbDbTypes.String, request.Address2));
+                cmd.Parameters.Add(InfraConnectionFactory.DataDB.GetNewParameter("@add1", Common.Structures.EbDbTypes.String, request.Address));
+                cmd.Parameters.Add(InfraConnectionFactory.DataDB.GetNewParameter("@add2", Common.Structures.EbDbTypes.String, request.Zip));
                 cmd.Parameters.Add(InfraConnectionFactory.DataDB.GetNewParameter("@city", Common.Structures.EbDbTypes.String, request.City));
                 cmd.Parameters.Add(InfraConnectionFactory.DataDB.GetNewParameter("@state", Common.Structures.EbDbTypes.String, request.State));
                 cmd.Parameters.Add(InfraConnectionFactory.DataDB.GetNewParameter("@country", Common.Structures.EbDbTypes.String, request.Country));
@@ -327,7 +333,7 @@ namespace ExpressBase.ServiceStack.Services
 
             List<Eb_StripePlans> Plans = new List<Eb_StripePlans>();
             int count = plans.Data.Count;
-            for(int i =0;i<count;i++)
+            for (int i = 0; i < count; i++)
             {
                 Plans.Add(new Eb_StripePlans
                 {
@@ -342,7 +348,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 Plans = Plans
             };
-           
+
             return resp;
         }
 
@@ -402,7 +408,7 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
-        public void Post(CreateSubscriptionRequest request)
+        public CreateSubscriptionResponse Post(CreateSubscriptionRequest request)
         {
             CreateSubscriptionResponse resp = new CreateSubscriptionResponse();
             using (DbConnection con = this.InfraConnectionFactory.DataDB.GetNewConnection())
@@ -417,28 +423,75 @@ namespace ExpressBase.ServiceStack.Services
                 //}
                 //else
                 //{
-                StripeSubscription subscription = gateway.Post(new SubscribeStripeCustomer
+                //StripeSubscription subscription = gateway.Post(new SubscribeStripeCustomer
+                //{
+                //    CustomerId = request.CustId,
+                //    Plan = request.PlanId,
+                //    Coupon = request.CoupId,
+                //    Quantity = 1
+                //});
+
+                StripeConfiguration.SetApiKey(Environment.GetEnvironmentVariable(EnvironmentConstants.EB_STRIPE_SECRET_KEY));
+                var items = new List<SubscriptionItemOption>
+                {
+                    new SubscriptionItemOption
+                    {
+                        PlanId = request.PlanId
+                    }
+                };
+                var options = new SubscriptionCreateOptions
                 {
                     CustomerId = request.CustId,
-                    Plan = request.PlanId,
-                    Coupon = request.CoupId,
-                    Quantity = 1,
-                });
+                    Items = items
+                };
+
+                var service = new SubscriptionService();
+                Subscription subscription = service.Create(options);
+
+                string inv_id = subscription.LatestInvoiceId;
+                string sub_item_id = subscription.Items.Data[0].Id;
+
+                //var service1 = new InvoiceService();
+                //var invoice = service1.Get(inv_id);
+                //string url = invoice.HostedInvoiceUrl;
+                //return url;
+
+
+                var usageRecordOptions = new UsageRecordCreateOptions()
+                {
+                    Quantity = request.Total,
+                    Timestamp = DateTime.Now.AddMinutes(3),
+                    Action = "increment"
+                };
+                var usageRecordService = new UsageRecordService();
+                UsageRecord usageRecord = usageRecordService.Create(sub_item_id, usageRecordOptions);
+
 
                 string str1 = @"
                     INSERT INTO
-                        eb_subscription (cust_id,plan_id,coupon_id,sub_id,created_at)
-                    VALUES (@custid, @planid,@coupid,@subid,@createdat)";
+                        eb_subscription (cust_id,plan_id,coupon_id,sub_id,sub_item_id,latest_invoice_id,created_at)
+                    VALUES (@custid,@planid,@coupid,@subid,@subitemid,@invid,@createdat)";
 
                 DbCommand cmd1 = InfraConnectionFactory.DataDB.GetNewCommand(con, str1);
                 cmd1.Parameters.Add(InfraConnectionFactory.DataDB.GetNewParameter("@custid", Common.Structures.EbDbTypes.String, request.CustId));
                 cmd1.Parameters.Add(InfraConnectionFactory.DataDB.GetNewParameter("@planid", Common.Structures.EbDbTypes.String, request.PlanId));
                 cmd1.Parameters.Add(InfraConnectionFactory.DataDB.GetNewParameter("@coupid", Common.Structures.EbDbTypes.String, request.CoupId));
                 cmd1.Parameters.Add(InfraConnectionFactory.DataDB.GetNewParameter("@subid", Common.Structures.EbDbTypes.String, subscription.Id));
+                cmd1.Parameters.Add(InfraConnectionFactory.DataDB.GetNewParameter("@subitemid", Common.Structures.EbDbTypes.String, sub_item_id));
+                cmd1.Parameters.Add(InfraConnectionFactory.DataDB.GetNewParameter("@invid", Common.Structures.EbDbTypes.String, inv_id));
                 cmd1.Parameters.Add(InfraConnectionFactory.DataDB.GetNewParameter("@createdat", Common.Structures.EbDbTypes.DateTime, DateTime.Now));
                 cmd1.ExecuteNonQuery();
                 //}
+                resp.PeriodStart = subscription.CurrentPeriodStart;
+                resp.PeriodEnd = subscription.CurrentPeriodEnd;
+                resp.Created = subscription.Created;
+                resp.Amount = subscription.Plan.Amount;
+                resp.UseageType = subscription.Plan.UsageType;
+                resp.BillingScheme = subscription.Plan.BillingScheme;
+                resp.Quantity = usageRecord.Quantity;
             }
+
+            return resp;
         }
 
         public void Post(UpgradeSubscriptionRequest request)
@@ -575,7 +628,7 @@ namespace ExpressBase.ServiceStack.Services
                 }
 
             }
-            catch (Exception e)
+            catch (Exception)
             {
 
                 //return BadRequest();
@@ -585,6 +638,7 @@ namespace ExpressBase.ServiceStack.Services
         public GetCustomerInvoiceResponse Post(GetCustomerInvoiceRequest request)
         {
             GetCustomerInvoiceResponse resp = new GetCustomerInvoiceResponse();
+            StripeConfiguration.SetApiKey(Environment.GetEnvironmentVariable(EnvironmentConstants.EB_STRIPE_SECRET_KEY));
 
             StripeCollection<StripeInvoice> invoices = gateway.Get(new GetStripeInvoices
             {
@@ -596,10 +650,14 @@ namespace ExpressBase.ServiceStack.Services
                 Id = request.CustId
             });
 
+            var service1 = new InvoiceService();
+
+
             int count = invoices.Data.Count;
             List<Eb_StripeInvoice> List = new List<Eb_StripeInvoice>();
             for (int i = 0; i < count; i++)
             {
+                var invoice = service1.Get(invoices.Data[i].Id);
                 List.Add(new Eb_StripeInvoice
                 {
                     Id = invoices.Data[i].Id,
@@ -608,10 +666,11 @@ namespace ExpressBase.ServiceStack.Services
                     Date = invoices.Data[i].Date,
                     SubTotal = invoices.Data[i].Subtotal / 100,
                     Total = invoices.Data[i].Total / 100,
-                    PercentOff = invoices.Data[i].Discount.Coupon.PercentOff,
-                    CouponId = invoices.Data[i].Discount.Coupon.Id,
                     Type = invoices.Data[i].Lines.Data[0].Type,
                     Description = invoices.Data[i].Lines.Data[0].Description,
+                    Url = invoice.HostedInvoiceUrl,
+                    InvNumber = invoice.Number,
+                    Status = invoice.Paid,
                     Currency = invoices.Data[i].Lines.Data[0].Currency,
                     Quantity = invoices.Data[i].Lines.Data[0].Quantity,
                     PeriodStart = invoices.Data[i].PeriodStart,
@@ -636,7 +695,7 @@ namespace ExpressBase.ServiceStack.Services
                 Customer = request.CustId,
             });
 
-            
+
 
             int count = Inv.Lines.Data.Count;
             List<Eb_StripeUpcomingInvoice> Data = new List<Eb_StripeUpcomingInvoice>();
@@ -659,7 +718,7 @@ namespace ExpressBase.ServiceStack.Services
                 Total = Inv.AmountDue / 100,
                 Date = Inv.Date,
                 Currency = Inv.Currency,
-                PercentOff = Inv.Discount==null?0:Inv.Discount.Coupon.PercentOff,
+                PercentOff = Inv.Discount == null ? 0 : Inv.Discount.Coupon.PercentOff,
                 CouponId = Inv.Discount == null ? "" : Inv.Discount.Coupon.Id,
                 Data = Data
             };
