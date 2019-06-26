@@ -83,8 +83,12 @@ namespace ExpressBase.ServiceStack.Services
                     string[] filePaths = Directory.GetFiles(string.Format("../ExpressBase.Common/sqlscripts/{0}", vendor.ToLower()),
                         "*.sql",
                         SearchOption.AllDirectories);
+                    Console.WriteLine(".............Reached CreateOrAlter_Structure. Total Files: " + filePaths.Length);
+                    int counter = 0;
                     foreach (string path in filePaths)
                     {
+                        counter++;
+                        Console.WriteLine(counter);
                         IsCreateComplete = CreateOrAlter_Structure(con, path, DataDB);
                         if (!IsCreateComplete)
                             break;
@@ -97,7 +101,7 @@ namespace ExpressBase.ServiceStack.Services
 
                     if (IsCreateComplete & IsInsertComplete)
                     {
-                        Console.WriteLine(".............Reached Commit");
+                        Console.WriteLine(".............Reached Transaction Commit");
                         con_trans.Commit();
                         EbDbCreateResponse success = request.IsChange ? new EbDbCreateResponse() { Resp = true } : _res;
                         return success;
@@ -211,9 +215,9 @@ namespace ExpressBase.ServiceStack.Services
         {
             try
             {
-
                 string result = null;
                 path = path.Replace("../", "").Replace("/", ".").Replace("\\", ".");
+                Console.WriteLine(".............Creating......" + path);
                 var assembly = typeof(sqlscripts).Assembly;
 
                 //.....................create tbls........
