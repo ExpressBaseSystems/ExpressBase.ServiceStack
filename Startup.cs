@@ -330,7 +330,7 @@ namespace ExpressBase.ServiceStack
                             }
                             else if (requestDto is IEbTenentRequest)
                             {
-                                (requestDto as IEbTenentRequest).SolnId = solId;
+                                //(requestDto as IEbTenentRequest).SolnId = solId;
                                 (requestDto as IEbTenentRequest).UserId = userId;
                             }
 
