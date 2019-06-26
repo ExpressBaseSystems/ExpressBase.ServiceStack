@@ -27,9 +27,9 @@ namespace ExpressBase.ServiceStack.Services
                 string query = @"
             INSERT INTO 
             wiki (
-                    category, title, html, eb_created_at, eb_created_by, eb_tags) 
+                    category, title, html, eb_created_at, eb_created_by, eb_tags , status) 
             VALUES (
-                    @category, @title, @html, @createdon, @createdby, @tags)
+                    @category, @title, @html, @createdon, @createdby, @tags, @status)
             RETURNING id";
 
                 DbParameter[] parameters = new DbParameter[]
@@ -39,7 +39,8 @@ namespace ExpressBase.ServiceStack.Services
                 this.InfraConnectionFactory.DataDB.GetNewParameter("html", EbDbTypes.String, request.Wiki.HTML),
                  this.InfraConnectionFactory.DataDB.GetNewParameter("createdon", EbDbTypes.DateTime, DateTime.Now),
                 this.InfraConnectionFactory.DataDB.GetNewParameter("createdby", EbDbTypes.Int32, request.Wiki.CreatedBy),
-                this.InfraConnectionFactory.DataDB.GetNewParameter("tags", EbDbTypes.String, request.Wiki.Tags)
+                this.InfraConnectionFactory.DataDB.GetNewParameter("tags", EbDbTypes.String, request.Wiki.Tags),
+                this.InfraConnectionFactory.DataDB.GetNewParameter("status", EbDbTypes.String, request.Wiki.Status)
                 };
 
                 EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(query, parameters);
@@ -66,7 +67,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 string query = @"
             UPDATE wiki SET
-                category= @category, title = @title , html = @html , eb_last_modified_by = @modified_by, eb_last_modified_at = @updatedtime, eb_tags = @tags
+                category= @category, title = @title , html = @html , eb_last_modified_by = @modified_by, eb_last_modified_at = @updatedtime, eb_tags = @tags, status =@status
             WHERE 
                 id= @id
             RETURNING id";
@@ -79,6 +80,7 @@ namespace ExpressBase.ServiceStack.Services
                 this.InfraConnectionFactory.DataDB.GetNewParameter("modified_by", EbDbTypes.Int32, request.Wiki.CreatedBy),
                 this.InfraConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.Wiki.Id),
                  this.InfraConnectionFactory.DataDB.GetNewParameter("tags", EbDbTypes.String, request.Wiki.Tags),
+                 this.InfraConnectionFactory.DataDB.GetNewParameter("status", EbDbTypes.String, request.Wiki.Status),
                  this.InfraConnectionFactory.DataDB.GetNewParameter("updatedtime", EbDbTypes.DateTime, DateTime.Now)
                 };
 
@@ -145,7 +147,7 @@ namespace ExpressBase.ServiceStack.Services
                 FROM
                     wiki
                 WHERE
-                    title LIKE '%' || @search_wiki || '%'  ";
+                    title LIKE '%' || @search_wiki || '%' And status='Publish' ";
 
                 EbDataTable table = InfraConnectionFactory.DataDB.DoQuery(query, parameters);
 
@@ -184,7 +186,7 @@ namespace ExpressBase.ServiceStack.Services
                 FROM
                     wiki 
                 WHERE 
-                    eb_del='false' ORDER BY id ";
+                    eb_del='false' AND status='Publish' ORDER BY id  ";
                 EbDataTable table = InfraConnectionFactory.DataDB.DoQuery(query);
 
                 int capacity = table.Rows.Capacity;
@@ -197,7 +199,7 @@ namespace ExpressBase.ServiceStack.Services
                             Category = table.Rows[i]["category"].ToString(),
                             HTML = table.Rows[i]["html"].ToString(),
                             Title = table.Rows[i]["title"].ToString(),
-                            Id = (int) table.Rows[i]["id"]
+                            Id = (int) table.Rows[i]["id"]  
                         });
                 }
             }
@@ -241,6 +243,162 @@ namespace ExpressBase.ServiceStack.Services
             }
             return resp;
         }
+
+        public WikiAdminResponse Get(WikiAdminRequest request)
+        {
+            WikiAdminResponse resp = new WikiAdminResponse();
+
+            try
+            {
+
+                string query = @"
+                SELECT *
+                FROM
+                    wiki 
+                WHERE 
+                    eb_del='false' ORDER BY id  ";
+                EbDataTable table = InfraConnectionFactory.DataDB.DoQuery(query);
+
+                int capacity = table.Rows.Capacity;
+
+                for (int i = 0; i < capacity; i++)
+                {
+                    resp.WikiList.Add(
+                        new Wiki()
+                        {
+                            Category = table.Rows[i]["category"].ToString(),
+                            HTML = table.Rows[i]["html"].ToString(),
+                            Title = table.Rows[i]["title"].ToString(),
+                            Id = (int)table.Rows[i]["id"],
+                            Status = table.Rows[i]["status"].ToString()
+                        });
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("ERROR: GetWikiList Exception: " + e.Message);
+            }
+            return resp;
+        }
+
+
+
+        public Admin_Wiki_ListResponse Get(Admin_Wiki_ListRequest request)
+        {
+            Admin_Wiki_ListResponse resp = new Admin_Wiki_ListResponse();
+            try
+            {
+                DbParameter[] parameters = new DbParameter[]
+                    {
+                this.InfraConnectionFactory.DataDB.GetNewParameter("status", EbDbTypes.String, request.Status)
+                    };
+                string query = @"
+                 SELECT *
+                 FROM
+                    wiki  
+                 WHERE
+                    status = @status AND eb_del='false' ";
+
+                EbDataTable table = InfraConnectionFactory.DataDB.DoQuery(query, parameters);
+
+                int capacity = table.Rows.Count;
+
+                for (int i = 0; i < capacity; i++)
+                {
+                    resp.WikiList.Add(
+                        new Wiki()
+                        {
+                            Category = table.Rows[i]["category"].ToString(),
+                            HTML = table.Rows[i]["html"].ToString(),
+                            Title = table.Rows[i]["title"].ToString(),
+                            Id = (int)table.Rows[i]["id"],
+                            Status = table.Rows[i]["status"].ToString(),
+                            CreatedAt = (DateTime)table.Rows[i]["eb_created_at"],
+                           
+
+                        });
+                }
+            }
+            catch (Exception e)
+            {
+
+            }
+            return resp;
+        }
+
+        public Publish_wikiResponse Post(Publish_wikiRequest request)
+        {
+            Publish_wikiResponse resp = new Publish_wikiResponse()
+            {
+                Id = request.Wiki_id 
+            };
+
+            try
+            {
+                string query = @"
+            UPDATE wiki SET
+                status =@status
+            WHERE 
+                id= @id
+            RETURNING id";
+
+                DbParameter[] parameters = new DbParameter[]
+                {
+                this.InfraConnectionFactory.DataDB.GetNewParameter("status", EbDbTypes.String,request.Status),
+                this.InfraConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.Wiki_id),
+                
+                };
+
+                EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(query, parameters);
+
+                resp.Id = (int)dt.Rows[0][0];
+
+            }
+            catch (Exception e)
+            {
+            
+            }
+
+            return resp;
+        }
+
+        public PublicViewResponse Get(PublicViewRequest request)
+        {
+            PublicViewResponse resp = new PublicViewResponse();
+
+            try
+            {
+
+                string query = @"
+                SELECT *
+                FROM
+                    wiki 
+                WHERE 
+                    eb_del='false' AND status='Publish'";
+                EbDataTable table = InfraConnectionFactory.DataDB.DoQuery(query);
+
+                int capacity = table.Rows.Capacity;
+
+                for (int i = 0; i < capacity; i++)
+                {
+                    resp.WikiList.Add(
+                        new Wiki()
+                        {
+                            Category = table.Rows[i]["category"].ToString(),
+                            HTML = table.Rows[i]["html"].ToString(),
+                            Title = table.Rows[i]["title"].ToString(),
+                            Id = (int)table.Rows[i]["id"]
+                        });
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("ERROR: GetWikiList Exception: " + e.Message);
+            }
+            return resp;
+        }
+
+
 
     }
 }
