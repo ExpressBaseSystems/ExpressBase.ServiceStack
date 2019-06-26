@@ -653,8 +653,8 @@ namespace ExpressBase.ServiceStack.Services
                             _intgre.Add(Type, new List<EbIntegrationData>());
                             _intgre[Type].Add(new EbIntegrationData
                             {
-                                Id = _row[0].ToString(),
-                                ConfId = _row[10].ToString(),
+                                ConfId = _row[0].ToString(),
+                                Id = _row[10].ToString(),
                                 NickName = _row[2].ToString(),
                                 Ctype = _row[3].ToString(),
                                 Type = _row[12].ToString(),
