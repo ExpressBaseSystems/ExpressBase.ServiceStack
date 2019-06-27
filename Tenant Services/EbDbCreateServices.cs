@@ -123,7 +123,7 @@ namespace ExpressBase.ServiceStack.Services
                     foreach (string path in _filepath)
                     {
                         counter++;
-                        Console.WriteLine(counter + ".............Creating......" + path);
+                        Console.WriteLine(counter);
                         IsCreateComplete = CreateOrAlter_Structure(con, Urlstart + path, DataDB);
                         if (!IsCreateComplete)
                             break;
