@@ -114,7 +114,7 @@ namespace ExpressBase.ServiceStack.Services
                  FROM
                     wiki  
                  WHERE
-                   id = @id AND eb_del='false' ";
+                   id = @id AND eb_del='false'  ";
 
                 EbDataTable table = InfraConnectionFactory.DataDB.DoQuery(query, parameters);
 
@@ -147,7 +147,7 @@ namespace ExpressBase.ServiceStack.Services
                 FROM
                     wiki
                 WHERE
-                    title LIKE '%' || @search_wiki || '%' And status='Publish' ";
+                    title LIKE '%' || @search_wiki || '%' And status='Publish' ORDER BY list_order";
 
                 EbDataTable table = InfraConnectionFactory.DataDB.DoQuery(query, parameters);
 
@@ -186,7 +186,7 @@ namespace ExpressBase.ServiceStack.Services
                 FROM
                     wiki 
                 WHERE 
-                    eb_del='false' AND status='Publish' ORDER BY id  ";
+                    eb_del='false' AND status='Publish' ORDER BY list_order  ";
                 EbDataTable table = InfraConnectionFactory.DataDB.DoQuery(query);
 
                 int capacity = table.Rows.Capacity;
@@ -228,7 +228,7 @@ namespace ExpressBase.ServiceStack.Services
                  FROM
                     wiki  
                  WHERE
-                    id = @id AND eb_del='false' ";
+                    id = @id AND eb_del='false'  ORDER BY list_order";
 
                 EbDataTable table = InfraConnectionFactory.DataDB.DoQuery(query, parameters);
 
@@ -374,7 +374,7 @@ namespace ExpressBase.ServiceStack.Services
                 FROM
                     wiki 
                 WHERE 
-                    eb_del='false' AND status='Publish'";
+                    eb_del='false' AND status='Publish' order by list_order ";
                 EbDataTable table = InfraConnectionFactory.DataDB.DoQuery(query);
 
                 int capacity = table.Rows.Capacity;
@@ -399,6 +399,52 @@ namespace ExpressBase.ServiceStack.Services
         }
 
 
+
+        public UpdateOrderResponse Post(UpdateOrderRequest request)
+        {
+            UpdateOrderResponse resp = new UpdateOrderResponse();
+
+            
+            try
+            {
+                string query = @"
+            UPDATE wiki SET
+                 list_order = @list_order
+            WHERE 
+                id = @id ";
+                int Temp = 1;
+                foreach (int i in request.Wiki_id)
+                {
+                    DbParameter[] parameters = new DbParameter[]
+               {
+                this.InfraConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, i),
+                this.InfraConnectionFactory.DataDB.GetNewParameter("list_order", EbDbTypes.Int32, Temp),
+               };
+                    EbDataTable x = InfraConnectionFactory.DataDB.DoQuery(query, parameters);
+                    Temp++;
+                }
+
+                //for (int i=0;i< request.Wiki_id.Length; i++) { 
+                //DbParameter[] parameters = new DbParameter[]
+                //{
+                //this.InfraConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.Wiki_id[i]),
+                //this.InfraConnectionFactory.DataDB.GetNewParameter("list_order", EbDbTypes.Int32, i++),
+                //};
+
+                //EbDataTable x = InfraConnectionFactory.DataDB.DoQuery(query, parameters);
+
+
+                //}
+
+                resp.ResponseStatus = true;
+            }
+            catch (Exception e)
+            {
+                resp.ResponseStatus = false;
+            }
+
+            return resp;
+        }
 
     }
 }
