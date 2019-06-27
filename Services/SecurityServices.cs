@@ -328,6 +328,9 @@ namespace ExpressBase.ServiceStack.Services
                 id = Convert.ToInt32(dt.Tables[0].Rows[0][0]);
             }
 
+            TenantUserServices _tenantUserService = base.ResolveService<TenantUserServices>();
+            _tenantUserService.Post(new UpdateSolutionRequest() { SolnId = request.SolnId, UserId = request.UserId });
+
             resp = new SaveUserResponse
             {
                 id = Convert.ToInt32(id)
