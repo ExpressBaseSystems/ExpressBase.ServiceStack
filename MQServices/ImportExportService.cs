@@ -149,7 +149,7 @@ namespace ExpressBase.ServiceStack.MQServices
                         AppObj.Name = AppObj.Name + "(1)";
                 }
                 while (!uniq_appnameresp.IsUnique);
-                CreateApplicationResponse appres = devservice.Post(new CreateApplicationDevRequest
+                CreateApplicationResponse appres = devservice.Post(new CreateApplicationRequest
                 {
                     AppName = AppObj.Name,
                     AppType = AppObj.AppType,
@@ -181,7 +181,7 @@ namespace ExpressBase.ServiceStack.MQServices
                         Relations = "_rel_obj",
                         IsSave = false,
                         Tags = "_tags",
-                        Apps = appres.id.ToString(),
+                        Apps = appres.Id.ToString(),
                         SourceSolutionId = (obj.RefId.Split("-"))[0],
                         SourceObjId = (obj.RefId.Split("-"))[3],
                         SourceVerID = (obj.RefId.Split("-"))[4],
@@ -206,7 +206,7 @@ namespace ExpressBase.ServiceStack.MQServices
                         DisplayName = obj.DisplayName,
                         Description = obj.Description,
                         Json = EbSerializers.Json_Serialize(obj),
-                        Apps = appres.id.ToString(),
+                        Apps = appres.Id.ToString(),
                         SolnId = request.SolnId,
                         UserId = request.UserId,
                         UserAuthId = request.UserAuthId,
