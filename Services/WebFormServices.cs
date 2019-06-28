@@ -2,6 +2,7 @@
 using ExpressBase.Common.Constants;
 using ExpressBase.Common.Data;
 using ExpressBase.Common.Extensions;
+using ExpressBase.Common.LocationNSolution;
 using ExpressBase.Common.Objects;
 using ExpressBase.Common.Structures;
 using ExpressBase.Objects;
@@ -61,7 +62,7 @@ namespace ExpressBase.ServiceStack.Services
                             _listNamesAndTypes.Add(new TableColumnMeta { Name = _column.ColumnName, Type = vDbTypes.GetVendorDbTypeStruct((EbDbTypes)_column.EbDbType), Unique = true });
                             _listNamesAndTypes.Add(new TableColumnMeta { Name = _column.ColumnName + "_ebbkup", Type = vDbTypes.GetVendorDbTypeStruct((EbDbTypes)_column.EbDbType) });
                         }
-                        else if (_column.Control is EbSysLocation || _column.Control is EbSysCreatedBy || _column.Control is EbSysCreatedAt || _column.Control is EbSysModifiedBy)
+                        else if (_column.Control is EbSysLocation || _column.Control is EbSysCreatedBy || _column.Control is EbSysCreatedAt || _column.Control is EbSysModifiedBy || _column.Control is EbSysModifiedAt)
                             continue;
                         else
                             _listNamesAndTypes.Add(new TableColumnMeta { Name = _column.ColumnName, Type = vDbTypes.GetVendorDbTypeStruct((EbDbTypes)_column.EbDbType) });
@@ -218,6 +219,7 @@ namespace ExpressBase.ServiceStack.Services
             form.TableRowId = request.RowId;
             form.RefId = request.RefId;
             form.UserObj = request.UserObj;
+            form.SolutionObj = this.Redis.Get<Eb_Solution>(String.Format("solution_{0}", request.SolnId)); 
             form.RefreshFormData(EbConnectionFactory.DataDB, this);
             _dataset.FormData = form.FormData;
             return _dataset;
