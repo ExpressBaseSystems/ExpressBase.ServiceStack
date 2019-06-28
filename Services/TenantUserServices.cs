@@ -147,16 +147,18 @@ namespace ExpressBase.ServiceStack.Services
                 GetSolutioInfoResponse res = (GetSolutioInfoResponse)_infraService.Get(new GetSolutioInfoRequest { IsolutionId = req.SolnId });
                 EbSolutionsWrapper wrap_sol = res.Data;
                 LocationInfoTenantResponse Loc = this.Get(new LocationInfoTenantRequest { SolnId = req.SolnId, UserId = req.UserId });
+                EbSolutionUsers users = GetUserCount();
                 Eb_Solution sol_Obj = new Eb_Solution
                 {
                     SolutionID = req.SolnId,
                     DateCreated = wrap_sol.DateCreated.ToString(),
                     Description = wrap_sol.Description.ToString(),
                     Locations = Loc.Locations,
-                    NumberOfUsers = GetUserCount(),
+                    NumberOfUsers = users.UserCount,
                     SolutionName = wrap_sol.SolutionName.ToString(),
                     LocationConfig = Loc.Config,
-                    PricingTier = wrap_sol.PricingTier
+                    PricingTier = wrap_sol.PricingTier,
+                    Users = users.UserList
                 };
 
                 this.Redis.Set<Eb_Solution>(String.Format("solution_{0}", req.SolnId), sol_Obj);
@@ -166,50 +168,75 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
-                Console.WriteLine("Error UpdateSolutionRequest: " + e.StackTrace);
+                Console.WriteLine("Error UpdateSolutionRequest: " + e.Message + e.StackTrace);
             }
             return new UpdateSolutionResponse { };
         }
 
-        public int GetUserCount()
+        public EbSolutionUsers GetUserCount()
         {
             // statusid 0 - active users, 1- suspended users
-            string sql = @"SELECT COUNT(*) FROM eb_users WHERE statusid = 0 OR statusid =1 AND eb_del ='F';";
-            EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(sql);
-            if (dt.Rows.Count > 0)
-                return Convert.ToInt32(dt.Rows[0][0]);
-            return 0;
+            string sql = @"SELECT COUNT(*) FROM eb_users WHERE statusid = 0 OR statusid =1 AND eb_del ='F';
+                        SELECT id, fullname from eb_users;";
+            EbDataSet dt = this.EbConnectionFactory.DataDB.DoQueries(sql);
+            EbSolutionUsers SolutionUsers = new EbSolutionUsers();
+            if (dt.Tables != null)
+            {
+                if (dt.Tables[0] != null && dt.Tables[0].Rows.Count > 0)
+                    SolutionUsers.UserCount = Convert.ToInt32(dt.Tables[0].Rows[0][0]);
+
+                if (dt.Tables[1] != null && dt.Tables[1].Rows.Count > 0)
+                {
+                    SolutionUsers.UserList = new Dictionary<int, string>();
+                    foreach (EbDataRow r in dt.Tables[1].Rows)
+                    {
+                        if (!SolutionUsers.UserList.ContainsKey((int)r[0]))
+                            SolutionUsers.UserList[(int)r[0]] = r[1].ToString();
+                    }
+                }
+            }
+
+            return SolutionUsers;
         }
+
         public LocationInfoTenantResponse Get(LocationInfoTenantRequest req)
         {
             List<EbLocationCustomField> Conf = new List<EbLocationCustomField>();
             Dictionary<int, EbLocation> locs = new Dictionary<int, EbLocation>();
-
-            string query = "SELECT * FROM eb_location_config WHERE eb_del = 'F' ORDER BY id; SELECT * FROM eb_locations;";
-            EbConnectionFactory ebConnectionFactory = new EbConnectionFactory(req.SolnId.ToLower(), this.Redis);
-            EbDataSet dt = ebConnectionFactory.DataDB.DoQueries(query);
-
-            foreach (EbDataRow r in dt.Tables[0].Rows)
+            try
             {
-                Conf.Add(new EbLocationCustomField
+                string query = "SELECT * FROM eb_location_config WHERE eb_del = 'F' ORDER BY id; SELECT * FROM eb_locations;";
+                EbConnectionFactory ebConnectionFactory = new EbConnectionFactory(req.SolnId.ToLower(), this.Redis);
+                EbDataSet dt = ebConnectionFactory.DataDB.DoQueries(query);
+                if (dt != null && dt.Tables.Count > 0)
                 {
-                    Name = r[1].ToString(),
-                    IsRequired = (r[2].ToString() == "T") ? true : false,
-                    Id = r[0].ToString(),
-                    Type = r[3].ToString()
-                });
+                    foreach (EbDataRow r in dt.Tables[0].Rows)
+                    {
+                        Conf.Add(new EbLocationCustomField
+                        {
+                            Name = r[1].ToString(),
+                            IsRequired = (r[2].ToString() == "T") ? true : false,
+                            Id = r[0].ToString(),
+                            Type = r[3].ToString()
+                        });
+                    }
+
+                    foreach (var r in dt.Tables[1].Rows)
+                    {
+                        locs.Add(Convert.ToInt32(r[0]), new EbLocation
+                        {
+                            LocId = Convert.ToInt32(r[0]),
+                            ShortName = r[1].ToString(),
+                            LongName = r[2].ToString(),
+                            Logo = r[3].ToString(),
+                            Meta = JsonConvert.DeserializeObject<Dictionary<string, string>>(r[4].ToString())
+                        });
+                    }
+                }
             }
-
-            foreach (var r in dt.Tables[1].Rows)
+            catch (Exception e)
             {
-                locs.Add(Convert.ToInt32(r[0]), new EbLocation
-                {
-                    LocId = Convert.ToInt32(r[0]),
-                    ShortName = r[1].ToString(),
-                    LongName = r[2].ToString(),
-                    Logo = r[3].ToString(),
-                    Meta = JsonConvert.DeserializeObject<Dictionary<string, string>>(r[4].ToString())
-                });
+                Console.WriteLine("Erron in Getting location info" + e.Message + e.StackTrace);
             }
 
             return new LocationInfoTenantResponse { Locations = locs, Config = Conf };
@@ -797,5 +824,11 @@ namespace ExpressBase.ServiceStack.Services
         //         }
         //         return resp;
         //     }
+    }
+    public class EbSolutionUsers
+    {
+        public int UserCount { get; set; }
+
+        public Dictionary<int, string> UserList { get; set; }
     }
 }
