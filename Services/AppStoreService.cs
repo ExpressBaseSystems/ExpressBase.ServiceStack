@@ -13,6 +13,7 @@ using System.Collections.Specialized;
 using System.Data.Common;
 using System.Linq;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -24,9 +25,10 @@ namespace ExpressBase.ServiceStack.Services
         {
             DbParameter[] Parameters = { InfraConnectionFactory.ObjectsDB.GetNewParameter(":id", EbDbTypes.Int32, request.Id) };
             EbDataTable dt = InfraConnectionFactory.ObjectsDB.DoQuery("SELECT * FROM eb_appstore WHERE id = :id", Parameters);
+            AppWrapper _wrapper = EbSerializers.Json_Deserialize<AppWrapper>(dt.Rows[0][7].ToString());
             return new GetOneFromAppstoreResponse
             {
-                Wrapper = (AppWrapper)EbSerializers.Json_Deserialize(dt.Rows[0][7].ToString())
+                Wrapper = _wrapper
             };
         }
       

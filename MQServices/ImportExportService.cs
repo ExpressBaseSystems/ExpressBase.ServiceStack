@@ -6,6 +6,7 @@ using ExpressBase.Objects;
 using ExpressBase.Objects.Services;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ExpressBase.ServiceStack.Services;
+using Newtonsoft.Json;
 using ServiceStack;
 using ServiceStack.Messaging;
 using System;
@@ -26,7 +27,7 @@ namespace ExpressBase.ServiceStack.MQServices
 
         public ExportApplicationResponse Post(ExportApplicationMqRequest request)
         {
-            
+
             ExportApplicationResponse resp = new ExportApplicationResponse();
             MessageProducer3.Publish(new ExportApplicationRequest
             {
@@ -71,8 +72,6 @@ namespace ExpressBase.ServiceStack.MQServices
             OrderedDictionary ObjDictionary = new OrderedDictionary();
             try
             {
-                // ServiceStackClient.RefreshToken = request.RToken;
-                //ServiceStackClient.BearerToken = request.BToken;
                 EbConnectionFactory ebConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
                 var devservice = base.ResolveService<DevRelatedServices>();
                 devservice.EbConnectionFactory = ebConnectionFactory;
@@ -88,7 +87,7 @@ namespace ExpressBase.ServiceStack.MQServices
                 ICollection ObjectList = ObjDictionary.Values;
                 foreach (object item in ObjectList)
                     AppObj.ObjCollection.Add(item as EbObject);
-
+                string appobj_s = EbSerializers.Json_Serialize4AppWraper(AppObj);
                 SaveToAppStoreResponse p = appstoreService.Post(new SaveToAppStoreRequest
                 {
                     Store = new AppStore
@@ -96,7 +95,7 @@ namespace ExpressBase.ServiceStack.MQServices
                         Name = AppObj.Name,
                         Cost = 10.00m,
                         Currency = "USD",
-                        Json = EbSerializers.Json_Serialize(AppObj),
+                        Json = appobj_s,
                         Status = 1,
                         AppType = 1,
                         Description = AppObj.Description,
@@ -111,7 +110,7 @@ namespace ExpressBase.ServiceStack.MQServices
             }
             catch (Exception e)
             {
-                Console.WriteLine("ExportApplication"+ e.Message);
+                Console.WriteLine("ExportApplication" + e.Message);
             }
 
             return null;
@@ -119,19 +118,18 @@ namespace ExpressBase.ServiceStack.MQServices
 
         public string Post(ImportApplicationRequest request)
         {
-            Log.Info("ExportApplicationRequest inside Mq");
+            Log.Info("ImportApplicationRequest inside Mq");
             Dictionary<string, string> RefidMap = new Dictionary<string, string>();
             try
             {
-                // ServiceStackClient.RefreshToken = request.RToken;
-                // ServiceStackClient.BearerToken = request.BToken;
-                EbConnectionFactory ebConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
+                EbConnectionFactory _ebConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
                 var appstoreService = base.ResolveService<AppStoreService>();
-                appstoreService.EbConnectionFactory = ebConnectionFactory;
+                appstoreService.EbConnectionFactory = _ebConnectionFactory;
                 var devservice = base.ResolveService<DevRelatedServices>();
-                devservice.EbConnectionFactory = ebConnectionFactory;
+                devservice.EbConnectionFactory = _ebConnectionFactory;
                 var objservice = base.ResolveService<EbObjectService>();
-                objservice.EbConnectionFactory = ebConnectionFactory;
+                objservice.EbConnectionFactory = _ebConnectionFactory;
+
                 AppWrapper AppObj = appstoreService.Get(new GetOneFromAppStoreRequest
                 {
                     Id = request.Id,
@@ -174,7 +172,7 @@ namespace ExpressBase.ServiceStack.MQServices
                     EbObject_Create_New_ObjectRequest ds = new EbObject_Create_New_ObjectRequest
                     {
                         Name = obj.Name,
-                        DisplayName=obj.DisplayName,
+                        DisplayName = obj.DisplayName,
                         Description = obj.Description,
                         Json = EbSerializers.Json_Serialize(obj),
                         Status = ObjectLifeCycleStatus.Dev,
@@ -199,7 +197,7 @@ namespace ExpressBase.ServiceStack.MQServices
                 {
                     EbObject obj = ObjectCollection[i];
                     obj.ReplaceRefid(RefidMap);
-                    EbObject_SaveRequest ss= new EbObject_SaveRequest
+                    EbObject_SaveRequest ss = new EbObject_SaveRequest
                     {
                         RefId = RefidMap[obj.RefId],
                         Name = obj.Name,
