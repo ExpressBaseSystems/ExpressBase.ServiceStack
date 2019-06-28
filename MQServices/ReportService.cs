@@ -22,7 +22,7 @@ namespace ExpressBase.ServiceStack.MQServices
         {
             try
             {
-                Console.WriteLine("Inside MQService/ReportServiceInternal in SS \n Before Report Render");
+                Console.WriteLine("           Reached Inside MQService/ReportServiceInternal in SS .. Before Report Render");
                 EbConnectionFactory ebConnectionFactory = new EbConnectionFactory(request.JobArgs.SolnId, this.Redis);
                 var objservice = base.ResolveService<EbObjectService>();
                 objservice.EbConnectionFactory = ebConnectionFactory;
@@ -32,13 +32,15 @@ namespace ExpressBase.ServiceStack.MQServices
                 schedulerservice.EbConnectionFactory = ebConnectionFactory;
                 Dictionary<string, List<User>> LocaleUser = new Dictionary<string, List<User>>();
                 Dictionary<string, byte[]> LocaleReport = new Dictionary<string, byte[]>();
+                Console.WriteLine("         Fetching Live version  "+ request.JobArgs.ObjId);
                 EbObjectFetchLiveVersionResponse res = ((EbObjectFetchLiveVersionResponse)objservice.Get(new EbObjectFetchLiveVersionRequest()
                 {
                     Id = request.JobArgs.ObjId
                 }));
 
-                if (res.Data.Count > 0)
+                if (res.Data!=null && res.Data.Count > 0)
                 {
+                    Console.WriteLine("         Got Live Version   Getting mail ids");
                     EbObjectWrapper Live_ver = res.Data[0];
                     GetUserEmailsResponse mailres = schedulerservice.Get(new GetUserEmailsRequest()
                     {
@@ -97,14 +99,11 @@ namespace ExpressBase.ServiceStack.MQServices
                         }
                         //LocaleReport.Add(locale.Key, RepRes.ReportBytea);
                     }
-
-
-
                 }
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.Message + e.StackTrace);
+                Console.WriteLine("     Error in ReportInternal " + e.Message + e.StackTrace);
             }
             return new ReportInternalResponse() { };
         }
