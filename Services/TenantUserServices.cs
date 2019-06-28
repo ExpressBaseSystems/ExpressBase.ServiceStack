@@ -147,16 +147,18 @@ namespace ExpressBase.ServiceStack.Services
                 GetSolutioInfoResponse res = (GetSolutioInfoResponse)_infraService.Get(new GetSolutioInfoRequest { IsolutionId = req.SolnId });
                 EbSolutionsWrapper wrap_sol = res.Data;
                 LocationInfoTenantResponse Loc = this.Get(new LocationInfoTenantRequest { SolnId = req.SolnId, UserId = req.UserId });
+                EbSolutionUsers users = GetUserCount();
                 Eb_Solution sol_Obj = new Eb_Solution
                 {
                     SolutionID = req.SolnId,
                     DateCreated = wrap_sol.DateCreated.ToString(),
                     Description = wrap_sol.Description.ToString(),
                     Locations = Loc.Locations,
-                    NumberOfUsers = GetUserCount(),
+                    NumberOfUsers = users.UserCount,
                     SolutionName = wrap_sol.SolutionName.ToString(),
                     LocationConfig = Loc.Config,
-                    PricingTier = wrap_sol.PricingTier
+                    PricingTier = wrap_sol.PricingTier,
+                    Users = users.UserList
                 };
 
                 this.Redis.Set<Eb_Solution>(String.Format("solution_{0}", req.SolnId), sol_Obj);
@@ -171,15 +173,32 @@ namespace ExpressBase.ServiceStack.Services
             return new UpdateSolutionResponse { };
         }
 
-        public int GetUserCount()
+        public EbSolutionUsers GetUserCount()
         {
             // statusid 0 - active users, 1- suspended users
-            string sql = @"SELECT COUNT(*) FROM eb_users WHERE statusid = 0 OR statusid =1 AND eb_del ='F';";
-            EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(sql);
-            if (dt.Rows.Count > 0)
-                return Convert.ToInt32(dt.Rows[0][0]);
-            return 0;
+            string sql = @"SELECT COUNT(*) FROM eb_users WHERE statusid = 0 OR statusid =1 AND eb_del ='F';
+                        SELECT id, fullname from eb_users;";
+            EbDataSet dt = this.EbConnectionFactory.DataDB.DoQueries(sql);
+            EbSolutionUsers SolutionUsers = new EbSolutionUsers();
+            if (dt.Tables != null)
+            {
+                if (dt.Tables[0] != null && dt.Tables[0].Rows.Count > 0)
+                    SolutionUsers.UserCount = Convert.ToInt32(dt.Tables[0].Rows[0][0]);
+
+                if (dt.Tables[1] != null && dt.Tables[1].Rows.Count > 0)
+                {
+                    SolutionUsers.UserList = new Dictionary<int, string>();
+                    foreach (EbDataRow r in dt.Tables[1].Rows)
+                    {
+                        if (!SolutionUsers.UserList.ContainsKey((int)r[0]))
+                            SolutionUsers.UserList[(int)r[0]] = r[1].ToString();
+                    }
+                }
+            }
+
+            return SolutionUsers;
         }
+
         public LocationInfoTenantResponse Get(LocationInfoTenantRequest req)
         {
             List<EbLocationCustomField> Conf = new List<EbLocationCustomField>();
@@ -805,5 +824,11 @@ namespace ExpressBase.ServiceStack.Services
         //         }
         //         return resp;
         //     }
+    }
+    public class EbSolutionUsers
+    {
+        public int UserCount { get; set; }
+
+        public Dictionary<int, string> UserList { get; set; }
     }
 }

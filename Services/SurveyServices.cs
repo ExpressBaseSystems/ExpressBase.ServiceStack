@@ -118,7 +118,7 @@ namespace ExpressBase.ServiceStack.Services
                     int count = c_count++;
                     if (EbConnectionFactory.DataDB.Vendor == DatabaseVendors.MYSQL)
                     {
-                        s.Append("SELECT last_insert_id(),:choice" + count + ",:score" + count + ")");
+                        s.Append("(last_insert_id(),:choice" + count + ",:score" + count + ")");
                     }
                     else
                     {

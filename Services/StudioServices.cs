@@ -260,7 +260,7 @@ namespace ExpressBase.ServiceStack
         {
             EbDataSet dt;
             EbDataTable tbl;
-            string query = EbConnectionFactory.ObjectsDB.Eb_ALLOBJNVER;
+            string query = EbConnectionFactory.ObjectsDB.EB_ALLOBJNVER;
 
             DbParameter[] parameters = { EbConnectionFactory.ObjectsDB.GetNewParameter("ids", EbDbTypes.String, request.ObjectIds) };
             dt = EbConnectionFactory.ObjectsDB.DoQueries(query, parameters);
