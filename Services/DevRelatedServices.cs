@@ -27,7 +27,7 @@ namespace ExpressBase.ServiceStack
                 string sql = "";
                 if (request.Id > 0)
                 {
-                        sql = "SELECT id, applicationname, description, application_type, app_icon, app_settings FROM eb_applications WHERE id = :id AND eb_del = 'F'";
+                    sql = "SELECT id, applicationname, description, application_type, app_icon, app_settings FROM eb_applications WHERE id = :id AND eb_del = 'F'";
                 }
                 else
                 {
@@ -204,107 +204,50 @@ namespace ExpressBase.ServiceStack
 
         public CreateApplicationResponse Post(CreateApplicationRequest request)
         {
-            string DbName = request.Sid;
-            CreateApplicationResponse resp;
+            CreateApplicationResponse resp = new CreateApplicationResponse();
             UniqueApplicationNameCheckResponse uniq_appnameresp;
-            do
+            List<DbParameter> parameters = new List<DbParameter>();
+            EbDataTable dt;
+            if(request.AppId <= 0)
             {
-                uniq_appnameresp = Get(new UniqueApplicationNameCheckRequest { AppName = request.AppName });
-                if (!uniq_appnameresp.IsUnique)
-                    request.AppName = request.AppName + "(1)";
-            }
-            while (!uniq_appnameresp.IsUnique);
-
-            using (var con = this.EbConnectionFactory.ObjectsDB.GetNewConnection(DbName.ToLower()))
-            {
-                con.Open();
-                if (!string.IsNullOrEmpty(request.AppName))
+                int c = 0;
+                do
                 {
-                    DbCommand cmd = EbConnectionFactory.ObjectsDB.GetNewCommand(con, EbConnectionFactory.ObjectsDB.EB_CREATEAPPLICATION);
-                    cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("applicationname", EbDbTypes.String, request.AppName));
-                    cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("apptype", EbDbTypes.Int32, request.AppType));
-                    cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("description", EbDbTypes.String, request.Description));
-                    cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("appicon", EbDbTypes.String, request.AppIcon));
-                    var res = cmd.ExecuteScalar();
-                    resp = new CreateApplicationResponse() { id = Convert.ToInt32(res) };
+                    c++;
+                    uniq_appnameresp = Get(new UniqueApplicationNameCheckRequest { AppName = request.AppName });
+                    if (!uniq_appnameresp.IsUnique)
+                        request.AppName = request.AppName + "(" + c + ")";
                 }
-                else
-                    resp = new CreateApplicationResponse() { id = 0 };
+                while (!uniq_appnameresp.IsUnique);
             }
-            return resp;
-        }
-
-        public CreateApplicationResponse Post(CreateApplicationDevRequest request)
-        {
-            //CreateApplicationResponse resp;
-            //try
-            //{
-
-            //    List<DbParameter> parameters = new List<DbParameter>();
-            //    string sql;
-            //    if (this.EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.ORACLE)
-            //    {
-            //        sql = "INSERT INTO eb_applications (applicationname,application_type, description,app_icon) VALUES (:applicationname,:apptype, :description,:appicon) returning id into :cur_id; ";
-            //        parameters.Add(this.EbConnectionFactory.DataDB.GetNewOutParameter("cur_id", EbDbTypes.Int32));
-            //    }
-            //    else
-            //    {
-            //        sql = "INSERT INTO eb_applications (applicationname,application_type, description,app_icon) VALUES (:applicationname,:apptype, :description,:appicon) returning id; ";
-
-            //    }
-            //    //string sql = "INSERT INTO eb_applications (applicationname,application_type, description,app_icon) VALUES (:applicationname,:apptype, :description,:appicon) RETURNING id;";
-            //    parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("applicationname", EbDbTypes.String, request.AppName));
-            //    parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("apptype", EbDbTypes.Int32, request.AppType));
-            //    parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("description", EbDbTypes.String, request.Description));
-            //    parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("appicon", EbDbTypes.String, request.AppIcon));
-
-            //    //var dt = this.EbConnectionFactory.DataDB.DoReturnId(sql, parameters.ToArray());
-
-            //    //var dt = this.EbConnectionFactory.DataDB.DoQuery(sql, parameters.ToArray());
-
-            //    var dt = this.EbConnectionFactory.DataDB.ex(sql, parameters.ToArray());
-
-            //    // resp = new CreateApplicationResponse() { id = Convert.ToInt32(dt.Rows[0][0]) };
-            //    resp = new CreateApplicationResponse() { id = dt };
-
-            //}
-            //catch (Exception e)
-            //{
-            //    Console.WriteLine("exception:" + e.Message);
-            //    resp = new CreateApplicationResponse() { id = 0 };
-            //}
-
-            //return resp;
-            CreateApplicationResponse resp;
-            UniqueApplicationNameCheckResponse uniq_appnameresp;
-
-            do
-            {
-                uniq_appnameresp = Get(new UniqueApplicationNameCheckRequest { AppName = request.AppName });
-                if (!uniq_appnameresp.IsUnique)
-                    request.AppName = request.AppName + "(1)";
-            }
-            while (!uniq_appnameresp.IsUnique);
 
             try
             {
-                DbParameter[] parameters = {
-                    this.EbConnectionFactory.ObjectsDB.GetNewParameter("applicationname", EbDbTypes.String, request.AppName),
-                    this.EbConnectionFactory.ObjectsDB.GetNewParameter("apptype", EbDbTypes.Int32, request.AppType),
-                    this.EbConnectionFactory.ObjectsDB.GetNewParameter("description", EbDbTypes.String, request.Description),
-                    this.EbConnectionFactory.ObjectsDB.GetNewParameter("appicon", EbDbTypes.String, request.AppIcon)
-                };
-                var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(EbConnectionFactory.ObjectsDB.EB_CREATEAPPLICATION_DEV, parameters);
+                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("applicationname", EbDbTypes.String, request.AppName));
+                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("apptype", EbDbTypes.Int32, request.AppType));
+                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("description", EbDbTypes.String, request.Description));
+                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("appicon", EbDbTypes.String, request.AppIcon));
 
-                resp = new CreateApplicationResponse() { id = Convert.ToInt32(dt.Rows[0][0]) };
-
+                if (request.AppId <= 0)//new mode
+                {
+                    dt = this.EbConnectionFactory.ObjectsDB.DoQuery(EbConnectionFactory.ObjectsDB.EB_CREATEAPPLICATION_DEV, parameters.ToArray());
+                    resp.Id = Convert.ToInt32(dt.Rows[0][0]);
+                }
+                else//edit mode
+                {
+                    parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("appid", EbDbTypes.Int32, request.AppId));
+                    int st = this.EbConnectionFactory.ObjectsDB.DoNonQuery(EbConnectionFactory.ObjectsDB.EB_EDITAPPLICATION_DEV, parameters.ToArray());
+                    if (st > 0)
+                    {
+                        resp.Id = request.AppId;
+                    }
+                }
             }
             catch (Exception e)
             {
                 Console.WriteLine("exception:" + e.Message);
-                resp = new CreateApplicationResponse() { id = 0 };
+                resp.Id = 0;
             }
-
             return resp;
         }
 
@@ -356,7 +299,7 @@ namespace ExpressBase.ServiceStack
             return new UniqueApplicationNameCheckResponse { IsUnique = _isunique };
         }
 
-     
-	}
+
+    }
 }
 
