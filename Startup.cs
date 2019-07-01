@@ -253,7 +253,7 @@ namespace ExpressBase.ServiceStack
                 }
                 try
                 {
-                    if (requestDto != null && requestDto.GetType() != typeof(Authenticate) && requestDto.GetType() != typeof(GetAccessToken) && requestDto.GetType() != typeof(UniqueRequest) && requestDto.GetType() != typeof(CreateAccountRequest) /*&& requestDto.GetType() != typeof(EmailServicesMqRequest) */&& requestDto.GetType() != typeof(RegisterRequest) && requestDto.GetType() != typeof(AutoGenSidRequest) && requestDto.GetType() != typeof(JoinbetaReq) && requestDto.GetType() != typeof(GetBotsRequest)
+                    if (requestDto != null && requestDto.GetType() != typeof(Authenticate) && requestDto.GetType() != typeof(GetAccessToken) && requestDto.GetType() != typeof(UniqueRequest) && requestDto.GetType() != typeof(CreateAccountRequest) /*&& requestDto.GetType() != typeof(EmailServicesMqRequest) */&& requestDto.GetType() != typeof(RegisterRequest) && requestDto.GetType() != typeof(JoinbetaReq) && requestDto.GetType() != typeof(GetBotsRequest)
                     && requestDto.GetType() != typeof(GetEventSubscribers) && requestDto.GetType() != typeof(GetAllFromAppStoreExternalRequest) && requestDto.GetType() != typeof(GetOneFromAppStoreRequest) && !(requestDto is EbServiceStackNoAuthRequest)/* && !(requestDto is IEbTenentRequest)*/)
                     {
                         var auth = req.Headers[HttpHeaders.Authorization];
