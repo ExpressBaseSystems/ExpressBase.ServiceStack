@@ -147,7 +147,7 @@ namespace ExpressBase.ServiceStack.Services
 
                     });
                     string quer = string.Format("UPDATE eb_tenants SET is_email_sent = 'true'  WHERE id = '{0}'", resp.id);
-                    EbDataTable dtb = this.EbConnectionFactory.DataDB.DoQuery(quer);
+                    EbDataTable dtb = this.InfraConnectionFactory.DataDB.DoQuery(quer);
 
                 }
             }
@@ -175,7 +175,7 @@ namespace ExpressBase.ServiceStack.Services
 
 
             string sid = "SELECT * from eb_sid_gen();";
-            EbDataTable dt1 = this.EbConnectionFactory.DataDB.DoQuery(sid);
+            EbDataTable dt1 = this.InfraConnectionFactory.DataDB.DoQuery(sid);
             string Sol_id_autogen = Convert.ToString(dt1.Rows[0][0]);
 
             string DbName = Sol_id_autogen;
@@ -290,10 +290,10 @@ namespace ExpressBase.ServiceStack.Services
 											activation_code= :codes");
 
                 DbParameter[] parameters = {
-                    EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, request.Id),
-                    EbConnectionFactory.ObjectsDB.GetNewParameter("codes", EbDbTypes.String, request.ActvCode)
+                    InfraConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, request.Id),
+                    InfraConnectionFactory.ObjectsDB.GetNewParameter("codes", EbDbTypes.String, request.ActvCode)
             };
-                int dt = this.EbConnectionFactory.DataDB.DoNonQuery(qur, parameters);
+                int dt = this.InfraConnectionFactory.DataDB.DoNonQuery(qur, parameters);
 
                 if (dt == 1)
                 {
@@ -326,10 +326,10 @@ namespace ExpressBase.ServiceStack.Services
 										WHERE 
 											email=:mail");
                 DbParameter[] parameters = {
-                    this.EbConnectionFactory.DataDB.GetNewParameter("code", EbDbTypes.String, reques.Resetcode),
-                    this.EbConnectionFactory.DataDB.GetNewParameter("mail", EbDbTypes.String, reques.Email)
+                    this.InfraConnectionFactory.DataDB.GetNewParameter("code", EbDbTypes.String, reques.Resetcode),
+                    this.InfraConnectionFactory.DataDB.GetNewParameter("mail", EbDbTypes.String, reques.Email)
                     };
-                int dt = this.EbConnectionFactory.DataDB.DoNonQuery(k, parameters);
+                int dt = this.InfraConnectionFactory.DataDB.DoNonQuery(k, parameters);
 
                 if (dt == 1)
                 {
@@ -419,11 +419,11 @@ namespace ExpressBase.ServiceStack.Services
 											resetpsw_code= :codes");
 
                 DbParameter[] parameters = {
-                EbConnectionFactory.ObjectsDB.GetNewParameter("pswrd",EbDbTypes.String,hshpassword),
-                    EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.String, reqst.Email),
-                    EbConnectionFactory.ObjectsDB.GetNewParameter("codes", EbDbTypes.String, reqst.Resetcode)
+                InfraConnectionFactory.ObjectsDB.GetNewParameter("pswrd",EbDbTypes.String,hshpassword),
+                    InfraConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.String, reqst.Email),
+                    InfraConnectionFactory.ObjectsDB.GetNewParameter("codes", EbDbTypes.String, reqst.Resetcode)
             };
-                int dt = this.EbConnectionFactory.DataDB.DoNonQuery(qur, parameters);
+                int dt = this.InfraConnectionFactory.DataDB.DoNonQuery(qur, parameters);
                 if (dt == 1)
                 {
 
@@ -1418,8 +1418,8 @@ namespace ExpressBase.ServiceStack.Services
             UniqueRequestResponse res = new UniqueRequestResponse();
             ILog log = LogManager.GetLogger(GetType());
             string sql = "SELECT id, pwd FROM eb_tenants WHERE email ~* @email";
-            DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("email", EbDbTypes.String, request.email) };
-            var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(sql, parameters);
+            DbParameter[] parameters = { this.InfraConnectionFactory.ObjectsDB.GetNewParameter("email", EbDbTypes.String, request.email) };
+            var dt = this.InfraConnectionFactory.ObjectsDB.DoQuery(sql, parameters);
             if (dt.Rows.Count > 0)
             {
                 res.Unique = false;
@@ -1435,7 +1435,7 @@ namespace ExpressBase.ServiceStack.Services
         public GetAccountResponse Any(GetAccountRequest request)
         {
             string sql = string.Format("SELECT id,solutionname,profilelogo,solutionid,createdat FROM eb_solutions WHERE tenantid={0}", request.UserId);
-            var dt = this.EbConnectionFactory.DataDB.DoQuery(sql);
+            var dt = this.InfraConnectionFactory.DataDB.DoQuery(sql);
             List<List<object>> list = new List<List<object>>();
             foreach (EbDataRow dr in dt.Rows)
             {

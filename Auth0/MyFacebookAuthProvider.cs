@@ -13,66 +13,115 @@ using ExpressBase.Common;
 using ExpressBase.Common.Data;
 using ExpressBase.Common.Structures;
 using System.Data.Common;
+using ExpressBase.Common.Extensions;
+using Newtonsoft.Json;
+using ExpressBase.ServiceStack.Services;
 
 namespace ExpressBase.ServiceStack.Auth0
 {
     public class MyFacebookAuthProvider : FacebookAuthProvider
     {
+
         public MyFacebookAuthProvider(IAppSettings settings) : base(settings) { }
 
         public override object Authenticate(IServiceBase authService, IAuthSession session, Authenticate request)
 
         {
-            var objret = base.Authenticate(authService, session, request);
+            EbConnectionFactory InfraConnectionFactory = authService.ResolveService<IEbConnectionFactory>() as EbConnectionFactory;
+
+            object objret = base.Authenticate(authService, session, request);
 
             if (!string.IsNullOrEmpty(session.FirstName))
             {
-
-                var _InfraDb = authService.ResolveService<IEbConnectionFactory>() as EbConnectionFactory;
-                using (var con = _InfraDb.DataDB.GetNewConnection())
+                 
+            
+             //   using (var con = InfraConnectionFactory.DataDB.GetNewConnection())
                 {
 
-            //        if ((session.ProviderOAuthAccess[0].Email) != null)
-            //        {
-            //            try
-            //            {
-            //                DbParameter[] parameter1 = {
-            //                this.InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String,  session.ProviderOAuthAccess[0].Email),
-            //                this.InfraConnectionFactory.DataDB.GetNewParameter("name", EbDbTypes.String,  session.ProviderOAuthAccess[0].),
-            //                this.InfraConnectionFactory.DataDB.GetNewParameter("fbid", EbDbTypes.String,  session.ProviderOAuthAccess[0].UserId)
-            //};
+                    if ((session.ProviderOAuthAccess[0].Email) != null)
+                    {
+                     string b=string.Empty;
+                        try
+                       {
+                            bool unique = false;
+                            string sql1 = "SELECT id, pwd FROM eb_tenants WHERE email ~* @email";
+                            DbParameter[] parameters2 = { InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, session.ProviderOAuthAccess[0].Email) };
+                            EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(sql1, parameters2);
+                            if (dt.Rows.Count > 0)
+                            {
+                                unique = false;
+                            }
+                            else
+                                unique = true;
+                            //string sql11 = "SELECT id, pwd FROM eb_tenants WHERE email ~* @email";
+                            //DbParameter[] parameters22 = { InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, session.ProviderOAuthAccess[0].Email) };
+                            //int dtq = InfraConnectionFactory.DataDB.DoNonQuery(sql11, parameters22);
+                            if (unique == true)
+                            {
+                                // DbParameter[] parameter1 = {
+                                //InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String,  session.ProviderOAuthAccess[0].Email),
+                                //InfraConnectionFactory.DataDB.GetNewParameter("name", EbDbTypes.String,  session.ProviderOAuthAccess[0].DisplayName),
+                                // InfraConnectionFactory.DataDB.GetNewParameter("fbid", EbDbTypes.String,  (session.ProviderOAuthAccess[0].UserId).ToString()),
+                                // InfraConnectionFactory.DataDB.GetNewParameter("password", EbDbTypes.String,  (session.ProviderOAuthAccess[0].UserId.ToString()+session.ProviderOAuthAccess[0].Email.ToString()).ToMD5Hash()),
 
-            //                EbDataTable dtbl = this.InfraConnectionFactory.DataDB.DoQuery(@"INSERT INTO eb_tenants 
-            //                               (email,name,fbid,) 
-            //                VALUES 
-            //                ( :email,:name,:fbid) RETURNING id;", parameter1);
-            //            }
-            //            catch (Exception e)
-            //            {
-            //                Console.WriteLine("Exception: " + e.Message + e.StackTrace);
-            //            }
-            //        }
+                                // };
+
+                                // EbDataTable dtbl = InfraConnectionFactory.DataDB.DoQuery(@"INSERT INTO eb_tenants (email,fullname,fb_id,pwd) 
+                                // VALUES 
+                                // (:email,:name,:fbid,:password) RETURNING id;", parameter1);
 
 
+                            }
+                            SocialSignup sco_signup = new SocialSignup
+                            {
+                                AuthProvider = session.ProviderOAuthAccess[0].Provider,
+                                Country = session.ProviderOAuthAccess[0].Country,
+                                Email = session.ProviderOAuthAccess[0].Email,
+                                Fbid = (session.ProviderOAuthAccess[0].UserId).ToString(),
+                                Fullname = session.ProviderOAuthAccess[0].DisplayName,
+                                //IsVerified = session.IsAuthenticated,
+                                Pauto = (session.ProviderOAuthAccess[0].UserId.ToString() + session.ProviderOAuthAccess[0].Email.ToString()).ToMD5Hash(),
+                                UniqueEmail = unique,
+                            };
+                           b = JsonConvert.SerializeObject(sco_signup);
+                            return authService.Redirect(SuccessRedirectUrlFilter(this, string.Format("http://localhost:41500/social_oauth?scosignup={0}", b)));
 
-                    con.Open();
-                    var cmd = _InfraDb.DataDB.GetNewCommand(con, "INSERT INTO eb_users (email,firstname,socialid,profileimg) VALUES(@email, @firstname,@socialid,@profileimg) ON CONFLICT(socialid) DO UPDATE SET loginattempts = eb_users.loginattempts + EXCLUDED.loginattempts RETURNING eb_users.loginattempts");
-                    cmd.Parameters.Add(_InfraDb.DataDB.GetNewParameter("email", EbDbTypes.String, session.ProviderOAuthAccess[0].Email));
-                    cmd.Parameters.Add(_InfraDb.DataDB.GetNewParameter("firstname", EbDbTypes.String, session.ProviderOAuthAccess[0].DisplayName));
-                    cmd.Parameters.Add(_InfraDb.DataDB.GetNewParameter("socialid", EbDbTypes.String, session.ProviderOAuthAccess[0].UserName));
-                    cmd.Parameters.Add(_InfraDb.DataDB.GetNewParameter("profileimg", EbDbTypes.String, session.ProviderOAuthAccess[0].Items["profileUrl"]));
-                    int logatmp = Convert.ToInt32(cmd.ExecuteScalar());
+                        }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine("Exception: " + e.Message + e.StackTrace);
+                        }
+                       
+        
+                        //try
+                        //{
 
-                    //(session as CustomUserSession).Company = CoreConstants.EXPRESSBASE;
-                    //(session as CustomUserSession).WhichConsole = "tc";
-                    //return authService.Redirect(SuccessRedirectUrlFilter(this, "http://expressbase.com/Ext/AfterSignInSocial?email=" + session.ProviderOAuthAccess[0].Email + "&socialId=" + session.ProviderOAuthAccess[0].UserName + "&provider=" + session.AuthProvider + "&providerToken=" + session.ProviderOAuthAccess[0].AccessTokenSecret + "&lg=" + logatmp));
-                    return authService.Redirect(SuccessRedirectUrlFilter(this, "http://myaccount.localhost:41500/MySolutions" + session.ProviderOAuthAccess[0].Email + "&socialId=" + session.ProviderOAuthAccess[0].UserName + "&provider=" + session.AuthProvider + "&providerToken=" + session.ProviderOAuthAccess[0].AccessTokenSecret + "&lg=" + logatmp));
+                        //    con.Open();
+                        //    var cmd = InfraConnectionFactory.DataDB.GetNewCommand(con, "INSERT INTO eb_users (email,firstname,socialid,profileimg) VALUES(@email, @firstname,@socialid,@profileimg) ON CONFLICT(socialid) DO UPDATE SET loginattempts = eb_users.loginattempts + EXCLUDED.loginattempts RETURNING eb_users.loginattempts");
+                        //    cmd.Parameters.Add(InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, session.ProviderOAuthAccess[0].Email));
+                        //    cmd.Parameters.Add(InfraConnectionFactory.DataDB.GetNewParameter("firstname", EbDbTypes.String, session.ProviderOAuthAccess[0].DisplayName));
+                        //    cmd.Parameters.Add(InfraConnectionFactory.DataDB.GetNewParameter("socialid", EbDbTypes.String, session.ProviderOAuthAccess[0].UserName));
+                        //    cmd.Parameters.Add(InfraConnectionFactory.DataDB.GetNewParameter("profileimg", EbDbTypes.String, session.ProviderOAuthAccess[0].Items["profileUrl"]));
+                        //    int logatmp = Convert.ToInt32(cmd.ExecuteScalar());
 
+                        //    //(session as CustomUserSession).Company = CoreConstants.EXPRESSBASE;
+                        //    //(session as CustomUserSession).WhichConsole = "tc";
+                        //    //return authService.Redirect(SuccessRedirectUrlFilter(this, "http://expressbase.com/Ext/AfterSignInSocial?email=" + session.ProviderOAuthAccess[0].Email + "&socialId=" + session.ProviderOAuthAccess[0].UserName + "&provider=" + session.AuthProvider + "&providerToken=" + session.ProviderOAuthAccess[0].AccessTokenSecret + "&lg=" + logatmp));
+                        //    //return authService.Redirect(SuccessRedirectUrlFilter(this, "http://myaccount.localhost:41500/MySolutions" + session.ProviderOAuthAccess[0].Email + "&socialId=" + session.ProviderOAuthAccess[0].UserName + "&provider=" + session.AuthProvider + "&providerToken=" + session.ProviderOAuthAccess[0].AccessTokenSecret + "&lg=" + logatmp));
+                        //    return authService.Redirect(SuccessRedirectUrlFilter(this, "http://localhost:41500/Ext/FbLogin"));
+                        //}
+                        //catch(Exception e)
+                        //{
+                        //    Console.WriteLine("Exception: " + e.Message + e.StackTrace);
+                        //}
+                    }
 
                 }
             }
 
             return objret;
+
+            
         }
 
         public override string CreateOrMergeAuthSession(IAuthSession session, IAuthTokens tokens)
@@ -156,6 +205,9 @@ namespace ExpressBase.ServiceStack.Auth0
         }
 
         protected override string GetReferrerUrl(IServiceBase authService, IAuthSession session, Authenticate request = null)
+
+
+
         {
             return base.GetReferrerUrl(authService, session, request);
         }
@@ -171,9 +223,173 @@ namespace ExpressBase.ServiceStack.Auth0
         }
 
         protected override IHttpResult ValidateAccount(IServiceBase authService, IAuthRepository authRepo, IAuthSession session, IAuthTokens tokens)
+       .
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
         {
             return base.ValidateAccount(authService, authRepo, session, tokens);
         }
+
+
+
+       
+
     }
 
     //public class MyJwtAuthProvider : JwtAuthProvider
@@ -225,4 +441,8 @@ namespace ExpressBase.ServiceStack.Auth0
     //    //}
 
     //}
+
+  
+
+
 }
