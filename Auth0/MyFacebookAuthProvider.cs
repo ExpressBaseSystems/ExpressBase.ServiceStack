@@ -33,16 +33,16 @@ namespace ExpressBase.ServiceStack.Auth0
 
             if (!string.IsNullOrEmpty(session.FirstName))
             {
-                 
-            
-             //   using (var con = InfraConnectionFactory.DataDB.GetNewConnection())
+
+
+                //   using (var con = InfraConnectionFactory.DataDB.GetNewConnection())
                 {
 
                     if ((session.ProviderOAuthAccess[0].Email) != null)
                     {
-                     string b=string.Empty;
+                        string b = string.Empty;
                         try
-                       {
+                        {
                             bool unique = false;
                             string sql1 = "SELECT id, pwd FROM eb_tenants WHERE email ~* @email";
                             DbParameter[] parameters2 = { InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, session.ProviderOAuthAccess[0].Email) };
@@ -83,7 +83,7 @@ namespace ExpressBase.ServiceStack.Auth0
                                 Pauto = (session.ProviderOAuthAccess[0].UserId.ToString() + session.ProviderOAuthAccess[0].Email.ToString()).ToMD5Hash(),
                                 UniqueEmail = unique,
                             };
-                           b = JsonConvert.SerializeObject(sco_signup);
+                            b = JsonConvert.SerializeObject(sco_signup);
                             return authService.Redirect(SuccessRedirectUrlFilter(this, string.Format("http://localhost:41500/social_oauth?scosignup={0}", b)));
 
                         }
@@ -91,8 +91,8 @@ namespace ExpressBase.ServiceStack.Auth0
                         {
                             Console.WriteLine("Exception: " + e.Message + e.StackTrace);
                         }
-                       
-        
+
+
                         //try
                         //{
 
@@ -121,7 +121,7 @@ namespace ExpressBase.ServiceStack.Auth0
 
             return objret;
 
-            
+
         }
 
         public override string CreateOrMergeAuthSession(IAuthSession session, IAuthTokens tokens)
@@ -223,226 +223,8 @@ namespace ExpressBase.ServiceStack.Auth0
         }
 
         protected override IHttpResult ValidateAccount(IServiceBase authService, IAuthRepository authRepo, IAuthSession session, IAuthTokens tokens)
-       .
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
         {
             return base.ValidateAccount(authService, authRepo, session, tokens);
         }
-
-
-
-       
-
     }
-
-    //public class MyJwtAuthProvider : JwtAuthProvider
-    //{
-    //    public MyJwtAuthProvider(IAppSettings settings) : base(settings) { }
-
-    //    public override object Authenticate(IServiceBase authService, IAuthSession session, Authenticate request)
-    //    {
-    //        return base.Authenticate(authService, session, request);
-    //    }
-
-    //    public override string CreateOrMergeAuthSession(IAuthSession session, IAuthTokens tokens)
-    //    {
-    //        return base.CreateOrMergeAuthSession(session, tokens);
-    //    }
-
-    //    public override IHttpResult OnAuthenticated(IServiceBase authService, IAuthSession session, IAuthTokens tokens, Dictionary<string, string> authInfo)
-    //    {
-    //        return base.OnAuthenticated(authService, session, tokens, authInfo);
-    //    }
-
-    //    //public override void OnSaveUserAuth(IServiceBase authService, IAuthSession session)
-    //    //{
-    //    //    base.OnSaveUserAuth(authService, session);
-    //    //}
-
-    //    public override void Init(IAppSettings appSettings = null)
-    //    {
-    //        base.Init(appSettings);
-    //    }
-
-    //    public override bool IsAuthorized(IAuthSession session, IAuthTokens tokens, Authenticate request = null)
-    //    {
-    //        return base.IsAuthorized(session, tokens, request);
-    //    }
-
-    //    //public override void OnSaveUserAuth(IServiceBase authService, IAuthSession session)
-    //    //{
-    //    //    base.OnSaveUserAuth(authService, session);
-    //    //}
-    //    //public override string GetKeyId()
-    //    //{
-    //    //    var x = base.GetKeyId();
-    //    //    return x;
-    //    //}
-    //    //public override string GetKeyId()
-    //    //{
-    //    //    return base.GetKeyId();
-    //    //}
-
-    //}
-
-  
-
-
 }
