@@ -51,104 +51,57 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
+
+
         public CreateAccountResponse Post(CreateAccountRequest request)
         {
             CreateAccountResponse resp = new CreateAccountResponse();
-
-            //****FOR INSERTING EMAIL OF TENANT ?USER INTO DATABAE
-            try
-            {
-                Console.WriteLine("Reached...  INSERTING EMAIL OF TENANT  ");
-                DbParameter[] parameter1 = {
-                this.InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, request.Email)
-            };
-
-                EbDataTable dtbl = this.InfraConnectionFactory.DataDB.DoQuery("INSERT INTO eb_tenants (email) VALUES ( :email) RETURNING id;", parameter1);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("Exception: " + e.Message + e.StackTrace);
-            }
-
-
-            //   ******FOR CREATING TENENT ACCCOUNT OR PROFILE
-
-
             try
             {
                 Console.WriteLine("Reached...  Updating tenant table with name ,activationcode,type etc  ");
-                if (request.Op == "updatetenant")
-                {
-                    string sql = "SELECT * FROM eb_tenantprofile_setup(:fullname, :country, :pwd, :email,:activationcode,:accounttype);";
-                    DbParameter[] parameters = {
+                string sql = @"INSERT INTO eb_tenants(
+                                                    emal,
+                                                    fullname,
+                                                    country,
+                                                    pwd,
+                                                    activation_code,
+                                                    account_type
+                                                )VALUES(
+                                                    :email,
+                                                    :fullname,
+                                                    :country,
+                                                    :pwd,
+                                                    :activationcode,
+                                                    :accounttype
+                                                )RETURNING id";
+
+                //string sql = "SELECT * FROM eb_tenantprofile_setup(:fullname, :country, :pwd, :email,:activationcode,:accounttype);";
+
+                DbParameter[] parameters = {
                     this.InfraConnectionFactory.DataDB.GetNewParameter("fullname", EbDbTypes.String, request.Name),
                     this.InfraConnectionFactory.DataDB.GetNewParameter("country", EbDbTypes.String, request.Country),
                     this.InfraConnectionFactory.DataDB.GetNewParameter("pwd", EbDbTypes.String, (request.Password.ToString() + request.Email.ToString()).ToMD5Hash()),
                     this.InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, request.Email),
                     this.InfraConnectionFactory.DataDB.GetNewParameter("activationcode", EbDbTypes.String, request.ActivationCode),
                     this.InfraConnectionFactory.DataDB.GetNewParameter("accounttype", EbDbTypes.String, request.Account_type)
-                };
-                    EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(sql, parameters);
-                    resp.id = Convert.ToInt32(dt.Rows[0][0]);
-                }
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("Exception: " + e.Message + e.StackTrace);
-            }
-            try
-            {
-                Console.WriteLine("Reached...  sending verifing email to tenant");
-                if (resp.id >= 0)
+                    };
+
+                EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(sql, parameters);
+                resp.Id = Convert.ToInt32(dt.Rows[0][0]);
+                if (resp.Id > 0)
                 {
-                    //uin=unique identification number
-                    //uic=unique identification code
-                    string aq = "$" + resp.id + "$" + request.ActivationCode + "$";
-                    byte[] plaintxt = System.Text.Encoding.UTF8.GetBytes(aq);
-                    string ai = System.Convert.ToBase64String(plaintxt);
-                    string elinks2 = string.Format("https://{0}/em?emv={1}", request.PageUrl, ai);
-                    string body = @"<html>
-												<head>
-													<title></title>
-												</head>
-												<body>
-													<div style='border: 3px solid #22BCE5'>
-														<figure style='text-align: center;'>
-															<img src='https://expressbase.com/images/logos/EB_Logo.png' /><br />
-														</figure>
-														<br />
-														Hello <b>{UserName}</b>,<br />
-														<br />
-														Thanks for registering with EXPRESSbase Systems Private Limited.<br />
-															<br />
-															Please verify your email address to confirm your account registration by clicking bleow<br />
- 
-														<br />
-														<a style='color: #22BCE5' href='{Url}'>Verify Account</a><br />
-														<br />
-														<br />
-														Thanks<br />
-														EXPRESSbase Systems Private Limited.
-      
-													</div>
-												</body>
-												</html>";
+                    resp.Notified = this.SendTenantMail(resp.Id, request.ActivationCode, request.PageUrl, request.Name, request.Email);
 
-                    body = body.Replace("{UserName}", request.Name);
-                    body = body.Replace("{Url}", elinks2);
-
-
-                    MessageProducer3.Publish(new EmailServicesRequest
+                    CreateSolutionResponse response = this.Post(new CreateSolutionRequest
                     {
-                        To = request.Email,
-                        Subject = "testing email",
-                        Message = body,
-                        SolnId = CoreConstants.EXPRESSBASE,
-
+                        SolutionName = "My First solution",
+                        Description = "my first solutiopn",
+                        DeployDB = true,
+                        UserId = resp.Id
                     });
-                    string quer = string.Format("UPDATE eb_tenants SET is_email_sent = 'true'  WHERE id = '{0}'", resp.id);
-                    EbDataTable dtb = this.InfraConnectionFactory.DataDB.DoQuery(quer);
 
+                    if (response.Id > 0)
+                        resp.DbCreated = true;
                 }
             }
             catch (Exception e)
@@ -158,76 +111,164 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
+        private string MailHtml
+        {
+            get
+            {
+                return @"<html>
+							<head>
+								<title></title>
+							</head>
+							<body>
+								<div style='border: 3px solid #22BCE5'>
+									<figure style='text-align: center;'>
+										<img src='https://expressbase.com/images/logos/EB_Logo.png' /><br />
+									</figure>
+									<br />
+									Hello <b>{UserName}</b>,<br />
+									<br />
+									Thanks for registering with EXPRESSbase Systems Private Limited.<br />
+										<br />
+										Please verify your email address to confirm your account registration by clicking bleow<br />
+ 
+									<br />
+									<a style='color: #22BCE5' href='{Url}'>Verify Account</a><br />
+									<br />
+									<br />
+									Thanks<br />
+									EXPRESSbase Systems Private Limited.
+      
+								</div>
+							</body>
+						</html>";
+            }
+            set { }
+        }
 
+        private bool SendTenantMail(int tid, string activationcode, string pageurl, string name, string email)
+        {
+            bool status = false;
+            string aq = "$" + tid + "$" + activationcode + "$";
+            byte[] plaintxt = System.Text.Encoding.UTF8.GetBytes(aq);
+            string ai = System.Convert.ToBase64String(plaintxt);
+            string elinks2 = string.Format("https://{0}/em?emv={1}", pageurl, ai);
+            this.MailHtml = this.MailHtml.Replace("{UserName}", name).Replace("{Url}", elinks2);
+            try
+            {
+                MessageProducer3.Publish(new EmailServicesRequest
+                {
+                    To = email,
+                    Subject = "testing email",
+                    Message = this.MailHtml,
+                    SolnId = CoreConstants.EXPRESSBASE,
+
+                });
+                string quer = string.Format("UPDATE eb_tenants SET is_email_sent = 'true'  WHERE id = '{0}'", tid);
+                int dtb = this.InfraConnectionFactory.DataDB.DoNonQuery(quer);
+                if (dtb > 0)
+                    status = true;
+            }
+            catch (Exception e)
+            {
+                status = true;
+                Console.WriteLine(e.Message);
+            }
+            return status;
+        }
 
         //******** CREATE DEFAULT SOLUTION AND DEPLOY DATABLE FOR THE USER
         public CreateSolutionResponse Post(CreateSolutionRequest request)
         {
-
-
             EbDbCreateServices _dbService = base.ResolveService<EbDbCreateServices>();
             ConnectionManager _conService = base.ResolveService<ConnectionManager>();
             TenantUserServices _tenantUserService = base.ResolveService<TenantUserServices>();
-            CreateSolutionResponse resp;
-
-
-            //    USE TRY CATCH 
-
-
-            string sid = "SELECT * from eb_sid_gen();";
-            EbDataTable dt1 = this.InfraConnectionFactory.DataDB.DoQuery(sid);
-            string Sol_id_autogen = Convert.ToString(dt1.Rows[0][0]);
-
-            string DbName = Sol_id_autogen;
-            string description = "";
+            CreateSolutionResponse resp = new CreateSolutionResponse();
             try
             {
-                Console.WriteLine("Reached.... Creating solution for TENANT  ");
+                string sid = "SELECT * from eb_sid_gen();";
+                EbDataTable dt1 = this.InfraConnectionFactory.DataDB.DoQuery(sid);
+                string Sol_id_autogen = Convert.ToString(dt1.Rows[0][0]);
 
-                string SolName = "My First Solution";
-                string sql = "select * from eb_create_solution_new(@sname,@tenant_id,@descript,@solnid);";
+                string sql = @"INSERT INTO eb_solutions
+                                            (
+                                                solution_name,
+                                                tenant_id,
+                                                date_created,
+                                                description,
+                                                solution_id,
+                                                esolution_id,
+                                                isolution_id,
+                                                pricing_tier
+                                            )
+                                            VALUES(
+                                                :sname,
+                                                :tenant_id,
+                                                now(),
+                                                :descript,
+                                                :solnid,
+                                                :solnid,
+                                                :solnid,
+                                                0
+                                            ) RETURNING id;	
+                                INSERT INTO eb_role2tenant
+                                            (
+                                                tenant_id,
+                                                solution_id,
+                                                sys_role_id,
+                                                eb_createdat,
+                                                eb_createdby
+                                            )
+                                            VALUES
+                                            (
+                                                :tenant_id,
+                                                :solnid,
+                                                0,
+                                                NOW(),
+                                                :tenant_id
+                                            )RETURNING id;";
 
                 DbParameter[] parameters = new DbParameter[]
                 {
-                    InfraConnectionFactory.DataDB.GetNewParameter("@sname", EbDbTypes.String, SolName),
-                    InfraConnectionFactory.DataDB.GetNewParameter("@tenant_id", EbDbTypes.Int32, request.UserId),
-                    InfraConnectionFactory.DataDB.GetNewParameter("@descript", EbDbTypes.String, description),
-                    InfraConnectionFactory.DataDB.GetNewParameter("@solnid", EbDbTypes.String,Sol_id_autogen)
-            };
-                EbDataTable res = this.InfraConnectionFactory.DataDB.DoQuery(sql, parameters);
-                resp = new CreateSolutionResponse
-                {
-                    Status = Convert.ToInt32(res.Rows[0][0])
+                    InfraConnectionFactory.DataDB.GetNewParameter("sname", EbDbTypes.String, request.SolutionName),
+                    InfraConnectionFactory.DataDB.GetNewParameter("tenant_id", EbDbTypes.Int32, request.UserId),
+                    InfraConnectionFactory.DataDB.GetNewParameter("descript", EbDbTypes.String, request.Description),
+                    InfraConnectionFactory.DataDB.GetNewParameter("solnid", EbDbTypes.String,Sol_id_autogen)
                 };
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("Exception: " + e.Message + e.StackTrace);
-                resp = new CreateSolutionResponse { ErrSolMessage = "Cannot create solution" };
-                return resp;
-            }
 
-            try
-            {
-                Console.WriteLine("Reached... Deploying DB for tenant  ");
-                if (resp.Status > 0)
+                EbDataSet res = this.InfraConnectionFactory.DataDB.DoQueries(sql, parameters);
+                resp.Id = Convert.ToInt32(res.Tables[0].Rows[0][0]);
+
+                if (resp.Id > 0)
                 {
                     if (request.DeployDB)
                     {
-                        EbDbCreateResponse response = (EbDbCreateResponse)_dbService.Post(new EbDbCreateRequest { DBName = DbName, SolnId = request.SolnId, UserId = request.UserId, IsChange = false });
+                        EbDbCreateResponse response = (EbDbCreateResponse)_dbService.Post(new EbDbCreateRequest {
+                            DBName = Sol_id_autogen,
+                            SolnId = request.SolnId,
+                            UserId = request.UserId,
+                            IsChange = false
+                        });
+
                         if (response.Resp)
                         {
-                            _conService.Post(new InitialSolutionConnectionsRequest { NewSolnId = DbName, SolnId = request.SolnId, UserId = request.UserId, DbUsers = response.DbUsers });
-                            _tenantUserService.Post(new UpdateSolutionRequest() { SolnId = DbName, UserId = request.UserId });
+                            _conService.Post(new InitialSolutionConnectionsRequest {
+                                NewSolnId = Sol_id_autogen,
+                                SolnId = request.SolnId,
+                                UserId = request.UserId,
+                                DbUsers = response.DbUsers
+                            });
+
+                            _tenantUserService.Post(new UpdateSolutionRequest {
+                                SolnId = Sol_id_autogen,
+                                UserId = request.UserId
+                            });
                         }
                     }
                 }
             }
-            catch (Exception e)
+            catch(Exception e)
             {
-                //resp = new CreateSolutionResponse { ErrDbMessage = e.Message };
-                resp = new CreateSolutionResponse { ErrDbMessage = "Cannot deploy DataBase" };
-                return resp;
+                Console.WriteLine("Exception: " + e.Message + e.StackTrace);
             }
             return resp;
         }
@@ -297,14 +338,12 @@ namespace ExpressBase.ServiceStack.Services
 
                 if (dt == 1)
                 {
-
                     re.VerifyStatus = true;
                 }
                 else
                 {
                     re.VerifyStatus = false;
                 }
-
             }
             catch (Exception e)
             {
