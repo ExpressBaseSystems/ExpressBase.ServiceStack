@@ -1,17 +1,20 @@
 ﻿using ExpressBase.Common;
 using ExpressBase.Common.Data;
+using ExpressBase.Common.Extensions;
 using ExpressBase.Common.Structures;
 using ExpressBase.Data;
 using ExpressBase.Objects.ServiceStack_Artifacts;
+using Newtonsoft.Json;
 using ServiceStack;
 using ServiceStack.Auth;
 using ServiceStack.Configuration;
 using ServiceStack.Web;
 using System;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Threading.Tasks;
 
-namespace ExpressBase.ServiceStack
+namespace ExpressBase.ServiceStack.Auth0
 {
     internal class MyGithubAuthProvider : GithubAuthProvider
     {
@@ -23,26 +26,85 @@ namespace ExpressBase.ServiceStack
 
             if (!string.IsNullOrEmpty(session.ProviderOAuthAccess[0].Email))
             {
-                var _InfraDb = authService.ResolveService<IEbConnectionFactory>() as EbConnectionFactory;
-                using (var con = _InfraDb.DataDB.GetNewConnection())
-                {
-                    con.Open();
-                    var cmd = _InfraDb.DataDB.GetNewCommand(con, "INSERT INTO eb_users (email,firstname,socialid,prolink) VALUES(@email, @firstname,@socialid,@prolink) ON CONFLICT(socialid) DO UPDATE SET loginattempts = eb_users.loginattempts + EXCLUDED.loginattempts RETURNING eb_users.loginattempts");
-                    cmd.Parameters.Add(_InfraDb.DataDB.GetNewParameter("email", EbDbTypes.String, session.ProviderOAuthAccess[0].Email));
-                    cmd.Parameters.Add(_InfraDb.DataDB.GetNewParameter("firstname", EbDbTypes.String, session.ProviderOAuthAccess[0].DisplayName));
-                    cmd.Parameters.Add(_InfraDb.DataDB.GetNewParameter("socialid", EbDbTypes.String, session.ProviderOAuthAccess[0].UserId));
-                    cmd.Parameters.Add(_InfraDb.DataDB.GetNewParameter("prolink", EbDbTypes.String, session.ProviderOAuthAccess[0].Items["profileUrl"]));
+                EbConnectionFactory InfraConnectionFactory = authService.ResolveService<IEbConnectionFactory>() as EbConnectionFactory;
 
-                    int logatmp = Convert.ToInt32(cmd.ExecuteScalar());
+                
+                    string b = string.Empty;
+                    try
+                    {
+                        bool unique = false;
+                        string sql1 = "SELECT id, pwd FROM eb_tenants WHERE email ~* @email";
+                        DbParameter[] parameters2 = { InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, session.ProviderOAuthAccess[0].Email) };
+                        EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(sql1, parameters2);
+                        if (dt.Rows.Count > 0)
+                        {
+                            unique = false;
+                        }
+                        else
+                            unique = true;
+                        //string sql11 = "SELECT id, pwd FROM eb_tenants WHERE email ~* @email";
+                        //DbParameter[] parameters22 = { InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, session.ProviderOAuthAccess[0].Email) };
+                        //int dtq = InfraConnectionFactory.DataDB.DoNonQuery(sql11, parameters22);
+                        if (unique == true)
+                        {
+                            DbParameter[] parameter1 = {
+                            InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String,  session.ProviderOAuthAccess[0].Email),
+                            InfraConnectionFactory.DataDB.GetNewParameter("name", EbDbTypes.String,  session.ProviderOAuthAccess[0].UserName),
+                             InfraConnectionFactory.DataDB.GetNewParameter("githubid", EbDbTypes.String,  (session.ProviderOAuthAccess[0].UserId).ToString()),
+                             InfraConnectionFactory.DataDB.GetNewParameter("password", EbDbTypes.String,  (session.ProviderOAuthAccess[0].UserId.ToString()+session.ProviderOAuthAccess[0].Email.ToString()).ToMD5Hash()),
+
+                             };
+
+                            EbDataTable dtbl = InfraConnectionFactory.DataDB.DoQuery(@"INSERT INTO eb_tenants (email,fullname,github_id,pwd) 
+                             VALUES 
+                             (:email,:name,:githubid,:password) RETURNING id;", parameter1);
 
 
-                    //(session as CustomUserSession).Company = CoreConstants.EXPRESSBASE;
-                    //(session as CustomUserSession).WhichConsole = "tc";
-                    return authService.Redirect(SuccessRedirectUrlFilter(this, "http://expressbase.com/Ext/AfterSignInSocial?email=" + session.ProviderOAuthAccess[0].Email + "&socialId=" + session.ProviderOAuthAccess[0].UserId + "&provider=" + session.AuthProvider + "&providerToken=" + session.ProviderOAuthAccess[0].AccessTokenSecret + "&lg=" + logatmp));
+                        }
+                        SocialSignup sco_signup = new SocialSignup
+                        {
+                            AuthProvider = session.ProviderOAuthAccess[0].Provider,
+                            Country = session.ProviderOAuthAccess[0].Country,
+                            Email = session.ProviderOAuthAccess[0].Email,
+                            Fbid = (session.ProviderOAuthAccess[0].UserId).ToString(),
+                            Fullname = session.ProviderOAuthAccess[0].UserName,
+                            //IsVerified = session.IsAuthenticated,
+                            Pauto = (session.ProviderOAuthAccess[0].UserId.ToString() + session.ProviderOAuthAccess[0].Email.ToString()).ToMD5Hash(),
+                            UniqueEmail = unique,
+                        };
+                        b = JsonConvert.SerializeObject(sco_signup);
+                    return authService.Redirect(SuccessRedirectUrlFilter(this, string.Format("http://localhost:41500/social_oauth?scosignup={0}", b)));
+
                 }
-            }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine("Exception: " + e.Message + e.StackTrace);
+                    }
 
-            return objret;
+
+
+
+
+
+                    //using (var con = _InfraDb.DataDB.GetNewConnection())
+                    //{
+                    //    con.Open();
+                    //    var cmd = _InfraDb.DataDB.GetNewCommand(con, "INSERT INTO eb_users (email,firstname,socialid,prolink) VALUES(@email, @firstname,@socialid,@prolink) ON CONFLICT(socialid) DO UPDATE SET loginattempts = eb_users.loginattempts + EXCLUDED.loginattempts RETURNING eb_users.loginattempts");
+                    //    cmd.Parameters.Add(_InfraDb.DataDB.GetNewParameter("email", EbDbTypes.String, session.ProviderOAuthAccess[0].Email));
+                    //    cmd.Parameters.Add(_InfraDb.DataDB.GetNewParameter("firstname", EbDbTypes.String, session.ProviderOAuthAccess[0].DisplayName));
+                    //    cmd.Parameters.Add(_InfraDb.DataDB.GetNewParameter("socialid", EbDbTypes.String, session.ProviderOAuthAccess[0].UserId));
+                    //    cmd.Parameters.Add(_InfraDb.DataDB.GetNewParameter("prolink", EbDbTypes.String, session.ProviderOAuthAccess[0].Items["profileUrl"]));
+
+                    //    int logatmp = Convert.ToInt32(cmd.ExecuteScalar());
+
+
+                    //    //(session as CustomUserSession).Company = CoreConstants.EXPRESSBASE;
+                    //    //(session as CustomUserSession).WhichConsole = "tc";
+                    //    return authService.Redirect(SuccessRedirectUrlFilter(this, "http://expressbase.com/Ext/AfterSignInSocial?email=" + session.ProviderOAuthAccess[0].Email + "&socialId=" + session.ProviderOAuthAccess[0].UserId + "&provider=" + session.AuthProvider + "&providerToken=" + session.ProviderOAuthAccess[0].AccessTokenSecret + "&lg=" + logatmp));
+                    //}
+                }
+
+                return objret;
         }
 
         public override string CreateOrMergeAuthSession(IAuthSession session, IAuthTokens tokens)
