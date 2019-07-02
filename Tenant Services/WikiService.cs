@@ -3,6 +3,7 @@ using ExpressBase.Common.Connections;
 using ExpressBase.Common.Data;
 using ExpressBase.Common.Structures;
 using ExpressBase.Objects.ServiceStack_Artifacts;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
@@ -407,36 +408,29 @@ namespace ExpressBase.ServiceStack.Services
             
             try
             {
-                string query = @"
-            UPDATE wiki SET
-                 list_order = @list_order
-            WHERE 
-                id = @id ";
-                int Temp = 1;
-                foreach (int i in request.Wiki_id)
+            //    string query = @"
+            //UPDATE wiki SET
+            //     list_order = @list_order
+            //WHERE 
+            //    id = @id ";
+                List<int> arr = JsonConvert.DeserializeObject<List<int>>(request.Wiki_id);
+                List<DbParameter> param = new List<DbParameter>();
+                List<string> str = new List<string>();
+                for (int i = 0; i < arr.Count; i++)
                 {
-                    DbParameter[] parameters = new DbParameter[]
-               {
-                this.InfraConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, i),
-                this.InfraConnectionFactory.DataDB.GetNewParameter("list_order", EbDbTypes.Int32, Temp),
-               };
-                    EbDataTable x = InfraConnectionFactory.DataDB.DoQuery(query, parameters);
-                    Temp++;
+                    param.Add(this.InfraConnectionFactory.DataDB.GetNewParameter("id_" + i, EbDbTypes.Int32, arr[i]));
+                    param.Add(this.InfraConnectionFactory.DataDB.GetNewParameter("list_order_" + i, EbDbTypes.Int32, i + 1));
+                    str.Add(string.Format("(@id_{0}, @list_order_{0})", i));                  
                 }
-
-                //for (int i=0;i< request.Wiki_id.Length; i++) { 
-                //DbParameter[] parameters = new DbParameter[]
-                //{
-                //this.InfraConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.Wiki_id[i]),
-                //this.InfraConnectionFactory.DataDB.GetNewParameter("list_order", EbDbTypes.Int32, i++),
-                //};
-
-                //EbDataTable x = InfraConnectionFactory.DataDB.DoQuery(query, parameters);
+                string query1 = string.Format(@" update wiki as w 
+                set list_order = c.list_order
+                from (values {0}) as c(id, list_order) 
+                where c.id = w.id;", string.Join(",", str));
 
 
-                //}
+                int x = InfraConnectionFactory.DataDB.DoNonQuery(query1, param.ToArray());
 
-                resp.ResponseStatus = true;
+                resp.ResponseStatus = x > 0;
             }
             catch (Exception e)
             {
