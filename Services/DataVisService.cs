@@ -698,7 +698,7 @@ namespace ExpressBase.ServiceStack
                     {
                         DataTable2FormatedTable(rows[i], _dv, dependencyTable, _user_culture, _user, ref _formattedTable, ref globals, bObfuscute, _isexcel, ref Summary, ref worksheet, i, rows.Count);
 
-                    }                    
+                    }
                 }
             }
             return new PrePrcessorReturn { FormattedTable = _formattedTable, Summary = Summary, excel_file = bytes, rows = rows, tree = tree.Tree };
@@ -800,7 +800,7 @@ namespace ExpressBase.ServiceStack
                     }
                     else if ((col as DVDateTimeColumn).Format == DateFormat.DateTime)
                     {
-                        if((col as DVDateTimeColumn).ConvretToUsersTimeZone)
+                        if ((col as DVDateTimeColumn).ConvretToUsersTimeZone)
                             _formattedData = (((DateTime)_unformattedData).Date != DateTime.MinValue) ? Convert.ToDateTime(_unformattedData).ConvertFromUtc(_user.Preference.TimeZone).ToString(cults.DateTimeFormat.ShortDatePattern + " " + cults.DateTimeFormat.ShortTimePattern) : string.Empty;
                         else
                             _formattedData = (((DateTime)_unformattedData).Date != DateTime.MinValue) ? Convert.ToDateTime(_unformattedData).ToString(cults.DateTimeFormat.ShortDatePattern + " " + cults.DateTimeFormat.ShortTimePattern) : string.Empty;
@@ -827,7 +827,7 @@ namespace ExpressBase.ServiceStack
                 {
                     if (col.AllowTooltip)
                     {
-                        _formattedData = _unformattedData.ToString().Length > col.AllowedCharacterLength ? "<span class='columntooltip' data-toggle='popover' data-content='"+ _unformattedData.ToString().ToBase64() + "'>" + _unformattedData.ToString().Substring(0, col.AllowedCharacterLength) + "...</span>" : _unformattedData;
+                        _formattedData = _unformattedData.ToString().Length > col.AllowedCharacterLength ? "<span class='columntooltip' data-toggle='popover' data-content='" + _unformattedData.ToString().ToBase64() + "'>" + _unformattedData.ToString().Substring(0, col.AllowedCharacterLength) + "...</span>" : _unformattedData;
                     }
                     if ((col as DVStringColumn).RenderAs == StringRenderType.Marker)
                         _formattedData = "<a href = '#' class ='columnMarker' data-latlong='" + _unformattedData + "'><i class='fa fa-map-marker fa-2x' style='color:red;'></i></a>";
@@ -850,7 +850,7 @@ namespace ExpressBase.ServiceStack
                         else if (col.LinkType == LinkTypeEnum.Both)
                             _formattedData = "<a href='#' oncontextmenu='return false' class ='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "'>" + _formattedData + "</a>" + "&nbsp; <a  href ='#' oncontextmenu='return false' class='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-inline='true' data-data='" + _formattedData + "'> <i class='fa fa-caret-down'></i></a>";
                         else if (col.LinkType == LinkTypeEnum.Popup)
-                            _formattedData =  "<a  href= '#' oncontextmenu= 'return false' class ='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-popup='true' data-data='" + _formattedData + "'>"+ _formattedData + "</a>";
+                            _formattedData = "<a  href= '#' oncontextmenu= 'return false' class ='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-popup='true' data-data='" + _formattedData + "'>" + _formattedData + "</a>";
                     }
                 }
                 if (col.Type == EbDbTypes.String && (col as DVStringColumn).RenderAs == StringRenderType.Link && col.LinkType == LinkTypeEnum.Tab && (_isexcel == false))/////////////////
@@ -864,6 +864,8 @@ namespace ExpressBase.ServiceStack
                         _formattedData = "********";
                     }
                 }
+
+                this.conditinallyformatColumn(col, ref _formattedData, _unformattedData);
 
                 _formattedTable.Rows[i][col.Data] = _formattedData;
                 if (_isexcel)
@@ -882,6 +884,134 @@ namespace ExpressBase.ServiceStack
                 _formattedTable.Rows[i][treecol.Data] = GetTreeHtml(_formattedTable.Rows[i][treecol.Data], isgroup, level);
             }
 
+        }
+
+        public void conditinallyformatColumn(DVBaseColumn col, ref object _formattedData, object _unformattedData)
+        {
+            if (col.Type == EbDbTypes.Decimal || col.Type == EbDbTypes.Int32 || col.Type == EbDbTypes.Int64 )
+            {
+                foreach (NumericCondition cond in (col as DVNumericColumn).ConditionalFormat)
+                {
+                    if (NumericCompareValues(cond, _unformattedData))
+                    {
+                        _formattedData = "<div style='background-color:" + cond.BackGroundColor + ";color:" + cond.FontColor + ";'>" + _formattedData + "</div>";
+                    }
+                }
+            }
+            else if (col.Type == EbDbTypes.Date)
+            {
+                foreach (DateCondition cond in (col as DVDateTimeColumn).ConditionalFormat)
+                {
+                    if (DateCompareValues(cond, _unformattedData))
+                    {
+                        _formattedData = "<div style='background-color:" + cond.BackGroundColor + ";color:" + cond.FontColor + ";'>" + _formattedData + "</div>";
+                    }
+                }
+            }
+            else if (col.Type == EbDbTypes.String)
+            {
+                foreach (StringCondition cond in (col as DVStringColumn).ConditionalFormat)
+                {
+                    if (StringCompareValues(cond, _unformattedData))
+                    {
+                        _formattedData = "<div style='background-color:" + cond.BackGroundColor + ";color:" + cond.FontColor + ";'>" + _formattedData + "</div>";
+                    }
+                }
+            }
+            else if (col.Type == EbDbTypes.Boolean)
+            {
+            }
+            
+        }
+
+        public bool NumericCompareValues(NumericCondition cond, object _unformattedData)
+        {
+            if (cond.Operator == NumericOperators.Equals)
+            {
+                return Convert.ToInt32(_unformattedData) == Convert.ToInt32(cond.Value);
+            }
+            else if (cond.Operator == NumericOperators.LessThan)
+            {
+                return Convert.ToInt32(_unformattedData) < Convert.ToInt32(cond.Value);
+            }
+            else if (cond.Operator == NumericOperators.GreaterThan)
+            {
+                return Convert.ToInt32(_unformattedData) > Convert.ToInt32(cond.Value);
+            }
+            else if(cond.Operator == NumericOperators.LessThanOrEqual)
+            {
+                return Convert.ToInt32(_unformattedData) <= Convert.ToInt32(cond.Value);
+            }
+            else if(cond.Operator == NumericOperators.GreaterThanOrEqual)
+            {
+                return Convert.ToInt32(_unformattedData) >= Convert.ToInt32(cond.Value);
+            }
+            else if(cond.Operator == NumericOperators.Between)
+            {
+                return Convert.ToInt32(_unformattedData) >= Convert.ToInt32(cond.Value) && Convert.ToInt32(_unformattedData) <= Convert.ToInt32(cond.Value1);
+            }
+            return false;
+        }
+
+        public bool DateCompareValues(DateCondition cond, object _unformattedData)
+        {
+            DateTime data = Convert.ToDateTime(_unformattedData);
+            DateTime value = Convert.ToDateTime(cond.Value);
+
+            if (cond.Operator == NumericOperators.Equals)
+            {
+                return data == value;
+            }
+            else if (cond.Operator == NumericOperators.LessThan)
+            {
+                return data < value;
+            }
+            else if (cond.Operator == NumericOperators.GreaterThan)
+            {
+                return data > value;
+            }
+            else if (cond.Operator == NumericOperators.LessThanOrEqual)
+            {
+                return data <= value;
+            }
+            else if (cond.Operator == NumericOperators.GreaterThanOrEqual)
+            {
+                return data >= value;
+            }
+            else if (cond.Operator == NumericOperators.Between)
+            {
+                return data >= value && data <= Convert.ToDateTime(cond.Value1);
+            }
+            return false;
+        }
+
+        public bool StringCompareValues(StringCondition cond, object _unformattedData)
+        {
+            string data = _unformattedData.ToString().Trim().ToLower();
+            string searchval = cond.Value.Trim().ToLower().ToString();
+
+            if (cond.Operator == StringOperators.Startwith)
+            {
+                return data.StartsWith(searchval);
+            }
+            else if (cond.Operator == StringOperators.EndsWith)
+            {
+                return data.EndsWith(searchval);
+            }
+            else if (cond.Operator == StringOperators.Contains)
+            {
+                return data.Contains(searchval);
+            }
+            else if (cond.Operator == StringOperators.Equals)
+            {
+                return data == searchval;
+            }
+            return false;
+        }
+
+        public bool BooleanCompareValues(BooleanCondition cond, object _unformattedData)
+        {
+            return false;
         }
 
         public string GetTreeHtml(object data, bool isgroup, int level)
@@ -997,7 +1127,7 @@ namespace ExpressBase.ServiceStack
             return SortedGroupings;
         }
 
-        public void DoRowGroupingCommon(EbDataRow currentRow, EbDataVisualization Visualization, List<DVBaseColumn> dependencyTable, CultureInfo Culture, User _user,ref EbDataTable FormattedTable, bool IsMultiLevelRowGrouping, ref Dictionary<string, GroupingDetails> RowGrouping, ref string PreviousGroupingText, ref int CurSortIndex, ref int SerialCount, int PrevRowIndex, int dvColCount, int TotalLevels, ref List<int> AggregateColumnIndexes, ref List<DVBaseColumn> RowGroupingColumns, int RowCount)
+        public void DoRowGroupingCommon(EbDataRow currentRow, EbDataVisualization Visualization, List<DVBaseColumn> dependencyTable, CultureInfo Culture, User _user, ref EbDataTable FormattedTable, bool IsMultiLevelRowGrouping, ref Dictionary<string, GroupingDetails> RowGrouping, ref string PreviousGroupingText, ref int CurSortIndex, ref int SerialCount, int PrevRowIndex, int dvColCount, int TotalLevels, ref List<int> AggregateColumnIndexes, ref List<DVBaseColumn> RowGroupingColumns, int RowCount)
         {
             CurSortIndex += TotalLevels + 30;
 
