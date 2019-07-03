@@ -792,20 +792,7 @@ namespace ExpressBase.ServiceStack
 
                 if (col.Type == EbDbTypes.Date)
                 {
-                    _unformattedData = (_unformattedData == DBNull.Value) ? DateTime.MinValue : _unformattedData;
-                    if ((col as DVDateTimeColumn).Format == DateFormat.Date)
-                    {
-                        _formattedData = (((DateTime)_unformattedData).Date != DateTime.MinValue) ? Convert.ToDateTime(_unformattedData).ToString("d", cults.DateTimeFormat) : string.Empty;
-                        row[col.Data] = Convert.ToDateTime(_unformattedData).ToString("yyyy-MM-dd");
-                    }
-                    else if ((col as DVDateTimeColumn).Format == DateFormat.DateTime)
-                    {
-                        if ((col as DVDateTimeColumn).ConvretToUsersTimeZone)
-                            _formattedData = (((DateTime)_unformattedData).Date != DateTime.MinValue) ? Convert.ToDateTime(_unformattedData).ConvertFromUtc(_user.Preference.TimeZone).ToString(cults.DateTimeFormat.ShortDatePattern + " " + cults.DateTimeFormat.ShortTimePattern) : string.Empty;
-                        else
-                            _formattedData = (((DateTime)_unformattedData).Date != DateTime.MinValue) ? Convert.ToDateTime(_unformattedData).ToString(cults.DateTimeFormat.ShortDatePattern + " " + cults.DateTimeFormat.ShortTimePattern) : string.Empty;
-                        row[col.Data] = Convert.ToDateTime(_unformattedData);
-                    }
+                    DateTimeformat(_unformattedData, ref _formattedData, ref row, col,cults, _user);
                 }
                 else if (col.Type == EbDbTypes.Decimal || col.Type == EbDbTypes.Int32 || col.Type == EbDbTypes.Int64)
                 {
@@ -886,9 +873,27 @@ namespace ExpressBase.ServiceStack
 
         }
 
+        public void DateTimeformat(object _unformattedData, ref object _formattedData, ref EbDataRow row, DVBaseColumn col, CultureInfo cults, User _user)
+        {
+            _unformattedData = (_unformattedData == DBNull.Value) ? DateTime.MinValue : _unformattedData;
+            if ((col as DVDateTimeColumn).Format == DateFormat.Date)
+            {
+                _formattedData = (((DateTime)_unformattedData).Date != DateTime.MinValue) ? Convert.ToDateTime(_unformattedData).ToString("d", cults.DateTimeFormat) : string.Empty;
+                row[col.Data] = Convert.ToDateTime(_unformattedData).ToString("yyyy-MM-dd");
+            }
+            else if ((col as DVDateTimeColumn).Format == DateFormat.DateTime)
+            {
+                if ((col as DVDateTimeColumn).ConvretToUsersTimeZone)
+                    _formattedData = (((DateTime)_unformattedData).Date != DateTime.MinValue) ? Convert.ToDateTime(_unformattedData).ConvertFromUtc(_user.Preference.TimeZone).ToString(cults.DateTimeFormat.ShortDatePattern + " " + cults.DateTimeFormat.ShortTimePattern) : string.Empty;
+                else
+                    _formattedData = (((DateTime)_unformattedData).Date != DateTime.MinValue) ? Convert.ToDateTime(_unformattedData).ToString(cults.DateTimeFormat.ShortDatePattern + " " + cults.DateTimeFormat.ShortTimePattern) : string.Empty;
+                row[col.Data] = Convert.ToDateTime(_unformattedData);
+            }
+        }
+
         public void conditinallyformatColumn(DVBaseColumn col, ref object _formattedData, object _unformattedData)
         {
-            if (col.Type == EbDbTypes.Decimal || col.Type == EbDbTypes.Int32 || col.Type == EbDbTypes.Int64 )
+            if (col.Type == EbDbTypes.Decimal || col.Type == EbDbTypes.Int32 || col.Type == EbDbTypes.Int64)
             {
                 foreach (NumericCondition cond in (col as DVNumericColumn).ConditionalFormat)
                 {
@@ -921,7 +926,7 @@ namespace ExpressBase.ServiceStack
             else if (col.Type == EbDbTypes.Boolean)
             {
             }
-            
+
         }
 
         public bool NumericCompareValues(NumericCondition cond, object _unformattedData)
@@ -938,15 +943,15 @@ namespace ExpressBase.ServiceStack
             {
                 return Convert.ToInt32(_unformattedData) > Convert.ToInt32(cond.Value);
             }
-            else if(cond.Operator == NumericOperators.LessThanOrEqual)
+            else if (cond.Operator == NumericOperators.LessThanOrEqual)
             {
                 return Convert.ToInt32(_unformattedData) <= Convert.ToInt32(cond.Value);
             }
-            else if(cond.Operator == NumericOperators.GreaterThanOrEqual)
+            else if (cond.Operator == NumericOperators.GreaterThanOrEqual)
             {
                 return Convert.ToInt32(_unformattedData) >= Convert.ToInt32(cond.Value);
             }
-            else if(cond.Operator == NumericOperators.Between)
+            else if (cond.Operator == NumericOperators.Between)
             {
                 return Convert.ToInt32(_unformattedData) >= Convert.ToInt32(cond.Value) && Convert.ToInt32(_unformattedData) <= Convert.ToInt32(cond.Value1);
             }
@@ -1058,87 +1063,87 @@ namespace ExpressBase.ServiceStack
             }
         }
 
-        public List<GroupingDetails> RowGroupingCommon(EbDataTable Table, EbDataVisualization Visualization, CultureInfo Culture, ref EbDataTable FormattedTable, bool IsMultiLevelRowGrouping = false)
-        {
-            Dictionary<string, GroupingDetails> RowGrouping = new Dictionary<string, GroupingDetails>();
+        //public List<GroupingDetails> RowGroupingCommon(EbDataTable Table, EbDataVisualization Visualization, CultureInfo Culture, ref EbDataTable FormattedTable, bool IsMultiLevelRowGrouping = false)
+        //{
+        //    Dictionary<string, GroupingDetails> RowGrouping = new Dictionary<string, GroupingDetails>();
 
-            int TotalLevels = (IsMultiLevelRowGrouping) ? (Visualization as EbTableVisualization).CurrentRowGroup.RowGrouping.Count : 1,
-            CurSortIndex = 0;
+        //    int TotalLevels = (IsMultiLevelRowGrouping) ? (Visualization as EbTableVisualization).CurrentRowGroup.RowGrouping.Count : 1,
+        //    CurSortIndex = 0;
 
-            List<int> AggregateColumnIndexes = GetAggregateIndexes(Visualization.Columns);
-            List<DVBaseColumn> RowGroupingColumns = new List<DVBaseColumn>((Visualization as EbTableVisualization).CurrentRowGroup.RowGrouping);
-            int ColCount = Visualization.Columns.Count;
-            string PreviousGroupingText = string.Empty;
-            int SerialCount = 0, PrevRowIndex = 0;
-            for (int i = 0; i < Table.Rows.Count; i++)
-            {
-                CurSortIndex += TotalLevels + 30;
+        //    List<int> AggregateColumnIndexes = GetAggregateIndexes(Visualization.Columns);
+        //    List<DVBaseColumn> RowGroupingColumns = new List<DVBaseColumn>((Visualization as EbTableVisualization).CurrentRowGroup.RowGrouping);
+        //    int ColCount = Visualization.Columns.Count;
+        //    string PreviousGroupingText = string.Empty;
+        //    int SerialCount = 0, PrevRowIndex = 0;
+        //    for (int i = 0; i < Table.Rows.Count; i++)
+        //    {
+        //        CurSortIndex += TotalLevels + 30;
 
-                EbDataRow currentRow = Table.Rows[i];
-                int delimCount = 1;
-                string TempGroupingText = CreateCollectionKey(currentRow, IsMultiLevelRowGrouping, BlankText, TotalLevels, RowGroupingColumns, i, ref delimCount);
+        //        EbDataRow currentRow = Table.Rows[i];
+        //        int delimCount = 1;
+        //        string TempGroupingText = CreateCollectionKey(currentRow, IsMultiLevelRowGrouping, BlankText, TotalLevels, RowGroupingColumns, i, ref delimCount);
 
-                if (TempGroupingText.Equals(PreviousGroupingText) == false)
-                {
-                    SerialCount = 0;
-                    FormattedTable.Rows[i][Table.Columns.Count] = ++SerialCount;
-                    CreateHeaderAndFooterPairs(currentRow, AggregateColumnIndexes, RowGroupingColumns, RowGrouping, Visualization.Columns, TotalLevels, IsMultiLevelRowGrouping, Culture, TempGroupingText, ref CurSortIndex, ColCount);
+        //        if (TempGroupingText.Equals(PreviousGroupingText) == false)
+        //        {
+        //            SerialCount = 0;
+        //            FormattedTable.Rows[i][Table.Columns.Count] = ++SerialCount;
+        //            CreateHeaderAndFooterPairs(currentRow, AggregateColumnIndexes, RowGroupingColumns, RowGrouping, Visualization.Columns, TotalLevels, IsMultiLevelRowGrouping, Culture, TempGroupingText, ref CurSortIndex, ColCount);
 
-                    HeaderGroupingDetails HeaderObject = RowGrouping[HeaderPrefix + TempGroupingText] as HeaderGroupingDetails;
-                    HeaderObject.SetRowIndex(i);
-                    HeaderObject.InsertionType = BeforeText;
+        //            HeaderGroupingDetails HeaderObject = RowGrouping[HeaderPrefix + TempGroupingText] as HeaderGroupingDetails;
+        //            HeaderObject.SetRowIndex(i);
+        //            HeaderObject.InsertionType = BeforeText;
 
-                    (RowGrouping[FooterPrefix + TempGroupingText] as FooterGroupingDetails).InsertionType = BeforeText;
+        //            (RowGrouping[FooterPrefix + TempGroupingText] as FooterGroupingDetails).InsertionType = BeforeText;
 
-                    if (i > 0)
-                    {
-                        (RowGrouping[FooterPrefix + PreviousGroupingText] as FooterGroupingDetails).SetRowIndex(i);
+        //            if (i > 0)
+        //            {
+        //                (RowGrouping[FooterPrefix + PreviousGroupingText] as FooterGroupingDetails).SetRowIndex(i);
 
-                        if (IsMultiLevelRowGrouping && i == Table.Rows.Count - 1 &&
-                            (RowGrouping[HeaderPrefix + TempGroupingText] as HeaderGroupingDetails).GroupingCount == 1 &&
-                            (RowGrouping[HeaderPrefix + TempGroupingText] as HeaderGroupingDetails).LevelCount == 0)
-                        {
-                            SetFinalFooterRow(currentRow, RowGroupingColumns, IsMultiLevelRowGrouping, RowGrouping, i, TempGroupingText, CurSortIndex);
-                        }
-                    }
-                    if (!IsMultiLevelRowGrouping && i == PrevRowIndex + 1 && i == Table.Rows.Count - 1)
-                    {
-                        SetFinalFooterRow(currentRow, RowGroupingColumns, IsMultiLevelRowGrouping, RowGrouping, i, TempGroupingText, CurSortIndex);
-                    }
-                }
-                else
-                {
-                    FormattedTable.Rows[i][Table.Columns.Count] = ++SerialCount;
+        //                if (IsMultiLevelRowGrouping && i == Table.Rows.Count - 1 &&
+        //                    (RowGrouping[HeaderPrefix + TempGroupingText] as HeaderGroupingDetails).GroupingCount == 1 &&
+        //                    (RowGrouping[HeaderPrefix + TempGroupingText] as HeaderGroupingDetails).LevelCount == 0)
+        //                {
+        //                    SetFinalFooterRow(currentRow, RowGroupingColumns, IsMultiLevelRowGrouping, RowGrouping, i, TempGroupingText, CurSortIndex);
+        //                }
+        //            }
+        //            if (!IsMultiLevelRowGrouping && i == PrevRowIndex + 1 && i == Table.Rows.Count - 1)
+        //            {
+        //                SetFinalFooterRow(currentRow, RowGroupingColumns, IsMultiLevelRowGrouping, RowGrouping, i, TempGroupingText, CurSortIndex);
+        //            }
+        //        }
+        //        else
+        //        {
+        //            FormattedTable.Rows[i][Table.Columns.Count] = ++SerialCount;
 
-                    (RowGrouping[HeaderPrefix + TempGroupingText] as HeaderGroupingDetails).GroupingCount++;
-                    if (i == Table.Rows.Count - 1)
-                    {
-                        SetFinalFooterRow(currentRow, RowGroupingColumns, IsMultiLevelRowGrouping, RowGrouping, i, TempGroupingText, CurSortIndex);
-                    }
-                }
+        //            (RowGrouping[HeaderPrefix + TempGroupingText] as HeaderGroupingDetails).GroupingCount++;
+        //            if (i == Table.Rows.Count - 1)
+        //            {
+        //                SetFinalFooterRow(currentRow, RowGroupingColumns, IsMultiLevelRowGrouping, RowGrouping, i, TempGroupingText, CurSortIndex);
+        //            }
+        //        }
 
-                (RowGrouping[FooterPrefix + TempGroupingText] as FooterGroupingDetails).SetValue(currentRow);
+        //        (RowGrouping[FooterPrefix + TempGroupingText] as FooterGroupingDetails).SetValue(currentRow);
 
-                PreviousGroupingText = TempGroupingText;
-                PrevRowIndex = i;
-            }
-            List<GroupingDetails> SortedGroupings = RowGrouping.Values.ToList();
-            SortedGroupings.Sort();
-            return SortedGroupings;
-        }
+        //        PreviousGroupingText = TempGroupingText;
+        //        PrevRowIndex = i;
+        //    }
+        //    List<GroupingDetails> SortedGroupings = RowGrouping.Values.ToList();
+        //    SortedGroupings.Sort();
+        //    return SortedGroupings;
+        //}
 
         public void DoRowGroupingCommon(EbDataRow currentRow, EbDataVisualization Visualization, List<DVBaseColumn> dependencyTable, CultureInfo Culture, User _user, ref EbDataTable FormattedTable, bool IsMultiLevelRowGrouping, ref Dictionary<string, GroupingDetails> RowGrouping, ref string PreviousGroupingText, ref int CurSortIndex, ref int SerialCount, int PrevRowIndex, int dvColCount, int TotalLevels, ref List<int> AggregateColumnIndexes, ref List<DVBaseColumn> RowGroupingColumns, int RowCount)
         {
             CurSortIndex += TotalLevels + 30;
 
             int delimCount = 1;
-            string TempGroupingText = CreateCollectionKey(currentRow, IsMultiLevelRowGrouping, BlankText, TotalLevels, RowGroupingColumns, PrevRowIndex, ref delimCount);
+            string TempGroupingText = CreateCollectionKey(currentRow, IsMultiLevelRowGrouping, BlankText, TotalLevels, RowGroupingColumns, PrevRowIndex, ref delimCount, Culture, _user);
 
             if (TempGroupingText.Equals(PreviousGroupingText) == false)
             {
                 SerialCount = 0;
                 FormattedTable.Rows[PrevRowIndex][dvColCount] = ++SerialCount;
-                CreateHeaderAndFooterPairs(currentRow, AggregateColumnIndexes, RowGroupingColumns, RowGrouping, Visualization.Columns, TotalLevels, IsMultiLevelRowGrouping, Culture, TempGroupingText, ref CurSortIndex, dvColCount);
+                CreateHeaderAndFooterPairs(currentRow, AggregateColumnIndexes, RowGroupingColumns, RowGrouping, Visualization.Columns, TotalLevels, IsMultiLevelRowGrouping, Culture, TempGroupingText, ref CurSortIndex, dvColCount, _user);
 
                 HeaderGroupingDetails HeaderObject = RowGrouping[HeaderPrefix + TempGroupingText] as HeaderGroupingDetails;
                 HeaderObject.SetRowIndex(PrevRowIndex);
@@ -1154,12 +1159,12 @@ namespace ExpressBase.ServiceStack
                         (RowGrouping[HeaderPrefix + TempGroupingText] as HeaderGroupingDetails).GroupingCount == 1 &&
                         (RowGrouping[HeaderPrefix + TempGroupingText] as HeaderGroupingDetails).LevelCount == 0)
                     {
-                        SetFinalFooterRow(currentRow, RowGroupingColumns, IsMultiLevelRowGrouping, RowGrouping, PrevRowIndex, TempGroupingText, CurSortIndex);
+                        SetFinalFooterRow(currentRow, RowGroupingColumns, IsMultiLevelRowGrouping, RowGrouping, PrevRowIndex, TempGroupingText, CurSortIndex, Culture, _user);
                     }
                 }
                 if (!IsMultiLevelRowGrouping && PrevRowIndex == PrevRowIndex + 1 && PrevRowIndex == RowCount - 1)
                 {
-                    SetFinalFooterRow(currentRow, RowGroupingColumns, IsMultiLevelRowGrouping, RowGrouping, PrevRowIndex, TempGroupingText, CurSortIndex);
+                    SetFinalFooterRow(currentRow, RowGroupingColumns, IsMultiLevelRowGrouping, RowGrouping, PrevRowIndex, TempGroupingText, CurSortIndex, Culture, _user);
                 }
             }
             else
@@ -1169,7 +1174,7 @@ namespace ExpressBase.ServiceStack
                 (RowGrouping[HeaderPrefix + TempGroupingText] as HeaderGroupingDetails).GroupingCount++;
                 if (PrevRowIndex == RowCount - 1)
                 {
-                    SetFinalFooterRow(currentRow, RowGroupingColumns, IsMultiLevelRowGrouping, RowGrouping, PrevRowIndex, TempGroupingText, CurSortIndex);
+                    SetFinalFooterRow(currentRow, RowGroupingColumns, IsMultiLevelRowGrouping, RowGrouping, PrevRowIndex, TempGroupingText, CurSortIndex, Culture, _user);
                 }
             }
 
@@ -1179,9 +1184,9 @@ namespace ExpressBase.ServiceStack
             PrevRowIndex = PrevRowIndex;
         }
 
-        private void SetFinalFooterRow(EbDataRow currentRow, List<DVBaseColumn> rowGroupingColumns, bool IsMultiLevelRowGrouping, Dictionary<string, GroupingDetails> RowGrouping, int i, string TempGroupingText, int CurSortIndex)
+        private void SetFinalFooterRow(EbDataRow currentRow, List<DVBaseColumn> rowGroupingColumns, bool IsMultiLevelRowGrouping, Dictionary<string, GroupingDetails> RowGrouping, int i, string TempGroupingText, int CurSortIndex,  CultureInfo _user_culture, User _user)
         {
-            List<string> GroupingKeys = CreateRowGroupingKeys(currentRow, rowGroupingColumns, IsMultiLevelRowGrouping);
+            List<string> GroupingKeys = CreateRowGroupingKeys(currentRow, rowGroupingColumns, IsMultiLevelRowGrouping, _user_culture, _user);
             (RowGrouping[FooterPrefix + TempGroupingText] as FooterGroupingDetails).InsertionType = AfterText;
             (RowGrouping[FooterPrefix + TempGroupingText] as FooterGroupingDetails).SetRowIndex(i);
             if (IsMultiLevelRowGrouping)
@@ -1215,12 +1220,14 @@ namespace ExpressBase.ServiceStack
             return AggregateColumnIndexes;
         }
 
-        private string CreateCollectionKey(EbDataRow row, bool IsMultiLevelRowGrouping, string BlankText, int TotalLevels, List<DVBaseColumn> RowGroupingColumns, int i, ref int delimCount)
+        private string CreateCollectionKey(EbDataRow row, bool IsMultiLevelRowGrouping, string BlankText, int TotalLevels, List<DVBaseColumn> RowGroupingColumns, int i, ref int delimCount, CultureInfo _user_culture, User _user)
         {
             string TempGroupingText = string.Empty;
             foreach (DVBaseColumn Column in RowGroupingColumns)
             {
                 string tempValue = row[Column.Data].ToString().Trim();
+                if (Column.Type == EbDbTypes.Date)
+                    tempValue = GetFormattedDate(row, Column, _user_culture, _user);
                 TempGroupingText += (tempValue.Trim().Equals(string.Empty) || tempValue.Trim().IsNullOrEmpty()) ? BlankText : tempValue.Trim();
                 TempGroupingText += (IsMultiLevelRowGrouping && delimCount == TotalLevels) ? string.Empty : GroupDelimiter;
 
@@ -1236,9 +1243,9 @@ namespace ExpressBase.ServiceStack
 
         private void CreateHeaderAndFooterPairs(EbDataRow CurrentRow, List<int> AggregateIndexes,
             List<DVBaseColumn> _rowGroupingColumns, Dictionary<string, GroupingDetails> rowGrouping, DVColumnCollection VisualizationColumns,
-            int TotalLevels, bool IsMultiLevelGrouping, CultureInfo culture, string TempGroupingText, ref int CurSortIndex, int ColumnCount)
+            int TotalLevels, bool IsMultiLevelGrouping, CultureInfo culture, string TempGroupingText, ref int CurSortIndex, int ColumnCount, User _user)
         {
-            List<string> TempKey = CreateRowGroupingKeys(CurrentRow, _rowGroupingColumns, (TotalLevels > 1) ? true : false);
+            List<string> TempKey = CreateRowGroupingKeys(CurrentRow, _rowGroupingColumns, (TotalLevels > 1) ? true : false, culture,_user);
             if (IsMultiLevelGrouping)
             {
                 for (int j = 0; j < TotalLevels; j++)
@@ -1278,19 +1285,22 @@ namespace ExpressBase.ServiceStack
             }
         }
 
-        private static List<string> CreateRowGroupingKeys(EbDataRow CurrentRow, List<DVBaseColumn> RowGroupingColumns, bool IsMultiLevelRowGrouping)
+        private static List<string> CreateRowGroupingKeys(EbDataRow CurrentRow, List<DVBaseColumn> RowGroupingColumns, bool IsMultiLevelRowGrouping, CultureInfo _user_culture, User _user)
         {
             List<string> TempKey = new List<string>();
             string TempStr = string.Empty;
-            foreach (var column in RowGroupingColumns)
+            foreach (DVBaseColumn column in RowGroupingColumns)
             {
+                string tempvalue = CurrentRow[column.Data].ToString().Trim();
+                if (column.Type == EbDbTypes.Date)
+                    tempvalue = GetFormattedDate(CurrentRow, column, _user_culture, _user);
                 if (IsMultiLevelRowGrouping)
                 {
-                    TempKey.Add(((TempKey.Count > 0) ? TempKey.Last() + GroupDelimiter : string.Empty) + ((CurrentRow[column.Data].ToString().Trim().IsNullOrEmpty()) ? BlankText : CurrentRow[column.Data].ToString().Trim()));
+                    TempKey.Add(((TempKey.Count > 0) ? TempKey.Last() + GroupDelimiter : string.Empty) + ((tempvalue.IsNullOrEmpty()) ? BlankText : tempvalue));
                 }
                 else
                 {
-                    TempStr += (TempStr.Equals(string.Empty)) ? CurrentRow[column.Data] : GroupDelimiter + ((CurrentRow[column.Data].ToString().Trim().IsNullOrEmpty()) ? BlankText : CurrentRow[column.Data].ToString().Trim());
+                    TempStr += (TempStr.Equals(string.Empty)) ? tempvalue : GroupDelimiter + ((tempvalue.IsNullOrEmpty()) ? BlankText : tempvalue);
                 }
             }
 
@@ -1325,6 +1335,27 @@ namespace ExpressBase.ServiceStack
             }
 
             return 1;
+        }
+
+        public static string GetFormattedDate(EbDataRow row, DVBaseColumn Column, CultureInfo _user_culture, User _user)
+        {
+            object _unformattedData = row[Column.Data];
+            var cults = Column.GetColumnCultureInfo(_user_culture);
+            DVDateTimeColumn col = (Column as DVDateTimeColumn);
+            if (col.Format == DateFormat.Date)
+            {
+                return Convert.ToDateTime(_unformattedData).ToString("d", cults.DateTimeFormat).Trim();
+
+            }
+            else if (col.Format == DateFormat.DateTime)
+            {
+                if (col.ConvretToUsersTimeZone)
+                    return Convert.ToDateTime(_unformattedData).ConvertFromUtc(_user.Preference.TimeZone).ToString(cults.DateTimeFormat.ShortDatePattern + " " + cults.DateTimeFormat.ShortTimePattern).Trim();
+                else
+                    return Convert.ToDateTime(_unformattedData).ToString(cults.DateTimeFormat.ShortDatePattern + " " + cults.DateTimeFormat.ShortTimePattern).Trim();
+
+            }
+            return string.Empty;
         }
 
         public List<string> PermissionCheck(User _user, string refId)
