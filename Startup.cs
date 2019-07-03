@@ -166,7 +166,7 @@ namespace ExpressBase.ServiceStack
                     {
                         ClientId ="5276cd109e1fc6cbd31f",//"5276cd109e1fc6cbd31f",// "4504eefeb8f027c810dd",
                         ClientSecret = "2f25e6fbba9850cf1c0f809ad0af784ab8916b75",//fb54aaa1371dbaaeb4b9fcf490af6cd7b596b26a",//"d9c1c956a9fddd089798e0031851e93a8d0e5cc6",
-                        RedirectUrl = "http://localhost:41600/auth/github"
+                       // RedirectUrl = "http://localhost:41600/auth/github"
                     }
                 }));
 
