@@ -75,15 +75,21 @@ namespace ExpressBase.ServiceStack.Services
                             WHERE   
                                 user_id= {0} and solution_id = '{1}' ", request.UserId, request.SolnId);
                     EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(str2);
-                    string cust_id = dt.Rows[0][0].ToString();
-                    string str = string.Format(@"
-                        SELECT plan_id, user_no 
-                        FROM eb_subscription 
-                        WHERE cust_id = '{0}'", cust_id);
-                    EbDataTable dt1 = InfraConnectionFactory.DataDB.DoQuery(str);
-                    resp.Plan = dt1.Rows[0][0].ToString();
-                    resp.Users = int.Parse(dt1.Rows[0][1].ToString());
-                    resp.CustId = cust_id;
+                    if (dt != null && dt.Rows.Count > 0)
+                    {
+                        string cust_id = dt.Rows[0][0].ToString();
+                        string str = string.Format(@"
+                                        SELECT plan_id, user_no 
+                                        FROM eb_subscription 
+                                        WHERE cust_id = '{0}'", cust_id);
+                        EbDataTable dt1 = InfraConnectionFactory.DataDB.DoQuery(str);
+                        if (dt1 != null && dt1.Rows.Count > 0)
+                        {
+                            resp.Plan = dt1.Rows[0][0].ToString();
+                            resp.Users = int.Parse(dt1.Rows[0][1].ToString());
+                            resp.CustId = cust_id;
+                        }
+                    }
                 }
             }
             catch (Exception e)
@@ -560,10 +566,10 @@ namespace ExpressBase.ServiceStack.Services
                 cmd1.ExecuteNonQuery();
                 //}
 
-                resp.PeriodStart = DateTime.Parse(subscription.CurrentPeriodStart.ToString());
-                resp.PeriodEnd = DateTime.Parse(subscription.CurrentPeriodEnd.ToString());
-                resp.Created = DateTime.Parse(subscription.Created.ToString());
-                resp.Amount = subscription.Plan.Amount;
+                resp.PeriodStart = ((DateTime)subscription.CurrentPeriodStart).ToString("dd MMM,yyyy");
+                resp.PeriodEnd = ((DateTime)subscription.CurrentPeriodEnd).ToString("dd MMM,yyyy");
+                resp.Created = ((DateTime)subscription.Created).ToString("dd MMM,yyyy");
+                resp.Amount = (subscription.Plan.Amount/100);
                 resp.UseageType = subscription.Plan.UsageType;
                 resp.BillingScheme = subscription.Plan.BillingScheme;
                 resp.Quantity = usageRecord.Quantity;
@@ -579,45 +585,22 @@ namespace ExpressBase.ServiceStack.Services
             using (DbConnection con = this.InfraConnectionFactory.DataDB.GetNewConnection())
             {
                 con.Open();
+                // Retriving cust_id from eb_customer table
                 string str2 = string.Format(@"
                         SELECT cust_id 
                         FROM eb_customer 
-                        WHERE solution_id = '{0}' and user_id = {1}", request.SolnId,request.UserId);
+                        WHERE solution_id = '{0}' and user_id = {1}", request.SolnId, request.UserId);
                 EbDataTable dt1 = InfraConnectionFactory.DataDB.DoQuery(str2);
                 string cust_id = dt1.Rows[0][0].ToString();
+                // Retriving subscription id and item id from eb_subscription table
                 string str = string.Format(@"
-                        SELECT sub_id 
+                        SELECT sub_id, sub_item_id 
                         FROM eb_subscription 
                         WHERE cust_id = '{0}'", cust_id);
                 EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(str);
                 string sub_id = dt.Rows[0][0].ToString();
-                var cancelled = gateway.Delete(new CancelStripeSubscription
-                {
-                    SubscriptionId = sub_id
-                    //InvoiceNow = true,
-                    //Prorate = true
-                });
-
-                StripeConfiguration.SetApiKey(Environment.GetEnvironmentVariable(EnvironmentConstants.EB_STRIPE_SECRET_KEY));
-                var items = new List<SubscriptionItemOption>
-                {
-                    new SubscriptionItemOption
-                    {
-                        PlanId = request.PlanId
-                    }
-                };
-                var options = new SubscriptionCreateOptions
-                {
-                    CustomerId = cust_id,
-                    Items = items
-                };
-
-                var service = new SubscriptionService();
-                Subscription subscription = service.Create(options);
-
-                string inv_id = subscription.LatestInvoiceId;
-                string sub_item_id = subscription.Items.Data[0].Id;
-
+                string sub_item_id = dt.Rows[0][1].ToString();
+                // Updating Usage Record
                 var usageRecordOptions = new UsageRecordCreateOptions()
                 {
                     Quantity = request.Total,
@@ -626,24 +609,24 @@ namespace ExpressBase.ServiceStack.Services
                 };
                 var usageRecordService = new UsageRecordService();
                 UsageRecord usageRecord = usageRecordService.Create(sub_item_id, usageRecordOptions);
-                string sub = subscription.Id;
+                //Retriving subscription details
+                var service = new SubscriptionService();
+                var subscription = service.Get(sub_id);
+                // Updating Subscription Table
                 string str1 = @"
                     UPDATE eb_subscription 
-                    SET sub_id = @sub_id, latest_invoice_id = @latestinvoice, sub_item_id = @subitem, user_no = @users, updated_at=@updatedat
+                    SET user_no = @users, updated_at = @updatedat
                     WHERE sub_id = @subid";
-
                 DbCommand cmd1 = InfraConnectionFactory.DataDB.GetNewCommand(con, str1);
                 cmd1.Parameters.Add(InfraConnectionFactory.DataDB.GetNewParameter("@subid", Common.Structures.EbDbTypes.String, sub_id));
-                cmd1.Parameters.Add(InfraConnectionFactory.DataDB.GetNewParameter("@sub_id", Common.Structures.EbDbTypes.String, sub));
-                cmd1.Parameters.Add(InfraConnectionFactory.DataDB.GetNewParameter("@latestinvoice", Common.Structures.EbDbTypes.String, inv_id));
-                cmd1.Parameters.Add(InfraConnectionFactory.DataDB.GetNewParameter("@subitem", Common.Structures.EbDbTypes.String, sub_item_id));
                 cmd1.Parameters.Add(InfraConnectionFactory.DataDB.GetNewParameter("@users", Common.Structures.EbDbTypes.Int16, request.Total));
                 cmd1.Parameters.Add(InfraConnectionFactory.DataDB.GetNewParameter("@updatedat", Common.Structures.EbDbTypes.DateTime, DateTime.Now));
                 cmd1.ExecuteNonQuery();
-                resp.PeriodStart = DateTime.Parse(subscription.CurrentPeriodStart.ToString());
-                resp.PeriodEnd = DateTime.Parse(subscription.CurrentPeriodEnd.ToString());
-                resp.Created = DateTime.Parse(subscription.Created.ToString());
-                resp.Amount = subscription.Plan.Amount;
+                //passing values to object
+                resp.PeriodStart = ((DateTime)subscription.CurrentPeriodStart).ToString("dd MMM,yyyy");
+                resp.PeriodEnd = ((DateTime)subscription.CurrentPeriodEnd).ToString("dd MMM,yyyy");
+                resp.Created = ((DateTime)subscription.Created).ToString("dd MMM,yyyy");
+                resp.Amount = (subscription.Plan.Amount / 100);
                 resp.UseageType = subscription.Plan.UsageType;
                 resp.BillingScheme = subscription.Plan.BillingScheme;
                 resp.Quantity = usageRecord.Quantity;
