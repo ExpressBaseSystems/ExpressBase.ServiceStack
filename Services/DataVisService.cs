@@ -846,10 +846,10 @@ namespace ExpressBase.ServiceStack
                             AllowLinkifNoData = false;
                     }
 
-                    if (col.Name == "eb_created_by" || col.Name == "eb_lastmodified_by" || col.Name == "eb_loc_id")
-                    {
-                        ModifyEbColumns(col, ref _formattedData, _unformattedData);
-                    }
+                    //if (col.Name == "eb_created_by" || col.Name == "eb_lastmodified_by" || col.Name == "eb_loc_id")
+                    //{
+                    //    ModifyEbColumns(col, ref _formattedData, _unformattedData);
+                    //}
 
                     if (!string.IsNullOrEmpty(col.LinkRefId) && (_isexcel == false))
                     {
@@ -1207,14 +1207,14 @@ namespace ExpressBase.ServiceStack
                 {
                     (RowGrouping[FooterPrefix + PreviousGroupingText] as FooterGroupingDetails).SetRowIndex(PrevRowIndex);
 
-                    if (IsMultiLevelRowGrouping && PrevRowIndex == dvColCount - 1 &&
+                    if (IsMultiLevelRowGrouping && PrevRowIndex == RowCount - 1 &&
                         (RowGrouping[HeaderPrefix + TempGroupingText] as HeaderGroupingDetails).GroupingCount == 1 &&
                         (RowGrouping[HeaderPrefix + TempGroupingText] as HeaderGroupingDetails).LevelCount == 0)
                     {
                         SetFinalFooterRow(currentRow, RowGroupingColumns, IsMultiLevelRowGrouping, RowGrouping, PrevRowIndex, TempGroupingText, CurSortIndex, Culture, _user);
                     }
                 }
-                if (!IsMultiLevelRowGrouping && PrevRowIndex == PrevRowIndex + 1 && PrevRowIndex == RowCount - 1)
+                if (!IsMultiLevelRowGrouping && PrevRowIndex == RowCount - 1)
                 {
                     SetFinalFooterRow(currentRow, RowGroupingColumns, IsMultiLevelRowGrouping, RowGrouping, PrevRowIndex, TempGroupingText, CurSortIndex, Culture, _user);
                 }
@@ -1233,7 +1233,6 @@ namespace ExpressBase.ServiceStack
                 (RowGrouping[FooterPrefix + TempGroupingText] as FooterGroupingDetails).SetValue(currentRow);
 
             PreviousGroupingText = TempGroupingText;
-            PrevRowIndex = PrevRowIndex;
         }
 
         private void SetFinalFooterRow(EbDataRow currentRow, List<DVBaseColumn> rowGroupingColumns, bool IsMultiLevelRowGrouping, Dictionary<string, GroupingDetails> RowGrouping, int i, string TempGroupingText, int CurSortIndex,  CultureInfo _user_culture, User _user)
