@@ -231,7 +231,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 Console.WriteLine("Exception in GetRowData Service" + ex.Message);
                 Console.WriteLine(ex.StackTrace);
-                throw new FormException("Terminated GetRowData");
+                throw new FormException("Terminated GetRowData. Check servicestack log for stack trace.");
             }    
         }
 
@@ -335,7 +335,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 Console.WriteLine("Exception in Insert/Update WebFormData" + ex.Message);
                 Console.WriteLine(ex.StackTrace);
-                throw new FormException("Terminated Insert/Update WebFormData");
+                throw new FormException("Terminated Insert/Update WebFormData. Check servicestack log for stack trace.");
             }            
         }
 
@@ -684,14 +684,23 @@ namespace ExpressBase.ServiceStack.Services
 
         public GetAuditTrailResponse Any(GetAuditTrailRequest request)
         {
-            EbWebForm FormObj = GetWebFormObject(request.FormId);
-            FormObj.RefId = request.FormId;
-            FormObj.TableRowId = request.RowId;
-            FormObj.UserObj = request.UserObj;
+            try
+            {
+                EbWebForm FormObj = GetWebFormObject(request.FormId);
+                FormObj.RefId = request.FormId;
+                FormObj.TableRowId = request.RowId;
+                FormObj.UserObj = request.UserObj;
 
-            string temp = FormObj.GetAuditTrail(EbConnectionFactory.DataDB, this);
+                string temp = FormObj.GetAuditTrail(EbConnectionFactory.DataDB, this);
 
-            return new GetAuditTrailResponse() { Json = temp };
+                return new GetAuditTrailResponse() { Json = temp };
+            }
+            catch(Exception ex)
+            {
+                Console.WriteLine("Exception in GetAuditTrail Service" + ex.Message);
+                Console.WriteLine(ex.StackTrace);
+                throw new FormException("Terminated GetAuditTrail. Check servicestack log for stack trace.");
+            }
 
 
             //     string qry = @"	SELECT 
