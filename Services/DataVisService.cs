@@ -779,17 +779,15 @@ namespace ExpressBase.ServiceStack
 
         public void DataTable2FormatedTable(EbDataRow row, EbDataVisualization _dv, List<DVBaseColumn> dependencyTable, CultureInfo _user_culture, User _user, ref EbDataTable _formattedTable, ref Globals globals, bool bObfuscute, bool _isexcel, ref Dictionary<int, List<object>> Summary, ref ExcelWorksheet worksheet, int i, int count, bool isgroup = false, int level = 0, bool isTree = false)
         {
-            bool AllowLinkforZero = true;
-
+            
             _formattedTable.Rows.Add(_formattedTable.NewDataRow2());
             _formattedTable.Rows[i][_formattedTable.Columns.Count - 1] = i + 1;
             int j = 0;
             foreach (DVBaseColumn col in dependencyTable)
             {
-                AllowLinkforZero = true;
                 if (col.IsCustomColumn)
                     CustomColumDoCalc4Row(row, _dv, globals, col);
-
+                bool AllowLinkifNoData = true;
                 var cults = col.GetColumnCultureInfo(_user_culture);
                 object _unformattedData = row[col.Data];
                 object _formattedData = _unformattedData;
@@ -804,8 +802,6 @@ namespace ExpressBase.ServiceStack
                     {
                         _formattedData = (Convert.ToDecimal(_unformattedData) == 0) ? string.Empty : Convert.ToDecimal(_unformattedData).ToString("N", cults.NumberFormat);
 
-                        if (_formattedData.ToString() == string.Empty)
-                            AllowLinkforZero = false;
                     }
                     else
                         _formattedData = Convert.ToDecimal(_unformattedData).ToString("N", cults.NumberFormat);
@@ -828,11 +824,20 @@ namespace ExpressBase.ServiceStack
                 {
 
                 }
+                if (col.HideLinkifNoData)
+                {
+                    if (_formattedData.ToString() == string.Empty)
+                        AllowLinkifNoData = false;
+                }
 
+                if (col.Name == "eb_created_by" || col.Name == "eb_lastmodified_by" || col.Name == "eb_loc_id")
+                {
+                    ModifyEbColumns(col, ref _formattedData, _unformattedData);
+                }
 
                 if (!string.IsNullOrEmpty(col.LinkRefId) && (_isexcel == false))
                 {
-                    if (AllowLinkforZero)
+                    if (AllowLinkifNoData)
                     {
                         if (col.LinkType == LinkTypeEnum.Popout)
                             _formattedData = "<a href='#' oncontextmenu='return false' class ='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "'>" + _formattedData + "</a>";
@@ -848,6 +853,7 @@ namespace ExpressBase.ServiceStack
                 {
                     _formattedData = "<a href='../leadmanagement/" + row[0] + "' target='_blank'>" + _formattedData + "</a>";
                 }
+
                 if (bObfuscute && (_isexcel == false))
                 {
                     if (col.HideDataRowMoreThan > 0 && col.HideDataRowMoreThan < count)
@@ -855,10 +861,7 @@ namespace ExpressBase.ServiceStack
                         _formattedData = "********";
                     }
                 }
-                if(col.Name == "eb_created_by" || col.Name == "eb_lastmodified_by" || col.Name == "eb_loc_id")
-                {
-                    ModifyEbColumns(col, ref _formattedData, _unformattedData);
-                }
+                
 
                 this.conditinallyformatColumn(col, ref _formattedData, _unformattedData);
 
