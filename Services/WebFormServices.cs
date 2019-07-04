@@ -212,26 +212,38 @@ namespace ExpressBase.ServiceStack.Services
         //================================== GET RECORD FOR RENDERING ================================================
 
         public GetRowDataResponse Any(GetRowDataRequest request)
-        {
-            Console.WriteLine("Requesting for WebFormData( Refid : " + request.RefId + ", Rowid : " + request.RowId + " ).................");
-            GetRowDataResponse _dataset = new GetRowDataResponse();
-            EbWebForm form = GetWebFormObject(request.RefId);
-            form.TableRowId = request.RowId;
-            form.RefId = request.RefId;
-            form.UserObj = request.UserObj;
-            form.SolutionObj = this.Redis.Get<Eb_Solution>(String.Format("solution_{0}", request.SolnId)); 
-            form.RefreshFormData(EbConnectionFactory.DataDB, this);
-            _dataset.FormData = form.FormData;
-            return _dataset;
+        {            
+            try
+            {
+                Console.WriteLine("Requesting for WebFormData( Refid : " + request.RefId + ", Rowid : " + request.RowId + " ).................");
+                GetRowDataResponse _dataset = new GetRowDataResponse();
+                EbWebForm form = GetWebFormObject(request.RefId);
+                form.TableRowId = request.RowId;
+                form.RefId = request.RefId;
+                form.UserObj = request.UserObj;
+                form.SolutionObj = this.Redis.Get<Eb_Solution>(String.Format("solution_{0}", request.SolnId));
+                form.RefreshFormData(EbConnectionFactory.DataDB, this);
+                _dataset.FormData = form.FormData;
+                Console.WriteLine("Returning from GetRowData Service");
+                return _dataset;
+            }
+            catch(Exception ex)
+            {
+                Console.WriteLine("Exception in GetRowData Service" + ex.Message);
+                Console.WriteLine(ex.StackTrace);
+                throw new FormException("Terminated GetRowData");
+            }    
         }
 
         public GetPrefillDataResponse Any(GetPrefillDataRequest request)
         {
+            Console.WriteLine("Start GetPrefillData");
             GetPrefillDataResponse _dataset = new GetPrefillDataResponse();
             EbWebForm form = GetWebFormObject(request.RefId);
             form.RefId = request.RefId;
             form.RefreshFormData(EbConnectionFactory.DataDB, this, request.Params);
             _dataset.FormData = form.FormData;
+            Console.WriteLine("End GetPrefillData");
             return _dataset;
         }
 
@@ -291,30 +303,40 @@ namespace ExpressBase.ServiceStack.Services
         //======================================= INSERT OR UPDATE OR DELETE RECORD =============================================
 
         public InsertDataFromWebformResponse Any(InsertDataFromWebformRequest request)
-        {
-            EbWebForm FormObj = GetWebFormObject(request.RefId);
-            FormObj.RefId = request.RefId;
-            FormObj.TableRowId = request.RowId;
-            FormObj.FormData = request.FormData;
-            FormObj.UserObj = request.UserObj;
-            FormObj.LocationId = request.CurrentLoc;
-            FormObj.SolutionObj = request.SolutionObj;
-
-            Console.WriteLine("Insert/Update WebFormData : MergeFormData start");
-            FormObj.MergeFormData();
-            Console.WriteLine("Insert/Update WebFormData : Save start");
-
-            int r = FormObj.Save(EbConnectionFactory.DataDB, this);
-
-            Console.WriteLine("Insert/Update WebFormData : AfterSave start");
-            int a = FormObj.AfterSave(EbConnectionFactory.DataDB, request.RowId > 0);
-            return new InsertDataFromWebformResponse()
+        {            
+            try
             {
-                RowId = FormObj.TableRowId,
-                FormData = FormObj.FormData,
-                RowAffected = r,
-                AfterSaveStatus = a
-            };
+                EbWebForm FormObj = GetWebFormObject(request.RefId);
+                FormObj.RefId = request.RefId;
+                FormObj.TableRowId = request.RowId;
+                FormObj.FormData = request.FormData;
+                FormObj.UserObj = request.UserObj;
+                FormObj.LocationId = request.CurrentLoc;
+                FormObj.SolutionObj = request.SolutionObj;
+                int r = 0, a = 0;
+
+                Console.WriteLine("Insert/Update WebFormData : MergeFormData start");
+                FormObj.MergeFormData();
+                Console.WriteLine("Insert/Update WebFormData : Save start");
+                r = FormObj.Save(EbConnectionFactory.DataDB, this);
+                Console.WriteLine("Insert/Update WebFormData : AfterSave start");
+                a = FormObj.AfterSave(EbConnectionFactory.DataDB, request.RowId > 0);
+                Console.WriteLine("Insert/Update WebFormData : Returning");
+
+                return new InsertDataFromWebformResponse()
+                {
+                    RowId = FormObj.TableRowId,
+                    FormData = FormObj.FormData,
+                    RowAffected = r,
+                    AfterSaveStatus = a
+                };
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Exception in Insert/Update WebFormData" + ex.Message);
+                Console.WriteLine(ex.StackTrace);
+                throw new FormException("Terminated Insert/Update WebFormData");
+            }            
         }
 
         public DeleteDataFromWebformResponse Any(DeleteDataFromWebformRequest request)
