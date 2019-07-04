@@ -32,6 +32,7 @@ using System.Threading.Tasks;
 using ExpressBase.Common.Extensions;
 using ExpressBase.Common.Singletons;
 using ExpressBase.Common.Helpers;
+using ExpressBase.Common.LocationNSolution;
 
 namespace ExpressBase.ServiceStack
 {
@@ -39,6 +40,8 @@ namespace ExpressBase.ServiceStack
     public class DataVisService : EbBaseService
     {
         private const string HeaderPrefix = "H_", FooterPrefix = "F_", GroupDelimiter = ":-:", AfterText = "After", BeforeText = "Before", BlankText = "(Blank)";
+
+        private Eb_Solution _ebSolution = null;
 
 
         public DataVisService(IEbConnectionFactory _dbf) : base(_dbf) { }
@@ -431,6 +434,7 @@ namespace ExpressBase.ServiceStack
             object xx = new object();
             if (_dataset.Tables.Count > 0 && _dV != null)
             {
+                _ebSolution = request.eb_Solution;
                 ReturnObj = PreProcessing(ref _dataset, request.Params, _dV, request.UserInfo, ref _levels, request.IsExcel);
             }
 
@@ -851,6 +855,10 @@ namespace ExpressBase.ServiceStack
                         _formattedData = "********";
                     }
                 }
+                if(col.Name == "eb_created_by" || col.Name == "eb_lastmodified_by" || col.Name == "eb_loc_id")
+                {
+                    ModifyEbColumns(col, ref _formattedData, _unformattedData);
+                }
 
                 this.conditinallyformatColumn(col, ref _formattedData, _unformattedData);
 
@@ -871,6 +879,26 @@ namespace ExpressBase.ServiceStack
                 _formattedTable.Rows[i][treecol.Data] = GetTreeHtml(_formattedTable.Rows[i][treecol.Data], isgroup, level);
             }
 
+        }
+
+        public void ModifyEbColumns(DVBaseColumn col, ref object _formattedData, object _unformattedData)
+        {
+            if (col.Name == "eb_created_by" || col.Name == "eb_lastmodified_by")
+            {
+                int user_id = Convert.ToInt32(_unformattedData);
+                if (this._ebSolution.Users != null && this._ebSolution.Users.ContainsKey(user_id))
+                {
+                    _formattedData = this._ebSolution.Users[user_id];
+                }
+            }
+            else if (col.Name == "eb_loc_id")
+            {
+                int loc_id = Convert.ToInt32(_unformattedData);
+                if (this._ebSolution.Locations.ContainsKey(loc_id))
+                {
+                    _formattedData = this._ebSolution.Locations[loc_id].ShortName;
+                }
+            }
         }
 
         public void DateTimeformat(object _unformattedData, ref object _formattedData, ref EbDataRow row, DVBaseColumn col, CultureInfo cults, User _user)
@@ -1411,6 +1439,7 @@ namespace ExpressBase.ServiceStack
             var _ds = this.Redis.Get<EbDataReader>(request.RefId);
             string _sql = string.Empty;
             request.IsExcel = false;
+            this._ebSolution = request.eb_solution;
             if (_ds == null)
             {
                 var myService = base.ResolveService<EbObjectService>();
