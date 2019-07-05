@@ -21,6 +21,7 @@ using System.Reflection;
 using System.Runtime.Loader;
 using ServiceStack.Messaging;
 using System.Text;
+using System.Globalization;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -284,7 +285,7 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     SolutionName = dr[6].ToString(),
                     Description = dr[2].ToString(),
-                    DateCreated = dr[1].ToString(),
+                    DateCreated = Convert.ToDateTime(dr[1]).ToString("g", DateTimeFormatInfo.InvariantInfo),
                     IsolutionId = dr[4].ToString(),
                     EsolutionId = dr[5].ToString()
                 });
