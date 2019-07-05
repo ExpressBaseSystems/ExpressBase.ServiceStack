@@ -97,11 +97,30 @@ namespace ExpressBase.ServiceStack.Services
         public GetExplainResponse Get(GetExplainRequest request)
         {
             string query = request.Query.Split(";")[0];
-            //string sql = "EXPLAIN FORMAT=json " + query + ";";  mysql
-            string sql = "explain (format json, analyze on) " + query + ";";
+            string sql="";
+            if (EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.PGSQL)
+            {
+                sql = "explain (format json, analyze on) " + query + ";";
+            }
+            else if (EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.MYSQL)
+            {
+                sql = " EXPLAIN FORMAT=JSON " + query + ";";              
+            }
             var parameters = DataHelper.GetParams(this.EbConnectionFactory, false, request.Params, 0, 0);
             EbDataTable _explain = EbConnectionFactory.ObjectsDB.DoQuery(sql, parameters.ToArray<System.Data.Common.DbParameter>());
-            return new GetExplainResponse { Explain = _explain.Rows[0][0].ToString() };
+            
+            Dictionary<string, string> _d = new Dictionary<string, string>();
+            if (EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.PGSQL)
+            {
+                _d.Add("vendor", DatabaseVendors.PGSQL.ToString());               
+            }
+            else if (EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.MYSQL)
+            {
+                _d.Add("vendor", DatabaseVendors.MYSQL.ToString());                
+            }
+            _d.Add("json", _explain.Rows[0][0].ToString());
+
+            return new GetExplainResponse { Explain = JsonConvert.SerializeObject(_d)};
         }
     }
 }

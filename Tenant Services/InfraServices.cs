@@ -21,6 +21,7 @@ using System.Reflection;
 using System.Runtime.Loader;
 using ServiceStack.Messaging;
 using System.Text;
+using System.Globalization;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -58,9 +59,9 @@ namespace ExpressBase.ServiceStack.Services
             CreateAccountResponse resp = new CreateAccountResponse();
             try
             {
-                Console.WriteLine("Reached...  Updating tenant table with name ,activationcode,type etc  ");
+                Console.WriteLine("Reached... inserting tenant details into table  ");
                 string sql = @"INSERT INTO eb_tenants(
-                                                    emal,
+                                                    email,
                                                     fullname,
                                                     country,
                                                     pwd,
@@ -90,6 +91,7 @@ namespace ExpressBase.ServiceStack.Services
                 resp.Id = Convert.ToInt32(dt.Rows[0][0]);
                 if (resp.Id > 0)
                 {
+                    resp.AccountCreated = true;
                     resp.Notified = this.SendTenantMail(resp.Id, request.ActivationCode, request.PageUrl, request.Name, request.Email);
 
                     CreateSolutionResponse response = this.Post(new CreateSolutionRequest
@@ -171,7 +173,7 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception e)
             {
                 status = true;
-                Console.WriteLine(e.Message);
+                Console.WriteLine("Exception: " + e.Message + e.StackTrace);
             }
             return status;
         }
@@ -284,7 +286,7 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     SolutionName = dr[6].ToString(),
                     Description = dr[2].ToString(),
-                    DateCreated = dr[1].ToString(),
+                    DateCreated = Convert.ToDateTime(dr[1]).ToString("g", DateTimeFormatInfo.InvariantInfo),
                     IsolutionId = dr[4].ToString(),
                     EsolutionId = dr[5].ToString()
                 });
@@ -294,10 +296,11 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
+      
         public GetSolutioInfoResponse Get(GetSolutioInfoRequest request)
         {
             ConnectionManager _conService = base.ResolveService<ConnectionManager>();
-            string sql = string.Format("SELECT solution_name, description, date_created, esolution_id, pricing_tier  FROM eb_solutions WHERE isolution_id='{0}'", request.IsolutionId);
+            string sql = string.Format("SELECT solution_name, description, date_created, esolution_id, pricing_tier, versioning  FROM eb_solutions WHERE isolution_id='{0}'", request.IsolutionId);
             EbDataTable dt = (new EbConnectionFactory(CoreConstants.EXPRESSBASE, this.Redis)).DataDB.DoQuery(sql);
             EbSolutionsWrapper _ebSolutions = new EbSolutionsWrapper
             {
@@ -305,7 +308,8 @@ namespace ExpressBase.ServiceStack.Services
                 Description = dt.Rows[0][1].ToString(),
                 DateCreated = dt.Rows[0][2].ToString(),
                 EsolutionId = dt.Rows[0][3].ToString(),
-                PricingTier = (PricingTiers)Convert.ToInt32(dt.Rows[0][4])
+                PricingTier = (PricingTiers)Convert.ToInt32(dt.Rows[0][4]),
+                IsVersioningEnabled = (bool)dt.Rows[0][5]
             };
             GetSolutioInfoResponse resp = new GetSolutioInfoResponse() { Data = _ebSolutions };
             if (resp.Data != null)
@@ -419,7 +423,7 @@ namespace ExpressBase.ServiceStack.Services
                     //            bodyMsg.Append("<br />");
                     //            bodyMsg.Append("next4");
 
-                    MessageProducer3.Publish(new EmailServicesRequest
+                    MessageProducer3.Publish(new EmailServicesRequest1
                     {
                         To = reques.Email,
                         Subject = "testing email for reset password",
@@ -1379,7 +1383,7 @@ namespace ExpressBase.ServiceStack.Services
                     if (request.restype == "img")
                     {
                         string sql = string.Format("SELECT id,profileimg FROM eb_tenants WHERE id={0}", request.Uid);
-                        EbDataTable dt = EbConnectionFactory.DataDB.DoQuery(sql);
+                        EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(sql);
                         // Dictionary<int, string> list = new Dictionary<int, string>();
                         List<List<object>> list = new List<List<object>>();
                         foreach (EbDataRow dr in dt.Rows)
@@ -1395,7 +1399,7 @@ namespace ExpressBase.ServiceStack.Services
                     else
                     {
                         string sql = string.Format("SELECT id,profileimg FROM eb_tenants WHERE cname={0}", request.Uname);
-                        EbDataTable dt = EbConnectionFactory.DataDB.DoQuery(sql);
+                        EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(sql);
                         List<List<object>> list = new List<List<object>>();
                         foreach (EbDataRow dr in dt.Rows)
                         {
@@ -1524,4 +1528,11 @@ namespace ExpressBase.ServiceStack.Services
         //}
     }
 
+    internal class EmailServicesRequest1
+    {
+        public string To { get; set; }
+        public string Subject { get; set; }
+        public string Message { get; set; }
+        public string SolnId { get; set; }
+    }
 }

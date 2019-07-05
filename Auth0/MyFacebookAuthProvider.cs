@@ -44,7 +44,7 @@ namespace ExpressBase.ServiceStack.Auth0
                         try
                         {
                             bool unique = false;
-                            string sql1 = "SELECT id, pwd FROM eb_tenants WHERE email ~* @email";
+                            string sql1 = "SELECT id, pwd,fb_id,github_id,twitter_id FROM eb_tenants WHERE email ~* @email";
                             DbParameter[] parameters2 = { InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, session.ProviderOAuthAccess[0].Email) };
                             EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(sql1, parameters2);
                             if (dt.Rows.Count > 0)
@@ -53,22 +53,20 @@ namespace ExpressBase.ServiceStack.Auth0
                             }
                             else
                                 unique = true;
-                            //string sql11 = "SELECT id, pwd FROM eb_tenants WHERE email ~* @email";
-                            //DbParameter[] parameters22 = { InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, session.ProviderOAuthAccess[0].Email) };
-                            //int dtq = InfraConnectionFactory.DataDB.DoNonQuery(sql11, parameters22);
+                        
                             if (unique == true)
                             {
-                                // DbParameter[] parameter1 = {
-                                //InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String,  session.ProviderOAuthAccess[0].Email),
-                                //InfraConnectionFactory.DataDB.GetNewParameter("name", EbDbTypes.String,  session.ProviderOAuthAccess[0].DisplayName),
-                                // InfraConnectionFactory.DataDB.GetNewParameter("fbid", EbDbTypes.String,  (session.ProviderOAuthAccess[0].UserId).ToString()),
-                                // InfraConnectionFactory.DataDB.GetNewParameter("password", EbDbTypes.String,  (session.ProviderOAuthAccess[0].UserId.ToString()+session.ProviderOAuthAccess[0].Email.ToString()).ToMD5Hash()),
+                                DbParameter[] parameter1 = {
+                                InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String,  session.ProviderOAuthAccess[0].Email),
+                                InfraConnectionFactory.DataDB.GetNewParameter("name", EbDbTypes.String,  session.ProviderOAuthAccess[0].DisplayName),
+                                 InfraConnectionFactory.DataDB.GetNewParameter("fbid", EbDbTypes.String,  (session.ProviderOAuthAccess[0].UserId).ToString()),
+                                 InfraConnectionFactory.DataDB.GetNewParameter("password", EbDbTypes.String,  (session.ProviderOAuthAccess[0].UserId.ToString()+session.ProviderOAuthAccess[0].Email.ToString()).ToMD5Hash()),
 
-                                // };
+                                 };
 
-                                // EbDataTable dtbl = InfraConnectionFactory.DataDB.DoQuery(@"INSERT INTO eb_tenants (email,fullname,fb_id,pwd) 
-                                // VALUES 
-                                // (:email,:name,:fbid,:password) RETURNING id;", parameter1);
+                                EbDataTable dtbl = InfraConnectionFactory.DataDB.DoQuery(@"INSERT INTO eb_tenants (email,fullname,fb_id,pwd) 
+                                 VALUES 
+                                 (:email,:name,:fbid,:password) RETURNING id;", parameter1);
 
 
                             }
@@ -82,6 +80,9 @@ namespace ExpressBase.ServiceStack.Auth0
                                 //IsVerified = session.IsAuthenticated,
                                 Pauto = (session.ProviderOAuthAccess[0].UserId.ToString() + session.ProviderOAuthAccess[0].Email.ToString()).ToMD5Hash(),
                                 UniqueEmail = unique,
+                                FbId = Convert.ToString(dt.Rows[0][2]),
+                                GithubId = Convert.ToString(dt.Rows[0][3]),
+                                TwitterId = Convert.ToString(dt.Rows[0][4]),
                             };
                             b = JsonConvert.SerializeObject(sco_signup);
                             return authService.Redirect(SuccessRedirectUrlFilter(this, string.Format("http://localhost:41500/social_oauth?scosignup={0}", b)));
