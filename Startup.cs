@@ -233,6 +233,8 @@ namespace ExpressBase.ServiceStack
             {
                 ILog log = LogManager.GetLogger(GetType());
 
+                log.Info(string.Format("Started Execution of {0} at {1}", requestDto.GetType().ToString(),DateTime.Now.TimeOfDay));
+
                 log.Info("In GlobalRequestFilters");
                 try
                 {
@@ -400,6 +402,10 @@ namespace ExpressBase.ServiceStack
 
             this.GlobalResponseFilters.Add((req, res, responseDto) =>
             {
+                ILog log = LogManager.GetLogger(GetType());
+
+                log.Info(string.Format("Finished Execution of {0} at {1}", responseDto.GetType().ToString(), DateTime.Now.TimeOfDay));
+
                 if (responseDto.GetResponseDto() != null)
                 {
                     if (responseDto.GetResponseDto().GetType() == typeof(GetAccessTokenResponse))
