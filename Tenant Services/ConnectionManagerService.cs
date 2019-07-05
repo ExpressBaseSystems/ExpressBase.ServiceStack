@@ -372,7 +372,8 @@ namespace ExpressBase.ServiceStack.Services
             AddDBResponse res = new AddDBResponse();
             try
             {
-                request.DbConfig.PersistIntegrationConf(request.SolnId, this.InfraConnectionFactory/*, request.IsNew*/, request.UserId);
+                res.nid = request.DbConfig.PersistIntegrationConf(request.SolnId, this.InfraConnectionFactory/*, request.IsNew*/, request.UserId);
+
             }
             catch (Exception e)
             {
@@ -449,6 +450,19 @@ namespace ExpressBase.ServiceStack.Services
             return res;
         }
 
+        public AddGoogleMapResponse Post(AddGoogleMapRequest request)
+        {
+            AddGoogleMapResponse res = new AddGoogleMapResponse();
+            try
+            {
+                request.Config.PersistIntegrationConf(request.SolnId, this.InfraConnectionFactory, request.UserId);
+            }
+            catch (Exception e)
+            {
+                res.ResponseStatus.Message = e.Message;
+            }
+            return res;
+        }
         public GetIntegrationConfigsResponse Get(GetIntegrationConfigsRequest request)
         {
             GetIntegrationConfigsResponse res = new GetIntegrationConfigsResponse();
@@ -498,6 +512,63 @@ namespace ExpressBase.ServiceStack.Services
             }
             return res;
         }
+
+        public EbIntegrationConfDeleteResponse Post(EbIntergationConfDeleteRequest request)
+        {
+            EbIntegrationConfDeleteResponse res = new EbIntegrationConfDeleteResponse();
+            try
+            {
+                request.IntegrationConfdelete.PersistConfDeleteIntegration(request.SolnId, this.InfraConnectionFactory, request.UserId);
+            }
+            catch (Exception e)
+            {
+                res.ResponseStatus.Message = e.Message;
+            }
+            return res;
+        }
+
+        public EbIntegrationDeleteResponse Post(EbIntergationDeleteRequest request)
+        {
+            EbIntegrationDeleteResponse res = new EbIntegrationDeleteResponse();
+            try
+            {
+                request.Integrationdelete.PersistDeleteIntegration(request.SolnId, this.InfraConnectionFactory, request.UserId);
+            }
+            catch (Exception e)
+            {
+                res.ResponseStatus.Message = e.Message;
+            }
+            return res;
+        }
+
+        public EbIntegrationSwitchResponse Post(EbIntergationSwitchRequest request)
+        {
+            EbIntegrationSwitchResponse res = new EbIntegrationSwitchResponse();
+            try
+            {
+                foreach (var ob in request.Integrations)
+                {
+                    EbIntegration obj = new EbIntegration
+                    {
+                        Id = Convert.ToInt32(ob.Id),
+                        ConfigId = Convert.ToInt32(ob.ConfigId),
+                        Preference = Enum.Parse<ConPreferences>(ob.Preference.ToString()),
+                        Type = Enum.Parse<EbConnections>(ob.Type.ToString())
+                    };
+                    EbIntegrationRequest _obj = new EbIntegrationRequest { IntegrationO = obj };
+                    _obj.IntegrationO.PersistIntegration(request.SolnId, this.InfraConnectionFactory, request.UserId);
+                }
+            }
+            catch (Exception e)
+            {
+                res.ResponseStatus.Message = e.Message;
+            }
+            return res;
+        }
+
+
+
+
 
         public void InitializeDataDb(int confid, string solid, int uid)
         {
@@ -558,32 +629,9 @@ namespace ExpressBase.ServiceStack.Services
                     foreach (var _row in _temp.Rows)
                     {
                         string type = _row[3].ToString();
-
                         if (!_conf.ContainsKey(type))
-                        {
                             _conf.Add(type, new List<EbIntegrationConfData>());
-                            _conf[type].Add(new EbIntegrationConfData
-                            {
-                                Id = Convert.ToInt32(_row[0]),
-                                SolutionId = _row[1].ToString(),
-                                NickName = _row[2].ToString(),
-                                ConObject = _row[4].ToString(),
-                                Type = _row[3].ToString(),
-                                CreatedOn = Convert.ToDateTime(_row[6]).ToString("dddd, dd MMMM yyyy"),
-                            });
-                        }
-                        else
-                        {
-                            _conf[type].Add(new EbIntegrationConfData
-                            {
-                                Id = Convert.ToInt32(_row[0]),
-                                SolutionId = _row[1].ToString(),
-                                NickName = _row[2].ToString(),
-                                ConObject = _row[4].ToString(),
-                                Type = _row[3].ToString(),
-                                CreatedOn = Convert.ToDateTime(_row[6]).ToString("dddd, dd MMMM yyyy"),
-                            });
-                        }
+                        _conf[type].Add(new EbIntegrationConfData(_row));
                     }
                     resp.IntegrationsConfig = _conf;
                     _temp = dt.Tables[2];
@@ -592,30 +640,8 @@ namespace ExpressBase.ServiceStack.Services
                     {
                         string Type = _row[12].ToString();
                         if (!_intgre.ContainsKey(Type))
-                        {
                             _intgre.Add(Type, new List<EbIntegrationData>());
-                            _intgre[Type].Add(new EbIntegrationData
-                            {
-                                Id = _row[0].ToString(),
-                                ConfId = _row[10].ToString(),
-                                NickName = _row[2].ToString(),
-                                Ctype = _row[3].ToString(),
-                                Type = _row[12].ToString(),
-                                Preference = _row[13].ToString()
-                            });
-                        }
-                        else
-                        {
-                            _intgre[Type].Add(new EbIntegrationData
-                            {
-                                Id = _row[0].ToString(),
-                                ConfId = _row[10].ToString(),
-                                NickName = _row[2].ToString(),
-                                Ctype = _row[3].ToString(),
-                                Type = _row[12].ToString(),
-                                Preference = _row[13].ToString()
-                            });
-                        }
+                        _intgre[Type].Add(new EbIntegrationData(_row));
                     }
                     resp.Integrations = _intgre;
                 }

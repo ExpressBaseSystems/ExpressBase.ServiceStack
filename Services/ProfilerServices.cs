@@ -20,7 +20,7 @@ namespace ExpressBase.ServiceStack.Services
         {
             List<EbExecutionLogs> _logs = new List<EbExecutionLogs>();
             List<DbParameter> parameters = new List<DbParameter>();
-            string query = "SELECT id, rows, exec_time, created_by, created_at FROM eb_executionlogs WHERE refid = :refid";
+            string query = EbConnectionFactory.ObjectsDB.EB_PROFILER_QUERY_COLUMN;
             parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("refid", EbDbTypes.String, request.RefId));
             var _dt = EbConnectionFactory.ObjectsDB.DoQuery(query, parameters.ToArray());
             return new ProfilerQueryResponse { ColumnCollection = _dt.Columns, data = _dt.Rows };
@@ -29,10 +29,7 @@ namespace ExpressBase.ServiceStack.Services
         public ProfilerQueryResponse Get(ProfilerQueryDataRequest request)
         {
             List<DbParameter> parameters = new List<DbParameter>();
-            string query = @"SELECT COUNT(id) FROM eb_executionlogs WHERE refid = :refid; 
-                SELECT EL.id, EL.rows, EL.exec_time, EU.fullname, EL.created_at FROM eb_executionlogs EL, eb_users EU
-                WHERE refid = :refid AND EL.created_by = EU.id
-                LIMIT :limit OFFSET :offset;";
+            string query = EbConnectionFactory.ObjectsDB.EB_PROFILER_QUERY_DATA;
             parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("refid", EbDbTypes.String, request.RefId));
             parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("limit", EbDbTypes.Int32, request.Length));
             parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("offset", EbDbTypes.Int32, request.Start));
@@ -45,7 +42,7 @@ namespace ExpressBase.ServiceStack.Services
             List<EbExecutionLogs> _logs = new List<EbExecutionLogs>();
             List<DbParameter> parameters = new List<DbParameter>();
             Profiler profiler = new Profiler();
-            string query = EbConnectionFactory.ObjectsDB.EB_GETPROFILERS;
+            string query = EbConnectionFactory.ObjectsDB.EB_GET_PROFILERS;
             parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("refid", EbDbTypes.String, request.RefId));
             EbDataSet dt = EbConnectionFactory.ObjectsDB.DoQueries(query, parameters.ToArray());
             if (dt.Tables.Count > 0)
@@ -83,7 +80,7 @@ namespace ExpressBase.ServiceStack.Services
 
         public GetChartDetailsResponse Get(GetChartDetailsRequest request)
         {
-            string sql = "SELECT rows, exec_time FROM eb_executionlogs WHERE refid = :refid AND EXTRACT(month FROM created_at) = EXTRACT(month FROM current_date);";
+            string sql = EbConnectionFactory.ObjectsDB.EB_GET_CHART_DETAILS;
             DbParameter[] p = { EbConnectionFactory.ObjectsDB.GetNewParameter("refid", EbDbTypes.String, request.Refid) };
             EbDataTable _chartdetails = EbConnectionFactory.ObjectsDB.DoQuery(sql, p);
             return new GetChartDetailsResponse { data = _chartdetails.Rows };
@@ -91,7 +88,7 @@ namespace ExpressBase.ServiceStack.Services
 
         public GetChart2DetailsResponse Get(GetChart2DetailsRequest request)
         {
-            string sql = EbConnectionFactory.ObjectsDB.EB_GETCHART2DETAILS;
+            string sql = EbConnectionFactory.ObjectsDB.EB_GET_CHART_2_DETAILS;
             DbParameter[] p = { EbConnectionFactory.ObjectsDB.GetNewParameter("refid", EbDbTypes.String, request.Refid) };
             EbDataTable _chartdetails = EbConnectionFactory.ObjectsDB.DoQuery(sql, p);
             return new GetChart2DetailsResponse { data = _chartdetails.Rows };
@@ -100,11 +97,30 @@ namespace ExpressBase.ServiceStack.Services
         public GetExplainResponse Get(GetExplainRequest request)
         {
             string query = request.Query.Split(";")[0];
-            //string sql = "EXPLAIN FORMAT=json " + query + ";";  mysql
-            string sql = "explain (format json, analyze on) " + query + ";";
+            string sql="";
+            if (EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.PGSQL)
+            {
+                sql = "explain (format json, analyze on) " + query + ";";
+            }
+            else if (EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.MYSQL)
+            {
+                sql = " EXPLAIN FORMAT=JSON " + query + ";";              
+            }
             var parameters = DataHelper.GetParams(this.EbConnectionFactory, false, request.Params, 0, 0);
             EbDataTable _explain = EbConnectionFactory.ObjectsDB.DoQuery(sql, parameters.ToArray<System.Data.Common.DbParameter>());
-            return new GetExplainResponse { Explain = _explain.Rows[0][0].ToString() };
+            
+            Dictionary<string, string> _d = new Dictionary<string, string>();
+            if (EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.PGSQL)
+            {
+                _d.Add("vendor", DatabaseVendors.PGSQL.ToString());               
+            }
+            else if (EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.MYSQL)
+            {
+                _d.Add("vendor", DatabaseVendors.MYSQL.ToString());                
+            }
+            _d.Add("json", _explain.Rows[0][0].ToString());
+
+            return new GetExplainResponse { Explain = JsonConvert.SerializeObject(_d)};
         }
     }
 }

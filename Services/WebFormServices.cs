@@ -2,6 +2,7 @@
 using ExpressBase.Common.Constants;
 using ExpressBase.Common.Data;
 using ExpressBase.Common.Extensions;
+using ExpressBase.Common.LocationNSolution;
 using ExpressBase.Common.Objects;
 using ExpressBase.Common.Structures;
 using ExpressBase.Objects;
@@ -61,7 +62,7 @@ namespace ExpressBase.ServiceStack.Services
                             _listNamesAndTypes.Add(new TableColumnMeta { Name = _column.ColumnName, Type = vDbTypes.GetVendorDbTypeStruct((EbDbTypes)_column.EbDbType), Unique = true });
                             _listNamesAndTypes.Add(new TableColumnMeta { Name = _column.ColumnName + "_ebbkup", Type = vDbTypes.GetVendorDbTypeStruct((EbDbTypes)_column.EbDbType) });
                         }
-                        else if (_column.Control is EbSysLocation || _column.Control is EbSysCreatedBy || _column.Control is EbSysCreatedAt)
+                        else if (_column.Control is EbSysLocation || _column.Control is EbSysCreatedBy || _column.Control is EbSysCreatedAt || _column.Control is EbSysModifiedBy || _column.Control is EbSysModifiedAt)
                             continue;
                         else
                             _listNamesAndTypes.Add(new TableColumnMeta { Name = _column.ColumnName, Type = vDbTypes.GetVendorDbTypeStruct((EbDbTypes)_column.EbDbType) });
@@ -72,15 +73,15 @@ namespace ExpressBase.ServiceStack.Services
                         _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_row_num", Type = vDbTypes.Decimal });
 
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_by", Type = vDbTypes.Decimal });
-                    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_by_s", Type = vDbTypes.String });
+                    //_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_by_s", Type = vDbTypes.String });
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_at", Type = vDbTypes.DateTime });
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_by", Type = vDbTypes.Decimal });
-                    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_by_s", Type = vDbTypes.String });
+                    //_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_by_s", Type = vDbTypes.String });
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_at", Type = vDbTypes.DateTime });
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_del", Type = vDbTypes.Boolean, Default = "F" });
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_void", Type = vDbTypes.Boolean, Default = "F" });
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_loc_id", Type = vDbTypes.Int32 });
-                    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_loc_s", Type = vDbTypes.String });
+                    //_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_loc_s", Type = vDbTypes.String });
                     //_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_default", Type = vDbTypes.Boolean, Default = "F" });
                     //_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_transaction_date", Type = vDbTypes.DateTime });
                     //_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_autogen", Type = vDbTypes.Decimal });
@@ -211,25 +212,38 @@ namespace ExpressBase.ServiceStack.Services
         //================================== GET RECORD FOR RENDERING ================================================
 
         public GetRowDataResponse Any(GetRowDataRequest request)
-        {
-            Console.WriteLine("Requesting for WebFormData( Refid : " + request.RefId + ", Rowid : " + request.RowId + " ).................");
-            GetRowDataResponse _dataset = new GetRowDataResponse();
-            EbWebForm form = GetWebFormObject(request.RefId);
-            form.TableRowId = request.RowId;
-            form.RefId = request.RefId;
-            form.UserObj = request.UserObj;
-            form.RefreshFormData(EbConnectionFactory.DataDB, this);
-            _dataset.FormData = form.FormData;
-            return _dataset;
+        {            
+            try
+            {
+                Console.WriteLine("Requesting for WebFormData( Refid : " + request.RefId + ", Rowid : " + request.RowId + " ).................");
+                GetRowDataResponse _dataset = new GetRowDataResponse();
+                EbWebForm form = GetWebFormObject(request.RefId);
+                form.TableRowId = request.RowId;
+                form.RefId = request.RefId;
+                form.UserObj = request.UserObj;
+                form.SolutionObj = this.Redis.Get<Eb_Solution>(String.Format("solution_{0}", request.SolnId));
+                form.RefreshFormData(EbConnectionFactory.DataDB, this);
+                _dataset.FormData = form.FormData;
+                Console.WriteLine("Returning from GetRowData Service");
+                return _dataset;
+            }
+            catch(Exception ex)
+            {
+                Console.WriteLine("Exception in GetRowData Service" + ex.Message);
+                Console.WriteLine(ex.StackTrace);
+                throw new FormException("Terminated GetRowData. Check servicestack log for stack trace.");
+            }    
         }
 
         public GetPrefillDataResponse Any(GetPrefillDataRequest request)
         {
+            Console.WriteLine("Start GetPrefillData");
             GetPrefillDataResponse _dataset = new GetPrefillDataResponse();
             EbWebForm form = GetWebFormObject(request.RefId);
             form.RefId = request.RefId;
             form.RefreshFormData(EbConnectionFactory.DataDB, this, request.Params);
             _dataset.FormData = form.FormData;
+            Console.WriteLine("End GetPrefillData");
             return _dataset;
         }
 
@@ -289,30 +303,40 @@ namespace ExpressBase.ServiceStack.Services
         //======================================= INSERT OR UPDATE OR DELETE RECORD =============================================
 
         public InsertDataFromWebformResponse Any(InsertDataFromWebformRequest request)
-        {
-            EbWebForm FormObj = GetWebFormObject(request.RefId);
-            FormObj.RefId = request.RefId;
-            FormObj.TableRowId = request.RowId;
-            FormObj.FormData = request.FormData;
-            FormObj.UserObj = request.UserObj;
-            FormObj.LocationId = request.CurrentLoc;
-            FormObj.SolutionObj = request.SolutionObj;
-
-            Console.WriteLine("Insert/Update WebFormData : MergeFormData start");
-            FormObj.MergeFormData();
-            Console.WriteLine("Insert/Update WebFormData : Save start");
-
-            int r = FormObj.Save(EbConnectionFactory.DataDB, this);
-
-            Console.WriteLine("Insert/Update WebFormData : AfterSave start");
-            int a = FormObj.AfterSave(EbConnectionFactory.DataDB, request.RowId > 0);
-            return new InsertDataFromWebformResponse()
+        {            
+            try
             {
-                RowId = FormObj.TableRowId,
-                FormData = FormObj.FormData,
-                RowAffected = r,
-                AfterSaveStatus = a
-            };
+                EbWebForm FormObj = GetWebFormObject(request.RefId);
+                FormObj.RefId = request.RefId;
+                FormObj.TableRowId = request.RowId;
+                FormObj.FormData = request.FormData;
+                FormObj.UserObj = request.UserObj;
+                FormObj.LocationId = request.CurrentLoc;
+                FormObj.SolutionObj = request.SolutionObj;
+                int r = 0, a = 0;
+
+                Console.WriteLine("Insert/Update WebFormData : MergeFormData start");
+                FormObj.MergeFormData();
+                Console.WriteLine("Insert/Update WebFormData : Save start");
+                r = FormObj.Save(EbConnectionFactory.DataDB, this);
+                Console.WriteLine("Insert/Update WebFormData : AfterSave start");
+                a = FormObj.AfterSave(EbConnectionFactory.DataDB, request.RowId > 0);
+                Console.WriteLine("Insert/Update WebFormData : Returning");
+
+                return new InsertDataFromWebformResponse()
+                {
+                    RowId = FormObj.TableRowId,
+                    FormData = FormObj.FormData,
+                    RowAffected = r,
+                    AfterSaveStatus = a
+                };
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Exception in Insert/Update WebFormData" + ex.Message);
+                Console.WriteLine(ex.StackTrace);
+                throw new FormException("Terminated Insert/Update WebFormData. Check servicestack log for stack trace.");
+            }            
         }
 
         public DeleteDataFromWebformResponse Any(DeleteDataFromWebformRequest request)
@@ -660,14 +684,24 @@ namespace ExpressBase.ServiceStack.Services
 
         public GetAuditTrailResponse Any(GetAuditTrailRequest request)
         {
-            EbWebForm FormObj = GetWebFormObject(request.FormId);
-            FormObj.RefId = request.FormId;
-            FormObj.TableRowId = request.RowId;
-            FormObj.UserObj = request.UserObj;
+            try
+            {
+                EbWebForm FormObj = GetWebFormObject(request.FormId);
+                FormObj.RefId = request.FormId;
+                FormObj.TableRowId = request.RowId;
+                FormObj.UserObj = request.UserObj;
+                FormObj.SolutionObj = this.Redis.Get<Eb_Solution>(String.Format("solution_{0}", request.SolnId));
 
-            string temp = FormObj.GetAuditTrail(EbConnectionFactory.DataDB, this);
+                string temp = FormObj.GetAuditTrail(EbConnectionFactory.DataDB, this);
 
-            return new GetAuditTrailResponse() { Json = temp };
+                return new GetAuditTrailResponse() { Json = temp };
+            }
+            catch(Exception ex)
+            {
+                Console.WriteLine("Exception in GetAuditTrail Service" + ex.Message);
+                Console.WriteLine(ex.StackTrace);
+                throw new FormException("Terminated GetAuditTrail. Check servicestack log for stack trace.");
+            }
 
 
             //     string qry = @"	SELECT 

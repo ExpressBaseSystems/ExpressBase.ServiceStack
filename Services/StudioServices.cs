@@ -260,7 +260,7 @@ namespace ExpressBase.ServiceStack
         {
             EbDataSet dt;
             EbDataTable tbl;
-            string query = EbConnectionFactory.ObjectsDB.Eb_ALLOBJNVER;
+            string query = EbConnectionFactory.ObjectsDB.EB_ALLOBJNVER;
 
             DbParameter[] parameters = { EbConnectionFactory.ObjectsDB.GetNewParameter("ids", EbDbTypes.String, request.ObjectIds) };
             dt = EbConnectionFactory.ObjectsDB.DoQueries(query, parameters);
@@ -268,7 +268,7 @@ namespace ExpressBase.ServiceStack
             Dictionary<string, List<EbObjectWrapper>> f_dict = new Dictionary<string, List<EbObjectWrapper>>();
             List<EbObjectWrapper> wrap_list = null;
 
-            if(EbConnectionFactory.ObjectsDB.Vendor==DatabaseVendors.MYSQL)
+            if (EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.MYSQL)
             {
                 tbl = dt.Tables[1];
             }
@@ -284,7 +284,7 @@ namespace ExpressBase.ServiceStack
                     wrap_list = new List<EbObjectWrapper>();
                     f_dict.Add(_nameKey, wrap_list);
                 }
-                
+
                 wrap_list.Add(new EbObjectWrapper
                 {
                     Id = Convert.ToInt32(dr[0]),
@@ -1099,7 +1099,7 @@ namespace ExpressBase.ServiceStack
 
         public EbObjectChangeStatusResponse Post(EbObjectChangeStatusRequest request)
         {
-            int id = 0;
+            bool res = true;
             try
             {
                 using (DbConnection con = EbConnectionFactory.ObjectsDB.GetNewConnection())
@@ -1113,20 +1113,21 @@ namespace ExpressBase.ServiceStack
                     cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("status", EbDbTypes.Int32, (int)request.Status));
                     cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("commit_uid", EbDbTypes.Int32, request.UserId));
                     cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("obj_changelog", EbDbTypes.String, request.ChangeLog));
-                    id = (int)cmd.ExecuteScalar();
+                    cmd.ExecuteScalar();
                 }
             }
             catch (Exception e)
             {
-                Console.WriteLine("Exception: " + e.ToString());
+                res = false;
+                Console.WriteLine("Exception: " + e.Message + e.StackTrace);
             }
-            return new EbObjectChangeStatusResponse { Id = id };
+            return new EbObjectChangeStatusResponse { Response = res };
         }
 
         public DeleteObjectResponse Post(DeleteEbObjectRequest request)
         {
-             string sql = @"UPDATE eb_objects SET eb_del='T' WHERE id = :id;             
-                           UPDATE eb_objects_ver SET eb_del='T' WHERE eb_objects_id = :id";            
+            string sql = @"UPDATE eb_objects SET eb_del='T' WHERE id = :id;             
+                           UPDATE eb_objects_ver SET eb_del='T' WHERE eb_objects_id = :id";
 
             DbParameter[] p = { EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, request.ObjId) };
             int _rows = EbConnectionFactory.ObjectsDB.DoNonQuery(sql, p);
@@ -1136,7 +1137,7 @@ namespace ExpressBase.ServiceStack
         public EnableLogResponse Post(EnableLogRequest request)
         {
             string sql = "UPDATE eb_objects SET is_logenabled=:log WHERE id = :id";
-            
+
             DbParameter[] p = { EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, request.ObjId) ,
             EbConnectionFactory.ObjectsDB.GetNewParameter("log",EbDbTypes.String,(request.Islog==true)? "T":"F")};
             int _rows = EbConnectionFactory.ObjectsDB.DoNonQuery(sql, p);
