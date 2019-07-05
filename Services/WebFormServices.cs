@@ -690,6 +690,7 @@ namespace ExpressBase.ServiceStack.Services
                 FormObj.RefId = request.FormId;
                 FormObj.TableRowId = request.RowId;
                 FormObj.UserObj = request.UserObj;
+                FormObj.SolutionObj = this.Redis.Get<Eb_Solution>(String.Format("solution_{0}", request.SolnId));
 
                 string temp = FormObj.GetAuditTrail(EbConnectionFactory.DataDB, this);
 
