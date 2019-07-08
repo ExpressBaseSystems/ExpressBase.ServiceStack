@@ -649,7 +649,7 @@ namespace ExpressBase.ServiceStack
                 RowColletion rows = _dataset.Tables[0].Rows;
                 if ((_dv as EbTableVisualization) != null)
                 {
-                    if ((_dv as EbTableVisualization).RowGroupCollection.Count > 0 && (_dv as EbTableVisualization).CurrentRowGroup.RowGrouping.Count > 0)
+                    if ((_dv as EbTableVisualization).RowGroupCollection.Count > 0 && (_dv as EbTableVisualization).CurrentRowGroup.RowGrouping.Count > 0 && !(_dv as EbTableVisualization).DisableRowGrouping)
                     {
                         isRowgrouping = true;
                         RowGroupingColumns = (_dv as EbTableVisualization).CurrentRowGroup.RowGrouping;
@@ -1351,7 +1351,7 @@ namespace ExpressBase.ServiceStack
                 }
                 else
                 {
-                    TempStr += (TempStr.Equals(string.Empty)) ? tempvalue : GroupDelimiter + ((tempvalue.IsNullOrEmpty()) ? BlankText : tempvalue);
+                    TempStr += (TempStr.Equals(string.Empty)) ? ((tempvalue.IsNullOrEmpty()) ? BlankText : tempvalue): GroupDelimiter + ((tempvalue.IsNullOrEmpty()) ? BlankText : tempvalue);
                 }
             }
 
