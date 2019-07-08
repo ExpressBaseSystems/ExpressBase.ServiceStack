@@ -301,7 +301,8 @@ namespace ExpressBase.ServiceStack
 
         public string Get(GetDefaultMapApiKeyFromConnectionRequest request)
         {
-            return this.EbConnectionFactory.MapConnection.GetDefaultApikey();
+            string _apikey = (this.EbConnectionFactory.MapConnection!=null)? this.EbConnectionFactory.MapConnection.GetDefaultApikey():string.Empty;
+            return _apikey;
         }
     }
 }
