@@ -72,7 +72,7 @@ namespace ExpressBase.ServiceStack
                             AuthProvider = session.ProviderOAuthAccess[0].Provider,
                             Country = session.ProviderOAuthAccess[0].Country,
                             Email = session.ProviderOAuthAccess[0].Email,
-                            Fbid = (session.ProviderOAuthAccess[0].UserId).ToString(),
+                            Social_id = (session.ProviderOAuthAccess[0].UserId).ToString(),
                             Fullname = session.ProviderOAuthAccess[0].UserName,
                             //IsVerified = session.IsAuthenticated,
                             Pauto = (session.ProviderOAuthAccess[0].UserId.ToString() + session.ProviderOAuthAccess[0].Email.ToString()).ToMD5Hash(),

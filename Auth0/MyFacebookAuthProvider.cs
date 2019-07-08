@@ -43,6 +43,9 @@ namespace ExpressBase.ServiceStack.Auth0
                         string b = string.Empty;
                         try
                         {
+                            string pasword = null;
+                            SocialSignup sco_signup = new SocialSignup();
+
                             bool unique = false;
                             string sql1 = "SELECT id, pwd,fb_id,github_id,twitter_id FROM eb_tenants WHERE email ~* @email";
                             DbParameter[] parameters2 = { InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, session.ProviderOAuthAccess[0].Email) };
@@ -56,11 +59,13 @@ namespace ExpressBase.ServiceStack.Auth0
                         
                             if (unique == true)
                             {
+                                string pd = Guid.NewGuid().ToString();
+                               pasword = (session.ProviderOAuthAccess[0].UserId.ToString() + pd + session.ProviderOAuthAccess[0].Email.ToString()).ToMD5Hash();
                                 DbParameter[] parameter1 = {
                                 InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String,  session.ProviderOAuthAccess[0].Email),
                                 InfraConnectionFactory.DataDB.GetNewParameter("name", EbDbTypes.String,  session.ProviderOAuthAccess[0].DisplayName),
                                  InfraConnectionFactory.DataDB.GetNewParameter("fbid", EbDbTypes.String,  (session.ProviderOAuthAccess[0].UserId).ToString()),
-                                 InfraConnectionFactory.DataDB.GetNewParameter("password", EbDbTypes.String,  (session.ProviderOAuthAccess[0].UserId.ToString()+session.ProviderOAuthAccess[0].Email.ToString()).ToMD5Hash()),
+                                 InfraConnectionFactory.DataDB.GetNewParameter("password", EbDbTypes.String,pasword  ),
 
                                  };
 
@@ -68,21 +73,21 @@ namespace ExpressBase.ServiceStack.Auth0
                                  VALUES 
                                  (:email,:name,:fbid,:password) RETURNING id;", parameter1);
 
-
+                                sco_signup.FbId = Convert.ToString(dt.Rows[0][1]);
+                                sco_signup.GithubId = Convert.ToString(dt.Rows[0][2]);
+                                sco_signup.TwitterId = Convert.ToString(dt.Rows[0][3]);
                             }
-                            SocialSignup sco_signup = new SocialSignup
+                           
                             {
-                                AuthProvider = session.ProviderOAuthAccess[0].Provider,
-                                Country = session.ProviderOAuthAccess[0].Country,
-                                Email = session.ProviderOAuthAccess[0].Email,
-                                Fbid = (session.ProviderOAuthAccess[0].UserId).ToString(),
-                                Fullname = session.ProviderOAuthAccess[0].DisplayName,
-                                //IsVerified = session.IsAuthenticated,
-                                Pauto = (session.ProviderOAuthAccess[0].UserId.ToString() + session.ProviderOAuthAccess[0].Email.ToString()).ToMD5Hash(),
-                                UniqueEmail = unique,
-                                FbId = Convert.ToString(dt.Rows[0][2]),
-                                GithubId = Convert.ToString(dt.Rows[0][3]),
-                                TwitterId = Convert.ToString(dt.Rows[0][4]),
+                                sco_signup.AuthProvider = session.ProviderOAuthAccess[0].Provider;
+                                sco_signup.Country = session.ProviderOAuthAccess[0].Country;
+                                sco_signup.Email = session.ProviderOAuthAccess[0].Email;
+                                sco_signup.Social_id = (session.ProviderOAuthAccess[0].UserId).ToString();
+                                sco_signup.Fullname = session.ProviderOAuthAccess[0].DisplayName;
+                                //sco_signup.IsVerified = session.IsAuthenticated,
+                                sco_signup.Pauto = pasword;
+                                sco_signup.UniqueEmail = unique;
+                               
                             };
                             b = JsonConvert.SerializeObject(sco_signup);
                             return authService.Redirect(SuccessRedirectUrlFilter(this, string.Format("http://localhost:41500/social_oauth?scosignup={0}", b)));
