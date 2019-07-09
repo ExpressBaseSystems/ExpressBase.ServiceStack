@@ -32,6 +32,7 @@ namespace ExpressBase.ServiceStack.Auth0
                 string b = string.Empty;
                 try
                 {
+                    Console.WriteLine("reached try of github auth");
                     string pasword = null;
                     SocialSignup sco_signup = new SocialSignup();
                     bool unique = false;
@@ -44,6 +45,7 @@ namespace ExpressBase.ServiceStack.Auth0
                         sco_signup.FbId = Convert.ToString(dt.Rows[0][1]);
                         sco_signup.GithubId = Convert.ToString(dt.Rows[0][2]);
                         sco_signup.TwitterId = Convert.ToString(dt.Rows[0][3]);
+                        Console.WriteLine("mail id is not unique");
                     }
                     else
                         unique = true;
@@ -64,7 +66,7 @@ namespace ExpressBase.ServiceStack.Auth0
                              VALUES 
                              (:email,:name,:githubid,:password) RETURNING id;", parameter1);
 
-                      
+                        Console.WriteLine("inserted details to tenant table");
                     }
                    
                     
@@ -83,19 +85,23 @@ namespace ExpressBase.ServiceStack.Auth0
                     string sociallink1 = "localhost:41500";
                     string sociallink2 = "eb-test.xyz";
                     string sociallink3 = "expressbase.com";
-                    Console.WriteLine("refferal url= "+ session.ReferrerUrl);
+                    Console.WriteLine("ReferrerUrl= " + session.ReferrerUrl);
                     if (urllink.Contains(sociallink1, StringComparison.OrdinalIgnoreCase))
                     {
+                        Console.WriteLine("reached  redirect to localhost:41500/social_oauth");
                         return authService.Redirect(SuccessRedirectUrlFilter(this, string.Format("http://localhost:41500/social_oauth?scosignup={0}", b)));
+
                     }
 
                     if (urllink.Contains(sociallink2, StringComparison.OrdinalIgnoreCase))
                     {
+                        Console.WriteLine("reached  redirect to myaccount.eb-test.xyz");
                         return authService.Redirect(SuccessRedirectUrlFilter(this, string.Format("https://myaccount.eb-test.xyz/social_oauth?scosignup={0}", b)));
                     }
 
                     if (urllink.Contains(sociallink3, StringComparison.OrdinalIgnoreCase))
                     {
+                        Console.WriteLine("reached redirect to myaccount.expressbase.com/");
                         return authService.Redirect(SuccessRedirectUrlFilter(this, string.Format("https://myaccount.expressbase.com/social_oauth?scosignup={0}", b)));
                     }
 
