@@ -170,11 +170,8 @@ namespace ExpressBase.ServiceStack
                 {
                     new MyCredentialsAuthProvider(AppSettings) { PersistSession = true },
                     jwtprovider,
+                    fbauth,
                     //apiprovider,
-
-
-                   
-
                     new MyTwitterAuthProvider(AppSettings)
                     {
                         ConsumerKey = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_TWITTER_CONSUMER_KEY),
