@@ -149,8 +149,8 @@ namespace ExpressBase.ServiceStack
 
                    new MyFacebookAuthProvider(AppSettings)
                     {
-                        AppId ="1345884605578600",//"141908109794829",//"1345884605578600", //"149537802493867",//"683590648713089",//"151550788692231", 
-                        AppSecret ="ca15e82895a7b60037798a9bdeb9d08e",//"b5ba6092aacaa54c73f0178c25f43dba",//"ca15e82895a7b60037798a9bdeb9d08e", //"55a9b5e0a88089465808bdc1d4f07e8e",//"61e674e06ae1b499a7b64b89454aa416",//"94ec1a04342e5cf7e7a971f2eb7ad7bc",
+                        AppId ="149537802493867",//"141908109794829",//"1345884605578600", //"149537802493867",//"683590648713089",//"151550788692231", 
+                        AppSecret ="55a9b5e0a88089465808bdc1d4f07e8e",//"b5ba6092aacaa54c73f0178c25f43dba",//"ca15e82895a7b60037798a9bdeb9d08e", //"55a9b5e0a88089465808bdc1d4f07e8e",//"61e674e06ae1b499a7b64b89454aa416",//"94ec1a04342e5cf7e7a971f2eb7ad7bc",
                         Permissions = new string[] { "email, public_profile,user_hometown" }
                     },
 

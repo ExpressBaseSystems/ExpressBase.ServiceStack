@@ -43,6 +43,8 @@ namespace ExpressBase.ServiceStack
 
         private Eb_Solution _ebSolution = null;
 
+        private bool _replaceEbColumns = true;
+
 
         public DataVisService(IEbConnectionFactory _dbf) : base(_dbf) { }
 
@@ -266,6 +268,7 @@ namespace ExpressBase.ServiceStack
                 EbDataVisualization _dV = request.EbDataVisualization;
 
                 DataSourceDataResponse dsresponse = null;
+                this._replaceEbColumns = request.ReplaceEbColumns;
 
                 var _ds = this.Redis.Get<EbDataReader>(request.RefId);
 
@@ -846,15 +849,20 @@ namespace ExpressBase.ServiceStack
                             AllowLinkifNoData = false;
                     }
 
-                    //if (col.Name == "eb_created_by" || col.Name == "eb_lastmodified_by" || col.Name == "eb_loc_id")
-                    //{
-                    //    ModifyEbColumns(col, ref _formattedData, _unformattedData);
-                    //}
+                    if (this._replaceEbColumns)
+                    {
+                        if (col.Name == "eb_created_by" || col.Name == "eb_lastmodified_by" || col.Name == "eb_loc_id")
+                        {
+                            ModifyEbColumns(col, ref _formattedData, _unformattedData);
+                        }
+                    }
 
                     if (!string.IsNullOrEmpty(col.LinkRefId) && (_isexcel == false))
                     {
                         if (AllowLinkifNoData)
                         {
+                            if (_formattedData.ToString() == string.Empty)
+                                _formattedData = "...";
                             if (col.LinkType == LinkTypeEnum.Popout)
                                 _formattedData = "<a href='#' oncontextmenu='return false' class ='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "'>" + _formattedData + "</a>";
                             else if (col.LinkType == LinkTypeEnum.Inline)
@@ -1459,6 +1467,7 @@ namespace ExpressBase.ServiceStack
         {
             DataSourceDataResponse dsresponse = null;
             EbDataVisualization _dV = request.EbDataVisualization;
+            this._replaceEbColumns = request.ReplaceEbColumns;
             var _ds = this.Redis.Get<EbDataReader>(request.RefId);
             string _sql = string.Empty;
             request.IsExcel = false;
