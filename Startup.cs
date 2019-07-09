@@ -133,6 +133,32 @@ namespace ExpressBase.ServiceStack
 #endif
             };
 
+            string env = Environment.GetEnvironmentVariable(EnvironmentConstants.ASPNETCORE_ENVIRONMENT);
+
+            string fburl = "";
+
+            if (env == "Staging")
+            {
+                fburl = "https://ss.eb-test.xyz/auth/facebook";
+            }
+            else if(env == "Production")
+            {
+                fburl = "https://ss.expressbase.com/auth/facebook";
+            }
+            else
+            {
+                fburl = "http://localhost:41600/auth/facebook";
+            }
+
+            MyFacebookAuthProvider fbauth = new MyFacebookAuthProvider(AppSettings)
+            {
+                AppId = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_FB_APP_ID),
+                AppSecret = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_FB_APP_SECRET),
+                Permissions = new string[] { "email, public_profile, user_hometown" },
+                RedirectUrl = fburl
+            };
+
+
             this.Plugins.Add(new CorsFeature(allowedHeaders: "Content-Type, Authorization, Access-Control-Allow-Origin, Access-Control-Allow-Credentials"));
 
             this.Plugins.Add(new ProtoBufFormat());
@@ -147,12 +173,7 @@ namespace ExpressBase.ServiceStack
                     //apiprovider,
 
 
-                   new MyFacebookAuthProvider(AppSettings)
-                    {
-                        AppId = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_FB_APP_ID),
-                        AppSecret =Environment.GetEnvironmentVariable(EnvironmentConstants.EB_FB_APP_SECRET),
-                        Permissions = new string[] { "email, public_profile, user_hometown" }
-                    },
+                   
 
                     new MyTwitterAuthProvider(AppSettings)
                     {
@@ -166,8 +187,7 @@ namespace ExpressBase.ServiceStack
                     new MyGithubAuthProvider(AppSettings)
                     {
                         ClientId =Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GITHUB_CLIENT_ID),
-                        ClientSecret = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GITHUB_CLIENT_SECRET),
-                       // RedirectUrl = "http://localhost:41600/auth/github"
+                        ClientSecret = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GITHUB_CLIENT_SECRET)
                     }
                 }));
 
@@ -234,7 +254,7 @@ namespace ExpressBase.ServiceStack
             {
                 ILog log = LogManager.GetLogger(GetType());
 
-                log.Info(string.Format("Started Execution of {0} at {1}", requestDto.GetType().ToString(),DateTime.Now.TimeOfDay));
+                log.Info(string.Format("Started Execution of {0} at {1}", requestDto.GetType().ToString(), DateTime.Now.TimeOfDay));
 
                 log.Info("In GlobalRequestFilters");
                 try
