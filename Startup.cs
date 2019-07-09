@@ -149,23 +149,24 @@ namespace ExpressBase.ServiceStack
 
                    new MyFacebookAuthProvider(AppSettings)
                     {
-                        AppId ="1345884605578600",//"141908109794829",//"1345884605578600", //"149537802493867",//"683590648713089",//"151550788692231", 
-                        AppSecret ="ca15e82895a7b60037798a9bdeb9d08e",//"b5ba6092aacaa54c73f0178c25f43dba",//"ca15e82895a7b60037798a9bdeb9d08e", //"55a9b5e0a88089465808bdc1d4f07e8e",//"61e674e06ae1b499a7b64b89454aa416",//"94ec1a04342e5cf7e7a971f2eb7ad7bc",
-                        Permissions = new string[] { "email, public_profile,user_hometown" }
+                        AppId = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_FB_APP_ID),
+                        AppSecret =Environment.GetEnvironmentVariable(EnvironmentConstants.EB_FB_APP_SECRET),
+                        Permissions = new string[] { "email, public_profile, user_hometown" }
                     },
 
                     new MyTwitterAuthProvider(AppSettings)
                     {
-                        ConsumerKey = "6G9gaYo7DMx1OHYRAcpmkPfvu",
-                        ConsumerSecret = "Jx8uUIPeo5D0agjUnqkKHGQ4o6zTrwze9EcLtjDlOgLnuBaf9x",
+                        ConsumerKey = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_TWITTER_CONSUMER_KEY),
+                        ConsumerSecret = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_TWITTER_CONSUMER_SECRET),
+                        //Need to Change 
                         CallbackUrl = "http://localhost:8000/auth/twitter",
                         RequestTokenUrl= "https://api.twitter.com/oauth/authenticate",
                     },
 
                     new MyGithubAuthProvider(AppSettings)
                     {
-                        ClientId ="5276cd109e1fc6cbd31f",//"5276cd109e1fc6cbd31f",// "4504eefeb8f027c810dd",
-                        ClientSecret = "2f25e6fbba9850cf1c0f809ad0af784ab8916b75",//fb54aaa1371dbaaeb4b9fcf490af6cd7b596b26a",//"d9c1c956a9fddd089798e0031851e93a8d0e5cc6",
+                        ClientId =Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GITHUB_CLIENT_ID),
+                        ClientSecret = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GITHUB_CLIENT_SECRET),
                        // RedirectUrl = "http://localhost:41600/auth/github"
                     }
                 }));
