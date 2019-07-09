@@ -505,6 +505,13 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     InitializeDataDb(request.IntegrationO.ConfigId, request.SolnId, request.UserId);
                 }
+                else
+                {
+                    RefreshSolutionConnectionsAsyncResponse resp = this.MQClient.Post<RefreshSolutionConnectionsAsyncResponse>(new RefreshSolutionConnectionsBySolutionIdAsyncRequest()
+                    {
+                        SolutionId = request.SolnId
+                    });
+                }
             }
             catch (Exception e)
             {
@@ -557,6 +564,11 @@ namespace ExpressBase.ServiceStack.Services
                     };
                     EbIntegrationRequest _obj = new EbIntegrationRequest { IntegrationO = obj };
                     _obj.IntegrationO.PersistIntegration(request.SolnId, this.InfraConnectionFactory, request.UserId);
+                    RefreshSolutionConnectionsAsyncResponse resp = this.MQClient.Post<RefreshSolutionConnectionsAsyncResponse>(new RefreshSolutionConnectionsBySolutionIdAsyncRequest()
+                    {
+                        SolutionId = request.SolnId
+                    });
+
                 }
             }
             catch (Exception e)
