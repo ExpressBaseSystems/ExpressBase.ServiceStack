@@ -115,12 +115,13 @@ namespace ExpressBase.ServiceStack.Services
                         "objectsdb.tablecreate.eb_objects.sql", "objectsdb.tablecreate.eb_objects2application.sql", "objectsdb.tablecreate.eb_objects_favourites.sql",
                         "objectsdb.tablecreate.eb_objects_relations.sql", "objectsdb.tablecreate.eb_objects_status.sql", "objectsdb.tablecreate.eb_objects_ver.sql"};
 */
-    
-                    string[] _filepath = { "datadb.functioncreate.eb_currval.sql", "datadb.functioncreate.eb_revokedbaccess2user.sql",
+
+                    /*string[] _filepath = { "datadb.functioncreate.eb_currval.sql", "datadb.functioncreate.eb_revokedbaccess2user.sql",
                                             "datadb.tablecreate.eb_schedules.sql", "objectsdb.tablecreate.eb_appstore.sql",
                                             "objectsdb.tablecreate.eb_executionlogs.sql","datadb.functioncreate.eb_persist_currval.sql",
                                             "objectsdb.functioncreate.split_str_util.sql", "objectsdb.functioncreate.string_to_rows_util.sql",
-                                            "objectsdb.functioncreate.str_to_tbl_grp_util.sql", "objectsdb.functioncreate.str_to_tbl_util.sql"};
+                                            "objectsdb.functioncreate.str_to_tbl_grp_util.sql", "objectsdb.functioncreate.str_to_tbl_util.sql"};*/
+                    string[] _filepath = { "datadb.tablecreate.eb_schedules.sq" };
                     Console.WriteLine(".............Reached CreateOrAlter_Structure. Total Files: " + _filepath.Length);
 
                     int counter = 0;
