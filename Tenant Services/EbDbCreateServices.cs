@@ -121,7 +121,7 @@ namespace ExpressBase.ServiceStack.Services
                                             "objectsdb.tablecreate.eb_executionlogs.sql","datadb.functioncreate.eb_persist_currval.sql",
                                             "objectsdb.functioncreate.split_str_util.sql", "objectsdb.functioncreate.string_to_rows_util.sql",
                                             "objectsdb.functioncreate.str_to_tbl_grp_util.sql", "objectsdb.functioncreate.str_to_tbl_util.sql"};*/
-                    string[] _filepath = { "datadb.tablecreate.eb_schedules.sql" };
+                    string[] _filepath = { "datadb.tablecreate.eb_schedules_old.sql" };
                     Console.WriteLine(".............Reached CreateOrAlter_Structure. Total Files: " + _filepath.Length);
 
                     int counter = 0;
