@@ -53,6 +53,9 @@ namespace ExpressBase.ServiceStack.Auth0
                             if (dt.Rows.Count > 0)
                             {
                                 unique = false;
+                                sco_signup.FbId = Convert.ToString(dt.Rows[0][1]);
+                                sco_signup.GithubId = Convert.ToString(dt.Rows[0][2]);
+                                sco_signup.TwitterId = Convert.ToString(dt.Rows[0][3]);
                             }
                             else
                                 unique = true;
@@ -73,9 +76,7 @@ namespace ExpressBase.ServiceStack.Auth0
                                  VALUES 
                                  (:email,:name,:fbid,:password) RETURNING id;", parameter1);
 
-                                sco_signup.FbId = Convert.ToString(dt.Rows[0][1]);
-                                sco_signup.GithubId = Convert.ToString(dt.Rows[0][2]);
-                                sco_signup.TwitterId = Convert.ToString(dt.Rows[0][3]);
+                                
                             }
                            
                             {
