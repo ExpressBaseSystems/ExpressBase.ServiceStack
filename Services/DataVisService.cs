@@ -861,6 +861,8 @@ namespace ExpressBase.ServiceStack
                     {
                         if (AllowLinkifNoData)
                         {
+                            if (_formattedData.ToString() == string.Empty)
+                                _formattedData = "...";
                             if (col.LinkType == LinkTypeEnum.Popout)
                                 _formattedData = "<a href='#' oncontextmenu='return false' class ='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "'>" + _formattedData + "</a>";
                             else if (col.LinkType == LinkTypeEnum.Inline)
