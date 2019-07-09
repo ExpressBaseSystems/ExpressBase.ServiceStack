@@ -17,8 +17,7 @@ namespace ExpressBase.ServiceStack.Services
         public StripeGateway gateway = new StripeGateway(Environment.GetEnvironmentVariable(EnvironmentConstants.EB_STRIPE_SECRET_KEY));
         public static int i = 1;
         public const string USD = "USD";
-
-
+        
         public CheckCustomerResponse Post(CheckCustomerRequest request)
         {
             CheckCustomerResponse resp = new CheckCustomerResponse();
@@ -56,8 +55,7 @@ namespace ExpressBase.ServiceStack.Services
 
             return resp;
         }
-
-
+        
         public CheckCustomerSubscribedResponse Post(CheckCustomerSubscribedRequest request)
         {
             CheckCustomerSubscribedResponse resp = new CheckCustomerSubscribedResponse();
@@ -157,14 +155,17 @@ namespace ExpressBase.ServiceStack.Services
                                 email='{0}' ", request.EmailId);
 
                         EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(str2);
-                        //DbCommand cmd2 = InfraConnectionFactory.DataDB.GetNewCommand(con, str2);
-                        //DbDataReader dr = cmd2.ExecuteReader();
-                        //while (dr.Read())
-                        //{
-                        //    custid = dr[0].ToString();
-                        //}
-                        //resp.CustomerId = custid;
-                        resp.CustomerId = dt.Rows[0][0].ToString();
+                        if (dt != null && dt.Rows.Count > 0)
+                        {
+                            //DbCommand cmd2 = InfraConnectionFactory.DataDB.GetNewCommand(con, str2);
+                            //DbDataReader dr = cmd2.ExecuteReader();
+                            //while (dr.Read())
+                            //{
+                            //    custid = dr[0].ToString();
+                            //}
+                            //resp.CustomerId = custid;
+                            resp.CustomerId = dt.Rows[0][0].ToString();
+                        }
                     }
                 }
             }
@@ -180,17 +181,20 @@ namespace ExpressBase.ServiceStack.Services
         {
             GetCustomerResponse resp = new GetCustomerResponse();
             string str = string.Format(@"
-                        SELECT name,address1,address2,city,state,country,email
+                        SELECT name,address1,zip,city,state,country,email
                         FROM eb_customer 
                         WHERE cust_id = '{0}'", request.CustId);
             EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(str);
-            resp.Name = dt.Rows[0][0].ToString();
-            resp.Address = dt.Rows[0][1].ToString();
-            resp.Zip = dt.Rows[0][2].ToString();
-            resp.City = dt.Rows[0][3].ToString();
-            resp.State = dt.Rows[0][4].ToString();
-            resp.Country = dt.Rows[0][5].ToString();
-            resp.Email = dt.Rows[0][6].ToString(); ;
+            if (dt != null && dt.Rows.Count > 0)
+            {
+                resp.Name = dt.Rows[0][0].ToString();
+                resp.Address = dt.Rows[0][1].ToString();
+                resp.Zip = dt.Rows[0][2].ToString();
+                resp.City = dt.Rows[0][3].ToString();
+                resp.State = dt.Rows[0][4].ToString();
+                resp.Country = dt.Rows[0][5].ToString();
+                resp.Email = dt.Rows[0][6].ToString();
+            }
             return resp;
         }
 
@@ -202,15 +206,29 @@ namespace ExpressBase.ServiceStack.Services
                         FROM eb_card 
                         WHERE cust_id = '{0}'", request.CustId);
             EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(str);
-            string card_id = dt.Rows[0][0].ToString();
-
-            StripeConfiguration.SetApiKey(Environment.GetEnvironmentVariable(EnvironmentConstants.EB_STRIPE_SECRET_KEY));
-
-            var service = new CardService();
-            Card response = service.Get(request.CustId, card_id);
-            resp.Last4 = response.Last4;
-            resp.ExpMonth = response.ExpMonth;
-            resp.ExpYear = response.ExpYear;
+            string card_id = "";
+            List<Eb_StripeCards> Card = new List<Eb_StripeCards>();
+            if (dt != null && dt.Rows.Count > 0)
+            {
+                for (int i = 0; i < dt.Rows.Count; i++)
+                {
+                    card_id = dt.Rows[i][0].ToString();
+                    StripeConfiguration.SetApiKey(Environment.GetEnvironmentVariable(EnvironmentConstants.EB_STRIPE_SECRET_KEY));
+                    var service = new CardService();
+                    Card response = service.Get(request.CustId, card_id);
+                    Card.Add(new Eb_StripeCards
+                    {
+                        Last4 = response.Last4,
+                        ExpMonth = response.ExpMonth,
+                        ExpYear = response.ExpYear,
+                    });
+                }
+            }
+            resp.Cards = new Eb_StripeCardsList
+            {
+                Card = Card
+            };
+            resp.Count = dt.Rows.Count;
             return resp;
         }
 
@@ -238,7 +256,7 @@ namespace ExpressBase.ServiceStack.Services
                     UPDATE 
                         eb_customer
                     SET 
-                        name=@name, address1=@add1,address2=@add2, city=@city, state=@state, country=@country 
+                        name=@name, address1=@add1,zip=@add2, city=@city, state=@state, country=@country 
                     WHERE 
                         cust_id=@custid";
 
@@ -270,17 +288,148 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     string str2 = @"
                         INSERT INTO 
-                            eb_card (cust_id,card_id,created_at)
-                        VALUES (@custid,@cardid,@createdat)";
+                            eb_card (cust_id,token_id,card_id,created_at)
+                        VALUES (@custid,@tokenid,@cardid,@createdat)";
 
                     DbCommand cmd2 = InfraConnectionFactory.DataDB.GetNewCommand(con, str2);
 
                     cmd2.Parameters.Add(InfraConnectionFactory.DataDB.GetNewParameter("@custid", Common.Structures.EbDbTypes.String, request.CustId));
+                    cmd2.Parameters.Add(InfraConnectionFactory.DataDB.GetNewParameter("@tokenid", Common.Structures.EbDbTypes.String, request.TokenId));
                     cmd2.Parameters.Add(InfraConnectionFactory.DataDB.GetNewParameter("@cardid", Common.Structures.EbDbTypes.String, request.CardId));
                     cmd2.Parameters.Add(InfraConnectionFactory.DataDB.GetNewParameter("@createdat", Common.Structures.EbDbTypes.DateTime, DateTime.Now));
                     cmd2.ExecuteNonQuery();
                 }
             }
+        }
+
+        public UpdateCustomerCardResponse Post(UpdateCustomerCardRequest request)
+        {
+            UpdateCustomerCardResponse resp = new UpdateCustomerCardResponse();
+            using (DbConnection con = this.InfraConnectionFactory.DataDB.GetNewConnection())
+            {
+                con.Open();
+                string str = string.Format(@"
+                    SELECT card_id
+                    FROM eb_card
+                    WHERE cust_id = '{0}'", request.CustId);
+
+                EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(str);
+                if (dt != null && dt.Rows.Count > 0)
+                {
+                    for (int i = 0; i < dt.Rows.Count; i++)
+                    {
+                        string card_id = dt.Rows[i][0].ToString();
+                        StripeCard card = gateway.Post(new UpdateStripeCard
+                        {
+                            CustomerId = request.CustId,
+                            CardId = card_id,
+                            Name = request.Name,
+                            AddressLine1 = request.Address,
+                            AddressZip = request.Zip,
+                            AddressCity = request.City,
+                            AddressState = request.State,
+                            AddressCountry = request.Country
+                        });
+                        string str1 = @"
+                                UPDATE 
+                                    eb_customer
+                                SET 
+                                    name=@name, address1=@add1,zip=@add2, city=@city, state=@state, country=@country 
+                                WHERE 
+                                    cust_id=@custid";
+
+                        DbCommand cmd = InfraConnectionFactory.DataDB.GetNewCommand(con, str1);
+
+                        cmd.Parameters.Add(InfraConnectionFactory.DataDB.GetNewParameter("@custid", Common.Structures.EbDbTypes.String, request.CustId));
+                        cmd.Parameters.Add(InfraConnectionFactory.DataDB.GetNewParameter("@name", Common.Structures.EbDbTypes.String, request.Name));
+                        cmd.Parameters.Add(InfraConnectionFactory.DataDB.GetNewParameter("@add1", Common.Structures.EbDbTypes.String, request.Address));
+                        cmd.Parameters.Add(InfraConnectionFactory.DataDB.GetNewParameter("@add2", Common.Structures.EbDbTypes.String, request.Zip));
+                        cmd.Parameters.Add(InfraConnectionFactory.DataDB.GetNewParameter("@city", Common.Structures.EbDbTypes.String, request.City));
+                        cmd.Parameters.Add(InfraConnectionFactory.DataDB.GetNewParameter("@state", Common.Structures.EbDbTypes.String, request.State));
+                        cmd.Parameters.Add(InfraConnectionFactory.DataDB.GetNewParameter("@country", Common.Structures.EbDbTypes.String, request.Country));
+                        cmd.ExecuteNonQuery();
+                    }
+                    resp.Name = request.Name;
+                    resp.Address = request.Address;
+                    resp.City = request.City;
+                    resp.State = request.State;
+                    resp.Country = request.Country;
+                    resp.Zip = request.Zip;
+                }
+            }
+            return resp;
+        }
+
+        public AddCustomerCardResponse Post(AddCustomerCardRequest request)
+        {
+            AddCustomerCardResponse resp = new AddCustomerCardResponse();
+            using (DbConnection con = this.InfraConnectionFactory.DataDB.GetNewConnection())
+            {
+                con.Open();
+                string str = string.Format(@"
+                    SELECT name,address1,zip,city,state,country
+                    FROM eb_customer
+                    WHERE cust_id = '{0}'", request.CustId);
+
+                EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(str);
+                if (dt != null && dt.Rows.Count > 0)
+                {
+                    string x = dt.Rows[0][0].ToString();
+                    StripeCard card = gateway.Post(new UpdateStripeCard
+                    {
+                        CustomerId = request.CustId,
+                        CardId = request.CardId,
+                        Name = dt.Rows[0][0].ToString(),
+                        AddressLine1 = dt.Rows[0][1].ToString(),
+                        AddressZip = dt.Rows[0][2].ToString(),
+                        AddressCity = dt.Rows[0][3].ToString(),
+                        AddressState = dt.Rows[0][4].ToString(),
+                        AddressCountry = dt.Rows[0][5].ToString()
+                    });
+                    string str2 = @"
+                        INSERT INTO 
+                            eb_card (cust_id,token_id,card_id,created_at)
+                        VALUES (@custid,@tokenid,@cardid,@createdat)";
+
+                    DbCommand cmd2 = InfraConnectionFactory.DataDB.GetNewCommand(con, str2);
+
+                    cmd2.Parameters.Add(InfraConnectionFactory.DataDB.GetNewParameter("@custid", Common.Structures.EbDbTypes.String, request.CustId));
+                    cmd2.Parameters.Add(InfraConnectionFactory.DataDB.GetNewParameter("@tokenid", Common.Structures.EbDbTypes.String, request.TokenId));
+                    cmd2.Parameters.Add(InfraConnectionFactory.DataDB.GetNewParameter("@cardid", Common.Structures.EbDbTypes.String, request.CardId));
+                    cmd2.Parameters.Add(InfraConnectionFactory.DataDB.GetNewParameter("@createdat", Common.Structures.EbDbTypes.DateTime, DateTime.Now));
+                    cmd2.ExecuteNonQuery();
+                }
+                string str1 = string.Format(@"
+                        SELECT card_id 
+                        FROM eb_card 
+                        WHERE cust_id = '{0}'", request.CustId);
+                EbDataTable dt1 = InfraConnectionFactory.DataDB.DoQuery(str1);
+                string card_id = "";
+                List<Eb_StripeCards> Card = new List<Eb_StripeCards>();
+                if (dt1 != null && dt1.Rows.Count > 0)
+                {
+                    for (int i = 0; i < dt1.Rows.Count; i++)
+                    {
+                        card_id = dt1.Rows[i][0].ToString();
+                        StripeConfiguration.SetApiKey(Environment.GetEnvironmentVariable(EnvironmentConstants.EB_STRIPE_SECRET_KEY));
+                        var service = new CardService();
+                        Card response = service.Get(request.CustId, card_id);
+                        Card.Add(new Eb_StripeCards
+                        {
+                            Last4 = response.Last4,
+                            ExpMonth = response.ExpMonth,
+                            ExpYear = response.ExpYear,
+                        });
+                    }
+                }
+                resp.Cards = new Eb_StripeCardsList
+                {
+                    Card = Card
+                };
+                resp.Count = dt.Rows.Count;
+                
+            }
+            return resp;
         }
 
         public void Post(CreateChargeRequest request)
@@ -569,7 +718,7 @@ namespace ExpressBase.ServiceStack.Services
                 resp.PeriodStart = ((DateTime)subscription.CurrentPeriodStart).ToString("dd MMM,yyyy");
                 resp.PeriodEnd = ((DateTime)subscription.CurrentPeriodEnd).ToString("dd MMM,yyyy");
                 resp.Created = ((DateTime)subscription.Created).ToString("dd MMM,yyyy");
-                resp.Amount = (subscription.Plan.Amount/100);
+                resp.Amount = (subscription.Plan.Amount / 100);
                 resp.UseageType = subscription.Plan.UsageType;
                 resp.BillingScheme = subscription.Plan.BillingScheme;
                 resp.Quantity = usageRecord.Quantity;

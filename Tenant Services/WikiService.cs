@@ -148,7 +148,7 @@ namespace ExpressBase.ServiceStack.Services
                 FROM
                     wiki
                 WHERE
-                    title LIKE '%' || @search_wiki || '%' And status='Publish' ORDER BY list_order";
+                    title LIKE '%' || @search_wiki || '%' OR  eb_tags LIKE '%' || @search_wiki || '%' And status='Publish' ORDER BY list_order";
 
                 EbDataTable table = InfraConnectionFactory.DataDB.DoQuery(query, parameters);
 
@@ -236,11 +236,12 @@ namespace ExpressBase.ServiceStack.Services
                 resp.Wiki.Category = table.Rows[0]["category"].ToString();
                 resp.Wiki.Title = table.Rows[0]["title"].ToString();
                 resp.Wiki.HTML = table.Rows[0]["html"].ToString();
+                resp.Wiki.Tags = table.Rows[0]["eb_tags"].ToString();
 
             }
             catch (Exception e)
             {
-
+                Console.Write("exception in PublicWiki/GetWiki");
             }
             return resp;
         }

@@ -299,7 +299,11 @@ namespace ExpressBase.ServiceStack
             return new UniqueApplicationNameCheckResponse { IsUnique = _isunique };
         }
 
-
+        public string Get(GetDefaultMapApiKeyFromConnectionRequest request)
+        {
+            string _apikey = (this.EbConnectionFactory.MapConnection!=null)? this.EbConnectionFactory.MapConnection.GetDefaultApikey():string.Empty;
+            return _apikey;
+        }
     }
 }
 

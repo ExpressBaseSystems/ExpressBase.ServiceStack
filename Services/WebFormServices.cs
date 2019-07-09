@@ -37,12 +37,6 @@ namespace ExpressBase.ServiceStack.Services
                 (request.WebObj as EbWebForm).AfterRedisGet(this);
                 CreateWebFormTables((request.WebObj as EbWebForm).FormSchema);
             }
-
-            //CreateWebFormTableRec(request.WebObj, request.WebObj.TableName);
-
-            //WebFormSchema _temp = GetWebFormSchema(request.WebObj);/////////
-            //CreateWebFormTables(_temp);
-
             return new CreateWebFormTableResponse { };
         }
 
@@ -73,18 +67,13 @@ namespace ExpressBase.ServiceStack.Services
                         _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_row_num", Type = vDbTypes.Decimal });
 
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_by", Type = vDbTypes.Decimal });
-                    //_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_by_s", Type = vDbTypes.String });
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_at", Type = vDbTypes.DateTime });
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_by", Type = vDbTypes.Decimal });
-                    //_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_by_s", Type = vDbTypes.String });
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_at", Type = vDbTypes.DateTime });
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_del", Type = vDbTypes.Boolean, Default = "F" });
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_void", Type = vDbTypes.Boolean, Default = "F" });
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_loc_id", Type = vDbTypes.Int32 });
-                    //_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_loc_s", Type = vDbTypes.String });
                     //_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_default", Type = vDbTypes.Boolean, Default = "F" });
-                    //_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_transaction_date", Type = vDbTypes.DateTime });
-                    //_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_autogen", Type = vDbTypes.Decimal });
 
                     CreateOrAlterTable(_table.TableName, _listNamesAndTypes, ref Msg);
                 }
@@ -312,15 +301,14 @@ namespace ExpressBase.ServiceStack.Services
                 FormObj.FormData = request.FormData;
                 FormObj.UserObj = request.UserObj;
                 FormObj.LocationId = request.CurrentLoc;
-                FormObj.SolutionObj = request.SolutionObj;
-                int r = 0, a = 0;
+                FormObj.SolutionObj = this.Redis.Get<Eb_Solution>(String.Format("solution_{0}", request.SolnId));
 
                 Console.WriteLine("Insert/Update WebFormData : MergeFormData start");
                 FormObj.MergeFormData();
                 Console.WriteLine("Insert/Update WebFormData : Save start");
-                r = FormObj.Save(EbConnectionFactory.DataDB, this);
+                int r = FormObj.Save(EbConnectionFactory.DataDB, this);
                 Console.WriteLine("Insert/Update WebFormData : AfterSave start");
-                a = FormObj.AfterSave(EbConnectionFactory.DataDB, request.RowId > 0);
+                int a = FormObj.AfterSave(EbConnectionFactory.DataDB, request.RowId > 0);
                 Console.WriteLine("Insert/Update WebFormData : Returning");
 
                 return new InsertDataFromWebformResponse()
@@ -366,7 +354,8 @@ namespace ExpressBase.ServiceStack.Services
 
         public WebformData CalcFormula(WebformData _formData, EbWebForm _formObj)
         {
-            Dictionary<int, EbControlWrapper> ctrls = EbWebForm.GetControlsAsDict(_formObj, "FORM");
+            Dictionary<int, EbControlWrapper> ctrls = new Dictionary<int, EbControlWrapper>();
+            EbWebForm.GetControlsAsDict(_formObj, "FORM", ctrls);
             List<int> ExeOrder = GetExecutionOrder(ctrls);
 
             for (int i = 0; i < ExeOrder.Count; i++)
@@ -439,7 +428,8 @@ namespace ExpressBase.ServiceStack.Services
             engine.SetGlobalValue("FORM", globals);
             List<EbValidator> warnings = new List<EbValidator>();
             List<EbValidator> errors = new List<EbValidator>();
-            Dictionary<int, EbControlWrapper> ctrls = EbWebForm.GetControlsAsDict(_formObj, "FORM");
+            Dictionary<int, EbControlWrapper> ctrls = new Dictionary<int, EbControlWrapper>();
+            EbWebForm.GetControlsAsDict(_formObj, "FORM", ctrls);
             foreach (KeyValuePair<int, EbControlWrapper> ctrl in ctrls)
             {
                 for (int i = 0; i < ctrl.Value.Control.Validators.Count; i++)
