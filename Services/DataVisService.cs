@@ -43,6 +43,8 @@ namespace ExpressBase.ServiceStack
 
         private Eb_Solution _ebSolution = null;
 
+        private bool _replaceEbColumns = true;
+
 
         public DataVisService(IEbConnectionFactory _dbf) : base(_dbf) { }
 
@@ -266,6 +268,7 @@ namespace ExpressBase.ServiceStack
                 EbDataVisualization _dV = request.EbDataVisualization;
 
                 DataSourceDataResponse dsresponse = null;
+                this._replaceEbColumns = request.ReplaceEbColumns;
 
                 var _ds = this.Redis.Get<EbDataReader>(request.RefId);
 
@@ -846,10 +849,13 @@ namespace ExpressBase.ServiceStack
                             AllowLinkifNoData = false;
                     }
 
-                    //if (col.Name == "eb_created_by" || col.Name == "eb_lastmodified_by" || col.Name == "eb_loc_id")
-                    //{
-                    //    ModifyEbColumns(col, ref _formattedData, _unformattedData);
-                    //}
+                    if (this._replaceEbColumns)
+                    {
+                        if (col.Name == "eb_created_by" || col.Name == "eb_lastmodified_by" || col.Name == "eb_loc_id")
+                        {
+                            ModifyEbColumns(col, ref _formattedData, _unformattedData);
+                        }
+                    }
 
                     if (!string.IsNullOrEmpty(col.LinkRefId) && (_isexcel == false))
                     {
@@ -1459,6 +1465,7 @@ namespace ExpressBase.ServiceStack
         {
             DataSourceDataResponse dsresponse = null;
             EbDataVisualization _dV = request.EbDataVisualization;
+            this._replaceEbColumns = request.ReplaceEbColumns;
             var _ds = this.Redis.Get<EbDataReader>(request.RefId);
             string _sql = string.Empty;
             request.IsExcel = false;
