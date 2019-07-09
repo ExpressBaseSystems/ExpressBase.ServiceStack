@@ -154,14 +154,19 @@ namespace ExpressBase.ServiceStack.Services
             byte[] plaintxt = System.Text.Encoding.UTF8.GetBytes(aq);
             string ai = System.Convert.ToBase64String(plaintxt);
             string elinks2 = string.Format("https://{0}/em?emv={1}", pageurl, ai);
-            this.MailHtml = this.MailHtml.Replace("{UserName}", name).Replace("{Url}", elinks2);
+            string mailbody = this.MailHtml;
+            mailbody=mailbody.Replace("{UserName}", name).Replace("{Url}", elinks2);
+            
+
             try
             {
+                mailbody = mailbody.Replace("{UserName}", name).Replace("{Url}", elinks2);
+
                 MessageProducer3.Publish(new EmailServicesRequest
                 {
                     To = email,
                     Subject = "testing email",
-                    Message = this.MailHtml,
+                    Message = mailbody,
                     SolnId = CoreConstants.EXPRESSBASE,
 
                 });
