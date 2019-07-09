@@ -83,6 +83,7 @@ namespace ExpressBase.ServiceStack.Auth0
                     string sociallink1 = "localhost:41500";
                     string sociallink2 = "eb-test.xyz";
                     string sociallink3 = "expressbase.com";
+                    Console.WriteLine("refferal url= "+ session.ReferrerUrl);
                     if (urllink.Contains(sociallink1, StringComparison.OrdinalIgnoreCase))
                     {
                         return authService.Redirect(SuccessRedirectUrlFilter(this, string.Format("http://localhost:41500/social_oauth?scosignup={0}", b)));
