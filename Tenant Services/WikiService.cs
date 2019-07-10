@@ -193,6 +193,8 @@ namespace ExpressBase.ServiceStack.Services
 
                 int capacity = table.Rows.Count;
 
+                Console.WriteLine("INFO: Wiki Count: " + capacity);
+
                 for (int i = 0; i < capacity; i++)
                 {
                     resp.WikiList.Add(
