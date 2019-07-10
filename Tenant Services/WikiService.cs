@@ -162,7 +162,8 @@ namespace ExpressBase.ServiceStack.Services
                             Category = table.Rows[i]["category"].ToString(),
                             HTML = table.Rows[i]["html"].ToString(),
                             Title = table.Rows[i]["title"].ToString(),
-                            Id = (int)table.Rows[i]["id"]
+                            Id = (int)table.Rows[i]["id"],
+                            Tags = table.Rows[i]["eb_tags"].ToString()
                         });
                 }
             }
