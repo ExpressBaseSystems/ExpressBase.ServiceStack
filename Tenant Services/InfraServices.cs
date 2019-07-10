@@ -164,11 +164,14 @@ namespace ExpressBase.ServiceStack.Services
             string elinks2 = string.Format("https://{0}/em?emv={1}", pageurl, ai);
             string mailbody = this.MailHtml;
             mailbody=mailbody.Replace("{UserName}", name).Replace("{Url}", elinks2);
-            
+            string wikiurl = "https://myaccount.expressbase.com/publicwiki/docs";
+            string stepsurl = "";
+            string supporturl = "support@expressbase.com";
+
 
             try
             {
-                mailbody = mailbody.Replace("{UserName}", name).Replace("{Url}", elinks2);
+                mailbody = mailbody.Replace("{UserName}", name).Replace("{Url}", elinks2).Replace("{wikiurl}", wikiurl).Replace("{supporturl}", supporturl).Replace("{stepsurl}", stepsurl);
 
                 MessageProducer3.Publish(new EmailServicesRequest
                 {
