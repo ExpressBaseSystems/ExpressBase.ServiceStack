@@ -47,7 +47,7 @@ namespace ExpressBase.ServiceStack.Auth0
                             SocialSignup sco_signup = new SocialSignup();
 
                             bool unique = false;
-                            string sql1 = "SELECT id, pwd,fb_id,github_id,twitter_id FROM eb_tenants WHERE email ~* @email";
+                            string sql1 = "SELECT id, pwd,fb_id,github_id,twitter_id FROM eb_tenants WHERE email ~* @email and eb_del=false";
                             DbParameter[] parameters2 = { InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, session.ProviderOAuthAccess[0].Email) };
                             EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(sql1, parameters2);
                             if (dt.Rows.Count > 0)

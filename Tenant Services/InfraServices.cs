@@ -31,7 +31,7 @@ namespace ExpressBase.ServiceStack.Services
     public class InfraServices : EbBaseService
     {
         public InfraServices(IEbConnectionFactory _dbf, IMessageProducer _mqp) : base(_dbf, _mqp) { }
-
+        
         public JoinbetaResponse Post(JoinbetaReq r)
         {
             JoinbetaResponse resp = new JoinbetaResponse();
@@ -122,7 +122,7 @@ namespace ExpressBase.ServiceStack.Services
     <title></title>
 </head>
 <body>
-    <div style='border: 1px solid #508bf9;padding:20px 40px 20px 40px;width:70%; '>
+    <div style='border: 1px solid #508bf9;padding:20px 40px 20px 40px;width:100%; '>
         <figure style='text-align: center;margin:0px;'>
             <img src='https://expressbase.com/images/logos/EB_Logo.png' /><br />
         </figure>
@@ -157,6 +157,7 @@ namespace ExpressBase.ServiceStack.Services
 
         private bool SendTenantMail(int tid, string activationcode, string pageurl, string name, string email)
         {
+           
             bool status = false;
             string aq = "$" + tid + "$" + activationcode + "$";
             byte[] plaintxt = System.Text.Encoding.UTF8.GetBytes(aq);
@@ -345,7 +346,8 @@ namespace ExpressBase.ServiceStack.Services
 										eb_tenants 
 										SET
 											is_verified = true,
-											activation_code=null 
+											activation_code=null,
+                                            mail_verify_time=NOW()
 										WHERE 
 											id = :id AND
 											activation_code= :codes");
@@ -1476,7 +1478,7 @@ namespace ExpressBase.ServiceStack.Services
         {
             UniqueRequestResponse res = new UniqueRequestResponse();
             ILog log = LogManager.GetLogger(GetType());
-            string sql = "SELECT id, pwd FROM eb_tenants WHERE email ~* @email";
+            string sql = "SELECT id, pwd FROM eb_tenants WHERE email ~* @email and eb_del=false";
             DbParameter[] parameters = { this.InfraConnectionFactory.ObjectsDB.GetNewParameter("email", EbDbTypes.String, request.email) };
             var dt = this.InfraConnectionFactory.ObjectsDB.DoQuery(sql, parameters);
             if (dt.Rows.Count > 0)
