@@ -152,7 +152,7 @@ namespace ExpressBase.ServiceStack.Services
 
                 EbDataTable table = InfraConnectionFactory.DataDB.DoQuery(query, parameters);
 
-                int capacity = table.Rows.Capacity;
+                int capacity = table.Rows.Count;
 
                 for (int i = 0; i < capacity; i++)
                 {
@@ -169,7 +169,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
-                Console.WriteLine("ERROR: GetWikiList Exception: " + e.Message);
+                Console.WriteLine("ERROR: GetWikiSearch Exception: " + e.Message);
             }
             return resp;
         }
