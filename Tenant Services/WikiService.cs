@@ -262,11 +262,12 @@ namespace ExpressBase.ServiceStack.Services
                     eb_del='F' ORDER BY id  ";
                 EbDataTable table = InfraConnectionFactory.DataDB.DoQuery(query);
 
-                int capacity = table.Rows.Capacity;
+                int count = table.Rows.Count;
 
-                for (int i = 0; i < capacity; i++)
+                Console.WriteLine("INFO: Wiki Count: " + count);
+
+                for (int i = 0; i < count; i++)
                 {
-                    Console.WriteLine("INFO: " + i + "th Wiki");
                     resp.WikiList.Add(
                         new Wiki()
                         {
@@ -381,9 +382,9 @@ namespace ExpressBase.ServiceStack.Services
                     eb_del='F' AND status='Publish' order by list_order ";
                 EbDataTable table = InfraConnectionFactory.DataDB.DoQuery(query);
 
-                int capacity = table.Rows.Capacity;
+                int count = table.Rows.Count;
 
-                for (int i = 0; i < capacity; i++)
+                for (int i = 0; i < count; i++)
                 {
                     resp.WikiList.Add(
                         new Wiki()
