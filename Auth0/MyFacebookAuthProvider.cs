@@ -47,7 +47,7 @@ namespace ExpressBase.ServiceStack.Auth0
                             SocialSignup sco_signup = new SocialSignup();
 
                             bool unique = false;
-                            string sql1 = "SELECT id, pwd,fb_id,github_id,twitter_id FROM eb_tenants WHERE email ~* @email";
+                            string sql1 = "SELECT id, pwd,fb_id,github_id,twitter_id FROM eb_tenants WHERE email ~* @email and eb_del=false";
                             DbParameter[] parameters2 = { InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, session.ProviderOAuthAccess[0].Email) };
                             EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(sql1, parameters2);
                             if (dt.Rows.Count > 0)
@@ -72,9 +72,9 @@ namespace ExpressBase.ServiceStack.Auth0
 
                                  };
 
-                                EbDataTable dtbl = InfraConnectionFactory.DataDB.DoQuery(@"INSERT INTO eb_tenants (email,fullname,fb_id,pwd) 
+                                EbDataTable dtbl = InfraConnectionFactory.DataDB.DoQuery(@"INSERT INTO eb_tenants (email,fullname,fb_id,pwd, eb_created_at) 
                                  VALUES 
-                                 (:email,:name,:fbid,:password) RETURNING id;", parameter1);
+                                 (:email,:name,:fbid,:password,NOW()) RETURNING id;", parameter1);
 
                                 
                             }

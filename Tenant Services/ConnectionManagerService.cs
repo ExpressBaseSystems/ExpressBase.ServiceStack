@@ -633,7 +633,8 @@ namespace ExpressBase.ServiceStack.Services
                         SolutionName = _temp.Rows[0][6].ToString(),
                         Description = _temp.Rows[0][2].ToString(),
                         DateCreated = _temp.Rows[0][1].ToString(),
-                        EsolutionId = _temp.Rows[0][5].ToString()
+                        EsolutionId = _temp.Rows[0][5].ToString(),
+                        IsVersioningEnabled = Convert.ToBoolean(_temp.Rows[0][11])
                     };
 
                     _temp = dt.Tables[1];

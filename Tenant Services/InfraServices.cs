@@ -31,7 +31,7 @@ namespace ExpressBase.ServiceStack.Services
     public class InfraServices : EbBaseService
     {
         public InfraServices(IEbConnectionFactory _dbf, IMessageProducer _mqp) : base(_dbf, _mqp) { }
-
+        
         public JoinbetaResponse Post(JoinbetaReq r)
         {
             JoinbetaResponse resp = new JoinbetaResponse();
@@ -52,7 +52,25 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
-
+        public GetVersioning Post (SetVersioning request)
+        {
+            GetVersioning resp = new GetVersioning();
+            try
+            {
+                string sql = string.Format("UPDATE eb_solutions SET versioning = true WHERE solution_id = '{0}';", request.solution_id);
+                int r = this.InfraConnectionFactory.DataDB.DoNonQuery(sql);
+                if (r > 0)
+                {
+                    resp.Versioning = request.Versioning;
+                }
+            }
+            catch(Exception e)
+            {
+                Console.WriteLine("Exception: " + e.ToString());
+                resp.status.Message = e.Message;
+            }
+            return resp;
+        }
 
         public CreateAccountResponse Post(CreateAccountRequest request)
         {
@@ -66,14 +84,16 @@ namespace ExpressBase.ServiceStack.Services
                                                     country,
                                                     pwd,
                                                     activation_code,
-                                                    account_type
+                                                    account_type,
+                                                    eb_created_at
                                                 )VALUES(
                                                     :email,
                                                     :fullname,
                                                     :country,
                                                     :pwd,
                                                     :activationcode,
-                                                    :accounttype
+                                                    :accounttype,
+                                                     NOW()
                                                 )RETURNING id";
 
                 //string sql = "SELECT * FROM eb_tenantprofile_setup(:fullname, :country, :pwd, :email,:activationcode,:accounttype);";
@@ -118,37 +138,47 @@ namespace ExpressBase.ServiceStack.Services
             get
             {
                 return @"<html>
-							<head>
-								<title></title>
-							</head>
-							<body>
-								<div style='border: 3px solid #22BCE5'>
-									<figure style='text-align: center;'>
-										<img src='https://expressbase.com/images/logos/EB_Logo.png' /><br />
-									</figure>
-									<br />
-									Hello <b>{UserName}</b>,<br />
-									<br />
-									Thanks for registering with EXPRESSbase Systems Private Limited.<br />
-										<br />
-										Please verify your email address to confirm your account registration by clicking bleow<br />
- 
-									<br />
-									<a style='color: #22BCE5' href='{Url}'>Verify Account</a><br />
-									<br />
-									<br />
-									Thanks<br />
-									EXPRESSbase Systems Private Limited.
-      
-								</div>
-							</body>
-						</html>";
+<head>
+    <title></title>
+</head>
+<body>
+    <div style='border: 1px solid #508bf9;padding:20px 40px 20px 40px;width:100%; '>
+        <figure style='text-align: center;margin:0px;'>
+            <img src='https://expressbase.com/images/logos/EB_Logo.png' /><br />
+        </figure>
+        <br />
+        <h3 style='color:#508bf9;margin:0px'>Build Business Apps 10x faster!</h3> <br />
+        <div style='line-height: 1.4;'>
+            Dear {UserName},<br />
+            <br />
+            Welcome to EXPRESSbase!  <br />
+            An Open-Source, Low-Code Rapid application development & delivery platform on the cloud for businesses & developers to build & run business apps 10 times faster.<br />
+            We're excited to help you get started with your new EXPRESSbase account. Please go thru our <a href='{wikiurl}'>Wiki</a> for tutorials. <br /><br />
+            If you wish to connect the database used by your existing applications, you could do it in very simple  <a href='{stepsurl}'>steps</a> – and it is secure too!<br /><br />
+            Just click the button below to verify your email address.<br />
+        </div>
+        <br />
+        <table>
+            <tr>
+                <td class='btn-read-online' style='text-align: center; background-color: #508bf9; padding: 10px 15px; border-radius: 5px;'>
+                    <a href='{Url}' style='color: #fff; font-size: 16px; letter-spacing: 1px; text-decoration: none;  font-family:Helvetica,sans-serif,Montserrat, Arial ;'>Verify Account</a>
+                </td>
+            </tr>
+        </table>
+        <br />
+        Need help? Please drop in a mail to <a href='{supporturl}'>support@expressbase.com</a>. We're right here for you.<br /><br />
+        Sincerely,<br />
+        EXPRESSbase<br />
+    </div>
+</body>
+</html>";
             }
             set { }
         }
 
         private bool SendTenantMail(int tid, string activationcode, string pageurl, string name, string email)
         {
+           
             bool status = false;
             string aq = "$" + tid + "$" + activationcode + "$";
             byte[] plaintxt = System.Text.Encoding.UTF8.GetBytes(aq);
@@ -156,16 +186,19 @@ namespace ExpressBase.ServiceStack.Services
             string elinks2 = string.Format("https://{0}/em?emv={1}", pageurl, ai);
             string mailbody = this.MailHtml;
             mailbody=mailbody.Replace("{UserName}", name).Replace("{Url}", elinks2);
-            
+            string wikiurl = "https://myaccount.expressbase.com/publicwiki/docs";
+            string stepsurl = "";
+            string supporturl = "support@expressbase.com";
+
 
             try
             {
-                mailbody = mailbody.Replace("{UserName}", name).Replace("{Url}", elinks2);
+                mailbody = mailbody.Replace("{UserName}", name).Replace("{Url}", elinks2).Replace("{wikiurl}", wikiurl).Replace("{supporturl}", supporturl).Replace("{stepsurl}", stepsurl);
 
                 MessageProducer3.Publish(new EmailServicesRequest
                 {
                     To = email,
-                    Subject = "testing email",
+                    Subject = "Welocme to EXPRESSbase",
                     Message = mailbody,
                     SolnId = CoreConstants.EXPRESSBASE,
 
@@ -334,7 +367,8 @@ namespace ExpressBase.ServiceStack.Services
 										eb_tenants 
 										SET
 											is_verified = true,
-											activation_code=null 
+											activation_code=null,
+                                            mail_verify_time=NOW()
 										WHERE 
 											id = :id AND
 											activation_code= :codes");
@@ -1465,7 +1499,7 @@ namespace ExpressBase.ServiceStack.Services
         {
             UniqueRequestResponse res = new UniqueRequestResponse();
             ILog log = LogManager.GetLogger(GetType());
-            string sql = "SELECT id, pwd FROM eb_tenants WHERE email ~* @email";
+            string sql = "SELECT id, pwd FROM eb_tenants WHERE email ~* @email and eb_del=false";
             DbParameter[] parameters = { this.InfraConnectionFactory.ObjectsDB.GetNewParameter("email", EbDbTypes.String, request.email) };
             var dt = this.InfraConnectionFactory.ObjectsDB.DoQuery(sql, parameters);
             if (dt.Rows.Count > 0)
