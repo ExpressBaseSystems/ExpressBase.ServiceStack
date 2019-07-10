@@ -191,7 +191,7 @@ namespace ExpressBase.ServiceStack.Services
                     eb_del='F' AND status='Publish' ORDER BY list_order  ";
                 EbDataTable table = InfraConnectionFactory.DataDB.DoQuery(query);
 
-                int capacity = table.Rows.Capacity;
+                int capacity = table.Rows.Count;
 
                 for (int i = 0; i < capacity; i++)
                 {
@@ -326,7 +326,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
-
+                Console.WriteLine("ERROR: Admin_Wiki_ListRequest : " +e.Message + e.StackTrace);
             }
             return resp;
         }
