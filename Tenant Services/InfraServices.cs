@@ -52,7 +52,25 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
-
+        public GetVersioning Post (SetVersioning request)
+        {
+            GetVersioning resp = new GetVersioning();
+            try
+            {
+                string sql = string.Format("UPDATE eb_solutions SET versioning = true WHERE solution_id = '{0}';", request.solution_id);
+                int r = this.InfraConnectionFactory.DataDB.DoNonQuery(sql);
+                if (r > 0)
+                {
+                    resp.Versioning = request.Versioning;
+                }
+            }
+            catch(Exception e)
+            {
+                Console.WriteLine("Exception: " + e.ToString());
+                resp.status.Message = e.Message;
+            }
+            return resp;
+        }
 
         public CreateAccountResponse Post(CreateAccountRequest request)
         {
