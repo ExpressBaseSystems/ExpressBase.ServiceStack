@@ -151,9 +151,10 @@ namespace ExpressBase.ServiceStack.Services
         <div style='line-height: 1.4;'>
             Dear {UserName},<br />
             <br />
-            Welcome to EXPRESSbase! An Open-Source, Low-Code Rapid application development & delivery platform on the cloud for businesses & developers to build & run business apps 10 times faster.<br />
-            We're excited to help you get started with your new EXPRESSbase account. Please go thru our <a href='{wikiurl}'>Wiki</a> for tutorials. <br />
-            If you wish to connect the database used by your existing applications, you could do it in very simple  <a href='{stepsurl}'>steps</a> – and it is secure too!<br />
+            Welcome to EXPRESSbase!  <br />
+            An Open-Source, Low-Code Rapid application development & delivery platform on the cloud for businesses & developers to build & run business apps 10 times faster.<br />
+            We're excited to help you get started with your new EXPRESSbase account. Please go thru our <a href='{wikiurl}'>Wiki</a> for tutorials. <br /><br />
+            If you wish to connect the database used by your existing applications, you could do it in very simple  <a href='{stepsurl}'>steps</a> – and it is secure too!<br /><br />
             Just click the button below to verify your email address.<br />
         </div>
         <br />
