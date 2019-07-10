@@ -206,7 +206,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 string sid = "SELECT * from eb_sid_gen();";
                 EbDataTable dt1 = this.InfraConnectionFactory.DataDB.DoQuery(sid);
-                string Sol_id_autogen = Convert.ToString(dt1.Rows[0][0]);
+                string Sol_id_autogen = "admin";
 
                 string sql = @"INSERT INTO eb_solutions
                                             (
