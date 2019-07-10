@@ -52,7 +52,25 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
-
+        public GetVersioning Post (SetVersioning request)
+        {
+            GetVersioning resp = new GetVersioning();
+            try
+            {
+                string sql = string.Format("UPDATE eb_solutions SET versioning = true WHERE solution_id = '{0}';", request.solution_id);
+                int r = this.InfraConnectionFactory.DataDB.DoNonQuery(sql);
+                if (r > 0)
+                {
+                    resp.Versioning = request.Versioning;
+                }
+            }
+            catch(Exception e)
+            {
+                Console.WriteLine("Exception: " + e.ToString());
+                resp.status.Message = e.Message;
+            }
+            return resp;
+        }
 
         public CreateAccountResponse Post(CreateAccountRequest request)
         {
@@ -66,14 +84,16 @@ namespace ExpressBase.ServiceStack.Services
                                                     country,
                                                     pwd,
                                                     activation_code,
-                                                    account_type
+                                                    account_type,
+                                                    eb_created_at
                                                 )VALUES(
                                                     :email,
                                                     :fullname,
                                                     :country,
                                                     :pwd,
                                                     :activationcode,
-                                                    :accounttype
+                                                    :accounttype,
+                                                     NOW()
                                                 )RETURNING id";
 
                 //string sql = "SELECT * FROM eb_tenantprofile_setup(:fullname, :country, :pwd, :email,:activationcode,:accounttype);";

@@ -72,9 +72,9 @@ namespace ExpressBase.ServiceStack.Auth0
 
                                  };
 
-                                EbDataTable dtbl = InfraConnectionFactory.DataDB.DoQuery(@"INSERT INTO eb_tenants (email,fullname,fb_id,pwd) 
+                                EbDataTable dtbl = InfraConnectionFactory.DataDB.DoQuery(@"INSERT INTO eb_tenants (email,fullname,fb_id,pwd, eb_created_at) 
                                  VALUES 
-                                 (:email,:name,:fbid,:password) RETURNING id;", parameter1);
+                                 (:email,:name,:fbid,:password,NOW()) RETURNING id;", parameter1);
 
                                 
                             }
