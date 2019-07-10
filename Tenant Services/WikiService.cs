@@ -128,7 +128,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
-                Console.WriteLine("Exception inside Getting Wiki By Id");
+                Console.WriteLine("ERROR: Inside GetWikiByIdRequest: " + e.StackTrace);
                 return null;
             }
             return resp;
