@@ -115,7 +115,7 @@ namespace ExpressBase.ServiceStack.Services
                  FROM
                     wiki  
                  WHERE
-                   id = @id AND eb_del='false'  ";
+                   id = @id AND eb_del='F'  ";
 
                 EbDataTable table = InfraConnectionFactory.DataDB.DoQuery(query, parameters);
 
@@ -128,7 +128,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
-                Console.WriteLine("ERROR: Inside GetWikiByIdRequest: " + e.StackTrace);
+                Console.WriteLine("ERROR: Inside GetWikiByIdRequest: " + e.Message + e.StackTrace);
                 return null;
             }
             return resp;
@@ -188,7 +188,7 @@ namespace ExpressBase.ServiceStack.Services
                 FROM
                     wiki 
                 WHERE 
-                    eb_del='false' AND status='Publish' ORDER BY list_order  ";
+                    eb_del='F' AND status='Publish' ORDER BY list_order  ";
                 EbDataTable table = InfraConnectionFactory.DataDB.DoQuery(query);
 
                 int capacity = table.Rows.Capacity;
@@ -230,7 +230,7 @@ namespace ExpressBase.ServiceStack.Services
                  FROM
                     wiki  
                  WHERE
-                    id = @id AND eb_del='false'  ORDER BY list_order";
+                    id = @id AND eb_del='F'  ORDER BY list_order";
 
                 EbDataTable table = InfraConnectionFactory.DataDB.DoQuery(query, parameters);
 
@@ -242,7 +242,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
-                Console.Write("exception in PublicWiki/GetWiki");
+                Console.Write("ERROR in PublicWiki/GetWiki" + e.Message + e.StackTrace);
             }
             return resp;
         }
@@ -259,7 +259,7 @@ namespace ExpressBase.ServiceStack.Services
                 FROM
                     wiki 
                 WHERE 
-                    eb_del='false' ORDER BY id  ";
+                    eb_del='F' ORDER BY id  ";
                 EbDataTable table = InfraConnectionFactory.DataDB.DoQuery(query);
 
                 int capacity = table.Rows.Capacity;
@@ -300,7 +300,7 @@ namespace ExpressBase.ServiceStack.Services
                  FROM
                     wiki  
                  WHERE
-                    status = @status AND eb_del='false' ";
+                    status = @status AND eb_del='F' ";
 
                 EbDataTable table = InfraConnectionFactory.DataDB.DoQuery(query, parameters);
 
@@ -377,7 +377,7 @@ namespace ExpressBase.ServiceStack.Services
                 FROM
                     wiki 
                 WHERE 
-                    eb_del='false' AND status='Publish' order by list_order ";
+                    eb_del='F' AND status='Publish' order by list_order ";
                 EbDataTable table = InfraConnectionFactory.DataDB.DoQuery(query);
 
                 int capacity = table.Rows.Capacity;
