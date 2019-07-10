@@ -266,6 +266,7 @@ namespace ExpressBase.ServiceStack.Services
 
                 for (int i = 0; i < capacity; i++)
                 {
+                    Console.WriteLine("INFO: " + i + "th Wiki");
                     resp.WikiList.Add(
                         new Wiki()
                         {
@@ -279,7 +280,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
-                Console.WriteLine("ERROR: GetWikiList Exception: " + e.Message);
+                Console.WriteLine("ERROR: GetWikiList Exception: " + e.Message + e.StackTrace);
             }
             return resp;
         }
