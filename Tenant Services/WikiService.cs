@@ -68,7 +68,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 string query = @"
             UPDATE wiki SET
-                category= @category, title = @title , html = @html , eb_last_modified_by = @modified_by, eb_last_modified_at = @updatedtime, eb_tags = @tags, status =@status
+                category= @category, title = @title , html = @html , eb_lastmodified_by = @modified_by, eb_lastmodified_at = @updatedtime, eb_tags = @tags, status =@status
             WHERE 
                 id= @id
             RETURNING id";
