@@ -31,7 +31,7 @@ namespace ExpressBase.ServiceStack.Services
     public class InfraServices : EbBaseService
     {
         public InfraServices(IEbConnectionFactory _dbf, IMessageProducer _mqp) : base(_dbf, _mqp) { }
-        
+
         public JoinbetaResponse Post(JoinbetaReq r)
         {
             JoinbetaResponse resp = new JoinbetaResponse();
@@ -52,7 +52,7 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
-        public GetVersioning Post (SetVersioning request)
+        public GetVersioning Post(SetVersioning request)
         {
             GetVersioning resp = new GetVersioning();
             try
@@ -64,7 +64,7 @@ namespace ExpressBase.ServiceStack.Services
                     resp.Versioning = request.Versioning;
                 }
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 Console.WriteLine("Exception: " + e.ToString());
                 resp.status.Message = e.Message;
@@ -133,6 +133,48 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
+        public CreateSolutionFurtherResponse Post(CreateSolutionFurtherRequest request)
+        {
+            CreateSolutionFurtherResponse resp = new CreateSolutionFurtherResponse();
+            int _solcount = 0;
+            try
+            {
+                string sql = @"SELECT COUNT(*) FROM eb_solutions WHERE tenant_id = :tid";
+                DbParameter[] parameters =
+                {
+                this.InfraConnectionFactory.DataDB.GetNewParameter("tid",EbDbTypes.Int32,request.UserId)
+                };
+                EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(sql, parameters);
+                _solcount = Convert.ToInt32(dt.Rows[0][0]) + 1;
+            }
+            catch(Exception e)
+            {
+                Console.WriteLine("Error at count * of solutions :" + e.Message); 
+            }
+
+            try
+            {
+                CreateSolutionResponse response = this.Post(new CreateSolutionRequest
+                {
+                    SolutionName = "My Solution " + _solcount,
+                    Description = "My solution " + _solcount,
+                    DeployDB = true,
+                    UserId = request.UserId
+                });
+                if (response.Id > 0)
+                {
+                    resp.SolId = response.Id;
+                    resp.Status = true;
+                }
+            }
+            catch(Exception e)
+            {
+                Console.WriteLine("Exception at new solution creation furtherRequest :" + e.Message);
+                resp.Status = false;
+            }
+            return resp;
+        }
+
         private string MailHtml
         {
             get
@@ -178,14 +220,14 @@ namespace ExpressBase.ServiceStack.Services
 
         private bool SendTenantMail(int tid, string activationcode, string pageurl, string name, string email)
         {
-           
+
             bool status = false;
             string aq = "$" + tid + "$" + activationcode + "$";
             byte[] plaintxt = System.Text.Encoding.UTF8.GetBytes(aq);
             string ai = System.Convert.ToBase64String(plaintxt);
             string elinks2 = string.Format("https://{0}/em?emv={1}", pageurl, ai);
             string mailbody = this.MailHtml;
-            mailbody=mailbody.Replace("{UserName}", name).Replace("{Url}", elinks2);
+            mailbody = mailbody.Replace("{UserName}", name).Replace("{Url}", elinks2);
             string wikiurl = "https://myaccount.expressbase.com/publicwiki/docs";
             string stepsurl = "";
             string supporturl = "support@expressbase.com";
@@ -282,7 +324,8 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     if (request.DeployDB)
                     {
-                        EbDbCreateResponse response = (EbDbCreateResponse)_dbService.Post(new EbDbCreateRequest {
+                        EbDbCreateResponse response = (EbDbCreateResponse)_dbService.Post(new EbDbCreateRequest
+                        {
                             DBName = Sol_id_autogen,
                             SolnId = request.SolnId,
                             UserId = request.UserId,
@@ -291,14 +334,16 @@ namespace ExpressBase.ServiceStack.Services
 
                         if (response.Resp)
                         {
-                            _conService.Post(new InitialSolutionConnectionsRequest {
+                            _conService.Post(new InitialSolutionConnectionsRequest
+                            {
                                 NewSolnId = Sol_id_autogen,
                                 SolnId = request.SolnId,
                                 UserId = request.UserId,
                                 DbUsers = response.DbUsers
                             });
 
-                            _tenantUserService.Post(new UpdateSolutionRequest {
+                            _tenantUserService.Post(new UpdateSolutionRequest
+                            {
                                 SolnId = Sol_id_autogen,
                                 UserId = request.UserId
                             });
@@ -306,7 +351,7 @@ namespace ExpressBase.ServiceStack.Services
                     }
                 }
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 Console.WriteLine("Exception: " + e.Message + e.StackTrace);
             }
@@ -334,7 +379,7 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
-      
+
         public GetSolutioInfoResponse Get(GetSolutioInfoRequest request)
         {
             ConnectionManager _conService = base.ResolveService<ConnectionManager>();
