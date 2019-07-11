@@ -249,44 +249,44 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
-        public WikiAdminResponse Get(WikiAdminRequest request)
-        {
-            WikiAdminResponse resp = new WikiAdminResponse();
+        //public WikiAdminResponse Get(WikiAdminRequest request)
+        //{
+        //    WikiAdminResponse resp = new WikiAdminResponse();
 
-            try
-            {
+        //    try
+        //    {
 
-                string query = @"
-                SELECT *
-                FROM
-                    wiki 
-                WHERE 
-                    eb_del='F' ORDER BY id  ";
-                EbDataTable table = InfraConnectionFactory.DataDB.DoQuery(query);
+        //        string query = @"
+        //        SELECT *
+        //        FROM
+        //            wiki 
+        //        WHERE 
+        //            eb_del='F' ORDER BY id  ";
+        //        EbDataTable table = InfraConnectionFactory.DataDB.DoQuery(query);
 
-                int count = table.Rows.Count;
+        //        int count = table.Rows.Count;
 
-                Console.WriteLine("INFO: Wiki Count: " + count);
+        //        Console.WriteLine("INFO: Wiki Count: " + count);
 
-                for (int i = 0; i < count; i++)
-                {
-                    resp.WikiList.Add(
-                        new Wiki()
-                        {
-                            Category = table.Rows[i]["category"].ToString(),
-                            HTML = table.Rows[i]["html"].ToString(),
-                            Title = table.Rows[i]["title"].ToString(),
-                            Id = (int)table.Rows[i]["id"],
-                            Status = table.Rows[i]["status"].ToString()
-                        });
-                }
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("ERROR: GetWikiList Exception: " + e.Message + e.StackTrace);
-            }
-            return resp;
-        }
+        //        for (int i = 0; i < count; i++)
+        //        {
+        //            resp.WikiList.Add(
+        //                new Wiki()
+        //                {
+        //                    Category = table.Rows[i]["category"].ToString(),
+        //                    HTML = table.Rows[i]["html"].ToString(),
+        //                    Title = table.Rows[i]["title"].ToString(),
+        //                    Id = (int)table.Rows[i]["id"],
+        //                    Status = table.Rows[i]["status"].ToString()
+        //                });
+        //        }
+        //    }
+        //    catch (Exception e)
+        //    {
+        //        Console.WriteLine("ERROR: GetWikiList Exception: " + e.Message + e.StackTrace);
+        //    }
+        //    return resp;
+        //}
 
 
 
