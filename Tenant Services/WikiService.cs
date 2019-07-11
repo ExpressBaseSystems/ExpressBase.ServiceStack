@@ -115,7 +115,7 @@ namespace ExpressBase.ServiceStack.Services
                  FROM
                     wiki  
                  WHERE
-                   id = @id AND eb_del='false'  ";
+                   id = @id AND eb_del='F'  ";
 
                 EbDataTable table = InfraConnectionFactory.DataDB.DoQuery(query, parameters);
 
@@ -128,7 +128,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
-                Console.WriteLine("Exception inside Getting Wiki By Id");
+                Console.WriteLine("ERROR: Inside GetWikiByIdRequest: " + e.Message + e.StackTrace);
                 return null;
             }
             return resp;
@@ -152,7 +152,7 @@ namespace ExpressBase.ServiceStack.Services
 
                 EbDataTable table = InfraConnectionFactory.DataDB.DoQuery(query, parameters);
 
-                int capacity = table.Rows.Capacity;
+                int capacity = table.Rows.Count;
 
                 for (int i = 0; i < capacity; i++)
                 {
@@ -169,7 +169,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
-                Console.WriteLine("ERROR: GetWikiList Exception: " + e.Message);
+                Console.WriteLine("ERROR: GetWikiSearch Exception: " + e.Message);
             }
             return resp;
         }
@@ -188,10 +188,12 @@ namespace ExpressBase.ServiceStack.Services
                 FROM
                     wiki 
                 WHERE 
-                    eb_del='false' AND status='Publish' ORDER BY list_order  ";
+                    eb_del='F' AND status='Publish' ORDER BY list_order  ";
                 EbDataTable table = InfraConnectionFactory.DataDB.DoQuery(query);
 
-                int capacity = table.Rows.Capacity;
+                int capacity = table.Rows.Count;
+
+                Console.WriteLine("INFO: Wiki Count: " + capacity);
 
                 for (int i = 0; i < capacity; i++)
                 {
@@ -230,7 +232,7 @@ namespace ExpressBase.ServiceStack.Services
                  FROM
                     wiki  
                  WHERE
-                    id = @id AND eb_del='false'  ORDER BY list_order";
+                    id = @id AND eb_del='F'  ORDER BY list_order";
 
                 EbDataTable table = InfraConnectionFactory.DataDB.DoQuery(query, parameters);
 
@@ -242,47 +244,49 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
-                Console.Write("exception in PublicWiki/GetWiki");
+                Console.Write("ERROR in PublicWiki/GetWiki" + e.Message + e.StackTrace);
             }
             return resp;
         }
 
-        public WikiAdminResponse Get(WikiAdminRequest request)
-        {
-            WikiAdminResponse resp = new WikiAdminResponse();
+        //public WikiAdminResponse Get(WikiAdminRequest request)
+        //{
+        //    WikiAdminResponse resp = new WikiAdminResponse();
 
-            try
-            {
+        //    try
+        //    {
 
-                string query = @"
-                SELECT *
-                FROM
-                    wiki 
-                WHERE 
-                    eb_del='false' ORDER BY id  ";
-                EbDataTable table = InfraConnectionFactory.DataDB.DoQuery(query);
+        //        string query = @"
+        //        SELECT *
+        //        FROM
+        //            wiki 
+        //        WHERE 
+        //            eb_del='F' ORDER BY id  ";
+        //        EbDataTable table = InfraConnectionFactory.DataDB.DoQuery(query);
 
-                int capacity = table.Rows.Capacity;
+        //        int count = table.Rows.Count;
 
-                for (int i = 0; i < capacity; i++)
-                {
-                    resp.WikiList.Add(
-                        new Wiki()
-                        {
-                            Category = table.Rows[i]["category"].ToString(),
-                            HTML = table.Rows[i]["html"].ToString(),
-                            Title = table.Rows[i]["title"].ToString(),
-                            Id = (int)table.Rows[i]["id"],
-                            Status = table.Rows[i]["status"].ToString()
-                        });
-                }
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("ERROR: GetWikiList Exception: " + e.Message);
-            }
-            return resp;
-        }
+        //        Console.WriteLine("INFO: Wiki Count: " + count);
+
+        //        for (int i = 0; i < count; i++)
+        //        {
+        //            resp.WikiList.Add(
+        //                new Wiki()
+        //                {
+        //                    Category = table.Rows[i]["category"].ToString(),
+        //                    HTML = table.Rows[i]["html"].ToString(),
+        //                    Title = table.Rows[i]["title"].ToString(),
+        //                    Id = (int)table.Rows[i]["id"],
+        //                    Status = table.Rows[i]["status"].ToString()
+        //                });
+        //        }
+        //    }
+        //    catch (Exception e)
+        //    {
+        //        Console.WriteLine("ERROR: GetWikiList Exception: " + e.Message + e.StackTrace);
+        //    }
+        //    return resp;
+        //}
 
 
 
@@ -300,7 +304,7 @@ namespace ExpressBase.ServiceStack.Services
                  FROM
                     wiki  
                  WHERE
-                    status = @status AND eb_del='false' ";
+                    status = @status AND eb_del='F' ";
 
                 EbDataTable table = InfraConnectionFactory.DataDB.DoQuery(query, parameters);
 
@@ -324,7 +328,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
-
+                Console.WriteLine("ERROR: Admin_Wiki_ListRequest : " +e.Message + e.StackTrace);
             }
             return resp;
         }
@@ -377,12 +381,12 @@ namespace ExpressBase.ServiceStack.Services
                 FROM
                     wiki 
                 WHERE 
-                    eb_del='false' AND status='Publish' order by list_order ";
+                    eb_del='F' AND status='Publish' order by list_order ";
                 EbDataTable table = InfraConnectionFactory.DataDB.DoQuery(query);
 
-                int capacity = table.Rows.Capacity;
+                int count = table.Rows.Count;
 
-                for (int i = 0; i < capacity; i++)
+                for (int i = 0; i < count; i++)
                 {
                     resp.WikiList.Add(
                         new Wiki()
