@@ -116,8 +116,8 @@ namespace ExpressBase.ServiceStack.Services
 
                     CreateSolutionResponse response = this.Post(new CreateSolutionRequest
                     {
-                        SolutionName = "My First solution",
-                        Description = "my first solutiopn",
+                        SolutionName = "My First Solution",
+                        Description = "This is my first solution",
                         DeployDB = true,
                         UserId = resp.Id
                     });
@@ -184,7 +184,7 @@ namespace ExpressBase.ServiceStack.Services
     <title></title>
 </head>
 <body>
-    <div style='border: 1px solid #508bf9;padding:20px 40px 20px 40px;width:100%; '>
+    <div style='border: 1px solid #508bf9;padding:20px 40px 20px 40px; '>
         <figure style='text-align: center;margin:0px;'>
             <img src='https://expressbase.com/images/logos/EB_Logo.png' /><br />
         </figure>
@@ -240,7 +240,7 @@ namespace ExpressBase.ServiceStack.Services
                 MessageProducer3.Publish(new EmailServicesRequest
                 {
                     To = email,
-                    Subject = "Welocme to EXPRESSbase",
+                    Subject = "Welcome to EXPRESSbase",
                     Message = mailbody,
                     SolnId = CoreConstants.EXPRESSBASE,
 
@@ -451,7 +451,9 @@ namespace ExpressBase.ServiceStack.Services
 										SET
 											resetpsw_code = :code
 										WHERE 
-											email=:mail");
+											email=:mail
+                                            and eb_del=false"
+                                            );
                 DbParameter[] parameters = {
                     this.InfraConnectionFactory.DataDB.GetNewParameter("code", EbDbTypes.String, reques.Resetcode),
                     this.InfraConnectionFactory.DataDB.GetNewParameter("mail", EbDbTypes.String, reques.Email)
