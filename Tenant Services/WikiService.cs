@@ -123,6 +123,7 @@ namespace ExpressBase.ServiceStack.Services
                 resp.Wiki.Title = table.Rows[0]["title"].ToString();
                 resp.Wiki.HTML = table.Rows[0]["html"].ToString();
                 resp.Wiki.Tags = table.Rows[0]["eb_tags"].ToString();
+                resp.Wiki.Status = table.Rows[0]["status"].ToString();
 
 
             }
