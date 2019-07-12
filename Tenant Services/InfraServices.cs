@@ -84,7 +84,6 @@ namespace ExpressBase.ServiceStack.Services
                                                     country,
                                                     pwd,
                                                     activation_code,
-                                                    account_type,
                                                     eb_created_at
                                                 )VALUES(
                                                     :email,
@@ -92,7 +91,6 @@ namespace ExpressBase.ServiceStack.Services
                                                     :country,
                                                     :pwd,
                                                     :activationcode,
-                                                    :accounttype,
                                                      NOW()
                                                 )RETURNING id";
 
@@ -103,8 +101,7 @@ namespace ExpressBase.ServiceStack.Services
                     this.InfraConnectionFactory.DataDB.GetNewParameter("country", EbDbTypes.String, request.Country),
                     this.InfraConnectionFactory.DataDB.GetNewParameter("pwd", EbDbTypes.String, (request.Password.ToString() + request.Email.ToString()).ToMD5Hash()),
                     this.InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, request.Email),
-                    this.InfraConnectionFactory.DataDB.GetNewParameter("activationcode", EbDbTypes.String, request.ActivationCode),
-                    this.InfraConnectionFactory.DataDB.GetNewParameter("accounttype", EbDbTypes.String, request.Account_type)
+                    this.InfraConnectionFactory.DataDB.GetNewParameter("activationcode", EbDbTypes.String, request.ActivationCode)
                     };
 
                 EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(sql, parameters);
