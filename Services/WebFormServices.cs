@@ -63,7 +63,7 @@ namespace ExpressBase.ServiceStack.Services
                     }
                     if (_table.TableName != _schema.MasterTable)
                         _listNamesAndTypes.Add(new TableColumnMeta { Name = _schema.MasterTable + "_id", Type = vDbTypes.Decimal });// id refernce to the parent table will store in this column - foreignkey
-                    if(_table.IsGridTable)
+                    if(_table.TableType == WebFormTableTypes.Grid)
                         _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_row_num", Type = vDbTypes.Decimal });
 
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_by", Type = vDbTypes.Decimal });
