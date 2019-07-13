@@ -205,6 +205,9 @@ namespace ExpressBase.ServiceStack.Services
             </tr>
         </table>
         <br />
+        If the previous button does not work, try to copy and paste the following URL in your browser’s address bar:<br />
+        <a href='{Url}'></a>
+        <br />
         Need help? Please drop in a mail to <a href='{supporturl}'>support@expressbase.com</a>. We're right here for you.<br /><br />
         Sincerely,<br />
         EXPRESSbase<br />
@@ -506,7 +509,7 @@ namespace ExpressBase.ServiceStack.Services
                     //            bodyMsg.Append("<br />");
                     //            bodyMsg.Append("next4");
 
-                    MessageProducer3.Publish(new EmailServicesRequest1
+                    MessageProducer3.Publish(new EmailServicesRequest
                     {
                         To = reques.Email,
                         Subject = "testing email for reset password",
