@@ -831,10 +831,7 @@ namespace ExpressBase.ServiceStack
                     }
                     else if (col.Type == EbDbTypes.String && (_isexcel == false))
                     {
-                        if (col.AllowTooltip)
-                        {
-                            _formattedData = _unformattedData.ToString().Length > col.AllowedCharacterLength ? "<span class='columntooltip' data-toggle='popover' data-content='" + _unformattedData.ToString().ToBase64() + "'>" + _unformattedData.ToString().Substring(0, col.AllowedCharacterLength) + "...</span>" : _unformattedData;
-                        }
+                        
                         if ((col as DVStringColumn).RenderAs == StringRenderType.Marker)
                             _formattedData = "<a href = '#' class ='columnMarker' data-latlong='" + _unformattedData + "'><i class='fa fa-map-marker fa-2x' style='color:red;'></i></a>";
 
@@ -842,6 +839,19 @@ namespace ExpressBase.ServiceStack
                     else if (col.Type == EbDbTypes.Boolean)
                     {
 
+                    }
+                    if (col.AllowTooltip)
+                    {
+                        string info = _unformattedData.ToString();
+                        if (col.InfoWindow.Count > 0)
+                        {
+                            info = string.Empty;
+                            foreach (DVBaseColumn _column in col.InfoWindow)
+                            {
+                                info += _column.sTitle+" : "+ row[_column.Data]+"</br>";
+                            }
+                        }
+                        _formattedData = _unformattedData.ToString().Length > col.AllowedCharacterLength ? "<span class='columntooltip' data-toggle='popover' data-content='" + info.ToBase64() + "'>" + _unformattedData.ToString().Substring(0, col.AllowedCharacterLength) + "...</span>" : _unformattedData;
                     }
                     if (col.HideLinkifNoData)
                     {
