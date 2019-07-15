@@ -206,7 +206,7 @@ namespace ExpressBase.ServiceStack.Services
         </table>
         <br />
         If the previous button does not work, try to copy and paste the following URL in your browser’s address bar:<br />
-        <a href='{Url}'></a>
+        <a href='{Url}'>{Url}</a>
         <br />
         Need help? Please drop in a mail to <a href='{supporturl}'>support@expressbase.com</a>. We're right here for you.<br /><br />
         Sincerely,<br />
@@ -474,29 +474,38 @@ namespace ExpressBase.ServiceStack.Services
                     //	body = reader.ReadToEnd();
                     //}
 
-                    string body = @"<html >
-							<head>
-								<title></title>
-							</head>
-							<body>
-								<div style='border: 3px solid #22BCE5; padding:10px;'>
-									<figure style='text-align: center;'>
-										<img src='https://expressbase.com/images/logos/EB_Logo.png' /><br />
-									</figure>
-									<br />
-
-      
-									Hello <b>{UserName}</b>,<br />
-									<br />
-									Reset your password by clicking below.<br />
-									<a  href='{Url}'>Reset password</a><br />
-									<br />
-									Thanks<br />
-									EXPRESSbase Systems Private Limited.
-       
-								</div>
-							</body>
-							</html>";
+                    string body = @"</head>
+<body>
+    <div style='border: 1px solid #508bf9;padding:20px 40px 20px 40px;width:70%; '>
+        <figure style='text-align: center;margin:0px;'>
+            <img src='https://expressbase.com/images/logos/EB_Logo.png' /><br />
+        </figure>
+        <br />
+        <h3 style='color:#508bf9;margin:0px'>Build Business Apps 10x faster!</h3> <br />
+        <div style='line-height: 1.4;'>
+            Dear {UserName},<br />
+            <br />
+			
+			You can use the following link to reset your password:
+        </div>
+        <br />
+        <table>
+            <tr>
+                <td class='btn-read-online' style='text-align: center; background-color: #508bf9; padding: 10px 15px; border-radius: 5px;'>
+                    <a href='{Url}' style='color: #fff; font-size: 16px; letter-spacing: 1px; text-decoration: none;  font-family: Montserrat,Arial, Helvetica, sans-serif;'>Reset password</a>
+                </td>
+            </tr>
+        </table>
+        <br />
+		If the previous button does not work, try to copy and paste the following URL in your browser’s address bar:<br />
+        <a href='{Url}'>{Url}</a>
+        <br />
+        Need help? Please drop in a mail to <a href='{supporturl}'>support@expressbase.com</a>. We're right here for you.<br /><br />
+        Sincerely,<br />
+        EXPRESSbase<br />
+    </div>
+</body>
+</html>";
                     body = body.Replace("{UserName}", reques.Email);
                     body = body.Replace("{Url}", resetlink);
 
@@ -512,7 +521,7 @@ namespace ExpressBase.ServiceStack.Services
                     MessageProducer3.Publish(new EmailServicesRequest
                     {
                         To = reques.Email,
-                        Subject = "testing email for reset password",
+                        Subject = "Reset password",
                         Message = body,
                         //Message = bodyMsg.ToString(),
                         SolnId = CoreConstants.EXPRESSBASE,
@@ -1614,11 +1623,11 @@ namespace ExpressBase.ServiceStack.Services
         //}
     }
 
-    internal class EmailServicesRequest1
-    {
-        public string To { get; set; }
-        public string Subject { get; set; }
-        public string Message { get; set; }
-        public string SolnId { get; set; }
-    }
+    //internal class EmailServicesRequest1
+    //{
+    //    public string To { get; set; }
+    //    public string Subject { get; set; }
+    //    public string Message { get; set; }
+    //    public string SolnId { get; set; }
+    //}
 }
