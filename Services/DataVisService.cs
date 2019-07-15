@@ -917,10 +917,17 @@ namespace ExpressBase.ServiceStack
         {
             if (col.Name == "eb_created_by" || col.Name == "eb_lastmodified_by")
             {
-                int user_id = Convert.ToInt32(_unformattedData);
-                if (this._ebSolution.Users != null && this._ebSolution.Users.ContainsKey(user_id))
+                try
                 {
-                    _formattedData = this._ebSolution.Users[user_id];
+                    int user_id = Convert.ToInt32(_unformattedData);
+                    if (this._ebSolution.Users != null && this._ebSolution.Users.ContainsKey(user_id))
+                    {
+                        _formattedData = this._ebSolution.Users[user_id];
+                    }
+                }
+                catch(Exception e)
+                {
+                    _formattedData = _unformattedData.ToString();
                 }
             }
             else if (col.Name == "eb_loc_id")
@@ -959,7 +966,7 @@ namespace ExpressBase.ServiceStack
                 {
                     if (NumericCompareValues(cond, _unformattedData))
                     {
-                        _formattedData = "<div style='background-color:" + cond.BackGroundColor + ";color:" + cond.FontColor + ";'>" + _formattedData + "</div>";
+                        _formattedData = "<div class='conditionformat' style='background-color:" + cond.BackGroundColor + ";color:" + cond.FontColor + ";'>" + _formattedData + "</div>";
                     }
                 }
             }
@@ -969,7 +976,7 @@ namespace ExpressBase.ServiceStack
                 {
                     if (DateCompareValues(cond, _unformattedData))
                     {
-                        _formattedData = "<div style='background-color:" + cond.BackGroundColor + ";color:" + cond.FontColor + ";'>" + _formattedData + "</div>";
+                        _formattedData = "<div class='conditionformat' style='background-color:" + cond.BackGroundColor + ";color:" + cond.FontColor + ";'>" + _formattedData + "</div>";
                     }
                 }
             }
@@ -979,7 +986,7 @@ namespace ExpressBase.ServiceStack
                 {
                     if (StringCompareValues(cond, _unformattedData))
                     {
-                        _formattedData = "<div style='background-color:" + cond.BackGroundColor + ";color:" + cond.FontColor + ";'>" + _formattedData + "</div>";
+                        _formattedData = "<div class='conditionformat' style='background-color:" + cond.BackGroundColor + ";color:" + cond.FontColor + ";'>" + _formattedData + "</div>";
                     }
                 }
             }
