@@ -5,6 +5,7 @@ using ExpressBase.Common.Data;
 using ExpressBase.Common.Security;
 using ExpressBase.Common.Structures;
 using ExpressBase.Objects.ServiceStack_Artifacts;
+using ExpressBase.ServiceStack.MQServices;
 using ServiceStack;
 using System;
 using System.Data;
@@ -62,7 +63,6 @@ namespace ExpressBase.ServiceStack.Services
                     _solutionConnections.DataDbConfig.DatabaseName = request.DBName;
                     DataDB = new EbConnectionFactory(_solutionConnections, request.DBName).DataDB;
                 }
-
                 return DbOperations(request, DataDB);
             }
             catch (Exception e)
@@ -141,8 +141,8 @@ namespace ExpressBase.ServiceStack.Services
                         "objectsdb.tablecreate.eb_google_map.sql", "objectsdb.tablecreate.eb_locations.sql", "objectsdb.tablecreate.eb_location_config.sql",
                         "objectsdb.tablecreate.eb_objects.sql", "objectsdb.tablecreate.eb_objects2application.sql", "objectsdb.tablecreate.eb_objects_favourites.sql",
                         "objectsdb.tablecreate.eb_objects_relations.sql", "objectsdb.tablecreate.eb_objects_status.sql", "objectsdb.tablecreate.eb_objects_ver.sql"};
-                   
-                                        Console.WriteLine(".............Reached CreateOrAlter_Structure. Total Files: " + _filepath.Length);
+
+                    Console.WriteLine(".............Reached CreateOrAlter_Structure. Total Files: " + _filepath.Length);
 
                     int counter = 0;
                     string Urlstart = string.Format("ExpressBase.Common.sqlscripts.{0}.", vendor.ToLower());
@@ -165,10 +165,19 @@ namespace ExpressBase.ServiceStack.Services
                         Console.WriteLine(".............Reached Transaction Commit");
                         con_trans.Commit();
                         EbDbCreateResponse success = request.IsChange ? new EbDbCreateResponse() { Resp = true } : _res;
+
+                        if (!request.IsChange)
+                        {   //run northwind
+                            Console.WriteLine("Executing northwind_script");
+                            CreateOrAlter_Structure(con, "ExpressBase.Common.sqlscripts.pgsql.northwind_script.sql", DataDB);
+
+                            //import the application 129
+                        }
                         return success;
                     }
                     else
                         con_trans.Rollback();
+
                 }
                 catch (Exception e)
                 {

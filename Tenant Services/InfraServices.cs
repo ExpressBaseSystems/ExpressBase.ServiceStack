@@ -22,6 +22,7 @@ using System.Runtime.Loader;
 using ServiceStack.Messaging;
 using System.Text;
 using System.Globalization;
+using ExpressBase.ServiceStack.MQServices;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -347,6 +348,16 @@ namespace ExpressBase.ServiceStack.Services
                                 SolnId = Sol_id_autogen,
                                 UserId = request.UserId
                             });
+
+                            ImportrExportService service = base.ResolveService<ImportrExportService>();
+                            ImportApplicationResponse _response = service.Get(new ImportApplicationMqRequest
+                            {
+                                Id = 129,
+                                SolnId = Sol_id_autogen,
+                                UserId = request.UserId,
+                                UserAuthId = "",
+                                WhichConsole = ""
+                            }); ;
                         }
                     }
                 }
@@ -441,7 +452,38 @@ namespace ExpressBase.ServiceStack.Services
             return re;
         }
 
-        public ForgotPasswordResponse Post(ForgotPasswordRequest reques)
+		public SocialAutoSignInResponse Post(SocialAutoSignInRequest Request)
+		{
+			SocialAutoSignInResponse respo = new SocialAutoSignInResponse();
+
+			string sql = @"SELECT 
+								id,
+								pwd 
+								FROM public.eb_tenants 
+								where
+								(fb_id=:soc_id or github_id=:soc_id or twitter_id=:soc_id) 
+								and 
+								email=:mail;";
+
+			DbParameter[] parameters = {
+					this.InfraConnectionFactory.DataDB.GetNewParameter("mail", EbDbTypes.String, Request.Email),
+					this.InfraConnectionFactory.DataDB.GetNewParameter("soc_id", EbDbTypes.String, Request.Social_id),
+					};
+
+			EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(sql, parameters);
+			respo.Id = Convert.ToInt32(dt.Rows[0][0]);
+			respo.psw = Convert.ToString(dt.Rows[0][1]);
+
+
+			return respo;
+		}
+
+
+
+
+
+
+		public ForgotPasswordResponse Post(ForgotPasswordRequest reques)
         {
             ForgotPasswordResponse re = new ForgotPasswordResponse();
             try

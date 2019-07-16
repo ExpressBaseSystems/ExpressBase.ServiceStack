@@ -23,15 +23,17 @@ namespace ExpressBase.ServiceStack.Services
 
         public GetOneFromAppstoreResponse Get(GetOneFromAppStoreRequest request)
         {
-            DbParameter[] Parameters = { InfraConnectionFactory.ObjectsDB.GetNewParameter(":id", EbDbTypes.Int32, request.Id) };
+            DbParameter[] Parameters = { this.InfraConnectionFactory.ObjectsDB.GetNewParameter(":id", EbDbTypes.Int32, request.Id) };
             EbDataTable dt = InfraConnectionFactory.ObjectsDB.DoQuery("SELECT * FROM eb_appstore WHERE id = :id", Parameters);
-            AppWrapper _wrapper = EbSerializers.Json_Deserialize<AppWrapper>(dt.Rows[0][7].ToString());
+            AppWrapper _wrapper = null;
+            if (dt.Rows.Count > 0)
+                _wrapper = EbSerializers.Json_Deserialize<AppWrapper>(dt.Rows[0][7].ToString());
             return new GetOneFromAppstoreResponse
             {
                 Wrapper = _wrapper
             };
         }
-      
+
         public GetAllFromAppstoreResponse Get(GetAllFromAppStoreExternalRequest request)
         {
             List<AppStore> _storeCollection = new List<AppStore>();
