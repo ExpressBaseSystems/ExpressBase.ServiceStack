@@ -85,7 +85,6 @@ namespace ExpressBase.ServiceStack.Services
                                                     country,
                                                     pwd,
                                                     activation_code,
-                                                    account_type,
                                                     eb_created_at
                                                 )VALUES(
                                                     :email,
@@ -93,7 +92,6 @@ namespace ExpressBase.ServiceStack.Services
                                                     :country,
                                                     :pwd,
                                                     :activationcode,
-                                                    :accounttype,
                                                      NOW()
                                                 )RETURNING id";
 
@@ -104,8 +102,7 @@ namespace ExpressBase.ServiceStack.Services
                     this.InfraConnectionFactory.DataDB.GetNewParameter("country", EbDbTypes.String, request.Country),
                     this.InfraConnectionFactory.DataDB.GetNewParameter("pwd", EbDbTypes.String, (request.Password.ToString() + request.Email.ToString()).ToMD5Hash()),
                     this.InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, request.Email),
-                    this.InfraConnectionFactory.DataDB.GetNewParameter("activationcode", EbDbTypes.String, request.ActivationCode),
-                    this.InfraConnectionFactory.DataDB.GetNewParameter("accounttype", EbDbTypes.String, request.Account_type)
+                    this.InfraConnectionFactory.DataDB.GetNewParameter("activationcode", EbDbTypes.String, request.ActivationCode)
                     };
 
                 EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(sql, parameters);
@@ -208,6 +205,9 @@ namespace ExpressBase.ServiceStack.Services
                 </td>
             </tr>
         </table>
+        <br />
+        If the previous button does not work, try to copy and paste the following URL in your browser’s address bar:<br />
+        <a href='{Url}'>{Url}</a>
         <br />
         Need help? Please drop in a mail to <a href='{supporturl}'>support@expressbase.com</a>. We're right here for you.<br /><br />
         Sincerely,<br />
@@ -452,7 +452,38 @@ namespace ExpressBase.ServiceStack.Services
             return re;
         }
 
-        public ForgotPasswordResponse Post(ForgotPasswordRequest reques)
+		public SocialAutoSignInResponse Post(SocialAutoSignInRequest Request)
+		{
+			SocialAutoSignInResponse respo = new SocialAutoSignInResponse();
+
+			string sql = @"SELECT 
+								id,
+								pwd 
+								FROM public.eb_tenants 
+								where
+								(fb_id=:soc_id or github_id=:soc_id or twitter_id=:soc_id) 
+								and 
+								email=:mail;";
+
+			DbParameter[] parameters = {
+					this.InfraConnectionFactory.DataDB.GetNewParameter("mail", EbDbTypes.String, Request.Email),
+					this.InfraConnectionFactory.DataDB.GetNewParameter("soc_id", EbDbTypes.String, Request.Social_id),
+					};
+
+			EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(sql, parameters);
+			respo.Id = Convert.ToInt32(dt.Rows[0][0]);
+			respo.psw = Convert.ToString(dt.Rows[0][1]);
+
+
+			return respo;
+		}
+
+
+
+
+
+
+		public ForgotPasswordResponse Post(ForgotPasswordRequest reques)
         {
             ForgotPasswordResponse re = new ForgotPasswordResponse();
             try
@@ -485,29 +516,38 @@ namespace ExpressBase.ServiceStack.Services
                     //	body = reader.ReadToEnd();
                     //}
 
-                    string body = @"<html >
-							<head>
-								<title></title>
-							</head>
-							<body>
-								<div style='border: 3px solid #22BCE5; padding:10px;'>
-									<figure style='text-align: center;'>
-										<img src='https://expressbase.com/images/logos/EB_Logo.png' /><br />
-									</figure>
-									<br />
-
-      
-									Hello <b>{UserName}</b>,<br />
-									<br />
-									Reset your password by clicking below.<br />
-									<a  href='{Url}'>Reset password</a><br />
-									<br />
-									Thanks<br />
-									EXPRESSbase Systems Private Limited.
-       
-								</div>
-							</body>
-							</html>";
+                    string body = @"</head>
+<body>
+    <div style='border: 1px solid #508bf9;padding:20px 40px 20px 40px;width:70%; '>
+        <figure style='text-align: center;margin:0px;'>
+            <img src='https://expressbase.com/images/logos/EB_Logo.png' /><br />
+        </figure>
+        <br />
+        <h3 style='color:#508bf9;margin:0px'>Build Business Apps 10x faster!</h3> <br />
+        <div style='line-height: 1.4;'>
+            Dear {UserName},<br />
+            <br />
+			
+			You can use the following link to reset your password:
+        </div>
+        <br />
+        <table>
+            <tr>
+                <td class='btn-read-online' style='text-align: center; background-color: #508bf9; padding: 10px 15px; border-radius: 5px;'>
+                    <a href='{Url}' style='color: #fff; font-size: 16px; letter-spacing: 1px; text-decoration: none;  font-family: Montserrat,Arial, Helvetica, sans-serif;'>Reset password</a>
+                </td>
+            </tr>
+        </table>
+        <br />
+		If the previous button does not work, try to copy and paste the following URL in your browser’s address bar:<br />
+        <a href='{Url}'>{Url}</a>
+        <br />
+        Need help? Please drop in a mail to <a href='{supporturl}'>support@expressbase.com</a>. We're right here for you.<br /><br />
+        Sincerely,<br />
+        EXPRESSbase<br />
+    </div>
+</body>
+</html>";
                     body = body.Replace("{UserName}", reques.Email);
                     body = body.Replace("{Url}", resetlink);
 
@@ -520,10 +560,10 @@ namespace ExpressBase.ServiceStack.Services
                     //            bodyMsg.Append("<br />");
                     //            bodyMsg.Append("next4");
 
-                    MessageProducer3.Publish(new EmailServicesRequest1
+                    MessageProducer3.Publish(new EmailServicesRequest
                     {
                         To = reques.Email,
-                        Subject = "testing email for reset password",
+                        Subject = "Reset password",
                         Message = body,
                         //Message = bodyMsg.ToString(),
                         SolnId = CoreConstants.EXPRESSBASE,
@@ -1625,11 +1665,11 @@ namespace ExpressBase.ServiceStack.Services
         //}
     }
 
-    internal class EmailServicesRequest1
-    {
-        public string To { get; set; }
-        public string Subject { get; set; }
-        public string Message { get; set; }
-        public string SolnId { get; set; }
-    }
+    //internal class EmailServicesRequest1
+    //{
+    //    public string To { get; set; }
+    //    public string Subject { get; set; }
+    //    public string Message { get; set; }
+    //    public string SolnId { get; set; }
+    //}
 }

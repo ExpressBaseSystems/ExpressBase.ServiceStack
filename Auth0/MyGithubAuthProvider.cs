@@ -36,7 +36,11 @@ namespace ExpressBase.ServiceStack.Auth0
                     string pasword = null;
                     SocialSignup sco_signup = new SocialSignup();
                     bool unique = false;
-                    string sql1 = "SELECT id,fb_id,github_id,twitter_id FROM eb_tenants WHERE email ~* @email and eb_del=false";
+					string urllink = session.ReferrerUrl;
+					string pathsignup = "Platform/OnBoarding";
+					string pathsignin = "TenantSignIn";
+
+					string sql1 = "SELECT id,fb_id,github_id,twitter_id FROM eb_tenants WHERE email ~* @email and eb_del=false";
                     DbParameter[] parameters2 = { InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, session.ProviderOAuthAccess[0].Email) };
                     EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(sql1, parameters2);
                     if (dt.Rows.Count > 0)
@@ -45,7 +49,17 @@ namespace ExpressBase.ServiceStack.Auth0
                         sco_signup.FbId = Convert.ToString(dt.Rows[0][1]);
                         sco_signup.GithubId = Convert.ToString(dt.Rows[0][2]);
                         sco_signup.TwitterId = Convert.ToString(dt.Rows[0][3]);
-                        Console.WriteLine("mail id is not unique");
+						Console.WriteLine("mail id is not unique");
+						//if (urllink.Contains(pathsignup, StringComparison.OrdinalIgnoreCase))
+						//{
+						//	sco_signup.Forsignup = true;
+						//}
+						//else
+						//if(urllink.Contains(pathsignin, StringComparison.OrdinalIgnoreCase))
+						{
+							sco_signup.Forsignup = false;
+						}
+							
                     }
                     else
                         unique = true;
@@ -81,7 +95,7 @@ namespace ExpressBase.ServiceStack.Auth0
                        
                     
                     b = JsonConvert.SerializeObject(sco_signup);
-                    string urllink = session.ReferrerUrl;
+                    
                     string sociallink1 = "localhost:41500";
                     string sociallink2 = "eb-test.xyz";
                     string sociallink3 = "expressbase.com";
