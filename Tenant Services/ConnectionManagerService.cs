@@ -463,6 +463,20 @@ namespace ExpressBase.ServiceStack.Services
             }
             return res;
         }
+        public AddSendGridResponse Post(AddSendGridRequest request)
+        {
+            AddSendGridResponse res = new AddSendGridResponse();
+            try
+            {
+                request.Config.PersistIntegrationConf(request.SolnId, this.InfraConnectionFactory, request.UserId);
+            }
+            catch (Exception e)
+            {
+                res.ResponseStatus.Message = e.Message;
+            }
+            return res;
+        }
+        
         public GetIntegrationConfigsResponse Get(GetIntegrationConfigsRequest request)
         {
             GetIntegrationConfigsResponse res = new GetIntegrationConfigsResponse();
