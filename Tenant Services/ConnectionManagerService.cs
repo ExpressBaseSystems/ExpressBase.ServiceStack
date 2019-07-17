@@ -463,6 +463,20 @@ namespace ExpressBase.ServiceStack.Services
             }
             return res;
         }
+        public AddSendGridResponse Post(AddSendGridRequest request)
+        {
+            AddSendGridResponse res = new AddSendGridResponse();
+            try
+            {
+                request.Config.PersistIntegrationConf(request.SolnId, this.InfraConnectionFactory, request.UserId);
+            }
+            catch (Exception e)
+            {
+                res.ResponseStatus.Message = e.Message;
+            }
+            return res;
+        }
+        
         public GetIntegrationConfigsResponse Get(GetIntegrationConfigsRequest request)
         {
             GetIntegrationConfigsResponse res = new GetIntegrationConfigsResponse();
@@ -504,6 +518,13 @@ namespace ExpressBase.ServiceStack.Services
                 if (request.IntegrationO.Type == EbConnectionTypes.EbDATA)
                 {
                     InitializeDataDb(request.IntegrationO.ConfigId, request.SolnId, request.UserId);
+                }
+                else
+                {
+                    RefreshSolutionConnectionsAsyncResponse resp = this.MQClient.Post<RefreshSolutionConnectionsAsyncResponse>(new RefreshSolutionConnectionsBySolutionIdAsyncRequest()
+                    {
+                        SolutionId = request.SolnId
+                    });
                 }
             }
             catch (Exception e)
@@ -557,6 +578,11 @@ namespace ExpressBase.ServiceStack.Services
                     };
                     EbIntegrationRequest _obj = new EbIntegrationRequest { IntegrationO = obj };
                     _obj.IntegrationO.PersistIntegration(request.SolnId, this.InfraConnectionFactory, request.UserId);
+                    RefreshSolutionConnectionsAsyncResponse resp = this.MQClient.Post<RefreshSolutionConnectionsAsyncResponse>(new RefreshSolutionConnectionsBySolutionIdAsyncRequest()
+                    {
+                        SolutionId = request.SolnId
+                    });
+
                 }
             }
             catch (Exception e)
@@ -621,7 +647,8 @@ namespace ExpressBase.ServiceStack.Services
                         SolutionName = _temp.Rows[0][6].ToString(),
                         Description = _temp.Rows[0][2].ToString(),
                         DateCreated = _temp.Rows[0][1].ToString(),
-                        EsolutionId = _temp.Rows[0][5].ToString()
+                        EsolutionId = _temp.Rows[0][5].ToString(),
+                        IsVersioningEnabled = Convert.ToBoolean(_temp.Rows[0][11])
                     };
 
                     _temp = dt.Tables[1];

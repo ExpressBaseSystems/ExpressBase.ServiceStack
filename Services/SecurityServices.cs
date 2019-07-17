@@ -165,6 +165,7 @@ namespace ExpressBase.ServiceStack.Services
 						FROM eb_users WHERE id = :id;
 						SELECT role_id FROM eb_role2user WHERE user_id = :id AND eb_del = 'F';
 						SELECT groupid FROM eb_user2usergroup WHERE userid = :id AND eb_del = 'F';";
+                //SELECT id, user_id, usergroup_id, role_id, c_type, c_value, c_operation, c_meta FROM eb_constraints WHERE user_id = :id AND eb_del = 'F' ORDER BY id;
             }
             //SELECT firstname, email, socialid, socialname FROM eb_users WHERE id = @id;	old 4th query
             DbParameter[] parameters = { this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.Id) };
@@ -236,6 +237,11 @@ namespace ExpressBase.ServiceStack.Services
                 resp.UserGroups = new List<int>();
                 foreach (var dr in ds.Tables[5].Rows)
                     resp.UserGroups.Add(Convert.ToInt32(dr[0]));
+
+                //EbConstraints con = new EbConstraints(ds.Tables[6]);
+                //resp.LocConstraint = new List<int>();
+                //foreach (var dr in con.UserLocCons)
+                //    resp.LocConstraint.Add(Convert.ToInt32(dr.Value));
             }
 
             return resp;
@@ -615,8 +621,8 @@ namespace ExpressBase.ServiceStack.Services
         {
             List<DbParameter> parameters = new List<DbParameter>();
             List<Eb_Users> _usersList = new List<Eb_Users>();
-            List<Eb_Constraints> _ipConsList = new List<Eb_Constraints>();
-            List<Eb_Constraints> _dtConsList = new List<Eb_Constraints>();
+            List<Eb_Constraints1> _ipConsList = new List<Eb_Constraints1>();
+            List<Eb_Constraints1> _dtConsList = new List<Eb_Constraints1>();
             Dictionary<string, object> _userGroupInfo = new Dictionary<string, object>();
             if (request.id > 0)
             {
@@ -647,7 +653,7 @@ namespace ExpressBase.ServiceStack.Services
 					}
 					foreach(EbDataRow dr in ds.Tables[2].Rows)
 					{
-						_ipConsList.Add(new Eb_Constraints {Id = Convert.ToInt32(dr["id"]), Title = dr["ip"].ToString(), Description = dr["description"].ToString() });
+						_ipConsList.Add(new Eb_Constraints1 {Id = Convert.ToInt32(dr["id"]), Title = dr["ip"].ToString(), Description = dr["description"].ToString() });
 					}
 					string[] days = { "Sun ", "Mon ", "Tue ", "Wed ", "Thu ", "Fri ", "Sat " };
 					foreach (EbDataRow dr in ds.Tables[3].Rows)
@@ -659,7 +665,7 @@ namespace ExpressBase.ServiceStack.Services
 						if (_type == 1)
 						{
 							string temp = "One Time - " + _start.ToString("dd-MM-yyyy HH:mm") + " to " + _end.ToString("dd-MM-yyyy HH:mm");
-							_dtConsList.Add(new Eb_Constraints {Id = Convert.ToInt32(dr["id"]), Title = dr["title"].ToString(), Description = temp });
+							_dtConsList.Add(new Eb_Constraints1 {Id = Convert.ToInt32(dr["id"]), Title = dr["title"].ToString(), Description = temp });
 						}
 						else if (_type == 2)
 						{
@@ -671,7 +677,7 @@ namespace ExpressBase.ServiceStack.Services
 									temp += days[i];
 								}
 							}
-							_dtConsList.Add(new Eb_Constraints { Id = Convert.ToInt32(dr["id"]), Title = dr["title"].ToString(), Description = temp });
+							_dtConsList.Add(new Eb_Constraints1 { Id = Convert.ToInt32(dr["id"]), Title = dr["title"].ToString(), Description = temp });
 						}
 					}
 				}
