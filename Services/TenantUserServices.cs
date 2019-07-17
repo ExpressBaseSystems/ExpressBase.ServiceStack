@@ -177,7 +177,7 @@ namespace ExpressBase.ServiceStack.Services
         public EbSolutionUsers GetUserCount()
         {
             // statusid 0 - active users, 1- suspended users
-            string sql = @"SELECT COUNT(*) FROM eb_users WHERE statusid = 0 OR statusid =1 AND eb_del ='F';
+            string sql = @"SELECT COUNT(*) FROM eb_users WHERE (statusid = 0 OR statusid = 1 OR statusid = 2) AND eb_del ='F';
                         SELECT id, fullname from eb_users;";
             EbDataSet dt = this.EbConnectionFactory.DataDB.DoQueries(sql);
             EbSolutionUsers SolutionUsers = new EbSolutionUsers();
