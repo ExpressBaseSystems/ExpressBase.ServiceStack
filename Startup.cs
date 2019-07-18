@@ -428,7 +428,8 @@ namespace ExpressBase.ServiceStack
             {
                 ILog log = LogManager.GetLogger(GetType());
 
-                log.Info(string.Format("Finished Execution of {0} at {1}", responseDto.GetType().ToString(), DateTime.Now.TimeOfDay));
+                if (responseDto != null)
+                    log.Info(string.Format("Finished Execution of {0} at {1}", responseDto.GetType().ToString(), DateTime.Now.TimeOfDay));
 
                 if (responseDto.GetResponseDto() != null)
                 {

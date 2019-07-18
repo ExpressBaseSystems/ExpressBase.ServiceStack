@@ -22,6 +22,7 @@ using System.Runtime.Loader;
 using ServiceStack.Messaging;
 using System.Text;
 using System.Globalization;
+using ExpressBase.ServiceStack.MQServices;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -356,6 +357,16 @@ namespace ExpressBase.ServiceStack.Services
                                 SolnId = Sol_id_autogen,
                                 UserId = request.UserId
                             });
+
+                            ImportrExportService service = base.ResolveService<ImportrExportService>();
+                            ImportApplicationResponse _response = service.Get(new ImportApplicationMqRequest
+                            {
+                                Id = 129,
+                                SolnId = Sol_id_autogen,
+                                UserId = request.UserId,
+                                UserAuthId = "",
+                                WhichConsole = ""
+                            }); ;
                         }
                     }
                 }
