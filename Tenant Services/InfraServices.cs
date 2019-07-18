@@ -84,14 +84,21 @@ namespace ExpressBase.ServiceStack.Services
                                                     country,
                                                     pwd,
                                                     activation_code,
-                                                    eb_created_at
+                                                    eb_created_at,
+													eb_del,
+													is_verified,
+													is_email_sent
+
                                                 )VALUES(
                                                     :email,
                                                     :fullname,
                                                     :country,
                                                     :pwd,
                                                     :activationcode,
-                                                     NOW()
+                                                     NOW(),
+													:fals,
+													:fals,
+													:fals	
                                                 )RETURNING id";
 
                 //string sql = "SELECT * FROM eb_tenantprofile_setup(:fullname, :country, :pwd, :email,:activationcode,:accounttype);";
@@ -101,7 +108,8 @@ namespace ExpressBase.ServiceStack.Services
                     this.InfraConnectionFactory.DataDB.GetNewParameter("country", EbDbTypes.String, request.Country),
                     this.InfraConnectionFactory.DataDB.GetNewParameter("pwd", EbDbTypes.String, (request.Password.ToString() + request.Email.ToString()).ToMD5Hash()),
                     this.InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, request.Email),
-                    this.InfraConnectionFactory.DataDB.GetNewParameter("activationcode", EbDbTypes.String, request.ActivationCode)
+                    this.InfraConnectionFactory.DataDB.GetNewParameter("activationcode", EbDbTypes.String, request.ActivationCode),
+                    this.InfraConnectionFactory.DataDB.GetNewParameter("fals", EbDbTypes.String, 'F')
                     };
 
                 EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(sql, parameters);
@@ -206,8 +214,9 @@ namespace ExpressBase.ServiceStack.Services
         </table>
         <br />
         If the previous button does not work, try to copy and paste the following URL in your browser’s address bar:<br />
-        <a href='{Url}'>{Url}</a>
+        <a href='{Url}'>{Url}</a><br />
         <br />
+
         Need help? Please drop in a mail to <a href='{supporturl}'>support@expressbase.com</a>. We're right here for you.<br /><br />
         Sincerely,<br />
         EXPRESSbase<br />
@@ -228,9 +237,9 @@ namespace ExpressBase.ServiceStack.Services
             string elinks2 = string.Format("https://{0}/em?emv={1}", pageurl, ai);
             string mailbody = this.MailHtml;
             mailbody = mailbody.Replace("{UserName}", name).Replace("{Url}", elinks2);
-            string wikiurl = "https://myaccount.expressbase.com/publicwiki/docs";
-            string stepsurl = "";
-            string supporturl = "support@expressbase.com";
+            string wikiurl = "https://myaccount.expressbase.com/wiki";
+            string stepsurl = "https://myaccount.expressbase.com/Wiki/View/3/connecting-database";
+            string supporturl = "mailto:support@expressbase.com";
 
 
             try
@@ -245,7 +254,7 @@ namespace ExpressBase.ServiceStack.Services
                     SolnId = CoreConstants.EXPRESSBASE,
 
                 });
-                string quer = string.Format("UPDATE eb_tenants SET is_email_sent = 'true'  WHERE id = '{0}'", tid);
+                string quer = string.Format("UPDATE eb_tenants SET is_email_sent = 'T'  WHERE id = '{0}'", tid);
                 int dtb = this.InfraConnectionFactory.DataDB.DoNonQuery(quer);
                 if (dtb > 0)
                     status = true;
@@ -411,7 +420,7 @@ namespace ExpressBase.ServiceStack.Services
                 string qur = String.Format(@"UPDATE 
 										eb_tenants 
 										SET
-											is_verified = true,
+											is_verified = 'T',
 											activation_code=null,
                                             mail_verify_time=NOW()
 										WHERE 
@@ -483,7 +492,7 @@ namespace ExpressBase.ServiceStack.Services
 											resetpsw_code = :code
 										WHERE 
 											email=:mail
-                                            and eb_del=false"
+                                            and eb_del='F'"
                                             );
                 DbParameter[] parameters = {
                     this.InfraConnectionFactory.DataDB.GetNewParameter("code", EbDbTypes.String, reques.Resetcode),
@@ -1586,7 +1595,7 @@ namespace ExpressBase.ServiceStack.Services
         {
             UniqueRequestResponse res = new UniqueRequestResponse();
             ILog log = LogManager.GetLogger(GetType());
-            string sql = "SELECT id, pwd FROM eb_tenants WHERE email ~* @email and eb_del=false";
+            string sql = "SELECT id, pwd FROM eb_tenants WHERE email ~* @email and eb_del='F'";
             DbParameter[] parameters = { this.InfraConnectionFactory.ObjectsDB.GetNewParameter("email", EbDbTypes.String, request.email) };
             var dt = this.InfraConnectionFactory.ObjectsDB.DoQuery(sql, parameters);
             if (dt.Rows.Count > 0)

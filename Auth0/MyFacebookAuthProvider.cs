@@ -43,11 +43,15 @@ namespace ExpressBase.ServiceStack.Auth0
                         string b = string.Empty;
                         try
                         {
-                            string pasword = null;
+							Console.WriteLine("reached try of facebook auth");
+							string pasword = null;
                             SocialSignup sco_signup = new SocialSignup();
 
                             bool unique = false;
-                            string sql1 = "SELECT id, pwd,fb_id,github_id,twitter_id FROM eb_tenants WHERE email ~* @email and eb_del=false";
+							string urllink = session.ReferrerUrl;
+							string pathsignup = "Platform/OnBoarding";
+							string pathsignin = "TenantSignIn";
+							string sql1 = "SELECT id, pwd,fb_id,github_id,twitter_id FROM eb_tenants WHERE email ~* @email and eb_del='F'";
                             DbParameter[] parameters2 = { InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, session.ProviderOAuthAccess[0].Email) };
                             EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(sql1, parameters2);
                             if (dt.Rows.Count > 0)
@@ -56,7 +60,17 @@ namespace ExpressBase.ServiceStack.Auth0
                                 sco_signup.FbId = Convert.ToString(dt.Rows[0][1]);
                                 sco_signup.GithubId = Convert.ToString(dt.Rows[0][2]);
                                 sco_signup.TwitterId = Convert.ToString(dt.Rows[0][3]);
-                            }
+								Console.WriteLine("mail id is not unique");
+								//if (urllink.Contains(pathsignup, StringComparison.OrdinalIgnoreCase))
+								//{
+								//	sco_signup.Forsignup = true;
+								//}
+								//else
+								//if(urllink.Contains(pathsignin, StringComparison.OrdinalIgnoreCase))
+								{
+									sco_signup.Forsignup = false;
+								}
+							}
                             else
                                 unique = true;
                         
@@ -72,12 +86,14 @@ namespace ExpressBase.ServiceStack.Auth0
 
                                  };
 
-                                EbDataTable dtbl = InfraConnectionFactory.DataDB.DoQuery(@"INSERT INTO eb_tenants (email,fullname,fb_id,pwd, eb_created_at) 
+                                EbDataTable dtbl = InfraConnectionFactory.DataDB.DoQuery(@"INSERT INTO eb_tenants 
+								(email,fullname,fb_id,pwd, eb_created_at,eb_del, is_verified, is_email_sent) 
                                  VALUES 
-                                 (:email,:name,:fbid,:password,NOW()) RETURNING id;", parameter1);
+                                 (:email,:name,:fbid,:password,NOW(),:fals,:fals,:fals) RETURNING id;", parameter1);
 
-                                
-                            }
+								Console.WriteLine("inserted details to tenant table");
+
+							}
                            
                             {
                                 sco_signup.AuthProvider = session.ProviderOAuthAccess[0].Provider;
@@ -91,10 +107,33 @@ namespace ExpressBase.ServiceStack.Auth0
                                
                             };
                             b = JsonConvert.SerializeObject(sco_signup);
-                            return authService.Redirect(SuccessRedirectUrlFilter(this, string.Format("http://localhost:41500/social_oauth?scosignup={0}", b)));
+							string sociallink1 = "localhost:41500";
+							string sociallink2 = "eb-test.xyz";
+							string sociallink3 = "expressbase.com";
+							Console.WriteLine("ReferrerUrl= " + session.ReferrerUrl);
+							if (urllink.Contains(sociallink1, StringComparison.OrdinalIgnoreCase))
+							{
+								Console.WriteLine("reached  redirect to localhost:41500/social_oauth");
+								return authService.Redirect(SuccessRedirectUrlFilter(this, string.Format("http://localhost:41500/social_oauth?scosignup={0}", b)));
 
-                        }
-                        catch (Exception e)
+							}
+
+							if (urllink.Contains(sociallink2, StringComparison.OrdinalIgnoreCase))
+							{
+								Console.WriteLine("reached  redirect to myaccount.eb-test.xyz");
+								return authService.Redirect(SuccessRedirectUrlFilter(this, string.Format("https://myaccount.eb-test.xyz/social_oauth?scosignup={0}", b)));
+							}
+
+							if (urllink.Contains(sociallink3, StringComparison.OrdinalIgnoreCase))
+							{
+								Console.WriteLine("reached redirect to myaccount.expressbase.com/");
+								return authService.Redirect(SuccessRedirectUrlFilter(this, string.Format("https://myaccount.expressbase.com/social_oauth?scosignup={0}", b)));
+							}
+
+
+
+						}
+						catch (Exception e)
                         {
                             Console.WriteLine("Exception: " + e.Message + e.StackTrace);
                         }

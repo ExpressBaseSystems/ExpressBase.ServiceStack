@@ -40,7 +40,7 @@ namespace ExpressBase.ServiceStack.Auth0
 					string pathsignup = "Platform/OnBoarding";
 					string pathsignin = "TenantSignIn";
 
-					string sql1 = "SELECT id,fb_id,github_id,twitter_id FROM eb_tenants WHERE email ~* @email and eb_del=false";
+					string sql1 = "SELECT id,fb_id,github_id,twitter_id FROM eb_tenants WHERE email ~* @email and eb_del='F'";
                     DbParameter[] parameters2 = { InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, session.ProviderOAuthAccess[0].Email) };
                     EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(sql1, parameters2);
                     if (dt.Rows.Count > 0)
@@ -72,13 +72,15 @@ namespace ExpressBase.ServiceStack.Auth0
                             InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String,  session.ProviderOAuthAccess[0].Email),
                             InfraConnectionFactory.DataDB.GetNewParameter("name", EbDbTypes.String,  session.ProviderOAuthAccess[0].UserName),
                              InfraConnectionFactory.DataDB.GetNewParameter("githubid", EbDbTypes.String,  (session.ProviderOAuthAccess[0].UserId).ToString()),
-                             InfraConnectionFactory.DataDB.GetNewParameter("password", EbDbTypes.String,pasword)
+                             InfraConnectionFactory.DataDB.GetNewParameter("password", EbDbTypes.String,pasword),
+                             InfraConnectionFactory.DataDB.GetNewParameter("fals", EbDbTypes.String,'F')
 
                              };
 
-                        EbDataTable dtbl = InfraConnectionFactory.DataDB.DoQuery(@"INSERT INTO eb_tenants (email, fullname, github_id, pwd, eb_created_at) 
-                             VALUES 
-                             (:email,:name,:githubid,:password,NOW()) RETURNING id;", parameter1);
+                        EbDataTable dtbl = InfraConnectionFactory.DataDB.DoQuery(@"INSERT INTO eb_tenants 
+																			(email, fullname, github_id, pwd, eb_created_at ,eb_del, is_verified, is_email_sent) 
+																			 VALUES 
+																			 (:email,:name,:githubid,:password,NOW(),:fals,:fals,:fals) RETURNING id;", parameter1);
 
                         Console.WriteLine("inserted details to tenant table");
                     }
@@ -124,7 +126,7 @@ namespace ExpressBase.ServiceStack.Auth0
                 catch (Exception e)
                 {
 
-                    Console.WriteLine("Exception: " + e.Message + e.StackTrace);
+                    Console.WriteLine($"Exception: { e.Message }{e.StackTrace}");
                 }
 
 
