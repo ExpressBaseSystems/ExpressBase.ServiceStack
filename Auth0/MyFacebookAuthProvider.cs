@@ -37,13 +37,15 @@ namespace ExpressBase.ServiceStack.Auth0
 
                 //   using (var con = InfraConnectionFactory.DataDB.GetNewConnection())
                 {
+					IAuthTokens t = session.ProviderOAuthAccess.FirstOrDefault(e => e.Provider == "facebook");
 
-                    if ((session.ProviderOAuthAccess[0].Email) != null)
+					if ((t.Email) != null)
                     {
                         string b = string.Empty;
                         try
                         {
 							Console.WriteLine("reached try of facebook auth");
+							Console.WriteLine($"refferal url  =  {session.ReferrerUrl}");
 							string pasword = null;
                             SocialSignup sco_signup = new SocialSignup();
 
@@ -52,7 +54,7 @@ namespace ExpressBase.ServiceStack.Auth0
 							string pathsignup = "Platform/OnBoarding";
 							string pathsignin = "TenantSignIn";
 							string sql1 = "SELECT id, pwd,fb_id,github_id,twitter_id FROM eb_tenants WHERE email ~* @email and eb_del='F'";
-                            DbParameter[] parameters2 = { InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, session.ProviderOAuthAccess[0].Email) };
+                            DbParameter[] parameters2 = { InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String,t.Email) };
                             EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(sql1, parameters2);
                             if (dt.Rows.Count > 0)
                             {
@@ -77,12 +79,13 @@ namespace ExpressBase.ServiceStack.Auth0
                             if (unique == true)
                             {
                                 string pd = Guid.NewGuid().ToString();
-                               pasword = (session.ProviderOAuthAccess[0].UserId.ToString() + pd + session.ProviderOAuthAccess[0].Email.ToString()).ToMD5Hash();
+                               pasword = (t.UserId.ToString() + pd + t.Email.ToString()).ToMD5Hash();
                                 DbParameter[] parameter1 = {
-                                InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String,  session.ProviderOAuthAccess[0].Email),
-                                InfraConnectionFactory.DataDB.GetNewParameter("name", EbDbTypes.String,  session.ProviderOAuthAccess[0].DisplayName),
-                                 InfraConnectionFactory.DataDB.GetNewParameter("fbid", EbDbTypes.String,  (session.ProviderOAuthAccess[0].UserId).ToString()),
-                                 InfraConnectionFactory.DataDB.GetNewParameter("password", EbDbTypes.String,pasword  ),
+                                InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, t.Email),
+                                InfraConnectionFactory.DataDB.GetNewParameter("name", EbDbTypes.String,  t.DisplayName),
+                                 InfraConnectionFactory.DataDB.GetNewParameter("fbid", EbDbTypes.String,  (t.UserId).ToString()),
+                                 InfraConnectionFactory.DataDB.GetNewParameter("password", EbDbTypes.String,pasword),
+                                 InfraConnectionFactory.DataDB.GetNewParameter("fals", EbDbTypes.String,'F'),
 
                                  };
 
@@ -96,11 +99,11 @@ namespace ExpressBase.ServiceStack.Auth0
 							}
                            
                             {
-                                sco_signup.AuthProvider = session.ProviderOAuthAccess[0].Provider;
-                                sco_signup.Country = session.ProviderOAuthAccess[0].Country;
-                                sco_signup.Email = session.ProviderOAuthAccess[0].Email;
-                                sco_signup.Social_id = (session.ProviderOAuthAccess[0].UserId).ToString();
-                                sco_signup.Fullname = session.ProviderOAuthAccess[0].DisplayName;
+                                sco_signup.AuthProvider = t.Provider;
+                                sco_signup.Country = t.Country;
+                                sco_signup.Email = t.Email;
+                                sco_signup.Social_id = (t.UserId).ToString();
+                                sco_signup.Fullname = t.DisplayName;
                                 //sco_signup.IsVerified = session.IsAuthenticated,
                                 sco_signup.Pauto = pasword;
                                 sco_signup.UniqueEmail = unique;

@@ -464,8 +464,9 @@ namespace ExpressBase.ServiceStack.Services
 		public SocialAutoSignInResponse Post(SocialAutoSignInRequest Request)
 		{
 			SocialAutoSignInResponse respo = new SocialAutoSignInResponse();
-
-			string sql = @"SELECT 
+			try
+			{
+				string sql = @"SELECT 
 								id,
 								pwd 
 								FROM public.eb_tenants 
@@ -474,15 +475,20 @@ namespace ExpressBase.ServiceStack.Services
 								and 
 								email=:mail;";
 
-			DbParameter[] parameters = {
+				DbParameter[] parameters = {
 					this.InfraConnectionFactory.DataDB.GetNewParameter("mail", EbDbTypes.String, Request.Email),
 					this.InfraConnectionFactory.DataDB.GetNewParameter("soc_id", EbDbTypes.String, Request.Social_id),
 					};
 
-			EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(sql, parameters);
-			respo.Id = Convert.ToInt32(dt.Rows[0][0]);
-			respo.psw = Convert.ToString(dt.Rows[0][1]);
+				EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(sql, parameters);
+				respo.Id = Convert.ToInt32(dt.Rows[0][0]);
+				respo.psw = Convert.ToString(dt.Rows[0][1]);
+			}
+			catch(Exception e)
+			{
+				Console.WriteLine("Exception: " + e.Message + e.StackTrace);
 
+			}
 
 			return respo;
 		}
