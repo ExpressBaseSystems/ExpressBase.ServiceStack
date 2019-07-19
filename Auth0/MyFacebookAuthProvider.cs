@@ -37,18 +37,24 @@ namespace ExpressBase.ServiceStack.Auth0
 
                 //   using (var con = InfraConnectionFactory.DataDB.GetNewConnection())
                 {
+					IAuthTokens t = session.ProviderOAuthAccess.FirstOrDefault(e => e.Provider == "facebook");
 
-                    if ((session.ProviderOAuthAccess[0].Email) != null)
+					if ((t.Email) != null)
                     {
                         string b = string.Empty;
                         try
                         {
-                            string pasword = null;
+							Console.WriteLine("reached try of facebook auth");
+							Console.WriteLine($"refferal url  =  {session.ReferrerUrl}");
+							string pasword = null;
                             SocialSignup sco_signup = new SocialSignup();
 
                             bool unique = false;
-                            string sql1 = "SELECT id, pwd,fb_id,github_id,twitter_id FROM eb_tenants WHERE email ~* @email and eb_del=false";
-                            DbParameter[] parameters2 = { InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, session.ProviderOAuthAccess[0].Email) };
+							string urllink = session.ReferrerUrl;
+							string pathsignup = "Platform/OnBoarding";
+							string pathsignin = "TenantSignIn";
+							string sql1 = "SELECT id, pwd,fb_id,github_id,twitter_id FROM eb_tenants WHERE email ~* @email and eb_del='F'";
+                            DbParameter[] parameters2 = { InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String,t.Email) };
                             EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(sql1, parameters2);
                             if (dt.Rows.Count > 0)
                             {
@@ -56,45 +62,81 @@ namespace ExpressBase.ServiceStack.Auth0
                                 sco_signup.FbId = Convert.ToString(dt.Rows[0][1]);
                                 sco_signup.GithubId = Convert.ToString(dt.Rows[0][2]);
                                 sco_signup.TwitterId = Convert.ToString(dt.Rows[0][3]);
-                            }
+								Console.WriteLine("mail id is not unique");
+								//if (urllink.Contains(pathsignup, StringComparison.OrdinalIgnoreCase))
+								//{
+								//	sco_signup.Forsignup = true;
+								//}
+								//else
+								//if(urllink.Contains(pathsignin, StringComparison.OrdinalIgnoreCase))
+								{
+									sco_signup.Forsignup = false;
+								}
+							}
                             else
                                 unique = true;
                         
                             if (unique == true)
                             {
                                 string pd = Guid.NewGuid().ToString();
-                               pasword = (session.ProviderOAuthAccess[0].UserId.ToString() + pd + session.ProviderOAuthAccess[0].Email.ToString()).ToMD5Hash();
+                               pasword = (t.UserId.ToString() + pd + t.Email.ToString()).ToMD5Hash();
                                 DbParameter[] parameter1 = {
-                                InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String,  session.ProviderOAuthAccess[0].Email),
-                                InfraConnectionFactory.DataDB.GetNewParameter("name", EbDbTypes.String,  session.ProviderOAuthAccess[0].DisplayName),
-                                 InfraConnectionFactory.DataDB.GetNewParameter("fbid", EbDbTypes.String,  (session.ProviderOAuthAccess[0].UserId).ToString()),
-                                 InfraConnectionFactory.DataDB.GetNewParameter("password", EbDbTypes.String,pasword  ),
+                                InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, t.Email),
+                                InfraConnectionFactory.DataDB.GetNewParameter("name", EbDbTypes.String,  t.DisplayName),
+                                 InfraConnectionFactory.DataDB.GetNewParameter("fbid", EbDbTypes.String,  (t.UserId).ToString()),
+                                 InfraConnectionFactory.DataDB.GetNewParameter("password", EbDbTypes.String,pasword),
+                                 InfraConnectionFactory.DataDB.GetNewParameter("fals", EbDbTypes.String,'F'),
 
                                  };
 
-                                EbDataTable dtbl = InfraConnectionFactory.DataDB.DoQuery(@"INSERT INTO eb_tenants (email,fullname,fb_id,pwd, eb_created_at) 
+                                EbDataTable dtbl = InfraConnectionFactory.DataDB.DoQuery(@"INSERT INTO eb_tenants 
+								(email,fullname,fb_id,pwd, eb_created_at,eb_del, is_verified, is_email_sent) 
                                  VALUES 
-                                 (:email,:name,:fbid,:password,NOW()) RETURNING id;", parameter1);
+                                 (:email,:name,:fbid,:password,NOW(),:fals,:fals,:fals) RETURNING id;", parameter1);
 
-                                
-                            }
+								Console.WriteLine("inserted details to tenant table");
+
+							}
                            
                             {
-                                sco_signup.AuthProvider = session.ProviderOAuthAccess[0].Provider;
-                                sco_signup.Country = session.ProviderOAuthAccess[0].Country;
-                                sco_signup.Email = session.ProviderOAuthAccess[0].Email;
-                                sco_signup.Social_id = (session.ProviderOAuthAccess[0].UserId).ToString();
-                                sco_signup.Fullname = session.ProviderOAuthAccess[0].DisplayName;
+                                sco_signup.AuthProvider = t.Provider;
+                                sco_signup.Country = t.Country;
+                                sco_signup.Email = t.Email;
+                                sco_signup.Social_id = (t.UserId).ToString();
+                                sco_signup.Fullname = t.DisplayName;
                                 //sco_signup.IsVerified = session.IsAuthenticated,
                                 sco_signup.Pauto = pasword;
                                 sco_signup.UniqueEmail = unique;
                                
                             };
                             b = JsonConvert.SerializeObject(sco_signup);
-                            return authService.Redirect(SuccessRedirectUrlFilter(this, string.Format("http://localhost:41500/social_oauth?scosignup={0}", b)));
+							string sociallink1 = "localhost:41500";
+							string sociallink2 = "eb-test.xyz";
+							string sociallink3 = "expressbase.com";
+							Console.WriteLine("ReferrerUrl= " + session.ReferrerUrl);
+							if (urllink.Contains(sociallink1, StringComparison.OrdinalIgnoreCase))
+							{
+								Console.WriteLine("reached  redirect to localhost:41500/social_oauth");
+								return authService.Redirect(SuccessRedirectUrlFilter(this, string.Format("http://localhost:41500/social_oauth?scosignup={0}", b)));
 
-                        }
-                        catch (Exception e)
+							}
+
+							if (urllink.Contains(sociallink2, StringComparison.OrdinalIgnoreCase))
+							{
+								Console.WriteLine("reached  redirect to myaccount.eb-test.xyz");
+								return authService.Redirect(SuccessRedirectUrlFilter(this, string.Format("https://myaccount.eb-test.xyz/social_oauth?scosignup={0}", b)));
+							}
+
+							if (urllink.Contains(sociallink3, StringComparison.OrdinalIgnoreCase))
+							{
+								Console.WriteLine("reached redirect to myaccount.expressbase.com/");
+								return authService.Redirect(SuccessRedirectUrlFilter(this, string.Format("https://myaccount.expressbase.com/social_oauth?scosignup={0}", b)));
+							}
+
+
+
+						}
+						catch (Exception e)
                         {
                             Console.WriteLine("Exception: " + e.Message + e.StackTrace);
                         }
