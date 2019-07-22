@@ -31,7 +31,7 @@ namespace ExpressBase.ServiceStack.Services
             if (request.Show != "all")
                 show = " AND hide = 'no'";
 
-            string sql = "SELECT id,fullname,email,nickname,sex,phnoprimary,statusid FROM eb_users WHERE eb_del = 'F' AND id > 1" + show + ";";
+            string sql = "SELECT id,fullname,email,nickname,sex,phnoprimary,statusid FROM eb_users WHERE (statusid = 0 OR statusid = 1 OR statusid = 2) AND eb_del = 'F' AND id > 1" + show + ";";
 
             DbParameter[] parameters = { };
 
@@ -162,7 +162,7 @@ namespace ExpressBase.ServiceStack.Services
             if (request.Id > 1)
             {
                 sql += @"SELECT fullname,nickname,email,alternateemail,dob,sex,phnoprimary,phnosecondary,landline,phextension,fbid,fbname,statusid,hide,preferencesjson,dprefid
-						FROM eb_users WHERE id = :id;
+						FROM eb_users WHERE id = :id AND (statusid = 0 OR statusid = 1 OR statusid = 2) AND id > 1 AND eb_del = 'F';
 						SELECT role_id FROM eb_role2user WHERE user_id = :id AND eb_del = 'F';
 						SELECT groupid FROM eb_user2usergroup WHERE userid = :id AND eb_del = 'F';";
                 //SELECT id, user_id, usergroup_id, role_id, c_type, c_value, c_operation, c_meta FROM eb_constraints WHERE user_id = :id AND eb_del = 'F' ORDER BY id;
@@ -209,6 +209,8 @@ namespace ExpressBase.ServiceStack.Services
             if (request.Id > 1)
             {
                 resp.UserData = new Dictionary<string, string>();
+                if (ds.Tables[3].Rows.Count == 0)
+                    return resp;
                 foreach (var dr in ds.Tables[3].Rows)
                 {
                     resp.UserData.Add("id", request.Id.ToString());
@@ -254,7 +256,7 @@ namespace ExpressBase.ServiceStack.Services
 
             if (!string.IsNullOrEmpty(request.email))
             {
-                sql = EbConnectionFactory.DataDB.EB_UNIQUEEMAILCHECK;
+                sql = "SELECT id FROM eb_users WHERE LOWER(email) LIKE LOWER(:email) AND eb_del = 'F' AND (statusid = 0 OR statusid = 1 OR statusid = 2);";                 
                 parameters = new DbParameter[] { this.EbConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, string.IsNullOrEmpty(request.email) ? "" : request.email) };
             }
 
@@ -351,6 +353,24 @@ namespace ExpressBase.ServiceStack.Services
 
 
             return resp;
+        }
+
+        public DeleteUserResponse Post(DeleteUserRequest request)
+        {
+            string sql = @"INSERT INTO eb_userstatus(userid, statusid, createdby, createdat) VALUES (:id, 3, :userid, NOW());
+                            UPDATE eb_users SET statusid = 3 WHERE id = :id AND eb_del = 'F';";
+            DbParameter[] parameters = new DbParameter[] {
+                this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.Id),
+                this.EbConnectionFactory.DataDB.GetNewParameter("userid", EbDbTypes.Int32, request.UserId)
+            };
+            int t = this.EbConnectionFactory.DataDB.DoNonQuery(sql, parameters.ToArray());
+            if(t > 0)
+            {
+                TenantUserServices _tenantUserService = base.ResolveService<TenantUserServices>();
+                _tenantUserService.Post(new UpdateSolutionRequest() { SolnId = request.SolnId, UserId = request.UserId });
+            }
+
+            return new DeleteUserResponse() { Status = t};
         }
 
         //------MY PROFILE------------------------------------------------------

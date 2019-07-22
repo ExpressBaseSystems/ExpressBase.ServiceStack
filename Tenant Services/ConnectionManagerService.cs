@@ -515,7 +515,7 @@ namespace ExpressBase.ServiceStack.Services
             try
             {
                 request.IntegrationO.PersistIntegration(request.SolnId, this.InfraConnectionFactory, request.UserId);
-                if (request.IntegrationO.Type == EbConnectionTypes.EbDATA)
+                if (request.IntegrationO.Type == EbConnectionTypes.EbDATA && request.deploy == true)
                 {
                     InitializeDataDb(request.IntegrationO.ConfigId, request.SolnId, request.UserId);
                 }

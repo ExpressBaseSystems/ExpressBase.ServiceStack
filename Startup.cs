@@ -181,12 +181,18 @@ namespace ExpressBase.ServiceStack
                         RequestTokenUrl= "https://api.twitter.com/oauth/authenticate",
                     },
 
-                    new MyGithubAuthProvider(AppSettings)
-                    {
-                        ClientId =Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GITHUB_CLIENT_ID),
-                        ClientSecret = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GITHUB_CLIENT_SECRET)
-                    }
-                }));
+					new MyGithubAuthProvider(AppSettings)
+					{
+						ClientId =Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GITHUB_CLIENT_ID),
+						ClientSecret = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GITHUB_CLIENT_SECRET)
+					}
+
+					//new MyGithubAuthProvider(AppSettings)
+					//{
+					//	ClientId ="de0c8eefca9c1871a521",
+					//	ClientSecret = "805bf067aa1768e1d63bc4f540d0f79834a3955f"
+					//}
+				}));
 
             this.ContentTypes.Register(MimeTypes.ProtoBuf, (reqCtx, res, stream) => ProtoBuf.Serializer.NonGeneric.Serialize(stream, res), ProtoBuf.Serializer.NonGeneric.Deserialize);
 
