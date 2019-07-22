@@ -180,7 +180,7 @@ namespace ExpressBase.ServiceStack.Services
         public GetCustomerResponse Post(GetCustomerRequest request)
         {
             GetCustomerResponse resp = new GetCustomerResponse();
-            StripeConfiguration.SetApiKey(Environment.GetEnvironmentVariable(EnvironmentConstants.EB_STRIPE_SECRET_KEY));
+            StripeConfiguration.ApiKey = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_STRIPE_SECRET_KEY);
             string str = string.Format(@"
                         SELECT name,address1,zip,city,state,country,email
                         FROM eb_customer 
@@ -217,7 +217,7 @@ namespace ExpressBase.ServiceStack.Services
                 for (int i = 0; i < dt.Rows.Count; i++)
                 {
                     card_id = dt.Rows[i][0].ToString();
-                    StripeConfiguration.SetApiKey(Environment.GetEnvironmentVariable(EnvironmentConstants.EB_STRIPE_SECRET_KEY));
+                    StripeConfiguration.ApiKey = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_STRIPE_SECRET_KEY);
                     var service = new CardService();
                     Card response = service.Get(request.CustId, card_id);
                     Card.Add(new Eb_StripeCards
@@ -368,7 +368,7 @@ namespace ExpressBase.ServiceStack.Services
         public AddCustomerCardResponse Post(AddCustomerCardRequest request)
         {
             AddCustomerCardResponse resp = new AddCustomerCardResponse();
-            StripeConfiguration.SetApiKey(Environment.GetEnvironmentVariable(EnvironmentConstants.EB_STRIPE_SECRET_KEY));
+            StripeConfiguration.ApiKey = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_STRIPE_SECRET_KEY);
             using (DbConnection con = this.InfraConnectionFactory.DataDB.GetNewConnection())
             {
                 con.Open();
@@ -382,7 +382,7 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     var options = new CardCreateOptions
                     {
-                        SourceToken = request.TokenId
+                        Source = request.TokenId
                     };
                     var service = new CardService();
                     var card = service.Create(request.CustId, options);
@@ -438,7 +438,7 @@ namespace ExpressBase.ServiceStack.Services
         public RemoveCustomerCardResponse Post(RemoveCustomerCardRequest request)
         {
             RemoveCustomerCardResponse resp = new RemoveCustomerCardResponse();
-            StripeConfiguration.SetApiKey(Environment.GetEnvironmentVariable(EnvironmentConstants.EB_STRIPE_SECRET_KEY));
+            StripeConfiguration.ApiKey = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_STRIPE_SECRET_KEY);
             using (DbConnection con = this.InfraConnectionFactory.DataDB.GetNewConnection())
             {
                 con.Open();
@@ -715,7 +715,7 @@ namespace ExpressBase.ServiceStack.Services
                 //    Quantity = 1
                 //});
 
-                StripeConfiguration.SetApiKey(Environment.GetEnvironmentVariable(EnvironmentConstants.EB_STRIPE_SECRET_KEY));
+                StripeConfiguration.ApiKey = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_STRIPE_SECRET_KEY);
                 var items = new List<SubscriptionItemOption>
                 {
                     new SubscriptionItemOption
@@ -938,7 +938,7 @@ namespace ExpressBase.ServiceStack.Services
         public GetCustomerInvoiceResponse Post(GetCustomerInvoiceRequest request)
         {
             GetCustomerInvoiceResponse resp = new GetCustomerInvoiceResponse();
-            StripeConfiguration.SetApiKey(Environment.GetEnvironmentVariable(EnvironmentConstants.EB_STRIPE_SECRET_KEY));
+            StripeConfiguration.ApiKey = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_STRIPE_SECRET_KEY);
 
             StripeCollection<StripeInvoice> invoices = gateway.Get(new GetStripeInvoices
             {
