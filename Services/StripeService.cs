@@ -1617,8 +1617,6 @@ namespace ExpressBase.ServiceStack.Services
                     type_id = cc.Id;
                 }
                 else if (stripeEvent.Type == Events.TransferUpdated)
-                else if (stripeEvent.Type == Events.CustomerDiscountCreated)
-
                 {
                     Customer cc = stripeEvent.Data.Object as Customer;
                     type_id = cc.Id;
