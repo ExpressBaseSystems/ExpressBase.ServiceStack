@@ -150,13 +150,18 @@ namespace ExpressBase.ServiceStack
                 fburl = "http://localhost:41600/auth/facebook";
             }
 
-            MyFacebookAuthProvider fbauth = new MyFacebookAuthProvider(AppSettings)
-            {
-                AppId = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_FB_APP_ID),
-                AppSecret = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_FB_APP_SECRET),
-                Permissions = new string[] { "email, public_profile, user_hometown" },
-                RedirectUrl = fburl
-            };
+    //        MyFacebookAuthProvider fbauth = new MyFacebookAuthProvider(AppSettings)
+    //        {
+    //            //AppId = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_FB_APP_ID),
+    //            //AppSecret = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_FB_APP_SECRET),
+    //            //Permissions = new string[] { "email, public_profile, user_hometown" },
+    //            //RedirectUrl = fburl 
+				
+				//AppId = "149537802493867",
+    //            AppSecret = "55a9b5e0a88089465808bdc1d4f07e8e",
+    //            Permissions = new string[] { "email, public_profile, user_hometown" },
+    //            RedirectUrl = fburl
+    //        };
 
 
             this.Plugins.Add(new CorsFeature(allowedHeaders: "Content-Type, Authorization, Access-Control-Allow-Origin, Access-Control-Allow-Credentials"));
@@ -170,7 +175,7 @@ namespace ExpressBase.ServiceStack
                 {
                     new MyCredentialsAuthProvider(AppSettings) { PersistSession = true },
                     jwtprovider,
-                    fbauth,
+                    //fbauth,
                     //apiprovider,
                     new MyTwitterAuthProvider(AppSettings)
                     {
@@ -180,6 +185,15 @@ namespace ExpressBase.ServiceStack
                         CallbackUrl = "http://localhost:8000/auth/twitter",
                         RequestTokenUrl= "https://api.twitter.com/oauth/authenticate",
                     },
+					new MyFacebookAuthProvider(AppSettings)
+					{
+						//AppId = "149537802493867",
+						// AppSecret = "55a9b5e0a88089465808bdc1d4f07e8e",
+
+						  AppId = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_FB_APP_ID),
+						  AppSecret = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_FB_APP_SECRET),
+						  Permissions = new string[] { "email, public_profile, user_hometown" },
+					},
 
 					new MyGithubAuthProvider(AppSettings)
 					{
