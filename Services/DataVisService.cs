@@ -1240,7 +1240,7 @@ namespace ExpressBase.ServiceStack
                         SetFinalFooterRow(currentRow, RowGroupingColumns, IsMultiLevelRowGrouping, RowGrouping, PrevRowIndex, TempGroupingText, CurSortIndex, Culture, _user);
                     }
                 }
-                if (!IsMultiLevelRowGrouping && PrevRowIndex == RowCount - 1)
+                if ( PrevRowIndex == RowCount - 1)
                 {
                     SetFinalFooterRow(currentRow, RowGroupingColumns, IsMultiLevelRowGrouping, RowGrouping, PrevRowIndex, TempGroupingText, CurSortIndex, Culture, _user);
                 }
