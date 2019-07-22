@@ -856,6 +856,8 @@ namespace ExpressBase.ServiceStack.Services
         public void Post(StripewebhookRequest request)
         {
             const string secret = "whsec_GqJuzEFUWI3I3ylB0aPTDax5mIWn2jR9";
+
+            Console.WriteLine("Web Hook Json in SS:  " + request.Json);
             var json = request.Json;
 
             try
