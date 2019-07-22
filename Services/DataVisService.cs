@@ -851,8 +851,8 @@ namespace ExpressBase.ServiceStack
                     }
                     if (!string.IsNullOrEmpty(info))
                     {
-                        _formattedData =(col.AllowedCharacterLength == 0) ? _unformattedData : _unformattedData.ToString().Length > col.AllowedCharacterLength ? _unformattedData.ToString().Substring(0, col.AllowedCharacterLength) : _unformattedData;
-                        _formattedData = "<span class='columntooltip' data-toggle='popover' data-content='" + info.ToBase64() + "'>" + _formattedData + "...</span>";
+                        _formattedData = _unformattedData.ToString().Truncate(col.AllowedCharacterLength);
+                        _formattedData = "<span class='columntooltip' data-toggle='popover' data-content='" + info.ToBase64() + "'>" + _formattedData +"</span>";
                     }
                     if (col.HideLinkifNoData)
                     {
