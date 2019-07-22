@@ -857,18 +857,15 @@ namespace ExpressBase.ServiceStack.Services
         {
             const string secret = "whsec_GqJuzEFUWI3I3ylB0aPTDax5mIWn2jR9";
 
-            Console.WriteLine("Web Hook Json in SS:  " + request.Json);
-            var json = request.Json;
-
             try
             {
-                var stripeEvent = EventUtility.ConstructEvent(json,
+                Event stripeEvent = EventUtility.ConstructEvent(request.Json,
                     Request.Headers["Stripe-Signature"], secret);
 
                 string stripeevent = stripeEvent.Type;
                 string type = stripeEvent.Data.Object.Object;
                 string type_id = "";
-
+                Console.WriteLine("Inserting Web Hook 1: " + stripeevent + ", " + type + ", " + type_id);
                 if (stripeEvent.Type == Events.CustomerCreated)
                 {
                     Customer cc = stripeEvent.Data.Object as Customer;
@@ -919,7 +916,7 @@ namespace ExpressBase.ServiceStack.Services
                 using (DbConnection con = this.InfraConnectionFactory.DataDB.GetNewConnection())
                 {
                     con.Open();
-                    Console.WriteLine("Inserting Web Hook : " + stripeevent + ", " + type + ", " + type_id);
+                    Console.WriteLine("Inserting Web Hook 2: " + stripeevent + ", " + type + ", " + type_id);
                     string str = string.Format(@"
                         INSERT INTO 
                             eb_stripeevents (event,type,type_id,created_at)
