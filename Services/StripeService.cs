@@ -860,7 +860,7 @@ namespace ExpressBase.ServiceStack.Services
             try
             {
                 Event stripeEvent = EventUtility.ConstructEvent(request.Json,
-                    Request.Headers["Stripe-Signature"], secret);
+                   request.Header, secret);
 
                 string stripeevent = stripeEvent.Type;
                 string type = stripeEvent.Data.Object.Object;
