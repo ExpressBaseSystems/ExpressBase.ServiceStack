@@ -17,7 +17,7 @@ namespace ExpressBase.ServiceStack.Services
         public StripeGateway gateway = new StripeGateway(Environment.GetEnvironmentVariable(EnvironmentConstants.EB_STRIPE_SECRET_KEY));
         public static int i = 1;
         public const string USD = "USD";
-        
+
         public CheckCustomerResponse Post(CheckCustomerRequest request)
         {
             CheckCustomerResponse resp = new CheckCustomerResponse();
@@ -55,7 +55,7 @@ namespace ExpressBase.ServiceStack.Services
 
             return resp;
         }
-        
+
         public CheckCustomerSubscribedResponse Post(CheckCustomerSubscribedRequest request)
         {
             CheckCustomerSubscribedResponse resp = new CheckCustomerSubscribedResponse();
@@ -856,7 +856,6 @@ namespace ExpressBase.ServiceStack.Services
         public void Post(StripewebhookRequest request)
         {
             const string secret = "whsec_GqJuzEFUWI3I3ylB0aPTDax5mIWn2jR9";
-            //var stripeEvent = EventUtility.ParseEvent(json);
             var json = request.Json;
 
             try
@@ -909,6 +908,7 @@ namespace ExpressBase.ServiceStack.Services
                     type_id = cc.Id;
                 }
                 else if (stripeEvent.Type == Events.CustomerDiscountCreated)
+
                 {
                     Customer cc = stripeEvent.Data.Object as Customer;
                     type_id = cc.Id;
@@ -917,21 +917,21 @@ namespace ExpressBase.ServiceStack.Services
                 using (DbConnection con = this.InfraConnectionFactory.DataDB.GetNewConnection())
                 {
                     con.Open();
-
+                    Console.WriteLine("Inserting Web Hook : " + stripeevent + ", " + type + ", " + type_id);
                     string str = string.Format(@"
                         INSERT INTO 
                             eb_stripeevents (event,type,type_id,created_at)
                         VALUES('{0}','{1}','{2}','{3}')", stripeevent, type, type_id, DateTime.Now);
-
+                    Console.WriteLine("Web Hook Connection  DBName : " + InfraConnectionFactory.DataDB.DBName);
                     DbCommand cmd = InfraConnectionFactory.DataDB.GetNewCommand(con, str);
 
                     cmd.ExecuteNonQuery();
                 }
 
             }
-            catch (Exception)
+            catch (Exception e)
             {
-
+                Console.WriteLine("Error in Webhook Handling : " + e.Message + e.StackTrace);
                 //return BadRequest();
             }
         }
