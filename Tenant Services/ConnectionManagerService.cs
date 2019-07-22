@@ -463,6 +463,20 @@ namespace ExpressBase.ServiceStack.Services
             }
             return res;
         }
+        public AddSendGridResponse Post(AddSendGridRequest request)
+        {
+            AddSendGridResponse res = new AddSendGridResponse();
+            try
+            {
+                request.Config.PersistIntegrationConf(request.SolnId, this.InfraConnectionFactory, request.UserId);
+            }
+            catch (Exception e)
+            {
+                res.ResponseStatus.Message = e.Message;
+            }
+            return res;
+        }
+        
         public GetIntegrationConfigsResponse Get(GetIntegrationConfigsRequest request)
         {
             GetIntegrationConfigsResponse res = new GetIntegrationConfigsResponse();
@@ -501,7 +515,7 @@ namespace ExpressBase.ServiceStack.Services
             try
             {
                 request.IntegrationO.PersistIntegration(request.SolnId, this.InfraConnectionFactory, request.UserId);
-                if (request.IntegrationO.Type == EbConnectionTypes.EbDATA)
+                if (request.IntegrationO.Type == EbConnectionTypes.EbDATA && request.deploy == true)
                 {
                     InitializeDataDb(request.IntegrationO.ConfigId, request.SolnId, request.UserId);
                 }

@@ -115,17 +115,27 @@ namespace ExpressBase.ServiceStack.Services
                  FROM
                     wiki  
                  WHERE
-                   id = @id AND eb_del='F'  ";
+                   id = @id AND eb_del='F' ; 
+                SELECT * FROM wiki_category WHERE status='publish' ; ";
 
-                EbDataTable table = InfraConnectionFactory.DataDB.DoQuery(query, parameters);
+                EbDataSet ds = InfraConnectionFactory.DataDB.DoQueries(query , parameters);
 
-                resp.Wiki.Category = table.Rows[0]["category"].ToString();
-                resp.Wiki.Title = table.Rows[0]["title"].ToString();
-                resp.Wiki.HTML = table.Rows[0]["html"].ToString();
-                resp.Wiki.Tags = table.Rows[0]["eb_tags"].ToString();
-                resp.Wiki.Status = table.Rows[0]["status"].ToString();
+                resp.Wiki.Category = ds.Tables[0].Rows[0]["category"].ToString();
+                resp.Wiki.Title = ds.Tables[0].Rows[0]["title"].ToString();
+                resp.Wiki.HTML = ds.Tables[0].Rows[0]["html"].ToString();
+                resp.Wiki.Tags = ds.Tables[0].Rows[0]["eb_tags"].ToString();
+                resp.Wiki.Status = ds.Tables[0].Rows[0]["status"].ToString();
 
-
+                int capacity1 = ds.Tables[1].Rows.Count;
+                Console.WriteLine("INFO: Wiki Count: " + capacity1);
+                for (int i = 0; i < capacity1; i++)
+                {
+                    resp.WikiCat.Add(
+                        new WikiCat()
+                        {
+                            WikiCategory = ds.Tables[1].Rows[i]["category"].ToString()
+                        });
+                }
             }
             catch (Exception e)
             {
@@ -135,9 +145,41 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
+
+        public AddNewWikiResponse Get(AddNewWikiRequest request)
+        {
+            AddNewWikiResponse resp = new AddNewWikiResponse();
+            try
+            {
+                string query = @" 
+                SELECT * FROM wiki_category WHERE status='publish'";
+                EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(query);
+
+                int capacity1 = dt.Rows.Count;
+                Console.WriteLine("INFO: Wiki Count: " + capacity1);
+                for (int i = 0; i < capacity1; i++)
+                {
+                    resp.WikiCat.Add(
+                        new WikiCat()
+                        {
+                            WikiCategory = dt.Rows[i]["category"].ToString(),
+                            WikiIconClass = dt.Rows[i]["icon_class"].ToString()
+                        });
+
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("ERROR: GetWikiList Exception: " + e.Message);
+            }
+            return resp;
+      }
+
+
+
         public GetWikiBySearchResponse Get(GetWikiBySearchRequest request)
         {
-            GetWikiBySearchResponse resp = new GetWikiBySearchResponse();       
+            GetWikiBySearchResponse resp = new GetWikiBySearchResponse();
             try
             {
                 DbParameter[] parameters = new DbParameter[]
@@ -189,10 +231,11 @@ namespace ExpressBase.ServiceStack.Services
                 FROM
                     wiki 
                 WHERE 
-                    eb_del='F' AND status='Publish' ORDER BY list_order  ";
-                EbDataTable table = InfraConnectionFactory.DataDB.DoQuery(query);
+                    eb_del='F' AND status='Publish' ORDER BY list_order ; 
+                SELECT * FROM wiki_category WHERE status='publish'; ";
+                EbDataSet ds = InfraConnectionFactory.DataDB.DoQueries(query);
 
-                int capacity = table.Rows.Count;
+                int capacity = ds.Tables[0].Rows.Count;
 
                 Console.WriteLine("INFO: Wiki Count: " + capacity);
 
@@ -201,11 +244,25 @@ namespace ExpressBase.ServiceStack.Services
                     resp.WikiList.Add(
                         new Wiki()
                         {
-                            Category = table.Rows[i]["category"].ToString(),
-                            HTML = table.Rows[i]["html"].ToString(),
-                            Title = table.Rows[i]["title"].ToString(),
-                            Id = (int) table.Rows[i]["id"]  
+                            Category = ds.Tables[0].Rows[i]["category"].ToString(),
+                            HTML = ds.Tables[0].Rows[i]["html"].ToString(),
+                            Title = ds.Tables[0].Rows[i]["title"].ToString(),
+                            Id = (int)ds.Tables[0].Rows[i]["id"],
+                            Order = (int)ds.Tables[0].Rows[i]["list_order"]
                         });
+                }
+                int capacity1 = ds.Tables[1].Rows.Count;
+                Console.WriteLine("INFO: Wiki Count: " + capacity1);
+                for (int i = 0; i < capacity1; i++)
+                {
+                    resp.WikiCat.Add(
+                        new WikiCat()
+                        {
+                            WikiCategory = ds.Tables[1].Rows[i]["category"].ToString(),
+                            WikiIconClass = ds.Tables[1].Rows[i]["icon_class"].ToString(),
+                            WikiDescription = ds.Tables[1].Rows[i]["description"].ToString()
+                        });
+
                 }
             }
             catch (Exception e)
@@ -305,40 +362,53 @@ namespace ExpressBase.ServiceStack.Services
                  FROM
                     wiki  
                  WHERE
-                    status = @status AND eb_del='F' ";
+                    status = @status AND eb_del='F'; 
+                 SELECT * FROM wiki_category WHERE status='publish'; ";
+                EbDataSet ds = InfraConnectionFactory.DataDB.DoQueries(query , parameters);
 
-                EbDataTable table = InfraConnectionFactory.DataDB.DoQuery(query, parameters);
+                int capacity = ds.Tables[0].Rows.Count;
 
-                int capacity = table.Rows.Count;
+                Console.WriteLine("INFO: Wiki Count: " + capacity);
 
                 for (int i = 0; i < capacity; i++)
                 {
                     resp.WikiList.Add(
                         new Wiki()
                         {
-                            Category = table.Rows[i]["category"].ToString(),
-                            HTML = table.Rows[i]["html"].ToString(),
-                            Title = table.Rows[i]["title"].ToString(),
-                            Id = (int)table.Rows[i]["id"],
-                            Status = table.Rows[i]["status"].ToString(),
-                            CreatedAt = (DateTime)table.Rows[i]["eb_created_at"],
-                           
-
+                            Category = ds.Tables[0].Rows[i]["category"].ToString(),
+                            HTML = ds.Tables[0].Rows[i]["html"].ToString(),
+                            Title = ds.Tables[0].Rows[i]["title"].ToString(),
+                            Id = (int)ds.Tables[0].Rows[i]["id"],
+                            Order = (int)ds.Tables[0].Rows[i]["list_order"],
+                            Status = ds.Tables[0].Rows[i]["status"].ToString()
                         });
+                }
+                int capacity1 = ds.Tables[1].Rows.Count;
+                Console.WriteLine("INFO: Wiki Count: " + capacity1);
+                for (int i = 0; i < capacity1; i++)
+                {
+                    resp.WikiCat.Add(
+                        new WikiCat()
+                        {
+                            WikiCategory = ds.Tables[1].Rows[i]["category"].ToString(), 
+                        });
+
                 }
             }
             catch (Exception e)
             {
-                Console.WriteLine("ERROR: Admin_Wiki_ListRequest : " +e.Message + e.StackTrace);
+                Console.WriteLine("ERROR: GetWikiList Exception: " + e.Message);
             }
             return resp;
         }
+
+
 
         public Publish_wikiResponse Post(Publish_wikiRequest request)
         {
             Publish_wikiResponse resp = new Publish_wikiResponse()
             {
-                Id = request.Wiki_id 
+                Id = request.Wiki_id
             };
 
             try
@@ -354,7 +424,7 @@ namespace ExpressBase.ServiceStack.Services
                 {
                 this.InfraConnectionFactory.DataDB.GetNewParameter("status", EbDbTypes.String,request.Status),
                 this.InfraConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.Wiki_id),
-                
+
                 };
 
                 EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(query, parameters);
@@ -364,7 +434,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
-            
+
             }
 
             return resp;
@@ -382,21 +452,37 @@ namespace ExpressBase.ServiceStack.Services
                 FROM
                     wiki 
                 WHERE 
-                    eb_del='F' AND status='Publish' order by list_order ";
-                EbDataTable table = InfraConnectionFactory.DataDB.DoQuery(query);
+                    eb_del='F' AND status='Publish' order by list_order ; 
+                SELECT* FROM wiki_category WHERE status = 'publish';";
+                EbDataSet ds = InfraConnectionFactory.DataDB.DoQueries(query);
 
-                int count = table.Rows.Count;
+                int capacity = ds.Tables[0].Rows.Count;
 
-                for (int i = 0; i < count; i++)
+                Console.WriteLine("INFO: Wiki Count: " + capacity);
+
+                for (int i = 0; i < capacity; i++)
                 {
                     resp.WikiList.Add(
                         new Wiki()
                         {
-                            Category = table.Rows[i]["category"].ToString(),
-                            HTML = table.Rows[i]["html"].ToString(),
-                            Title = table.Rows[i]["title"].ToString(),
-                            Id = (int)table.Rows[i]["id"]
+                            Category = ds.Tables[0].Rows[i]["category"].ToString(),
+                            HTML = ds.Tables[0].Rows[i]["html"].ToString(),
+                            Title = ds.Tables[0].Rows[i]["title"].ToString(),
+                            Id = (int)ds.Tables[0].Rows[i]["id"],
+                            Order = (int)ds.Tables[0].Rows[i]["list_order"],
+                            Status = ds.Tables[0].Rows[i]["status"].ToString()
                         });
+                }
+                int capacity1 = ds.Tables[1].Rows.Count;
+                Console.WriteLine("INFO: Wiki Count: " + capacity1);
+                for (int i = 0; i < capacity1; i++)
+                {
+                    resp.WikiCat.Add(
+                        new WikiCat()
+                        {
+                            WikiCategory = ds.Tables[1].Rows[i]["category"].ToString(),
+                        });
+
                 }
             }
             catch (Exception e)
@@ -407,19 +493,18 @@ namespace ExpressBase.ServiceStack.Services
         }
 
 
-
         public UpdateOrderResponse Post(UpdateOrderRequest request)
         {
             UpdateOrderResponse resp = new UpdateOrderResponse();
 
-            
+
             try
             {
-            //    string query = @"
-            //UPDATE wiki SET
-            //     list_order = @list_order
-            //WHERE 
-            //    id = @id ";
+                //    string query = @"
+                //UPDATE wiki SET
+                //     list_order = @list_order
+                //WHERE 
+                //    id = @id ";
                 List<int> arr = JsonConvert.DeserializeObject<List<int>>(request.Wiki_id);
                 List<DbParameter> param = new List<DbParameter>();
                 List<string> str = new List<string>();
@@ -427,7 +512,7 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     param.Add(this.InfraConnectionFactory.DataDB.GetNewParameter("id_" + i, EbDbTypes.Int32, arr[i]));
                     param.Add(this.InfraConnectionFactory.DataDB.GetNewParameter("list_order_" + i, EbDbTypes.Int32, i + 1));
-                    str.Add(string.Format("(@id_{0}, @list_order_{0})", i));                  
+                    str.Add(string.Format("(@id_{0}, @list_order_{0})", i));
                 }
                 string query1 = string.Format(@" update wiki as w 
                 set list_order = c.list_order
@@ -444,6 +529,47 @@ namespace ExpressBase.ServiceStack.Services
                 resp.ResponseStatus = false;
             }
 
+            return resp;
+        }
+
+        public FileRefByContextResponse Get(FileRefByContextRequest request)
+        {
+            string Qry = @"
+                            SELECT 
+	                            B.id, B.filename, B.tags, B.uploadts
+                            FROM
+	                            eb_files_ref B
+                            WHERE
+	                            B.context = :context";
+
+            FileRefByContextResponse resp = new FileRefByContextResponse();
+            try
+            {
+                DbParameter[] param = new DbParameter[]
+                {
+                this.InfraConnectionFactory.DataDB.GetNewParameter("context", EbDbTypes.String, request.Context)
+                };
+
+                var dt = this.InfraConnectionFactory.DataDB.DoQuery(Qry, param);
+
+                foreach (EbDataRow dr in dt.Rows)
+                {
+                    FileMetaInfo info = new FileMetaInfo
+                    {
+                        FileRefId = Convert.ToInt32(dr["id"]),
+                        FileName = dr["filename"] as string,
+                        Meta = JsonConvert.DeserializeObject<Dictionary<string, List<string>>>(dr["tags"] as string),
+                        UploadTime = Convert.ToDateTime(dr["uploadts"]).ToString("dd-MM-yyyy hh:mm tt")
+                    };
+
+                    if (!resp.Images.Contains(info))
+                        resp.Images.Add(info);
+                }
+            }
+            catch (Exception e)
+            {
+
+            }
             return resp;
         }
 

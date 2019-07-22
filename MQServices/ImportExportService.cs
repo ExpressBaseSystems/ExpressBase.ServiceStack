@@ -49,8 +49,8 @@ namespace ExpressBase.ServiceStack.MQServices
             this.MessageProducer3.Publish(new ImportApplicationRequest
             {
                 Id = request.Id,
-                BToken = this.ServerEventClient.BearerToken,
-                RToken = this.ServerEventClient.RefreshToken,
+                //BToken = this.ServerEventClient.BearerToken,
+                //RToken = this.ServerEventClient.RefreshToken,
                 SolnId = request.SolnId,
                 UserId = request.UserId,
                 UserAuthId = request.UserAuthId,
@@ -138,87 +138,104 @@ namespace ExpressBase.ServiceStack.MQServices
                     UserId = request.UserId,
                     WhichConsole = request.WhichConsole,
                 }).Wrapper;
-                List<EbObject> ObjectCollection = AppObj.ObjCollection;
-                UniqueApplicationNameCheckResponse uniq_appnameresp;
-                do
+                if (AppObj != null)
                 {
-                    uniq_appnameresp = devservice.Get(new UniqueApplicationNameCheckRequest { AppName = AppObj.Name });
-                    if (!uniq_appnameresp.IsUnique)
-                        AppObj.Name = AppObj.Name + "(1)";
-                }
-                while (!uniq_appnameresp.IsUnique);
-                CreateApplicationResponse appres = devservice.Post(new CreateApplicationRequest
-                {
-                    AppName = AppObj.Name,
-                    AppType = AppObj.AppType,
-                    Description = AppObj.Description,
-                    AppIcon = AppObj.Icon
-                });
-
-                for (int i = ObjectCollection.Count - 1; i >= 0; i--)
-                {
-                    UniqueObjectNameCheckResponse uniqnameresp;
-                    EbObject obj = ObjectCollection[i];
-
-                    do
+                    List<EbObject> ObjectCollection = AppObj.ObjCollection;
+                    if (ObjectCollection.Count > 0)
                     {
-                        uniqnameresp = objservice.Get(new UniqueObjectNameCheckRequest { ObjName = obj.Name });
-                        if (!uniqnameresp.IsUnique)
-                            obj.Name = obj.Name + "(1)";
+                        int c = 0;
+                        UniqueApplicationNameCheckResponse uniq_appnameresp;
+                        do
+                        {
+                            c++;
+                            uniq_appnameresp = devservice.Get(new UniqueApplicationNameCheckRequest { AppName = AppObj.Name });
+                            if (!uniq_appnameresp.IsUnique)
+                                AppObj.Name = AppObj.Name + "(" + c + ")";
+                        }
+                        while (!uniq_appnameresp.IsUnique);
+
+                        CreateApplicationResponse appres = devservice.Post(new CreateApplicationRequest
+                        {
+                            AppName = AppObj.Name,
+                            AppType = AppObj.AppType,
+                            Description = AppObj.Description,
+                            AppIcon = AppObj.Icon
+                        });
+
+                        for (int i = ObjectCollection.Count - 1; i >= 0; i--)
+                        {
+                            UniqueObjectNameCheckResponse uniqnameresp;
+                            EbObject obj = ObjectCollection[i];
+
+                            do
+                            {
+                                uniqnameresp = objservice.Get(new UniqueObjectNameCheckRequest { ObjName = obj.Name });
+                                if (!uniqnameresp.IsUnique)
+                                    obj.Name = obj.Name + "(1)";
+                            }
+                            while (!uniqnameresp.IsUnique);
+
+
+                            EbObject_Create_New_ObjectRequest ds = new EbObject_Create_New_ObjectRequest
+                            {
+                                Name = obj.Name,
+                                DisplayName = obj.DisplayName,
+                                Description = obj.Description,
+                                Json = EbSerializers.Json_Serialize(obj),
+                                Status = ObjectLifeCycleStatus.Dev,
+                                Relations = "_rel_obj",
+                                IsSave = false,
+                                Tags = "_tags",
+                                Apps = appres.Id.ToString(),
+                                SourceSolutionId = (obj.RefId.Split("-"))[0],
+                                SourceObjId = (obj.RefId.Split("-"))[3],
+                                SourceVerID = (obj.RefId.Split("-"))[4],
+                                SolnId = request.SolnId,
+                                UserId = request.UserId,
+                                UserAuthId = request.UserAuthId,
+                                WhichConsole = request.WhichConsole
+                            };
+                            EbObject_Create_New_ObjectResponse res = objservice.Post(ds);
+                            RefidMap[obj.RefId] = res.RefId;
+
+                            // obj.ReplaceRefid(RefidMap);
+                        }
+                        for (int i = ObjectCollection.Count - 1; i >= 0; i--)
+                        {
+                            EbObject obj = ObjectCollection[i];
+                            obj.ReplaceRefid(RefidMap);
+                            EbObject_SaveRequest ss = new EbObject_SaveRequest
+                            {
+                                RefId = RefidMap[obj.RefId],
+                                Name = obj.Name,
+                                DisplayName = obj.DisplayName,
+                                Description = obj.Description,
+                                Json = EbSerializers.Json_Serialize(obj),
+                                Apps = appres.Id.ToString(),
+                                SolnId = request.SolnId,
+                                UserId = request.UserId,
+                                UserAuthId = request.UserAuthId,
+                                WhichConsole = request.WhichConsole,
+                                Relations = "_rel_obj",
+                                Tags = "_tags"
+                            };
+                            EbObject_SaveResponse saveRes = objservice.Post(ss);
+                        }
+                        Console.WriteLine("ImportApplication success");
                     }
-                    while (!uniqnameresp.IsUnique);
-
-
-                    EbObject_Create_New_ObjectRequest ds = new EbObject_Create_New_ObjectRequest
+                    else
                     {
-                        Name = obj.Name,
-                        DisplayName = obj.DisplayName,
-                        Description = obj.Description,
-                        Json = EbSerializers.Json_Serialize(obj),
-                        Status = ObjectLifeCycleStatus.Dev,
-                        Relations = "_rel_obj",
-                        IsSave = false,
-                        Tags = "_tags",
-                        Apps = appres.Id.ToString(),
-                        SourceSolutionId = (obj.RefId.Split("-"))[0],
-                        SourceObjId = (obj.RefId.Split("-"))[3],
-                        SourceVerID = (obj.RefId.Split("-"))[4],
-                        SolnId = request.SolnId,
-                        UserId = request.UserId,
-                        UserAuthId = request.UserAuthId,
-                        WhichConsole = request.WhichConsole
-                    };
-                    EbObject_Create_New_ObjectResponse res = objservice.Post(ds);
-                    RefidMap[obj.RefId] = res.RefId;
-
-                    // obj.ReplaceRefid(RefidMap);
+                        Console.WriteLine("Import - ObjectCollection is null. appid: " + request.Id);
+                    }
                 }
-                for (int i = ObjectCollection.Count - 1; i >= 0; i--)
+                else
                 {
-                    EbObject obj = ObjectCollection[i];
-                    obj.ReplaceRefid(RefidMap);
-                    EbObject_SaveRequest ss = new EbObject_SaveRequest
-                    {
-                        RefId = RefidMap[obj.RefId],
-                        Name = obj.Name,
-                        DisplayName = obj.DisplayName,
-                        Description = obj.Description,
-                        Json = EbSerializers.Json_Serialize(obj),
-                        Apps = appres.Id.ToString(),
-                        SolnId = request.SolnId,
-                        UserId = request.UserId,
-                        UserAuthId = request.UserAuthId,
-                        WhichConsole = request.WhichConsole,
-                        Relations = "_rel_obj",
-                        Tags = "_tags"
-                    };
-                    EbObject_SaveResponse saveRes = objservice.Post(ss);
+                    Console.WriteLine(" Failed to load from appstore appid: " + request.Id);
                 }
-                Console.WriteLine("ImportApplication success");
             }
             catch (Exception e)
             {
-                Console.WriteLine("ImportApplication" + e.Message);
+                Console.WriteLine("ImportApplication" + e.Message + e.StackTrace);
             }
             return null;
         }

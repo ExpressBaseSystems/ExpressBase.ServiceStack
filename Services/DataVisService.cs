@@ -831,10 +831,7 @@ namespace ExpressBase.ServiceStack
                     }
                     else if (col.Type == EbDbTypes.String && (_isexcel == false))
                     {
-                        if (col.AllowTooltip)
-                        {
-                            _formattedData = _unformattedData.ToString().Length > col.AllowedCharacterLength ? "<span class='columntooltip' data-toggle='popover' data-content='" + _unformattedData.ToString().ToBase64() + "'>" + _unformattedData.ToString().Substring(0, col.AllowedCharacterLength) + "...</span>" : _unformattedData;
-                        }
+                        
                         if ((col as DVStringColumn).RenderAs == StringRenderType.Marker)
                             _formattedData = "<a href = '#' class ='columnMarker' data-latlong='" + _unformattedData + "'><i class='fa fa-map-marker fa-2x' style='color:red;'></i></a>";
 
@@ -842,6 +839,20 @@ namespace ExpressBase.ServiceStack
                     else if (col.Type == EbDbTypes.Boolean)
                     {
 
+                    }
+                    string info = (col.AllowedCharacterLength > 0) ? col.sTitle + " : " + row[col.Data] + "</br>" : string.Empty;
+                    if (col.InfoWindow.Count > 0)
+                    {
+                        foreach (DVBaseColumn _column in col.InfoWindow)
+                        {
+                            if (_column.Name != col.Name)
+                                info += _column.sTitle + " : " + row[_column.Data] + "</br>";
+                        }
+                    }
+                    if (!string.IsNullOrEmpty(info))
+                    {
+                        _formattedData =(col.AllowedCharacterLength == 0) ? _unformattedData : _unformattedData.ToString().Length > col.AllowedCharacterLength ? _unformattedData.ToString().Substring(0, col.AllowedCharacterLength) : _unformattedData;
+                        _formattedData = "<span class='columntooltip' data-toggle='popover' data-content='" + info.ToBase64() + "'>" + _formattedData + "...</span>";
                     }
                     if (col.HideLinkifNoData)
                     {
@@ -917,10 +928,17 @@ namespace ExpressBase.ServiceStack
         {
             if (col.Name == "eb_created_by" || col.Name == "eb_lastmodified_by")
             {
-                int user_id = Convert.ToInt32(_unformattedData);
-                if (this._ebSolution.Users != null && this._ebSolution.Users.ContainsKey(user_id))
+                try
                 {
-                    _formattedData = this._ebSolution.Users[user_id];
+                    int user_id = Convert.ToInt32(_unformattedData);
+                    if (this._ebSolution.Users != null && this._ebSolution.Users.ContainsKey(user_id))
+                    {
+                        _formattedData = this._ebSolution.Users[user_id];
+                    }
+                }
+                catch(Exception e)
+                {
+                    _formattedData = _unformattedData.ToString();
                 }
             }
             else if (col.Name == "eb_loc_id")
@@ -959,7 +977,7 @@ namespace ExpressBase.ServiceStack
                 {
                     if (NumericCompareValues(cond, _unformattedData))
                     {
-                        _formattedData = "<div style='background-color:" + cond.BackGroundColor + ";color:" + cond.FontColor + ";'>" + _formattedData + "</div>";
+                        _formattedData = "<div class='conditionformat' style='background-color:" + cond.BackGroundColor + ";color:" + cond.FontColor + ";'>" + _formattedData + "</div>";
                     }
                 }
             }
@@ -969,7 +987,7 @@ namespace ExpressBase.ServiceStack
                 {
                     if (DateCompareValues(cond, _unformattedData))
                     {
-                        _formattedData = "<div style='background-color:" + cond.BackGroundColor + ";color:" + cond.FontColor + ";'>" + _formattedData + "</div>";
+                        _formattedData = "<div class='conditionformat' style='background-color:" + cond.BackGroundColor + ";color:" + cond.FontColor + ";'>" + _formattedData + "</div>";
                     }
                 }
             }
@@ -979,7 +997,7 @@ namespace ExpressBase.ServiceStack
                 {
                     if (StringCompareValues(cond, _unformattedData))
                     {
-                        _formattedData = "<div style='background-color:" + cond.BackGroundColor + ";color:" + cond.FontColor + ";'>" + _formattedData + "</div>";
+                        _formattedData = "<div class='conditionformat' style='background-color:" + cond.BackGroundColor + ";color:" + cond.FontColor + ";'>" + _formattedData + "</div>";
                     }
                 }
             }
