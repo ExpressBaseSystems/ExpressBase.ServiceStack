@@ -1113,7 +1113,9 @@ namespace ExpressBase.ServiceStack
                     cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("status", EbDbTypes.Int32, (int)request.Status));
                     cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("commit_uid", EbDbTypes.Int32, request.UserId));
                     cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("obj_changelog", EbDbTypes.String, request.ChangeLog));
-                    cmd.ExecuteScalar();
+                    int v = (int)cmd.ExecuteScalar();
+                    if (v != 0)
+                        res = false;
                 }
             }
             catch (Exception e)
