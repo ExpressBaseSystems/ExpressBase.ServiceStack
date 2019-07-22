@@ -840,18 +840,19 @@ namespace ExpressBase.ServiceStack
                     {
 
                     }
-                    if (col.AllowTooltip)
+                    string info = (col.AllowedCharacterLength > 0) ? col.sTitle + " : " + row[col.Data] + "</br>" : string.Empty;
+                    if (col.InfoWindow.Count > 0)
                     {
-                        string info = _unformattedData.ToString();
-                        if (col.InfoWindow.Count > 0)
+                        foreach (DVBaseColumn _column in col.InfoWindow)
                         {
-                            info = string.Empty;
-                            foreach (DVBaseColumn _column in col.InfoWindow)
-                            {
-                                info += _column.sTitle+" : "+ row[_column.Data]+"</br>";
-                            }
+                            if (_column.Name != col.Name)
+                                info += _column.sTitle + " : " + row[_column.Data] + "</br>";
                         }
-                        _formattedData = _unformattedData.ToString().Length > col.AllowedCharacterLength ? "<span class='columntooltip' data-toggle='popover' data-content='" + info.ToBase64() + "'>" + _unformattedData.ToString().Substring(0, col.AllowedCharacterLength) + "...</span>" : _unformattedData;
+                    }
+                    if (!string.IsNullOrEmpty(info))
+                    {
+                        _formattedData = _unformattedData.ToString().Truncate(col.AllowedCharacterLength);
+                        _formattedData = "<span class='columntooltip' data-toggle='popover' data-content='" + info.ToBase64() + "'>" + _formattedData +"</span>";
                     }
                     if (col.HideLinkifNoData)
                     {
@@ -1239,7 +1240,7 @@ namespace ExpressBase.ServiceStack
                         SetFinalFooterRow(currentRow, RowGroupingColumns, IsMultiLevelRowGrouping, RowGrouping, PrevRowIndex, TempGroupingText, CurSortIndex, Culture, _user);
                     }
                 }
-                if (!IsMultiLevelRowGrouping && PrevRowIndex == RowCount - 1)
+                if ( PrevRowIndex == RowCount - 1)
                 {
                     SetFinalFooterRow(currentRow, RowGroupingColumns, IsMultiLevelRowGrouping, RowGrouping, PrevRowIndex, TempGroupingText, CurSortIndex, Culture, _user);
                 }

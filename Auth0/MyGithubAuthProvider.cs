@@ -12,6 +12,7 @@ using ServiceStack.Web;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace ExpressBase.ServiceStack.Auth0
@@ -23,8 +24,9 @@ namespace ExpressBase.ServiceStack.Auth0
         public override object Authenticate(IServiceBase authService, IAuthSession session, Authenticate request)
         {
             var objret = base.Authenticate(authService, session, request);
+			IAuthTokens t = session.ProviderOAuthAccess.FirstOrDefault(e => e.Provider == "github");
 
-            if (!string.IsNullOrEmpty(session.ProviderOAuthAccess[0].Email))
+			if (!string.IsNullOrEmpty(t.Email))
             {
                 EbConnectionFactory InfraConnectionFactory = authService.ResolveService<IEbConnectionFactory>() as EbConnectionFactory;
 
@@ -40,8 +42,8 @@ namespace ExpressBase.ServiceStack.Auth0
 					string pathsignup = "Platform/OnBoarding";
 					string pathsignin = "TenantSignIn";
 
-					string sql1 = "SELECT id,fb_id,github_id,twitter_id FROM eb_tenants WHERE email ~* @email and eb_del=false";
-                    DbParameter[] parameters2 = { InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, session.ProviderOAuthAccess[0].Email) };
+					string sql1 = "SELECT id,fb_id,github_id,twitter_id FROM eb_tenants WHERE email ~* @email and eb_del='F'";
+                    DbParameter[] parameters2 = { InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, t.Email) };
                     EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(sql1, parameters2);
                     if (dt.Rows.Count > 0)
                     {
@@ -67,28 +69,30 @@ namespace ExpressBase.ServiceStack.Auth0
                     if (unique == true)
                     {
                         string pd = Guid.NewGuid().ToString();
-                         pasword = (session.ProviderOAuthAccess[0].UserId.ToString() + pd + session.ProviderOAuthAccess[0].Email.ToString()).ToMD5Hash();
+                         pasword = (t.UserId.ToString() + pd + t.Email.ToString()).ToMD5Hash();
                         DbParameter[] parameter1 = {
-                            InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String,  session.ProviderOAuthAccess[0].Email),
-                            InfraConnectionFactory.DataDB.GetNewParameter("name", EbDbTypes.String,  session.ProviderOAuthAccess[0].UserName),
-                             InfraConnectionFactory.DataDB.GetNewParameter("githubid", EbDbTypes.String,  (session.ProviderOAuthAccess[0].UserId).ToString()),
-                             InfraConnectionFactory.DataDB.GetNewParameter("password", EbDbTypes.String,pasword)
+                            InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String,  t.Email),
+                            InfraConnectionFactory.DataDB.GetNewParameter("name", EbDbTypes.String,  t.UserName),
+                             InfraConnectionFactory.DataDB.GetNewParameter("githubid", EbDbTypes.String,  (t.UserId).ToString()),
+                             InfraConnectionFactory.DataDB.GetNewParameter("password", EbDbTypes.String,pasword),
+                             InfraConnectionFactory.DataDB.GetNewParameter("fals", EbDbTypes.String,'F')
 
                              };
 
-                        EbDataTable dtbl = InfraConnectionFactory.DataDB.DoQuery(@"INSERT INTO eb_tenants (email, fullname, github_id, pwd, eb_created_at) 
-                             VALUES 
-                             (:email,:name,:githubid,:password,NOW()) RETURNING id;", parameter1);
+                        EbDataTable dtbl = InfraConnectionFactory.DataDB.DoQuery(@"INSERT INTO eb_tenants 
+																			(email, fullname, github_id, pwd, eb_created_at ,eb_del, is_verified, is_email_sent) 
+																			 VALUES 
+																			 (:email,:name,:githubid,:password,NOW(),:fals,:fals,:fals) RETURNING id;", parameter1);
 
                         Console.WriteLine("inserted details to tenant table");
                     }
                    
                     
-                        sco_signup.AuthProvider = session.ProviderOAuthAccess[0].Provider;
-                        sco_signup.Country = session.ProviderOAuthAccess[0].Country;
-                        sco_signup.Email = session.ProviderOAuthAccess[0].Email;
-                        sco_signup.Social_id = (session.ProviderOAuthAccess[0].UserId).ToString();
-                        sco_signup.Fullname = session.ProviderOAuthAccess[0].UserName;
+                        sco_signup.AuthProvider = t.Provider;
+                        sco_signup.Country = t.Country;
+                        sco_signup.Email = t.Email;
+                        sco_signup.Social_id = (t.UserId).ToString();
+                        sco_signup.Fullname = t.UserName;
                         // sco_signup.IsVerified = session.IsAuthenticated;
                         sco_signup.Pauto = pasword;
                         sco_signup.UniqueEmail = unique;
@@ -124,7 +128,7 @@ namespace ExpressBase.ServiceStack.Auth0
                 catch (Exception e)
                 {
 
-                    Console.WriteLine("Exception: " + e.Message + e.StackTrace);
+                    Console.WriteLine($"Exception: { e.Message }{e.StackTrace}");
                 }
 
 

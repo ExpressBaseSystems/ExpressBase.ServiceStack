@@ -1100,6 +1100,7 @@ namespace ExpressBase.ServiceStack
         public EbObjectChangeStatusResponse Post(EbObjectChangeStatusRequest request)
         {
             bool res = true;
+            string message = string.Empty;
             try
             {
                 using (DbConnection con = EbConnectionFactory.ObjectsDB.GetNewConnection())
@@ -1113,15 +1114,21 @@ namespace ExpressBase.ServiceStack
                     cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("status", EbDbTypes.Int32, (int)request.Status));
                     cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("commit_uid", EbDbTypes.Int32, request.UserId));
                     cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("obj_changelog", EbDbTypes.String, request.ChangeLog));
-                    cmd.ExecuteScalar();
+                    int result = (int)cmd.ExecuteScalar();
+                    if (result > 0)
+                    {
+                        res = false;
+                        message = "Only one Live version is allowed. A version already exist in Live status. Please change old one's status to proceed.";
+                    }
                 }
             }
             catch (Exception e)
             {
                 res = false;
+                message = e.Message;
                 Console.WriteLine("Exception: " + e.Message + e.StackTrace);
             }
-            return new EbObjectChangeStatusResponse { Response = res };
+            return new EbObjectChangeStatusResponse { Response = res, ResponseStatus = new ResponseStatus { Message = message } };
         }
 
         public DeleteObjectResponse Post(DeleteEbObjectRequest request)

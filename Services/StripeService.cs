@@ -180,7 +180,7 @@ namespace ExpressBase.ServiceStack.Services
         public GetCustomerResponse Post(GetCustomerRequest request)
         {
             GetCustomerResponse resp = new GetCustomerResponse();
-            StripeConfiguration.SetApiKey(Environment.GetEnvironmentVariable(EnvironmentConstants.EB_STRIPE_SECRET_KEY));
+            StripeConfiguration.ApiKey = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_STRIPE_SECRET_KEY);
             string str = string.Format(@"
                         SELECT name,address1,zip,city,state,country,email
                         FROM eb_customer 
@@ -217,7 +217,7 @@ namespace ExpressBase.ServiceStack.Services
                 for (int i = 0; i < dt.Rows.Count; i++)
                 {
                     card_id = dt.Rows[i][0].ToString();
-                    StripeConfiguration.SetApiKey(Environment.GetEnvironmentVariable(EnvironmentConstants.EB_STRIPE_SECRET_KEY));
+                    StripeConfiguration.ApiKey = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_STRIPE_SECRET_KEY);
                     var service = new CardService();
                     Card response = service.Get(request.CustId, card_id);
                     Card.Add(new Eb_StripeCards
@@ -368,7 +368,7 @@ namespace ExpressBase.ServiceStack.Services
         public AddCustomerCardResponse Post(AddCustomerCardRequest request)
         {
             AddCustomerCardResponse resp = new AddCustomerCardResponse();
-            StripeConfiguration.SetApiKey(Environment.GetEnvironmentVariable(EnvironmentConstants.EB_STRIPE_SECRET_KEY));
+            StripeConfiguration.ApiKey = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_STRIPE_SECRET_KEY);
             using (DbConnection con = this.InfraConnectionFactory.DataDB.GetNewConnection())
             {
                 con.Open();
@@ -382,7 +382,7 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     var options = new CardCreateOptions
                     {
-                        SourceToken = request.TokenId
+                        Source = request.TokenId
                     };
                     var service = new CardService();
                     var card = service.Create(request.CustId, options);
@@ -438,7 +438,7 @@ namespace ExpressBase.ServiceStack.Services
         public RemoveCustomerCardResponse Post(RemoveCustomerCardRequest request)
         {
             RemoveCustomerCardResponse resp = new RemoveCustomerCardResponse();
-            StripeConfiguration.SetApiKey(Environment.GetEnvironmentVariable(EnvironmentConstants.EB_STRIPE_SECRET_KEY));
+            StripeConfiguration.ApiKey = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_STRIPE_SECRET_KEY);
             using (DbConnection con = this.InfraConnectionFactory.DataDB.GetNewConnection())
             {
                 con.Open();
@@ -768,7 +768,7 @@ namespace ExpressBase.ServiceStack.Services
                 //    Quantity = 1
                 //});
 
-                StripeConfiguration.SetApiKey(Environment.GetEnvironmentVariable(EnvironmentConstants.EB_STRIPE_SECRET_KEY));
+                StripeConfiguration.ApiKey = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_STRIPE_SECRET_KEY);
                 var items = new List<SubscriptionItemOption>
                 {
                     new SubscriptionItemOption
@@ -909,17 +909,17 @@ namespace ExpressBase.ServiceStack.Services
         public void Post(StripewebhookRequest request)
         {
             const string secret = "whsec_GqJuzEFUWI3I3ylB0aPTDax5mIWn2jR9";
-            //var stripeEvent = EventUtility.ParseEvent(json);
-            var json = request.Json;
-
+            Console.WriteLine("JSON : " + request.Json);
             try
             {
-                var stripeEvent = EventUtility.ConstructEvent(json,
-                    Request.Headers["Stripe-Signature"], secret);
+                Event stripeEvent = EventUtility.ConstructEvent(request.Json,
+                   request.Header, secret);
 
                 string stripeevent = stripeEvent.Type;
                 string type = stripeEvent.Data.Object.Object;
                 string type_id = "";
+                Console.WriteLine("Inserting Web Hook 1: " + stripeevent + ", " + type + ", " + type_id);
+                if (stripeEvent.Type == Events.CustomerCreated)
                 //------------------------------------------ Account----------------------------------------------
                 if (stripeEvent.Type == Events.AccountApplicationAuthorized)
                 {
@@ -1617,6 +1617,8 @@ namespace ExpressBase.ServiceStack.Services
                     type_id = cc.Id;
                 }
                 else if (stripeEvent.Type == Events.TransferUpdated)
+                else if (stripeEvent.Type == Events.CustomerDiscountCreated)
+
                 {
                     Customer cc = stripeEvent.Data.Object as Customer;
                     type_id = cc.Id;
@@ -1625,21 +1627,21 @@ namespace ExpressBase.ServiceStack.Services
                 using (DbConnection con = this.InfraConnectionFactory.DataDB.GetNewConnection())
                 {
                     con.Open();
-
+                    Console.WriteLine("Inserting Web Hook 2: " + stripeevent + ", " + type + ", " + type_id);
                     string str = string.Format(@"
                         INSERT INTO 
                             eb_stripeevents (event,type,type_id,created_at)
                         VALUES('{0}','{1}','{2}','{3}')", stripeevent, type, type_id, DateTime.Now);
-
+                    Console.WriteLine("Web Hook Connection  DBName : " + InfraConnectionFactory.DataDB.DBName);
                     DbCommand cmd = InfraConnectionFactory.DataDB.GetNewCommand(con, str);
 
                     cmd.ExecuteNonQuery();
                 }
 
             }
-            catch (Exception)
+            catch (Exception e)
             {
-
+                Console.WriteLine("Error in Webhook Handling : " + e.Message + e.StackTrace);
                 //return BadRequest();
             }
         }
@@ -1647,7 +1649,7 @@ namespace ExpressBase.ServiceStack.Services
         public GetCustomerInvoiceResponse Post(GetCustomerInvoiceRequest request)
         {
             GetCustomerInvoiceResponse resp = new GetCustomerInvoiceResponse();
-            StripeConfiguration.SetApiKey(Environment.GetEnvironmentVariable(EnvironmentConstants.EB_STRIPE_SECRET_KEY));
+            StripeConfiguration.ApiKey = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_STRIPE_SECRET_KEY);
 
             StripeCollection<StripeInvoice> invoices = gateway.Get(new GetStripeInvoices
             {
