@@ -913,14 +913,14 @@ namespace ExpressBase.ServiceStack.Services
             Console.WriteLine("JSON : " + request.Json);
             try
             {
-                Event stripeEvent = EventUtility.ConstructEvent(request.Json,
+                Event StripeEvent = EventUtility.ConstructEvent(request.Json,
                    request.Header, secret);
 
-                string stripeevent = stripeEvent.Type;
-                string type = stripeEvent.Data.Object.Object;
+                string _stripeevent = StripeEvent.Type;
+                string type = StripeEvent.Data.Object.Object;
                 //string type_id = (stripeEvent.Data.Object as Customer).Id;
-                string type_id = JsonConvert.SerializeObject(stripeEvent.Data.Object as Customer);
-                Console.WriteLine("Inserting Web Hook 1: " + stripeevent + ", " + type + ", " + type_id);
+                string type_id = JsonConvert.SerializeObject(StripeEvent.Data.Object);
+                Console.WriteLine("Inserting Web Hook 1: " + _stripeevent + ", " + type + ", " + type_id);
                 //------------------------------------------ Account----------------------------------------------
                 //if (stripeEvent.Type == Events.AccountApplicationAuthorized)
                 //{
@@ -1626,11 +1626,11 @@ namespace ExpressBase.ServiceStack.Services
                 using (DbConnection con = this.InfraConnectionFactory.DataDB.GetNewConnection())
                 {
                     con.Open();
-                    Console.WriteLine("Inserting Web Hook 2: " + stripeevent + ", " + type + ", " + type_id);
+                    Console.WriteLine("Inserting Web Hook 2: " + _stripeevent + ", " + type + ", " + type_id);
                     string str = string.Format(@"
                         INSERT INTO 
                             eb_stripeevents (event,type,type_id,created_at)
-                        VALUES('{0}','{1}','{2}','{3}')", stripeevent, type, type_id, DateTime.Now);
+                        VALUES('{0}','{1}','{2}','{3}')", _stripeevent, type, type_id, DateTime.Now);
                     Console.WriteLine("Web Hook Connection  DBName : " + InfraConnectionFactory.DataDB.DBName);
                     DbCommand cmd = InfraConnectionFactory.DataDB.GetNewCommand(con, str);
 
