@@ -914,12 +914,12 @@ namespace ExpressBase.ServiceStack.Services
             Console.WriteLine("JSON : " + request.Json);
             try
             {
-                Event stripeEvent = EventUtility.ConstructEvent(request.Json,
+                Event StripeEvent = EventUtility.ConstructEvent(request.Json,
                    request.Header, secret);
-                string stripeevent = stripeEvent.Type;
-                string type = stripeEvent.Data.Object.Object;
+                string stripeevent = StripeEvent.Type;
+                string type = StripeEvent.Data.Object.Object;
                 //string type_id = (stripeEvent.Data.Object as Customer).Id;
-                string type_id = JsonConvert.SerializeObject(stripeEvent.Data.Object as Customer);
+                string type_id = JsonConvert.SerializeObject(StripeEvent.Data.Object as Customer);
                 var userObj = JObject.Parse(type_id);
                 string cust_id = Convert.ToString(userObj["customer"]);
                 Console.WriteLine("Inserting Web Hook 1: " + stripeevent + ", " + type + ", " + type_id);
@@ -1628,7 +1628,7 @@ namespace ExpressBase.ServiceStack.Services
                 using (DbConnection con = this.InfraConnectionFactory.DataDB.GetNewConnection())
                 {
                     con.Open();
-                    Console.WriteLine("Inserting Web Hook 2: " + stripeevent + ", " + type + ", " + type_id);
+                    Console.WriteLine("Inserting Web Hook 2: " + _stripeevent + ", " + type + ", " + type_id);
                     string str = string.Format(@"
                         INSERT INTO 
                             eb_stripeevents (event,type,type_id,created_at,cust_id)
