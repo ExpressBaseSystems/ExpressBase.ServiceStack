@@ -9,6 +9,7 @@ using System.Data.Common;
 using Stripe;
 using ExpressBase.Common.Stripe;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -915,11 +916,12 @@ namespace ExpressBase.ServiceStack.Services
             {
                 Event stripeEvent = EventUtility.ConstructEvent(request.Json,
                    request.Header, secret);
-
                 string stripeevent = stripeEvent.Type;
                 string type = stripeEvent.Data.Object.Object;
                 //string type_id = (stripeEvent.Data.Object as Customer).Id;
                 string type_id = JsonConvert.SerializeObject(stripeEvent.Data.Object as Customer);
+                var userObj = JObject.Parse(type_id);
+                string cust_id = Convert.ToString(userObj["customer"]);
                 Console.WriteLine("Inserting Web Hook 1: " + stripeevent + ", " + type + ", " + type_id);
                 //------------------------------------------ Account----------------------------------------------
                 //if (stripeEvent.Type == Events.AccountApplicationAuthorized)
@@ -1629,8 +1631,8 @@ namespace ExpressBase.ServiceStack.Services
                     Console.WriteLine("Inserting Web Hook 2: " + stripeevent + ", " + type + ", " + type_id);
                     string str = string.Format(@"
                         INSERT INTO 
-                            eb_stripeevents (event,type,type_id,created_at)
-                        VALUES('{0}','{1}','{2}','{3}')", stripeevent, type, type_id, DateTime.Now);
+                            eb_stripeevents (event,type,type_id,created_at,cust_id)
+                        VALUES('{0}','{1}','{2}','{3}','{4}')", stripeevent, type, type_id, DateTime.Now,cust_id);
                     Console.WriteLine("Web Hook Connection  DBName : " + InfraConnectionFactory.DataDB.DBName);
                     DbCommand cmd = InfraConnectionFactory.DataDB.GetNewCommand(con, str);
 
