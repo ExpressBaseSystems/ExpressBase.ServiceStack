@@ -55,7 +55,8 @@ namespace ExpressBase.ServiceStack.Services
 			if (request.RequestMode == 1)//edit mode 
 			{
 				SqlQry += @"SELECT id, eb_loc_id, trdate, genurl, name, dob, genphoffice, profession, genemail, customertype, clcity, clcountry, city,
-								typeofcustomer, sourcecategory, subcategory, consultation, picsrcvd, dprefid, sex, district, leadowner
+								typeofcustomer, sourcecategory, subcategory, consultation, picsrcvd, dprefid, sex, district, leadowner,
+                                baldnessgrade, diffusepattern, hfcurrently, htpreviously
 								FROM customers WHERE id = :accountid AND eb_del='F';
 							SELECT id,trdate,status,followupdate,narration, eb_createdby, eb_createddt,isnotpickedup FROM leaddetails
 								WHERE customers_id=:accountid ORDER BY eb_createddt DESC;
@@ -141,6 +142,10 @@ namespace ExpressBase.ServiceStack.Services
 				CustomerData.Add("sex", dr[19].ToString());
 				CustomerData.Add("district", dr[20].ToString());
 				CustomerData.Add("leadowner", dr[21].ToString());
+				CustomerData.Add("baldnessgrade", dr[22].ToString());
+				CustomerData.Add("diffusepattern", dr[23].ToString().ToLower());
+				CustomerData.Add("hfcurrently", dr[24].ToString().ToLower());
+				CustomerData.Add("htpreviously", dr[25].ToString().ToLower());
 				
 				if (ds.Tables[Qcnt + 4].Rows.Count > 0)
 				{
@@ -460,8 +465,36 @@ WHERE
 				vals += ":leadowner,";
 				upcolsvals += "leadowner=:leadowner,";
 			}
-			//------------------------------------------------------
-			if (dict.TryGetValue("consdate", out found))
+            if (dict.TryGetValue("baldnessgrade", out found))
+            {
+                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Int32, Convert.ToInt32(found.Value)));
+                cols += "baldnessgrade,";
+                vals += ":baldnessgrade,";
+                upcolsvals += "baldnessgrade=:baldnessgrade,";
+            }
+            if (dict.TryGetValue("diffusepattern", out found))
+            {
+                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.BooleanOriginal, Convert.ToBoolean(found.Value)));
+                cols += "diffusepattern,";
+                vals += ":diffusepattern,";
+                upcolsvals += "diffusepattern=:diffusepattern,";
+            }
+            if (dict.TryGetValue("hfcurrently", out found))
+            {
+                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.BooleanOriginal, Convert.ToBoolean(found.Value)));
+                cols += "hfcurrently,";
+                vals += ":hfcurrently,";
+                upcolsvals += "hfcurrently=:hfcurrently,";
+            }
+            if (dict.TryGetValue("htpreviously", out found))
+            {
+                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.BooleanOriginal, Convert.ToBoolean(found.Value)));
+                cols += "htpreviously,";
+                vals += ":htpreviously,";
+                upcolsvals += "htpreviously=:htpreviously,";
+            }
+            //------------------------------------------------------
+            if (dict.TryGetValue("consdate", out found))
 			{
 				parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Date, Convert.ToDateTime(DateTime.ParseExact(found.Value.ToString(), "dd-MM-yyyy", CultureInfo.InvariantCulture))));
 				cols2 += "consdate,";

@@ -514,18 +514,34 @@ namespace ExpressBase.ServiceStack.Services
             EbIntegrationResponse res = new EbIntegrationResponse();
             try
             {
-                request.IntegrationO.PersistIntegration(request.SolnId, this.InfraConnectionFactory, request.UserId);
-                if (request.IntegrationO.Type == EbConnectionTypes.EbDATA && request.deploy == true)
+                int flag = 0;
+                if (request.IntegrationO.Type.ToString() == "EbDATA" || request.IntegrationO.Type.ToString()== "EbOBJECTS")
                 {
-                    InitializeDataDb(request.IntegrationO.ConfigId, request.SolnId, request.UserId);
+                    string sql = "SELECT * FROM eb_integrations WHERE type = @type AND eb_del ='F' AND solution_id = @soluid;";
+                    DbParameter[] parameters = {
+                                                this.EbConnectionFactory.DataDB.GetNewParameter("type", EbDbTypes.String, request.IntegrationO.Type.ToString()),
+                                                this.EbConnectionFactory.DataDB.GetNewParameter("soluid", EbDbTypes.String, request.SolnId.ToString())
+                                           };
+                    EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(sql, parameters);
+                    if (dt.Rows.Count() > 0)
+                        flag = 1;
                 }
-                else
+                
+                if (flag == 0)
                 {
-                    RefreshSolutionConnectionsAsyncResponse resp = this.MQClient.Post<RefreshSolutionConnectionsAsyncResponse>(new RefreshSolutionConnectionsBySolutionIdAsyncRequest()
+                    request.IntegrationO.PersistIntegration(request.SolnId, this.InfraConnectionFactory, request.UserId);
+                    if (request.IntegrationO.Type == EbConnectionTypes.EbDATA && request.deploy == true)
                     {
-                        SolutionId = request.SolnId
-                    });
-                }
+                        InitializeDataDb(request.IntegrationO.ConfigId, request.SolnId, request.UserId);
+                    }
+                    else
+                    {
+                        RefreshSolutionConnectionsAsyncResponse resp = this.MQClient.Post<RefreshSolutionConnectionsAsyncResponse>(new RefreshSolutionConnectionsBySolutionIdAsyncRequest()
+                        {
+                            SolutionId = request.SolnId
+                        });
+                    }
+                }               
             }
             catch (Exception e)
             {
@@ -622,6 +638,36 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception e) { Console.WriteLine(e.Message); }
         }
 
+        public CredientialBotResponse Get(CredientialBotRequest request)
+        {
+            CredientialBotResponse response = new CredientialBotResponse();
+            string sql = string.Format(@"SELECT con_obj from eb_integration_configs WHERE id = {0} AND solution_id = '{1}' AND eb_del = 'F';
+                                         SELECT pricing_tier FROM eb_solutions WHERE isolution_id='{1}'  ", request.ConfId, request.SolnId);
+            try
+            {
+                EbDataSet dt = this.InfraConnectionFactory.DataDB.DoQueries(sql);
+                EbDataTable _temp = dt.Tables[0];
+                string ConnObj = _temp.Rows[0][0].ToString();
+                _temp = dt.Tables[1];
+                int pricing_tier = Convert.ToInt32(_temp.Rows[0][0]);
+                EbIntegrationConf conobject = JsonConvert.DeserializeObject<EbIntegrationConf>(ConnObj);
+                if (conobject.IsDefault == true && pricing_tier == 0 && conobject.Type == EbIntegrations.PGSQL)
+                {
+                    response.ResponseStatus = new ResponseStatus { Message = "Its a free account." };
+                }
+                else
+                {
+                    response.ConnObj = ConnObj;
+                }
+            }
+            catch(Exception e)
+             {
+                Console.WriteLine(e.Message);
+                response.ResponseStatus = new ResponseStatus { Message = e.Message };
+            }
+            return response;
+        }
+
         public GetSolutioInfoResponses Get(GetSolutioInfoRequests request)
         {
             GetSolutioInfoResponses resp = new GetSolutioInfoResponses();
@@ -644,11 +690,12 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     resp.SolutionInfo = new EbSolutionsWrapper
                     {
-                        SolutionName = _temp.Rows[0][6].ToString(),
-                        Description = _temp.Rows[0][2].ToString(),
-                        DateCreated = _temp.Rows[0][1].ToString(),
-                        EsolutionId = _temp.Rows[0][5].ToString(),
-                        IsVersioningEnabled = Convert.ToBoolean(_temp.Rows[0][11])
+                        SolutionName = _temp.Rows[0]["solution_name"].ToString(),
+                        Description = _temp.Rows[0]["description"].ToString(),
+                        DateCreated = _temp.Rows[0]["date_created"].ToString(),
+                        EsolutionId = _temp.Rows[0]["esolution_id"].ToString(),
+                        PricingTier = Enum.Parse <PricingTiers>(_temp.Rows[0]["pricing_tier"].ToString()),
+                        IsVersioningEnabled = Convert.ToBoolean(_temp.Rows[0]["versioning"])
                     };
 
                     _temp = dt.Tables[1];
