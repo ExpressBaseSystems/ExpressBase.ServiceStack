@@ -919,7 +919,7 @@ namespace ExpressBase.ServiceStack.Services
                    request.Header, secret);
                 string stripeevent = StripeEvent.Type;
                 string type = StripeEvent.Data.Object.Object;
-                string type_id = JsonConvert.SerializeObject(StripeEvent.Data.Object as Customer);
+                string type_id = JsonConvert.SerializeObject(StripeEvent.Data.Object);
                 var userObj = JObject.Parse(type_id);
                 string cust_id = Convert.ToString(userObj["customer"]);
                 Console.WriteLine("Inserting Web Hook 1: " + stripeevent + ", " + type + ", " + type_id);

@@ -169,7 +169,7 @@ namespace ExpressBase.ServiceStack.Services
                         if (!request.IsChange)
                         {   //run northwind
                             Console.WriteLine("Executing northwind_script");
-                            CreateOrAlter_Structure(con, "ExpressBase.Common.sqlscripts.pgsql.northwind_script.sql", DataDB);
+                            CreateOrAlter_Structure(con, "ExpressBase.Common.sqlscripts.pgsql.eb_northwind_script.sql", DataDB);
 
                             //import the application 129
                         }
@@ -277,7 +277,7 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception e)
             {
                 Console.WriteLine(".............problem in CreateUsers4DataBase: " + e.ToString());
-                return null;
+                throw e;
             }
         }
 
