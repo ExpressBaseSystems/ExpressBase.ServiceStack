@@ -514,18 +514,34 @@ namespace ExpressBase.ServiceStack.Services
             EbIntegrationResponse res = new EbIntegrationResponse();
             try
             {
-                request.IntegrationO.PersistIntegration(request.SolnId, this.InfraConnectionFactory, request.UserId);
-                if (request.IntegrationO.Type == EbConnectionTypes.EbDATA && request.deploy == true)
+                int flag = 0;
+                if (request.IntegrationO.Type.ToString() == "EbDATA" || request.IntegrationO.Type.ToString()== "EbOBJECTS")
                 {
-                    InitializeDataDb(request.IntegrationO.ConfigId, request.SolnId, request.UserId);
+                    string sql = "SELECT * FROM eb_integrations WHERE type = @type AND eb_del ='F' AND solution_id = @soluid;";
+                    DbParameter[] parameters = {
+                                                this.EbConnectionFactory.DataDB.GetNewParameter("type", EbDbTypes.String, request.IntegrationO.Type.ToString()),
+                                                this.EbConnectionFactory.DataDB.GetNewParameter("soluid", EbDbTypes.String, request.SolnId.ToString())
+                                           };
+                    EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(sql, parameters);
+                    if (dt.Rows.Count() > 0)
+                        flag = 1;
                 }
-                else
+                
+                if (flag == 0)
                 {
-                    RefreshSolutionConnectionsAsyncResponse resp = this.MQClient.Post<RefreshSolutionConnectionsAsyncResponse>(new RefreshSolutionConnectionsBySolutionIdAsyncRequest()
+                    request.IntegrationO.PersistIntegration(request.SolnId, this.InfraConnectionFactory, request.UserId);
+                    if (request.IntegrationO.Type == EbConnectionTypes.EbDATA && request.deploy == true)
                     {
-                        SolutionId = request.SolnId
-                    });
-                }
+                        InitializeDataDb(request.IntegrationO.ConfigId, request.SolnId, request.UserId);
+                    }
+                    else
+                    {
+                        RefreshSolutionConnectionsAsyncResponse resp = this.MQClient.Post<RefreshSolutionConnectionsAsyncResponse>(new RefreshSolutionConnectionsBySolutionIdAsyncRequest()
+                        {
+                            SolutionId = request.SolnId
+                        });
+                    }
+                }               
             }
             catch (Exception e)
             {
@@ -644,11 +660,12 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     resp.SolutionInfo = new EbSolutionsWrapper
                     {
-                        SolutionName = _temp.Rows[0][6].ToString(),
-                        Description = _temp.Rows[0][2].ToString(),
-                        DateCreated = _temp.Rows[0][1].ToString(),
-                        EsolutionId = _temp.Rows[0][5].ToString(),
-                        IsVersioningEnabled = Convert.ToBoolean(_temp.Rows[0][11])
+                        SolutionName = _temp.Rows[0]["solution_name"].ToString(),
+                        Description = _temp.Rows[0]["description"].ToString(),
+                        DateCreated = _temp.Rows[0]["date_created"].ToString(),
+                        EsolutionId = _temp.Rows[0]["esolution_id"].ToString(),
+                        PricingTier = Enum.Parse <PricingTiers>(_temp.Rows[0]["pricing_tier"].ToString()),
+                        IsVersioningEnabled = Convert.ToBoolean(_temp.Rows[0]["versioning"])
                     };
 
                     _temp = dt.Tables[1];
