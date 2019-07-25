@@ -501,7 +501,7 @@ namespace ExpressBase.ServiceStack.Services
         public EditCardExpResponse Post(EditCardExpRequest request)
         {
             EditCardExpResponse resp = new EditCardExpResponse();
-            StripeConfiguration.SetApiKey(Environment.GetEnvironmentVariable(EnvironmentConstants.EB_STRIPE_SECRET_KEY));
+            StripeConfiguration.ApiKey = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_STRIPE_SECRET_KEY);
             using (DbConnection con = this.InfraConnectionFactory.DataDB.GetNewConnection())
             {
                 con.Open();
@@ -851,6 +851,7 @@ namespace ExpressBase.ServiceStack.Services
 
         public UpgradeSubscriptionResponse Post(UpgradeSubscriptionRequest request)
         {
+            StripeConfiguration.ApiKey = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_STRIPE_SECRET_KEY);
             UpgradeSubscriptionResponse resp = new UpgradeSubscriptionResponse();
             using (DbConnection con = this.InfraConnectionFactory.DataDB.GetNewConnection())
             {
@@ -867,7 +868,7 @@ namespace ExpressBase.ServiceStack.Services
                 var usageRecordOptions = new UsageRecordCreateOptions()
                 {
                     Quantity = request.Total,
-                    Timestamp = DateTime.Now.AddMinutes(3),
+                    Timestamp = DateTime.Now,
                     Action = "increment"
                 };
                 var usageRecordService = new UsageRecordService();
