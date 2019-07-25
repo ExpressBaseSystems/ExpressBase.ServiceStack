@@ -342,7 +342,7 @@ namespace ExpressBase.ServiceStack.Services
                             IsChange = false
                         });
 
-                        if (response.Resp)
+                        if (response.DeploymentCompled)
                         {
                             _conService.Post(new InitialSolutionConnectionsRequest
                             {
