@@ -68,7 +68,7 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception e)
             {
                 Console.WriteLine("Exception: " + e.Message + e.StackTrace);
-                return new EbDbCreateResponse { ResponseStatus = new ResponseStatus { Message = "Database Already exists" } };
+                return new EbDbCreateResponse { ResponseStatus = new ResponseStatus { Message = ErrorTexConstants.DB_ALREADY_EXISTS } };
             }
         }
 
@@ -164,7 +164,7 @@ namespace ExpressBase.ServiceStack.Services
                     {
                         Console.WriteLine(".............Reached Transaction Commit");
                         con_trans.Commit();
-                        EbDbCreateResponse success = request.IsChange ? new EbDbCreateResponse() { Resp = true } : _res;
+                        EbDbCreateResponse success = request.IsChange ? new EbDbCreateResponse() { DeploymentCompled = true } : _res;
 
                         if (!request.IsChange)
                         {   //run northwind
@@ -269,7 +269,7 @@ namespace ExpressBase.ServiceStack.Services
                 };
                 return new EbDbCreateResponse
                 {
-                    Resp = true,
+                    DeploymentCompled = true,
                     DbName = _dbname,
                     DbUsers = ebdbusers
                 };
