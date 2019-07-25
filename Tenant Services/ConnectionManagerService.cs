@@ -476,7 +476,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             return res;
         }
-        
+
         public GetIntegrationConfigsResponse Get(GetIntegrationConfigsRequest request)
         {
             GetIntegrationConfigsResponse res = new GetIntegrationConfigsResponse();
@@ -515,7 +515,7 @@ namespace ExpressBase.ServiceStack.Services
             try
             {
                 int flag = 0;
-                if (request.IntegrationO.Type.ToString() == "EbDATA" || request.IntegrationO.Type.ToString()== "EbOBJECTS")
+                if (request.IntegrationO.Type.ToString() == "EbDATA" || request.IntegrationO.Type.ToString() == "EbOBJECTS")
                 {
                     string sql = "SELECT * FROM eb_integrations WHERE type = @type AND eb_del ='F' AND solution_id = @soluid;";
                     DbParameter[] parameters = {
@@ -526,11 +526,11 @@ namespace ExpressBase.ServiceStack.Services
                     if (dt.Rows.Count() > 0)
                         flag = 1;
                 }
-                
+
                 if (flag == 0)
                 {
                     request.IntegrationO.PersistIntegration(request.SolnId, this.InfraConnectionFactory, request.UserId);
-                    if (request.IntegrationO.Type == EbConnectionTypes.EbDATA && request.deploy == true)
+                    if (request.IntegrationO.Type == EbConnectionTypes.EbDATA && request.deploy)
                     {
                         InitializeDataDb(request.IntegrationO.ConfigId, request.SolnId, request.UserId);
                     }
@@ -541,7 +541,7 @@ namespace ExpressBase.ServiceStack.Services
                             SolutionId = request.SolnId
                         });
                     }
-                }               
+                }
             }
             catch (Exception e)
             {
@@ -625,7 +625,7 @@ namespace ExpressBase.ServiceStack.Services
                 EbIntegrationConf conf = EbSerializers.Json_Deserialize(dt.Rows[0][4].ToString());
 
                 EbDbCreateResponse response = _dbService.Post(new EbDbCreateRequest { DataDBConfig = conf as EbDbConfig, SolnId = solid, UserId = uid, IsChange = true });
-                if (response.Resp)
+                if (response.Resp || response.ResponseStatus.Message == ErrorTexConstants.db_alredyExists)
                 {
                     //Post(new InitialSolutionConnectionsRequest { NewSolnId = DbName, SolnId = request.SolnId, UserId = request.UserId, DbUsers = response.dbusers });
                     _tenantUserService.Post(new UpdateSolutionRequest() { UserId = uid, SolnId = solid, });
@@ -664,7 +664,7 @@ namespace ExpressBase.ServiceStack.Services
                         Description = _temp.Rows[0]["description"].ToString(),
                         DateCreated = _temp.Rows[0]["date_created"].ToString(),
                         EsolutionId = _temp.Rows[0]["esolution_id"].ToString(),
-                        PricingTier = Enum.Parse <PricingTiers>(_temp.Rows[0]["pricing_tier"].ToString()),
+                        PricingTier = Enum.Parse<PricingTiers>(_temp.Rows[0]["pricing_tier"].ToString()),
                         IsVersioningEnabled = Convert.ToBoolean(_temp.Rows[0]["versioning"])
                     };
 

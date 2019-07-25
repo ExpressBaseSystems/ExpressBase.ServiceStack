@@ -68,7 +68,7 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception e)
             {
                 Console.WriteLine("Exception: " + e.Message + e.StackTrace);
-                return new EbDbCreateResponse { ResponseStatus = new ResponseStatus { Message = "Database Already exists" } };
+                return new EbDbCreateResponse { ResponseStatus = new ResponseStatus { Message = ErrorTexConstants.db_alredyExists } };
             }
         }
 
