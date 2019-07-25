@@ -528,19 +528,28 @@ namespace ExpressBase.ServiceStack.Services
                 }
                 
                 if (flag == 0)
-                {
-                    request.IntegrationO.PersistIntegration(request.SolnId, this.InfraConnectionFactory, request.UserId);
+                {                    
                     if (request.IntegrationO.Type == EbConnectionTypes.EbDATA && request.deploy == true)
                     {
-                        InitializeDataDb(request.IntegrationO.ConfigId, request.SolnId, request.UserId);
+                        bool status = InitializeDataDb( request.IntegrationO.ConfigId, request.SolnId, request.UserId, request.drop);
+                        if (!status)
+                        {
+                            res.ResponseStatus = new ResponseStatus { Message = "DataBase Already Exist" };
+                        }
+                        else
+                        {
+                            request.IntegrationO.PersistIntegration(request.SolnId, this.InfraConnectionFactory, request.UserId);
+                        }
                     }
                     else
                     {
-                        RefreshSolutionConnectionsAsyncResponse resp = this.MQClient.Post<RefreshSolutionConnectionsAsyncResponse>(new RefreshSolutionConnectionsBySolutionIdAsyncRequest()
-                        {
-                            SolutionId = request.SolnId
-                        });
+                        request.IntegrationO.PersistIntegration(request.SolnId, this.InfraConnectionFactory, request.UserId);
                     }
+
+                    RefreshSolutionConnectionsAsyncResponse resp = this.MQClient.Post<RefreshSolutionConnectionsAsyncResponse>(new RefreshSolutionConnectionsBySolutionIdAsyncRequest()
+                    {
+                        SolutionId = request.SolnId
+                    });
                 }               
             }
             catch (Exception e)
@@ -612,7 +621,7 @@ namespace ExpressBase.ServiceStack.Services
 
 
 
-        public void InitializeDataDb(int confid, string solid, int uid)
+        public bool InitializeDataDb(int confid, string solid, int uid, bool drop)
         {
             try
             {
@@ -622,20 +631,19 @@ namespace ExpressBase.ServiceStack.Services
                 string query = string.Format("SELECT * FROM eb_integration_configs where id ={0};", confid);
                 EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(query);
 
-                EbIntegrationConf conf = EbSerializers.Json_Deserialize(dt.Rows[0][4].ToString());
+                EbIntegrationConf conf = EbSerializers.Json_Deserialize(dt.Rows[0][4].ToString());               
 
                 EbDbCreateResponse response = _dbService.Post(new EbDbCreateRequest { DataDBConfig = conf as EbDbConfig, SolnId = solid, UserId = uid, IsChange = true });
-                if (response.Resp)
+                if (!response.Resp && drop)
                 {
                     //Post(new InitialSolutionConnectionsRequest { NewSolnId = DbName, SolnId = request.SolnId, UserId = request.UserId, DbUsers = response.dbusers });
-                    _tenantUserService.Post(new UpdateSolutionRequest() { UserId = uid, SolnId = solid, });
-                    RefreshSolutionConnectionsAsyncResponse res = this.MQClient.Post<RefreshSolutionConnectionsAsyncResponse>(new RefreshSolutionConnectionsBySolutionIdAsyncRequest()
-                    {
-                        SolutionId = solid
-                    });
-                }
+                    _tenantUserService.Post(new UpdateSolutionRequest() { UserId = uid, SolnId = solid, });                   
+                    return true;
+                }              
+               
             }
             catch (Exception e) { Console.WriteLine(e.Message); }
+            return false;
         }
 
         public CredientialBotResponse Get(CredientialBotRequest request)
