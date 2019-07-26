@@ -7,8 +7,10 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
+using ServiceStack.Redis;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Text;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -49,6 +51,10 @@ namespace ExpressBase.ServiceStack.Services
                 resp.Wiki.Id = (int)dt.Rows[0][0];
 
                 resp.ResponseStatus = true;
+                request.Wiki.Id = resp.Wiki.Id;
+                var hashfield = Encoding.UTF8.GetBytes(resp.Wiki.Id.ToString());
+                var hashval = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(resp.Wiki));
+                var Temp = (this.Redis as RedisClient).HSet("wiki", hashfield, hashval); 
             }
             catch (Exception e)
             {
@@ -88,7 +94,10 @@ namespace ExpressBase.ServiceStack.Services
                 EbDataTable x = InfraConnectionFactory.DataDB.DoQuery(query, parameters);
 
                 resp.Wiki.Id = (int)x.Rows[0][0];
-
+                request.Wiki.Id = resp.Wiki.Id;
+                var hashfield = Encoding.UTF8.GetBytes(resp.Wiki.Id.ToString());
+                var hashval = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(resp.Wiki));
+                var Temp = (this.Redis as RedisClient).HSet("wiki", hashfield, hashval);
                 resp.ResponseStatus = true;
             }
             catch (Exception e)
@@ -106,10 +115,12 @@ namespace ExpressBase.ServiceStack.Services
             resp.Wiki = new Wiki();
             try
             {
+
                 DbParameter[] parameters = new DbParameter[]
-                    {
+                {
                 this.InfraConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.Id)
-                    };
+                };
+
                 string query = @"
                  SELECT *
                  FROM
@@ -118,14 +129,13 @@ namespace ExpressBase.ServiceStack.Services
                    id = @id AND eb_del='F' ; 
                 SELECT * FROM wiki_category WHERE status='publish' ; ";
 
-                EbDataSet ds = InfraConnectionFactory.DataDB.DoQueries(query , parameters);
+                EbDataSet ds = InfraConnectionFactory.DataDB.DoQueries(query, parameters);
 
                 resp.Wiki.Category = ds.Tables[0].Rows[0]["category"].ToString();
                 resp.Wiki.Title = ds.Tables[0].Rows[0]["title"].ToString();
                 resp.Wiki.HTML = ds.Tables[0].Rows[0]["html"].ToString();
                 resp.Wiki.Tags = ds.Tables[0].Rows[0]["eb_tags"].ToString();
                 resp.Wiki.Status = ds.Tables[0].Rows[0]["status"].ToString();
-
                 int capacity1 = ds.Tables[1].Rows.Count;
                 Console.WriteLine("INFO: Wiki Count: " + capacity1);
                 for (int i = 0; i < capacity1; i++)
@@ -135,6 +145,7 @@ namespace ExpressBase.ServiceStack.Services
                         {
                             WikiCategory = ds.Tables[1].Rows[i]["category"].ToString()
                         });
+
                 }
             }
             catch (Exception e)
@@ -281,23 +292,48 @@ namespace ExpressBase.ServiceStack.Services
             resp.Wiki = new Wiki();
             try
             {
-                DbParameter[] parameters = new DbParameter[]
-                    {
+
+                var hashfield = Encoding.UTF8.GetBytes(request.Id.ToString());
+                var tem2 = (this.Redis as RedisClient).HGet("wiki", hashfield);
+                if(tem2 != null)
+                {
+                    string my_string = Encoding.UTF8.GetString(tem2);
+                    var abc = JsonConvert.SerializeObject(resp.Wiki);
+                    Wiki obj = JsonConvert.DeserializeObject<Wiki>(my_string);
+
+                    resp.Wiki.Category = obj.Category.ToString();
+                    resp.Wiki.Title = obj.Title.ToString();
+                    resp.Wiki.HTML = obj.HTML.ToString();
+                    resp.Wiki.Tags = obj.Tags.ToString();
+                }
+
+                else
+                {
+                    DbParameter[] parameters = new DbParameter[]
+                   {
                 this.InfraConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.Id)
-                    };
-                string query = @"
+                   };
+                    string query = @"
                  SELECT *
                  FROM
                     wiki  
                  WHERE
                     id = @id AND eb_del='F'  ORDER BY list_order";
 
-                EbDataTable table = InfraConnectionFactory.DataDB.DoQuery(query, parameters);
+                    EbDataTable table = InfraConnectionFactory.DataDB.DoQuery(query, parameters);
 
-                resp.Wiki.Category = table.Rows[0]["category"].ToString();
-                resp.Wiki.Title = table.Rows[0]["title"].ToString();
-                resp.Wiki.HTML = table.Rows[0]["html"].ToString();
-                resp.Wiki.Tags = table.Rows[0]["eb_tags"].ToString();
+                    resp.Wiki.Category = table.Rows[0]["category"].ToString();
+                    resp.Wiki.Title = table.Rows[0]["title"].ToString();
+                    resp.Wiki.HTML = table.Rows[0]["html"].ToString();
+                    resp.Wiki.Tags = table.Rows[0]["eb_tags"].ToString();
+                    resp.Wiki.Id = request.Id;
+
+                    var hashval = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(resp.Wiki));
+                    var Temp = (this.Redis as RedisClient).HSet("wiki", hashfield, hashval);
+
+                }
+
+               
 
             }
             catch (Exception e)
@@ -380,7 +416,9 @@ namespace ExpressBase.ServiceStack.Services
                             Title = ds.Tables[0].Rows[i]["title"].ToString(),
                             Id = (int)ds.Tables[0].Rows[i]["id"],
                             Order = (int)ds.Tables[0].Rows[i]["list_order"],
-                            Status = ds.Tables[0].Rows[i]["status"].ToString()
+                            Status = ds.Tables[0].Rows[i]["status"].ToString(),
+                            CreatedAt = ((DateTime)ds.Tables[0].Rows[i]["eb_created_at"]).Date
+
                         });
                 }
                 int capacity1 = ds.Tables[1].Rows.Count;
