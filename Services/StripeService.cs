@@ -1687,7 +1687,9 @@ namespace ExpressBase.ServiceStack.Services
                     Currency = invoices.Data[i].Lines.Data[0].Currency,
                     Quantity = invoices.Data[i].Lines.Data[0].Quantity,
                     PeriodStart = invoices.Data[i].PeriodStart,
-                    PeriodEnd = invoices.Data[i].PeriodEnd
+                    PeriodEnd = invoices.Data[i].PeriodEnd,
+                    Duration = invoices.Data[i].Discount == null ? 0 : invoices.Data[i].Discount.Coupon.Duration,
+                    PercentOff = invoices.Data[i].Discount == null ? 0 : invoices.Data[i].Discount.Coupon.PercentOff
                 });
 
             }
@@ -1733,6 +1735,7 @@ namespace ExpressBase.ServiceStack.Services
                 Currency = Inv.Currency,
                 PercentOff = Inv.Discount == null ? 0 : Inv.Discount.Coupon.PercentOff,
                 CouponId = Inv.Discount == null ? "" : Inv.Discount.Coupon.Id,
+                Duration = Inv.Discount == null ? 0 : Inv.Discount.Coupon.Duration,
                 Data = Data
             };
 
