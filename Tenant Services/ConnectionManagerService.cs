@@ -15,6 +15,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Linq;
+using System.IO;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -542,6 +543,11 @@ namespace ExpressBase.ServiceStack.Services
                             request.IntegrationO.PersistIntegration(request.SolnId, this.InfraConnectionFactory, request.UserId);
                         }
                     }
+                    else if (request.IntegrationO.Type == EbConnectionTypes.EbFILES)
+                    {
+                        InitializeFileDb(request.IntegrationO.ConfigId);
+                        request.IntegrationO.PersistIntegration(request.SolnId, this.InfraConnectionFactory, request.UserId);
+                    }
                     else
                     {
                         request.IntegrationO.PersistIntegration(request.SolnId, this.InfraConnectionFactory, request.UserId);
@@ -645,6 +651,54 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e) { Console.WriteLine(e.Message); }
             return false;
+        }
+
+        public void InitializeFileDb(int confid)
+        {
+            try
+            {
+                IDatabase DataDB = null;
+                string query = string.Format("SELECT * FROM eb_integration_configs where id ={0};", confid);
+                EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(query);
+
+                EbDbConfig conf = EbSerializers.Json_Deserialize(dt.Rows[0][4].ToString());
+
+                if (conf.DatabaseVendor == DatabaseVendors.PGSQL)
+                {
+                    DataDB = new PGSQLDatabase(conf);
+                }
+                else if (conf.DatabaseVendor == DatabaseVendors.MYSQL)
+                {
+                    DataDB = new MySqlDB(conf);
+                }
+                else if (conf.DatabaseVendor == DatabaseVendors.ORACLE)
+                {
+                    DataDB = new OracleDB(conf);
+                }
+                string vendor = DataDB.Vendor.ToString();
+                string Urlstart = string.Format("ExpressBase.Common.sqlscripts.{0}.", vendor.ToLower());
+                DbConnection con = DataDB.GetNewConnection();
+                con.Open();
+                var assembly = typeof(sqlscripts).Assembly;
+                string result = null;
+                Stream stream = assembly.GetManifestResourceStream(Urlstart + "filesdb.tablecreate.eb_files_bytea.sql");
+                if (stream != null)
+                {
+
+                    StreamReader reader = new StreamReader(stream);
+                    result = reader.ReadToEnd();
+                }
+                else
+                {
+                    Console.WriteLine(" Reading reference - stream is null -" + Urlstart + "filesdb.tablecreate.eb_files_bytea.sql");
+                }
+                var cmdtxt1 = DataDB.GetNewCommand(con, result);
+                cmdtxt1.ExecuteNonQuery();
+            }
+            catch (Exception e)
+            {
+
+            }
         }
 
         public CredientialBotResponse Get(CredientialBotRequest request)
