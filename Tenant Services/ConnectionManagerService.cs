@@ -604,7 +604,7 @@ namespace ExpressBase.ServiceStack.Services
                 EbIntegrationConf conf = EbSerializers.Json_Deserialize(dt.Rows[0][4].ToString());
 
                 EbDbCreateResponse response = _dbService.Post(new EbDbCreateRequest { DataDBConfig = conf as EbDbConfig, SolnId = solid, UserId = uid, IsChange = true });
-                if (!response.DeploymentCompled && drop)
+                if (response.DeploymentCompled || drop)
                 {
                     //Post(new InitialSolutionConnectionsRequest { NewSolnId = DbName, SolnId = request.SolnId, UserId = request.UserId, DbUsers = response.dbusers });
                     _tenantUserService.Post(new UpdateSolutionRequest() { UserId = uid, SolnId = solid, });
