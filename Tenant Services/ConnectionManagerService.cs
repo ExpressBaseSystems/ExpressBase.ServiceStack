@@ -275,78 +275,41 @@ namespace ExpressBase.ServiceStack.Services
 
         public TestConnectionResponse Post(TestConnectionRequest request)
         {
-            TestConnectionResponse res = new TestConnectionResponse();
-            bool IsAdmin = false;
+            TestConnectionResponse res = new TestConnectionResponse { ConnectionStatus = false };
             IDatabase DataDB = null;
-            if (request.DataDBConfig.DatabaseVendor == DatabaseVendors.PGSQL)
-                DataDB = new PGSQLDatabase(request.DataDBConfig);
-            else if (request.DataDBConfig.DatabaseVendor == DatabaseVendors.ORACLE)
-                DataDB = new OracleDB(request.DataDBConfig);
-            else if (request.DataDBConfig.DatabaseVendor == DatabaseVendors.MYSQL)
-                DataDB = new MySqlDB(request.DataDBConfig);
+            List<string> adroleslist_db = new List<string>();
+            List<string> adminroles_enum = new List<string>();
 
             try
             {
-                var dt = DataDB.DoQuery(DataDB.EB_USER_ROLE_PRIVS.Replace("@uname", request.DataDBConfig.UserName));
-
                 if (request.DataDBConfig.DatabaseVendor == DatabaseVendors.PGSQL)
                 {
-                    string[] adminroles = Enum.GetNames(typeof(PGSQLSysRoles));
-                    List<string> adroleslist = adminroles.OfType<string>().ToList();
-                    foreach (var dr in dt.Rows)
-                    {
-                        if (adroleslist.Contains(dr[0]))     //IsAdmin = (adroleslist.Contains(dr[0])) ? true : false;
-                            IsAdmin = true;
-                        else
-                        {
-                            IsAdmin = false;
-                            break;
-                        }
-                    }
-                    res.ConnectionStatus = IsAdmin;
-
+                    DataDB = new PGSQLDatabase(request.DataDBConfig);
+                    adminroles_enum = Enum.GetNames(typeof(PGSQLSysRoles)).ToList();
                 }
                 else if (request.DataDBConfig.DatabaseVendor == DatabaseVendors.ORACLE)
                 {
-                    string[] adminroles = Enum.GetNames(typeof(OracleSysRoles));
-                    List<string> adroleslist = adminroles.OfType<string>().ToList();
-                    foreach (var dr in dt.Rows)
-                    {
-                        if (adroleslist.Contains(dr[0]))
-                            IsAdmin = true;
-                        else
-                        {
-                            IsAdmin = false;
-                            break;
-                        }
-                    }
-                    res.ConnectionStatus = IsAdmin;
-
+                    DataDB = new OracleDB(request.DataDBConfig);
+                    adminroles_enum = Enum.GetNames(typeof(OracleSysRoles)).ToList();
                 }
-
                 else if (request.DataDBConfig.DatabaseVendor == DatabaseVendors.MYSQL)
                 {
-                    string[] adminroles = Enum.GetNames(typeof(MySqlSysRoles));
-                    List<string> adroleslist = adminroles.OfType<string>().ToList();
-                    List<string> adroleslistv1 = Enum.GetNames(typeof(MySqlSysRolesv1)).ToList();
-                    adroleslist = adroleslist.ConvertAll(s => s.Replace("_", " "));
-                    foreach (var dr in dt.Rows)
-                    {
-                        if (adroleslist.Contains(dr[0]) || adroleslistv1.Contains(dr[0]))
-                            IsAdmin = true;
-                        else
-                        {
-                            IsAdmin = false;
-                            break;
-                        }
-                    }
-                    res.ConnectionStatus = IsAdmin;
+                    DataDB = new MySqlDB(request.DataDBConfig);
+                    adminroles_enum = Enum.GetNames(typeof(MySqlSysRoles)).ToList();
+                    adminroles_enum = adminroles_enum.ConvertAll(s => s.Replace("___", " "));
                 }
+
+                EbDataTable dt = DataDB.DoQuery(DataDB.EB_USER_ROLE_PRIVS.Replace("@uname", request.DataDBConfig.UserName));
+                foreach (EbDataRow dr in dt.Rows)
+                {
+                    adroleslist_db.Add(dr[0].ToString());
+                }
+                bool IsSubset = !(adminroles_enum.Except(adroleslist_db).Any());
+                res.ConnectionStatus = (IsSubset) ? true : false;
             }
             catch (Exception e)
             {
                 Console.WriteLine("Exception:" + e.ToString());
-                res.ConnectionStatus = IsAdmin;
             }
             return res;
         }
