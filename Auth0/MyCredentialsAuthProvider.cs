@@ -129,10 +129,8 @@ namespace ExpressBase.ServiceStack.Auth0
             } catch(Exception ee)
             {
                 Logger.Info("Exception: "+ ee.ToJson());
-                return false;
+                throw ee;
             }
-           
-            
         }
 
         public override object Authenticate(IServiceBase authService, IAuthSession session, Authenticate request)

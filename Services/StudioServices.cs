@@ -39,13 +39,13 @@ namespace ExpressBase.ServiceStack
             {
                 EbObjectWrapper _ebObject = (new EbObjectWrapper
                 {
-                    Id = Convert.ToInt32(dr[0]),
-                    VersionNumber = dr[1].ToString(),
-                    ChangeLog = dr[2].ToString(),
-                    CommitTs = Convert.ToDateTime((dr[3].ToString()) == "0" || (dr[3].ToString()) == "" ? DateTime.MinValue : dr[3]),
-                    RefId = dr[4].ToString(),
-                    CommitUId = Convert.ToInt32(dr[5]),
-                    CommitUname = dr[6].ToString()
+                    Id = Convert.ToInt32(dr["id"]),
+                    VersionNumber = dr["version_num"].ToString(),
+                    ChangeLog = dr["obj_changelog"].ToString(),
+                    CommitTs = Convert.ToDateTime((dr["commit_ts"].ToString()) == "0" || (dr["commit_ts"].ToString()) == "" ? DateTime.MinValue : dr["commit_ts"]),
+                    RefId = dr["refid"].ToString(),
+                    CommitUId = Convert.ToInt32(dr["commit_uid"]),
+                    CommitUname = dr["fullname"].ToString()
                 });
                 wrap.Add(_ebObject);
             }
