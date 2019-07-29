@@ -196,7 +196,10 @@ namespace ExpressBase.ServiceStack.Services
             {
                 //string usersql = "SELECT * FROM eb_assignprivileges('@unameadmin','@unameROUser','@unameRWUser');".Replace("@unameadmin", _dbname + "_admin").Replace("@unameROUser", _dbname + "_ro").Replace("@unameRWUser", _dbname + "_rw");
                 string usersql = string.Format("SELECT * FROM eb_assignprivileges('{0}_admin','{0}_ro','{0}_rw');", _dbname);
-                EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(usersql);
+                EbConnectionsConfig _dcConnections = EbConnectionsConfigProvider.GetDataCenterConnections();
+
+                IDatabase DataCenterDataDB = new EbConnectionFactory(_dcConnections, _dcConnections.DataDbConfig.DatabaseName).DataDB;
+                EbDataTable dt = DataCenterDataDB.DoQuery(usersql);
 
                 string sql = string.Format(@"REVOKE connect ON DATABASE ""{0}"" FROM PUBLIC;
                                GRANT ALL PRIVILEGES ON DATABASE ""{0}"" TO {1};                   
@@ -215,7 +218,7 @@ namespace ExpressBase.ServiceStack.Services
                 //              ".Replace("@unameadmin", _dbname + "_admin").Replace("@unameROUser", _dbname + "_ro")
                 //               .Replace("@unameRWUser", _dbname + "_rw").Replace("@dbname", _dbname).Replace("@ebadmin", Environment.GetEnvironmentVariable(EnvironmentConstants.EB_DATACENTRE_ADMIN_USER));
 
-                int grnt = this.InfraConnectionFactory.DataDB.DoNonQuery(sql);
+                int grnt = DataDB.DoNonQuery(sql);
 
                 string sql2 = string.Format(@"
                       GRANT ALL PRIVILEGES ON SCHEMA public TO {1};                           
