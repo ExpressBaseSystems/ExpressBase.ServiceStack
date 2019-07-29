@@ -416,7 +416,9 @@ namespace ExpressBase.ServiceStack.Services
                             Title = ds.Tables[0].Rows[i]["title"].ToString(),
                             Id = (int)ds.Tables[0].Rows[i]["id"],
                             Order = (int)ds.Tables[0].Rows[i]["list_order"],
-                            Status = ds.Tables[0].Rows[i]["status"].ToString()
+                            Status = ds.Tables[0].Rows[i]["status"].ToString(),
+                            CreatedAt = ((DateTime)ds.Tables[0].Rows[i]["eb_created_at"]).Date
+
                         });
                 }
                 int capacity1 = ds.Tables[1].Rows.Count;
