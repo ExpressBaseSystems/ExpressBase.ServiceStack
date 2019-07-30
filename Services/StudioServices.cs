@@ -1159,6 +1159,8 @@ namespace ExpressBase.ServiceStack
                 return EbObjectTypes.TableVisualization.IntCode;
             else if (obj is EbChartVisualization)
                 return EbObjectTypes.ChartVisualization.IntCode;
+            else if (obj is Objects.EbGoogleMap)
+                return EbObjectTypes.GoogleMap.IntCode;
             else if (obj is EbWebForm)
                 return EbObjectTypes.WebForm.IntCode;
             else if (obj is EbUserControl)
@@ -1195,13 +1197,18 @@ namespace ExpressBase.ServiceStack
             }
             else if (obj is EbDataWriter)
                 Redis.Set(refId, (EbDataWriter)obj);
-            else if (obj is EbChart)
+
+            else if (obj is EbChartVisualization)
             {
-                Redis.Set(refId, (EbChart)obj);
+                Redis.Set(refId, (EbChartVisualization)obj);
             }
-            else if (obj is EbTable)
+            else if (obj is EbTableVisualization)
             {
-                Redis.Set(refId, (EbTable)obj);
+                Redis.Set(refId, (EbTableVisualization)obj);
+            }
+            else if (obj is Objects.EbGoogleMap)
+            {
+                Redis.Set(refId, (Objects.EbGoogleMap)obj);
             }
             else if (obj is EbWebForm)
             {
