@@ -1666,32 +1666,42 @@ namespace ExpressBase.ServiceStack.Services
             });
 
             var service1 = new InvoiceService();
-
-
             int count = invoices.Data.Count;
+            int cnt = 0;
             List<Eb_StripeInvoice> List = new List<Eb_StripeInvoice>();
+            List<Eb_StripeSubInvoice> SubList=null;
             for (int i = 0; i < count; i++)
             {
+                cnt = invoices.Data[i].Lines.Data.Count;
                 var invoice = service1.Get(invoices.Data[i].Id);
+                for (int j = 0; j < cnt; j++)
+                {
+                    SubList = new List<Eb_StripeSubInvoice>();
+                    SubList.Add(new Eb_StripeSubInvoice
+                    {
+                        PlanId = invoices.Data[i].Lines.Data[j].Plan.Id,
+                        Amount = invoices.Data[i].Lines.Data[j].Plan.Amount / 100,
+                        Type = invoices.Data[i].Lines.Data[j].Type,
+                        Description = invoices.Data[i].Lines.Data[j].Description,
+                        Currency = invoices.Data[i].Lines.Data[j].Currency,
+                        Quantity = invoices.Data[i].Lines.Data[j].Quantity,
+                        Total = invoices.Data[i].Lines.Data[j].Amount / 100
+                    });
+                }
                 List.Add(new Eb_StripeInvoice
                 {
                     Id = invoices.Data[i].Id,
-                    PlanId = invoices.Data[i].Lines.Data[0].Plan.Id,
-                    Amount = invoices.Data[i].Lines.Data[0].Plan.Amount / 100,
                     Date = invoices.Data[i].Date,
                     SubTotal = invoices.Data[i].Subtotal / 100,
                     Total = invoices.Data[i].Total / 100,
-                    Type = invoices.Data[i].Lines.Data[0].Type,
-                    Description = invoices.Data[i].Lines.Data[0].Description,
                     Url = invoice.HostedInvoiceUrl,
                     InvNumber = invoice.Number,
                     Status = invoice.Paid,
-                    Currency = invoices.Data[i].Lines.Data[0].Currency,
-                    Quantity = invoices.Data[i].Lines.Data[0].Quantity,
                     PeriodStart = invoices.Data[i].PeriodStart,
                     PeriodEnd = invoices.Data[i].PeriodEnd,
                     Duration = invoices.Data[i].Discount == null ? 0 : invoices.Data[i].Discount.Coupon.Duration,
-                    PercentOff = invoices.Data[i].Discount == null ? 0 : invoices.Data[i].Discount.Coupon.PercentOff
+                    PercentOff = invoices.Data[i].Discount == null ? 0 : invoices.Data[i].Discount.Coupon.PercentOff,
+                    SubList = SubList
                 });
 
             }
@@ -1711,9 +1721,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 Customer = request.CustId,
             });
-
-
-
+            
             int count = Inv.Lines.Data.Count;
             List<Eb_StripeUpcomingInvoice> Data = new List<Eb_StripeUpcomingInvoice>();
             for (int i = 0; i < count; i++)
