@@ -187,11 +187,16 @@ namespace ExpressBase.ServiceStack
                     },
 					new MyFacebookAuthProvider(AppSettings)
 					{
+						//febin
 						//AppId = "149537802493867",
 						// AppSecret = "55a9b5e0a88089465808bdc1d4f07e8e",
+						
+						  //unni
+						  AppId = "628799957635144",
+						  AppSecret = "abf6b5ad5f0f2b886ccaeddc72f209c2",
 
-						  AppId = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_FB_APP_ID),
-						  AppSecret = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_FB_APP_SECRET),
+						  //AppId = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_FB_APP_ID),
+						  //AppSecret = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_FB_APP_SECRET),
 						  Permissions = new string[] { "email, public_profile, user_hometown" },
 					},
 
@@ -199,13 +204,12 @@ namespace ExpressBase.ServiceStack
 					{
 						ClientId =Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GITHUB_CLIENT_ID),
 						ClientSecret = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GITHUB_CLIENT_SECRET)
+
+						//	ClientId ="de0c8eefca9c1871a521",
+					//	ClientSecret = "805bf067aa1768e1d63bc4f540d0f79834a3955f"
 					}
 
-					//new MyGithubAuthProvider(AppSettings)
-					//{
-					//	ClientId ="de0c8eefca9c1871a521",
-					//	ClientSecret = "805bf067aa1768e1d63bc4f540d0f79834a3955f"
-					//}
+				
 				}));
 
             this.ContentTypes.Register(MimeTypes.ProtoBuf, (reqCtx, res, stream) => ProtoBuf.Serializer.NonGeneric.Serialize(stream, res), ProtoBuf.Serializer.NonGeneric.Deserialize);

@@ -564,9 +564,10 @@ namespace ExpressBase.ServiceStack.Services
     </div>
 </body>
 </html>";
-                    body = body.Replace("{UserName}", reques.Email);
-                    body = body.Replace("{Url}", resetlink);
 					string supporturl = "mailto:support@expressbase.com";
+					body = body.Replace("{UserName}", reques.Email);
+                    body = body.Replace("{Url}", resetlink).Replace("{supporturl}", supporturl);
+					
 
 					//StringBuilder bodyMsg = new StringBuilder();
 					//bodyMsg.Append( " <img src = "+ "https://expressbase.com/images/logos/EB_Logo.png" + " />");
