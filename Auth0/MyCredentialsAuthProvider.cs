@@ -98,6 +98,8 @@ namespace ExpressBase.ServiceStack.Auth0
                 }
                 if (_authUser != null)
                 {
+                    if (_authUser.UserId == -1)
+                        throw new Exception("Access Denied");
                     if (_authUser.Email != null)
                     {						
 						CustomUserSession session = authService.GetSession(false) as CustomUserSession;
@@ -128,11 +130,11 @@ namespace ExpressBase.ServiceStack.Auth0
 
             } catch(Exception ee)
             {
+                if (ee.Message == "Access Denied")
+                    throw new Exception("Access Denied");
                 Logger.Info("Exception: "+ ee.ToJson());
-                return false;
+                throw ee;
             }
-           
-            
         }
 
         public override object Authenticate(IServiceBase authService, IAuthSession session, Authenticate request)
@@ -170,6 +172,8 @@ namespace ExpressBase.ServiceStack.Auth0
             {
                 if (e.Message == "Invalid UserName or Password")
                     throw new Exception("Invalid Username or Password");
+                else if (e.Message == "Access Denied")
+                    throw new Exception("Access Denied");
                 else
                     throw new Exception("Internal Server Error");
             }

@@ -153,9 +153,9 @@ namespace ExpressBase.ServiceStack.Services
                 EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(sql, parameters);
                 _solcount = Convert.ToInt32(dt.Rows[0][0]) + 1;
             }
-            catch(Exception e)
+            catch (Exception e)
             {
-                Console.WriteLine("Error at count * of solutions :" + e.Message); 
+                Console.WriteLine("Error at count * of solutions :" + e.Message);
             }
 
             try
@@ -173,7 +173,7 @@ namespace ExpressBase.ServiceStack.Services
                     resp.Status = true;
                 }
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 Console.WriteLine("Exception at new solution creation furtherRequest :" + e.Message);
                 resp.Status = false;
@@ -342,7 +342,7 @@ namespace ExpressBase.ServiceStack.Services
                             IsChange = false
                         });
 
-                        if (response.Resp)
+                        if (response.DeploymentCompled)
                         {
                             _conService.Post(new InitialSolutionConnectionsRequest
                             {
@@ -365,8 +365,9 @@ namespace ExpressBase.ServiceStack.Services
                                 SolnId = Sol_id_autogen,
                                 UserId = request.UserId,
                                 UserAuthId = "",
-                                WhichConsole = ""
-                            }); ;
+                                WhichConsole = "",
+                                IsDemoApp = true
+                            });
                         }
                     }
                 }
@@ -461,12 +462,12 @@ namespace ExpressBase.ServiceStack.Services
             return re;
         }
 
-		public SocialAutoSignInResponse Post(SocialAutoSignInRequest Request)
-		{
-			SocialAutoSignInResponse respo = new SocialAutoSignInResponse();
-			try
-			{
-				string sql = @"SELECT 
+        public SocialAutoSignInResponse Post(SocialAutoSignInRequest Request)
+        {
+            SocialAutoSignInResponse respo = new SocialAutoSignInResponse();
+            try
+            {
+                string sql = @"SELECT 
 								id,
 								pwd 
 								FROM public.eb_tenants 
@@ -475,30 +476,30 @@ namespace ExpressBase.ServiceStack.Services
 								and 
 								email=:mail;";
 
-				DbParameter[] parameters = {
-					this.InfraConnectionFactory.DataDB.GetNewParameter("mail", EbDbTypes.String, Request.Email),
-					this.InfraConnectionFactory.DataDB.GetNewParameter("soc_id", EbDbTypes.String, Request.Social_id),
-					};
+                DbParameter[] parameters = {
+                    this.InfraConnectionFactory.DataDB.GetNewParameter("mail", EbDbTypes.String, Request.Email),
+                    this.InfraConnectionFactory.DataDB.GetNewParameter("soc_id", EbDbTypes.String, Request.Social_id),
+                    };
 
-				EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(sql, parameters);
-				respo.Id = Convert.ToInt32(dt.Rows[0][0]);
-				respo.psw = Convert.ToString(dt.Rows[0][1]);
-			}
-			catch(Exception e)
-			{
-				Console.WriteLine("Exception: " + e.Message + e.StackTrace);
+                EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(sql, parameters);
+                respo.Id = Convert.ToInt32(dt.Rows[0][0]);
+                respo.psw = Convert.ToString(dt.Rows[0][1]);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Exception: " + e.Message + e.StackTrace);
 
-			}
+            }
 
-			return respo;
-		}
-
-
+            return respo;
+        }
 
 
 
 
-		public ForgotPasswordResponse Post(ForgotPasswordRequest reques)
+
+
+        public ForgotPasswordResponse Post(ForgotPasswordRequest reques)
         {
             ForgotPasswordResponse re = new ForgotPasswordResponse();
             try
@@ -563,19 +564,21 @@ namespace ExpressBase.ServiceStack.Services
     </div>
 </body>
 </html>";
-                    body = body.Replace("{UserName}", reques.Email);
-                    body = body.Replace("{Url}", resetlink);
+					string supporturl = "mailto:support@expressbase.com";
+					body = body.Replace("{UserName}", reques.Email);
+                    body = body.Replace("{Url}", resetlink).Replace("{supporturl}", supporturl);
+					
 
-                    //StringBuilder bodyMsg = new StringBuilder();
-                    //bodyMsg.Append( " <img src = "+ "https://expressbase.com/images/logos/EB_Logo.png" + " />");
-                    //bodyMsg.Append("<p style="+"color: red;"+"><b>Please follow this link to reset your password: <b></p>");
-                    //            bodyMsg.Append("<br />");
-                    //            bodyMsg.Append("next3");
-                    //            bodyMsg.Append("<a href=https://" + resetlink + ">Account</a>");
-                    //            bodyMsg.Append("<br />");
-                    //            bodyMsg.Append("next4");
+					//StringBuilder bodyMsg = new StringBuilder();
+					//bodyMsg.Append( " <img src = "+ "https://expressbase.com/images/logos/EB_Logo.png" + " />");
+					//bodyMsg.Append("<p style="+"color: red;"+"><b>Please follow this link to reset your password: <b></p>");
+					//            bodyMsg.Append("<br />");
+					//            bodyMsg.Append("next3");
+					//            bodyMsg.Append("<a href=https://" + resetlink + ">Account</a>");
+					//            bodyMsg.Append("<br />");
+					//            bodyMsg.Append("next4");
 
-                    MessageProducer3.Publish(new EmailServicesRequest
+					MessageProducer3.Publish(new EmailServicesRequest
                     {
                         To = reques.Email,
                         Subject = "Reset password",

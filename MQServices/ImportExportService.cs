@@ -54,7 +54,8 @@ namespace ExpressBase.ServiceStack.MQServices
                 SolnId = request.SolnId,
                 UserId = request.UserId,
                 UserAuthId = request.UserAuthId,
-                WhichConsole = request.WhichConsole
+                WhichConsole = request.WhichConsole,
+                IsDemoApp = request.IsDemoApp
             });
             Log.Info("ImportApplicationRequest published to Mq");
             return resp;
@@ -175,6 +176,11 @@ namespace ExpressBase.ServiceStack.MQServices
                             }
                             while (!uniqnameresp.IsUnique);
 
+                            ObjectLifeCycleStatus _status;
+                            if (request.IsDemoApp)
+                                _status = ObjectLifeCycleStatus.Live;
+                            else
+                                _status = ObjectLifeCycleStatus.Dev;
 
                             EbObject_Create_New_ObjectRequest ds = new EbObject_Create_New_ObjectRequest
                             {
@@ -182,7 +188,7 @@ namespace ExpressBase.ServiceStack.MQServices
                                 DisplayName = obj.DisplayName,
                                 Description = obj.Description,
                                 Json = EbSerializers.Json_Serialize(obj),
-                                Status = ObjectLifeCycleStatus.Dev,
+                                Status = _status,
                                 Relations = "_rel_obj",
                                 IsSave = false,
                                 Tags = "_tags",

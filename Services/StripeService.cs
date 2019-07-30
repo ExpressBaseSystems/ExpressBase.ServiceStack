@@ -9,6 +9,7 @@ using System.Data.Common;
 using Stripe;
 using ExpressBase.Common.Stripe;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -500,7 +501,7 @@ namespace ExpressBase.ServiceStack.Services
         public EditCardExpResponse Post(EditCardExpRequest request)
         {
             EditCardExpResponse resp = new EditCardExpResponse();
-            StripeConfiguration.SetApiKey(Environment.GetEnvironmentVariable(EnvironmentConstants.EB_STRIPE_SECRET_KEY));
+            StripeConfiguration.ApiKey = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_STRIPE_SECRET_KEY);
             using (DbConnection con = this.InfraConnectionFactory.DataDB.GetNewConnection())
             {
                 con.Open();
@@ -814,8 +815,7 @@ namespace ExpressBase.ServiceStack.Services
                 cmd.Parameters.Add(InfraConnectionFactory.DataDB.GetNewParameter("@pricingtier", Common.Structures.EbDbTypes.Int16, (int)PricingTiers.STANDARD));
                 cmd.Parameters.Add(InfraConnectionFactory.DataDB.GetNewParameter("@solid", Common.Structures.EbDbTypes.String, request.SolnId));
                 cmd.ExecuteNonQuery();
-                TenantUserServices _tenantUserService = base.ResolveService<TenantUserServices>();
-                _tenantUserService.Post(new UpdateSolutionRequest() { SolnId = request.SolnId, UserId = request.UserId });
+
                 string str1 = @"
                     INSERT INTO
                         eb_subscription (cust_id,plan_id,coupon_id,sub_id,sub_item_id,latest_invoice_id,user_no,created_at)
@@ -833,6 +833,9 @@ namespace ExpressBase.ServiceStack.Services
                 cmd1.ExecuteNonQuery();
                 //}
 
+                TenantUserServices _tenantUserService = base.ResolveService<TenantUserServices>();
+                _tenantUserService.Post(new UpdateSolutionRequest() { SolnId = request.SolnId, UserId = request.UserId });
+
                 resp.PeriodStart = ((DateTime)subscription.CurrentPeriodStart).ToString("dd MMM,yyyy");
                 resp.PeriodEnd = ((DateTime)subscription.CurrentPeriodEnd).ToString("dd MMM,yyyy");
                 resp.Created = ((DateTime)subscription.Created).ToString("dd MMM,yyyy");
@@ -848,6 +851,7 @@ namespace ExpressBase.ServiceStack.Services
 
         public UpgradeSubscriptionResponse Post(UpgradeSubscriptionRequest request)
         {
+            StripeConfiguration.ApiKey = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_STRIPE_SECRET_KEY);
             UpgradeSubscriptionResponse resp = new UpgradeSubscriptionResponse();
             using (DbConnection con = this.InfraConnectionFactory.DataDB.GetNewConnection())
             {
@@ -864,7 +868,7 @@ namespace ExpressBase.ServiceStack.Services
                 var usageRecordOptions = new UsageRecordCreateOptions()
                 {
                     Quantity = request.Total,
-                    Timestamp = DateTime.Now.AddMinutes(3),
+                    Timestamp = DateTime.Now,
                     Action = "increment"
                 };
                 var usageRecordService = new UsageRecordService();
@@ -915,722 +919,723 @@ namespace ExpressBase.ServiceStack.Services
             {
                 Event StripeEvent = EventUtility.ConstructEvent(request.Json,
                    request.Header, secret);
-
-                string _stripeevent = StripeEvent.Type;
+                string stripeevent = StripeEvent.Type;
                 string type = StripeEvent.Data.Object.Object;
-                //string type_id = (stripeEvent.Data.Object as Customer).Id;
                 string type_id = JsonConvert.SerializeObject(StripeEvent.Data.Object);
-                Console.WriteLine("Inserting Web Hook 1: " + _stripeevent + ", " + type + ", " + type_id);
-                //------------------------------------------ Account----------------------------------------------
-                //if (stripeEvent.Type == Events.AccountApplicationAuthorized)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.AccountApplicationDeauthorized)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.AccountExternalAccountCreated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.AccountExternalAccountDeleted)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.AccountExternalAccountUpdated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.AccountUpdated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                ////---------------------------Application Fee-----------------------------------------------------
-                //else if (stripeEvent.Type == Events.ApplicationFeeCreated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.ApplicationFeeRefunded)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.ApplicationFeeRefundUpdated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                ////--------------------------------------- Balance---------------------------------------------------
-                //else if (stripeEvent.Type == Events.BalanceAvailable)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                ////----------------------------------------Bitcoin----------------------------------------------------
+                var userObj = JObject.Parse(type_id);
+                string cust_id = Convert.ToString(userObj["customer"]);
+                Console.WriteLine("Inserting Web Hook 1: " + stripeevent + ", " + type + ", " + type_id);
+
+                {//------------------------------------------ Account----------------------------------------------
+                 //if (stripeEvent.Type == Events.AccountApplicationAuthorized)
+                 //{
+                 //    Customer cc = stripeEvent.Data.Object as Customer;
+                 //    type_id = cc.Id;
+                 //}
+                 //else if (stripeEvent.Type == Events.AccountApplicationDeauthorized)
+                 //{
+                 //    Customer cc = stripeEvent.Data.Object as Customer;
+                 //    type_id = cc.Id;
+                 //}
+                 //else if (stripeEvent.Type == Events.AccountExternalAccountCreated)
+                 //{
+                 //    Customer cc = stripeEvent.Data.Object as Customer;
+                 //    type_id = cc.Id;
+                 //}
+                 //else if (stripeEvent.Type == Events.AccountExternalAccountDeleted)
+                 //{
+                 //    Customer cc = stripeEvent.Data.Object as Customer;
+                 //    type_id = cc.Id;
+                 //}
+                 //else if (stripeEvent.Type == Events.AccountExternalAccountUpdated)
+                 //{
+                 //    Customer cc = stripeEvent.Data.Object as Customer;
+                 //    type_id = cc.Id;
+                 //}
+                 //else if (stripeEvent.Type == Events.AccountUpdated)
+                 //{
+                 //    Customer cc = stripeEvent.Data.Object as Customer;
+                 //    type_id = cc.Id;
+                 //}
+                 ////---------------------------Application Fee-----------------------------------------------------
+                 //else if (stripeEvent.Type == Events.ApplicationFeeCreated)
+                 //{
+                 //    Customer cc = stripeEvent.Data.Object as Customer;
+                 //    type_id = cc.Id;
+                 //}
+                 //else if (stripeEvent.Type == Events.ApplicationFeeRefunded)
+                 //{
+                 //    Customer cc = stripeEvent.Data.Object as Customer;
+                 //    type_id = cc.Id;
+                 //}
+                 //else if (stripeEvent.Type == Events.ApplicationFeeRefundUpdated)
+                 //{
+                 //    Customer cc = stripeEvent.Data.Object as Customer;
+                 //    type_id = cc.Id;
+                 //}
+                 ////--------------------------------------- Balance---------------------------------------------------
+                 //else if (stripeEvent.Type == Events.BalanceAvailable)
+                 //{
+                 //    Customer cc = stripeEvent.Data.Object as Customer;
+                 //    type_id = cc.Id;
+                 //}
+                 ////----------------------------------------Bitcoin----------------------------------------------------
 
 
-                ////------------------------------------------------ Charge----------------------------------------------
-                //else if (stripeEvent.Type == Events.ChargeCaptured)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.ChargeDisputeClosed)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.ChargeDisputeCreated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.ChargeDisputeFundsReinstated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.ChargeDisputeFundsWithdrawn)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.ChargeDisputeUpdated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.ChargeExpired)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.ChargeFailed)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.ChargePending)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.ChargeRefunded)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.ChargeRefundUpdated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.ChargeSucceeded)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.ChargeUpdated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                ////----------------------------------Checkout -------------------------------
-                //else if (stripeEvent.Type == Events.CheckoutSessionCompleted)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                ////----------------------------------Coupon--------------------------------------
-                //else if (stripeEvent.Type == Events.CouponCreated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.CouponDeleted)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.CouponUpdated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                ////---------------------------------------Credit-------------------------------------------
-                //else if (stripeEvent.Type == Events.CreditNoteCreated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.CreditNoteUpdated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.CreditNoteVoided)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                ////-------------------------------Customer--------------------------------
-                //else if (stripeEvent.Type == Events.CustomerCreated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.CustomerDeleted)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.CustomerDiscountCreated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.CustomerDiscountDeleted)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.CustomerDiscountUpdated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.CustomerSourceCreated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.CustomerSourceDeleted)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.CustomerSourceExpiring)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.CustomerSourceUpdated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.CustomerSubscriptionCreated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.CustomerSubscriptionDeleted)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.CustomerSubscriptionTrialWillEnd)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.CustomerSubscriptionUpdated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.CustomerUpdated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                ////---------------------------------- File---------------------------------------
-                //else if (stripeEvent.Type == Events.FileCreated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                ////---------------------------------Invoice--------------------------------------
-                //else if (stripeEvent.Type == Events.InvoiceCreated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.InvoiceDeleted)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.InvoiceFinalized)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.InvoiceItemCreated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.InvoiceItemDeleted)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.InvoiceItemUpdated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.InvoiceMarkedUncollectible)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.InvoicePaymentActionRequired)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.InvoicePaymentFailed)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.InvoicePaymentSucceeded)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.InvoiceSent)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.InvoiceUpcoming)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.InvoiceUpdated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.InvoiceVoided)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                ////---------------------------------------Issue-----------------------------------------
-                //else if (stripeEvent.Type == Events.IssuingAuthorizationCreated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.IssuingAuthorizationRequest)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.IssuingAuthorizationUpdated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.IssuingCardCreated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.IssuingCardholderCreated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.IssuingCardholderUpdated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.IssuingCardUpdated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.IssuingDisputeCreated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.IssuingDisputeUpdated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.IssuingTransactionCreated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.IssuingTransactionUpdated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                ////-------------------------------------- Order---------------------------------------------
-                //else if (stripeEvent.Type == Events.OrderCreated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.OrderPaymentFailed)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.OrderPaymentSucceeded)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.OrderReturnCreated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.OrderUpdated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                ////------------------------------------Payment-----------------------------------
-                //else if (stripeEvent.Type == Events.PaymentIntentAmountCapturableUpdated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.PaymentIntentCreated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.PaymentIntentPaymentFailed)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.PaymentIntentSucceeded)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.PaymentMethodAttached)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.PaymentMethodCardAutomaticallyUpdated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.PaymentMethodDetached)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.PaymentMethodUpdated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                ////------------------------------------Payout--------------------------------
-                //else if (stripeEvent.Type == Events.PayoutCanceled)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.PayoutCreated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.PayoutFailed)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.PayoutPaid)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.PayoutUpdated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                ////------------------------------------------Person-------------------------------------------
-                //else if (stripeEvent.Type == Events.PersonCreated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.PersonDeleted)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.PersonUpdated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                ////------------------------------------------Ping------------------------------------------------
-                //else if (stripeEvent.Type == Events.Ping)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                ////-------------------------------------Plan------------------------------------------------------
-                //else if (stripeEvent.Type == Events.PlanCreated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.PlanDeleted)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.PlanUpdated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                ////----------------------------------------------Product-------------------------------------------
-                //else if (stripeEvent.Type == Events.ProductCreated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.ProductDeleted)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.ProductUpdated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                ////--------------------------------------------Recipient-------------------------------------------
-                //else if (stripeEvent.Type == Events.RecipientCreated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.RecipientDeleted)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.RecipientUpdated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                ////------------------------------------Reporting-----------------------------------
-                //else if (stripeEvent.Type == Events.ReportingReportRunFailed)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.ReportingReportRunSucceeded)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.ReportingReportTypeUpdated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                ////---------------------------------------------Review---------------------------------------
-                //else if (stripeEvent.Type == Events.ReviewClosed)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.ReviewOpened)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                ////------------------------------------------Sigma---------------------------------------------
-                //else if (stripeEvent.Type == Events.SigmaScheduleQueryRunCreated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                ////------------------------------------------Sku------------------------------------------------
-                //else if (stripeEvent.Type == Events.SkuCreated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.SkuDeleted)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.SkuUpdated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                ////-----------------------------------------Source-------------------------------------------------
-                //else if (stripeEvent.Type == Events.SourceCanceled)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.SourceChargeable)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.SourceFailed)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.SourceMandateNotification)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.SourceRefundAttributesRequired)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.SourceTransactionCreated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.SourceTransactionUpdated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                ////-------------------------------------Subscription-----------------------------------------
-                //else if (stripeEvent.Type == Events.SubscriptionScheduleAborted)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.SubscriptionScheduleCanceled)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.SubscriptionScheduleCompleted)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.SubscriptionScheduleCreated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.SubscriptionScheduleExpiring)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.SubscriptionScheduleReleased)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.SubscriptionScheduleUpdated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                ////-------------------------------------Tax------------------------------
-                //else if (stripeEvent.Type == Events.TaxRateCreated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.TaxRateUpdated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                ////---------------------------------------Topup----------------------------------
-                //else if (stripeEvent.Type == Events.TopupCanceled)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.TopupCreated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.TopupFailed)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.TopupReversed)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.TopupSucceeded)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                ////-----------------------------------------------Transfer-------------------------------------
-                //else if (stripeEvent.Type == Events.TransferCreated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.TransferReversed)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-                //else if (stripeEvent.Type == Events.TransferUpdated)
-                //{
-                //    Customer cc = stripeEvent.Data.Object as Customer;
-                //    type_id = cc.Id;
-                //}
-
+                    ////------------------------------------------------ Charge----------------------------------------------
+                    //else if (stripeEvent.Type == Events.ChargeCaptured)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.ChargeDisputeClosed)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.ChargeDisputeCreated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.ChargeDisputeFundsReinstated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.ChargeDisputeFundsWithdrawn)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.ChargeDisputeUpdated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.ChargeExpired)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.ChargeFailed)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.ChargePending)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.ChargeRefunded)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.ChargeRefundUpdated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.ChargeSucceeded)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.ChargeUpdated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    ////----------------------------------Checkout -------------------------------
+                    //else if (stripeEvent.Type == Events.CheckoutSessionCompleted)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    ////----------------------------------Coupon--------------------------------------
+                    //else if (stripeEvent.Type == Events.CouponCreated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.CouponDeleted)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.CouponUpdated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    ////---------------------------------------Credit-------------------------------------------
+                    //else if (stripeEvent.Type == Events.CreditNoteCreated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.CreditNoteUpdated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.CreditNoteVoided)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    ////-------------------------------Customer--------------------------------
+                    //else if (stripeEvent.Type == Events.CustomerCreated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.CustomerDeleted)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.CustomerDiscountCreated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.CustomerDiscountDeleted)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.CustomerDiscountUpdated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.CustomerSourceCreated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.CustomerSourceDeleted)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.CustomerSourceExpiring)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.CustomerSourceUpdated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.CustomerSubscriptionCreated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.CustomerSubscriptionDeleted)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.CustomerSubscriptionTrialWillEnd)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.CustomerSubscriptionUpdated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.CustomerUpdated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    ////---------------------------------- File---------------------------------------
+                    //else if (stripeEvent.Type == Events.FileCreated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    ////---------------------------------Invoice--------------------------------------
+                    //else if (stripeEvent.Type == Events.InvoiceCreated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.InvoiceDeleted)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.InvoiceFinalized)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.InvoiceItemCreated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.InvoiceItemDeleted)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.InvoiceItemUpdated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.InvoiceMarkedUncollectible)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.InvoicePaymentActionRequired)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.InvoicePaymentFailed)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.InvoicePaymentSucceeded)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.InvoiceSent)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.InvoiceUpcoming)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.InvoiceUpdated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.InvoiceVoided)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    ////---------------------------------------Issue-----------------------------------------
+                    //else if (stripeEvent.Type == Events.IssuingAuthorizationCreated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.IssuingAuthorizationRequest)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.IssuingAuthorizationUpdated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.IssuingCardCreated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.IssuingCardholderCreated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.IssuingCardholderUpdated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.IssuingCardUpdated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.IssuingDisputeCreated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.IssuingDisputeUpdated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.IssuingTransactionCreated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.IssuingTransactionUpdated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    ////-------------------------------------- Order---------------------------------------------
+                    //else if (stripeEvent.Type == Events.OrderCreated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.OrderPaymentFailed)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.OrderPaymentSucceeded)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.OrderReturnCreated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.OrderUpdated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    ////------------------------------------Payment-----------------------------------
+                    //else if (stripeEvent.Type == Events.PaymentIntentAmountCapturableUpdated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.PaymentIntentCreated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.PaymentIntentPaymentFailed)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.PaymentIntentSucceeded)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.PaymentMethodAttached)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.PaymentMethodCardAutomaticallyUpdated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.PaymentMethodDetached)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.PaymentMethodUpdated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    ////------------------------------------Payout--------------------------------
+                    //else if (stripeEvent.Type == Events.PayoutCanceled)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.PayoutCreated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.PayoutFailed)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.PayoutPaid)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.PayoutUpdated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    ////------------------------------------------Person-------------------------------------------
+                    //else if (stripeEvent.Type == Events.PersonCreated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.PersonDeleted)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.PersonUpdated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    ////------------------------------------------Ping------------------------------------------------
+                    //else if (stripeEvent.Type == Events.Ping)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    ////-------------------------------------Plan------------------------------------------------------
+                    //else if (stripeEvent.Type == Events.PlanCreated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.PlanDeleted)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.PlanUpdated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    ////----------------------------------------------Product-------------------------------------------
+                    //else if (stripeEvent.Type == Events.ProductCreated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.ProductDeleted)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.ProductUpdated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    ////--------------------------------------------Recipient-------------------------------------------
+                    //else if (stripeEvent.Type == Events.RecipientCreated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.RecipientDeleted)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.RecipientUpdated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    ////------------------------------------Reporting-----------------------------------
+                    //else if (stripeEvent.Type == Events.ReportingReportRunFailed)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.ReportingReportRunSucceeded)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.ReportingReportTypeUpdated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    ////---------------------------------------------Review---------------------------------------
+                    //else if (stripeEvent.Type == Events.ReviewClosed)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.ReviewOpened)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    ////------------------------------------------Sigma---------------------------------------------
+                    //else if (stripeEvent.Type == Events.SigmaScheduleQueryRunCreated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    ////------------------------------------------Sku------------------------------------------------
+                    //else if (stripeEvent.Type == Events.SkuCreated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.SkuDeleted)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.SkuUpdated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    ////-----------------------------------------Source-------------------------------------------------
+                    //else if (stripeEvent.Type == Events.SourceCanceled)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.SourceChargeable)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.SourceFailed)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.SourceMandateNotification)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.SourceRefundAttributesRequired)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.SourceTransactionCreated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.SourceTransactionUpdated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    ////-------------------------------------Subscription-----------------------------------------
+                    //else if (stripeEvent.Type == Events.SubscriptionScheduleAborted)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.SubscriptionScheduleCanceled)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.SubscriptionScheduleCompleted)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.SubscriptionScheduleCreated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.SubscriptionScheduleExpiring)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.SubscriptionScheduleReleased)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.SubscriptionScheduleUpdated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    ////-------------------------------------Tax------------------------------
+                    //else if (stripeEvent.Type == Events.TaxRateCreated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.TaxRateUpdated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    ////---------------------------------------Topup----------------------------------
+                    //else if (stripeEvent.Type == Events.TopupCanceled)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.TopupCreated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.TopupFailed)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.TopupReversed)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.TopupSucceeded)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    ////-----------------------------------------------Transfer-------------------------------------
+                    //else if (stripeEvent.Type == Events.TransferCreated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.TransferReversed)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                    //else if (stripeEvent.Type == Events.TransferUpdated)
+                    //{
+                    //    Customer cc = stripeEvent.Data.Object as Customer;
+                    //    type_id = cc.Id;
+                    //}
+                }
                 using (DbConnection con = this.InfraConnectionFactory.DataDB.GetNewConnection())
                 {
                     con.Open();
-                    Console.WriteLine("Inserting Web Hook 2: " + _stripeevent + ", " + type + ", " + type_id);
+                    Console.WriteLine("Inserting Web Hook 2: " + stripeevent + ", " + type + ", " + type_id);
                     string str = string.Format(@"
                         INSERT INTO 
-                            eb_stripeevents (event,type,type_id,created_at)
-                        VALUES('{0}','{1}','{2}','{3}')", _stripeevent, type, type_id, DateTime.Now);
+                            eb_stripeevents (event,type,type_id,created_at,cust_id)
+                        VALUES('{0}','{1}','{2}','{3}','{4}')", stripeevent, type, type_id, DateTime.Now, cust_id);
                     Console.WriteLine("Web Hook Connection  DBName : " + InfraConnectionFactory.DataDB.DBName);
                     DbCommand cmd = InfraConnectionFactory.DataDB.GetNewCommand(con, str);
 
@@ -1684,7 +1689,9 @@ namespace ExpressBase.ServiceStack.Services
                     Currency = invoices.Data[i].Lines.Data[0].Currency,
                     Quantity = invoices.Data[i].Lines.Data[0].Quantity,
                     PeriodStart = invoices.Data[i].PeriodStart,
-                    PeriodEnd = invoices.Data[i].PeriodEnd
+                    PeriodEnd = invoices.Data[i].PeriodEnd,
+                    Duration = invoices.Data[i].Discount == null ? 0 : invoices.Data[i].Discount.Coupon.Duration,
+                    PercentOff = invoices.Data[i].Discount == null ? 0 : invoices.Data[i].Discount.Coupon.PercentOff
                 });
 
             }
@@ -1730,6 +1737,7 @@ namespace ExpressBase.ServiceStack.Services
                 Currency = Inv.Currency,
                 PercentOff = Inv.Discount == null ? 0 : Inv.Discount.Coupon.PercentOff,
                 CouponId = Inv.Discount == null ? "" : Inv.Discount.Coupon.Id,
+                Duration = Inv.Discount == null ? 0 : Inv.Discount.Coupon.Duration,
                 Data = Data
             };
 

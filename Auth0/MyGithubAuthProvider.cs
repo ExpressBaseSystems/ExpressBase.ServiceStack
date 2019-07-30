@@ -85,7 +85,8 @@ namespace ExpressBase.ServiceStack.Auth0
 																			 (:email,:name,:githubid,:password,NOW(),:fals,:fals,:fals) RETURNING id;", parameter1);
 
                         Console.WriteLine("inserted details to tenant table");
-                    }
+						sco_signup.Pauto = pasword;
+					}
                    
                     
                         sco_signup.AuthProvider = t.Provider;
@@ -94,13 +95,13 @@ namespace ExpressBase.ServiceStack.Auth0
                         sco_signup.Social_id = (t.UserId).ToString();
                         sco_signup.Fullname = t.UserName;
                         // sco_signup.IsVerified = session.IsAuthenticated;
-                        sco_signup.Pauto = pasword;
+                       
                         sco_signup.UniqueEmail = unique;
                        
                     
                     b = JsonConvert.SerializeObject(sco_signup);
                     
-                    string sociallink1 = "localhost:41500";
+                    string sociallink1 = "localhost:";
                     string sociallink2 = "eb-test.xyz";
                     string sociallink3 = "expressbase.com";
                     Console.WriteLine("ReferrerUrl= " + session.ReferrerUrl);

@@ -68,7 +68,7 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception e)
             {
                 Console.WriteLine("Exception: " + e.Message + e.StackTrace);
-                return new EbDbCreateResponse { ResponseStatus = new ResponseStatus { Message = "Database Already exists" } };
+                return new EbDbCreateResponse { ResponseStatus = new ResponseStatus { Message = ErrorTexConstants.DB_ALREADY_EXISTS } };
             }
         }
 
@@ -164,12 +164,12 @@ namespace ExpressBase.ServiceStack.Services
                     {
                         Console.WriteLine(".............Reached Transaction Commit");
                         con_trans.Commit();
-                        EbDbCreateResponse success = request.IsChange ? new EbDbCreateResponse() { Resp = true } : _res;
+                        EbDbCreateResponse success = request.IsChange ? new EbDbCreateResponse() { DeploymentCompled = true } : _res;
 
                         if (!request.IsChange)
                         {   //run northwind
                             Console.WriteLine("Executing northwind_script");
-                            CreateOrAlter_Structure(con, "ExpressBase.Common.sqlscripts.pgsql.northwind_script.sql", DataDB);
+                            CreateOrAlter_Structure(con, "ExpressBase.Common.sqlscripts.pgsql.eb_northwind_script.sql", DataDB);
 
                             //import the application 129
                         }
@@ -196,11 +196,16 @@ namespace ExpressBase.ServiceStack.Services
             {
                 //string usersql = "SELECT * FROM eb_assignprivileges('@unameadmin','@unameROUser','@unameRWUser');".Replace("@unameadmin", _dbname + "_admin").Replace("@unameROUser", _dbname + "_ro").Replace("@unameRWUser", _dbname + "_rw");
                 string usersql = string.Format("SELECT * FROM eb_assignprivileges('{0}_admin','{0}_ro','{0}_rw');", _dbname);
-                EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(usersql);
+                EbConnectionsConfig _dcConnections = EbConnectionsConfigProvider.GetDataCenterConnections();
+
+                IDatabase DataCenterDataDB = new EbConnectionFactory(_dcConnections, _dcConnections.DataDbConfig.DatabaseName).DataDB;
+                EbDataTable dt = DataCenterDataDB.DoQuery(usersql);
 
                 string sql = string.Format(@"REVOKE connect ON DATABASE ""{0}"" FROM PUBLIC;
                                GRANT ALL PRIVILEGES ON DATABASE ""{0}"" TO {1};                   
-                               GRANT ALL PRIVILEGES ON DATABASE ""{0}"" TO {0}_admin;      
+                               GRANT ALL PRIVILEGES ON DATABASE ""{0}"" TO {0}_admin;
+                               GRANT CONNECT ON DATABASE ""{0}"" TO {1};
+                               GRANT CONNECT ON DATABASE ""{0}"" TO {0}_admin;
                                GRANT CONNECT ON DATABASE ""{0}"" TO {0}_ro;     
                                GRANT CONNECT ON DATABASE ""{0}"" TO {0}_rw;", _dbname,
                                Environment.GetEnvironmentVariable(EnvironmentConstants.EB_DATACENTRE_ADMIN_USER));
@@ -213,27 +218,102 @@ namespace ExpressBase.ServiceStack.Services
                 //              ".Replace("@unameadmin", _dbname + "_admin").Replace("@unameROUser", _dbname + "_ro")
                 //               .Replace("@unameRWUser", _dbname + "_rw").Replace("@dbname", _dbname).Replace("@ebadmin", Environment.GetEnvironmentVariable(EnvironmentConstants.EB_DATACENTRE_ADMIN_USER));
 
-                int grnt = this.InfraConnectionFactory.DataDB.DoNonQuery(sql);
+                int grnt = DataDB.DoNonQuery(sql);
 
-                string sql2 = string.Format(@"GRANT USAGE ON SCHEMA public TO {1};
+                string sql2 = string.Format(@"
+                      GRANT ALL PRIVILEGES ON SCHEMA public TO {1};                           
                             GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO {1};
+                            ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON TABLES TO {1};
+                           -- ALTER DEFAULT PRIVILEGES FOR ROLE {1} IN SCHEMA public GRANT ALL ON TABLES TO {0}_admin;
                             GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO {1};
-                            GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO {1};
-                            GRANT USAGE ON SCHEMA public TO {0}_admin;   
-                            GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO {0}_admin;
+                            ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON SEQUENCES TO {1};
+                          -- ALTER DEFAULT PRIVILEGES FOR ROLE {1} IN SCHEMA public GRANT ALL ON SEQUENCES TO {0}_admin;
+                            GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public TO {1};
+                            ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON FUNCTIONS TO {1};
+                           -- ALTER DEFAULT PRIVILEGES FOR ROLE {1} IN SCHEMA public GRANT ALL ON FUNCTIONS TO {0}_admin;
+                      GRANT ALL PRIVILEGES ON SCHEMA public TO {0}_admin; 
+                            GRANT {0}_admin to {1};
+                            GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO {0}_admin;                            
+                            ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON TABLES TO {0}_admin;                            
+                            ALTER DEFAULT PRIVILEGES FOR ROLE {0}_admin IN SCHEMA public GRANT ALL ON TABLES TO {1};
                             GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO {0}_admin;
-                            GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO {0}_admin;
-                            REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM {0}_ro;
+                            ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON SEQUENCES TO {0}_admin;
+                            ALTER DEFAULT PRIVILEGES FOR ROLE {0}_admin IN SCHEMA public GRANT ALL ON SEQUENCES TO {1};
+                            GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public TO {0}_admin;
+                            ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON FUNCTIONS TO {0}_admin; 
+                            ALTER DEFAULT PRIVILEGES FOR ROLE {0}_admin IN SCHEMA public GRANT ALL ON FUNCTIONS TO {1};                            
+                            REVOKE ALL ON SCHEMA public FROM public;
+                            REVOKE ALL ON DATABASE {0} FROM PUBLIC;
+                      REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM {0}_ro;
+                            REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM {0}_ro; 
+                            REVOKE ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public FROM {0}_ro; 
                             GRANT USAGE ON SCHEMA public TO {0}_ro;
+                            GRANT {0}_ro to {0}_admin;                            
                             GRANT SELECT ON ALL TABLES IN SCHEMA public TO {0}_ro;
-                            GRANT SELECT ON ALL SEQUENCES IN SCHEMA public TO {0}_ro;
+                            ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO {0}_ro;
+                            ALTER DEFAULT PRIVILEGES FOR ROLE {0}_admin IN SCHEMA public GRANT SELECT ON TABLES TO {0}_ro;
+                            GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO {0}_ro;
+                            ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE ON SEQUENCES TO {0}_ro;
+                            ALTER DEFAULT PRIVILEGES FOR ROLE {0}_admin IN SCHEMA public GRANT USAGE ON SEQUENCES TO {0}_ro;
                             GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO {0}_ro;
+                            ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT EXECUTE ON FUNCTIONS TO {0}_ro; 
+                            ALTER DEFAULT PRIVILEGES FOR ROLE {0}_admin IN SCHEMA public GRANT USAGE ON SEQUENCES TO {0}_ro;
+                       REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM {0}_rw;
+                            REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM {0}_rw;
+                            REVOKE ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public FROM {0}_rw;
                             GRANT USAGE ON SCHEMA public TO {0}_rw;
+                            GRANT {0}_rw to {0}_admin;                            
                             GRANT SELECT,INSERT,UPDATE ON ALL TABLES IN SCHEMA public TO {0}_rw;
-                            GRANT SELECT,UPDATE ON ALL SEQUENCES IN SCHEMA public TO {0}_rw;
-                            GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO {0}_rw;", _dbname,
+                            ALTER DEFAULT PRIVILEGES FOR ROLE {0}_admin IN SCHEMA public GRANT SELECT,INSERT,UPDATE ON TABLES TO {0}_rw;
+                            ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT,INSERT,UPDATE ON TABLES TO {0}_rw;
+                            GRANT SELECT,UPDATE,USAGE ON ALL SEQUENCES IN SCHEMA public TO {0}_rw;
+                            ALTER DEFAULT PRIVILEGES FOR ROLE {0}_admin IN SCHEMA public GRANT SELECT,UPDATE,USAGE ON SEQUENCES TO {0}_rw;
+                            ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT,UPDATE,USAGE ON SEQUENCES TO {0}_rw;                            
+                            GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO {0}_rw;
+                            ALTER DEFAULT PRIVILEGES FOR ROLE {0}_admin IN SCHEMA public GRANT EXECUTE ON FUNCTIONS TO {0}_rw;
+                            ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT EXECUTE ON FUNCTIONS TO {0}_rw;", _dbname,
                             Environment.GetEnvironmentVariable(EnvironmentConstants.EB_DATACENTRE_ADMIN_USER)
                             );
+
+                //string sql2 = string.Format(@"
+                //            GRANT ALL PRIVILEGES ON SCHEMA public TO {1};                           
+                //            GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO {1};
+                //            ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON TABLES TO {1};
+                //            GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO {1};
+                //            ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON SEQUENCES TO {1};
+                //            GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public TO {1};
+                //            ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON FUNCTIONS TO {1};
+                //            GRANT ALL PRIVILEGES ON SCHEMA public TO {0}_admin;   
+                //            GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO {0}_admin;
+                //            ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON TABLES TO {0}_admin;
+                //            GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO {0}_admin;
+                //            ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON SEQUENCES TO {0}_admin;
+                //            GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public TO {0}_admin;
+                //            ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON FUNCTIONS TO {0}_admin; 
+                //            REVOKE ALL ON SCHEMA public FROM public;
+                //            REVOKE ALL ON DATABASE {0} FROM PUBLIC;
+                //            REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM {0}_ro;
+                //            REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM {0}_ro; 
+                //            REVOKE ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public FROM {0}_ro; 
+                //            GRANT USAGE ON SCHEMA public TO {0}_ro;
+                //            GRANT SELECT ON ALL TABLES IN SCHEMA public TO {0}_ro;
+                //            ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO {0}_ro;
+                //            GRANT SELECT ON ALL SEQUENCES IN SCHEMA public TO {0}_ro;
+                //            ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON SEQUENCES TO {0}_ro;
+                //            GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO {0}_ro;
+                //            ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT EXECUTE ON FUNCTIONS TO {0}_ro;                            
+                //            REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM {0}_rw;
+                //            REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM {0}_rw;
+                //            REVOKE ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public FROM {0}_rw;
+                //            GRANT USAGE ON SCHEMA public TO {0}_rw;
+                //            GRANT SELECT,INSERT,UPDATE ON ALL TABLES IN SCHEMA public TO {0}_rw;
+                //            ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT,INSERT,UPDATE ON TABLES TO {0}_rw;
+                //            GRANT SELECT,UPDATE,USAGE ON ALL SEQUENCES IN SCHEMA public TO {0}_rw;
+                //            ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT,UPDATE,USAGE ON SEQUENCES TO {0}_rw;                            
+                //            GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO {0}_rw;
+                //            ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT EXECUTE ON FUNCTIONS TO {0}_rw;", _dbname,
+                //            Environment.GetEnvironmentVariable(EnvironmentConstants.EB_DATACENTRE_ADMIN_USER)
+                //            );
 
                 //@"GRANT USAGE ON SCHEMA public TO @ebadmin;
                 //            GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO @ebadmin;
@@ -269,7 +349,7 @@ namespace ExpressBase.ServiceStack.Services
                 };
                 return new EbDbCreateResponse
                 {
-                    Resp = true,
+                    DeploymentCompled = true,
                     DbName = _dbname,
                     DbUsers = ebdbusers
                 };
@@ -277,7 +357,7 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception e)
             {
                 Console.WriteLine(".............problem in CreateUsers4DataBase: " + e.ToString());
-                return null;
+                throw e;
             }
         }
 
