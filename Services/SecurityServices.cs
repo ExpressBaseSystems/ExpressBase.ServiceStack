@@ -164,7 +164,10 @@ namespace ExpressBase.ServiceStack.Services
                 sql += @"SELECT fullname,nickname,email,alternateemail,dob,sex,phnoprimary,phnosecondary,landline,phextension,fbid,fbname,statusid,hide,preferencesjson,dprefid
 						FROM eb_users WHERE id = :id AND (statusid = 0 OR statusid = 1 OR statusid = 2) AND id > 1 AND eb_del = 'F';
 						SELECT role_id FROM eb_role2user WHERE user_id = :id AND eb_del = 'F';
-						SELECT groupid FROM eb_user2usergroup WHERE userid = :id AND eb_del = 'F';";
+						SELECT groupid FROM eb_user2usergroup WHERE userid = :id AND eb_del = 'F';
+                        SELECT m.id, m.key_id, m.key_type, m.description, l.id AS lid, l.c_type, l.c_operation, l.c_value 
+	                        FROM eb_constraints_master m, eb_constraints_line l
+	                        WHERE m.id = l.master_id AND m.key_id = :id AND key_type = 1 AND eb_del = 'F' ORDER BY m.id;";
                 //SELECT id, user_id, usergroup_id, role_id, c_type, c_value, c_operation, c_meta FROM eb_constraints WHERE user_id = :id AND eb_del = 'F' ORDER BY id;
             }
             //SELECT firstname, email, socialid, socialname FROM eb_users WHERE id = @id;	old 4th query
@@ -240,10 +243,13 @@ namespace ExpressBase.ServiceStack.Services
                 foreach (var dr in ds.Tables[5].Rows)
                     resp.UserGroups.Add(Convert.ToInt32(dr[0]));
 
-                //EbConstraints con = new EbConstraints(ds.Tables[6]);
-                //resp.LocConstraint = new List<int>();
-                //foreach (var dr in con.UserLocCons)
-                //    resp.LocConstraint.Add(Convert.ToInt32(dr.Value));
+                EbConstraints con = new EbConstraints(ds.Tables[6]);
+                resp.LocConstraint = new Dictionary<int, int>();
+                foreach (var c in con.UConstraints)
+                {
+                    if (c.Value.Values.ElementAt(0).Value.Type == EbConstraintTypes.User_Location)
+                        resp.LocConstraint.Add(c.Key, c.Value.Values.ElementAt(0).Value.GetValue());
+                }
             }
 
             return resp;
@@ -256,7 +262,7 @@ namespace ExpressBase.ServiceStack.Services
 
             if (!string.IsNullOrEmpty(request.email))
             {
-                sql = "SELECT id FROM eb_users WHERE LOWER(email) LIKE LOWER(:email) AND eb_del = 'F' AND (statusid = 0 OR statusid = 1 OR statusid = 2);";                 
+                sql = "SELECT id FROM eb_users WHERE LOWER(email) LIKE LOWER(:email) AND eb_del = 'F' AND (statusid = 0 OR statusid = 1 OR statusid = 2);";
                 parameters = new DbParameter[] { this.EbConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, string.IsNullOrEmpty(request.email) ? "" : request.email) };
             }
 
@@ -295,30 +301,38 @@ namespace ExpressBase.ServiceStack.Services
             string sql = this.EbConnectionFactory.DataDB.EB_SAVEUSER_QUERY;
             int id = 0;
 
+            if (!request.LocationAdd.IsNullOrEmpty())
+            {
+                EbConstraints consObj = new EbConstraints(request.LocationAdd.Split(","), EbConstraintKeyTypes.User, EbConstraintTypes.User_Location);
+                request.LocationAdd = consObj.GetDataAsString();
+            }            
+
             string password = (request.Password + request.EmailPrimary).ToMD5Hash();
             List<DbParameter> parameters = new List<DbParameter> {
-                        this.EbConnectionFactory.DataDB.GetNewParameter("userid", EbDbTypes.Int32, request.UserId),
-                        this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.Id),
-                        this.EbConnectionFactory.DataDB.GetNewParameter("fullname", EbDbTypes.String, request.FullName),
-                        this.EbConnectionFactory.DataDB.GetNewParameter("nickname", EbDbTypes.String, request.NickName),
-                        this.EbConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, request.EmailPrimary),
-                        this.EbConnectionFactory.DataDB.GetNewParameter("pwd", EbDbTypes.String,password),
-                        this.EbConnectionFactory.DataDB.GetNewParameter("dob", EbDbTypes.Date, Convert.ToDateTime(DateTime.ParseExact(request.DateOfBirth, "yyyy-MM-dd", CultureInfo.InvariantCulture))),
-                        this.EbConnectionFactory.DataDB.GetNewParameter("sex", EbDbTypes.String, request.Sex),
-                        this.EbConnectionFactory.DataDB.GetNewParameter("alternateemail", EbDbTypes.String, request.EmailSecondary),
-                        this.EbConnectionFactory.DataDB.GetNewParameter("phprimary", EbDbTypes.String, request.PhonePrimary),
-                        this.EbConnectionFactory.DataDB.GetNewParameter("phsecondary", EbDbTypes.String, request.PhoneSecondary),
-                        this.EbConnectionFactory.DataDB.GetNewParameter("phlandphone", EbDbTypes.String, request.LandPhone),
-                        this.EbConnectionFactory.DataDB.GetNewParameter("extension", EbDbTypes.String, request.PhoneExtension),
-                        this.EbConnectionFactory.DataDB.GetNewParameter("fbid", EbDbTypes.String, request.FbId),
-                        this.EbConnectionFactory.DataDB.GetNewParameter("fbname", EbDbTypes.String, request.FbName),
-                        this.EbConnectionFactory.DataDB.GetNewParameter("roles", EbDbTypes.String, (request.Roles != string.Empty? request.Roles : string.Empty)),
-                        this.EbConnectionFactory.DataDB.GetNewParameter("groups", EbDbTypes.String, (request.UserGroups != string.Empty? request.UserGroups : string.Empty)),
-                        this.EbConnectionFactory.DataDB.GetNewParameter("statusid", EbDbTypes.Int32, Convert.ToInt32(request.StatusId)),
-                        this.EbConnectionFactory.DataDB.GetNewParameter("hide", EbDbTypes.String, request.Hide),
-                        this.EbConnectionFactory.DataDB.GetNewParameter("anonymoususerid", EbDbTypes.Int32, request.AnonymousUserId),
-                        this.EbConnectionFactory.DataDB.GetNewParameter("preference", EbDbTypes.String, request.Preference)
-                     };
+                this.EbConnectionFactory.DataDB.GetNewParameter("userid", EbDbTypes.Int32, request.UserId),
+                this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.Id),
+                this.EbConnectionFactory.DataDB.GetNewParameter("fullname", EbDbTypes.String, request.FullName),
+                this.EbConnectionFactory.DataDB.GetNewParameter("nickname", EbDbTypes.String, request.NickName),
+                this.EbConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, request.EmailPrimary),
+                this.EbConnectionFactory.DataDB.GetNewParameter("pwd", EbDbTypes.String,password),
+                this.EbConnectionFactory.DataDB.GetNewParameter("dob", EbDbTypes.Date, Convert.ToDateTime(DateTime.ParseExact(request.DateOfBirth, "yyyy-MM-dd", CultureInfo.InvariantCulture))),
+                this.EbConnectionFactory.DataDB.GetNewParameter("sex", EbDbTypes.String, request.Sex),
+                this.EbConnectionFactory.DataDB.GetNewParameter("alternateemail", EbDbTypes.String, request.EmailSecondary),
+                this.EbConnectionFactory.DataDB.GetNewParameter("phprimary", EbDbTypes.String, request.PhonePrimary),
+                this.EbConnectionFactory.DataDB.GetNewParameter("phsecondary", EbDbTypes.String, request.PhoneSecondary),
+                this.EbConnectionFactory.DataDB.GetNewParameter("phlandphone", EbDbTypes.String, request.LandPhone),
+                this.EbConnectionFactory.DataDB.GetNewParameter("extension", EbDbTypes.String, request.PhoneExtension),
+                this.EbConnectionFactory.DataDB.GetNewParameter("fbid", EbDbTypes.String, request.FbId),
+                this.EbConnectionFactory.DataDB.GetNewParameter("fbname", EbDbTypes.String, request.FbName),
+                this.EbConnectionFactory.DataDB.GetNewParameter("roles", EbDbTypes.String, (request.Roles != string.Empty? request.Roles : string.Empty)),
+                this.EbConnectionFactory.DataDB.GetNewParameter("groups", EbDbTypes.String, (request.UserGroups != string.Empty? request.UserGroups : string.Empty)),
+                this.EbConnectionFactory.DataDB.GetNewParameter("statusid", EbDbTypes.Int32, Convert.ToInt32(request.StatusId)),
+                this.EbConnectionFactory.DataDB.GetNewParameter("hide", EbDbTypes.String, request.Hide),
+                this.EbConnectionFactory.DataDB.GetNewParameter("anonymoususerid", EbDbTypes.Int32, request.AnonymousUserId),
+                this.EbConnectionFactory.DataDB.GetNewParameter("preference", EbDbTypes.String, request.Preference),
+                this.EbConnectionFactory.DataDB.GetNewParameter("consadd", EbDbTypes.String, request.LocationAdd),
+                this.EbConnectionFactory.DataDB.GetNewParameter("consdel", EbDbTypes.String, request.LocationDelete)
+            };
 
             if (EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.MYSQL)
             {
@@ -364,13 +378,13 @@ namespace ExpressBase.ServiceStack.Services
                 this.EbConnectionFactory.DataDB.GetNewParameter("userid", EbDbTypes.Int32, request.UserId)
             };
             int t = this.EbConnectionFactory.DataDB.DoNonQuery(sql, parameters.ToArray());
-            if(t > 0)
+            if (t > 0)
             {
                 TenantUserServices _tenantUserService = base.ResolveService<TenantUserServices>();
                 _tenantUserService.Post(new UpdateSolutionRequest() { SolnId = request.SolnId, UserId = request.UserId });
             }
 
-            return new DeleteUserResponse() { Status = t};
+            return new DeleteUserResponse() { Status = t };
         }
 
         //------MY PROFILE------------------------------------------------------
@@ -652,58 +666,52 @@ namespace ExpressBase.ServiceStack.Services
 									SELECT U.id,U.fullname,U.email 
 										FROM eb_users U, eb_user2usergroup G 
 										WHERE G.groupid = :id AND U.id=G.userid 
-										AND G.eb_del = 'F' AND U.eb_del = 'F';
+										AND G.eb_del = 'F' AND U.eb_del = 'F';";
 
-									SELECT id, ip, description 
-										FROM eb_constraints_ip
-										WHERE usergroup_id = :id AND eb_del='F';
-									SELECT id, title, description, type, start_datetime, end_datetime, days_coded
-										FROM eb_constraints_datetime
-										WHERE usergroup_id = :id AND eb_del='F';";
-				parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.id));
-				var ds = this.EbConnectionFactory.DataDB.DoQueries(query, parameters.ToArray());
-				if (ds.Tables.Count > 0)
-				{
-					_userGroupInfo.Add("id", Convert.ToInt32(ds.Tables[0].Rows[0][0]));
-					_userGroupInfo.Add("name", ds.Tables[0].Rows[0][1].ToString());
-					_userGroupInfo.Add("description", ds.Tables[0].Rows[0][2].ToString());
-					foreach (EbDataRow dr in ds.Tables[1].Rows)
-					{
-						_usersList.Add(new Eb_Users() { Id = Convert.ToInt32(dr[0]), Name = dr[1].ToString(), Email = dr[2].ToString() });
-					}
-					foreach(EbDataRow dr in ds.Tables[2].Rows)
-					{
-						_ipConsList.Add(new Eb_Constraints1 {Id = Convert.ToInt32(dr["id"]), Title = dr["ip"].ToString(), Description = dr["description"].ToString() });
-					}
-					string[] days = { "Sun ", "Mon ", "Tue ", "Wed ", "Thu ", "Fri ", "Sat " };
-					foreach (EbDataRow dr in ds.Tables[3].Rows)
-					{
-						int _type = Convert.ToInt32(dr["type"]);
-						DateTime _start = Convert.ToDateTime(dr["start_datetime"]).ConvertFromUtc(request.Timezone);
-						DateTime _end = Convert.ToDateTime(dr["end_datetime"]).ConvertFromUtc(request.Timezone);
-						int _days = Convert.ToInt32(dr["days_coded"]);
-						if (_type == 1)
-						{
-							string temp = "One Time - " + _start.ToString("dd-MM-yyyy HH:mm") + " to " + _end.ToString("dd-MM-yyyy HH:mm");
-							_dtConsList.Add(new Eb_Constraints1 {Id = Convert.ToInt32(dr["id"]), Title = dr["title"].ToString(), Description = temp });
-						}
-						else if (_type == 2)
-						{
-							string temp = "Recurring - " + _start.ToString("HH:mm") + " to " + _end.ToString("HH:mm") + "<br>";
-							for(int i = 0; i < 7; i++)
-							{
-								if((Convert.ToInt32(Math.Pow(2, i)) & _days) > 0)
-								{
-									temp += days[i];
-								}
-							}
-							_dtConsList.Add(new Eb_Constraints1 { Id = Convert.ToInt32(dr["id"]), Title = dr["title"].ToString(), Description = temp });
-						}
-					}
-				}
-			}
-			else
-				_userGroupInfo.Add("id", 0);
+                parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.id));
+                var ds = this.EbConnectionFactory.DataDB.DoQueries(query, parameters.ToArray());
+                if (ds.Tables.Count > 0)
+                {
+                    _userGroupInfo.Add("id", Convert.ToInt32(ds.Tables[0].Rows[0][0]));
+                    _userGroupInfo.Add("name", ds.Tables[0].Rows[0][1].ToString());
+                    _userGroupInfo.Add("description", ds.Tables[0].Rows[0][2].ToString());
+                    foreach (EbDataRow dr in ds.Tables[1].Rows)
+                    {
+                        _usersList.Add(new Eb_Users() { Id = Convert.ToInt32(dr[0]), Name = dr[1].ToString(), Email = dr[2].ToString() });
+                    }
+                    //foreach (EbDataRow dr in ds.Tables[2].Rows)
+                    //{
+                    //    _ipConsList.Add(new Eb_Constraints1 { Id = Convert.ToInt32(dr["id"]), Title = dr["ip"].ToString(), Description = dr["description"].ToString() });
+                    //}
+                    //string[] days = { "Sun ", "Mon ", "Tue ", "Wed ", "Thu ", "Fri ", "Sat " };
+                    //foreach (EbDataRow dr in ds.Tables[3].Rows)
+                    //{
+                    //    int _type = Convert.ToInt32(dr["type"]);
+                    //    DateTime _start = Convert.ToDateTime(dr["start_datetime"]).ConvertFromUtc(request.Timezone);
+                    //    DateTime _end = Convert.ToDateTime(dr["end_datetime"]).ConvertFromUtc(request.Timezone);
+                    //    int _days = Convert.ToInt32(dr["days_coded"]);
+                    //    if (_type == 1)
+                    //    {
+                    //        string temp = "One Time - " + _start.ToString("dd-MM-yyyy HH:mm") + " to " + _end.ToString("dd-MM-yyyy HH:mm");
+                    //        _dtConsList.Add(new Eb_Constraints1 { Id = Convert.ToInt32(dr["id"]), Title = dr["title"].ToString(), Description = temp });
+                    //    }
+                    //    else if (_type == 2)
+                    //    {
+                    //        string temp = "Recurring - " + _start.ToString("HH:mm") + " to " + _end.ToString("HH:mm") + "<br>";
+                    //        for (int i = 0; i < 7; i++)
+                    //        {
+                    //            if ((Convert.ToInt32(Math.Pow(2, i)) & _days) > 0)
+                    //            {
+                    //                temp += days[i];
+                    //            }
+                    //        }
+                    //        _dtConsList.Add(new Eb_Constraints1 { Id = Convert.ToInt32(dr["id"]), Title = dr["title"].ToString(), Description = temp });
+                    //    }
+                    //}
+                }
+            }
+            else
+                _userGroupInfo.Add("id", 0);
 
             return new GetManageUserGroupResponse() { SelectedUserGroupInfo = _userGroupInfo, UsersList = _usersList, IpConsList = _ipConsList, DtConsList = _dtConsList };
             //using (var con = this.TenantDbFactory.DataDB.GetNewConnection())
@@ -758,55 +766,55 @@ namespace ExpressBase.ServiceStack.Services
         public SaveUserGroupResponse Post(SaveUserGroupRequest request)
         {
             SaveUserGroupResponse resp;
-            List<IpConstraint> IpConstr = JsonConvert.DeserializeObject<List<IpConstraint>>(request.IpConstraintNw);
-            List<DateTimeConstraint> DtConstr = JsonConvert.DeserializeObject<List<DateTimeConstraint>>(request.DtConstraintNw);
-            string sIpConstr = string.Empty;
-            string sDtConstr = string.Empty;
+            //List<IpConstraint> IpConstr = JsonConvert.DeserializeObject<List<IpConstraint>>(request.IpConstraintNw);
+            //List<DateTimeConstraint> DtConstr = JsonConvert.DeserializeObject<List<DateTimeConstraint>>(request.DtConstraintNw);
+            //string sIpConstr = string.Empty;
+            //string sDtConstr = string.Empty;
 
-            string _sIp = string.Empty;
-            string _sIpDesc = string.Empty;
-            string _sDtTitle = string.Empty;
-            string _sDtDesc = string.Empty;
-            string _sDtType = string.Empty;
-            string _sDtStart = string.Empty;
-            string _sDtEnd = string.Empty;
-            string _sDtDays = string.Empty;
+            //string _sIp = string.Empty;
+            //string _sIpDesc = string.Empty;
+            //string _sDtTitle = string.Empty;
+            //string _sDtDesc = string.Empty;
+            //string _sDtType = string.Empty;
+            //string _sDtStart = string.Empty;
+            //string _sDtEnd = string.Empty;
+            //string _sDtDays = string.Empty;
 
-			foreach (IpConstraint _ipc in IpConstr)
-			{
-				_sIp += _ipc.Ip.Replace(" ", "_") + ",";
-				_sIpDesc += _ipc.Description.Replace(" ", "_") + ",";
-				//sIpConstr += _ipc.Ip.Replace(" ", "_") + "," + _ipc.Description.Replace(" ", "_") + ",,";
-			}
-			if(_sIp.Length > 0)
-			{
-				sIpConstr = _sIp.Substring(0, _sIp.Length - 1) + "$$" + _sIpDesc.Substring(0, _sIpDesc.Length - 1);
-			}
-			
-			foreach (DateTimeConstraint _dtc in DtConstr)
-			{
-				if(_dtc.Type == 1)//One Time
-				{
-					_dtc.Start = Convert.ToDateTime(DateTime.ParseExact(_dtc.Start, "dd-MM-yyyy HH:mm", CultureInfo.InvariantCulture)).ConvertToUtc(request.UsersTimezone).ToString("yyyy-MM-dd HH:mm:ss");
-					_dtc.End = Convert.ToDateTime(DateTime.ParseExact(_dtc.End, "dd-MM-yyyy HH:mm", CultureInfo.InvariantCulture)).ConvertToUtc(request.UsersTimezone).ToString("yyyy-MM-dd HH:mm:ss");
-				}
-				else if(_dtc.Type == 2)//recurring
-				{
-					_dtc.Start = Convert.ToDateTime(DateTime.ParseExact(_dtc.Start, "HH:mm", CultureInfo.InvariantCulture)).ConvertToUtc(request.UsersTimezone).ToString("yyyy-MM-dd HH:mm:ss");
-					_dtc.End = Convert.ToDateTime(DateTime.ParseExact(_dtc.End, "HH:mm", CultureInfo.InvariantCulture)).ConvertToUtc(request.UsersTimezone).ToString("yyyy-MM-dd HH:mm:ss");
-				}
-				_sDtTitle += _dtc.Title.Replace(" ", "_") + ",";
-				_sDtDesc += _dtc.Description.Replace(" ", "_") + ",";
-				_sDtType += _dtc.Type + ",";
-				_sDtStart += _dtc.Start + ",";
-				_sDtEnd  += _dtc.End + ",";
-				_sDtDays += _dtc.DaysCoded + ",";
-				//sDtConstr += _dtc.Title.Replace(" ", "_") + "," + _dtc.Description.Replace(" ", "_") + "," + _dtc.Type + "," + _dtc.Start + "," + _dtc.End + "," + _dtc.DaysCoded + ",,";
-			}
-			if(_sDtTitle.Length > 0)
-			{
-				sDtConstr = _sDtTitle.Substring(0, _sDtTitle.Length - 1) + "$$" + _sDtDesc.Substring(0, _sDtDesc.Length - 1) + "$$" + _sDtType.Substring(0, _sDtType.Length - 1) + "$$" + _sDtStart.Substring(0, _sDtStart.Length - 1) + "$$" + _sDtEnd.Substring(0, _sDtEnd.Length - 1) + "$$" + _sDtDays.Substring(0, _sDtDays.Length - 1);
-			}
+            //foreach (IpConstraint _ipc in IpConstr)
+            //{
+            //    _sIp += _ipc.Ip.Replace(" ", "_") + ",";
+            //    _sIpDesc += _ipc.Description.Replace(" ", "_") + ",";
+            //    //sIpConstr += _ipc.Ip.Replace(" ", "_") + "," + _ipc.Description.Replace(" ", "_") + ",,";
+            //}
+            //if (_sIp.Length > 0)
+            //{
+            //    sIpConstr = _sIp.Substring(0, _sIp.Length - 1) + "$$" + _sIpDesc.Substring(0, _sIpDesc.Length - 1);
+            //}
+
+            //foreach (DateTimeConstraint _dtc in DtConstr)
+            //{
+            //    if (_dtc.Type == 1)//One Time
+            //    {
+            //        _dtc.Start = Convert.ToDateTime(DateTime.ParseExact(_dtc.Start, "dd-MM-yyyy HH:mm", CultureInfo.InvariantCulture)).ConvertToUtc(request.UsersTimezone).ToString("yyyy-MM-dd HH:mm:ss");
+            //        _dtc.End = Convert.ToDateTime(DateTime.ParseExact(_dtc.End, "dd-MM-yyyy HH:mm", CultureInfo.InvariantCulture)).ConvertToUtc(request.UsersTimezone).ToString("yyyy-MM-dd HH:mm:ss");
+            //    }
+            //    else if (_dtc.Type == 2)//recurring
+            //    {
+            //        _dtc.Start = Convert.ToDateTime(DateTime.ParseExact(_dtc.Start, "HH:mm", CultureInfo.InvariantCulture)).ConvertToUtc(request.UsersTimezone).ToString("yyyy-MM-dd HH:mm:ss");
+            //        _dtc.End = Convert.ToDateTime(DateTime.ParseExact(_dtc.End, "HH:mm", CultureInfo.InvariantCulture)).ConvertToUtc(request.UsersTimezone).ToString("yyyy-MM-dd HH:mm:ss");
+            //    }
+            //    _sDtTitle += _dtc.Title.Replace(" ", "_") + ",";
+            //    _sDtDesc += _dtc.Description.Replace(" ", "_") + ",";
+            //    _sDtType += _dtc.Type + ",";
+            //    _sDtStart += _dtc.Start + ",";
+            //    _sDtEnd += _dtc.End + ",";
+            //    _sDtDays += _dtc.DaysCoded + ",";
+            //    //sDtConstr += _dtc.Title.Replace(" ", "_") + "," + _dtc.Description.Replace(" ", "_") + "," + _dtc.Type + "," + _dtc.Start + "," + _dtc.End + "," + _dtc.DaysCoded + ",,";
+            //}
+            //if (_sDtTitle.Length > 0)
+            //{
+            //    sDtConstr = _sDtTitle.Substring(0, _sDtTitle.Length - 1) + "$$" + _sDtDesc.Substring(0, _sDtDesc.Length - 1) + "$$" + _sDtType.Substring(0, _sDtType.Length - 1) + "$$" + _sDtStart.Substring(0, _sDtStart.Length - 1) + "$$" + _sDtEnd.Substring(0, _sDtEnd.Length - 1) + "$$" + _sDtDays.Substring(0, _sDtDays.Length - 1);
+            //}
 
             string sql = this.EbConnectionFactory.DataDB.EB_SAVEUSERGROUP_QUERY;
             using (var con = this.EbConnectionFactory.DataDB.GetNewConnection())
@@ -821,10 +829,8 @@ namespace ExpressBase.ServiceStack.Services
                         this.EbConnectionFactory.DataDB.GetNewParameter("name", EbDbTypes.String, request.Name),
                         this.EbConnectionFactory.DataDB.GetNewParameter("description", EbDbTypes.String, request.Description),
                         this.EbConnectionFactory.DataDB.GetNewParameter("users", EbDbTypes.String,(request.Users != string.Empty? request.Users : string.Empty)),
-                        this.EbConnectionFactory.DataDB.GetNewParameter("ipconstrnw", EbDbTypes.String, sIpConstr),
-                        this.EbConnectionFactory.DataDB.GetNewParameter("ipconstrold", EbDbTypes.String, request.IpConstraintOld),
-                        this.EbConnectionFactory.DataDB.GetNewParameter("dtconstrnw", EbDbTypes.String, sDtConstr),
-                        this.EbConnectionFactory.DataDB.GetNewParameter("dtconstrold", EbDbTypes.String, request.DtConstraintOld)
+                        this.EbConnectionFactory.DataDB.GetNewParameter("constraints_add", EbDbTypes.String, string.Empty),
+                        this.EbConnectionFactory.DataDB.GetNewParameter("constraints_del", EbDbTypes.String, string.Empty)
                     };
                 if (EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.MYSQL)
                 {
