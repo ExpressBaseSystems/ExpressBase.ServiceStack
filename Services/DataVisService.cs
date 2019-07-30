@@ -971,38 +971,12 @@ namespace ExpressBase.ServiceStack
 
         public void conditinallyformatColumn(DVBaseColumn col, ref object _formattedData, object _unformattedData)
         {
-            if (col.Type == EbDbTypes.Decimal || col.Type == EbDbTypes.Int32 || col.Type == EbDbTypes.Int64)
+            foreach (ColumnCondition cond in col.ConditionalFormating )
             {
-                foreach (NumericCondition cond in (col as DVNumericColumn).ConditionalFormat)
+                if (cond.CompareValues(_unformattedData))
                 {
-                    if (NumericCompareValues(cond, _unformattedData))
-                    {
-                        _formattedData = "<div class='conditionformat' style='background-color:" + cond.BackGroundColor + ";color:" + cond.FontColor + ";'>" + _formattedData + "</div>";
-                    }
+                    _formattedData = "<div class='conditionformat' style='background-color:" + cond.BackGroundColor + ";color:" + cond.FontColor + ";'>" + _formattedData + "</div>";
                 }
-            }
-            else if (col.Type == EbDbTypes.Date)
-            {
-                foreach (DateCondition cond in (col as DVDateTimeColumn).ConditionalFormat)
-                {
-                    if (DateCompareValues(cond, _unformattedData))
-                    {
-                        _formattedData = "<div class='conditionformat' style='background-color:" + cond.BackGroundColor + ";color:" + cond.FontColor + ";'>" + _formattedData + "</div>";
-                    }
-                }
-            }
-            else if (col.Type == EbDbTypes.String)
-            {
-                foreach (StringCondition cond in (col as DVStringColumn).ConditionalFormat)
-                {
-                    if (StringCompareValues(cond, _unformattedData))
-                    {
-                        _formattedData = "<div class='conditionformat' style='background-color:" + cond.BackGroundColor + ";color:" + cond.FontColor + ";'>" + _formattedData + "</div>";
-                    }
-                }
-            }
-            else if (col.Type == EbDbTypes.Boolean)
-            {
             }
 
         }
