@@ -53,7 +53,7 @@ namespace ExpressBase.ServiceStack.Auth0
 							string urllink = session.ReferrerUrl;
 							string pathsignup = "Platform/OnBoarding";
 							string pathsignin = "TenantSignIn";
-							string sql1 = "SELECT id, pwd,fb_id,github_id,twitter_id FROM eb_tenants WHERE email ~* @email and eb_del='F'";
+							string sql1 = "SELECT id,fb_id,github_id,twitter_id FROM eb_tenants WHERE email ~* @email and eb_del='F'";
                             DbParameter[] parameters2 = { InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String,t.Email) };
                             EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(sql1, parameters2);
                             if (dt.Rows.Count > 0)
@@ -95,7 +95,7 @@ namespace ExpressBase.ServiceStack.Auth0
                                  (:email,:name,:fbid,:password,NOW(),:fals,:fals,:fals) RETURNING id;", parameter1);
 
 								Console.WriteLine("inserted details to tenant table");
-
+								sco_signup.Pauto = pasword;
 							}
                            
                             {
@@ -105,12 +105,12 @@ namespace ExpressBase.ServiceStack.Auth0
                                 sco_signup.Social_id = (t.UserId).ToString();
                                 sco_signup.Fullname = t.DisplayName;
                                 //sco_signup.IsVerified = session.IsAuthenticated,
-                                sco_signup.Pauto = pasword;
+                                
                                 sco_signup.UniqueEmail = unique;
                                
                             };
                             b = JsonConvert.SerializeObject(sco_signup);
-							string sociallink1 = "localhost:41500";
+							string sociallink1 = "localhost:";
 							string sociallink2 = "eb-test.xyz";
 							string sociallink3 = "expressbase.com";
 							Console.WriteLine("ReferrerUrl= " + session.ReferrerUrl);

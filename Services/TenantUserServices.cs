@@ -147,7 +147,7 @@ namespace ExpressBase.ServiceStack.Services
                 GetSolutioInfoResponse res = (GetSolutioInfoResponse)_infraService.Get(new GetSolutioInfoRequest { IsolutionId = req.SolnId });
                 EbSolutionsWrapper wrap_sol = res.Data;
                 LocationInfoTenantResponse Loc = this.Get(new LocationInfoTenantRequest { SolnId = req.SolnId, UserId = req.UserId });
-                EbSolutionUsers users = GetUserCount();
+                EbSolutionUsers users = GetUserInfo(req.SolnId);
                 Eb_Solution sol_Obj = new Eb_Solution
                 {
                     SolutionID = req.SolnId,
@@ -159,7 +159,8 @@ namespace ExpressBase.ServiceStack.Services
                     LocationConfig = Loc.Config,
                     PricingTier = wrap_sol.PricingTier,
                     Users = users.UserList,
-                    IsVersioningEnabled = wrap_sol.IsVersioningEnabled
+                    IsVersioningEnabled = wrap_sol.IsVersioningEnabled,
+                    PlanUserCount = users.PlanUserCount
                 };
 
                 this.Redis.Set<Eb_Solution>(String.Format("solution_{0}", req.SolnId), sol_Obj);
@@ -174,29 +175,40 @@ namespace ExpressBase.ServiceStack.Services
             return new UpdateSolutionResponse { };
         }
 
-        public EbSolutionUsers GetUserCount()
+        public EbSolutionUsers GetUserInfo(string solnId)
         {
-            // statusid 0 - active users, 1- suspended users
-            string sql = @"SELECT COUNT(*) FROM eb_users WHERE (statusid = 0 OR statusid = 1 OR statusid = 2) AND eb_del ='F';
-                        SELECT id, fullname from eb_users;";
-            EbDataSet dt = this.EbConnectionFactory.DataDB.DoQueries(sql);
             EbSolutionUsers SolutionUsers = new EbSolutionUsers();
-            if (dt.Tables != null)
+            try
             {
-                if (dt.Tables[0] != null && dt.Tables[0].Rows.Count > 0)
-                    SolutionUsers.UserCount = Convert.ToInt32(dt.Tables[0].Rows[0][0]);
+                string query = string.Format(@"SELECT user_no FROM eb_subscription WHERE 
+                                cust_id = (select cust_id from eb_customer where solution_id = '{0}')", solnId);
+                EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(query);
 
-                if (dt.Tables[1] != null && dt.Tables[1].Rows.Count > 0)
+                SolutionUsers.PlanUserCount = (dt.Rows.Count > 0) ? (int)dt.Rows[0]["user_no"] : 5; /// Hardcoding 5
+
+                EbConnectionFactory _ebConnectionFactory = new EbConnectionFactory(solnId, this.Redis);
+                string sql = @"SELECT COUNT(*) FROM eb_users WHERE (statusid = 0 OR statusid = 1 OR statusid = 2) AND eb_del ='F';
+                        SELECT id, fullname from eb_users; ";  // statusid 0 - active users, 1- suspended users
+                EbDataSet ds = _ebConnectionFactory.DataDB.DoQueries(sql);
+                if (ds.Tables != null)
                 {
-                    SolutionUsers.UserList = new Dictionary<int, string>();
-                    foreach (EbDataRow r in dt.Tables[1].Rows)
+                    if (ds.Tables[0] != null && ds.Tables[0].Rows.Count > 0)
+                        SolutionUsers.UserCount = Convert.ToInt32(ds.Tables[0].Rows[0][0]);
+
+                    if (ds.Tables[1] != null && ds.Tables[1].Rows.Count > 0)
                     {
-                        if (!SolutionUsers.UserList.ContainsKey((int)r[0]))
-                            SolutionUsers.UserList[(int)r[0]] = r[1].ToString();
+                        SolutionUsers.UserList = new Dictionary<int, string>();
+                        foreach (EbDataRow r in ds.Tables[1].Rows)
+                            if (!SolutionUsers.UserList.ContainsKey((int)r[0]))
+                                SolutionUsers.UserList[(int)r[0]] = r[1].ToString();
                     }
                 }
             }
-
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message + e.StackTrace);
+                throw e;
+            }
             return SolutionUsers;
         }
 
@@ -831,5 +843,7 @@ namespace ExpressBase.ServiceStack.Services
         public int UserCount { get; set; }
 
         public Dictionary<int, string> UserList { get; set; }
+
+        public int PlanUserCount { get; set; }
     }
 }

@@ -501,7 +501,7 @@ namespace ExpressBase.ServiceStack.Services
         public EditCardExpResponse Post(EditCardExpRequest request)
         {
             EditCardExpResponse resp = new EditCardExpResponse();
-            StripeConfiguration.SetApiKey(Environment.GetEnvironmentVariable(EnvironmentConstants.EB_STRIPE_SECRET_KEY));
+            StripeConfiguration.ApiKey = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_STRIPE_SECRET_KEY);
             using (DbConnection con = this.InfraConnectionFactory.DataDB.GetNewConnection())
             {
                 con.Open();
@@ -815,8 +815,7 @@ namespace ExpressBase.ServiceStack.Services
                 cmd.Parameters.Add(InfraConnectionFactory.DataDB.GetNewParameter("@pricingtier", Common.Structures.EbDbTypes.Int16, (int)PricingTiers.STANDARD));
                 cmd.Parameters.Add(InfraConnectionFactory.DataDB.GetNewParameter("@solid", Common.Structures.EbDbTypes.String, request.SolnId));
                 cmd.ExecuteNonQuery();
-                TenantUserServices _tenantUserService = base.ResolveService<TenantUserServices>();
-                _tenantUserService.Post(new UpdateSolutionRequest() { SolnId = request.SolnId, UserId = request.UserId });
+
                 string str1 = @"
                     INSERT INTO
                         eb_subscription (cust_id,plan_id,coupon_id,sub_id,sub_item_id,latest_invoice_id,user_no,created_at)
@@ -834,6 +833,9 @@ namespace ExpressBase.ServiceStack.Services
                 cmd1.ExecuteNonQuery();
                 //}
 
+                TenantUserServices _tenantUserService = base.ResolveService<TenantUserServices>();
+                _tenantUserService.Post(new UpdateSolutionRequest() { SolnId = request.SolnId, UserId = request.UserId });
+
                 resp.PeriodStart = ((DateTime)subscription.CurrentPeriodStart).ToString("dd MMM,yyyy");
                 resp.PeriodEnd = ((DateTime)subscription.CurrentPeriodEnd).ToString("dd MMM,yyyy");
                 resp.Created = ((DateTime)subscription.Created).ToString("dd MMM,yyyy");
@@ -849,6 +851,7 @@ namespace ExpressBase.ServiceStack.Services
 
         public UpgradeSubscriptionResponse Post(UpgradeSubscriptionRequest request)
         {
+            StripeConfiguration.ApiKey = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_STRIPE_SECRET_KEY);
             UpgradeSubscriptionResponse resp = new UpgradeSubscriptionResponse();
             using (DbConnection con = this.InfraConnectionFactory.DataDB.GetNewConnection())
             {
@@ -865,7 +868,7 @@ namespace ExpressBase.ServiceStack.Services
                 var usageRecordOptions = new UsageRecordCreateOptions()
                 {
                     Quantity = request.Total,
-                    Timestamp = DateTime.Now.AddMinutes(3),
+                    Timestamp = DateTime.Now,
                     Action = "increment"
                 };
                 var usageRecordService = new UsageRecordService();
@@ -1686,7 +1689,9 @@ namespace ExpressBase.ServiceStack.Services
                     Currency = invoices.Data[i].Lines.Data[0].Currency,
                     Quantity = invoices.Data[i].Lines.Data[0].Quantity,
                     PeriodStart = invoices.Data[i].PeriodStart,
-                    PeriodEnd = invoices.Data[i].PeriodEnd
+                    PeriodEnd = invoices.Data[i].PeriodEnd,
+                    Duration = invoices.Data[i].Discount == null ? 0 : invoices.Data[i].Discount.Coupon.Duration,
+                    PercentOff = invoices.Data[i].Discount == null ? 0 : invoices.Data[i].Discount.Coupon.PercentOff
                 });
 
             }
@@ -1732,6 +1737,7 @@ namespace ExpressBase.ServiceStack.Services
                 Currency = Inv.Currency,
                 PercentOff = Inv.Discount == null ? 0 : Inv.Discount.Coupon.PercentOff,
                 CouponId = Inv.Discount == null ? "" : Inv.Discount.Coupon.Id,
+                Duration = Inv.Discount == null ? 0 : Inv.Discount.Coupon.Duration,
                 Data = Data
             };
 

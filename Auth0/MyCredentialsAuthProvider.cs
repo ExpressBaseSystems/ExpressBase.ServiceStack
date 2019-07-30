@@ -133,10 +133,8 @@ namespace ExpressBase.ServiceStack.Auth0
                 if (ee.Message == "Access Denied")
                     throw new Exception("Access Denied");
                 Logger.Info("Exception: "+ ee.ToJson());
-                return false;
+                throw ee;
             }
-           
-            
         }
 
         public override object Authenticate(IServiceBase authService, IAuthSession session, Authenticate request)
