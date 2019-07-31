@@ -150,21 +150,21 @@ namespace ExpressBase.ServiceStack
                 fburl = "http://localhost:41600/auth/facebook";
             }
 
-    //        MyFacebookAuthProvider fbauth = new MyFacebookAuthProvider(AppSettings)
-    //        {
-    //            //AppId = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_FB_APP_ID),
-    //            //AppSecret = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_FB_APP_SECRET),
-    //            //Permissions = new string[] { "email, public_profile, user_hometown" },
-    //            //RedirectUrl = fburl 
-				
-				//AppId = "149537802493867",
-    //            AppSecret = "55a9b5e0a88089465808bdc1d4f07e8e",
-    //            Permissions = new string[] { "email, public_profile, user_hometown" },
-    //            RedirectUrl = fburl
-    //        };
+			//MyFacebookAuthProvider fbauth = new MyFacebookAuthProvider(AppSettings)
+			//{
+			//	//AppId = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_FB_APP_ID),
+			//	//AppSecret = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_FB_APP_SECRET),
+			//	//Permissions = new string[] { "email, public_profile, user_hometown" },
+			//	//RedirectUrl = fburl
+
+			//	AppId = "149537802493867",
+			//	AppSecret = "55a9b5e0a88089465808bdc1d4f07e8e",
+			//	Permissions = new string[] { "email, public_profile, user_hometown" },
+			//	RedirectUrl = fburl
+			//};
 
 
-            this.Plugins.Add(new CorsFeature(allowedHeaders: "Content-Type, Authorization, Access-Control-Allow-Origin, Access-Control-Allow-Credentials"));
+			this.Plugins.Add(new CorsFeature(allowedHeaders: "Content-Type, Authorization, Access-Control-Allow-Origin, Access-Control-Allow-Credentials"));
 
             this.Plugins.Add(new ProtoBufFormat());
             this.Plugins.Add(new SessionFeature());
@@ -189,14 +189,14 @@ namespace ExpressBase.ServiceStack
 					{
 						//febin
 						//AppId = "149537802493867",
-						// AppSecret = "55a9b5e0a88089465808bdc1d4f07e8e",
+						 //AppSecret = "55a9b5e0a88089465808bdc1d4f07e8e",
 						
 						  //unni
-						  AppId = "628799957635144",
-						  AppSecret = "abf6b5ad5f0f2b886ccaeddc72f209c2",
+						  //AppId = "628799957635144",
+						 // AppSecret = "abf6b5ad5f0f2b886ccaeddc72f209c2",
 
-						  //AppId = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_FB_APP_ID),
-						  //AppSecret = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_FB_APP_SECRET),
+						  AppId = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_FB_APP_ID),
+						  AppSecret = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_FB_APP_SECRET),
 						  Permissions = new string[] { "email, public_profile, user_hometown" },
 					},
 
