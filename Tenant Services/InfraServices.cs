@@ -277,9 +277,17 @@ namespace ExpressBase.ServiceStack.Services
             CreateSolutionResponse resp = new CreateSolutionResponse();
             try
             {
-                string sid = "SELECT * from eb_sid_gen();";
-                EbDataTable dt1 = this.InfraConnectionFactory.DataDB.DoQuery(sid);
-                string Sol_id_autogen = Convert.ToString(dt1.Rows[0][0]);
+                string Sol_id_autogen = string.Empty;
+                if (string.IsNullOrEmpty(request.SolnUrl))
+                {
+                    string sid = "SELECT * from eb_sid_gen();";
+                    EbDataTable dt1 = this.InfraConnectionFactory.DataDB.DoQuery(sid);
+                    Sol_id_autogen = Convert.ToString(dt1.Rows[0][0]);
+                }
+                else
+                {
+                    Sol_id_autogen = request.SolnUrl;
+                }
 
                 string sql = @"INSERT INTO eb_solutions
                                             (
@@ -564,21 +572,21 @@ namespace ExpressBase.ServiceStack.Services
     </div>
 </body>
 </html>";
-					string supporturl = "mailto:support@expressbase.com";
-					body = body.Replace("{UserName}", reques.Email);
+                    string supporturl = "mailto:support@expressbase.com";
+                    body = body.Replace("{UserName}", reques.Email);
                     body = body.Replace("{Url}", resetlink).Replace("{supporturl}", supporturl);
-					
 
-					//StringBuilder bodyMsg = new StringBuilder();
-					//bodyMsg.Append( " <img src = "+ "https://expressbase.com/images/logos/EB_Logo.png" + " />");
-					//bodyMsg.Append("<p style="+"color: red;"+"><b>Please follow this link to reset your password: <b></p>");
-					//            bodyMsg.Append("<br />");
-					//            bodyMsg.Append("next3");
-					//            bodyMsg.Append("<a href=https://" + resetlink + ">Account</a>");
-					//            bodyMsg.Append("<br />");
-					//            bodyMsg.Append("next4");
 
-					MessageProducer3.Publish(new EmailServicesRequest
+                    //StringBuilder bodyMsg = new StringBuilder();
+                    //bodyMsg.Append( " <img src = "+ "https://expressbase.com/images/logos/EB_Logo.png" + " />");
+                    //bodyMsg.Append("<p style="+"color: red;"+"><b>Please follow this link to reset your password: <b></p>");
+                    //            bodyMsg.Append("<br />");
+                    //            bodyMsg.Append("next3");
+                    //            bodyMsg.Append("<a href=https://" + resetlink + ">Account</a>");
+                    //            bodyMsg.Append("<br />");
+                    //            bodyMsg.Append("next4");
+
+                    MessageProducer3.Publish(new EmailServicesRequest
                     {
                         To = reques.Email,
                         Subject = "Reset password",

@@ -16,6 +16,7 @@ using System.Data.Common;
 using ExpressBase.Common.Extensions;
 using Newtonsoft.Json;
 using ExpressBase.ServiceStack.Services;
+using System.Net;
 
 namespace ExpressBase.ServiceStack.Auth0
 {
@@ -24,19 +25,102 @@ namespace ExpressBase.ServiceStack.Auth0
 
         public MyFacebookAuthProvider(IAppSettings settings) : base(settings) { }
 
-        public override object Authenticate(IServiceBase authService, IAuthSession session, Authenticate request)
+
+
+
+		public  object Authenticate111(IServiceBase authService, IAuthSession session, Authenticate request)
+		{
+			var tokens = Init(authService, ref session, request);
+
+			Console.WriteLine("reached call back url in init" + this.CallbackUrl);
+			if (this.CallbackUrl.Split(":")[0].Equals("http"))
+			{
+				this.CallbackUrl = this.CallbackUrl.Replace("http", "https");
+			}
+				
+			Console.WriteLine("reached call back url after split" + this.CallbackUrl);
+
+			//Transfering AccessToken/Secret from Mobile/Desktop App to Server
+			if (request?.AccessToken != null)
+			{
+				if (!AuthHttpGateway.VerifyFacebookAccessToken(AppId, request.AccessToken))
+					return HttpError.Unauthorized("AccessToken is not for App: " + AppId);
+
+				var isHtml = authService.Request.IsHtml();
+				var failedResult = AuthenticateWithAccessToken(authService, session, tokens, request.AccessToken);
+				if (failedResult != null)
+					return ConvertToClientError(failedResult, isHtml);
+
+				return isHtml
+					? authService.Redirect(SuccessRedirectUrlFilter(this, session.ReferrerUrl.SetParam("s", "1")))
+					: null; //return default AuthenticateResponse
+			}
+
+			var httpRequest = authService.Request;
+			var error = httpRequest.QueryString["error_reason"]
+				?? httpRequest.QueryString["error"]
+				?? httpRequest.QueryString["error_code"]
+				?? httpRequest.QueryString["error_description"];
+
+			var hasError = !error.IsNullOrEmpty();
+			if (hasError)
+			{
+				Log.Error($"Facebook error callback. {httpRequest.QueryString}");
+				return authService.Redirect(FailedRedirectUrlFilter(this, session.ReferrerUrl.SetParam("f", error)));
+			}
+
+			var code = httpRequest.QueryString[Keywords.Code];
+			var isPreAuthCallback = !code.IsNullOrEmpty();
+			if (!isPreAuthCallback)
+			{
+				var preAuthUrl = $"{PreAuthUrl}?client_id={AppId}&redirect_uri={this.CallbackUrl.UrlEncode()}&scope={string.Join(",", Permissions)}";
+
+				this.SaveSession(authService, session, SessionExpiry);
+				return authService.Redirect(PreAuthUrlFilter(this, preAuthUrl));
+			}
+
+			try
+			{
+				var accessTokenUrl = $"{AccessTokenUrl}?client_id={AppId}&redirect_uri={this.CallbackUrl.UrlEncode()}&client_secret={AppSecret}&code={code}";
+				var contents = AccessTokenUrlFilter(this, accessTokenUrl).GetJsonFromUrl();
+				var authInfo = JsonObject.Parse(contents);
+
+				var accessToken = authInfo["access_token"];
+
+				return AuthenticateWithAccessToken(authService, session, tokens, accessToken)
+					   ?? authService.Redirect(SuccessRedirectUrlFilter(this, session.ReferrerUrl.SetParam("s", "1"))); //Haz Access!
+			}
+			catch (WebException we)
+			{
+				var statusCode = ((HttpWebResponse)we.Response).StatusCode;
+				if (statusCode == HttpStatusCode.BadRequest)
+				{
+					return authService.Redirect(FailedRedirectUrlFilter(this, session.ReferrerUrl.SetParam("f", "AccessTokenFailed")));
+				}
+			}
+
+			//Shouldn't get here
+			return authService.Redirect(FailedRedirectUrlFilter(this, session.ReferrerUrl.SetParam("f", "Unknown")));
+		}
+
+
+
+
+		public override object Authenticate(IServiceBase authService, IAuthSession session, Authenticate request)
 
         {
-            EbConnectionFactory InfraConnectionFactory = authService.ResolveService<IEbConnectionFactory>() as EbConnectionFactory;
-
-            object objret = base.Authenticate(authService, session, request);
-
-            if (!string.IsNullOrEmpty(session.FirstName))
+			Console.WriteLine("reached facebook auth started");
+			EbConnectionFactory InfraConnectionFactory = authService.ResolveService<IEbConnectionFactory>() as EbConnectionFactory;
+			Console.WriteLine("reached InfraConnectionFactory : url" + authService.Request.AbsoluteUri);
+			
+			object objret = Authenticate111(authService, session, request);
+			Console.WriteLine("reached base.Authenticate");
+			if (!string.IsNullOrEmpty(session.FirstName))
             {
+				Console.WriteLine("reached session first name not empty");
 
-
-                //   using (var con = InfraConnectionFactory.DataDB.GetNewConnection())
-                {
+				//   using (var con = InfraConnectionFactory.DataDB.GetNewConnection())
+				{
 					IAuthTokens t = session.ProviderOAuthAccess.FirstOrDefault(e => e.Provider == "facebook");
 
 					if ((t.Email) != null)
@@ -44,7 +128,7 @@ namespace ExpressBase.ServiceStack.Auth0
                         string b = string.Empty;
                         try
                         {
-							Console.WriteLine("reached try of facebook auth");
+							Console.WriteLine("reached 1st try of facebook auth");
 							Console.WriteLine($"refferal url  =  {session.ReferrerUrl}");
 							string pasword = null;
                             SocialSignup sco_signup = new SocialSignup();
@@ -176,7 +260,9 @@ namespace ExpressBase.ServiceStack.Auth0
         public override string CreateOrMergeAuthSession(IAuthSession session, IAuthTokens tokens)
         {
 			Console.WriteLine("reached CreateOrMergeAuthSession ");
-			return base.CreateOrMergeAuthSession(session, tokens);
+			string cm = base.CreateOrMergeAuthSession(session, tokens);
+			Console.WriteLine("reached  "+cm);
+			return cm;
         }
 
         public override bool Equals(object obj)
@@ -260,7 +346,10 @@ namespace ExpressBase.ServiceStack.Auth0
         protected override string GetAuthRedirectUrl(IServiceBase authService, IAuthSession session)
         {
 			Console.WriteLine("reached GetAuthRedirectUrl ");
-			return base.GetAuthRedirectUrl(authService, session);
+			string ss = base.GetAuthRedirectUrl(authService, session);
+			Console.WriteLine("reached  " + ss);
+
+			return ss;
         }
 
         protected override IAuthRepository GetAuthRepository(IRequest req)
@@ -272,8 +361,10 @@ namespace ExpressBase.ServiceStack.Auth0
         protected override string GetReferrerUrl(IServiceBase authService, IAuthSession session, Authenticate request = null)
 
         {
-			Console.WriteLine("reached GetReferrerUrl ");
-			return base.GetReferrerUrl(authService, session, request);
+			Console.WriteLine("reached GetReferrerUrl  ");
+			string ref1= base.GetReferrerUrl(authService, session, request);
+			Console.WriteLine("reached   " + ref1);
+			return ref1;
         }
 
         protected override void LoadUserAuthInfo(AuthUserSession userSession, IAuthTokens tokens, Dictionary<string, string> authInfo)
