@@ -390,21 +390,29 @@ namespace ExpressBase.ServiceStack.Services
         public GetSolutionResponse Get(GetSolutionRequest request)
         {
             List<EbSolutionsWrapper> temp = new List<EbSolutionsWrapper>();
-            string sql = string.Format("SELECT * FROM eb_solutions WHERE tenant_id={0}", request.UserId);
-            EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(sql);
-            foreach (EbDataRow dr in dt.Rows)
+            string sql = string.Format("SELECT * FROM eb_solutions WHERE tenant_id={0} AND eb_del=false;", request.UserId);
+            GetSolutionResponse resp = new GetSolutionResponse();
+            try
             {
-                EbSolutionsWrapper _ebSolutions = (new EbSolutionsWrapper
+                EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(sql);
+                foreach (EbDataRow dr in dt.Rows)
                 {
-                    SolutionName = dr[6].ToString(),
-                    Description = dr[2].ToString(),
-                    DateCreated = Convert.ToDateTime(dr[1]).ToString("g", DateTimeFormatInfo.InvariantInfo),
-                    IsolutionId = dr[4].ToString(),
-                    EsolutionId = dr[5].ToString()
-                });
-                temp.Add(_ebSolutions);
+                    EbSolutionsWrapper _ebSolutions = (new EbSolutionsWrapper
+                    {
+                        SolutionName = dr[6].ToString(),
+                        Description = dr[2].ToString(),
+                        DateCreated = Convert.ToDateTime(dr[1]).ToString("g", DateTimeFormatInfo.InvariantInfo),
+                        IsolutionId = dr[4].ToString(),
+                        EsolutionId = dr[5].ToString()
+                    });
+                    temp.Add(_ebSolutions);
+                }
+                resp.Data = temp;
             }
-            GetSolutionResponse resp = new GetSolutionResponse() { Data = temp };
+            catch(Exception e)
+            {
+                Console.WriteLine("Exception:" + e.Message + e.StackTrace);
+            }
             return resp;
         }
 
