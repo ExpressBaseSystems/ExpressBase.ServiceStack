@@ -518,6 +518,7 @@ namespace ExpressBase.ServiceStack.Services
 
 		public FacebookLoginResponse Post(FacebookLoginRequest reqt)
 		{
+			Console.WriteLine("reached service / FacebookLoginRequest");
 			FacebookLoginResponse fbr = new FacebookLoginResponse();
 			SocialSignup sco_signup = new SocialSignup();
 			bool unique = false;

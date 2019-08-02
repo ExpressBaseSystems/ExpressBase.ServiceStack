@@ -202,11 +202,11 @@ namespace ExpressBase.ServiceStack
 
 					new MyGithubAuthProvider(AppSettings)
 					{
-						ClientId =Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GITHUB_CLIENT_ID),
-						ClientSecret = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GITHUB_CLIENT_SECRET)
+						//ClientId =Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GITHUB_CLIENT_ID),
+						//ClientSecret = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GITHUB_CLIENT_SECRET)
 
-						//	ClientId ="de0c8eefca9c1871a521",
-					//	ClientSecret = "805bf067aa1768e1d63bc4f540d0f79834a3955f"
+							ClientId ="de0c8eefca9c1871a521",
+					ClientSecret = "805bf067aa1768e1d63bc4f540d0f79834a3955f"
 					}
 
 				
