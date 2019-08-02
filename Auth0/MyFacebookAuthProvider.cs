@@ -43,10 +43,13 @@ namespace ExpressBase.ServiceStack.Auth0
 			//Transfering AccessToken/Secret from Mobile/Desktop App to Server
 			if (request?.AccessToken != null)
 			{
+				Console.WriteLine("reached access toke =null? access token =  " + request.AccessToken);
+
 				if (!AuthHttpGateway.VerifyFacebookAccessToken(AppId, request.AccessToken))
 					return HttpError.Unauthorized("AccessToken is not for App: " + AppId);
 
 				var isHtml = authService.Request.IsHtml();
+				Console.WriteLine("reached ishtml =  " + isHtml);
 				var failedResult = AuthenticateWithAccessToken(authService, session, tokens, request.AccessToken);
 				if (failedResult != null)
 					return ConvertToClientError(failedResult, isHtml);
@@ -65,6 +68,7 @@ namespace ExpressBase.ServiceStack.Auth0
 			var hasError = !error.IsNullOrEmpty();
 			if (hasError)
 			{
+				Console.WriteLine("reached hasError =  ");
 				Log.Error($"Facebook error callback. {httpRequest.QueryString}");
 				return authService.Redirect(FailedRedirectUrlFilter(this, session.ReferrerUrl.SetParam("f", error)));
 			}
@@ -73,6 +77,7 @@ namespace ExpressBase.ServiceStack.Auth0
 			var isPreAuthCallback = !code.IsNullOrEmpty();
 			if (!isPreAuthCallback)
 			{
+				Console.WriteLine("reached !isPreAuthCallback =  ");
 				var preAuthUrl = $"{PreAuthUrl}?client_id={AppId}&redirect_uri={this.CallbackUrl.UrlEncode()}&scope={string.Join(",", Permissions)}";
 
 				this.SaveSession(authService, session, SessionExpiry);
@@ -82,19 +87,22 @@ namespace ExpressBase.ServiceStack.Auth0
 			try
 			{
 				var accessTokenUrl = $"{AccessTokenUrl}?client_id={AppId}&redirect_uri={this.CallbackUrl.UrlEncode()}&client_secret={AppSecret}&code={code}";
+				Console.WriteLine("reached accessTokenUrl =  " + accessTokenUrl);
 				var contents = AccessTokenUrlFilter(this, accessTokenUrl).GetJsonFromUrl();
 				var authInfo = JsonObject.Parse(contents);
 
 				var accessToken = authInfo["access_token"];
-
+				Console.WriteLine("reached accessToken =  " + accessToken);
 				return AuthenticateWithAccessToken(authService, session, tokens, accessToken)
 					   ?? authService.Redirect(SuccessRedirectUrlFilter(this, session.ReferrerUrl.SetParam("s", "1"))); //Haz Access!
 			}
 			catch (WebException we)
 			{
+				Console.WriteLine("reached catch Exception: " + we + we.StackTrace);
 				var statusCode = ((HttpWebResponse)we.Response).StatusCode;
 				if (statusCode == HttpStatusCode.BadRequest)
 				{
+					Console.WriteLine("reached catch bad request: " + statusCode);
 					return authService.Redirect(FailedRedirectUrlFilter(this, session.ReferrerUrl.SetParam("f", "AccessTokenFailed")));
 				}
 			}
