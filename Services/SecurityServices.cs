@@ -164,10 +164,13 @@ namespace ExpressBase.ServiceStack.Services
                 sql += @"SELECT fullname,nickname,email,alternateemail,dob,sex,phnoprimary,phnosecondary,landline,phextension,fbid,fbname,statusid,hide,preferencesjson,dprefid
 						FROM eb_users WHERE id = :id AND (statusid = 0 OR statusid = 1 OR statusid = 2) AND id > 1 AND eb_del = 'F';
 						SELECT role_id FROM eb_role2user WHERE user_id = :id AND eb_del = 'F';
-						SELECT groupid FROM eb_user2usergroup WHERE userid = :id AND eb_del = 'F';
-                        SELECT m.id, m.key_id, m.key_type, m.description, l.id AS lid, l.c_type, l.c_operation, l.c_value 
-	                        FROM eb_constraints_master m, eb_constraints_line l
-	                        WHERE m.id = l.master_id AND m.key_id = :id AND key_type = 1 AND eb_del = 'F' ORDER BY m.id;";
+						SELECT groupid FROM eb_user2usergroup WHERE userid = :id AND eb_del = 'F';";
+
+                sql += EbConstraints.GetSelectQuery(EbConstraintKeyTypes.User);
+
+                //SELECT m.id, m.key_id, m.key_type, m.description, l.id AS lid, l.c_type, l.c_operation, l.c_value 
+                //            FROM eb_constraints_master m, eb_constraints_line l
+                //            WHERE m.id = l.master_id AND m.key_id = :id AND key_type = 1 AND eb_del = 'F' ORDER BY m.id;
                 //SELECT id, user_id, usergroup_id, role_id, c_type, c_value, c_operation, c_meta FROM eb_constraints WHERE user_id = :id AND eb_del = 'F' ORDER BY id;
             }
             //SELECT firstname, email, socialid, socialname FROM eb_users WHERE id = @id;	old 4th query
