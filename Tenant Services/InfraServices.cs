@@ -277,9 +277,17 @@ namespace ExpressBase.ServiceStack.Services
             CreateSolutionResponse resp = new CreateSolutionResponse();
             try
             {
-                string sid = "SELECT * from eb_sid_gen();";
-                EbDataTable dt1 = this.InfraConnectionFactory.DataDB.DoQuery(sid);
-                string Sol_id_autogen = Convert.ToString(dt1.Rows[0][0]);
+                string Sol_id_autogen = string.Empty;
+                if (string.IsNullOrEmpty(request.SolnUrl))
+                {
+                    string sid = "SELECT * from eb_sid_gen();";
+                    EbDataTable dt1 = this.InfraConnectionFactory.DataDB.DoQuery(sid);
+                    Sol_id_autogen = Convert.ToString(dt1.Rows[0][0]);
+                }
+                else
+                {
+                    Sol_id_autogen = request.SolnUrl;
+                }
 
                 string sql = @"INSERT INTO eb_solutions
                                             (
@@ -382,21 +390,29 @@ namespace ExpressBase.ServiceStack.Services
         public GetSolutionResponse Get(GetSolutionRequest request)
         {
             List<EbSolutionsWrapper> temp = new List<EbSolutionsWrapper>();
-            string sql = string.Format("SELECT * FROM eb_solutions WHERE tenant_id={0}", request.UserId);
-            EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(sql);
-            foreach (EbDataRow dr in dt.Rows)
+            string sql = string.Format("SELECT * FROM eb_solutions WHERE tenant_id={0} AND eb_del=false;", request.UserId);
+            GetSolutionResponse resp = new GetSolutionResponse();
+            try
             {
-                EbSolutionsWrapper _ebSolutions = (new EbSolutionsWrapper
+                EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(sql);
+                foreach (EbDataRow dr in dt.Rows)
                 {
-                    SolutionName = dr[6].ToString(),
-                    Description = dr[2].ToString(),
-                    DateCreated = Convert.ToDateTime(dr[1]).ToString("g", DateTimeFormatInfo.InvariantInfo),
-                    IsolutionId = dr[4].ToString(),
-                    EsolutionId = dr[5].ToString()
-                });
-                temp.Add(_ebSolutions);
+                    EbSolutionsWrapper _ebSolutions = (new EbSolutionsWrapper
+                    {
+                        SolutionName = dr[6].ToString(),
+                        Description = dr[2].ToString(),
+                        DateCreated = Convert.ToDateTime(dr[1]).ToString("g", DateTimeFormatInfo.InvariantInfo),
+                        IsolutionId = dr[4].ToString(),
+                        EsolutionId = dr[5].ToString()
+                    });
+                    temp.Add(_ebSolutions);
+                }
+                resp.Data = temp;
             }
-            GetSolutionResponse resp = new GetSolutionResponse() { Data = temp };
+            catch(Exception e)
+            {
+                Console.WriteLine("Exception:" + e.Message + e.StackTrace);
+            }
             return resp;
         }
 
@@ -564,21 +580,21 @@ namespace ExpressBase.ServiceStack.Services
     </div>
 </body>
 </html>";
-					string supporturl = "mailto:support@expressbase.com";
-					body = body.Replace("{UserName}", reques.Email);
+                    string supporturl = "mailto:support@expressbase.com";
+                    body = body.Replace("{UserName}", reques.Email);
                     body = body.Replace("{Url}", resetlink).Replace("{supporturl}", supporturl);
-					
 
-					//StringBuilder bodyMsg = new StringBuilder();
-					//bodyMsg.Append( " <img src = "+ "https://expressbase.com/images/logos/EB_Logo.png" + " />");
-					//bodyMsg.Append("<p style="+"color: red;"+"><b>Please follow this link to reset your password: <b></p>");
-					//            bodyMsg.Append("<br />");
-					//            bodyMsg.Append("next3");
-					//            bodyMsg.Append("<a href=https://" + resetlink + ">Account</a>");
-					//            bodyMsg.Append("<br />");
-					//            bodyMsg.Append("next4");
 
-					MessageProducer3.Publish(new EmailServicesRequest
+                    //StringBuilder bodyMsg = new StringBuilder();
+                    //bodyMsg.Append( " <img src = "+ "https://expressbase.com/images/logos/EB_Logo.png" + " />");
+                    //bodyMsg.Append("<p style="+"color: red;"+"><b>Please follow this link to reset your password: <b></p>");
+                    //            bodyMsg.Append("<br />");
+                    //            bodyMsg.Append("next3");
+                    //            bodyMsg.Append("<a href=https://" + resetlink + ">Account</a>");
+                    //            bodyMsg.Append("<br />");
+                    //            bodyMsg.Append("next4");
+
+                    MessageProducer3.Publish(new EmailServicesRequest
                     {
                         To = reques.Email,
                         Subject = "Reset password",

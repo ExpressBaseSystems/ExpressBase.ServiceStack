@@ -440,6 +440,19 @@ namespace ExpressBase.ServiceStack.Services
             }
             return res;
         }
+        public AddGoogleDriveResponse Post(AddGoogleDriveRequest request)
+        {
+            AddGoogleDriveResponse res = new AddGoogleDriveResponse();
+            try
+            {
+                request.Config.PersistIntegrationConf(request.SolnId, this.InfraConnectionFactory, request.UserId);
+            }
+            catch (Exception e)
+            {
+                res.ResponseStatus.Message = e.Message;
+            }
+            return res;
+        }
 
         public GetIntegrationConfigsResponse Get(GetIntegrationConfigsRequest request)
         {
