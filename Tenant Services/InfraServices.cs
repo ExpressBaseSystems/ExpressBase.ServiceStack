@@ -165,7 +165,8 @@ namespace ExpressBase.ServiceStack.Services
                     SolutionName = "My Solution " + _solcount,
                     Description = "My solution " + _solcount,
                     DeployDB = true,
-                    UserId = request.UserId
+                    UserId = request.UserId,
+                    IsFurther = true
                 });
                 if (response.Id > 0)
                 {
@@ -347,7 +348,9 @@ namespace ExpressBase.ServiceStack.Services
                             DBName = Sol_id_autogen,
                             SolnId = request.SolnId,
                             UserId = request.UserId,
-                            IsChange = false
+                            IsChange = false,
+                            IsFurther = request.IsFurther
+
                         });
 
                         if (response.DeploymentCompled)
@@ -365,17 +368,19 @@ namespace ExpressBase.ServiceStack.Services
                                 SolnId = Sol_id_autogen,
                                 UserId = request.UserId
                             });
-
-                            ImportrExportService service = base.ResolveService<ImportrExportService>();
-                            ImportApplicationResponse _response = service.Get(new ImportApplicationMqRequest
+                            if (!request.IsFurther)
                             {
-                                Id = 129,
-                                SolnId = Sol_id_autogen,
-                                UserId = request.UserId,
-                                UserAuthId = "",
-                                WhichConsole = "",
-                                IsDemoApp = true
-                            });
+                                ImportrExportService service = base.ResolveService<ImportrExportService>();
+                                ImportApplicationResponse _response = service.Get(new ImportApplicationMqRequest
+                                {
+                                    Id = 129,
+                                    SolnId = Sol_id_autogen,
+                                    UserId = request.UserId,
+                                    UserAuthId = "",
+                                    WhichConsole = "",
+                                    IsDemoApp = true
+                                });
+                            }
                         }
                     }
                 }
@@ -409,7 +414,7 @@ namespace ExpressBase.ServiceStack.Services
                 }
                 resp.Data = temp;
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 Console.WriteLine("Exception:" + e.Message + e.StackTrace);
             }

@@ -118,7 +118,7 @@ namespace ExpressBase.ServiceStack.Services
                     string[] _filepath ={"eb_compilefunctions.sql",
                         "eb_extras.sql",
                         "datadb.functioncreate.eb_authenticate_anonymous.sql",
-                        "datadb.functioncreate.eb_authenticate_unified.sql",                        
+                        "datadb.functioncreate.eb_authenticate_unified.sql",
                         "datadb.functioncreate.eb_create_or_update_rbac_roles.sql",
                         "datadb.functioncreate.eb_create_or_update_role.sql",
                         "datadb.functioncreate.eb_create_or_update_role2loc.sql",
@@ -214,7 +214,7 @@ namespace ExpressBase.ServiceStack.Services
                         con_trans.Commit();
                         EbDbCreateResponse success = request.IsChange ? new EbDbCreateResponse() { DeploymentCompled = true } : _res;
 
-                        if (!request.IsChange)
+                        if (!request.IsChange && !request.IsFurther)
                         {   //run northwind
                             Console.WriteLine("Executing northwind_script");
                             CreateOrAlter_Structure(con, "ExpressBase.Common.sqlscripts.pgsql.eb_northwind_script.sql", DataDB);
@@ -272,13 +272,13 @@ namespace ExpressBase.ServiceStack.Services
                       GRANT ALL PRIVILEGES ON SCHEMA public TO {1};                           
                             GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO {1};
                             ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON TABLES TO {1};
-                           -- ALTER DEFAULT PRIVILEGES FOR ROLE {1} IN SCHEMA public GRANT ALL ON TABLES TO {0}_admin;
+                            ALTER DEFAULT PRIVILEGES FOR ROLE {1} IN SCHEMA public GRANT ALL ON TABLES TO {0}_admin;
                             GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO {1};
                             ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON SEQUENCES TO {1};
-                          -- ALTER DEFAULT PRIVILEGES FOR ROLE {1} IN SCHEMA public GRANT ALL ON SEQUENCES TO {0}_admin;
+                            ALTER DEFAULT PRIVILEGES FOR ROLE {1} IN SCHEMA public GRANT ALL ON SEQUENCES TO {0}_admin;
                             GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public TO {1};
                             ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON FUNCTIONS TO {1};
-                           -- ALTER DEFAULT PRIVILEGES FOR ROLE {1} IN SCHEMA public GRANT ALL ON FUNCTIONS TO {0}_admin;
+                            ALTER DEFAULT PRIVILEGES FOR ROLE {1} IN SCHEMA public GRANT ALL ON FUNCTIONS TO {0}_admin;
                       GRANT ALL PRIVILEGES ON SCHEMA public TO {0}_admin; 
                             GRANT {0}_admin to {1};
                             GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO {0}_admin;                            
@@ -414,8 +414,6 @@ namespace ExpressBase.ServiceStack.Services
             try
             {
                 string result = null;
-                //path = path.Replace("../", "").Replace("/", ".").Replace("\\", ".");
-                Console.WriteLine(".............Creating......" + path);
                 var assembly = typeof(sqlscripts).Assembly;
 
                 //.....................create tbls........
@@ -431,7 +429,6 @@ namespace ExpressBase.ServiceStack.Services
                     }
                     var cmdtxt1 = DataDB.GetNewCommand(con, result);
                     cmdtxt1.ExecuteNonQuery();
-
                 }
             }
             catch (Exception e)
