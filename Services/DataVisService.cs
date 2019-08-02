@@ -465,7 +465,7 @@ namespace ExpressBase.ServiceStack
                 var x = EbSerializers.Json_Serialize(dsresponse);
                 return dsresponse;
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 Log.Info("Datviz service Exception........." + e.StackTrace);
             }
@@ -831,7 +831,7 @@ namespace ExpressBase.ServiceStack
                     }
                     else if (col.Type == EbDbTypes.String && (_isexcel == false))
                     {
-                        
+
                         if ((col as DVStringColumn).RenderAs == StringRenderType.Marker)
                             _formattedData = "<a href = '#' class ='columnMarker' data-latlong='" + _unformattedData + "'><i class='fa fa-map-marker fa-2x' style='color:red;'></i></a>";
 
@@ -851,8 +851,8 @@ namespace ExpressBase.ServiceStack
                     }
                     if (!string.IsNullOrEmpty(info))
                     {
-                        _formattedData = _unformattedData.ToString().Truncate(col.AllowedCharacterLength);
-                        _formattedData = "<span class='columntooltip' data-toggle='popover' data-content='" + info.ToBase64() + "'>" + _formattedData +"</span>";
+                        _formattedData = _formattedData.ToString().Truncate(col.AllowedCharacterLength);
+                        _formattedData = "<span class='columntooltip' data-toggle='popover' data-content='" + info.ToBase64() + "'>" + _formattedData + "</span>";
                     }
                     if (col.HideLinkifNoData)
                     {
@@ -898,7 +898,8 @@ namespace ExpressBase.ServiceStack
                     }
 
 
-                    this.conditinallyformatColumn(col, ref _formattedData, _unformattedData);
+
+                    this.conditinallyformatColumn(col, ref _formattedData, _unformattedData, row, ref globals);
 
                     _formattedTable.Rows[i][col.Data] = _formattedData;
                     if (_isexcel)
@@ -936,7 +937,7 @@ namespace ExpressBase.ServiceStack
                         _formattedData = this._ebSolution.Users[user_id];
                     }
                 }
-                catch(Exception e)
+                catch (Exception e)
                 {
                     _formattedData = _unformattedData.ToString();
                 }
@@ -969,10 +970,16 @@ namespace ExpressBase.ServiceStack
             }
         }
 
-        public void conditinallyformatColumn(DVBaseColumn col, ref object _formattedData, object _unformattedData)
+        public void conditinallyformatColumn(DVBaseColumn col, ref object _formattedData, object _unformattedData, EbDataRow row, ref Globals globals)
         {
-            foreach (ColumnCondition cond in col.ConditionalFormating )
+            foreach (ColumnCondition cond in col.ConditionalFormating)
             {
+                if (cond is AdvancedCondition)
+                {
+                    bool result= (cond as AdvancedCondition).EvaluateExpression(row, ref globals);
+                    if (result == (cond as AdvancedCondition).GetBoolValue())
+                        _formattedData = "<div class='conditionformat' style='background-color:" + cond.BackGroundColor + ";color:" + cond.FontColor + ";'>" + _formattedData + "</div>";
+                }
                 if (cond.CompareValues(_unformattedData))
                 {
                     _formattedData = "<div class='conditionformat' style='background-color:" + cond.BackGroundColor + ";color:" + cond.FontColor + ";'>" + _formattedData + "</div>";
@@ -981,95 +988,95 @@ namespace ExpressBase.ServiceStack
 
         }
 
-        public bool NumericCompareValues(NumericCondition cond, object _unformattedData)
-        {
-            if (cond.Operator == NumericOperators.Equals)
-            {
-                return Convert.ToInt32(_unformattedData) == Convert.ToInt32(cond.Value);
-            }
-            else if (cond.Operator == NumericOperators.LessThan)
-            {
-                return Convert.ToInt32(_unformattedData) < Convert.ToInt32(cond.Value);
-            }
-            else if (cond.Operator == NumericOperators.GreaterThan)
-            {
-                return Convert.ToInt32(_unformattedData) > Convert.ToInt32(cond.Value);
-            }
-            else if (cond.Operator == NumericOperators.LessThanOrEqual)
-            {
-                return Convert.ToInt32(_unformattedData) <= Convert.ToInt32(cond.Value);
-            }
-            else if (cond.Operator == NumericOperators.GreaterThanOrEqual)
-            {
-                return Convert.ToInt32(_unformattedData) >= Convert.ToInt32(cond.Value);
-            }
-            else if (cond.Operator == NumericOperators.Between)
-            {
-                return Convert.ToInt32(_unformattedData) >= Convert.ToInt32(cond.Value) && Convert.ToInt32(_unformattedData) <= Convert.ToInt32(cond.Value1);
-            }
-            return false;
-        }
+        //public bool NumericCompareValues(NumericCondition cond, object _unformattedData)
+        //{
+        //    if (cond.Operator == NumericOperators.Equals)
+        //    {
+        //        return Convert.ToInt32(_unformattedData) == Convert.ToInt32(cond.Value);
+        //    }
+        //    else if (cond.Operator == NumericOperators.LessThan)
+        //    {
+        //        return Convert.ToInt32(_unformattedData) < Convert.ToInt32(cond.Value);
+        //    }
+        //    else if (cond.Operator == NumericOperators.GreaterThan)
+        //    {
+        //        return Convert.ToInt32(_unformattedData) > Convert.ToInt32(cond.Value);
+        //    }
+        //    else if (cond.Operator == NumericOperators.LessThanOrEqual)
+        //    {
+        //        return Convert.ToInt32(_unformattedData) <= Convert.ToInt32(cond.Value);
+        //    }
+        //    else if (cond.Operator == NumericOperators.GreaterThanOrEqual)
+        //    {
+        //        return Convert.ToInt32(_unformattedData) >= Convert.ToInt32(cond.Value);
+        //    }
+        //    else if (cond.Operator == NumericOperators.Between)
+        //    {
+        //        return Convert.ToInt32(_unformattedData) >= Convert.ToInt32(cond.Value) && Convert.ToInt32(_unformattedData) <= Convert.ToInt32(cond.Value1);
+        //    }
+        //    return false;
+        //}
 
-        public bool DateCompareValues(DateCondition cond, object _unformattedData)
-        {
-            DateTime data = Convert.ToDateTime(_unformattedData);
-            DateTime value = Convert.ToDateTime(cond.Value);
+        //public bool DateCompareValues(DateCondition cond, object _unformattedData)
+        //{
+        //    DateTime data = Convert.ToDateTime(_unformattedData);
+        //    DateTime value = Convert.ToDateTime(cond.Value);
 
-            if (cond.Operator == NumericOperators.Equals)
-            {
-                return data == value;
-            }
-            else if (cond.Operator == NumericOperators.LessThan)
-            {
-                return data < value;
-            }
-            else if (cond.Operator == NumericOperators.GreaterThan)
-            {
-                return data > value;
-            }
-            else if (cond.Operator == NumericOperators.LessThanOrEqual)
-            {
-                return data <= value;
-            }
-            else if (cond.Operator == NumericOperators.GreaterThanOrEqual)
-            {
-                return data >= value;
-            }
-            else if (cond.Operator == NumericOperators.Between)
-            {
-                return data >= value && data <= Convert.ToDateTime(cond.Value1);
-            }
-            return false;
-        }
+        //    if (cond.Operator == NumericOperators.Equals)
+        //    {
+        //        return data == value;
+        //    }
+        //    else if (cond.Operator == NumericOperators.LessThan)
+        //    {
+        //        return data < value;
+        //    }
+        //    else if (cond.Operator == NumericOperators.GreaterThan)
+        //    {
+        //        return data > value;
+        //    }
+        //    else if (cond.Operator == NumericOperators.LessThanOrEqual)
+        //    {
+        //        return data <= value;
+        //    }
+        //    else if (cond.Operator == NumericOperators.GreaterThanOrEqual)
+        //    {
+        //        return data >= value;
+        //    }
+        //    else if (cond.Operator == NumericOperators.Between)
+        //    {
+        //        return data >= value && data <= Convert.ToDateTime(cond.Value1);
+        //    }
+        //    return false;
+        //}
 
-        public bool StringCompareValues(StringCondition cond, object _unformattedData)
-        {
-            string data = _unformattedData.ToString().Trim().ToLower();
-            string searchval = cond.Value.Trim().ToLower().ToString();
+        //public bool StringCompareValues(StringCondition cond, object _unformattedData)
+        //{
+        //    string data = _unformattedData.ToString().Trim().ToLower();
+        //    string searchval = cond.Value.Trim().ToLower().ToString();
 
-            if (cond.Operator == StringOperators.Startwith)
-            {
-                return data.StartsWith(searchval);
-            }
-            else if (cond.Operator == StringOperators.EndsWith)
-            {
-                return data.EndsWith(searchval);
-            }
-            else if (cond.Operator == StringOperators.Contains)
-            {
-                return data.Contains(searchval);
-            }
-            else if (cond.Operator == StringOperators.Equals)
-            {
-                return data == searchval;
-            }
-            return false;
-        }
+        //    if (cond.Operator == StringOperators.Startwith)
+        //    {
+        //        return data.StartsWith(searchval);
+        //    }
+        //    else if (cond.Operator == StringOperators.EndsWith)
+        //    {
+        //        return data.EndsWith(searchval);
+        //    }
+        //    else if (cond.Operator == StringOperators.Contains)
+        //    {
+        //        return data.Contains(searchval);
+        //    }
+        //    else if (cond.Operator == StringOperators.Equals)
+        //    {
+        //        return data == searchval;
+        //    }
+        //    return false;
+        //}
 
-        public bool BooleanCompareValues(BooleanCondition cond, object _unformattedData)
-        {
-            return false;
-        }
+        //public bool BooleanCompareValues(BooleanCondition cond, object _unformattedData)
+        //{
+        //    return false;
+        //}
 
         public string GetTreeHtml(object data, bool isgroup, int level)
         {
@@ -1214,7 +1221,7 @@ namespace ExpressBase.ServiceStack
                         SetFinalFooterRow(currentRow, RowGroupingColumns, IsMultiLevelRowGrouping, RowGrouping, PrevRowIndex, TempGroupingText, CurSortIndex, Culture, _user);
                     }
                 }
-                if ( PrevRowIndex == RowCount - 1)
+                if (PrevRowIndex == RowCount - 1)
                 {
                     SetFinalFooterRow(currentRow, RowGroupingColumns, IsMultiLevelRowGrouping, RowGrouping, PrevRowIndex, TempGroupingText, CurSortIndex, Culture, _user);
                 }
@@ -1235,7 +1242,7 @@ namespace ExpressBase.ServiceStack
             PreviousGroupingText = TempGroupingText;
         }
 
-        private void SetFinalFooterRow(EbDataRow currentRow, List<DVBaseColumn> rowGroupingColumns, bool IsMultiLevelRowGrouping, Dictionary<string, GroupingDetails> RowGrouping, int i, string TempGroupingText, int CurSortIndex,  CultureInfo _user_culture, User _user)
+        private void SetFinalFooterRow(EbDataRow currentRow, List<DVBaseColumn> rowGroupingColumns, bool IsMultiLevelRowGrouping, Dictionary<string, GroupingDetails> RowGrouping, int i, string TempGroupingText, int CurSortIndex, CultureInfo _user_culture, User _user)
         {
             List<string> GroupingKeys = CreateRowGroupingKeys(currentRow, rowGroupingColumns, IsMultiLevelRowGrouping, _user_culture, _user);
             (RowGrouping[FooterPrefix + TempGroupingText] as FooterGroupingDetails).InsertionType = AfterText;
@@ -1296,7 +1303,7 @@ namespace ExpressBase.ServiceStack
             List<DVBaseColumn> _rowGroupingColumns, Dictionary<string, GroupingDetails> rowGrouping, DVColumnCollection VisualizationColumns,
             int TotalLevels, bool IsMultiLevelGrouping, CultureInfo culture, string TempGroupingText, ref int CurSortIndex, int ColumnCount, User _user)
         {
-            List<string> TempKey = CreateRowGroupingKeys(CurrentRow, _rowGroupingColumns, (TotalLevels > 1) ? true : false, culture,_user);
+            List<string> TempKey = CreateRowGroupingKeys(CurrentRow, _rowGroupingColumns, (TotalLevels > 1) ? true : false, culture, _user);
             if (IsMultiLevelGrouping)
             {
                 for (int j = 0; j < TotalLevels; j++)
@@ -1351,7 +1358,7 @@ namespace ExpressBase.ServiceStack
                 }
                 else
                 {
-                    TempStr += (TempStr.Equals(string.Empty)) ? ((tempvalue.IsNullOrEmpty()) ? BlankText : tempvalue): GroupDelimiter + ((tempvalue.IsNullOrEmpty()) ? BlankText : tempvalue);
+                    TempStr += (TempStr.Equals(string.Empty)) ? ((tempvalue.IsNullOrEmpty()) ? BlankText : tempvalue) : GroupDelimiter + ((tempvalue.IsNullOrEmpty()) ? BlankText : tempvalue);
                 }
             }
 
