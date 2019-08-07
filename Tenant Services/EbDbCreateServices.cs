@@ -216,9 +216,7 @@ namespace ExpressBase.ServiceStack.Services
 
                         if (!request.IsChange && !request.IsFurther)
                         {   //run northwind
-                            Console.WriteLine("Executing northwind_script");
-                            CreateOrAlter_Structure(con, "ExpressBase.Common.sqlscripts.pgsql.eb_northwind_script.sql", DataDB);
-
+                            RunNorthWindScript(request.DBName, _res.DbUsers);
                             //import the application 129
                         }
                         return success;
@@ -506,6 +504,21 @@ namespace ExpressBase.ServiceStack.Services
                 return false;
             }
             return true;
+        }
+
+        public void RunNorthWindScript(string DBName,EbDbUsers dbusers)
+        {
+            Console.WriteLine("Executing northwind_script");
+            EbConnectionsConfig _solutionConnections = EbConnectionsConfigProvider.GetDataCenterConnections();
+            _solutionConnections.DataDbConfig.DatabaseName = DBName;
+            _solutionConnections.DataDbConfig.Password = dbusers.AdminPassword;
+            _solutionConnections.DataDbConfig.UserName = dbusers.AdminUserName;
+
+            IDatabase DataDB = new EbConnectionFactory(_solutionConnections, DBName).DataDB;
+            DbConnection con = DataDB.GetNewConnection();
+            con.Open();
+            CreateOrAlter_Structure(con, "ExpressBase.Common.sqlscripts.pgsql.eb_northwind_script.sql", DataDB);
+
         }
     }
 }
