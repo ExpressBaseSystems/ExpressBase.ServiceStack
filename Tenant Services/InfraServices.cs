@@ -23,6 +23,7 @@ using ServiceStack.Messaging;
 using System.Text;
 using System.Globalization;
 using ExpressBase.ServiceStack.MQServices;
+using Newtonsoft.Json;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -200,9 +201,9 @@ namespace ExpressBase.ServiceStack.Services
         <div style='line-height: 1.4;'>
             Dear {UserName},<br />
             <br />
-            Welcome to EXPRESSbase!  <br />
-            An Open-Source, Low-Code Rapid application development & delivery platform on the cloud for businesses & developers to build & run business apps 10 times faster.<br />
-            We're excited to help you get started with your new EXPRESSbase account. Please go thru our <a href='{wikiurl}'>Wiki</a> for tutorials. <br /><br />
+            Welcome to EXPRESSbase, an Open-Source, Low-Code Rapid application development & delivery platform on the cloud for businesses & developers to build & run business apps 10 times faster.<br />
+			 <br />
+            We're excited to help you get started with your new EXPRESSbase account. Please go thru our <a href='{wikiurl}'>Wiki</a> for tutorials. 
             If you wish to connect the database used by your existing applications, you could do it in very simple  <a href='{stepsurl}'>steps</a> – and it is secure too!<br /><br />
             Just click the button below to verify your email address.<br />
         </div>
@@ -217,11 +218,11 @@ namespace ExpressBase.ServiceStack.Services
         <br />
         If the previous button does not work, try to copy and paste the following URL in your browser’s address bar:<br />
         <a href='{Url}'>{Url}</a><br />
-        <br />
+         <br />
 
         Need help? Please drop in a mail to <a href='{supporturl}'>support@expressbase.com</a>. We're right here for you.<br /><br />
         Sincerely,<br />
-        EXPRESSbase<br />
+        Team EXPRESSbase<br />
     </div>
 </body>
 </html>";
@@ -515,12 +516,86 @@ namespace ExpressBase.ServiceStack.Services
             return respo;
         }
 
+		public FacebookLoginResponse Post(FacebookLoginRequest reqt)
+		{
+			Console.WriteLine("reached service / FacebookLoginRequest");
+			FacebookLoginResponse fbr = new FacebookLoginResponse();
+			SocialSignup sco_signup = new SocialSignup();
+			bool unique = false;
+			string pasword = null;
+			try
+			{
+				string sql1 = "SELECT id,fb_id,github_id,twitter_id FROM eb_tenants WHERE email ~* @email and eb_del='F'";
+				DbParameter[] parameters2 = { InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, reqt.Email) };
+				EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(sql1, parameters2);
+				if (dt.Rows.Count > 0)
+				{
+					unique = false;
+					sco_signup.FbId = Convert.ToString(dt.Rows[0][1]);
+					sco_signup.GithubId = Convert.ToString(dt.Rows[0][2]);
+					sco_signup.TwitterId = Convert.ToString(dt.Rows[0][3]);
+					Console.WriteLine("mail id is not unique");
+					//if (urllink.Contains(pathsignup, StringComparison.OrdinalIgnoreCase))
+					//{
+					//	sco_signup.Forsignup = true;
+					//}
+					//else
+					//if(urllink.Contains(pathsignin, StringComparison.OrdinalIgnoreCase))
+					{
+						sco_signup.Forsignup = false;
+					}
+				}
+				else
+					unique = true;
+				if (unique == true)
+				{
+					string pd = Guid.NewGuid().ToString();
+					pasword = (reqt.Fbid+ pd + reqt.Email).ToMD5Hash();
+					DbParameter[] parameter1 = {
+								InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, reqt.Email),
+								InfraConnectionFactory.DataDB.GetNewParameter("name", EbDbTypes.String,  reqt.Name),
+								 InfraConnectionFactory.DataDB.GetNewParameter("fbid", EbDbTypes.String,  reqt.Fbid),
+								 InfraConnectionFactory.DataDB.GetNewParameter("password", EbDbTypes.String,pasword),
+								 InfraConnectionFactory.DataDB.GetNewParameter("fals", EbDbTypes.String,'F'),
+
+								 };
+
+					EbDataTable dtbl = InfraConnectionFactory.DataDB.DoQuery(@"INSERT INTO eb_tenants 
+								(email,fullname,fb_id,pwd, eb_created_at,eb_del, is_verified, is_email_sent) 
+                                 VALUES 
+                                 (:email,:name,:fbid,:password,NOW(),:fals,:fals,:fals) RETURNING id;", parameter1);
+
+					Console.WriteLine("inserted details to tenant table");
+					sco_signup.Pauto = pasword;
+				}
+
+				{
+					sco_signup.AuthProvider = "facebook";
+					sco_signup.Email = reqt.Email;
+					sco_signup.Social_id = reqt.Fbid;
+					sco_signup.Fullname = reqt.Name;
+					//sco_signup.IsVerified = session.IsAuthenticated,
+
+					sco_signup.UniqueEmail = unique;
+
+				};
+				fbr.jsonval = JsonConvert.SerializeObject(sco_signup);
+				
+
+			}
+			catch(Exception e)
+			{
+				Console.WriteLine("Exception: " + e.Message + e.StackTrace);
+			}
+
+
+			return fbr;
+		}
 
 
 
 
-
-        public ForgotPasswordResponse Post(ForgotPasswordRequest reques)
+			public ForgotPasswordResponse Post(ForgotPasswordRequest reques)
         {
             ForgotPasswordResponse re = new ForgotPasswordResponse();
             try
@@ -541,9 +616,19 @@ namespace ExpressBase.ServiceStack.Services
 
                 if (dt == 1)
                 {
-                    //uin=unique identification number
-                    //uic=unique identification code
-                    string aq = "$" + reques.Email + "$" + reques.Resetcode + "$";
+					string pq = String.Format(@"select name from
+										eb_tenants 
+										WHERE 
+											email=:mail
+                                            and eb_del='F'"
+											);
+					DbParameter[] parameters11 = {
+					this.InfraConnectionFactory.DataDB.GetNewParameter("mail", EbDbTypes.String, reques.Email)
+					};
+					EbDataTable dt11 = InfraConnectionFactory.DataDB.DoQuery(pq, parameters11);
+					//uin=unique identification number
+					//uic=unique identification code
+					string aq = "$" + reques.Email + "$" + reques.Resetcode + "$";
                     byte[] plaintxt = System.Text.Encoding.UTF8.GetBytes(aq);
                     string ai = System.Convert.ToBase64String(plaintxt);
                     string resetlink = string.Format("https://{0}/resetpassword?rep={1}", reques.PageUrl, ai);
@@ -555,7 +640,7 @@ namespace ExpressBase.ServiceStack.Services
 
                     string body = @"</head>
 <body>
-    <div style='border: 1px solid #508bf9;padding:20px 40px 20px 40px;width:70%; '>
+    <div style='border: 1px solid #508bf9;padding:20px 40px 20px 40px; '>
         <figure style='text-align: center;margin:0px;'>
             <img src='https://expressbase.com/images/logos/EB_Logo.png' /><br />
         </figure>
@@ -577,16 +662,17 @@ namespace ExpressBase.ServiceStack.Services
         </table>
         <br />
 		If the previous button does not work, try to copy and paste the following URL in your browser’s address bar:<br />
-        <a href='{Url}'>{Url}</a>
-        <br />
+        <a href='{Url}'>{Url}</a> 
+		<br />
+		<br />
         Need help? Please drop in a mail to <a href='{supporturl}'>support@expressbase.com</a>. We're right here for you.<br /><br />
         Sincerely,<br />
-        EXPRESSbase<br />
+        Team EXPRESSbase<br />
     </div>
 </body>
 </html>";
                     string supporturl = "mailto:support@expressbase.com";
-                    body = body.Replace("{UserName}", reques.Email);
+                    body = body.Replace("{UserName}", (dt11.Rows[0][0]).ToString());
                     body = body.Replace("{Url}", resetlink).Replace("{supporturl}", supporturl);
 
 

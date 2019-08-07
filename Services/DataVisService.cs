@@ -45,6 +45,8 @@ namespace ExpressBase.ServiceStack
 
         private bool _replaceEbColumns = true;
 
+        private ResponseStatus _Responsestatus = new ResponseStatus();
+
 
         public DataVisService(IEbConnectionFactory _dbf) : base(_dbf) { }
 
@@ -410,7 +412,17 @@ namespace ExpressBase.ServiceStack
                 Console.WriteLine("Before :  " + DateTime.Now);
                 var dtStart = DateTime.Now;
                 Console.WriteLine("................................................dataviz datarequest start " + DateTime.Now);
-                var _dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray<System.Data.Common.DbParameter>());
+                var _dataset = new EbDataSet();
+                try
+                {
+                    _dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray<System.Data.Common.DbParameter>());
+                }
+                catch (Exception e)
+                {
+                    Log.Info("Datviz Qurey Exception........." + e.StackTrace);
+                    Log.Info("Datviz Qurey Exception........." + e.Message);
+                    this._Responsestatus.Message = e.Message;
+                }
                 Console.WriteLine("................................................dataviz datarequest end " + DateTime.Now);
                 var dtstop = DateTime.Now;
                 Console.WriteLine("..................................totaltimeinSeconds" + dtstop.Subtract(dtStart).Seconds);
@@ -459,7 +471,8 @@ namespace ExpressBase.ServiceStack
                     Summary = ReturnObj.Summary,
                     excel_file = ReturnObj.excel_file,
                     TableName = _dataset.Tables[0].TableName,
-                    Tree = ReturnObj.tree
+                    Tree = ReturnObj.tree,
+                    ResponseStatus =this._Responsestatus
                 };
                 this.Log.Info(" dataviz dataresponse*****" + dsresponse.Data);
                 var x = EbSerializers.Json_Serialize(dsresponse);
@@ -468,6 +481,8 @@ namespace ExpressBase.ServiceStack
             catch (Exception e)
             {
                 Log.Info("Datviz service Exception........." + e.StackTrace);
+                Log.Info("Datviz service Exception........." + e.Message);
+                this._Responsestatus.Message = e.Message;
             }
             return null;
         }
@@ -587,7 +602,8 @@ namespace ExpressBase.ServiceStack
             }
             catch (Exception e)
             {
-                Log.Info("c# Script Exception........." + e.StackTrace);
+                Log.Info("CustomColumDoCalc4Row........." + e.StackTrace);
+                Log.Info("CustomColumDoCalc4Row........." + e.Message);
             }
 
             try
@@ -601,7 +617,8 @@ namespace ExpressBase.ServiceStack
             }
             catch (Exception e)
             {
-                Log.Info("c# Script Exception........." + e.StackTrace);
+                Log.Info("CustomColumDoCalc4Row Exception........." + e.StackTrace);
+                Log.Info("CustomColumDoCalc4Row Exception........." + e.Message);
             }
 
             _datarow[customCol.Name] = result;
@@ -723,6 +740,8 @@ namespace ExpressBase.ServiceStack
             catch (Exception e)
             {
                 Log.Info("Before PreProcessing in datatable  Exception........." + e.StackTrace);
+                Log.Info("Before PreProcessing in datatable  Exception........." + e.Message);
+                this._Responsestatus.Message = e.Message;
             }
             return null;
         }
@@ -921,69 +940,98 @@ namespace ExpressBase.ServiceStack
             catch (Exception e)
             {
                 Log.Info("PreProcessing in datatable Exception........." + e.StackTrace);
+                Log.Info("PreProcessing in datatable Exception........." + e.Message);
+                this._Responsestatus.Message = e.Message;
             }
 
         }
 
         public void ModifyEbColumns(DVBaseColumn col, ref object _formattedData, object _unformattedData)
         {
-            if (col.Name == "eb_created_by" || col.Name == "eb_lastmodified_by")
+            try
             {
-                try
+                if (col.Name == "eb_created_by" || col.Name == "eb_lastmodified_by")
                 {
-                    int user_id = Convert.ToInt32(_unformattedData);
-                    if (this._ebSolution.Users != null && this._ebSolution.Users.ContainsKey(user_id))
+                    try
                     {
-                        _formattedData = this._ebSolution.Users[user_id];
+                        int user_id = Convert.ToInt32(_unformattedData);
+                        if (this._ebSolution.Users != null && this._ebSolution.Users.ContainsKey(user_id))
+                        {
+                            _formattedData = this._ebSolution.Users[user_id];
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        _formattedData = _unformattedData.ToString();
                     }
                 }
-                catch (Exception e)
+                else if (col.Name == "eb_loc_id")
                 {
-                    _formattedData = _unformattedData.ToString();
+                    int loc_id = Convert.ToInt32(_unformattedData);
+                    if (this._ebSolution.Locations.ContainsKey(loc_id))
+                    {
+                        _formattedData = this._ebSolution.Locations[loc_id].ShortName;
+                    }
                 }
             }
-            else if (col.Name == "eb_loc_id")
+            catch (Exception e)
             {
-                int loc_id = Convert.ToInt32(_unformattedData);
-                if (this._ebSolution.Locations.ContainsKey(loc_id))
-                {
-                    _formattedData = this._ebSolution.Locations[loc_id].ShortName;
-                }
+                Log.Info("Modify EbColumns in datatable Exception........." + e.StackTrace);
+                Log.Info("Modify EbColumns in datatable Exception........." + e.Message);
+                this._Responsestatus.Message = e.Message;
             }
         }
 
         public void DateTimeformat(object _unformattedData, ref object _formattedData, ref EbDataRow row, DVBaseColumn col, CultureInfo cults, User _user)
         {
-            _unformattedData = (_unformattedData == DBNull.Value) ? DateTime.MinValue : _unformattedData;
-            if ((col as DVDateTimeColumn).Format == DateFormat.Date)
+            try
             {
-                _formattedData = (((DateTime)_unformattedData).Date != DateTime.MinValue) ? Convert.ToDateTime(_unformattedData).ToString("d", cults.DateTimeFormat) : string.Empty;
-                row[col.Data] = Convert.ToDateTime(_unformattedData).ToString("yyyy-MM-dd");
+                _unformattedData = (_unformattedData == DBNull.Value) ? DateTime.MinValue : _unformattedData;
+                if ((col as DVDateTimeColumn).Format == DateFormat.Date)
+                {
+                    _formattedData = (((DateTime)_unformattedData).Date != DateTime.MinValue) ? Convert.ToDateTime(_unformattedData).ToString("d", cults.DateTimeFormat) : string.Empty;
+                    row[col.Data] = Convert.ToDateTime(_unformattedData).ToString("yyyy-MM-dd");
+                }
+                else if ((col as DVDateTimeColumn).Format == DateFormat.DateTime)
+                {
+                    if ((col as DVDateTimeColumn).ConvretToUsersTimeZone)
+                        _formattedData = (((DateTime)_unformattedData).Date != DateTime.MinValue) ? Convert.ToDateTime(_unformattedData).ConvertFromUtc(_user.Preference.TimeZone).ToString(cults.DateTimeFormat.ShortDatePattern + " " + cults.DateTimeFormat.ShortTimePattern) : string.Empty;
+                    else
+                        _formattedData = (((DateTime)_unformattedData).Date != DateTime.MinValue) ? Convert.ToDateTime(_unformattedData).ToString(cults.DateTimeFormat.ShortDatePattern + " " + cults.DateTimeFormat.ShortTimePattern) : string.Empty;
+                    row[col.Data] = Convert.ToDateTime(_unformattedData);
+                }
             }
-            else if ((col as DVDateTimeColumn).Format == DateFormat.DateTime)
+            catch (Exception e)
             {
-                if ((col as DVDateTimeColumn).ConvretToUsersTimeZone)
-                    _formattedData = (((DateTime)_unformattedData).Date != DateTime.MinValue) ? Convert.ToDateTime(_unformattedData).ConvertFromUtc(_user.Preference.TimeZone).ToString(cults.DateTimeFormat.ShortDatePattern + " " + cults.DateTimeFormat.ShortTimePattern) : string.Empty;
-                else
-                    _formattedData = (((DateTime)_unformattedData).Date != DateTime.MinValue) ? Convert.ToDateTime(_unformattedData).ToString(cults.DateTimeFormat.ShortDatePattern + " " + cults.DateTimeFormat.ShortTimePattern) : string.Empty;
-                row[col.Data] = Convert.ToDateTime(_unformattedData);
+                Log.Info("DateTime Conversion in datatable Exception........." + e.StackTrace);
+                Log.Info("DateTime Conversion in datatable Exception........." + e.Message);
+                this._Responsestatus.Message = e.Message;
             }
         }
 
         public void conditinallyformatColumn(DVBaseColumn col, ref object _formattedData, object _unformattedData, EbDataRow row, ref Globals globals)
         {
-            foreach (ColumnCondition cond in col.ConditionalFormating)
+            try
             {
-                if (cond is AdvancedCondition)
+                foreach (ColumnCondition cond in col.ConditionalFormating)
                 {
-                    bool result= (cond as AdvancedCondition).EvaluateExpression(row, ref globals);
-                    if (result == (cond as AdvancedCondition).GetBoolValue())
+                    if (cond is AdvancedCondition)
+                    {
+                        bool result = (cond as AdvancedCondition).EvaluateExpression(row, ref globals);
+                        if (result == (cond as AdvancedCondition).GetBoolValue())
+                            _formattedData = "<div class='conditionformat' style='background-color:" + cond.BackGroundColor + ";color:" + cond.FontColor + ";'>" + _formattedData + "</div>";
+                    }
+                    if (cond.CompareValues(_unformattedData))
+                    {
                         _formattedData = "<div class='conditionformat' style='background-color:" + cond.BackGroundColor + ";color:" + cond.FontColor + ";'>" + _formattedData + "</div>";
+                    }
                 }
-                if (cond.CompareValues(_unformattedData))
-                {
-                    _formattedData = "<div class='conditionformat' style='background-color:" + cond.BackGroundColor + ";color:" + cond.FontColor + ";'>" + _formattedData + "</div>";
-                }
+            }
+            catch(Exception e)
+            {
+                Log.Info("Condition Formatting in datatable Exception........." + e.StackTrace);
+                Log.Info("Condition Formatting in datatable Exception........." + e.Message);
+                this._Responsestatus.Message = e.Message;
             }
 
         }
