@@ -616,7 +616,7 @@ namespace ExpressBase.ServiceStack.Services
 
                 if (dt == 1)
                 {
-					string pq = String.Format(@"select name from
+					string pq = String.Format(@"select fullname from
 										eb_tenants 
 										WHERE 
 											email=:mail
