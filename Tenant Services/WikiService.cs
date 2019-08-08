@@ -30,9 +30,9 @@ namespace ExpressBase.ServiceStack.Services
                 string query = @"
             INSERT INTO 
             wiki (
-                    category, title, html, eb_created_at, eb_created_by, eb_tags , status) 
+                    category, title, html, eb_created_at, eb_created_by, eb_tags , status , wiki_category_id) 
             VALUES (
-                    @category, @title, @html, @createdon, @createdby, @tags, @status)
+                    @category, @title, @html, @createdon, @createdby, @tags, @status, @catid)
             RETURNING id";
 
                 DbParameter[] parameters = new DbParameter[]
@@ -43,7 +43,8 @@ namespace ExpressBase.ServiceStack.Services
                  this.InfraConnectionFactory.DataDB.GetNewParameter("createdon", EbDbTypes.DateTime, DateTime.Now),
                 this.InfraConnectionFactory.DataDB.GetNewParameter("createdby", EbDbTypes.Int32, request.Wiki.CreatedBy),
                 this.InfraConnectionFactory.DataDB.GetNewParameter("tags", EbDbTypes.String, request.Wiki.Tags),
-                this.InfraConnectionFactory.DataDB.GetNewParameter("status", EbDbTypes.String, request.Wiki.Status)
+                this.InfraConnectionFactory.DataDB.GetNewParameter("status", EbDbTypes.String, request.Wiki.Status),
+                this.InfraConnectionFactory.DataDB.GetNewParameter("catid", EbDbTypes.Int32, request.Wiki.CatId)
                 };
 
                 EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(query, parameters);
@@ -74,7 +75,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 string query = @"
             UPDATE wiki SET
-                category= @category, title = @title , html = @html , eb_lastmodified_by = @modified_by, eb_lastmodified_at = @updatedtime, eb_tags = @tags, status =@status
+                category= @category, title = @title , html = @html , eb_lastmodified_by = @modified_by, eb_lastmodified_at = @updatedtime, eb_tags = @tags, status =@status, wiki_category_id = @catid
             WHERE 
                 id= @id
             RETURNING id";
@@ -88,7 +89,8 @@ namespace ExpressBase.ServiceStack.Services
                 this.InfraConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.Wiki.Id),
                  this.InfraConnectionFactory.DataDB.GetNewParameter("tags", EbDbTypes.String, request.Wiki.Tags),
                  this.InfraConnectionFactory.DataDB.GetNewParameter("status", EbDbTypes.String, request.Wiki.Status),
-                 this.InfraConnectionFactory.DataDB.GetNewParameter("updatedtime", EbDbTypes.DateTime, DateTime.Now)
+                 this.InfraConnectionFactory.DataDB.GetNewParameter("updatedtime", EbDbTypes.DateTime, DateTime.Now),
+                 this.InfraConnectionFactory.DataDB.GetNewParameter("catid", EbDbTypes.Int32, request.Wiki.CatId)
                 };
 
                 EbDataTable x = InfraConnectionFactory.DataDB.DoQuery(query, parameters);
@@ -136,6 +138,7 @@ namespace ExpressBase.ServiceStack.Services
                 resp.Wiki.HTML = ds.Tables[0].Rows[0]["html"].ToString();
                 resp.Wiki.Tags = ds.Tables[0].Rows[0]["eb_tags"].ToString();
                 resp.Wiki.Status = ds.Tables[0].Rows[0]["status"].ToString();
+                resp.Wiki.CatId = (int)ds.Tables[0].Rows[0]["wiki_category_id"];
                 int capacity1 = ds.Tables[1].Rows.Count;
                 Console.WriteLine("INFO: Wiki Count: " + capacity1);
                 for (int i = 0; i < capacity1; i++)
@@ -143,7 +146,8 @@ namespace ExpressBase.ServiceStack.Services
                     resp.WikiCat.Add(
                         new WikiCat()
                         {
-                            WikiCategory = ds.Tables[1].Rows[i]["category"].ToString()
+                            WikiCategory = ds.Tables[1].Rows[i]["category"].ToString(),
+                            WikiCatId = (int)ds.Tables[1].Rows[i]["id"]
                         });
 
                 }
@@ -174,7 +178,8 @@ namespace ExpressBase.ServiceStack.Services
                         new WikiCat()
                         {
                             WikiCategory = dt.Rows[i]["category"].ToString(),
-                            WikiIconClass = dt.Rows[i]["icon_class"].ToString()
+                            WikiIconClass = dt.Rows[i]["icon_class"].ToString(),
+                            WikiCatId = (int) dt.Rows[i]["id"]
                         });
 
                 }
@@ -197,12 +202,12 @@ namespace ExpressBase.ServiceStack.Services
                     {
                 this.InfraConnectionFactory.DataDB.GetNewParameter("search_wiki", EbDbTypes.String, request.Wiki_Search)
                     };
-                string query = @"
+              string query = @"
                 SELECT *
                 FROM
                     wiki
-                WHERE
-                    title LIKE '%' || @search_wiki || '%' OR  eb_tags LIKE '%' || @search_wiki || '%' And status='Publish' ORDER BY list_order";
+                WHERE status='Publish' AND
+                    ( title LIKE '%' || @search_wiki || '%' OR  eb_tags LIKE '%' || @search_wiki || '%' ) ORDER BY list_order";
 
                 EbDataTable table = InfraConnectionFactory.DataDB.DoQuery(query, parameters);
 
@@ -259,7 +264,8 @@ namespace ExpressBase.ServiceStack.Services
                             HTML = ds.Tables[0].Rows[i]["html"].ToString(),
                             Title = ds.Tables[0].Rows[i]["title"].ToString(),
                             Id = (int)ds.Tables[0].Rows[i]["id"],
-                            Order = (int)ds.Tables[0].Rows[i]["list_order"]
+                            Order = (int)ds.Tables[0].Rows[i]["list_order"],
+                            CatId = (int)ds.Tables[0].Rows[i]["wiki_category_id"]
                         });
                 }
                 int capacity1 = ds.Tables[1].Rows.Count;
@@ -271,7 +277,8 @@ namespace ExpressBase.ServiceStack.Services
                         {
                             WikiCategory = ds.Tables[1].Rows[i]["category"].ToString(),
                             WikiIconClass = ds.Tables[1].Rows[i]["icon_class"].ToString(),
-                            WikiDescription = ds.Tables[1].Rows[i]["description"].ToString()
+                            WikiDescription = ds.Tables[1].Rows[i]["description"].ToString(),
+                            WikiCatId = (int) ds.Tables[1].Rows[i]["id"]
                         });
 
                 }
