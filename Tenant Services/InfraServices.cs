@@ -201,9 +201,9 @@ namespace ExpressBase.ServiceStack.Services
         <div style='line-height: 1.4;'>
             Dear {UserName},<br />
             <br />
-            Welcome to EXPRESSbase!  <br />
-            An Open-Source, Low-Code Rapid application development & delivery platform on the cloud for businesses & developers to build & run business apps 10 times faster.<br />
-            We're excited to help you get started with your new EXPRESSbase account. Please go thru our <a href='{wikiurl}'>Wiki</a> for tutorials. <br /><br />
+            Welcome to EXPRESSbase, an Open-Source, Low-Code Rapid application development & delivery platform on the cloud for businesses & developers to build & run business apps 10 times faster.<br />
+			 <br />
+            We're excited to help you get started with your new EXPRESSbase account. Please go thru our <a href='{wikiurl}'>Wiki</a> for tutorials. 
             If you wish to connect the database used by your existing applications, you could do it in very simple  <a href='{stepsurl}'>steps</a> – and it is secure too!<br /><br />
             Just click the button below to verify your email address.<br />
         </div>
@@ -218,11 +218,11 @@ namespace ExpressBase.ServiceStack.Services
         <br />
         If the previous button does not work, try to copy and paste the following URL in your browser’s address bar:<br />
         <a href='{Url}'>{Url}</a><br />
-        <br />
+         <br />
 
         Need help? Please drop in a mail to <a href='{supporturl}'>support@expressbase.com</a>. We're right here for you.<br /><br />
         Sincerely,<br />
-        EXPRESSbase<br />
+        Team EXPRESSbase<br />
     </div>
 </body>
 </html>";
@@ -241,7 +241,7 @@ namespace ExpressBase.ServiceStack.Services
             string mailbody = this.MailHtml;
             mailbody = mailbody.Replace("{UserName}", name).Replace("{Url}", elinks2);
             string wikiurl = "https://myaccount.expressbase.com/wiki";
-            string stepsurl = "https://myaccount.expressbase.com/Wiki/View/3/connecting-database";
+            string stepsurl = "https://myaccount.expressbase.com/Wiki/Integrations/Connecting-your-existing-Database";
             string supporturl = "mailto:support@expressbase.com";
 
 
@@ -374,7 +374,7 @@ namespace ExpressBase.ServiceStack.Services
                                 ImportrExportService service = base.ResolveService<ImportrExportService>();
                                 ImportApplicationResponse _response = service.Get(new ImportApplicationMqRequest
                                 {
-                                    Id = 129,
+                                    Id = 9,
                                     SolnId = Sol_id_autogen,
                                     UserId = request.UserId,
                                     UserAuthId = "",
@@ -616,9 +616,19 @@ namespace ExpressBase.ServiceStack.Services
 
                 if (dt == 1)
                 {
-                    //uin=unique identification number
-                    //uic=unique identification code
-                    string aq = "$" + reques.Email + "$" + reques.Resetcode + "$";
+					string pq = String.Format(@"select fullname from
+										eb_tenants 
+										WHERE 
+											email=:mail
+                                            and eb_del='F'"
+											);
+					DbParameter[] parameters11 = {
+					this.InfraConnectionFactory.DataDB.GetNewParameter("mail", EbDbTypes.String, reques.Email)
+					};
+					EbDataTable dt11 = InfraConnectionFactory.DataDB.DoQuery(pq, parameters11);
+					//uin=unique identification number
+					//uic=unique identification code
+					string aq = "$" + reques.Email + "$" + reques.Resetcode + "$";
                     byte[] plaintxt = System.Text.Encoding.UTF8.GetBytes(aq);
                     string ai = System.Convert.ToBase64String(plaintxt);
                     string resetlink = string.Format("https://{0}/resetpassword?rep={1}", reques.PageUrl, ai);
@@ -630,7 +640,7 @@ namespace ExpressBase.ServiceStack.Services
 
                     string body = @"</head>
 <body>
-    <div style='border: 1px solid #508bf9;padding:20px 40px 20px 40px;width:70%; '>
+    <div style='border: 1px solid #508bf9;padding:20px 40px 20px 40px; '>
         <figure style='text-align: center;margin:0px;'>
             <img src='https://expressbase.com/images/logos/EB_Logo.png' /><br />
         </figure>
@@ -652,16 +662,17 @@ namespace ExpressBase.ServiceStack.Services
         </table>
         <br />
 		If the previous button does not work, try to copy and paste the following URL in your browser’s address bar:<br />
-        <a href='{Url}'>{Url}</a>
-        <br />
+        <a href='{Url}'>{Url}</a> 
+		<br />
+		<br />
         Need help? Please drop in a mail to <a href='{supporturl}'>support@expressbase.com</a>. We're right here for you.<br /><br />
         Sincerely,<br />
-        EXPRESSbase<br />
+        Team EXPRESSbase<br />
     </div>
 </body>
 </html>";
                     string supporturl = "mailto:support@expressbase.com";
-                    body = body.Replace("{UserName}", reques.Email);
+                    body = body.Replace("{UserName}", (dt11.Rows[0][0]).ToString());
                     body = body.Replace("{Url}", resetlink).Replace("{supporturl}", supporturl);
 
 
