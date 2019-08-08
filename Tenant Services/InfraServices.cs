@@ -241,7 +241,7 @@ namespace ExpressBase.ServiceStack.Services
             string mailbody = this.MailHtml;
             mailbody = mailbody.Replace("{UserName}", name).Replace("{Url}", elinks2);
             string wikiurl = "https://myaccount.expressbase.com/wiki";
-            string stepsurl = "https://myaccount.expressbase.com/Wiki/View/3/connecting-database";
+            string stepsurl = "https://myaccount.expressbase.com/Wiki/Integrations/Connecting-your-existing-Database";
             string supporturl = "mailto:support@expressbase.com";
 
 
