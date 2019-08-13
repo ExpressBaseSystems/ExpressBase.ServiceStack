@@ -241,7 +241,7 @@ namespace ExpressBase.ServiceStack.Services
             string mailbody = this.MailHtml;
             mailbody = mailbody.Replace("{UserName}", name).Replace("{Url}", elinks2);
             string wikiurl = "https://myaccount.expressbase.com/wiki";
-            string stepsurl = "https://myaccount.expressbase.com/Wiki/View/3/connecting-database";
+            string stepsurl = "https://myaccount.expressbase.com/Wiki/Integrations/Connecting-your-existing-Database";
             string supporturl = "mailto:support@expressbase.com";
 
 
@@ -374,7 +374,7 @@ namespace ExpressBase.ServiceStack.Services
                                 ImportrExportService service = base.ResolveService<ImportrExportService>();
                                 ImportApplicationResponse _response = service.Get(new ImportApplicationMqRequest
                                 {
-                                    Id = 129,
+                                    Id = 9,
                                     SolnId = Sol_id_autogen,
                                     UserId = request.UserId,
                                     UserAuthId = "",
@@ -616,7 +616,7 @@ namespace ExpressBase.ServiceStack.Services
 
                 if (dt == 1)
                 {
-					string pq = String.Format(@"select name from
+					string pq = String.Format(@"select fullname from
 										eb_tenants 
 										WHERE 
 											email=:mail
