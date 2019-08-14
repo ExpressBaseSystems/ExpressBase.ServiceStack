@@ -798,7 +798,7 @@ namespace ExpressBase.ServiceStack.Services
             EbUserControl _uc = EbSerializers.Json_Deserialize(formObj.Data[0].Json);
             _uc.AfterRedisGet(this);
             _uc.VersionNumber = formObj.Data[0].VersionNumber;//Version number(w) in EbObject is not updated when it is commited
-            string _temp = _uc.GetInnerHtml();
+            string _temp = _uc.GetHtml();
 
             return new GetDesignHtmlResponse { Html = _temp };
         }
