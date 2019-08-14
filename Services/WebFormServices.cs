@@ -35,12 +35,12 @@ namespace ExpressBase.ServiceStack.Services
             if (request.WebObj is EbWebForm)
             {
                 (request.WebObj as EbWebForm).AfterRedisGet(this);
-                CreateWebFormTables((request.WebObj as EbWebForm).FormSchema);
+                CreateWebFormTables((request.WebObj as EbWebForm).FormSchema, request);
             }
             return new CreateWebFormTableResponse { };
         }
 
-        private void CreateWebFormTables(WebFormSchema _schema)
+        private void CreateWebFormTables(WebFormSchema _schema, CreateWebFormTableRequest request)
         {
             IVendorDbTypes vDbTypes = this.EbConnectionFactory.ObjectsDB.VendorDbTypes;
             string Msg = string.Empty;
@@ -75,7 +75,9 @@ namespace ExpressBase.ServiceStack.Services
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_loc_id", Type = vDbTypes.Int32 });
                     //_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_default", Type = vDbTypes.Boolean, Default = "F" });
 
-                    CreateOrAlterTable(_table.TableName, _listNamesAndTypes, ref Msg);
+                    int _rowaff = CreateOrAlterTable(_table.TableName, _listNamesAndTypes, ref Msg);
+                    //if (_rowaff > 0)
+                    //    CreateDsAndDv(request, _listNamesAndTypes);
                 }
             }
             if (!Msg.IsEmpty())
@@ -99,19 +101,21 @@ namespace ExpressBase.ServiceStack.Services
                 if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.ORACLE)////////////
                 {
                     sql = "CREATE TABLE @tbl(id NUMBER(10), @cols)".Replace("@cols", cols).Replace("@tbl", tableName);
-                    this.EbConnectionFactory.ObjectsDB.CreateTable(sql);//Table Creation
+                    int _rowaff = this.EbConnectionFactory.ObjectsDB.CreateTable(sql);//Table Creation
                     CreateSquenceAndTrigger(tableName);//
+                    return _rowaff;
                 }
                 else if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.PGSQL)
                 {
                     sql = "CREATE TABLE @tbl( id SERIAL PRIMARY KEY, @cols)".Replace("@cols", cols).Replace("@tbl", tableName);
-                    this.EbConnectionFactory.ObjectsDB.CreateTable(sql);
+                    return this.EbConnectionFactory.ObjectsDB.CreateTable(sql);
                 }
                 else if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.MYSQL)
                 {
                     sql = "CREATE TABLE @tbl( id INTEGER AUTO_INCREMENT PRIMARY KEY, @cols)".Replace("@cols", cols).Replace("@tbl", tableName);
-                    this.EbConnectionFactory.ObjectsDB.CreateTable(sql);
+                    return this.EbConnectionFactory.ObjectsDB.CreateTable(sql);
                 }
+
                 return 0;
             }
             else
@@ -152,9 +156,10 @@ namespace ExpressBase.ServiceStack.Services
                         {
                             sql = "ALTER TABLE @tbl ADD (" + sql.Substring(0, sql.Length - 1) + ")";
                             sql = sql.Replace("@tbl", tableName);
-                            this.EbConnectionFactory.ObjectsDB.UpdateTable(sql);
+                            int _aff = this.EbConnectionFactory.ObjectsDB.UpdateTable(sql);
                             if (appendId)
                                 CreateSquenceAndTrigger(tableName);
+                            return _aff;
                         }
                     }
                     else if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.PGSQL)
@@ -164,7 +169,7 @@ namespace ExpressBase.ServiceStack.Services
                         {
                             sql = "ALTER TABLE @tbl ADD COLUMN " + (sql.Substring(0, sql.Length - 1)).Replace(",", ", ADD COLUMN ");
                             sql = sql.Replace("@tbl", tableName);
-                            this.EbConnectionFactory.ObjectsDB.UpdateTable(sql);
+                            return this.EbConnectionFactory.ObjectsDB.UpdateTable(sql);
                         }
                     }
                     else if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.MYSQL)
@@ -174,7 +179,7 @@ namespace ExpressBase.ServiceStack.Services
                         {
                             sql = "ALTER TABLE @tbl ADD COLUMN " + (sql.Substring(0, sql.Length - 1)).Replace(",", ", ADD COLUMN ");
                             sql = sql.Replace("@tbl", tableName);
-                            this.EbConnectionFactory.ObjectsDB.UpdateTable(sql);
+                            return this.EbConnectionFactory.ObjectsDB.UpdateTable(sql);
                         }
                     }
                     return 0;
@@ -197,8 +202,49 @@ namespace ExpressBase.ServiceStack.Services
             this.EbConnectionFactory.ObjectsDB.CreateTable(trgrSql);//Trigger Creation
         }
 
+        //public void CreateDsAndDv(CreateWebFormTableRequest request, List<TableColumnMeta> listNamesAndTypes)
+        //{
+        //    var dsobj = new EbDataReader();
+        //    dsobj.Sql = "SELECT @colname@ FROM @tbl".Replace("@tbl", request.WebObj.TableName).Replace("@colname@", ColumnName);
+        //    var ds = new EbObject_Create_New_ObjectRequest();
+        //    ds.Name = request.WebObj.Name + "_datasource";
+        //    ds.Description = "desc";
+        //    ds.Json = EbSerializers.Json_Serialize(ds
+        //obj);
+        //    ds.Status = ObjectLifeCycleStatus.Live;
+        //    ds.Relations = "";
+        //    ds.IsSave = false;
+        //    ds.Tags = "";
+        //    ds.Apps = request.Apps;
+        //    ds.SolnId = request.SolnId;
+        //    ds.WhichConsole = request.WhichConsole;
+        //    ds.UserId = request.UserId;
+        //    var myService = base.ResolveService<EbObjectService>();
+        //    var res = myService.Post(ds);
+        //    var refid = res.RefId;
 
-        //================================== GET RECORD FOR RENDERING ================================================
+        //    var dvobj = new EbTableVisualization();
+        //    dvobj.DataSourceRefId = refid;
+        //    dvobj.Columns = Columns;
+        //    dvobj.DSColumns = Columns;
+        //    var ds1 = new EbObject_Create_New_ObjectRequest();
+        //    ds1.Name = request.WebObj.Name + "_response";
+        //    ds1.Description = "desc";
+        //    ds1.Json = EbSerializers.Json_Serialize(dvobj);
+        //    ds1.Status = ObjectLifeCycleStatus.Live;
+        //    ds1.Relations = refid;
+        //    ds1.IsSave = false;
+        //    ds1.Tags = "";
+        //    ds1.Apps = request.Apps;
+        //    ds1.SolnId = request.SolnId;
+        //    ds1.WhichConsole = request.WhichConsole;
+        //    ds1.UserId = request.UserId;
+        //    var res1 = myService.Post(ds1);
+        //    var refid1 = res.RefId;
+        //}
+
+
+       // ================================== GET RECORD FOR RENDERING ================================================
 
         public GetRowDataResponse Any(GetRowDataRequest request)
         {            
@@ -752,7 +798,7 @@ namespace ExpressBase.ServiceStack.Services
             EbUserControl _uc = EbSerializers.Json_Deserialize(formObj.Data[0].Json);
             _uc.AfterRedisGet(this);
             _uc.VersionNumber = formObj.Data[0].VersionNumber;//Version number(w) in EbObject is not updated when it is commited
-            string _temp = _uc.GetInnerHtml();
+            string _temp = _uc.GetHtml();
 
             return new GetDesignHtmlResponse { Html = _temp };
         }

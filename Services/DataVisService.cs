@@ -270,7 +270,7 @@ namespace ExpressBase.ServiceStack
                 EbDataVisualization _dV = request.EbDataVisualization;
 
                 DataSourceDataResponse dsresponse = null;
-                this._replaceEbColumns = request.ReplaceEbColumns;
+                //this._replaceEbColumns = request.ReplaceEbColumns;
 
                 var _ds = this.Redis.Get<EbDataReader>(request.RefId);
 
@@ -879,13 +879,13 @@ namespace ExpressBase.ServiceStack
                             AllowLinkifNoData = false;
                     }
 
-                    if (this._replaceEbColumns)
-                    {
-                        if (col.Name == "eb_created_by" || col.Name == "eb_lastmodified_by" || col.Name == "eb_loc_id")
+                    //if (this._replaceEbColumns)
+                    //{
+                        if (col.Name == "eb_created_by" || col.Name == "eb_lastmodified_by" || col.Name == "eb_loc_id" || col.Name == "eb_createdby")
                         {
                             ModifyEbColumns(col, ref _formattedData, _unformattedData);
                         }
-                    }
+                    //}
 
                     if (!string.IsNullOrEmpty(col.LinkRefId) && (_isexcel == false))
                     {
@@ -950,7 +950,7 @@ namespace ExpressBase.ServiceStack
         {
             try
             {
-                if (col.Name == "eb_created_by" || col.Name == "eb_lastmodified_by")
+                if (col.Name == "eb_created_by" || col.Name == "eb_lastmodified_by" || col.Name == "eb_createdby")
                 {
                     try
                     {
