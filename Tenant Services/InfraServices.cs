@@ -337,8 +337,8 @@ namespace ExpressBase.ServiceStack.Services
                     InfraConnectionFactory.DataDB.GetNewParameter("solnid", EbDbTypes.String,Sol_id_autogen)
                 };
 
-                EbDataSet res = this.InfraConnectionFactory.DataDB.DoQueries(sql, parameters);
-                resp.Id = Convert.ToInt32(res.Tables[0].Rows[0][0]);
+                EbDataSet _ds = this.InfraConnectionFactory.DataDB.DoQueries(sql, parameters);
+                resp.Id = Convert.ToInt32(_ds.Tables[0].Rows[0][0]);
 
                 if (resp.Id > 0)
                 {
@@ -372,9 +372,14 @@ namespace ExpressBase.ServiceStack.Services
                             if (!request.IsFurther)
                             {
                                 ImportrExportService service = base.ResolveService<ImportrExportService>();
+                                int demoAppId;
+                                if (Environment.GetEnvironmentVariable(EnvironmentConstants.ASPNETCORE_ENVIRONMENT) == "Production")
+                                    demoAppId = 9;
+                                else
+                                    demoAppId = 129;
                                 ImportApplicationResponse _response = service.Get(new ImportApplicationMqRequest
                                 {
-                                    Id = 9,
+                                    Id = demoAppId,
                                     SolnId = Sol_id_autogen,
                                     UserId = request.UserId,
                                     UserAuthId = "",
@@ -516,86 +521,86 @@ namespace ExpressBase.ServiceStack.Services
             return respo;
         }
 
-		public FacebookLoginResponse Post(FacebookLoginRequest reqt)
-		{
-			Console.WriteLine("reached service / FacebookLoginRequest");
-			FacebookLoginResponse fbr = new FacebookLoginResponse();
-			SocialSignup sco_signup = new SocialSignup();
-			bool unique = false;
-			string pasword = null;
-			try
-			{
-				string sql1 = "SELECT id,fb_id,github_id,twitter_id FROM eb_tenants WHERE email ~* @email and eb_del='F'";
-				DbParameter[] parameters2 = { InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, reqt.Email) };
-				EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(sql1, parameters2);
-				if (dt.Rows.Count > 0)
-				{
-					unique = false;
-					sco_signup.FbId = Convert.ToString(dt.Rows[0][1]);
-					sco_signup.GithubId = Convert.ToString(dt.Rows[0][2]);
-					sco_signup.TwitterId = Convert.ToString(dt.Rows[0][3]);
-					Console.WriteLine("mail id is not unique");
-					//if (urllink.Contains(pathsignup, StringComparison.OrdinalIgnoreCase))
-					//{
-					//	sco_signup.Forsignup = true;
-					//}
-					//else
-					//if(urllink.Contains(pathsignin, StringComparison.OrdinalIgnoreCase))
-					{
-						sco_signup.Forsignup = false;
-					}
-				}
-				else
-					unique = true;
-				if (unique == true)
-				{
-					string pd = Guid.NewGuid().ToString();
-					pasword = (reqt.Fbid+ pd + reqt.Email).ToMD5Hash();
-					DbParameter[] parameter1 = {
-								InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, reqt.Email),
-								InfraConnectionFactory.DataDB.GetNewParameter("name", EbDbTypes.String,  reqt.Name),
-								 InfraConnectionFactory.DataDB.GetNewParameter("fbid", EbDbTypes.String,  reqt.Fbid),
-								 InfraConnectionFactory.DataDB.GetNewParameter("password", EbDbTypes.String,pasword),
-								 InfraConnectionFactory.DataDB.GetNewParameter("fals", EbDbTypes.String,'F'),
+        public FacebookLoginResponse Post(FacebookLoginRequest reqt)
+        {
+            Console.WriteLine("reached service / FacebookLoginRequest");
+            FacebookLoginResponse fbr = new FacebookLoginResponse();
+            SocialSignup sco_signup = new SocialSignup();
+            bool unique = false;
+            string pasword = null;
+            try
+            {
+                string sql1 = "SELECT id,fb_id,github_id,twitter_id FROM eb_tenants WHERE email ~* @email and eb_del='F'";
+                DbParameter[] parameters2 = { InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, reqt.Email) };
+                EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(sql1, parameters2);
+                if (dt.Rows.Count > 0)
+                {
+                    unique = false;
+                    sco_signup.FbId = Convert.ToString(dt.Rows[0][1]);
+                    sco_signup.GithubId = Convert.ToString(dt.Rows[0][2]);
+                    sco_signup.TwitterId = Convert.ToString(dt.Rows[0][3]);
+                    Console.WriteLine("mail id is not unique");
+                    //if (urllink.Contains(pathsignup, StringComparison.OrdinalIgnoreCase))
+                    //{
+                    //	sco_signup.Forsignup = true;
+                    //}
+                    //else
+                    //if(urllink.Contains(pathsignin, StringComparison.OrdinalIgnoreCase))
+                    {
+                        sco_signup.Forsignup = false;
+                    }
+                }
+                else
+                    unique = true;
+                if (unique == true)
+                {
+                    string pd = Guid.NewGuid().ToString();
+                    pasword = (reqt.Fbid + pd + reqt.Email).ToMD5Hash();
+                    DbParameter[] parameter1 = {
+                                InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, reqt.Email),
+                                InfraConnectionFactory.DataDB.GetNewParameter("name", EbDbTypes.String,  reqt.Name),
+                                 InfraConnectionFactory.DataDB.GetNewParameter("fbid", EbDbTypes.String,  reqt.Fbid),
+                                 InfraConnectionFactory.DataDB.GetNewParameter("password", EbDbTypes.String,pasword),
+                                 InfraConnectionFactory.DataDB.GetNewParameter("fals", EbDbTypes.String,'F'),
 
-								 };
+                                 };
 
-					EbDataTable dtbl = InfraConnectionFactory.DataDB.DoQuery(@"INSERT INTO eb_tenants 
+                    EbDataTable dtbl = InfraConnectionFactory.DataDB.DoQuery(@"INSERT INTO eb_tenants 
 								(email,fullname,fb_id,pwd, eb_created_at,eb_del, is_verified, is_email_sent) 
                                  VALUES 
                                  (:email,:name,:fbid,:password,NOW(),:fals,:fals,:fals) RETURNING id;", parameter1);
 
-					Console.WriteLine("inserted details to tenant table");
-					sco_signup.Pauto = pasword;
-				}
+                    Console.WriteLine("inserted details to tenant table");
+                    sco_signup.Pauto = pasword;
+                }
 
-				{
-					sco_signup.AuthProvider = "facebook";
-					sco_signup.Email = reqt.Email;
-					sco_signup.Social_id = reqt.Fbid;
-					sco_signup.Fullname = reqt.Name;
-					//sco_signup.IsVerified = session.IsAuthenticated,
+                {
+                    sco_signup.AuthProvider = "facebook";
+                    sco_signup.Email = reqt.Email;
+                    sco_signup.Social_id = reqt.Fbid;
+                    sco_signup.Fullname = reqt.Name;
+                    //sco_signup.IsVerified = session.IsAuthenticated,
 
-					sco_signup.UniqueEmail = unique;
+                    sco_signup.UniqueEmail = unique;
 
-				};
-				fbr.jsonval = JsonConvert.SerializeObject(sco_signup);
-				
-
-			}
-			catch(Exception e)
-			{
-				Console.WriteLine("Exception: " + e.Message + e.StackTrace);
-			}
+                };
+                fbr.jsonval = JsonConvert.SerializeObject(sco_signup);
 
 
-			return fbr;
-		}
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Exception: " + e.Message + e.StackTrace);
+            }
+
+
+            return fbr;
+        }
 
 
 
 
-			public ForgotPasswordResponse Post(ForgotPasswordRequest reques)
+        public ForgotPasswordResponse Post(ForgotPasswordRequest reques)
         {
             ForgotPasswordResponse re = new ForgotPasswordResponse();
             try
@@ -616,19 +621,19 @@ namespace ExpressBase.ServiceStack.Services
 
                 if (dt == 1)
                 {
-					string pq = String.Format(@"select fullname from
+                    string pq = String.Format(@"select fullname from
 										eb_tenants 
 										WHERE 
 											email=:mail
                                             and eb_del='F'"
-											);
-					DbParameter[] parameters11 = {
-					this.InfraConnectionFactory.DataDB.GetNewParameter("mail", EbDbTypes.String, reques.Email)
-					};
-					EbDataTable dt11 = InfraConnectionFactory.DataDB.DoQuery(pq, parameters11);
-					//uin=unique identification number
-					//uic=unique identification code
-					string aq = "$" + reques.Email + "$" + reques.Resetcode + "$";
+                                            );
+                    DbParameter[] parameters11 = {
+                    this.InfraConnectionFactory.DataDB.GetNewParameter("mail", EbDbTypes.String, reques.Email)
+                    };
+                    EbDataTable dt11 = InfraConnectionFactory.DataDB.DoQuery(pq, parameters11);
+                    //uin=unique identification number
+                    //uic=unique identification code
+                    string aq = "$" + reques.Email + "$" + reques.Resetcode + "$";
                     byte[] plaintxt = System.Text.Encoding.UTF8.GetBytes(aq);
                     string ai = System.Convert.ToBase64String(plaintxt);
                     string resetlink = string.Format("https://{0}/resetpassword?rep={1}", reques.PageUrl, ai);
