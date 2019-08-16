@@ -337,8 +337,8 @@ namespace ExpressBase.ServiceStack.Services
                     InfraConnectionFactory.DataDB.GetNewParameter("solnid", EbDbTypes.String,Sol_id_autogen)
                 };
 
-                EbDataSet res = this.InfraConnectionFactory.DataDB.DoQueries(sql, parameters);
-                resp.Id = Convert.ToInt32(res.Tables[0].Rows[0][0]);
+                EbDataSet _ds = this.InfraConnectionFactory.DataDB.DoQueries(sql, parameters);
+                resp.Id = Convert.ToInt32(_ds.Tables[0].Rows[0][0]);
 
                 if (resp.Id > 0)
                 {
@@ -372,9 +372,14 @@ namespace ExpressBase.ServiceStack.Services
                             if (!request.IsFurther)
                             {
                                 ImportrExportService service = base.ResolveService<ImportrExportService>();
+                                int demoAppId;
+                                if (Environment.GetEnvironmentVariable(EnvironmentConstants.ASPNETCORE_ENVIRONMENT) == "Production")
+                                    demoAppId = 9;
+                                else
+                                    demoAppId = 129;
                                 ImportApplicationResponse _response = service.Get(new ImportApplicationMqRequest
                                 {
-                                    Id = 9,
+                                    Id = demoAppId,
                                     SolnId = Sol_id_autogen,
                                     UserId = request.UserId,
                                     UserAuthId = "",
@@ -565,7 +570,7 @@ namespace ExpressBase.ServiceStack.Services
 								 InfraConnectionFactory.DataDB.GetNewParameter("password", EbDbTypes.String,pasword),
 								 InfraConnectionFactory.DataDB.GetNewParameter("fals", EbDbTypes.String,'F'),
 
-								 };
+                                 };
 
 						EbDataTable dtbl = InfraConnectionFactory.DataDB.DoQuery(@"INSERT INTO eb_tenants 
 								(email,fullname,fb_id,pwd, eb_created_at,eb_del, is_verified, is_email_sent) 
@@ -618,11 +623,11 @@ namespace ExpressBase.ServiceStack.Services
 				Soclg.jsonval = JsonConvert.SerializeObject(sco_signup);
 				
 
-			}
-			catch(Exception e)
-			{
-				Console.WriteLine("Exception: " + e.Message + e.StackTrace);
-			}
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Exception: " + e.Message + e.StackTrace);
+            }
 
 
 			return Soclg;
@@ -631,7 +636,7 @@ namespace ExpressBase.ServiceStack.Services
 
 
 
-			public ForgotPasswordResponse Post(ForgotPasswordRequest reques)
+        public ForgotPasswordResponse Post(ForgotPasswordRequest reques)
         {
             ForgotPasswordResponse re = new ForgotPasswordResponse();
             try
@@ -652,19 +657,19 @@ namespace ExpressBase.ServiceStack.Services
 
                 if (dt == 1)
                 {
-					string pq = String.Format(@"select fullname from
+                    string pq = String.Format(@"select fullname from
 										eb_tenants 
 										WHERE 
 											email=:mail
                                             and eb_del='F'"
-											);
-					DbParameter[] parameters11 = {
-					this.InfraConnectionFactory.DataDB.GetNewParameter("mail", EbDbTypes.String, reques.Email)
-					};
-					EbDataTable dt11 = InfraConnectionFactory.DataDB.DoQuery(pq, parameters11);
-					//uin=unique identification number
-					//uic=unique identification code
-					string aq = "$" + reques.Email + "$" + reques.Resetcode + "$";
+                                            );
+                    DbParameter[] parameters11 = {
+                    this.InfraConnectionFactory.DataDB.GetNewParameter("mail", EbDbTypes.String, reques.Email)
+                    };
+                    EbDataTable dt11 = InfraConnectionFactory.DataDB.DoQuery(pq, parameters11);
+                    //uin=unique identification number
+                    //uic=unique identification code
+                    string aq = "$" + reques.Email + "$" + reques.Resetcode + "$";
                     byte[] plaintxt = System.Text.Encoding.UTF8.GetBytes(aq);
                     string ai = System.Convert.ToBase64String(plaintxt);
                     string resetlink = string.Format("https://{0}/resetpassword?rep={1}", reques.PageUrl, ai);
