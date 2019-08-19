@@ -499,7 +499,7 @@ namespace ExpressBase.ServiceStack.Services
 								pwd 
 								FROM public.eb_tenants 
 								where
-								(fb_id=:soc_id or github_id=:soc_id or twitter_id=:soc_id) 
+								(fb_id=:soc_id or github_id=:soc_id or twitter_id=:soc_id or google_id=:soc_id) 
 								and 
 								email=:mail;";
 
@@ -521,71 +521,107 @@ namespace ExpressBase.ServiceStack.Services
             return respo;
         }
 
-        public FacebookLoginResponse Post(FacebookLoginRequest reqt)
-        {
-            Console.WriteLine("reached service / FacebookLoginRequest");
-            FacebookLoginResponse fbr = new FacebookLoginResponse();
-            SocialSignup sco_signup = new SocialSignup();
-            bool unique = false;
-            string pasword = null;
-            try
-            {
-                string sql1 = "SELECT id,fb_id,github_id,twitter_id FROM eb_tenants WHERE email ~* @email and eb_del='F'";
-                DbParameter[] parameters2 = { InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, reqt.Email) };
-                EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(sql1, parameters2);
-                if (dt.Rows.Count > 0)
-                {
-                    unique = false;
-                    sco_signup.FbId = Convert.ToString(dt.Rows[0][1]);
-                    sco_signup.GithubId = Convert.ToString(dt.Rows[0][2]);
-                    sco_signup.TwitterId = Convert.ToString(dt.Rows[0][3]);
-                    Console.WriteLine("mail id is not unique");
-                    //if (urllink.Contains(pathsignup, StringComparison.OrdinalIgnoreCase))
-                    //{
-                    //	sco_signup.Forsignup = true;
-                    //}
-                    //else
-                    //if(urllink.Contains(pathsignin, StringComparison.OrdinalIgnoreCase))
-                    {
-                        sco_signup.Forsignup = false;
-                    }
-                }
-                else
-                    unique = true;
-                if (unique == true)
-                {
-                    string pd = Guid.NewGuid().ToString();
-                    pasword = (reqt.Fbid + pd + reqt.Email).ToMD5Hash();
-                    DbParameter[] parameter1 = {
-                                InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, reqt.Email),
-                                InfraConnectionFactory.DataDB.GetNewParameter("name", EbDbTypes.String,  reqt.Name),
-                                 InfraConnectionFactory.DataDB.GetNewParameter("fbid", EbDbTypes.String,  reqt.Fbid),
-                                 InfraConnectionFactory.DataDB.GetNewParameter("password", EbDbTypes.String,pasword),
-                                 InfraConnectionFactory.DataDB.GetNewParameter("fals", EbDbTypes.String,'F'),
+		public SocialLoginResponse Post(SocialLoginRequest reqt)
+		{
+			Console.WriteLine("reached service / SocialLoginRequest");
+			SocialLoginResponse Soclg = new SocialLoginResponse();
+			SocialSignup sco_signup = new SocialSignup();
+			bool unique = false;
+			string pasword = null;
+			try
+			{
+				string sql1 = "SELECT id,fb_id,github_id,twitter_id,google_id FROM eb_tenants WHERE email ~* @email and eb_del='F'";
+				DbParameter[] parameters2 = { InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, reqt.Email) };
+				EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(sql1, parameters2);
+				if (dt.Rows.Count > 0)
+				{
+					unique = false;
+					sco_signup.FbId = Convert.ToString(dt.Rows[0][1]);
+					sco_signup.GithubId = Convert.ToString(dt.Rows[0][2]);
+					sco_signup.TwitterId = Convert.ToString(dt.Rows[0][3]);
+					sco_signup.GoogleId = Convert.ToString(dt.Rows[0][4]);
+					Console.WriteLine("mail id is not unique");
+					//if (urllink.Contains(pathsignup, StringComparison.OrdinalIgnoreCase))
+					//{
+					//	sco_signup.Forsignup = true;
+					//}
+					//else
+					//if(urllink.Contains(pathsignin, StringComparison.OrdinalIgnoreCase))
+					{
+						sco_signup.Forsignup = false;
+
+					}
+				}
+				else
+				{
+					unique = true;
+				}
+
+				if (unique == true)
+				{
+					string pd = Guid.NewGuid().ToString();
+					if (!string.IsNullOrEmpty(reqt.Fbid) )
+					{
+						pasword = (reqt.Fbid + pd + reqt.Email).ToMD5Hash();
+						DbParameter[] parameter1 = {
+								InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, reqt.Email),
+								InfraConnectionFactory.DataDB.GetNewParameter("name", EbDbTypes.String,  reqt.Name),
+								 InfraConnectionFactory.DataDB.GetNewParameter("fbid", EbDbTypes.String,  reqt.Fbid),
+								 InfraConnectionFactory.DataDB.GetNewParameter("password", EbDbTypes.String,pasword),
+								 InfraConnectionFactory.DataDB.GetNewParameter("fals", EbDbTypes.String,'F'),
 
                                  };
 
-                    EbDataTable dtbl = InfraConnectionFactory.DataDB.DoQuery(@"INSERT INTO eb_tenants 
+						EbDataTable dtbl = InfraConnectionFactory.DataDB.DoQuery(@"INSERT INTO eb_tenants 
 								(email,fullname,fb_id,pwd, eb_created_at,eb_del, is_verified, is_email_sent) 
                                  VALUES 
                                  (:email,:name,:fbid,:password,NOW(),:fals,:fals,:fals) RETURNING id;", parameter1);
 
-                    Console.WriteLine("inserted details to tenant table");
-                    sco_signup.Pauto = pasword;
-                }
+						Console.WriteLine("inserted details to tenant table");
+						sco_signup.Pauto = pasword;
+					}
+					else if (!string.IsNullOrEmpty(reqt.Goglid))
+					{
 
-                {
-                    sco_signup.AuthProvider = "facebook";
-                    sco_signup.Email = reqt.Email;
-                    sco_signup.Social_id = reqt.Fbid;
-                    sco_signup.Fullname = reqt.Name;
-                    //sco_signup.IsVerified = session.IsAuthenticated,
+						pasword = (reqt.Fbid + pd + reqt.Email).ToMD5Hash();
+						DbParameter[] parameter1 = {
+								InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, reqt.Email),
+								InfraConnectionFactory.DataDB.GetNewParameter("name", EbDbTypes.String,  reqt.Name),
+								 InfraConnectionFactory.DataDB.GetNewParameter("gogl_id", EbDbTypes.String,  reqt.Goglid),
+								 InfraConnectionFactory.DataDB.GetNewParameter("password", EbDbTypes.String,pasword),
+								 InfraConnectionFactory.DataDB.GetNewParameter("fals", EbDbTypes.String,'F'),
 
-                    sco_signup.UniqueEmail = unique;
+								 };
 
-                };
-                fbr.jsonval = JsonConvert.SerializeObject(sco_signup);
+						EbDataTable dtbl = InfraConnectionFactory.DataDB.DoQuery(@"INSERT INTO eb_tenants 
+								(email,fullname,google_id,pwd, eb_created_at,eb_del, is_verified, is_email_sent) 
+                                 VALUES 
+                                 (:email,:name,:gogl_id,:password,NOW(),:fals,:fals,:fals) RETURNING id;", parameter1);
 
+						Console.WriteLine("inserted details to tenant table");
+						sco_signup.Pauto = pasword;
+					}
+				}
+				
+				{
+					if (!string.IsNullOrEmpty(reqt.Fbid))
+					{
+
+						sco_signup.AuthProvider = "facebook";
+						sco_signup.Social_id = reqt.Fbid;
+					}
+					else if (!string.IsNullOrEmpty(reqt.Goglid))
+					{
+						sco_signup.AuthProvider = "google";
+						sco_signup.Social_id = reqt.Goglid;
+					}
+				sco_signup.Email = reqt.Email;
+				sco_signup.Fullname = reqt.Name;
+				sco_signup.UniqueEmail = unique;
+				};
+
+				Soclg.jsonval = JsonConvert.SerializeObject(sco_signup);
+				
 
             }
             catch (Exception e)
@@ -594,8 +630,8 @@ namespace ExpressBase.ServiceStack.Services
             }
 
 
-            return fbr;
-        }
+			return Soclg;
+		}
 
 
 
