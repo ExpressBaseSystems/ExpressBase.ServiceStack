@@ -42,7 +42,7 @@ namespace ExpressBase.ServiceStack.Auth0
 					string pathsignup = "Platform/OnBoarding";
 					string pathsignin = "TenantSignIn";
 
-					string sql1 = "SELECT id,fb_id,github_id,twitter_id FROM eb_tenants WHERE email ~* @email and eb_del='F'";
+					string sql1 = "SELECT id,fb_id,github_id,twitter_id,google_id FROM eb_tenants WHERE email ~* @email and eb_del='F'";
                     DbParameter[] parameters2 = { InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, t.Email) };
                     EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(sql1, parameters2);
                     if (dt.Rows.Count > 0)
@@ -51,6 +51,7 @@ namespace ExpressBase.ServiceStack.Auth0
                         sco_signup.FbId = Convert.ToString(dt.Rows[0][1]);
                         sco_signup.GithubId = Convert.ToString(dt.Rows[0][2]);
                         sco_signup.TwitterId = Convert.ToString(dt.Rows[0][3]);
+                        sco_signup.GoogleId = Convert.ToString(dt.Rows[0][4]);
 						Console.WriteLine("mail id is not unique");
 						//if (urllink.Contains(pathsignup, StringComparison.OrdinalIgnoreCase))
 						//{
