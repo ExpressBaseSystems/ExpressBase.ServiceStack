@@ -862,6 +862,7 @@ namespace ExpressBase.ServiceStack
                             }
                         }
                     }
+                    obj.RefId = refId;
                     SetRedis(obj, refId);
                     if (obj is EbBotForm)
                     {
