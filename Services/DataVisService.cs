@@ -645,6 +645,8 @@ namespace ExpressBase.ServiceStack
                 this.PreCustomColumDoCalc(ref _dataset, Parameters, _dv, globals);
 
                 EbDataTable _formattedTable = _dataset.Tables[0].GetEmptyTable();
+                if (_dv.AutoGen)
+                    _formattedTable.Columns.Add(_formattedTable.NewDataColumn(_dv.Columns.Count - 1, "action", EbDbTypes.String));
                 _formattedTable.Columns.Add(_formattedTable.NewDataColumn(_dv.Columns.Count, "serial", EbDbTypes.Int32));
                 Dictionary<int, List<object>> Summary = new Dictionary<int, List<object>>();
 
@@ -835,15 +837,15 @@ namespace ExpressBase.ServiceStack
             {
                 IntermediateDic = new Dictionary<int, object>();
                 _formattedTable.Rows.Add(_formattedTable.NewDataRow2());
-                _formattedTable.Rows[i][_formattedTable.Columns.Count - 1] = i + 1;
+                _formattedTable.Rows[i][_formattedTable.Columns.Count - 1] = i + 1;//serial
                 int j = 0;
                 foreach (DVBaseColumn col in dependencyTable)
                 {
                     var cults = col.GetColumnCultureInfo(_user_culture);
-                    object _unformattedData = row[col.Data];
+                    object _unformattedData =(_dv.AutoGen && col.Name == "action") ? "<i class='fa fa-edit'></i>": row[col.Data];
                     object _formattedData = _unformattedData;
 
-                    if (col.Type == EbDbTypes.Date)
+                    if (col.Type == EbDbTypes.Date || col.Type == EbDbTypes.DateTime)
                     {
                         DateTimeformat(_unformattedData, ref _formattedData, ref row, col, cults, _user);
                     }
@@ -875,7 +877,7 @@ namespace ExpressBase.ServiceStack
                             CustomColumDoCalc4Row(row, _dv, globals, col);
                         bool AllowLinkifNoData = true;
                         var cults = col.GetColumnCultureInfo(_user_culture);
-                        object _unformattedData = row[col.Data];
+                        object _unformattedData = (_dv.AutoGen && col.Name == "action") ? "<i class='fa fa-edit'></i>" : row[col.Data]; 
                         object _formattedData = IntermediateDic[col.Data];
 
                         if (col.Type == EbDbTypes.Decimal || col.Type == EbDbTypes.Int32 || col.Type == EbDbTypes.Int64)
