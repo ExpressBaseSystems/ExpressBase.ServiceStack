@@ -841,6 +841,8 @@ namespace ExpressBase.ServiceStack
                 int j = 0;
                 foreach (DVBaseColumn col in dependencyTable)
                 {
+                    if (col.IsCustomColumn)
+                        CustomColumDoCalc4Row(row, _dv, globals, col);
                     var cults = col.GetColumnCultureInfo(_user_culture);
                     object _unformattedData = (_dv.AutoGen && col.Name == "action") ? "<i class='fa fa-edit'></i>" : row[col.Data];
                     object _formattedData = _unformattedData;
@@ -872,9 +874,7 @@ namespace ExpressBase.ServiceStack
                 if ((_dv as EbTableVisualization) != null)
                 {
                     foreach (DVBaseColumn col in dependencyTable)
-                    {
-                        if (col.IsCustomColumn)
-                            CustomColumDoCalc4Row(row, _dv, globals, col);
+                    {                        
                         bool AllowLinkifNoData = true;
                         var cults = col.GetColumnCultureInfo(_user_culture);
                         object _unformattedData = (_dv.AutoGen && col.Name == "action") ? "<i class='fa fa-edit'></i>" : row[col.Data];
