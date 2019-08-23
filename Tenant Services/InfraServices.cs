@@ -379,10 +379,12 @@ namespace ExpressBase.ServiceStack.Services
                             {
                                 ImportrExportService service = base.ResolveService<ImportrExportService>();
                                 int demoAppId;
-                                if (Environment.GetEnvironmentVariable(EnvironmentConstants.ASPNETCORE_ENVIRONMENT) == "Production")
-                                    demoAppId = 9;
-                                else
+                                string env = Environment.GetEnvironmentVariable(EnvironmentConstants.ASPNETCORE_ENVIRONMENT);
+                                Console.WriteLine("Environment : " + env);
+                                if (env == "Staging" || env == "Development")
                                     demoAppId = 129;
+                                else
+                                    demoAppId = 9;
                                 ImportApplicationResponse _response = service.Get(new ImportApplicationMqRequest
                                 {
                                     Id = demoAppId,
@@ -437,23 +439,40 @@ namespace ExpressBase.ServiceStack.Services
 
         public GetSolutioInfoResponse Get(GetSolutioInfoRequest request)
         {
-            ConnectionManager _conService = base.ResolveService<ConnectionManager>();
-            string sql = string.Format("SELECT solution_name, description, date_created, esolution_id, pricing_tier, versioning  FROM eb_solutions WHERE isolution_id='{0}'", request.IsolutionId);
-            EbDataTable dt = (new EbConnectionFactory(CoreConstants.EXPRESSBASE, this.Redis)).DataDB.DoQuery(sql);
-            EbSolutionsWrapper _ebSolutions = new EbSolutionsWrapper
+            GetSolutioInfoResponse resp = null;
+            try
             {
-                SolutionName = dt.Rows[0][0].ToString(),
-                Description = dt.Rows[0][1].ToString(),
-                DateCreated = dt.Rows[0][2].ToString(),
-                EsolutionId = dt.Rows[0][3].ToString(),
-                PricingTier = (PricingTiers)Convert.ToInt32(dt.Rows[0][4]),
-                IsVersioningEnabled = (bool)dt.Rows[0][5]
-            };
-            GetSolutioInfoResponse resp = new GetSolutioInfoResponse() { Data = _ebSolutions };
-            if (resp.Data != null)
+                Console.WriteLine("GetSolutioInfoRequest started - " + request.IsolutionId);
+                ConnectionManager _conService = base.ResolveService<ConnectionManager>();
+                string sql = string.Format("SELECT solution_name, description, date_created, esolution_id, pricing_tier, versioning  FROM eb_solutions WHERE isolution_id='{0}'", request.IsolutionId);
+                EbDataTable dt = (new EbConnectionFactory(CoreConstants.EXPRESSBASE, this.Redis)).DataDB.DoQuery(sql);
+                if (dt.Rows.Count > 0)
+                {
+                    EbSolutionsWrapper _ebSolutions = new EbSolutionsWrapper
+                    {
+                        SolutionName = dt.Rows[0][0].ToString(),
+                        Description = dt.Rows[0][1].ToString(),
+                        DateCreated = dt.Rows[0][2].ToString(),
+                        EsolutionId = dt.Rows[0][3].ToString(),
+                        PricingTier = (PricingTiers)Convert.ToInt32(dt.Rows[0][4]),
+                        IsVersioningEnabled = (dt.Rows[0][5] == null || dt.Rows[0][5].ToString() == "") ? false : (bool)dt.Rows[0][5],
+                        IsolutionId = request.IsolutionId
+                    };
+                    resp = new GetSolutioInfoResponse() { Data = _ebSolutions };
+                    if (resp.Data != null)
+                    {
+                        GetConnectionsResponse response = (GetConnectionsResponse)_conService.Post(new GetConnectionsRequest { ConnectionType = 0, SolutionId = request.IsolutionId });
+                        resp.EBSolutionConnections = response.EBSolutionConnections;
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("Couldn't retrieve solution from db" + request.IsolutionId);
+                }
+            }
+            catch (Exception e)
             {
-                GetConnectionsResponse response = (GetConnectionsResponse)_conService.Post(new GetConnectionsRequest { ConnectionType = 0, SolutionId = request.IsolutionId });
-                resp.EBSolutionConnections = response.EBSolutionConnections;
+                Console.WriteLine(e.Message + e.StackTrace);
             }
             return resp;
         }
