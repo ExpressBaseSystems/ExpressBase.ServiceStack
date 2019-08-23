@@ -162,7 +162,7 @@ namespace ExpressBase.ServiceStack.MQServices
                             Description = AppObj.Description,
                             AppIcon = AppObj.Icon
                         });
-
+                        Console.WriteLine("Created application : "+ AppObj.Name);
                         for (int i = ObjectCollection.Count - 1; i >= 0; i--)
                         {
                             UniqueObjectNameCheckResponse uniqnameresp;
