@@ -379,10 +379,12 @@ namespace ExpressBase.ServiceStack.Services
                             {
                                 ImportrExportService service = base.ResolveService<ImportrExportService>();
                                 int demoAppId;
-                                if (Environment.GetEnvironmentVariable(EnvironmentConstants.ASPNETCORE_ENVIRONMENT) == "Production")
-                                    demoAppId = 9;
-                                else
+                                string env = Environment.GetEnvironmentVariable(EnvironmentConstants.ASPNETCORE_ENVIRONMENT);
+                                Console.WriteLine("Environment : " + env);
+                                if (env == "Staging" || env == "Development")
                                     demoAppId = 129;
+                                else
+                                    demoAppId = 9;
                                 ImportApplicationResponse _response = service.Get(new ImportApplicationMqRequest
                                 {
                                     Id = demoAppId,
@@ -453,7 +455,7 @@ namespace ExpressBase.ServiceStack.Services
                         DateCreated = dt.Rows[0][2].ToString(),
                         EsolutionId = dt.Rows[0][3].ToString(),
                         PricingTier = (PricingTiers)Convert.ToInt32(dt.Rows[0][4]),
-                        IsVersioningEnabled = (dt.Rows[0][5]==null || dt.Rows[0][5].ToString()=="")?false: (bool)dt.Rows[0][5],
+                        IsVersioningEnabled = (dt.Rows[0][5] == null || dt.Rows[0][5].ToString() == "") ? false : (bool)dt.Rows[0][5],
                         IsolutionId = request.IsolutionId
                     };
                     resp = new GetSolutioInfoResponse() { Data = _ebSolutions };
@@ -465,7 +467,7 @@ namespace ExpressBase.ServiceStack.Services
                 }
                 else
                 {
-                    Console.WriteLine("Couldn't retrieve solution from db"+ request.IsolutionId);
+                    Console.WriteLine("Couldn't retrieve solution from db" + request.IsolutionId);
                 }
             }
             catch (Exception e)
