@@ -875,7 +875,7 @@ namespace ExpressBase.ServiceStack
                     {
                         WebFormServices myService = base.ResolveService<WebFormServices>();
                         myService.EbConnectionFactory = this.EbConnectionFactory;                        
-                        CreateWebFormTableResponse res = (CreateWebFormTableResponse)myService.Any(new CreateWebFormTableRequest() { WebObj = obj, Apps = request.Apps, SolnId = request.SolnId, UserId = request.UserId, WhichConsole = request.WhichConsole });
+                        CreateWebFormTableResponse res = (CreateWebFormTableResponse)myService.Any(new CreateWebFormTableRequest() { WebObj = obj, Apps = request.Apps, IsImport= request.IsImport, SolnId = request.SolnId, UserId = request.UserId, WhichConsole = request.WhichConsole });
                     }
                     else if (obj is EbSqlFunction)
                     {

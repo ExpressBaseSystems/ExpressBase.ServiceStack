@@ -79,7 +79,7 @@ namespace ExpressBase.ServiceStack.Services
                     //_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_default", Type = vDbTypes.Boolean, Default = "F" });
 
                     int _rowaff = CreateOrAlterTable(_table.TableName, _listNamesAndTypes, ref Msg);
-                    if (_table.TableName == _schema.MasterTable)
+                    if (_table.TableName == _schema.MasterTable && !request.IsImport)
                         CreateOrUpdateDsAndDv(request, _listNamesAndTypes);
                 }
             }
