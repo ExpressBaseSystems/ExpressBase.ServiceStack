@@ -842,7 +842,7 @@ namespace ExpressBase.ServiceStack
                 foreach (DVBaseColumn col in dependencyTable)
                 {
                     var cults = col.GetColumnCultureInfo(_user_culture);
-                    object _unformattedData =(_dv.AutoGen && col.Name == "action") ? "<i class='fa fa-edit'></i>": row[col.Data];
+                    object _unformattedData = (_dv.AutoGen && col.Name == "action") ? "<i class='fa fa-edit'></i>" : row[col.Data];
                     object _formattedData = _unformattedData;
 
                     if (col.Type == EbDbTypes.Date || col.Type == EbDbTypes.DateTime)
@@ -877,7 +877,7 @@ namespace ExpressBase.ServiceStack
                             CustomColumDoCalc4Row(row, _dv, globals, col);
                         bool AllowLinkifNoData = true;
                         var cults = col.GetColumnCultureInfo(_user_culture);
-                        object _unformattedData = (_dv.AutoGen && col.Name == "action") ? "<i class='fa fa-edit'></i>" : row[col.Data]; 
+                        object _unformattedData = (_dv.AutoGen && col.Name == "action") ? "<i class='fa fa-edit'></i>" : row[col.Data];
                         object _formattedData = IntermediateDic[col.Data];
 
                         if (col.Type == EbDbTypes.Decimal || col.Type == EbDbTypes.Int32 || col.Type == EbDbTypes.Int64)
@@ -893,20 +893,28 @@ namespace ExpressBase.ServiceStack
                                 _formattedData = "<a href = '#' class ='columnMarker' data-latlong='" + _unformattedData + "'><i class='fa fa-map-marker fa-2x' style='color:red;'></i></a>";
 
                         }
-                        string info = (col.AllowedCharacterLength > 0) ? col.sTitle + " : " + _formattedData + "</br>" : string.Empty;
-                        if (col.InfoWindow.Count > 0)
+                        string info = string.Empty;
+                        if (col.AllowedCharacterLength > 0 || col.InfoWindow.Count > 0)
                         {
-                            foreach (DVBaseColumn _column in col.InfoWindow)
+                            info = "<table>";
+                            if(col.AllowedCharacterLength > 0)
+                                info += "<tr><td>" +col.sTitle + "</td><td>" + _formattedData + "</td></tr>";
+                            if(col.InfoWindow.Count > 0)
                             {
-                                if (_column.Name != col.Name)
-                                    info += _column.sTitle + " : " + IntermediateDic[_column.Data] + "</br>";
+                                foreach (DVBaseColumn _column in col.InfoWindow)
+                                {
+                                    if (_column.Name != col.Name)
+                                    {
+                                        info += "<tr><td>" + _column.sTitle + "</td><td>" + IntermediateDic[_column.Data] + "</td></tr>";
+                                    }
+                                }
                             }
-                        }
-                        if (!string.IsNullOrEmpty(info))
-                        {
+                            info += "</table>";
+
                             _formattedData = _formattedData.ToString().Truncate(col.AllowedCharacterLength);
-                            _formattedData = "<span class='columntooltip' data-toggle='popover' data-content='" + info.ToBase64() + "'>" + _formattedData + "</span>";
+                            _formattedData = "<span class='columntooltip' data-toggle='popover' data-contents='" + info.ToBase64() + "'>" + _formattedData + "</span>";
                         }
+
                         if (col.HideLinkifNoData)
                         {
                             if (_formattedData.ToString() == string.Empty)
