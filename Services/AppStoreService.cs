@@ -28,6 +28,8 @@ namespace ExpressBase.ServiceStack.Services
             AppWrapper _wrapper = null;
             if (dt.Rows.Count > 0)
                 _wrapper = EbSerializers.Json_Deserialize<AppWrapper>(dt.Rows[0][7].ToString());
+            else
+                Console.WriteLine("Could't retrieve app from table eb_appstore. app id:" + request.Id);
             return new GetOneFromAppstoreResponse
             {
                 Wrapper = _wrapper
