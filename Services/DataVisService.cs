@@ -625,6 +625,28 @@ namespace ExpressBase.ServiceStack
             _datarow[customCol.Name] = result;
         }
 
+        public void GetDictonaries4Columns(EbDataVisualization _dv)
+        {
+            foreach (DVBaseColumn col in _dv.Columns)
+            {
+                if (col.ColumnQueryMapping != null)
+                {
+                    if (col.AutoResolve && !col.ColumnQueryMapping.DataSourceId.IsNullOrEmpty())
+                    {
+                        EbDataReader dr = this.Redis.Get<EbDataReader>(col.ColumnQueryMapping.DataSourceId);
+                        if (dr == null || dr.Sql == null || dr.Sql == string.Empty)
+                        {
+                            var myService = base.ResolveService<EbObjectService>();
+                            EbObjectParticularVersionResponse result =(EbObjectParticularVersionResponse) myService.Get(new EbObjectParticularVersionRequest { RefId = col.ColumnQueryMapping.DataSourceId });
+                            dr = EbSerializers.Json_Deserialize(result.Data[0].Json);
+                            Redis.Set<EbDataReader>(col.ColumnQueryMapping.DataSourceId, dr);
+                        }
+                        col.ColumnQueryMapping.Values = this.EbConnectionFactory.ObjectsDB.GetDictionary(dr.Sql, col.ColumnQueryMapping.DisplayMember[0].Name, col.ColumnQueryMapping.ValueMember.Name);
+                    }
+                }
+            }
+        }
+
         public PrePrcessorReturn PreProcessing(ref EbDataSet _dataset, List<Param> Parameters, EbDataVisualization _dv, User _user, ref List<GroupingDetails> _levels, Boolean _isexcel)
         {
             try
@@ -643,7 +665,7 @@ namespace ExpressBase.ServiceStack
 
                 Globals globals = new Globals();
                 this.PreCustomColumDoCalc(ref _dataset, Parameters, _dv, globals);
-
+                this.GetDictonaries4Columns(_dv);
                 EbDataTable _formattedTable = _dataset.Tables[0].GetEmptyTable();
                 if (_dv.AutoGen)
                     _formattedTable.Columns.Add(_formattedTable.NewDataColumn(_dv.Columns.Count - 1, "action", EbDbTypes.String));
@@ -865,6 +887,8 @@ namespace ExpressBase.ServiceStack
                     {
                         ModifyEbColumns(col, ref _formattedData, _unformattedData);
                     }
+                    if (col.ColumnQueryMapping != null && col.ColumnQueryMapping.Values.Count > 0)
+                        _formattedData = col.ColumnQueryMapping.Values[Convert.ToInt32(_formattedData)];
                     IntermediateDic.Add(col.Data, _formattedData);
                     if ((_dv as EbChartVisualization) != null || (_dv as Objects.EbGoogleMap) != null)
                     {
@@ -987,7 +1011,9 @@ namespace ExpressBase.ServiceStack
                     try
                     {
                         int user_id = Convert.ToInt32(_unformattedData);
-                        if (this._ebSolution.Users != null && this._ebSolution.Users.ContainsKey(user_id))
+                        if (user_id == 0)
+                            _formattedData = "";
+                        else if (this._ebSolution.Users != null && this._ebSolution.Users.ContainsKey(user_id))
                         {
                             _formattedData = this._ebSolution.Users[user_id];
                         }
