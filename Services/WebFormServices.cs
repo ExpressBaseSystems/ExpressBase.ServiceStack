@@ -256,6 +256,20 @@ namespace ExpressBase.ServiceStack.Services
             dvobj.DSColumns = columns;
             dvobj.ColumnsCollection.Add(columns);
             dvobj.AutoGen = true;
+            dvobj.OrderBy = new List<DVBaseColumn>();
+            dvobj.RowGroupCollection = new List<RowGroupParent>();
+            dvobj.OrderBy.Add(columns.Get("eb_created_at"));
+            RowGroupParent _rowgroup = new RowGroupParent();
+            _rowgroup.DisplayName = "By Location";
+            _rowgroup.Name = "groupbylocation";
+            _rowgroup.RowGrouping.Add(columns.Get("eb_loc_id"));
+
+            dvobj.RowGroupCollection.Add(_rowgroup);
+            _rowgroup = new RowGroupParent();
+            _rowgroup.DisplayName = "By Created By";
+            _rowgroup.Name = "groupbycreatedby";
+            _rowgroup.RowGrouping.Add(columns.Get("eb_created_by"));
+            dvobj.RowGroupCollection.Add(_rowgroup);
             dvobj.BeforeSave(this);
             return CreateNewObjectRequest(request, dvobj);
         }
@@ -363,7 +377,7 @@ namespace ExpressBase.ServiceStack.Services
         {
             var Columns = new DVColumnCollection();
             int index = 0;
-            DVBaseColumn col = new DVNumericColumn { Data = index, Name = "id", sTitle = "id", Type = EbDbTypes.Decimal, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
+            DVBaseColumn col = new DVNumericColumn { Data = index, Name = "id", sTitle = "id", Type = EbDbTypes.Decimal, bVisible = false, sWidth = "100px", ClassName = "tdheight" };
             Columns.Add(col);
             foreach (TableColumnMeta column in listNamesAndTypes)
             {
@@ -372,6 +386,7 @@ namespace ExpressBase.ServiceStack.Services
                     DVBaseColumn _col = null;
                     ControlClass _control = null;
                     bool _autoresolve = false;
+                    Align _align = Align.Auto;
                     index++;
                     if (column.Control is EbPowerSelect) {
                         _control = new ControlClass
@@ -381,21 +396,26 @@ namespace ExpressBase.ServiceStack.Services
                             ValueMember = (column.Control as EbPowerSelect).ValueMember
                         };
                         _autoresolve = true;
+                        _align = Align.Center;
                     }
 
                     if(column.Type.EbDbType == EbDbTypes.String)
                         _col = new DVStringColumn { Data = index, Name = column.Name, sTitle = column.Label, Type = column.Type.EbDbType, bVisible = true, sWidth = "100px",
-                            ClassName = "tdheight",ColumnQueryMapping = _control, AutoResolve = _autoresolve
+                            ClassName = "tdheight",ColumnQueryMapping = _control, AutoResolve = _autoresolve,Align= _align
                         };
                     
                     else if (column.Type.EbDbType == EbDbTypes.Int16 || column.Type.EbDbType == EbDbTypes.Int32 || column.Type.EbDbType == EbDbTypes.Int64 || column.Type.EbDbType == EbDbTypes.Double || column.Type.EbDbType == EbDbTypes.Decimal || column.Type.EbDbType == EbDbTypes.VarNumeric)
                         _col = new DVNumericColumn { Data = index, Name = column.Name, sTitle = column.Label, Type = column.Type.EbDbType, bVisible = true, sWidth = "100px",
-                            ClassName = "tdheight dt-body-right",ColumnQueryMapping = _control,AutoResolve = _autoresolve
+                            ClassName = "tdheight",ColumnQueryMapping = _control,AutoResolve = _autoresolve,Align = _align
                         };
                     else if (column.Type.EbDbType == EbDbTypes.Boolean)
-                        _col = new DVBooleanColumn { Data = index, Name = column.Name, sTitle = column.Label, Type = column.Type.EbDbType, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
+                        _col = new DVBooleanColumn { Data = index, Name = column.Name, sTitle = column.Label, Type = column.Type.EbDbType, bVisible = true, sWidth = "100px",
+                            ClassName = "tdheight",Align = _align
+                        };
                     else if (column.Type.EbDbType == EbDbTypes.DateTime || column.Type.EbDbType == EbDbTypes.Date || column.Type.EbDbType == EbDbTypes.Time)
-                        _col = new DVDateTimeColumn { Data = index, Name = column.Name, sTitle = column.Label, Type = column.Type.EbDbType, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
+                        _col = new DVDateTimeColumn { Data = index, Name = column.Name, sTitle = column.Label, Type = column.Type.EbDbType, bVisible = true, sWidth = "100px",
+                            ClassName = "tdheight",Align = _align
+                        };
 
                     Columns.Add(_col);
                 }
@@ -406,7 +426,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 Data = (index+1),//index+1 for serial column in datavis service
                 Name = "action",
-                sTitle = "action",
+                sTitle = "Action",
                 Type = EbDbTypes.String,
                 bVisible = true,
                 sWidth = "100px",
@@ -415,7 +435,8 @@ namespace ExpressBase.ServiceStack.Services
                 LinkRefId = request.WebObj.RefId,
                 LinkType = LinkTypeEnum.Popout,
                 FormMode = WebFormDVModes.View_Mode,
-                FormId = _formid
+                FormId = _formid,
+                Align = Align.Center
             });
             return Columns;
         }

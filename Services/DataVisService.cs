@@ -1308,7 +1308,7 @@ namespace ExpressBase.ServiceStack
             {
                 SerialCount = 0;
                 FormattedTable.Rows[PrevRowIndex][dvColCount] = ++SerialCount;
-                CreateHeaderAndFooterPairs(currentRow, AggregateColumnIndexes, RowGroupingColumns, RowGrouping, Visualization.Columns, TotalLevels, IsMultiLevelRowGrouping, Culture, TempGroupingText, ref CurSortIndex, dvColCount, _user);
+                CreateHeaderAndFooterPairs(currentRow, AggregateColumnIndexes, RowGroupingColumns, RowGrouping, Visualization.Columns, TotalLevels, IsMultiLevelRowGrouping, Culture, TempGroupingText, ref CurSortIndex, dvColCount, _user, Visualization.AutoGen);
 
                 HeaderGroupingDetails HeaderObject = RowGrouping[HeaderPrefix + TempGroupingText] as HeaderGroupingDetails;
                 HeaderObject.SetRowIndex(PrevRowIndex);
@@ -1405,7 +1405,7 @@ namespace ExpressBase.ServiceStack
 
         private void CreateHeaderAndFooterPairs(EbDataRow CurrentRow, List<int> AggregateIndexes,
             List<DVBaseColumn> _rowGroupingColumns, Dictionary<string, GroupingDetails> rowGrouping, DVColumnCollection VisualizationColumns,
-            int TotalLevels, bool IsMultiLevelGrouping, CultureInfo culture, string TempGroupingText, ref int CurSortIndex, int ColumnCount, User _user)
+            int TotalLevels, bool IsMultiLevelGrouping, CultureInfo culture, string TempGroupingText, ref int CurSortIndex, int ColumnCount, User _user, bool IsAutoGendv)
         {
             List<string> TempKey = CreateRowGroupingKeys(CurrentRow, _rowGroupingColumns, (TotalLevels > 1) ? true : false, culture, _user);
             if (IsMultiLevelGrouping)
@@ -1425,6 +1425,8 @@ namespace ExpressBase.ServiceStack
                         (rowGrouping[headerKey] as HeaderGroupingDetails).TotalLevels = TotalLevels;
                         rowGrouping[headerKey].IsMultiLevel = IsMultiLevelGrouping;
                         rowGrouping[footerKey].IsMultiLevel = IsMultiLevelGrouping;
+                        rowGrouping[headerKey].IsAutoGen = IsAutoGendv;
+                        rowGrouping[footerKey].IsAutoGen = IsAutoGendv;
                     }
                 }
                 (rowGrouping[HeaderPrefix + TempKey[TotalLevels - 1]] as HeaderGroupingDetails).SetSortIndex(CurSortIndex);
@@ -1443,6 +1445,8 @@ namespace ExpressBase.ServiceStack
                     (rowGrouping[headerKey] as HeaderGroupingDetails).ColumnCount = ColumnCount;
                     (rowGrouping[headerKey] as HeaderGroupingDetails).SetSortIndex(CurSortIndex);
                     (rowGrouping[footerKey] as FooterGroupingDetails).SetSortIndex(++CurSortIndex);
+                    rowGrouping[headerKey].IsAutoGen = IsAutoGendv;
+                    rowGrouping[footerKey].IsAutoGen = IsAutoGendv;
                 }
             }
         }
