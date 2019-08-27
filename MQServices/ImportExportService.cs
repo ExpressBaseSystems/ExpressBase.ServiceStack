@@ -162,7 +162,7 @@ namespace ExpressBase.ServiceStack.MQServices
                             Description = AppObj.Description,
                             AppIcon = AppObj.Icon
                         });
-
+                        Console.WriteLine("Created application : "+ AppObj.Name);
                         for (int i = ObjectCollection.Count - 1; i >= 0; i--)
                         {
                             UniqueObjectNameCheckResponse uniqnameresp;
@@ -199,7 +199,8 @@ namespace ExpressBase.ServiceStack.MQServices
                                 SolnId = request.SolnId,
                                 UserId = request.UserId,
                                 UserAuthId = request.UserAuthId,
-                                WhichConsole = request.WhichConsole
+                                WhichConsole = request.WhichConsole,
+                                IsImport = true
                             };
                             EbObject_Create_New_ObjectResponse res = objservice.Post(ds);
                             RefidMap[obj.RefId] = res.RefId;
