@@ -675,11 +675,13 @@ namespace ExpressBase.ServiceStack
                     if (obj is EbBotForm)
                     {
                         ChatbotServices myService = base.ResolveService<ChatbotServices>();
+                        myService.EbConnectionFactory = this.EbConnectionFactory;
                         CreateBotFormTableResponse res = (CreateBotFormTableResponse)myService.Any(new CreateBotFormTableRequest() { BotObj = obj, Apps = request.Apps, SolnId = request.SolnId, UserId = request.UserId, WhichConsole = request.WhichConsole });
                     }
                     else if (obj is EbWebForm)
                     {
                         WebFormServices myService = base.ResolveService<WebFormServices>();
+                        myService.EbConnectionFactory = this.EbConnectionFactory;
                         CreateWebFormTableResponse res = (CreateWebFormTableResponse)myService.Any(new CreateWebFormTableRequest() { WebObj = obj as EbWebForm, Apps = request.Apps, SolnId = request.SolnId, UserId = request.UserId, WhichConsole = request.WhichConsole });
                     }
                     else if (obj is EbSqlFunction)
@@ -763,12 +765,14 @@ namespace ExpressBase.ServiceStack
                     if (obj is EbBotForm)
                     {
                         ChatbotServices myService = base.ResolveService<ChatbotServices>();
+                        myService.EbConnectionFactory = this.EbConnectionFactory;
                         CreateBotFormTableResponse res = (CreateBotFormTableResponse)myService.Any(new CreateBotFormTableRequest() { BotObj = obj, Apps = request.Apps, SolnId = request.SolnId, UserId = request.UserId, WhichConsole = request.WhichConsole });
                     }
                     else if (obj is EbWebForm)
                     {
                         WebFormServices myService = base.ResolveService<WebFormServices>();
-                        CreateWebFormTableResponse res = (CreateWebFormTableResponse)myService.Any(new CreateWebFormTableRequest() { WebObj = obj as EbWebForm, Apps = request.Apps, SolnId = request.SolnId, UserId = request.UserId, WhichConsole = request.WhichConsole });
+                        myService.EbConnectionFactory = this.EbConnectionFactory;
+                        CreateWebFormTableResponse res = (CreateWebFormTableResponse)myService.Any(new CreateWebFormTableRequest() { WebObj = obj as EbWebForm, Apps = request.Apps, SolnId = request.SolnId, UserId = request.UserId, WhichConsole = request.WhichConsole, IsImport = request.IsImport });
                     }
                     else if (obj is EbSqlFunction)
                     {
@@ -858,16 +862,20 @@ namespace ExpressBase.ServiceStack
                             }
                         }
                     }
+                    obj.RefId = refId;
+                    Console.WriteLine("Created " + refId);
                     SetRedis(obj, refId);
                     if (obj is EbBotForm)
                     {
                         ChatbotServices myService = base.ResolveService<ChatbotServices>();
+                        myService.EbConnectionFactory = this.EbConnectionFactory;
                         CreateBotFormTableResponse res = (CreateBotFormTableResponse)myService.Any(new CreateBotFormTableRequest() { BotObj = obj, Apps = request.Apps, SolnId = request.SolnId, UserId = request.UserId, WhichConsole = request.WhichConsole });
                     }
                     else if (obj is EbWebForm)
                     {
                         WebFormServices myService = base.ResolveService<WebFormServices>();
-                        CreateWebFormTableResponse res = (CreateWebFormTableResponse)myService.Any(new CreateWebFormTableRequest() { WebObj = obj, Apps = request.Apps, SolnId = request.SolnId, UserId = request.UserId, WhichConsole = request.WhichConsole });
+                        myService.EbConnectionFactory = this.EbConnectionFactory;                        
+                        CreateWebFormTableResponse res = (CreateWebFormTableResponse)myService.Any(new CreateWebFormTableRequest() { WebObj = obj, Apps = request.Apps, IsImport= request.IsImport, SolnId = request.SolnId, UserId = request.UserId, WhichConsole = request.WhichConsole });
                     }
                     else if (obj is EbSqlFunction)
                     {

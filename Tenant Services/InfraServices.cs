@@ -146,13 +146,14 @@ namespace ExpressBase.ServiceStack.Services
             int _solcount = 0;
             try
             {
-                string sql = @"SELECT COUNT(*) FROM eb_solutions WHERE tenant_id = :tid";
+                string sql = @"SELECT COUNT(*) FROM eb_solutions WHERE tenant_id = :tid AND pricing_tier = :pricing_tier";
                 DbParameter[] parameters =
                 {
-                this.InfraConnectionFactory.DataDB.GetNewParameter("tid",EbDbTypes.Int32,request.UserId)
+                this.InfraConnectionFactory.DataDB.GetNewParameter("tid",EbDbTypes.Int32,request.UserId),
+                this.InfraConnectionFactory.DataDB.GetNewParameter("pricing_tier",EbDbTypes.Int32,Convert.ToInt32(PricingTiers.FREE))
                 };
                 EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(sql, parameters);
-                _solcount = Convert.ToInt32(dt.Rows[0][0]) + 1;
+                _solcount = Convert.ToInt32(dt.Rows[0][0]);
             }
             catch (Exception e)
             {
@@ -161,19 +162,24 @@ namespace ExpressBase.ServiceStack.Services
 
             try
             {
-                CreateSolutionResponse response = this.Post(new CreateSolutionRequest
+                if (_solcount <= 3)
                 {
-                    SolutionName = "My Solution " + _solcount,
-                    Description = "My solution " + _solcount,
-                    DeployDB = true,
-                    UserId = request.UserId,
-                    IsFurther = true
-                });
-                if (response.Id > 0)
-                {
-                    resp.SolId = response.Id;
-                    resp.Status = true;
+                    CreateSolutionResponse response = this.Post(new CreateSolutionRequest
+                    {
+                        SolutionName = "My Solution " + _solcount + 1,
+                        Description = "My solution " + _solcount + 1,
+                        DeployDB = true,
+                        UserId = request.UserId,
+                        IsFurther = true
+                    });
+                    if (response.Id > 0)
+                    {
+                        resp.SolId = response.Id;
+                        resp.Status = true;
+                    }
                 }
+                else
+                    resp.Status = false;
             }
             catch (Exception e)
             {
@@ -373,10 +379,12 @@ namespace ExpressBase.ServiceStack.Services
                             {
                                 ImportrExportService service = base.ResolveService<ImportrExportService>();
                                 int demoAppId;
-                                if (Environment.GetEnvironmentVariable(EnvironmentConstants.ASPNETCORE_ENVIRONMENT) == "Production")
-                                    demoAppId = 9;
-                                else
+                                string env = Environment.GetEnvironmentVariable(EnvironmentConstants.ASPNETCORE_ENVIRONMENT);
+                                Console.WriteLine("Environment : " + env);
+                                if (env == "Staging" || env == "Development")
                                     demoAppId = 129;
+                                else
+                                    demoAppId = 9;
                                 ImportApplicationResponse _response = service.Get(new ImportApplicationMqRequest
                                 {
                                     Id = demoAppId,
@@ -414,7 +422,8 @@ namespace ExpressBase.ServiceStack.Services
                         Description = dr[2].ToString(),
                         DateCreated = Convert.ToDateTime(dr[1]).ToString("g", DateTimeFormatInfo.InvariantInfo),
                         IsolutionId = dr[4].ToString(),
-                        EsolutionId = dr[5].ToString()
+                        EsolutionId = dr[5].ToString(),
+                        PricingTier = (PricingTiers)Convert.ToInt32(dr["pricing_tier"])
                     });
                     temp.Add(_ebSolutions);
                 }
@@ -430,23 +439,40 @@ namespace ExpressBase.ServiceStack.Services
 
         public GetSolutioInfoResponse Get(GetSolutioInfoRequest request)
         {
-            ConnectionManager _conService = base.ResolveService<ConnectionManager>();
-            string sql = string.Format("SELECT solution_name, description, date_created, esolution_id, pricing_tier, versioning  FROM eb_solutions WHERE isolution_id='{0}'", request.IsolutionId);
-            EbDataTable dt = (new EbConnectionFactory(CoreConstants.EXPRESSBASE, this.Redis)).DataDB.DoQuery(sql);
-            EbSolutionsWrapper _ebSolutions = new EbSolutionsWrapper
+            GetSolutioInfoResponse resp = null;
+            try
             {
-                SolutionName = dt.Rows[0][0].ToString(),
-                Description = dt.Rows[0][1].ToString(),
-                DateCreated = dt.Rows[0][2].ToString(),
-                EsolutionId = dt.Rows[0][3].ToString(),
-                PricingTier = (PricingTiers)Convert.ToInt32(dt.Rows[0][4]),
-                IsVersioningEnabled = (bool)dt.Rows[0][5]
-            };
-            GetSolutioInfoResponse resp = new GetSolutioInfoResponse() { Data = _ebSolutions };
-            if (resp.Data != null)
+                Console.WriteLine("GetSolutioInfoRequest started - " + request.IsolutionId);
+                ConnectionManager _conService = base.ResolveService<ConnectionManager>();
+                string sql = string.Format("SELECT solution_name, description, date_created, esolution_id, pricing_tier, versioning  FROM eb_solutions WHERE isolution_id='{0}'", request.IsolutionId);
+                EbDataTable dt = (new EbConnectionFactory(CoreConstants.EXPRESSBASE, this.Redis)).DataDB.DoQuery(sql);
+                if (dt.Rows.Count > 0)
+                {
+                    EbSolutionsWrapper _ebSolutions = new EbSolutionsWrapper
+                    {
+                        SolutionName = dt.Rows[0][0].ToString(),
+                        Description = dt.Rows[0][1].ToString(),
+                        DateCreated = dt.Rows[0][2].ToString(),
+                        EsolutionId = dt.Rows[0][3].ToString(),
+                        PricingTier = (PricingTiers)Convert.ToInt32(dt.Rows[0][4]),
+                        IsVersioningEnabled = (dt.Rows[0][5] == null || dt.Rows[0][5].ToString() == "") ? false : (bool)dt.Rows[0][5],
+                        IsolutionId = request.IsolutionId
+                    };
+                    resp = new GetSolutioInfoResponse() { Data = _ebSolutions };
+                    if (resp.Data != null)
+                    {
+                        GetConnectionsResponse response = (GetConnectionsResponse)_conService.Post(new GetConnectionsRequest { ConnectionType = 0, SolutionId = request.IsolutionId });
+                        resp.EBSolutionConnections = response.EBSolutionConnections;
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("Couldn't retrieve solution from db" + request.IsolutionId);
+                }
+            }
+            catch (Exception e)
             {
-                GetConnectionsResponse response = (GetConnectionsResponse)_conService.Post(new GetConnectionsRequest { ConnectionType = 0, SolutionId = request.IsolutionId });
-                resp.EBSolutionConnections = response.EBSolutionConnections;
+                Console.WriteLine(e.Message + e.StackTrace);
             }
             return resp;
         }
@@ -521,107 +547,107 @@ namespace ExpressBase.ServiceStack.Services
             return respo;
         }
 
-		public SocialLoginResponse Post(SocialLoginRequest reqt)
-		{
-			Console.WriteLine("reached service / SocialLoginRequest");
-			SocialLoginResponse Soclg = new SocialLoginResponse();
-			SocialSignup sco_signup = new SocialSignup();
-			bool unique = false;
-			string pasword = null;
-			try
-			{
-				string sql1 = "SELECT id,fb_id,github_id,twitter_id,google_id FROM eb_tenants WHERE email ~* @email and eb_del='F'";
-				DbParameter[] parameters2 = { InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, reqt.Email) };
-				EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(sql1, parameters2);
-				if (dt.Rows.Count > 0)
-				{
-					unique = false;
-					sco_signup.FbId = Convert.ToString(dt.Rows[0][1]);
-					sco_signup.GithubId = Convert.ToString(dt.Rows[0][2]);
-					sco_signup.TwitterId = Convert.ToString(dt.Rows[0][3]);
-					sco_signup.GoogleId = Convert.ToString(dt.Rows[0][4]);
-					Console.WriteLine("mail id is not unique");
-					//if (urllink.Contains(pathsignup, StringComparison.OrdinalIgnoreCase))
-					//{
-					//	sco_signup.Forsignup = true;
-					//}
-					//else
-					//if(urllink.Contains(pathsignin, StringComparison.OrdinalIgnoreCase))
-					{
-						sco_signup.Forsignup = false;
+        public SocialLoginResponse Post(SocialLoginRequest reqt)
+        {
+            Console.WriteLine("reached service / SocialLoginRequest");
+            SocialLoginResponse Soclg = new SocialLoginResponse();
+            SocialSignup sco_signup = new SocialSignup();
+            bool unique = false;
+            string pasword = null;
+            try
+            {
+                string sql1 = "SELECT id,fb_id,github_id,twitter_id,google_id FROM eb_tenants WHERE email ~* @email and eb_del='F'";
+                DbParameter[] parameters2 = { InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, reqt.Email) };
+                EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(sql1, parameters2);
+                if (dt.Rows.Count > 0)
+                {
+                    unique = false;
+                    sco_signup.FbId = Convert.ToString(dt.Rows[0][1]);
+                    sco_signup.GithubId = Convert.ToString(dt.Rows[0][2]);
+                    sco_signup.TwitterId = Convert.ToString(dt.Rows[0][3]);
+                    sco_signup.GoogleId = Convert.ToString(dt.Rows[0][4]);
+                    Console.WriteLine("mail id is not unique");
+                    //if (urllink.Contains(pathsignup, StringComparison.OrdinalIgnoreCase))
+                    //{
+                    //	sco_signup.Forsignup = true;
+                    //}
+                    //else
+                    //if(urllink.Contains(pathsignin, StringComparison.OrdinalIgnoreCase))
+                    {
+                        sco_signup.Forsignup = false;
 
-					}
-				}
-				else
-				{
-					unique = true;
-				}
+                    }
+                }
+                else
+                {
+                    unique = true;
+                }
 
-				if (unique == true)
-				{
-					string pd = Guid.NewGuid().ToString();
-					if (!string.IsNullOrEmpty(reqt.Fbid) )
-					{
-						pasword = (reqt.Fbid + pd + reqt.Email).ToMD5Hash();
-						DbParameter[] parameter1 = {
-								InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, reqt.Email),
-								InfraConnectionFactory.DataDB.GetNewParameter("name", EbDbTypes.String,  reqt.Name),
-								 InfraConnectionFactory.DataDB.GetNewParameter("fbid", EbDbTypes.String,  reqt.Fbid),
-								 InfraConnectionFactory.DataDB.GetNewParameter("password", EbDbTypes.String,pasword),
-								 InfraConnectionFactory.DataDB.GetNewParameter("fals", EbDbTypes.String,'F'),
+                if (unique == true)
+                {
+                    string pd = Guid.NewGuid().ToString();
+                    if (!string.IsNullOrEmpty(reqt.Fbid))
+                    {
+                        pasword = (reqt.Fbid + pd + reqt.Email).ToMD5Hash();
+                        DbParameter[] parameter1 = {
+                                InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, reqt.Email),
+                                InfraConnectionFactory.DataDB.GetNewParameter("name", EbDbTypes.String,  reqt.Name),
+                                 InfraConnectionFactory.DataDB.GetNewParameter("fbid", EbDbTypes.String,  reqt.Fbid),
+                                 InfraConnectionFactory.DataDB.GetNewParameter("password", EbDbTypes.String,pasword),
+                                 InfraConnectionFactory.DataDB.GetNewParameter("fals", EbDbTypes.String,'F'),
 
                                  };
 
-						EbDataTable dtbl = InfraConnectionFactory.DataDB.DoQuery(@"INSERT INTO eb_tenants 
+                        EbDataTable dtbl = InfraConnectionFactory.DataDB.DoQuery(@"INSERT INTO eb_tenants 
 								(email,fullname,fb_id,pwd, eb_created_at,eb_del, is_verified, is_email_sent) 
                                  VALUES 
                                  (:email,:name,:fbid,:password,NOW(),:fals,:fals,:fals) RETURNING id;", parameter1);
 
-						Console.WriteLine("inserted details to tenant table");
-						sco_signup.Pauto = pasword;
-					}
-					else if (!string.IsNullOrEmpty(reqt.Goglid))
-					{
+                        Console.WriteLine("inserted details to tenant table");
+                        sco_signup.Pauto = pasword;
+                    }
+                    else if (!string.IsNullOrEmpty(reqt.Goglid))
+                    {
 
-						pasword = (reqt.Fbid + pd + reqt.Email).ToMD5Hash();
-						DbParameter[] parameter1 = {
-								InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, reqt.Email),
-								InfraConnectionFactory.DataDB.GetNewParameter("name", EbDbTypes.String,  reqt.Name),
-								 InfraConnectionFactory.DataDB.GetNewParameter("gogl_id", EbDbTypes.String,  reqt.Goglid),
-								 InfraConnectionFactory.DataDB.GetNewParameter("password", EbDbTypes.String,pasword),
-								 InfraConnectionFactory.DataDB.GetNewParameter("fals", EbDbTypes.String,'F'),
+                        pasword = (reqt.Fbid + pd + reqt.Email).ToMD5Hash();
+                        DbParameter[] parameter1 = {
+                                InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, reqt.Email),
+                                InfraConnectionFactory.DataDB.GetNewParameter("name", EbDbTypes.String,  reqt.Name),
+                                 InfraConnectionFactory.DataDB.GetNewParameter("gogl_id", EbDbTypes.String,  reqt.Goglid),
+                                 InfraConnectionFactory.DataDB.GetNewParameter("password", EbDbTypes.String,pasword),
+                                 InfraConnectionFactory.DataDB.GetNewParameter("fals", EbDbTypes.String,'F'),
 
-								 };
+                                 };
 
-						EbDataTable dtbl = InfraConnectionFactory.DataDB.DoQuery(@"INSERT INTO eb_tenants 
+                        EbDataTable dtbl = InfraConnectionFactory.DataDB.DoQuery(@"INSERT INTO eb_tenants 
 								(email,fullname,google_id,pwd, eb_created_at,eb_del, is_verified, is_email_sent) 
                                  VALUES 
                                  (:email,:name,:gogl_id,:password,NOW(),:fals,:fals,:fals) RETURNING id;", parameter1);
 
-						Console.WriteLine("inserted details to tenant table");
-						sco_signup.Pauto = pasword;
-					}
-				}
-				
-				{
-					if (!string.IsNullOrEmpty(reqt.Fbid))
-					{
+                        Console.WriteLine("inserted details to tenant table");
+                        sco_signup.Pauto = pasword;
+                    }
+                }
 
-						sco_signup.AuthProvider = "facebook";
-						sco_signup.Social_id = reqt.Fbid;
-					}
-					else if (!string.IsNullOrEmpty(reqt.Goglid))
-					{
-						sco_signup.AuthProvider = "google";
-						sco_signup.Social_id = reqt.Goglid;
-					}
-				sco_signup.Email = reqt.Email;
-				sco_signup.Fullname = reqt.Name;
-				sco_signup.UniqueEmail = unique;
-				};
+                {
+                    if (!string.IsNullOrEmpty(reqt.Fbid))
+                    {
 
-				Soclg.jsonval = JsonConvert.SerializeObject(sco_signup);
-				
+                        sco_signup.AuthProvider = "facebook";
+                        sco_signup.Social_id = reqt.Fbid;
+                    }
+                    else if (!string.IsNullOrEmpty(reqt.Goglid))
+                    {
+                        sco_signup.AuthProvider = "google";
+                        sco_signup.Social_id = reqt.Goglid;
+                    }
+                    sco_signup.Email = reqt.Email;
+                    sco_signup.Fullname = reqt.Name;
+                    sco_signup.UniqueEmail = unique;
+                };
+
+                Soclg.jsonval = JsonConvert.SerializeObject(sco_signup);
+
 
             }
             catch (Exception e)
@@ -630,8 +656,8 @@ namespace ExpressBase.ServiceStack.Services
             }
 
 
-			return Soclg;
-		}
+            return Soclg;
+        }
 
 
 

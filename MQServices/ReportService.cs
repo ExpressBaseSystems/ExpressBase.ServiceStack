@@ -22,23 +22,24 @@ namespace ExpressBase.ServiceStack.MQServices
         {
             try
             {
-                Console.WriteLine("           Reached Inside MQService/ReportServiceInternal in SS .. Before Report Render");
+                Console.WriteLine(" Reached Inside MQService/ReportServiceInternal in SS .. Before Report Render");
                 EbConnectionFactory ebConnectionFactory = new EbConnectionFactory(request.JobArgs.SolnId, this.Redis);
-                var objservice = base.ResolveService<EbObjectService>();
+                EbObjectService objservice = base.ResolveService<EbObjectService>();
                 objservice.EbConnectionFactory = ebConnectionFactory;
-                var reportservice = base.ResolveService<ReportService>();
+                ReportService reportservice = base.ResolveService<ReportService>();
                 reportservice.EbConnectionFactory = ebConnectionFactory;
-                var schedulerservice = base.ResolveService<SchedulerServices>();
+                SchedulerServices schedulerservice = base.ResolveService<SchedulerServices>();
                 schedulerservice.EbConnectionFactory = ebConnectionFactory;
-                Dictionary<string, List<User>> LocaleUser = new Dictionary<string, List<User>>();
+
+                Dictionary<string, List<User>> Locales = new Dictionary<string, List<User>>();
                 Dictionary<string, byte[]> LocaleReport = new Dictionary<string, byte[]>();
-                Console.WriteLine("         Fetching Live version  "+ request.JobArgs.ObjId);
+                Console.WriteLine(" Fetching Live version  " + request.JobArgs.ObjId);
                 EbObjectFetchLiveVersionResponse res = ((EbObjectFetchLiveVersionResponse)objservice.Get(new EbObjectFetchLiveVersionRequest()
                 {
                     Id = request.JobArgs.ObjId
                 }));
 
-                if (res.Data!=null && res.Data.Count > 0)
+                if (res.Data != null && res.Data.Count > 0)
                 {
                     Console.WriteLine("         Got Live Version   Getting mail ids");
                     EbObjectWrapper Live_ver = res.Data[0];
@@ -47,22 +48,27 @@ namespace ExpressBase.ServiceStack.MQServices
                         UserIds = request.JobArgs.ToUserIds,
                         UserGroupIds = request.JobArgs.ToUserGroupIds
                     });
-                    var MailIds = mailres.UserEmails
+                    Dictionary<int, string> MailIds = mailres.UserEmails
                         .Concat(mailres.UserGroupEmails)
                         .GroupBy(d => d.Key)
                         .ToDictionary(d => d.Key, d => d.First().Value);
 
-                    foreach (var u in MailIds)
+                    foreach (KeyValuePair<int, string> u in MailIds)
                     {
                         User usr = this.Redis.Get<User>(string.Format(TokenConstants.SUB_FORMAT, request.JobArgs.SolnId, u.Value, "uc"));
                         if (usr != null)
                         {
-                            if (LocaleUser.ContainsKey(usr.Preference.Locale))
-                                LocaleUser[usr.Preference.Locale].Add(usr);
-                            else LocaleUser.Add(usr.Preference.Locale, new List<User> { usr });
+                            if (Locales.ContainsKey(usr.Preference.Locale))
+                                Locales[usr.Preference.Locale].Add(usr);
+                            else Locales.Add(usr.Preference.Locale, new List<User> { usr });
+                        }
+                        else
+                        {
+                            Console.WriteLine("Redis User Object is empty for : " + u.Value);
                         }
                     }
-                    foreach (var locale in LocaleUser)
+                    Console.WriteLine("Number of locales : " + Locales.Count());
+                    foreach (KeyValuePair<string, List<User>> locale in Locales)
                     {
                         ReportRenderResponse RepRes = reportservice.Get(new ReportRenderRequest
                         {
@@ -78,7 +84,7 @@ namespace ExpressBase.ServiceStack.MQServices
                         Console.WriteLine(locale.Key);
                         Console.WriteLine("Inside MQService/ReportServiceInternal in SS \n After Report Render .Going to send email");
                         RepRes.StreamWrapper.Memorystream.Position = 0;
-                        foreach (var _u in locale.Value)
+                        foreach (User _u in locale.Value)
                         {
                             MessageProducer3.Publish(new EmailServicesRequest()
                             {
@@ -95,10 +101,14 @@ namespace ExpressBase.ServiceStack.MQServices
                                 AttachmentReport = RepRes.ReportBytea,
                                 AttachmentName = RepRes.ReportName + " - " + RepRes.CurrentTimestamp.ToString("dd-MM-yy")
                             });
-                            Console.WriteLine("Email to "+ _u.Email +" pushed.....");
+                            Console.WriteLine("Email to " + _u.Email + " pushed.....");
                         }
                         //LocaleReport.Add(locale.Key, RepRes.ReportBytea);
                     }
+                }
+                else
+                {
+                    Console.WriteLine("No Live version avaialble for :" + request.JobArgs.ObjId);
                 }
             }
             catch (Exception e)
