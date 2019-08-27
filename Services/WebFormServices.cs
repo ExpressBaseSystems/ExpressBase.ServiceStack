@@ -255,6 +255,7 @@ namespace ExpressBase.ServiceStack.Services
             dvobj.Columns = columns;
             dvobj.DSColumns = columns;
             dvobj.ColumnsCollection.Add(columns);
+            dvobj.NotVisibleColumns = columns.FindAll(x => !x.bVisible);
             dvobj.AutoGen = true;
             dvobj.OrderBy = new List<DVBaseColumn>();
             dvobj.RowGroupCollection = new List<RowGroupParent>();
@@ -329,6 +330,7 @@ namespace ExpressBase.ServiceStack.Services
             dvobj.Columns = columns;
             dvobj.DSColumns = columns;
             dvobj.ColumnsCollection[0] = columns;
+            dvobj.NotVisibleColumns = columns.FindAll(x => !x.bVisible);
             dvobj.AutoGen = true;
             dvobj.OrderBy = new List<DVBaseColumn>();
             dvobj.RowGroupCollection = new List<RowGroupParent>();
