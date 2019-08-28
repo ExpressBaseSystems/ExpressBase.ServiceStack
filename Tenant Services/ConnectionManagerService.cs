@@ -576,6 +576,10 @@ namespace ExpressBase.ServiceStack.Services
             try
             {
                 request.Integrationdelete.PersistDeleteIntegration(request.SolnId, this.InfraConnectionFactory, request.UserId);
+                RefreshSolutionConnectionsAsyncResponse resp = this.MQClient.Post<RefreshSolutionConnectionsAsyncResponse>(new RefreshSolutionConnectionsBySolutionIdAsyncRequest()
+                {
+                    SolutionId = request.SolnId
+                });
             }
             catch (Exception e)
             {
@@ -647,6 +651,7 @@ namespace ExpressBase.ServiceStack.Services
         {
             try
             {
+                bool IsNonSqlDb = true;
                 IDatabase DataDB = null;
                 string query = string.Format("SELECT * FROM eb_integration_configs where id ={0};", confid);
                 EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(query);
@@ -665,29 +670,37 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     DataDB = new OracleDB(conf);
                 }
-                string vendor = DataDB.Vendor.ToString();
-                string Urlstart = string.Format("ExpressBase.Common.sqlscripts.{0}.", vendor.ToLower());
-                DbConnection con = DataDB.GetNewConnection();
-                con.Open();
-                var assembly = typeof(sqlscripts).Assembly;
-                string result = null;
-                Stream stream = assembly.GetManifestResourceStream(Urlstart + "filesdb.tablecreate.eb_files_bytea.sql");
-                if (stream != null)
-                {
-
-                    StreamReader reader = new StreamReader(stream);
-                    result = reader.ReadToEnd();
-                }
                 else
                 {
-                    Console.WriteLine(" Reading reference - stream is null -" + Urlstart + "filesdb.tablecreate.eb_files_bytea.sql");
+                    IsNonSqlDb = false;
                 }
-                var cmdtxt1 = DataDB.GetNewCommand(con, result);
-                cmdtxt1.ExecuteNonQuery();
+
+                if (IsNonSqlDb)
+                {
+                    string vendor = DataDB.Vendor.ToString();
+                    string Urlstart = string.Format("ExpressBase.Common.sqlscripts.{0}.", vendor.ToLower());
+                    DbConnection con = DataDB.GetNewConnection();
+                    con.Open();
+                    var assembly = typeof(sqlscripts).Assembly;
+                    string result = null;
+                    Stream stream = assembly.GetManifestResourceStream(Urlstart + "filesdb.tablecreate.eb_files_bytea.sql");
+                    if (stream != null)
+                    {
+
+                        StreamReader reader = new StreamReader(stream);
+                        result = reader.ReadToEnd();
+                    }
+                    else
+                    {
+                        Console.WriteLine(" Reading reference - stream is null -" + Urlstart + "filesdb.tablecreate.eb_files_bytea.sql");
+                    }
+                    var cmdtxt1 = DataDB.GetNewCommand(con, result);
+                    cmdtxt1.ExecuteNonQuery();
+                }
             }
             catch (Exception e)
             {
-
+                Console.WriteLine(e.Message + e.StackTrace);
             }
         }
 
