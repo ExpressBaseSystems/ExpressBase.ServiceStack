@@ -613,6 +613,8 @@ namespace ExpressBase.ServiceStack
                     result = Convert.ToDecimal(customCol.GetCodeAnalysisScript().RunAsync(globals).Result.ReturnValue);
                 else if (customCol is DVBooleanColumn)
                     result = Convert.ToBoolean(customCol.GetCodeAnalysisScript().RunAsync(globals).Result.ReturnValue);
+                else if (customCol is DVDateTimeColumn)
+                    result = Convert.ToDateTime(customCol.GetCodeAnalysisScript().RunAsync(globals).Result.ReturnValue);
                 else
                     result = customCol.GetCodeAnalysisScript().RunAsync(globals).Result.ReturnValue.ToString();
             }
@@ -1047,7 +1049,12 @@ namespace ExpressBase.ServiceStack
                 _unformattedData = (_unformattedData == DBNull.Value) ? DateTime.MinValue : _unformattedData;
                 if ((col as DVDateTimeColumn).Format == DateFormat.Date)
                 {
-                    _formattedData = (((DateTime)_unformattedData).Date != DateTime.MinValue) ? Convert.ToDateTime(_unformattedData).ToString("d", cults.DateTimeFormat) : string.Empty;
+                    if((col as DVDateTimeColumn).Pattern == DatePattern.MMMM_yyyy)
+                        _formattedData = (((DateTime)_unformattedData).Date != DateTime.MinValue) ? Convert.ToDateTime(_unformattedData).ToString(cults.DateTimeFormat.YearMonthPattern) : string.Empty;
+                    else if ((col as DVDateTimeColumn).Pattern == DatePattern.MMM_yyyy)
+                        _formattedData = (((DateTime)_unformattedData).Date != DateTime.MinValue) ? Convert.ToDateTime(_unformattedData).ToString("MMM"+ cults.DateTimeFormat.DateSeparator+"yyyy") : string.Empty;
+                    else
+                        _formattedData = (((DateTime)_unformattedData).Date != DateTime.MinValue) ? Convert.ToDateTime(_unformattedData).ToString("d", cults.DateTimeFormat) : string.Empty;
                     row[col.Data] = Convert.ToDateTime(_unformattedData).ToString("yyyy-MM-dd");
                 }
                 else if ((col as DVDateTimeColumn).Format == DateFormat.DateTime)
