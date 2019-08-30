@@ -249,7 +249,7 @@ namespace ExpressBase.ServiceStack.Services
             DVColumnCollection columns = GetDVColumnCollection(listNamesAndTypes, request);
             var dvobj = new EbTableVisualization();
             dvobj.Name = request.WebObj.Name + "_AutoGenDV";
-            dvobj.DisplayName = request.WebObj.DisplayName + "_AutoGenDV";
+            dvobj.DisplayName = request.WebObj.DisplayName + " List";
             dvobj.Description = request.WebObj.Description;
             dvobj.DataSourceRefId = dsid;
             dvobj.Columns = columns;
@@ -325,7 +325,7 @@ namespace ExpressBase.ServiceStack.Services
         {
             DVColumnCollection columns = GetDVColumnCollection(listNamesAndTypes, request);
             dvobj.Name = request.WebObj.Name + "_AutoGenDV";
-            dvobj.DisplayName = request.WebObj.DisplayName + "_AutoGenDV";
+            dvobj.DisplayName = request.WebObj.DisplayName + " List";
             dvobj.Description = request.WebObj.Description;
             dvobj.Columns = columns;
             dvobj.DSColumns = columns;
