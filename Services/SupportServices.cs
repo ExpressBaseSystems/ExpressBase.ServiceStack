@@ -30,7 +30,9 @@ namespace ExpressBase.ServiceStack.Services
 													modified_at,
 													eb_del,
 													status,
-													type_bg_fr
+													type_bg_fr,
+													fullname,
+													email
 													)
 													VALUES(
                                                     :usrid,
@@ -43,7 +45,9 @@ namespace ExpressBase.ServiceStack.Services
 													 NOW(),
 													:fals,
 													:sts,
-													:typ
+													:typ,
+													:fname,
+													:email
                                                 )RETURNING id;";
 
 				DbParameter[] parameters = {
@@ -55,7 +59,9 @@ namespace ExpressBase.ServiceStack.Services
 					this.InfraConnectionFactory.DataDB.GetNewParameter("solid", EbDbTypes.String, sbreq.solutionid),
 					this.InfraConnectionFactory.DataDB.GetNewParameter("fals", EbDbTypes.String, "F"),
 					this.InfraConnectionFactory.DataDB.GetNewParameter("sts", EbDbTypes.String, sbreq.status),
-					this.InfraConnectionFactory.DataDB.GetNewParameter("typ", EbDbTypes.String,sbreq.type_b_f)
+					this.InfraConnectionFactory.DataDB.GetNewParameter("typ", EbDbTypes.String,sbreq.type_b_f),
+					this.InfraConnectionFactory.DataDB.GetNewParameter("fname", EbDbTypes.String,sbreq.fullname),
+					this.InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String,sbreq.email)
 					};
 
 				EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(sql, parameters);
@@ -92,6 +98,10 @@ namespace ExpressBase.ServiceStack.Services
 			return sb;
 		}
 
+
+
+		//to fetch solution id,name from tenant table  to show in dropdown
+
 		public TenantSolutionsResponse Post(TenantSolutionsRequest tsreq)
 		{
 			TenantSolutionsResponse tr = new TenantSolutionsResponse();
@@ -117,7 +127,7 @@ namespace ExpressBase.ServiceStack.Services
 			return tr;
 		}
 
-
+		//to fetch all details of tickets of corresponding user of that corresponding solution to show as tables
 		public FetchSupportResponse Post(FetchSupportRequest fsreq)
 		{
 			FetchSupportResponse fr = new FetchSupportResponse();
@@ -162,6 +172,8 @@ namespace ExpressBase.ServiceStack.Services
 			return fr;
 		}
 
+
+		// fectch complete details of ticket and show it in edit /view ticket
 		public SupportDetailsResponse Post(SupportDetailsRequest sdreq)
 		{
 			SupportDetailsResponse sd = new SupportDetailsResponse();
