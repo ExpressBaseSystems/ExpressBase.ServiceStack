@@ -613,6 +613,8 @@ namespace ExpressBase.ServiceStack
                     result = Convert.ToDecimal(customCol.GetCodeAnalysisScript().RunAsync(globals).Result.ReturnValue);
                 else if (customCol is DVBooleanColumn)
                     result = Convert.ToBoolean(customCol.GetCodeAnalysisScript().RunAsync(globals).Result.ReturnValue);
+                else if (customCol is DVDateTimeColumn)
+                    result = Convert.ToDateTime(customCol.GetCodeAnalysisScript().RunAsync(globals).Result.ReturnValue);
                 else
                     result = customCol.GetCodeAnalysisScript().RunAsync(globals).Result.ReturnValue.ToString();
             }
@@ -888,7 +890,7 @@ namespace ExpressBase.ServiceStack
                         ModifyEbColumns(col, ref _formattedData, _unformattedData);
                     }
                     if (col.ColumnQueryMapping != null && col.ColumnQueryMapping.Values.Count > 0)
-                        _formattedData = col.ColumnQueryMapping.Values[Convert.ToInt32(_formattedData)];
+                        _formattedData = (col.ColumnQueryMapping.Values.ContainsKey(Convert.ToInt32(_formattedData))) ? col.ColumnQueryMapping.Values[Convert.ToInt32(_formattedData)] : string.Empty;
                     IntermediateDic.Add(col.Data, _formattedData);
                     if ((_dv as EbChartVisualization) != null || (_dv as Objects.EbGoogleMap) != null)
                     {
@@ -1047,7 +1049,12 @@ namespace ExpressBase.ServiceStack
                 _unformattedData = (_unformattedData == DBNull.Value) ? DateTime.MinValue : _unformattedData;
                 if ((col as DVDateTimeColumn).Format == DateFormat.Date)
                 {
-                    _formattedData = (((DateTime)_unformattedData).Date != DateTime.MinValue) ? Convert.ToDateTime(_unformattedData).ToString("d", cults.DateTimeFormat) : string.Empty;
+                    if((col as DVDateTimeColumn).Pattern == DatePattern.MMMM_yyyy)
+                        _formattedData = (((DateTime)_unformattedData).Date != DateTime.MinValue) ? Convert.ToDateTime(_unformattedData).ToString(cults.DateTimeFormat.YearMonthPattern) : string.Empty;
+                    else if ((col as DVDateTimeColumn).Pattern == DatePattern.MMM_yyyy)
+                        _formattedData = (((DateTime)_unformattedData).Date != DateTime.MinValue) ? Convert.ToDateTime(_unformattedData).ToString("MMM"+ cults.DateTimeFormat.DateSeparator+"yyyy") : string.Empty;
+                    else
+                        _formattedData = (((DateTime)_unformattedData).Date != DateTime.MinValue) ? Convert.ToDateTime(_unformattedData).ToString("d", cults.DateTimeFormat) : string.Empty;
                     row[col.Data] = Convert.ToDateTime(_unformattedData).ToString("yyyy-MM-dd");
                 }
                 else if ((col as DVDateTimeColumn).Format == DateFormat.DateTime)
