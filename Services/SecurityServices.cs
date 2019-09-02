@@ -63,7 +63,10 @@ namespace ExpressBase.ServiceStack.Services
             {
                 con.Open();
                 string sql = @"SELECT A.id, A.fullname, A.email, A.phoneno, A.socialid, A.firstvisit, A.lastvisit, A.totalvisits, B.applicationname 
-								FROM eb_usersanonymous A, eb_applications B WHERE A.appid = B.id AND A.ebuserid = 1;";
+								FROM eb_usersanonymous A 
+								LEFT JOIN 
+								eb_applications B
+								ON  A.appid = B.id AND A.ebuserid = 1;";
 
                 DbParameter[] parameters = { this.EbConnectionFactory.DataDB.GetNewParameter("searchtext", EbDbTypes.String, (request.Colvalues != null) ? request.Colvalues["searchtext"] : string.Empty) };
 

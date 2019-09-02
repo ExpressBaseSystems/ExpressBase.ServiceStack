@@ -84,7 +84,7 @@ namespace ExpressBase.ServiceStack.Services
 
                 List<DbParameter> parameters = new List<DbParameter>();
                 parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("keys", EbDbTypes.String, conf.Name));
-                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("isrequired", EbDbTypes.String, conf.IsRequired));
+                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("isrequired", EbDbTypes.Boolean, conf.IsRequired));
                 parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("type", EbDbTypes.String, conf.Type));
 
                 if (conf.Id != null)

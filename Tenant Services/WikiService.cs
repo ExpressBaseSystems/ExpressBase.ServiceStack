@@ -39,10 +39,10 @@ namespace ExpressBase.ServiceStack.Services
                 {
                 this.InfraConnectionFactory.DataDB.GetNewParameter("category", EbDbTypes.String, request.Wiki.Category),
                 this.InfraConnectionFactory.DataDB.GetNewParameter("title", EbDbTypes.String, request.Wiki.Title),
-                this.InfraConnectionFactory.DataDB.GetNewParameter("html", EbDbTypes.String, request.Wiki.HTML),
+                this.InfraConnectionFactory.DataDB.GetNewParameter("html", EbDbTypes.String, (request.Wiki.HTML==null)?string.Empty:request.Wiki.HTML),
                  this.InfraConnectionFactory.DataDB.GetNewParameter("createdon", EbDbTypes.DateTime, DateTime.Now),
                 this.InfraConnectionFactory.DataDB.GetNewParameter("createdby", EbDbTypes.Int32, request.Wiki.CreatedBy),
-                this.InfraConnectionFactory.DataDB.GetNewParameter("tags", EbDbTypes.String, request.Wiki.Tags),
+                this.InfraConnectionFactory.DataDB.GetNewParameter("tags", EbDbTypes.String, (request.Wiki.Tags == null)?string.Empty:request.Wiki.Tags),
                 this.InfraConnectionFactory.DataDB.GetNewParameter("status", EbDbTypes.String, request.Wiki.Status),
                 this.InfraConnectionFactory.DataDB.GetNewParameter("catid", EbDbTypes.Int32, request.Wiki.CatId)
                 };
@@ -77,30 +77,32 @@ namespace ExpressBase.ServiceStack.Services
             UPDATE wiki SET
                 category= @category, title = @title , html = @html , eb_lastmodified_by = @modified_by, eb_lastmodified_at = @updatedtime, eb_tags = @tags, status =@status, wiki_category_id = @catid
             WHERE 
-                id= @id
-            RETURNING id";
+                id= @id ";
 
                 DbParameter[] parameters = new DbParameter[]
                 {
                 this.InfraConnectionFactory.DataDB.GetNewParameter("category", EbDbTypes.String, request.Wiki.Category),
                 this.InfraConnectionFactory.DataDB.GetNewParameter("title", EbDbTypes.String, request.Wiki.Title),
-                this.InfraConnectionFactory.DataDB.GetNewParameter("html", EbDbTypes.String, request.Wiki.HTML),
+                this.InfraConnectionFactory.DataDB.GetNewParameter("html", EbDbTypes.String, (request.Wiki.HTML==null)?string.Empty:request.Wiki.HTML),
                 this.InfraConnectionFactory.DataDB.GetNewParameter("modified_by", EbDbTypes.Int32, request.Wiki.CreatedBy),
                 this.InfraConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.Wiki.Id),
-                 this.InfraConnectionFactory.DataDB.GetNewParameter("tags", EbDbTypes.String, request.Wiki.Tags),
+                 this.InfraConnectionFactory.DataDB.GetNewParameter("tags", EbDbTypes.String, (request.Wiki.Tags == null)?string.Empty:request.Wiki.Tags),
                  this.InfraConnectionFactory.DataDB.GetNewParameter("status", EbDbTypes.String, request.Wiki.Status),
                  this.InfraConnectionFactory.DataDB.GetNewParameter("updatedtime", EbDbTypes.DateTime, DateTime.Now),
                  this.InfraConnectionFactory.DataDB.GetNewParameter("catid", EbDbTypes.Int32, request.Wiki.CatId)
                 };
 
-                EbDataTable x = InfraConnectionFactory.DataDB.DoQuery(query, parameters);
+                int x = InfraConnectionFactory.DataDB.DoNonQuery(query, parameters);
+                if(x > 0)
+                {
+                    resp.ResponseStatus = true;
+                }
 
-                resp.Wiki.Id = (int)x.Rows[0][0];
-                request.Wiki.Id = resp.Wiki.Id;
+                resp.Wiki.Id = request.Wiki.Id;
                 var hashfield = Encoding.UTF8.GetBytes(resp.Wiki.Id.ToString());
                 var hashval = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(resp.Wiki));
                 var Temp = (this.Redis as RedisClient).HSet("wiki", hashfield, hashval);
-                resp.ResponseStatus = true;
+               
             }
             catch (Exception e)
             {
@@ -302,16 +304,41 @@ namespace ExpressBase.ServiceStack.Services
 
                 var hashfield = Encoding.UTF8.GetBytes(request.Id.ToString());
                 var tem2 = (this.Redis as RedisClient).HGet("wiki", hashfield);
-                if(tem2 != null)
+                if (tem2 != null)
                 {
                     string my_string = Encoding.UTF8.GetString(tem2);
                     var abc = JsonConvert.SerializeObject(resp.Wiki);
                     Wiki obj = JsonConvert.DeserializeObject<Wiki>(my_string);
-
                     resp.Wiki.Category = obj.Category.ToString();
                     resp.Wiki.Title = obj.Title.ToString();
                     resp.Wiki.HTML = obj.HTML.ToString();
                     resp.Wiki.Tags = obj.Tags.ToString();
+                    
+                    resp.Wiki.CreatedBy = obj.CreatedBy;
+                    resp.Wiki.Id = request.Id;
+                    if (obj.AuthorName == null)
+                    {
+                       
+                        DbParameter[] parameters = new DbParameter[]
+                          {
+                        this.InfraConnectionFactory.DataDB.GetNewParameter("createdby", EbDbTypes.Int32,obj.CreatedBy)
+                          };
+                         string query = @"
+                         SELECT fullname
+                         FROM
+                            eb_users  
+                         WHERE
+                            id = @createdby";
+
+                                EbDataTable table = InfraConnectionFactory.DataDB.DoQuery(query, parameters);
+                                resp.Wiki.AuthorName = table.Rows[0]["fullname"].ToString();
+                                var hashval = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(resp.Wiki));
+                                var Temp = (this.Redis as RedisClient).HSet("wiki", hashfield, hashval);
+                        }
+                    else
+                    {
+                        resp.Wiki.AuthorName = obj.AuthorName.ToString();
+                    }
                 }
 
                 else
@@ -334,13 +361,11 @@ namespace ExpressBase.ServiceStack.Services
                     resp.Wiki.HTML = table.Rows[0]["html"].ToString();
                     resp.Wiki.Tags = table.Rows[0]["eb_tags"].ToString();
                     resp.Wiki.Id = request.Id;
-
+                    resp.Wiki.CreatedBy = (int)table.Rows[0]["eb_created_by"];
+               
                     var hashval = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(resp.Wiki));
                     var Temp = (this.Redis as RedisClient).HSet("wiki", hashfield, hashval);
-
                 }
-
-               
 
             }
             catch (Exception e)

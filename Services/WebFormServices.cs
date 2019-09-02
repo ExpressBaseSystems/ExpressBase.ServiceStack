@@ -7,6 +7,7 @@ using ExpressBase.Common.Objects;
 using ExpressBase.Common.Structures;
 using ExpressBase.Objects;
 using ExpressBase.Objects.Objects;
+using ExpressBase.Objects.Objects.DVRelated;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using Jurassic;
 using Jurassic.Library;
@@ -35,12 +36,12 @@ namespace ExpressBase.ServiceStack.Services
             if (request.WebObj is EbWebForm)
             {
                 (request.WebObj as EbWebForm).AfterRedisGet(this);
-                CreateWebFormTables((request.WebObj as EbWebForm).FormSchema);
+                CreateWebFormTables((request.WebObj as EbWebForm).FormSchema, request);
             }
             return new CreateWebFormTableResponse { };
         }
 
-        private void CreateWebFormTables(WebFormSchema _schema)
+        private void CreateWebFormTables(WebFormSchema _schema, CreateWebFormTableRequest request)
         {
             IVendorDbTypes vDbTypes = this.EbConnectionFactory.ObjectsDB.VendorDbTypes;
             string Msg = string.Empty;
@@ -53,29 +54,33 @@ namespace ExpressBase.ServiceStack.Services
                     {
                         if (_column.Control is EbAutoId)
                         {
-                            _listNamesAndTypes.Add(new TableColumnMeta { Name = _column.ColumnName, Type = vDbTypes.GetVendorDbTypeStruct((EbDbTypes)_column.EbDbType), Unique = true });
-                            _listNamesAndTypes.Add(new TableColumnMeta { Name = _column.ColumnName + "_ebbkup", Type = vDbTypes.GetVendorDbTypeStruct((EbDbTypes)_column.EbDbType) });
+                            _listNamesAndTypes.Add(new TableColumnMeta { Name = _column.ColumnName, Type = vDbTypes.GetVendorDbTypeStruct((EbDbTypes)_column.EbDbType), Unique = true, Control = (_column.Control as EbControl), Label = (_column.Control as EbControl).Label });
+                            _listNamesAndTypes.Add(new TableColumnMeta { Name = _column.ColumnName + "_ebbkup", Type = vDbTypes.GetVendorDbTypeStruct((EbDbTypes)_column.EbDbType), Label = (_column.Control as EbControl).Label+ "_ebbkup" });
                         }
                         else if ((_column.Control as EbControl).IsSysControl)
                             continue;
                         else
-                            _listNamesAndTypes.Add(new TableColumnMeta { Name = _column.ColumnName, Type = vDbTypes.GetVendorDbTypeStruct((EbDbTypes)_column.EbDbType) });
+                            _listNamesAndTypes.Add(new TableColumnMeta { Name = _column.ColumnName, Type = vDbTypes.GetVendorDbTypeStruct((EbDbTypes)_column.EbDbType), Label= (_column.Control as EbControl).Label, Control = (_column.Control as EbControl) });
                     }
-                    if (_table.TableName != _schema.MasterTable)
+                    if (_table.TableName == _schema.MasterTable)
+                        _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_ver_id", Type = vDbTypes.Decimal });// id refernce to the parent table will store in this column - foreignkey
+                    else
                         _listNamesAndTypes.Add(new TableColumnMeta { Name = _schema.MasterTable + "_id", Type = vDbTypes.Decimal });// id refernce to the parent table will store in this column - foreignkey
-                    if(_table.TableType == WebFormTableTypes.Grid)
+                    if (_table.TableType == WebFormTableTypes.Grid)
                         _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_row_num", Type = vDbTypes.Decimal });
 
-                    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_by", Type = vDbTypes.Decimal });
-                    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_at", Type = vDbTypes.DateTime });
-                    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_by", Type = vDbTypes.Decimal });
-                    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_at", Type = vDbTypes.DateTime });
+                    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_by", Type = vDbTypes.Decimal, Label = "Created By" });
+                    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_at", Type = vDbTypes.DateTime, Label = "Created At" });
+                    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_by", Type = vDbTypes.Decimal, Label = "Last Modified By" });
+                    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_at", Type = vDbTypes.DateTime, Label = "Last Modified At" });
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_del", Type = vDbTypes.Boolean, Default = "F" });
-                    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_void", Type = vDbTypes.Boolean, Default = "F" });
-                    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_loc_id", Type = vDbTypes.Int32 });
+                    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_void", Type = vDbTypes.Boolean, Default = "F", Label = "Void ?" });
+                    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_loc_id", Type = vDbTypes.Int32, Label = "Location" });
                     //_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_default", Type = vDbTypes.Boolean, Default = "F" });
 
-                    CreateOrAlterTable(_table.TableName, _listNamesAndTypes, ref Msg);
+                    int _rowaff = CreateOrAlterTable(_table.TableName, _listNamesAndTypes, ref Msg);
+                    if (_table.TableName == _schema.MasterTable && !request.IsImport && (request.WebObj as EbWebForm).AutoDeployTV)
+                        CreateOrUpdateDsAndDv(request, _listNamesAndTypes);
                 }
             }
             if (!Msg.IsEmpty())
@@ -99,19 +104,21 @@ namespace ExpressBase.ServiceStack.Services
                 if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.ORACLE)////////////
                 {
                     sql = "CREATE TABLE @tbl(id NUMBER(10), @cols)".Replace("@cols", cols).Replace("@tbl", tableName);
-                    this.EbConnectionFactory.ObjectsDB.CreateTable(sql);//Table Creation
+                    int _rowaff = this.EbConnectionFactory.ObjectsDB.CreateTable(sql);//Table Creation
                     CreateSquenceAndTrigger(tableName);//
+                    return _rowaff;
                 }
                 else if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.PGSQL)
                 {
                     sql = "CREATE TABLE @tbl( id SERIAL PRIMARY KEY, @cols)".Replace("@cols", cols).Replace("@tbl", tableName);
-                    this.EbConnectionFactory.ObjectsDB.CreateTable(sql);
+                    return this.EbConnectionFactory.ObjectsDB.CreateTable(sql);
                 }
                 else if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.MYSQL)
                 {
                     sql = "CREATE TABLE @tbl( id INTEGER AUTO_INCREMENT PRIMARY KEY, @cols)".Replace("@cols", cols).Replace("@tbl", tableName);
-                    this.EbConnectionFactory.ObjectsDB.CreateTable(sql);
+                    return this.EbConnectionFactory.ObjectsDB.CreateTable(sql);
                 }
+
                 return 0;
             }
             else
@@ -152,9 +159,10 @@ namespace ExpressBase.ServiceStack.Services
                         {
                             sql = "ALTER TABLE @tbl ADD (" + sql.Substring(0, sql.Length - 1) + ")";
                             sql = sql.Replace("@tbl", tableName);
-                            this.EbConnectionFactory.ObjectsDB.UpdateTable(sql);
+                            int _aff = this.EbConnectionFactory.ObjectsDB.UpdateTable(sql);
                             if (appendId)
                                 CreateSquenceAndTrigger(tableName);
+                            return _aff;
                         }
                     }
                     else if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.PGSQL)
@@ -164,7 +172,7 @@ namespace ExpressBase.ServiceStack.Services
                         {
                             sql = "ALTER TABLE @tbl ADD COLUMN " + (sql.Substring(0, sql.Length - 1)).Replace(",", ", ADD COLUMN ");
                             sql = sql.Replace("@tbl", tableName);
-                            this.EbConnectionFactory.ObjectsDB.UpdateTable(sql);
+                            return this.EbConnectionFactory.ObjectsDB.UpdateTable(sql);
                         }
                     }
                     else if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.MYSQL)
@@ -174,7 +182,7 @@ namespace ExpressBase.ServiceStack.Services
                         {
                             sql = "ALTER TABLE @tbl ADD COLUMN " + (sql.Substring(0, sql.Length - 1)).Replace(",", ", ADD COLUMN ");
                             sql = sql.Replace("@tbl", tableName);
-                            this.EbConnectionFactory.ObjectsDB.UpdateTable(sql);
+                            return this.EbConnectionFactory.ObjectsDB.UpdateTable(sql);
                         }
                     }
                     return 0;
@@ -197,11 +205,257 @@ namespace ExpressBase.ServiceStack.Services
             this.EbConnectionFactory.ObjectsDB.CreateTable(trgrSql);//Trigger Creation
         }
 
+        private void CreateOrUpdateDsAndDv(CreateWebFormTableRequest request, List<TableColumnMeta> listNamesAndTypes)
+        {            
+            IEnumerable<TableColumnMeta> _list= listNamesAndTypes.Where(x => x.Name != "eb_del" && x.Name != "eb_ver_id" && !(x.Name.Contains("_ebbkup")) && !(x.Control is EbFileUploader));
+            string cols = string.Join(CharConstants.COMMA+ "\n \t ", _list.Select(x=> x.Name).ToArray());
+            EbTableVisualization dv = null;
+            string AutogenId = (request.WebObj as EbWebForm).AutoGeneratedVizRefId;
+            if (AutogenId.IsNullOrEmpty())
+            {
+                var dsid = CreateDataReader(request, cols);
+                var dvrefid = CreateDataDataVisualization(request, listNamesAndTypes, dsid);
+                (request.WebObj as EbWebForm).AutoGeneratedVizRefId = dvrefid;
+                SaveFormObject(request);
+            }
+            else
+            {
+                dv = Redis.Get<EbTableVisualization>(AutogenId);
+                //Check4ColumnChange(listNamesAndTypes, dv);
+                if (dv == null )
+                {
+                    var result = this.Gateway.Send<EbObjectParticularVersionResponse>(new EbObjectParticularVersionRequest { RefId = AutogenId });
+                    dv = EbSerializers.Json_Deserialize(result.Data[0].Json);
+                    Redis.Set<EbTableVisualization>(AutogenId, dv);
+                }
+                UpdateDataReader(request, cols, dv, AutogenId);
+                UpdateDataVisualization(request, listNamesAndTypes, dv, AutogenId);
+            }
+        }
+
+        private string CreateDataReader(CreateWebFormTableRequest request, string cols)
+        {
+            EbDataReader drObj = new EbDataReader();
+            drObj.Sql = "SELECT \n \t id,@colname@ FROM @tbl \n WHERE eb_del='F'".Replace("@tbl", request.WebObj.TableName).Replace("@colname@", cols);
+            drObj.FilterDialogRefId = "";
+            drObj.Name = request.WebObj.Name + "_AutoGenDR";
+            drObj.DisplayName = request.WebObj.DisplayName + "_AutoGenDR";
+            drObj.Description = request.WebObj.Description;
+            return CreateNewObjectRequest(request, drObj);
+        }
+
+        private string CreateDataDataVisualization(CreateWebFormTableRequest request, List<TableColumnMeta> listNamesAndTypes, string dsid)
+        {
+            DVColumnCollection columns = GetDVColumnCollection(listNamesAndTypes, request);
+            var dvobj = new EbTableVisualization();
+            dvobj.Name = request.WebObj.Name + "_AutoGenDV";
+            dvobj.DisplayName = request.WebObj.DisplayName + " List";
+            dvobj.Description = request.WebObj.Description;
+            dvobj.DataSourceRefId = dsid;
+            dvobj.Columns = columns;
+            dvobj.DSColumns = columns;
+            dvobj.ColumnsCollection.Add(columns);
+            dvobj.NotVisibleColumns = columns.FindAll(x => !x.bVisible);
+            dvobj.AutoGen = true;
+            dvobj.OrderBy = new List<DVBaseColumn>();
+            dvobj.RowGroupCollection = new List<RowGroupParent>();
+            dvobj.OrderBy.Add(columns.Get("eb_created_at"));
+            RowGroupParent _rowgroup = new RowGroupParent();
+            _rowgroup.DisplayName = "By Location";
+            _rowgroup.Name = "groupbylocation";
+            _rowgroup.RowGrouping.Add(columns.Get("eb_loc_id"));
+
+            dvobj.RowGroupCollection.Add(_rowgroup);
+            _rowgroup = new RowGroupParent();
+            _rowgroup.DisplayName = "By Created By";
+            _rowgroup.Name = "groupbycreatedby";
+            _rowgroup.RowGrouping.Add(columns.Get("eb_created_by"));
+            dvobj.RowGroupCollection.Add(_rowgroup);
+            dvobj.BeforeSave(this, Redis);
+            return CreateNewObjectRequest(request, dvobj);
+        }
+
+        private string CreateNewObjectRequest(CreateWebFormTableRequest request, EbObject dvobj)
+        {
+            string _rel_obj_tmp = dvobj.DiscoverRelatedRefids();
+            EbObject_Create_New_ObjectRequest ds1 = (new EbObject_Create_New_ObjectRequest
+            {
+                Name = dvobj.Name,
+                Description = dvobj.Description,
+                Json = EbSerializers.Json_Serialize(dvobj),
+                Status = ObjectLifeCycleStatus.Live,
+                IsSave = false,
+                Tags = "",
+                Apps = request.Apps,
+                SolnId = request.SolnId,
+                WhichConsole = request.WhichConsole,
+                UserId = request.UserId,
+                SourceObjId = "0",
+                SourceVerID = "0",
+                DisplayName = dvobj.DisplayName,
+                SourceSolutionId = request.SolnId,
+                Relations = _rel_obj_tmp
+            });
+            var myService = base.ResolveService<EbObjectService>();
+            var res = myService.Post(ds1);
+            return res.RefId;
+        }
+
+        private void Check4ColumnChange(List<TableColumnMeta> listNamesAndTypes, EbTableVisualization dv)
+        {
+            foreach (TableColumnMeta column in listNamesAndTypes)
+            {
+
+            }
+        }
+
+        private void UpdateDataReader(CreateWebFormTableRequest request, string cols, EbTableVisualization dv, string AutogenId)
+        {
+            dv.AfterRedisGet(Redis,this);
+            EbDataReader drObj = dv.EbDataSource;
+            drObj.Sql = "SELECT \n \t id,@colname@ FROM @tbl \n WHERE eb_del='F'".Replace("@tbl", request.WebObj.TableName).Replace("@colname@", cols);
+            drObj.FilterDialogRefId = "";
+            drObj.Name = request.WebObj.Name + "_AutoGenDR";
+            drObj.DisplayName = request.WebObj.DisplayName + "_AutoGenDR";
+            drObj.Description = request.WebObj.Description;
+            SaveObjectRequest(request, drObj);
+        }
+
+        private void UpdateDataVisualization(CreateWebFormTableRequest request, List<TableColumnMeta> listNamesAndTypes, EbTableVisualization dvobj, string AutogenId)
+        {
+            DVColumnCollection columns = GetDVColumnCollection(listNamesAndTypes, request);
+            dvobj.Name = request.WebObj.Name + "_AutoGenDV";
+            dvobj.DisplayName = request.WebObj.DisplayName + " List";
+            dvobj.Description = request.WebObj.Description;
+            dvobj.Columns = columns;
+            dvobj.DSColumns = columns;
+            dvobj.ColumnsCollection[0] = columns;
+            dvobj.NotVisibleColumns = columns.FindAll(x => !x.bVisible);
+            dvobj.AutoGen = true;
+            dvobj.OrderBy = new List<DVBaseColumn>();
+            dvobj.RowGroupCollection = new List<RowGroupParent>();
+            dvobj.OrderBy.Add(columns.Get("eb_created_at"));
+            RowGroupParent _rowgroup = new RowGroupParent();
+            _rowgroup.DisplayName = "By Location";
+            _rowgroup.Name = "groupbylocation";
+            _rowgroup.RowGrouping.Add(columns.Get("eb_loc_id"));
+
+            dvobj.RowGroupCollection.Add(_rowgroup);
+            _rowgroup = new RowGroupParent();
+            _rowgroup.DisplayName = "By Created By";
+            _rowgroup.Name = "groupbycreatedby";
+            _rowgroup.RowGrouping.Add(columns.Get("eb_created_by"));
+            dvobj.RowGroupCollection.Add(_rowgroup);
+            dvobj.BeforeSave(this, Redis);
+            SaveObjectRequest(request, dvobj);
+        }
+
+        private void SaveFormObject(CreateWebFormTableRequest request )
+        {
+            EbWebForm obj = request.WebObj as EbWebForm;
+            obj.BeforeSave(this);
+            SaveObjectRequest(request, obj);
+        }
+
+        private void SaveObjectRequest(CreateWebFormTableRequest request, EbObject obj)
+        {
+            string _rel_obj_tmp = obj.DiscoverRelatedRefids();
+            EbObject_SaveRequest ds = new EbObject_SaveRequest
+            {
+                RefId = obj.RefId,
+                Name = obj.Name,
+                Description = obj.Description,
+                Json = EbSerializers.Json_Serialize(obj),
+                Relations = _rel_obj_tmp,
+                Tags = "",
+                Apps = request.Apps,
+                DisplayName = obj.DisplayName
+            };
+            var myService = base.ResolveService<EbObjectService>();
+            EbObject_SaveResponse res = myService.Post(ds);
+        }
+
+        private DVColumnCollection GetDVColumnCollection(List<TableColumnMeta> listNamesAndTypes, CreateWebFormTableRequest request)
+        {
+            var Columns = new DVColumnCollection();
+            int index = 0;
+            DVBaseColumn col = new DVNumericColumn { Data = index, Name = "id", sTitle = "id", Type = EbDbTypes.Decimal, bVisible = false, sWidth = "100px", ClassName = "tdheight" };
+            Columns.Add(col);
+            foreach (TableColumnMeta column in listNamesAndTypes)
+            {
+                if (column.Name != "eb_del" && column.Name != "eb_ver_id" && !(column.Name.Contains("_ebbkup"))  && !(column.Control is EbFileUploader))
+                {
+                    DVBaseColumn _col = null;
+                    ControlClass _control = null;
+                    bool _autoresolve = false;
+                    Align _align = Align.Auto;
+                    int charlength = 0;
+                    index++;
+                    if (column.Control is EbPowerSelect) {
+                        _control = new ControlClass
+                        {
+                            DataSourceId = (column.Control as EbPowerSelect).DataSourceId,
+                            DisplayMember = (column.Control as EbPowerSelect).DisplayMembers,
+                            ValueMember = (column.Control as EbPowerSelect).ValueMember
+                        };
+                        _autoresolve = true;
+                        _align = Align.Center;
+                    }
+                    if(column.Control is EbTextBox)
+                    {
+                        if((column.Control as EbTextBox).TextMode == TextMode.MultiLine)
+                        {
+                            charlength = 20;
+                        }
+                    }
+
+                    if(column.Type.EbDbType == EbDbTypes.String)
+                        _col = new DVStringColumn { Data = index, Name = column.Name, sTitle = column.Label, Type = column.Type.EbDbType, bVisible = true, sWidth = "100px",
+                            ClassName = "tdheight",ColumnQueryMapping = _control, AutoResolve = _autoresolve,Align= _align, AllowedCharacterLength = charlength
+                        };
+                    
+                    else if (column.Type.EbDbType == EbDbTypes.Int16 || column.Type.EbDbType == EbDbTypes.Int32 || column.Type.EbDbType == EbDbTypes.Int64 || column.Type.EbDbType == EbDbTypes.Double || column.Type.EbDbType == EbDbTypes.Decimal || column.Type.EbDbType == EbDbTypes.VarNumeric)
+                        _col = new DVNumericColumn { Data = index, Name = column.Name, sTitle = column.Label, Type = column.Type.EbDbType, bVisible = true, sWidth = "100px",
+                            ClassName = "tdheight",ColumnQueryMapping = _control,AutoResolve = _autoresolve,Align = _align,AllowedCharacterLength = charlength
+                        };
+                    else if (column.Type.EbDbType == EbDbTypes.Boolean)
+                        _col = new DVBooleanColumn { Data = index, Name = column.Name, sTitle = column.Label, Type = column.Type.EbDbType, bVisible = true, sWidth = "100px",
+                            ClassName = "tdheight",Align = _align,AllowedCharacterLength = charlength
+                        };
+                    else if (column.Type.EbDbType == EbDbTypes.DateTime || column.Type.EbDbType == EbDbTypes.Date || column.Type.EbDbType == EbDbTypes.Time)
+                        _col = new DVDateTimeColumn { Data = index, Name = column.Name, sTitle = column.Label, Type = column.Type.EbDbType, bVisible = true, sWidth = "100px",
+                            ClassName = "tdheight",Align = _align,AllowedCharacterLength = charlength
+                        };
+
+                    Columns.Add(_col);
+                }
+            }
+            List<DVBaseColumn> _formid = new List<DVBaseColumn>() { col };
+
+            Columns.Add(new DVStringColumn
+            {
+                Data = (index+1),//index+1 for serial column in datavis service
+                Name = "action",
+                sTitle = "Action",
+                Type = EbDbTypes.String,
+                bVisible = true,
+                sWidth = "100px",
+                ClassName = "tdheight",
+                RenderAs = StringRenderType.Link,
+                LinkRefId = request.WebObj.RefId,
+                LinkType = LinkTypeEnum.Popout,
+                FormMode = WebFormDVModes.View_Mode,
+                FormId = _formid,
+                Align = Align.Center
+            });
+            return Columns;
+        }
+
 
         //================================== GET RECORD FOR RENDERING ================================================
 
         public GetRowDataResponse Any(GetRowDataRequest request)
-        {            
+        {
             try
             {
                 Console.WriteLine("Requesting for WebFormData( Refid : " + request.RefId + ", Rowid : " + request.RowId + " ).................");
@@ -216,12 +470,12 @@ namespace ExpressBase.ServiceStack.Services
                 Console.WriteLine("Returning from GetRowData Service");
                 return _dataset;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 Console.WriteLine("Exception in GetRowData Service" + ex.Message);
                 Console.WriteLine(ex.StackTrace);
                 throw new FormException("Terminated GetRowData. Check servicestack log for stack trace.");
-            }    
+            }
         }
 
         public GetPrefillDataResponse Any(GetPrefillDataRequest request)
@@ -292,7 +546,7 @@ namespace ExpressBase.ServiceStack.Services
         //======================================= INSERT OR UPDATE OR DELETE RECORD =============================================
 
         public InsertDataFromWebformResponse Any(InsertDataFromWebformRequest request)
-        {            
+        {
             try
             {
                 EbWebForm FormObj = GetWebFormObject(request.RefId);
@@ -324,7 +578,7 @@ namespace ExpressBase.ServiceStack.Services
                 Console.WriteLine("Exception in Insert/Update WebFormData" + ex.Message);
                 Console.WriteLine(ex.StackTrace);
                 throw new FormException("Terminated Insert/Update WebFormData. Check servicestack log for stack trace.");
-            }            
+            }
         }
 
         public DeleteDataFromWebformResponse Any(DeleteDataFromWebformRequest request)
@@ -686,7 +940,7 @@ namespace ExpressBase.ServiceStack.Services
 
                 return new GetAuditTrailResponse() { Json = temp };
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 Console.WriteLine("Exception in GetAuditTrail Service" + ex.Message);
                 Console.WriteLine(ex.StackTrace);
@@ -752,7 +1006,7 @@ namespace ExpressBase.ServiceStack.Services
             EbUserControl _uc = EbSerializers.Json_Deserialize(formObj.Data[0].Json);
             _uc.AfterRedisGet(this);
             _uc.VersionNumber = formObj.Data[0].VersionNumber;//Version number(w) in EbObject is not updated when it is commited
-            string _temp = _uc.GetInnerHtml();
+            string _temp = _uc.GetHtml();
 
             return new GetDesignHtmlResponse { Html = _temp };
         }

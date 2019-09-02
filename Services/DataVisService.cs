@@ -47,6 +47,7 @@ namespace ExpressBase.ServiceStack
 
         private ResponseStatus _Responsestatus = new ResponseStatus();
 
+        private Dictionary<int, object> IntermediateDic = new Dictionary<int, object>();
 
         public DataVisService(IEbConnectionFactory _dbf) : base(_dbf) { }
 
@@ -270,7 +271,7 @@ namespace ExpressBase.ServiceStack
                 EbDataVisualization _dV = request.EbDataVisualization;
 
                 DataSourceDataResponse dsresponse = null;
-                this._replaceEbColumns = request.ReplaceEbColumns;
+                //this._replaceEbColumns = request.ReplaceEbColumns;
 
                 var _ds = this.Redis.Get<EbDataReader>(request.RefId);
 
@@ -472,7 +473,7 @@ namespace ExpressBase.ServiceStack
                     excel_file = ReturnObj.excel_file,
                     TableName = _dataset.Tables[0].TableName,
                     Tree = ReturnObj.tree,
-                    ResponseStatus =this._Responsestatus
+                    ResponseStatus = this._Responsestatus
                 };
                 this.Log.Info(" dataviz dataresponse*****" + dsresponse.Data);
                 var x = EbSerializers.Json_Serialize(dsresponse);
@@ -612,6 +613,8 @@ namespace ExpressBase.ServiceStack
                     result = Convert.ToDecimal(customCol.GetCodeAnalysisScript().RunAsync(globals).Result.ReturnValue);
                 else if (customCol is DVBooleanColumn)
                     result = Convert.ToBoolean(customCol.GetCodeAnalysisScript().RunAsync(globals).Result.ReturnValue);
+                else if (customCol is DVDateTimeColumn)
+                    result = Convert.ToDateTime(customCol.GetCodeAnalysisScript().RunAsync(globals).Result.ReturnValue);
                 else
                     result = customCol.GetCodeAnalysisScript().RunAsync(globals).Result.ReturnValue.ToString();
             }
@@ -622,6 +625,28 @@ namespace ExpressBase.ServiceStack
             }
 
             _datarow[customCol.Name] = result;
+        }
+
+        public void GetDictonaries4Columns(EbDataVisualization _dv)
+        {
+            foreach (DVBaseColumn col in _dv.Columns)
+            {
+                if (col.ColumnQueryMapping != null)
+                {
+                    if (col.AutoResolve && !col.ColumnQueryMapping.DataSourceId.IsNullOrEmpty())
+                    {
+                        EbDataReader dr = this.Redis.Get<EbDataReader>(col.ColumnQueryMapping.DataSourceId);
+                        if (dr == null || dr.Sql == null || dr.Sql == string.Empty)
+                        {
+                            var myService = base.ResolveService<EbObjectService>();
+                            EbObjectParticularVersionResponse result =(EbObjectParticularVersionResponse) myService.Get(new EbObjectParticularVersionRequest { RefId = col.ColumnQueryMapping.DataSourceId });
+                            dr = EbSerializers.Json_Deserialize(result.Data[0].Json);
+                            Redis.Set<EbDataReader>(col.ColumnQueryMapping.DataSourceId, dr);
+                        }
+                        col.ColumnQueryMapping.Values = this.EbConnectionFactory.ObjectsDB.GetDictionary(dr.Sql, col.ColumnQueryMapping.DisplayMember[0].Name, col.ColumnQueryMapping.ValueMember.Name);
+                    }
+                }
+            }
         }
 
         public PrePrcessorReturn PreProcessing(ref EbDataSet _dataset, List<Param> Parameters, EbDataVisualization _dv, User _user, ref List<GroupingDetails> _levels, Boolean _isexcel)
@@ -642,8 +667,10 @@ namespace ExpressBase.ServiceStack
 
                 Globals globals = new Globals();
                 this.PreCustomColumDoCalc(ref _dataset, Parameters, _dv, globals);
-
+                this.GetDictonaries4Columns(_dv);
                 EbDataTable _formattedTable = _dataset.Tables[0].GetEmptyTable();
+                if (_dv.AutoGen)
+                    _formattedTable.Columns.Add(_formattedTable.NewDataColumn(_dv.Columns.Count - 1, "action", EbDbTypes.String));
                 _formattedTable.Columns.Add(_formattedTable.NewDataColumn(_dv.Columns.Count, "serial", EbDbTypes.Int32));
                 Dictionary<int, List<object>> Summary = new Dictionary<int, List<object>>();
 
@@ -726,13 +753,10 @@ namespace ExpressBase.ServiceStack
                 }
                 else
                 {
-                    if ((_dv as EbChartVisualization) != null)
+                    for (int i = 0; i < rows.Count; i++)
                     {
-                        for (int i = 0; i < rows.Count; i++)
-                        {
-                            DataTable2FormatedTable(rows[i], _dv, dependencyTable, _user_culture, _user, ref _formattedTable, ref globals, bObfuscute, _isexcel, ref Summary, ref worksheet, i, rows.Count);
+                        DataTable2FormatedTable(rows[i], _dv, dependencyTable, _user_culture, _user, ref _formattedTable, ref globals, bObfuscute, _isexcel, ref Summary, ref worksheet, i, rows.Count);
 
-                        }
                     }
                 }
                 return new PrePrcessorReturn { FormattedTable = _formattedTable, Summary = Summary, excel_file = bytes, rows = rows, tree = tree.Tree };
@@ -749,8 +773,9 @@ namespace ExpressBase.ServiceStack
         public List<DVBaseColumn> CreateDependencyTable(EbDataVisualization _dv)
         {
             List<DVBaseColumn> noncustom = _dv.Columns.Where(item => !item.IsCustomColumn).ToList<DVBaseColumn>();
+            List<DVBaseColumn> Columns = new List<DVBaseColumn>();
+            RecursiveCallforNonCustom(ref Columns, noncustom);
             List<DVBaseColumn> custom = _dv.Columns.Where(item => item.IsCustomColumn).ToList<DVBaseColumn>();
-            List<DVBaseColumn> Columns = new List<DVBaseColumn>(noncustom);
             foreach (DVBaseColumn col in custom)
             {
                 List<DVBaseColumn> curcustom = new List<DVBaseColumn>();
@@ -770,6 +795,22 @@ namespace ExpressBase.ServiceStack
                     Columns.Add(col);
             }
             return Columns;
+        }
+
+        public void RecursiveCallforNonCustom(ref List<DVBaseColumn> Columns, List<DVBaseColumn> noncustom)
+        {
+            foreach (DVBaseColumn _column in noncustom)
+                RecursiveNonCustomColumn(ref Columns, _column);
+        }
+
+        public void RecursiveNonCustomColumn(ref List<DVBaseColumn> Columns, DVBaseColumn _column)
+        {
+            foreach (DVBaseColumn infocol in _column.InfoWindow)
+            {
+                RecursiveNonCustomColumn(ref Columns, infocol);
+            }
+            if (!Columns.Exists(x => x.Name == _column.Name))
+                Columns.Add(_column);
         }
 
         public void RecursiveCustomColumn(ref List<DVBaseColumn> Columns, DVBaseColumn _column, List<DVBaseColumn> noncustom, List<DVBaseColumn> custom)
@@ -818,19 +859,19 @@ namespace ExpressBase.ServiceStack
         {
             try
             {
+                IntermediateDic = new Dictionary<int, object>();
                 _formattedTable.Rows.Add(_formattedTable.NewDataRow2());
-                _formattedTable.Rows[i][_formattedTable.Columns.Count - 1] = i + 1;
+                _formattedTable.Rows[i][_formattedTable.Columns.Count - 1] = i + 1;//serial
                 int j = 0;
                 foreach (DVBaseColumn col in dependencyTable)
                 {
                     if (col.IsCustomColumn)
                         CustomColumDoCalc4Row(row, _dv, globals, col);
-                    bool AllowLinkifNoData = true;
                     var cults = col.GetColumnCultureInfo(_user_culture);
-                    object _unformattedData = row[col.Data];
+                    object _unformattedData = (_dv.AutoGen && col.Name == "action") ? "<i class='fa fa-edit'></i>" : row[col.Data];
                     object _formattedData = _unformattedData;
 
-                    if (col.Type == EbDbTypes.Date)
+                    if (col.Type == EbDbTypes.Date || col.Type == EbDbTypes.DateTime)
                     {
                         DateTimeformat(_unformattedData, ref _formattedData, ref row, col, cults, _user);
                     }
@@ -843,98 +884,115 @@ namespace ExpressBase.ServiceStack
                         }
                         else
                             _formattedData = Convert.ToDecimal(_unformattedData).ToString("N", cults.NumberFormat);
-                        if (((col as DVNumericColumn).RenderAs == NumericRenderType.ProgressBar) && (_isexcel == false))
-                            _formattedData = "<div class='progress'><div class='progress-bar' role='progressbar' aria-valuenow='" + _formattedData + "' aria-valuemin='0' aria-valuemax='100' style='width:" + _unformattedData.ToString() + "%'>" + _formattedData + "</div></div>";
-
-                        SummaryCalc(ref Summary, col, _unformattedData, cults);
                     }
-                    else if (col.Type == EbDbTypes.String && (_isexcel == false))
+                    if (col.Name == "eb_created_by" || col.Name == "eb_lastmodified_by" || col.Name == "eb_loc_id" || col.Name == "eb_createdby")
                     {
-
-                        if ((col as DVStringColumn).RenderAs == StringRenderType.Marker)
-                            _formattedData = "<a href = '#' class ='columnMarker' data-latlong='" + _unformattedData + "'><i class='fa fa-map-marker fa-2x' style='color:red;'></i></a>";
-
+                        ModifyEbColumns(col, ref _formattedData, _unformattedData);
                     }
-                    else if (col.Type == EbDbTypes.Boolean)
+                    if (col.ColumnQueryMapping != null && col.ColumnQueryMapping.Values.Count > 0)
+                        _formattedData = (col.ColumnQueryMapping.Values.ContainsKey(Convert.ToInt32(_formattedData))) ? col.ColumnQueryMapping.Values[Convert.ToInt32(_formattedData)] : string.Empty;
+                    IntermediateDic.Add(col.Data, _formattedData);
+                    if ((_dv as EbChartVisualization) != null || (_dv as Objects.EbGoogleMap) != null)
                     {
-
+                        _formattedTable.Rows[i][col.Data] = _formattedData;
                     }
-                    string info = (col.AllowedCharacterLength > 0) ? col.sTitle + " : " + row[col.Data] + "</br>" : string.Empty;
-                    if (col.InfoWindow.Count > 0)
-                    {
-                        foreach (DVBaseColumn _column in col.InfoWindow)
+                }
+                if ((_dv as EbTableVisualization) != null)
+                {
+                    foreach (DVBaseColumn col in dependencyTable)
+                    {                        
+                        bool AllowLinkifNoData = true;
+                        var cults = col.GetColumnCultureInfo(_user_culture);
+                        object _unformattedData = (_dv.AutoGen && col.Name == "action") ? "<i class='fa fa-edit'></i>" : row[col.Data];
+                        object _formattedData = IntermediateDic[col.Data];
+
+                        if (col.Type == EbDbTypes.Decimal || col.Type == EbDbTypes.Int32 || col.Type == EbDbTypes.Int64)
                         {
-                            if (_column.Name != col.Name)
-                                info += _column.sTitle + " : " + row[_column.Data] + "</br>";
-                        }
-                    }
-                    if (!string.IsNullOrEmpty(info))
-                    {
-                        _formattedData = _formattedData.ToString().Truncate(col.AllowedCharacterLength);
-                        _formattedData = "<span class='columntooltip' data-toggle='popover' data-content='" + info.ToBase64() + "'>" + _formattedData + "</span>";
-                    }
-                    if (col.HideLinkifNoData)
-                    {
-                        if (_formattedData.ToString() == string.Empty)
-                            AllowLinkifNoData = false;
-                    }
+                            if (((col as DVNumericColumn).RenderAs == NumericRenderType.ProgressBar) && (_isexcel == false))
+                                _formattedData = "<div class='progress'><div class='progress-bar' role='progressbar' aria-valuenow='" + _formattedData + "' aria-valuemin='0' aria-valuemax='100' style='width:" + _unformattedData.ToString() + "%'>" + _formattedData + "</div></div>";
 
-                    if (this._replaceEbColumns)
-                    {
-                        if (col.Name == "eb_created_by" || col.Name == "eb_lastmodified_by" || col.Name == "eb_loc_id")
+                            SummaryCalc(ref Summary, col, _unformattedData, cults);
+                        }
+                        else if (col.Type == EbDbTypes.String && (_isexcel == false))
                         {
-                            ModifyEbColumns(col, ref _formattedData, _unformattedData);
-                        }
-                    }
+                            if ((col as DVStringColumn).RenderAs == StringRenderType.Marker)
+                                _formattedData = "<a href = '#' class ='columnMarker' data-latlong='" + _unformattedData + "'><i class='fa fa-map-marker fa-2x' style='color:red;'></i></a>";
 
-                    if (!string.IsNullOrEmpty(col.LinkRefId) && (_isexcel == false))
-                    {
-                        if (AllowLinkifNoData)
+                        }
+                        string info = string.Empty;
+                        if (col.AllowedCharacterLength > 0 || col.InfoWindow.Count > 0)
+                        {
+                            info = "<table>";
+                            if(col.AllowedCharacterLength > 0)
+                                info += "<tr><td>" +col.sTitle + "</td><td>" + _formattedData + "</td></tr>";
+                            if(col.InfoWindow.Count > 0)
+                            {
+                                foreach (DVBaseColumn _column in col.InfoWindow)
+                                {
+                                    if (_column.Name != col.Name)
+                                    {
+                                        info += "<tr><td>" + _column.sTitle + "</td><td>" + IntermediateDic[_column.Data] + "</td></tr>";
+                                    }
+                                }
+                            }
+                            info += "</table>";
+
+                            _formattedData = _formattedData.ToString().Truncate(col.AllowedCharacterLength);
+                            _formattedData = "<span class='columntooltip' data-toggle='popover' data-contents='" + info.ToBase64() + "'>" + _formattedData + "</span>";
+                        }
+
+                        if (col.HideLinkifNoData)
                         {
                             if (_formattedData.ToString() == string.Empty)
-                                _formattedData = "...";
-                            if (col.LinkType == LinkTypeEnum.Popout)
-                                _formattedData = "<a href='#' oncontextmenu='return false' class ='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "'>" + _formattedData + "</a>";
-                            else if (col.LinkType == LinkTypeEnum.Inline)
-                                _formattedData = _formattedData + "&nbsp; <a  href= '#' oncontextmenu= 'return false' class ='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-inline='true' data-data='" + _formattedData + "'><i class='fa fa-caret-down'></i></a>";
-                            else if (col.LinkType == LinkTypeEnum.Both)
-                                _formattedData = "<a href='#' oncontextmenu='return false' class ='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "'>" + _formattedData + "</a>" + "&nbsp; <a  href ='#' oncontextmenu='return false' class='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-inline='true' data-data='" + _formattedData + "'> <i class='fa fa-caret-down'></i></a>";
-                            else if (col.LinkType == LinkTypeEnum.Popup)
-                                _formattedData = "<a  href= '#' oncontextmenu= 'return false' class ='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-popup='true' data-data='" + _formattedData + "'>" + _formattedData + "</a>";
+                                AllowLinkifNoData = false;
                         }
-                    }
-                    if (col.Type == EbDbTypes.String && (col as DVStringColumn).RenderAs == StringRenderType.Link && col.LinkType == LinkTypeEnum.Tab && (_isexcel == false))/////////////////
-                    {
-                        _formattedData = "<a href='../leadmanagement/" + row[0] + "' target='_blank'>" + _formattedData + "</a>";
-                    }
 
-                    if (bObfuscute && (_isexcel == false))
-                    {
-                        if (col.HideDataRowMoreThan > 0 && col.HideDataRowMoreThan < count)
+                        if (!string.IsNullOrEmpty(col.LinkRefId) && (_isexcel == false))
                         {
-                            _formattedData = "********";
+                            if (AllowLinkifNoData)
+                            {
+                                if (_formattedData.ToString() == string.Empty)
+                                    _formattedData = "...";
+                                if (col.LinkType == LinkTypeEnum.Popout)
+                                    _formattedData = "<a href='#' oncontextmenu='return false' class ='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "'>" + _formattedData + "</a>";
+                                else if (col.LinkType == LinkTypeEnum.Inline)
+                                    _formattedData = _formattedData + "&nbsp; <a  href= '#' oncontextmenu= 'return false' class ='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-inline='true' data-data='" + _formattedData + "'><i class='fa fa-caret-down'></i></a>";
+                                else if (col.LinkType == LinkTypeEnum.Both)
+                                    _formattedData = "<a href='#' oncontextmenu='return false' class ='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "'>" + _formattedData + "</a>" + "&nbsp; <a  href ='#' oncontextmenu='return false' class='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-inline='true' data-data='" + _formattedData + "'> <i class='fa fa-caret-down'></i></a>";
+                                else if (col.LinkType == LinkTypeEnum.Popup)
+                                    _formattedData = "<a  href= '#' oncontextmenu= 'return false' class ='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-popup='true' data-data='" + _formattedData + "'>" + _formattedData + "</a>";
+                            }
                         }
+                        if (col.Type == EbDbTypes.String && (col as DVStringColumn).RenderAs == StringRenderType.Link && col.LinkType == LinkTypeEnum.Tab && (_isexcel == false))/////////////////
+                        {
+                            _formattedData = "<a href='../leadmanagement/" + row[0] + "' target='_blank'>" + _formattedData + "</a>";
+                        }
+
+                        if (bObfuscute && (_isexcel == false))
+                        {
+                            if (col.HideDataRowMoreThan > 0 && col.HideDataRowMoreThan < count)
+                            {
+                                _formattedData = "********";
+                            }
+                        }
+
+                        this.conditinallyformatColumn(col, ref _formattedData, _unformattedData, row, ref globals);
+
+                        _formattedTable.Rows[i][col.Data] = _formattedData;
+                        if (_isexcel)
+                            worksheet.Cells[i + 2, j + 1].Value = _formattedData;
+
+                        if (i + 1 == count)
+                        {
+                            SummaryCalcAverage(ref Summary, col, cults, count);
+                        }
+                        j++;
                     }
-
-
-
-                    this.conditinallyformatColumn(col, ref _formattedData, _unformattedData, row, ref globals);
-
-                    _formattedTable.Rows[i][col.Data] = _formattedData;
-                    if (_isexcel)
-                        worksheet.Cells[i + 2, j + 1].Value = _formattedData;
-
-                    if (i + 1 == count)
+                    if (isTree)
                     {
-                        SummaryCalcAverage(ref Summary, col, cults, count);
+                        var treecol = _dv.Columns.FirstOrDefault(e => e.IsTree == true);
+                        _formattedTable.Rows[i][treecol.Data] = GetTreeHtml(_formattedTable.Rows[i][treecol.Data], isgroup, level);
                     }
-                    j++;
-                }
-
-                if (isTree)
-                {
-                    var treecol = _dv.Columns.FirstOrDefault(e => e.IsTree == true);
-                    _formattedTable.Rows[i][treecol.Data] = GetTreeHtml(_formattedTable.Rows[i][treecol.Data], isgroup, level);
                 }
             }
             catch (Exception e)
@@ -950,12 +1008,14 @@ namespace ExpressBase.ServiceStack
         {
             try
             {
-                if (col.Name == "eb_created_by" || col.Name == "eb_lastmodified_by")
+                if (col.Name == "eb_created_by" || col.Name == "eb_lastmodified_by" || col.Name == "eb_createdby")
                 {
                     try
                     {
                         int user_id = Convert.ToInt32(_unformattedData);
-                        if (this._ebSolution.Users != null && this._ebSolution.Users.ContainsKey(user_id))
+                        if (user_id == 0)
+                            _formattedData = "";
+                        else if (this._ebSolution.Users != null && this._ebSolution.Users.ContainsKey(user_id))
                         {
                             _formattedData = this._ebSolution.Users[user_id];
                         }
@@ -989,7 +1049,12 @@ namespace ExpressBase.ServiceStack
                 _unformattedData = (_unformattedData == DBNull.Value) ? DateTime.MinValue : _unformattedData;
                 if ((col as DVDateTimeColumn).Format == DateFormat.Date)
                 {
-                    _formattedData = (((DateTime)_unformattedData).Date != DateTime.MinValue) ? Convert.ToDateTime(_unformattedData).ToString("d", cults.DateTimeFormat) : string.Empty;
+                    if((col as DVDateTimeColumn).Pattern == DatePattern.MMMM_yyyy)
+                        _formattedData = (((DateTime)_unformattedData).Date != DateTime.MinValue) ? Convert.ToDateTime(_unformattedData).ToString(cults.DateTimeFormat.YearMonthPattern) : string.Empty;
+                    else if ((col as DVDateTimeColumn).Pattern == DatePattern.MMM_yyyy)
+                        _formattedData = (((DateTime)_unformattedData).Date != DateTime.MinValue) ? Convert.ToDateTime(_unformattedData).ToString("MMM"+ cults.DateTimeFormat.DateSeparator+"yyyy") : string.Empty;
+                    else
+                        _formattedData = (((DateTime)_unformattedData).Date != DateTime.MinValue) ? Convert.ToDateTime(_unformattedData).ToString("d", cults.DateTimeFormat) : string.Empty;
                     row[col.Data] = Convert.ToDateTime(_unformattedData).ToString("yyyy-MM-dd");
                 }
                 else if ((col as DVDateTimeColumn).Format == DateFormat.DateTime)
@@ -1027,7 +1092,7 @@ namespace ExpressBase.ServiceStack
                     }
                 }
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 Log.Info("Condition Formatting in datatable Exception........." + e.StackTrace);
                 Log.Info("Condition Formatting in datatable Exception........." + e.Message);
@@ -1250,7 +1315,7 @@ namespace ExpressBase.ServiceStack
             {
                 SerialCount = 0;
                 FormattedTable.Rows[PrevRowIndex][dvColCount] = ++SerialCount;
-                CreateHeaderAndFooterPairs(currentRow, AggregateColumnIndexes, RowGroupingColumns, RowGrouping, Visualization.Columns, TotalLevels, IsMultiLevelRowGrouping, Culture, TempGroupingText, ref CurSortIndex, dvColCount, _user);
+                CreateHeaderAndFooterPairs(currentRow, AggregateColumnIndexes, RowGroupingColumns, RowGrouping, Visualization.Columns, TotalLevels, IsMultiLevelRowGrouping, Culture, TempGroupingText, ref CurSortIndex, dvColCount, _user, Visualization.AutoGen);
 
                 HeaderGroupingDetails HeaderObject = RowGrouping[HeaderPrefix + TempGroupingText] as HeaderGroupingDetails;
                 HeaderObject.SetRowIndex(PrevRowIndex);
@@ -1331,9 +1396,7 @@ namespace ExpressBase.ServiceStack
             string TempGroupingText = string.Empty;
             foreach (DVBaseColumn Column in RowGroupingColumns)
             {
-                string tempValue = row[Column.Data].ToString().Trim();
-                if (Column.Type == EbDbTypes.Date)
-                    tempValue = GetFormattedDate(row, Column, _user_culture, _user);
+                string tempValue = IntermediateDic[Column.Data].ToString().Trim();
                 TempGroupingText += (tempValue.Trim().Equals(string.Empty) || tempValue.Trim().IsNullOrEmpty()) ? BlankText : tempValue.Trim();
                 TempGroupingText += (IsMultiLevelRowGrouping && delimCount == TotalLevels) ? string.Empty : GroupDelimiter;
 
@@ -1349,7 +1412,7 @@ namespace ExpressBase.ServiceStack
 
         private void CreateHeaderAndFooterPairs(EbDataRow CurrentRow, List<int> AggregateIndexes,
             List<DVBaseColumn> _rowGroupingColumns, Dictionary<string, GroupingDetails> rowGrouping, DVColumnCollection VisualizationColumns,
-            int TotalLevels, bool IsMultiLevelGrouping, CultureInfo culture, string TempGroupingText, ref int CurSortIndex, int ColumnCount, User _user)
+            int TotalLevels, bool IsMultiLevelGrouping, CultureInfo culture, string TempGroupingText, ref int CurSortIndex, int ColumnCount, User _user, bool IsAutoGendv)
         {
             List<string> TempKey = CreateRowGroupingKeys(CurrentRow, _rowGroupingColumns, (TotalLevels > 1) ? true : false, culture, _user);
             if (IsMultiLevelGrouping)
@@ -1369,6 +1432,8 @@ namespace ExpressBase.ServiceStack
                         (rowGrouping[headerKey] as HeaderGroupingDetails).TotalLevels = TotalLevels;
                         rowGrouping[headerKey].IsMultiLevel = IsMultiLevelGrouping;
                         rowGrouping[footerKey].IsMultiLevel = IsMultiLevelGrouping;
+                        rowGrouping[headerKey].IsAutoGen = IsAutoGendv;
+                        rowGrouping[footerKey].IsAutoGen = IsAutoGendv;
                     }
                 }
                 (rowGrouping[HeaderPrefix + TempKey[TotalLevels - 1]] as HeaderGroupingDetails).SetSortIndex(CurSortIndex);
@@ -1387,19 +1452,19 @@ namespace ExpressBase.ServiceStack
                     (rowGrouping[headerKey] as HeaderGroupingDetails).ColumnCount = ColumnCount;
                     (rowGrouping[headerKey] as HeaderGroupingDetails).SetSortIndex(CurSortIndex);
                     (rowGrouping[footerKey] as FooterGroupingDetails).SetSortIndex(++CurSortIndex);
+                    rowGrouping[headerKey].IsAutoGen = IsAutoGendv;
+                    rowGrouping[footerKey].IsAutoGen = IsAutoGendv;
                 }
             }
         }
 
-        private static List<string> CreateRowGroupingKeys(EbDataRow CurrentRow, List<DVBaseColumn> RowGroupingColumns, bool IsMultiLevelRowGrouping, CultureInfo _user_culture, User _user)
+        private List<string> CreateRowGroupingKeys(EbDataRow CurrentRow, List<DVBaseColumn> RowGroupingColumns, bool IsMultiLevelRowGrouping, CultureInfo _user_culture, User _user)
         {
             List<string> TempKey = new List<string>();
             string TempStr = string.Empty;
             foreach (DVBaseColumn column in RowGroupingColumns)
             {
-                string tempvalue = CurrentRow[column.Data].ToString().Trim();
-                if (column.Type == EbDbTypes.Date)
-                    tempvalue = GetFormattedDate(CurrentRow, column, _user_culture, _user);
+                string tempvalue = IntermediateDic[column.Data].ToString().Trim();
                 if (IsMultiLevelRowGrouping)
                 {
                     TempKey.Add(((TempKey.Count > 0) ? TempKey.Last() + GroupDelimiter : string.Empty) + ((tempvalue.IsNullOrEmpty()) ? BlankText : tempvalue));
