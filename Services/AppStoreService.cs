@@ -41,8 +41,9 @@ namespace ExpressBase.ServiceStack.Services
             List<AppStore> _storeCollection = new List<AppStore>();
             EbDataTable dt = InfraConnectionFactory.ObjectsDB.DoQuery(string.Format(@"
             SELECT
-	            EAS.id, app_name, status, user_solution_id, cost, created_by, created_at, json, currency, EAS.eb_del, app_type,	EAS.description, icon, solution_name, fullname,
-				EAD.images
+	            EAS.id, EAD.title, status, user_solution_id, cost, created_by, created_at, currency, app_type,
+                EAS.description, icon, solution_name, fullname,
+				EAD.images, EAD.demo_links, EAD.detailed_desc, is_free, pricing_desc, short_desc,tags, title, video_links
             FROM 
 	            eb_appstore EAS, eb_solutions ES, eb_tenants ET,eb_appstore_detailed EAD
             WHERE 
@@ -55,21 +56,28 @@ namespace ExpressBase.ServiceStack.Services
             {
                 AppStore _app = new AppStore
                 {
-                    Id = Convert.ToInt32(_row[0]),
-                    Name = _row[1].ToString(),
-                    Status = Convert.ToInt32(_row[2]),
-                    SolutionId = _row[3].ToString(),
-                    Cost = Convert.ToInt32(_row[4]),
-                    CreatedBy = Convert.ToInt32(_row[5]),
-                    CreatedAt = Convert.ToDateTime(_row[6]),
-                    Json = _row[7].ToString(),
-                    Currency = _row[8].ToString(),
-                    AppType = Convert.ToInt32(_row[10]),
-                    Description = _row[11].ToString(),
-                    Icon = _row[12].ToString(),
-                    SolutionName = _row[13].ToString(),
-                    TenantName = _row[14].ToString(),
-                    Images = _row["images"].ToString()
+                    Id = Convert.ToInt32(_row["id"]),
+                    Name = _row["title"].ToString(),
+                    Status = Convert.ToInt32(_row["status"]),
+                    SolutionId = _row["user_solution_id"].ToString(),
+                    Cost = Convert.ToInt32(_row["cost"]),
+                    CreatedBy = Convert.ToInt32(_row["created_by"]),
+                    CreatedAt = Convert.ToDateTime(_row["created_at"]),
+                    Currency = _row["currency"].ToString(),
+                    AppType = Convert.ToInt32(_row["app_type"]),
+                    Description = _row["description"].ToString(),
+                    Icon = _row["icon"].ToString(),
+                    SolutionName = _row["solution_name"].ToString(),
+                    TenantName = _row["fullname"].ToString(),
+                    Images = _row["images"].ToString(),
+                    DemoLinks = _row["demo_links"].ToString(),
+                    DetailedDesc = _row["detailed_desc"].ToString(),
+                    IsFree= _row["is_free"].ToString(),
+                    PricingDesc= _row["pricing_desc"].ToString(),
+                    ShortDesc= _row["short_desc"].ToString(),
+                    Tags= _row["tags"].ToString(),
+                    Title= _row["title"].ToString(),
+                    VideoLinks = _row["video_links"].ToString(),                    
                 };
                 _storeCollection.Add(_app);
             }
@@ -81,7 +89,8 @@ namespace ExpressBase.ServiceStack.Services
             List<AppStore> _storeCollection = new List<AppStore>();
             EbDataTable dt = InfraConnectionFactory.ObjectsDB.DoQuery(string.Format(@"
             SELECT
-	            EAS.id, app_name, status, user_solution_id, cost, created_by, created_at, json, currency, EAS.eb_del, app_type,	EAS.description, icon, solution_name, fullname
+	            EAS.id, app_name, status, user_solution_id, cost, created_by, created_at, currency,
+                app_type, EAS.description, icon, solution_name, fullname
             FROM 
 	            eb_appstore EAS, eb_solutions ES, eb_tenants ET
             WHERE 
@@ -94,20 +103,19 @@ namespace ExpressBase.ServiceStack.Services
             {
                 AppStore _app = new AppStore
                 {
-                    Id = Convert.ToInt32(_row[0]),
-                    Name = _row[1].ToString(),
-                    Status = Convert.ToInt32(_row[2]),
-                    SolutionId = _row[3].ToString(),
-                    Cost = Convert.ToInt32(_row[4]),
-                    CreatedBy = Convert.ToInt32(_row[5]),
-                    CreatedAt = Convert.ToDateTime(_row[6]),
-                    Json = _row[7].ToString(),
-                    Currency = _row[8].ToString(),
-                    AppType = Convert.ToInt32(_row[10]),
-                    Description = _row[11].ToString(),
-                    Icon = _row[12].ToString(),
-                    SolutionName = _row[13].ToString(),
-                    TenantName = _row[14].ToString()
+                    Id = Convert.ToInt32(_row["id"]),
+                    Name = _row["app_name"].ToString(),
+                    Status = Convert.ToInt32(_row["status"]),
+                    SolutionId = _row["user_solution_id"].ToString(),
+                    Cost = Convert.ToInt32(_row["cost"]),
+                    CreatedBy = Convert.ToInt32(_row["created_by"]),
+                    CreatedAt = Convert.ToDateTime(_row["created_at"]),
+                    Currency = _row["currency"].ToString(),
+                    AppType = Convert.ToInt32(_row["app_type"]),
+                    Description = _row["description"].ToString(),
+                    Icon = _row["icon"].ToString(),
+                    SolutionName = _row["solution_name"].ToString(),
+                    TenantName = _row["fullname"].ToString()
                 };
                 _storeCollection.Add(_app);
             }
