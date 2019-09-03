@@ -445,7 +445,10 @@ namespace ExpressBase.ServiceStack
                 {
                     __order = string.Format("{0} {1}", request.OrderBy.Column, (request.OrderBy.Direction == 2) ? "DESC" : "ASC");
                 }
-                sql = sql.Replace(":orderby", (string.IsNullOrEmpty(__order)) ? "1" : __order);
+                if (string.IsNullOrEmpty(__order))
+                    sql = sql.Replace("order by :orderby", string.Empty);
+                else
+                    sql = sql.Replace(":orderby", __order);
                 bool _isPaged = true;
                 IEnumerable<DbParameter> parameters = DataHelper.GetParams(this.EbConnectionFactory, _isPaged, request.Params, request.Length, request.Start);
                 try
