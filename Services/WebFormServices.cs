@@ -435,7 +435,7 @@ namespace ExpressBase.ServiceStack.Services
             Columns.Add(new DVStringColumn
             {
                 Data = (index+1),//index+1 for serial column in datavis service
-                Name = "action",
+                Name = "eb_action",
                 sTitle = "Action",
                 Type = EbDbTypes.String,
                 bVisible = true,
