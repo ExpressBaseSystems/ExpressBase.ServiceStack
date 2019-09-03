@@ -41,12 +41,14 @@ namespace ExpressBase.ServiceStack.Services
             List<AppStore> _storeCollection = new List<AppStore>();
             EbDataTable dt = InfraConnectionFactory.ObjectsDB.DoQuery(string.Format(@"
             SELECT
-	            EAS.id, app_name, status, user_solution_id, cost, created_by, created_at, json, currency, EAS.eb_del, app_type,	EAS.description, icon, solution_name, fullname
+	            EAS.id, app_name, status, user_solution_id, cost, created_by, created_at, json, currency, EAS.eb_del, app_type,	EAS.description, icon, solution_name, fullname,
+				EAD.images
             FROM 
-	            eb_appstore EAS, eb_solutions ES, eb_tenants ET
+	            eb_appstore EAS, eb_solutions ES, eb_tenants ET,eb_appstore_detailed EAD
             WHERE 
                 EAS.user_solution_id = ES.esolution_id AND
                 ES.tenant_id = ET.id AND EAS.eb_del='F' AND
+				EAD.app_store_id = EAS.id AND
                 EAS.status=2;
             ", request.SolnId));
             foreach (EbDataRow _row in dt.Rows)
@@ -66,7 +68,8 @@ namespace ExpressBase.ServiceStack.Services
                     Description = _row[11].ToString(),
                     Icon = _row[12].ToString(),
                     SolutionName = _row[13].ToString(),
-                    TenantName = _row[14].ToString()
+                    TenantName = _row[14].ToString(),
+                    Images = _row["images"].ToString()
                 };
                 _storeCollection.Add(_app);
             }
