@@ -392,14 +392,17 @@ namespace ExpressBase.ServiceStack.Services
                     int charlength = 0;
                     index++;
                     if (column.Control is EbPowerSelect) {
-                        _control = new ControlClass
+                        if (!(column.Control as EbPowerSelect).MultiSelect)
                         {
-                            DataSourceId = (column.Control as EbPowerSelect).DataSourceId,
-                            DisplayMember = (column.Control as EbPowerSelect).DisplayMembers,
-                            ValueMember = (column.Control as EbPowerSelect).ValueMember
-                        };
-                        _autoresolve = true;
-                        _align = Align.Center;
+                            _control = new ControlClass
+                            {
+                                DataSourceId = (column.Control as EbPowerSelect).DataSourceId,
+                                DisplayMember = (column.Control as EbPowerSelect).DisplayMembers,
+                                ValueMember = (column.Control as EbPowerSelect).ValueMember
+                            };
+                            _autoresolve = true;
+                            _align = Align.Center;
+                        }
                     }
                     if(column.Control is EbTextBox)
                     {

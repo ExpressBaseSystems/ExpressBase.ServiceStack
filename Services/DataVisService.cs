@@ -416,7 +416,7 @@ namespace ExpressBase.ServiceStack
                         string pattern = $"(?i)(order by {Treecol.ParentColumn[0].Name})";
                         var matches = Regex.Matches(_sql, pattern);
                         if (matches.Count == 0)
-                            _sql = $"SELECT * FROM ({_sql}) data ORDER BY {Treecol.ParentColumn[0].Name}";
+                            _sql = $"SELECT * FROM ({_sql.ReplaceAll(";",string.Empty)}) data ORDER BY {Treecol.ParentColumn[0].Name}";
                     }
                 }
                 
