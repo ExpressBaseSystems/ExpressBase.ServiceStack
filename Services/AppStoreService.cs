@@ -36,6 +36,53 @@ namespace ExpressBase.ServiceStack.Services
             };
         }
 
+        public GetAppStoreDetailedResponse Get(GetAppStoreDetailedRequest request)
+        {
+            GetAppStoreDetailedResponse resp = new GetAppStoreDetailedResponse();
+            string query = @"SELECT 
+	                            EAS.app_name,EAS.cost,EAS.created_by,EAS.created_at,EAS.currency,EAS.app_type,
+	                            EAS.icon,EASD.*
+                            FROM 
+	                            eb_appstore EAS 
+                            INNER JOIN 
+	                            eb_appstore_detailed EASD 
+                            ON 
+	                            EAS.id = EASD.app_store_id
+                            WHERE
+	                            EAS.id = :id;";
+            try
+            {
+                DbParameter[] Parameters = {
+                    this.InfraConnectionFactory.ObjectsDB.GetNewParameter(":id", EbDbTypes.Int32, request.Id)
+                };
+                EbDataTable dt = this.InfraConnectionFactory.ObjectsDB.DoQuery(query, Parameters);
+                if (dt.Rows.Count > 0)
+                {
+                    EbDataRow _row = dt.Rows[0];
+                    resp.Store.Cost = Convert.ToInt32(_row["cost"]);
+                    resp.Store.Title = _row["title"].ToString();
+                    resp.Store.CreatedAt = Convert.ToDateTime(_row["created_at"]);
+                    resp.Store.Currency = _row["currency"].ToString();
+                    resp.Store.AppType = Convert.ToInt32(_row["app_type"]);
+                    resp.Store.Icon = _row["icon"].ToString();
+                    resp.Store.ShortDesc = _row["short_desc"].ToString();
+                    resp.Store.Tags = _row["tags"].ToString();
+                    resp.Store.IsFree = _row["is_free"].ToString();
+                    resp.Store.DetailedDesc = _row["detailed_desc"].ToString();
+                    resp.Store.DemoLinks = _row["demo_links"].ToString();
+                    resp.Store.VideoLinks = _row["video_links"].ToString();
+                    resp.Store.Images = _row["images"].ToString();
+                    resp.Store.PricingDesc = _row["pricing_desc"].ToString();
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+                Console.WriteLine(e.StackTrace);
+            }
+            return resp;
+        }
+
         public GetAllFromAppstoreResponse Get(GetAllFromAppStoreExternalRequest request)
         {
             GetAllFromAppstoreResponse resp = new GetAllFromAppstoreResponse();
