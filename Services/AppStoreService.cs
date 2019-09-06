@@ -136,22 +136,22 @@ namespace ExpressBase.ServiceStack.Services
                 if (request.WhichConsole == RoutingConstants.TC)
                 {
                     q = @"SELECT 
-	                    id,app_name,user_solution_id,created_by, created_at,description,app_type,icon
+	                    id,app_name,user_solution_id,created_by, created_at,description,app_type,icon,status
                     FROM
 	                    eb_appstore
                     WHERE
-	                    eb_del = 'F' AND status = 1 AND
+	                    eb_del = 'F' AND
 	                    user_solution_id = ANY(SELECT isolution_id FROM eb_solutions WHERE tenant_id = :tenantid);";
                     parameters.Add(this.InfraConnectionFactory.DataDB.GetNewParameter("tenantid", EbDbTypes.Int32, request.UserId));
                 }
                 else
                 {
                     q = @"SELECT 
-	                    id,app_name,user_solution_id,created_by, created_at,description,app_type,icon
+	                    id,app_name,user_solution_id,created_by, created_at,description,app_type,icon,status
                     FROM
 	                    eb_appstore
                     WHERE
-	                    eb_del = 'F' AND status = 1 AND
+	                    eb_del = 'F' AND
 	                    user_solution_id = :isolutionid ;";
                     parameters.Add(this.InfraConnectionFactory.DataDB.GetNewParameter("isolutionid", EbDbTypes.String, request.SolnId));
                 }
@@ -159,17 +159,35 @@ namespace ExpressBase.ServiceStack.Services
                 EbDataTable dt = InfraConnectionFactory.ObjectsDB.DoQuery(q, parameters.ToArray());
                 foreach (EbDataRow _row in dt.Rows)
                 {
-                    resp.Apps.Add(new AppStore
+                    int status = Convert.ToInt32(_row["status"]);
+                    if (status == 1)
                     {
-                        Id = Convert.ToInt32(_row["id"]),
-                        Name = _row["app_name"].ToString(),
-                        SolutionId = _row["user_solution_id"].ToString(),
-                        CreatedBy = Convert.ToInt32(_row["created_by"]),
-                        CreatedAt = Convert.ToDateTime(_row["created_at"]),
-                        AppType = Convert.ToInt32(_row["app_type"]),
-                        Description = _row["description"].ToString(),
-                        Icon = _row["icon"].ToString(),
-                    });
+                        resp.Apps.Add(new AppStore
+                        {
+                            Id = Convert.ToInt32(_row["id"]),
+                            Name = _row["app_name"].ToString(),
+                            SolutionId = _row["user_solution_id"].ToString(),
+                            CreatedBy = Convert.ToInt32(_row["created_by"]),
+                            CreatedAt = Convert.ToDateTime(_row["created_at"]),
+                            AppType = Convert.ToInt32(_row["app_type"]),
+                            Description = _row["description"].ToString(),
+                            Icon = _row["icon"].ToString(),
+                        });
+                    }
+                    else if (status == 2)
+                    {
+                        resp.PublicApps.Add(new AppStore
+                        {
+                            Id = Convert.ToInt32(_row["id"]),
+                            Name = _row["app_name"].ToString(),
+                            SolutionId = _row["user_solution_id"].ToString(),
+                            CreatedBy = Convert.ToInt32(_row["created_by"]),
+                            CreatedAt = Convert.ToDateTime(_row["created_at"]),
+                            AppType = Convert.ToInt32(_row["app_type"]),
+                            Description = _row["description"].ToString(),
+                            Icon = _row["icon"].ToString(),
+                        });
+                    }
                 }
             }
             catch(Exception e)
