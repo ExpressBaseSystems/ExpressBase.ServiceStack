@@ -76,12 +76,12 @@ namespace ExpressBase.ServiceStack.Services
 					string l = string.Format("select lpad('{0}',6,'0');",cx );
 					EbDataTable dt3 = this.InfraConnectionFactory.DataDB.DoQuery(l);
 					string sbgf = null;
-					if (sbreq.type_b_f.Equals("bug"))
+					if (sbreq.type_b_f.Equals("Bug"))
 					{
 						sbgf = "IS" + dt3.Rows[0][0];
 
 					}
-					else if (sbreq.type_b_f.Equals("featurerequest"))
+					else if (sbreq.type_b_f.Equals("FeatureRequest"))
 					{
 						sbgf = "IS" + dt3.Rows[0][0];
 					}
@@ -95,6 +95,11 @@ namespace ExpressBase.ServiceStack.Services
 
 					if (sbreq.upload_files.Count > 0)
 					{
+						for(var i = 0; i < sbreq.upload_files.Count; i++)
+						{
+							long s=sbreq.upload_files[i].Length;
+							
+						}
 
 					}
 				}
