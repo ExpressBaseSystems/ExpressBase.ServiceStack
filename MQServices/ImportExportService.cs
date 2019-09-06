@@ -151,7 +151,10 @@ namespace ExpressBase.ServiceStack.MQServices
                             c++;
                             uniq_appnameresp = devservice.Get(new UniqueApplicationNameCheckRequest { AppName = AppObj.Name });
                             if (!uniq_appnameresp.IsUnique)
-                                AppObj.Name = AppObj.Name + "(" + c + ")";
+                            {
+                                string _r = "(" +( c - 1) + ")";
+                                AppObj.Name = AppObj.Name.Replace(_r, "") + "(" + c + ")";
+                            }
                         }
                         while (!uniq_appnameresp.IsUnique);
 
@@ -224,7 +227,8 @@ namespace ExpressBase.ServiceStack.MQServices
                                 UserAuthId = request.UserAuthId,
                                 WhichConsole = request.WhichConsole,
                                 Relations = "_rel_obj",
-                                Tags = "_tags"
+                                Tags = "_tags",
+                                IsImport = true
                             };
                             EbObject_SaveResponse saveRes = objservice.Post(ss);
                         }

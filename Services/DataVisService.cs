@@ -298,6 +298,7 @@ namespace ExpressBase.ServiceStack
                 string _sql = string.Empty;
                 string tempsql = string.Empty;
 
+                bool _isPaged = false;
                 if (_ds != null)
                 {
                     string _c = string.Empty;
@@ -359,52 +360,68 @@ namespace ExpressBase.ServiceStack
                             }
                         }
                     }
-
-                    if (!_ds.Sql.ToLower().Contains(":and_search"))
+                    DVBaseColumn Treecol = null;
+                    if (_dV is EbTableVisualization)
+                        Treecol = this.Check4Tree((_dV as EbTableVisualization));
+                    _sql = _ds.Sql;
+                    if (Treecol == null)
                     {
-                        _ds.Sql = "SELECT * FROM (" + _ds.Sql + "\n ) data WHERE 1=1 :and_search order by :orderby";
-                    }
-                    _ds.Sql = _ds.Sql.ReplaceAll(";", string.Empty);
-                    _sql = _ds.Sql.Replace(":and_search", _c) + ";";
-                    //}
-                    if (request.Ispaging)
-                    {
-                        var matches = Regex.Matches(_sql, @"\;\s*SELECT\s*COUNT\(\*\)\s*FROM");
-                        if (matches.Count == 0)
+                        if (!_ds.Sql.ToLower().Contains(":and_search"))
                         {
-                            tempsql = _sql.ReplaceAll(";", string.Empty);
-                            tempsql = "SELECT COUNT(*) FROM (" + tempsql + ") data1;";
+                            _ds.Sql = "SELECT * FROM (" + _ds.Sql + "\n ) data WHERE 1=1 :and_search order by :orderby";
+                        }
+                        _ds.Sql = _ds.Sql.ReplaceAll(";", string.Empty);
+                        _sql = _ds.Sql.Replace(":and_search", _c) + ";";
+                        //}
+                        if (request.Ispaging)
+                        {
+                            var matches = Regex.Matches(_sql, @"\;\s*SELECT\s*COUNT\(\*\)\s*FROM");
+                            if (matches.Count == 0)
+                            {
+                                tempsql = _sql.ReplaceAll(";", string.Empty);
+                                tempsql = "SELECT COUNT(*) FROM (" + tempsql + ") data1;";
+                            }
+
+                            var sql1 = _sql.ReplaceAll(";", string.Empty);
+                            if (this.EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.ORACLE)
+                            {
+                                sql1 = "SELECT * FROM ( SELECT a.*,ROWNUM rnum FROM (" + sql1 + ")a WHERE ROWNUM <= :limit+:offset) WHERE rnum > :offset;";
+                                //sql1 += "ALTER TABLE T1 DROP COLUMN rnum;SELECT * FROM T1;";
+                            }
+                            else
+                            {
+                                if (!sql1.ToLower().Contains(":limit"))
+                                    sql1 = sql1 + " LIMIT :limit OFFSET :offset;";
+                            }
+                            _sql = sql1 + tempsql;
                         }
 
-                        var sql1 = _sql.ReplaceAll(";", string.Empty);
-                        if (this.EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.ORACLE)
+                        string __order = string.Empty;
+                        if (request.OrderBy != null && request.OrderBy.Count > 0)
                         {
-                            sql1 = "SELECT * FROM ( SELECT a.*,ROWNUM rnum FROM (" + sql1 + ")a WHERE ROWNUM <= :limit+:offset) WHERE rnum > :offset;";
-                            //sql1 += "ALTER TABLE T1 DROP COLUMN rnum;SELECT * FROM T1;";
+                            foreach (OrderBy order in request.OrderBy)
+                            {
+                                __order += string.Format("{0} {1},", order.Column, (order.Direction == 1) ? "DESC" : "ASC");
+                            }
+                            int indx = __order.LastIndexOf(",");
+                            __order = __order.Substring(0, indx);
                         }
+                        if (string.IsNullOrEmpty(__order))
+                            _sql = _sql.Replace("order by :orderby", string.Empty);
                         else
-                        {
-                            if (!sql1.ToLower().Contains(":limit"))
-                                sql1 = sql1 + " LIMIT :limit OFFSET :offset;";
-                        }
-                        _sql = sql1 + tempsql;
-                    }
-                }
-                bool _isPaged = false;
+                            _sql = _sql.Replace(":orderby", __order);
 
-                string __order = string.Empty;
-                if (request.OrderBy != null && request.OrderBy.Count > 0)
-                {
-                    foreach (OrderBy order in request.OrderBy)
+                        _isPaged = (_sql.ToLower().Contains(":offset") && _sql.ToLower().Contains(":limit"));
+                    }
+                    else
                     {
-                        __order += string.Format("{0} {1},", order.Column, (order.Direction == 1) ? "DESC" : "ASC");
+                        string pattern = $"(?i)(order by {Treecol.ParentColumn[0].Name})";
+                        var matches = Regex.Matches(_sql, pattern);
+                        if (matches.Count == 0)
+                            _sql = $"SELECT * FROM ({_sql.ReplaceAll(";",string.Empty)}) data ORDER BY {Treecol.ParentColumn[0].Name}";
                     }
-                    int indx = __order.LastIndexOf(",");
-                    __order = __order.Substring(0, indx);
                 }
-                _sql = _sql.Replace(":orderby", (string.IsNullOrEmpty(__order)) ? "1" : __order);
-
-                _isPaged = (_sql.ToLower().Contains(":offset") && _sql.ToLower().Contains(":limit"));
+                
 
                 if (request.Params == null)
                     _sql = _sql.Replace(":id", "0");
@@ -868,7 +885,7 @@ namespace ExpressBase.ServiceStack
                     if (col.IsCustomColumn)
                         CustomColumDoCalc4Row(row, _dv, globals, col);
                     var cults = col.GetColumnCultureInfo(_user_culture);
-                    object _unformattedData = (_dv.AutoGen && col.Name == "action") ? "<i class='fa fa-edit'></i>" : row[col.Data];
+                    object _unformattedData = (_dv.AutoGen && col.Name == "eb_action") ? "<i class='fa fa-edit'></i>" : row[col.Data];
                     object _formattedData = _unformattedData;
 
                     if (col.Type == EbDbTypes.Date || col.Type == EbDbTypes.DateTime)
@@ -903,7 +920,7 @@ namespace ExpressBase.ServiceStack
                     {                        
                         bool AllowLinkifNoData = true;
                         var cults = col.GetColumnCultureInfo(_user_culture);
-                        object _unformattedData = (_dv.AutoGen && col.Name == "action") ? "<i class='fa fa-edit'></i>" : row[col.Data];
+                        object _unformattedData = (_dv.AutoGen && col.Name == "eb_action") ? "<i class='fa fa-edit'></i>" : row[col.Data];
                         object _formattedData = IntermediateDic[col.Data];
 
                         if (col.Type == EbDbTypes.Decimal || col.Type == EbDbTypes.Int32 || col.Type == EbDbTypes.Int64)
@@ -924,14 +941,14 @@ namespace ExpressBase.ServiceStack
                         {
                             info = "<table>";
                             if(col.AllowedCharacterLength > 0)
-                                info += "<tr><td>" +col.sTitle + "</td><td>" + _formattedData + "</td></tr>";
+                                info += "<tr><td>" +col.sTitle + " &nbsp; : &nbsp;</td><td>" + _formattedData + "</td></tr>";
                             if(col.InfoWindow.Count > 0)
                             {
                                 foreach (DVBaseColumn _column in col.InfoWindow)
                                 {
                                     if (_column.Name != col.Name)
                                     {
-                                        info += "<tr><td>" + _column.sTitle + "</td><td>" + IntermediateDic[_column.Data] + "</td></tr>";
+                                        info += "<tr><td>" + _column.sTitle + " &nbsp; : &nbsp;</td><td>" + IntermediateDic[_column.Data] + "</td></tr>";
                                     }
                                 }
                             }
