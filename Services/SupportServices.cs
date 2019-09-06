@@ -70,6 +70,9 @@ namespace ExpressBase.ServiceStack.Services
 				if (sb.Id > 0)
 				{
 					string cx = sb.Id.ToString();
+
+					//for making id 6 digit with intial position 0 in case of single digit
+
 					string l = string.Format("select lpad('{0}',6,'0');",cx );
 					EbDataTable dt3 = this.InfraConnectionFactory.DataDB.DoQuery(l);
 					string sbgf = null;
@@ -87,7 +90,15 @@ namespace ExpressBase.ServiceStack.Services
 					this.InfraConnectionFactory.DataDB.GetNewParameter("bfi", EbDbTypes.String,sbgf)
 					};
 					int dt2= this.InfraConnectionFactory.DataDB.DoNonQuery(k, param);
+
+					//to upload images
+
+					if (sbreq.upload_files.Count > 0)
+					{
+
+					}
 				}
+
 
 
 			}
@@ -127,13 +138,19 @@ namespace ExpressBase.ServiceStack.Services
 			return tr;
 		}
 
+
 		//to fetch all details of tickets of corresponding user of that corresponding solution to show as tables
 		public FetchSupportResponse Post(FetchSupportRequest fsreq)
 		{
 			FetchSupportResponse fr = new FetchSupportResponse();
 			try
 			{
-				string sql = string.Format(@"SELECT 
+				
+				if (fsreq.WhichConsole.Equals("tc"))
+				{
+					
+
+					string sql2 = @"SELECT 
 								title, 
 								description,
 								priority, 
@@ -146,24 +163,72 @@ namespace ExpressBase.ServiceStack.Services
 								bg_fr_id
 								FROM support_ticket
 								WHERE 
-								eb_created_by ={0} AND eb_del='F';", fsreq.UserId);
+								eb_del='F' 
+								AND 
+								solution_id 
+								IN
+								(SELECT isolution_id  FROM eb_solutions WHERE tenant_id=:tndid AND eb_del='F');";
+					DbParameter[] parameters2 = {
+					this.InfraConnectionFactory.DataDB.GetNewParameter("tndid", EbDbTypes.Int32, fsreq.UserId)
+					};
 
-				EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(sql);
-				for (int i = 0; i < dt.Rows.Count; i++)
-				{
-					SupportTktCls st = new SupportTktCls();
-					st.title=dt.Rows[i][0].ToString();
-					st.description=dt.Rows[i][1].ToString();
-					st.priority=dt.Rows[i][2].ToString();
-					st.solutionid=dt.Rows[i][3].ToString();
-					st.lstmodified=dt.Rows[i][4].ToString();
-					st.status=dt.Rows[i][5].ToString();
-					st.remarks=dt.Rows[i][6].ToString();
-					st.assignedto = dt.Rows[i][7].ToString();
-					st.type_b_f=dt.Rows[i][8].ToString();
-					st.ticketid=dt.Rows[i][9].ToString();
-					fr.supporttkt.Add(st);
+					EbDataTable dt2 = this.InfraConnectionFactory.DataDB.DoQuery(sql2, parameters2);
+					for (int i = 0; i < dt2.Rows.Count; i++)
+					{
+						SupportTktCls st = new SupportTktCls();
+						st.title = dt2.Rows[i][0].ToString();
+						st.description = dt2.Rows[i][1].ToString();
+						st.priority = dt2.Rows[i][2].ToString();
+						st.solutionid = dt2.Rows[i][3].ToString();
+						st.lstmodified = dt2.Rows[i][4].ToString();
+						st.status = dt2.Rows[i][5].ToString();
+						st.remarks = dt2.Rows[i][6].ToString();
+						st.assignedto = dt2.Rows[i][7].ToString();
+						st.type_b_f = dt2.Rows[i][8].ToString();
+						st.ticketid = dt2.Rows[i][9].ToString();
+						fr.supporttkt.Add(st);
+					}
 				}
+				else
+				{
+					string sql = @"SELECT 
+								title, 
+								description,
+								priority, 
+								solution_id, 
+								modified_at, 
+								status, 
+								remarks, 
+								assigned_to, 
+								type_bg_fr,
+								bg_fr_id
+								FROM support_ticket
+								WHERE 
+								eb_created_by =:usr AND solution_id =:sln AND eb_del=:fls;";
+					DbParameter[] parameters3 = {
+					this.InfraConnectionFactory.DataDB.GetNewParameter("usr", EbDbTypes.Int32, fsreq.UserId),
+					this.InfraConnectionFactory.DataDB.GetNewParameter("sln", EbDbTypes.String, fsreq.SolnId),
+					this.InfraConnectionFactory.DataDB.GetNewParameter("fls", EbDbTypes.String, "F")
+					};
+
+					EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(sql, parameters3);
+					for (int i = 0; i < dt.Rows.Count; i++)
+					{
+						SupportTktCls st = new SupportTktCls();
+						st.title = dt.Rows[i][0].ToString();
+						st.description = dt.Rows[i][1].ToString();
+						st.priority = dt.Rows[i][2].ToString();
+						st.solutionid = dt.Rows[i][3].ToString();
+						st.lstmodified = dt.Rows[i][4].ToString();
+						st.status = dt.Rows[i][5].ToString();
+						st.remarks = dt.Rows[i][6].ToString();
+						st.assignedto = dt.Rows[i][7].ToString();
+						st.type_b_f = dt.Rows[i][8].ToString();
+						st.ticketid = dt.Rows[i][9].ToString();
+						fr.supporttkt.Add(st);
+					}
+				}
+				
 			}
 			catch(Exception e)
 			{
@@ -217,6 +282,40 @@ namespace ExpressBase.ServiceStack.Services
 				Console.WriteLine("Excetion " + e.Message + e.StackTrace);
 			}
 			return sd;
+		}
+
+
+
+		public UpdateTicketResponse Post(UpdateTicketRequest utreq)
+		{
+			UpdateTicketResponse utr = new UpdateTicketResponse();
+			utr.status = false;
+			try
+			{
+				string k = String.Format(@"UPDATE 
+										support_ticket 
+										SET
+										title = :title, 
+										description = :descr,
+										priority = :prior
+										WHERE 
+											bg_fr_id=:tktid
+                                            and eb_del='F'"
+											);
+				DbParameter[] parameters = {
+					this.InfraConnectionFactory.DataDB.GetNewParameter("tktid", EbDbTypes.String, utreq.ticketid),
+					this.InfraConnectionFactory.DataDB.GetNewParameter("title", EbDbTypes.String, utreq.title),
+					this.InfraConnectionFactory.DataDB.GetNewParameter("description", EbDbTypes.String, utreq.description),
+					this.InfraConnectionFactory.DataDB.GetNewParameter("priority", EbDbTypes.String, utreq.priority)
+					};
+				int dt = this.InfraConnectionFactory.DataDB.DoNonQuery(k, parameters);
+				utr.status = true;
+			}
+			catch(Exception e)
+			{
+				Console.WriteLine("Excetion " + e.Message + e.StackTrace);
+			}
+			return utr;
 		}
 
 	}
