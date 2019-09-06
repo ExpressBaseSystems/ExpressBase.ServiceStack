@@ -36,90 +36,148 @@ namespace ExpressBase.ServiceStack.Services
             };
         }
 
+        public GetAppStoreDetailedResponse Get(GetAppStoreDetailedRequest request)
+        {
+            GetAppStoreDetailedResponse resp = new GetAppStoreDetailedResponse();
+            string query = @"SELECT 
+	                            EAS.app_name,EAS.cost,EAS.created_by,EAS.created_at,EAS.currency,EAS.app_type,
+	                            EAS.icon,EASD.*
+                            FROM 
+	                            eb_appstore EAS 
+                            INNER JOIN 
+	                            eb_appstore_detailed EASD 
+                            ON 
+	                            EAS.id = EASD.app_store_id
+                            WHERE
+	                            EAS.id = :id;";
+            try
+            {
+                DbParameter[] Parameters = {
+                    this.InfraConnectionFactory.ObjectsDB.GetNewParameter(":id", EbDbTypes.Int32, request.Id)
+                };
+                EbDataTable dt = this.InfraConnectionFactory.ObjectsDB.DoQuery(query, Parameters);
+                if (dt.Rows.Count > 0)
+                {
+                    EbDataRow _row = dt.Rows[0];
+                    resp.Store.Cost = Convert.ToInt32(_row["cost"]);
+                    resp.Store.Title = _row["title"].ToString();
+                    resp.Store.CreatedAt = Convert.ToDateTime(_row["created_at"]);
+                    resp.Store.Currency = _row["currency"].ToString();
+                    resp.Store.AppType = Convert.ToInt32(_row["app_type"]);
+                    resp.Store.Icon = _row["icon"].ToString();
+                    resp.Store.ShortDesc = _row["short_desc"].ToString();
+                    resp.Store.Tags = _row["tags"].ToString();
+                    resp.Store.IsFree = _row["is_free"].ToString();
+                    resp.Store.DetailedDesc = _row["detailed_desc"].ToString();
+                    resp.Store.DemoLinks = _row["demo_links"].ToString();
+                    resp.Store.VideoLinks = _row["video_links"].ToString();
+                    resp.Store.Images = _row["images"].ToString();
+                    resp.Store.PricingDesc = _row["pricing_desc"].ToString();
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+                Console.WriteLine(e.StackTrace);
+            }
+            return resp;
+        }
+
         public GetAllFromAppstoreResponse Get(GetAllFromAppStoreExternalRequest request)
         {
-            List<AppStore> _storeCollection = new List<AppStore>();
-            EbDataTable dt = InfraConnectionFactory.ObjectsDB.DoQuery(string.Format(@"
-            SELECT
-	            EAS.id, EAD.title, status, user_solution_id, cost, created_by, created_at, currency, app_type,
-                EAS.description, icon, solution_name, fullname,
-				EAD.images, EAD.demo_links, EAD.detailed_desc, is_free, pricing_desc, short_desc,tags, title, video_links
-            FROM 
-	            eb_appstore EAS, eb_solutions ES, eb_tenants ET,eb_appstore_detailed EAD
-            WHERE 
-                EAS.user_solution_id = ES.esolution_id AND
-                ES.tenant_id = ET.id AND EAS.eb_del='F' AND
-				EAD.app_store_id = EAS.id AND
-                EAS.status=2;
-            ", request.SolnId));
-            foreach (EbDataRow _row in dt.Rows)
+            GetAllFromAppstoreResponse resp = new GetAllFromAppstoreResponse();
+            string query = @"SELECT
+	                            EAS.id, EAD.title,cost, created_by, created_at, currency, app_type,EAS.description, icon, 
+	                            EAD.images,EAD.detailed_desc, is_free, short_desc,tags, title
+                            FROM 
+	                            eb_appstore EAS, eb_appstore_detailed EAD
+                            WHERE 
+                            EAS.eb_del='F' AND EAD.app_store_id = EAS.id AND EAS.status = 2;";
+            try
             {
-                AppStore _app = new AppStore
+                EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(query);
+                foreach (EbDataRow _row in dt.Rows)
                 {
-                    Id = Convert.ToInt32(_row["id"]),
-                    Name = _row["title"].ToString(),
-                    Status = Convert.ToInt32(_row["status"]),
-                    SolutionId = _row["user_solution_id"].ToString(),
-                    Cost = Convert.ToInt32(_row["cost"]),
-                    CreatedBy = Convert.ToInt32(_row["created_by"]),
-                    CreatedAt = Convert.ToDateTime(_row["created_at"]),
-                    Currency = _row["currency"].ToString(),
-                    AppType = Convert.ToInt32(_row["app_type"]),
-                    Description = _row["description"].ToString(),
-                    Icon = _row["icon"].ToString(),
-                    SolutionName = _row["solution_name"].ToString(),
-                    TenantName = _row["fullname"].ToString(),
-                    Images = _row["images"].ToString(),
-                    DemoLinks = _row["demo_links"].ToString(),
-                    DetailedDesc = _row["detailed_desc"].ToString(),
-                    IsFree= _row["is_free"].ToString(),
-                    PricingDesc= _row["pricing_desc"].ToString(),
-                    ShortDesc= _row["short_desc"].ToString(),
-                    Tags= _row["tags"].ToString(),
-                    Title= _row["title"].ToString(),
-                    VideoLinks = _row["video_links"].ToString(),                    
-                };
-                _storeCollection.Add(_app);
+                    resp.Apps.Add(new AppStore
+                    {
+                        Id = Convert.ToInt32(_row["id"]),
+                        Cost = Convert.ToInt32(_row["cost"]),
+                        CreatedBy = Convert.ToInt32(_row["created_by"]),
+                        CreatedAt = Convert.ToDateTime(_row["created_at"]),
+                        Currency = _row["currency"].ToString(),
+                        AppType = Convert.ToInt32(_row["app_type"]),
+                        Description = _row["description"].ToString(),
+                        Icon = _row["icon"].ToString(),
+                        Images = _row["images"].ToString(),
+                        DetailedDesc = _row["detailed_desc"].ToString(),
+                        IsFree = _row["is_free"].ToString(),
+                        ShortDesc = _row["short_desc"].ToString(),
+                        Tags = _row["tags"].ToString(),
+                        Title = _row["title"].ToString(),
+                    });
+                }
             }
-            return new GetAllFromAppstoreResponse { Apps = _storeCollection };
+            catch(Exception e)
+            {
+                Console.WriteLine(e.Message);
+                Console.WriteLine(e.StackTrace);
+            }
+            return resp;
         }
+
         [Authenticate]
         public GetAllFromAppstoreResponse Get(GetAllFromAppStoreInternalRequest request)
         {
-            List<AppStore> _storeCollection = new List<AppStore>();
-            EbDataTable dt = InfraConnectionFactory.ObjectsDB.DoQuery(string.Format(@"
-            SELECT
-	            EAS.id, app_name, status, user_solution_id, cost, created_by, created_at, currency,
-                app_type, EAS.description, icon, solution_name, fullname
-            FROM 
-	            eb_appstore EAS, eb_solutions ES, eb_tenants ET
-            WHERE 
-                EAS.user_solution_id = ES.esolution_id AND
-                ES.tenant_id = ET.id AND EAS.eb_del='F' AND
-                EAS.status=1 AND 
-                ES.tenant_id=(SELECT ES.tenant_id from eb_solutions ES where ES.esolution_id = '{0}');
-            ", request.SolnId));
-            foreach (EbDataRow _row in dt.Rows)
+            GetAllFromAppstoreResponse resp = new GetAllFromAppstoreResponse();
+            List<DbParameter> parameters = new List<DbParameter>();
+            string q = string.Empty;
+            try
             {
-                AppStore _app = new AppStore
+                if (request.WhichConsole == RoutingConstants.TC)
                 {
-                    Id = Convert.ToInt32(_row["id"]),
-                    Name = _row["app_name"].ToString(),
-                    Status = Convert.ToInt32(_row["status"]),
-                    SolutionId = _row["user_solution_id"].ToString(),
-                    Cost = Convert.ToInt32(_row["cost"]),
-                    CreatedBy = Convert.ToInt32(_row["created_by"]),
-                    CreatedAt = Convert.ToDateTime(_row["created_at"]),
-                    Currency = _row["currency"].ToString(),
-                    AppType = Convert.ToInt32(_row["app_type"]),
-                    Description = _row["description"].ToString(),
-                    Icon = _row["icon"].ToString(),
-                    SolutionName = _row["solution_name"].ToString(),
-                    TenantName = _row["fullname"].ToString()
-                };
-                _storeCollection.Add(_app);
+                    q = @"SELECT 
+	                    id,app_name,user_solution_id,created_by, created_at,description,app_type,icon
+                    FROM
+	                    eb_appstore
+                    WHERE
+	                    eb_del = 'F' AND status = 1 AND
+	                    user_solution_id = ANY(SELECT isolution_id FROM eb_solutions WHERE tenant_id = :tenantid);";
+                    parameters.Add(this.InfraConnectionFactory.DataDB.GetNewParameter("tenantid", EbDbTypes.Int32, request.UserId));
+                }
+                else
+                {
+                    q = @"SELECT 
+	                    id,app_name,user_solution_id,created_by, created_at,description,app_type,icon
+                    FROM
+	                    eb_appstore
+                    WHERE
+	                    eb_del = 'F' AND status = 1 AND
+	                    user_solution_id = :isolutionid ;";
+                    parameters.Add(this.InfraConnectionFactory.DataDB.GetNewParameter("isolutionid", EbDbTypes.String, request.SolnId));
+                }
+
+                EbDataTable dt = InfraConnectionFactory.ObjectsDB.DoQuery(q, parameters.ToArray());
+                foreach (EbDataRow _row in dt.Rows)
+                {
+                    resp.Apps.Add(new AppStore
+                    {
+                        Id = Convert.ToInt32(_row["id"]),
+                        Name = _row["app_name"].ToString(),
+                        SolutionId = _row["user_solution_id"].ToString(),
+                        CreatedBy = Convert.ToInt32(_row["created_by"]),
+                        CreatedAt = Convert.ToDateTime(_row["created_at"]),
+                        AppType = Convert.ToInt32(_row["app_type"]),
+                        Description = _row["description"].ToString(),
+                        Icon = _row["icon"].ToString(),
+                    });
+                }
             }
-            return new GetAllFromAppstoreResponse { Apps = _storeCollection };
+            catch(Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
+            
+            return resp;
         }
         public SaveToAppStoreResponse Post(SaveToAppStoreRequest request)
         {
