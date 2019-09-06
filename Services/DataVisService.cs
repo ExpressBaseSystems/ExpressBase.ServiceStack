@@ -360,7 +360,9 @@ namespace ExpressBase.ServiceStack
                             }
                         }
                     }
-                    var Treecol = this.Check4Tree((_dV as EbTableVisualization));
+                    DVBaseColumn Treecol = null;
+                    if (_dV is EbTableVisualization)
+                        Treecol = this.Check4Tree((_dV as EbTableVisualization));
                     _sql = _ds.Sql;
                     if (Treecol == null)
                     {
@@ -939,14 +941,14 @@ namespace ExpressBase.ServiceStack
                         {
                             info = "<table>";
                             if(col.AllowedCharacterLength > 0)
-                                info += "<tr><td>" +col.sTitle + "</td><td>" + _formattedData + "</td></tr>";
+                                info += "<tr><td>" +col.sTitle + " &nbsp; : &nbsp;</td><td>" + _formattedData + "</td></tr>";
                             if(col.InfoWindow.Count > 0)
                             {
                                 foreach (DVBaseColumn _column in col.InfoWindow)
                                 {
                                     if (_column.Name != col.Name)
                                     {
-                                        info += "<tr><td>" + _column.sTitle + "</td><td>" + IntermediateDic[_column.Data] + "</td></tr>";
+                                        info += "<tr><td>" + _column.sTitle + " &nbsp; : &nbsp;</td><td>" + IntermediateDic[_column.Data] + "</td></tr>";
                                     }
                                 }
                             }
