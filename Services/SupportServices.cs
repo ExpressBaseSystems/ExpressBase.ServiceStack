@@ -92,16 +92,35 @@ namespace ExpressBase.ServiceStack.Services
 					int dt2= this.InfraConnectionFactory.DataDB.DoNonQuery(k, param);
 
 					//to upload images
-
-					if (sbreq.upload_files.Count > 0)
+					for(var i = 0; i < sbreq.Filecollection.Count; i++)
 					{
-						for(var i = 0; i < sbreq.upload_files.Count; i++)
-						{
-							long s=sbreq.upload_files[i].Length;
-							
-						}
+						byte[] sa = sbreq.Filecollection[i];
+
+						string sql3= @"INSERT INTO  support_ticket_files(
+																	ticket_id,
+																	bg_fr_id,
+																	eb_del,
+																	img_bytea
+																	)
+																	VALUES(
+																	:tktid,
+																	:bgid,
+																	:fals,
+																	:filebt
+																	)RETURNING id;";
+						DbParameter[] parameters3 = {
+					this.InfraConnectionFactory.DataDB.GetNewParameter("tktid", EbDbTypes.Int32, sb.Id),
+					this.InfraConnectionFactory.DataDB.GetNewParameter("fals", EbDbTypes.String, "F"),
+					this.InfraConnectionFactory.DataDB.GetNewParameter("bgid", EbDbTypes.String, sbgf),
+					this.InfraConnectionFactory.DataDB.GetNewParameter("filebt", EbDbTypes.Bytea,sbreq.Filecollection[i]),
+					};
+
+						EbDataTable dt4 = this.InfraConnectionFactory.DataDB.DoQuery(sql3, parameters3);
+						var iden = Convert.ToInt32(dt4.Rows[0][0]);
 
 					}
+
+
 				}
 
 
