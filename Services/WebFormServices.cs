@@ -132,10 +132,12 @@ namespace ExpressBase.ServiceStack.Services
                     {
                         if (entry.Name.ToLower() == (dr.ColumnName.ToLower()))
                         {
-                            if (entry.Type.EbDbType != dr.Type && !(entry.Name.Equals("eb_created_at") ||
-                                entry.Name.Equals("eb_lastmodified_at") || entry.Name.Equals("eb_del") ||
-                                entry.Name.Equals("eb_void") || entry.Name.Equals("eb_default") ||
-                                (entry.Type.EbDbType.ToString().Equals("Boolean") && dr.Type.ToString().Equals("String"))))
+                            if (entry.Type.EbDbType != dr.Type && !(
+                                (entry.Type.EbDbType.ToString().Equals("Boolean") && dr.Type.ToString().Equals("String")) ||
+                                (entry.Type.EbDbType.ToString().Equals("Decimal") && (dr.Type.ToString().Equals("Int32") || dr.Type.ToString().Equals("Int64"))) ||
+                                (entry.Type.EbDbType.ToString().Equals("DateTime") && dr.Type.ToString().Equals("Date")) ||
+                                (entry.Type.EbDbType.ToString().Equals("Date") && dr.Type.ToString().Equals("DateTime"))
+                                ))
                                 Msg += string.Format("Already exists '{0}' Column for {1}.{2}({3}); ", dr.Type.ToString(), tableName, entry.Name, entry.Type.EbDbType);
                             isFound = true;
                             break;
@@ -392,14 +394,17 @@ namespace ExpressBase.ServiceStack.Services
                     int charlength = 0;
                     index++;
                     if (column.Control is EbPowerSelect) {
-                        _control = new ControlClass
+                        if (!(column.Control as EbPowerSelect).MultiSelect)
                         {
-                            DataSourceId = (column.Control as EbPowerSelect).DataSourceId,
-                            DisplayMember = (column.Control as EbPowerSelect).DisplayMembers,
-                            ValueMember = (column.Control as EbPowerSelect).ValueMember
-                        };
-                        _autoresolve = true;
-                        _align = Align.Center;
+                            _control = new ControlClass
+                            {
+                                DataSourceId = (column.Control as EbPowerSelect).DataSourceId,
+                                DisplayMember = (column.Control as EbPowerSelect).DisplayMembers,
+                                ValueMember = (column.Control as EbPowerSelect).ValueMember
+                            };
+                            _autoresolve = true;
+                            _align = Align.Center;
+                        }
                     }
                     if(column.Control is EbTextBox)
                     {
