@@ -133,7 +133,7 @@ namespace ExpressBase.ServiceStack.Services
                 };
                 _storeCollection.Add(_app);
             }
-            return resp;
+            return new GetAllFromAppstoreResponse { Apps = _storeCollection };
         }
 
         [Authenticate]
