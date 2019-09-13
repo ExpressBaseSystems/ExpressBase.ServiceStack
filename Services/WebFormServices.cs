@@ -277,7 +277,7 @@ namespace ExpressBase.ServiceStack.Services
 
         private string CreateNewObjectRequest(CreateWebFormTableRequest request, EbObject dvobj)
         {
-            string _rel_obj_tmp = dvobj.DiscoverRelatedRefids();
+            string _rel_obj_tmp = string.Join(",", dvobj.DiscoverRelatedRefids()); 
             EbObject_Create_New_ObjectRequest ds1 = (new EbObject_Create_New_ObjectRequest
             {
                 Name = dvobj.Name,
@@ -359,7 +359,7 @@ namespace ExpressBase.ServiceStack.Services
 
         private void SaveObjectRequest(CreateWebFormTableRequest request, EbObject obj)
         {
-            string _rel_obj_tmp = obj.DiscoverRelatedRefids();
+            string _rel_obj_tmp = string.Join(",", obj.DiscoverRelatedRefids());
             EbObject_SaveRequest ds = new EbObject_SaveRequest
             {
                 RefId = obj.RefId,

@@ -24,10 +24,15 @@ namespace ExpressBase.ServiceStack.Services
         public GetOneFromAppstoreResponse Get(GetOneFromAppStoreRequest request)
         {
             DbParameter[] Parameters = { this.InfraConnectionFactory.ObjectsDB.GetNewParameter(":id", EbDbTypes.Int32, request.Id) };
-            EbDataTable dt = InfraConnectionFactory.ObjectsDB.DoQuery("SELECT * FROM eb_appstore WHERE id = :id", Parameters);
+            EbDataTable dt = InfraConnectionFactory.ObjectsDB.DoQuery(@"SELECT title, json, status FROM eb_appstore s , eb_appstore_detailed d
+                                                                        WHERE s.id = :id and s.id = d.app_store_id", Parameters);
             AppWrapper _wrapper = null;
             if (dt.Rows.Count > 0)
-                _wrapper = EbSerializers.Json_Deserialize<AppWrapper>(dt.Rows[0][7].ToString());
+            {
+                _wrapper = EbSerializers.Json_Deserialize<AppWrapper>(dt.Rows[0]["json"].ToString());
+                _wrapper.Title = dt.Rows[0]["title"].ToString();
+                _wrapper.IsPublic = (((int)dt.Rows[0]["status"]) == 2) ? true : false;
+            }
             else
                 Console.WriteLine("Could't retrieve app from table eb_appstore. app id:" + request.Id);
             return new GetOneFromAppstoreResponse
@@ -72,12 +77,12 @@ namespace ExpressBase.ServiceStack.Services
                     Images = _row["images"].ToString(),
                     DemoLinks = _row["demo_links"].ToString(),
                     DetailedDesc = _row["detailed_desc"].ToString(),
-                    IsFree= _row["is_free"].ToString(),
-                    PricingDesc= _row["pricing_desc"].ToString(),
-                    ShortDesc= _row["short_desc"].ToString(),
-                    Tags= _row["tags"].ToString(),
-                    Title= _row["title"].ToString(),
-                    VideoLinks = _row["video_links"].ToString(),                    
+                    IsFree = _row["is_free"].ToString(),
+                    PricingDesc = _row["pricing_desc"].ToString(),
+                    ShortDesc = _row["short_desc"].ToString(),
+                    Tags = _row["tags"].ToString(),
+                    Title = _row["title"].ToString(),
+                    VideoLinks = _row["video_links"].ToString(),
                 };
                 _storeCollection.Add(_app);
             }
