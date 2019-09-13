@@ -117,7 +117,7 @@ namespace ExpressBase.ServiceStack.Services
                     });
                 }
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 Console.WriteLine(e.Message);
                 Console.WriteLine(e.StackTrace);
@@ -190,11 +190,11 @@ namespace ExpressBase.ServiceStack.Services
                     }
                 }
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 Console.WriteLine(e.Message);
             }
-            
+
             return resp;
         }
         public SaveToAppStoreResponse Post(SaveToAppStoreRequest request)
@@ -292,6 +292,54 @@ namespace ExpressBase.ServiceStack.Services
                 _storeCollection.Add(app_detail);
             }
             return new GetAppDetailsResponse { StoreCollection = _storeCollection };
+        }
+
+        public AppAndsolutionInfoResponse Get(AppAndsolutionInfoRequest request)
+        {
+            AppAndsolutionInfoResponse resp = new AppAndsolutionInfoResponse();
+            try
+            {
+                string q = @"SELECT solution_name,isolution_id,esolution_id FROM eb_solutions WHERE eb_del = 'F' AND tenant_id = :tid;
+                        SELECT 
+	                        EAS.app_name,EAS.cost,EAS.created_by,EAS.created_at,EAS.currency,EAS.app_type,
+	                        EAS.icon,EASD.*
+                        FROM 
+	                        eb_appstore EAS 
+                        INNER JOIN 
+	                        eb_appstore_detailed EASD 
+                        ON 
+	                        EAS.id = EASD.app_store_id
+                        WHERE
+	                        EAS.id = :appid;";
+
+                DbParameter[] parameters =
+                {
+                    this.InfraConnectionFactory.DataDB.GetNewParameter("tid", EbDbTypes.Int32, request.UserId),
+                    this.InfraConnectionFactory.DataDB.GetNewParameter("appid", EbDbTypes.Int32, request.AppId)
+                };
+
+                EbDataSet dt = this.InfraConnectionFactory.DataDB.DoQueries(q, parameters);
+                foreach (EbDataRow _row in dt.Tables[0].Rows)
+                {
+                    resp.Solutions.Add(new EbSolutionsWrapper
+                    {
+                        SolutionName = _row["solution_name"].ToString(),
+                        EsolutionId = _row["esolution_id"].ToString(),
+                        IsolutionId = _row["isolution_id"].ToString()
+                    });
+                }
+
+                resp.AppData.Title = dt.Tables[1].Rows[0]["title"].ToString();
+                resp.AppData.AppType = Convert.ToInt32(dt.Tables[1].Rows[0]["app_type"]);
+                resp.AppData.ShortDesc = dt.Tables[1].Rows[0]["short_desc"].ToString();
+                resp.AppData.Tags = dt.Tables[1].Rows[0]["tags"].ToString();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+                Console.WriteLine(e.StackTrace);
+            }
+            return resp;
         }
     }
 }
