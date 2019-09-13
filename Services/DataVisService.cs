@@ -491,6 +491,7 @@ namespace ExpressBase.ServiceStack
                     ResponseStatus = this._Responsestatus
                 };
                 this.Log.Info(" dataviz dataresponse*****" + dsresponse.Data);
+                EbSerializers.Json_Serialize(dsresponse);
                 return dsresponse;
             }
             catch (Exception e)
