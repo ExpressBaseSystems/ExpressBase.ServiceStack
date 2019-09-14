@@ -15,6 +15,7 @@ using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
 using Newtonsoft.Json;
 using ServiceStack;
+using ServiceStack.Messaging;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
@@ -27,7 +28,7 @@ namespace ExpressBase.ServiceStack.Services
     [Authenticate]
     public class WebFormServices : EbBaseService
     {
-        public WebFormServices(IEbConnectionFactory _dbf) : base(_dbf) { }
+        public WebFormServices(IEbConnectionFactory _dbf, IMessageProducer _mqp) : base(_dbf, _mqp) { }
 
         //========================================== FORM TABLE CREATION  ==========================================
 
@@ -132,10 +133,12 @@ namespace ExpressBase.ServiceStack.Services
                     {
                         if (entry.Name.ToLower() == (dr.ColumnName.ToLower()))
                         {
-                            if (entry.Type.EbDbType != dr.Type && !(entry.Name.Equals("eb_created_at") ||
-                                entry.Name.Equals("eb_lastmodified_at") || entry.Name.Equals("eb_del") ||
-                                entry.Name.Equals("eb_void") || entry.Name.Equals("eb_default") ||
-                                (entry.Type.EbDbType.ToString().Equals("Boolean") && dr.Type.ToString().Equals("String"))))
+                            if (entry.Type.EbDbType != dr.Type && !(
+                                (entry.Type.EbDbType.ToString().Equals("Boolean") && dr.Type.ToString().Equals("String")) ||
+                                (entry.Type.EbDbType.ToString().Equals("Decimal") && (dr.Type.ToString().Equals("Int32") || dr.Type.ToString().Equals("Int64"))) ||
+                                (entry.Type.EbDbType.ToString().Equals("DateTime") && dr.Type.ToString().Equals("Date")) ||
+                                (entry.Type.EbDbType.ToString().Equals("Date") && dr.Type.ToString().Equals("DateTime"))
+                                ))
                                 Msg += string.Format("Already exists '{0}' Column for {1}.{2}({3}); ", dr.Type.ToString(), tableName, entry.Name, entry.Type.EbDbType);
                             isFound = true;
                             break;
@@ -277,7 +280,7 @@ namespace ExpressBase.ServiceStack.Services
 
         private string CreateNewObjectRequest(CreateWebFormTableRequest request, EbObject dvobj)
         {
-            string _rel_obj_tmp = dvobj.DiscoverRelatedRefids();
+            string _rel_obj_tmp = string.Join(",", dvobj.DiscoverRelatedRefids()); 
             EbObject_Create_New_ObjectRequest ds1 = (new EbObject_Create_New_ObjectRequest
             {
                 Name = dvobj.Name,
@@ -359,7 +362,7 @@ namespace ExpressBase.ServiceStack.Services
 
         private void SaveObjectRequest(CreateWebFormTableRequest request, EbObject obj)
         {
-            string _rel_obj_tmp = obj.DiscoverRelatedRefids();
+            string _rel_obj_tmp = string.Join(",", obj.DiscoverRelatedRefids());
             EbObject_SaveRequest ds = new EbObject_SaveRequest
             {
                 RefId = obj.RefId,
@@ -392,14 +395,17 @@ namespace ExpressBase.ServiceStack.Services
                     int charlength = 0;
                     index++;
                     if (column.Control is EbPowerSelect) {
-                        _control = new ControlClass
+                        if (!(column.Control as EbPowerSelect).MultiSelect)
                         {
-                            DataSourceId = (column.Control as EbPowerSelect).DataSourceId,
-                            DisplayMember = (column.Control as EbPowerSelect).DisplayMembers,
-                            ValueMember = (column.Control as EbPowerSelect).ValueMember
-                        };
-                        _autoresolve = true;
-                        _align = Align.Center;
+                            _control = new ControlClass
+                            {
+                                DataSourceId = (column.Control as EbPowerSelect).DataSourceId,
+                                DisplayMember = (column.Control as EbPowerSelect).DisplayMembers,
+                                ValueMember = (column.Control as EbPowerSelect).ValueMember
+                            };
+                            _autoresolve = true;
+                            _align = Align.Center;
+                        }
                     }
                     if(column.Control is EbTextBox)
                     {
@@ -435,7 +441,7 @@ namespace ExpressBase.ServiceStack.Services
             Columns.Add(new DVStringColumn
             {
                 Data = (index+1),//index+1 for serial column in datavis service
-                Name = "action",
+                Name = "eb_action",
                 sTitle = "Action",
                 Type = EbDbTypes.String,
                 bVisible = true,
@@ -563,8 +569,12 @@ namespace ExpressBase.ServiceStack.Services
                 int r = FormObj.Save(EbConnectionFactory.DataDB, this);
                 Console.WriteLine("Insert/Update WebFormData : AfterSave start");
                 int a = FormObj.AfterSave(EbConnectionFactory.DataDB, request.RowId > 0);
+                if (this.EbConnectionFactory.EmailConnection.Primary != null)
+                {
+                    Console.WriteLine("Insert/Update WebFormData : SendMailIfUserCreated start");
+                    FormObj.SendMailIfUserCreated(MessageProducer3);
+                }
                 Console.WriteLine("Insert/Update WebFormData : Returning");
-
                 return new InsertDataFromWebformResponse()
                 {
                     RowId = FormObj.TableRowId,
@@ -1019,6 +1029,10 @@ namespace ExpressBase.ServiceStack.Services
             return new GetCtrlsFlatResponse { Controls = ctrls.ToList<EbControl>() };
         }
 
+        public CheckEmailConAvailableResponse Post(CheckEmailConAvailableRequest request)
+        {
+            return new CheckEmailConAvailableResponse { ConnectionAvailable = this.EbConnectionFactory.EmailConnection.Primary != null };
+        }
 
     }
 }
