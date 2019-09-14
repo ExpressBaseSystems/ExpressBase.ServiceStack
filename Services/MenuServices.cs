@@ -30,7 +30,13 @@ namespace ExpressBase.ServiceStack.Services
             };
 
             if (request.SysRole.Contains("SolutionOwner") || request.SysRole.Contains("SolutionAdmin"))
-                ds = this.EbConnectionFactory.ObjectsDB.DoQueries(this.EbConnectionFactory.ObjectsDB.EB_SIDEBARUSER_REQUEST.Replace(this.EbConnectionFactory.ObjectsDB.EB_SIDEBARCHECK, string.Empty), parameters);
+            {
+                if (EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.MYSQL)
+                    ds = this.EbConnectionFactory.ObjectsDB.DoQueries((this.EbConnectionFactory.DataDB as MySqlDB).EB_SIDEBARUSER_REQUEST_SOL_OWNER, parameters);
+                else
+                    ds = this.EbConnectionFactory.ObjectsDB.DoQueries(this.EbConnectionFactory.ObjectsDB.EB_SIDEBARUSER_REQUEST.Replace(this.EbConnectionFactory.ObjectsDB.EB_SIDEBARCHECK, string.Empty), parameters);
+
+            }
             else
                 ds = this.EbConnectionFactory.ObjectsDB.DoQueries(this.EbConnectionFactory.ObjectsDB.EB_SIDEBARUSER_REQUEST.Replace(":Ids", string.IsNullOrEmpty(request.Ids) ? "0" : request.Ids), parameters);
 
