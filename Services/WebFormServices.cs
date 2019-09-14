@@ -132,10 +132,12 @@ namespace ExpressBase.ServiceStack.Services
                     {
                         if (entry.Name.ToLower() == (dr.ColumnName.ToLower()))
                         {
-                            if (entry.Type.EbDbType != dr.Type && !(entry.Name.Equals("eb_created_at") ||
-                                entry.Name.Equals("eb_lastmodified_at") || entry.Name.Equals("eb_del") ||
-                                entry.Name.Equals("eb_void") || entry.Name.Equals("eb_default") ||
-                                (entry.Type.EbDbType.ToString().Equals("Boolean") && dr.Type.ToString().Equals("String"))))
+                            if (entry.Type.EbDbType != dr.Type && !(
+                                (entry.Type.EbDbType.ToString().Equals("Boolean") && dr.Type.ToString().Equals("String")) ||
+                                (entry.Type.EbDbType.ToString().Equals("Decimal") && (dr.Type.ToString().Equals("Int32") || dr.Type.ToString().Equals("Int64"))) ||
+                                (entry.Type.EbDbType.ToString().Equals("DateTime") && dr.Type.ToString().Equals("Date")) ||
+                                (entry.Type.EbDbType.ToString().Equals("Date") && dr.Type.ToString().Equals("DateTime"))
+                                ))
                                 Msg += string.Format("Already exists '{0}' Column for {1}.{2}({3}); ", dr.Type.ToString(), tableName, entry.Name, entry.Type.EbDbType);
                             isFound = true;
                             break;
@@ -277,7 +279,7 @@ namespace ExpressBase.ServiceStack.Services
 
         private string CreateNewObjectRequest(CreateWebFormTableRequest request, EbObject dvobj)
         {
-            string _rel_obj_tmp = dvobj.DiscoverRelatedRefids();
+            string _rel_obj_tmp = string.Join(",", dvobj.DiscoverRelatedRefids()); 
             EbObject_Create_New_ObjectRequest ds1 = (new EbObject_Create_New_ObjectRequest
             {
                 Name = dvobj.Name,
@@ -359,7 +361,7 @@ namespace ExpressBase.ServiceStack.Services
 
         private void SaveObjectRequest(CreateWebFormTableRequest request, EbObject obj)
         {
-            string _rel_obj_tmp = obj.DiscoverRelatedRefids();
+            string _rel_obj_tmp = string.Join(",", obj.DiscoverRelatedRefids());
             EbObject_SaveRequest ds = new EbObject_SaveRequest
             {
                 RefId = obj.RefId,
