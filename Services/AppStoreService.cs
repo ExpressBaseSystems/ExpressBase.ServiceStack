@@ -338,6 +338,8 @@ namespace ExpressBase.ServiceStack.Services
                 resp.AppData.AppType = Convert.ToInt32(dt.Tables[1].Rows[0]["app_type"]);
                 resp.AppData.ShortDesc = dt.Tables[1].Rows[0]["short_desc"].ToString();
                 resp.AppData.Tags = dt.Tables[1].Rows[0]["tags"].ToString();
+                resp.AppData.IsFree = dt.Tables[1].Rows[0]["is_free"].ToString();
+                resp.AppData.Cost = Convert.ToDecimal(dt.Tables[1].Rows[0]["cost"]);
             }
             catch (Exception e)
             {
