@@ -569,7 +569,7 @@ namespace ExpressBase.ServiceStack.Services
                 int r = FormObj.Save(EbConnectionFactory.DataDB, this);
                 Console.WriteLine("Insert/Update WebFormData : AfterSave start");
                 int a = FormObj.AfterSave(EbConnectionFactory.DataDB, request.RowId > 0);
-                if (this.EbConnectionFactory.EmailConnection.Primary != null)
+                if (this.EbConnectionFactory.EmailConnection != null && this.EbConnectionFactory.EmailConnection.Primary != null)
                 {
                     Console.WriteLine("Insert/Update WebFormData : SendMailIfUserCreated start");
                     FormObj.SendMailIfUserCreated(MessageProducer3);
