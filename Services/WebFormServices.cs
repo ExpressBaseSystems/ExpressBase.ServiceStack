@@ -15,6 +15,7 @@ using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
 using Newtonsoft.Json;
 using ServiceStack;
+using ServiceStack.Messaging;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
@@ -27,7 +28,7 @@ namespace ExpressBase.ServiceStack.Services
     [Authenticate]
     public class WebFormServices : EbBaseService
     {
-        public WebFormServices(IEbConnectionFactory _dbf) : base(_dbf) { }
+        public WebFormServices(IEbConnectionFactory _dbf, IMessageProducer _mqp) : base(_dbf, _mqp) { }
 
         //========================================== FORM TABLE CREATION  ==========================================
 
@@ -649,8 +650,12 @@ namespace ExpressBase.ServiceStack.Services
                 int r = FormObj.Save(EbConnectionFactory.DataDB, this);
                 Console.WriteLine("Insert/Update WebFormData : AfterSave start");
                 int a = FormObj.AfterSave(EbConnectionFactory.DataDB, request.RowId > 0);
+                if (this.EbConnectionFactory.EmailConnection != null && this.EbConnectionFactory.EmailConnection.Primary != null)
+                {
+                    Console.WriteLine("Insert/Update WebFormData : SendMailIfUserCreated start");
+                    FormObj.SendMailIfUserCreated(MessageProducer3);
+                }
                 Console.WriteLine("Insert/Update WebFormData : Returning");
-
                 return new InsertDataFromWebformResponse()
                 {
                     RowId = FormObj.TableRowId,
@@ -1105,6 +1110,10 @@ namespace ExpressBase.ServiceStack.Services
             return new GetCtrlsFlatResponse { Controls = ctrls.ToList<EbControl>() };
         }
 
+        public CheckEmailConAvailableResponse Post(CheckEmailConAvailableRequest request)
+        {
+            return new CheckEmailConAvailableResponse { ConnectionAvailable = this.EbConnectionFactory.EmailConnection.Primary != null };
+        }
 
     }
 }
