@@ -19,14 +19,14 @@ namespace ExpressBase.ServiceStack.Services
             string query = @"INSERT INTO eb_redis_logs (changed_by, operation, changed_at, prev_value, new_value, soln_id, key) VALUES(:usr, :opn, NOW(), :prev, :new,
                             :sln, :key);";
             DbParameter[] parameters = {
-                     EbConnectionFactory.ObjectsDB.GetNewParameter("usr", EbDbTypes.Int32, request.UserId),
-                EbConnectionFactory.ObjectsDB.GetNewParameter("opn", EbDbTypes.Int32, request.Operation),
-                EbConnectionFactory.ObjectsDB.GetNewParameter("prev", EbDbTypes.String, request.PreviousValue),
-                EbConnectionFactory.ObjectsDB.GetNewParameter("new", EbDbTypes.String, request.NewValue),
-                EbConnectionFactory.ObjectsDB.GetNewParameter("sln", EbDbTypes.Int32, request.SolutionId),
-                EbConnectionFactory.ObjectsDB.GetNewParameter("key", EbDbTypes.String, request.Key)
+                     InfraConnectionFactory.ObjectsDB.GetNewParameter("usr", EbDbTypes.Int32, request.UserId),
+                InfraConnectionFactory.ObjectsDB.GetNewParameter("opn", EbDbTypes.Int32, request.Operation),
+                InfraConnectionFactory.ObjectsDB.GetNewParameter("prev", EbDbTypes.String, request.PreviousValue),
+                InfraConnectionFactory.ObjectsDB.GetNewParameter("new", EbDbTypes.String, request.NewValue),
+                InfraConnectionFactory.ObjectsDB.GetNewParameter("sln", EbDbTypes.Int32, request.SolutionId),
+                InfraConnectionFactory.ObjectsDB.GetNewParameter("key", EbDbTypes.String, request.Key)
             };
-            this.EbConnectionFactory.ObjectsDB.DoNonQuery(query, parameters);
+            this.InfraConnectionFactory.ObjectsDB.DoNonQuery(query, parameters);
             return new LogRedisInsertResponse();
         }
 
@@ -35,8 +35,8 @@ namespace ExpressBase.ServiceStack.Services
             List<EbRedisLogs> r_logs = new List<EbRedisLogs>();
             List<DbParameter> parameters = new List<DbParameter>();
             string query = @"SELECT changed_by, operation, changed_at, soln_id, key, id FROM eb_redis_logs WHERE soln_id = :slnid order by changed_at desc";
-            parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("slnid", EbDbTypes.Int32, request.SolutionId));
-            EbDataTable dt = EbConnectionFactory.ObjectsDB.DoQuery(query, parameters.ToArray());
+            parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter("slnid", EbDbTypes.Int32, request.SolutionId));
+            EbDataTable dt = InfraConnectionFactory.ObjectsDB.DoQuery(query, parameters.ToArray());
             foreach (var item in dt.Rows)
             {
                 EbRedisLogs eb = new EbRedisLogs
@@ -58,8 +58,8 @@ namespace ExpressBase.ServiceStack.Services
             //EbRedisLogValues ebRedisLogValues = new EbRedisLogValues();
             List<DbParameter> parameters = new List<DbParameter>();
             string query = @"SELECT prev_value, new_value FROM eb_redis_logs WHERE id = :logid";
-            parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("logid", EbDbTypes.Int32, request.LogId));
-            EbDataTable dt = EbConnectionFactory.ObjectsDB.DoQuery(query, parameters.ToArray());
+            parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter("logid", EbDbTypes.Int32, request.LogId));
+            EbDataTable dt = InfraConnectionFactory.ObjectsDB.DoQuery(query, parameters.ToArray());
             EbRedisLogValues logValues = new EbRedisLogValues
             {
                 Prev_val = dt.Rows[0][0].ToString(),
@@ -73,7 +73,7 @@ namespace ExpressBase.ServiceStack.Services
         {
             Dictionary<string, List<EbRedisGroupDetails>> grpdict = new Dictionary<string, List<EbRedisGroupDetails>>();
             string qry = @"select EO.obj_type, EO.display_name, EV.refid, EV.version_num FROM eb_objects EO , eb_objects_ver EV WHERE EO.id = EV.eb_objects_id AND (COALESCE(EO.eb_del, 'F')= 'F') order by EO.display_name";
-            EbDataTable dt = EbConnectionFactory.ObjectsDB.DoQuery(qry);
+            EbDataTable dt = InfraConnectionFactory.ObjectsDB.DoQuery(qry);
             List<EbRedisGroupDetails> l0 = new List<EbRedisGroupDetails>();
             List<EbRedisGroupDetails> l1 = new List<EbRedisGroupDetails>();
             List<EbRedisGroupDetails> l2 = new List<EbRedisGroupDetails>();
