@@ -55,7 +55,8 @@ namespace ExpressBase.ServiceStack.MQServices
                 UserId = request.UserId,
                 UserAuthId = request.UserAuthId,
                 WhichConsole = request.WhichConsole,
-                IsDemoApp = request.IsDemoApp
+                IsDemoApp = request.IsDemoApp,
+                SelectedSolutionId=request.SelectedSolutionId
             });
             Log.Info("ImportApplicationRequest published to Mq");
             return resp;
@@ -123,7 +124,7 @@ namespace ExpressBase.ServiceStack.MQServices
             Dictionary<string, string> RefidMap = new Dictionary<string, string>();
             try
             {
-                EbConnectionFactory _ebConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
+                EbConnectionFactory _ebConnectionFactory = new EbConnectionFactory(request.SelectedSolutionId, this.Redis);
                 var appstoreService = base.ResolveService<AppStoreService>();
                 appstoreService.EbConnectionFactory = _ebConnectionFactory;
                 var devservice = base.ResolveService<DevRelatedServices>();
