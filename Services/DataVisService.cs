@@ -350,7 +350,12 @@ namespace ExpressBase.ServiceStack
                                                     _cond += string.Format(" {0} {1} '{2}' OR", col, op, array[i].Trim());
                                             }
                                             else
-                                                _cond += string.Format(" {0} {1} '{2}' OR", col, op, array[i].Trim());
+                                            {
+                                                if (type == "date")
+                                                    _cond += string.Format(" {0}::date {1} '{2}' OR", col, op, array[i].Trim());
+                                                else
+                                                    _cond += string.Format(" {0} {1} '{2}' OR", col, op, array[i].Trim());
+                                            }
                                         }
                                     }
                                 }
@@ -360,7 +365,9 @@ namespace ExpressBase.ServiceStack
                             }
                         }
                     }
-                    var Treecol = this.Check4Tree((_dV as EbTableVisualization));
+                    DVBaseColumn Treecol = null;
+                    if (_dV is EbTableVisualization)
+                        Treecol = this.Check4Tree((_dV as EbTableVisualization));
                     _sql = _ds.Sql;
                     if (Treecol == null)
                     {
@@ -416,7 +423,7 @@ namespace ExpressBase.ServiceStack
                         string pattern = $"(?i)(order by {Treecol.ParentColumn[0].Name})";
                         var matches = Regex.Matches(_sql, pattern);
                         if (matches.Count == 0)
-                            _sql = $"SELECT * FROM ({_sql}) data ORDER BY {Treecol.ParentColumn[0].Name}";
+                            _sql = $"SELECT * FROM ({_sql.ReplaceAll(";",string.Empty)}) data ORDER BY {Treecol.ParentColumn[0].Name}";
                     }
                 }
                 
@@ -428,7 +435,7 @@ namespace ExpressBase.ServiceStack
                 Console.WriteLine("Before :  " + DateTime.Now);
                 var dtStart = DateTime.Now;
                 Console.WriteLine("................................................dataviz datarequest start " + DateTime.Now);
-                var _dataset = new EbDataSet();
+                EbDataSet _dataset = null;
                 try
                 {
                     _dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray<System.Data.Common.DbParameter>());
@@ -461,10 +468,8 @@ namespace ExpressBase.ServiceStack
                 _recordsTotal = (_recordsTotal > 0) ? _recordsTotal : _dataset.Tables[_dataset.Tables.Count - 1].Rows.Count;
                 _recordsFiltered = (_recordsFiltered > 0) ? _recordsFiltered : _dataset.Tables[_dataset.Tables.Count - 1].Rows.Count;
                 //-- 
-                EbDataTable _formattedDataTable = null;
-                PrePrcessorReturn ReturnObj = new PrePrcessorReturn();
+                PrePrcessorReturn ReturnObj = null;
                 List<GroupingDetails> _levels = new List<GroupingDetails>();
-                object xx = new object();
                 if (_dataset.Tables.Count > 0 && _dV != null)
                 {
                     _ebSolution = request.eb_Solution;
@@ -477,21 +482,21 @@ namespace ExpressBase.ServiceStack
                 dsresponse = new DataSourceDataResponse
                 {
                     Draw = request.Draw,
-                    Data = (ReturnObj.rows != null) ? ReturnObj.rows : _dataset.Tables[0].Rows,
-                    FormattedData = (ReturnObj.FormattedTable != null) ? ReturnObj.FormattedTable.Rows : null,
+                    Data = (ReturnObj?.rows != null) ? ReturnObj.rows : _dataset.Tables[0].Rows,
+                    FormattedData = (ReturnObj?.FormattedTable != null) ? ReturnObj.FormattedTable.Rows : null,
                     RecordsTotal = _recordsTotal,
                     RecordsFiltered = _recordsFiltered,
                     Ispaged = _isPaged,
                     Levels = _levels,
                     Permission = _permission,
-                    Summary = ReturnObj.Summary,
-                    excel_file = ReturnObj.excel_file,
+                    Summary = ReturnObj?.Summary,
+                    excel_file = ReturnObj?.excel_file,
                     TableName = _dataset.Tables[0].TableName,
-                    Tree = ReturnObj.tree,
+                    Tree = ReturnObj?.tree,
                     ResponseStatus = this._Responsestatus
                 };
                 this.Log.Info(" dataviz dataresponse*****" + dsresponse.Data);
-                var x = EbSerializers.Json_Serialize(dsresponse);
+                EbSerializers.Json_Serialize(dsresponse);
                 return dsresponse;
             }
             catch (Exception e)
@@ -939,14 +944,14 @@ namespace ExpressBase.ServiceStack
                         {
                             info = "<table>";
                             if(col.AllowedCharacterLength > 0)
-                                info += "<tr><td>" +col.sTitle + "</td><td>" + _formattedData + "</td></tr>";
+                                info += "<tr><td>" +col.sTitle + " &nbsp; : &nbsp;</td><td>" + _formattedData + "</td></tr>";
                             if(col.InfoWindow.Count > 0)
                             {
                                 foreach (DVBaseColumn _column in col.InfoWindow)
                                 {
                                     if (_column.Name != col.Name)
                                     {
-                                        info += "<tr><td>" + _column.sTitle + "</td><td>" + IntermediateDic[_column.Data] + "</td></tr>";
+                                        info += "<tr><td>" + _column.sTitle + " &nbsp; : &nbsp;</td><td>" + IntermediateDic[_column.Data] + "</td></tr>";
                                     }
                                 }
                             }
@@ -956,11 +961,10 @@ namespace ExpressBase.ServiceStack
                             _formattedData = "<span class='columntooltip' data-toggle='popover' data-contents='" + info.ToBase64() + "'>" + _formattedData + "</span>";
                         }
 
-                        if (col.HideLinkifNoData)
-                        {
-                            if (_formattedData.ToString() == string.Empty)
-                                AllowLinkifNoData = false;
-                        }
+                        if (_formattedData.ToString() == string.Empty)
+                            AllowLinkifNoData = false;
+                        if(col.ShowLinkifNoData)
+                            AllowLinkifNoData = true;
 
                         if (!string.IsNullOrEmpty(col.LinkRefId) && (_isexcel == false))
                         {

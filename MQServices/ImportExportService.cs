@@ -55,7 +55,8 @@ namespace ExpressBase.ServiceStack.MQServices
                 UserId = request.UserId,
                 UserAuthId = request.UserAuthId,
                 WhichConsole = request.WhichConsole,
-                IsDemoApp = request.IsDemoApp
+                IsDemoApp = request.IsDemoApp,
+                SelectedSolutionId=request.SelectedSolutionId
             });
             Log.Info("ImportApplicationRequest published to Mq");
             return resp;
@@ -123,7 +124,7 @@ namespace ExpressBase.ServiceStack.MQServices
             Dictionary<string, string> RefidMap = new Dictionary<string, string>();
             try
             {
-                EbConnectionFactory _ebConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
+                EbConnectionFactory _ebConnectionFactory = new EbConnectionFactory(request.SelectedSolutionId, this.Redis);
                 var appstoreService = base.ResolveService<AppStoreService>();
                 appstoreService.EbConnectionFactory = _ebConnectionFactory;
                 var devservice = base.ResolveService<DevRelatedServices>();
@@ -145,37 +146,36 @@ namespace ExpressBase.ServiceStack.MQServices
                     if (ObjectCollection.Count > 0)
                     {
                         int c = 0;
+                        string _appname = AppObj.IsPublic ? AppObj.Title : AppObj.Name;
                         UniqueApplicationNameCheckResponse uniq_appnameresp;
                         do
                         {
                             c++;
-                            uniq_appnameresp = devservice.Get(new UniqueApplicationNameCheckRequest { AppName = AppObj.Name });
+                            uniq_appnameresp = devservice.Get(new UniqueApplicationNameCheckRequest { AppName = _appname });
                             if (!uniq_appnameresp.IsUnique)
-                            {
-                                string _r = "(" +( c - 1) + ")";
-                                AppObj.Name = AppObj.Name.Replace(_r, "") + "(" + c + ")";
-                            }
+                                _appname = _appname + "(" + c + ")";
                         }
                         while (!uniq_appnameresp.IsUnique);
 
                         CreateApplicationResponse appres = devservice.Post(new CreateApplicationRequest
                         {
-                            AppName = AppObj.Name,
+                            AppName = _appname,
                             AppType = AppObj.AppType,
                             Description = AppObj.Description,
                             AppIcon = AppObj.Icon
                         });
-                        Console.WriteLine("Created application : "+ AppObj.Name);
+                        Console.WriteLine("Created application : "+ _appname);
                         for (int i = ObjectCollection.Count - 1; i >= 0; i--)
                         {
                             UniqueObjectNameCheckResponse uniqnameresp;
                             EbObject obj = ObjectCollection[i];
-
+                            int o = 0;
                             do
                             {
+                                o++;
                                 uniqnameresp = objservice.Get(new UniqueObjectNameCheckRequest { ObjName = obj.Name });
                                 if (!uniqnameresp.IsUnique)
-                                    obj.Name = obj.Name + "(1)";
+                                    obj.Name = obj.Name + "(" + o + ")";
                             }
                             while (!uniqnameresp.IsUnique);
 
@@ -265,9 +265,7 @@ namespace ExpressBase.ServiceStack.MQServices
             {
                 obj = GetObjfromDB(_refid, solid);
                 ObjDictionary.Add(_refid, obj);
-                string RefidS = obj.DiscoverRelatedRefids();
-
-                string[] _refCollection = RefidS.Split(",");
+                List<string> _refCollection = obj.DiscoverRelatedRefids();
                 foreach (string _ref in _refCollection)
                     if (_ref.Trim() != string.Empty)
                         GetRelated(_ref, ObjDictionary, solid);

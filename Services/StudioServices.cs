@@ -111,7 +111,7 @@ namespace ExpressBase.ServiceStack
         {
             List<EbObjectWrapper> wrap = new List<EbObjectWrapper>();
             DbParameter[] parameters = { EbConnectionFactory.ObjectsDB.GetNewParameter("type", EbDbTypes.Int32, request.EbObjectType) };
-            EbDataTable dt = EbConnectionFactory.ObjectsDB.DoQuery(EbConnectionFactory.ObjectsDB.EB_ALL_LATEST_COMMITTED_VERSION_OF_AN_OBJ, parameters);
+            EbDataTable dt = EbConnectionFactory.ObjectsDB.DoQuery(EbConnectionFactory.ObjectsDB.EB_COMMITTED_VERSIONS_OF_ALL_OBJECTS_OF_A_TYPE, parameters);
 
             foreach (EbDataRow dr in dt.Rows)
             {
@@ -133,11 +133,11 @@ namespace ExpressBase.ServiceStack
         }
 
         [CompressResponse]
-        public object Get(EbObjectListRequest request)// Get All latest committed versions of this Object Type without json
+        public object Get(EbObjectListRequest request)// Get objects of a type from eb_objects
         {
             List<EbObjectWrapper> wrap = new List<EbObjectWrapper>();
             DbParameter[] parameters = { EbConnectionFactory.ObjectsDB.GetNewParameter("type", EbDbTypes.Int32, request.EbObjectType) };
-            EbDataTable dt = EbConnectionFactory.ObjectsDB.DoQuery(EbConnectionFactory.ObjectsDB.EB_GET_OBJ_LIST_FROM_EBOBJECTS, parameters);
+            EbDataTable dt = EbConnectionFactory.ObjectsDB.DoQuery(EbConnectionFactory.ObjectsDB.EB_GET_OBJECTS_OF_A_TYPE, parameters);
 
             foreach (EbDataRow dr in dt.Rows)
             {
@@ -155,7 +155,7 @@ namespace ExpressBase.ServiceStack
         }
 
         [CompressResponse]
-        public object Get(EbObjectObjLisAllVerRequest request)// Get All latest committed versions of this Object Type without json
+        public object Get(EbObjectObjLisAllVerRequest request)
         {
             List<EbObjectWrapper> wrap = new List<EbObjectWrapper>();
             DbParameter[] parameters = { EbConnectionFactory.ObjectsDB.GetNewParameter("type", EbDbTypes.Int32, request.EbObjectType) };
