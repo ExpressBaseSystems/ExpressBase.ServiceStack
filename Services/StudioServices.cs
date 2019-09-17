@@ -1189,6 +1189,8 @@ namespace ExpressBase.ServiceStack
                 return EbObjectTypes.SqlFunction.IntCode;
             else if (obj is EbApi)
                 return EbObjectTypes.Api.IntCode;
+            else if (obj is EbDashBoard)
+                return EbObjectTypes.DashBoard.IntCode;
             else
                 return -1;
         }
@@ -1249,6 +1251,10 @@ namespace ExpressBase.ServiceStack
             else if (obj is EbApi)
             {
                 Redis.Set(refId, (EbApi)obj);
+            }
+            else if (obj is EbDashBoard)
+            {
+                Redis.Set(refId, (EbDashBoard)obj);
             }
         }
 
