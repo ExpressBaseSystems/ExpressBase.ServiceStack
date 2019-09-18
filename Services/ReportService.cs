@@ -87,7 +87,8 @@ namespace ExpressBase.ServiceStack
                 if (Report.DataSourceRefId != string.Empty)
                     Report.DataSet = myDataSourceservice.Any(new DataSourceDataSetRequest { RefId = Report.DataSourceRefId, Params = Report.Parameters }).DataSet;
                 if (Report.DataSet == null)
-                    throw new Exception("Dataset is null, refid " + Report.DataSourceRefId);
+                    Console.WriteLine("Dataset is null, refid " + Report.DataSourceRefId); 
+                //throw new Exception("Dataset is null, refid " + Report.DataSourceRefId);
                 Report.Writer = PdfWriter.GetInstance(Report.Doc, Report.Ms1);
                 Report.Writer.Open();
                 Report.Doc.Open();

@@ -92,29 +92,36 @@ namespace ExpressBase.ServiceStack.Services
 					int dt2 = this.InfraConnectionFactory.DataDB.DoNonQuery(k, param);
 
 					//to upload images
-					if (sbreq.Filecollection.Count > 0)
+					FileUploadCls flupcl = new FileUploadCls();
+					if (sbreq.Fileuploadlst.Count > 0)
 					{
-						for (var i = 0; i < sbreq.Filecollection.Count; i++)
+						for (var i = 0; i < sbreq.Fileuploadlst.Count; i++)
 						{
-							byte[] sa = sbreq.Filecollection[i];
+							byte[] sa = sbreq.Fileuploadlst[i].Filecollection;
 
 							string sql3 = @"INSERT INTO  support_ticket_files(
 																	ticket_id,
 																	bg_fr_id,
 																	eb_del,
-																	img_bytea
+																	img_bytea,
+																	content_type,
+																	file_name
 																	)
 																	VALUES(
 																	:tktid,
 																	:bgid,
 																	:fals,
-																	:filebt
+																	:filebt,
+																	:cnttyp,
+																	:flname
 																	)RETURNING id;";
-								DbParameter[] parameters3 = {
+							DbParameter[] parameters3 = {
 								this.InfraConnectionFactory.DataDB.GetNewParameter("tktid", EbDbTypes.Int32, sb.Id),
 								this.InfraConnectionFactory.DataDB.GetNewParameter("fals", EbDbTypes.String, "F"),
 								this.InfraConnectionFactory.DataDB.GetNewParameter("bgid", EbDbTypes.String, sbgf),
-								this.InfraConnectionFactory.DataDB.GetNewParameter("filebt", EbDbTypes.Bytea,sbreq.Filecollection[i]),
+								this.InfraConnectionFactory.DataDB.GetNewParameter("filebt", EbDbTypes.Bytea,sbreq.Fileuploadlst[i].Filecollection),
+								this.InfraConnectionFactory.DataDB.GetNewParameter("cnttyp", EbDbTypes.String, sbreq.Fileuploadlst[i].ContentType),
+								this.InfraConnectionFactory.DataDB.GetNewParameter("flname", EbDbTypes.String, sbreq.Fileuploadlst[i].FileName),
 								};
 
 							EbDataTable dt4 = this.InfraConnectionFactory.DataDB.DoQuery(sql3, parameters3);
@@ -122,13 +129,7 @@ namespace ExpressBase.ServiceStack.Services
 
 						}
 					}
-
-
-
 				}
-
-
-
 			}
 			catch (Exception e)
 			{
@@ -303,14 +304,28 @@ namespace ExpressBase.ServiceStack.Services
 					st.type_b_f = dt.Rows[i][8].ToString();
 					st.createdat = dt.Rows[i][9].ToString();
 					st.ticketid = sdreq.ticketno;
-					
+
 				}
 
-				string sql1 = string.Format(@"SELECT id,img_bytea from support_ticket_files where bg_fr_id ='{0}' AND eb_del='F';", sdreq.ticketno);
+				string sql1 = string.Format(@"SELECT id,img_bytea,content_type,file_name from support_ticket_files where bg_fr_id ='{0}' AND eb_del='F';", sdreq.ticketno);
 				EbDataTable dt2 = this.InfraConnectionFactory.DataDB.DoQuery(sql1);
+
 				for (int i = 0; i < dt2.Rows.Count; i++)
 				{
-					st.Filecollection.Add((Byte[])(dt2.Rows[i][1]));
+					FileUploadCls flupcls = new FileUploadCls();
+
+					flupcls.Filecollection = ((Byte[])(dt2.Rows[i][1]));
+					flupcls.FileId = ((int)(dt2.Rows[i][0]));
+					flupcls.FileName = dt2.Rows[i][3].ToString();
+					flupcls.ContentType = dt2.Rows[i][2].ToString();
+
+					//check for file type
+
+					//convert file to base 64 and to url
+					string fileBase64Data = Convert.ToBase64String(flupcls.Filecollection);
+					flupcls.FileDataURL = string.Format("data:image/png;base64,{0}", fileBase64Data);
+
+					st.Fileuploadlst.Add(flupcls);
 				}
 				sd.supporttkt.Add(st);
 
@@ -333,21 +348,99 @@ namespace ExpressBase.ServiceStack.Services
 				string k = String.Format(@"UPDATE 
 										support_ticket 
 										SET
-										title = :title, 
+										title = :titl, 
 										description = :descr,
-										priority = :prior
+										priority = :prior,
+										solution_id = :soluid
 										WHERE 
-											bg_fr_id=:tktid
-                                            and eb_del='F'"
+											bg_fr_id=:bg_id
+                                            and eb_del=:fals"
 											);
 				DbParameter[] parameters = {
-					this.InfraConnectionFactory.DataDB.GetNewParameter("tktid", EbDbTypes.String, utreq.ticketid),
-					this.InfraConnectionFactory.DataDB.GetNewParameter("title", EbDbTypes.String, utreq.title),
-					this.InfraConnectionFactory.DataDB.GetNewParameter("description", EbDbTypes.String, utreq.description),
-					this.InfraConnectionFactory.DataDB.GetNewParameter("priority", EbDbTypes.String, utreq.priority)
+					this.InfraConnectionFactory.DataDB.GetNewParameter("bg_id", EbDbTypes.String, utreq.ticketid),
+					this.InfraConnectionFactory.DataDB.GetNewParameter("titl", EbDbTypes.String, utreq.title),
+					this.InfraConnectionFactory.DataDB.GetNewParameter("descr", EbDbTypes.String, utreq.description),
+					this.InfraConnectionFactory.DataDB.GetNewParameter("prior", EbDbTypes.String, utreq.priority),
+					this.InfraConnectionFactory.DataDB.GetNewParameter("fals", EbDbTypes.String, "F"),
+					this.InfraConnectionFactory.DataDB.GetNewParameter("soluid", EbDbTypes.String, utreq.SolnId)
+
 					};
 				int dt = this.InfraConnectionFactory.DataDB.DoNonQuery(k, parameters);
+
+				//remove previouse upload files ie set false
+				if(utreq.Filedel.Length>0)
+				{
+					for(var m=0;m< utreq.Filedel.Length; m++)
+					{
+						string k1 = String.Format(@"UPDATE 
+										support_ticket_files 
+										SET
+										eb_del=:tru 
+										WHERE 
+											bg_fr_id=:bgid
+                                            and eb_del=:fals
+											and id=:fileid"
+											);
+
+
+						DbParameter[] parameters5 = {
+								this.InfraConnectionFactory.DataDB.GetNewParameter("tru", EbDbTypes.String, "T"),
+								this.InfraConnectionFactory.DataDB.GetNewParameter("fals", EbDbTypes.String, "F"),
+								this.InfraConnectionFactory.DataDB.GetNewParameter("bgid", EbDbTypes.String, utreq.ticketid),
+								this.InfraConnectionFactory.DataDB.GetNewParameter("fileid", EbDbTypes.Int32, utreq.Filedel[m])
+								};
+
+						int dt5 = this.InfraConnectionFactory.DataDB.DoNonQuery(k1, parameters5);
+
+					}
+
+				}
+
+
+				//to upload images
+				FileUploadCls flupcl = new FileUploadCls();
+				if (utreq.Fileuploadlst.Count > 0)
+				{
+					for (var i = 0; i < utreq.Fileuploadlst.Count; i++)
+					{
+						byte[] sa = utreq.Fileuploadlst[i].Filecollection;
+
+						string sql3 = @"INSERT INTO  support_ticket_files(
+																	bg_fr_id,
+																	eb_del,
+																	img_bytea,
+																	content_type,
+																	file_name
+																	)
+																	VALUES(
+																	:bgid,
+																	:fals,
+																	:filebt,
+																	:cnttyp,
+																	:flname
+																	)RETURNING id;";
+						DbParameter[] parameters3 = {
+								this.InfraConnectionFactory.DataDB.GetNewParameter("fals", EbDbTypes.String, "F"),
+								this.InfraConnectionFactory.DataDB.GetNewParameter("bgid", EbDbTypes.String, utreq.ticketid),
+								this.InfraConnectionFactory.DataDB.GetNewParameter("filebt", EbDbTypes.Bytea,utreq.Fileuploadlst[i].Filecollection),
+								this.InfraConnectionFactory.DataDB.GetNewParameter("cnttyp", EbDbTypes.String, utreq.Fileuploadlst[i].ContentType),
+								this.InfraConnectionFactory.DataDB.GetNewParameter("flname", EbDbTypes.String, utreq.Fileuploadlst[i].FileName),
+								};
+
+						EbDataTable dt4 = this.InfraConnectionFactory.DataDB.DoQuery(sql3, parameters3);
+						var iden = Convert.ToInt32(dt4.Rows[0][0]);
+
+					}
+				}
+
+
+
+
+
 				utr.status = true;
+
+
+
 			}
 			catch (Exception e)
 			{
