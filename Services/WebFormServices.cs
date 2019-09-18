@@ -224,7 +224,6 @@ namespace ExpressBase.ServiceStack.Services
             else
             {
                 dv = Redis.Get<EbTableVisualization>(AutogenId);
-                //Check4ColumnChange(listNamesAndTypes, dv, _list);
                 if (dv == null )
                 {
                     var result = this.Gateway.Send<EbObjectParticularVersionResponse>(new EbObjectParticularVersionRequest { RefId = AutogenId });
@@ -318,39 +317,17 @@ namespace ExpressBase.ServiceStack.Services
 
         private void UpdateDataVisualization(CreateWebFormTableRequest request, List<TableColumnMeta> listNamesAndTypes, EbTableVisualization dvobj, string AutogenId)
         {
-            //DVColumnCollection columns = UpdateDVColumnCollection(listNamesAndTypes, request, dvobj);
-            //dvobj.Name = request.WebObj.Name + "_AutoGenDV";
-            //dvobj.DisplayName = request.WebObj.DisplayName + " List";
-            //dvobj.Description = request.WebObj.Description;
-            //dvobj.Columns = columns;
-            //dvobj.DSColumns = columns;
-            //dvobj.ColumnsCollection[0] = columns;
-            //dvobj.NotVisibleColumns = columns.FindAll(x => !x.bVisible);
-            //UpdateOrderByObject(ref dvobj);
-            //UpdateRowGroupObject(ref dvobj);
-            DVColumnCollection columns = GetDVColumnCollection(listNamesAndTypes, request);
+            DVColumnCollection columns = UpdateDVColumnCollection(listNamesAndTypes, request, dvobj);
             dvobj.Name = request.WebObj.Name + "_AutoGenDV";
             dvobj.DisplayName = request.WebObj.DisplayName + " List";
             dvobj.Description = request.WebObj.Description;
             dvobj.Columns = columns;
             dvobj.DSColumns = columns;
-            dvobj.ColumnsCollection[0]=columns;
+            dvobj.ColumnsCollection[0] = columns;
             dvobj.NotVisibleColumns = columns.FindAll(x => !x.bVisible);
-            dvobj.AutoGen = true;
-            dvobj.OrderBy = new List<DVBaseColumn>();
-            dvobj.RowGroupCollection = new List<RowGroupParent>();
-            dvobj.OrderBy.Add(columns.Get("eb_created_at"));
-            RowGroupParent _rowgroup = new RowGroupParent();
-            _rowgroup.DisplayName = "By Location";
-            _rowgroup.Name = "groupbylocation";
-            _rowgroup.RowGrouping.Add(columns.Get("eb_loc_id"));
-
-            dvobj.RowGroupCollection.Add(_rowgroup);
-            _rowgroup = new RowGroupParent();
-            _rowgroup.DisplayName = "By Created By";
-            _rowgroup.Name = "groupbycreatedby";
-            _rowgroup.RowGrouping.Add(columns.Get("eb_created_by"));
-            dvobj.RowGroupCollection.Add(_rowgroup);
+            UpdateOrderByObject(ref dvobj);
+            UpdateRowGroupObject(ref dvobj);
+            //notchecked for infowindow, formlink, treeview, customcolumn
             dvobj.BeforeSave(this, Redis);
             SaveObjectRequest(request, dvobj);
         }
