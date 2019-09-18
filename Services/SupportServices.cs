@@ -449,5 +449,35 @@ namespace ExpressBase.ServiceStack.Services
 			return utr;
 		}
 
+		public ChangeStatusResponse Post(ChangeStatusRequest chstreq)
+		{
+			ChangeStatusResponse chst = new ChangeStatusResponse();
+			try
+			{
+				string k = String.Format(@"UPDATE 
+										support_ticket 
+										SET
+										status = :sts
+										WHERE 
+											bg_fr_id=:bg_id
+                                            and eb_del=:fals"
+											);
+				DbParameter[] parameters = {
+					this.InfraConnectionFactory.DataDB.GetNewParameter("bg_id", EbDbTypes.String, chstreq.TicketNo),
+					this.InfraConnectionFactory.DataDB.GetNewParameter("sts", EbDbTypes.String,chstreq.NewStatus ),
+					this.InfraConnectionFactory.DataDB.GetNewParameter("fals", EbDbTypes.String, "F"),
+
+					};
+				int dt = this.InfraConnectionFactory.DataDB.DoNonQuery(k, parameters);
+				chst.RtnStatus = true;
+
+			}
+			catch (Exception e)
+			{
+				Console.WriteLine("Excetion " + e.Message + e.StackTrace);
+			}
+			return chst;
+		}
+
 	}
 }
