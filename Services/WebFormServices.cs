@@ -304,16 +304,6 @@ namespace ExpressBase.ServiceStack.Services
             return res.RefId;
         }
 
-        private void Check4ColumnChange(List<TableColumnMeta> listNamesAndTypes, EbTableVisualization dv, IEnumerable<TableColumnMeta> _list)
-        {
-            IEnumerable<string> _array = _list.Select(x => x.Name).ToArray();
-            foreach (DVBaseColumn col in dv.Columns)
-            {
-                if (!_array.Contains(col.Name))
-                    dv.Columns.RemoveAll(x => x.Name == col.Name);
-            }
-        }
-
         private void UpdateDataReader(CreateWebFormTableRequest request, string cols, EbTableVisualization dv, string AutogenId)
         {
             dv.AfterRedisGet(Redis,this);
@@ -328,13 +318,23 @@ namespace ExpressBase.ServiceStack.Services
 
         private void UpdateDataVisualization(CreateWebFormTableRequest request, List<TableColumnMeta> listNamesAndTypes, EbTableVisualization dvobj, string AutogenId)
         {
+            //DVColumnCollection columns = UpdateDVColumnCollection(listNamesAndTypes, request, dvobj);
+            //dvobj.Name = request.WebObj.Name + "_AutoGenDV";
+            //dvobj.DisplayName = request.WebObj.DisplayName + " List";
+            //dvobj.Description = request.WebObj.Description;
+            //dvobj.Columns = columns;
+            //dvobj.DSColumns = columns;
+            //dvobj.ColumnsCollection[0] = columns;
+            //dvobj.NotVisibleColumns = columns.FindAll(x => !x.bVisible);
+            //UpdateOrderByObject(ref dvobj);
+            //UpdateRowGroupObject(ref dvobj);
             DVColumnCollection columns = GetDVColumnCollection(listNamesAndTypes, request);
             dvobj.Name = request.WebObj.Name + "_AutoGenDV";
             dvobj.DisplayName = request.WebObj.DisplayName + " List";
             dvobj.Description = request.WebObj.Description;
             dvobj.Columns = columns;
             dvobj.DSColumns = columns;
-            dvobj.ColumnsCollection[0] = columns;
+            dvobj.ColumnsCollection[0]=columns;
             dvobj.NotVisibleColumns = columns.FindAll(x => !x.bVisible);
             dvobj.AutoGen = true;
             dvobj.OrderBy = new List<DVBaseColumn>();
@@ -465,12 +465,12 @@ namespace ExpressBase.ServiceStack.Services
             int index = 0;
             foreach (TableColumnMeta column in listNamesAndTypes)
             {
-                index++;
                 DVBaseColumn _col = dv.Columns.Find(x => x.Name == column.Name);
-                if (_col != null)
+                if (_col == null)
                 {
                     if (column.Name != "eb_del" && column.Name != "eb_ver_id" && !(column.Name.Contains("_ebbkup")) && !(column.Control is EbFileUploader))
                     {
+                        index++;
                         ControlClass _control = null;
                         bool _autoresolve = false;
                         Align _align = Align.Auto;
@@ -522,22 +522,61 @@ namespace ExpressBase.ServiceStack.Services
                 }
                 else
                 {
-                    _col.Data = index;
+                    _col.Data = ++index;
                     Columns.Add(_col);
                 }
-            }
 
-            IEnumerable<string> _array = listNamesAndTypes.Select(x => x.Name).ToArray();
-            foreach (DVBaseColumn col in Columns)
-            {
-                if (!_array.Contains(col.Name))
-                    dv.Columns.RemoveAll(x => x.Name == col.Name);
             }
-            //int index = -1;            
-            dv.Columns.ForEach(x=> x.Data = ++index);
+            Columns.Add(dv.Columns.Get("id"));
+            DVBaseColumn Col = dv.Columns.Get("eb_action");
+            Col.Data = ++index;
+            Columns.Add(Col);
             return Columns;
         }
 
+        private void UpdateOrderByObject(ref EbTableVisualization dv)
+        {
+            List<DVBaseColumn> _orderby = new List<DVBaseColumn>(dv.OrderBy);
+            string[] _array = dv.Columns.Select(x => x.Name).ToArray();
+            int index = -1;
+            foreach(DVBaseColumn col in _orderby)
+            {
+                index++;
+                if (!_array.Contains(col.Name))
+                    dv.OrderBy.RemoveAll(x => x.Name == col.Name);
+                else
+                    dv.OrderBy[index].Data = dv.Columns.FindAll(x => x.Name == col.Name)[0].Data;
+            }
+        }
+
+        private void UpdateRowGroupObject(ref EbTableVisualization dv)
+        {
+            List<RowGroupParent> _rowgroupColl = new List<RowGroupParent>( dv.RowGroupCollection);
+            string[] _array = dv.Columns.Select(x => x.Name).ToArray();
+            int index = -1;
+            foreach (RowGroupParent _rowgroup in _rowgroupColl)
+            {
+                index++;int j = -1;
+                foreach (DVBaseColumn col in _rowgroup.RowGrouping)
+                {
+                    j++;
+                    if (!_array.Contains(col.Name))
+                        dv.RowGroupCollection[index].RowGrouping.RemoveAll(x => x.Name == col.Name);
+                    else
+                        dv.RowGroupCollection[index].RowGrouping[j].Data = dv.Columns.FindAll(x => x.Name == col.Name)[0].Data;
+                }
+                j = -1;
+                foreach (DVBaseColumn col in _rowgroup.OrderBy)
+                {
+                    j++;
+                    if (!_array.Contains(col.Name))
+                        dv.RowGroupCollection[index].OrderBy.RemoveAll(x => x.Name == col.Name);
+                    else
+                        dv.RowGroupCollection[index].OrderBy[j].Data = dv.Columns.FindAll(x => x.Name == col.Name)[0].Data;
+                }
+
+            }
+        }
 
         //================================== GET RECORD FOR RENDERING ================================================
 
