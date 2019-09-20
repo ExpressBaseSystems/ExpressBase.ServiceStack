@@ -16,30 +16,16 @@ namespace ExpressBase.ServiceStack.Services
     public class ProductionDBManagerServices : EbBaseService
     {
         public ProductionDBManagerServices(IEbConnectionFactory _dbf) : base(_dbf) { }
-        private List<string> _solnnames = null;
-        List<string> SolNames
-        {
-            get
-            {
-                if (_solnnames == null)
-                {
-                    EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery("SELECT isolution_id FROM eb_solutions where solution_id is not null");
-                    if (dt != null && dt.Rows.Count > 0)
-                    {
-                        _solnnames = new List<string>();
-                        for (int i = 0; i < dt.Rows.Count; i++)
-                        {
-                            _solnnames.Add(dt.Rows[i][0].ToString());
-                        }
-                    }
-                }
-                return _solnnames;
-            }
-        }
-
         Dictionary<string, string[]> dictTenant = new Dictionary<string, string[]>();
         Dictionary<string, Eb_FileChanges> dictInfra = new Dictionary<string, Eb_FileChanges>();
         Dictionary<string, List<Eb_FileChanges>> dictDBFunctionChanges = new Dictionary<string, List<Eb_FileChanges>>();
+
+        public UpdateInfraWithSqlScriptsResponse Post (UpdateInfraWithSqlScriptsRequest request)
+        {
+            UpdateInfraWithSqlScriptsResponse resp = new UpdateInfraWithSqlScriptsResponse();
+            SetFuncMd5InfraReference();
+            return resp;
+        }
 
         public CheckChangesInFunctionResponse Post(CheckChangesInFunctionRequest request)
         {
@@ -49,7 +35,6 @@ namespace ExpressBase.ServiceStack.Services
                 EbConnectionsConfig _solutionConnections = EbConnectionsConfigProvider.GetDataCenterConnections();
                 _solutionConnections.DataDbConfig.DatabaseName = request.SolutionId;
                 IDatabase _ebconfactoryDatadb = new EbConnectionFactory(_solutionConnections, request.SolutionId).DataDB;
-                //SetFuncMd5InfraReference(request.SolutionId, _ebconfactoryDatadb);
                 GetFuncScriptFromInfra();
                 GetFuncScriptFromTenant(request.SolutionId);
                 resp.Changes = dictDBFunctionChanges;
@@ -61,89 +46,101 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
-        public DBIntegrityCheckResponse Post(DBIntegrityCheckRequest request)
+        public GetSolutionForIntegrityCheckResponse Post(GetSolutionForIntegrityCheckRequest request)
         {
-            DBIntegrityCheckResponse resp = new DBIntegrityCheckResponse();
+            GetSolutionForIntegrityCheckResponse resp = new GetSolutionForIntegrityCheckResponse();
             List<Eb_Changes_Log> list = new List<Eb_Changes_Log>();
-            EbConnectionFactory _ebConnectionFactory;
-            foreach (string name in SolNames)
-                if (name != string.Empty)
+            string name = string.Empty;
+            try { 
+            using (DbConnection con = this.InfraConnectionFactory.DataDB.GetNewConnection())
+            {
+                con.Open();
+                string str = @"
+                                SELECT * 
+                                   FROM eb_solutions
+                                WHERE eb_del = false";
+                EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(str);
+                for (int i = 0; i < dt.Rows.Count; i++)
                 {
-                    try
+                    name = dt.Rows[i]["isolution_id"].ToString();
+                        if(name=="")
+                        {
+                            name = dt.Rows[i]["esolution_id"].ToString();
+                        }
+                    string str1 = string.Format(@"
+                                   SELECT * 
+                                   FROM eb_dbchangeslog
+                                   WHERE solution_id = '{0}' ", name);
+                    EbDataTable dt1 = InfraConnectionFactory.DataDB.DoQuery(str1);
+                    if (dt1 != null && dt1.Rows.Count > 0)
                     {
-                        _ebConnectionFactory = new EbConnectionFactory(name, Redis);
+                        string str2 = string.Format(@"
+                                    SELECT d.modified_at, t.email , t.fullname 
+                                    FROM eb_dbchangeslog as d, eb_tenants as t  
+                                    WHERE d.solution_id = '{0}'
+                                        AND  t.id = ( 
+                                                        SELECT tenant_id 
+                                                        FROM eb_solutions 
+                                                        WHERE isolution_id = '{0}' 
+                                                            AND eb_del = false)", name);
+                        EbDataTable dt2 = InfraConnectionFactory.DataDB.DoQuery(str2);
+                        if (dt2 != null && dt1.Rows.Count > 0)
+                        {
+                            list.Add(new Eb_Changes_Log
+                            {
+                                Solution = name,
+                                DBName = dt1.Rows[0]["dbname"].ToString(),
+                                TenantName = dt2.Rows[0]["fullname"].ToString(),
+                                TenantEmail = dt2.Rows[0]["email"].ToString(),
+                                Last_Modified = DateTime.Parse(dt2.Rows[0][0].ToString()),
+                                Vendor = dt1.Rows[0]["vendor"].ToString()
+                            });
+                        }
+                    }
+                    else
+                    {
                         EbConnectionsConfig _solutionConnections = EbConnectionsConfigProvider.GetDataCenterConnections();
                         _solutionConnections.DataDbConfig.DatabaseName = name;
                         IDatabase _ebconfactoryDatadb = new EbConnectionFactory(_solutionConnections, name).DataDB;
-                        //EbConnectionsConfig _solutionConnections = EbConnectionsConfigProvider.GetDataCenterConnections();
-                        //_solutionConnections.DataDbConfig.DatabaseName = "ebdbh3ivsn9lud20190808061231";
-                        //IDatabase _ebconfactoryDatadb = new EbConnectionFactory(_solutionConnections, "ebdbh3ivsn9lud20190808061231").DataDB;
-                        //string name = "ebdbh3ivsn9lud20190808061231";
-                        string vendor = _ebconfactoryDatadb.Vendor.ToString();
-                        using (DbConnection con = this.InfraConnectionFactory.DataDB.GetNewConnection())
+                        string str2 = string.Format(@"
+                                                SELECT t.email, t.fullname, s.date_created 
+                                                FROM eb_solutions as s, eb_tenants as t 
+                                                WHERE s.isolution_id = '{0}'
+                                                    AND s.eb_del = false
+                                                    AND s.tenant_id = t.id", name);
+                        EbDataTable dt2 = InfraConnectionFactory.DataDB.DoQuery(str2);
+                        if (dt2.Rows.Count > 0)
                         {
-                            con.Open();
-                            string str = string.Format(@"
-                                   SELECT * 
-                                   FROM eb_dbchangeslog
-                                   WHERE solution_id = '{0}'", name);
-                            EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(str);
-                            if (dt != null && dt.Rows.Count > 0)
-                            {
-                                string str1 = string.Format(@"
-                                   SELECT MAX(last_modified)  
-                                   FROM eb_dbchangeslog
-                                   WHERE solution_id = '{0}'", name);
-                                EbDataTable dt2 = InfraConnectionFactory.DataDB.DoQuery(str1);
-
-                                string str2 = string.Format(@"
-                                            SELECT email, fullname 
-                                            FROM eb_tenants
-                                            WHERE id = (
-                                                SELECT tenant_id 
-                                                FROM eb_solutions
-                                                WHERE isolution_id = '{0}')", name);
-                                EbDataTable dt1 = InfraConnectionFactory.DataDB.DoQuery(str2);
-                                if (dt1 != null && dt.Rows.Count > 0)
-                                {
-                                    list.Add(new Eb_Changes_Log
-                                    {
-                                        Solution = name,
-                                        DBName = dt.Rows[0]["dbname"].ToString(),
-                                        TenantName = dt1.Rows[0]["fullname"].ToString(),
-                                        TenantEmail = dt1.Rows[0]["email"].ToString(),
-                                        Last_Modified = DateTime.Parse(dt2.Rows[0][0].ToString()),
-                                        Vendor = dt.Rows[0]["vendor"].ToString()
-                                    });
-                                }
-                            }
-                            else
-                            {
-                                string str2 = string.Format(@"
-                                                SELECT * 
-                                                FROM eb_solutions
-                                                WHERE isolution_id = '{0}'", name);
-                                EbDataTable dt2 = InfraConnectionFactory.DataDB.DoQuery(str2);
-
-                                string str3 = string.Format(@"
+                            string str3 = string.Format(@"
                                             INSERT INTO 
-                                                eb_dbchangeslog (solution_id, dbname, vendor, last_modified)
-                                            VALUES ('{0}','{1}','{2}','{3}')", dt2.Rows[0]["isolution_id"].ToString(), _ebconfactoryDatadb.DBName, _ebconfactoryDatadb.Vendor, dt2.Rows[0]["eb_created_at"].ToString());
-                                DbCommand cmd = InfraConnectionFactory.DataDB.GetNewCommand(con, str2);
-                                cmd.ExecuteNonQuery();
-                            }
+                                                eb_dbchangeslog (solution_id, dbname, vendor, modified_at)
+                                            VALUES ('{0}','{1}','{2}','{3}')", name, _ebconfactoryDatadb.DBName, _ebconfactoryDatadb.Vendor, dt2.Rows[0]["date_created"].ToString());
+                            DbCommand cmd = InfraConnectionFactory.DataDB.GetNewCommand(con, str3);
+                            cmd.ExecuteNonQuery();
+                            list.Add(new Eb_Changes_Log
+                            {
+                                Solution = name,
+                                DBName = _ebconfactoryDatadb.DBName,
+                                TenantName = dt2.Rows[0]["fullname"].ToString(),
+                                TenantEmail = dt2.Rows[0]["email"].ToString(),
+                                Last_Modified = DateTime.Parse(dt2.Rows[0]["date_created"].ToString()),
+                                Vendor = _ebconfactoryDatadb.Vendor.ToString()
+                            });
                         }
                     }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine(e.Message);
-                    }
                 }
-                else
-                {
-                    int a = 0;
-                }
-            resp.ChangesLog = list;
+            }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
+        
+        //else
+        //{
+        //    int a = 0;
+        //}
+        resp.ChangesLog = list;
             return resp;
 
         }
@@ -194,53 +191,52 @@ namespace ExpressBase.ServiceStack.Services
 
             CompareScripts(_ebconfactoryDatadb);
         }
+        
+        //void GetFuncScriptFromTenant()
+        //{
+        //    string str = string.Empty;
+        //    StringBuilder hash = new StringBuilder();
+        //    MD5CryptoServiceProvider md5provider = new MD5CryptoServiceProvider();
+        //    string result = string.Empty;
+        //    string file_name;
+        //    //  EbConnectionFactory factory = new EbConnectionFactory("ebdbh3ivsn9lud20190808061231", this.Redis);
+        //    EbConnectionsConfig _solutionConnections = EbConnectionsConfigProvider.GetDataCenterConnections();
+        //    _solutionConnections.DataDbConfig.DatabaseName = "ebdbh3ivsn9lud20190808061231";
+        //    IDatabase _ebconfactoryDatadb = new EbConnectionFactory(_solutionConnections, "ebdbh3ivsn9lud20190808061231").DataDB;
+        //    string vendor = _ebconfactoryDatadb.Vendor.ToString();
+        //    dictTenant.Clear();
+        //    if (_ebconfactoryDatadb.Vendor == DatabaseVendors.PGSQL)
+        //    {
+        //        str = @"
+        //                SELECT pg_get_functiondef(oid)::text, proname 
+        //                FROM pg_proc 
+        //                WHERE proname 
+        //                IN 
+        //                    (SELECT routine_name 
+        //                    FROM information_schema.routines 
+        //                    WHERE routine_type = 'FUNCTION' 
+        //                        AND specific_schema = 'public')";
 
-
-        void GetFuncScriptFromTenant()
-        {
-            string str = string.Empty;
-            StringBuilder hash = new StringBuilder();
-            MD5CryptoServiceProvider md5provider = new MD5CryptoServiceProvider();
-            string result = string.Empty;
-            string file_name;
-            //  EbConnectionFactory factory = new EbConnectionFactory("ebdbh3ivsn9lud20190808061231", this.Redis);
-            EbConnectionsConfig _solutionConnections = EbConnectionsConfigProvider.GetDataCenterConnections();
-            _solutionConnections.DataDbConfig.DatabaseName = "ebdbh3ivsn9lud20190808061231";
-            IDatabase _ebconfactoryDatadb = new EbConnectionFactory(_solutionConnections, "ebdbh3ivsn9lud20190808061231").DataDB;
-            string vendor = _ebconfactoryDatadb.Vendor.ToString();
-            dictTenant.Clear();
-            if (_ebconfactoryDatadb.Vendor == DatabaseVendors.PGSQL)
-            {
-                str = @"
-                        SELECT pg_get_functiondef(oid)::text, proname 
-                        FROM pg_proc 
-                        WHERE proname 
-                        IN 
-                            (SELECT routine_name 
-                            FROM information_schema.routines 
-                            WHERE routine_type = 'FUNCTION' 
-                                AND specific_schema = 'public')";
-
-                EbDataTable dt = _ebconfactoryDatadb.DoQuery(str);
-                if (dt != null && dt.Rows.Count > 0)
-                {
-                    for (int i = 0; i < dt.Rows.Count; i++)
-                    {
-                        result = dt.Rows[i][0].ToString();
-                        file_name = GetFileName(result, dt.Rows[i][1].ToString());
-                        result = FormatDBStringPGSQL(result);
-                        byte[] bytes = md5provider.ComputeHash(new UTF8Encoding().GetBytes(result));
-                        hash.Clear();
-                        for (int j = 0; j < bytes.Length; j++)
-                        {
-                            hash.Append(bytes[j].ToString("x2"));
-                        }
-                        dictTenant.Add(file_name, new[] { vendor, hash.ToString() });
-                    }
-                }
-            }
-            CompareScripts(_ebconfactoryDatadb);
-        }
+        //        EbDataTable dt = _ebconfactoryDatadb.DoQuery(str);
+        //        if (dt != null && dt.Rows.Count > 0)
+        //        {
+        //            for (int i = 0; i < dt.Rows.Count; i++)
+        //            {
+        //                result = dt.Rows[i][0].ToString();
+        //                file_name = GetFileName(result, dt.Rows[i][1].ToString());
+        //                result = FormatDBStringPGSQL(result);
+        //                byte[] bytes = md5provider.ComputeHash(new UTF8Encoding().GetBytes(result));
+        //                hash.Clear();
+        //                for (int j = 0; j < bytes.Length; j++)
+        //                {
+        //                    hash.Append(bytes[j].ToString("x2"));
+        //                }
+        //                dictTenant.Add(file_name, new[] { vendor, hash.ToString() });
+        //            }
+        //        }
+        //    }
+        //    CompareScripts(_ebconfactoryDatadb);
+        //}
 
         void GetFuncScriptFromInfra()
         {
@@ -282,7 +278,7 @@ namespace ExpressBase.ServiceStack.Services
                     {
                         if (value[1] != pair.Value.MD5)
                         {
-                            Console.WriteLine(pair.Key + " : " + pair.Value.FilePath + " : " + value[1] + " : change found");
+                            //Console.WriteLine(pair.Key + " : " + pair.Value.FilePath + " : " + value[1] + " : change found");
                             if (dictDBFunctionChanges.ContainsKey(_ebconfactoryDatadb.DBName))
                             {
                                 ChangesList = dictDBFunctionChanges[_ebconfactoryDatadb.DBName];
@@ -292,7 +288,8 @@ namespace ExpressBase.ServiceStack.Services
                                     FunctionHeader = pair.Key,
                                     FilePath = pair.Value.FilePath,
                                     Vendor = pair.Value.Vendor,
-                                    MD5 = pair.Value.MD5
+                                    MD5 = pair.Value.MD5,
+                                    NewItem = false
                                 });
                                 dictDBFunctionChanges[_ebconfactoryDatadb.DBName] = ChangesList;
                             }
@@ -304,12 +301,11 @@ namespace ExpressBase.ServiceStack.Services
                                     FunctionHeader = pair.Key,
                                     FilePath = pair.Value.FilePath,
                                     Vendor = pair.Value.Vendor,
-                                    MD5 = pair.Value.MD5
+                                    MD5 = pair.Value.MD5,
+                                    NewItem = false
                                 });
                                 dictDBFunctionChanges.Add(_ebconfactoryDatadb.DBName, ChangesList);
                             }
-
-                            //UpdateDB(pair.Value[0], pair.Key, pair.Value[1], _ebconfactoryDatadb);
                         }
                         if (value == null)
                         {
@@ -319,14 +315,39 @@ namespace ExpressBase.ServiceStack.Services
                     }
                     else
                     {
+                        if (dictDBFunctionChanges.ContainsKey(_ebconfactoryDatadb.DBName))
+                        {
+                            ChangesList = dictDBFunctionChanges[_ebconfactoryDatadb.DBName];
+                            ChangesList.Add(new Eb_FileChanges
+                            {
+                                Id = pair.Value.Id,
+                                FunctionHeader = pair.Key,
+                                FilePath = pair.Value.FilePath,
+                                Vendor = pair.Value.Vendor,
+                                MD5 = pair.Value.MD5,
+                                NewItem = true
+                            });
+                            dictDBFunctionChanges[_ebconfactoryDatadb.DBName] = ChangesList;
+                        }
+                        else
+                        {
+                            ChangesList.Add(new Eb_FileChanges
+                            {
+                                Id = pair.Value.Id,
+                                FunctionHeader = pair.Key,
+                                FilePath = pair.Value.FilePath,
+                                Vendor = pair.Value.Vendor,
+                                MD5 = pair.Value.MD5,
+                                NewItem = true
+                            });
+                            dictDBFunctionChanges.Add(_ebconfactoryDatadb.DBName, ChangesList);
+                        }
                     }
                 }
             }
         }
-
-
-
-        void SetFuncMd5InfraReference(string name, IDatabase _ebconfactoryDatadb)
+        
+        void SetFuncMd5InfraReference()
         {
             StringBuilder hash = new StringBuilder();
             MD5CryptoServiceProvider md5provider = new MD5CryptoServiceProvider();
@@ -365,117 +386,93 @@ namespace ExpressBase.ServiceStack.Services
                             {
                                 using (StreamReader reader = new StreamReader(stream))
                                     result = reader.ReadToEnd();
-                                file_name = GetFileName(result, file);
-                                file_name_shrt = file_name.Split("(")[0];
-                                if (vendor == "PGSQL")
+                                if (result != "-- For MySQL")
                                 {
-                                    result = FormatFileStringPGSQL(result);
-                                }
-
-                                byte[] bytes = md5provider.ComputeHash(new UTF8Encoding().GetBytes(result));
-                                hash.Clear();
-                                for (int j = 0; j < bytes.Length; j++)
-                                {
-                                    hash.Append(bytes[j].ToString("x2"));
-                                }
-                                Console.WriteLine(file_name + "Success");
-
-                                using (DbConnection con = this.InfraConnectionFactory.DataDB.GetNewConnection())
-                                {
-                                    con.Open();
-                                    string str = string.Format(@"
-                                    SELECT * 
-                                    FROM eb_dbmd5 as d , eb_dbstructure as c
-                                    WHERE d.filename = '{0}' 
-                                        AND d.eb_del = 'F' 
-                                        AND d.change_id = c.id", file_name);
-                                    EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(str);
-                                    if (dt != null && dt.Rows.Count > 0)
+                                    file_name = GetFileName(result, file);
+                                    file_name_shrt = file_name.Split("(")[0];
+                                    if (vendor == "PGSQL")
                                     {
-                                        string str1 = string.Format(@"
+                                        result = FormatFileStringPGSQL(result);
+                                    }
+
+                                    byte[] bytes = md5provider.ComputeHash(new UTF8Encoding().GetBytes(result));
+                                    hash.Clear();
+                                    for (int j = 0; j < bytes.Length; j++)
+                                    {
+                                        hash.Append(bytes[j].ToString("x2"));
+                                    }
+                                    Console.WriteLine(file_name + "Success");
+
+                                    using (DbConnection con = this.InfraConnectionFactory.DataDB.GetNewConnection())
+                                    {
+                                        con.Open();
+                                        string str = string.Format(@"
+                                                SELECT * 
+                                                FROM eb_dbmd5 as d , eb_dbstructure as c
+                                                WHERE d.filename = '{0}' 
+                                                    AND d.eb_del = 'F' 
+                                                    AND c.vendor = '{1}'
+                                                    AND d.change_id = c.id", file_name, vendor);
+                                        EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(str);
+                                        if (dt != null && dt.Rows.Count > 0)
+                                        {
+                                            string str1 = string.Format(@"
                                             SELECT * 
                                             FROM eb_dbmd5 as d , eb_dbstructure as c
-                                            WHERE d.filename = '{0}' 
-                                                AND d.eb_del = 'F' 
-                                                AND d.change_id = c.id
-                                                AND d.md5 <> '{1}'", file_name, hash.ToString());
-                                        EbDataTable dt1 = InfraConnectionFactory.DataDB.DoQuery(str1);
-
-                                        if (dt1 != null && dt1.Rows.Count > 0)
-                                        {
-                                            string str2 = string.Format(@"
-                                                            SELECT id 
-                                                            FROM eb_dbstructure
-                                                            WHERE filename = '{0}'
-                                                                AND vendor = '{1}'", file_name_shrt, vendor);
-                                            EbDataTable dt2 = InfraConnectionFactory.DataDB.DoQuery(str2);
-
-                                            string str3 = string.Format(@"
+                                            WHERE  d.change_id = {0}
+                                                AND c.id = {0}
+                                                AND d.eb_del = 'F'
+                                                AND d.md5 <> '{1}'", dt.Rows[0]["change_id"].ToString(), hash.ToString());
+                                            EbDataTable dt1 = InfraConnectionFactory.DataDB.DoQuery(str1);
+                                            if (dt1 != null && dt1.Rows.Count > 0)
+                                            {
+                                                string str2 = string.Format(@"
                                                     UPDATE eb_dbmd5 
                                                     SET eb_del = 'T'
                                                     WHERE filename = '{0}' 
                                                         AND eb_del = 'F'
-                                                        AND change_id = '{1}'", file_name, dt2.Rows[0]["id"].ToString());
-                                            DbCommand cmd = InfraConnectionFactory.DataDB.GetNewCommand(con, str3);
-                                            cmd.ExecuteNonQuery();
+                                                        AND change_id = '{1}'", file_name, dt1.Rows[0]["change_id"].ToString());
+                                                DbCommand cmd = InfraConnectionFactory.DataDB.GetNewCommand(con, str2);
+                                                cmd.ExecuteNonQuery();
 
-                                            string str4 = string.Format(@"
+                                                string str3 = string.Format(@"
                                                     INSERT INTO 
                                                         eb_dbmd5 (change_id, filename, md5, eb_del)
-                                                    VALUES ('{0}','{1}','{2}','F')", dt2.Rows[0]["id"].ToString(), file_name, hash.ToString());
-                                            DbCommand cmd1 = InfraConnectionFactory.DataDB.GetNewCommand(con, str4);
-                                            cmd1.ExecuteNonQuery();
-
-                                            string str5 = string.Format(@"
-                                                    UPDATE eb_dbstructure 
-                                                    SET modified_date = '{0}'
-                                                    WHERE id = '{1}'", DateTime.Now, dt2.Rows[0]["id"].ToString());
-                                            DbCommand cmd2 = InfraConnectionFactory.DataDB.GetNewCommand(con, str5);
-                                            cmd2.ExecuteNonQuery();
-
-                                            string str6 = string.Format(@"
-                                                    UPDATE eb_dbchangeslog 
-                                                    SET last_modified = '{0}'
-                                                    WHERE change_id = '{1}'", DateTime.Now, dt2.Rows[0]["id"].ToString());
-                                            DbCommand cmd3 = InfraConnectionFactory.DataDB.GetNewCommand(con, str6);
-                                            cmd3.ExecuteNonQuery();
+                                                    VALUES ('{0}','{1}','{2}','F')", dt1.Rows[0]["change_id"], file_name, hash.ToString());
+                                                DbCommand cmd1 = InfraConnectionFactory.DataDB.GetNewCommand(con, str3);
+                                                cmd1.ExecuteNonQuery();
+                                            }
                                         }
-                                    }
-                                    else
-                                    {
-                                        string str1 = string.Format(@"
+                                        else
+                                        {
+                                            string str1 = string.Format(@"
                                             INSERT INTO 
-                                                eb_dbstructure (filename, filepath, vendor, type, created_at, modified_date)
-                                            VALUES ('{0}','{1}','{2}','{3}','{4}','{5}')", file_name_shrt, file, vendor, type, DateTime.Now, DateTime.Now);
-                                        DbCommand cmd = InfraConnectionFactory.DataDB.GetNewCommand(con, str1);
-                                        cmd.ExecuteNonQuery();
+                                                eb_dbstructure (filename, filepath, vendor, type)
+                                            VALUES ('{0}','{1}','{2}','{3}')", file_name_shrt, file, vendor, type);
+                                            DbCommand cmd = InfraConnectionFactory.DataDB.GetNewCommand(con, str1);
+                                            cmd.ExecuteNonQuery();
 
-                                        string str2 = string.Format(@"
+                                            string str2 = string.Format(@"
                                                 SELECT id 
                                                 FROM eb_dbstructure
                                                 WHERE filename = '{0}'
                                                     AND vendor = '{1}'", file_name_shrt, vendor);
-                                        EbDataTable dt2 = InfraConnectionFactory.DataDB.DoQuery(str2);
+                                            EbDataTable dt2 = InfraConnectionFactory.DataDB.DoQuery(str2);
 
-                                        string str3 = string.Format(@"
+                                            string str3 = string.Format(@"
                                                 INSERT INTO 
                                                     eb_dbmd5 (change_id, filename, md5, eb_del)
                                                 VALUES ('{0}','{1}','{2}','F')", dt2.Rows[0]["id"].ToString(), file_name, hash.ToString());
-                                        DbCommand cmd2 = InfraConnectionFactory.DataDB.GetNewCommand(con, str3);
-                                        cmd2.ExecuteNonQuery();
+                                            DbCommand cmd2 = InfraConnectionFactory.DataDB.GetNewCommand(con, str3);
+                                            cmd2.ExecuteNonQuery();
 
-                                        string str4 = string.Format(@"
-                                                SELECT * 
-                                                FROM eb_solutions
-                                                WHERE isolution_id = '{0}'", name);
-                                        EbDataTable dt3 = InfraConnectionFactory.DataDB.DoQuery(str4);
+                                            //string str4 = string.Format(@"
+                                            //        SELECT * 
+                                            //        FROM eb_solutions
+                                            //        WHERE isolution_id = '{0}'", name);
+                                            //EbDataTable dt3 = InfraConnectionFactory.DataDB.DoQuery(str4);
 
-                                        string str5 = string.Format(@"
-                                                INSERT INTO 
-                                                    eb_dbchangeslog (solution_id, dbname, vendor, last_modified, change_id)
-                                                VALUES ('{0}','{1}','{2}','{3}','{4}')", name, _ebconfactoryDatadb.DBName, _ebconfactoryDatadb.Vendor, dt3.Rows[0]["date_created"].ToString(), dt2.Rows[0]["id"].ToString());
-                                        DbCommand cmd3 = InfraConnectionFactory.DataDB.GetNewCommand(con, str5);
-                                        cmd3.ExecuteNonQuery();
+                                        }
                                     }
                                 }
                             }
@@ -484,12 +481,10 @@ namespace ExpressBase.ServiceStack.Services
                 }
             }
         }
-
-
-        DateTime UpdateDB(string id, string vendor, string filename, string filepath, IDatabase _ebconfactoryDatadb)
+        
+        void UpdateDB(string id, string vendor, string filename, string filepath, bool newitem, IDatabase _ebconfactoryDatadb)
         {
             string result = string.Empty;
-            DateTime modified_date = DateTime.Now;
             string Urlstart = string.Format("ExpressBase.Common.sqlscripts.{0}.", vendor.ToLower());
             string path = Urlstart + filepath;
             var assembly = typeof(sqlscripts).Assembly;
@@ -499,49 +494,46 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     using (StreamReader reader = new StreamReader(stream))
                         result = reader.ReadToEnd();
-                    string fun = GetFuncDef(result, filename);
+                    string fun = GetFuncDef(result, filename)+";";
                     using (DbConnection con = _ebconfactoryDatadb.GetNewConnection())
                     {
                         con.Open();
-                        DbCommand cmd = _ebconfactoryDatadb.GetNewCommand(con, fun);
-                        cmd.ExecuteNonQuery();
-
+                        if(!newitem)
+                        {
+                            DbCommand cmd = _ebconfactoryDatadb.GetNewCommand(con, fun);
+                            cmd.ExecuteNonQuery();
+                        }
+                        
                         DbCommand cmd1 = _ebconfactoryDatadb.GetNewCommand(con, result);
                         int x = cmd1.ExecuteNonQuery();
 
                     }
-                    using (DbConnection con = InfraConnectionFactory.DataDB.GetNewConnection())
-                    {
-                        con.Open();
-                        string str = string.Format(@"
-                                                    UPDATE eb_dbstructure 
-                                                    SET modified_date = '{0}'
-                                                    WHERE id = '{1}'", modified_date, id);
-                        DbCommand cmd2 = InfraConnectionFactory.DataDB.GetNewCommand(con, str);
-                        cmd2.ExecuteNonQuery();
-
-                        string str1 = string.Format(@"
-                                                    UPDATE eb_dbchangeslog 
-                                                    SET last_modified = '{0}'
-                                                    WHERE change_id = '{1}'", modified_date, id);
-                        DbCommand cmd3 = InfraConnectionFactory.DataDB.GetNewCommand(con, str1);
-                        cmd3.ExecuteNonQuery();
-                    }
+                    
                 }
             }
-            return modified_date;
         }
-
-
+        
         public UpdateDBFunctionByDBResponse Post(UpdateDBFunctionByDBRequest request)
         {
+            DateTime modified_date = DateTime.Now;
             UpdateDBFunctionByDBResponse resp = new UpdateDBFunctionByDBResponse();
             EbConnectionsConfig _solutionConnections = EbConnectionsConfigProvider.GetDataCenterConnections();
             _solutionConnections.DataDbConfig.DatabaseName = request.DBName;
             IDatabase _ebconfactoryDatadb = new EbConnectionFactory(_solutionConnections, request.DBName).DataDB;
             for (int i = 0; i < request.Changes.Count; i++)
             {
-                resp.ModifiedDate = UpdateDB(request.Changes[i].Id, request.Changes[i].Vendor, request.Changes[i].FunctionHeader, request.Changes[i].FilePath, _ebconfactoryDatadb);
+                UpdateDB(request.Changes[i].Id, request.Changes[i].Vendor, request.Changes[i].FunctionHeader, request.Changes[i].FilePath, request.Changes[i].NewItem, _ebconfactoryDatadb);
+            }
+            using (DbConnection con = InfraConnectionFactory.DataDB.GetNewConnection())
+            {
+                con.Open();
+                
+                string str1 = string.Format(@"
+                                              UPDATE eb_dbchangeslog 
+                                              SET modified_at = NOW()
+                                              WHERE solution_id = '{0}'", request.Solution);
+                DbCommand cmd2 = InfraConnectionFactory.DataDB.GetNewCommand(con, str1);
+                cmd2.ExecuteNonQuery();
             }
             return resp;
         }

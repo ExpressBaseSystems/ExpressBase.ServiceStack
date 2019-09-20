@@ -350,7 +350,12 @@ namespace ExpressBase.ServiceStack
                                                     _cond += string.Format(" {0} {1} '{2}' OR", col, op, array[i].Trim());
                                             }
                                             else
-                                                _cond += string.Format(" {0} {1} '{2}' OR", col, op, array[i].Trim());
+                                            {
+                                                if (type == "date")
+                                                    _cond += string.Format(" {0}::date {1} '{2}' OR", col, op, array[i].Trim());
+                                                else
+                                                    _cond += string.Format(" {0} {1} '{2}' OR", col, op, array[i].Trim());
+                                            }
                                         }
                                     }
                                 }
@@ -956,11 +961,10 @@ namespace ExpressBase.ServiceStack
                             _formattedData = "<span class='columntooltip' data-toggle='popover' data-contents='" + info.ToBase64() + "'>" + _formattedData + "</span>";
                         }
 
-                        if (col.HideLinkifNoData)
-                        {
-                            if (_formattedData.ToString() == string.Empty)
-                                AllowLinkifNoData = false;
-                        }
+                        if (_formattedData.ToString() == string.Empty)
+                            AllowLinkifNoData = false;
+                        if(col.ShowLinkifNoData)
+                            AllowLinkifNoData = true;
 
                         if (!string.IsNullOrEmpty(col.LinkRefId) && (_isexcel == false))
                         {
