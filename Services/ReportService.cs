@@ -92,7 +92,7 @@ namespace ExpressBase.ServiceStack
                 Report.Writer = PdfWriter.GetInstance(Report.Doc, Report.Ms1);
                 Report.Writer.Open();
                 Report.Doc.Open();
-                Report.Doc.AddTitle(Report.Name);
+                Report.Doc.AddTitle(Report.DisplayName);
                 Report.Writer.PageEvent = new HeaderFooter(Report);
                 Report.Writer.CloseStream = true;//important
                 Report.Canvas = Report.Writer.DirectContent;
