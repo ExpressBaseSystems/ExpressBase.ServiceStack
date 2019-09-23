@@ -6,6 +6,7 @@ using ExpressBase.Common.ServiceClients;
 using ExpressBase.Common.ServiceStack.Auth;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ExpressBase.ServiceStack.Auth0;
+using ExpressBase.ServiceStack.MQServices;
 using Funq;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -258,6 +259,7 @@ namespace ExpressBase.ServiceStack
             mqServer.RegisterHandler<ReportInternalRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<AddSchedulesToSolutionRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<ExportToExcelServiceRequest>(base.ExecuteMessage);
+            mqServer.RegisterHandler<UpdateSidMapMqRequest>(base.ExecuteMessage);
 
             mqServer.Start();
 

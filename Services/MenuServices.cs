@@ -32,13 +32,18 @@ namespace ExpressBase.ServiceStack.Services
             if (request.SysRole.Contains("SolutionOwner") || request.SysRole.Contains("SolutionAdmin"))
             {
                 if (EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.MYSQL)
-                    ds = this.EbConnectionFactory.ObjectsDB.DoQueries((this.EbConnectionFactory.DataDB as MySqlDB).EB_SIDEBARUSER_REQUEST_SOL_OWNER, parameters);
+                {
+                    ds = this.EbConnectionFactory.ObjectsDB.DoQueries((this.EbConnectionFactory.ObjectsDB as MySqlDB).EB_SIDEBARUSER_REQUEST_SOL_OWNER, parameters);
+                }
                 else
+                {
                     ds = this.EbConnectionFactory.ObjectsDB.DoQueries(this.EbConnectionFactory.ObjectsDB.EB_SIDEBARUSER_REQUEST.Replace(this.EbConnectionFactory.ObjectsDB.EB_SIDEBARCHECK, string.Empty), parameters);
-
+                }
             }
             else
+            {
                 ds = this.EbConnectionFactory.ObjectsDB.DoQueries(this.EbConnectionFactory.ObjectsDB.EB_SIDEBARUSER_REQUEST.Replace(":Ids", string.IsNullOrEmpty(request.Ids) ? "0" : request.Ids), parameters);
+            }
 
             foreach (EbDataRow row in ds.Tables[2].Rows)
             {
