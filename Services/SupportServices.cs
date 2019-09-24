@@ -105,7 +105,9 @@ namespace ExpressBase.ServiceStack.Services
 																	eb_del,
 																	img_bytea,
 																	content_type,
-																	file_name
+																	file_name,
+																	solution_id
+
 																	)
 																	VALUES(
 																	:tktid,
@@ -113,7 +115,8 @@ namespace ExpressBase.ServiceStack.Services
 																	:fals,
 																	:filebt,
 																	:cnttyp,
-																	:flname
+																	:flname,
+																	:slid
 																	)RETURNING id;";
 							DbParameter[] parameters3 = {
 								this.InfraConnectionFactory.DataDB.GetNewParameter("tktid", EbDbTypes.Int32, sb.Id),
@@ -122,6 +125,7 @@ namespace ExpressBase.ServiceStack.Services
 								this.InfraConnectionFactory.DataDB.GetNewParameter("filebt", EbDbTypes.Bytea,sbreq.Fileuploadlst[i].Filecollection),
 								this.InfraConnectionFactory.DataDB.GetNewParameter("cnttyp", EbDbTypes.String, sbreq.Fileuploadlst[i].ContentType),
 								this.InfraConnectionFactory.DataDB.GetNewParameter("flname", EbDbTypes.String, sbreq.Fileuploadlst[i].FileName),
+								this.InfraConnectionFactory.DataDB.GetNewParameter("slid", EbDbTypes.String, sbreq.solutionid),
 								};
 
 							EbDataTable dt4 = this.InfraConnectionFactory.DataDB.DoQuery(sql3, parameters3);
@@ -177,8 +181,6 @@ namespace ExpressBase.ServiceStack.Services
 
 				if (fsreq.WhichConsole.Equals("tc"))
 				{
-
-
 					string sql2 = @"SELECT 
 								title, 
 								description,
@@ -266,14 +268,63 @@ namespace ExpressBase.ServiceStack.Services
 			return fr;
 		}
 
-
-		// fectch complete details of ticket and show it in edit /view ticket
-		public SupportDetailsResponse Post(SupportDetailsRequest sdreq)
+		//to fetch all details of tickets of corresponding user of that corresponding solution to show as tables of admin solution
+		public AdminSupportResponse Post(AdminSupportRequest asreq)
 		{
-			SupportDetailsResponse sd = new SupportDetailsResponse();
+			AdminSupportResponse asr = new AdminSupportResponse();
 			try
 			{
-				string sql = string.Format(@"SELECT 
+				string sql2 = @"SELECT 
+								title, 
+								description,
+								priority, 
+								solution_id, 
+								modified_at, 
+								status, 
+								remarks, 
+								assigned_to, 
+								type_bg_fr,
+								bg_fr_id
+								FROM support_ticket
+								WHERE 
+								eb_del='F' ORDER BY modified_at 
+								;";
+				EbDataTable dt2 = this.InfraConnectionFactory.DataDB.DoQuery(sql2);
+				for (int i = 0; i < dt2.Rows.Count; i++)
+				{
+					SupportTktCls st = new SupportTktCls();
+					st.title = dt2.Rows[i][0].ToString();
+					st.description = dt2.Rows[i][1].ToString();
+					st.priority = dt2.Rows[i][2].ToString();
+					st.solutionid = dt2.Rows[i][3].ToString();
+					st.lstmodified = dt2.Rows[i][4].ToString();
+					st.status = dt2.Rows[i][5].ToString();
+					st.remarks = dt2.Rows[i][6].ToString();
+					st.assignedto = dt2.Rows[i][7].ToString();
+					st.type_b_f = dt2.Rows[i][8].ToString();
+					st.ticketid = dt2.Rows[i][9].ToString();
+					asr.supporttkt.Add(st);
+				}
+
+			}
+			catch (Exception e)
+			{
+				Console.WriteLine("Excetion " + e.Message + e.StackTrace);
+			}
+			return asr;
+		}
+
+			// fectch complete details of ticket and show it in edit /view ticket
+			public SupportDetailsResponse Post(SupportDetailsRequest sdreq)
+		{
+			SupportDetailsResponse sd = new SupportDetailsResponse();
+			string sql = null;
+			string sql1 = null;
+			try
+			{
+				if (sdreq.SolnId.Equals("admin"))
+				{
+					sql = string.Format(@"SELECT 
 								title, 
 								description,
 								priority, 
@@ -288,47 +339,95 @@ namespace ExpressBase.ServiceStack.Services
 								WHERE 
 								bg_fr_id ='{0}' AND eb_del='F';", sdreq.ticketno);
 
-				EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(sql);
-				SupportTktCls st = new SupportTktCls();
-				for (int i = 0; i < dt.Rows.Count; i++)
-				{
-
-					st.title = dt.Rows[i][0].ToString();
-					st.description = dt.Rows[i][1].ToString();
-					st.priority = dt.Rows[i][2].ToString();
-					st.solutionid = dt.Rows[i][3].ToString();
-					st.lstmodified = dt.Rows[i][4].ToString();
-					st.status = dt.Rows[i][5].ToString();
-					st.remarks = dt.Rows[i][6].ToString();
-					st.assignedto = dt.Rows[i][7].ToString();
-					st.type_b_f = dt.Rows[i][8].ToString();
-					st.createdat = dt.Rows[i][9].ToString();
-					st.ticketid = sdreq.ticketno;
-
+					sql1 = string.Format(@"SELECT id,img_bytea,content_type,file_name from support_ticket_files where bg_fr_id ='{0}' AND eb_del='F' ;", sdreq.ticketno);
 				}
-
-				string sql1 = string.Format(@"SELECT id,img_bytea,content_type,file_name from support_ticket_files where bg_fr_id ='{0}' AND eb_del='F';", sdreq.ticketno);
-				EbDataTable dt2 = this.InfraConnectionFactory.DataDB.DoQuery(sql1);
-
-				for (int i = 0; i < dt2.Rows.Count; i++)
+				else
 				{
-					FileUploadCls flupcls = new FileUploadCls();
+					if (sdreq.Usertype.Equals("tc"))
+					{
+						sql = string.Format(@"SELECT 
+								title, 
+								description,
+								priority, 
+								solution_id, 
+								modified_at, 
+								status, 
+								remarks, 
+								assigned_to, 
+								type_bg_fr,
+								eb_created_at
+								FROM support_ticket
+								WHERE 
+								bg_fr_id ='{0}' AND eb_del='F' AND solution_id
+								IN
+								(SELECT isolution_id  FROM eb_solutions WHERE tenant_id ={1} AND eb_del = 'F');", sdreq.ticketno, sdreq.UserId);
 
-					flupcls.Filecollection = ((Byte[])(dt2.Rows[i][1]));
-					flupcls.FileId = ((int)(dt2.Rows[i][0]));
-					flupcls.FileName = dt2.Rows[i][3].ToString();
-					flupcls.ContentType = dt2.Rows[i][2].ToString();
+						sql1 = string.Format(@"SELECT id,img_bytea,content_type,file_name from support_ticket_files where bg_fr_id ='{0}' AND eb_del='F' AND solution_id
+								IN
+								(SELECT isolution_id  FROM eb_solutions WHERE tenant_id ={1} AND eb_del = 'F');", sdreq.ticketno, sdreq.UserId);
+					}
+					else
+					{
+						sql = string.Format(@"SELECT 
+								title, 
+								description,
+								priority, 
+								solution_id, 
+								modified_at, 
+								status, 
+								remarks, 
+								assigned_to, 
+								type_bg_fr,
+								eb_created_at
+								FROM support_ticket
+								WHERE 
+								bg_fr_id ='{0}' AND eb_del='F' AND solution_id='{1}';", sdreq.ticketno, sdreq.SolnId);
 
-					//check for file type
-
-					//convert file to base 64 and to url
-					string fileBase64Data = Convert.ToBase64String(flupcls.Filecollection);
-					flupcls.FileDataURL = string.Format("data:image/png;base64,{0}", fileBase64Data);
-
-					st.Fileuploadlst.Add(flupcls);
+						sql1 = string.Format(@"SELECT id,img_bytea,content_type,file_name from support_ticket_files where bg_fr_id ='{0}' AND eb_del='F' AND solution_id='{1}';", sdreq.ticketno, sdreq.SolnId);
+					}
 				}
-				sd.supporttkt.Add(st);
+					
 
+					EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(sql);
+					SupportTktCls st = new SupportTktCls();
+					for (int i = 0; i < dt.Rows.Count; i++)
+					{
+
+						st.title = dt.Rows[i][0].ToString();
+						st.description = dt.Rows[i][1].ToString();
+						st.priority = dt.Rows[i][2].ToString();
+						st.solutionid = dt.Rows[i][3].ToString();
+						st.lstmodified = dt.Rows[i][4].ToString();
+						st.status = dt.Rows[i][5].ToString();
+						st.remarks = dt.Rows[i][6].ToString();
+						st.assignedto = dt.Rows[i][7].ToString();
+						st.type_b_f = dt.Rows[i][8].ToString();
+						st.createdat = dt.Rows[i][9].ToString();
+						st.ticketid = sdreq.ticketno;
+
+					}
+
+					EbDataTable dt2 = this.InfraConnectionFactory.DataDB.DoQuery(sql1);
+
+					for (int i = 0; i < dt2.Rows.Count; i++)
+					{
+						FileUploadCls flupcls = new FileUploadCls();
+
+						flupcls.Filecollection = ((Byte[])(dt2.Rows[i][1]));
+						flupcls.FileId = ((int)(dt2.Rows[i][0]));
+						flupcls.FileName = dt2.Rows[i][3].ToString();
+						flupcls.ContentType = dt2.Rows[i][2].ToString();
+
+						//check for file type
+
+						//convert file to base 64 and to url
+						string fileBase64Data = Convert.ToBase64String(flupcls.Filecollection);
+						flupcls.FileDataURL = string.Format("data:image/png;base64,{0}", fileBase64Data);
+
+						st.Fileuploadlst.Add(flupcls);
+					}
+					sd.supporttkt.Add(st);
+				
 			}
 			catch (Exception e)
 			{
@@ -351,7 +450,8 @@ namespace ExpressBase.ServiceStack.Services
 										title = :titl, 
 										description = :descr,
 										priority = :prior,
-										solution_id = :soluid
+										solution_id = :soluid,
+										type_bg_fr=:typ
 										WHERE 
 											bg_fr_id=:bg_id
                                             and eb_del=:fals"
@@ -362,7 +462,8 @@ namespace ExpressBase.ServiceStack.Services
 					this.InfraConnectionFactory.DataDB.GetNewParameter("descr", EbDbTypes.String, utreq.description),
 					this.InfraConnectionFactory.DataDB.GetNewParameter("prior", EbDbTypes.String, utreq.priority),
 					this.InfraConnectionFactory.DataDB.GetNewParameter("fals", EbDbTypes.String, "F"),
-					this.InfraConnectionFactory.DataDB.GetNewParameter("soluid", EbDbTypes.String, utreq.SolnId)
+					this.InfraConnectionFactory.DataDB.GetNewParameter("soluid", EbDbTypes.String, utreq.solution_id),
+					this.InfraConnectionFactory.DataDB.GetNewParameter("typ", EbDbTypes.String, utreq.type_f_b)
 
 					};
 				int dt = this.InfraConnectionFactory.DataDB.DoNonQuery(k, parameters);
