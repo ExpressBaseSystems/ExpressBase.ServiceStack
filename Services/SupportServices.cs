@@ -73,7 +73,7 @@ namespace ExpressBase.ServiceStack.Services
 
 					//for making id 6 digit with intial position 0 in case of single digit
 
-					string l = string.Format("select lpad('{0}',6,'0');", cx);
+					string l = string.Format("select lpad('{0}',10,'0');", cx);
 					EbDataTable dt3 = this.InfraConnectionFactory.DataDB.DoQuery(l);
 					string sbgf = null;
 					if (sbreq.type_b_f.Equals("Bug"))
@@ -85,9 +85,11 @@ namespace ExpressBase.ServiceStack.Services
 					{
 						sbgf = "IS" + dt3.Rows[0][0];
 					}
-					string k = String.Format("UPDATE support_ticket SET bg_fr_id = :bfi WHERE id={0} and eb_del='F';", sb.Id);
+					string k = String.Format("UPDATE support_ticket SET bg_fr_id = :bfi WHERE id=:tktid and eb_del=:fls;", sb.Id);
 					DbParameter[] param = {
-					this.InfraConnectionFactory.DataDB.GetNewParameter("bfi", EbDbTypes.String,sbgf)
+						this.InfraConnectionFactory.DataDB.GetNewParameter("tktid", EbDbTypes.Int32, sb.Id),
+						this.InfraConnectionFactory.DataDB.GetNewParameter("fls", EbDbTypes.String, "F"),
+						this.InfraConnectionFactory.DataDB.GetNewParameter("bfi", EbDbTypes.String,sbgf)
 					};
 					int dt2 = this.InfraConnectionFactory.DataDB.DoNonQuery(k, param);
 
@@ -110,14 +112,14 @@ namespace ExpressBase.ServiceStack.Services
 
 																	)
 																	VALUES(
-																	:tktid,
-																	:bgid,
-																	:fals,
-																	:filebt,
-																	:cnttyp,
-																	:flname,
-																	:slid
-																	)RETURNING id;";
+																		:tktid,
+																		:bgid,
+																		:fals,
+																		:filebt,
+																		:cnttyp,
+																		:flname,
+																		:slid
+																		)RETURNING id;";
 							DbParameter[] parameters3 = {
 								this.InfraConnectionFactory.DataDB.GetNewParameter("tktid", EbDbTypes.Int32, sb.Id),
 								this.InfraConnectionFactory.DataDB.GetNewParameter("fals", EbDbTypes.String, "F"),
@@ -152,9 +154,19 @@ namespace ExpressBase.ServiceStack.Services
 
 			try
 			{
-				string sql = string.Format("SELECT isolution_id,solution_name,esolution_id  FROM eb_solutions WHERE tenant_id={0} AND eb_del='F';", tsreq.UserId);
-
-				EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(sql);
+				string sql = @"SELECT 
+								isolution_id,
+								solution_name,
+								esolution_id 
+								FROM eb_solutions 
+							WHERE 
+									tenant_id=:tktid
+									AND 
+									eb_del=false;";
+				DbParameter[] parameters3 = {
+				this.InfraConnectionFactory.DataDB.GetNewParameter("tktid", EbDbTypes.Int32,  tsreq.UserId),
+				};
+				EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(sql, parameters3);
 
 
 				for (int i = 0; i < dt.Rows.Count; i++)
@@ -182,25 +194,34 @@ namespace ExpressBase.ServiceStack.Services
 				if (fsreq.WhichConsole.Equals("tc"))
 				{
 					string sql2 = @"SELECT 
-								title, 
-								description,
-								priority, 
-								solution_id, 
-								modified_at, 
-								status, 
-								remarks, 
-								assigned_to, 
-								type_bg_fr,
-								bg_fr_id
-								FROM support_ticket
+									title, 
+									description,
+									priority, 
+									solution_id, 
+									modified_at, 
+									status, 
+									remarks, 
+									assigned_to, 
+									type_bg_fr,
+									bg_fr_id
+									FROM support_ticket
 								WHERE 
-								eb_del='F' 
-								AND 
-								solution_id 
+									eb_del=:fls 
+									AND 
+									solution_id 
 								IN
-								(SELECT isolution_id  FROM eb_solutions WHERE tenant_id=:tndid AND eb_del='F');";
+								(SELECT 
+									isolution_id 
+								FROM
+									eb_solutions 
+								WHERE 
+									tenant_id=:tndid 
+								AND
+									eb_del=false
+								);";
 					DbParameter[] parameters2 = {
-					this.InfraConnectionFactory.DataDB.GetNewParameter("tndid", EbDbTypes.Int32, fsreq.UserId)
+					this.InfraConnectionFactory.DataDB.GetNewParameter("tndid", EbDbTypes.Int32, fsreq.UserId),
+					this.InfraConnectionFactory.DataDB.GetNewParameter("fls", EbDbTypes.String, "F")
 					};
 
 					EbDataTable dt2 = this.InfraConnectionFactory.DataDB.DoQuery(sql2, parameters2);
@@ -222,27 +243,32 @@ namespace ExpressBase.ServiceStack.Services
 				}
 				else
 				{
-					string sql = @"SELECT 
-								title, 
-								description,
-								priority, 
-								solution_id, 
-								modified_at, 
-								status, 
-								remarks, 
-								assigned_to, 
-								type_bg_fr,
-								bg_fr_id
-								FROM support_ticket
+					string sql3 = @"SELECT 
+									title, 
+									description,
+									priority, 
+									solution_id, 
+									modified_at, 
+									status, 
+									remarks, 
+									assigned_to, 
+									type_bg_fr,
+									bg_fr_id
+									FROM support_ticket
 								WHERE 
-								eb_created_by =:usr AND solution_id =:sln AND eb_del=:fls;";
+									eb_created_by =:usr 
+								AND 
+									solution_id =:sln 
+								AND 
+									eb_del=:fls
+								;";
 					DbParameter[] parameters3 = {
 					this.InfraConnectionFactory.DataDB.GetNewParameter("usr", EbDbTypes.Int32, fsreq.UserId),
 					this.InfraConnectionFactory.DataDB.GetNewParameter("sln", EbDbTypes.String, fsreq.SolnId),
 					this.InfraConnectionFactory.DataDB.GetNewParameter("fls", EbDbTypes.String, "F")
 					};
 
-					EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(sql, parameters3);
+					EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(sql3, parameters3);
 					for (int i = 0; i < dt.Rows.Count; i++)
 					{
 						SupportTktCls st = new SupportTktCls();
@@ -275,21 +301,25 @@ namespace ExpressBase.ServiceStack.Services
 			try
 			{
 				string sql2 = @"SELECT 
-								title, 
-								description,
-								priority, 
-								solution_id, 
-								modified_at, 
-								status, 
-								remarks, 
-								assigned_to, 
-								type_bg_fr,
-								bg_fr_id
-								FROM support_ticket
+									title, 
+									description,
+									priority, 
+									solution_id, 
+									modified_at, 
+									status, 
+									remarks, 
+									assigned_to, 
+									type_bg_fr,
+									bg_fr_id
+								FROM 
+									support_ticket
 								WHERE 
-								eb_del='F' ORDER BY modified_at 
+									eb_del='F'
+								ORDER BY 
+									modified_at 
 								;";
 				EbDataTable dt2 = this.InfraConnectionFactory.DataDB.DoQuery(sql2);
+
 				for (int i = 0; i < dt2.Rows.Count; i++)
 				{
 					SupportTktCls st = new SupportTktCls();
@@ -314,17 +344,20 @@ namespace ExpressBase.ServiceStack.Services
 			return asr;
 		}
 
-			// fectch complete details of ticket and show it in edit /view ticket
-			public SupportDetailsResponse Post(SupportDetailsRequest sdreq)
+		// fectch complete details of ticket and show it in edit /view ticket
+		public SupportDetailsResponse Post(SupportDetailsRequest sdreq)
 		{
 			SupportDetailsResponse sd = new SupportDetailsResponse();
 			string sql = null;
 			string sql1 = null;
+			
+			var parameters = new List<DbParameter>();
+			var parameters1 = new List<DbParameter>();
 			try
 			{
 				if (sdreq.SolnId.Equals("admin"))
 				{
-					sql = string.Format(@"SELECT 
+					sql = @"SELECT 
 								title, 
 								description,
 								priority, 
@@ -336,98 +369,196 @@ namespace ExpressBase.ServiceStack.Services
 								type_bg_fr,
 								eb_created_at
 								FROM support_ticket
-								WHERE 
-								bg_fr_id ='{0}' AND eb_del='F';", sdreq.ticketno);
+							WHERE 
+								bg_fr_id =:ticketno 
+							AND 
+							eb_del=:fals
+							;";
+					
+						parameters.Add(this.InfraConnectionFactory.DataDB.GetNewParameter("ticketno", EbDbTypes.String, sdreq.ticketno));
+					parameters.Add(this.InfraConnectionFactory.DataDB.GetNewParameter("fals", EbDbTypes.String, "F"));
+					
 
-					sql1 = string.Format(@"SELECT id,img_bytea,content_type,file_name from support_ticket_files where bg_fr_id ='{0}' AND eb_del='F' ;", sdreq.ticketno);
+					sql1 = @"SELECT
+								id,
+								img_bytea,
+								content_type,
+								file_name 
+								from 
+								support_ticket_files
+							where 
+								bg_fr_id =:ticketno 
+							AND
+								eb_del=:fals
+							;";
+
+					parameters1.Add(this.InfraConnectionFactory.DataDB.GetNewParameter("ticketno", EbDbTypes.String, sdreq.ticketno));
+					parameters1.Add(this.InfraConnectionFactory.DataDB.GetNewParameter("fals", EbDbTypes.String, "F"));
+					
 				}
 				else
 				{
 					if (sdreq.Usertype.Equals("tc"))
 					{
-						sql = string.Format(@"SELECT 
-								title, 
-								description,
-								priority, 
-								solution_id, 
-								modified_at, 
-								status, 
-								remarks, 
-								assigned_to, 
-								type_bg_fr,
-								eb_created_at
-								FROM support_ticket
+						sql = @"SELECT 
+									title, 
+									description,
+									priority, 
+									solution_id, 
+									modified_at, 
+									status, 
+									remarks, 
+									assigned_to, 
+									type_bg_fr,
+									eb_created_at
+									FROM support_ticket
 								WHERE 
-								bg_fr_id ='{0}' AND eb_del='F' AND solution_id
+									bg_fr_id =:ticketno
+								AND 
+									eb_del=:fals 
+								AND 
+									solution_id
 								IN
-								(SELECT isolution_id  FROM eb_solutions WHERE tenant_id ={1} AND eb_del = 'F');", sdreq.ticketno, sdreq.UserId);
+								(SELECT 
+										isolution_id 
+									FROM
+										eb_solutions
+									WHERE 
+										tenant_id =:UserId
+									AND 
+										eb_del = false);";
 
-						sql1 = string.Format(@"SELECT id,img_bytea,content_type,file_name from support_ticket_files where bg_fr_id ='{0}' AND eb_del='F' AND solution_id
+						
+							parameters.Add(this.InfraConnectionFactory.DataDB.GetNewParameter("ticketno", EbDbTypes.String, sdreq.ticketno));
+							parameters.Add(this.InfraConnectionFactory.DataDB.GetNewParameter("UserId", EbDbTypes.Int32, sdreq.UserId));
+							parameters.Add(this.InfraConnectionFactory.DataDB.GetNewParameter("fals", EbDbTypes.String, "F"));
+						
+						sql1 = @"SELECT
+									id,
+									img_bytea,
+									content_type,
+									file_name 
+									from 
+									support_ticket_files
+								where 
+									bg_fr_id =:ticketno 
+								AND
+									eb_del=:fals 
+								AND 
+									solution_id
 								IN
-								(SELECT isolution_id  FROM eb_solutions WHERE tenant_id ={1} AND eb_del = 'F');", sdreq.ticketno, sdreq.UserId);
+								(SELECT
+									isolution_id  
+								FROM 
+									eb_solutions 
+								WHERE 
+									tenant_id =:UserId 
+								AND 
+									eb_del = false);";
+						
+							parameters1.Add(this.InfraConnectionFactory.DataDB.GetNewParameter("ticketno", EbDbTypes.String, sdreq.ticketno));
+							parameters1.Add(this.InfraConnectionFactory.DataDB.GetNewParameter("UserId", EbDbTypes.Int32, sdreq.UserId));
+							parameters1.Add(this.InfraConnectionFactory.DataDB.GetNewParameter("fals", EbDbTypes.String, "F"));
+						
 					}
 					else
 					{
 						sql = string.Format(@"SELECT 
-								title, 
-								description,
-								priority, 
-								solution_id, 
-								modified_at, 
-								status, 
-								remarks, 
-								assigned_to, 
-								type_bg_fr,
-								eb_created_at
-								FROM support_ticket
-								WHERE 
-								bg_fr_id ='{0}' AND eb_del='F' AND solution_id='{1}';", sdreq.ticketno, sdreq.SolnId);
+												title, 
+												description,
+												priority, 
+												solution_id, 
+												modified_at, 
+												status, 
+												remarks, 
+												assigned_to, 
+												type_bg_fr,
+												eb_created_at
+											FROM
+												support_ticket
+											WHERE 
+												bg_fr_id =:ticketno 
+											AND
+												eb_del=:fals 
+											AND
+												solution_id=:SolnId;");
+						
+							parameters.Add(this.InfraConnectionFactory.DataDB.GetNewParameter("ticketno", EbDbTypes.String, sdreq.ticketno));
+							parameters.Add(this.InfraConnectionFactory.DataDB.GetNewParameter("SolnId", EbDbTypes.String, sdreq.SolnId));
+							parameters.Add(this.InfraConnectionFactory.DataDB.GetNewParameter("fals", EbDbTypes.String, "F"));
+						
 
-						sql1 = string.Format(@"SELECT id,img_bytea,content_type,file_name from support_ticket_files where bg_fr_id ='{0}' AND eb_del='F' AND solution_id='{1}';", sdreq.ticketno, sdreq.SolnId);
+						sql1 = string.Format(@"SELECT 
+													id,
+													img_bytea,
+													content_type,
+													file_name 
+													from 
+													support_ticket_files
+												where
+													bg_fr_id =:ticketno
+												AND
+													eb_del=:fals 
+												AND 
+													solution_id=:SolnId;");
+						
+							parameters1.Add(this.InfraConnectionFactory.DataDB.GetNewParameter("ticketno", EbDbTypes.String, sdreq.ticketno));
+							parameters1.Add(this.InfraConnectionFactory.DataDB.GetNewParameter("SolnId", EbDbTypes.String, sdreq.SolnId));
+							parameters1.Add(this.InfraConnectionFactory.DataDB.GetNewParameter("fals", EbDbTypes.String, "F"));
+						
 					}
 				}
-					
+				DbParameter[] param = parameters.ToArray();
+				DbParameter[] param1 = parameters1.ToArray();
 
-					EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(sql);
-					SupportTktCls st = new SupportTktCls();
-					for (int i = 0; i < dt.Rows.Count; i++)
+				EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(sql, param);
+				SupportTktCls st = new SupportTktCls();
+				for (int i = 0; i < dt.Rows.Count; i++)
+				{
+
+					st.title = dt.Rows[i][0].ToString();
+					st.description = dt.Rows[i][1].ToString();
+					st.priority = dt.Rows[i][2].ToString();
+					st.solutionid = dt.Rows[i][3].ToString();
+					st.lstmodified = dt.Rows[i][4].ToString();
+					st.status = dt.Rows[i][5].ToString();
+					st.remarks = dt.Rows[i][6].ToString();
+					st.assignedto = dt.Rows[i][7].ToString();
+					st.type_b_f = dt.Rows[i][8].ToString();
+					st.createdat = dt.Rows[i][9].ToString();
+					st.ticketid = sdreq.ticketno;
+
+				}
+
+				EbDataTable dt2 = this.InfraConnectionFactory.DataDB.DoQuery(sql1, param1);
+
+				for (int i = 0; i < dt2.Rows.Count; i++)
+				{
+					FileUploadCls flupcls = new FileUploadCls();
+
+					flupcls.Filecollection = ((Byte[])(dt2.Rows[i][1]));
+					flupcls.FileId = ((int)(dt2.Rows[i][0]));
+					flupcls.FileName = dt2.Rows[i][3].ToString();
+					flupcls.ContentType = dt2.Rows[i][2].ToString();
+
+					//check for file type
+
+					//convert file to base 64 and to url
+					string fileBase64Data = Convert.ToBase64String(flupcls.Filecollection);
+					if ((flupcls.ContentType == "image/jpeg") || (flupcls.ContentType == "image/jpg") || (flupcls.ContentType == "image/png"))
 					{
-
-						st.title = dt.Rows[i][0].ToString();
-						st.description = dt.Rows[i][1].ToString();
-						st.priority = dt.Rows[i][2].ToString();
-						st.solutionid = dt.Rows[i][3].ToString();
-						st.lstmodified = dt.Rows[i][4].ToString();
-						st.status = dt.Rows[i][5].ToString();
-						st.remarks = dt.Rows[i][6].ToString();
-						st.assignedto = dt.Rows[i][7].ToString();
-						st.type_b_f = dt.Rows[i][8].ToString();
-						st.createdat = dt.Rows[i][9].ToString();
-						st.ticketid = sdreq.ticketno;
-
-					}
-
-					EbDataTable dt2 = this.InfraConnectionFactory.DataDB.DoQuery(sql1);
-
-					for (int i = 0; i < dt2.Rows.Count; i++)
-					{
-						FileUploadCls flupcls = new FileUploadCls();
-
-						flupcls.Filecollection = ((Byte[])(dt2.Rows[i][1]));
-						flupcls.FileId = ((int)(dt2.Rows[i][0]));
-						flupcls.FileName = dt2.Rows[i][3].ToString();
-						flupcls.ContentType = dt2.Rows[i][2].ToString();
-
-						//check for file type
-
-						//convert file to base 64 and to url
-						string fileBase64Data = Convert.ToBase64String(flupcls.Filecollection);
 						flupcls.FileDataURL = string.Format("data:image/png;base64,{0}", fileBase64Data);
-
-						st.Fileuploadlst.Add(flupcls);
 					}
-					sd.supporttkt.Add(st);
-				
+					else if ((flupcls.ContentType == "application/pdf"))
+					{
+						flupcls.FileDataURL = string.Format("data:application/pdf;base64,{0}", fileBase64Data);
+					}
+
+
+					st.Fileuploadlst.Add(flupcls);
+				}
+				sd.supporttkt.Add(st);
+
 			}
 			catch (Exception e)
 			{
@@ -469,9 +600,9 @@ namespace ExpressBase.ServiceStack.Services
 				int dt = this.InfraConnectionFactory.DataDB.DoNonQuery(k, parameters);
 
 				//remove previouse upload files ie set false
-				if(utreq.Filedel.Length>0)
+				if (utreq.Filedel.Length > 0)
 				{
-					for(var m=0;m< utreq.Filedel.Length; m++)
+					for (var m = 0; m < utreq.Filedel.Length; m++)
 					{
 						string k1 = String.Format(@"UPDATE 
 										support_ticket_files 
@@ -533,15 +664,7 @@ namespace ExpressBase.ServiceStack.Services
 
 					}
 				}
-
-
-
-
-
 				utr.status = true;
-
-
-
 			}
 			catch (Exception e)
 			{
