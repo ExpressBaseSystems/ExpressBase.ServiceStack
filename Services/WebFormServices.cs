@@ -226,7 +226,7 @@ namespace ExpressBase.ServiceStack.Services
             else
             {
                 dv = Redis.Get<EbTableVisualization>(AutogenId);
-                if (dv == null )
+                if (dv == null)
                 {
                     var result = this.Gateway.Send<EbObjectParticularVersionResponse>(new EbObjectParticularVersionRequest { RefId = AutogenId });
                     dv = EbSerializers.Json_Deserialize(result.Data[0].Json);
@@ -329,7 +329,8 @@ namespace ExpressBase.ServiceStack.Services
             dvobj.NotVisibleColumns = columns.FindAll(x => !x.bVisible);
             UpdateOrderByObject(ref dvobj);
             UpdateRowGroupObject(ref dvobj);
-            //notchecked for infowindow, formlink, treeview, customcolumn
+            UpdateInfowindowObject(ref dvobj);
+            //notchecked for formlink, treeview, customcolumn
             dvobj.BeforeSave(this, Redis);
             SaveObjectRequest(request, dvobj);
         }
@@ -361,6 +362,7 @@ namespace ExpressBase.ServiceStack.Services
 
         private DVColumnCollection GetDVColumnCollection(List<TableColumnMeta> listNamesAndTypes, CreateWebFormTableRequest request)
         {
+            IVendorDbTypes vDbTypes = this.EbConnectionFactory.ObjectsDB.VendorDbTypes;
             var Columns = new DVColumnCollection();
             int index = 0;
             DVBaseColumn col = new DVNumericColumn { Data = index, Name = "id", sTitle = "id", Type = EbDbTypes.Decimal, bVisible = false, sWidth = "100px", ClassName = "tdheight" };
@@ -375,6 +377,8 @@ namespace ExpressBase.ServiceStack.Services
                     Align _align = Align.Auto;
                     int charlength = 0;
                     index++;
+                    EbDbTypes _RenderType = column.Type.EbDbType;
+
                     if (column.Control is EbPowerSelect)
                     {
                         if (!(column.Control as EbPowerSelect).MultiSelect)
@@ -387,17 +391,26 @@ namespace ExpressBase.ServiceStack.Services
                             };
                             _autoresolve = true;
                             _align = Align.Center;
+                            _RenderType = EbDbTypes.String;
                         }
                     }
-                    if (column.Control is EbTextBox)
+                    else if (column.Control is EbTextBox)
                     {
                         if ((column.Control as EbTextBox).TextMode == TextMode.MultiLine)
                         {
                             charlength = 20;
                         }
                     }
-
-                    if (column.Type.EbDbType == EbDbTypes.String)
+                    else if (column.Name == "eb_void")
+                    {
+                        column.Type = vDbTypes.String;//T or F
+                        _RenderType = EbDbTypes.Boolean;
+                    }
+                    else if (column.Name == "eb_created_by" || column.Name == "eb_lastmodified_by" || column.Name == "eb_loc_id")
+                    {
+                        _RenderType = EbDbTypes.String;
+                    }
+                    if (_RenderType == EbDbTypes.String)
                         _col = new DVStringColumn
                         {
                             Data = index,
@@ -410,10 +423,11 @@ namespace ExpressBase.ServiceStack.Services
                             ColumnQueryMapping = _control,
                             AutoResolve = _autoresolve,
                             Align = _align,
-                            AllowedCharacterLength = charlength
+                            AllowedCharacterLength = charlength,
+                            RenderType = _RenderType
                         };
 
-                    else if (column.Type.EbDbType == EbDbTypes.Int16 || column.Type.EbDbType == EbDbTypes.Int32 || column.Type.EbDbType == EbDbTypes.Int64 || column.Type.EbDbType == EbDbTypes.Double || column.Type.EbDbType == EbDbTypes.Decimal || column.Type.EbDbType == EbDbTypes.VarNumeric)
+                    else if (_RenderType == EbDbTypes.Int16 || _RenderType == EbDbTypes.Int32 || _RenderType == EbDbTypes.Int64 || _RenderType == EbDbTypes.Double || _RenderType == EbDbTypes.Decimal || _RenderType == EbDbTypes.VarNumeric)
                         _col = new DVNumericColumn
                         {
                             Data = index,
@@ -426,9 +440,10 @@ namespace ExpressBase.ServiceStack.Services
                             ColumnQueryMapping = _control,
                             AutoResolve = _autoresolve,
                             Align = _align,
-                            AllowedCharacterLength = charlength
+                            AllowedCharacterLength = charlength,
+                            RenderType = _RenderType
                         };
-                    else if (column.Type.EbDbType == EbDbTypes.Boolean || column.Type.EbDbType == EbDbTypes.BooleanOriginal)
+                    else if (_RenderType == EbDbTypes.Boolean || _RenderType == EbDbTypes.BooleanOriginal)
                         _col = new DVBooleanColumn
                         {
                             Data = index,
@@ -439,9 +454,10 @@ namespace ExpressBase.ServiceStack.Services
                             sWidth = "100px",
                             ClassName = "tdheight",
                             Align = _align,
-                            AllowedCharacterLength = charlength
+                            AllowedCharacterLength = charlength,
+                            RenderType = _RenderType
                         };
-                    else if (column.Type.EbDbType == EbDbTypes.DateTime || column.Type.EbDbType == EbDbTypes.Date || column.Type.EbDbType == EbDbTypes.Time)
+                    else if (_RenderType == EbDbTypes.DateTime || _RenderType == EbDbTypes.Date || _RenderType == EbDbTypes.Time)
                         _col = new DVDateTimeColumn
                         {
                             Data = index,
@@ -452,9 +468,9 @@ namespace ExpressBase.ServiceStack.Services
                             sWidth = "100px",
                             ClassName = "tdheight",
                             Align = _align,
-                            AllowedCharacterLength = charlength
+                            AllowedCharacterLength = charlength,
+                            RenderType = _RenderType
                         };
-
                     Columns.Add(_col);
                 }
             }
@@ -481,12 +497,13 @@ namespace ExpressBase.ServiceStack.Services
 
         private DVColumnCollection UpdateDVColumnCollection(List<TableColumnMeta> listNamesAndTypes, CreateWebFormTableRequest request, EbTableVisualization dv)
         {
+            IVendorDbTypes vDbTypes = this.EbConnectionFactory.ObjectsDB.VendorDbTypes;
             var Columns = new DVColumnCollection();
             int index = 0;
             foreach (TableColumnMeta column in listNamesAndTypes)
             {
                 DVBaseColumn _col = dv.Columns.Find(x => x.Name == column.Name);
-                if (_col == null)
+                if (_col == null || _col.Name == "eb_void" || column.Name == "eb_created_by" || column.Name == "eb_lastmodified_by" || column.Name == "eb_loc_id" || column.Control is EbPowerSelect)
                 {
                     if (column.Name != "eb_del" && column.Name != "eb_ver_id" && !(column.Name.Contains("_ebbkup")) && !(column.Control is EbFileUploader))
                     {
@@ -495,6 +512,7 @@ namespace ExpressBase.ServiceStack.Services
                         bool _autoresolve = false;
                         Align _align = Align.Auto;
                         int charlength = 0;
+                        EbDbTypes _RenderType = column.Type.EbDbType;
                         if (column.Control is EbPowerSelect)
                         {
                             if (!(column.Control as EbPowerSelect).MultiSelect)
@@ -507,17 +525,26 @@ namespace ExpressBase.ServiceStack.Services
                                 };
                                 _autoresolve = true;
                                 _align = Align.Center;
+                                _RenderType = EbDbTypes.String;
                             }
                         }
-                        if (column.Control is EbTextBox)
+                        else if (column.Control is EbTextBox)
                         {
                             if ((column.Control as EbTextBox).TextMode == TextMode.MultiLine)
                             {
                                 charlength = 20;
                             }
                         }
-
-                        if (column.Type.EbDbType == EbDbTypes.String)
+                        if (column.Name == "eb_void")
+                        {
+                            column.Type = vDbTypes.String;//T or F
+                            _RenderType = EbDbTypes.Boolean;
+                        }
+                        else if (column.Name == "eb_created_by" || column.Name == "eb_lastmodified_by" || column.Name == "eb_loc_id")
+                        {
+                            _RenderType = EbDbTypes.String;
+                        }
+                        if (_RenderType == EbDbTypes.String)
                             _col = new DVStringColumn
                             {
                                 Data = index,
@@ -530,10 +557,11 @@ namespace ExpressBase.ServiceStack.Services
                                 ColumnQueryMapping = _control,
                                 AutoResolve = _autoresolve,
                                 Align = _align,
-                                AllowedCharacterLength = charlength
+                                AllowedCharacterLength = charlength,
+                                RenderType = _RenderType
                             };
 
-                        else if (column.Type.EbDbType == EbDbTypes.Int16 || column.Type.EbDbType == EbDbTypes.Int32 || column.Type.EbDbType == EbDbTypes.Int64 || column.Type.EbDbType == EbDbTypes.Double || column.Type.EbDbType == EbDbTypes.Decimal || column.Type.EbDbType == EbDbTypes.VarNumeric)
+                        else if (_RenderType == EbDbTypes.Int16 || _RenderType == EbDbTypes.Int32 || _RenderType == EbDbTypes.Int64 || _RenderType == EbDbTypes.Double || _RenderType == EbDbTypes.Decimal || _RenderType == EbDbTypes.VarNumeric)
                             _col = new DVNumericColumn
                             {
                                 Data = index,
@@ -546,9 +574,10 @@ namespace ExpressBase.ServiceStack.Services
                                 ColumnQueryMapping = _control,
                                 AutoResolve = _autoresolve,
                                 Align = _align,
-                                AllowedCharacterLength = charlength
+                                AllowedCharacterLength = charlength,
+                                RenderType = _RenderType
                             };
-                        else if (column.Type.EbDbType == EbDbTypes.Boolean || column.Type.EbDbType == EbDbTypes.BooleanOriginal)
+                        else if (_RenderType == EbDbTypes.Boolean || _RenderType == EbDbTypes.BooleanOriginal)
                         {
                             _col = new DVBooleanColumn
                             {
@@ -560,10 +589,11 @@ namespace ExpressBase.ServiceStack.Services
                                 sWidth = "100px",
                                 ClassName = "tdheight",
                                 Align = _align,
-                                AllowedCharacterLength = charlength
+                                AllowedCharacterLength = charlength,
+                                RenderType = _RenderType
                             };
                         }
-                        else if (column.Type.EbDbType == EbDbTypes.DateTime || column.Type.EbDbType == EbDbTypes.Date || column.Type.EbDbType == EbDbTypes.Time)
+                        else if (_RenderType == EbDbTypes.DateTime || _RenderType == EbDbTypes.Date || _RenderType == EbDbTypes.Time)
                             _col = new DVDateTimeColumn
                             {
                                 Data = index,
@@ -574,14 +604,16 @@ namespace ExpressBase.ServiceStack.Services
                                 sWidth = "100px",
                                 ClassName = "tdheight",
                                 Align = _align,
-                                AllowedCharacterLength = charlength
+                                AllowedCharacterLength = charlength,
+                                RenderType = _RenderType
                             };
-
+                        
                         Columns.Add(_col);
                     }
                 }
                 else
                 {
+                    _col.RenderType = column.Type.EbDbType;
                     _col.Data = ++index;
                     Columns.Add(_col);
                 }
@@ -635,6 +667,29 @@ namespace ExpressBase.ServiceStack.Services
                         dv.RowGroupCollection[index].OrderBy[j].Data = dv.Columns.FindAll(x => x.Name == col.Name)[0].Data;
                 }
 
+            }
+        }
+
+        private void UpdateInfowindowObject(ref EbTableVisualization dv)
+        {
+            List<DVBaseColumn> _ColColl = dv.Columns.FindAll(x => x.InfoWindow.Count > 0);
+            string[] _array = dv.Columns.Select(x => x.Name).ToArray();
+            foreach (DVBaseColumn col in _ColColl)
+            {
+                int idx = dv.Columns.FindIndex(x => x.Name == col.Name);
+                int index = -1;
+                foreach (DVBaseColumn _col in col.InfoWindow)
+                {
+                    index++;
+                    if (!_array.Contains(_col.Name))
+                    {
+                        dv.Columns[idx].InfoWindow.RemoveAll(x => x.Name == _col.Name);
+                    }
+                    else
+                    {
+                        dv.Columns[idx].InfoWindow[index].Data = dv.Columns.FindAll(x => x.Name == _col.Name)[0].Data;
+                    }
+                }
             }
         }
 
