@@ -1,9 +1,11 @@
 ﻿using ExpressBase.Common;
 using ExpressBase.Common.Application;
+using ExpressBase.Common.Constants;
 using ExpressBase.Common.Data;
 using ExpressBase.Common.Structures;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using Newtonsoft.Json;
+using ServiceStack.Messaging;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
@@ -16,7 +18,7 @@ namespace ExpressBase.ServiceStack
 {
     public class DevRelatedServices : EbBaseService
     {
-        public DevRelatedServices(IEbConnectionFactory _dbf) : base(_dbf) { }
+        public DevRelatedServices(IEbConnectionFactory _dbf, IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_dbf, _mqp, _mqc) { }
 
         public GetApplicationResponse Get(GetApplicationRequest request)
         {
@@ -134,6 +136,7 @@ namespace ExpressBase.ServiceStack
                     AppType = appType,
                     AppSettings = appStng
                 };
+                resp.ObjectsCount = dt.Tables[1].Rows.Count;
 
                 Dictionary<int, TypeWrap> _types = new Dictionary<int, TypeWrap>();
                 foreach (EbDataRow dr in dt.Tables[1].Rows)
@@ -208,7 +211,7 @@ namespace ExpressBase.ServiceStack
             UniqueApplicationNameCheckResponse uniq_appnameresp;
             List<DbParameter> parameters = new List<DbParameter>();
             EbDataTable dt;
-            if(request.AppId <= 0)
+            if (request.AppId <= 0)
             {
                 int c = 0;
                 do
@@ -301,8 +304,33 @@ namespace ExpressBase.ServiceStack
 
         public string Get(GetDefaultMapApiKeyFromConnectionRequest request)
         {
-            string _apikey = (this.EbConnectionFactory.MapConnection!=null)? this.EbConnectionFactory.MapConnection.GetDefaultApikey():string.Empty;
+            string _apikey = (this.EbConnectionFactory.MapConnection != null) ? this.EbConnectionFactory.MapConnection.GetDefaultApikey() : string.Empty;
             return _apikey;
+        }
+
+        public DeleteAppResponse Post(DeleteAppRequest request)
+        {
+            string q = @"UPDATE eb_applications SET eb_del = 'T' WHERE id = :appid";
+            DeleteAppResponse resp = new DeleteAppResponse();
+            try
+            {
+                DbParameter[] parameters = new DbParameter[]
+                {
+                    this.EbConnectionFactory.DataDB.GetNewParameter("appid",EbDbTypes.Int32,request.AppId)
+                };
+                int st = this.EbConnectionFactory.DataDB.DoNonQuery(q, parameters);
+                if (st > 0)
+                    resp.Status = true;
+                else
+                    resp.Status = false;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.StackTrace);
+                Console.WriteLine(e.Message);
+                resp.Status = false;
+            }
+            return resp;
         }
     }
 }

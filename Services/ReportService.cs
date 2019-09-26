@@ -87,11 +87,12 @@ namespace ExpressBase.ServiceStack
                 if (Report.DataSourceRefId != string.Empty)
                     Report.DataSet = myDataSourceservice.Any(new DataSourceDataSetRequest { RefId = Report.DataSourceRefId, Params = Report.Parameters }).DataSet;
                 if (Report.DataSet == null)
-                    throw new Exception("Dataset is null, refid " + Report.DataSourceRefId);
+                    Console.WriteLine("Dataset is null, refid " + Report.DataSourceRefId); 
+                //throw new Exception("Dataset is null, refid " + Report.DataSourceRefId);
                 Report.Writer = PdfWriter.GetInstance(Report.Doc, Report.Ms1);
                 Report.Writer.Open();
                 Report.Doc.Open();
-                Report.Doc.AddTitle(Report.Name);
+                Report.Doc.AddTitle(Report.DisplayName);
                 Report.Writer.PageEvent = new HeaderFooter(Report);
                 Report.Writer.CloseStream = true;//important
                 Report.Canvas = Report.Writer.DirectContent;
@@ -102,6 +103,7 @@ namespace ExpressBase.ServiceStack
                 Report.Doc.NewPage();
                 Report.DrawReportHeader();
                 Report.DrawDetail();
+                Report.DrawReportFooter();
                 Report.Doc.Close();
                 if (Report.UserPassword != string.Empty || Report.OwnerPassword != string.Empty)
                     Report.SetPassword();
@@ -429,11 +431,13 @@ namespace ExpressBase.ServiceStack
         }
 
         public override void OnEndPage(PdfWriter writer, Document d)
-        {
-            Report.DrawPageHeader();
-            Report.DrawPageFooter();
-            if (Report.IsLastpage == true)
-                Report.DrawReportFooter();
+        {if (!Report.FooterDrawn)
+            {
+                Report.DrawPageHeader();
+                Report.DrawPageFooter();
+            }
+            //if (Report.IsLastpage == true)
+            //    Report.DrawReportFooter();
             Report.DrawWaterMark(d, writer);
             Report.SetDetail();
         }
