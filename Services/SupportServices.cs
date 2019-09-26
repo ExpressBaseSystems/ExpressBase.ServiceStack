@@ -673,6 +673,79 @@ namespace ExpressBase.ServiceStack.Services
 			return utr;
 		}
 
+		public UpdateTicketAdminResponse Post(UpdateTicketAdminRequest utreq)
+		{
+			UpdateTicketAdminResponse utr = new UpdateTicketAdminResponse();
+			utr.status = false;
+			try
+			{
+				string k = String.Format(@"UPDATE 
+										support_ticket 
+										SET
+										status = :sts,
+										assigned_to = :asgned,
+										remarks=:rmrk,
+										type_bg_fr=:typ
+										WHERE 
+											bg_fr_id=:bg_id
+                                            and eb_del=:fals
+											and solution_id = :soluid"
+											);
+				DbParameter[] parameters = {
+					this.InfraConnectionFactory.DataDB.GetNewParameter("bg_id", EbDbTypes.String, utreq.Ticketid),
+					this.InfraConnectionFactory.DataDB.GetNewParameter("sts", EbDbTypes.String, utreq.Status),
+					this.InfraConnectionFactory.DataDB.GetNewParameter("asgned", EbDbTypes.String, utreq.AssignTo),
+					this.InfraConnectionFactory.DataDB.GetNewParameter("rmrk", EbDbTypes.String, utreq.Remarks),
+					this.InfraConnectionFactory.DataDB.GetNewParameter("fals", EbDbTypes.String, "F"),
+					this.InfraConnectionFactory.DataDB.GetNewParameter("soluid", EbDbTypes.String, utreq.Solution_id),
+					this.InfraConnectionFactory.DataDB.GetNewParameter("typ", EbDbTypes.String, utreq.Type_f_b)
+
+					};
+				int dt = this.InfraConnectionFactory.DataDB.DoNonQuery(k, parameters);
+
+				
+				
+				utr.status = true;
+			}
+			catch (Exception e)
+			{
+				Console.WriteLine("Excetion " + e.Message + e.StackTrace);
+			}
+			return utr;
+		}
+
+
+		public FetchAdminsResponse Post(FetchAdminsRequest tsreq)
+		{
+			FetchAdminsResponse far = new FetchAdminsResponse();
+
+			try
+			{
+				string sql = @"SELECT 
+								fullname
+								FROM eb_users 
+							WHERE
+								id > 1 AND
+									statusid=0
+									AND 
+									eb_del='F';";
+				
+				EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(sql);
+
+
+				for (int i = 0; i < dt.Rows.Count; i++)
+				{
+					far.AdminNames.Add(dt.Rows[i][0].ToString());
+				}
+			}
+			catch (Exception e)
+			{
+				Console.WriteLine("Exception: " + e.Message + e.StackTrace);
+			}
+			return far;
+		}
+
+
 		public ChangeStatusResponse Post(ChangeStatusRequest chstreq)
 		{
 			ChangeStatusResponse chst = new ChangeStatusResponse();
