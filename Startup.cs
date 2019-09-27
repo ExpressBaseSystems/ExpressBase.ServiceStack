@@ -19,7 +19,6 @@ using ServiceStack.Auth;
 using ServiceStack.Caching;
 using ServiceStack.Logging;
 using ServiceStack.Messaging;
-using ServiceStack.ProtoBuf;
 using ServiceStack.RabbitMq;
 using ServiceStack.Redis;
 using System;
@@ -168,7 +167,7 @@ namespace ExpressBase.ServiceStack
 
 			this.Plugins.Add(new CorsFeature(allowedHeaders: "Content-Type, Authorization, Access-Control-Allow-Origin, Access-Control-Allow-Credentials"));
 
-            this.Plugins.Add(new ProtoBufFormat());
+            //this.Plugins.Add(new ProtoBufFormat());
             this.Plugins.Add(new SessionFeature());
 
             this.Plugins.Add(new AuthFeature(() =>
