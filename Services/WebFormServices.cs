@@ -386,9 +386,16 @@ namespace ExpressBase.ServiceStack.Services
                             _control = new ControlClass
                             {
                                 DataSourceId = (column.Control as EbPowerSelect).DataSourceId,
-                                DisplayMember = (column.Control as EbPowerSelect).DisplayMembers,
                                 ValueMember = (column.Control as EbPowerSelect).ValueMember
                             };
+                            if ((column.Control as EbPowerSelect).RenderAsSimpleSelect)
+                            {
+                                _control.DisplayMember = (column.Control as EbPowerSelect).DisplayMember;
+                            }
+                            else
+                            {
+                                _control.DisplayMember = (column.Control as EbPowerSelect).DisplayMembers[0];
+                            }
                             _autoresolve = true;
                             _align = Align.Center;
                             _RenderType = EbDbTypes.String;
@@ -520,9 +527,16 @@ namespace ExpressBase.ServiceStack.Services
                                 _control = new ControlClass
                                 {
                                     DataSourceId = (column.Control as EbPowerSelect).DataSourceId,
-                                    DisplayMember = (column.Control as EbPowerSelect).DisplayMembers,
                                     ValueMember = (column.Control as EbPowerSelect).ValueMember
                                 };
+                                if ((column.Control as EbPowerSelect).RenderAsSimpleSelect)
+                                {
+                                    _control.DisplayMember = (column.Control as EbPowerSelect).DisplayMember;
+                                }
+                                else
+                                {
+                                    _control.DisplayMember = (column.Control as EbPowerSelect).DisplayMembers[0];
+                                }
                                 _autoresolve = true;
                                 _align = Align.Center;
                                 _RenderType = EbDbTypes.String;
@@ -607,7 +621,7 @@ namespace ExpressBase.ServiceStack.Services
                                 AllowedCharacterLength = charlength,
                                 RenderType = _RenderType
                             };
-                        
+
                         Columns.Add(_col);
                     }
                 }
