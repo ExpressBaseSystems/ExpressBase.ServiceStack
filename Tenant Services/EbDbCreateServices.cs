@@ -63,7 +63,19 @@ namespace ExpressBase.ServiceStack.Services
                     _solutionConnections.DataDbConfig.DatabaseName = request.DBName;
                     DataDB = new EbConnectionFactory(_solutionConnections, request.DBName).DataDB;
                 }
-                return DbOperations(request, DataDB);
+
+                string usersql = string.Format("SELECT * FROM eb_assignprivileges('{0}_admin','{0}_ro','{0}_rw');", request.DBName);
+                EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(usersql);
+                EbDbUsers ebdbusers = new EbDbUsers
+                {
+                    AdminUserName = request.DBName + "_admin",
+                    AdminPassword = dt.Rows[0][0].ToString(),
+                    ReadOnlyUserName = request.DBName + "_ro",
+                    ReadOnlyPassword = dt.Rows[0][1].ToString(),
+                    ReadWriteUserName = request.DBName + "_rw",
+                    ReadWritePassword = dt.Rows[0][2].ToString(),
+                };
+                return DbOperations(request, ebdbusers);
             }
             catch (Exception e)
             {
@@ -72,18 +84,28 @@ namespace ExpressBase.ServiceStack.Services
             }
         }
 
-        public EbDbCreateResponse DbOperations(EbDbCreateRequest request, IDatabase DataDB)
+        public EbDbCreateResponse DbOperations(EbDbCreateRequest request, EbDbUsers ebDbUsers)
         {
             Console.WriteLine("Reached DbOperations");
-            using (DbConnection con = DataDB.GetNewConnection())
+
+            EbConnectionsConfig _dcConnections = EbConnectionsConfigProvider.GetDataCenterConnections();
+            _dcConnections.DataDbConfig.DatabaseName = request.DBName;
+            _dcConnections.DataDbConfig.UserName = ebDbUsers.AdminUserName;
+            _dcConnections.DataDbConfig.Password = ebDbUsers.AdminPassword;
+            IDatabase DataDB_Admin = new EbConnectionFactory(_dcConnections, request.DBName).DataDB;
+
+            using (DbConnection con_admin = DataDB_Admin.GetNewConnection())
             {
-                con.Open();
-                DbTransaction con_trans = con.BeginTransaction();
-                string vendor = DataDB.Vendor.ToString();
+                con_admin.Open();
+
+                DbTransaction con_trans = con_admin.BeginTransaction();
+
+                string vendor = DataDB_Admin.Vendor.ToString();
                 bool IsCreateComplete = false;
                 bool IsInsertComplete = false;
                 try
                 {
+
                     //string[] filePaths = Directory.GetFiles(string.Format("../ExpressBase.Common/sqlscripts/{0}",counter),
                     //    "*.sql",
                     //    SearchOption.AllDirectories); 
@@ -175,6 +197,7 @@ namespace ExpressBase.ServiceStack.Services
                         "objectsdb.functioncreate.split_str_util.sql",
                         "objectsdb.functioncreate.string_to_rows_util.sql",
                         "objectsdb.functioncreate.str_to_tbl_grp_util.sql",
+                        "objectsdb.functioncreate.str_to_tbl_constraints_util.sql",
                         "objectsdb.functioncreate.str_to_tbl_util.sql",
                         "objectsdb.tablecreate.eb_applications.sql",
                         "objectsdb.tablecreate.eb_appstore.sql",
@@ -193,30 +216,35 @@ namespace ExpressBase.ServiceStack.Services
                     Console.WriteLine(".............Reached CreateOrAlter_Structure. Total Files: " + _filepath.Length);
 
                     int counter = 0;
+
+
                     string Urlstart = string.Format("ExpressBase.Common.sqlscripts.{0}.", vendor.ToLower());
                     foreach (string path in _filepath)
                     {
                         counter++;
                         Console.WriteLine(counter);
-                        IsCreateComplete = CreateOrAlter_Structure(con, Urlstart + path, DataDB);
+
+                        IsCreateComplete = CreateOrAlter_Structure(con_admin, Urlstart + path, DataDB_Admin);
                         if (!IsCreateComplete)
                             break;
                     }
                     if (IsCreateComplete)
                     {
-                        IsInsertComplete = InsertIntoTables(request, con, DataDB);
+                        IsInsertComplete = InsertIntoTables(request, con_admin, DataDB_Admin);
                     }
-                    EbDbCreateResponse _res = request.IsChange ? null : CreateUsers4DataBase(con, request.DBName, DataDB);
+
+
+                    EbDbCreateResponse _res = request.IsChange ? null : AssignDBUserPrivileges(con_admin, request.DBName, DataDB_Admin);
 
                     if (IsCreateComplete & IsInsertComplete)
                     {
                         Console.WriteLine(".............Reached Transaction Commit");
                         con_trans.Commit();
                         EbDbCreateResponse success = request.IsChange ? new EbDbCreateResponse() { DeploymentCompled = true } : _res;
-
+                        success.DbUsers = ebDbUsers;
                         if (!request.IsChange && !request.IsFurther)
                         {   //run northwind
-                            RunNorthWindScript(request.DBName, _res.DbUsers);
+                            RunNorthWindScript(request.DBName, ebDbUsers);
                             //import the application 129
                         }
                         return success;
@@ -236,17 +264,17 @@ namespace ExpressBase.ServiceStack.Services
             return null;
         }
 
-        public EbDbCreateResponse CreateUsers4DataBase(DbConnection con, string _dbname, IDatabase DataDB)
+        public EbDbCreateResponse AssignDBUserPrivileges(DbConnection con, string _dbname, IDatabase DataDB)
         {
             try
             {
-                //string usersql = "SELECT * FROM eb_assignprivileges('@unameadmin','@unameROUser','@unameRWUser');".Replace("@unameadmin", _dbname + "_admin").Replace("@unameROUser", _dbname + "_ro").Replace("@unameRWUser", _dbname + "_rw");
-                string usersql = string.Format("SELECT * FROM eb_assignprivileges('{0}_admin','{0}_ro','{0}_rw');", _dbname);
                 EbConnectionsConfig _dcConnections = EbConnectionsConfigProvider.GetDataCenterConnections();
+                _dcConnections.DataDbConfig.DatabaseName = _dbname;
+                IDatabase DataCenterDataDB = new EbConnectionFactory(_dcConnections, _dbname).DataDB;
 
-                IDatabase DataCenterDataDB = new EbConnectionFactory(_dcConnections, _dcConnections.DataDbConfig.DatabaseName).DataDB;
-                EbDataTable dt = DataCenterDataDB.DoQuery(usersql);
+                DbConnection con_p = DataCenterDataDB.GetNewConnection();
 
+                con_p.Open();
                 string sql = string.Format(@"REVOKE connect ON DATABASE ""{0}"" FROM PUBLIC;
                                GRANT ALL PRIVILEGES ON DATABASE ""{0}"" TO {1};                   
                                GRANT ALL PRIVILEGES ON DATABASE ""{0}"" TO {0}_admin;
@@ -264,10 +292,9 @@ namespace ExpressBase.ServiceStack.Services
                 //              ".Replace("@unameadmin", _dbname + "_admin").Replace("@unameROUser", _dbname + "_ro")
                 //               .Replace("@unameRWUser", _dbname + "_rw").Replace("@dbname", _dbname).Replace("@ebadmin", Environment.GetEnvironmentVariable(EnvironmentConstants.EB_DATACENTRE_ADMIN_USER));
 
-                int grnt = DataDB.DoNonQuery(sql);
+                int grnt = DataCenterDataDB.DoNonQuery(sql);
 
-                string sql2 = string.Format(@"
-                      GRANT ALL PRIVILEGES ON SCHEMA public TO {1};                           
+                string sql2 = string.Format(@"GRANT ALL PRIVILEGES ON SCHEMA public TO {1};                           
                             GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO {1};
                             ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON TABLES TO {1};
                             ALTER DEFAULT PRIVILEGES FOR ROLE {1} IN SCHEMA public GRANT ALL ON TABLES TO {0}_admin;
@@ -381,28 +408,18 @@ namespace ExpressBase.ServiceStack.Services
                 //                    .Replace("@unameadmin", _dbname + "_admin").Replace("@unameROUser", _dbname + "_ro")
                 //                    .Replace("@unameRWUser", _dbname + "_rw").Replace("@ebadmin", Environment.GetEnvironmentVariable(EnvironmentConstants.EB_DATACENTRE_ADMIN_USER));
 
-                DbCommand cmdtxt = DataDB.GetNewCommand(con, sql2);
+                DbCommand cmdtxt = DataCenterDataDB.GetNewCommand(con_p, sql2);
                 cmdtxt.ExecuteNonQuery();
 
-                EbDbUsers ebdbusers = new EbDbUsers
-                {
-                    AdminUserName = _dbname + "_admin",
-                    AdminPassword = dt.Rows[0][0].ToString(),
-                    ReadOnlyUserName = _dbname + "_ro",
-                    ReadOnlyPassword = dt.Rows[0][1].ToString(),
-                    ReadWriteUserName = _dbname + "_rw",
-                    ReadWritePassword = dt.Rows[0][2].ToString(),
-                };
                 return new EbDbCreateResponse
                 {
                     DeploymentCompled = true,
-                    DbName = _dbname,
-                    DbUsers = ebdbusers
+                    DbName = _dbname
                 };
             }
             catch (Exception e)
             {
-                Console.WriteLine(".............problem in CreateUsers4DataBase: " + e.ToString());
+                Console.WriteLine(".............problem in AssignDBUserPrivileges: " + e.ToString());
                 throw e;
             }
         }
@@ -506,7 +523,7 @@ namespace ExpressBase.ServiceStack.Services
             return true;
         }
 
-        public void RunNorthWindScript(string DBName,EbDbUsers dbusers)
+        public void RunNorthWindScript(string DBName, EbDbUsers dbusers)
         {
             Console.WriteLine("Executing northwind_script");
             EbConnectionsConfig _solutionConnections = EbConnectionsConfigProvider.GetDataCenterConnections();

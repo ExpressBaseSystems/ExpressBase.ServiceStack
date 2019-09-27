@@ -325,7 +325,7 @@ namespace ExpressBase.ServiceStack
                                 {
                                     if (array[i].Trim() != "")
                                     {
-                                        col = AutoResolve.ColumnQueryMapping.DisplayMember[0].Name;
+                                        col = AutoResolve.ColumnQueryMapping.DisplayMember.Name;
                                         if (op == "x*")
                                             _auto += string.Format(" LOWER({0}) LIKE LOWER('{1}%') OR", col, val);
                                         else if (op == "*x")
@@ -718,7 +718,7 @@ namespace ExpressBase.ServiceStack
                     dr = EbSerializers.Json_Deserialize(result.Data[0].Json);
                     Redis.Set<EbDataReader>(col.ColumnQueryMapping.DataSourceId, dr);
                 }
-                col.ColumnQueryMapping.Values = this.EbConnectionFactory.ObjectsDB.GetDictionary(dr.Sql, col.ColumnQueryMapping.DisplayMember[0].Name, col.ColumnQueryMapping.ValueMember.Name);
+                col.ColumnQueryMapping.Values = this.EbConnectionFactory.ObjectsDB.GetDictionary(dr.Sql, col.ColumnQueryMapping.DisplayMember.Name, col.ColumnQueryMapping.ValueMember.Name);
             }
         }
 
