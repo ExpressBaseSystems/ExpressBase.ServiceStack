@@ -8,6 +8,7 @@ using ExpressBase.Objects.ServiceStack_Artifacts;
 using ExpressBase.ServiceStack.Auth0;
 using ExpressBase.ServiceStack.MQServices;
 using Funq;
+using iTextSharp.text;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -468,7 +469,13 @@ namespace ExpressBase.ServiceStack
 
                 }
             });
-
+            try
+            {
+                RegisterFont();
+            }catch(Exception e)
+            {
+                Console.WriteLine(e);
+            }
             //--Api Key Generation
             //AfterInitCallbacks.Add(host =>
             //{
@@ -489,6 +496,15 @@ namespace ExpressBase.ServiceStack
             //    }
 
             //});
+        }
+        public void RegisterFont()
+        {
+            var fontName = "Century Gothic";
+            if (!FontFactory.IsRegistered(fontName))
+            {
+                var fontPath = "Fonts/07558_CenturyGothic.ttf";
+                FontFactory.Register(fontPath);
+            }
         }
     }
 
