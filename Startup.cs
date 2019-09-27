@@ -502,7 +502,7 @@ namespace ExpressBase.ServiceStack
             var fontName = "Century Gothic";
             if (!FontFactory.IsRegistered(fontName))
             {
-                var fontPath = "Fonts/07558_CenturyGothic.ttf";
+                var fontPath = Environment.GetEnvironmentVariable("SystemRoot") + "\\fonts\\07558_centurygothic.ttf"; ;
                 FontFactory.Register(fontPath);
             }
         }
