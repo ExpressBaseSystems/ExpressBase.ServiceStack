@@ -642,18 +642,21 @@ namespace ExpressBase.ServiceStack.Services
 																	eb_del,
 																	img_bytea,
 																	content_type,
-																	file_name
+																	file_name,
+																	solution_id															
 																	)
 																	VALUES(
 																	:bgid,
 																	:fals,
 																	:filebt,
 																	:cnttyp,
-																	:flname
+																	:flname,
+																	:solu
 																	)RETURNING id;";
 						DbParameter[] parameters3 = {
 								this.InfraConnectionFactory.DataDB.GetNewParameter("fals", EbDbTypes.String, "F"),
 								this.InfraConnectionFactory.DataDB.GetNewParameter("bgid", EbDbTypes.String, utreq.ticketid),
+								this.InfraConnectionFactory.DataDB.GetNewParameter("solu", EbDbTypes.String, utreq.solution_id),
 								this.InfraConnectionFactory.DataDB.GetNewParameter("filebt", EbDbTypes.Bytea,utreq.Fileuploadlst[i].Filecollection),
 								this.InfraConnectionFactory.DataDB.GetNewParameter("cnttyp", EbDbTypes.String, utreq.Fileuploadlst[i].ContentType),
 								this.InfraConnectionFactory.DataDB.GetNewParameter("flname", EbDbTypes.String, utreq.Fileuploadlst[i].FileName),
