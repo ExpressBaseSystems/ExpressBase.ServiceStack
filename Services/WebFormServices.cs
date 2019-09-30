@@ -390,11 +390,11 @@ namespace ExpressBase.ServiceStack.Services
                             };
                             if ((column.Control as EbPowerSelect).RenderAsSimpleSelect)
                             {
-                                _control.DisplayMember = (column.Control as EbPowerSelect).DisplayMember;
+                                _control.DisplayMember.Add( (column.Control as EbPowerSelect).DisplayMember);
                             }
                             else
                             {
-                                _control.DisplayMember = (column.Control as EbPowerSelect).DisplayMembers[0];
+                                _control.DisplayMember = (column.Control as EbPowerSelect).DisplayMembers;
                             }
                             _autoresolve = true;
                             _align = Align.Center;
@@ -531,11 +531,11 @@ namespace ExpressBase.ServiceStack.Services
                                 };
                                 if ((column.Control as EbPowerSelect).RenderAsSimpleSelect)
                                 {
-                                    _control.DisplayMember = (column.Control as EbPowerSelect).DisplayMember;
+                                    _control.DisplayMember.Add((column.Control as EbPowerSelect).DisplayMember);
                                 }
                                 else
                                 {
-                                    _control.DisplayMember = (column.Control as EbPowerSelect).DisplayMembers[0];
+                                    _control.DisplayMember = (column.Control as EbPowerSelect).DisplayMembers;
                                 }
                                 _autoresolve = true;
                                 _align = Align.Center;
