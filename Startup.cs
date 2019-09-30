@@ -8,6 +8,7 @@ using ExpressBase.Objects.ServiceStack_Artifacts;
 using ExpressBase.ServiceStack.Auth0;
 using ExpressBase.ServiceStack.MQServices;
 using Funq;
+using iTextSharp.text;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -18,7 +19,6 @@ using ServiceStack.Auth;
 using ServiceStack.Caching;
 using ServiceStack.Logging;
 using ServiceStack.Messaging;
-using ServiceStack.ProtoBuf;
 using ServiceStack.RabbitMq;
 using ServiceStack.Redis;
 using System;
@@ -142,7 +142,7 @@ namespace ExpressBase.ServiceStack
             {
                 fburl = "https://ss.eb-test.xyz/auth/facebook";
             }
-            else if(env == "Production")
+            else if (env == "Production")
             {
                 fburl = "https://ss.expressbase.com/auth/facebook";
             }
@@ -151,23 +151,23 @@ namespace ExpressBase.ServiceStack
                 fburl = "http://localhost:41600/auth/facebook";
             }
 
-			//MyFacebookAuthProvider fbauth = new MyFacebookAuthProvider(AppSettings)
-			//{
-			//	//AppId = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_FB_APP_ID),
-			//	//AppSecret = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_FB_APP_SECRET),
-			//	//Permissions = new string[] { "email, public_profile, user_hometown" },
-			//	//RedirectUrl = fburl
+            //MyFacebookAuthProvider fbauth = new MyFacebookAuthProvider(AppSettings)
+            //{
+            //	//AppId = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_FB_APP_ID),
+            //	//AppSecret = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_FB_APP_SECRET),
+            //	//Permissions = new string[] { "email, public_profile, user_hometown" },
+            //	//RedirectUrl = fburl
 
-			//	AppId = "149537802493867",
-			//	AppSecret = "55a9b5e0a88089465808bdc1d4f07e8e",
-			//	Permissions = new string[] { "email, public_profile, user_hometown" },
-			//	RedirectUrl = fburl
-			//};
+            //	AppId = "149537802493867",
+            //	AppSecret = "55a9b5e0a88089465808bdc1d4f07e8e",
+            //	Permissions = new string[] { "email, public_profile, user_hometown" },
+            //	RedirectUrl = fburl
+            //};
 
 
-			this.Plugins.Add(new CorsFeature(allowedHeaders: "Content-Type, Authorization, Access-Control-Allow-Origin, Access-Control-Allow-Credentials"));
+            this.Plugins.Add(new CorsFeature(allowedHeaders: "Content-Type, Authorization, Access-Control-Allow-Origin, Access-Control-Allow-Credentials"));
 
-            this.Plugins.Add(new ProtoBufFormat());
+            //this.Plugins.Add(new ProtoBufFormat());
             this.Plugins.Add(new SessionFeature());
 
             this.Plugins.Add(new AuthFeature(() =>
@@ -202,16 +202,16 @@ namespace ExpressBase.ServiceStack
 					//},
 
 					new MyGithubAuthProvider(AppSettings)
-					{
-						ClientId =Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GITHUB_CLIENT_ID),
-						ClientSecret = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GITHUB_CLIENT_SECRET)
+                    {
+                        ClientId =Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GITHUB_CLIENT_ID),
+                        ClientSecret = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GITHUB_CLIENT_SECRET)
 
 							//ClientId ="de0c8eefca9c1871a521",
 							//ClientSecret = "805bf067aa1768e1d63bc4f540d0f79834a3955f"
 					}
 
-				
-				}));
+
+                }));
 
             this.ContentTypes.Register(MimeTypes.ProtoBuf, (reqCtx, res, stream) => ProtoBuf.Serializer.NonGeneric.Serialize(stream, res), ProtoBuf.Serializer.NonGeneric.Deserialize);
 
@@ -468,7 +468,14 @@ namespace ExpressBase.ServiceStack
 
                 }
             });
-
+            try
+            {
+                RegisterFont();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
             //--Api Key Generation
             //AfterInitCallbacks.Add(host =>
             //{
@@ -489,6 +496,25 @@ namespace ExpressBase.ServiceStack
             //    }
 
             //});
+        }
+        public void RegisterFont()
+        {
+            Dictionary<string, string> FontPaths = new Dictionary<string, string>();
+            FontPaths.Add("Century Gothic", "07558_centurygothic.ttf");
+            foreach (KeyValuePair<string, string> _fonts in FontPaths)
+            {
+                if (!FontFactory.IsRegistered(_fonts.Key))
+                {
+                    try
+                    {
+                        FontFactory.Register(_fonts.Value);
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e.Message);
+                    }
+                }
+            }
         }
     }
 
