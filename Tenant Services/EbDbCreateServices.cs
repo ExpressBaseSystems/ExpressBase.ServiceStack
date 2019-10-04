@@ -38,6 +38,7 @@ namespace ExpressBase.ServiceStack.Services
 
             try
             {
+                EbDbUsers ebdbusers = null;
                 if (request.IsChange)
                 {
                     if (request.DataDBConfig.DatabaseVendor == DatabaseVendors.PGSQL)
@@ -62,20 +63,25 @@ namespace ExpressBase.ServiceStack.Services
                     }
                     _solutionConnections.DataDbConfig.DatabaseName = request.DBName;
                     DataDB = new EbConnectionFactory(_solutionConnections, request.DBName).DataDB;
+                    string usersql = string.Format("SELECT * FROM eb_assignprivileges('{0}_admin','{0}_ro','{0}_rw');", request.DBName);
+                    EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(usersql);
+                    ebdbusers = new EbDbUsers
+                    {
+                        AdminUserName = request.DBName + "_admin",
+                        AdminPassword = dt.Rows[0][0].ToString(),
+                        ReadOnlyUserName = request.DBName + "_ro",
+                        ReadOnlyPassword = dt.Rows[0][1].ToString(),
+                        ReadWriteUserName = request.DBName + "_rw",
+                        ReadWritePassword = dt.Rows[0][2].ToString(),
+                    };
+                    EbConnectionsConfig _dcConnections = EbConnectionsConfigProvider.GetDataCenterConnections();
+                    _dcConnections.DataDbConfig.DatabaseName = request.DBName;
+                    _dcConnections.DataDbConfig.UserName = ebdbusers.AdminUserName;
+                    _dcConnections.DataDbConfig.Password = ebdbusers.AdminPassword;
+                    DataDB = new EbConnectionFactory(_dcConnections, request.DBName).DataDB;
                 }
-
-                string usersql = string.Format("SELECT * FROM eb_assignprivileges('{0}_admin','{0}_ro','{0}_rw');", request.DBName);
-                EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(usersql);
-                EbDbUsers ebdbusers = new EbDbUsers
-                {
-                    AdminUserName = request.DBName + "_admin",
-                    AdminPassword = dt.Rows[0][0].ToString(),
-                    ReadOnlyUserName = request.DBName + "_ro",
-                    ReadOnlyPassword = dt.Rows[0][1].ToString(),
-                    ReadWriteUserName = request.DBName + "_rw",
-                    ReadWritePassword = dt.Rows[0][2].ToString(),
-                };
-                return DbOperations(request, ebdbusers);
+                
+                return DbOperations(request, ebdbusers,DataDB);
             }
             catch (Exception e)
             {
@@ -84,23 +90,17 @@ namespace ExpressBase.ServiceStack.Services
             }
         }
 
-        public EbDbCreateResponse DbOperations(EbDbCreateRequest request, EbDbUsers ebDbUsers)
+        public EbDbCreateResponse DbOperations(EbDbCreateRequest request, EbDbUsers ebDbUsers, IDatabase DataDB)
         {
             Console.WriteLine("Reached DbOperations");
 
-            EbConnectionsConfig _dcConnections = EbConnectionsConfigProvider.GetDataCenterConnections();
-            _dcConnections.DataDbConfig.DatabaseName = request.DBName;
-            _dcConnections.DataDbConfig.UserName = ebDbUsers.AdminUserName;
-            _dcConnections.DataDbConfig.Password = ebDbUsers.AdminPassword;
-            IDatabase DataDB_Admin = new EbConnectionFactory(_dcConnections, request.DBName).DataDB;
-
-            using (DbConnection con_admin = DataDB_Admin.GetNewConnection())
+            using (DbConnection con = DataDB.GetNewConnection())
             {
-                con_admin.Open();
+                con.Open();
 
-                DbTransaction con_trans = con_admin.BeginTransaction();
+                DbTransaction con_trans = con.BeginTransaction();
 
-                string vendor = DataDB_Admin.Vendor.ToString();
+                string vendor = DataDB.Vendor.ToString();
                 bool IsCreateComplete = false;
                 bool IsInsertComplete = false;
                 try
@@ -136,83 +136,8 @@ namespace ExpressBase.ServiceStack.Services
                         "objectsdb.tablecreate.eb_google_map.sql", "objectsdb.tablecreate.eb_locations.sql", "objectsdb.tablecreate.eb_location_config.sql",
                         "objectsdb.tablecreate.eb_objects.sql", "objectsdb.tablecreate.eb_objects2application.sql", "objectsdb.tablecreate.eb_objects_favourites.sql",
                         "objectsdb.tablecreate.eb_objects_relations.sql", "objectsdb.tablecreate.eb_objects_status.sql", "objectsdb.tablecreate.eb_objects_ver.sql"};
-*/
-                    string[] _filepath ={"eb_compilefunctions.sql",
-                        "eb_extras.sql",
-                        "datadb.functioncreate.eb_authenticate_anonymous.sql",
-                        "datadb.functioncreate.eb_authenticate_unified.sql",
-                        "datadb.functioncreate.eb_create_or_update_rbac_roles.sql",
-                        "datadb.functioncreate.eb_create_or_update_role.sql",
-                        "datadb.functioncreate.eb_create_or_update_role2loc.sql",
-                        "datadb.functioncreate.eb_create_or_update_role2role.sql",
-                        "datadb.functioncreate.eb_create_or_update_role2user.sql",
-                        "datadb.functioncreate.eb_currval_new.sql",
-                        "datadb.functioncreate.eb_getpermissions.sql",
-                        "datadb.functioncreate.eb_getroles.sql",
-                        "datadb.functioncreate.eb_persist_currval.sql",
-                        "datadb.functioncreate.eb_revokedbaccess2user_new.sql",
-                        "datadb.functioncreate.eb_security_user.sql",
-                        "datadb.functioncreate.eb_security_usergroup.sql",
-                        "datadb.functioncreate.eb_security_constraints.sql",
-                        "datadb.tablecreate.eb_audit_lines.sql",
-                        "datadb.tablecreate.eb_audit_master.sql",
-                        "datadb.tablecreate.eb_constraints_line.sql",
-                        "datadb.tablecreate.eb_constraints_master.sql",
-                        "datadb.tablecreate.eb_files.sql",
-                        "datadb.tablecreate.eb_keys.sql",
-                        "datadb.tablecreate.eb_keyvalue.sql",
-                        "datadb.tablecreate.eb_languages.sql",
-                        "datadb.tablecreate.eb_query_choices.sql",
-                        "datadb.tablecreate.eb_role2location.sql",
-                        "datadb.tablecreate.eb_role2permission.sql",
-                        "datadb.tablecreate.eb_role2role.sql",
-                        "datadb.tablecreate.eb_role2user.sql",
-                        "datadb.tablecreate.eb_roles.sql",
-                        "datadb.tablecreate.eb_schedules_new.sql",
-                        "datadb.tablecreate.eb_signin_log.sql",
-                        "datadb.tablecreate.eb_surveys.sql",
-                        "datadb.tablecreate.eb_survey_lines.sql",
-                        "datadb.tablecreate.eb_survey_master.sql",
-                        "datadb.tablecreate.eb_survey_queries.sql",
-                        "datadb.tablecreate.eb_user2usergroup.sql",
-                        "datadb.tablecreate.eb_useranonymous.sql",
-                        "datadb.tablecreate.eb_usergroup.sql",
-                        "datadb.tablecreate.eb_users.sql",
-                        "datadb.tablecreate.eb_userstatus.sql",
-                        "filesdb.tablecreate.eb_files_bytea.sql",
-                        "objectsdb.functioncreate.eb_botdetails.sql",
-                        "objectsdb.functioncreate.eb_createbot.sql",
-                        "objectsdb.functioncreate.eb_get_tagged_object.sql",
-                        "objectsdb.functioncreate.eb_objects_change_status.sql",
-                        "objectsdb.functioncreate.eb_objects_commit.sql",
-                        "objectsdb.functioncreate.eb_objects_create_new_object.sql",
-                        "objectsdb.functioncreate.eb_objects_exploreobject.sql",
-                        "objectsdb.functioncreate.eb_objects_getversiontoopen.sql",
-                        "objectsdb.functioncreate.eb_objects_save.sql",
-                        "objectsdb.functioncreate.eb_objects_update_dashboard.sql",
-                        "objectsdb.functioncreate.eb_object_create_major_version.sql",
-                        "objectsdb.functioncreate.eb_object_create_minor_version.sql",
-                        "objectsdb.functioncreate.eb_object_create_patch_version.sql",
-                        "objectsdb.functioncreate.eb_update_rel.sql",
-                        "objectsdb.functioncreate.split_str_util.sql",
-                        "objectsdb.functioncreate.string_to_rows_util.sql",
-                        "objectsdb.functioncreate.str_to_tbl_grp_util.sql",
-                        "objectsdb.functioncreate.str_to_tbl_constraints_util.sql",
-                        "objectsdb.functioncreate.str_to_tbl_util.sql",
-                        "objectsdb.tablecreate.eb_applications.sql",
-                        "objectsdb.tablecreate.eb_appstore.sql",
-                        "objectsdb.tablecreate.eb_bots.sql",
-                        "objectsdb.tablecreate.eb_executionlogs_new.sql",
-                        "objectsdb.tablecreate.eb_google_map.sql",
-                        "objectsdb.tablecreate.eb_locations.sql",
-                        "objectsdb.tablecreate.eb_location_config.sql",
-                        "objectsdb.tablecreate.eb_objects.sql",
-                        "objectsdb.tablecreate.eb_objects2application.sql",
-                        "objectsdb.tablecreate.eb_objects_favourites.sql",
-                        "objectsdb.tablecreate.eb_objects_relations.sql",
-                        "objectsdb.tablecreate.eb_objects_status.sql",
-                        "objectsdb.tablecreate.eb_objects_ver.sql" };
-
+*/                    
+                    string[] _filepath = SqlScriptArrayConstant.SQLSCRIPTARRAY;
                     Console.WriteLine(".............Reached CreateOrAlter_Structure. Total Files: " + _filepath.Length);
 
                     int counter = 0;
@@ -224,17 +149,16 @@ namespace ExpressBase.ServiceStack.Services
                         counter++;
                         Console.WriteLine(counter);
 
-                        IsCreateComplete = CreateOrAlter_Structure(con_admin, Urlstart + path, DataDB_Admin);
+                        IsCreateComplete = CreateOrAlter_Structure(con, Urlstart + path, DataDB);
                         if (!IsCreateComplete)
                             break;
                     }
                     if (IsCreateComplete)
                     {
-                        IsInsertComplete = InsertIntoTables(request, con_admin, DataDB_Admin);
+                        IsInsertComplete = InsertIntoTables(request, con, DataDB);
                     }
 
-
-                    EbDbCreateResponse _res = request.IsChange ? null : AssignDBUserPrivileges(con_admin, request.DBName, DataDB_Admin);
+                    EbDbCreateResponse _res = request.IsChange ? null : AssignDBUserPrivileges(con, request.DBName, DataDB);
 
                     if (IsCreateComplete & IsInsertComplete)
                     {
