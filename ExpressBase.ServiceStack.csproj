@@ -6,6 +6,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="07558_centurygothic.ttf" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="07558_centurygothic.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="robots.txt">
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </Content>

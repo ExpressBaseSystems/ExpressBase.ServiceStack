@@ -454,6 +454,20 @@ namespace ExpressBase.ServiceStack.Services
             return res;
         }
 
+        public AddSlackResponse Post(AddSlackRequest request)
+        {
+            AddSlackResponse res = new AddSlackResponse();
+            try
+            {
+                request.Config.PersistIntegrationConf(request.SolnId, this.InfraConnectionFactory, request.UserId);
+            }
+            catch (Exception e)
+            {
+                res.ResponseStatus.Message = e.Message;
+            }
+            return res;
+        }
+
         public AddDropBoxResponse Post(AddDropBoxRequest request)
         {
             AddDropBoxResponse res = new AddDropBoxResponse();

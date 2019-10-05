@@ -358,7 +358,7 @@ namespace ExpressBase.ServiceStack
                     {
                         foreach (TFilters _dic in request.TFilters)
                         {
-                            string op = _dic.Operator; string col = _dic.Column; string val = _dic.Value; string type = _dic.Type;
+                            string op = _dic.Operator; string col = _dic.Column; string val = _dic.Value; var type = _dic.Type;
                             string[] array = _dic.Value.Split("|");
                             if (array.Length == 0)
                             {
@@ -380,7 +380,7 @@ namespace ExpressBase.ServiceStack
                                 {
                                     if (array[i].Trim() != string.Empty)
                                     {
-                                        if (type == "string")
+                                        if (type == EbDbTypes.String)
                                         {
                                             if (op == "x*")
                                                 _cond += string.Format(" LOWER({0}) LIKE LOWER('{1}%') OR", col, array[i].Trim());
@@ -395,7 +395,7 @@ namespace ExpressBase.ServiceStack
                                         {
                                             if (this.EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.ORACLE)
                                             {
-                                                if (type == "date")
+                                                if (type == EbDbTypes.Date)
                                                     _cond += string.Format(" {0} {1} date '{2}' OR", col, op, array[i].Trim());
                                                 else
                                                     _cond += string.Format(" {0} {1} '{2}' OR", col, op, array[i].Trim());
@@ -479,7 +479,7 @@ namespace ExpressBase.ServiceStack
                     }
                 }
                 _recordsTotal = (_recordsTotal > 0) ? _recordsTotal : (_dataset.Tables.Count > 0) ? _dataset.Tables[1].Rows.Count : 0;
-                _recordsFiltered = (_recordsFiltered > 0) ? _recordsFiltered : (_dataset.Tables.Count > 0) ? _dataset.Tables[1].Rows.Count:0;
+                _recordsFiltered = (_recordsFiltered > 0) ? _recordsFiltered : (_dataset.Tables.Count > 0) ? _dataset.Tables[1].Rows.Count : 0;
 
                 resp.Data = (request.QueryIndex == 0) ? _dataset.Tables[1].Rows : _dataset.Tables[0].Rows;
                 resp.Draw = request.Draw;
@@ -528,7 +528,11 @@ namespace ExpressBase.ServiceStack
                     string _c = string.Empty;
                     _sql = _ds.Sql;
                 }
-
+                //if (request.Groupings != null && request.Groupings.Count > 0)
+                //{
+                //    foreach 
+                //    _sql = "SELECT * FROM (" + _sql + "\n ) data  order by :orderby";
+                //}
                 try
                 {
                     IEnumerable<DbParameter> parameters = DataHelper.GetParams(this.EbConnectionFactory, false, request.Params, 0, 0);
