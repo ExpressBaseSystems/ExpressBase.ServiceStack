@@ -250,9 +250,7 @@ namespace ExpressBase.ServiceStack
 
         public object Any(CreateBotFormTableRequest request)
         {
-            return new CreateBotFormTableResponse();// Table creation commented for testing purpose
-
-            var vDbTypes = this.EbConnectionFactory.ObjectsDB.VendorDbTypes;
+            var vDbTypes = this.EbConnectionFactory.DataDB.VendorDbTypes;
             List<TableColumnMeta> _listNamesAndTypes = new List<TableColumnMeta>();
 
             foreach (EbControl control in request.BotObj.Controls)
