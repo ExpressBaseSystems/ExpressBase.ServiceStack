@@ -156,7 +156,7 @@ namespace ExpressBase.ServiceStack.Services
 																		:slid
 																		)RETURNING id;";
 							DbParameter[] parameters3 = {
-								this.InfraConnectionFactory.DataDB.GetNewParameter("tktid", EbDbTypes.Int32, sb.Id),
+								this.InfraConnectionFactory.DataDB.GetNewParameter("tktid", EbDbTypes.String, sbgf),
 								this.InfraConnectionFactory.DataDB.GetNewParameter("fals", EbDbTypes.String, "F"),
 								this.InfraConnectionFactory.DataDB.GetNewParameter("filebt", EbDbTypes.Bytea,sbreq.Fileuploadlst[i].Filecollection),
 								this.InfraConnectionFactory.DataDB.GetNewParameter("cnttyp", EbDbTypes.String, sbreq.Fileuploadlst[i].ContentType),
