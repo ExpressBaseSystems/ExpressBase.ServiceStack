@@ -653,9 +653,6 @@ namespace ExpressBase.ServiceStack.Services
 			utr.status = false;
 
 
-
-
-
 			try
 			{
 				string tem = string.Empty;
@@ -868,76 +865,95 @@ namespace ExpressBase.ServiceStack.Services
 			utr.status = false;
 			try
 			{
+				string tem = string.Empty;
+				List<string> FieldKey = new List<string>();
+				List<string> FieldValue = new List<string>();
+				List<DbParameter> p = new List<DbParameter>();
+
+				string[] DBcolms = new string[] { "title", "description", "priority", "solution_id", "type_bg_fr", "assigned_to", "status", "comment", "files", "date_created" };
+
+
+				for (int i = 0; i < DBcolms.Length; i++)
+				{
+					if (utreq.chngedtkt.ContainsKey(DBcolms[i]))
+					{
+						FieldKey.Add(DBcolms[i]);
+						FieldValue.Add(":" + DBcolms[i]);
+						p.Add(this.InfraConnectionFactory.DataDB.GetNewParameter(":" + DBcolms[i], EbDbTypes.String, utreq.chngedtkt[DBcolms[i]]));
+
+					}
+				}
+				for (int j = 0; j < FieldKey.Count; j++)
+				{
+					tem += FieldKey[j] + "=" + FieldValue[j] + ",";
+				}
+
+				tem = tem.Remove(tem.Length - 1, 1);
 				string k = String.Format(@"UPDATE 
 										support_ticket 
 										SET
-										status = :sts,
-										assigned_to = :asgned,
-										remarks=:rmrk,
-										type_bg_fr=:typ
+										{0}
 										WHERE 
 											ticket_id=:tktid
                                             and eb_del=:fals
-											and solution_id = :soluid"
+											and solution_id = :soluid", tem
 											);
-				DbParameter[] parameters = {
-					this.InfraConnectionFactory.DataDB.GetNewParameter("tktid", EbDbTypes.String, utreq.Ticketid),
-					this.InfraConnectionFactory.DataDB.GetNewParameter("sts", EbDbTypes.String, utreq.Status),
-					this.InfraConnectionFactory.DataDB.GetNewParameter("asgned", EbDbTypes.String, utreq.AssignTo),
-					this.InfraConnectionFactory.DataDB.GetNewParameter("rmrk", EbDbTypes.String, utreq.Remarks),
-					this.InfraConnectionFactory.DataDB.GetNewParameter("fals", EbDbTypes.String, "F"),
-					this.InfraConnectionFactory.DataDB.GetNewParameter("soluid", EbDbTypes.String, utreq.Solution_id),
-					this.InfraConnectionFactory.DataDB.GetNewParameter("typ", EbDbTypes.String, utreq.Type_f_b)
 
-
-				};
+				p.Add(this.InfraConnectionFactory.DataDB.GetNewParameter("tktid", EbDbTypes.String, utreq.Ticketid));
+				p.Add(this.InfraConnectionFactory.DataDB.GetNewParameter("fals", EbDbTypes.String, "F"));
+				p.Add(this.InfraConnectionFactory.DataDB.GetNewParameter("soluid", EbDbTypes.String, utreq.Solution_id));
+				DbParameter[] parameters = p.ToArray();
 				int dt = this.InfraConnectionFactory.DataDB.DoNonQuery(k, parameters);
+
 				if (dt == 0)
 				{
 					utr.ErMsg = "Unexpected error occurred while updating";
 				}
 				else
 				{
-					//if (utreq.History_fv.Count > 0)
-					//{
+					//insert into history
+					DateTime tdate = DateTime.UtcNow;
+					string sql6 = @"INSERT INTO  support_ticket_history(
+																ticket_id,
+																eb_del,
+																field,
+																value,
+																username,
+																field_id,
+																eb_created_at,
+																solution_id
+																)
+																VALUES(
+																	:tktid,
+																	:fals,
+																	:fld,
+																	:val,
+																	:usrname,
+																	:fldid,
+																	:nwtime,
+																	:slid
+																	)RETURNING id;";
 
-					//	string sql6 = @"INSERT INTO  support_ticket_history(
-					//												ticket_id,
-					//												eb_del,
-					//												field,
-					//												value,
-					//												username,
-					//												field_id,
-					//												eb_created_at,
-					//												solution_id
 
-					//												)
-					//												VALUES(
-					//													:tktid,
-					//													:fals,
-					//													:fld,
-					//													:val,
-					//													:usrname,
-					//													:fldid,
-					//													NOW(),
-					//													:slid
-					//													)RETURNING id;";
-					//	DbParameter[] parameters6 = {
-					//			this.InfraConnectionFactory.DataDB.GetNewParameter("tktid", EbDbTypes.String, utreq.ticketid),
-					//			this.InfraConnectionFactory.DataDB.GetNewParameter("fals", EbDbTypes.String, "F"),
-					//			this.InfraConnectionFactory.DataDB.GetNewParameter("fld", EbDbTypes.String,""),
-					//			this.InfraConnectionFactory.DataDB.GetNewParameter("val", EbDbTypes.String, ""),
-					//			this.InfraConnectionFactory.DataDB.GetNewParameter("fldid", EbDbTypes.Int32,  1),
-					//			this.InfraConnectionFactory.DataDB.GetNewParameter("usrname", EbDbTypes.String, utreq.usrname),
-					//			this.InfraConnectionFactory.DataDB.GetNewParameter("slid", EbDbTypes.String, utreq.solution_id),
-					//			};
+					List<string> klist = new List<string>(utreq.chngedtkt.Keys);
+					List<string> vlist = new List<string>(utreq.chngedtkt.Values);
+					for (int j = 0; j < utreq.chngedtkt.Count; j++)
+					{
+						DbParameter[] parameters6 = {
+							this.InfraConnectionFactory.DataDB.GetNewParameter("tktid", EbDbTypes.String, utreq.Ticketid),
+							this.InfraConnectionFactory.DataDB.GetNewParameter("fals", EbDbTypes.String, "F"),
+							this.InfraConnectionFactory.DataDB.GetNewParameter("fld", EbDbTypes.String,klist[j]),
+							this.InfraConnectionFactory.DataDB.GetNewParameter("val", EbDbTypes.String,vlist[j] ),
+							this.InfraConnectionFactory.DataDB.GetNewParameter("fldid", EbDbTypes.Int32,  (int)SupportTicketFields.status),
+							this.InfraConnectionFactory.DataDB.GetNewParameter("usrname", EbDbTypes.String, utreq.usrname),
+							this.InfraConnectionFactory.DataDB.GetNewParameter("nwtime", EbDbTypes.DateTime, tdate),
+							this.InfraConnectionFactory.DataDB.GetNewParameter("slid", EbDbTypes.String, utreq.Solution_id),
+							};
 
-					//	EbDataTable dt6 = this.InfraConnectionFactory.DataDB.DoQuery(sql6, parameters6);
-					//	var ide = Convert.ToInt32(dt6.Rows[0][0]);
-
-					//}
+						EbDataTable dt6 = this.InfraConnectionFactory.DataDB.DoQuery(sql6, parameters6);
+						var ide = Convert.ToInt32(dt6.Rows[0][0]);
+					}
 				}
-
 				utr.status = true;
 			}
 			catch (Exception e)
