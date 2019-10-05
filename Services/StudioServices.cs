@@ -176,7 +176,7 @@ namespace ExpressBase.ServiceStack
                 {
                     Id = Convert.ToInt32(dr[0]),
                     Name = dr[1].ToString(),
-                    EbObjectType = ((EbObjectType)Convert.ToInt32(dr[3])).IntCode,
+                    EbObjectType = ((EbObjectType)Convert.ToInt32(dr[2])).IntCode,
                     Status = Enum.GetName(typeof(ObjectLifeCycleStatus), Convert.ToInt32(dr[3])),
                     VersionNumber = dr[7].ToString(),
                     RefId = dr[11].ToString(),
@@ -184,6 +184,46 @@ namespace ExpressBase.ServiceStack
                 });
             }
             return new EbObjectObjListAllVerResponse { Data = f_dict };
+        }
+
+        [CompressResponse]
+        public EbObjAllVerForDashBoardResp Get(EbObjAllVerForDashBoardRqst request)
+        {
+            List<EbObjectWrapper> wrap = new List<EbObjectWrapper>();
+
+            string qry = @"select o.display_name, v.refid, o.id, o.obj_type, v.id version_id, v.version_num from eb_objects o
+                            inner join eb_objects_ver v 
+                            on (o.id=v.eb_objects_id and v.id= (select max(vv.id) from eb_objects_ver vv where 
+									                            vv.eb_objects_id=o.id AND COALESCE(v.working_mode, 'F')='F'))
+                            where obj_type = 14 or obj_type = 16 or obj_type = 17 or obj_type =21
+                            AND COALESCE(o.eb_del,'F')='F' 
+                             order by o.id";
+
+            EbDataTable dt = EbConnectionFactory.ObjectsDB.DoQuery(qry);
+
+            Dictionary<string, List<EbObjectWrapper>> f_dict = new Dictionary<string, List<EbObjectWrapper>>();
+            List<EbObjectWrapper> wrap_list = null;
+            foreach (EbDataRow dr in dt.Rows)
+            {
+                string _nameKey = dr[1].ToString();
+                if (!f_dict.ContainsKey(_nameKey))
+                {
+                    wrap_list = new List<EbObjectWrapper>();
+                    f_dict.Add(_nameKey, wrap_list);
+                }
+
+                wrap_list.Add(new EbObjectWrapper
+                {
+                    Id = Convert.ToInt32(dr[2]),
+                    Name = dr[4].ToString(),
+                    EbObjectType = ((EbObjectType)Convert.ToInt32(dr[3])).IntCode,
+                    //Status = Enum.GetName(typeof(ObjectLifeCycleStatus), Convert.ToInt32(dr[3])),
+                    VersionNumber = dr[5].ToString(),
+                    RefId = dr[1].ToString(),
+                    DisplayName = dr[0].ToString()
+                });
+            }
+            return new EbObjAllVerForDashBoardResp { Data = f_dict };
         }
 
         public EbObjAllVerWithoutCircularRefResp Get(EbObjAllVerWithoutCircularRefRqst request)// Get all latest committed versions of EbObject without json - circular reference situation avoided on query
