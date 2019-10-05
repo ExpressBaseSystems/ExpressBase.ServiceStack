@@ -250,9 +250,7 @@ namespace ExpressBase.ServiceStack
 
         public object Any(CreateBotFormTableRequest request)
         {
-            return new CreateBotFormTableResponse();// Table creation commented for testing purpose
-
-            var vDbTypes = this.EbConnectionFactory.ObjectsDB.VendorDbTypes;
+            var vDbTypes = this.EbConnectionFactory.DataDB.VendorDbTypes;
             List<TableColumnMeta> _listNamesAndTypes = new List<TableColumnMeta>();
 
             foreach (EbControl control in request.BotObj.Controls)
@@ -1034,7 +1032,7 @@ namespace ExpressBase.ServiceStack
         {
             List<BotDetails> list = new List<BotDetails>();
             string qry = @"SELECT id, applicationname, app_icon, app_settings FROM eb_applications WHERE application_type = 3 AND eb_del = 'F'";
-            var table = this.EbConnectionFactory.ObjectsDB.DoQuery(qry);
+            var table = this.EbConnectionFactory.DataDB.DoQuery(qry);
             foreach (EbDataRow row in table.Rows)
             {
                 list.Add(new BotDetails
