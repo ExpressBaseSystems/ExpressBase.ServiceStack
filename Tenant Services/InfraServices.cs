@@ -484,7 +484,8 @@ namespace ExpressBase.ServiceStack.Services
                                     UserId = request.UserId,
                                     UserAuthId = "",
                                     WhichConsole = "",
-                                    IsDemoApp = true
+                                    IsDemoApp = true,
+                                    SelectedSolutionId = Sol_id_autogen
                                 });
                             }
                         }
