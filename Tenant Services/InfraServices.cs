@@ -474,9 +474,9 @@ namespace ExpressBase.ServiceStack.Services
                                 string env = Environment.GetEnvironmentVariable(EnvironmentConstants.ASPNETCORE_ENVIRONMENT);
                                 Console.WriteLine("Environment : " + env);
                                 if (env == "Staging" || env == "Development")
-                                    demoAppId = 129;
+                                    demoAppId = 4;
                                 else
-                                    demoAppId = 9;
+                                    demoAppId = 11;
                                 ImportApplicationResponse _response = service.Get(new ImportApplicationMqRequest
                                 {
                                     Id = demoAppId,
