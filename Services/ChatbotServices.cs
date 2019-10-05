@@ -1032,7 +1032,7 @@ namespace ExpressBase.ServiceStack
         {
             List<BotDetails> list = new List<BotDetails>();
             string qry = @"SELECT id, applicationname, app_icon, app_settings FROM eb_applications WHERE application_type = 3 AND eb_del = 'F'";
-            var table = this.EbConnectionFactory.ObjectsDB.DoQuery(qry);
+            var table = this.EbConnectionFactory.DataDB.DoQuery(qry);
             foreach (EbDataRow row in table.Rows)
             {
                 list.Add(new BotDetails
