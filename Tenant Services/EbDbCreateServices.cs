@@ -61,10 +61,11 @@ namespace ExpressBase.ServiceStack.Services
                     {
                         Console.WriteLine("...........Created Database " + request.DBName);
                     }
-                    _solutionConnections.DataDbConfig.DatabaseName = request.DBName;
-                    DataDB = new EbConnectionFactory(_solutionConnections, request.DBName).DataDB;
+                    //_solutionConnections.DataDbConfig.DatabaseName = request.DBName;
+                    //DataDB = new EbConnectionFactory(_solutionConnections, request.DBName).DataDB;
                     string usersql = string.Format("SELECT * FROM eb_assignprivileges('{0}_admin','{0}_ro','{0}_rw');", request.DBName);
-                    EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(usersql);
+                    // EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(usersql);
+                    EbDataTable dt = DataDB.DoQuery(usersql);
                     ebdbusers = new EbDbUsers
                     {
                         AdminUserName = request.DBName + "_admin",
