@@ -476,7 +476,7 @@ namespace ExpressBase.ServiceStack.Services
                                 if (env == "Staging" || env == "Development")
                                     demoAppId = 4;
                                 else
-                                    demoAppId = 11;
+                                    demoAppId = 13;
                                 ImportApplicationResponse _response = service.Get(new ImportApplicationMqRequest
                                 {
                                     Id = demoAppId,
@@ -484,7 +484,8 @@ namespace ExpressBase.ServiceStack.Services
                                     UserId = request.UserId,
                                     UserAuthId = "",
                                     WhichConsole = "",
-                                    IsDemoApp = true
+                                    IsDemoApp = true,
+                                    SelectedSolutionId = Sol_id_autogen
                                 });
                             }
                         }
