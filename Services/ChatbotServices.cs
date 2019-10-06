@@ -110,7 +110,9 @@ namespace ExpressBase.ServiceStack
             {
                 string formRefid = row[0].ToString();
                 string formName = row[1].ToString();
+                string formDisplayName = row[2].ToString();
                 resp.BotForms.Add(formRefid, formName);
+                resp.BotFormsDisp.Add(formRefid, formDisplayName);
             }
             //int _id = Convert.ToInt32(request.BotFormIds);
             //var myService = base.ResolveService<EbObjectService>();
