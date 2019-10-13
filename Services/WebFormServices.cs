@@ -883,7 +883,7 @@ namespace ExpressBase.ServiceStack.Services
                 valscript.Compile();
 
                 FormAsGlobal g = _formObj.GetFormAsGlobal(_formData);
-                FormGlobals globals = new FormGlobals() { FORM = g };
+                FormGlobals globals = new FormGlobals() { form = g };
                 var result = (valscript.RunAsync(globals)).Result.ReturnValue;
 
                 _formData.MultipleTables[cw.TableName][0].Columns.Add(new SingleColumn
