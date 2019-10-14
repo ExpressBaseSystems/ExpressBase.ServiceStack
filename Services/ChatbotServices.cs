@@ -110,7 +110,9 @@ namespace ExpressBase.ServiceStack
             {
                 string formRefid = row[0].ToString();
                 string formName = row[1].ToString();
+                string formDisplayName = row[2].ToString();
                 resp.BotForms.Add(formRefid, formName);
+                resp.BotFormsDisp.Add(formRefid, formDisplayName);
             }
             //int _id = Convert.ToInt32(request.BotFormIds);
             //var myService = base.ResolveService<EbObjectService>();
@@ -1032,7 +1034,7 @@ namespace ExpressBase.ServiceStack
         {
             List<BotDetails> list = new List<BotDetails>();
             string qry = @"SELECT id, applicationname, app_icon, app_settings FROM eb_applications WHERE application_type = 3 AND eb_del = 'F'";
-            var table = this.EbConnectionFactory.ObjectsDB.DoQuery(qry);
+            var table = this.EbConnectionFactory.DataDB.DoQuery(qry);
             foreach (EbDataRow row in table.Rows)
             {
                 list.Add(new BotDetails
