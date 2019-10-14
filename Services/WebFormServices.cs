@@ -883,7 +883,7 @@ namespace ExpressBase.ServiceStack.Services
                 valscript.Compile();
 
                 FormAsGlobal g = _formObj.GetFormAsGlobal(_formData);
-                FormGlobals globals = new FormGlobals() { FORM = g };
+                FormGlobals globals = new FormGlobals() { form = g };
                 var result = (valscript.RunAsync(globals)).Result.ReturnValue;
 
                 _formData.MultipleTables[cw.TableName][0].Columns.Add(new SingleColumn
@@ -1281,6 +1281,26 @@ namespace ExpressBase.ServiceStack.Services
         public CheckEmailConAvailableResponse Post(CheckEmailConAvailableRequest request)
         {
             return new CheckEmailConAvailableResponse { ConnectionAvailable = this.EbConnectionFactory.EmailConnection.Primary != null };
+        }
+
+
+        public GetDashBoardUserCtrlResponse Post(GetDashBoardUserCtrlRequest Request)
+        {
+            EbUserControl _ucObj = this.Redis.Get<EbUserControl>(Request.RefId);
+            if (_ucObj == null)
+            {
+                var myService = base.ResolveService<EbObjectService>();
+                EbObjectParticularVersionResponse formObj = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = Request.RefId });
+                _ucObj = EbSerializers.Json_Deserialize(formObj.Data[0].Json);
+                this.Redis.Set<EbUserControl>(Request.RefId, _ucObj);
+            }
+            //_ucObj.AfterRedisGet(this);
+            _ucObj.SetDataObjectControl(this.EbConnectionFactory.DataDB, this);
+            _ucObj.IsRenderMode = true;
+            return new GetDashBoardUserCtrlResponse() {
+                UcObjJson = EbSerializers.Json_Serialize(_ucObj),
+                UcHtml = _ucObj.GetHtml()
+            };
         }
 
     }
