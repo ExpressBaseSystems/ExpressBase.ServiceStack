@@ -1,5 +1,6 @@
 ﻿using ExpressBase.Common;
 using ExpressBase.Common.Data;
+using ExpressBase.Common.Extensions;
 using ExpressBase.Common.Structures;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using System;
@@ -278,7 +279,8 @@ namespace ExpressBase.ServiceStack.Services
 							st.priority = dt2.Rows[i][2].ToString();
 							st.solutionid = dt2.Rows[i][3].ToString();
 							DateTime stdate = (DateTime)dt2.Rows[i][4];
-							st.Age = (((tdate - stdate).Days).ToString() + "D" + " " + ((tdate - stdate).Hours).ToString() + "h");
+							st.NoHour = (tdate - stdate).Hours.ToString();
+							st.NoDays = (tdate - stdate).Days.ToString();
 							st.lstmodified = dt2.Rows[i][4].ToString();
 							st.status = dt2.Rows[i][5].ToString();
 							st.remarks = dt2.Rows[i][6].ToString();
@@ -293,7 +295,7 @@ namespace ExpressBase.ServiceStack.Services
 						fr.ErMsg = "No tickets found";
 					}
 				}
-				else
+				else if(fsreq.WhichConsole.Equals("dc"))
 				{
 					string sql3 = @"SELECT 
 									title, 
@@ -329,7 +331,63 @@ namespace ExpressBase.ServiceStack.Services
 							st.priority = dt.Rows[i][2].ToString();
 							st.solutionid = dt.Rows[i][3].ToString();
 							DateTime stdate = (DateTime)dt.Rows[i][4];
-							st.Age = (((tdate - stdate).Days).ToString() + "D" + " " + ((tdate - stdate).Hours).ToString() + "h");
+							st.NoHour =(tdate - stdate).Hours.ToString() ;
+							st.NoDays = (tdate - stdate).Days.ToString();
+							st.lstmodified = dt.Rows[i][4].ToString();
+							st.status = dt.Rows[i][5].ToString();
+							st.remarks = dt.Rows[i][6].ToString();
+							st.assignedto = dt.Rows[i][7].ToString();
+							st.type_b_f = dt.Rows[i][8].ToString();
+							st.ticketid = dt.Rows[i][9].ToString();
+							fr.supporttkt.Add(st);
+						}
+					}
+					else
+					{
+						fr.ErMsg = "NO tickets found";
+					}
+				}
+				else if (fsreq.WhichConsole.Equals("uc"))
+				{
+					string sql7 = @"SELECT 
+									title, 
+									description,
+									priority, 
+									solution_id, 
+									eb_created_at, 
+									status, 
+									remarks, 
+									assigned_to, 
+									type_bg_fr,
+									ticket_id
+									FROM support_ticket
+								WHERE 
+									solution_id =:sln 
+								AND 
+									eb_del=:fls
+								AND 
+									user_type=:utyp
+								ORDER BY id
+								;";
+					DbParameter[] parameters7 = {
+					this.InfraConnectionFactory.DataDB.GetNewParameter("sln", EbDbTypes.String, fsreq.SolnId),
+					this.InfraConnectionFactory.DataDB.GetNewParameter("fls", EbDbTypes.String, "F"),
+					this.InfraConnectionFactory.DataDB.GetNewParameter("utyp", EbDbTypes.String, "user")
+					};
+
+					EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(sql7, parameters7);
+					if (dt.Rows.Count > 0)
+					{
+						for (int i = 0; i < dt.Rows.Count; i++)
+						{
+							SupportTktCls st = new SupportTktCls();
+							st.title = dt.Rows[i][0].ToString();
+							st.description = dt.Rows[i][1].ToString();
+							st.priority = dt.Rows[i][2].ToString();
+							st.solutionid = dt.Rows[i][3].ToString();
+							DateTime stdate = (DateTime)dt.Rows[i][4];
+							st.NoHour = (tdate - stdate).Hours.ToString();
+							st.NoDays = (tdate - stdate).Days.ToString();
 							st.lstmodified = dt.Rows[i][4].ToString();
 							st.status = dt.Rows[i][5].ToString();
 							st.remarks = dt.Rows[i][6].ToString();
@@ -390,7 +448,8 @@ namespace ExpressBase.ServiceStack.Services
 						st.priority = dt2.Rows[i][2].ToString();
 						st.solutionid = dt2.Rows[i][3].ToString();
 						DateTime stdate = (DateTime)dt2.Rows[i][4];
-						st.Age = (((tdate - stdate).Days).ToString() + "D" + " " + ((tdate - stdate).Hours).ToString() + "h");
+						st.NoHour = (tdate - stdate).Hours.ToString();
+						st.NoDays = (tdate - stdate).Days.ToString();
 						st.lstmodified = dt2.Rows[i][4].ToString();
 						st.status = dt2.Rows[i][5].ToString();
 						st.remarks = dt2.Rows[i][6].ToString();
@@ -437,7 +496,8 @@ namespace ExpressBase.ServiceStack.Services
 								remarks, 
 								assigned_to, 
 								type_bg_fr,
-								eb_created_at
+								eb_created_at,
+								user_type
 								FROM support_ticket
 							WHERE 
 								ticket_id =:ticketno 
@@ -480,7 +540,8 @@ namespace ExpressBase.ServiceStack.Services
 									remarks, 
 									assigned_to, 
 									type_bg_fr,
-									eb_created_at
+									eb_created_at,
+									user_type
 									FROM support_ticket
 								WHERE 
 									ticket_id =:ticketno
@@ -531,7 +592,7 @@ namespace ExpressBase.ServiceStack.Services
 						parameters1.Add(this.InfraConnectionFactory.DataDB.GetNewParameter("fals", EbDbTypes.String, "F"));
 
 					}
-					else
+					else 
 					{
 						sql = string.Format(@"SELECT 
 												title, 
@@ -543,7 +604,8 @@ namespace ExpressBase.ServiceStack.Services
 												remarks, 
 												assigned_to, 
 												type_bg_fr,
-												eb_created_at
+												eb_created_at,
+												user_type
 											FROM
 												support_ticket
 											WHERE 
@@ -577,6 +639,7 @@ namespace ExpressBase.ServiceStack.Services
 						parameters1.Add(this.InfraConnectionFactory.DataDB.GetNewParameter("fals", EbDbTypes.String, "F"));
 
 					}
+
 				}
 				DbParameter[] param = parameters.ToArray();
 				DbParameter[] param1 = parameters1.ToArray();
@@ -1023,6 +1086,7 @@ namespace ExpressBase.ServiceStack.Services
 					chst.ErMsg = "Unexpected error occurred while updating";
 				}
 				else
+				//insert into history
 				{
 					string sql6 = @"INSERT INTO  support_ticket_history(
 																	ticket_id,
@@ -1046,7 +1110,7 @@ namespace ExpressBase.ServiceStack.Services
 																		:slid
 																		)RETURNING id;";
 					DbParameter[] parameters6 = {
-								this.InfraConnectionFactory.DataDB.GetNewParameter("tktid", EbDbTypes.String,  chstreq.TicketNo),
+							this.InfraConnectionFactory.DataDB.GetNewParameter("tktid", EbDbTypes.String,  chstreq.TicketNo),
 							this.InfraConnectionFactory.DataDB.GetNewParameter("fals", EbDbTypes.String, "F"),
 							this.InfraConnectionFactory.DataDB.GetNewParameter("fld", EbDbTypes.String,SupportTicketFields.status.ToString()),
 							this.InfraConnectionFactory.DataDB.GetNewParameter("val", EbDbTypes.String,chstreq.NewStatus ),
@@ -1055,8 +1119,18 @@ namespace ExpressBase.ServiceStack.Services
 							this.InfraConnectionFactory.DataDB.GetNewParameter("tdate", EbDbTypes.DateTime, tdate),
 							this.InfraConnectionFactory.DataDB.GetNewParameter("slid", EbDbTypes.String, chstreq.Solution_id),
 								};
-
+					DbParameter[] parameters7 = {
+							this.InfraConnectionFactory.DataDB.GetNewParameter("tktid", EbDbTypes.String,  chstreq.TicketNo),
+							this.InfraConnectionFactory.DataDB.GetNewParameter("fals", EbDbTypes.String, "F"),
+							this.InfraConnectionFactory.DataDB.GetNewParameter("fld", EbDbTypes.String,SupportTicketFields.reason.ToString()),
+							this.InfraConnectionFactory.DataDB.GetNewParameter("val", EbDbTypes.String,chstreq.Reason ),
+							this.InfraConnectionFactory.DataDB.GetNewParameter("fldid", EbDbTypes.Int32,  (int)SupportTicketFields.reason),
+							this.InfraConnectionFactory.DataDB.GetNewParameter("usrname", EbDbTypes.String, chstreq.UserName),
+							this.InfraConnectionFactory.DataDB.GetNewParameter("tdate", EbDbTypes.DateTime, tdate),
+							this.InfraConnectionFactory.DataDB.GetNewParameter("slid", EbDbTypes.String, chstreq.Solution_id),
+								};
 					EbDataTable dt6 = this.InfraConnectionFactory.DataDB.DoQuery(sql6, parameters6);
+					EbDataTable dt7 = this.InfraConnectionFactory.DataDB.DoQuery(sql6, parameters7);
 					var ide = Convert.ToInt32(dt6.Rows[0][0]);
 				}
 				chst.RtnStatus = true;
@@ -1111,6 +1185,7 @@ namespace ExpressBase.ServiceStack.Services
 						Sh.UserName = dt.Rows[i][5].ToString();
 						Sh.FieldId = (int)dt.Rows[i][6];
 						DateTime Dat1 = (DateTime)dt.Rows[i][7];
+						Dat1 = Dat1.ConvertFromUtc(Shreq.UserObject.Preference.TimeZone);
 						Sh.CreatedDate = (Dat1.Date).ToString("d");
 						Sh.CreatedTime = Dat1.ToString("HH:mm");
 
