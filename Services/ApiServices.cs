@@ -621,7 +621,8 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch(Exception e)
             {
-
+                Console.WriteLine(e.StackTrace);
+                Console.WriteLine("EXCEPTION AT GetMobMenuRequest " + e.Message);
             }
             return resp;
         }
