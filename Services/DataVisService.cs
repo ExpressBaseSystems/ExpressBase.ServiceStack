@@ -51,6 +51,8 @@ namespace ExpressBase.ServiceStack
 
         public DataVisService(IEbConnectionFactory _dbf) : base(_dbf) { }
 
+        private string TableId = null;
+
         //[CompressResponse]
         //public DataSourceDataResponse Any(DataVisDataRequest request)
         //{
@@ -267,6 +269,7 @@ namespace ExpressBase.ServiceStack
             try
             {
                 _ebSolution = request.eb_Solution;
+                this.TableId = request.TableId;
                 this.Log.Info("data request");
 
                 EbDataVisualization _dV = request.EbDataVisualization;
@@ -325,7 +328,7 @@ namespace ExpressBase.ServiceStack
                                 {
                                     if (array[i].Trim() != "")
                                     {
-                                        col = AutoResolve.ColumnQueryMapping.DisplayMember.Name;
+                                        col = AutoResolve.ColumnQueryMapping.DisplayMember[0].Name;
                                         if (op == "x*")
                                             _auto += string.Format(" LOWER({0}) LIKE LOWER('{1}%') OR", col, val);
                                         else if (op == "*x")
@@ -718,7 +721,7 @@ namespace ExpressBase.ServiceStack
                     dr = EbSerializers.Json_Deserialize(result.Data[0].Json);
                     Redis.Set<EbDataReader>(col.ColumnQueryMapping.DataSourceId, dr);
                 }
-                col.ColumnQueryMapping.Values = this.EbConnectionFactory.ObjectsDB.GetDictionary(dr.Sql, col.ColumnQueryMapping.DisplayMember.Name, col.ColumnQueryMapping.ValueMember.Name);
+                col.ColumnQueryMapping.Values = this.EbConnectionFactory.ObjectsDB.GetDictionary(dr.Sql, col.ColumnQueryMapping.DisplayMember[0].Name, col.ColumnQueryMapping.ValueMember.Name);
             }
         }
 
@@ -1027,7 +1030,7 @@ namespace ExpressBase.ServiceStack
                         else if (col.RenderType == EbDbTypes.String && (_isexcel == false))
                         {
                             if ((col as DVStringColumn).RenderAs == StringRenderType.Marker)
-                                _formattedData = "<a href = '#' class ='columnMarker' data-latlong='" + _unformattedData + "'><i class='fa fa-map-marker fa-2x' style='color:red;'></i></a>";
+                                _formattedData = "<a href = '#' class ='columnMarker"+ this.TableId + "' data-latlong='" + _unformattedData + "'><i class='fa fa-map-marker fa-2x' style='color:red;'></i></a>";
                         }
                         string info = string.Empty;
                         if (col.AllowedCharacterLength > 0 || col.InfoWindow.Count > 0)
@@ -1063,13 +1066,13 @@ namespace ExpressBase.ServiceStack
                                 if (_formattedData.ToString() == string.Empty)
                                     _formattedData = "...";
                                 if (col.LinkType == LinkTypeEnum.Popout)
-                                    _formattedData = "<a href='#' oncontextmenu='return false' class ='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "'>" + _formattedData + "</a>";
+                                    _formattedData = "<a href='#' oncontextmenu='return false' class ='tablelink"+ this.TableId + "' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "'>" + _formattedData + "</a>";
                                 else if (col.LinkType == LinkTypeEnum.Inline)
-                                    _formattedData = _formattedData + "&nbsp; <a  href= '#' oncontextmenu= 'return false' class ='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-inline='true' data-data='" + _formattedData + "'><i class='fa fa-caret-down'></i></a>";
+                                    _formattedData = _formattedData + "&nbsp; <a  href= '#' oncontextmenu= 'return false' class ='tablelink"+ this.TableId + "' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-inline='true' data-data='" + _formattedData + "'><i class='fa fa-caret-down'></i></a>";
                                 else if (col.LinkType == LinkTypeEnum.Both)
-                                    _formattedData = "<a href='#' oncontextmenu='return false' class ='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "'>" + _formattedData + "</a>" + "&nbsp; <a  href ='#' oncontextmenu='return false' class='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-inline='true' data-data='" + _formattedData + "'> <i class='fa fa-caret-down'></i></a>";
+                                    _formattedData = "<a href='#' oncontextmenu='return false' class ='tablelink"+ this.TableId + "' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "'>" + _formattedData + "</a>" + "&nbsp; <a  href ='#' oncontextmenu='return false' class='tablelink"+ this.TableId + "' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-inline='true' data-data='" + _formattedData + "'> <i class='fa fa-caret-down'></i></a>";
                                 else if (col.LinkType == LinkTypeEnum.Popup)
-                                    _formattedData = "<a  href= '#' oncontextmenu= 'return false' class ='tablelink' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-popup='true' data-data='" + _formattedData + "'>" + _formattedData + "</a>";
+                                    _formattedData = "<a  href= '#' oncontextmenu= 'return false' class ='tablelink"+ this.TableId + "' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-popup='true' data-data='" + _formattedData + "'>" + _formattedData + "</a>";
                             }
                         }
                         if (col.RenderType == EbDbTypes.String && (col as DVStringColumn).RenderAs == StringRenderType.Link && col.LinkType == LinkTypeEnum.Tab && (_isexcel == false))/////////////////
@@ -1693,6 +1696,7 @@ namespace ExpressBase.ServiceStack
             string _sql = string.Empty;
             request.IsExcel = false;
             this._ebSolution = request.eb_solution;
+            this.TableId = request.TableId;
             if (_ds == null)
             {
                 var myService = base.ResolveService<EbObjectService>();

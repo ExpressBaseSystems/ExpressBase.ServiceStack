@@ -390,11 +390,11 @@ namespace ExpressBase.ServiceStack.Services
                             };
                             if ((column.Control as EbPowerSelect).RenderAsSimpleSelect)
                             {
-                                _control.DisplayMember = (column.Control as EbPowerSelect).DisplayMember;
+                                _control.DisplayMember.Add( (column.Control as EbPowerSelect).DisplayMember);
                             }
                             else
                             {
-                                _control.DisplayMember = (column.Control as EbPowerSelect).DisplayMembers[0];
+                                _control.DisplayMember = (column.Control as EbPowerSelect).DisplayMembers;
                             }
                             _autoresolve = true;
                             _align = Align.Center;
@@ -531,11 +531,11 @@ namespace ExpressBase.ServiceStack.Services
                                 };
                                 if ((column.Control as EbPowerSelect).RenderAsSimpleSelect)
                                 {
-                                    _control.DisplayMember = (column.Control as EbPowerSelect).DisplayMember;
+                                    _control.DisplayMember.Add((column.Control as EbPowerSelect).DisplayMember);
                                 }
                                 else
                                 {
-                                    _control.DisplayMember = (column.Control as EbPowerSelect).DisplayMembers[0];
+                                    _control.DisplayMember = (column.Control as EbPowerSelect).DisplayMembers;
                                 }
                                 _autoresolve = true;
                                 _align = Align.Center;
@@ -883,7 +883,7 @@ namespace ExpressBase.ServiceStack.Services
                 valscript.Compile();
 
                 FormAsGlobal g = _formObj.GetFormAsGlobal(_formData);
-                FormGlobals globals = new FormGlobals() { FORM = g };
+                FormGlobals globals = new FormGlobals() { form = g };
                 var result = (valscript.RunAsync(globals)).Result.ReturnValue;
 
                 _formData.MultipleTables[cw.TableName][0].Columns.Add(new SingleColumn
@@ -1283,5 +1283,49 @@ namespace ExpressBase.ServiceStack.Services
             return new CheckEmailConAvailableResponse { ConnectionAvailable = this.EbConnectionFactory.EmailConnection.Primary != null };
         }
 
+
+        public GetDashBoardUserCtrlResponse Post(GetDashBoardUserCtrlRequest Request)
+        {
+            EbUserControl _ucObj = this.Redis.Get<EbUserControl>(Request.RefId);
+            if (_ucObj == null)
+            {
+                var myService = base.ResolveService<EbObjectService>();
+                EbObjectParticularVersionResponse formObj = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = Request.RefId });
+                _ucObj = EbSerializers.Json_Deserialize(formObj.Data[0].Json);
+                this.Redis.Set<EbUserControl>(Request.RefId, _ucObj);
+            }
+            //_ucObj.AfterRedisGet(this);
+            _ucObj.SetDataObjectControl(this.EbConnectionFactory.DataDB, this);
+            _ucObj.IsRenderMode = true;
+            return new GetDashBoardUserCtrlResponse() {
+                UcObjJson = EbSerializers.Json_Serialize(_ucObj),
+                UcHtml = _ucObj.GetHtml()
+            };
+        }
+
+        public GetDistinctValuesResponse Get(GetDistinctValuesRequest request)
+        {
+            GetDistinctValuesResponse resp = new GetDistinctValuesResponse() { Suggestions = new List<string>()};
+            try
+            {  
+                string query = @"SELECT DISTINCT INITCAP(TRIM(@ColumName)) AS @ColumName FROM @TableName ORDER BY @ColumName;"
+                .Replace("@ColumName", request.ColumnName)
+                .Replace("@TableName", request.TableName);
+                EbDataTable table = EbConnectionFactory.DataDB.DoQuery(query);
+
+                int capacity = table.Rows.Count;
+
+                for (int i = 0; i < capacity; i++)
+                {
+                    resp.Suggestions.Add(table.Rows[i][0].ToString());
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("ERROR: GetWikiSearch Exception: " + e.Message);
+            }
+            return resp;
+
+        }
     }
 }

@@ -601,5 +601,30 @@ namespace ExpressBase.ServiceStack.Services
             }
             return col;
         }
+
+        public GetMobMenuResonse Get(GetMobMenuRequest request)
+        {
+            GetMobMenuResonse resp = new GetMobMenuResonse();
+            try
+            {
+                string sql = "SELECT id,applicationname,app_icon,application_type FROM eb_applications WHERE eb_del='F'";
+                EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery(sql);
+                foreach(EbDataRow row in dt.Rows)
+                {
+                    resp.Applications.Add(new AppDataToMob
+                    {
+                        AppId = Convert.ToInt32(row["id"]),
+                        AppName = row["applicationname"].ToString(),
+                        AppIcon = row["app_icon"].ToString(),
+                    });
+                }
+            }
+            catch(Exception e)
+            {
+                Console.WriteLine(e.StackTrace);
+                Console.WriteLine("EXCEPTION AT GetMobMenuRequest " + e.Message);
+            }
+            return resp;
+        }
     }
 }
