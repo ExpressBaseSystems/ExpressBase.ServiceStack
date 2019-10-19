@@ -166,8 +166,8 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     CreateSolutionResponse response = this.Post(new CreateSolutionRequest
                     {
-                        SolutionName = "My Solution " + _solcount + 1,
-                        Description = "My solution " + _solcount + 1,
+                        SolutionName = "My Solution " + (_solcount + 1),
+                        Description = "My solution " + (_solcount + 1),
                         DeployDB = true,
                         UserId = request.UserId,
                         IsFurther = true
@@ -185,6 +185,95 @@ namespace ExpressBase.ServiceStack.Services
             {
                 Console.WriteLine("Exception at new solution creation furtherRequest :" + e.Message);
                 resp.Status = false;
+            }
+            return resp;
+        }
+
+        public EditSolutionResponse Post(EditSolutionRequest request)
+        {
+            EditSolutionResponse resp = new EditSolutionResponse();
+
+            string isid = this.Redis.Get<string>(string.Format(CoreConstants.SOLUTION_ID_MAP, request.OldESolutionId));
+            if (isid == null)
+            {
+                resp.Status = false;
+                return resp;
+            }
+
+            string q = @"UPDATE 
+                            eb_solutions 
+                        SET 
+                            esolution_id = :esid,
+                            solution_name = :sname,
+                            description = :desc 
+                        WHERE 
+                            isolution_id = :isid 
+                        AND 
+                            tenant_id = :userid;";
+            try
+            {
+                DbParameter[] parameters = new DbParameter[]
+                {
+                    this.InfraConnectionFactory.DataDB.GetNewParameter("esid",EbDbTypes.String,request.NewESolutionId),
+                    this.InfraConnectionFactory.DataDB.GetNewParameter("sname",EbDbTypes.String,request.SolutionName),
+                    this.InfraConnectionFactory.DataDB.GetNewParameter("desc",EbDbTypes.String,request.Description),
+                    this.InfraConnectionFactory.DataDB.GetNewParameter("userid",EbDbTypes.Int32,request.UserId),
+                    this.InfraConnectionFactory.DataDB.GetNewParameter("isid",EbDbTypes.String,isid),
+                };
+
+                int rowaffcted = this.InfraConnectionFactory.DataDB.DoNonQuery(q, parameters);
+                if (rowaffcted > 0)
+                {
+                    this.Redis.RenameKey(string.Format(CoreConstants.SOLUTION_ID_MAP, request.OldESolutionId), string.Format(CoreConstants.SOLUTION_ID_MAP, request.NewESolutionId));
+                    resp.Status = true;
+                    TenantUserServices _tenantUserService = base.ResolveService<TenantUserServices>();
+                    _tenantUserService.Post(new UpdateSolutionRequest
+                    {
+                        SolnId = isid,
+                        UserId = request.UserId
+                    });
+                }
+                else
+                    resp.Status = false;
+            }
+            catch (Exception e)
+            {
+                resp.Status = false;
+                Console.WriteLine(e.Message);
+                Console.WriteLine(e.StackTrace);
+            }
+            return resp;
+        }
+
+        public CheckSolutionOwnerResp Get(CheckSolutionOwnerReq request)
+        {
+            CheckSolutionOwnerResp resp = new CheckSolutionOwnerResp();
+            try
+            {
+                string q = @"SELECT * FROM eb_solutions WHERE tenant_id = :userid AND esolution_id = :esid AND eb_del = false;";
+                DbParameter[] parameters = new DbParameter[]
+                {
+                this.InfraConnectionFactory.DataDB.GetNewParameter("userid",EbDbTypes.Int32,request.UserId),
+                this.InfraConnectionFactory.DataDB.GetNewParameter("esid",EbDbTypes.String,request.ESolutionId),
+                };
+                EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(q, parameters);
+
+                if (dt.Rows.Count > 0)
+                {
+                    resp.IsValid = true;
+                    resp.SolutionInfo.SolutionName = dt.Rows[0]["solution_name"].ToString();
+                    resp.SolutionInfo.Description = dt.Rows[0]["description"].ToString();
+                    resp.SolutionInfo.IsolutionId = dt.Rows[0]["isolution_id"].ToString();
+                    resp.SolutionInfo.EsolutionId = dt.Rows[0]["esolution_id"].ToString();
+                }
+                else
+                    resp.IsValid = false;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+                Console.WriteLine(e.StackTrace);
+                resp.IsValid = false;
             }
             return resp;
         }
@@ -348,6 +437,9 @@ namespace ExpressBase.ServiceStack.Services
 
                 if (resp.Id > 0)
                 {
+                    //set esid=>isid map in redis
+                    this.Redis.Set<string>(string.Format(CoreConstants.SOLUTION_ID_MAP, Sol_id_autogen), Sol_id_autogen);
+
                     if (request.DeployDB)
                     {
                         EbDbCreateResponse response = (EbDbCreateResponse)_dbService.Post(new EbDbCreateRequest
@@ -382,9 +474,9 @@ namespace ExpressBase.ServiceStack.Services
                                 string env = Environment.GetEnvironmentVariable(EnvironmentConstants.ASPNETCORE_ENVIRONMENT);
                                 Console.WriteLine("Environment : " + env);
                                 if (env == "Staging" || env == "Development")
-                                    demoAppId = 129;
+                                    demoAppId = 4;
                                 else
-                                    demoAppId = 9;
+                                    demoAppId = 13;
                                 ImportApplicationResponse _response = service.Get(new ImportApplicationMqRequest
                                 {
                                     Id = demoAppId,
@@ -392,7 +484,8 @@ namespace ExpressBase.ServiceStack.Services
                                     UserId = request.UserId,
                                     UserAuthId = "",
                                     WhichConsole = "",
-                                    IsDemoApp = true
+                                    IsDemoApp = true,
+                                    SelectedSolutionId = Sol_id_autogen
                                 });
                             }
                         }
@@ -435,7 +528,6 @@ namespace ExpressBase.ServiceStack.Services
             }
             return resp;
         }
-
 
         public GetSolutioInfoResponse Get(GetSolutioInfoRequest request)
         {
@@ -659,9 +751,6 @@ namespace ExpressBase.ServiceStack.Services
             return Soclg;
         }
 
-
-
-
         public ForgotPasswordResponse Post(ForgotPasswordRequest reques)
         {
             ForgotPasswordResponse re = new ForgotPasswordResponse();
@@ -775,6 +864,7 @@ namespace ExpressBase.ServiceStack.Services
 
             return re;
         }
+
         public ResetPasswordResponse Post(ResetPasswordRequest reqst)
         {
             ResetPasswordResponse rests = new ResetPasswordResponse();
@@ -814,28 +904,6 @@ namespace ExpressBase.ServiceStack.Services
 
             return rests;
         }
-        //public EditAccountResponse Post(EditAccountRequest request)
-        //{
-        //    EditAccountResponse resp;
-        //    using (var con = EbConnectionFactory.DataDB.GetNewConnection())
-        //    {
-        //        Dictionary<string, object> dict = new Dictionary<string, object>();
-        //        string sql = string.Format("SELECT * FROM eb_tenantaccount WHERE id={0}", request.Colvalues["id"]);
-        //        var dt = EbConnectionFactory.DataDB.DoQuery(sql);
-        //        foreach (EbDataRow dr in dt.Rows)
-        //        {
-        //            foreach (EbDataColumn dc in dt.Columns)
-        //            {
-        //                dict.Add(dc.ColumnName, dr[dc.ColumnName]);
-        //            }
-        //        }
-        //        resp = new EditAccountResponse()
-        //        {
-        //            Data = dict
-        //        };
-        //    }
-        //    return resp;
-        //}
 
         //public void Get(CreateApplicationRequest request)
         //{
@@ -1818,6 +1886,12 @@ namespace ExpressBase.ServiceStack.Services
                 returnlist = list
             };
             return resp;
+        }
+
+        public UpdateSidMapResponse Post(UpdateSidMapRequest request)
+        {
+            this.MessageProducer3.Publish(new UpdateSidMapMqRequest());
+            return new UpdateSidMapResponse();
         }
 
         //public InfraDb_GENERIC_SELECTResponse Any(InfraDb_GENERIC_SELECTRequest req)

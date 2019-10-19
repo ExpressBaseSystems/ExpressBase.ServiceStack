@@ -110,7 +110,9 @@ namespace ExpressBase.ServiceStack
             {
                 string formRefid = row[0].ToString();
                 string formName = row[1].ToString();
+                string formDisplayName = row[2].ToString();
                 resp.BotForms.Add(formRefid, formName);
+                resp.BotFormsDisp.Add(formRefid, formDisplayName);
             }
             //int _id = Convert.ToInt32(request.BotFormIds);
             //var myService = base.ResolveService<EbObjectService>();
@@ -225,8 +227,6 @@ namespace ExpressBase.ServiceStack
             _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_at", Type = vDbTypes.DateTime });
             _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_del", Type = vDbTypes.Boolean, Default = "F" });
             _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_void", Type = vDbTypes.Boolean, Default = "F" });
-            _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_transaction_date", Type = vDbTypes.DateTime });
-            _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_autogen", Type = vDbTypes.Decimal });
 
             CreateOrAlterTable(request.WebObj.TableName.ToLower(), _listNamesAndTypes);
 
@@ -252,7 +252,7 @@ namespace ExpressBase.ServiceStack
 
         public object Any(CreateBotFormTableRequest request)
         {
-            var vDbTypes = this.EbConnectionFactory.ObjectsDB.VendorDbTypes;
+            var vDbTypes = this.EbConnectionFactory.DataDB.VendorDbTypes;
             List<TableColumnMeta> _listNamesAndTypes = new List<TableColumnMeta>();
 
             foreach (EbControl control in request.BotObj.Controls)
@@ -309,8 +309,6 @@ namespace ExpressBase.ServiceStack
             _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_at", Type = vDbTypes.DateTime });
             _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_del", Type = vDbTypes.Boolean, Default = "F" });
             _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_void", Type = vDbTypes.Boolean, Default = "F" });
-            _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_transaction_date", Type = vDbTypes.DateTime });
-            _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_autogen", Type = vDbTypes.Decimal });
 
             CreateOrAlterTable(request.BotObj.TableName.ToLower(), _listNamesAndTypes);
 
@@ -899,16 +897,14 @@ namespace ExpressBase.ServiceStack
 
             if (request.Id == 0)
             {
-                cols = cols + "eb_created_by, eb_created_aid, eb_created_at, eb_lastmodified_by, eb_lastmodified_aid, eb_lastmodified_at, eb_transaction_date, eb_autogen";
-                vals = vals + ":eb_created_by,:eb_created_aid,:eb_created_at,:eb_lastmodified_by,:eb_lastmodified_aid,:eb_lastmodified_at,:eb_transaction_date,:eb_autogen";
+                cols = cols + "eb_created_by, eb_created_aid, eb_created_at, eb_lastmodified_by, eb_lastmodified_aid, eb_lastmodified_at";
+                vals = vals + ":eb_created_by,:eb_created_aid,:eb_created_at,:eb_lastmodified_by,:eb_lastmodified_aid,:eb_lastmodified_at";
                 paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_created_by", EbDbTypes.Int32, request.UserId));
                 paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_created_aid", EbDbTypes.Int32, request.AnonUserId));
                 paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_created_at", EbDbTypes.DateTime, DateTime.Now));
                 paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_lastmodified_by", EbDbTypes.Int32, request.UserId));
                 paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_lastmodified_aid", EbDbTypes.Int32, request.AnonUserId));
                 paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_lastmodified_at", EbDbTypes.DateTime, DateTime.Now));
-                paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_transaction_date", EbDbTypes.Date, DateTime.Now));
-                paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_autogen", EbDbTypes.Int64, new Random().Next()));
                 qry = string.Format("insert into @tbl({0}) values({1})".Replace("@tbl", request.TableName), cols, vals);
 
                 //append second insert query
@@ -1006,7 +1002,7 @@ namespace ExpressBase.ServiceStack
                     string Qry = string.Format("UPDATE {0} SET {1} WHERE id=:id;", TableName, colvals.Substring(0, colvals.Length - 1));
                     rstatus = this.EbConnectionFactory.ObjectsDB.UpdateTable(Qry, parameters.ToArray());
                 }
-                UpdateLog(UpdateList, TableName, UserId);
+                //UpdateLog(UpdateList, TableName, UserId);
             }
             return rstatus;
         }
@@ -1038,7 +1034,7 @@ namespace ExpressBase.ServiceStack
         {
             List<BotDetails> list = new List<BotDetails>();
             string qry = @"SELECT id, applicationname, app_icon, app_settings FROM eb_applications WHERE application_type = 3 AND eb_del = 'F'";
-            var table = this.EbConnectionFactory.ObjectsDB.DoQuery(qry);
+            var table = this.EbConnectionFactory.DataDB.DoQuery(qry);
             foreach (EbDataRow row in table.Rows)
             {
                 list.Add(new BotDetails

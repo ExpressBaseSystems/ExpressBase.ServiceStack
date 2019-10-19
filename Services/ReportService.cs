@@ -55,6 +55,7 @@ namespace ExpressBase.ServiceStack
             EbReport Report = null;
             try
             {
+                //List<string> Groupings = null;
                 EbObjectService myObjectservice = base.ResolveService<EbObjectService>();
                 myObjectservice.EbConnectionFactory = this.EbConnectionFactory;
                 DataSourceService myDataSourceservice = base.ResolveService<DataSourceService>();
@@ -73,6 +74,8 @@ namespace ExpressBase.ServiceStack
                 Report.LinkCollection = new Dictionary<string, List<Common.Objects.EbControl>>();
                 Report.PageSummaryFields = new Dictionary<string, List<EbDataField>>();
                 Report.ReportSummaryFields = new Dictionary<string, List<EbDataField>>();
+                Report.GroupFooters = new Dictionary<string, ReportGroupItem>();
+                Report.Groupheaders = new Dictionary<string, ReportGroupItem>();
                 Report.FileClient = new EbStaticFileClient();
                 Report.FileClient = FileClient;
                 Report.Solution = Redis.Get<Eb_Solution>(String.Format("solution_{0}", request.SolnId));
@@ -85,14 +88,18 @@ namespace ExpressBase.ServiceStack
                 Report.Doc = new Document(rec);
                 Report.Ms1 = new MemoryStream();
                 if (Report.DataSourceRefId != string.Empty)
-                    Report.DataSet = myDataSourceservice.Any(new DataSourceDataSetRequest { RefId = Report.DataSourceRefId, Params = Report.Parameters }).DataSet;
+                {
+                    //Groupings = new List<string>();
+
+                    Report.DataSet = myDataSourceservice.Any(new DataSourceDataSetRequest { RefId = Report.DataSourceRefId, Params = Report.Parameters,/*Groupings= Groupings*/ }).DataSet;
+                }
                 if (Report.DataSet == null)
-                    Console.WriteLine("Dataset is null, refid " + Report.DataSourceRefId); 
+                    Console.WriteLine("Dataset is null, refid " + Report.DataSourceRefId);
                 //throw new Exception("Dataset is null, refid " + Report.DataSourceRefId);
                 Report.Writer = PdfWriter.GetInstance(Report.Doc, Report.Ms1);
                 Report.Writer.Open();
                 Report.Doc.Open();
-                Report.Doc.AddTitle(Report.Name);
+                Report.Doc.AddTitle(Report.DisplayName);
                 Report.Writer.PageEvent = new HeaderFooter(Report);
                 Report.Writer.CloseStream = true;//important
                 Report.Canvas = Report.Writer.DirectContent;
@@ -103,6 +110,7 @@ namespace ExpressBase.ServiceStack
                 Report.Doc.NewPage();
                 Report.DrawReportHeader();
                 Report.DrawDetail();
+                Report.DrawReportFooter();
                 Report.Doc.Close();
                 if (Report.UserPassword != string.Empty || Report.OwnerPassword != string.Empty)
                     Report.SetPassword();
@@ -143,6 +151,27 @@ namespace ExpressBase.ServiceStack
 
             foreach (EbPageFooter p_footer in Report.PageFooters)
                 Fill(Report, p_footer.Fields, EbReportSectionType.PageFooter);
+
+            foreach (EbReportGroup group in Report.ReportGroups)
+            {
+                foreach (EbReportField field in group.GroupHeader.Fields)
+                {
+                   
+                    if (field is EbDataField)
+                    {
+                        Report.Groupheaders.Add((field as EbDataField).ColumnName, new ReportGroupItem
+                        {
+                            field = field as EbDataField,
+                            PreviousValue = string.Empty,
+                            order = group.GroupHeader.Order
+                        });                      
+                    }
+                }
+                // foreach (EbReportField field in group.GroupFooter.Fields)
+                // if (field is EbDataField)
+                // Report.GroupFooters.Add(field as EbDataField);
+            }
+
         }
 
         private void Fill(EbReport Report, List<EbReportField> fields, EbReportSectionType section_typ)
@@ -431,10 +460,13 @@ namespace ExpressBase.ServiceStack
 
         public override void OnEndPage(PdfWriter writer, Document d)
         {
-            Report.DrawPageHeader();
-            Report.DrawPageFooter();
-            if (Report.IsLastpage == true)
-                Report.DrawReportFooter();
+            if (!Report.FooterDrawn)
+            {
+                Report.DrawPageHeader();
+                Report.DrawPageFooter();
+            }
+            //if (Report.IsLastpage == true)
+            //    Report.DrawReportFooter();
             Report.DrawWaterMark(d, writer);
             Report.SetDetail();
         }
