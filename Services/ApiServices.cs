@@ -15,6 +15,7 @@ using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
+using ExpressBase.Security;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -607,9 +608,28 @@ namespace ExpressBase.ServiceStack.Services
             GetMobMenuResonse resp = new GetMobMenuResonse();
             try
             {
-                string sql = "SELECT id,applicationname,app_icon,application_type FROM eb_applications WHERE eb_del='F'";
+                string sql = @"SELECT 
+                                    EA.id,
+                                    EA.applicationname,
+                                    EA.app_icon,
+                                    EA.application_type 
+                                FROM 
+                                    eb_applications EA 
+                                WHERE EXISTS(
+                                            SELECT 
+                                                * 
+                                            FROM 
+                                                eb_objects2application 
+                                            WHERE 
+                                                app_id = EA.id 
+                                            AND 
+                                                eb_del = 'F'
+                                            )
+                                AND 
+                                    EA.eb_del = 'F';";
+
                 EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery(sql);
-                foreach(EbDataRow row in dt.Rows)
+                foreach (EbDataRow row in dt.Rows)
                 {
                     resp.Applications.Add(new AppDataToMob
                     {
@@ -619,12 +639,73 @@ namespace ExpressBase.ServiceStack.Services
                     });
                 }
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 Console.WriteLine(e.StackTrace);
                 Console.WriteLine("EXCEPTION AT GetMobMenuRequest " + e.Message);
             }
             return resp;
+        }
+
+        public EbObjectToMobResponse Get(EbObjectToMobRequest request)
+        {
+            EbObjectToMobResponse response = new EbObjectToMobResponse();
+
+            try
+            {
+                var resp = (EbObjectParticularVersionResponse)StudioServices.Get(new EbObjectParticularVersionRequest { RefId = request.RefId });
+
+                if (!resp.Data.Any())
+                    return null;
+
+                response.ObjectWraper = resp.Data[0];
+
+                if (resp.Data[0].EbObjectType == EbObjectTypes.Report)
+                {
+                    EbReport reportobj = EbSerializers.Json_Deserialize<EbReport>(resp.Data[0].Json);
+                    if (!string.IsNullOrEmpty(reportobj.DataSourceRefId))
+                    {
+                        ObjWrapperInt dr = this.GetObjectByVer(reportobj.DataSourceRefId);
+
+                        if (string.IsNullOrEmpty((dr.EbObj as EbDataReader).FilterDialogRefId))
+                        {
+                            ReportService rep_service = base.ResolveService<ReportService>();
+                            ReportRenderResponse stream = rep_service.Get(new ReportRenderRequest
+                            {
+                                Refid = request.RefId,
+                                SolnId = request.SolnId,
+                                UserId = request.UserId,
+                                ReadingUser = request.User,
+                                RenderingUser = request.User
+                            });
+
+                            response.ReportResult = stream.ReportBytea;
+                        }
+                    }
+
+                }
+                else if (resp.Data[0].EbObjectType == EbObjectTypes.TableVisualization)
+                {
+                    EbTableVisualization tv = EbSerializers.Json_Deserialize<EbTableVisualization>(resp.Data[0].Json);
+
+                    if (!string.IsNullOrEmpty(tv.DataSourceRefId))
+                    {
+                        ObjWrapperInt dr = this.GetObjectByVer(tv.DataSourceRefId);
+
+                        if(string.IsNullOrEmpty((dr.EbObj as EbDataReader).FilterDialogRefId))
+                        {
+                            response.TableResult = this.EbConnectionFactory.DataDB.DoQueries((dr.EbObj as EbDataReader).Sql);
+                        }
+                    }
+                }
+            }
+            catch(Exception e)
+            {
+                Console.WriteLine("EXCEPTION AT EbObjectToMobResponse" + e.Message);
+                Console.WriteLine(e.StackTrace);
+            }
+            
+            return response;
         }
     }
 }
