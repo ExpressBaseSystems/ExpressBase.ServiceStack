@@ -177,7 +177,7 @@ namespace ExpressBase.ServiceStack
                     new MyCredentialsAuthProvider(AppSettings) { PersistSession = true },
                     jwtprovider,
                     //fbauth,
-                    //apiprovider,
+                    apiprovider,
                     new MyTwitterAuthProvider(AppSettings)
                     {
                         ConsumerKey = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_TWITTER_CONSUMER_KEY),
@@ -228,7 +228,7 @@ namespace ExpressBase.ServiceStack
             container.Register<IAuthRepository>(c => new MyRedisAuthRepository(c.Resolve<IRedisClientsManager>()));
             container.Register<IManageApiKeys>(c => new EbApiRedisAuthRepository(c.Resolve<IRedisClientsManager>()));
 
-            container.Register<ICacheClient>(c => new RedisClientManagerCacheClient(c.Resolve<IRedisClientsManager>()));
+            container.Register<ICacheClient>(c => new RedisClientManagerCacheClient(c.Resolve<IRedisClientsManager>())).ReusedWithin(ReuseScope.Request);
             container.Register<JwtAuthProvider>(jwtprovider);
             container.Register<IEbConnectionFactory>(c => new EbConnectionFactory(c)).ReusedWithin(ReuseScope.Request);
             container.Register<IEbServerEventClient>(c => new EbServerEventClient()).ReusedWithin(ReuseScope.Request);

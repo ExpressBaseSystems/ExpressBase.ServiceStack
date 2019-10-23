@@ -14,6 +14,7 @@ using ServiceStack;
 using Newtonsoft.Json;
 using ExpressBase.Security;
 using ExpressBase.Common.Singletons;
+using ServiceStack.Auth;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -311,7 +312,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 EbConstraints consObj = new EbConstraints(request.LocationAdd.Split(","), EbConstraintKeyTypes.User, EbConstraintTypes.User_Location);
                 request.LocationAdd = consObj.GetDataAsString();
-            }            
+            }
 
             string password = (request.Password + request.EmailPrimary).ToMD5Hash();
             List<DbParameter> parameters = new List<DbParameter> {
@@ -1020,6 +1021,35 @@ namespace ExpressBase.ServiceStack.Services
                     id = Convert.ToInt32(id)
                 };
             }
+            return resp;
+        }
+
+        //--API KEY GENERATION
+        public object Get(GenerateAPIKey request)
+        {
+            GenerateAPIKeyResponse resp = new GenerateAPIKeyResponse();
+            //var authProvider = (ApiKeyAuthProvider)AuthenticateService.GetAuthProvider(ApiKeyAuthProvider.Name);
+
+            try
+            {
+                var auth_api = (ApiKeyAuthProvider)AuthenticateService.GetAuthProvider(ApiKeyAuthProvider.Name);
+
+                var authRepo = TryResolve<IManageApiKeys>();
+
+                resp.APIKeys = auth_api.GenerateNewApiKeys(request.UserAuthId);
+
+                authRepo.StoreAll(resp.APIKeys);
+            }
+            catch(Exception e)
+            {
+                resp.ResponseStatus = new ResponseStatus()
+                {
+                    ErrorCode = "APIError",
+                    Message = e.Message,
+                    StackTrace = e.StackTrace
+                };
+            }
+
             return resp;
         }
     }

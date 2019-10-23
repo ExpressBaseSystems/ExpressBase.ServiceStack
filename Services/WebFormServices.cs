@@ -883,7 +883,7 @@ namespace ExpressBase.ServiceStack.Services
                 valscript.Compile();
 
                 FormAsGlobal g = _formObj.GetFormAsGlobal(_formData);
-                FormGlobals globals = new FormGlobals() { FORM = g };
+                FormGlobals globals = new FormGlobals() { form = g };
                 var result = (valscript.RunAsync(globals)).Result.ReturnValue;
 
                 _formData.MultipleTables[cw.TableName][0].Columns.Add(new SingleColumn
@@ -1303,5 +1303,29 @@ namespace ExpressBase.ServiceStack.Services
             };
         }
 
+        public GetDistinctValuesResponse Get(GetDistinctValuesRequest request)
+        {
+            GetDistinctValuesResponse resp = new GetDistinctValuesResponse() { Suggestions = new List<string>()};
+            try
+            {  
+                string query = @"SELECT DISTINCT INITCAP(TRIM(@ColumName)) AS @ColumName FROM @TableName ORDER BY @ColumName;"
+                .Replace("@ColumName", request.ColumnName)
+                .Replace("@TableName", request.TableName);
+                EbDataTable table = EbConnectionFactory.DataDB.DoQuery(query);
+
+                int capacity = table.Rows.Count;
+
+                for (int i = 0; i < capacity; i++)
+                {
+                    resp.Suggestions.Add(table.Rows[i][0].ToString());
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("ERROR: GetWikiSearch Exception: " + e.Message);
+            }
+            return resp;
+
+        }
     }
 }
