@@ -228,14 +228,14 @@ namespace ExpressBase.ServiceStack
             container.Register<IAuthRepository>(c => new MyRedisAuthRepository(c.Resolve<IRedisClientsManager>()));
             //container.Register<IManageApiKeys>(c => new EbApiRedisAuthRepository(c.Resolve<IRedisClientsManager>()));
 
-            container.Register<ICacheClient>(c => new RedisClientManagerCacheClient(c.Resolve<IRedisClientsManager>())).ReusedWithin(ReuseScope.Request);
+            container.Register(c => c.Resolve<IRedisClientsManager>().GetCacheClient());
             container.Register<JwtAuthProvider>(jwtprovider);
             container.Register<IEbConnectionFactory>(c => new EbConnectionFactory(c)).ReusedWithin(ReuseScope.Request);
             container.Register<IEbServerEventClient>(c => new EbServerEventClient()).ReusedWithin(ReuseScope.Request);
             container.Register<IEbMqClient>(c => new EbMqClient()).ReusedWithin(ReuseScope.Request);
             container.Register<IEbStaticFileClient>(c => new EbStaticFileClient()).ReusedWithin(ReuseScope.Request);
 
-            ////Setting Assembly version in Redis
+            //Setting Assembly version in Redis
             //RedisClient client = (container.Resolve<IRedisClientsManager>() as RedisManagerPool).GetClient() as RedisClient;
             //AssemblyName assembly = Assembly.GetExecutingAssembly().GetName();
             //String version = assembly.Name.ToString() + " - " + assembly.Version.ToString();

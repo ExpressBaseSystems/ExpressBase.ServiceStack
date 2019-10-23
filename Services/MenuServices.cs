@@ -9,6 +9,8 @@ using System.Data.Common;
 using System.Linq;
 using System.Runtime.Serialization;
 using System.Threading.Tasks;
+using ExpressBase.Security;
+using ExpressBase.Common.Constants;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -16,7 +18,20 @@ namespace ExpressBase.ServiceStack.Services
     {
         public MenuServices(IEbConnectionFactory _dbf) : base(_dbf) { }
 
-        List<System.Data.Common.DbParameter> parameters = new List<System.Data.Common.DbParameter>();
+        public User UserObject { set; get; }
+
+        private List<string> GetAccessIds(int lid)
+        {
+            List<string> ObjIds = new List<string>();
+            foreach (string perm in this.UserObject.Permissions)
+            {
+                int id = Convert.ToInt32(perm.Split(CharConstants.DASH)[2]);
+                int locid = Convert.ToInt32(perm.Split(CharConstants.COLON)[1]);
+                if ((lid == locid || locid == -1) && !ObjIds.Contains(id.ToString()))
+                    ObjIds.Add(id.ToString());
+            }
+            return ObjIds;
+        }
 
         public SidebarUserResponse Get(SidebarUserRequest request)
         {
@@ -25,11 +40,13 @@ namespace ExpressBase.ServiceStack.Services
             List<ObjWrap> _fav = new List<ObjWrap>();
             List<int> _favids = new List<int>();
 
+            this.UserObject = this.Redis.Get<User>(request.UserAuthId);
+
             DbParameter[] parameters = {
                 this.EbConnectionFactory.ObjectsDB.GetNewParameter("user_id",EbDbTypes.Int32,request.UserId)
             };
 
-            if (request.SysRole.Contains("SolutionOwner") || request.SysRole.Contains("SolutionAdmin"))
+            if (this.UserObject.Roles.Contains("SolutionOwner") || this.UserObject.Roles.Contains("SolutionAdmin"))
             {
                 if (EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.MYSQL)
                 {
@@ -42,7 +59,9 @@ namespace ExpressBase.ServiceStack.Services
             }
             else
             {
-                ds = this.EbConnectionFactory.ObjectsDB.DoQueries(this.EbConnectionFactory.ObjectsDB.EB_SIDEBARUSER_REQUEST.Replace(":Ids", string.IsNullOrEmpty(request.Ids) ? "0" : request.Ids), parameters);
+                string Ids = String.Join(",", this.GetAccessIds(request.LocationId));
+
+                ds = this.EbConnectionFactory.ObjectsDB.DoQueries(this.EbConnectionFactory.ObjectsDB.EB_SIDEBARUSER_REQUEST.Replace(":Ids", string.IsNullOrEmpty(Ids) ? "0" : Ids), parameters);
             }
 
             foreach (EbDataRow row in ds.Tables[2].Rows)
@@ -146,6 +165,8 @@ namespace ExpressBase.ServiceStack.Services
 
             return new SidebarDevResponse { Data = _Coll, AppList = appColl };
         }
+
+
         public AddFavouriteResponse Post(AddFavouriteRequest request)
         {
             AddFavouriteResponse resp = new AddFavouriteResponse();
