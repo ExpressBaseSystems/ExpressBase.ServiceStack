@@ -745,6 +745,26 @@ namespace ExpressBase.ServiceStack.Services
             return _dataset;
         }
 
+        public GetImportDataResponse Any(GetImportDataRequest request)
+        {
+            try
+            {
+                DataSourceService myService = base.ResolveService<DataSourceService>();
+                DataSourceDataSetResponse response = (DataSourceDataSetResponse)myService.Any(new DataSourceDataSetRequest() { RefId = request.RefId, Params = request.Params });
+                SingleTable Table = new SingleTable();
+                EbWebForm WebForm = new EbWebForm();
+                WebForm.GetFormattedData(response.DataSet.Tables[0], Table);
+                WebformData formData = new WebformData { MultipleTables = new Dictionary<string, SingleTable>() { { "Table1", Table } } };
+                return new GetImportDataResponse() { FormData = formData };
+            }
+            catch(Exception ex)
+            {
+                Console.WriteLine("Exception in GetImportDataRequest Service" + ex.Message);
+                Console.WriteLine(ex.StackTrace);
+                throw ex;
+            }
+        }
+
         private EbWebForm GetWebFormObject(string RefId)
         {
             EbWebForm _form = this.Redis.Get<EbWebForm>(RefId);
