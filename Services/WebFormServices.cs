@@ -729,7 +729,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 Console.WriteLine("Exception in GetRowData Service" + ex.Message);
                 Console.WriteLine(ex.StackTrace);
-                throw new FormException("Terminated GetRowData. Check servicestack log for stack trace.");
+                throw ex;
             }
         }
 
