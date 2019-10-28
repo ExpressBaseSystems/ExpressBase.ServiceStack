@@ -137,6 +137,31 @@ namespace ExpressBase.ServiceStack.Services
             return JobResponse;
         }
 
+        public SqlJobsListGetResponse Get(SqlJobsListGetRequest request)
+        {
+            
+            SqlJobsListGetResponse resp = new SqlJobsListGetResponse();
+            try
+            {
+               
+                string query =  $"select logmaster_id , params,COALESCE (message, 'ffff') message,createdby,createdat," +
+                    $"COALESCE(status, 'FAILED') status,id from eb_joblogs_lines where logmaster_id =" +
+                    $"(select id from eb_joblogs_master where to_char(created_at, 'dd-mm-yyyy') = '{request.Date}' and refid = '{request.Refid}' limit 1) order by status,id; ";
+                EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(query);
+                int capacity1 = dt.Rows.Count;
+                resp.SqlJobsColumns = dt.Columns;
+                resp.SqlJobsRows = dt.Rows;
+
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("ERROR: SqlFetch Exception: " + e.Message);
+            }
+            return resp;
+        }
+
+
+
         public object GetResult(SqlJobResources resource, int index, int parentindex, int grandparent)
         {
             ResultWrapper res = new ResultWrapper();
@@ -428,5 +453,9 @@ namespace ExpressBase.ServiceStack.Services
         //    return _param;
         //}
     }
+
+
+   
+
 
 }
