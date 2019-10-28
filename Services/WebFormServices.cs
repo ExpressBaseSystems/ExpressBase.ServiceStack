@@ -5,6 +5,7 @@ using ExpressBase.Common.Extensions;
 using ExpressBase.Common.LocationNSolution;
 using ExpressBase.Common.Objects;
 using ExpressBase.Common.Structures;
+using ExpressBase.Security;
 using ExpressBase.Objects;
 using ExpressBase.Objects.Objects;
 using ExpressBase.Objects.Objects.DVRelated;
@@ -745,25 +746,52 @@ namespace ExpressBase.ServiceStack.Services
             return _dataset;
         }
 
+        //public GetImportDataResponse Any(GetImportDataRequest request)
+        //{
+        //    try
+        //    {
+        //        DataSourceService myService = base.ResolveService<DataSourceService>();
+        //        DataSourceDataSetResponse response = (DataSourceDataSetResponse)myService.Any(new DataSourceDataSetRequest() { RefId = request.RefId, Params = request.Params });
+        //        SingleTable Table = new SingleTable();
+        //        EbWebForm WebForm = new EbWebForm();
+        //        WebForm.GetFormattedData(response.DataSet.Tables[0], Table);
+        //        WebformData formData = new WebformData { MultipleTables = new Dictionary<string, SingleTable>() { { "Table1", Table } } };
+        //        return new GetImportDataResponse() { FormData = formData };
+        //    }
+        //    catch(Exception ex)
+        //    {
+        //        Console.WriteLine("Exception in GetImportDataRequest Service" + ex.Message);
+        //        Console.WriteLine(ex.StackTrace);
+        //        throw ex;
+        //    }
+        //}
+        
         public GetImportDataResponse Any(GetImportDataRequest request)
         {
             try
             {
-                DataSourceService myService = base.ResolveService<DataSourceService>();
-                DataSourceDataSetResponse response = (DataSourceDataSetResponse)myService.Any(new DataSourceDataSetRequest() { RefId = request.RefId, Params = request.Params });
-                SingleTable Table = new SingleTable();
-                EbWebForm WebForm = new EbWebForm();
-                WebForm.GetFormattedData(response.DataSet.Tables[0], Table);
-                WebformData formData = new WebformData { MultipleTables = new Dictionary<string, SingleTable>() { { "Table1", Table } } };
-                return new GetImportDataResponse() { FormData = formData };
+                Console.WriteLine("Start ImportFormData");
+                EbWebForm form = GetWebFormObject(request.RefId);
+                form.RefId = request.RefId;
+                form.UserObj = this.Redis.Get<User>(request.UserAuthId);
+                form.SolutionObj = this.Redis.Get<Eb_Solution>(String.Format("solution_{0}", request.SolnId));
+                form.ImportData(EbConnectionFactory.DataDB, this, request.Params, request.Trigger);
+                Console.WriteLine("End ImportFormData");
+                return new GetImportDataResponse() { FormDataWrap = new WebformDataWrapper { FormData = form.FormData, Status = 200 } };
             }
-            catch(Exception ex)
+            catch (FormException ex)
+            {
+                Console.WriteLine("FormException in GetImportDataRequest Service" + ex.Message);
+                return new GetImportDataResponse() { FormDataWrap = new WebformDataWrapper { Status = 500, Message = ex.Message, MessageInt = ex.MessageInternal, StackTraceInt = ex.StackTraceInternal} };
+            }
+            catch (Exception ex)
             {
                 Console.WriteLine("Exception in GetImportDataRequest Service" + ex.Message);
                 Console.WriteLine(ex.StackTrace);
-                throw ex;
+                return new GetImportDataResponse() { FormDataWrap = new WebformDataWrapper { Status = 500, Message = "Exception in GetImportDataRequest", MessageInt = ex.Message, StackTraceInt = ex.StackTrace } };
             }
         }
+
 
         private EbWebForm GetWebFormObject(string RefId)
         {
@@ -1342,7 +1370,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
-                Console.WriteLine("ERROR: GetWikiSearch Exception: " + e.Message);
+                Console.WriteLine("EXCEPTION: Get suggestions for EbTextBox(AutoSuggestion)\nMessage: " + e.Message);
             }
             return resp;
 
