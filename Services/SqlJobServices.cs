@@ -28,6 +28,8 @@ namespace ExpressBase.ServiceStack.Services
 
         public int UserId { get; set; }
 
+        public bool IsRetry = false;
+
         public Dictionary<string, object> GlobalParams { set; get; }
 
         public Dictionary<string, object> TempParams { set; get; }
@@ -41,15 +43,39 @@ namespace ExpressBase.ServiceStack.Services
             this.StudioServices = base.ResolveService<EbObjectService>();
             this.JobResponse = new SqlJobResponse();
         }
+        private Dictionary<string, string> _keyValuePairs = null;
 
+        public Dictionary<string, string> GetKeyvalueDict
+        {
+            get
+            {
+                if (_keyValuePairs == null)
+                {
+                    _keyValuePairs = new Dictionary<string, string>();
+                    foreach (string key in this.SqlJob.FirstReaderKeyColumns)
+                    {
+                        if (!_keyValuePairs.ContainsKey(key))
+                            _keyValuePairs.Add(key, "");
+                    }
+                    foreach (string key in this.SqlJob.ParameterKeyColumns)
+                    {
+                        if (!_keyValuePairs.ContainsKey(key))
+                            _keyValuePairs.Add(key, "");
+                    }
+                }
+                return _keyValuePairs;
+            }
+        }
         public EbSqlJob SqlJob = new EbSqlJob
         {
-            RefId = "Testid",
+            RefId = "My-Testid",
+            FirstReaderKeyColumns = new List<string> { "empmaster_name" },
+            ParameterKeyColumns = new List<string> { "date_to_consolidate" },
             Resources = new OrderedList
             {
                 new EbSqlJobReader
                 {
-                    Reference="ebdbllz23nkqd620180220120030-ebdbllz23nkqd620180220120030-2-2601-3447-2601-3447",
+                    Reference="ebdbllz23nkqd620180220120030-ebdbllz23nkqd620180220120030-2-2601-3455-2601-3455",
                     RouteIndex=0
                 },
                 new EbLoop
@@ -78,14 +104,13 @@ namespace ExpressBase.ServiceStack.Services
                                     },
                                     new EbSqlJobWriter
                                     {
-                                        Reference="ebdbllz23nkqd620180220120030-ebdbllz23nkqd620180220120030-4-2604-3446-2604-3446",
+                                        Reference="ebdbllz23nkqd620180220120030-ebdbllz23nkqd620180220120030-4-2613-3461-2613-3461",
                                         RouteIndex=2,
                                     }
                                 }
                         },
                     }
                 }
-
             }
         };
 
@@ -127,7 +152,11 @@ namespace ExpressBase.ServiceStack.Services
                 }
                 catch (Exception e)
                 {
-                    this.EbConnectionFactory.DataDB.DoNonQuery(string.Format("UPDATE eb_joblogs_master SET status = 'FAILED', message = {1} WHERE id = {0};", LogMasterId, e.Message + e.StackTrace));
+                    DbParameter[] dbparameters = new DbParameter[] {
+                    this.EbConnectionFactory.DataDB.GetNewParameter("message",EbDbTypes.String, e.Message + e.StackTrace),
+                    this.EbConnectionFactory.DataDB.GetNewParameter("id",EbDbTypes.Int32,LogMasterId)
+                    };
+                    this.EbConnectionFactory.DataDB.DoNonQuery("UPDATE eb_joblogs_master SET status = 'FAILED', message = :message WHERE id = :id;", dbparameters);
                 }
             }
             catch (Exception e)
@@ -137,7 +166,44 @@ namespace ExpressBase.ServiceStack.Services
             return JobResponse;
         }
 
-        public object GetResult(SqlJobResources resource, int index, int parentindex, int grandparent)
+        public RetryJobResponse post(RetryJobRequest request)
+        {
+            RetryJobResponse response = new RetryJobResponse();
+            IsRetry = true;
+            LogLine logline = GetLogLine(request.JoblogId);
+            this.GlobalParams = logline.Params;
+            LoopLocation loopLocation = this.SqlJob.GetLoop();
+            LoopExecution(loopLocation.Loop, request.JoblogId, loopLocation.Step, loopLocation.ParentIndex, null);
+            return response;
+        }
+
+        //---------------------------------------------------------------------------------------------------------------------------------------------
+
+        public LogLine GetLogLine(int JoblogId)
+        {
+            LogLine logline = null;
+            string sql = @"SELECT l.* , m.refid 
+                        FROM  eb_joblogs_lines l, eb_joblogs_master m
+                        WHERE l.id = :id AND
+                        m.id = l.logmaster_id";
+            DbParameter[] parameters = new DbParameter[] {
+            this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, JoblogId) };
+            EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(sql, parameters);
+            if (dt.Rows != null && dt.Rows.Count > 0)
+            {
+                logline = new LogLine
+                {
+                    linesid = Convert.ToInt32(dt.Rows[0]["id"]),
+                    masterid = Convert.ToInt32(dt.Rows[0]["logmaster_id"]),
+                    Message = dt.Rows[0]["message"].ToString(),
+                    Params = JsonConvert.DeserializeObject<Dictionary<string, object>>(dt.Rows[0]["params"].ToString()),
+                    Status = dt.Rows[0]["status"].ToString(),
+                    Refid = dt.Rows[0]["refid"].ToString()
+                };
+            }
+            return logline;
+        }
+        public object GetResult(SqlJobResource resource, int index, int parentindex, int grandparent)
         {
             ResultWrapper res = new ResultWrapper();
             try
@@ -152,7 +218,7 @@ namespace ExpressBase.ServiceStack.Services
                     res.Result = ExecuteTransaction(resource as EbTransaction, index);
                 else if (resource is EbSqlProcessor)
                 {
-                    SqlJobResources _prev = null;
+                    SqlJobResource _prev = null;
                     if (this.SqlJob.Resources[index] is EbTransaction)
                         _prev = (index != 0) ? (((this.SqlJob.Resources[index] as EbTransaction).InnerResources[parentindex] as EbLoop).InnerResources[index - 1]) : null;
                     else if (this.SqlJob.Resources[index] is EbLoop)
@@ -243,7 +309,6 @@ namespace ExpressBase.ServiceStack.Services
 
         public bool ExecuteLoop(EbLoop loop, int step, int parentindex)
         {
-            int linesid = 0;
             EbDataTable _table = null;
             if (parentindex == 0 && step == 1)
                 _table = (this.SqlJob.Resources[step - 1].Result as EbDataSet).Tables[0];
@@ -268,31 +333,7 @@ namespace ExpressBase.ServiceStack.Services
                     else
                         this.GlobalParams.Add(_outparam.Name, _outparam.Value);
 
-                    try
-                    {
-                        string query = @" INSERT INTO eb_joblogs_lines(logmaster_id, params, createdby, createdat)
-                                    VALUES(:logmaster_id, :params, :createdby, NOW()) returning id;";
-                        DbParameter[] parameters = new DbParameter[]
-                        {
-                         this.EbConnectionFactory.DataDB.GetNewParameter("logmaster_id", EbDbTypes.Int32, this.LogMasterId) ,
-                         this.EbConnectionFactory.DataDB.GetNewParameter("params",EbDbTypes.Json,EbSerializers.Json_Serialize(this.GlobalParams)),
-                         this.EbConnectionFactory.ObjectsDB.GetNewParameter("createdby", EbDbTypes.Int32, UserId)
-                         };
-                        EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(query, parameters);
-                        linesid = Convert.ToInt32(dt.Rows[0][0]);
-                        for (int counter = 0; counter < loop.InnerResources.Count; counter++)
-                            loop.InnerResources[counter].Result = this.GetResult(loop.InnerResources[counter], counter, step, parentindex);
-                        this.EbConnectionFactory.DataDB.DoNonQuery(string.Format("UPDATE eb_joblogs_lines SET status = 'SUCCESS' WHERE id = {0};", linesid));
-                    }
-                    catch (Exception e)
-                    {
-                        DbParameter[] parameters = new DbParameter[]
-                        {
-                         this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, linesid) ,
-                         this.EbConnectionFactory.DataDB.GetNewParameter("message",EbDbTypes.String,  e.Message)
-                        };
-                        this.EbConnectionFactory.DataDB.DoNonQuery(@"UPDATE eb_joblogs_lines SET status = 'FAILED', message = :message WHERE id = :id ;", parameters);
-                    }
+                    LoopExecution(loop, 0, step, parentindex, _table.Rows[i]);
                 }
                 catch (Exception e)
                 {
@@ -300,6 +341,74 @@ namespace ExpressBase.ServiceStack.Services
                 }
             }
             return true;
+        }
+
+        public void LoopExecution(EbLoop loop, int linesid, int step, int parentindex, EbDataRow dataRow)
+        {
+            try
+            {
+                if (!IsRetry)
+                {
+                    string query = @" INSERT INTO eb_joblogs_lines(logmaster_id, params, createdby, createdat)
+                                    VALUES(:logmaster_id, :params, :createdby, NOW()) returning id;";
+                    DbParameter[] parameters = new DbParameter[]
+                    {
+                         this.EbConnectionFactory.DataDB.GetNewParameter("logmaster_id", EbDbTypes.Int32, this.LogMasterId) ,
+                         this.EbConnectionFactory.DataDB.GetNewParameter("params",EbDbTypes.Json,JsonConvert.SerializeObject(this.GlobalParams)),
+                         this.EbConnectionFactory.ObjectsDB.GetNewParameter("createdby", EbDbTypes.Int32, UserId)
+                     };
+                    EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(query, parameters);
+                    linesid = Convert.ToInt32(dt.Rows[0][0]);
+                }
+                for (int counter = 0; counter < loop.InnerResources.Count; counter++)
+                    loop.InnerResources[counter].Result = this.GetResult(loop.InnerResources[counter], counter, step, parentindex);
+                 
+                this.EbConnectionFactory.DataDB.DoNonQuery(string.Format("UPDATE eb_joblogs_lines SET status = 'SUCCESS' WHERE id = {0};", linesid));
+            }
+            catch (Exception e)
+            {
+                DbParameter[] parameters = new DbParameter[]
+                {
+                         this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, linesid) ,
+                         this.EbConnectionFactory.DataDB.GetNewParameter("message",EbDbTypes.String,  e.Message),
+                         this.EbConnectionFactory.DataDB.GetNewParameter("keyvalues",EbDbTypes.Json,  FillKeys(dataRow))
+                };
+                this.EbConnectionFactory.DataDB.DoNonQuery(@"UPDATE eb_joblogs_lines SET status = 'FAILED', message = :message, keyvalues = :keyvalues WHERE id = :id ;", parameters);
+                throw e;
+            }
+        }
+
+        public string FillKeys(EbDataRow dataRow)
+        {
+            foreach (var item in this.GlobalParams)
+                if (GetKeyvalueDict.ContainsKey(item.Key))
+                    this.GetKeyvalueDict[item.Key] = GlobalParams[item.Key].ToString();
+            for (int i = 0; i < dataRow.Count; i++)
+            {
+                if (GetKeyvalueDict.ContainsKey(dataRow.Table.Columns[i].ColumnName))
+                    this.GetKeyvalueDict[dataRow.Table.Columns[i].ColumnName] = dataRow[i].ToString();
+            }
+
+
+            //foreach (var item in dataRow)
+            //    dataRow.Table.Columns[columnname].ColumnIndex
+            //    if (  item != null)
+            //        this.GetKeyvalueDict[item.ToString()] =  item .
+
+
+
+            //foreach (var item in this.GetKeyvalueDict)
+            //{
+            //    if (GlobalParams.ContainsKey(item.Key))
+            //        this.GetKeyvalueDict[item.Key] = GlobalParams[item.Key].ToString();
+            //    else if (dataRow != null && dataRow[item.Key] != null)
+            //        this.GetKeyvalueDict[item.Key] = dataRow[item.Key].ToString();
+            //}
+
+
+
+
+            return JsonConvert.SerializeObject(GetKeyvalueDict); ;
         }
 
         public bool ExecuteTransaction(EbTransaction txn, int step)
@@ -373,11 +482,11 @@ namespace ExpressBase.ServiceStack.Services
         }
     }
 
-    public class EbSqlProcessor : SqlJobResources
+    public class EbSqlProcessor : SqlJobResource
     {
         public EbScript Script { get; set; }
 
-        public SqlJobScript Evaluate(SqlJobResources _prevres, Dictionary<string, object> GlobalParams)
+        public SqlJobScript Evaluate(SqlJobResource _prevres, Dictionary<string, object> GlobalParams)
         {
             string code = this.Script.Code.Trim();
             EbDataSet _ds = null;
