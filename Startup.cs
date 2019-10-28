@@ -177,7 +177,7 @@ namespace ExpressBase.ServiceStack
                     new MyCredentialsAuthProvider(AppSettings) { PersistSession = true },
                     jwtprovider,
                     //fbauth,
-                    apiprovider,
+                    //apiprovider,
                     new MyTwitterAuthProvider(AppSettings)
                     {
                         ConsumerKey = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_TWITTER_CONSUMER_KEY),
@@ -226,9 +226,9 @@ namespace ExpressBase.ServiceStack
             container.Register<IRedisClientsManager>(c => new RedisManagerPool(redisConnectionString));
 
             container.Register<IAuthRepository>(c => new MyRedisAuthRepository(c.Resolve<IRedisClientsManager>()));
-            container.Register<IManageApiKeys>(c => new EbApiRedisAuthRepository(c.Resolve<IRedisClientsManager>()));
+            //container.Register<IManageApiKeys>(c => new EbApiRedisAuthRepository(c.Resolve<IRedisClientsManager>()));
 
-            container.Register<ICacheClient>(c => new RedisClientManagerCacheClient(c.Resolve<IRedisClientsManager>())).ReusedWithin(ReuseScope.Request);
+            container.Register(c => c.Resolve<IRedisClientsManager>().GetCacheClient());
             container.Register<JwtAuthProvider>(jwtprovider);
             container.Register<IEbConnectionFactory>(c => new EbConnectionFactory(c)).ReusedWithin(ReuseScope.Request);
             container.Register<IEbServerEventClient>(c => new EbServerEventClient()).ReusedWithin(ReuseScope.Request);
@@ -236,10 +236,10 @@ namespace ExpressBase.ServiceStack
             container.Register<IEbStaticFileClient>(c => new EbStaticFileClient()).ReusedWithin(ReuseScope.Request);
 
             //Setting Assembly version in Redis
-            RedisClient client = (container.Resolve<IRedisClientsManager>() as RedisManagerPool).GetClient() as RedisClient;
-            AssemblyName assembly = Assembly.GetExecutingAssembly().GetName();
-            String version = assembly.Name.ToString() + " - " + assembly.Version.ToString();
-            client.Set("ServiceStackAssembly", version);
+            //RedisClient client = (container.Resolve<IRedisClientsManager>() as RedisManagerPool).GetClient() as RedisClient;
+            //AssemblyName assembly = Assembly.GetExecutingAssembly().GetName();
+            //String version = assembly.Name.ToString() + " - " + assembly.Version.ToString();
+            //client.Set("ServiceStackAssembly", version);
 
             RabbitMqMessageFactory rabitFactory = new RabbitMqMessageFactory();
             rabitFactory.ConnectionFactory.UserName = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_RABBIT_USER);

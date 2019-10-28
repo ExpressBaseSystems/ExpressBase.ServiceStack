@@ -729,7 +729,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 Console.WriteLine("Exception in GetRowData Service" + ex.Message);
                 Console.WriteLine(ex.StackTrace);
-                throw new FormException("Terminated GetRowData. Check servicestack log for stack trace.");
+                throw ex;
             }
         }
 
@@ -743,6 +743,26 @@ namespace ExpressBase.ServiceStack.Services
             _dataset.FormData = form.FormData;
             Console.WriteLine("End GetPrefillData");
             return _dataset;
+        }
+
+        public GetImportDataResponse Any(GetImportDataRequest request)
+        {
+            try
+            {
+                DataSourceService myService = base.ResolveService<DataSourceService>();
+                DataSourceDataSetResponse response = (DataSourceDataSetResponse)myService.Any(new DataSourceDataSetRequest() { RefId = request.RefId, Params = request.Params });
+                SingleTable Table = new SingleTable();
+                EbWebForm WebForm = new EbWebForm();
+                WebForm.GetFormattedData(response.DataSet.Tables[0], Table);
+                WebformData formData = new WebformData { MultipleTables = new Dictionary<string, SingleTable>() { { "Table1", Table } } };
+                return new GetImportDataResponse() { FormData = formData };
+            }
+            catch(Exception ex)
+            {
+                Console.WriteLine("Exception in GetImportDataRequest Service" + ex.Message);
+                Console.WriteLine(ex.StackTrace);
+                throw ex;
+            }
         }
 
         private EbWebForm GetWebFormObject(string RefId)
@@ -1322,7 +1342,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
-                Console.WriteLine("ERROR: GetWikiSearch Exception: " + e.Message);
+                Console.WriteLine("ERROR:  Exception: " + e.Message);
             }
             return resp;
 
