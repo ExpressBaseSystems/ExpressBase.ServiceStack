@@ -1342,7 +1342,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
-                Console.WriteLine("ERROR: GetWikiSearch Exception: " + e.Message);
+                Console.WriteLine("ERROR:  Exception: " + e.Message);
             }
             return resp;
 
