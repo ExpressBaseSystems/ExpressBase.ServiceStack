@@ -725,66 +725,70 @@ namespace ExpressBase.ServiceStack.Services
 
 				string[] DBcolms = new string[] { "title", "description", "priority", "solution_id", "type_bg_fr", "assigned_to", "status", "comment", "files", "date_created" };
 
-
-				for (int i = 0; i < DBcolms.Length; i++)
+				if (utreq.chngedtkt.Count > 0)
 				{
-					if (utreq.chngedtkt.ContainsKey(DBcolms[i]))
+
+
+					for (int i = 0; i < DBcolms.Length; i++)
 					{
-						FieldKey.Add(DBcolms[i]);
-						FieldValue.Add(":" + DBcolms[i]);
-						p.Add(this.InfraConnectionFactory.DataDB.GetNewParameter(":" + DBcolms[i], EbDbTypes.String, utreq.chngedtkt[DBcolms[i]]));
+						if (utreq.chngedtkt.ContainsKey(DBcolms[i]))
+						{
+							FieldKey.Add(DBcolms[i]);
+							FieldValue.Add(":" + DBcolms[i]);
+							p.Add(this.InfraConnectionFactory.DataDB.GetNewParameter(":" + DBcolms[i], EbDbTypes.String, utreq.chngedtkt[DBcolms[i]]));
 
+						}
 					}
-				}
-				for (int j = 0; j < FieldKey.Count; j++)
-				{
-					tem += FieldKey[j] + "=" + FieldValue[j] + ",";
-				}
+					for (int j = 0; j < FieldKey.Count; j++)
+					{
+						tem += FieldKey[j] + "=" + FieldValue[j] + ",";
+					}
 
-				tem = tem.Remove(tem.Length - 1, 1);
-				string k = String.Format(@"UPDATE 
+					tem = tem.Remove(tem.Length - 1, 1);
+					string k = String.Format(@"UPDATE 
 										support_ticket 
 										SET
 										{0}
 										WHERE 
 											ticket_id=:tktid
                                             and eb_del=:fals", tem
-											);
+												);
 
-				p.Add(this.InfraConnectionFactory.DataDB.GetNewParameter("tktid", EbDbTypes.String, utreq.ticketid));
-				p.Add(this.InfraConnectionFactory.DataDB.GetNewParameter("fals", EbDbTypes.String, "F"));
-				DbParameter[] parameters = p.ToArray();
-				int dt = this.InfraConnectionFactory.DataDB.DoNonQuery(k, parameters);
+					p.Add(this.InfraConnectionFactory.DataDB.GetNewParameter("tktid", EbDbTypes.String, utreq.ticketid));
+					p.Add(this.InfraConnectionFactory.DataDB.GetNewParameter("fals", EbDbTypes.String, "F"));
+					DbParameter[] parameters = p.ToArray();
+					int dt = this.InfraConnectionFactory.DataDB.DoNonQuery(k, parameters);
 
-				if (dt == 1)
-				{
-					if (utreq.chngedtkt.ContainsKey("solution_id"))
+					//to change solution id of files if changed field is solution id
+					if (dt == 1)
 					{
-						string k8 = String.Format(@"UPDATE 
+						if (utreq.chngedtkt.ContainsKey("solution_id"))
+						{
+							string k8 = String.Format(@"UPDATE 
 											support_ticket_files 
 											SET
 											solution_id=:slutn 
 											WHERE 
 												ticket_id=:tktid
 												and eb_del=:fals"
-												);
+													);
 
 
-						DbParameter[] parameters8 = {
+							DbParameter[] parameters8 = {
 									this.InfraConnectionFactory.DataDB.GetNewParameter("slutn", EbDbTypes.String, utreq.chngedtkt["solution_id"]),
 									this.InfraConnectionFactory.DataDB.GetNewParameter("fals", EbDbTypes.String, "F"),
 									this.InfraConnectionFactory.DataDB.GetNewParameter("tktid", EbDbTypes.String, utreq.ticketid)
 									};
 
-						int dt5 = this.InfraConnectionFactory.DataDB.DoNonQuery(k8, parameters8);
+							int dt5 = this.InfraConnectionFactory.DataDB.DoNonQuery(k8, parameters8);
 
+						}
+					}
+					if (dt == 0)
+					{
+						utr.ErMsg = "Unexpected error occurred while updating";
 					}
 				}
-					if (dt == 0)
-				{
-					utr.ErMsg = "Unexpected error occurred while updating";
-				}
-				
 
 				//to insert into history
 				DateTime tdate = DateTime.UtcNow;
@@ -827,14 +831,14 @@ namespace ExpressBase.ServiceStack.Services
 
 					EbDataTable dt6 = this.InfraConnectionFactory.DataDB.DoQuery(sql6, parameters6);
 					var ide = Convert.ToInt32(dt6.Rows[0][0]);
-
+					if (dt6.Rows.Count < 0)
+					{
+						utr.ErMsg = "Unexpected error occurred while updating";
+					}
 				}
 
 				//remove previouse upload files ie set false
-				if (dt > 0)
-				{
-
-
+				
 					if (utreq.Filedel.Length > 0)
 					{
 						for (var m = 0; m < utreq.Filedel.Length; m++)
@@ -858,8 +862,11 @@ namespace ExpressBase.ServiceStack.Services
 									};
 
 							int dt5 = this.InfraConnectionFactory.DataDB.DoNonQuery(k1, parameters5);
-
+						if (dt5 < 1)
+						{
+							utr.ErMsg = "Unexpected error occurred while updating";
 						}
+					}
 
 					}
 
@@ -911,7 +918,7 @@ namespace ExpressBase.ServiceStack.Services
 
 
 
-				}
+				
 				utr.status = true;
 			}
 			catch (Exception e)

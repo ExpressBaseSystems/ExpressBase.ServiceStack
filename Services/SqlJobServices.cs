@@ -174,15 +174,49 @@ namespace ExpressBase.ServiceStack.Services
             SqlJobsListGetResponse resp = new SqlJobsListGetResponse();
             try
             {
-
-                string query = $"select logmaster_id, params, COALESCE (message, 'ffff') message, createdby, createdat," +
-                    $"COALESCE(status, 'FAILED') status,id from eb_joblogs_lines where logmaster_id =" +
-                    $"(select id from eb_joblogs_master where to_char(created_at, 'dd-mm-yyyy') = '{request.Date}' and refid = '{request.Refid}' limit 1) order by status,id; ";
+               
+                string query =  $"select logmaster_id , params,COALESCE (message, 'ffff') message,createdby,createdat," +
+                    $"COALESCE(status, 'FAILED') status,id, keyvalues from eb_joblogs_lines where logmaster_id =" +
+                    $"(select id from eb_joblogs_master where to_char(created_at, 'dd-mm-yyyy') = '{request.Date}' and refid = '{request.Refid}' offset 3 limit 1) order by status,id; ";
                 EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(query);
-                int capacity1 = dt.Rows.Count;
-                resp.SqlJobsColumns = dt.Columns;
-                resp.SqlJobsRows = dt.Rows;
+                int capacity1 = dt.Columns.Count -1 ;
 
+                RowColletion rc = new RowColletion();
+                EbDataTable dtNew = new EbDataTable(); 
+
+
+                foreach (string DataCol in this.SqlJob.FirstReaderKeyColumns)
+                {
+                    dt.Columns.Add(new EbDataColumn( ++capacity1, DataCol, EbDbTypes.String));
+                }
+
+                foreach (string DataColumn in this.SqlJob.ParameterKeyColumns)
+                {
+                    dt.Columns.Add(new EbDataColumn(++capacity1, DataColumn, EbDbTypes.String));
+                }
+
+                dtNew.Columns = dt.Columns;
+                int i = 0;
+                foreach (EbDataRow dr in dt.Rows)
+                {
+                    dtNew.Rows.Add(dr);
+                    if (dr[7].ToString() != "")
+                    {
+                        Dictionary<string, string> _list = JsonConvert.DeserializeObject<Dictionary<string, string>>(dr[7].ToString());
+                        var Col = 7;
+                        foreach (var xx in _list)
+                        {
+                            
+                            dtNew.Rows[i][++Col] = xx.Value;
+                        }
+                       
+                    }
+                    i++;
+                }
+
+                
+                resp.SqlJobsColumns = dtNew.Columns;
+                resp.SqlJobsRows = dtNew.Rows;
             }
             catch (Exception e)
             {
