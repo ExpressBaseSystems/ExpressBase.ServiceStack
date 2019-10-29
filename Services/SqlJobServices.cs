@@ -30,7 +30,7 @@ namespace ExpressBase.ServiceStack.Services
 
         public bool IsRetry = false;
 
-        public Dictionary<string, object> GlobalParams { set; get; }
+        public Dictionary<string, TV> GlobalParams { set; get; }
 
         public Dictionary<string, object> TempParams { set; get; }
 
@@ -43,29 +43,30 @@ namespace ExpressBase.ServiceStack.Services
             this.StudioServices = base.ResolveService<EbObjectService>();
             this.JobResponse = new SqlJobResponse();
         }
-        private Dictionary<string, string> _keyValuePairs = null;
+        private Dictionary<string, TV> _keyValuePairs = null;
 
-        public Dictionary<string, string> GetKeyvalueDict
+        public Dictionary<string, TV> GetKeyvalueDict
         {
             get
             {
                 if (_keyValuePairs == null)
                 {
-                    _keyValuePairs = new Dictionary<string, string>();
+                    _keyValuePairs = new Dictionary<string, TV>();
                     foreach (string key in this.SqlJob.FirstReaderKeyColumns)
                     {
                         if (!_keyValuePairs.ContainsKey(key))
-                            _keyValuePairs.Add(key, "");
+                            _keyValuePairs.Add(key, new TV { });
                     }
                     foreach (string key in this.SqlJob.ParameterKeyColumns)
                     {
                         if (!_keyValuePairs.ContainsKey(key))
-                            _keyValuePairs.Add(key, "");
+                            _keyValuePairs.Add(key, new TV { });
                     }
                 }
                 return _keyValuePairs;
             }
         }
+
         public EbSqlJob SqlJob = new EbSqlJob
         {
             RefId = "My-Testid",
@@ -97,7 +98,8 @@ namespace ExpressBase.ServiceStack.Services
                                     {
                                         Script = new EbScript
                                         {
-                                            Code="Job.SetParam(\"val\",(Tables[0].Rows.Count>0)?Convert.ToInt32(Tables[0].Rows[0][0]):0); return 100;",
+                                           // Code="Job.SetParam(\"val\",(Tables[0].Rows.Count>0)?Convert.ToInt32(Tables[0].Rows[0][0])/1000:0); return 100;",
+                                            Code="Job.SetParam(\"val\",200);",
                                             Lang = ScriptingLanguage.CSharp
                                         },
                                         RouteIndex=1,
@@ -114,13 +116,13 @@ namespace ExpressBase.ServiceStack.Services
             }
         };
 
-        public Dictionary<string, object> Proc(List<Param> plist)
+        public Dictionary<string, TV> Proc(List<Param> plist)
         {
-            Dictionary<string, object> _fdict = new Dictionary<string, object>();
+            Dictionary<string, TV> _fdict = new Dictionary<string, TV>();
             if (plist != null)
                 foreach (Param p in plist)
                 {
-                    _fdict.Add(p.Name, p.Value);
+                    _fdict.Add(p.Name, new TV { Value = p.Value, Type = p.Type });
                 }
             return _fdict;
         }
@@ -168,12 +170,12 @@ namespace ExpressBase.ServiceStack.Services
 
         public SqlJobsListGetResponse Get(SqlJobsListGetRequest request)
         {
-            
+
             SqlJobsListGetResponse resp = new SqlJobsListGetResponse();
             try
             {
-               
-                string query =  $"select logmaster_id , params,COALESCE (message, 'ffff') message,createdby,createdat," +
+
+                string query = $"select logmaster_id, params, COALESCE (message, 'ffff') message, createdby, createdat," +
                     $"COALESCE(status, 'FAILED') status,id from eb_joblogs_lines where logmaster_id =" +
                     $"(select id from eb_joblogs_master where to_char(created_at, 'dd-mm-yyyy') = '{request.Date}' and refid = '{request.Refid}' limit 1) order by status,id; ";
                 EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(query);
@@ -188,7 +190,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             return resp;
         }
-                             
+
         public RetryJobResponse post(RetryJobRequest request)
         {
             RetryJobResponse response = new RetryJobResponse();
@@ -219,7 +221,7 @@ namespace ExpressBase.ServiceStack.Services
                     linesid = Convert.ToInt32(dt.Rows[0]["id"]),
                     masterid = Convert.ToInt32(dt.Rows[0]["logmaster_id"]),
                     Message = dt.Rows[0]["message"].ToString(),
-                    Params = JsonConvert.DeserializeObject<Dictionary<string, object>>(dt.Rows[0]["params"].ToString()),
+                    Params = JsonConvert.DeserializeObject<Dictionary<string, TV>>(dt.Rows[0]["params"].ToString()),
                     Status = dt.Rows[0]["status"].ToString(),
                     Refid = dt.Rows[0]["refid"].ToString()
                 };
@@ -352,9 +354,9 @@ namespace ExpressBase.ServiceStack.Services
                     };
                     this.SqlJob.Resources[step].Result = _outparam;
                     if (this.GlobalParams.ContainsKey(_outparam.Name))
-                        this.GlobalParams[_outparam.Name] = _outparam.Value;
+                        this.GlobalParams[_outparam.Name] = new TV { Value = _outparam.Value };
                     else
-                        this.GlobalParams.Add(_outparam.Name, _outparam.Value);
+                        this.GlobalParams.Add(_outparam.Name, new TV { Value = _outparam.Value });
 
                     LoopExecution(loop, 0, step, parentindex, _table.Rows[i]);
                 }
@@ -366,37 +368,45 @@ namespace ExpressBase.ServiceStack.Services
             return true;
         }
 
-        public void LoopExecution(EbLoop loop, int linesid, int step, int parentindex, EbDataRow dataRow)
+        public void LoopExecution(EbLoop loop, int retryof, int step, int parentindex, EbDataRow dataRow)
         {
+            int linesid = 0;
             try
             {
-                if (!IsRetry)
-                {
-                    string query = @" INSERT INTO eb_joblogs_lines(logmaster_id, params, createdby, createdat)
-                                    VALUES(:logmaster_id, :params, :createdby, NOW()) returning id;";
-                    DbParameter[] parameters = new DbParameter[]
-                    {
-                         this.EbConnectionFactory.DataDB.GetNewParameter("logmaster_id", EbDbTypes.Int32, this.LogMasterId) ,
-                         this.EbConnectionFactory.DataDB.GetNewParameter("params",EbDbTypes.Json,JsonConvert.SerializeObject(this.GlobalParams)),
-                         this.EbConnectionFactory.ObjectsDB.GetNewParameter("createdby", EbDbTypes.Int32, UserId)
-                     };
-                    EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(query, parameters);
-                    linesid = Convert.ToInt32(dt.Rows[0][0]);
-                }
-                for (int counter = 0; counter < loop.InnerResources.Count; counter++)
-                    loop.InnerResources[counter].Result = this.GetResult(loop.InnerResources[counter], counter, step, parentindex);
-                 
-                this.EbConnectionFactory.DataDB.DoNonQuery(string.Format("UPDATE eb_joblogs_lines SET status = 'SUCCESS' WHERE id = {0};", linesid));
-            }
-            catch (Exception e)
-            {
+
+                string query = @" INSERT INTO eb_joblogs_lines(logmaster_id, params, createdby, createdat, retry_of)
+                                    VALUES(:logmaster_id, :params, :createdby, NOW(), :retry_of) returning id;";
                 DbParameter[] parameters = new DbParameter[]
                 {
+                         this.EbConnectionFactory.DataDB.GetNewParameter("logmaster_id", EbDbTypes.Int32, this.LogMasterId) ,
+                         this.EbConnectionFactory.DataDB.GetNewParameter("params",EbDbTypes.Json,JsonConvert.SerializeObject(this.GlobalParams)),
+                         this.EbConnectionFactory.ObjectsDB.GetNewParameter("createdby", EbDbTypes.Int32, UserId),
+                         this.EbConnectionFactory.ObjectsDB.GetNewParameter("retry_of", EbDbTypes.Int32, retryof)
+                 };
+                EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(query, parameters);
+                linesid = Convert.ToInt32(dt.Rows[0][0]);
+                try
+                {
+                    for (int counter = 0; counter < loop.InnerResources.Count; counter++)
+                        loop.InnerResources[counter].Result = this.GetResult(loop.InnerResources[counter], counter, step, parentindex);
+                   // throw new Exception();
+                    this.EbConnectionFactory.DataDB.DoNonQuery(string.Format("UPDATE eb_joblogs_lines SET status = 'SUCCESS' WHERE id = {0};", linesid));
+                }
+                catch (Exception e)
+                {
+                    DbParameter[] e_parameters = new DbParameter[]
+                    {
                          this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, linesid) ,
                          this.EbConnectionFactory.DataDB.GetNewParameter("message",EbDbTypes.String,  e.Message),
                          this.EbConnectionFactory.DataDB.GetNewParameter("keyvalues",EbDbTypes.Json,  FillKeys(dataRow))
-                };
-                this.EbConnectionFactory.DataDB.DoNonQuery(@"UPDATE eb_joblogs_lines SET status = 'FAILED', message = :message, keyvalues = :keyvalues WHERE id = :id ;", parameters);
+                    };
+                    this.EbConnectionFactory.DataDB.DoNonQuery(@"UPDATE eb_joblogs_lines SET status = 'FAILED', message = :message, keyvalues = :keyvalues WHERE id = :id ;", e_parameters);
+
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Error at LoopExecution" + dataRow.ToString() + retryof+"- retryof");
                 throw e;
             }
         }
@@ -405,32 +415,12 @@ namespace ExpressBase.ServiceStack.Services
         {
             foreach (var item in this.GlobalParams)
                 if (GetKeyvalueDict.ContainsKey(item.Key))
-                    this.GetKeyvalueDict[item.Key] = GlobalParams[item.Key].ToString();
+                    this.GetKeyvalueDict[item.Key] = GlobalParams[item.Key];
             for (int i = 0; i < dataRow.Count; i++)
             {
                 if (GetKeyvalueDict.ContainsKey(dataRow.Table.Columns[i].ColumnName))
-                    this.GetKeyvalueDict[dataRow.Table.Columns[i].ColumnName] = dataRow[i].ToString();
+                    this.GetKeyvalueDict[dataRow.Table.Columns[i].ColumnName] = new TV { Value = dataRow[i].ToString(), Type = ((int)dataRow.Table.Columns[i].Type).ToString() };
             }
-
-
-            //foreach (var item in dataRow)
-            //    dataRow.Table.Columns[columnname].ColumnIndex
-            //    if (  item != null)
-            //        this.GetKeyvalueDict[item.ToString()] =  item .
-
-
-
-            //foreach (var item in this.GetKeyvalueDict)
-            //{
-            //    if (GlobalParams.ContainsKey(item.Key))
-            //        this.GetKeyvalueDict[item.Key] = GlobalParams[item.Key].ToString();
-            //    else if (dataRow != null && dataRow[item.Key] != null)
-            //        this.GetKeyvalueDict[item.Key] = dataRow[item.Key].ToString();
-            //}
-
-
-
-
             return JsonConvert.SerializeObject(GetKeyvalueDict); ;
         }
 
@@ -463,16 +453,6 @@ namespace ExpressBase.ServiceStack.Services
             List<Param> OutParams = new List<Param>();
             if (step != 0)
             {
-                //if (this.SqlJob.Resources[step - 1] is EbLoop)
-                //{
-                //    if ((this.SqlJob.Resources[step - 1] as EbLoop).InnerResources[0] is EbTransaction)
-                //    {
-                //        OutParams = ((this.SqlJob.Resources[step - 1] as EbLoop).InnerResources[0] as EbTransaction).InnerResources[step - 1].GetOutParams(InputParam);
-                //    }
-                //    else
-                //        OutParams = (this.SqlJob.Resources[step - 1] as EbLoop).InnerResources[step - 1].GetOutParams(InputParam);
-                //}
-                //else 
                 if (this.SqlJob.Resources[step - 1].Result != null)
                     OutParams = this.SqlJob.Resources[step - 1].GetOutParams(InputParam, step);
             }
@@ -485,7 +465,7 @@ namespace ExpressBase.ServiceStack.Services
                 if (this.TempParams != null && this.TempParams.ContainsKey(p.Name))
                     p.Value = this.TempParams[p.Name].ToString();
                 else if (this.GlobalParams.ContainsKey(p.Name))
-                    p.Value = this.GlobalParams[p.Name].ToString();
+                    p.Value = this.GlobalParams[p.Name].Value.ToString();
                 else if (string.IsNullOrEmpty(p.Value))
                 {
                     Console.WriteLine(string.Format("Parameter {0} must be set", p.Name));
@@ -509,7 +489,7 @@ namespace ExpressBase.ServiceStack.Services
     {
         public EbScript Script { get; set; }
 
-        public SqlJobScript Evaluate(SqlJobResource _prevres, Dictionary<string, object> GlobalParams)
+        public SqlJobScript Evaluate(SqlJobResource _prevres, Dictionary<string, TV> GlobalParams)
         {
             string code = this.Script.Code.Trim();
             EbDataSet _ds = null;
@@ -537,13 +517,13 @@ namespace ExpressBase.ServiceStack.Services
             {
                 SqlJobGlobals globals = new SqlJobGlobals(_ds, ref GlobalParams);
 
-                foreach (KeyValuePair<string, object> kp in GlobalParams)
+                foreach (KeyValuePair<string, TV> kp in GlobalParams)
                 {
                     globals["Params"].Add(kp.Key, new NTV
                     {
                         Name = kp.Key,
-                        Type = (kp.Value.GetType() == typeof(JObject)) ? EbDbTypes.Object : (EbDbTypes)Enum.Parse(typeof(EbDbTypes), kp.Value.GetType().Name, true),
-                        Value = kp.Value
+                        Type = (kp.Value.Value.GetType() == typeof(JObject)) ? EbDbTypes.Object : (EbDbTypes)Enum.Parse(typeof(EbDbTypes), kp.Value.Value.GetType().Name, true),
+                        Value = kp.Value.Value
                     });
                 }
 
@@ -562,7 +542,7 @@ namespace ExpressBase.ServiceStack.Services
     }
 
 
-   
+
 
 
 }
