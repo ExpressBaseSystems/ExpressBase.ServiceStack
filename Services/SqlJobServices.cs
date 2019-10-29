@@ -174,47 +174,54 @@ namespace ExpressBase.ServiceStack.Services
             SqlJobsListGetResponse resp = new SqlJobsListGetResponse();
             try
             {
-               
-                string query =  $"select logmaster_id , params,COALESCE (message, 'ffff') message,createdby,createdat," +
+
+                string query = $"select logmaster_id , COALESCE (message, 'ffff') message,createdby,createdat," +
                     $"COALESCE(status, 'FAILED') status,id, keyvalues from eb_joblogs_lines where logmaster_id =" +
-                    $"(select id from eb_joblogs_master where to_char(created_at, 'dd-mm-yyyy') = '{request.Date}' and refid = '{request.Refid}' offset 3 limit 1) order by status,id; ";
+                    $"(select id from eb_joblogs_master where to_char(created_at, 'dd-mm-yyyy') = '{request.Date}' and refid = '{request.Refid}'  limit 1) order by status,id; ";
                 EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(query);
-                int capacity1 = dt.Columns.Count -1 ;
+                int capacity1 = dt.Columns.Count - 1;
 
                 RowColletion rc = new RowColletion();
-                EbDataTable dtNew = new EbDataTable(); 
-
+                EbDataTable dtNew = new EbDataTable();
+                Dictionary<string, TV> _columnTypeCollection = null;
+                if (dt.Rows[0] != null)
+                {
+                    _columnTypeCollection = JsonConvert.DeserializeObject<Dictionary<string, TV>>(dt.Rows[0]["keyvalues"].ToString());
+                }
 
                 foreach (string DataCol in this.SqlJob.FirstReaderKeyColumns)
                 {
-                    dt.Columns.Add(new EbDataColumn( ++capacity1, DataCol, EbDbTypes.String));
+                    EbDbTypes _type = (_columnTypeCollection.ContainsKey(DataCol)) ? (EbDbTypes)(Convert.ToInt32(_columnTypeCollection[DataCol].Type)) : EbDbTypes.String;
+                    dt.Columns.Add(new EbDataColumn(++capacity1, DataCol, _type));
                 }
 
-                foreach (string DataColumn in this.SqlJob.ParameterKeyColumns)
+                foreach (string DataCol in this.SqlJob.ParameterKeyColumns)
                 {
-                    dt.Columns.Add(new EbDataColumn(++capacity1, DataColumn, EbDbTypes.String));
+                    EbDbTypes _type = (_columnTypeCollection.ContainsKey(DataCol)) ? (EbDbTypes)(Convert.ToInt32(_columnTypeCollection[DataCol].Type)) : EbDbTypes.String;
+                    dt.Columns.Add(new EbDataColumn(++capacity1, DataCol, _type));
                 }
 
                 dtNew.Columns = dt.Columns;
                 int i = 0;
                 foreach (EbDataRow dr in dt.Rows)
                 {
+
+                    int Col = dt.Columns["keyvalues"].ColumnIndex;
                     dtNew.Rows.Add(dr);
-                    if (dr[7].ToString() != "")
+                    if (dr["keyvalues"].ToString() != "")
                     {
-                        Dictionary<string, string> _list = JsonConvert.DeserializeObject<Dictionary<string, string>>(dr[7].ToString());
-                        var Col = 7;
-                        foreach (var xx in _list)
+                        Dictionary<string, TV> _list = JsonConvert.DeserializeObject<Dictionary<string, TV>>(dr["keyvalues"].ToString());
+
+                        foreach (KeyValuePair<string, TV> _c in _list)
                         {
-                            
-                            dtNew.Rows[i][++Col] = xx.Value;
+                            dtNew.Rows[i][++Col] = _c.Value.Value;
                         }
-                       
+
                     }
                     i++;
                 }
 
-                
+
                 resp.SqlJobsColumns = dtNew.Columns;
                 resp.SqlJobsRows = dtNew.Rows;
             }
@@ -423,8 +430,11 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     for (int counter = 0; counter < loop.InnerResources.Count; counter++)
                         loop.InnerResources[counter].Result = this.GetResult(loop.InnerResources[counter], counter, step, parentindex);
-                   // throw new Exception();
-                    this.EbConnectionFactory.DataDB.DoNonQuery(string.Format("UPDATE eb_joblogs_lines SET status = 'SUCCESS' WHERE id = {0};", linesid));
+                    // throw new Exception(); 
+                    DbParameter[] e_parameters = new DbParameter[]
+                    { this.EbConnectionFactory.DataDB.GetNewParameter("linesid", EbDbTypes.Int32, linesid) ,
+                    this.EbConnectionFactory.DataDB.GetNewParameter("keyvalues",EbDbTypes.Json,  FillKeys(dataRow))};
+                    this.EbConnectionFactory.DataDB.DoNonQuery("UPDATE eb_joblogs_lines SET status = 'SUCCESS', message = 'SUCCESS', keyvalues = :keyvalues WHERE id = :linesid;",e_parameters);
                 }
                 catch (Exception e)
                 {
@@ -440,7 +450,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
-                Console.WriteLine("Error at LoopExecution" + dataRow.ToString() + retryof+"- retryof");
+                Console.WriteLine("Error at LoopExecution" + dataRow.ToString() + retryof + "- retryof");
                 throw e;
             }
         }
