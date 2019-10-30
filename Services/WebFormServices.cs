@@ -5,6 +5,7 @@ using ExpressBase.Common.Extensions;
 using ExpressBase.Common.LocationNSolution;
 using ExpressBase.Common.Objects;
 using ExpressBase.Common.Structures;
+using ExpressBase.Security;
 using ExpressBase.Objects;
 using ExpressBase.Objects.Objects;
 using ExpressBase.Objects.Objects.DVRelated;
@@ -729,7 +730,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 Console.WriteLine("Exception in GetRowData Service" + ex.Message);
                 Console.WriteLine(ex.StackTrace);
-                throw new FormException("Terminated GetRowData. Check servicestack log for stack trace.");
+                throw ex;
             }
         }
 
@@ -744,6 +745,62 @@ namespace ExpressBase.ServiceStack.Services
             Console.WriteLine("End GetPrefillData");
             return _dataset;
         }
+
+        //public GetImportDataResponse Any(GetImportDataRequest request)
+        //{
+        //    try
+        //    {
+        //        DataSourceService myService = base.ResolveService<DataSourceService>();
+        //        DataSourceDataSetResponse response = (DataSourceDataSetResponse)myService.Any(new DataSourceDataSetRequest() { RefId = request.RefId, Params = request.Params });
+        //        SingleTable Table = new SingleTable();
+        //        EbWebForm WebForm = new EbWebForm();
+        //        WebForm.GetFormattedData(response.DataSet.Tables[0], Table);
+        //        WebformData formData = new WebformData { MultipleTables = new Dictionary<string, SingleTable>() { { "Table1", Table } } };
+        //        return new GetImportDataResponse() { FormData = formData };
+        //    }
+        //    catch(Exception ex)
+        //    {
+        //        Console.WriteLine("Exception in GetImportDataRequest Service" + ex.Message);
+        //        Console.WriteLine(ex.StackTrace);
+        //        throw ex;
+        //    }
+        //}
+        
+        public GetImportDataResponse Any(GetImportDataRequest request)
+        {
+            try
+            {
+                Console.WriteLine("Start ImportFormData");
+                EbWebForm form = GetWebFormObject(request.RefId);
+                form.RefId = request.RefId;
+                form.UserObj = this.Redis.Get<User>(request.UserAuthId);
+                form.SolutionObj = this.Redis.Get<Eb_Solution>(String.Format("solution_{0}", request.SolnId));
+                form.ImportData(EbConnectionFactory.DataDB, this, request.Params, request.Trigger);
+                Console.WriteLine("End ImportFormData");
+                return new GetImportDataResponse() { FormDataWrap = new WebformDataWrapper { FormData = form.FormData, Status = 200 } };
+            }
+            catch (FormException ex)
+            {
+                Console.WriteLine("FormException in GetImportDataRequest Service" + ex.Message);
+                return new GetImportDataResponse() { FormDataWrap = new WebformDataWrapper { Status = 500, Message = ex.Message, MessageInt = ex.MessageInternal, StackTraceInt = ex.StackTraceInternal} };
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Exception in GetImportDataRequest Service" + ex.Message);
+                Console.WriteLine(ex.StackTrace);
+                return new GetImportDataResponse() { FormDataWrap = new WebformDataWrapper { Status = 500, Message = "Exception in GetImportDataRequest", MessageInt = ex.Message, StackTraceInt = ex.StackTrace } };
+            }
+        }
+
+        public ExecuteSqlValueExprResponse Any(ExecuteSqlValueExprRequest request)
+        {
+            Console.WriteLine("Start ExecuteSqlValueExpr");
+            EbWebForm form = GetWebFormObject(request.RefId);
+            string val = form.ExecuteSqlValueExpression(EbConnectionFactory.DataDB, this, request.Params, request.Trigger);
+            Console.WriteLine("End ExecuteSqlValueExpr");
+            return new ExecuteSqlValueExprResponse() { Data = val};
+        }
+
 
         private EbWebForm GetWebFormObject(string RefId)
         {
@@ -883,7 +940,7 @@ namespace ExpressBase.ServiceStack.Services
                 valscript.Compile();
 
                 FormAsGlobal g = _formObj.GetFormAsGlobal(_formData);
-                FormGlobals globals = new FormGlobals() { FORM = g };
+                FormGlobals globals = new FormGlobals() { form = g };
                 var result = (valscript.RunAsync(globals)).Result.ReturnValue;
 
                 _formData.MultipleTables[cw.TableName][0].Columns.Add(new SingleColumn
@@ -1303,5 +1360,29 @@ namespace ExpressBase.ServiceStack.Services
             };
         }
 
+        public GetDistinctValuesResponse Get(GetDistinctValuesRequest request)
+        {
+            GetDistinctValuesResponse resp = new GetDistinctValuesResponse() { Suggestions = new List<string>()};
+            try
+            {  
+                string query = @"SELECT DISTINCT INITCAP(TRIM(@ColumName)) AS @ColumName FROM @TableName ORDER BY @ColumName;"
+                .Replace("@ColumName", request.ColumnName)
+                .Replace("@TableName", request.TableName);
+                EbDataTable table = EbConnectionFactory.DataDB.DoQuery(query);
+
+                int capacity = table.Rows.Count;
+
+                for (int i = 0; i < capacity; i++)
+                {
+                    resp.Suggestions.Add(table.Rows[i][0].ToString());
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("EXCEPTION: Get suggestions for EbTextBox(AutoSuggestion)\nMessage: " + e.Message);
+            }
+            return resp;
+
+        }
     }
 }

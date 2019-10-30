@@ -46,13 +46,12 @@ namespace ExpressBase.ServiceStack.Services
 
     }
 
-    [Authenticate]
-    public class ReqstarsService : Service
-    {
-        public object Get(ApiTestReq request)
-        {
-    //        var authProvider = (ApiKeyAuthProvider)
-    //AuthenticateService.GetAuthProvider(ApiKeyAuthProvider.Name);
+    //[Authenticate]
+    //public class ReqstarsService : Service
+    //{
+    //    public object Get(ApiTestReq request)
+    //    {
+    //        var authProvider = (ApiKeyAuthProvider)AuthenticateService.GetAuthProvider(ApiKeyAuthProvider.Name);
 
     //        var auth_api = (ApiKeyAuthProvider)AuthenticateService.GetAuthProvider(ApiKeyAuthProvider.Name);
 
@@ -62,8 +61,7 @@ namespace ExpressBase.ServiceStack.Services
 
     //        authRepo.StoreAll(apiKeys);
 
-
-            return new UnniTest();
-        }
-    }
+    //        return new UnniTest();
+    //    }
+    //}
 }

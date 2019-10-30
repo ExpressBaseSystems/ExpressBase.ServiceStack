@@ -1,5 +1,6 @@
 ﻿using ExpressBase.Common;
 using ExpressBase.Common.Data;
+using ExpressBase.Common.Extensions;
 using ExpressBase.Common.Structures;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using System;
@@ -210,9 +211,9 @@ namespace ExpressBase.ServiceStack.Services
 
 				for (int i = 0; i < dt.Rows.Count; i++)
 				{
-					tr.solid.Add(dt.Rows[i][0].ToString());
+					tr.sol_id.Add(dt.Rows[i][0].ToString());
 					tr.solname.Add(dt.Rows[i][1].ToString());
-					tr.soldispid.Add(dt.Rows[i][2].ToString());
+					tr.sol_exid.Add(dt.Rows[i][2].ToString());
 				}
 			}
 			catch (Exception e)
@@ -233,34 +234,42 @@ namespace ExpressBase.ServiceStack.Services
 				DateTime tdate = DateTime.UtcNow;
 				if (fsreq.WhichConsole.Equals("tc"))
 				{
-					string sql2 = @"SELECT 
-									title, 
-									description,
-									priority, 
-									solution_id, 
-									eb_created_at, 
-									status, 
-									remarks, 
-									assigned_to, 
-									type_bg_fr,
-									ticket_id
+					string sql2 = @"SELECT     
+										support_ticket.title, 
+										support_ticket.description,
+										support_ticket.priority, 
+										support_ticket.solution_id, 
+										support_ticket.eb_created_at, 
+										support_ticket.status, 
+										support_ticket.remarks, 
+										support_ticket.assigned_to, 
+										support_ticket.type_bg_fr,
+										support_ticket.ticket_id,
+										eb_solutions.solution_name,
+										eb_solutions.esolution_id
 									FROM support_ticket
-								WHERE 
-									eb_del=:fls 
+									JOIN
+										eb_solutions
+									ON
+										support_ticket.solution_id 
+									= 
+										eb_solutions.isolution_id 
+									WHERE 
+										support_ticket.eb_del=:fls 
 									AND 
-									solution_id 
-								IN
-								(SELECT 
-									isolution_id 
-								FROM
-									eb_solutions 
-								WHERE 
-									tenant_id=:tndid 
-								AND
-									eb_del=false
-								
-								)
-								ORDER BY id ;";
+										support_ticket.solution_id 
+									IN
+									(SELECT 
+										eb_solutions.isolution_id 
+									FROM
+										eb_solutions 
+									WHERE 
+										eb_solutions.tenant_id=:tndid 
+									AND
+										eb_solutions.eb_del=false
+
+									)
+									ORDER BY support_ticket.id ;";
 					DbParameter[] parameters2 = {
 						this.InfraConnectionFactory.DataDB.GetNewParameter("tndid", EbDbTypes.Int32, fsreq.UserId),
 						this.InfraConnectionFactory.DataDB.GetNewParameter("fls", EbDbTypes.String, "F")
@@ -278,13 +287,16 @@ namespace ExpressBase.ServiceStack.Services
 							st.priority = dt2.Rows[i][2].ToString();
 							st.solutionid = dt2.Rows[i][3].ToString();
 							DateTime stdate = (DateTime)dt2.Rows[i][4];
-							st.Age = (((tdate - stdate).Days).ToString() + "D" + " " + ((tdate - stdate).Hours).ToString() + "h");
+							st.NoHour = (tdate - stdate).Hours.ToString();
+							st.NoDays = (tdate - stdate).Days.ToString();
 							st.lstmodified = dt2.Rows[i][4].ToString();
 							st.status = dt2.Rows[i][5].ToString();
 							st.remarks = dt2.Rows[i][6].ToString();
 							st.assignedto = dt2.Rows[i][7].ToString();
 							st.type_b_f = dt2.Rows[i][8].ToString();
 							st.ticketid = dt2.Rows[i][9].ToString();
+							st.Solution_name = dt2.Rows[i][10].ToString();
+							st.Esolution_id = dt2.Rows[i][11].ToString();
 							fr.supporttkt.Add(st);
 						}
 					}
@@ -293,25 +305,33 @@ namespace ExpressBase.ServiceStack.Services
 						fr.ErMsg = "No tickets found";
 					}
 				}
-				else
+				else if(fsreq.WhichConsole.Equals("dc"))
 				{
 					string sql3 = @"SELECT 
-									title, 
-									description,
-									priority, 
-									solution_id, 
-									eb_created_at, 
-									status, 
-									remarks, 
-									assigned_to, 
-									type_bg_fr,
-									ticket_id
+										support_ticket.title, 
+										support_ticket.description,
+										support_ticket.priority, 
+										support_ticket.solution_id, 
+										support_ticket.eb_created_at, 
+										support_ticket.status, 
+										support_ticket.remarks, 
+										support_ticket.assigned_to, 
+										support_ticket.type_bg_fr,
+										support_ticket.ticket_id,
+										eb_solutions.solution_name,
+										eb_solutions.esolution_id	
 									FROM support_ticket
-								WHERE 
-									solution_id =:sln 
-								AND 
-									eb_del=:fls
-								ORDER BY id
+									JOIN
+										eb_solutions
+									ON
+										support_ticket.solution_id 
+									= 
+										eb_solutions.isolution_id 
+									WHERE 
+										support_ticket.solution_id =:sln 
+									AND 
+										support_ticket.eb_del=:fls
+									ORDER BY support_ticket.id
 								;";
 					DbParameter[] parameters3 = {
 					this.InfraConnectionFactory.DataDB.GetNewParameter("sln", EbDbTypes.String, fsreq.SolnId),
@@ -329,13 +349,82 @@ namespace ExpressBase.ServiceStack.Services
 							st.priority = dt.Rows[i][2].ToString();
 							st.solutionid = dt.Rows[i][3].ToString();
 							DateTime stdate = (DateTime)dt.Rows[i][4];
-							st.Age = (((tdate - stdate).Days).ToString() + "D" + " " + ((tdate - stdate).Hours).ToString() + "h");
+							st.NoHour =(tdate - stdate).Hours.ToString() ;
+							st.NoDays = (tdate - stdate).Days.ToString();
 							st.lstmodified = dt.Rows[i][4].ToString();
 							st.status = dt.Rows[i][5].ToString();
 							st.remarks = dt.Rows[i][6].ToString();
 							st.assignedto = dt.Rows[i][7].ToString();
 							st.type_b_f = dt.Rows[i][8].ToString();
 							st.ticketid = dt.Rows[i][9].ToString();
+							st.Solution_name = dt.Rows[i][10].ToString();
+							st.Esolution_id = dt.Rows[i][11].ToString();
+							fr.supporttkt.Add(st);
+						}
+					}
+					else
+					{
+						fr.ErMsg = "NO tickets found";
+					}
+				}
+				else if (fsreq.WhichConsole.Equals("uc"))
+				{
+					string sql7 = @"SELECT 
+										support_ticket.title, 
+										support_ticket.description,
+										support_ticket.priority, 
+										support_ticket.solution_id, 
+										support_ticket.eb_created_at, 
+										support_ticket.status, 
+										support_ticket.remarks, 
+										support_ticket.assigned_to, 
+										support_ticket.type_bg_fr,
+										support_ticket.ticket_id,
+										eb_solutions.solution_name,
+										eb_solutions.esolution_id	
+									FROM 
+										support_ticket
+									JOIN
+										eb_solutions
+									ON
+										support_ticket.solution_id 
+									= 
+										eb_solutions.isolution_id 
+									WHERE 
+										support_ticket.solution_id =:sln 
+									AND 
+										support_ticket.eb_del=:fls
+									AND 
+										support_ticket.user_type=:utyp
+									ORDER BY support_ticket.id
+								;";
+					DbParameter[] parameters7 = {
+					this.InfraConnectionFactory.DataDB.GetNewParameter("sln", EbDbTypes.String, fsreq.SolnId),
+					this.InfraConnectionFactory.DataDB.GetNewParameter("fls", EbDbTypes.String, "F"),
+					this.InfraConnectionFactory.DataDB.GetNewParameter("utyp", EbDbTypes.String, "user")
+					};
+
+					EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(sql7, parameters7);
+					if (dt.Rows.Count > 0)
+					{
+						for (int i = 0; i < dt.Rows.Count; i++)
+						{
+							SupportTktCls st = new SupportTktCls();
+							st.title = dt.Rows[i][0].ToString();
+							st.description = dt.Rows[i][1].ToString();
+							st.priority = dt.Rows[i][2].ToString();
+							st.solutionid = dt.Rows[i][3].ToString();
+							DateTime stdate = (DateTime)dt.Rows[i][4];
+							st.NoHour = (tdate - stdate).Hours.ToString();
+							st.NoDays = (tdate - stdate).Days.ToString();
+							st.lstmodified = dt.Rows[i][4].ToString();
+							st.status = dt.Rows[i][5].ToString();
+							st.remarks = dt.Rows[i][6].ToString();
+							st.assignedto = dt.Rows[i][7].ToString();
+							st.type_b_f = dt.Rows[i][8].ToString();
+							st.ticketid = dt.Rows[i][9].ToString();
+							st.Solution_name = dt.Rows[i][10].ToString();
+							st.Esolution_id = dt.Rows[i][11].ToString();
 							fr.supporttkt.Add(st);
 						}
 					}
@@ -362,21 +451,29 @@ namespace ExpressBase.ServiceStack.Services
 			{
 				DateTime tdate = DateTime.UtcNow;
 				string sql2 = @"SELECT 
-									title, 
-									description,
-									priority, 
-									solution_id, 
-									eb_created_at, 
-									status, 
-									remarks, 
-									assigned_to, 
-									type_bg_fr,
-									ticket_id
+									support_ticket.title, 
+									support_ticket.description,
+									support_ticket.priority, 
+									support_ticket.solution_id, 
+									support_ticket.eb_created_at, 
+									support_ticket.status, 
+									support_ticket.remarks, 
+									support_ticket.assigned_to, 
+									support_ticket.type_bg_fr,
+									support_ticket.ticket_id
+									eb_solutions.solution_name,
+									eb_solutions.esolution_id	
 								FROM 
 									support_ticket
+								JOIN
+									eb_solutions
+								ON
+									support_ticket.solution_id 
+								= 
+									eb_solutions.isolution_id 
 								WHERE 
-									eb_del='F'
-								ORDER BY id
+									support_ticket.eb_del='F'
+								ORDER BY support_ticket.id
 								 
 								;";
 				EbDataTable dt2 = this.InfraConnectionFactory.DataDB.DoQuery(sql2);
@@ -390,13 +487,16 @@ namespace ExpressBase.ServiceStack.Services
 						st.priority = dt2.Rows[i][2].ToString();
 						st.solutionid = dt2.Rows[i][3].ToString();
 						DateTime stdate = (DateTime)dt2.Rows[i][4];
-						st.Age = (((tdate - stdate).Days).ToString() + "D" + " " + ((tdate - stdate).Hours).ToString() + "h");
+						st.NoHour = (tdate - stdate).Hours.ToString();
+						st.NoDays = (tdate - stdate).Days.ToString();
 						st.lstmodified = dt2.Rows[i][4].ToString();
 						st.status = dt2.Rows[i][5].ToString();
 						st.remarks = dt2.Rows[i][6].ToString();
 						st.assignedto = dt2.Rows[i][7].ToString();
 						st.type_b_f = dt2.Rows[i][8].ToString();
 						st.ticketid = dt2.Rows[i][9].ToString();
+						st.Solution_name = dt2.Rows[i][10].ToString();
+						st.Esolution_id = dt2.Rows[i][11].ToString();
 						asr.supporttkt.Add(st);
 					}
 				}
@@ -414,7 +514,7 @@ namespace ExpressBase.ServiceStack.Services
 			return asr;
 		}
 
-		// fectch complete details of ticket and show it in edit /view ticket
+		// fetch complete details of ticket and show it in edit /view ticket
 		public SupportDetailsResponse Post(SupportDetailsRequest sdreq)
 		{
 			SupportDetailsResponse sd = new SupportDetailsResponse();
@@ -428,21 +528,30 @@ namespace ExpressBase.ServiceStack.Services
 				if (sdreq.SolnId.Equals("admin"))
 				{
 					sql = @"SELECT 
-								title, 
-								description,
-								priority, 
-								solution_id, 
-								modified_at, 
-								status, 
-								remarks, 
-								assigned_to, 
-								type_bg_fr,
-								eb_created_at
+									support_ticket.title, 
+									support_ticket.description,
+									support_ticket.priority, 
+									support_ticket.solution_id, 
+									support_ticket.modified_at, 
+									support_ticket.status, 
+									support_ticket.remarks, 
+									support_ticket.assigned_to, 
+									support_ticket.type_bg_fr,
+									support_ticket.eb_created_at,
+									support_ticket.user_type,
+									eb_solutions.solution_name,
+									eb_solutions.esolution_id	
 								FROM support_ticket
+								JOIN
+									eb_solutions
+								ON
+									support_ticket.solution_id 
+								= 
+									eb_solutions.isolution_id 
 							WHERE 
-								ticket_id =:ticketno 
+								support_ticket.ticket_id =:ticketno 
 							AND 
-							eb_del=:fals
+								support_ticket.eb_del=:fals
 							;";
 
 					parameters.Add(this.InfraConnectionFactory.DataDB.GetNewParameter("ticketno", EbDbTypes.String, sdreq.ticketno));
@@ -471,32 +580,42 @@ namespace ExpressBase.ServiceStack.Services
 					if (sdreq.Usertype.Equals("tc"))
 					{
 						sql = @"SELECT 
-									title, 
-									description,
-									priority, 
-									solution_id, 
-									modified_at, 
-									status, 
-									remarks, 
-									assigned_to, 
-									type_bg_fr,
-									eb_created_at
-									FROM support_ticket
+									support_ticket.title, 
+									support_ticket.description,
+									support_ticket.priority, 
+									support_ticket.solution_id, 
+									support_ticket.modified_at, 
+									support_ticket.status, 
+									support_ticket.remarks, 
+									support_ticket.assigned_to, 
+									support_ticket.type_bg_fr,
+									support_ticket.eb_created_at,
+									support_ticket.user_type,									
+									eb_solutions.solution_name,
+									eb_solutions.esolution_id	
+									FROM 
+										support_ticket
+									JOIN
+										eb_solutions
+									ON
+										support_ticket.solution_id 
+									= 
+										eb_solutions.isolution_id 
 								WHERE 
-									ticket_id =:ticketno
+									support_ticket.ticket_id =:ticketno
 								AND 
-									eb_del=:fals 
+									support_ticket.eb_del=:fals 
 								AND 
-									solution_id
+									support_ticket.solution_id
 								IN
 								(SELECT 
-										isolution_id 
+										eb_solutions.isolution_id 
 									FROM
 										eb_solutions
 									WHERE 
-										tenant_id =:UserId
+										eb_solutions.tenant_id =:UserId
 									AND 
-										eb_del = false);";
+										eb_solutions.eb_del = false);";
 
 
 						parameters.Add(this.InfraConnectionFactory.DataDB.GetNewParameter("ticketno", EbDbTypes.String, sdreq.ticketno));
@@ -531,27 +650,36 @@ namespace ExpressBase.ServiceStack.Services
 						parameters1.Add(this.InfraConnectionFactory.DataDB.GetNewParameter("fals", EbDbTypes.String, "F"));
 
 					}
-					else
+					else 
 					{
 						sql = string.Format(@"SELECT 
-												title, 
-												description,
-												priority, 
-												solution_id, 
-												modified_at, 
-												status, 
-												remarks, 
-												assigned_to, 
-												type_bg_fr,
-												eb_created_at
-											FROM
+												support_ticket.title, 
+												support_ticket.description,
+												support_ticket.priority, 
+												support_ticket.solution_id, 
+												support_ticket.modified_at, 
+												support_ticket.status, 
+												support_ticket.remarks, 
+												support_ticket.assigned_to, 
+												support_ticket.type_bg_fr,
+												support_ticket.eb_created_at,
+												support_ticket.user_type,
+												eb_solutions.solution_name,
+												eb_solutions.esolution_id	
+											FROM 
 												support_ticket
+											JOIN
+												eb_solutions
+											ON
+												support_ticket.solution_id 
+											= 
+												eb_solutions.isolution_id 
 											WHERE 
-												ticket_id =:ticketno 
+												support_ticket.ticket_id =:ticketno 
 											AND
-												eb_del=:fals 
+												support_ticket.eb_del=:fals 
 											AND
-												solution_id=:SolnId;");
+												support_ticket.solution_id=:SolnId;");
 
 						parameters.Add(this.InfraConnectionFactory.DataDB.GetNewParameter("ticketno", EbDbTypes.String, sdreq.ticketno));
 						parameters.Add(this.InfraConnectionFactory.DataDB.GetNewParameter("SolnId", EbDbTypes.String, sdreq.SolnId));
@@ -577,6 +705,7 @@ namespace ExpressBase.ServiceStack.Services
 						parameters1.Add(this.InfraConnectionFactory.DataDB.GetNewParameter("fals", EbDbTypes.String, "F"));
 
 					}
+
 				}
 				DbParameter[] param = parameters.ToArray();
 				DbParameter[] param1 = parameters1.ToArray();
@@ -599,6 +728,8 @@ namespace ExpressBase.ServiceStack.Services
 						st.type_b_f = dt.Rows[i][8].ToString();
 						st.createdat = dt.Rows[i][9].ToString();
 						st.ticketid = sdreq.ticketno;
+						st.Solution_name = dt.Rows[i][11].ToString();
+						st.Esolution_id = dt.Rows[i][12].ToString();
 
 					}
 				}
@@ -662,66 +793,70 @@ namespace ExpressBase.ServiceStack.Services
 
 				string[] DBcolms = new string[] { "title", "description", "priority", "solution_id", "type_bg_fr", "assigned_to", "status", "comment", "files", "date_created" };
 
-
-				for (int i = 0; i < DBcolms.Length; i++)
+				if (utreq.chngedtkt.Count > 0)
 				{
-					if (utreq.chngedtkt.ContainsKey(DBcolms[i]))
+
+
+					for (int i = 0; i < DBcolms.Length; i++)
 					{
-						FieldKey.Add(DBcolms[i]);
-						FieldValue.Add(":" + DBcolms[i]);
-						p.Add(this.InfraConnectionFactory.DataDB.GetNewParameter(":" + DBcolms[i], EbDbTypes.String, utreq.chngedtkt[DBcolms[i]]));
+						if (utreq.chngedtkt.ContainsKey(DBcolms[i]))
+						{
+							FieldKey.Add(DBcolms[i]);
+							FieldValue.Add(":" + DBcolms[i]);
+							p.Add(this.InfraConnectionFactory.DataDB.GetNewParameter(":" + DBcolms[i], EbDbTypes.String, utreq.chngedtkt[DBcolms[i]]));
 
+						}
 					}
-				}
-				for (int j = 0; j < FieldKey.Count; j++)
-				{
-					tem += FieldKey[j] + "=" + FieldValue[j] + ",";
-				}
+					for (int j = 0; j < FieldKey.Count; j++)
+					{
+						tem += FieldKey[j] + "=" + FieldValue[j] + ",";
+					}
 
-				tem = tem.Remove(tem.Length - 1, 1);
-				string k = String.Format(@"UPDATE 
+					tem = tem.Remove(tem.Length - 1, 1);
+					string k = String.Format(@"UPDATE 
 										support_ticket 
 										SET
 										{0}
 										WHERE 
 											ticket_id=:tktid
                                             and eb_del=:fals", tem
-											);
+												);
 
-				p.Add(this.InfraConnectionFactory.DataDB.GetNewParameter("tktid", EbDbTypes.String, utreq.ticketid));
-				p.Add(this.InfraConnectionFactory.DataDB.GetNewParameter("fals", EbDbTypes.String, "F"));
-				DbParameter[] parameters = p.ToArray();
-				int dt = this.InfraConnectionFactory.DataDB.DoNonQuery(k, parameters);
+					p.Add(this.InfraConnectionFactory.DataDB.GetNewParameter("tktid", EbDbTypes.String, utreq.ticketid));
+					p.Add(this.InfraConnectionFactory.DataDB.GetNewParameter("fals", EbDbTypes.String, "F"));
+					DbParameter[] parameters = p.ToArray();
+					int dt = this.InfraConnectionFactory.DataDB.DoNonQuery(k, parameters);
 
-				if (dt == 1)
-				{
-					if (utreq.chngedtkt.ContainsKey("solution_id"))
+					//to change solution id of files if changed field is solution id
+					if (dt == 1)
 					{
-						string k8 = String.Format(@"UPDATE 
+						if (utreq.chngedtkt.ContainsKey("solution_id"))
+						{
+							string k8 = String.Format(@"UPDATE 
 											support_ticket_files 
 											SET
 											solution_id=:slutn 
 											WHERE 
 												ticket_id=:tktid
 												and eb_del=:fals"
-												);
+													);
 
 
-						DbParameter[] parameters8 = {
+							DbParameter[] parameters8 = {
 									this.InfraConnectionFactory.DataDB.GetNewParameter("slutn", EbDbTypes.String, utreq.chngedtkt["solution_id"]),
 									this.InfraConnectionFactory.DataDB.GetNewParameter("fals", EbDbTypes.String, "F"),
 									this.InfraConnectionFactory.DataDB.GetNewParameter("tktid", EbDbTypes.String, utreq.ticketid)
 									};
 
-						int dt5 = this.InfraConnectionFactory.DataDB.DoNonQuery(k8, parameters8);
+							int dt5 = this.InfraConnectionFactory.DataDB.DoNonQuery(k8, parameters8);
 
+						}
+					}
+					if (dt == 0)
+					{
+						utr.ErMsg = "Unexpected error occurred while updating";
 					}
 				}
-					if (dt == 0)
-				{
-					utr.ErMsg = "Unexpected error occurred while updating";
-				}
-				
 
 				//to insert into history
 				DateTime tdate = DateTime.UtcNow;
@@ -764,14 +899,14 @@ namespace ExpressBase.ServiceStack.Services
 
 					EbDataTable dt6 = this.InfraConnectionFactory.DataDB.DoQuery(sql6, parameters6);
 					var ide = Convert.ToInt32(dt6.Rows[0][0]);
-
+					if (dt6.Rows.Count < 0)
+					{
+						utr.ErMsg = "Unexpected error occurred while updating";
+					}
 				}
 
 				//remove previouse upload files ie set false
-				if (dt > 0)
-				{
-
-
+				
 					if (utreq.Filedel.Length > 0)
 					{
 						for (var m = 0; m < utreq.Filedel.Length; m++)
@@ -795,8 +930,11 @@ namespace ExpressBase.ServiceStack.Services
 									};
 
 							int dt5 = this.InfraConnectionFactory.DataDB.DoNonQuery(k1, parameters5);
-
+						if (dt5 < 1)
+						{
+							utr.ErMsg = "Unexpected error occurred while updating";
 						}
+					}
 
 					}
 
@@ -848,7 +986,7 @@ namespace ExpressBase.ServiceStack.Services
 
 
 
-				}
+				
 				utr.status = true;
 			}
 			catch (Exception e)
@@ -1023,6 +1161,7 @@ namespace ExpressBase.ServiceStack.Services
 					chst.ErMsg = "Unexpected error occurred while updating";
 				}
 				else
+				//insert into history
 				{
 					string sql6 = @"INSERT INTO  support_ticket_history(
 																	ticket_id,
@@ -1046,7 +1185,7 @@ namespace ExpressBase.ServiceStack.Services
 																		:slid
 																		)RETURNING id;";
 					DbParameter[] parameters6 = {
-								this.InfraConnectionFactory.DataDB.GetNewParameter("tktid", EbDbTypes.String,  chstreq.TicketNo),
+							this.InfraConnectionFactory.DataDB.GetNewParameter("tktid", EbDbTypes.String,  chstreq.TicketNo),
 							this.InfraConnectionFactory.DataDB.GetNewParameter("fals", EbDbTypes.String, "F"),
 							this.InfraConnectionFactory.DataDB.GetNewParameter("fld", EbDbTypes.String,SupportTicketFields.status.ToString()),
 							this.InfraConnectionFactory.DataDB.GetNewParameter("val", EbDbTypes.String,chstreq.NewStatus ),
@@ -1055,8 +1194,18 @@ namespace ExpressBase.ServiceStack.Services
 							this.InfraConnectionFactory.DataDB.GetNewParameter("tdate", EbDbTypes.DateTime, tdate),
 							this.InfraConnectionFactory.DataDB.GetNewParameter("slid", EbDbTypes.String, chstreq.Solution_id),
 								};
-
+					DbParameter[] parameters7 = {
+							this.InfraConnectionFactory.DataDB.GetNewParameter("tktid", EbDbTypes.String,  chstreq.TicketNo),
+							this.InfraConnectionFactory.DataDB.GetNewParameter("fals", EbDbTypes.String, "F"),
+							this.InfraConnectionFactory.DataDB.GetNewParameter("fld", EbDbTypes.String,SupportTicketFields.reason.ToString()),
+							this.InfraConnectionFactory.DataDB.GetNewParameter("val", EbDbTypes.String,chstreq.Reason ),
+							this.InfraConnectionFactory.DataDB.GetNewParameter("fldid", EbDbTypes.Int32,  (int)SupportTicketFields.reason),
+							this.InfraConnectionFactory.DataDB.GetNewParameter("usrname", EbDbTypes.String, chstreq.UserName),
+							this.InfraConnectionFactory.DataDB.GetNewParameter("tdate", EbDbTypes.DateTime, tdate),
+							this.InfraConnectionFactory.DataDB.GetNewParameter("slid", EbDbTypes.String, chstreq.Solution_id),
+								};
 					EbDataTable dt6 = this.InfraConnectionFactory.DataDB.DoQuery(sql6, parameters6);
+					EbDataTable dt7 = this.InfraConnectionFactory.DataDB.DoQuery(sql6, parameters7);
 					var ide = Convert.ToInt32(dt6.Rows[0][0]);
 				}
 				chst.RtnStatus = true;
@@ -1111,6 +1260,7 @@ namespace ExpressBase.ServiceStack.Services
 						Sh.UserName = dt.Rows[i][5].ToString();
 						Sh.FieldId = (int)dt.Rows[i][6];
 						DateTime Dat1 = (DateTime)dt.Rows[i][7];
+						Dat1 = Dat1.ConvertFromUtc(Shreq.UserObject.Preference.TimeZone);
 						Sh.CreatedDate = (Dat1.Date).ToString("d");
 						Sh.CreatedTime = Dat1.ToString("HH:mm");
 
