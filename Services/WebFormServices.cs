@@ -1365,7 +1365,7 @@ namespace ExpressBase.ServiceStack.Services
             GetDistinctValuesResponse resp = new GetDistinctValuesResponse() { Suggestions = new List<string>()};
             try
             {  
-                string query = @"SELECT DISTINCT INITCAP(TRIM(@ColumName)) AS @ColumName FROM @TableName ORDER BY @ColumName;"
+                string query = EbConnectionFactory.DataDB.EB_GET_DISTINCT_VALUES
                 .Replace("@ColumName", request.ColumnName)
                 .Replace("@TableName", request.TableName);
                 EbDataTable table = EbConnectionFactory.DataDB.DoQuery(query);

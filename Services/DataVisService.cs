@@ -415,6 +415,13 @@ namespace ExpressBase.ServiceStack
                                             else
                                                 _cond += string.Format(" {0} {1} '{2}' OR", col, op, array[i].Trim());
                                         }
+                                        else if (this.EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.MYSQL)
+                                        {
+                                            if (type == EbDbTypes.Date || type == EbDbTypes.DateTime)
+                                                _cond += string.Format(" CAST({0} AS date) {1} '{2}' OR", col, op, array[i].Trim());
+                                            else
+                                                _cond += string.Format(" {0} {1} '{2}' OR", col, op, array[i].Trim());
+                                        }
                                         else
                                         {
                                             if (type == EbDbTypes.Date || type == EbDbTypes.DateTime)
