@@ -242,7 +242,9 @@ namespace ExpressBase.ServiceStack.Services
                             ShortName = r[1].ToString(),
                             LongName = r[2].ToString(),
                             Logo = r[3].ToString(),
-                            Meta = JsonConvert.DeserializeObject<Dictionary<string, string>>(r[4].ToString())
+                            Meta = JsonConvert.DeserializeObject<Dictionary<string, string>>(r[4].ToString()),
+                            WeekHoliday1 = r["week_holiday1"].ToString(),
+                            WeekHoliday2 = r["week_holiday2"].ToString()
                         });
                     }
                 }
