@@ -363,7 +363,7 @@ namespace ExpressBase.ServiceStack.Services
             string file_name = string.Empty;
             string file_name_shrt = string.Empty;
             DBManagerType type = DBManagerType.Function;
-            string[] func_create = SqlScriptArrayConstant.SQLSCRIPTARRAY;
+            string[] func_create = SqlFiles.SQLSCRIPTS;
 
             foreach (string vendor in Enum.GetNames(typeof(DatabaseVendors)))
             {
