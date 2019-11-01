@@ -609,26 +609,32 @@ namespace ExpressBase.ServiceStack.Services
             try
             {
                 string sql = @"SELECT 
-                                    EA.id,
-                                    EA.applicationname,
-                                    EA.app_icon,
-                                    EA.application_type 
+	                                EA.id,
+	                                EA.applicationname,
+	                                EA.app_icon,
+	                                EA.application_type 
                                 FROM 
-                                    eb_applications EA 
-                                WHERE EXISTS(
-                                            SELECT 
-                                                * 
-                                            FROM 
-                                                eb_objects2application 
-                                            WHERE 
-                                                app_id = EA.id 
-                                            AND 
-                                                eb_del = 'F'
-                                            )
+	                                eb_applications EA
+                                LEFT JOIN 
+	                                eb_objects2application EOA
+                                ON 
+	                                EA.id = EOA.app_id 
+                                WHERE 
+	                                EOA.obj_id = ANY(string_to_array(:ids,',')::int[]) 
                                 AND 
-                                    EA.eb_del = 'F';";
+	                                EA.eb_del = 'F'
+                                AND
+									EOA.eb_del = 'F';";
 
-                EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery(sql);
+                User UserObject = this.Redis.Get<User>(request.UserAuthId);
+                string[] Ids = UserObject.GetAccessIds(request.LocationId);
+
+                DbParameter[] parameters =
+                {
+                    this.EbConnectionFactory.DataDB.GetNewParameter("ids", EbDbTypes.String, String.Join(",",Ids)),
+                };
+
+                EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery(sql,parameters);
                 foreach (EbDataRow row in dt.Rows)
                 {
                     resp.Applications.Add(new AppDataToMob
@@ -645,6 +651,71 @@ namespace ExpressBase.ServiceStack.Services
                 Console.WriteLine("EXCEPTION AT GetMobMenuRequest " + e.Message);
             }
             return resp;
+        }
+
+        //objectlist for mobile
+        public ObjectListToMob Get(ObjectListToMobRequest request)
+        {
+            Dictionary<int, List<ObjWrap>> dict = new Dictionary<int, List<ObjWrap>>();
+
+            try
+            {
+                User UserObject = this.Redis.Get<User>(request.UserAuthId);
+                string[] PermIds = UserObject.GetAccessIds(request.LocationId);
+
+                string Sql = @"SELECT
+                                   EO.id, EO.obj_type, EO.obj_name,
+                                   EOV.version_num, 
+                                   EOV.refid,
+                                   display_name
+                                FROM
+   	                                eb_objects EO, eb_objects_ver EOV, eb_objects_status EOS, eb_objects2application EO2A 
+                                WHERE
+   	                                EOV.eb_objects_id = EO.id	
+                                AND EO2A.app_id = 7	      			    
+                                AND EOS.eb_obj_ver_id = EOV.id 
+                                AND EO2A.obj_id = EO.id
+                                AND EO2A.eb_del = 'F'
+                                AND EOS.status = 3 
+                                AND COALESCE( EO.eb_del, 'F') = 'F'
+                                AND EOS.id = ANY( Select MAX(id) from eb_objects_status EOS Where EOS.eb_obj_ver_id = EOV.id );";
+
+                DbParameter[] parameters = {
+                    this.EbConnectionFactory.ObjectsDB.GetNewParameter("appid",EbDbTypes.Int32,request.AppId)
+                };
+
+                EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(Sql, parameters);
+
+                foreach (EbDataRow dr in dt.Rows)
+                {
+                    int _ObjType = Convert.ToInt32(dr["obj_type"]);
+                    EbObjectType _EbObjType = (EbObjectType)_ObjType;
+
+                    string _ObjId = dr["id"].ToString();
+
+                    if (!_EbObjType.IsUserFacing && !PermIds.Contains(_ObjId))
+                        continue;
+
+                    if (!dict.ContainsKey(_ObjType))
+                        dict.Add(_ObjType, new List<ObjWrap>());
+
+                    dict[_ObjType].Add(new ObjWrap
+                    {
+                        Id = Convert.ToInt32(dr["id"]),
+                        EbObjectType = Convert.ToInt32(dr["obj_type"]),
+                        Refid = dr["refid"].ToString(),
+                        EbType = _EbObjType.Name,
+                        DisplayName = dr["display_name"].ToString(),
+                        VersionNumber = dr["version_num"].ToString()
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Exception at sidebar user mobile req ::" + ex.Message);
+            }
+
+            return new ObjectListToMob { ObjectTypes = dict };
         }
 
         public EbObjectToMobResponse Get(EbObjectToMobRequest request)
