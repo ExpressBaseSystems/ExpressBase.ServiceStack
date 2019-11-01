@@ -15,6 +15,7 @@ using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
+using ExpressBase.Security;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -607,9 +608,34 @@ namespace ExpressBase.ServiceStack.Services
             GetMobMenuResonse resp = new GetMobMenuResonse();
             try
             {
-                string sql = "SELECT id,applicationname,app_icon,application_type FROM eb_applications WHERE eb_del='F'";
-                EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery(sql);
-                foreach(EbDataRow row in dt.Rows)
+                string sql = @"SELECT 
+	                                EA.id,
+	                                EA.applicationname,
+	                                EA.app_icon,
+	                                EA.application_type 
+                                FROM 
+	                                eb_applications EA
+                                LEFT JOIN 
+	                                eb_objects2application EOA
+                                ON 
+	                                EA.id = EOA.app_id 
+                                WHERE 
+	                                EOA.obj_id = ANY(string_to_array(:ids,',')::int[]) 
+                                AND 
+	                                EA.eb_del = 'F'
+                                AND
+									EOA.eb_del = 'F';";
+
+                User UserObject = this.Redis.Get<User>(request.UserAuthId);
+                string[] Ids = UserObject.GetAccessIds(request.LocationId);
+
+                DbParameter[] parameters =
+                {
+                    this.EbConnectionFactory.DataDB.GetNewParameter("ids", EbDbTypes.String, String.Join(",",Ids)),
+                };
+
+                EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery(sql,parameters);
+                foreach (EbDataRow row in dt.Rows)
                 {
                     resp.Applications.Add(new AppDataToMob
                     {
@@ -619,12 +645,138 @@ namespace ExpressBase.ServiceStack.Services
                     });
                 }
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 Console.WriteLine(e.StackTrace);
                 Console.WriteLine("EXCEPTION AT GetMobMenuRequest " + e.Message);
             }
             return resp;
+        }
+
+        //objectlist for mobile
+        public ObjectListToMob Get(ObjectListToMobRequest request)
+        {
+            Dictionary<int, List<ObjWrap>> dict = new Dictionary<int, List<ObjWrap>>();
+
+            try
+            {
+                User UserObject = this.Redis.Get<User>(request.UserAuthId);
+                string[] PermIds = UserObject.GetAccessIds(request.LocationId);
+
+                string Sql = @"SELECT
+                                   EO.id, EO.obj_type, EO.obj_name,
+                                   EOV.version_num, 
+                                   EOV.refid,
+                                   display_name
+                                FROM
+   	                                eb_objects EO, eb_objects_ver EOV, eb_objects_status EOS, eb_objects2application EO2A 
+                                WHERE
+   	                                EOV.eb_objects_id = EO.id	
+                                AND EO2A.app_id = 7	      			    
+                                AND EOS.eb_obj_ver_id = EOV.id 
+                                AND EO2A.obj_id = EO.id
+                                AND EO2A.eb_del = 'F'
+                                AND EOS.status = 3 
+                                AND COALESCE( EO.eb_del, 'F') = 'F'
+                                AND EOS.id = ANY( Select MAX(id) from eb_objects_status EOS Where EOS.eb_obj_ver_id = EOV.id );";
+
+                DbParameter[] parameters = {
+                    this.EbConnectionFactory.ObjectsDB.GetNewParameter("appid",EbDbTypes.Int32,request.AppId)
+                };
+
+                EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(Sql, parameters);
+
+                foreach (EbDataRow dr in dt.Rows)
+                {
+                    int _ObjType = Convert.ToInt32(dr["obj_type"]);
+                    EbObjectType _EbObjType = (EbObjectType)_ObjType;
+
+                    string _ObjId = dr["id"].ToString();
+
+                    if (!_EbObjType.IsUserFacing && !PermIds.Contains(_ObjId))
+                        continue;
+
+                    if (!dict.ContainsKey(_ObjType))
+                        dict.Add(_ObjType, new List<ObjWrap>());
+
+                    dict[_ObjType].Add(new ObjWrap
+                    {
+                        Id = Convert.ToInt32(dr["id"]),
+                        EbObjectType = Convert.ToInt32(dr["obj_type"]),
+                        Refid = dr["refid"].ToString(),
+                        EbType = _EbObjType.Name,
+                        DisplayName = dr["display_name"].ToString(),
+                        VersionNumber = dr["version_num"].ToString()
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Exception at sidebar user mobile req ::" + ex.Message);
+            }
+
+            return new ObjectListToMob { ObjectTypes = dict };
+        }
+
+        public EbObjectToMobResponse Get(EbObjectToMobRequest request)
+        {
+            EbObjectToMobResponse response = new EbObjectToMobResponse();
+
+            try
+            {
+                var resp = (EbObjectParticularVersionResponse)StudioServices.Get(new EbObjectParticularVersionRequest { RefId = request.RefId });
+
+                if (!resp.Data.Any())
+                    return null;
+
+                response.ObjectWraper = resp.Data[0];
+
+                if (resp.Data[0].EbObjectType == EbObjectTypes.Report)
+                {
+                    EbReport reportobj = EbSerializers.Json_Deserialize<EbReport>(resp.Data[0].Json);
+                    if (!string.IsNullOrEmpty(reportobj.DataSourceRefId))
+                    {
+                        ObjWrapperInt dr = this.GetObjectByVer(reportobj.DataSourceRefId);
+
+                        if (string.IsNullOrEmpty((dr.EbObj as EbDataReader).FilterDialogRefId))
+                        {
+                            ReportService rep_service = base.ResolveService<ReportService>();
+                            ReportRenderResponse stream = rep_service.Get(new ReportRenderRequest
+                            {
+                                Refid = request.RefId,
+                                SolnId = request.SolnId,
+                                UserId = request.UserId,
+                                ReadingUser = request.User,
+                                RenderingUser = request.User
+                            });
+
+                            response.ReportResult = stream.ReportBytea;
+                        }
+                    }
+
+                }
+                else if (resp.Data[0].EbObjectType == EbObjectTypes.TableVisualization)
+                {
+                    EbTableVisualization tv = EbSerializers.Json_Deserialize<EbTableVisualization>(resp.Data[0].Json);
+
+                    if (!string.IsNullOrEmpty(tv.DataSourceRefId))
+                    {
+                        ObjWrapperInt dr = this.GetObjectByVer(tv.DataSourceRefId);
+
+                        if(string.IsNullOrEmpty((dr.EbObj as EbDataReader).FilterDialogRefId))
+                        {
+                            response.TableResult = this.EbConnectionFactory.DataDB.DoQueries((dr.EbObj as EbDataReader).Sql);
+                        }
+                    }
+                }
+            }
+            catch(Exception e)
+            {
+                Console.WriteLine("EXCEPTION AT EbObjectToMobResponse" + e.Message);
+                Console.WriteLine(e.StackTrace);
+            }
+            
+            return response;
         }
     }
 }

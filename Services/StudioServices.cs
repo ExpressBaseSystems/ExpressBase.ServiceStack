@@ -191,13 +191,23 @@ namespace ExpressBase.ServiceStack
         {
             List<EbObjectWrapper> wrap = new List<EbObjectWrapper>();
 
-            string qry = @"select o.display_name, v.refid, o.id, o.obj_type, v.id version_id, v.version_num from eb_objects o
-                            inner join eb_objects_ver v 
-                            on (o.id=v.eb_objects_id and v.id= (select max(vv.id) from eb_objects_ver vv where 
-									                            vv.eb_objects_id=o.id AND COALESCE(v.working_mode, 'F')='F'))
-                            where obj_type = 14 or obj_type = 16 or obj_type = 17 or obj_type =21
-                            AND COALESCE(o.eb_del,'F')='F' 
-                             order by o.id";
+            string qry = @"select 
+		            o.id, o.display_name, v.refid,  o.obj_type, v.id version_id, v.version_num 
+	            from 
+		            eb_objects o
+                inner join 
+		            eb_objects_ver v 
+               on (o.id=v.eb_objects_id and v.id= (
+		            select 
+				            max(vv.id)
+			            from 
+				            eb_objects_ver vv, eb_objects_status eos
+			            where 
+				            vv.eb_objects_id=o.id and vv.id=eos.eb_obj_ver_id and eos.status=3 and COALESCE(v.working_mode, 'F')='F')
+                    )	
+	            where (obj_type = 14 or obj_type = 16 or obj_type = 17 or obj_type =21)
+			            AND COALESCE(o.eb_del,'F')='F' 
+	            order by o.id";
 
             EbDataTable dt = EbConnectionFactory.ObjectsDB.DoQuery(qry);
 
@@ -214,13 +224,13 @@ namespace ExpressBase.ServiceStack
 
                 wrap_list.Add(new EbObjectWrapper
                 {
-                    Id = Convert.ToInt32(dr[2]),
-                    Name = dr[4].ToString(),
+                    Id = Convert.ToInt32(dr[0]),
+                    Name = dr[1].ToString(),
                     EbObjectType = ((EbObjectType)Convert.ToInt32(dr[3])).IntCode,
                     //Status = Enum.GetName(typeof(ObjectLifeCycleStatus), Convert.ToInt32(dr[3])),
                     VersionNumber = dr[5].ToString(),
-                    RefId = dr[1].ToString(),
-                    DisplayName = dr[0].ToString()
+                    RefId = dr[2].ToString(),
+                    DisplayName = dr[1].ToString()
                 });
             }
             return new EbObjAllVerForDashBoardResp { Data = f_dict };
@@ -1231,6 +1241,8 @@ namespace ExpressBase.ServiceStack
                 return EbObjectTypes.Api.IntCode;
             else if (obj is EbDashBoard)
                 return EbObjectTypes.DashBoard.IntCode;
+            else if (obj is EbCalendarView)
+                return EbObjectTypes.CalendarView.IntCode;
             else
                 return -1;
         }
@@ -1295,6 +1307,10 @@ namespace ExpressBase.ServiceStack
             else if (obj is EbDashBoard)
             {
                 Redis.Set(refId, (EbDashBoard)obj);
+            }
+            else if (obj is EbCalendarView)
+            {
+                Redis.Set(refId, (EbCalendarView)obj);
             }
         }
 
