@@ -693,7 +693,7 @@ namespace ExpressBase.ServiceStack.Services
 
                     string _ObjId = dr["id"].ToString();
 
-                    if (!_EbObjType.IsUserFacing && !PermIds.Contains(_ObjId))
+                    if (!_EbObjType.IsUserFacing || !PermIds.Contains(_ObjId))
                         continue;
 
                     if (!dict.ContainsKey(_ObjType))
