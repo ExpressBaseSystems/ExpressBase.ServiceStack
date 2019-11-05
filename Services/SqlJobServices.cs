@@ -249,7 +249,10 @@ namespace ExpressBase.ServiceStack.Services
 
                         foreach (KeyValuePair<string, TV> _c in _list)
                         {
-                            dtNew.Rows[i][++Col] = _c.Value.Value;
+                            Param obj = new Param();
+                            obj.Value = _c.Value.Value.ToString();
+                            obj.Type = _c.Value.Type;
+                            dtNew.Rows[i][++Col] = obj.ValueTo;
                         }
 
                     }
