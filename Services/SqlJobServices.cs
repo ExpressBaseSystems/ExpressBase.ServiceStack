@@ -212,7 +212,8 @@ namespace ExpressBase.ServiceStack.Services
 
                 string query = $"select logmaster_id , COALESCE (message, 'ffff') message,createdby,createdat," +
                     $"COALESCE(status, 'F') status,id, keyvalues from eb_joblogs_lines where logmaster_id =" +
-                    $"(select id from eb_joblogs_master where to_char(created_at, 'dd-mm-yyyy') = '{request.Date}' and refid = '{request.Refid}'  limit 1) order by status,id; ";
+                    $"(select id from eb_joblogs_master where to_char(created_at, 'dd-mm-yyyy') = '{request.Date}' and refid = '{request.Refid}'  limit 1) " +
+                    $"and id not in (select retry_of from eb_joblogs_lines) order by status,id; ";
                 EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(query);
                 int capacity1 = dt.Columns.Count - 1;
 
@@ -273,11 +274,21 @@ namespace ExpressBase.ServiceStack.Services
         public RetryJobResponse post(RetryJobRequest request)
         {
             RetryJobResponse response = new RetryJobResponse();
+            response.Status = false;
             IsRetry = true;
             LogLine logline = GetLogLine(request.JoblogId);
             this.GlobalParams = logline.Params;
             LoopLocation loopLocation = this.SqlJob.GetLoop();
-            LoopExecution(loopLocation.Loop, request.JoblogId, loopLocation.Step, loopLocation.ParentIndex, null, logline.Keyvalues);
+            try
+            {
+                LoopExecution(loopLocation.Loop, request.JoblogId, loopLocation.Step, loopLocation.ParentIndex, null, logline.Keyvalues);
+                response.Status = true;
+            }
+            catch(Exception e)
+            {
+                response.Status = false;
+                Console.WriteLine("exception" + e);
+            }
             return response;
         }
 
