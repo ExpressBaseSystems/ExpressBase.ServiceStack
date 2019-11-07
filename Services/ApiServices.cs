@@ -672,7 +672,7 @@ namespace ExpressBase.ServiceStack.Services
    	                                eb_objects EO, eb_objects_ver EOV, eb_objects_status EOS, eb_objects2application EO2A 
                                 WHERE
    	                                EOV.eb_objects_id = EO.id	
-                                AND EO2A.app_id = 7	      			    
+                                AND EO2A.app_id = :appid	      			    
                                 AND EOS.eb_obj_ver_id = EOV.id 
                                 AND EO2A.obj_id = EO.id
                                 AND EO2A.eb_del = 'F'
@@ -693,7 +693,7 @@ namespace ExpressBase.ServiceStack.Services
 
                     string _ObjId = dr["id"].ToString();
 
-                    if (!_EbObjType.IsUserFacing && !PermIds.Contains(_ObjId))
+                    if (!_EbObjType.IsUserFacing || !PermIds.Contains(_ObjId))
                         continue;
 
                     if (!dict.ContainsKey(_ObjType))
