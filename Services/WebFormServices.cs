@@ -37,8 +37,19 @@ namespace ExpressBase.ServiceStack.Services
         {
             if (request.WebObj is EbWebForm)
             {
-                (request.WebObj as EbWebForm).AfterRedisGet(this);
-                CreateWebFormTables((request.WebObj as EbWebForm).FormSchema, request);
+                EbWebForm Form = request.WebObj as EbWebForm;
+                Form.AfterRedisGet(this);
+                if (Form.ExeDataPusher)
+                {
+                    foreach(EbDataPusher pusher in Form.DataPushers)
+                    {
+                        EbWebForm _form = GetWebFormObject(pusher.FormRefId);
+                        TableSchema _table = _form.FormSchema.Tables.Find(e => e.TableName.Equals(_form.FormSchema.MasterTable));
+                        if (_table != null)
+                            Form.FormSchema.Tables.Add(_table);
+                    }
+                }
+                CreateWebFormTables(Form.FormSchema, request);                
             }
             return new CreateWebFormTableResponse { };
         }
