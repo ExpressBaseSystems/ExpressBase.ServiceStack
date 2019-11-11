@@ -5,7 +5,7 @@ using ExpressBase.Common.Objects;
 using ExpressBase.Common.Structures;
 using ExpressBase.Objects;
 using ExpressBase.Objects.Objects;
-using ExpressBase.Objects.Objects.SqlJobRelated;
+using ExpressBase.Objects;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
@@ -17,7 +17,6 @@ using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
 using System.Threading.Tasks;
-using static ExpressBase.Objects.Objects.SqlJobRelated.EbSqlJob;
 
 namespace ExpressBase.ServiceStack.Services
 {
