@@ -32,43 +32,6 @@ namespace ExpressBase.ServiceStack.Services
             return _ebconfactoryDatadb;
         }
 
-        public UpdateInfraWithSqlScriptsResponse Post(UpdateInfraWithSqlScriptsRequest request)
-        {
-            UpdateInfraWithSqlScriptsResponse resp = new UpdateInfraWithSqlScriptsResponse();
-            SetFileMd5InfraReference();
-            return resp;
-        }
-
-        public CheckChangesInFilesResponse Post(CheckChangesInFilesRequest request)
-        {
-            CheckChangesInFilesResponse resp = new CheckChangesInFilesResponse();
-            CheckChangesInFilesResponse resp1 = new CheckChangesInFilesResponse();
-            List<Eb_FileDetails> ChangesList = new List<Eb_FileDetails>();
-            try
-            {
-                IDatabase _ebconfactoryDatadb = GetTenantDB(request.SolutionId);
-                if (_ebconfactoryDatadb != null)
-                {
-                    GetFileScriptFromInfra(_ebconfactoryDatadb);
-                    ChangesList = GetFileScriptFromTenant(_ebconfactoryDatadb);
-                    if (request.IsUpdate)
-                    {
-                        resp.ModifiedDate = UpdateDBFunctionByDB(ChangesList, request.SolutionId);
-                        request.IsUpdate = false;
-                        resp1 = this.Post(request);
-                        ChangesList = resp1.Changes;
-                    }
-                    resp.Changes = ChangesList;
-                }
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e.Message);
-                return resp;
-            }
-            return resp;
-        }
-
         public GetSolutionForIntegrityCheckResponse Post(GetSolutionForIntegrityCheckRequest request)
         {
             GetSolutionForIntegrityCheckResponse resp = new GetSolutionForIntegrityCheckResponse();
@@ -186,6 +149,43 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
+        public UpdateInfraWithSqlScriptsResponse Post(UpdateInfraWithSqlScriptsRequest request)
+        {
+            UpdateInfraWithSqlScriptsResponse resp = new UpdateInfraWithSqlScriptsResponse();
+            SetFileMd5InfraReference();
+            return resp;
+        }
+
+        public CheckChangesInFilesResponse Post(CheckChangesInFilesRequest request)
+        {
+            CheckChangesInFilesResponse resp = new CheckChangesInFilesResponse();
+            CheckChangesInFilesResponse resp1 = new CheckChangesInFilesResponse();
+            List<Eb_FileDetails> ChangesList = new List<Eb_FileDetails>();
+            try
+            {
+                IDatabase _ebconfactoryDatadb = GetTenantDB(request.SolutionId);
+                if (_ebconfactoryDatadb != null)
+                {
+                    GetFileScriptFromInfra(_ebconfactoryDatadb);
+                    ChangesList = GetFileScriptFromTenant(_ebconfactoryDatadb);
+                    if (request.IsUpdate)
+                    {
+                        resp.ModifiedDate = UpdateDBFunctionByDB(ChangesList, request.SolutionId);
+                        request.IsUpdate = false;
+                        resp1 = this.Post(request);
+                        ChangesList = resp1.Changes;
+                    }
+                    resp.Changes = ChangesList;
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+                return resp;
+            }
+            return resp;
+        }
+
         void SetFileMd5InfraReference()
         {
             StringBuilder hash = new StringBuilder();
@@ -217,11 +217,11 @@ namespace ExpressBase.ServiceStack.Services
                                     if (file.Split(".")[1] == "functioncreate")
                                     {
                                         type = DBManagerType.Function;
-                                        file_name = GetFileName(result, file, type);
-                                        file_name_shrt = file_name.Split("(")[0];
+                                        file_name = GetFileName(result, file, type); //function name with parameter
+                                        file_name_shrt = file_name.Split("(")[0]; // function name without parameter
                                         if (vendor == "PGSQL")
                                         {
-                                            result = FormatFileStringPGSQL(result, type);
+                                            result = FormatFileStringPGSQL(result, type); //remove escape sequences, spaces
                                         }
                                         byte[] bytes = md5provider.ComputeHash(new UTF8Encoding().GetBytes(result));
                                         hash.Clear();
@@ -234,7 +234,7 @@ namespace ExpressBase.ServiceStack.Services
                                     else if (file.Split(".")[1] == "tablecreate")
                                     {
                                         type = DBManagerType.Table;
-                                        file_name = GetFileName(result, file, type);
+                                        file_name = GetFileName(result, file, type); //table name
                                         file_name_shrt = file_name;
                                         using (DbConnection con = this.InfraConnectionFactory.DataDB.GetNewConnection())
                                         {
@@ -403,7 +403,7 @@ namespace ExpressBase.ServiceStack.Services
                     for (int i = 0; i < dt.Rows.Count; i++)
                     {
                         result = dt.Rows[i][0].ToString();
-                        file_name = GetFileName(result, dt.Rows[i][1].ToString(), DBManagerType.Function);
+                        file_name = GetFileName(result, dt.Rows[i][1].ToString(), DBManagerType.Function); // function name with parameters
                         result = FormatDBStringPGSQL(result, DBManagerType.Function);
                         byte[] bytes = md5provider.ComputeHash(new UTF8Encoding().GetBytes(result));
                         hash.Clear();
@@ -461,53 +461,53 @@ namespace ExpressBase.ServiceStack.Services
             }
             return CompareScripts(_ebconfactoryDatadb);
         }
-        
-        List<Eb_FileDetails> CompareScripts(IDatabase _ebconfactoryDatadb)                                                                                                                
+
+        List<Eb_FileDetails> CompareScripts(IDatabase _ebconfactoryDatadb)
         {
             List<Eb_FileDetails> ChangesList = new List<Eb_FileDetails>();
 
             foreach (KeyValuePair<string, Eb_FileDetails> _infraitem in dictInfra)
             {
-                if (dictTenant.TryGetValue(_infraitem.Key, out string[] _tenantitem))
+                if (dictTenant.TryGetValue(_infraitem.Key, out string[] _tenantitem)) // file name checking 
                 {
                     if ((_tenantitem != null) && (_tenantitem[1] != _infraitem.Value.Content))
                     {
-                        if(_infraitem.Value.Type == DBManagerType.Table)
+                        if (_infraitem.Value.Type == DBManagerType.Table)
                         {
-                            int f = 0;
+                            bool _isChange = false;
                             Eb_TableFieldChangesList infra_table_details = JsonConvert.DeserializeObject<Eb_TableFieldChangesList>(_infraitem.Value.Content);
                             Eb_TableFieldChangesList tenant_table_details = JsonConvert.DeserializeObject<Eb_TableFieldChangesList>(_tenantitem[1]);
                             foreach (KeyValuePair<string, List<Eb_TableFieldChanges>> _infratableitem in infra_table_details.Fields)
                             {
-                                if (!tenant_table_details.Fields.TryGetValue(_infratableitem.Key, out List<Eb_TableFieldChanges> _tenanttableitem))
+                                if (!tenant_table_details.Fields.TryGetValue(_infratableitem.Key, out List<Eb_TableFieldChanges> _tenanttableitem)) // checking table fields
                                 {
-                                    f = 1;
+                                    _isChange = true;
                                 }
                                 else
                                 {
                                     if (_infratableitem.Value[0].Data_type != _tenanttableitem[0].Data_type)
-                                        f = 1;
+                                        _isChange = true;
                                     if (_infratableitem.Value[0].Column_default != _tenanttableitem[0].Column_default)
-                                        f = 1;
+                                        _isChange = true;
                                     if (_infratableitem.Value[0].Constraint_name != _tenanttableitem[0].Constraint_name)
-                                        f = 1;
+                                        _isChange = true;
                                     if (_infratableitem.Value[0].Constraint_type != _tenanttableitem[0].Constraint_type)
-                                        f = 1;
+                                        _isChange = true;
                                 }
                             }
                             foreach (KeyValuePair<string, string> _infratableitem in infra_table_details.Indexs)
                             {
-                                if (!tenant_table_details.Indexs.TryGetValue(_infratableitem.Key, out string _tenanttableitem))
+                                if (!tenant_table_details.Indexs.TryGetValue(_infratableitem.Key, out string _tenanttableitem)) // checking indexes
                                 {
-                                    f = 1;
+                                    _isChange = true;
                                 }
                                 else
                                 {
                                     if (_infratableitem.Value != _tenanttableitem)
-                                        f = 1;
+                                        _isChange = true;
                                 }
                             }
-                            if (f==1)
+                            if (_isChange == true)
                             {
                                 ChangesList.Add(new Eb_FileDetails
                                 {
@@ -520,7 +520,7 @@ namespace ExpressBase.ServiceStack.Services
                                     FileType = Enum.GetName(typeof(DBManagerType), _infraitem.Value.Type),
                                     NewItem = false
                                 });
-                                f = 0;
+                                _isChange = false;
                             }
                         }
                         else
@@ -556,7 +556,26 @@ namespace ExpressBase.ServiceStack.Services
             }
             return ChangesList;
         }
-        
+
+        string UpdateDBFunctionByDB(List<Eb_FileDetails> ChangesList, string Solution)
+        {
+            DateTime modified_date = DateTime.Now;
+            UpdateDBFunctionByDBResponse resp = new UpdateDBFunctionByDBResponse();
+            IDatabase _ebconfactoryDatadb = GetTenantDB(Solution);
+            UpdateDB(ChangesList, _ebconfactoryDatadb);
+            using (DbConnection con = InfraConnectionFactory.DataDB.GetNewConnection())
+            {
+                con.Open();
+                string str1 = string.Format(@"
+                                              UPDATE eb_dbchangeslog 
+                                              SET modified_at = NOW()
+                                              WHERE solution_id = '{0}'", Solution);
+                DbCommand cmd2 = InfraConnectionFactory.DataDB.GetNewCommand(con, str1);
+                cmd2.ExecuteNonQuery();
+            }
+            return modified_date.ToString();
+        }
+
         void UpdateDB(List<Eb_FileDetails> ChangesList, IDatabase _ebconfactoryDatadb)
         {
             string result = string.Empty;
@@ -571,25 +590,41 @@ namespace ExpressBase.ServiceStack.Services
                     {
                         if (stream != null)
                         {
-                            using (StreamReader reader = new StreamReader(stream))
-                                result = reader.ReadToEnd();
-                            string fun = GetFuncDef(result, ChangesList[i].FileHeader);
-                            if (!ChangesList[i].NewItem)
+                            using (DbConnection con = _ebconfactoryDatadb.GetNewConnection())
                             {
-                                using (DbConnection con = _ebconfactoryDatadb.GetNewConnection())
+                                con.Open();
+                                using (StreamReader reader = new StreamReader(stream))
+                                    result = reader.ReadToEnd();
+                                string fun = GetFuncDef(result, ChangesList[i].FileHeader);
+
+                                string str = string.Format(@"
+                                                            SELECT pg_get_functiondef(oid)::text, proname 
+                                                            FROM pg_proc 
+                                                            WHERE proname = '{0}'
+                                                        ", ChangesList[i].FileHeader.Split("(")[0]);
+                                EbDataTable dt = _ebconfactoryDatadb.DoQuery(str);
+                                if (dt != null && dt.Rows.Count > 0)
                                 {
-                                    con.Open();
-                                    DbCommand cmd = _ebconfactoryDatadb.GetNewCommand(con, fun);
-                                    int y = cmd.ExecuteNonQuery();
-                                    con.Close();
+                                    for (int j = 0; j < dt.Rows.Count; j++)
+                                    {
+                                        string func_def = dt.Rows[j][0].ToString();
+                                        string file_name = GetFileName(func_def, dt.Rows[j][1].ToString(), DBManagerType.Function); // function name with parameters
+                                        if (file_name != ChangesList[i].FileHeader)
+                                        {
+                                            string str1 = "DROP FUNCTION" + file_name;
+                                            DbCommand cmd = _ebconfactoryDatadb.GetNewCommand(con, str1); //function drop
+                                            cmd.ExecuteNonQuery();
+                                        }
+                                    }
                                 }
-                            }
-                            using (DbConnection con1 = _ebconfactoryDatadb.GetNewConnection())
-                            {
-                                con1.Open();
-                                DbCommand cmd1 = _ebconfactoryDatadb.GetNewCommand(con1, result);
-                                int x = cmd1.ExecuteNonQuery();
-                                con1.Close();
+                                if (!ChangesList[i].NewItem)
+                                {
+                                    DbCommand cmd = _ebconfactoryDatadb.GetNewCommand(con, fun); //function drop
+                                    cmd.ExecuteNonQuery();
+                                }
+                                DbCommand cmd1 = _ebconfactoryDatadb.GetNewCommand(con, result); // fuction create
+                                cmd1.ExecuteNonQuery();
+
                             }
                         }
                     }
@@ -670,7 +705,7 @@ namespace ExpressBase.ServiceStack.Services
                                                         ALTER TABLE {0} 
                                                         ADD COLUMN {1} {2};
                                                         ", infra_table_details.Table_name, _infratableitem.Key, _infratableitem.Value[0].Data_type);
-                                if(_infratableitem.Value[0].Column_default != null)
+                                if (_infratableitem.Value[0].Column_default != null)
                                 {
                                     changes = changes + string.Format(@"
                                                                         ALTER TABLE {0}
@@ -693,9 +728,9 @@ namespace ExpressBase.ServiceStack.Services
                                     changes = changes + string.Format(@"
                                                     ALTER TABLE {0} 
                                                     ADD PRIMARY KEY ({1});
-                                                    ", infra_table_details.Table_name,  _infratableitem.Key);
+                                                    ", infra_table_details.Table_name, _infratableitem.Key);
                                 }
-                                else if(_infratableitem.Value[0].Constraint_type == "CHECK")
+                                else if (_infratableitem.Value[0].Constraint_type == "CHECK")
                                 {
                                     string str1 = string.Format(@"
                                                                         SELECT consrc
@@ -803,7 +838,7 @@ namespace ExpressBase.ServiceStack.Services
                                                     changes = changes + string.Format(@"
                                                                                         DROP SEQUENCE {0};
                                                                                         ALTER SEQUENCE {1} RENAME TO {0};
-                                                                                        ", infra_seq_name,tenant_seq_name);
+                                                                                        ", infra_seq_name, tenant_seq_name);
                                                 }
                                             }
                                         }
@@ -849,25 +884,6 @@ namespace ExpressBase.ServiceStack.Services
                     }
                 }
             }
-        }
-
-        string UpdateDBFunctionByDB(List<Eb_FileDetails> ChangesList, string Solution)
-        {
-            DateTime modified_date = DateTime.Now;
-            UpdateDBFunctionByDBResponse resp = new UpdateDBFunctionByDBResponse();
-            IDatabase _ebconfactoryDatadb = GetTenantDB(Solution);
-            UpdateDB(ChangesList, _ebconfactoryDatadb);
-            using (DbConnection con = InfraConnectionFactory.DataDB.GetNewConnection())
-            {
-                con.Open();
-                string str1 = string.Format(@"
-                                              UPDATE eb_dbchangeslog 
-                                              SET modified_at = NOW()
-                                              WHERE solution_id = '{0}'", Solution);
-                DbCommand cmd2 = InfraConnectionFactory.DataDB.GetNewCommand(con, str1);
-                cmd2.ExecuteNonQuery();
-            }
-            return modified_date.ToString();
         }
 
         string GetFuncDef(string str, string filename)
@@ -925,14 +941,6 @@ namespace ExpressBase.ServiceStack.Services
             {
                 str = str.Replace(" ", "").Replace("\r", "").Replace("\t", "").Replace("\n", "").Trim();
             }
-            else if (type == DBManagerType.Table)
-            {
-                Regex regex = new Regex(@"integer DEFAULT nextval\(.*?\) NOT NULL");
-                MatchCollection matches = regex.Matches(str);
-                str = str.Replace(matches[0].ToString(), "serial").Replace("  NULL", "");
-                str = str.Replace(" ", "").Replace("\r", "").Replace("\t", "").Replace("\n", "").Trim();
-                str = str + ")";
-            }
             return str;
         }
 
@@ -952,16 +960,6 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     str = "";
                 }
-            }
-            else if (type == DBManagerType.Table)
-            {
-                string s = str;
-                str = s;
-                str = str.Split("\r\n\r\n")[2];
-                str = str.Replace(" ", "").Replace("\r", "").Replace("\t", "").Replace("\n", "");
-                if (str.IndexOf(",CONSTRAINT") > 0)
-                    str = str.Remove(str.IndexOf(",CONSTRAINT"));
-                str = str + ")";
             }
             return str;
         }
