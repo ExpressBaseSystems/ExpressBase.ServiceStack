@@ -5,7 +5,7 @@ using ExpressBase.Common.Objects;
 using ExpressBase.Common.Structures;
 using ExpressBase.Objects;
 using ExpressBase.Objects.Objects;
-using ExpressBase.Objects.Objects.SqlJobRelated;
+using ExpressBase.Objects;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
@@ -17,7 +17,6 @@ using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
 using System.Threading.Tasks;
-using static ExpressBase.Objects.Objects.SqlJobRelated.EbSqlJob;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -99,7 +98,42 @@ namespace ExpressBase.ServiceStack.Services
                                         Script = new EbScript
                                         {
                                            // Code="Job.SetParam(\"val\",(Tables[0].Rows.Count>0)?Convert.ToInt32(Tables[0].Rows[0][0])/1000:0); return 100;",
-                                            Code="Job.SetParam(\"val\",200);",
+                                           // Code="Job.SetParam(\"val\",200);",
+                                           Code=@"  internal class Attendance
+    {
+        internal int Empmaster_id { get; set; }
+        internal DateTime In_time { get; set; }
+        internal DateTime Out_time { get; set; }
+        internal int IWork { get; set; }
+        internal int IBreak { get; set; }
+        internal int IOverTime { get; set; }
+        internal int IOTHours { get; set; }
+        internal int IOTMinutes { get; set; }
+        internal string Notes { get; set; }
+        internal bool IsNightshift { get; set; }
+
+        internal int App_att_inout_id { get; set; }
+
+        internal Attendance(int empmaster_id)
+        {
+            this.Empmaster_id = empmaster_id;
+        }
+
+        internal Attendance(int empmaster_id, DateTime in_time, DateTime out_time, int iWork, int iBreak, int iOverTime, int iOTHours, int iOTMinutes, string notes, bool bNightshift)
+        {
+            this.Empmaster_id = empmaster_id;
+            this.In_time = in_time;
+            this.Out_time = out_time;
+            this.IWork = iWork;
+            this.IBreak = iBreak;
+            this.IOverTime = iOverTime;
+            this.IOTHours = iOTHours;
+            this.IOTMinutes = iOTMinutes;
+            this.Notes = notes;
+            this.IsNightshift = bNightshift;
+        }
+    }
+",
                                             Lang = ScriptingLanguage.CSharp
                                         },
                                         RouteIndex=1,
@@ -150,7 +184,7 @@ namespace ExpressBase.ServiceStack.Services
                         this.SqlJob.Resources[step].Result = GetResult(this.SqlJob.Resources[step], step, 0, 0);
                         step++;
                     }
-                    this.EbConnectionFactory.DataDB.DoNonQuery(string.Format("UPDATE eb_joblogs_master SET status = 'SUCCESS' WHERE id = {0};", LogMasterId));
+                    this.EbConnectionFactory.DataDB.DoNonQuery(string.Format("UPDATE eb_joblogs_master SET status = 'S' WHERE id = {0};", LogMasterId));
                 }
                 catch (Exception e)
                 {
@@ -176,8 +210,9 @@ namespace ExpressBase.ServiceStack.Services
             {
 
                 string query = $"select logmaster_id , COALESCE (message, 'ffff') message,createdby,createdat," +
-                    $"COALESCE(status, 'FAILED') status,id, keyvalues from eb_joblogs_lines where logmaster_id =" +
-                    $"(select id from eb_joblogs_master where to_char(created_at, 'dd-mm-yyyy') = '{request.Date}' and refid = '{request.Refid}'  limit 1) order by status,id; ";
+                    $"COALESCE(status, 'F') status,id, keyvalues from eb_joblogs_lines where logmaster_id =" +
+                    $"(select id from eb_joblogs_master where to_char(created_at, 'dd-mm-yyyy') = '{request.Date}' and refid = '{request.Refid}'  limit 1) " +
+                    $"and id not in (select retry_of from eb_joblogs_lines) order by status,id; ";
                 EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(query);
                 int capacity1 = dt.Columns.Count - 1;
 
@@ -238,12 +273,193 @@ namespace ExpressBase.ServiceStack.Services
         public RetryJobResponse post(RetryJobRequest request)
         {
             RetryJobResponse response = new RetryJobResponse();
+            response.Status = false;
             IsRetry = true;
             LogLine logline = GetLogLine(request.JoblogId);
             this.GlobalParams = logline.Params;
             LoopLocation loopLocation = this.SqlJob.GetLoop();
-            LoopExecution(loopLocation.Loop, request.JoblogId, loopLocation.Step, loopLocation.ParentIndex, null);
+            try
+            {
+                LoopExecution(loopLocation.Loop, request.JoblogId, loopLocation.Step, loopLocation.ParentIndex, null, logline.Keyvalues);
+                response.Status = true;
+            }
+            catch(Exception e)
+            {
+                response.Status = false;
+                Console.WriteLine("exception" + e);
+            }
             return response;
+        }
+
+        public ProcessorResponse Post(ProcessorRequest request)
+        {
+            DateTime dateInQuestion = new DateTime(2015, 2, 28);
+            int empmaster_id = 85;
+            DateTime dtFirstIn = dateInQuestion;
+            DateTime dtLastIn = dateInQuestion;
+            DateTime dtLastOut = dateInQuestion;
+            string lastKnownStatus = "UnKnown";
+            string lastKnownInOutStatus = "UnKnown";
+            string currentStatus = "UnKnown";
+            int iPos = 0;
+            string status = "In";
+            var att = new Attendance(empmaster_id);
+            //string sql = @"SELECT 
+            //            id, 
+            //            machineno, 
+            //            punched_at, 
+            //            inout, 
+            //            CASE WHEN inout = null THEN '' WHEN inout = 0 THEN 'OUT' WHEN inout = 1 THEN 'IN' WHEN inout = 2 THEN 'Ignored'
+
+            //            WHEN inout = 3 THEN 'Excluded' WHEN inout = 4 THEN 'ERROR' END AS inout_s, 
+            //            CASE WHEN machineno IS NULL THEN 'Manual' WHEN machineno IS NOT NULL THEN 'Device' END AS type, 
+            //            sys_ignored
+            //        FROM
+            //            app_att_deviceattlogs
+            //        WHERE
+            //            userid = 85 AND
+            //              (punched_at::date = '2015-02-28' OR punched_at::date = '2015-03-01') AND
+            //                  (COALESCE(app_att_inout_id, 0) <= 0 OR app_att_inout_id = (SELECT id FROM app_att_inout WHERE empmaster_id = 85
+
+            //                                                                           AND att_date = '2015-02-28'))
+            //        ORDER BY
+            // punched_at ASC";           " +
+            string sql = @"SELECT 
+                id, 
+                machineno, 
+                punched_at, 
+                inout, 
+                CASE WHEN inout = null THEN '' WHEN inout = 0 THEN 'OUT' WHEN inout = 1 THEN 'IN' WHEN inout = 2 THEN 'Ignored'
+
+                WHEN inout = 3 THEN 'Excluded' WHEN inout = 4 THEN 'ERROR' END AS inout_s, 
+                CASE WHEN machineno IS NULL THEN 'Manual' WHEN machineno IS NOT NULL THEN 'Device' END AS type, 
+                sys_ignored
+            FROM
+                app_att_deviceattlogs
+            WHERE
+                userid = :id AND
+                  (punched_at::date = :date_to_consolidate::date OR punched_at::date = (:date_to_consolidate::date - 1)) AND
+                      (COALESCE(app_att_inout_id, 0) <= 0 OR app_att_inout_id = (SELECT id FROM app_att_inout WHERE empmaster_id = :id
+      
+                                                                                AND att_date = :date_to_consolidate::date limit 1))
+            ORDER BY
+                punched_at ASC";
+            DbParameter[] parameters = new DbParameter[] {
+                this.EbConnectionFactory.DataDB.GetNewParameter(":date_to_consolidate",EbDbTypes.DateTime,dateInQuestion),
+                this.EbConnectionFactory.DataDB.GetNewParameter(":id",EbDbTypes.Int32,empmaster_id)
+            };
+            EbDataTable dt_devattlogs = this.EbConnectionFactory.DataDB.DoQuery(sql, parameters);
+            if (dt_devattlogs.Rows.Count > 1)
+            {
+                EbDataRow row = dt_devattlogs.Rows[0];
+                foreach (EbDataRow _row_devattlogs in dt_devattlogs.Rows)
+                {
+                    if (iPos >= dt_devattlogs.Rows.IndexOf(row))
+                    {
+                        var _punched_at = Convert.ToDateTime(_row_devattlogs["punched_at"]);
+                        if (iPos == dt_devattlogs.Rows.IndexOf(row))
+                        {
+                            currentStatus = status;
+                            //  if (!att.IsNightshift)
+                            dtFirstIn = _punched_at;
+                            att.In_time = dtFirstIn;
+                            dtLastIn = dtFirstIn;
+                        }
+                        if (iPos > dt_devattlogs.Rows.IndexOf(row))
+                        {
+                            if (lastKnownStatus == "In")
+                            {
+                                if ((_punched_at - dtLastIn).TotalMinutes > 5)
+                                {
+                                    currentStatus = "Out";
+                                    dtLastOut = _punched_at;
+                                    att.Out_time = dtLastOut;
+                                    att.IWork += Convert.ToInt32((dtLastOut - dtLastIn).TotalMinutes);
+                                }
+                                else
+                                    currentStatus = "Ignored";
+                            }
+                            else if (lastKnownStatus == "Out")
+                            {
+                                if ((_punched_at - dtLastOut).TotalMinutes > 5)
+                                {
+                                    currentStatus = "In";
+                                    dtLastIn = _punched_at;
+                                    att.IBreak += Convert.ToInt32((dtLastIn - dtLastOut).TotalMinutes);
+                                }
+                                else
+                                    currentStatus = "Ignored";
+                            }
+                            else if (lastKnownStatus == "Ignored")
+                            {
+                                bool bDoneAnything = false;
+                                if (dtLastOut > dtLastIn && (_punched_at - dtLastOut).TotalMinutes > 5)
+                                {
+                                    currentStatus = "In";
+                                    dtLastIn = _punched_at;
+                                    att.IBreak += Convert.ToInt32((dtLastIn - dtLastOut).TotalMinutes);
+                                    bDoneAnything = true;
+                                }
+
+                                if (dtLastIn > dtLastOut && (_punched_at - dtLastIn).TotalMinutes > 5)
+                                {
+                                    currentStatus = "Out";
+                                    dtLastOut = _punched_at;
+                                    att.Out_time = dtLastOut;
+                                    att.IWork += Convert.ToInt32((dtLastOut - dtLastIn).TotalMinutes);
+                                    bDoneAnything = true;
+                                }
+
+                                if (!bDoneAnything)
+                                    currentStatus = "Ignored";
+                            }
+                        }
+                        _row_devattlogs["inout"] = currentStatus;
+
+                        //FillInOutString
+                        if (currentStatus == "In")
+                            row["inout_s"] = "IN";
+                        else if (currentStatus == "Out")
+                            row["inout_s"] = "OUT";
+                        else if (currentStatus == "Ignored")
+                            row["inout_s"] = "Ignored";
+                        else if (currentStatus == "Excluded")
+                            row["inout_s"] = "Excluded";
+                        else if (currentStatus == "Error")
+                            row["inout_s"] = "ERROR";
+
+                        if (row["machineno"] != DBNull.Value)
+                            row["type"] = "Device";
+                        else
+                            row["type"] = "Manual";
+
+                        lastKnownStatus = currentStatus;
+                        if (currentStatus == "In" || currentStatus == "Out")
+                            lastKnownInOutStatus = currentStatus;
+                    }
+                    iPos++;
+                }
+                if (att.In_time != DateTime.MinValue && att.Out_time != DateTime.MinValue)
+                {
+                    //this.MarkPresent(att.Empmaster_id, cell, null);
+                    //this.Save(devattlogs, att, dateInQuestion, break_time, bonus_ot);
+                }
+                //  else
+                // this.MarkError(cell, att.Empmaster_id, dateInQuestion, devattlogs.Rows.Count, Convert.ToInt32(att.IWork / 60), devattlogs, string.Empty);
+                // this.SetWorkBreakOT(dt_devattlogs, true, att);
+            }
+            else
+            {
+                //var DateTime_Now = CacheHelper.Get<DateTime>(CacheKeys.SYSVARS_NOW_LOCALE);
+                //if (((DateTime)cell.OwningColumn.Tag).Date == DateTime_Now.Date)
+                //    this.MarkUnReviewed(cell, empmaster_id, dateInQuestion, devattlogs.Rows.Count, devattlogs);
+                //else
+                //    this.MarkAbsent(cell, empmaster_id, dateInQuestion);
+            }
+            string _insert_qry = string.Format("INSERT INTO app_att_inout (empmaster_id, in_time, out_time, duration, break_time, ot_time, ot_time_approved, notes, night_shift, att_date) SELECT {0}, '{1}', '{2}', {3}, {4}, {5}, {6}, '{7}', {8}, '{9}'",
+                  att.Empmaster_id, att.In_time.ToString("yyyy-MM-dd HH:mm"), att.Out_time.ToString("yyyy-MM-dd HH:mm"), att.IWork, att.IBreak, att.IOverTime, (att.IOTHours * 60) + att.IOTMinutes, att.Notes, att.IsNightshift, dateInQuestion.ToString("yyyy-MM-dd HH:mm"));
+            var p = this.EbConnectionFactory.DataDB.DoNonQuery(_insert_qry);
+            return new ProcessorResponse();
         }
 
         //---------------------------------------------------------------------------------------------------------------------------------------------
@@ -267,11 +483,14 @@ namespace ExpressBase.ServiceStack.Services
                     Message = dt.Rows[0]["message"].ToString(),
                     Params = JsonConvert.DeserializeObject<Dictionary<string, TV>>(dt.Rows[0]["params"].ToString()),
                     Status = dt.Rows[0]["status"].ToString(),
-                    Refid = dt.Rows[0]["refid"].ToString()
+                    Refid = dt.Rows[0]["refid"].ToString(),
+                    Keyvalues = JsonConvert.DeserializeObject<Dictionary<string, TV>>(dt.Rows[0]["keyvalues"].ToString()),
+                    RetryOf = Convert.ToInt32(dt.Rows[0]["retry_of"]),
                 };
             }
             return logline;
         }
+
         public object GetResult(SqlJobResource resource, int index, int parentindex, int grandparent)
         {
             ResultWrapper res = new ResultWrapper();
@@ -402,7 +621,7 @@ namespace ExpressBase.ServiceStack.Services
                     else
                         this.GlobalParams.Add(_outparam.Name, new TV { Value = _outparam.Value });
 
-                    LoopExecution(loop, 0, step, parentindex, _table.Rows[i]);
+                    LoopExecution(loop, 0, step, parentindex, _table.Rows[i], null);
                 }
                 catch (Exception e)
                 {
@@ -412,7 +631,7 @@ namespace ExpressBase.ServiceStack.Services
             return true;
         }
 
-        public void LoopExecution(EbLoop loop, int retryof, int step, int parentindex, EbDataRow dataRow)
+        public void LoopExecution(EbLoop loop, int retryof, int step, int parentindex, EbDataRow dataRow, Dictionary<string, TV> keyvals)
         {
             int linesid = 0;
             try
@@ -429,15 +648,16 @@ namespace ExpressBase.ServiceStack.Services
                  };
                 EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(query, parameters);
                 linesid = Convert.ToInt32(dt.Rows[0][0]);
+                string _keyvalues = (dataRow is null) ? JsonConvert.SerializeObject(keyvals) : FillKeys(dataRow);
                 try
                 {
                     for (int counter = 0; counter < loop.InnerResources.Count; counter++)
                         loop.InnerResources[counter].Result = this.GetResult(loop.InnerResources[counter], counter, step, parentindex);
-                    // throw new Exception(); 
+
                     DbParameter[] e_parameters = new DbParameter[]
                     { this.EbConnectionFactory.DataDB.GetNewParameter("linesid", EbDbTypes.Int32, linesid) ,
-                    this.EbConnectionFactory.DataDB.GetNewParameter("keyvalues",EbDbTypes.Json,  FillKeys(dataRow))};
-                    this.EbConnectionFactory.DataDB.DoNonQuery("UPDATE eb_joblogs_lines SET status = 'SUCCESS', message = 'SUCCESS', keyvalues = :keyvalues WHERE id = :linesid;",e_parameters);
+                    this.EbConnectionFactory.DataDB.GetNewParameter("keyvalues",EbDbTypes.Json,  _keyvalues)};
+                    this.EbConnectionFactory.DataDB.DoNonQuery("UPDATE eb_joblogs_lines SET status = 'S' , keyvalues = :keyvalues WHERE id = :linesid;", e_parameters);
                 }
                 catch (Exception e)
                 {
@@ -445,9 +665,9 @@ namespace ExpressBase.ServiceStack.Services
                     {
                          this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, linesid) ,
                          this.EbConnectionFactory.DataDB.GetNewParameter("message",EbDbTypes.String,  e.Message),
-                         this.EbConnectionFactory.DataDB.GetNewParameter("keyvalues",EbDbTypes.Json,  FillKeys(dataRow))
+                         this.EbConnectionFactory.DataDB.GetNewParameter("keyvalues",EbDbTypes.Json,  _keyvalues)
                     };
-                    this.EbConnectionFactory.DataDB.DoNonQuery(@"UPDATE eb_joblogs_lines SET status = 'FAILED', message = :message, keyvalues = :keyvalues WHERE id = :id ;", e_parameters);
+                    this.EbConnectionFactory.DataDB.DoNonQuery(@"UPDATE eb_joblogs_lines SET status = 'F', message = :message, keyvalues = :keyvalues WHERE id = :id ;", e_parameters);
 
                 }
             }
@@ -588,8 +808,38 @@ namespace ExpressBase.ServiceStack.Services
         //}
     }
 
+    internal class Attendance
+    {
+        internal int Empmaster_id { get; set; }
+        internal DateTime In_time { get; set; }
+        internal DateTime Out_time { get; set; }
+        internal int IWork { get; set; }
+        internal int IBreak { get; set; }
+        internal int IOverTime { get; set; }
+        internal int IOTHours { get; set; }
+        internal int IOTMinutes { get; set; }
+        internal string Notes { get; set; }
+        internal bool IsNightshift { get; set; }
 
+        internal int App_att_inout_id { get; set; }
 
+        internal Attendance(int empmaster_id)
+        {
+            this.Empmaster_id = empmaster_id;
+        }
 
-
+        internal Attendance(int empmaster_id, DateTime in_time, DateTime out_time, int iWork, int iBreak, int iOverTime, int iOTHours, int iOTMinutes, string notes, bool bNightshift)
+        {
+            this.Empmaster_id = empmaster_id;
+            this.In_time = in_time;
+            this.Out_time = out_time;
+            this.IWork = iWork;
+            this.IBreak = iBreak;
+            this.IOverTime = iOverTime;
+            this.IOTHours = iOTHours;
+            this.IOTMinutes = iOTMinutes;
+            this.Notes = notes;
+            this.IsNightshift = bNightshift;
+        }
+    }
 }
