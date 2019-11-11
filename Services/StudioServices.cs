@@ -1243,6 +1243,8 @@ namespace ExpressBase.ServiceStack
                 return EbObjectTypes.DashBoard.IntCode;
             else if (obj is EbCalendarView)
                 return EbObjectTypes.CalendarView.IntCode;
+            else if(obj is EbMobilePage)
+                return EbObjectTypes.MobilePage.IntCode;
             else
                 return -1;
         }
@@ -1311,6 +1313,10 @@ namespace ExpressBase.ServiceStack
             else if (obj is EbCalendarView)
             {
                 Redis.Set(refId, (EbCalendarView)obj);
+            }
+            else if (obj is EbMobilePage)
+            {
+                Redis.Set(refId, (EbMobilePage)obj);
             }
         }
 
