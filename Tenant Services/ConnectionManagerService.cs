@@ -300,6 +300,7 @@ namespace ExpressBase.ServiceStack.Services
                 }
 
                 EbDataTable dt = DataDB.DoQuery(DataDB.EB_USER_ROLE_PRIVS.Replace("@uname", request.DataDBConfig.UserName));
+                Console.WriteLine("User Role Privilages: " + dt.Rows.Count());
                 foreach (EbDataRow dr in dt.Rows)
                 {
                     adroleslist_db.Add(dr[0].ToString());
@@ -816,7 +817,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.Message);
+                Console.WriteLine("GETting all data : "+e.Message);
             }
             return resp;
         }
