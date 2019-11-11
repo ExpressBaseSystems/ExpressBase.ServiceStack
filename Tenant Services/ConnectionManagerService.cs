@@ -343,6 +343,7 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception e)
             {
                 res.ResponseStatus.Message = e.Message;
+                Console.WriteLine("AddDB Fail : " + e.Message + e.StackTrace);
             }
             return res;
         }
@@ -357,6 +358,7 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception e)
             {
                 res.ResponseStatus.Message = e.Message;
+                Console.WriteLine("Add Fail : " + e.Message + e.StackTrace);
             }
             return res;
         }
@@ -371,6 +373,7 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception e)
             {
                 res.ResponseStatus.Message = e.Message;
+                Console.WriteLine("Add Fail : " + e.Message + e.StackTrace);
             }
             return res;
         }
@@ -385,6 +388,7 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception e)
             {
                 res.ResponseStatus.Message = e.Message;
+                Console.WriteLine("Add Fail : " + e.Message + e.StackTrace);
             }
             return res;
         }
@@ -398,6 +402,7 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception e)
             {
                 res.ResponseStatus.Message = e.Message;
+                Console.WriteLine("Add Fail : " + e.Message + e.StackTrace);
             }
             return res;
         }
@@ -411,6 +416,7 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception e)
             {
                 res.ResponseStatus.Message = e.Message;
+                Console.WriteLine("Add Fail : " + e.Message + e.StackTrace);
             }
             return res;
         }
@@ -425,6 +431,7 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception e)
             {
                 res.ResponseStatus.Message = e.Message;
+                Console.WriteLine("Add Fail : " + e.Message + e.StackTrace);
             }
             return res;
         }
@@ -438,6 +445,7 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception e)
             {
                 res.ResponseStatus.Message = e.Message;
+                Console.WriteLine("Add Fail : " + e.Message + e.StackTrace);
             }
             return res;
         }
@@ -451,6 +459,7 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception e)
             {
                 res.ResponseStatus.Message = e.Message;
+                Console.WriteLine("Add Fail : " + e.Message + e.StackTrace);
             }
             return res;
         }
@@ -465,6 +474,7 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception e)
             {
                 res.ResponseStatus.Message = e.Message;
+                Console.WriteLine("Add Fail : " + e.Message + e.StackTrace);
             }
             return res;
         }
@@ -479,6 +489,7 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception e)
             {
                 res.ResponseStatus.Message = e.Message;
+                Console.WriteLine("Add Fail : " + e.Message + e.StackTrace);
             }
             return res;
         }
@@ -493,6 +504,7 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception e)
             {
                 res.ResponseStatus.Message = e.Message;
+                Console.WriteLine("Add Fail : " + e.Message + e.StackTrace);
             }
             return res;
         }
@@ -509,6 +521,7 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception e)
             {
                 res.ResponseStatus.Message = e.Message;
+                Console.WriteLine("Add Fail : " + e.Message + e.StackTrace);
             }
             return res;
         }
@@ -525,6 +538,7 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception e)
             {
                 res.ResponseStatus.Message = e.Message;
+                Console.WriteLine("GetIntegrationsRequest Fail : " + e.Message + e.StackTrace);
             }
             return res;
         }
@@ -581,6 +595,7 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception e)
             {
                 res.ResponseStatus.Message = e.Message;
+                Console.WriteLine(" Fail : " + e.Message + e.StackTrace);
             }
             return res;
         }
@@ -595,6 +610,7 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception e)
             {
                 res.ResponseStatus.Message = e.Message;
+                Console.WriteLine(" Fail : " + e.Message + e.StackTrace);
             }
             return res;
         }
@@ -613,6 +629,7 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception e)
             {
                 res.ResponseStatus.Message = e.Message;
+                Console.WriteLine(" Fail : " + e.Message + e.StackTrace);
             }
             return res;
         }
@@ -643,6 +660,7 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception e)
             {
                 res.ResponseStatus.Message = e.Message;
+                Console.WriteLine(" Fail : " + e.Message + e.StackTrace);
             }
             return res;
         }
@@ -817,7 +835,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
-                Console.WriteLine("GETting all data : "+e.Message);
+                Console.WriteLine("GETting all data : "+e.Message+"  "+ e.StackTrace);
             }
             return resp;
         }
