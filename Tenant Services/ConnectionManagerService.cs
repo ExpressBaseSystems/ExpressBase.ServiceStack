@@ -747,7 +747,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.Message + e.StackTrace);
+                Console.WriteLine("Fail : "+ e.Message + e.StackTrace);
             }
         }
 
