@@ -479,6 +479,20 @@ namespace ExpressBase.ServiceStack.Services
             return res;
         }
 
+        public AddfacebookResponse Post(AddfacebookRequest request)
+        {
+            AddfacebookResponse res = new AddfacebookResponse();
+            try
+            {
+                request.Config.PersistIntegrationConf(request.SolnId, this.InfraConnectionFactory, request.UserId);
+            }
+            catch (Exception e)
+            {
+                res.ResponseStatus.Message = e.Message;
+                Console.WriteLine("Add Fail : " + e.ToString() + e.StackTrace.ToString());
+            }
+            return res;
+        }
         public AddDropBoxResponse Post(AddDropBoxRequest request)
         {
             AddDropBoxResponse res = new AddDropBoxResponse();
@@ -807,6 +821,7 @@ namespace ExpressBase.ServiceStack.Services
                         Description = _temp.Rows[0]["description"].ToString(),
                         DateCreated = _temp.Rows[0]["date_created"].ToString(),
                         EsolutionId = _temp.Rows[0]["esolution_id"].ToString(),
+                        IsolutionId = request.IsolutionId,
                         PricingTier = Enum.Parse<PricingTiers>(_temp.Rows[0]["pricing_tier"].ToString()),
                         IsVersioningEnabled = Convert.ToBoolean(_temp.Rows[0]["versioning"])
                     };
