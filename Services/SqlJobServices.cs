@@ -648,7 +648,7 @@ Console.Write(JsonConvert.SerializeObject(att));
                     else if (this.SqlJob.Resources[index] is EbLoop)
                         _prev = (index != 0) ? (((this.SqlJob.Resources[index] as EbLoop).InnerResources[parentindex] as EbTransaction).InnerResources[index - 1]) : null;
 
-                    res.Result = (resource as EbSqlProcessor).Evaluate(_prev, this.GlobalParams);
+                    res.Result =  EvaluateProcessor(resource as EbSqlProcessor,_prev, this.GlobalParams);
                 }
                 return res.Result;
             }
@@ -827,6 +827,53 @@ Console.Write(JsonConvert.SerializeObject(att));
             }
         }
 
+        public SqlJobScript EvaluateProcessor(EbSqlProcessor processor,SqlJobResource _prevres, Dictionary<string, TV> GlobalParams)
+        {
+            string code = processor.Script.Code.Trim();
+            EbDataSet _ds = null;
+            SqlJobScript script = new SqlJobScript();
+
+            Script valscript = CSharpScript.Create<dynamic>(code,
+                ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core")
+                .WithImports("System.Dynamic", "System", "System.Collections.Generic", "System.Diagnostics", "System.Linq", "Newtonsoft.Json", "ExpressBase.Common")
+                .AddReferences(typeof(ExpressBase.Common.EbDataSet).Assembly),
+                globalsType: typeof(SqlJobGlobals));
+
+            if (_prevres != null)
+                _ds = _prevres.Result as EbDataSet;
+            try
+            {
+                valscript.Compile();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message + e.StackTrace);
+                throw e;
+            }
+
+            try
+            {
+                SqlJobGlobals globals = new SqlJobGlobals(_ds, ref GlobalParams);
+
+                foreach (KeyValuePair<string, TV> kp in GlobalParams)
+                {
+                    globals["Params"].Add(kp.Key, new NTV
+                    {
+                        Name = kp.Key,
+                        Type = (kp.Value.Value.GetType() == typeof(JObject)) ? EbDbTypes.Object : (EbDbTypes)Enum.Parse(typeof(EbDbTypes), kp.Value.Value.GetType().Name, true),
+                        Value = kp.Value.Value
+                    });
+                }
+
+                script.Data = JsonConvert.SerializeObject(valscript.RunAsync(globals).Result.ReturnValue);
+            }
+            catch (Exception e)
+            {
+                throw e;
+            }
+            return script;
+        }
+
         public string FillKeys(EbDataRow dataRow)
         {
             foreach (var item in this.GlobalParams)
@@ -908,63 +955,8 @@ Console.Write(JsonConvert.SerializeObject(att));
             return EbSerializers.Json_Deserialize(resp.Data[0].Json);
         }
     }
-
-    public class EbSqlProcessor : SqlJobResource
-    {
-        public EbScript Script { get; set; }
-
-        public SqlJobScript Evaluate(SqlJobResource _prevres, Dictionary<string, TV> GlobalParams)
-        {
-            string code = this.Script.Code.Trim();
-            EbDataSet _ds = null;
-            SqlJobScript script = new SqlJobScript();
-
-            Script valscript = CSharpScript.Create<dynamic>(code,
-                ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core")
-                .WithImports("System.Dynamic", "System", "System.Collections.Generic", "System.Diagnostics", "System.Linq", "Newtonsoft.Json","ExpressBase.Common")
-                .AddReferences(typeof(ExpressBase.Common.EbDataSet).Assembly),                
-                globalsType: typeof(SqlJobGlobals));
-
-            if (_prevres != null)
-                _ds = _prevres.Result as EbDataSet;
-            try
-            {
-                valscript.Compile();
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e.Message + e.StackTrace);
-                throw e;
-            }
-
-            try
-            {
-                SqlJobGlobals globals = new SqlJobGlobals(_ds, ref GlobalParams);
-
-                foreach (KeyValuePair<string, TV> kp in GlobalParams)
-                {
-                    globals["Params"].Add(kp.Key, new NTV
-                    {
-                        Name = kp.Key,
-                        Type = (kp.Value.Value.GetType() == typeof(JObject)) ? EbDbTypes.Object : (EbDbTypes)Enum.Parse(typeof(EbDbTypes), kp.Value.Value.GetType().Name, true),
-                        Value = kp.Value.Value
-                    });
-                }
-
-                script.Data = JsonConvert.SerializeObject(valscript.RunAsync(globals).Result.ReturnValue);
-            }
-            catch (Exception e)
-            {
-                throw e;
-            }
-            return script;
-        }
-        //public override List<Param> GetOutParams(List<Param> _param, int step)
-        //{
-        //    return _param;
-        //}
-    }
-
+    
+   
     internal class Attendance
     {
         internal int Empmaster_id { get; set; }
