@@ -4,7 +4,8 @@ using ExpressBase.Common.Extensions;
 using ExpressBase.Common.Objects;
 using ExpressBase.Common.Structures;
 using ExpressBase.Objects;
-using ExpressBase.Objects.Objects; 
+using ExpressBase.Objects.Objects;
+using ExpressBase.Objects;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
@@ -14,7 +15,8 @@ using ServiceStack.Redis;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
-using System.Linq; 
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -345,7 +347,8 @@ Console.Write(JsonConvert.SerializeObject(att));
 
                 string query = $"select logmaster_id , COALESCE (message, 'ffff') message,createdby,createdat," +
                     $"COALESCE(status, 'F') status,id, keyvalues from eb_joblogs_lines where logmaster_id =" +
-                    $"(select id from eb_joblogs_master where to_char(created_at, 'dd-mm-yyyy') = '{request.Date}' and refid = '{request.Refid}'  limit 1) order by status,id; ";
+                    $"(select id from eb_joblogs_master where to_char(created_at, 'dd-mm-yyyy') = '{request.Date}' and refid = '{request.Refid}'  limit 1) " +
+                    $"and id not in (select retry_of from eb_joblogs_lines) order by status,id; ";
                 EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(query);
                 int capacity1 = dt.Columns.Count - 1;
 
@@ -406,11 +409,21 @@ Console.Write(JsonConvert.SerializeObject(att));
         public RetryJobResponse post(RetryJobRequest request)
         {
             RetryJobResponse response = new RetryJobResponse();
+            response.Status = false;
             IsRetry = true;
             LogLine logline = GetLogLine(request.JoblogId);
             this.GlobalParams = logline.Params;
             LoopLocation loopLocation = this.SqlJob.GetLoop();
-            LoopExecution(loopLocation.Loop, request.JoblogId, loopLocation.Step, loopLocation.ParentIndex, null, logline.Keyvalues);
+            try
+            {
+                LoopExecution(loopLocation.Loop, request.JoblogId, loopLocation.Step, loopLocation.ParentIndex, null, logline.Keyvalues);
+                response.Status = true;
+            }
+            catch(Exception e)
+            {
+                response.Status = false;
+                Console.WriteLine("exception" + e);
+            }
             return response;
         }
 

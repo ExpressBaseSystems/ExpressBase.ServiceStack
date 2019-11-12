@@ -86,7 +86,6 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
-                this.ApiResponse.Message.ErrorCode = ApiErrorCode.Failed;
                 Console.WriteLine(e.Message);
             }
             return this.ApiResponse;
@@ -115,6 +114,15 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
+                if (e is ExplicitExitException)
+                {
+                    this.ApiResponse.Message.Description = e.Message;
+                    this.ApiResponse.Message.ErrorCode = ApiErrorCode.ExplicitExit;
+                }
+                else
+                {
+                    this.ApiResponse.Message.ErrorCode = ApiErrorCode.Failed;
+                }
                 throw new ApiException();
             }
         }
@@ -693,7 +701,7 @@ namespace ExpressBase.ServiceStack.Services
 
                     string _ObjId = dr["id"].ToString();
 
-                    if (!_EbObjType.IsUserFacing && !PermIds.Contains(_ObjId))
+                    if (!_EbObjType.IsUserFacing || !PermIds.Contains(_ObjId))
                         continue;
 
                     if (!dict.ContainsKey(_ObjType))
