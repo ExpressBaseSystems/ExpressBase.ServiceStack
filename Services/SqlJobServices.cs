@@ -4,8 +4,7 @@ using ExpressBase.Common.Extensions;
 using ExpressBase.Common.Objects;
 using ExpressBase.Common.Structures;
 using ExpressBase.Objects;
-using ExpressBase.Objects.Objects;
-using ExpressBase.Objects.Objects.SqlJobRelated;
+using ExpressBase.Objects.Objects; 
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
@@ -15,9 +14,7 @@ using ServiceStack.Redis;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
-using System.Linq;
-using System.Threading.Tasks;
-using static ExpressBase.Objects.Objects.SqlJobRelated.EbSqlJob;
+using System.Linq; 
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -39,7 +36,7 @@ namespace ExpressBase.ServiceStack.Services
         private EbObjectService StudioServices { set; get; }
 
         public SqlJobServices(IEbConnectionFactory _dbf) : base(_dbf)
-        {
+        { 
             this.StudioServices = base.ResolveService<EbObjectService>();
             this.JobResponse = new SqlJobResponse();
         }
@@ -62,7 +59,7 @@ namespace ExpressBase.ServiceStack.Services
                         if (!_keyValuePairs.ContainsKey(key))
                             _keyValuePairs.Add(key, new TV { });
                     }
-                }
+                }                
                 return _keyValuePairs;
             }
         }
@@ -76,7 +73,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 new EbSqlJobReader
                 {
-                    Reference="ebdbllz23nkqd620180220120030-ebdbllz23nkqd620180220120030-2-2601-3455-2601-3455",
+                    Reference="ebdbllz23nkqd620180220120030-ebdbllz23nkqd620180220120030-2-2601-3480-2601-3480",
                     RouteIndex=0
                 },
                 new EbLoop
@@ -91,7 +88,7 @@ namespace ExpressBase.ServiceStack.Services
                                 {
                                     new EbSqlJobReader
                                     {
-                                        Reference="ebdbllz23nkqd620180220120030-ebdbllz23nkqd620180220120030-2-2603-3445-2603-3445",
+                                        Reference="ebdbllz23nkqd620180220120030-ebdbllz23nkqd620180220120030-2-2603-3477-2603-3477",
                                         RouteIndex=0
                                     },
                                     new EbSqlProcessor
@@ -100,7 +97,8 @@ namespace ExpressBase.ServiceStack.Services
                                         {
                                            // Code="Job.SetParam(\"val\",(Tables[0].Rows.Count>0)?Convert.ToInt32(Tables[0].Rows[0][0])/1000:0); return 100;",
                                            // Code="Job.SetParam(\"val\",200);",
-                                           Code=@"  internal class Attendance
+                                           Code=@"  
+    internal class Attendance
     {
         internal int Empmaster_id { get; set; }
         internal DateTime In_time { get; set; }
@@ -134,14 +132,149 @@ namespace ExpressBase.ServiceStack.Services
             this.IsNightshift = bNightshift;
         }
     }
-",
+ 
+        DateTime dateInQuestion = Convert.ToDateTime(Params.date_to_consolidate);
+        int empmaster_id =  Convert.ToInt32(Params.empid);
+
+        DateTime dtFirstIn = dateInQuestion;
+        DateTime dtLastIn = dateInQuestion;
+        DateTime dtLastOut = dateInQuestion;
+        string lastKnownStatus = ""UnKnown"";
+        string lastKnownInOutStatus = ""UnKnown"";
+        string currentStatus = ""UnKnown"";
+        int iPos = 0;
+        string status = ""In"";
+        Attendance att = new Attendance(empmaster_id);
+         EbDataTable dt_devattlogs =  Tables[0];
+
+            if (dt_devattlogs.Rows.Count > 1)
+            {
+
+                EbDataRow row = dt_devattlogs.Rows[0];
+                foreach ( EbDataRow _row_devattlogs in dt_devattlogs.Rows)
+                {
+                    if (iPos >= dt_devattlogs.Rows.IndexOf(row))
+                    {
+                        DateTime _punched_at = Convert.ToDateTime(_row_devattlogs[""punched_at""]);
+
+                        if (iPos == dt_devattlogs.Rows.IndexOf(row))
+                        {
+                            currentStatus = status;
+                 //  if (!att.IsNightshift)
+                 dtFirstIn = _punched_at;
+                            att.In_time = dtFirstIn;
+                            dtLastIn = dtFirstIn;
+                        }
+                        if (iPos > dt_devattlogs.Rows.IndexOf(row))
+                        {
+                            if (lastKnownStatus == ""In"")
+                            {
+                                if ((_punched_at - dtLastIn).TotalMinutes > 5)
+                                {
+                                    currentStatus = ""Out"";
+                                    dtLastOut = _punched_at;
+                                    att.Out_time = dtLastOut;
+                                    att.IWork += Convert.ToInt32((dtLastOut - dtLastIn).TotalMinutes);
+                                }
+                                else
+                                    currentStatus = ""Ignored"";
+                            }
+                            else if (lastKnownStatus == ""Out"")
+                            {
+                                if ((_punched_at - dtLastOut).TotalMinutes > 5)
+                                {
+                                    currentStatus = ""In"";
+                                    dtLastIn = _punched_at;
+                                    att.IBreak += Convert.ToInt32((dtLastIn - dtLastOut).TotalMinutes);
+                                }
+                                else
+                                    currentStatus = ""Ignored"";
+                            }
+                            else if (lastKnownStatus == ""Ignored"")
+                            {
+                                bool bDoneAnything = false;
+                                if (dtLastOut > dtLastIn && (_punched_at - dtLastOut).TotalMinutes > 5)
+                                {
+                                    currentStatus = ""In"";
+                                    dtLastIn = _punched_at;
+                                    att.IBreak += Convert.ToInt32((dtLastIn - dtLastOut).TotalMinutes);
+                                    bDoneAnything = true;
+                                }
+
+                                if (dtLastIn > dtLastOut && (_punched_at - dtLastIn).TotalMinutes > 5)
+                                {
+                                    currentStatus = ""Out"";
+                                    dtLastOut = _punched_at;
+                                    att.Out_time = dtLastOut;
+                                    att.IWork += Convert.ToInt32((dtLastOut - dtLastIn).TotalMinutes);
+                                    bDoneAnything = true;
+                                }
+
+                                if (!bDoneAnything)
+                                    currentStatus = ""Ignored"";
+                            }
+                        }
+                        _row_devattlogs[""inout""] = currentStatus;
+
+                        //FillInOutString
+                        if (currentStatus == ""In"")
+                            row[""inout_s""] = ""IN"";
+                        else if (currentStatus == ""Out"")
+                            row[""inout_s""] = ""OUT"";
+                        else if (currentStatus == ""Ignored"")
+                            row[""inout_s""] = ""Ignored"";
+                        else if (currentStatus == ""Excluded"")
+                            row[""inout_s""] = ""Excluded"";
+                        else if (currentStatus == ""Error"")
+                            row[""inout_s""] = ""ERROR"";
+
+                        if (row[""machineno""] != DBNull.Value)
+                            row[""type""] = ""Device"";
+                        else
+                            row[""type""] = ""Manual"";
+
+                        lastKnownStatus = currentStatus;
+                        if (currentStatus == ""In"" || currentStatus == ""Out"")
+                            lastKnownInOutStatus = currentStatus;
+                    }
+                    iPos++;
+                }
+                if (att.In_time != DateTime.MinValue && att.Out_time != DateTime.MinValue)
+                {
+                    //this.MarkPresent(att.Empmaster_id, cell, null);
+                    //this.Save(devattlogs, att, dateInQuestion, break_time, bonus_ot);
+                }
+                //  else
+                // this.MarkError(cell, att.Empmaster_id, dateInQuestion, devattlogs.Rows.Count, Convert.ToInt32(att.IWork / 60), devattlogs, string.Empty);
+                // this.SetWorkBreakOT(dt_devattlogs, true, att);
+            }
+            else
+            {
+                //var DateTime_Now = CacheHelper.Get<DateTime>(CacheKeys.SYSVARS_NOW_LOCALE);
+                //if (((DateTime)cell.OwningColumn.Tag).Date == DateTime_Now.Date)
+                //    this.MarkUnReviewed(cell, empmaster_id, dateInQuestion, devattlogs.Rows.Count, devattlogs);
+                //else
+                //    this.MarkAbsent(cell, empmaster_id, dateInQuestion);
+            }
+
+Console.Write(JsonConvert.SerializeObject(att));
+            Job.SetParam(""in_time"",att.In_time.ToString(""yyyy-MM-dd HH:mm""));
+            Job.SetParam(""out_time"",att.Out_time.ToString(""yyyy-MM-dd HH:mm""));
+            Job.SetParam(""duration"",att.IWork);
+            Job.SetParam(""break_time"",att.IBreak);
+            Job.SetParam(""ot_time"",att.IOverTime);
+            Job.SetParam(""ot_time_approved"",(att.IOTHours * 60) + att.IOTMinutes);
+            Job.SetParam(""notes"",(att.Notes == """" || att.Notes == null)? ""_"" : att.Notes);
+            Job.SetParam(""night_shift"",att.IsNightshift);
+            Job.SetParam(""att_date"",dateInQuestion.ToString(""yyyy-MM-dd HH:mm""));
+            ",
                                             Lang = ScriptingLanguage.CSharp
                                         },
                                         RouteIndex=1,
                                     },
                                     new EbSqlJobWriter
                                     {
-                                        Reference="ebdbllz23nkqd620180220120030-ebdbllz23nkqd620180220120030-4-2613-3461-2613-3461",
+                                        Reference="ebdbllz23nkqd620180220120030-ebdbllz23nkqd620180220120030-4-2622-3474-2622-3474",
                                         RouteIndex=2,
                                     }
                                 }
@@ -166,7 +299,7 @@ namespace ExpressBase.ServiceStack.Services
         public SqlJobResponse Any(SqlJobRequest request)
         {
             try
-            {
+            {                
                 UserId = request.UserId;
                 string query = @" INSERT INTO eb_joblogs_master(refid, type, createdby, created_at) VALUES(:refid, :type, :createdby, NOW()) returning id;";
                 DbParameter[] parameters = new DbParameter[] {
@@ -533,6 +666,10 @@ namespace ExpressBase.ServiceStack.Services
                     p.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(pr.Name, (EbDbTypes)Convert.ToInt32(pr.Type), pr.ValueTo));
                 }
                 dt = this.EbConnectionFactory.ObjectsDB.DoQueries((ObjectWrapper as EbDataReader).Sql, p.ToArray());
+                if (dt.Tables[0].Rows.Count > 0)
+                {
+                    Console.WriteLine("kittippoy");
+                }
                 this.JobResponse.Message.Description = "Execution success";
             }
             catch (Exception e)
@@ -642,8 +779,17 @@ namespace ExpressBase.ServiceStack.Services
                 try
                 {
                     for (int counter = 0; counter < loop.InnerResources.Count; counter++)
+                    {
+                        if (loop.InnerResources[counter] is EbSqlProcessor)
+                        {
+                            if (loop.InnerResources[counter - 1] is EbSqlJobReader)
+                                if (((loop.InnerResources[counter - 1] as EbSqlJobReader).Result as EbDataSet).Tables[0].Rows.Count > 0)
+                                    loop.InnerResources[counter].Result = this.GetResult(loop.InnerResources[counter], counter, step, parentindex);
+                                else
+                                    break;
+                        }
                         loop.InnerResources[counter].Result = this.GetResult(loop.InnerResources[counter], counter, step, parentindex);
-
+                    }
                     DbParameter[] e_parameters = new DbParameter[]
                     { this.EbConnectionFactory.DataDB.GetNewParameter("linesid", EbDbTypes.Int32, linesid) ,
                     this.EbConnectionFactory.DataDB.GetNewParameter("keyvalues",EbDbTypes.Json,  _keyvalues)};
@@ -690,9 +836,17 @@ namespace ExpressBase.ServiceStack.Services
                 DbTransaction trans = con.BeginTransaction();
                 try
                 {
-
                     for (int counter = 0; counter < txn.InnerResources.Count; counter++)
-                        txn.InnerResources[counter].Result = this.GetResult(txn.InnerResources[counter], counter, step, 0);
+                        if (txn.InnerResources[counter] is EbSqlProcessor)
+                        {
+                            if (txn.InnerResources[counter - 1] is EbSqlJobReader)
+                                if (((txn.InnerResources[counter - 1] as EbSqlJobReader).Result as EbDataSet).Tables[0].Rows.Count > 0)
+                                    txn.InnerResources[counter].Result = this.GetResult(txn.InnerResources[counter], counter, step, 0);
+                                else
+                                    break;
+                        }
+                        else
+                            txn.InnerResources[counter].Result = this.GetResult(txn.InnerResources[counter], counter, step, 0);
                     trans.Commit();
                 }
                 catch (Exception e)
@@ -754,8 +908,8 @@ namespace ExpressBase.ServiceStack.Services
 
             Script valscript = CSharpScript.Create<dynamic>(code,
                 ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core")
-                .WithImports("System.Dynamic", "System", "System.Collections.Generic", "System.Diagnostics", "System.Linq")
-                .AddReferences(typeof(ExpressBase.Common.EbDataSet).Assembly),
+                .WithImports("System.Dynamic", "System", "System.Collections.Generic", "System.Diagnostics", "System.Linq", "Newtonsoft.Json","ExpressBase.Common")
+                .AddReferences(typeof(ExpressBase.Common.EbDataSet).Assembly),                
                 globalsType: typeof(SqlJobGlobals));
 
             if (_prevres != null)
