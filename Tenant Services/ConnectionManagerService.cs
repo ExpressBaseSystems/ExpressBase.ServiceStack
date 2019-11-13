@@ -119,6 +119,12 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
+        //public void Post(sampletest set)
+        //{
+        //    this.EbConnectionFactory.SMSConnection.SendSMS("919961596200", "Hello");
+
+        //}
+
         [Authenticate]
         public void Post(InitialSolutionConnectionsRequest request)
         {
@@ -351,6 +357,20 @@ namespace ExpressBase.ServiceStack.Services
         public AddTwilioResponse Post(AddTwilioRequest request)
         {
             AddTwilioResponse res = new AddTwilioResponse();
+            try
+            {
+                request.Config.PersistIntegrationConf(request.SolnId, this.InfraConnectionFactory, /*request.IsNew,*/ request.UserId);
+            }
+            catch (Exception e)
+            {
+                res.ResponseStatus.Message = e.Message;
+                Console.WriteLine("Add Fail : " + e.ToString() + e.StackTrace.ToString());
+            }
+            return res;
+        }
+        public AddUnifonicResponse Post(AddUnifonicRequest request)
+        {
+            AddUnifonicResponse res = new AddUnifonicResponse();
             try
             {
                 request.Config.PersistIntegrationConf(request.SolnId, this.InfraConnectionFactory, /*request.IsNew,*/ request.UserId);
