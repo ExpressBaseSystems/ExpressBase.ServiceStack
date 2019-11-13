@@ -434,11 +434,11 @@ Console.Write(JsonConvert.SerializeObject(att));
             DateTime dtFirstIn = dateInQuestion;
             DateTime dtLastIn = dateInQuestion;
             DateTime dtLastOut = dateInQuestion;
-            string lastKnownStatus = "UnKnown";
-            string lastKnownInOutStatus = "UnKnown";
-            string currentStatus = "UnKnown";
+            InOutStatus lastKnownStatus = InOutStatus.UnKnown;
+            InOutStatus lastKnownInOutStatus = InOutStatus.UnKnown;
+            InOutStatus currentStatus = InOutStatus.UnKnown;
             int iPos = 0;
-            string status = "In";
+            InOutStatus status = InOutStatus.In;
             var att = new Attendance(empmaster_id);
             //string sql = @"SELECT 
             //            id, 
@@ -484,98 +484,99 @@ Console.Write(JsonConvert.SerializeObject(att));
                 this.EbConnectionFactory.DataDB.GetNewParameter(":date_to_consolidate",EbDbTypes.DateTime,dateInQuestion),
                 this.EbConnectionFactory.DataDB.GetNewParameter(":id",EbDbTypes.Int32,empmaster_id)
             };
-            EbDataTable dt_devattlogs = this.EbConnectionFactory.DataDB.DoQuery(sql, parameters);
-            if (dt_devattlogs.Rows.Count > 1)
-            {
-                EbDataRow row = dt_devattlogs.Rows[0];
-                foreach (EbDataRow _row_devattlogs in dt_devattlogs.Rows)
+            EbDataTable dt_devattlogs = this.EbConnectionFactory.DataDB.DoQuery(sql, parameters);           
+                if (dt_devattlogs.Rows.Count > 1)
                 {
-                    if (iPos >= dt_devattlogs.Rows.IndexOf(row))
+                    EbDataRow row = dt_devattlogs.Rows[0];
+                    foreach (EbDataRow _row_devattlogs in dt_devattlogs.Rows)
                     {
-                        var _punched_at = Convert.ToDateTime(_row_devattlogs["punched_at"]);
-                        if (iPos == dt_devattlogs.Rows.IndexOf(row))
+                        if (iPos >= dt_devattlogs.Rows.IndexOf(row))
                         {
-                            currentStatus = status;
-                            //  if (!att.IsNightshift)
-                            dtFirstIn = _punched_at;
-                            att.In_time = dtFirstIn;
-                            dtLastIn = dtFirstIn;
-                        }
-                        if (iPos > dt_devattlogs.Rows.IndexOf(row))
-                        {
-                            if (lastKnownStatus == "In")
+                            DateTime _punched_at = Convert.ToDateTime(_row_devattlogs["punched_at"]);
+
+                            if (iPos == dt_devattlogs.Rows.IndexOf(row))
                             {
-                                if ((_punched_at - dtLastIn).TotalMinutes > 5)
-                                {
-                                    currentStatus = "Out";
-                                    dtLastOut = _punched_at;
-                                    att.Out_time = dtLastOut;
-                                    att.IWork += Convert.ToInt32((dtLastOut - dtLastIn).TotalMinutes);
-                                }
-                                else
-                                    currentStatus = "Ignored";
+                                currentStatus = status;
+                                //  if (!att.IsNightshift)
+                                dtFirstIn = _punched_at;
+                                att.In_time = dtFirstIn;
+                                dtLastIn = dtFirstIn;
                             }
-                            else if (lastKnownStatus == "Out")
+                            if (iPos > dt_devattlogs.Rows.IndexOf(row))
                             {
-                                if ((_punched_at - dtLastOut).TotalMinutes > 5)
+                                if (lastKnownStatus == InOutStatus.In)
                                 {
-                                    currentStatus = "In";
-                                    dtLastIn = _punched_at;
-                                    att.IBreak += Convert.ToInt32((dtLastIn - dtLastOut).TotalMinutes);
+                                    if ((_punched_at - dtLastIn).TotalMinutes > 5)
+                                    {
+                                        currentStatus = InOutStatus.UnKnown;
+                                        dtLastOut = _punched_at;
+                                        att.Out_time = dtLastOut;
+                                        att.IWork += Convert.ToInt32((dtLastOut - dtLastIn).TotalMinutes);
+                                    }
+                                    else
+                                        currentStatus = InOutStatus.Ignored;
                                 }
-                                else
-                                    currentStatus = "Ignored";
+                                else if (lastKnownStatus == InOutStatus.Out)
+                                {
+                                    if ((_punched_at - dtLastOut).TotalMinutes > 5)
+                                    {
+                                        currentStatus = InOutStatus.In;
+                                        dtLastIn = _punched_at;
+                                        att.IBreak += Convert.ToInt32((dtLastIn - dtLastOut).TotalMinutes);
+                                    }
+                                    else
+                                        currentStatus = InOutStatus.Ignored;
+                                }
+                                else if (lastKnownStatus == InOutStatus.Ignored)
+                                {
+                                    bool bDoneAnything = false;
+                                    if (dtLastOut > dtLastIn && (_punched_at - dtLastOut).TotalMinutes > 5)
+                                    {
+                                        currentStatus = InOutStatus.In;
+                                        dtLastIn = _punched_at;
+                                        att.IBreak += Convert.ToInt32((dtLastIn - dtLastOut).TotalMinutes);
+                                        bDoneAnything = true;
+                                    }
+
+                                    if (dtLastIn > dtLastOut && (_punched_at - dtLastIn).TotalMinutes > 5)
+                                    {
+                                        currentStatus = InOutStatus.Out;
+                                        dtLastOut = _punched_at;
+                                        att.Out_time = dtLastOut;
+                                        att.IWork += Convert.ToInt32((dtLastOut - dtLastIn).TotalMinutes);
+                                        bDoneAnything = true;
+                                    }
+
+                                    if (!bDoneAnything)
+                                        currentStatus = InOutStatus.Ignored;
+                                }
                             }
-                            else if (lastKnownStatus == "Ignored")
-                            {
-                                bool bDoneAnything = false;
-                                if (dtLastOut > dtLastIn && (_punched_at - dtLastOut).TotalMinutes > 5)
-                                {
-                                    currentStatus = "In";
-                                    dtLastIn = _punched_at;
-                                    att.IBreak += Convert.ToInt32((dtLastIn - dtLastOut).TotalMinutes);
-                                    bDoneAnything = true;
-                                }
+                            _row_devattlogs["inout"] = currentStatus;
 
-                                if (dtLastIn > dtLastOut && (_punched_at - dtLastIn).TotalMinutes > 5)
-                                {
-                                    currentStatus = "Out";
-                                    dtLastOut = _punched_at;
-                                    att.Out_time = dtLastOut;
-                                    att.IWork += Convert.ToInt32((dtLastOut - dtLastIn).TotalMinutes);
-                                    bDoneAnything = true;
-                                }
+                            //FillInOutString
+                            if (currentStatus == InOutStatus.In)
+                                row["inout_s"] = "IN";
+                        else if (currentStatus == InOutStatus.Out)
+                                row["inout_s"] = "OUT";
+                        else if (currentStatus == InOutStatus.Ignored)
+                                row["inout_s"] = "Ignored";
+                        else if (currentStatus == InOutStatus.Excluded)
+                                row["inout_s"] = "Excluded";
+                        else if (currentStatus == InOutStatus.Error)
+                                row["inout_s"] = "ERROR";
 
-                                if (!bDoneAnything)
-                                    currentStatus = "Ignored";
-                            }
-                        }
-                        _row_devattlogs["inout"] = currentStatus;
-
-                        //FillInOutString
-                        if (currentStatus == "In")
-                            row["inout_s"] = "IN";
-                        else if (currentStatus == "Out")
-                            row["inout_s"] = "OUT";
-                        else if (currentStatus == "Ignored")
-                            row["inout_s"] = "Ignored";
-                        else if (currentStatus == "Excluded")
-                            row["inout_s"] = "Excluded";
-                        else if (currentStatus == "Error")
-                            row["inout_s"] = "ERROR";
-
-                        if (row["machineno"] != DBNull.Value)
-                            row["type"] = "Device";
+                            if (row["machineno"] != DBNull.Value)
+                                row["type"] = "Device";
                         else
-                            row["type"] = "Manual";
+                                row["type"] = "Manual";
 
-                        lastKnownStatus = currentStatus;
-                        if (currentStatus == "In" || currentStatus == "Out")
-                            lastKnownInOutStatus = currentStatus;
+                            lastKnownStatus = currentStatus;
+                            if (currentStatus == InOutStatus.In || currentStatus == InOutStatus.Out)
+                                lastKnownInOutStatus = currentStatus;
+                        }
+                        iPos++;
                     }
-                    iPos++;
-                }
-                if (att.In_time != DateTime.MinValue && att.Out_time != DateTime.MinValue)
+                    if (att.In_time != DateTime.MinValue && att.Out_time != DateTime.MinValue)
                 {
                     //this.MarkPresent(att.Empmaster_id, cell, null);
                     //this.Save(devattlogs, att, dateInQuestion, break_time, bonus_ot);
