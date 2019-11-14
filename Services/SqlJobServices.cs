@@ -134,6 +134,15 @@ namespace ExpressBase.ServiceStack.Services
             this.IsNightshift = bNightshift;
         }
     }
+    enum InOutStatus
+        {
+            In,
+            UnKnown,
+            Out,
+            Ignored,
+            Excluded,
+            Error
+    }
  
         DateTime dateInQuestion = Convert.ToDateTime(Params.date_to_consolidate);
         int empmaster_id =  Convert.ToInt32(Params.empid);
@@ -141,13 +150,13 @@ namespace ExpressBase.ServiceStack.Services
         DateTime dtFirstIn = dateInQuestion;
         DateTime dtLastIn = dateInQuestion;
         DateTime dtLastOut = dateInQuestion;
-        string lastKnownStatus = ""UnKnown"";
-        string lastKnownInOutStatus = ""UnKnown"";
-        string currentStatus = ""UnKnown"";
+        InOutStatus lastKnownStatus = InOutStatus.UnKnown;
+        InOutStatus lastKnownInOutStatus = InOutStatus.UnKnown;
+        InOutStatus currentStatus = InOutStatus.UnKnown;
         int iPos = 0;
-        string status = ""In"";
+        InOutStatus status = InOutStatus.In;
         Attendance att = new Attendance(empmaster_id);
-         EbDataTable dt_devattlogs =  Tables[0];
+        EbDataTable dt_devattlogs =  Tables[0];
 
             if (dt_devattlogs.Rows.Count > 1)
             {
@@ -169,35 +178,35 @@ namespace ExpressBase.ServiceStack.Services
                         }
                         if (iPos > dt_devattlogs.Rows.IndexOf(row))
                         {
-                            if (lastKnownStatus == ""In"")
+                              if (lastKnownStatus == InOutStatus.In)
                             {
                                 if ((_punched_at - dtLastIn).TotalMinutes > 5)
                                 {
-                                    currentStatus = ""Out"";
+                                    currentStatus = InOutStatus.UnKnown;
                                     dtLastOut = _punched_at;
                                     att.Out_time = dtLastOut;
                                     att.IWork += Convert.ToInt32((dtLastOut - dtLastIn).TotalMinutes);
                                 }
                                 else
-                                    currentStatus = ""Ignored"";
+                                    currentStatus = InOutStatus.Ignored;
                             }
-                            else if (lastKnownStatus == ""Out"")
+                            else if (lastKnownStatus == InOutStatus.Out)
                             {
                                 if ((_punched_at - dtLastOut).TotalMinutes > 5)
                                 {
-                                    currentStatus = ""In"";
+                                    currentStatus = InOutStatus.In;
                                     dtLastIn = _punched_at;
                                     att.IBreak += Convert.ToInt32((dtLastIn - dtLastOut).TotalMinutes);
                                 }
                                 else
-                                    currentStatus = ""Ignored"";
+                                    currentStatus = InOutStatus.Ignored;
                             }
-                            else if (lastKnownStatus == ""Ignored"")
+                            else if (lastKnownStatus == InOutStatus.Ignored)
                             {
                                 bool bDoneAnything = false;
                                 if (dtLastOut > dtLastIn && (_punched_at - dtLastOut).TotalMinutes > 5)
                                 {
-                                    currentStatus = ""In"";
+                                    currentStatus = InOutStatus.In;
                                     dtLastIn = _punched_at;
                                     att.IBreak += Convert.ToInt32((dtLastIn - dtLastOut).TotalMinutes);
                                     bDoneAnything = true;
@@ -205,7 +214,7 @@ namespace ExpressBase.ServiceStack.Services
 
                                 if (dtLastIn > dtLastOut && (_punched_at - dtLastIn).TotalMinutes > 5)
                                 {
-                                    currentStatus = ""Out"";
+                                    currentStatus = InOutStatus.Out;
                                     dtLastOut = _punched_at;
                                     att.Out_time = dtLastOut;
                                     att.IWork += Convert.ToInt32((dtLastOut - dtLastIn).TotalMinutes);
@@ -213,21 +222,21 @@ namespace ExpressBase.ServiceStack.Services
                                 }
 
                                 if (!bDoneAnything)
-                                    currentStatus = ""Ignored"";
+                                    currentStatus = InOutStatus.Ignored;
                             }
                         }
                         _row_devattlogs[""inout""] = currentStatus;
 
                         //FillInOutString
-                        if (currentStatus == ""In"")
+                        if (currentStatus ==InOutStatus.In)
                             row[""inout_s""] = ""IN"";
-                        else if (currentStatus == ""Out"")
+                        else if (currentStatus == InOutStatus.Out)
                             row[""inout_s""] = ""OUT"";
-                        else if (currentStatus == ""Ignored"")
+                        else if (currentStatus == InOutStatus.Ignored)
                             row[""inout_s""] = ""Ignored"";
-                        else if (currentStatus == ""Excluded"")
+                        else if (currentStatus == InOutStatus.Excluded)
                             row[""inout_s""] = ""Excluded"";
-                        else if (currentStatus == ""Error"")
+                         else if (currentStatus == InOutStatus.Error)
                             row[""inout_s""] = ""ERROR"";
 
                         if (row[""machineno""] != DBNull.Value)
@@ -236,7 +245,7 @@ namespace ExpressBase.ServiceStack.Services
                             row[""type""] = ""Manual"";
 
                         lastKnownStatus = currentStatus;
-                        if (currentStatus == ""In"" || currentStatus == ""Out"")
+                        if (currentStatus == InOutStatus.In || currentStatus == InOutStatus.Out)
                             lastKnownInOutStatus = currentStatus;
                     }
                     iPos++;
