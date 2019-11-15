@@ -100,7 +100,7 @@ namespace ExpressBase.ServiceStack.Services
                 throw new FormException(Msg);
         }
 
-        private int CreateOrAlterTable(string tableName, List<TableColumnMeta> listNamesAndTypes, ref string Msg)
+        public int CreateOrAlterTable(string tableName, List<TableColumnMeta> listNamesAndTypes, ref string Msg)
         {
             //checking for space in column name, table name
             if (tableName.Contains(CharConstants.SPACE))
