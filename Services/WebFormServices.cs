@@ -753,10 +753,17 @@ namespace ExpressBase.ServiceStack.Services
         {
             Console.WriteLine("Start GetPrefillData");
             GetPrefillDataResponse _dataset = new GetPrefillDataResponse();
-            EbWebForm form = GetWebFormObject(request.RefId);
-            form.RefId = request.RefId;
-            form.RefreshFormData(EbConnectionFactory.DataDB, this, request.Params);
-            _dataset.FormData = form.FormData;
+            try
+            {
+                EbWebForm form = GetWebFormObject(request.RefId);
+                form.RefId = request.RefId;
+                form.RefreshFormData(EbConnectionFactory.DataDB, this, request.Params);
+                _dataset.FormData = new WebformDataWrapper { FormData = form.FormData };
+            }
+            catch(Exception e)
+            {
+                _dataset.FormData = new WebformDataWrapper {  Message = "Something went wrong.", MessageInt = e.Message, StackTraceInt = e.StackTrace };
+            }
             Console.WriteLine("End GetPrefillData");
             return _dataset;
         }
