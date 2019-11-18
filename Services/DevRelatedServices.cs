@@ -110,9 +110,11 @@ namespace ExpressBase.ServiceStack
 				                ON
 				                     EO.id = EO2A.obj_id
 				                WHERE 
-				                 EO2A.app_id=:appid
+				                    EO2A.app_id=:appid
                                 AND
                                     COALESCE(EO2A.eb_del, 'F') = 'F'
+                                AND 
+									EO.eb_del = 'F'
 				                ORDER BY
 				                    EO.obj_type;";
 

@@ -119,6 +119,12 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
+        //public void Post(sampletest set)
+        //{
+        //    this.EbConnectionFactory.SMSConnection.SendSMS("919961596200", "Hello");
+
+        //}
+
         [Authenticate]
         public void Post(InitialSolutionConnectionsRequest request)
         {
@@ -300,6 +306,7 @@ namespace ExpressBase.ServiceStack.Services
                 }
 
                 EbDataTable dt = DataDB.DoQuery(DataDB.EB_USER_ROLE_PRIVS.Replace("@uname", request.DataDBConfig.UserName));
+                Console.WriteLine("User Role Privilages: " + dt.Rows.Count());
                 foreach (EbDataRow dr in dt.Rows)
                 {
                     adroleslist_db.Add(dr[0].ToString());
@@ -309,7 +316,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
-                Console.WriteLine("Exception:" + e.ToString());
+                Console.WriteLine("Exception:" + e.ToString() + e.StackTrace.ToString());
             }
             return res;
         }
@@ -342,6 +349,7 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception e)
             {
                 res.ResponseStatus.Message = e.Message;
+                Console.WriteLine("AddDB Fail : " + e.ToString() + e.StackTrace.ToString());
             }
             return res;
         }
@@ -356,6 +364,21 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception e)
             {
                 res.ResponseStatus.Message = e.Message;
+                Console.WriteLine("Add Fail : " + e.ToString() + e.StackTrace.ToString());
+            }
+            return res;
+        }
+        public AddUnifonicResponse Post(AddUnifonicRequest request)
+        {
+            AddUnifonicResponse res = new AddUnifonicResponse();
+            try
+            {
+                request.Config.PersistIntegrationConf(request.SolnId, this.InfraConnectionFactory, /*request.IsNew,*/ request.UserId);
+            }
+            catch (Exception e)
+            {
+                res.ResponseStatus.Message = e.Message;
+                Console.WriteLine("Add Fail : " + e.ToString() + e.StackTrace.ToString());
             }
             return res;
         }
@@ -370,6 +393,7 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception e)
             {
                 res.ResponseStatus.Message = e.Message;
+                Console.WriteLine("Add Fail : " + e.ToString() + e.StackTrace.ToString());
             }
             return res;
         }
@@ -384,6 +408,7 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception e)
             {
                 res.ResponseStatus.Message = e.Message;
+                Console.WriteLine("Add Fail : " + e.ToString() + e.StackTrace.ToString());
             }
             return res;
         }
@@ -397,6 +422,7 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception e)
             {
                 res.ResponseStatus.Message = e.Message;
+                Console.WriteLine("Add Fail : " + e.ToString() + e.StackTrace.ToString());
             }
             return res;
         }
@@ -410,6 +436,7 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception e)
             {
                 res.ResponseStatus.Message = e.Message;
+                Console.WriteLine("Add Fail : " + e.ToString() + e.StackTrace.ToString());
             }
             return res;
         }
@@ -424,6 +451,7 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception e)
             {
                 res.ResponseStatus.Message = e.Message;
+                Console.WriteLine("Add Fail : " + e.ToString() + e.StackTrace.ToString());
             }
             return res;
         }
@@ -437,6 +465,7 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception e)
             {
                 res.ResponseStatus.Message = e.Message;
+                Console.WriteLine("Add Fail : " + e.ToString() + e.StackTrace.ToString());
             }
             return res;
         }
@@ -450,6 +479,7 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception e)
             {
                 res.ResponseStatus.Message = e.Message;
+                Console.WriteLine("Add Fail : " + e.ToString() + e.StackTrace.ToString());
             }
             return res;
         }
@@ -464,10 +494,25 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception e)
             {
                 res.ResponseStatus.Message = e.Message;
+                Console.WriteLine("Add Fail : " + e.ToString() + e.StackTrace.ToString());
             }
             return res;
         }
 
+        public AddfacebookResponse Post(AddfacebookRequest request)
+        {
+            AddfacebookResponse res = new AddfacebookResponse();
+            try
+            {
+                request.Config.PersistIntegrationConf(request.SolnId, this.InfraConnectionFactory, request.UserId);
+            }
+            catch (Exception e)
+            {
+                res.ResponseStatus.Message = e.Message;
+                Console.WriteLine("Add Fail : " + e.ToString() + e.StackTrace.ToString());
+            }
+            return res;
+        }
         public AddDropBoxResponse Post(AddDropBoxRequest request)
         {
             AddDropBoxResponse res = new AddDropBoxResponse();
@@ -478,6 +523,7 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception e)
             {
                 res.ResponseStatus.Message = e.Message;
+                Console.WriteLine("Add Fail : " + e.Message.ToString() + e.StackTrace.ToString());
             }
             return res;
         }
@@ -492,6 +538,7 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception e)
             {
                 res.ResponseStatus.Message = e.Message;
+                Console.WriteLine("Add Fail : " + e.Message.ToString() + e.StackTrace.ToString());
             }
             return res;
         }
@@ -508,6 +555,7 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception e)
             {
                 res.ResponseStatus.Message = e.Message;
+                Console.WriteLine("Add Fail : " + e.Message.ToString() + e.StackTrace.ToString());
             }
             return res;
         }
@@ -524,6 +572,7 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception e)
             {
                 res.ResponseStatus.Message = e.Message;
+                Console.WriteLine("GetIntegrationsRequest Fail : " + e.Message.ToString() + e.StackTrace.ToString());
             }
             return res;
         }
@@ -580,6 +629,7 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception e)
             {
                 res.ResponseStatus.Message = e.Message;
+                Console.WriteLine(" Fail : " + e.Message.ToString() + e.StackTrace.ToString());
             }
             return res;
         }
@@ -594,6 +644,7 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception e)
             {
                 res.ResponseStatus.Message = e.Message;
+                Console.WriteLine(" Fail : " + e.Message.ToString() + e.StackTrace.ToString());
             }
             return res;
         }
@@ -612,6 +663,7 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception e)
             {
                 res.ResponseStatus.Message = e.Message;
+                Console.WriteLine(" Fail : " + e.Message.ToString() + e.StackTrace.ToString());
             }
             return res;
         }
@@ -642,6 +694,7 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception e)
             {
                 res.ResponseStatus.Message = e.Message;
+                Console.WriteLine(" Fail : " + e.Message.ToString() + e.StackTrace.ToString());
             }
             return res;
         }
@@ -671,7 +724,7 @@ namespace ExpressBase.ServiceStack.Services
                 }
 
             }
-            catch (Exception e) { Console.WriteLine(e.Message); }
+            catch (Exception e) { Console.WriteLine(e.Message.ToString() + e.StackTrace.ToString()); }
             return false;
         }
 
@@ -728,7 +781,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.Message + e.StackTrace);
+                Console.WriteLine("Fail : "+ e.Message.ToString() + e.StackTrace.ToString());
             }
         }
 
@@ -788,6 +841,7 @@ namespace ExpressBase.ServiceStack.Services
                         Description = _temp.Rows[0]["description"].ToString(),
                         DateCreated = _temp.Rows[0]["date_created"].ToString(),
                         EsolutionId = _temp.Rows[0]["esolution_id"].ToString(),
+                        IsolutionId = request.IsolutionId,
                         PricingTier = Enum.Parse<PricingTiers>(_temp.Rows[0]["pricing_tier"].ToString()),
                         IsVersioningEnabled = Convert.ToBoolean(_temp.Rows[0]["versioning"])
                     };
@@ -816,7 +870,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.Message);
+                Console.WriteLine("GETting all data : "+e.Message.ToString() + e.StackTrace.ToString());
             }
             return resp;
         }

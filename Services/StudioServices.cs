@@ -745,6 +745,20 @@ namespace ExpressBase.ServiceStack
                             Json = request.Json
                         });
                     }
+                    else if (obj is EbMobilePage)
+                    {
+                        if ((obj as EbMobilePage).Container is EbMobileForm)
+                        {
+                            MobileServices mobservice = base.ResolveService<MobileServices>();
+                            CreateMobileFormTableResponse res = mobservice.Post(new CreateMobileFormTableRequest
+                            {
+                                MobilePage = obj as EbMobilePage,
+                                SolnId = request.SolnId,
+                                UserId = request.UserId,
+                                WhichConsole = request.WhichConsole
+                            });
+                        }
+                    }
                 }
             }
             catch (Exception e)
@@ -834,6 +848,21 @@ namespace ExpressBase.ServiceStack
                             UserAuthId = request.UserAuthId,
                             Json = request.Json
                         });
+                    }
+                    else if(obj is EbMobilePage)
+                    {
+                        if((obj as EbMobilePage).Container is EbMobileForm)
+                        {
+                            MobileServices mobservice = base.ResolveService<MobileServices>();
+                            CreateMobileFormTableResponse res = mobservice.Post(new CreateMobileFormTableRequest
+                            {
+                                MobilePage = obj as EbMobilePage,
+                                Apps = request.Apps,
+                                SolnId = request.SolnId,
+                                UserId = request.UserId,
+                                WhichConsole = request.WhichConsole
+                            });
+                        }
                     }
                 }
             }
@@ -1243,6 +1272,8 @@ namespace ExpressBase.ServiceStack
                 return EbObjectTypes.DashBoard.IntCode;
             else if (obj is EbCalendarView)
                 return EbObjectTypes.CalendarView.IntCode;
+            else if(obj is EbMobilePage)
+                return EbObjectTypes.MobilePage.IntCode;
             else
                 return -1;
         }
@@ -1311,6 +1342,10 @@ namespace ExpressBase.ServiceStack
             else if (obj is EbCalendarView)
             {
                 Redis.Set(refId, (EbCalendarView)obj);
+            }
+            else if (obj is EbMobilePage)
+            {
+                Redis.Set(refId, (EbMobilePage)obj);
             }
         }
 
