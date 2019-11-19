@@ -282,9 +282,27 @@ namespace ExpressBase.ServiceStack
                     if (_ds != null)
                     {
                         string sql = string.Empty;
+                        string subjectString = _ds.Sql.ToString();
+                        string resultList = string.Empty;
+                        try
+                        {
+                            Regex regexObj = new Regex(@"/\*(?>(?:(?!\*/|/\*).)*)(?>(?:/\*(?>(?:(?!\*/|/\*).)*)\*/(?>(?:(?!\*/|/\*).)*))*).*?\*/|--.*?\r?[\n]", RegexOptions.Singleline);
+                            Match matchResult = regexObj.Match(subjectString);
+                            while (matchResult.Success)
+                            {
+                                resultList=matchResult.Value.ToString();
+                                _ds.Sql = _ds.Sql.Replace(resultList.Trim(), string.Empty);
+                                matchResult = matchResult.NextMatch();
+                            }                            
+                        }
+                        catch (ArgumentException ex)
+                        {
+                            // Syntax error in the regular expression
+                        }                        
+                        
                         string[] sqlArray = _ds.Sql.Trim().Split(";");
                         foreach (string _sql in sqlArray)
-                        {
+                        {                            
                             if (_sql != string.Empty && !_sql.ToLower().Contains("limit") && !_sql.ToLower().Contains("offset"))
                                 sql += _sql + " LIMIT :limit OFFSET :offset;";
                             else
@@ -348,6 +366,24 @@ namespace ExpressBase.ServiceStack
                 EbDataSet _dataset = new EbDataSet();
                 string sql = string.Empty;
                 string countsql = string.Empty;
+
+                string subjectString = _ds.Sql.ToString();
+                string resultList = string.Empty;
+                try
+                {
+                    Regex regexObj = new Regex(@"/\*(?>(?:(?!\*/|/\*).)*)(?>(?:/\*(?>(?:(?!\*/|/\*).)*)\*/(?>(?:(?!\*/|/\*).)*))*).*?\*/|--.*?\r?[\n]", RegexOptions.Singleline);
+                    Match matchResult = regexObj.Match(subjectString);
+                    while (matchResult.Success)
+                    {
+                        resultList = matchResult.Value.ToString();
+                        _ds.Sql = _ds.Sql.Replace(resultList.Trim(), string.Empty);
+                        matchResult = matchResult.NextMatch();
+                    }
+                }
+                catch (ArgumentException ex)
+                {
+                    // Syntax error in the regular expression
+                }
                 string[] sqlArray = _ds.Sql.Trim().Split(";");
                 sql = sqlArray[request.QueryIndex];
                 if (request.QueryIndex == 0)
