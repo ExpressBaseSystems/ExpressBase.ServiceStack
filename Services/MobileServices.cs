@@ -307,7 +307,7 @@ namespace ExpressBase.ServiceStack.Services
                         Name = dr["obj_name"].ToString(),
                         DisplayName = dr["display_name"].ToString(),
                         Version = dr["version_num"].ToString(),
-                        Page = EbSerializers.Json_Deserialize<EbMobilePage>(dr["obj_json"].ToString())
+                        Json = dr["obj_json"].ToString()
                     });
                 }
             }
