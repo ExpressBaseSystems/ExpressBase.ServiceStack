@@ -58,7 +58,7 @@ namespace ExpressBase.ServiceStack
                         Description = dt.Rows[0][2].ToString(),
                         AppType = Convert.ToInt32(dt.Rows[0][3]),
                         Icon = dt.Rows[0][4].ToString(),
-                        AppSettings = dt.Rows[0][5]
+                        AppSettings = dt.Rows[0][5].ToString()
                     };
                     resp.AppInfo = _app;
                 }
@@ -102,19 +102,19 @@ namespace ExpressBase.ServiceStack
             {
                 string sql = @" SELECT applicationname,description,app_icon,application_type, app_settings FROM eb_applications WHERE id=:appid AND  eb_del = 'F';
 				                SELECT 
-				                     EO.id, EO.obj_type, EO.obj_name, EO.obj_desc, EO.display_name
+				                     EO.id, EO.obj_type, EO.obj_name, EO.obj_desc, EO.display_name,EOV.refid,EOV.working_mode
 				                FROM
-				                     eb_objects EO
+				                     eb_objects_ver EOV,eb_objects EO
 				                INNER JOIN
 				                     eb_objects2application EO2A
 				                ON
 				                     EO.id = EO2A.obj_id
 				                WHERE 
-				                    EO2A.app_id=:appid
+				                    EO2A.app_id = :appid
+								AND
+									EO.id = EOV.eb_objects_id
                                 AND
-                                    COALESCE(EO2A.eb_del, 'F') = 'F'
-                                AND 
-									EO.eb_del = 'F'
+									COALESCE(EO.eb_del, 'F') = 'F'
 				                ORDER BY
 				                    EO.obj_type;";
 
@@ -123,11 +123,6 @@ namespace ExpressBase.ServiceStack
                 var dt = this.EbConnectionFactory.ObjectsDB.DoQueries(sql, parameters);
 
                 int appType = Convert.ToInt32(dt.Tables[0].Rows[0][3]);
-                object appStng = null;
-                if (appType == 3)//if bot app
-                {
-                    appStng = JsonConvert.DeserializeObject<EbBotSettings>(dt.Tables[0].Rows[0][4].ToString());
-                }
 
                 resp.AppInfo = new AppWrapper
                 {
@@ -136,7 +131,7 @@ namespace ExpressBase.ServiceStack
                     Description = dt.Tables[0].Rows[0][1].ToString(),
                     Icon = dt.Tables[0].Rows[0][2].ToString(),
                     AppType = appType,
-                    AppSettings = appStng
+                    AppSettings = dt.Tables[0].Rows[0][4].ToString(),
                 };
                 resp.ObjectsCount = dt.Tables[1].Rows.Count;
 
@@ -159,7 +154,9 @@ namespace ExpressBase.ServiceStack
                             ObjName = dr[2].ToString(),
                             Description = dr[3].ToString(),
                             EbType = ___otyp.ToString(),
-                            DisplayName = dr[4].ToString()
+                            DisplayName = dr[4].ToString(),
+                            Refid = dr[5].ToString(),
+                            IsCommitted = (dr[6].ToString() == "F") ? true : false
                         });
                     }
                 }
@@ -331,6 +328,42 @@ namespace ExpressBase.ServiceStack
                 Console.WriteLine(e.StackTrace);
                 Console.WriteLine(e.Message);
                 resp.Status = false;
+            }
+            return resp;
+        }
+
+        public UpdateAppSettingsResponse Post(UpdateAppSettingsRequest request)
+        {
+            string sql = @"UPDATE eb_applications SET app_settings = :settings WHERE id = :appid";
+            UpdateAppSettingsResponse resp = new UpdateAppSettingsResponse();
+            try
+            {
+                //to validate json
+                EbAppSettings settings = null;
+                if (request.AppType == EbApplicationTypes.Bot)
+                    settings = JsonConvert.DeserializeObject<EbBotSettings>(request.Settings);
+                else if (request.AppType == EbApplicationTypes.Mobile)
+                    settings = JsonConvert.DeserializeObject<EbMobileSettings>(request.Settings);
+                else if (request.AppType == EbApplicationTypes.Web)
+                    settings = JsonConvert.DeserializeObject<EbWebSettings>(request.Settings);
+
+                DbParameter[] parameters = {
+                    this.EbConnectionFactory.DataDB.GetNewParameter("appid",EbDbTypes.Int32,request.AppId),
+                    this.EbConnectionFactory.DataDB.GetNewParameter("settings",EbDbTypes.String,JsonConvert.SerializeObject(settings))
+                };
+
+                int s = this.EbConnectionFactory.DataDB.DoNonQuery(sql, parameters);
+                if (s > 0)
+                {
+                    resp.Status = true;
+                    resp.Message = "App settings updated successfully (:";
+                }
+            }
+            catch (Exception e)
+            {
+                resp.Status = false;
+                resp.Message = "Unable to update settings";
+                Console.WriteLine("EXCEPTION AT APPLICATION SETTINGS UPDATE :", e.Message);
             }
             return resp;
         }

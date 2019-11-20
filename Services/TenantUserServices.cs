@@ -235,7 +235,7 @@ namespace ExpressBase.ServiceStack.Services
                         });
                     }
 
-                    foreach (var r in dt.Tables[1].Rows)
+                    foreach (EbDataRow r in dt.Tables[1].Rows)
                     {
                         locs.Add(Convert.ToInt32(r[0]), new EbLocation
                         {

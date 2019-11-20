@@ -33,6 +33,7 @@ using System.Net.Mail;
 using System.Net;
 using ServiceStack.Messaging;
 using System.Globalization;
+using Rectangle = iTextSharp.text.Rectangle;
 
 namespace ExpressBase.ServiceStack
 {
@@ -83,10 +84,8 @@ namespace ExpressBase.ServiceStack
                 Report.RenderingUser = request.RenderingUser;
                 Report.CultureInfo = CultureInfo.GetCultureInfo(Report.ReadingUser.Preference.Locale);
                 Report.Parameters = request.Params;
-                //-- END REPORT object INIT
-                iTextSharp.text.Rectangle rec = new iTextSharp.text.Rectangle(Report.WidthPt, Report.HeightPt);
-                Report.Doc = new Document(rec);
                 Report.Ms1 = new MemoryStream();
+                //-- END REPORT object INIT
                 if (Report.DataSourceRefId != string.Empty)
                 {
                     //Groupings = new List<string>();
@@ -95,7 +94,14 @@ namespace ExpressBase.ServiceStack
                 }
                 if (Report.DataSet == null)
                     Console.WriteLine("Dataset is null, refid " + Report.DataSourceRefId);
-                //throw new Exception("Dataset is null, refid " + Report.DataSourceRefId);
+
+                float _width = Report.WidthPt - Report.Margin.Left - Report.Margin.Right;
+                float _height = Report.HeightPt - Report.Margin.Top - Report.Margin.Bottom;
+                Report.HeightPt = _height;
+                //iTextSharp.text.Rectangle rec =new iTextSharp.text.Rectangle(Report.WidthPt, Report.HeightPt);
+                iTextSharp.text.Rectangle rec = new iTextSharp.text.Rectangle(_width, _height);
+                Report.Doc = new Document(rec);
+                Report.Doc.SetMargins(Report.Margin.Left, Report.Margin.Right, Report.Margin.Top, Report.Margin.Bottom);
                 Report.Writer = PdfWriter.GetInstance(Report.Doc, Report.Ms1);
                 Report.Writer.Open();
                 Report.Doc.Open();
@@ -156,7 +162,7 @@ namespace ExpressBase.ServiceStack
             {
                 foreach (EbReportField field in group.GroupHeader.Fields)
                 {
-                   
+
                     if (field is EbDataField)
                     {
                         Report.Groupheaders.Add((field as EbDataField).ColumnName, new ReportGroupItem
@@ -164,7 +170,7 @@ namespace ExpressBase.ServiceStack
                             field = field as EbDataField,
                             PreviousValue = string.Empty,
                             order = group.GroupHeader.Order
-                        });                      
+                        });
                     }
                 }
                 // foreach (EbReportField field in group.GroupFooter.Fields)
@@ -460,6 +466,18 @@ namespace ExpressBase.ServiceStack
 
         public override void OnEndPage(PdfWriter writer, Document d)
         {
+            //var content = writer.DirectContent;
+            //var pageBorderRect = new Rectangle(Report.Doc.PageSize);
+
+            //pageBorderRect.Left += Report.Doc.LeftMargin;
+            //pageBorderRect.Right -= Report.Doc.RightMargin;
+            //pageBorderRect.Top -= Report.Doc.TopMargin;
+            //pageBorderRect.Bottom += Report.Doc.BottomMargin;
+
+            //content.SetColorStroke(BaseColor.Red);
+            //content.Rectangle(pageBorderRect.Left, pageBorderRect.Bottom, pageBorderRect.Width, pageBorderRect.Height);
+            //content.Stroke();
+
             if (!Report.FooterDrawn)
             {
                 Report.DrawPageHeader();

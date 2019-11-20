@@ -45,6 +45,7 @@ namespace ExpressBase.ServiceStack.Services
                     {
                         EbWebForm _form = GetWebFormObject(pusher.FormRefId);
                         TableSchema _table = _form.FormSchema.Tables.Find(e => e.TableName.Equals(_form.FormSchema.MasterTable));
+                        _table.Columns.Add(new ColumnSchema { ColumnName = "eb_push_id", EbDbType = (int)EbDbTypes.String, Control = new EbTextBox { Name = "eb_push_id", Label = "Push Id" } });
                         if (_table != null)
                             Form.FormSchema.Tables.Add(_table);
                     }
@@ -76,7 +77,10 @@ namespace ExpressBase.ServiceStack.Services
                             _listNamesAndTypes.Add(new TableColumnMeta { Name = _column.ColumnName, Type = vDbTypes.GetVendorDbTypeStruct((EbDbTypes)_column.EbDbType), Label = (_column.Control as EbControl).Label, Control = (_column.Control as EbControl) });
                     }
                     if (_table.TableName == _schema.MasterTable)
+                    {
                         _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_ver_id", Type = vDbTypes.Decimal });// id refernce to the parent table will store in this column - foreignkey
+                        _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lock", Type = vDbTypes.Boolean, Default = "F", Label = "Lock ?" });
+                    }
                     else
                         _listNamesAndTypes.Add(new TableColumnMeta { Name = _schema.MasterTable + "_id", Type = vDbTypes.Decimal });// id refernce to the parent table will store in this column - foreignkey
                     if (_table.TableType == WebFormTableTypes.Grid)
@@ -87,8 +91,8 @@ namespace ExpressBase.ServiceStack.Services
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_by", Type = vDbTypes.Decimal, Label = "Last Modified By" });
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_at", Type = vDbTypes.DateTime, Label = "Last Modified At" });
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_del", Type = vDbTypes.Boolean, Default = "F" });
-                    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_void", Type = vDbTypes.Boolean, Default = "F", Label = "Void ?" });
-                    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_loc_id", Type = vDbTypes.Int32, Label = "Location" });
+                    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_void", Type = vDbTypes.Boolean, Default = "F", Label = "Void ?" });//only ?
+                    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_loc_id", Type = vDbTypes.Int32, Label = "Location" });//only ?
                     //_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_default", Type = vDbTypes.Boolean, Default = "F" });
 
                     int _rowaff = CreateOrAlterTable(_table.TableName, _listNamesAndTypes, ref Msg);
@@ -100,7 +104,7 @@ namespace ExpressBase.ServiceStack.Services
                 throw new FormException(Msg);
         }
 
-        private int CreateOrAlterTable(string tableName, List<TableColumnMeta> listNamesAndTypes, ref string Msg)
+        public int CreateOrAlterTable(string tableName, List<TableColumnMeta> listNamesAndTypes, ref string Msg)
         {
             //checking for space in column name, table name
             if (tableName.Contains(CharConstants.SPACE))
@@ -749,10 +753,17 @@ namespace ExpressBase.ServiceStack.Services
         {
             Console.WriteLine("Start GetPrefillData");
             GetPrefillDataResponse _dataset = new GetPrefillDataResponse();
-            EbWebForm form = GetWebFormObject(request.RefId);
-            form.RefId = request.RefId;
-            form.RefreshFormData(EbConnectionFactory.DataDB, this, request.Params);
-            _dataset.FormData = form.FormData;
+            try
+            {
+                EbWebForm form = GetWebFormObject(request.RefId);
+                form.RefId = request.RefId;
+                form.RefreshFormData(EbConnectionFactory.DataDB, this, request.Params);
+                _dataset.FormData = new WebformDataWrapper { FormData = form.FormData };
+            }
+            catch(Exception e)
+            {
+                _dataset.FormData = new WebformDataWrapper {  Message = "Something went wrong.", MessageInt = e.Message, StackTraceInt = e.StackTrace };
+            }
             Console.WriteLine("End GetPrefillData");
             return _dataset;
         }
