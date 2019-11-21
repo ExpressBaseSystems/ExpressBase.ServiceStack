@@ -891,6 +891,12 @@ namespace ExpressBase.ServiceStack.Services
                 FormObj.LocationId = request.CurrentLoc;
                 FormObj.SolutionObj = this.Redis.Get<Eb_Solution>(String.Format("solution_{0}", request.SolnId));
 
+                string Operation = OperationConstants.NEW;
+                if (request.RowId > 0)
+                    Operation = OperationConstants.EDIT;
+                if (!FormObj.HasPermission(Operation, request.CurrentLoc))
+                    return new InsertDataFromWebformResponse { Status = (int)HttpStatusCodes.FORBIDDEN, Message = "Access denied to save this data entry!", RowAffected = -2, RowId = -2 };
+
                 Console.WriteLine("Insert/Update WebFormData : MergeFormData start");
                 FormObj.MergeFormData();
                 Console.WriteLine("Insert/Update WebFormData : Save start");
@@ -908,14 +914,33 @@ namespace ExpressBase.ServiceStack.Services
                     RowId = FormObj.TableRowId,
                     FormData = FormObj.FormData,
                     RowAffected = r,
-                    AfterSaveStatus = a
+                    AfterSaveStatus = a,
+                    Status = (int)HttpStatusCodes.OK,
+                };
+            }
+            catch (FormException ex)
+            {
+                Console.WriteLine("Exception in Insert/Update WebFormData" + ex.Message);
+                Console.WriteLine(ex.StackTrace);
+                return new InsertDataFromWebformResponse()
+                {
+                    Message = ex.Message,
+                    Status  = ex.ExceptionCode,
+                    MessageInt = ex.MessageInternal,
+                    StackTraceInt = ex.StackTraceInternal
                 };
             }
             catch (Exception ex)
             {
                 Console.WriteLine("Exception in Insert/Update WebFormData" + ex.Message);
                 Console.WriteLine(ex.StackTrace);
-                throw new FormException("Terminated Insert/Update WebFormData. Check servicestack log for stack trace.");
+                return new InsertDataFromWebformResponse()
+                {
+                    Message = "Something went wrong",
+                    Status = (int)HttpStatusCodes.INTERNAL_SERVER_ERROR,
+                    MessageInt = ex.Message,
+                    StackTraceInt = ex.StackTrace
+                };
             }
         }
 
