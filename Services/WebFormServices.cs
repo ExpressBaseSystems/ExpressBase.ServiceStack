@@ -883,6 +883,8 @@ namespace ExpressBase.ServiceStack.Services
         {
             try
             {
+                DateTime startdt = DateTime.Now;
+                Console.WriteLine("Insert/Update WebFormData : start - " + startdt);
                 EbWebForm FormObj = GetWebFormObject(request.RefId);
                 FormObj.RefId = request.RefId;
                 FormObj.TableRowId = request.RowId;
@@ -891,31 +893,56 @@ namespace ExpressBase.ServiceStack.Services
                 FormObj.LocationId = request.CurrentLoc;
                 FormObj.SolutionObj = this.Redis.Get<Eb_Solution>(String.Format("solution_{0}", request.SolnId));
 
-                Console.WriteLine("Insert/Update WebFormData : MergeFormData start");
+                string Operation = OperationConstants.NEW;
+                if (request.RowId > 0)
+                    Operation = OperationConstants.EDIT;
+                if (!FormObj.HasPermission(Operation, request.CurrentLoc))
+                    return new InsertDataFromWebformResponse { Status = (int)HttpStatusCodes.FORBIDDEN, Message = "Access denied to save this data entry!", RowAffected = -2, RowId = -2 };
+
+                Console.WriteLine("Insert/Update WebFormData : MergeFormData start - " + DateTime.Now);
                 FormObj.MergeFormData();
-                Console.WriteLine("Insert/Update WebFormData : Save start");
+                Console.WriteLine("Insert/Update WebFormData : Save start - " + DateTime.Now);
                 int r = FormObj.Save(EbConnectionFactory.DataDB, this);
-                Console.WriteLine("Insert/Update WebFormData : AfterSave start");
+                Console.WriteLine("Insert/Update WebFormData : AfterSave start - " + DateTime.Now);
                 int a = FormObj.AfterSave(EbConnectionFactory.DataDB, request.RowId > 0);
                 if (this.EbConnectionFactory.EmailConnection != null && this.EbConnectionFactory.EmailConnection.Primary != null)
                 {
-                    Console.WriteLine("Insert/Update WebFormData : SendMailIfUserCreated start");
+                    Console.WriteLine("Insert/Update WebFormData : SendMailIfUserCreated start - " + DateTime.Now);
                     FormObj.SendMailIfUserCreated(MessageProducer3);
                 }
-                Console.WriteLine("Insert/Update WebFormData : Returning");
+                Console.WriteLine("Insert/Update WebFormData : Execution Time = " + (DateTime.Now - startdt).TotalMilliseconds);
                 return new InsertDataFromWebformResponse()
                 {
                     RowId = FormObj.TableRowId,
                     FormData = FormObj.FormData,
                     RowAffected = r,
-                    AfterSaveStatus = a
+                    AfterSaveStatus = a,
+                    Status = (int)HttpStatusCodes.OK,
+                };
+            }
+            catch (FormException ex)
+            {
+                Console.WriteLine("Exception in Insert/Update WebFormData" + ex.Message);
+                Console.WriteLine(ex.StackTrace);
+                return new InsertDataFromWebformResponse()
+                {
+                    Message = ex.Message,
+                    Status  = ex.ExceptionCode,
+                    MessageInt = ex.MessageInternal,
+                    StackTraceInt = ex.StackTraceInternal
                 };
             }
             catch (Exception ex)
             {
                 Console.WriteLine("Exception in Insert/Update WebFormData" + ex.Message);
                 Console.WriteLine(ex.StackTrace);
-                throw new FormException("Terminated Insert/Update WebFormData. Check servicestack log for stack trace.");
+                return new InsertDataFromWebformResponse()
+                {
+                    Message = "Something went wrong",
+                    Status = (int)HttpStatusCodes.INTERNAL_SERVER_ERROR,
+                    MessageInt = ex.Message,
+                    StackTraceInt = ex.StackTrace
+                };
             }
         }
 
