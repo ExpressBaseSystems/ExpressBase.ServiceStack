@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using ExpressBase.Security;
 using ExpressBase.Common.Extensions;
 using System.Data.Common;
+using Newtonsoft.Json;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -247,96 +248,72 @@ namespace ExpressBase.ServiceStack.Services
         }
 
         //objectlist for mobile
-        public ObjectListToMob Get(ObjectListToMobRequest request)
+        public GetMobilePagesResponse Get(GetMobilePagesRequest request)
         {
-            Dictionary<int, List<ObjWrap>> dict = new Dictionary<int, List<ObjWrap>>();
-
+            GetMobilePagesResponse response = new GetMobilePagesResponse();
             try
             {
                 User UserObject = this.Redis.Get<User>(request.UserAuthId);
                 string[] PermIds = UserObject.GetAccessIds(request.LocationId);
 
-                string Sql = @"SELECT
-                                   EO.id, EO.obj_type, EO.obj_name,
-                                   EOV.version_num, 
-                                   EOV.refid,
-                                   display_name
-                                FROM
-   	                                eb_objects EO, eb_objects_ver EOV, eb_objects_status EOS, eb_objects2application EO2A 
-                                WHERE
-   	                                EOV.eb_objects_id = EO.id	
-                                AND EO2A.app_id = :appid	      			    
-                                AND EOS.eb_obj_ver_id = EOV.id 
-                                AND EO2A.obj_id = EO.id
-                                AND EO2A.eb_del = 'F'
-                                AND EOS.status = 3 
-                                AND COALESCE( EO.eb_del, 'F') = 'F'
-                                AND EOS.id = ANY( Select MAX(id) from eb_objects_status EOS Where EOS.eb_obj_ver_id = EOV.id );";
+                string query = string.Empty;
 
-                DbParameter[] parameters = {
-                    this.EbConnectionFactory.ObjectsDB.GetNewParameter("appid",EbDbTypes.Int32,request.AppId)
+                const string idcheck = "AND OD.id = ANY(string_to_array(:objids, ',')::int[])";
+
+                const string Sql = @"SELECT obj_name,display_name,version_num,obj_json FROM (
+				                                SELECT 
+					                                EO.id,EO.obj_name,EO.display_name,EOV.version_num, EOV.obj_json
+				                                FROM
+					                                eb_objects EO
+				                                LEFT JOIN 
+					                                eb_objects_ver EOV ON (EOV.eb_objects_id = EO.id)
+				                                LEFT JOIN
+					                                eb_objects_status EOS ON (EOS.eb_obj_ver_id = EOV.id)
+				                                WHERE
+					                                COALESCE(EO.eb_del, 'F') = 'F'
+				                                AND
+					                                EOS.status = 3
+				                                AND 
+					                                EO.obj_type = 13
+				                                AND 
+					                                EOS.id = ANY( Select MAX(id) from eb_objects_status EOS Where EOS.eb_obj_ver_id = EOV.id)
+				                                ) OD 
+                                LEFT JOIN eb_objects2application EO2A ON (EO2A.obj_id = OD.id)
+                                WHERE 
+	                                EO2A.app_id = :appid 
+                                {0}
+                                AND 
+	                                COALESCE(EO2A.eb_del, 'F') = 'F';";
+
+                List<DbParameter> parameters = new List<DbParameter> {
+                    this.EbConnectionFactory.ObjectsDB.GetNewParameter("appid", EbDbTypes.Int32, request.AppId)
                 };
 
-                EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(Sql, parameters);
+                if (UserObject.Roles.Contains(SystemRoles.SolutionOwner.ToString()) || UserObject.Roles.Contains(SystemRoles.SolutionAdmin.ToString()))
+                {
+                    query = string.Format(Sql,string.Empty);
+                }
+                else
+                {
+                    parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("objids", EbDbTypes.String, string.Join(",", PermIds)));
+                    query = string.Format(Sql, idcheck);
+                }
+
+                EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(query, parameters.ToArray());
 
                 foreach (EbDataRow dr in dt.Rows)
                 {
-                    int _ObjType = Convert.ToInt32(dr["obj_type"]);
-                    EbObjectType _EbObjType = (EbObjectType)_ObjType;
-
-                    string _ObjId = dr["id"].ToString();
-
-                    if (!_EbObjType.IsUserFacing || !PermIds.Contains(_ObjId))
-                        continue;
-
-                    if (!dict.ContainsKey(_ObjType))
-                        dict.Add(_ObjType, new List<ObjWrap>());
-
-                    dict[_ObjType].Add(new ObjWrap
-                    {
-                        Id = Convert.ToInt32(dr["id"]),
-                        EbObjectType = Convert.ToInt32(dr["obj_type"]),
-                        Refid = dr["refid"].ToString(),
-                        EbType = _EbObjType.Name,
+                    response.Pages.Add(new MobilePagesWraper {
+                        Name = dr["obj_name"].ToString(),
                         DisplayName = dr["display_name"].ToString(),
-                        VersionNumber = dr["version_num"].ToString()
+                        Version = dr["version_num"].ToString(),
+                        Json = dr["obj_json"].ToString()
                     });
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Exception at sidebar user mobile req ::" + ex.Message);
-            }
-
-            return new ObjectListToMob { ObjectTypes = dict };
-        }
-
-        public EbObjectToMobResponse Get(EbObjectToMobRequest request)
-        {
-            EbObjectToMobResponse response = new EbObjectToMobResponse();
-            EbObjectService StudioServices = base.ResolveService<EbObjectService>();
-            try
-            {
-                var resp = (EbObjectParticularVersionResponse)StudioServices.Get(new EbObjectParticularVersionRequest { RefId = request.RefId });
-
-                if (!resp.Data.Any())
-                    return null;
-
-                response.ObjectWraper = resp.Data[0];
-
-                if (resp.Data[0].EbObjectType == EbObjectTypes.Report)
-                {
-
-                }
-                else if (resp.Data[0].EbObjectType == EbObjectTypes.TableVisualization)
-                {
-
-                }
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("EXCEPTION AT EbObjectToMobResponse" + e.Message);
-                Console.WriteLine(e.StackTrace);
+                Console.WriteLine("Exception at object list for user mobile req ::" + ex.Message);
             }
 
             return response;
