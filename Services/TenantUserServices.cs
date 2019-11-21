@@ -291,7 +291,7 @@ namespace ExpressBase.ServiceStack.Services
             return new LocationInfoResponse { Locations = locs, Config = Conf };
         }
 
-        public GetUserDashBoardObjectsResponse Any (GetUserDashBoardObjectsRequest request)
+        public GetUserDashBoardObjectsResponse Any(GetUserDashBoardObjectsRequest request)
         {
             string query = @"SELECT t2.* FROM
                         (
@@ -303,8 +303,9 @@ namespace ExpressBase.ServiceStack.Services
     			                        eb_objects_status eos WHERE eos.id IN (
 					                        SELECT MAX(eos1.id) AS id1 FROM eb_objects_status eos1 WHERE eos1.eb_obj_ver_id IN(
 						                        SELECT eov.id FROM eb_objects_ver eov, eb_objects eo 
-                                                WHERE eov.eb_objects_id = ANY(string_to_array(:ids,',')::int[])
-                                                AND eov.eb_objects_id = eo.id 
+                                                WHERE
+                                                eov.eb_objects_id = eo.id And eo.obj_type = 22
+                                                {0}
                                                 AND coalesce(eov.eb_del,'F')='F' 
                                                 AND coalesce(eo.eb_del,'F')='F' ) 
                                                 GROUP BY eos1.eb_obj_ver_id )
@@ -318,23 +319,34 @@ namespace ExpressBase.ServiceStack.Services
 	                        eb_objects_ver eov
                         )t2
                         ON t1.ver_id = t2.ver_id; ";
-
-             List <int> Ids = request.ObjectIds;
-             DbParameter[] parameters =
-              {
-                    this.EbConnectionFactory.DataDB.GetNewParameter("ids", EbDbTypes.String, String.Join(",",Ids)),
-                };
-
-            EbDataTable dt = EbConnectionFactory.ObjectsDB.DoQuery(query , parameters);
-            Dictionary<string, EbDashBoard> Wrap = new Dictionary<string, EbDashBoard>();
-            foreach (EbDataRow dr in dt.Rows)
+            EbDataTable dt = null;
+            if (request.SolutionOwner)
             {
-                Wrap.Add(dr["refid"].ToString(), EbSerializers.Json_Deserialize <EbDashBoard> (dr["obj_json"].ToString()));
-
+                query = string.Format(query, string.Empty);
+                dt = EbConnectionFactory.ObjectsDB.DoQuery(query);
             }
-            return new GetUserDashBoardObjectsResponse { DashBoardObjectIds = Wrap };
+            else
+            {
+                query = string.Format(query, "AND eov.eb_objects_id = ANY(string_to_array(:ids,',')::int[])");
+                DbParameter[] parameters =
+                {
+                    this.EbConnectionFactory.DataDB.GetNewParameter("ids", EbDbTypes.String, String.Join(",",request.ObjectIds)),
+                };
+                dt = EbConnectionFactory.ObjectsDB.DoQuery(query, parameters);
+            }
 
+            Dictionary<string, EbDashBoard> Wrap = new Dictionary<string, EbDashBoard>();
+
+            if(dt.Rows.Count != 0)
+            {
+                foreach (EbDataRow dr in dt.Rows)
+                {
+                    Wrap.Add(dr["refid"].ToString(), EbSerializers.Json_Deserialize<EbDashBoard>(dr["obj_json"].ToString()));
+
+                }
+            }
             
+            return new GetUserDashBoardObjectsResponse { DashBoardObjectIds = Wrap };
         }
 
         //private string GeneratePassword()
