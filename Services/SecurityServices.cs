@@ -412,38 +412,59 @@ namespace ExpressBase.ServiceStack.Services
             {
                 string selQry = @"SELECT fullname,nickname,email,alternateemail,dob,sex,phnoprimary,phnosecondary,landline,phextension,preferencesjson
 						FROM eb_users WHERE id = :id ; 
-                SELECT t2.* FROM
-                        (
-	                        SELECT 
- 		                        q.ver_id as ver_id FROM( 
-			                        SELECT 
-				                        eos.eb_obj_ver_id as ver_id, eos.status as t_status 
-			                        FROM 
-    			                        eb_objects_status eos WHERE eos.id IN (
-					                        SELECT MAX(eos1.id) AS id1 FROM eb_objects_status eos1 WHERE eos1.eb_obj_ver_id IN(
-						                        SELECT eov.id FROM eb_objects_ver eov, eb_objects eo 
-                                                WHERE eov.eb_objects_id = ANY(string_to_array(:ids,',')::int[])
-                                                AND eov.eb_objects_id = eo.id 
-                                                AND coalesce(eov.eb_del,'F')='F' 
-                                                AND coalesce(eo.eb_del,'F')='F' ) 
-                                                GROUP BY eos1.eb_obj_ver_id )
-				                        )q WHERE t_status=3
-                        ) t1
-                        LEFT JOIN				
-                        (
-                        SELECT 
- 	                        eov.eb_objects_id, eov.id AS ver_id, eov.refid,eo.display_name
-                        FROM
-	                        eb_objects_ver eov,eb_objects eo
-						WHERE	eo.id = eov.eb_objects_id
-                        )t2
-                        ON t1.ver_id = t2.ver_id;";
+                            SELECT t2.* FROM
+                                (
+	                                SELECT 
+ 		                                q.ver_id as ver_id FROM( 
+			                                SELECT 
+				                                eos.eb_obj_ver_id as ver_id, eos.status as t_status 
+			                                FROM 
+    			                                eb_objects_status eos WHERE eos.id IN (
+					                                SELECT MAX(eos1.id) AS id1 FROM eb_objects_status eos1 WHERE eos1.eb_obj_ver_id IN(
+						                                SELECT eov.id FROM eb_objects_ver eov, eb_objects eo 
+                                                        WHERE  eov.eb_objects_id = eo.id And eo.obj_type = 22
+                                                        {0}
+                                                        AND eov.eb_objects_id = eo.id 
+                                                        AND coalesce(eov.eb_del,'F')='F' 
+                                                        AND coalesce(eo.eb_del,'F')='F' ) 
+                                                        GROUP BY eos1.eb_obj_ver_id )
+				                                )q WHERE t_status=3
+                                ) t1
+                                LEFT JOIN				
+                                (
+                                SELECT 
+ 	                                eov.eb_objects_id, eov.id AS ver_id, eov.refid,eo.display_name
+                                FROM
+	                                eb_objects_ver eov,eb_objects eo
+						        WHERE	eo.id = eov.eb_objects_id
+                                )t2
+                                ON t1.ver_id = t2.ver_id;";
 
-                DbParameter[] parameters = { 
+                if (request.IsSolutionOwner)
+                {
+                    selQry = string.Format(selQry, string.Empty);
+                    DbParameter[] para = {
                     this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.UserId),
-                    this.EbConnectionFactory.DataDB.GetNewParameter("ids", EbDbTypes.String, String.Join(",",request.DBIds))
-                };
-                ds = this.EbConnectionFactory.DataDB.DoQueries(selQry, parameters);
+                    };
+                    ds = this.EbConnectionFactory.DataDB.DoQueries(selQry, para);
+                }
+                else
+                {
+                    selQry = string.Format(selQry, "AND eov.eb_objects_id = ANY(string_to_array(:ids,',')::int[])");
+                    DbParameter[] param2 =
+                    {
+                        this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.UserId),
+                        this.EbConnectionFactory.DataDB.GetNewParameter("ids", EbDbTypes.String, String.Join(",",request.DBIds))
+                    };
+                    ds = this.EbConnectionFactory.DataDB.DoQueries(selQry, param2);
+                }
+
+
+                //parameters = { 
+                //    this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.UserId),
+                //    this.EbConnectionFactory.DataDB.GetNewParameter("ids", EbDbTypes.String, String.Join(",",request.DBIds))
+                //};
+                //ds = this.EbConnectionFactory.DataDB.DoQueries(selQry, parameters);
             }
             if (ds.Tables[0].Rows.Count > 0)
             {
