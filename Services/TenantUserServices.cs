@@ -3,6 +3,7 @@ using ExpressBase.Common.Data;
 using ExpressBase.Common.Extensions;
 using ExpressBase.Common.LocationNSolution;
 using ExpressBase.Common.Structures;
+using ExpressBase.Objects;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ExpressBase.Security.Core;
 using Newtonsoft.Json;
@@ -288,6 +289,64 @@ namespace ExpressBase.ServiceStack.Services
                 });
             }
             return new LocationInfoResponse { Locations = locs, Config = Conf };
+        }
+
+        public GetUserDashBoardObjectsResponse Any(GetUserDashBoardObjectsRequest request)
+        {
+            string query = @"SELECT t2.* FROM
+                        (
+	                        SELECT 
+ 		                        q.ver_id as ver_id FROM( 
+			                        SELECT 
+				                        eos.eb_obj_ver_id as ver_id, eos.status as t_status 
+			                        FROM 
+    			                        eb_objects_status eos WHERE eos.id IN (
+					                        SELECT MAX(eos1.id) AS id1 FROM eb_objects_status eos1 WHERE eos1.eb_obj_ver_id IN(
+						                        SELECT eov.id FROM eb_objects_ver eov, eb_objects eo 
+                                                WHERE
+                                                eov.eb_objects_id = eo.id And eo.obj_type = 22
+                                                {0}
+                                                AND coalesce(eov.eb_del,'F')='F' 
+                                                AND coalesce(eo.eb_del,'F')='F' ) 
+                                                GROUP BY eos1.eb_obj_ver_id )
+				                        )q WHERE t_status=3
+                        ) t1
+                        LEFT JOIN				
+                        (
+                        SELECT 
+ 	                        eov.eb_objects_id, eov.id AS ver_id, eov.refid, eov.obj_json
+                        FROM
+	                        eb_objects_ver eov
+                        )t2
+                        ON t1.ver_id = t2.ver_id; ";
+            EbDataTable dt = null;
+            if (request.SolutionOwner)
+            {
+                query = string.Format(query, string.Empty);
+                dt = EbConnectionFactory.ObjectsDB.DoQuery(query);
+            }
+            else
+            {
+                query = string.Format(query, "AND eov.eb_objects_id = ANY(string_to_array(:ids,',')::int[])");
+                DbParameter[] parameters =
+                {
+                    this.EbConnectionFactory.DataDB.GetNewParameter("ids", EbDbTypes.String, String.Join(",",request.ObjectIds)),
+                };
+                dt = EbConnectionFactory.ObjectsDB.DoQuery(query, parameters);
+            }
+
+            Dictionary<string, EbDashBoard> Wrap = new Dictionary<string, EbDashBoard>();
+
+            if(dt.Rows.Count != 0)
+            {
+                foreach (EbDataRow dr in dt.Rows)
+                {
+                    Wrap.Add(dr["refid"].ToString(), EbSerializers.Json_Deserialize<EbDashBoard>(dr["obj_json"].ToString()));
+
+                }
+            }
+            
+            return new GetUserDashBoardObjectsResponse { DashBoardObjectIds = Wrap };
         }
 
         //private string GeneratePassword()
