@@ -1,5 +1,6 @@
 ﻿using ExpressBase.Common;
 using ExpressBase.Common.Data;
+using ExpressBase.Common.LocationNSolution;
 using ExpressBase.Common.Objects;
 using ExpressBase.Common.ServiceClients;
 using ExpressBase.Objects;
@@ -56,7 +57,7 @@ namespace ExpressBase.ServiceStack.MQServices
                 UserAuthId = request.UserAuthId,
                 WhichConsole = request.WhichConsole,
                 IsDemoApp = request.IsDemoApp,
-                SelectedSolutionId=request.SelectedSolutionId
+                SelectedSolutionId = request.SelectedSolutionId
             });
             Log.Info("ImportApplicationRequest published to Mq");
             return resp;
@@ -135,7 +136,7 @@ namespace ExpressBase.ServiceStack.MQServices
                 AppWrapper AppObj = appstoreService.Get(new GetOneFromAppStoreRequest
                 {
                     Id = request.Id,
-                    SolnId = request.SolnId,
+                    SolnId = request.SelectedSolutionId,
                     UserAuthId = request.UserAuthId,
                     UserId = request.UserId,
                     WhichConsole = request.WhichConsole,
@@ -164,7 +165,8 @@ namespace ExpressBase.ServiceStack.MQServices
                             Description = AppObj.Description,
                             AppIcon = AppObj.Icon
                         });
-                        Console.WriteLine("Created application : "+ _appname);
+                        Console.WriteLine("Created application : " + _appname);
+                        bool _isVersionedSolution = IsVersioned(request.SelectedSolutionId, request.UserId);
                         for (int i = ObjectCollection.Count - 1; i >= 0; i--)
                         {
                             UniqueObjectNameCheckResponse uniqnameresp;
@@ -178,9 +180,9 @@ namespace ExpressBase.ServiceStack.MQServices
                                     obj.Name = obj.Name + "(" + o + ")";
                             }
                             while (!uniqnameresp.IsUnique);
-
+                                                       
                             ObjectLifeCycleStatus _status;
-                            if (request.IsDemoApp)
+                            if (request.IsDemoApp || !_isVersionedSolution)
                                 _status = ObjectLifeCycleStatus.Live;
                             else
                                 _status = ObjectLifeCycleStatus.Dev;
@@ -199,7 +201,7 @@ namespace ExpressBase.ServiceStack.MQServices
                                 SourceSolutionId = (obj.RefId.Split("-"))[0],
                                 SourceObjId = (obj.RefId.Split("-"))[3],
                                 SourceVerID = (obj.RefId.Split("-"))[4],
-                                SolnId = request.SolnId,
+                                SolnId = request.SelectedSolutionId,
                                 UserId = request.UserId,
                                 UserAuthId = request.UserAuthId,
                                 WhichConsole = request.WhichConsole,
@@ -213,16 +215,18 @@ namespace ExpressBase.ServiceStack.MQServices
                         for (int i = ObjectCollection.Count - 1; i >= 0; i--)
                         {
                             EbObject obj = ObjectCollection[i];
+                            string _mapRefid = obj.RefId;
+                            obj.RefId = RefidMap[obj.RefId];
                             obj.ReplaceRefid(RefidMap);
                             EbObject_SaveRequest ss = new EbObject_SaveRequest
                             {
-                                RefId = RefidMap[obj.RefId],
+                                RefId = RefidMap[_mapRefid],
                                 Name = obj.Name,
                                 DisplayName = obj.DisplayName,
                                 Description = obj.Description,
                                 Json = EbSerializers.Json_Serialize(obj),
                                 Apps = appres.Id.ToString(),
-                                SolnId = request.SolnId,
+                                SolnId = request.SelectedSolutionId,
                                 UserId = request.UserId,
                                 UserAuthId = request.UserAuthId,
                                 WhichConsole = request.WhichConsole,
@@ -280,6 +284,16 @@ namespace ExpressBase.ServiceStack.MQServices
             EbObject obj = EbSerializers.Json_Deserialize(res.Data[0].Json);
             obj.RefId = _refid;
             return obj;
+        }
+        public bool IsVersioned(string selectedSolnId, int uid)
+        {
+            Eb_Solution soln = this.Redis.Get<Eb_Solution>(String.Format("solution_{0}", selectedSolnId));
+            if (soln == null)
+            {
+                base.ResolveService<TenantUserServices>().Post(new UpdateSolutionRequest { SolnId = selectedSolnId, UserId = uid });
+                soln = this.Redis.Get<Eb_Solution>(String.Format("solution_{0}", selectedSolnId));
+            }
+            return soln.IsVersioningEnabled;
         }
     }
 }
