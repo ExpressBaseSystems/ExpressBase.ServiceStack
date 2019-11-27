@@ -14,7 +14,7 @@ namespace ExpressBase.ServiceStack.MQServices
     [Restrict(InternalOnly = true)]
     public class RefreshSolutionConnections : EbMqBaseService
     {
-        public RefreshSolutionConnections( IMessageProducer _mqp) : base( _mqp) { }
+        public RefreshSolutionConnections(IMessageProducer _mqp) : base(_mqp) { }
         public UpdateRedisConnectionsMqResponse Post(UpdateRedisConnectionsMqRequest request)
         {
             string q = @"SELECT esolution_id,isolution_id FROM eb_solutions WHERE eb_del=false;";
@@ -26,7 +26,7 @@ namespace ExpressBase.ServiceStack.MQServices
 
                     string SolutionId = row["isolution_id"].ToString();
                     if (SolutionId != string.Empty)
-                        this.MessageProducer3.Publish(new RefreshSolutionConnectionsBySolutionIdAsyncRequest { SolutionId = SolutionId, SolnId = SolutionId });
+                        this.MessageProducer3.Publish(new RefreshSolutionConnectionsRequest { SolnId = SolutionId, UserId = request.UserId });
                 }
             }
             catch (Exception e)
