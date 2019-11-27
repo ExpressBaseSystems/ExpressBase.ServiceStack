@@ -26,7 +26,7 @@ namespace ExpressBase.ServiceStack.MQServices
 
                     string SolutionId = row["isolution_id"].ToString();
                     if (SolutionId != string.Empty)
-                        this.MessageProducer3.Publish(new RefreshSolutionConnectionsRequest { SolnId = SolutionId, UserId = request.UserId });
+                        this.MessageProducer3.Publish(new RefreshSolutionConnectionsRequest { SolnId = SolutionId });
                 }
             }
             catch (Exception e)
