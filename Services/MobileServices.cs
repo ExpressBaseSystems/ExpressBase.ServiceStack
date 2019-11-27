@@ -190,7 +190,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 string sql = string.Empty;
                 EbDataTable dt = null;
-                const string idcheck = "AND EOA.obj_id = ANY(string_to_array(:ids, ',')::int[])";
+                string idcheck = EbConnectionFactory.DataDB.EB_GET_MOB_MENU_OBJ_IDS;
                 const string acquery = @"SELECT 
 	                                        EA.id,
 	                                        EA.applicationname,
@@ -258,7 +258,7 @@ namespace ExpressBase.ServiceStack.Services
 
                 string query = string.Empty;
 
-                const string idcheck = "AND OD.id = ANY(string_to_array(:objids, ',')::int[])";
+                string idcheck = EbConnectionFactory.DataDB.EB_GET_MOBILE_PAGES;
 
                 const string Sql = @"SELECT obj_name,display_name,version_num,obj_json FROM (
 				                                SELECT 
@@ -307,7 +307,7 @@ namespace ExpressBase.ServiceStack.Services
                         Name = dr["obj_name"].ToString(),
                         DisplayName = dr["display_name"].ToString(),
                         Version = dr["version_num"].ToString(),
-                        Page = EbSerializers.Json_Deserialize<EbMobilePage>(dr["obj_json"].ToString())
+                        Json = dr["obj_json"].ToString()
                     });
                 }
             }

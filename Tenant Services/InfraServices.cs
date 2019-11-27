@@ -24,6 +24,7 @@ using System.Text;
 using System.Globalization;
 using ExpressBase.ServiceStack.MQServices;
 using Newtonsoft.Json;
+using ExpressBase.Security;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -176,6 +177,9 @@ namespace ExpressBase.ServiceStack.Services
                     {
                         resp.SolId = response.Id;
                         resp.Status = true;
+                        User user = this.Redis.Get<User>(request.UserAuthId);
+                        user.Permissions.Add(response.SolURL + "-" + (int)SystemRoles.SolutionOwner);
+                        this.Redis.Set<User>(request.UserAuthId, user);
                     }
                 }
                 else
@@ -439,6 +443,7 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     //set esid=>isid map in redis
                     this.Redis.Set<string>(string.Format(CoreConstants.SOLUTION_ID_MAP, Sol_id_autogen), Sol_id_autogen);
+                    resp.SolURL = Sol_id_autogen;
 
                     if (request.DeployDB)
                     {
@@ -1894,6 +1899,11 @@ namespace ExpressBase.ServiceStack.Services
             return new UpdateSidMapResponse();
         }
 
+        public UpdateRedisConnectionsResponse Post(UpdateRedisConnectionsRequest request)
+        {
+            this.MessageProducer3.Publish(new UpdateRedisConnectionsMqRequest());
+            return new UpdateRedisConnectionsResponse();
+        }
         //public InfraDb_GENERIC_SELECTResponse Any(InfraDb_GENERIC_SELECTRequest req)
         //{
         //    using (var con = InfraDatabaseFactory.InfraDB.GetNewConnection())
