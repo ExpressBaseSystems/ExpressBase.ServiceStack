@@ -1274,6 +1274,8 @@ namespace ExpressBase.ServiceStack
                 return EbObjectTypes.CalendarView.IntCode;
             else if(obj is EbMobilePage)
                 return EbObjectTypes.MobilePage.IntCode;
+            else if (obj is EbSqlJob)
+                return EbObjectTypes.SqlJob.IntCode;
             else
                 return -1;
         }
@@ -1346,6 +1348,10 @@ namespace ExpressBase.ServiceStack
             else if (obj is EbMobilePage)
             {
                 Redis.Set(refId, (EbMobilePage)obj);
+            }
+            else if (obj is EbSqlJob)
+            {
+                Redis.Set(refId, (EbSqlJob)obj);
             }
         }
 
