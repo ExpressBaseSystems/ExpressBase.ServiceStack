@@ -187,11 +187,17 @@ namespace ExpressBase.ServiceStack
         }
 
         [CompressResponse]
-        public EbObjAllVerForDashBoardResp Get(EbObjAllVerForDashBoardRqst request)
+        public GetAllLiveObjectsResp Get(GetAllLiveObjectsRqst request)// Get All Live Objects of particular types.
         {
             List<EbObjectWrapper> wrap = new List<EbObjectWrapper>();
-
-            string qry = @"select 
+            string Typestring = string.Empty;
+            foreach(int type in request.Typelist)
+            {
+                Typestring += $"obj_type = {type} or ";
+            }
+            int place = Typestring.LastIndexOf("or");
+            Typestring = Typestring.Remove(place, "or".Length).Insert(place, string.Empty);
+            string qry = $@"select 
 		            o.id, o.display_name, v.refid,  o.obj_type, v.id version_id, v.version_num 
 	            from 
 		            eb_objects o
@@ -205,7 +211,7 @@ namespace ExpressBase.ServiceStack
 			            where 
 				            vv.eb_objects_id=o.id and vv.id=eos.eb_obj_ver_id and eos.status=3 and COALESCE(v.working_mode, 'F')='F')
                     )	
-	            where (obj_type = 14 or obj_type = 16 or obj_type = 17 or obj_type =21)
+	            where ({Typestring})
 			            AND COALESCE(o.eb_del,'F')='F' 
 	            order by o.id";
 
@@ -233,7 +239,62 @@ namespace ExpressBase.ServiceStack
                     DisplayName = dr[1].ToString()
                 });
             }
-            return new EbObjAllVerForDashBoardResp { Data = f_dict };
+            return new GetAllLiveObjectsResp { Data = f_dict };
+        }
+
+        [CompressResponse]
+        public GetAllCommitedObjectsResp Get(GetAllCommitedObjectsRqst request)// Get All Commited Objects of particular types.
+        {
+            List<EbObjectWrapper> wrap = new List<EbObjectWrapper>();
+            string Typestring = string.Empty;
+            foreach (int type in request.Typelist)
+            {
+                Typestring += $"EO.obj_type = {type} or ";
+            }
+            int place = Typestring.LastIndexOf("or");
+            Typestring = Typestring.Remove(place, "or".Length).Insert(place, string.Empty);
+
+            string qry = $@"SELECT 
+                            EO.id, EO.obj_name, EO.obj_type, EO.obj_cur_status,EO.obj_desc,
+                            EOV.id, EOV.eb_objects_id, EOV.version_num, EOV.obj_changelog, EOV.commit_ts, EOV.commit_uid, EOV.refid,
+                            EU.fullname, EO.display_name
+                        FROM 
+                            eb_objects EO, eb_objects_ver EOV
+                        LEFT JOIN
+	                        eb_users EU
+                        ON 
+	                        EOV.commit_uid=EU.id
+                        WHERE
+                            EO.id = EOV.eb_objects_id  AND COALESCE(EOV.working_mode, 'F') <> 'T'
+                            AND COALESCE( EO.eb_del, 'F') = 'F' AND ({Typestring})
+                        ORDER BY
+                            EO.obj_name , EOV.id
+                ";
+
+            EbDataTable dt = EbConnectionFactory.ObjectsDB.DoQuery(qry);
+
+            Dictionary<string, List<EbObjectWrapper>> f_dict = new Dictionary<string, List<EbObjectWrapper>>();
+            List<EbObjectWrapper> wrap_list = null;
+            foreach (EbDataRow dr in dt.Rows)
+            {
+                string _nameKey = dr[1].ToString();
+                if (!f_dict.ContainsKey(_nameKey))
+                {
+                    wrap_list = new List<EbObjectWrapper>();
+                    f_dict.Add(_nameKey, wrap_list);
+                }
+
+                wrap_list.Add(new EbObjectWrapper
+                {
+                    Id = Convert.ToInt32(dr[0]),
+                    Name = dr[1].ToString(),
+                    EbObjectType = ((EbObjectType)Convert.ToInt32(dr[2])).IntCode,
+                    VersionNumber = dr[7].ToString(),
+                    RefId = dr[11].ToString(),
+                    DisplayName = dr[13].ToString()
+                });
+            }
+            return new GetAllCommitedObjectsResp { Data = f_dict };
         }
 
         public EbObjAllVerWithoutCircularRefResp Get(EbObjAllVerWithoutCircularRefRqst request)// Get all latest committed versions of EbObject without json - circular reference situation avoided on query
