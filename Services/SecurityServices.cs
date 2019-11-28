@@ -450,7 +450,7 @@ namespace ExpressBase.ServiceStack.Services
                 }
                 else
                 {
-                    selQry = string.Format(selQry, "AND eov.eb_objects_id = ANY(string_to_array(:ids,',')::int[])");
+                    selQry = string.Format(selQry, EbConnectionFactory.DataDB.EB_GET_MYPROFILE_OBJID);
                     DbParameter[] param2 =
                     {
                         this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.UserId),

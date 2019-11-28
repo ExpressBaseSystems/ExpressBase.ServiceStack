@@ -1443,5 +1443,73 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
 
         }
+        
+        public UpdateAllFormTablesResponse Post(UpdateAllFormTablesRequest request)
+        {            
+            string msg = $"Start* UpdateAllFormTables {DateTime.Now}\n\n";   
+            try
+            {
+                User u = this.Redis.Get<User>(request.UserAuthId);
+                if (u.Roles.Contains(SystemRoles.SolutionOwner.ToString()))
+                {
+                    string Qry = @"SELECT refid,display_name,obj_json FROM (
+				                        SELECT 
+					                        EO.id, EOV.refid, EO.display_name, EOV.obj_json
+				                        FROM
+					                        eb_objects EO
+				                        LEFT JOIN 
+					                        eb_objects_ver EOV ON (EOV.eb_objects_id = EO.id)
+				                        LEFT JOIN
+					                        eb_objects_status EOS ON (EOS.eb_obj_ver_id = EOV.id)
+				                        WHERE
+					                        COALESCE(EO.eb_del, 'F') = 'F'
+				                        AND EO.obj_type = 0 AND 
+					                        EOS.id = ANY( Select MAX(id) from eb_objects_status EOS Where EOS.eb_obj_ver_id = EOV.id)
+				                        ) OD 
+                                    LEFT JOIN eb_objects2application EO2A ON (EO2A.obj_id = OD.id)
+	                                    WHERE COALESCE(EO2A.eb_del, 'F') = 'F' LIMIT 500;";
+
+                    EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(Qry);
+                    msg += $"Form Objects Count : {dt.Rows.Count} \n";
+                    foreach (EbDataRow dr in dt.Rows)
+                    {
+                        if (dr.IsDBNull(2))
+                            msg += $"\n\nNull Json found, Name : {dr[1].ToString()}";
+                        else
+                        {
+                            EbWebForm F = null;
+                            try
+                            {
+                                F = EbSerializers.Json_Deserialize<EbWebForm>(dr[2].ToString());
+                            }
+                            catch (Exception ex)
+                            {
+                                msg += $"\n\nDeserialization Failed, Name : {dr[1].ToString()}, Message : {ex.Message}";
+                            }
+                            if(F != null)
+                            {
+                                F.AutoDeployTV = false;
+                                try
+                                {
+                                    this.Any(new CreateWebFormTableRequest { WebObj = F });
+                                    msg += $"\n\nSuccess   RefId : {dr[0].ToString()}, Name : {dr[1].ToString()} ";
+                                }
+                                catch(Exception e)
+                                {
+                                    msg += $"\n\nWarning   RefId : {dr[0].ToString()}, Name : {dr[1].ToString()}, Message : {e.Message} ";
+                                }
+                            }
+                        }
+                    }
+                    msg += $"\n\nEnd* UpdateAllFormTables {DateTime.Now}";
+                }
+            }
+            catch(Exception e)
+            {
+                msg += e.Message;
+            }
+            Console.WriteLine(msg);
+            return new UpdateAllFormTablesResponse() { Message = msg };
+        }
     }
 }
