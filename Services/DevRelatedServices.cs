@@ -111,10 +111,9 @@ namespace ExpressBase.ServiceStack
 				                     EO.id = EO2A.obj_id
 				                WHERE 
 				                    EO2A.app_id = :appid
-								AND
-									EO.id = EOV.eb_objects_id
-                                AND
-									COALESCE(EO.eb_del, 'F') = 'F'
+								    AND	EO.id = EOV.eb_objects_id
+                                    AND	COALESCE(EO.eb_del, 'F') = 'F'
+                                    AND COALESCE(EO2A.eb_del, 'F') = 'F'
 				                ORDER BY
 				                    EO.obj_type;";
 
