@@ -972,7 +972,7 @@ namespace ExpressBase.ServiceStack
                     var _hoidayRow = _datatable.Rows.FirstOrDefault(row => row["holiday_date"].Equals(date));
                     if (_hoidayRow != null)
                     {
-                        cls = "holiday_class";
+                        cls = "holiday_class public-holiday";
                         tooltip = _hoidayRow["holiday_name"].ToString();
                     }
                     else if(this._ebSolution.Locations.ContainsKey(CurLocId))
@@ -982,7 +982,11 @@ namespace ExpressBase.ServiceStack
                         else if(this._ebSolution.Locations[CurLocId].WeekHoliday2.ToLower() == date.ToString("dddd").ToLower())
                             tooltip = this._ebSolution.Locations[CurLocId].WeekHoliday2;
                         if(tooltip != string.Empty)
-                            cls = "holiday_class";
+                            cls = "holiday_class week-holiday";
+                    }
+                    if (DateTime.Now.Date.Equals(date))
+                    {
+                        cls += "current_date_class";
                     }
                     _dv.Columns.Add(new DVStringColumn
                     {
