@@ -14,6 +14,7 @@ using ExpressBase.Security;
 using ExpressBase.Common.Extensions;
 using System.Data.Common;
 using Newtonsoft.Json;
+using ExpressBase.Objects.Objects.MobilePage;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -34,6 +35,12 @@ namespace ExpressBase.ServiceStack.Services
                 WebFormServices webservices = base.ResolveService<WebFormServices>();
 
                 int status = webservices.CreateOrAlterTable(schema.FormName, _TableColMeta, ref msg);
+
+                //deploy webform if create 
+                if (status == 0)
+                {
+                    this.DeployWebForm(request);
+                }
 
                 if ((request.MobilePage.Container as EbMobileForm).AutoDeployMV)
                     this.DeployMobileVis(request, _TableColMeta);
@@ -70,6 +77,9 @@ namespace ExpressBase.ServiceStack.Services
                     _metaList.Add(new TableColumnMeta { Name = "eb_del", Type = vDbTypes.Boolean, Default = "F" });
                     _metaList.Add(new TableColumnMeta { Name = "eb_void", Type = vDbTypes.Boolean, Default = "F", Label = "Void ?" });
                     _metaList.Add(new TableColumnMeta { Name = "eb_loc_id", Type = vDbTypes.Int32, Label = "Location" });
+                    _metaList.Add(new TableColumnMeta { Name = "eb_device_id", Type = vDbTypes.String, Label = "Device Id" });
+                    _metaList.Add(new TableColumnMeta { Name = "eb_appversion", Type = vDbTypes.String, Label = "App Version" });
+                    _metaList.Add(new TableColumnMeta { Name = "eb_sync_time", Type = vDbTypes.DateTime, Label = "Sync Time" });
                 }
             }
             return _metaList;
@@ -122,6 +132,49 @@ namespace ExpressBase.ServiceStack.Services
                 string refid = this.CreateNewObjectRequest(request, vispage);
                 (request.MobilePage.Container as EbMobileForm).AutoGenMVRefid = refid;
                 this.SaveObjectRequest(request, request.MobilePage);
+            }
+        }
+
+        private void DeployWebForm(CreateMobileFormTableRequest request)
+        {
+            string autgenref = (request.MobilePage.Container as EbMobileForm).WebFormRefId;
+
+            try
+            {
+                if (string.IsNullOrEmpty(autgenref))
+                {
+                    EbMobileForm mobileform = (request.MobilePage.Container as EbMobileForm);
+
+                    EbWebForm webform = new EbWebForm
+                    {
+                        Name = request.MobilePage.Name + "_autogen_webform",
+                        DisplayName = request.MobilePage.DisplayName + " AutoGen Webform",
+                        TableName = mobileform.TableName,
+                        Padding = new UISides { Top = 0, Right = 0, Bottom = 0, Left = 0 }
+                    };
+
+                    var counter = new Dictionary<string, int>();
+                    foreach (EbMobileControl ctrl in mobileform.ChiledControls)
+                    {
+                        string name = ctrl.GetType().Name;
+
+                        if (counter.ContainsKey(name))
+                            counter[name]++;
+                        else
+                            counter[name] = 0;
+
+                        EbControl Wctrl = ctrl.GetWebFormCtrl(counter[name]);
+                        webform.Controls.Add(Wctrl);
+                    }
+
+                    string refid = this.CreateNewObjectRequest(request, webform);
+                    (request.MobilePage.Container as EbMobileForm).WebFormRefId = refid;
+                    this.SaveObjectRequest(request, request.MobilePage);
+                }
+            }
+            catch (Exception ee)
+            {
+                Console.WriteLine(ee.Message);
             }
         }
 
@@ -291,7 +344,7 @@ namespace ExpressBase.ServiceStack.Services
 
                 if (UserObject.Roles.Contains(SystemRoles.SolutionOwner.ToString()) || UserObject.Roles.Contains(SystemRoles.SolutionAdmin.ToString()))
                 {
-                    query = string.Format(Sql,string.Empty);
+                    query = string.Format(Sql, string.Empty);
                 }
                 else
                 {
@@ -303,7 +356,8 @@ namespace ExpressBase.ServiceStack.Services
 
                 foreach (EbDataRow dr in dt.Rows)
                 {
-                    response.Pages.Add(new MobilePagesWraper {
+                    response.Pages.Add(new MobilePagesWraper
+                    {
                         Name = dr["obj_name"].ToString(),
                         DisplayName = dr["display_name"].ToString(),
                         Version = dr["version_num"].ToString(),

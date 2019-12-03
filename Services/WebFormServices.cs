@@ -109,6 +109,8 @@ namespace ExpressBase.ServiceStack.Services
 
         public int CreateOrAlterTable(string tableName, List<TableColumnMeta> listNamesAndTypes, ref string Msg)
         {
+            int status = -1;
+
             //checking for space in column name, table name
             if (tableName.Contains(CharConstants.SPACE))
                 throw new FormException("Table creation failed - Invalid table name: " + tableName);
@@ -124,22 +126,20 @@ namespace ExpressBase.ServiceStack.Services
                 if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.ORACLE)////////////
                 {
                     sql = "CREATE TABLE @tbl(id NUMBER(10), @cols)".Replace("@cols", cols).Replace("@tbl", tableName);
-                    int _rowaff = this.EbConnectionFactory.DataDB.CreateTable(sql);//Table Creation
-                    CreateSquenceAndTrigger(tableName);//
-                    return _rowaff;
+                    this.EbConnectionFactory.DataDB.CreateTable(sql);//Table Creation
+                    CreateSquenceAndTrigger(tableName);
                 }
                 else if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.PGSQL)
                 {
                     sql = "CREATE TABLE @tbl( id SERIAL PRIMARY KEY, @cols)".Replace("@cols", cols).Replace("@tbl", tableName);
-                    return this.EbConnectionFactory.DataDB.CreateTable(sql);
+                    this.EbConnectionFactory.DataDB.CreateTable(sql);
                 }
                 else if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.MYSQL)
                 {
                     sql = "CREATE TABLE @tbl( id INTEGER AUTO_INCREMENT PRIMARY KEY, @cols)".Replace("@cols", cols).Replace("@tbl", tableName);
-                    return this.EbConnectionFactory.DataDB.CreateTable(sql);
+                    this.EbConnectionFactory.DataDB.CreateTable(sql);
                 }
-
-                return 0;
+                status = 0;
             }
             else
             {
@@ -186,7 +186,6 @@ namespace ExpressBase.ServiceStack.Services
                             int _aff = this.EbConnectionFactory.DataDB.UpdateTable(sql);
                             if (appendId)
                                 CreateSquenceAndTrigger(tableName);
-                            return _aff;
                         }
                     }
                     else if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.PGSQL)
@@ -196,7 +195,7 @@ namespace ExpressBase.ServiceStack.Services
                         {
                             sql = "ALTER TABLE @tbl ADD COLUMN " + (sql.Substring(0, sql.Length - 1)).Replace(",", ", ADD COLUMN ");
                             sql = sql.Replace("@tbl", tableName);
-                            return this.EbConnectionFactory.DataDB.UpdateTable(sql);
+                            this.EbConnectionFactory.DataDB.UpdateTable(sql);
                         }
                     }
                     else if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.MYSQL)
@@ -206,13 +205,13 @@ namespace ExpressBase.ServiceStack.Services
                         {
                             sql = "ALTER TABLE @tbl ADD COLUMN " + (sql.Substring(0, sql.Length - 1)).Replace(",", ", ADD COLUMN ");
                             sql = sql.Replace("@tbl", tableName);
-                            return this.EbConnectionFactory.DataDB.UpdateTable(sql);
+                            this.EbConnectionFactory.DataDB.UpdateTable(sql);
                         }
                     }
-                    return 0;
+                    status = 1;
                 }
             }
-            return -1;
+            return status;
             //throw new FormException("Table creation failed - Table name: " + tableName);
         }
 
@@ -1443,10 +1442,10 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
 
         }
-        
+
         public UpdateAllFormTablesResponse Post(UpdateAllFormTablesRequest request)
-        {            
-            string msg = $"Start* UpdateAllFormTables {DateTime.Now}\n\n";   
+        {
+            string msg = $"Start* UpdateAllFormTables {DateTime.Now}\n\n";
             try
             {
                 User u = this.Redis.Get<User>(request.UserAuthId);
@@ -1486,7 +1485,7 @@ namespace ExpressBase.ServiceStack.Services
                             {
                                 msg += $"\n\nDeserialization Failed, Name : {dr[1].ToString()}, Message : {ex.Message}";
                             }
-                            if(F != null)
+                            if (F != null)
                             {
                                 F.AutoDeployTV = false;
                                 try
@@ -1494,7 +1493,7 @@ namespace ExpressBase.ServiceStack.Services
                                     this.Any(new CreateWebFormTableRequest { WebObj = F });
                                     msg += $"\n\nSuccess   RefId : {dr[0].ToString()}, Name : {dr[1].ToString()} ";
                                 }
-                                catch(Exception e)
+                                catch (Exception e)
                                 {
                                     msg += $"\n\nWarning   RefId : {dr[0].ToString()}, Name : {dr[1].ToString()}, Message : {e.Message} ";
                                 }
@@ -1504,7 +1503,7 @@ namespace ExpressBase.ServiceStack.Services
                     msg += $"\n\nEnd* UpdateAllFormTables {DateTime.Now}";
                 }
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 msg += e.Message;
             }
