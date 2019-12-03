@@ -726,26 +726,34 @@ namespace ExpressBase.ServiceStack.Services
 
         public GetRowDataResponse Any(GetRowDataRequest request)
         {
+            GetRowDataResponse _dataset = new GetRowDataResponse();
             try
             {
                 Console.WriteLine("Requesting for WebFormData( Refid : " + request.RefId + ", Rowid : " + request.RowId + " ).................");
-                GetRowDataResponse _dataset = new GetRowDataResponse();
                 EbWebForm form = GetWebFormObject(request.RefId);
                 form.TableRowId = request.RowId;
                 form.RefId = request.RefId;
                 form.UserObj = request.UserObj;
                 form.SolutionObj = this.Redis.Get<Eb_Solution>(String.Format("solution_{0}", request.SolnId));
                 form.RefreshFormData(EbConnectionFactory.DataDB, this);
-                _dataset.FormData = form.FormData;
+                if (!(form.HasPermission(OperationConstants.VIEW, form.LocationId) || form.HasPermission(OperationConstants.NEW, form.LocationId) || form.HasPermission(OperationConstants.EDIT, form.LocationId)))
+                {
+                    throw new FormException("Error in loading data. Access Denied.", (int)HttpStatusCodes.UNAUTHORIZED, "Access Denied for rowid " + form.TableRowId + " , current location " + form.LocationId, string.Empty);
+                }
+                _dataset.FormDataWrap = new WebformDataWrapper() { FormData = form.FormData, Status = (int)HttpStatusCodes.OK };
                 Console.WriteLine("Returning from GetRowData Service");
-                return _dataset;
+            }
+            catch (FormException ex)
+            {
+                Console.WriteLine("FormException in GetRowData Service \nMessage : " + ex.Message + "\n" + ex.StackTrace);
+                _dataset.FormDataWrap = new WebformDataWrapper() { Message = ex.Message, Status = ex.ExceptionCode, MessageInt = ex.MessageInternal, StackTraceInt = ex.StackTraceInternal };
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Exception in GetRowData Service" + ex.Message);
-                Console.WriteLine(ex.StackTrace);
-                throw ex;
+                Console.WriteLine("Exception in GetRowData Service \nMessage : " + ex.Message + "\n" + ex.StackTrace);
+                _dataset.FormDataWrap = new WebformDataWrapper() { Message = "Something went wrong", Status = (int)HttpStatusCodes.INTERNAL_SERVER_ERROR, MessageInt = ex.Message, StackTraceInt = ex.StackTrace };
             }
+            return _dataset;
         }
 
         public GetPrefillDataResponse Any(GetPrefillDataRequest request)
@@ -757,11 +765,15 @@ namespace ExpressBase.ServiceStack.Services
                 EbWebForm form = GetWebFormObject(request.RefId);
                 form.RefId = request.RefId;
                 form.RefreshFormData(EbConnectionFactory.DataDB, this, request.Params);
-                _dataset.FormData = new WebformDataWrapper { FormData = form.FormData };
+                _dataset.FormData = new WebformDataWrapper { FormData = form.FormData, Status = (int)HttpStatusCodes.OK };
+            }
+            catch (FormException ex)
+            {
+                _dataset.FormData = new WebformDataWrapper { Message = ex.Message, Status = ex.ExceptionCode, MessageInt = ex.MessageInternal, StackTraceInt = ex.StackTraceInternal };
             }
             catch (Exception e)
             {
-                _dataset.FormData = new WebformDataWrapper { Message = "Something went wrong.", MessageInt = e.Message, StackTraceInt = e.StackTrace };
+                _dataset.FormData = new WebformDataWrapper { Message = "Something went wrong.", Status = (int)HttpStatusCodes.INTERNAL_SERVER_ERROR, MessageInt = e.Message, StackTraceInt = e.StackTrace };
             }
             Console.WriteLine("End GetPrefillData");
             return _dataset;
@@ -789,6 +801,7 @@ namespace ExpressBase.ServiceStack.Services
 
         public GetImportDataResponse Any(GetImportDataRequest request)
         {
+            GetImportDataResponse resp = new GetImportDataResponse();
             try
             {
                 Console.WriteLine("Start ImportFormData");
@@ -798,19 +811,19 @@ namespace ExpressBase.ServiceStack.Services
                 form.SolutionObj = this.Redis.Get<Eb_Solution>(String.Format("solution_{0}", request.SolnId));
                 form.ImportData(EbConnectionFactory.DataDB, this, request.Params, request.Trigger);
                 Console.WriteLine("End ImportFormData");
-                return new GetImportDataResponse() { FormDataWrap = new WebformDataWrapper { FormData = form.FormData, Status = 200 } };
+                resp.FormDataWrap = new WebformDataWrapper { FormData = form.FormData, Status = (int)HttpStatusCodes.OK };
             }
             catch (FormException ex)
             {
                 Console.WriteLine("FormException in GetImportDataRequest Service" + ex.Message);
-                return new GetImportDataResponse() { FormDataWrap = new WebformDataWrapper { Status = 500, Message = ex.Message, MessageInt = ex.MessageInternal, StackTraceInt = ex.StackTraceInternal } };
+                resp.FormDataWrap = new WebformDataWrapper { Status = ex.ExceptionCode, Message = ex.Message, MessageInt = ex.MessageInternal, StackTraceInt = ex.StackTraceInternal };
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Exception in GetImportDataRequest Service" + ex.Message);
-                Console.WriteLine(ex.StackTrace);
-                return new GetImportDataResponse() { FormDataWrap = new WebformDataWrapper { Status = 500, Message = "Exception in GetImportDataRequest", MessageInt = ex.Message, StackTraceInt = ex.StackTrace } };
+                Console.WriteLine("Exception in GetImportDataRequest Service" + ex.Message + "\n" + ex.StackTrace);
+                resp.FormDataWrap = new WebformDataWrapper { Status = (int)HttpStatusCodes.INTERNAL_SERVER_ERROR, Message = "Exception in GetImportDataRequest", MessageInt = ex.Message, StackTraceInt = ex.StackTrace };
             }
+            return resp;
         }
 
         public ExecuteSqlValueExprResponse Any(ExecuteSqlValueExprRequest request)
@@ -930,8 +943,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (FormException ex)
             {
-                Console.WriteLine("Exception in Insert/Update WebFormData" + ex.Message);
-                Console.WriteLine(ex.StackTrace);
+                Console.WriteLine("Exception in Insert/Update WebFormData" + ex.Message + "\n" + ex.StackTrace);
                 return new InsertDataFromWebformResponse()
                 {
                     Message = ex.Message,
@@ -942,8 +954,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Exception in Insert/Update WebFormData" + ex.Message);
-                Console.WriteLine(ex.StackTrace);
+                Console.WriteLine("Exception in Insert/Update WebFormData" + ex.Message + "\n" + ex.StackTrace);
                 return new InsertDataFromWebformResponse()
                 {
                     Message = "Something went wrong",
