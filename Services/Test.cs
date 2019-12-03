@@ -40,6 +40,18 @@ namespace ExpressBase.ServiceStack.Services
 
             return null;
         }
+                
+        public UpdateSidMapResponse Post(UpdateSidMapRequest request)
+        {
+            this.MessageProducer3.Publish(new UpdateSidMapMqRequest());
+            return new UpdateSidMapResponse();
+        }
+
+        public UpdateRedisConnectionsResponse Post(UpdateRedisConnectionsRequest request)
+        {
+            this.MessageProducer3.Publish(new UpdateRedisConnectionsMqRequest());
+            return new UpdateRedisConnectionsResponse();
+        }
 
 
 
