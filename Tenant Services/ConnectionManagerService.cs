@@ -121,7 +121,8 @@ namespace ExpressBase.ServiceStack.Services
 
         //public void Post(sampletest set)
         //{
-        //    this.EbConnectionFactory.SMSConnection.SendSMS("919961596200", "Hello");
+        //    byte[] byteaa = null;
+        //    this.EbConnectionFactory.ChatConnection.Send("channel", "Hello", byteaa,"hahaha");
 
         //}
 
