@@ -41,15 +41,17 @@ namespace ExpressBase.ServiceStack.Services
                 Form.AfterRedisGet(this);
                 if (Form.ExeDataPusher)
                 {
-                    foreach(EbDataPusher pusher in Form.DataPushers)
+                    foreach (EbDataPusher pusher in Form.DataPushers)
                     {
                         EbWebForm _form = GetWebFormObject(pusher.FormRefId);
                         TableSchema _table = _form.FormSchema.Tables.Find(e => e.TableName.Equals(_form.FormSchema.MasterTable));
+                        //_table.Columns.Add(new ColumnSchema { ColumnName = "eb_push_id", EbDbType = (int)EbDbTypes.String, Control = new EbTextBox { Name = "eb_push_id", Label = "Push Id" } });// multi push id
+                        //_table.Columns.Add(new ColumnSchema { ColumnName = "eb_src_id", EbDbType = (int)EbDbTypes.Decimal, Control = new EbNumeric { Name = "eb_src_id", Label = "Source Id" } });// source master table id
                         if (_table != null)
                             Form.FormSchema.Tables.Add(_table);
                     }
                 }
-                CreateWebFormTables(Form.FormSchema, request);                
+                CreateWebFormTables(Form.FormSchema, request);
             }
             return new CreateWebFormTableResponse { };
         }
@@ -76,19 +78,24 @@ namespace ExpressBase.ServiceStack.Services
                             _listNamesAndTypes.Add(new TableColumnMeta { Name = _column.ColumnName, Type = vDbTypes.GetVendorDbTypeStruct((EbDbTypes)_column.EbDbType), Label = (_column.Control as EbControl).Label, Control = (_column.Control as EbControl) });
                     }
                     if (_table.TableName == _schema.MasterTable)
+                    {
                         _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_ver_id", Type = vDbTypes.Decimal });// id refernce to the parent table will store in this column - foreignkey
+                        _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lock", Type = vDbTypes.Boolean, Default = "F", Label = "Lock ?" });// lock to prevent editing
+                        _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_push_id", Type = vDbTypes.String, Label = "Multi push id" });// multi push id - for data pushers
+                        _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_src_id", Type = vDbTypes.Decimal, Label = "Source id" });// source id - for data pushers
+                    }
                     else
                         _listNamesAndTypes.Add(new TableColumnMeta { Name = _schema.MasterTable + "_id", Type = vDbTypes.Decimal });// id refernce to the parent table will store in this column - foreignkey
                     if (_table.TableType == WebFormTableTypes.Grid)
-                        _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_row_num", Type = vDbTypes.Decimal });
+                        _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_row_num", Type = vDbTypes.Decimal });// data grid row number
 
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_by", Type = vDbTypes.Decimal, Label = "Created By" });
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_at", Type = vDbTypes.DateTime, Label = "Created At" });
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_by", Type = vDbTypes.Decimal, Label = "Last Modified By" });
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_at", Type = vDbTypes.DateTime, Label = "Last Modified At" });
-                    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_del", Type = vDbTypes.Boolean, Default = "F" });
-                    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_void", Type = vDbTypes.Boolean, Default = "F", Label = "Void ?" });
-                    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_loc_id", Type = vDbTypes.Int32, Label = "Location" });
+                    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_del", Type = vDbTypes.Boolean, Default = "F" });// delete
+                    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_void", Type = vDbTypes.Boolean, Default = "F", Label = "Void ?" });// cancel //only ?
+                    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_loc_id", Type = vDbTypes.Int32, Label = "Location" });// location id //only ?
                     //_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_default", Type = vDbTypes.Boolean, Default = "F" });
 
                     int _rowaff = CreateOrAlterTable(_table.TableName, _listNamesAndTypes, ref Msg);
@@ -100,8 +107,10 @@ namespace ExpressBase.ServiceStack.Services
                 throw new FormException(Msg);
         }
 
-        private int CreateOrAlterTable(string tableName, List<TableColumnMeta> listNamesAndTypes, ref string Msg)
+        public int CreateOrAlterTable(string tableName, List<TableColumnMeta> listNamesAndTypes, ref string Msg)
         {
+            int status = -1;
+
             //checking for space in column name, table name
             if (tableName.Contains(CharConstants.SPACE))
                 throw new FormException("Table creation failed - Invalid table name: " + tableName);
@@ -117,22 +126,20 @@ namespace ExpressBase.ServiceStack.Services
                 if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.ORACLE)////////////
                 {
                     sql = "CREATE TABLE @tbl(id NUMBER(10), @cols)".Replace("@cols", cols).Replace("@tbl", tableName);
-                    int _rowaff = this.EbConnectionFactory.DataDB.CreateTable(sql);//Table Creation
-                    CreateSquenceAndTrigger(tableName);//
-                    return _rowaff;
+                    this.EbConnectionFactory.DataDB.CreateTable(sql);//Table Creation
+                    CreateSquenceAndTrigger(tableName);
                 }
                 else if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.PGSQL)
                 {
                     sql = "CREATE TABLE @tbl( id SERIAL PRIMARY KEY, @cols)".Replace("@cols", cols).Replace("@tbl", tableName);
-                    return this.EbConnectionFactory.DataDB.CreateTable(sql);
+                    this.EbConnectionFactory.DataDB.CreateTable(sql);
                 }
                 else if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.MYSQL)
                 {
                     sql = "CREATE TABLE @tbl( id INTEGER AUTO_INCREMENT PRIMARY KEY, @cols)".Replace("@cols", cols).Replace("@tbl", tableName);
-                    return this.EbConnectionFactory.DataDB.CreateTable(sql);
+                    this.EbConnectionFactory.DataDB.CreateTable(sql);
                 }
-
-                return 0;
+                status = 0;
             }
             else
             {
@@ -179,7 +186,6 @@ namespace ExpressBase.ServiceStack.Services
                             int _aff = this.EbConnectionFactory.DataDB.UpdateTable(sql);
                             if (appendId)
                                 CreateSquenceAndTrigger(tableName);
-                            return _aff;
                         }
                     }
                     else if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.PGSQL)
@@ -189,7 +195,7 @@ namespace ExpressBase.ServiceStack.Services
                         {
                             sql = "ALTER TABLE @tbl ADD COLUMN " + (sql.Substring(0, sql.Length - 1)).Replace(",", ", ADD COLUMN ");
                             sql = sql.Replace("@tbl", tableName);
-                            return this.EbConnectionFactory.DataDB.UpdateTable(sql);
+                            this.EbConnectionFactory.DataDB.UpdateTable(sql);
                         }
                     }
                     else if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.MYSQL)
@@ -199,13 +205,13 @@ namespace ExpressBase.ServiceStack.Services
                         {
                             sql = "ALTER TABLE @tbl ADD COLUMN " + (sql.Substring(0, sql.Length - 1)).Replace(",", ", ADD COLUMN ");
                             sql = sql.Replace("@tbl", tableName);
-                            return this.EbConnectionFactory.DataDB.UpdateTable(sql);
+                            this.EbConnectionFactory.DataDB.UpdateTable(sql);
                         }
                     }
-                    return 0;
+                    status = 1;
                 }
             }
-            return -1;
+            return status;
             //throw new FormException("Table creation failed - Table name: " + tableName);
         }
 
@@ -224,7 +230,7 @@ namespace ExpressBase.ServiceStack.Services
 
         private void CreateOrUpdateDsAndDv(CreateWebFormTableRequest request, List<TableColumnMeta> listNamesAndTypes)
         {
-            IEnumerable<TableColumnMeta> _list = listNamesAndTypes.Where(x => x.Name != "eb_del" && x.Name != "eb_ver_id" && !(x.Name.Contains("_ebbkup")) && !(x.Control is EbFileUploader));
+            IEnumerable<TableColumnMeta> _list = listNamesAndTypes.Where(x => x.Name != "eb_del" && x.Name != "eb_ver_id" && !(x.Name.Contains("_ebbkup")) && x.Name != "eb_push_id" && x.Name != "eb_src_id" && x.Name != "eb_lock" && !(x.Control is EbFileUploader));
             string cols = string.Join(CharConstants.COMMA + "\n \t ", _list.Select(x => x.Name).ToArray());
             EbTableVisualization dv = null;
             string AutogenId = (request.WebObj as EbWebForm).AutoGeneratedVizRefId;
@@ -245,7 +251,7 @@ namespace ExpressBase.ServiceStack.Services
                     Redis.Set<EbTableVisualization>(AutogenId, dv);
                 }
                 UpdateDataReader(request, cols, dv, AutogenId);
-                UpdateDataVisualization(request, listNamesAndTypes, dv, AutogenId);
+                UpdateDataVisualization(request, _list.ToList(), dv, AutogenId);
             }
         }
 
@@ -402,7 +408,7 @@ namespace ExpressBase.ServiceStack.Services
                             };
                             if ((column.Control as EbPowerSelect).RenderAsSimpleSelect)
                             {
-                                _control.DisplayMember.Add( (column.Control as EbPowerSelect).DisplayMember);
+                                _control.DisplayMember.Add((column.Control as EbPowerSelect).DisplayMember);
                             }
                             else
                             {
@@ -524,118 +530,115 @@ namespace ExpressBase.ServiceStack.Services
                 DVBaseColumn _col = dv.Columns.Find(x => x.Name == column.Name);
                 if (_col == null || _col.Name == "eb_void" || column.Name == "eb_created_by" || column.Name == "eb_lastmodified_by" || column.Name == "eb_loc_id" || column.Control is EbPowerSelect)
                 {
-                    if (column.Name != "eb_del" && column.Name != "eb_ver_id" && !(column.Name.Contains("_ebbkup")) && !(column.Control is EbFileUploader))
+                    index++;
+                    ControlClass _control = null;
+                    bool _autoresolve = false;
+                    Align _align = Align.Auto;
+                    int charlength = 0;
+                    EbDbTypes _RenderType = column.Type.EbDbType;
+                    if (column.Control is EbPowerSelect)
                     {
-                        index++;
-                        ControlClass _control = null;
-                        bool _autoresolve = false;
-                        Align _align = Align.Auto;
-                        int charlength = 0;
-                        EbDbTypes _RenderType = column.Type.EbDbType;
-                        if (column.Control is EbPowerSelect)
+                        if (!(column.Control as EbPowerSelect).MultiSelect)
                         {
-                            if (!(column.Control as EbPowerSelect).MultiSelect)
+                            _control = new ControlClass
                             {
-                                _control = new ControlClass
-                                {
-                                    DataSourceId = (column.Control as EbPowerSelect).DataSourceId,
-                                    ValueMember = (column.Control as EbPowerSelect).ValueMember
-                                };
-                                if ((column.Control as EbPowerSelect).RenderAsSimpleSelect)
-                                {
-                                    _control.DisplayMember.Add((column.Control as EbPowerSelect).DisplayMember);
-                                }
-                                else
-                                {
-                                    _control.DisplayMember = (column.Control as EbPowerSelect).DisplayMembers;
-                                }
-                                _autoresolve = true;
-                                _align = Align.Center;
-                                _RenderType = EbDbTypes.String;
-                            }
-                        }
-                        else if (column.Control is EbTextBox)
-                        {
-                            if ((column.Control as EbTextBox).TextMode == TextMode.MultiLine)
+                                DataSourceId = (column.Control as EbPowerSelect).DataSourceId,
+                                ValueMember = (column.Control as EbPowerSelect).ValueMember
+                            };
+                            if ((column.Control as EbPowerSelect).RenderAsSimpleSelect)
                             {
-                                charlength = 20;
+                                _control.DisplayMember.Add((column.Control as EbPowerSelect).DisplayMember);
                             }
-                        }
-                        if (column.Name == "eb_void")
-                        {
-                            column.Type = vDbTypes.String;//T or F
-                            _RenderType = EbDbTypes.Boolean;
-                        }
-                        else if (column.Name == "eb_created_by" || column.Name == "eb_lastmodified_by" || column.Name == "eb_loc_id")
-                        {
+                            else
+                            {
+                                _control.DisplayMember = (column.Control as EbPowerSelect).DisplayMembers;
+                            }
+                            _autoresolve = true;
+                            _align = Align.Center;
                             _RenderType = EbDbTypes.String;
                         }
-                        if (_RenderType == EbDbTypes.String)
-                            _col = new DVStringColumn
-                            {
-                                Data = index,
-                                Name = column.Name,
-                                sTitle = column.Label,
-                                Type = column.Type.EbDbType,
-                                bVisible = true,
-                                sWidth = "100px",
-                                ClassName = "tdheight",
-                                ColumnQueryMapping = _control,
-                                AutoResolve = _autoresolve,
-                                Align = _align,
-                                AllowedCharacterLength = charlength,
-                                RenderType = _RenderType
-                            };
-
-                        else if (_RenderType == EbDbTypes.Int16 || _RenderType == EbDbTypes.Int32 || _RenderType == EbDbTypes.Int64 || _RenderType == EbDbTypes.Double || _RenderType == EbDbTypes.Decimal || _RenderType == EbDbTypes.VarNumeric)
-                            _col = new DVNumericColumn
-                            {
-                                Data = index,
-                                Name = column.Name,
-                                sTitle = column.Label,
-                                Type = column.Type.EbDbType,
-                                bVisible = true,
-                                sWidth = "100px",
-                                ClassName = "tdheight",
-                                ColumnQueryMapping = _control,
-                                AutoResolve = _autoresolve,
-                                Align = _align,
-                                AllowedCharacterLength = charlength,
-                                RenderType = _RenderType
-                            };
-                        else if (_RenderType == EbDbTypes.Boolean || _RenderType == EbDbTypes.BooleanOriginal)
-                        {
-                            _col = new DVBooleanColumn
-                            {
-                                Data = index,
-                                Name = column.Name,
-                                sTitle = column.Label,
-                                Type = column.Type.EbDbType,
-                                bVisible = true,
-                                sWidth = "100px",
-                                ClassName = "tdheight",
-                                Align = _align,
-                                AllowedCharacterLength = charlength,
-                                RenderType = _RenderType
-                            };
-                        }
-                        else if (_RenderType == EbDbTypes.DateTime || _RenderType == EbDbTypes.Date || _RenderType == EbDbTypes.Time)
-                            _col = new DVDateTimeColumn
-                            {
-                                Data = index,
-                                Name = column.Name,
-                                sTitle = column.Label,
-                                Type = column.Type.EbDbType,
-                                bVisible = true,
-                                sWidth = "100px",
-                                ClassName = "tdheight",
-                                Align = _align,
-                                AllowedCharacterLength = charlength,
-                                RenderType = _RenderType
-                            };
-
-                        Columns.Add(_col);
                     }
+                    else if (column.Control is EbTextBox)
+                    {
+                        if ((column.Control as EbTextBox).TextMode == TextMode.MultiLine)
+                        {
+                            charlength = 20;
+                        }
+                    }
+                    if (column.Name == "eb_void")
+                    {
+                        column.Type = vDbTypes.String;//T or F
+                        _RenderType = EbDbTypes.Boolean;
+                    }
+                    else if (column.Name == "eb_created_by" || column.Name == "eb_lastmodified_by" || column.Name == "eb_loc_id")
+                    {
+                        _RenderType = EbDbTypes.String;
+                    }
+                    if (_RenderType == EbDbTypes.String)
+                        _col = new DVStringColumn
+                        {
+                            Data = index,
+                            Name = column.Name,
+                            sTitle = column.Label,
+                            Type = column.Type.EbDbType,
+                            bVisible = true,
+                            sWidth = "100px",
+                            ClassName = "tdheight",
+                            ColumnQueryMapping = _control,
+                            AutoResolve = _autoresolve,
+                            Align = _align,
+                            AllowedCharacterLength = charlength,
+                            RenderType = _RenderType
+                        };
+
+                    else if (_RenderType == EbDbTypes.Int16 || _RenderType == EbDbTypes.Int32 || _RenderType == EbDbTypes.Int64 || _RenderType == EbDbTypes.Double || _RenderType == EbDbTypes.Decimal || _RenderType == EbDbTypes.VarNumeric)
+                        _col = new DVNumericColumn
+                        {
+                            Data = index,
+                            Name = column.Name,
+                            sTitle = column.Label,
+                            Type = column.Type.EbDbType,
+                            bVisible = true,
+                            sWidth = "100px",
+                            ClassName = "tdheight",
+                            ColumnQueryMapping = _control,
+                            AutoResolve = _autoresolve,
+                            Align = _align,
+                            AllowedCharacterLength = charlength,
+                            RenderType = _RenderType
+                        };
+                    else if (_RenderType == EbDbTypes.Boolean || _RenderType == EbDbTypes.BooleanOriginal)
+                    {
+                        _col = new DVBooleanColumn
+                        {
+                            Data = index,
+                            Name = column.Name,
+                            sTitle = column.Label,
+                            Type = column.Type.EbDbType,
+                            bVisible = true,
+                            sWidth = "100px",
+                            ClassName = "tdheight",
+                            Align = _align,
+                            AllowedCharacterLength = charlength,
+                            RenderType = _RenderType
+                        };
+                    }
+                    else if (_RenderType == EbDbTypes.DateTime || _RenderType == EbDbTypes.Date || _RenderType == EbDbTypes.Time)
+                        _col = new DVDateTimeColumn
+                        {
+                            Data = index,
+                            Name = column.Name,
+                            sTitle = column.Label,
+                            Type = column.Type.EbDbType,
+                            bVisible = true,
+                            sWidth = "100px",
+                            ClassName = "tdheight",
+                            Align = _align,
+                            AllowedCharacterLength = charlength,
+                            RenderType = _RenderType
+                        };
+
+                    Columns.Add(_col);
                 }
                 else
                 {
@@ -723,36 +726,55 @@ namespace ExpressBase.ServiceStack.Services
 
         public GetRowDataResponse Any(GetRowDataRequest request)
         {
+            GetRowDataResponse _dataset = new GetRowDataResponse();
             try
             {
                 Console.WriteLine("Requesting for WebFormData( Refid : " + request.RefId + ", Rowid : " + request.RowId + " ).................");
-                GetRowDataResponse _dataset = new GetRowDataResponse();
                 EbWebForm form = GetWebFormObject(request.RefId);
                 form.TableRowId = request.RowId;
                 form.RefId = request.RefId;
                 form.UserObj = request.UserObj;
                 form.SolutionObj = this.Redis.Get<Eb_Solution>(String.Format("solution_{0}", request.SolnId));
                 form.RefreshFormData(EbConnectionFactory.DataDB, this);
-                _dataset.FormData = form.FormData;
+                if (!(form.HasPermission(OperationConstants.VIEW, form.LocationId) || form.HasPermission(OperationConstants.NEW, form.LocationId) || form.HasPermission(OperationConstants.EDIT, form.LocationId)))
+                {
+                    throw new FormException("Error in loading data. Access Denied.", (int)HttpStatusCodes.UNAUTHORIZED, "Access Denied for rowid " + form.TableRowId + " , current location " + form.LocationId, string.Empty);
+                }
+                _dataset.FormDataWrap = new WebformDataWrapper() { FormData = form.FormData, Status = (int)HttpStatusCodes.OK };
                 Console.WriteLine("Returning from GetRowData Service");
-                return _dataset;
+            }
+            catch (FormException ex)
+            {
+                Console.WriteLine("FormException in GetRowData Service \nMessage : " + ex.Message + "\n" + ex.StackTrace);
+                _dataset.FormDataWrap = new WebformDataWrapper() { Message = ex.Message, Status = ex.ExceptionCode, MessageInt = ex.MessageInternal, StackTraceInt = ex.StackTraceInternal };
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Exception in GetRowData Service" + ex.Message);
-                Console.WriteLine(ex.StackTrace);
-                throw ex;
+                Console.WriteLine("Exception in GetRowData Service \nMessage : " + ex.Message + "\n" + ex.StackTrace);
+                _dataset.FormDataWrap = new WebformDataWrapper() { Message = "Something went wrong", Status = (int)HttpStatusCodes.INTERNAL_SERVER_ERROR, MessageInt = ex.Message, StackTraceInt = ex.StackTrace };
             }
+            return _dataset;
         }
 
         public GetPrefillDataResponse Any(GetPrefillDataRequest request)
         {
             Console.WriteLine("Start GetPrefillData");
             GetPrefillDataResponse _dataset = new GetPrefillDataResponse();
-            EbWebForm form = GetWebFormObject(request.RefId);
-            form.RefId = request.RefId;
-            form.RefreshFormData(EbConnectionFactory.DataDB, this, request.Params);
-            _dataset.FormData = form.FormData;
+            try
+            {
+                EbWebForm form = GetWebFormObject(request.RefId);
+                form.RefId = request.RefId;
+                form.RefreshFormData(EbConnectionFactory.DataDB, this, request.Params);
+                _dataset.FormData = new WebformDataWrapper { FormData = form.FormData, Status = (int)HttpStatusCodes.OK };
+            }
+            catch (FormException ex)
+            {
+                _dataset.FormData = new WebformDataWrapper { Message = ex.Message, Status = ex.ExceptionCode, MessageInt = ex.MessageInternal, StackTraceInt = ex.StackTraceInternal };
+            }
+            catch (Exception e)
+            {
+                _dataset.FormData = new WebformDataWrapper { Message = "Something went wrong.", Status = (int)HttpStatusCodes.INTERNAL_SERVER_ERROR, MessageInt = e.Message, StackTraceInt = e.StackTrace };
+            }
             Console.WriteLine("End GetPrefillData");
             return _dataset;
         }
@@ -776,9 +798,10 @@ namespace ExpressBase.ServiceStack.Services
         //        throw ex;
         //    }
         //}
-        
+
         public GetImportDataResponse Any(GetImportDataRequest request)
         {
+            GetImportDataResponse resp = new GetImportDataResponse();
             try
             {
                 Console.WriteLine("Start ImportFormData");
@@ -788,19 +811,19 @@ namespace ExpressBase.ServiceStack.Services
                 form.SolutionObj = this.Redis.Get<Eb_Solution>(String.Format("solution_{0}", request.SolnId));
                 form.ImportData(EbConnectionFactory.DataDB, this, request.Params, request.Trigger);
                 Console.WriteLine("End ImportFormData");
-                return new GetImportDataResponse() { FormDataWrap = new WebformDataWrapper { FormData = form.FormData, Status = 200 } };
+                resp.FormDataWrap = new WebformDataWrapper { FormData = form.FormData, Status = (int)HttpStatusCodes.OK };
             }
             catch (FormException ex)
             {
                 Console.WriteLine("FormException in GetImportDataRequest Service" + ex.Message);
-                return new GetImportDataResponse() { FormDataWrap = new WebformDataWrapper { Status = 500, Message = ex.Message, MessageInt = ex.MessageInternal, StackTraceInt = ex.StackTraceInternal} };
+                resp.FormDataWrap = new WebformDataWrapper { Status = ex.ExceptionCode, Message = ex.Message, MessageInt = ex.MessageInternal, StackTraceInt = ex.StackTraceInternal };
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Exception in GetImportDataRequest Service" + ex.Message);
-                Console.WriteLine(ex.StackTrace);
-                return new GetImportDataResponse() { FormDataWrap = new WebformDataWrapper { Status = 500, Message = "Exception in GetImportDataRequest", MessageInt = ex.Message, StackTraceInt = ex.StackTrace } };
+                Console.WriteLine("Exception in GetImportDataRequest Service" + ex.Message + "\n" + ex.StackTrace);
+                resp.FormDataWrap = new WebformDataWrapper { Status = (int)HttpStatusCodes.INTERNAL_SERVER_ERROR, Message = "Exception in GetImportDataRequest", MessageInt = ex.Message, StackTraceInt = ex.StackTrace };
             }
+            return resp;
         }
 
         public ExecuteSqlValueExprResponse Any(ExecuteSqlValueExprRequest request)
@@ -809,7 +832,16 @@ namespace ExpressBase.ServiceStack.Services
             EbWebForm form = GetWebFormObject(request.RefId);
             string val = form.ExecuteSqlValueExpression(EbConnectionFactory.DataDB, this, request.Params, request.Trigger);
             Console.WriteLine("End ExecuteSqlValueExpr");
-            return new ExecuteSqlValueExprResponse() { Data = val};
+            return new ExecuteSqlValueExprResponse() { Data = val };
+        }
+
+        public GetDataPusherJsonResponse Any(GetDataPusherJsonRequest request)
+        {
+            Console.WriteLine("Start GetDataPusherJson");
+            EbWebForm form = GetWebFormObject(request.RefId);
+            string val = form.GetDataPusherJson();
+            Console.WriteLine("End GetDataPusherJson");
+            return new GetDataPusherJsonResponse() { Json = val };
         }
 
 
@@ -872,6 +904,8 @@ namespace ExpressBase.ServiceStack.Services
         {
             try
             {
+                DateTime startdt = DateTime.Now;
+                Console.WriteLine("Insert/Update WebFormData : start - " + startdt);
                 EbWebForm FormObj = GetWebFormObject(request.RefId);
                 FormObj.RefId = request.RefId;
                 FormObj.TableRowId = request.RowId;
@@ -880,31 +914,54 @@ namespace ExpressBase.ServiceStack.Services
                 FormObj.LocationId = request.CurrentLoc;
                 FormObj.SolutionObj = this.Redis.Get<Eb_Solution>(String.Format("solution_{0}", request.SolnId));
 
-                Console.WriteLine("Insert/Update WebFormData : MergeFormData start");
+                string Operation = OperationConstants.NEW;
+                if (request.RowId > 0)
+                    Operation = OperationConstants.EDIT;
+                if (!FormObj.HasPermission(Operation, request.CurrentLoc))
+                    return new InsertDataFromWebformResponse { Status = (int)HttpStatusCodes.FORBIDDEN, Message = "Access denied to save this data entry!", RowAffected = -2, RowId = -2 };
+
+                Console.WriteLine("Insert/Update WebFormData : MergeFormData start - " + DateTime.Now);
                 FormObj.MergeFormData();
-                Console.WriteLine("Insert/Update WebFormData : Save start");
+                Console.WriteLine("Insert/Update WebFormData : Save start - " + DateTime.Now);
                 int r = FormObj.Save(EbConnectionFactory.DataDB, this);
-                Console.WriteLine("Insert/Update WebFormData : AfterSave start");
+                Console.WriteLine("Insert/Update WebFormData : AfterSave start - " + DateTime.Now);
                 int a = FormObj.AfterSave(EbConnectionFactory.DataDB, request.RowId > 0);
                 if (this.EbConnectionFactory.EmailConnection != null && this.EbConnectionFactory.EmailConnection.Primary != null)
                 {
-                    Console.WriteLine("Insert/Update WebFormData : SendMailIfUserCreated start");
+                    Console.WriteLine("Insert/Update WebFormData : SendMailIfUserCreated start - " + DateTime.Now);
                     FormObj.SendMailIfUserCreated(MessageProducer3);
                 }
-                Console.WriteLine("Insert/Update WebFormData : Returning");
+                Console.WriteLine("Insert/Update WebFormData : Execution Time = " + (DateTime.Now - startdt).TotalMilliseconds);
                 return new InsertDataFromWebformResponse()
                 {
                     RowId = FormObj.TableRowId,
                     FormData = FormObj.FormData,
                     RowAffected = r,
-                    AfterSaveStatus = a
+                    AfterSaveStatus = a,
+                    Status = (int)HttpStatusCodes.OK,
+                };
+            }
+            catch (FormException ex)
+            {
+                Console.WriteLine("Exception in Insert/Update WebFormData" + ex.Message + "\n" + ex.StackTrace);
+                return new InsertDataFromWebformResponse()
+                {
+                    Message = ex.Message,
+                    Status = ex.ExceptionCode,
+                    MessageInt = ex.MessageInternal,
+                    StackTraceInt = ex.StackTraceInternal
                 };
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Exception in Insert/Update WebFormData" + ex.Message);
-                Console.WriteLine(ex.StackTrace);
-                throw new FormException("Terminated Insert/Update WebFormData. Check servicestack log for stack trace.");
+                Console.WriteLine("Exception in Insert/Update WebFormData" + ex.Message + "\n" + ex.StackTrace);
+                return new InsertDataFromWebformResponse()
+                {
+                    Message = "Something went wrong",
+                    Status = (int)HttpStatusCodes.INTERNAL_SERVER_ERROR,
+                    MessageInt = ex.Message,
+                    StackTraceInt = ex.StackTrace
+                };
             }
         }
 
@@ -1365,7 +1422,8 @@ namespace ExpressBase.ServiceStack.Services
             //_ucObj.AfterRedisGet(this);
             _ucObj.SetDataObjectControl(this.EbConnectionFactory.DataDB, this);
             _ucObj.IsRenderMode = true;
-            return new GetDashBoardUserCtrlResponse() {
+            return new GetDashBoardUserCtrlResponse()
+            {
                 UcObjJson = EbSerializers.Json_Serialize(_ucObj),
                 UcHtml = _ucObj.GetHtml()
             };
@@ -1373,9 +1431,9 @@ namespace ExpressBase.ServiceStack.Services
 
         public GetDistinctValuesResponse Get(GetDistinctValuesRequest request)
         {
-            GetDistinctValuesResponse resp = new GetDistinctValuesResponse() { Suggestions = new List<string>()};
+            GetDistinctValuesResponse resp = new GetDistinctValuesResponse() { Suggestions = new List<string>() };
             try
-            {  
+            {
                 string query = EbConnectionFactory.DataDB.EB_GET_DISTINCT_VALUES
                 .Replace("@ColumName", request.ColumnName)
                 .Replace("@TableName", request.TableName);
@@ -1394,6 +1452,74 @@ namespace ExpressBase.ServiceStack.Services
             }
             return resp;
 
+        }
+
+        public UpdateAllFormTablesResponse Post(UpdateAllFormTablesRequest request)
+        {
+            string msg = $"Start* UpdateAllFormTables {DateTime.Now}\n\n";
+            try
+            {
+                User u = this.Redis.Get<User>(request.UserAuthId);
+                if (u.Roles.Contains(SystemRoles.SolutionOwner.ToString()))
+                {
+                    string Qry = @"SELECT refid,display_name,obj_json FROM (
+				                        SELECT 
+					                        EO.id, EOV.refid, EO.display_name, EOV.obj_json
+				                        FROM
+					                        eb_objects EO
+				                        LEFT JOIN 
+					                        eb_objects_ver EOV ON (EOV.eb_objects_id = EO.id)
+				                        LEFT JOIN
+					                        eb_objects_status EOS ON (EOS.eb_obj_ver_id = EOV.id)
+				                        WHERE
+					                        COALESCE(EO.eb_del, 'F') = 'F'
+				                        AND EO.obj_type = 0 AND 
+					                        EOS.id = ANY( Select MAX(id) from eb_objects_status EOS Where EOS.eb_obj_ver_id = EOV.id)
+				                        ) OD 
+                                    LEFT JOIN eb_objects2application EO2A ON (EO2A.obj_id = OD.id)
+	                                    WHERE COALESCE(EO2A.eb_del, 'F') = 'F' LIMIT 500;";
+
+                    EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(Qry);
+                    msg += $"Form Objects Count : {dt.Rows.Count} \n";
+                    foreach (EbDataRow dr in dt.Rows)
+                    {
+                        if (dr.IsDBNull(2))
+                            msg += $"\n\nNull Json found, Name : {dr[1].ToString()}";
+                        else
+                        {
+                            EbWebForm F = null;
+                            try
+                            {
+                                F = EbSerializers.Json_Deserialize<EbWebForm>(dr[2].ToString());
+                            }
+                            catch (Exception ex)
+                            {
+                                msg += $"\n\nDeserialization Failed, Name : {dr[1].ToString()}, Message : {ex.Message}";
+                            }
+                            if (F != null)
+                            {
+                                F.AutoDeployTV = false;
+                                try
+                                {
+                                    this.Any(new CreateWebFormTableRequest { WebObj = F });
+                                    msg += $"\n\nSuccess   RefId : {dr[0].ToString()}, Name : {dr[1].ToString()} ";
+                                }
+                                catch (Exception e)
+                                {
+                                    msg += $"\n\nWarning   RefId : {dr[0].ToString()}, Name : {dr[1].ToString()}, Message : {e.Message} ";
+                                }
+                            }
+                        }
+                    }
+                    msg += $"\n\nEnd* UpdateAllFormTables {DateTime.Now}";
+                }
+            }
+            catch (Exception e)
+            {
+                msg += e.Message;
+            }
+            Console.WriteLine(msg);
+            return new UpdateAllFormTablesResponse() { Message = msg };
         }
     }
 }

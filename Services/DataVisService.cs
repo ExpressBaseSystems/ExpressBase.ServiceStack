@@ -687,20 +687,30 @@ namespace ExpressBase.ServiceStack
             {
                 foreach (FormulaPart formulaPart in customCol.FormulaParts)
                 {
-                    object __value = null;
-                    var __partType = _datarow.Table.Columns[formulaPart.FieldName].Type;
-                    if (__partType == EbDbTypes.Decimal || __partType == EbDbTypes.Int32)
-                        __value = (_datarow[formulaPart.FieldName] != DBNull.Value) ? _datarow[formulaPart.FieldName] : 0;
-                    else
-                        __value = _datarow[formulaPart.FieldName];
+                    try
+                    {
+                        object __value = null;
+                        var __partType = _datarow.Table.Columns[formulaPart.FieldName].Type;
+                        if (__partType == EbDbTypes.Decimal || __partType == EbDbTypes.Int32)
+                            __value = (_datarow[formulaPart.FieldName] != DBNull.Value) ? _datarow[formulaPart.FieldName] : 0;
+                        else
+                            __value = _datarow[formulaPart.FieldName];
 
-                    globals[formulaPart.TableName].Add(formulaPart.FieldName, new NTV { Name = formulaPart.FieldName, Type = __partType, Value = __value });
+                        globals[formulaPart.TableName].Add(formulaPart.FieldName, new NTV { Name = formulaPart.FieldName, Type = __partType, Value = __value });
+                    }
+                    catch (Exception e)
+                    {
+                        Log.Info("customCol.FormulaParts........." + e.StackTrace + "Column Name...."+ customCol.Name);
+                        Log.Info("customCol.FormulaParts........." + e.Message + "Column Name...." + customCol.Name);
+                        this._Responsestatus.Message = e.Message;
+                    }
                 }
             }
             catch (Exception e)
             {
-                Log.Info("CustomColumDoCalc4Row........." + e.StackTrace);
-                Log.Info("CustomColumDoCalc4Row........." + e.Message);
+                Log.Info("CustomColumDoCalc4Row........." + e.StackTrace + "Column Name...." + customCol.Name);
+                Log.Info("CustomColumDoCalc4Row........." + e.Message + "Column Name...." + customCol.Name);
+                this._Responsestatus.Message = e.Message;
             }
 
             try
@@ -716,8 +726,9 @@ namespace ExpressBase.ServiceStack
             }
             catch (Exception e)
             {
-                Log.Info("CustomColumDoCalc4Row Exception........." + e.StackTrace);
-                Log.Info("CustomColumDoCalc4Row Exception........." + e.Message);
+                Log.Info("CustomColumDoCalc4Row Script Exception........." + e.StackTrace + "Column Name...." + customCol.Name);
+                Log.Info("CustomColumDoCalc4Row Script Exception........." + e.Message + "Column Name...." + customCol.Name);
+                this._Responsestatus.Message = e.Message;
             }
 
             _datarow[customCol.Name] = result;
@@ -737,17 +748,26 @@ namespace ExpressBase.ServiceStack
 
         public void GetDictonaries4AutoResolveColumn(DVBaseColumn col)
         {
-            if (col.AutoResolve && !col.ColumnQueryMapping.DataSourceId.IsNullOrEmpty())
+            try
             {
-                EbDataReader dr = this.Redis.Get<EbDataReader>(col.ColumnQueryMapping.DataSourceId);
-                if (dr == null || dr.Sql == null || dr.Sql == string.Empty)
+                if (col.AutoResolve && !col.ColumnQueryMapping.DataSourceId.IsNullOrEmpty())
                 {
-                    var myService = base.ResolveService<EbObjectService>();
-                    EbObjectParticularVersionResponse result = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest { RefId = col.ColumnQueryMapping.DataSourceId });
-                    dr = EbSerializers.Json_Deserialize(result.Data[0].Json);
-                    Redis.Set<EbDataReader>(col.ColumnQueryMapping.DataSourceId, dr);
+                    EbDataReader dr = this.Redis.Get<EbDataReader>(col.ColumnQueryMapping.DataSourceId);
+                    if (dr == null || dr.Sql == null || dr.Sql == string.Empty)
+                    {
+                        var myService = base.ResolveService<EbObjectService>();
+                        EbObjectParticularVersionResponse result = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest { RefId = col.ColumnQueryMapping.DataSourceId });
+                        dr = EbSerializers.Json_Deserialize(result.Data[0].Json);
+                        Redis.Set<EbDataReader>(col.ColumnQueryMapping.DataSourceId, dr);
+                    }
+                    col.ColumnQueryMapping.Values = this.EbConnectionFactory.ObjectsDB.GetDictionary(dr.Sql, col.ColumnQueryMapping.DisplayMember[0].Name, col.ColumnQueryMapping.ValueMember.Name);
                 }
-                col.ColumnQueryMapping.Values = this.EbConnectionFactory.ObjectsDB.GetDictionary(dr.Sql, col.ColumnQueryMapping.DisplayMember[0].Name, col.ColumnQueryMapping.ValueMember.Name);
+            }
+            catch (Exception e)
+            {
+                Log.Info("GetDictonaries4AutoResolveColumn in datatable Exception........." + e.StackTrace + "Column Name....." + col.Name);
+                Log.Info("GetDictonaries4AutoResolveColumn in datatable Exception........." + e.Message + "Column Name....." + col.Name);
+                this._Responsestatus.Message = e.Message;
             }
         }
 
@@ -766,17 +786,26 @@ namespace ExpressBase.ServiceStack
 
         public string GetValues4AutoResolveColumn(DVBaseColumn col, string cond)
         {
-            if (col.AutoResolve && !col.ColumnQueryMapping.DataSourceId.IsNullOrEmpty())
+            try
             {
-                EbDataReader dr = this.Redis.Get<EbDataReader>(col.ColumnQueryMapping.DataSourceId);
-                if (dr == null || dr.Sql == null || dr.Sql == string.Empty)
+                if (col.AutoResolve && !col.ColumnQueryMapping.DataSourceId.IsNullOrEmpty())
                 {
-                    var myService = base.ResolveService<EbObjectService>();
-                    EbObjectParticularVersionResponse result = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest { RefId = col.ColumnQueryMapping.DataSourceId });
-                    dr = EbSerializers.Json_Deserialize(result.Data[0].Json);
-                    Redis.Set<EbDataReader>(col.ColumnQueryMapping.DataSourceId, dr);
+                    EbDataReader dr = this.Redis.Get<EbDataReader>(col.ColumnQueryMapping.DataSourceId);
+                    if (dr == null || dr.Sql == null || dr.Sql == string.Empty)
+                    {
+                        var myService = base.ResolveService<EbObjectService>();
+                        EbObjectParticularVersionResponse result = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest { RefId = col.ColumnQueryMapping.DataSourceId });
+                        dr = EbSerializers.Json_Deserialize(result.Data[0].Json);
+                        Redis.Set<EbDataReader>(col.ColumnQueryMapping.DataSourceId, dr);
+                    }
+                    return string.Join(",", this.EbConnectionFactory.ObjectsDB.GetAutoResolveValues(dr.Sql, col.ColumnQueryMapping.ValueMember.Name, cond).ToArray());
                 }
-                return string.Join(",", this.EbConnectionFactory.ObjectsDB.GetAutoResolveValues(dr.Sql, col.ColumnQueryMapping.ValueMember.Name, cond).ToArray());
+            }
+            catch (Exception e)
+            {
+                Log.Info("GetValues4AutoResolveColumn in datatable Exception........." + e.StackTrace + "Column Name....." + col.Name);
+                Log.Info("GetValues4AutoResolveColumn in datatable Exception........." + e.Message + "Column Name....." + col.Name);
+                this._Responsestatus.Message = e.Message;
             }
             return string.Empty;
         }
@@ -934,8 +963,8 @@ namespace ExpressBase.ServiceStack
             }
             catch (Exception e)
             {
-                Log.Info("Before PreProcessing in datatable  Exception........." + e.StackTrace);
-                Log.Info("Before PreProcessing in datatable  Exception........." + e.Message);
+                Log.Info("Before PreProcessing in PreProcessingCalendarView  Exception........." + e.StackTrace);
+                Log.Info("Before PreProcessing in PreProcessingCalendarView  Exception........." + e.Message);
                 this._Responsestatus.Message = e.Message;
             }
             return null;
@@ -972,7 +1001,7 @@ namespace ExpressBase.ServiceStack
                     var _hoidayRow = _datatable.Rows.FirstOrDefault(row => row["holiday_date"].Equals(date));
                     if (_hoidayRow != null)
                     {
-                        cls = "holiday_class";
+                        cls = "holiday_class public-holiday";
                         tooltip = _hoidayRow["holiday_name"].ToString();
                     }
                     else if(this._ebSolution.Locations.ContainsKey(CurLocId))
@@ -982,7 +1011,11 @@ namespace ExpressBase.ServiceStack
                         else if(this._ebSolution.Locations[CurLocId].WeekHoliday2.ToLower() == date.ToString("dddd").ToLower())
                             tooltip = this._ebSolution.Locations[CurLocId].WeekHoliday2;
                         if(tooltip != string.Empty)
-                            cls = "holiday_class";
+                            cls = "holiday_class week-holiday";
+                    }
+                    if (DateTime.Now.Date.Equals(date))
+                    {
+                        cls += "current_date_class";
                     }
                     _dv.Columns.Add(new DVStringColumn
                     {
@@ -1112,133 +1145,151 @@ namespace ExpressBase.ServiceStack
                 int j = 0;
                 foreach (DVBaseColumn col in dependencyTable)
                 {
-                    if (col.IsCustomColumn)
-                        CustomColumDoCalc4Row(row, _dv, globals, col);
-                    var cults = col.GetColumnCultureInfo(_user_culture);
-                    object _unformattedData = (_dv.AutoGen && col.Name == "eb_action") ? "<i class='fa fa-edit'></i>" : row[col.Data];
-                    object _formattedData = _unformattedData;
+                    try
+                    {
+                        if (col.IsCustomColumn)
+                            CustomColumDoCalc4Row(row, _dv, globals, col);
+                        var cults = col.GetColumnCultureInfo(_user_culture);
+                        object _unformattedData = (_dv.AutoGen && col.Name == "eb_action") ? "<i class='fa fa-edit'></i>" : row[col.Data];
+                        object _formattedData = _unformattedData;
 
-                    if (col.RenderType == EbDbTypes.Date || col.RenderType == EbDbTypes.DateTime)
-                    {
-                        DateTimeformat(_unformattedData, ref _formattedData, ref row, col, cults, _user);
-                    }
-                    else if (col.RenderType == EbDbTypes.Decimal || col.RenderType == EbDbTypes.Int32 || col.RenderType == EbDbTypes.Int64)
-                    {
-                        if ((col as DVNumericColumn).SuppresIfZero && (_isexcel == false))
+                        if (col.RenderType == EbDbTypes.Date || col.RenderType == EbDbTypes.DateTime)
                         {
-                            _formattedData = (Convert.ToDecimal(_unformattedData) == 0) ? string.Empty : Convert.ToDecimal(_unformattedData).ToString("N", cults.NumberFormat);
-
+                            DateTimeformat(_unformattedData, ref _formattedData, ref row, col, cults, _user);
                         }
-                        else
-                            _formattedData = Convert.ToDecimal(_unformattedData).ToString("N", cults.NumberFormat);
+                        else if (col.RenderType == EbDbTypes.Decimal || col.RenderType == EbDbTypes.Int32 || col.RenderType == EbDbTypes.Int64)
+                        {
+                            if ((col as DVNumericColumn).SuppresIfZero && (_isexcel == false))
+                            {
+                                _formattedData = (Convert.ToDecimal(_unformattedData) == 0) ? string.Empty : Convert.ToDecimal(_unformattedData).ToString("N", cults.NumberFormat);
+
+                            }
+                            else
+                                _formattedData = Convert.ToDecimal(_unformattedData).ToString("N", cults.NumberFormat);
+                        }
+                        else if (col.RenderType == EbDbTypes.Boolean || col.RenderType == EbDbTypes.BooleanOriginal)
+                        {
+                            if (col.Type == EbDbTypes.Decimal || col.Type == EbDbTypes.Int32 || col.Type == EbDbTypes.Int64)
+                                _formattedData = Convert.ToDecimal(_unformattedData);
+                            else if (col.Type == EbDbTypes.String)
+                                _formattedData = _unformattedData.ToString();
+                        }
+                        if (col.Name == "eb_created_by" || col.Name == "eb_lastmodified_by" || col.Name == "eb_loc_id" || col.Name == "eb_createdby")
+                        {
+                            ModifyEbColumns(col, ref _formattedData, _unformattedData);
+                        }
+                        if (col.ColumnQueryMapping != null && col.ColumnQueryMapping.Values.Count > 0)
+                            _formattedData = (col.ColumnQueryMapping.Values.ContainsKey(Convert.ToInt32(_formattedData))) ? col.ColumnQueryMapping.Values[Convert.ToInt32(_formattedData)] : string.Empty;
+                        IntermediateDic.Add(col.Data, _formattedData);
+                        if ((_dv as EbChartVisualization) != null || (_dv as Objects.EbGoogleMap) != null)
+                        {
+                            _formattedTable.Rows[i][col.Data] = _formattedData;
+                        }
                     }
-                    else if (col.RenderType == EbDbTypes.Boolean || col.RenderType == EbDbTypes.BooleanOriginal)
+                    catch (Exception e)
                     {
-                        if (col.Type == EbDbTypes.Decimal || col.Type == EbDbTypes.Int32 || col.Type == EbDbTypes.Int64)
-                            _formattedData = Convert.ToDecimal(_unformattedData);
-                        else if (col.Type == EbDbTypes.String)
-                            _formattedData = _unformattedData.ToString();
-                    }
-                    if (col.Name == "eb_created_by" || col.Name == "eb_lastmodified_by" || col.Name == "eb_loc_id" || col.Name == "eb_createdby")
-                    {
-                        ModifyEbColumns(col, ref _formattedData, _unformattedData);
-                    }
-                    if (col.ColumnQueryMapping != null && col.ColumnQueryMapping.Values.Count > 0)
-                        _formattedData = (col.ColumnQueryMapping.Values.ContainsKey(Convert.ToInt32(_formattedData))) ? col.ColumnQueryMapping.Values[Convert.ToInt32(_formattedData)] : string.Empty;
-                    IntermediateDic.Add(col.Data, _formattedData);
-                    if ((_dv as EbChartVisualization) != null || (_dv as Objects.EbGoogleMap) != null)
-                    {
-                        _formattedTable.Rows[i][col.Data] = _formattedData;
+                        Log.Info("PreProcessing in Create IntermediateDictionay........." + e.StackTrace + "Column Name  ......" + col.Name);
+                        Log.Info("PreProcessing in Create IntermediateDictionay........." + e.Message + "Column Name  ......" + col.Name);
+                        this._Responsestatus.Message = e.Message;
                     }
                 }
                 if ((_dv as EbTableVisualization) != null)
                 {
                     foreach (DVBaseColumn col in dependencyTable)
                     {
-                        bool AllowLinkifNoData = true;
-                        var cults = col.GetColumnCultureInfo(_user_culture);
-                        object _unformattedData = (_dv.AutoGen && col.Name == "eb_action") ? "<i class='fa fa-edit'></i>" : row[col.Data];
-                        object _formattedData = IntermediateDic[col.Data];
+                        try
+                        {
+                            bool AllowLinkifNoData = true;
+                            var cults = col.GetColumnCultureInfo(_user_culture);
+                            object _unformattedData = (_dv.AutoGen && col.Name == "eb_action") ? "<i class='fa fa-edit'></i>" : row[col.Data];
+                            object _formattedData = IntermediateDic[col.Data];
 
-                        if (col.RenderType == EbDbTypes.Decimal || col.RenderType == EbDbTypes.Int32 || col.RenderType == EbDbTypes.Int64)
-                        {
-                            if (((col as DVNumericColumn).RenderAs == NumericRenderType.ProgressBar) && (_isexcel == false))
-                                _formattedData = "<div class='progress'><div class='progress-bar' role='progressbar' aria-valuenow='" + _formattedData + "' aria-valuemin='0' aria-valuemax='100' style='width:" + _unformattedData.ToString() + "%'>" + _formattedData + "</div></div>";
-
-                            SummaryCalc(ref Summary, col, _unformattedData, cults);
-                        }
-                        else if (col.RenderType == EbDbTypes.String && (_isexcel == false))
-                        {
-                            if ((col as DVStringColumn).RenderAs == StringRenderType.Marker)
-                                _formattedData = "<a href = '#' class ='columnMarker" + this.TableId + "' data-latlong='" + _unformattedData + "'><i class='fa fa-map-marker fa-2x' style='color:red;'></i></a>";
-                        }
-                        string info = string.Empty;
-                        if (col.AllowedCharacterLength > 0 || col.InfoWindow.Count > 0)
-                        {
-                            info = "<table>";
-                            if (col.AllowedCharacterLength > 0)
-                                info += "<tr><td>" + col.sTitle + " &nbsp; : &nbsp;</td><td>" + _formattedData + "</td></tr>";
-                            if (col.InfoWindow.Count > 0)
+                            if (col.RenderType == EbDbTypes.Decimal || col.RenderType == EbDbTypes.Int32 || col.RenderType == EbDbTypes.Int64)
                             {
-                                foreach (DVBaseColumn _column in col.InfoWindow)
+                                if (((col as DVNumericColumn).RenderAs == NumericRenderType.ProgressBar) && (_isexcel == false))
+                                    _formattedData = "<div class='progress'><div class='progress-bar' role='progressbar' aria-valuenow='" + _formattedData + "' aria-valuemin='0' aria-valuemax='100' style='width:" + _unformattedData.ToString() + "%'>" + _formattedData + "</div></div>";
+
+                                SummaryCalc(ref Summary, col, _unformattedData, cults);
+                            }
+                            else if (col.RenderType == EbDbTypes.String && (_isexcel == false))
+                            {
+                                if ((col as DVStringColumn).RenderAs == StringRenderType.Marker)
+                                    _formattedData = "<a href = '#' class ='columnMarker" + this.TableId + "' data-latlong='" + _unformattedData + "'><i class='fa fa-map-marker fa-2x' style='color:red;'></i></a>";
+                            }
+                            string info = string.Empty;
+                            if (col.AllowedCharacterLength > 0 || col.InfoWindow.Count > 0)
+                            {
+                                info = "<table>";
+                                if (col.AllowedCharacterLength > 0)
+                                    info += "<tr><td>" + col.sTitle + " &nbsp; : &nbsp;</td><td>" + _formattedData + "</td></tr>";
+                                if (col.InfoWindow.Count > 0)
                                 {
-                                    if (_column.Name != col.Name)
+                                    foreach (DVBaseColumn _column in col.InfoWindow)
                                     {
-                                        info += "<tr><td>" + _column.sTitle + " &nbsp; : &nbsp;</td><td>" + IntermediateDic[_column.Data] + "</td></tr>";
+                                        if (_column.Name != col.Name)
+                                        {
+                                            info += "<tr><td>" + _column.sTitle + " &nbsp; : &nbsp;</td><td>" + IntermediateDic[_column.Data] + "</td></tr>";
+                                        }
                                     }
                                 }
+                                info += "</table>";
+
+                                _formattedData = _formattedData.ToString().Truncate(col.AllowedCharacterLength);
+                                _formattedData = "<span class='columntooltip' data-toggle='popover' data-contents='" + info.ToBase64() + "'>" + _formattedData + "</span>";
                             }
-                            info += "</table>";
 
-                            _formattedData = _formattedData.ToString().Truncate(col.AllowedCharacterLength);
-                            _formattedData = "<span class='columntooltip' data-toggle='popover' data-contents='" + info.ToBase64() + "'>" + _formattedData + "</span>";
-                        }
+                            if (_formattedData.ToString() == string.Empty)
+                                AllowLinkifNoData = false;
+                            if (col.ShowLinkifNoData)
+                                AllowLinkifNoData = true;
 
-                        if (_formattedData.ToString() == string.Empty)
-                            AllowLinkifNoData = false;
-                        if (col.ShowLinkifNoData)
-                            AllowLinkifNoData = true;
-
-                        if (!string.IsNullOrEmpty(col.LinkRefId) && (_isexcel == false))
-                        {
-                            if (AllowLinkifNoData)
+                            if (!string.IsNullOrEmpty(col.LinkRefId) && (_isexcel == false))
                             {
-                                if (_formattedData.ToString() == string.Empty)
-                                    _formattedData = "...";
-                                if (col.LinkType == LinkTypeEnum.Popout)
-                                    _formattedData = "<a href='#' oncontextmenu='return false' class ='tablelink" + this.TableId + "' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "'>" + _formattedData + "</a>";
-                                else if (col.LinkType == LinkTypeEnum.Inline)
-                                    _formattedData = _formattedData + "&nbsp; <a  href= '#' oncontextmenu= 'return false' class ='tablelink" + this.TableId + "' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-inline='true' data-data='" + _formattedData + "'><i class='fa fa-caret-down'></i></a>";
-                                else if (col.LinkType == LinkTypeEnum.Both)
-                                    _formattedData = "<a href='#' oncontextmenu='return false' class ='tablelink" + this.TableId + "' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "'>" + _formattedData + "</a>" + "&nbsp; <a  href ='#' oncontextmenu='return false' class='tablelink" + this.TableId + "' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-inline='true' data-data='" + _formattedData + "'> <i class='fa fa-caret-down'></i></a>";
-                                else if (col.LinkType == LinkTypeEnum.Popup)
-                                    _formattedData = "<a  href= '#' oncontextmenu= 'return false' class ='tablelink" + this.TableId + "' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-popup='true' data-data='" + _formattedData + "'>" + _formattedData + "</a>";
+                                if (AllowLinkifNoData)
+                                {
+                                    if (_formattedData.ToString() == string.Empty)
+                                        _formattedData = "...";
+                                    if (col.LinkType == LinkTypeEnum.Popout)
+                                        _formattedData = "<a href='#' oncontextmenu='return false' class ='tablelink" + this.TableId + "' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-column='" + col.Name + "'>" + _formattedData + "</a>";
+                                    else if (col.LinkType == LinkTypeEnum.Inline)
+                                        _formattedData = _formattedData + "&nbsp; <a  href= '#' oncontextmenu= 'return false' class ='tablelink" + this.TableId + "' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-column='" + col.Name + "' data-inline='true' data-data='" + _formattedData + "'><i class='fa fa-caret-down'></i></a>";
+                                    else if (col.LinkType == LinkTypeEnum.Both)
+                                        _formattedData = "<a href='#' oncontextmenu='return false' class ='tablelink" + this.TableId + "' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-column='" + col.Name + "' >" + _formattedData + "</a>" + "&nbsp; <a  href ='#' oncontextmenu='return false' class='tablelink" + this.TableId + "' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-column='" + col.Name + "' data-inline='true' data-data='" + _formattedData + "'> <i class='fa fa-caret-down'></i></a>";
+                                    else if (col.LinkType == LinkTypeEnum.Popup)
+                                        _formattedData = "<a  href= '#' oncontextmenu= 'return false' class ='tablelink" + this.TableId + "' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-column='" + col.Name + "' data-popup='true' data-data='" + _formattedData + "'>" + _formattedData + "</a>";
+                                }
                             }
-                        }
-                        if (col.RenderType == EbDbTypes.String && (col as DVStringColumn).RenderAs == StringRenderType.Link && col.LinkType == LinkTypeEnum.Tab && (_isexcel == false))/////////////////
-                        {
-                            _formattedData = "<a href='../leadmanagement/" + row[0] + "' target='_blank'>" + _formattedData + "</a>";
-                        }
-
-                        if (bObfuscute && (_isexcel == false))
-                        {
-                            if (col.HideDataRowMoreThan > 0 && col.HideDataRowMoreThan < count)
+                            if (col.RenderType == EbDbTypes.String && (col as DVStringColumn).RenderAs == StringRenderType.Link && col.LinkType == LinkTypeEnum.Tab && (_isexcel == false))/////////////////
                             {
-                                _formattedData = "********";
+                                _formattedData = "<a href='../leadmanagement/" + row[0] + "' target='_blank'>" + _formattedData + "</a>";
                             }
+
+                            if (bObfuscute && (_isexcel == false))
+                            {
+                                if (col.HideDataRowMoreThan > 0 && col.HideDataRowMoreThan < count)
+                                {
+                                    _formattedData = "********";
+                                }
+                            }
+
+                            this.conditinallyformatColumn(col, ref _formattedData, _unformattedData, row, ref globals);
+
+                            _formattedTable.Rows[i][col.Data] = _formattedData;
+                            if (_isexcel)
+                                worksheet.Cells[i + 2, j + 1].Value = _formattedData;
+
+                            if (i + 1 == count)
+                            {
+                                SummaryCalcAverage(ref Summary, col, cults, count);
+                            }
+                            j++;
                         }
-
-                        this.conditinallyformatColumn(col, ref _formattedData, _unformattedData, row, ref globals);
-
-                        _formattedTable.Rows[i][col.Data] = _formattedData;
-                        if (_isexcel)
-                            worksheet.Cells[i + 2, j + 1].Value = _formattedData;
-
-                        if (i + 1 == count)
+                        catch (Exception e)
                         {
-                            SummaryCalcAverage(ref Summary, col, cults, count);
+                            Log.Info("PreProcessing  data from IntermediateDictionay datatable Exception........." + e.StackTrace + "Column Name  ......" + col.Name);
+                            Log.Info("PreProcessing data from IntermediateDictionay datatable Exception........." + e.Message + "Column Name  ......" + col.Name);
+                            this._Responsestatus.Message = e.Message;
                         }
-                        j++;
                     }
                     if (isTree)
                     {
@@ -1281,13 +1332,28 @@ namespace ExpressBase.ServiceStack
                         {
                             if ((col as DVStringColumn).RenderAs == StringRenderType.Table)
                             {
-                                string _table = string.Empty;
+                                string _data = string.Empty;
+                                Dictionary<string, object> MyDynamic = new Dictionary<string, object>();
                                 foreach (DVBaseColumn _column in (_dv as EbCalendarView).DataColumns)
                                 {
-                                    _formattedData = xxx(dr, _column, _user_culture, _user, ref globals);
-                                    _table += $"<div class='dataclass {_column.Name}_class'>{ _formattedData }</div>";
+                                    MyDynamic.Add(_column.Name, xxx(dr, _column, _user_culture, _user, ref globals));
                                 }
-                                _formattedData = _table;
+
+                                foreach (DVBaseColumn _column in (_dv as EbCalendarView).DataColumns)
+                                {
+                                    string _tooltip = "<table>";
+                                    _formattedData = MyDynamic[_column.Name];
+                                    foreach (var key in MyDynamic.Keys)
+                                    {
+                                        if (key != _column.Name)
+                                        {
+                                            _tooltip += $"<tr><td> {key} &nbsp; : &nbsp; {MyDynamic[key]}</td></tr>";
+                                        }
+                                    }
+                                    _tooltip += "</table>";
+                                    _data += $"<div class='dataclass {_column.Name}_class columntooltip' data-toggle='popover' data-contents='{_tooltip.ToBase64()}'>{ _formattedData }</div>";
+                                }
+                                _formattedData = _data;
                             }
                             _formattedTable.Rows[i][col.Data] = _formattedData;
 
@@ -1298,8 +1364,8 @@ namespace ExpressBase.ServiceStack
             }
             catch (Exception e)
             {
-                Log.Info("PreProcessing in datatable Exception........." + e.StackTrace);
-                Log.Info("PreProcessing in datatable Exception........." + e.Message);
+                Log.Info("PreProcessing in DataTable2FormatedTable4Calendar Exception........." + e.StackTrace);
+                Log.Info("PreProcessing in DataTable2FormatedTable4Calendar Exception........." + e.Message);
                 this._Responsestatus.Message = e.Message;
             }
 
@@ -1309,8 +1375,6 @@ namespace ExpressBase.ServiceStack
         {
             try
             {
-
-
                 var cults = col.GetColumnCultureInfo(_user_culture);
                 object _unformattedData = row[col.OIndex];
                 object _formattedData = _unformattedData;
@@ -1333,8 +1397,8 @@ namespace ExpressBase.ServiceStack
             }
             catch (Exception e)
             {
-                Log.Info("PreProcessing in datatable Exception........." + e.StackTrace);
-                Log.Info("PreProcessing in datatable Exception........." + e.Message);
+                Log.Info("PreProcessing in Calendar Exception........." + e.StackTrace + "Column Name ....."+ col.Name);
+                Log.Info("PreProcessing in Calendar Exception........." + e.Message + "Column Name ....." + col.Name);
                 this._Responsestatus.Message = e.Message;
             }
             return null;
@@ -1372,8 +1436,8 @@ namespace ExpressBase.ServiceStack
             }
             catch (Exception e)
             {
-                Log.Info("Modify EbColumns in datatable Exception........." + e.StackTrace);
-                Log.Info("Modify EbColumns in datatable Exception........." + e.Message);
+                Log.Info("Modify EbColumns in datatable Exception........." + e.StackTrace + "Column Name  ......" +col.Name);
+                Log.Info("Modify EbColumns in datatable Exception........." + e.Message + "Column Name  ......" + col.Name);
                 this._Responsestatus.Message = e.Message;
             }
         }
@@ -1406,8 +1470,8 @@ namespace ExpressBase.ServiceStack
             }
             catch (Exception e)
             {
-                Log.Info("DateTime Conversion in datatable Exception........." + e.StackTrace);
-                Log.Info("DateTime Conversion in datatable Exception........." + e.Message);
+                Log.Info("DateTime Conversion in datatable Exception........." + e.StackTrace + "Column Name....."+ col.Name);
+                Log.Info("DateTime Conversion in datatable Exception........." + e.Message + "Column Name....." + col.Name);
                 this._Responsestatus.Message = e.Message;
             }
         }
@@ -1442,8 +1506,8 @@ namespace ExpressBase.ServiceStack
             }
             catch (Exception e)
             {
-                Log.Info("Condition Formatting in datatable Exception........." + e.StackTrace);
-                Log.Info("Condition Formatting in datatable Exception........." + e.Message);
+                Log.Info("Condition Formatting in datatable Exception........." + e.StackTrace + "Column Name....." + col.Name);
+                Log.Info("Condition Formatting in datatable Exception........." + e.Message + "Column Name....." + col.Name);
                 this._Responsestatus.Message = e.Message;
             }
 
