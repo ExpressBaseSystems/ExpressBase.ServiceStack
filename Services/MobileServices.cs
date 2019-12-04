@@ -79,7 +79,7 @@ namespace ExpressBase.ServiceStack.Services
                     _metaList.Add(new TableColumnMeta { Name = "eb_loc_id", Type = vDbTypes.Int32, Label = "Location" });
                     _metaList.Add(new TableColumnMeta { Name = "eb_device_id", Type = vDbTypes.String, Label = "Device Id" });
                     _metaList.Add(new TableColumnMeta { Name = "eb_appversion", Type = vDbTypes.String, Label = "App Version" });
-                    _metaList.Add(new TableColumnMeta { Name = "eb_sync_time", Type = vDbTypes.DateTime, Label = "Sync Time" });
+                    _metaList.Add(new TableColumnMeta { Name = "eb_created_at_device", Type = vDbTypes.DateTime, Label = "Sync Time" });
                 }
             }
             return _metaList;
