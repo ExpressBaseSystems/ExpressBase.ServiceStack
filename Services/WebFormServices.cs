@@ -740,7 +740,7 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     throw new FormException("Error in loading data. Access Denied.", (int)HttpStatusCodes.UNAUTHORIZED, "Access Denied for rowid " + form.TableRowId + " , current location " + form.LocationId, string.Empty);
                 }
-                _dataset.FormDataWrap = new WebformDataWrapper() { FormData = form.FormData, Status = (int)HttpStatusCodes.OK };
+                _dataset.FormDataWrap = new WebformDataWrapper() { FormData = form.FormData, Status = (int)HttpStatusCodes.OK, Message = "Success" };
                 Console.WriteLine("Returning from GetRowData Service");
             }
             catch (FormException ex)
@@ -765,7 +765,7 @@ namespace ExpressBase.ServiceStack.Services
                 EbWebForm form = GetWebFormObject(request.RefId);
                 form.RefId = request.RefId;
                 form.RefreshFormData(EbConnectionFactory.DataDB, this, request.Params);
-                _dataset.FormData = new WebformDataWrapper { FormData = form.FormData, Status = (int)HttpStatusCodes.OK };
+                _dataset.FormData = new WebformDataWrapper { FormData = form.FormData, Status = (int)HttpStatusCodes.OK, Message = "Success" };
             }
             catch (FormException ex)
             {
@@ -811,7 +811,7 @@ namespace ExpressBase.ServiceStack.Services
                 form.SolutionObj = this.Redis.Get<Eb_Solution>(String.Format("solution_{0}", request.SolnId));
                 form.ImportData(EbConnectionFactory.DataDB, this, request.Params, request.Trigger);
                 Console.WriteLine("End ImportFormData");
-                resp.FormDataWrap = new WebformDataWrapper { FormData = form.FormData, Status = (int)HttpStatusCodes.OK };
+                resp.FormDataWrap = new WebformDataWrapper { FormData = form.FormData, Status = (int)HttpStatusCodes.OK, Message = "Success" };
             }
             catch (FormException ex)
             {
@@ -934,6 +934,7 @@ namespace ExpressBase.ServiceStack.Services
                 Console.WriteLine("Insert/Update WebFormData : Execution Time = " + (DateTime.Now - startdt).TotalMilliseconds);
                 return new InsertDataFromWebformResponse()
                 {
+                    Message = "Success",
                     RowId = FormObj.TableRowId,
                     FormData = FormObj.FormData,
                     RowAffected = r,

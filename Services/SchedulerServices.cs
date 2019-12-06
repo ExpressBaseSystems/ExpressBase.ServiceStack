@@ -1,6 +1,7 @@
 ﻿using ExpressBase.Common;
 using ExpressBase.Common.Data;
 using ExpressBase.Common.Structures;
+using ExpressBase.Common.Connections;
 using ExpressBase.Objects.Services;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ExpressBase.Scheduler.Jobs;
@@ -90,7 +91,19 @@ namespace ExpressBase.ServiceStack.Services
                 }
                 res.Users = Users;
                 res.UserGroups = UserGroups;
+
+                //Slack user and group call
+
+                res.SlackUsers = this.EbConnectionFactory.ChatConnection.GetAllUsers();
+                res.SlackChannels = this.EbConnectionFactory.ChatConnection.GetAllGroup();
             }
+            return res;
+        }
+
+        public GetAllUsersResponse Get(GetAllSlackRequest request)
+        {
+            GetAllUsersResponse res = new GetAllUsersResponse();
+            
             return res;
         }
 
