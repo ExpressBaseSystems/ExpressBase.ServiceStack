@@ -1893,17 +1893,7 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
-        public UpdateSidMapResponse Post(UpdateSidMapRequest request)
-        {
-            this.MessageProducer3.Publish(new UpdateSidMapMqRequest());
-            return new UpdateSidMapResponse();
-        }
 
-        public UpdateRedisConnectionsResponse Post(UpdateRedisConnectionsRequest request)
-        {
-            this.MessageProducer3.Publish(new UpdateRedisConnectionsMqRequest());
-            return new UpdateRedisConnectionsResponse();
-        }
         //public InfraDb_GENERIC_SELECTResponse Any(InfraDb_GENERIC_SELECTRequest req)
         //{
         //    using (var con = InfraDatabaseFactory.InfraDB.GetNewConnection())
