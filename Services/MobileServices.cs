@@ -9,10 +9,10 @@ using ServiceStack.Messaging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using ExpressBase.Security;
 using ExpressBase.Common.Extensions;
 using System.Data.Common;
+using ExpressBase.Common.Application;
 using Newtonsoft.Json;
 
 namespace ExpressBase.ServiceStack.Services
@@ -34,6 +34,12 @@ namespace ExpressBase.ServiceStack.Services
                 WebFormServices webservices = base.ResolveService<WebFormServices>();
 
                 int status = webservices.CreateOrAlterTable(schema.FormName, _TableColMeta, ref msg);
+
+                //deploy webform if create 
+                if (status == 0)
+                {
+                    this.DeployWebForm(request);
+                }
 
                 if ((request.MobilePage.Container as EbMobileForm).AutoDeployMV)
                     this.DeployMobileVis(request, _TableColMeta);
@@ -70,6 +76,9 @@ namespace ExpressBase.ServiceStack.Services
                     _metaList.Add(new TableColumnMeta { Name = "eb_del", Type = vDbTypes.Boolean, Default = "F" });
                     _metaList.Add(new TableColumnMeta { Name = "eb_void", Type = vDbTypes.Boolean, Default = "F", Label = "Void ?" });
                     _metaList.Add(new TableColumnMeta { Name = "eb_loc_id", Type = vDbTypes.Int32, Label = "Location" });
+                    _metaList.Add(new TableColumnMeta { Name = "eb_device_id", Type = vDbTypes.String, Label = "Device Id" });
+                    _metaList.Add(new TableColumnMeta { Name = "eb_appversion", Type = vDbTypes.String, Label = "App Version" });
+                    _metaList.Add(new TableColumnMeta { Name = "eb_created_at_device", Type = vDbTypes.DateTime, Label = "Sync Time" });
                 }
             }
             return _metaList;
@@ -122,6 +131,49 @@ namespace ExpressBase.ServiceStack.Services
                 string refid = this.CreateNewObjectRequest(request, vispage);
                 (request.MobilePage.Container as EbMobileForm).AutoGenMVRefid = refid;
                 this.SaveObjectRequest(request, request.MobilePage);
+            }
+        }
+
+        private void DeployWebForm(CreateMobileFormTableRequest request)
+        {
+            string autgenref = (request.MobilePage.Container as EbMobileForm).WebFormRefId;
+
+            try
+            {
+                if (string.IsNullOrEmpty(autgenref))
+                {
+                    EbMobileForm mobileform = (request.MobilePage.Container as EbMobileForm);
+
+                    EbWebForm webform = new EbWebForm
+                    {
+                        Name = request.MobilePage.Name + "_autogen_webform",
+                        DisplayName = request.MobilePage.DisplayName + " AutoGen Webform",
+                        TableName = mobileform.TableName,
+                        Padding = new UISides { Top = 0, Right = 0, Bottom = 0, Left = 0 }
+                    };
+
+                    var counter = new Dictionary<string, int>();
+                    foreach (EbMobileControl ctrl in mobileform.ChiledControls)
+                    {
+                        string name = ctrl.GetType().Name;
+
+                        if (counter.ContainsKey(name))
+                            counter[name]++;
+                        else
+                            counter[name] = 0;
+
+                        EbControl Wctrl = ctrl.GetWebFormCtrl(counter[name]);
+                        webform.Controls.Add(Wctrl);
+                    }
+
+                    string refid = this.CreateNewObjectRequest(request, webform);
+                    (request.MobilePage.Container as EbMobileForm).WebFormRefId = refid;
+                    this.SaveObjectRequest(request, request.MobilePage);
+                }
+            }
+            catch (Exception ee)
+            {
+                Console.WriteLine(ee.Message);
             }
         }
 
@@ -283,7 +335,8 @@ namespace ExpressBase.ServiceStack.Services
 	                                EO2A.app_id = :appid 
                                 {0}
                                 AND 
-	                                COALESCE(EO2A.eb_del, 'F') = 'F';";
+	                                COALESCE(EO2A.eb_del, 'F') = 'F';
+                                SELECT app_settings FROM eb_applications WHERE id = :appid";
 
                 List<DbParameter> parameters = new List<DbParameter> {
                     this.EbConnectionFactory.ObjectsDB.GetNewParameter("appid", EbDbTypes.Int32, request.AppId)
@@ -291,7 +344,7 @@ namespace ExpressBase.ServiceStack.Services
 
                 if (UserObject.Roles.Contains(SystemRoles.SolutionOwner.ToString()) || UserObject.Roles.Contains(SystemRoles.SolutionAdmin.ToString()))
                 {
-                    query = string.Format(Sql,string.Empty);
+                    query = string.Format(Sql, string.Empty);
                 }
                 else
                 {
@@ -299,24 +352,69 @@ namespace ExpressBase.ServiceStack.Services
                     query = string.Format(Sql, idcheck);
                 }
 
-                EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(query, parameters.ToArray());
+                EbDataSet ds = this.EbConnectionFactory.DataDB.DoQueries(query, parameters.ToArray());
 
-                foreach (EbDataRow dr in dt.Rows)
+                foreach (EbDataRow dr in ds.Tables[0].Rows)
                 {
-                    response.Pages.Add(new MobilePagesWraper {
+                    response.Pages.Add(new MobilePagesWraper
+                    {
                         Name = dr["obj_name"].ToString(),
                         DisplayName = dr["display_name"].ToString(),
                         Version = dr["version_num"].ToString(),
                         Json = dr["obj_json"].ToString()
                     });
                 }
+
+                //apps settings
+                if (ds.Tables.Count >= 2 && ds.Tables[1].Rows.Any())
+                {
+                    EbMobileSettings settings = JsonConvert.DeserializeObject<EbMobileSettings>(ds.Tables[1].Rows[0]["app_settings"].ToString());
+                    if (settings != null)
+                    {
+                        response.TableNames = settings.DataImport.Select(i => i.TableName).ToList();
+                        if (request.PullData)
+                        {
+                            response.Data = this.PullAppConfiguredData(settings);
+                        }
+                    }
+                }
             }
             catch (Exception ex)
             {
                 Console.WriteLine("Exception at object list for user mobile req ::" + ex.Message);
+                return response;
             }
 
             return response;
+        }
+
+        private EbDataSet PullAppConfiguredData(EbMobileSettings Settings)
+        {
+            EbDataSet DataSet = new EbDataSet();
+
+            try
+            {
+                foreach(DataImportMobile DI in Settings.DataImport)
+                {
+                    int objtype = Convert.ToInt32(DI.RefId.Split(CharConstants.DASH)[2]);
+                    if(objtype == (int)EbObjectTypes.DataReader)
+                    {
+                        var resp = this.Gateway.Send<DataSourceDataSetResponse>(new DataSourceDataSetRequest
+                        {
+                            RefId = DI.RefId
+                        });
+
+                        resp.DataSet.Tables[0].TableName = DI.TableName;
+                        DataSet.Tables.Add(resp.DataSet.Tables[0]);
+                    }
+
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Exception at pull app configured data ::" + ex.Message);
+            }
+            return DataSet;
         }
     }
 }
