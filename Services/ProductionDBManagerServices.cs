@@ -489,8 +489,8 @@ namespace ExpressBase.ServiceStack.Services
                     for (int i = 0; i < dt.Tables[0].Rows.Count; i++)
                     {
                         column_default = dt.Tables[0].Rows[i]["column_default"].ToString();
-                        if (column_default.Contains("''F''::\"char\""))
-                            column_default = column_default.Replace("''F''::\"char\"", "'F'");
+                        if (column_default.Contains("'F'::\"char\""))
+                            column_default = column_default.Replace("'F'::\"char\"", "F");
                         string constraint_name = dt.Tables[0].Rows[i]["constraint_name"].ToString();
                         string data_type = dt.Tables[0].Rows[i]["data_type"].ToString();
                         string column_name = dt.Tables[0].Rows[i]["column_name"].ToString();
@@ -667,8 +667,8 @@ namespace ExpressBase.ServiceStack.Services
                                     dt.Tables[0].Rows[i]["column_name"] = "`keys`";
                             }
                             string column_default = dt.Tables[0].Rows[i]["column_default"].ToString();
-                            if (column_default.Contains("''F''::\"char\""))
-                                column_default = column_default.Replace("''F''::\"char\"", "'F'");
+                            if (column_default.Contains("'F'::\"char\""))
+                                column_default = column_default.Replace("'F'::\"char\"", "F");
                             Fields.Add(dt.Tables[0].Rows[i]["column_name"].ToString(), new List<Eb_TableFieldChanges> {
                             new Eb_TableFieldChanges{
                                 Data_type = dt.Tables[0].Rows[i]["data_type"].ToString(),
