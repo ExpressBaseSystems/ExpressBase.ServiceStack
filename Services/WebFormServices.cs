@@ -109,6 +109,8 @@ namespace ExpressBase.ServiceStack.Services
 
         public int CreateOrAlterTable(string tableName, List<TableColumnMeta> listNamesAndTypes, ref string Msg)
         {
+            int status = -1;
+
             //checking for space in column name, table name
             if (tableName.Contains(CharConstants.SPACE))
                 throw new FormException("Table creation failed - Invalid table name: " + tableName);
@@ -124,22 +126,20 @@ namespace ExpressBase.ServiceStack.Services
                 if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.ORACLE)////////////
                 {
                     sql = "CREATE TABLE @tbl(id NUMBER(10), @cols)".Replace("@cols", cols).Replace("@tbl", tableName);
-                    int _rowaff = this.EbConnectionFactory.DataDB.CreateTable(sql);//Table Creation
-                    CreateSquenceAndTrigger(tableName);//
-                    return _rowaff;
+                    this.EbConnectionFactory.DataDB.CreateTable(sql);//Table Creation
+                    CreateSquenceAndTrigger(tableName);
                 }
                 else if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.PGSQL)
                 {
                     sql = "CREATE TABLE @tbl( id SERIAL PRIMARY KEY, @cols)".Replace("@cols", cols).Replace("@tbl", tableName);
-                    return this.EbConnectionFactory.DataDB.CreateTable(sql);
+                    this.EbConnectionFactory.DataDB.CreateTable(sql);
                 }
                 else if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.MYSQL)
                 {
                     sql = "CREATE TABLE @tbl( id INTEGER AUTO_INCREMENT PRIMARY KEY, @cols)".Replace("@cols", cols).Replace("@tbl", tableName);
-                    return this.EbConnectionFactory.DataDB.CreateTable(sql);
+                    this.EbConnectionFactory.DataDB.CreateTable(sql);
                 }
-
-                return 0;
+                status = 0;
             }
             else
             {
@@ -186,7 +186,6 @@ namespace ExpressBase.ServiceStack.Services
                             int _aff = this.EbConnectionFactory.DataDB.UpdateTable(sql);
                             if (appendId)
                                 CreateSquenceAndTrigger(tableName);
-                            return _aff;
                         }
                     }
                     else if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.PGSQL)
@@ -196,7 +195,7 @@ namespace ExpressBase.ServiceStack.Services
                         {
                             sql = "ALTER TABLE @tbl ADD COLUMN " + (sql.Substring(0, sql.Length - 1)).Replace(",", ", ADD COLUMN ");
                             sql = sql.Replace("@tbl", tableName);
-                            return this.EbConnectionFactory.DataDB.UpdateTable(sql);
+                            this.EbConnectionFactory.DataDB.UpdateTable(sql);
                         }
                     }
                     else if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.MYSQL)
@@ -206,13 +205,13 @@ namespace ExpressBase.ServiceStack.Services
                         {
                             sql = "ALTER TABLE @tbl ADD COLUMN " + (sql.Substring(0, sql.Length - 1)).Replace(",", ", ADD COLUMN ");
                             sql = sql.Replace("@tbl", tableName);
-                            return this.EbConnectionFactory.DataDB.UpdateTable(sql);
+                            this.EbConnectionFactory.DataDB.UpdateTable(sql);
                         }
                     }
-                    return 0;
+                    status = 1;
                 }
             }
-            return -1;
+            return status;
             //throw new FormException("Table creation failed - Table name: " + tableName);
         }
 
@@ -727,26 +726,34 @@ namespace ExpressBase.ServiceStack.Services
 
         public GetRowDataResponse Any(GetRowDataRequest request)
         {
+            GetRowDataResponse _dataset = new GetRowDataResponse();
             try
             {
                 Console.WriteLine("Requesting for WebFormData( Refid : " + request.RefId + ", Rowid : " + request.RowId + " ).................");
-                GetRowDataResponse _dataset = new GetRowDataResponse();
                 EbWebForm form = GetWebFormObject(request.RefId);
                 form.TableRowId = request.RowId;
                 form.RefId = request.RefId;
                 form.UserObj = request.UserObj;
                 form.SolutionObj = this.Redis.Get<Eb_Solution>(String.Format("solution_{0}", request.SolnId));
                 form.RefreshFormData(EbConnectionFactory.DataDB, this);
-                _dataset.FormData = form.FormData;
+                if (!(form.HasPermission(OperationConstants.VIEW, form.LocationId) || form.HasPermission(OperationConstants.NEW, form.LocationId) || form.HasPermission(OperationConstants.EDIT, form.LocationId)))
+                {
+                    throw new FormException("Error in loading data. Access Denied.", (int)HttpStatusCodes.UNAUTHORIZED, "Access Denied for rowid " + form.TableRowId + " , current location " + form.LocationId, string.Empty);
+                }
+                _dataset.FormDataWrap = new WebformDataWrapper() { FormData = form.FormData, Status = (int)HttpStatusCodes.OK, Message = "Success" };
                 Console.WriteLine("Returning from GetRowData Service");
-                return _dataset;
+            }
+            catch (FormException ex)
+            {
+                Console.WriteLine("FormException in GetRowData Service \nMessage : " + ex.Message + "\n" + ex.StackTrace);
+                _dataset.FormDataWrap = new WebformDataWrapper() { Message = ex.Message, Status = ex.ExceptionCode, MessageInt = ex.MessageInternal, StackTraceInt = ex.StackTraceInternal };
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Exception in GetRowData Service" + ex.Message);
-                Console.WriteLine(ex.StackTrace);
-                throw ex;
+                Console.WriteLine("Exception in GetRowData Service \nMessage : " + ex.Message + "\n" + ex.StackTrace);
+                _dataset.FormDataWrap = new WebformDataWrapper() { Message = "Something went wrong", Status = (int)HttpStatusCodes.INTERNAL_SERVER_ERROR, MessageInt = ex.Message, StackTraceInt = ex.StackTrace };
             }
+            return _dataset;
         }
 
         public GetPrefillDataResponse Any(GetPrefillDataRequest request)
@@ -758,11 +765,15 @@ namespace ExpressBase.ServiceStack.Services
                 EbWebForm form = GetWebFormObject(request.RefId);
                 form.RefId = request.RefId;
                 form.RefreshFormData(EbConnectionFactory.DataDB, this, request.Params);
-                _dataset.FormData = new WebformDataWrapper { FormData = form.FormData };
+                _dataset.FormData = new WebformDataWrapper { FormData = form.FormData, Status = (int)HttpStatusCodes.OK, Message = "Success" };
+            }
+            catch (FormException ex)
+            {
+                _dataset.FormData = new WebformDataWrapper { Message = ex.Message, Status = ex.ExceptionCode, MessageInt = ex.MessageInternal, StackTraceInt = ex.StackTraceInternal };
             }
             catch (Exception e)
             {
-                _dataset.FormData = new WebformDataWrapper { Message = "Something went wrong.", MessageInt = e.Message, StackTraceInt = e.StackTrace };
+                _dataset.FormData = new WebformDataWrapper { Message = "Something went wrong.", Status = (int)HttpStatusCodes.INTERNAL_SERVER_ERROR, MessageInt = e.Message, StackTraceInt = e.StackTrace };
             }
             Console.WriteLine("End GetPrefillData");
             return _dataset;
@@ -790,6 +801,7 @@ namespace ExpressBase.ServiceStack.Services
 
         public GetImportDataResponse Any(GetImportDataRequest request)
         {
+            GetImportDataResponse resp = new GetImportDataResponse();
             try
             {
                 Console.WriteLine("Start ImportFormData");
@@ -799,19 +811,19 @@ namespace ExpressBase.ServiceStack.Services
                 form.SolutionObj = this.Redis.Get<Eb_Solution>(String.Format("solution_{0}", request.SolnId));
                 form.ImportData(EbConnectionFactory.DataDB, this, request.Params, request.Trigger);
                 Console.WriteLine("End ImportFormData");
-                return new GetImportDataResponse() { FormDataWrap = new WebformDataWrapper { FormData = form.FormData, Status = 200 } };
+                resp.FormDataWrap = new WebformDataWrapper { FormData = form.FormData, Status = (int)HttpStatusCodes.OK, Message = "Success" };
             }
             catch (FormException ex)
             {
                 Console.WriteLine("FormException in GetImportDataRequest Service" + ex.Message);
-                return new GetImportDataResponse() { FormDataWrap = new WebformDataWrapper { Status = 500, Message = ex.Message, MessageInt = ex.MessageInternal, StackTraceInt = ex.StackTraceInternal } };
+                resp.FormDataWrap = new WebformDataWrapper { Status = ex.ExceptionCode, Message = ex.Message, MessageInt = ex.MessageInternal, StackTraceInt = ex.StackTraceInternal };
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Exception in GetImportDataRequest Service" + ex.Message);
-                Console.WriteLine(ex.StackTrace);
-                return new GetImportDataResponse() { FormDataWrap = new WebformDataWrapper { Status = 500, Message = "Exception in GetImportDataRequest", MessageInt = ex.Message, StackTraceInt = ex.StackTrace } };
+                Console.WriteLine("Exception in GetImportDataRequest Service" + ex.Message + "\n" + ex.StackTrace);
+                resp.FormDataWrap = new WebformDataWrapper { Status = (int)HttpStatusCodes.INTERNAL_SERVER_ERROR, Message = "Exception in GetImportDataRequest", MessageInt = ex.Message, StackTraceInt = ex.StackTrace };
             }
+            return resp;
         }
 
         public ExecuteSqlValueExprResponse Any(ExecuteSqlValueExprRequest request)
@@ -922,6 +934,7 @@ namespace ExpressBase.ServiceStack.Services
                 Console.WriteLine("Insert/Update WebFormData : Execution Time = " + (DateTime.Now - startdt).TotalMilliseconds);
                 return new InsertDataFromWebformResponse()
                 {
+                    Message = "Success",
                     RowId = FormObj.TableRowId,
                     FormData = FormObj.FormData,
                     RowAffected = r,
@@ -931,8 +944,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (FormException ex)
             {
-                Console.WriteLine("Exception in Insert/Update WebFormData" + ex.Message);
-                Console.WriteLine(ex.StackTrace);
+                Console.WriteLine("Exception in Insert/Update WebFormData" + ex.Message + "\n" + ex.StackTrace);
                 return new InsertDataFromWebformResponse()
                 {
                     Message = ex.Message,
@@ -943,8 +955,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Exception in Insert/Update WebFormData" + ex.Message);
-                Console.WriteLine(ex.StackTrace);
+                Console.WriteLine("Exception in Insert/Update WebFormData" + ex.Message + "\n" + ex.StackTrace);
                 return new InsertDataFromWebformResponse()
                 {
                     Message = "Something went wrong",
@@ -1443,10 +1454,10 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
 
         }
-        
+
         public UpdateAllFormTablesResponse Post(UpdateAllFormTablesRequest request)
-        {            
-            string msg = $"Start* UpdateAllFormTables {DateTime.Now}\n\n";   
+        {
+            string msg = $"Start* UpdateAllFormTables {DateTime.Now}\n\n";
             try
             {
                 User u = this.Redis.Get<User>(request.UserAuthId);
@@ -1486,7 +1497,7 @@ namespace ExpressBase.ServiceStack.Services
                             {
                                 msg += $"\n\nDeserialization Failed, Name : {dr[1].ToString()}, Message : {ex.Message}";
                             }
-                            if(F != null)
+                            if (F != null)
                             {
                                 F.AutoDeployTV = false;
                                 try
@@ -1494,7 +1505,7 @@ namespace ExpressBase.ServiceStack.Services
                                     this.Any(new CreateWebFormTableRequest { WebObj = F });
                                     msg += $"\n\nSuccess   RefId : {dr[0].ToString()}, Name : {dr[1].ToString()} ";
                                 }
-                                catch(Exception e)
+                                catch (Exception e)
                                 {
                                     msg += $"\n\nWarning   RefId : {dr[0].ToString()}, Name : {dr[1].ToString()}, Message : {e.Message} ";
                                 }
@@ -1504,7 +1515,7 @@ namespace ExpressBase.ServiceStack.Services
                     msg += $"\n\nEnd* UpdateAllFormTables {DateTime.Now}";
                 }
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 msg += e.Message;
             }

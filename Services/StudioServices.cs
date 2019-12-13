@@ -1030,6 +1030,10 @@ namespace ExpressBase.ServiceStack
                     }
                 }
             }
+            catch (FormException e)
+            {
+                exception_msg = "--FormException--" + e.Message;
+            }
             catch (Exception e)
             {
                 Console.WriteLine("Exception: " + e.ToString());

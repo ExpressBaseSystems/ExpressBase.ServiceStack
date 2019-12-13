@@ -306,8 +306,17 @@ namespace ExpressBase.ServiceStack
                         _dsf = EbSerializers.Json_Deserialize(result.Data[0].Json);
                         Redis.Set<EbFilterDialog>(_ds.FilterDialogRefId, _dsf);
                     }
-                    if (request.Params == null)
-                        request.Params = _dsf.GetDefaultParams();
+                    if (request.Params == null || request.Params.Count == 2)
+                    {
+                        if(request.Params.Count == 2)
+                        {
+                            request.Params = request.Params.Concat(_dsf.GetDefaultParams()).ToList();
+                        }
+                        else
+                        {
+                            request.Params = _dsf.GetDefaultParams();
+                        }
+                    }
                 }
                 string _sql = string.Empty;
                 string tempsql = string.Empty;
