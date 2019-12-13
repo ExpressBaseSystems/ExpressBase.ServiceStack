@@ -72,7 +72,7 @@ namespace ExpressBase.ServiceStack.Services
                             _listNamesAndTypes.Add(new TableColumnMeta { Name = _column.ColumnName, Type = vDbTypes.GetVendorDbTypeStruct((EbDbTypes)_column.EbDbType), Unique = true, Control = (_column.Control as EbControl), Label = (_column.Control as EbControl).Label });
                             _listNamesAndTypes.Add(new TableColumnMeta { Name = _column.ColumnName + "_ebbkup", Type = vDbTypes.GetVendorDbTypeStruct((EbDbTypes)_column.EbDbType), Label = (_column.Control as EbControl).Label + "_ebbkup" });
                         }
-                        else if ((_column.Control as EbControl).IsSysControl)
+                        else if ((_column.Control as EbControl).DoNotPersist || (_column.Control as EbControl).IsSysControl)
                             continue;
                         else
                             _listNamesAndTypes.Add(new TableColumnMeta { Name = _column.ColumnName, Type = vDbTypes.GetVendorDbTypeStruct((EbDbTypes)_column.EbDbType), Label = (_column.Control as EbControl).Label, Control = (_column.Control as EbControl) });
