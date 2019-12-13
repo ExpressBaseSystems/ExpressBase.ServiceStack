@@ -700,7 +700,7 @@ namespace ExpressBase.ServiceStack
                     }
                     catch (Exception e)
                     {
-                        Log.Info("customCol.FormulaParts........." + e.StackTrace + "Column Name...."+ customCol.Name);
+                        Log.Info("customCol.FormulaParts........." + e.StackTrace + "Column Name...." + customCol.Name);
                         Log.Info("customCol.FormulaParts........." + e.Message + "Column Name...." + customCol.Name);
                         this._Responsestatus.Message = e.Message;
                     }
@@ -942,7 +942,8 @@ namespace ExpressBase.ServiceStack
                 dataset = _dataset;
                 EbDataSet tempdataset = new EbDataSet();
                 Globals globals = new Globals();
-                this.CreateCustomcolumn4Calendar(_dataset, ref tempdataset, Parameters, ref _dv);
+                Dictionary<int, int> _hourCount = new Dictionary<int, int>();
+                this.CreateCustomcolumn4Calendar(_dataset, ref tempdataset, Parameters, ref _dv, ref _hourCount);
                 EbDataTable _formattedTable = tempdataset.Tables[0].GetEmptyTable();
                 _formattedTable.Columns.Add(_formattedTable.NewDataColumn(_dv.Columns.Count, "serial", EbDbTypes.Int32));
                 RowColletion MasterRows = _dataset.Tables[0].Rows;
@@ -952,12 +953,11 @@ namespace ExpressBase.ServiceStack
                 string PreviousGroupingText = string.Empty;
                 for (int i = 0; i < MasterRows.Count; i++)
                 {
-
                     object keydata = MasterRows[i][PrimaryColumn.OIndex];
                     List<EbDataRow> customRows = LinesRows.FindAll(row => row[ForeignColumn.OIndex].Equals(keydata));
                     _formattedTable.Rows.Add(_formattedTable.NewDataRow2());
                     _formattedTable.Rows[i][_formattedTable.Columns.Count - 1] = i + 1;//serial
-                    DataTable2FormatedTable4Calendar(MasterRows[i], customRows, _dv, _user_culture, _user, ref _formattedTable, ref globals, i);
+                    DataTable2FormatedTable4Calendar(MasterRows[i], customRows, _dv, _user_culture, _user, ref _formattedTable, ref globals, i, _hourCount);
                 }
                 return new PrePrcessorReturn { FormattedTable = _formattedTable, rows = MasterRows };
             }
@@ -970,7 +970,7 @@ namespace ExpressBase.ServiceStack
             return null;
         }
 
-        public void CreateCustomcolumn4Calendar(EbDataSet _dataset, ref EbDataSet tempdataset, List<Param> Parameters, ref EbDataVisualization _dv)
+        public void CreateCustomcolumn4Calendar(EbDataSet _dataset, ref EbDataSet tempdataset, List<Param> Parameters, ref EbDataVisualization _dv, ref Dictionary<int, int> _hourCount)
         {
             int i = 0;
             foreach (EbDataTable _table in _dataset.Tables)
@@ -987,7 +987,25 @@ namespace ExpressBase.ServiceStack
                 i++;
             }
             int index = tempdataset.Tables[0].Columns.Count;
-            i = -1;
+            foreach (DVBaseColumn col in (_dv as EbCalendarView).DataColumns)
+            {
+                if (col.IsCustomColumn)
+                    tempdataset.Tables[0].Columns.Add(new EbDataColumn { ColumnIndex = index++, ColumnName = col.Name, Type = col.Type });
+            }
+            if ((_dv as EbCalendarView).AttendanceType == AttendanceType.DayWise)
+            {
+                DayWiseDateColumns(_dataset, ref tempdataset, Parameters, ref _dv);
+            }
+            else if ((_dv as EbCalendarView).AttendanceType == AttendanceType.Hourly)
+            {
+                HourlyWiseDateColumns(_dataset, ref tempdataset, Parameters, ref _dv, ref _hourCount);
+            }
+        }
+
+        public void DayWiseDateColumns(EbDataSet _dataset, ref EbDataSet tempdataset, List<Param> Parameters, ref EbDataVisualization _dv)
+        {
+            int index = tempdataset.Tables[0].Columns.Count;
+            int i = -1;
             string sql = $"SELECT eb_loc_id, holiday_date, holiday_name FROM eb_public_holidays WHERE eb_loc_id={CurLocId}";
             var _datatable = this.EbConnectionFactory.ObjectsDB.DoQuery(sql);
             for (var date = Parameters[0].ValueTo; Parameters[0].ValueTo.Month == date.Month; date = date.AddDays(1))
@@ -1004,13 +1022,13 @@ namespace ExpressBase.ServiceStack
                         cls = "holiday_class public-holiday";
                         tooltip = _hoidayRow["holiday_name"].ToString();
                     }
-                    else if(this._ebSolution.Locations.ContainsKey(CurLocId))
+                    else if (this._ebSolution.Locations.ContainsKey(CurLocId))
                     {
                         if (this._ebSolution.Locations[CurLocId].WeekHoliday1.ToLower() == date.ToString("dddd").ToLower())
                             tooltip = this._ebSolution.Locations[CurLocId].WeekHoliday1;
-                        else if(this._ebSolution.Locations[CurLocId].WeekHoliday2.ToLower() == date.ToString("dddd").ToLower())
+                        else if (this._ebSolution.Locations[CurLocId].WeekHoliday2.ToLower() == date.ToString("dddd").ToLower())
                             tooltip = this._ebSolution.Locations[CurLocId].WeekHoliday2;
-                        if(tooltip != string.Empty)
+                        if (tooltip != string.Empty)
                             cls = "holiday_class week-holiday";
                     }
                     if (DateTime.Now.Date.Equals(date))
@@ -1047,6 +1065,54 @@ namespace ExpressBase.ServiceStack
                     });
                 }
                 index++;
+            }
+        }
+
+        public void HourlyWiseDateColumns(EbDataSet _dataset, ref EbDataSet tempdataset, List<Param> Parameters, ref EbDataVisualization _dv, ref Dictionary<int, int> _hourCount)
+        {
+            int index = tempdataset.Tables[0].Columns.Count;
+            int i = -1;
+            int starttime = 9;
+            int endtime = starttime + 7 + 3;
+            int interval = 1;
+            for (var time = starttime; time < endtime; time = time + interval)
+            {
+                var name = (time + ":" + (time + interval)).ToString();
+                var StartamOrPm = (time < 12) ? " AM " : " PM ";
+                var EndamOrPm = ((time + interval) < 12) ? " AM " : " PM ";
+                var _title = (time + StartamOrPm+"-" + (time + interval) + EndamOrPm).ToString();
+                tempdataset.Tables[0].Columns.Add(new EbDataColumn { ColumnIndex = index, ColumnName = name, Type = EbDbTypes.String });
+                i++;
+                if (Modifydv)
+                {
+                    _dv.Columns.Add(new DVStringColumn
+                    {
+                        Data = index,
+                        Name = name,
+                        sTitle = _title,
+                        Type = EbDbTypes.String,
+                        RenderType = EbDbTypes.String,
+                        IsCustomColumn = true,
+                        bVisible = true,
+                        RenderAs = StringRenderType.Table,
+                    });
+
+                    (_dv as EbCalendarView).DateColumns.Add(new DVStringColumn
+                    {
+                        Data = index,
+                        OIndex = i,
+                        Name = name,
+                        sTitle = _title,
+                        Type = EbDbTypes.String,
+                        RenderType = EbDbTypes.String,
+                        IsCustomColumn = true,
+                        bVisible = true,
+                        RenderAs = StringRenderType.Table,
+                    });
+                }
+                index++;
+                if (!_hourCount.ContainsKey(time))
+                    _hourCount.Add(time, 0);
             }
         }
 
@@ -1247,6 +1313,7 @@ namespace ExpressBase.ServiceStack
                             {
                                 if (AllowLinkifNoData)
                                 {
+                                    string _link = col.LinkRefId;
                                     if (_formattedData.ToString() == string.Empty)
                                         _formattedData = "...";
                                     if (col.LinkType == LinkTypeEnum.Popout)
@@ -1307,58 +1374,32 @@ namespace ExpressBase.ServiceStack
 
         }
 
-        public void DataTable2FormatedTable4Calendar(EbDataRow row, List<EbDataRow> Customrows, EbDataVisualization _dv, CultureInfo _user_culture, User _user, ref EbDataTable _formattedTable, ref Globals globals, int i)
+        public void DataTable2FormatedTable4Calendar(EbDataRow row, List<EbDataRow> Customrows, EbDataVisualization _dv, CultureInfo _user_culture, User _user, ref EbDataTable _formattedTable, ref Globals globals, int i, Dictionary<int, int> _hourCount)
         {
             try
             {
                 IntermediateDic = new Dictionary<int, object>();
                 DVBaseColumn DateColumn = (_dv as EbCalendarView).LinesColumns.FirstOrDefault(col => !col.IsCustomColumn && (col.Type == EbDbTypes.Date || col.Type == EbDbTypes.DateTime));
-
+                bool _islink = ((_dv as EbCalendarView).ObjectLinks.Count == 1) ? true : false;
                 foreach (DVBaseColumn col in (_dv as EbCalendarView).KeyColumns)
                 {
                     _formattedTable.Rows[i][col.Data] = xxx(row, col, _user_culture, _user, ref globals);
                 }
                 foreach (DVBaseColumn col in (_dv as EbCalendarView).LinesColumns)
                 {
-                    //_formattedTable.Rows[i][col.Data] = xxx(Customrows[0], col, _user_culture, _user, ref globals);
+                    //_tempdatatable.Rows[i][col.Data] = Customrows[0][col.OIndex];
                 }
-                foreach (DVBaseColumn col in (_dv as EbCalendarView).DateColumns)
+
+                if ((_dv as EbCalendarView).AttendanceType == AttendanceType.DayWise)
                 {
-                    foreach (EbDataRow dr in Customrows)
+                    foreach (DVBaseColumn col in (_dv as EbCalendarView).DateColumns)
                     {
-                        object unformated = Convert.ToDateTime(dr[DateColumn.OIndex]).ToString("dd-MM-yyyy");// date column date
-                        object _formattedData = null;
-                        if (unformated.ToString() == col.Name)
-                        {
-                            if ((col as DVStringColumn).RenderAs == StringRenderType.Table)
-                            {
-                                string _data = string.Empty;
-                                Dictionary<string, object> MyDynamic = new Dictionary<string, object>();
-                                foreach (DVBaseColumn _column in (_dv as EbCalendarView).DataColumns)
-                                {
-                                    MyDynamic.Add(_column.Name, xxx(dr, _column, _user_culture, _user, ref globals));
-                                }
-
-                                foreach (DVBaseColumn _column in (_dv as EbCalendarView).DataColumns)
-                                {
-                                    string _tooltip = "<table>";
-                                    _formattedData = MyDynamic[_column.Name];
-                                    foreach (var key in MyDynamic.Keys)
-                                    {
-                                        if (key != _column.Name)
-                                        {
-                                            _tooltip += $"<tr><td> {key} &nbsp; : &nbsp; {MyDynamic[key]}</td></tr>";
-                                        }
-                                    }
-                                    _tooltip += "</table>";
-                                    _data += $"<div class='dataclass {_column.Name}_class columntooltip' data-toggle='popover' data-contents='{_tooltip.ToBase64()}'>{ _formattedData }</div>";
-                                }
-                                _formattedData = _data;
-                            }
-                            _formattedTable.Rows[i][col.Data] = _formattedData;
-
-                        }
+                        this.CalendarDayWise(ref _formattedTable, Customrows, DateColumn, col, _dv, _islink, i, _user_culture, _user, ref globals);
                     }
+                }
+                else if ((_dv as EbCalendarView).AttendanceType == AttendanceType.Hourly)
+                {
+                    this.CalendarHours(_hourCount, ref _formattedTable, Customrows, DateColumn, _dv, _islink, i, _user_culture, _user, ref globals);
                 }
 
             }
@@ -1369,6 +1410,144 @@ namespace ExpressBase.ServiceStack
                 this._Responsestatus.Message = e.Message;
             }
 
+        }
+
+
+        public void CalendarDayWise(ref EbDataTable _formattedTable, List<EbDataRow> Customrows, DVBaseColumn DateColumn, DVBaseColumn col, EbDataVisualization _dv, bool _islink, int i, CultureInfo _user_culture, User _user, ref Globals globals)
+        {
+            try
+            {
+                foreach (EbDataRow dr in Customrows)
+                {
+                    object unformated = Convert.ToDateTime(dr[DateColumn.OIndex]).ToString("dd-MM-yyyy");// date column date
+                    object _formattedData = null;
+                    if (unformated.ToString() == col.Name)
+                    {
+                        if ((col as DVStringColumn).RenderAs == StringRenderType.Table)
+                        {
+                            string _data = string.Empty;
+                            string _tooltip = "<table>";
+                            Dictionary<string, object> MyDynamic = new Dictionary<string, object>();
+                            foreach (DVBaseColumn _column in (_dv as EbCalendarView).DataColumns)
+                            {
+                                if (_column.bVisible)
+                                {
+                                    MyDynamic.Add(_column.Name, xxx(dr, _column, _user_culture, _user, ref globals));
+                                    _tooltip += $"<tr><td> {_column.Name} &nbsp; : &nbsp; {MyDynamic[_column.Name]}</td></tr>";
+                                }
+                            }
+                            _tooltip += "</table>";
+                            foreach (DVBaseColumn _column in (_dv as EbCalendarView).DataColumns)
+                            {
+                                if (_column.bVisible)
+                                {
+                                    _formattedData = MyDynamic[_column.Name];
+                                    if (_islink)
+                                        _formattedData = "<a href = '#' oncontextmenu = 'return false' class ='tablelink4calendar'  data-column='" + col.Name + "'>" + _formattedData + "</a>";
+                                    _data += $"<div hidden-row={System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(string.Join(",", dr.ToArray())))} class='dataclass {_column.Name}_class columntooltip' data-toggle='popover' data-contents='{_tooltip.ToBase64()}'>{ _formattedData }</div>";
+
+                                }
+                            }
+                            _formattedData = _data;
+                        }
+                        _formattedTable.Rows[i][col.Data] = _formattedData;
+
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Log.Info("PreProcessing in CalendarDayWise Exception........." + e.StackTrace + "Column Name ....." + col.Name);
+                Log.Info("PreProcessing in CalendarDayWise Exception........." + e.Message + "Column Name ....." + col.Name);
+                this._Responsestatus.Message = e.Message;
+            }
+        }
+
+        public void CalendarHours(Dictionary<int, int> _hourCount, ref EbDataTable _formattedTable, List<EbDataRow> Customrows, DVBaseColumn DateColumn, EbDataVisualization _dv, bool _islink, int i, CultureInfo _user_culture, User _user, ref Globals globals)
+        {
+            try
+            {
+                var _array = _hourCount.Keys.ToList();
+                Dictionary<string, Dictionary<int, int>> _dict = new Dictionary<string, Dictionary<int, int>>();
+                foreach (DVBaseColumn datacol in (_dv as EbCalendarView).DataColumns)
+                {
+                    if (datacol.bVisible)
+                    {
+                        _hourCount.Clear();
+                        foreach (var key in _array)
+                        {
+                            _hourCount.Add(key,0);
+                        }
+                        if (datacol.AggregateFun == AggregateFun.Count)
+                        {
+                            foreach (EbDataRow dr in Customrows)
+                            {
+                                if (datacol.Type == EbDbTypes.Date || datacol.Type == EbDbTypes.DateTime)
+                                {
+                                    string unformated = Convert.ToDateTime(dr[DateColumn.OIndex]).ToString("H:mm");
+                                    var _hour = unformated.Split(":")[0];
+                                    if (_hourCount.ContainsKey(Convert.ToInt32(_hour)))
+                                        _hourCount[Convert.ToInt32(_hour)]++;
+                                }
+                            }
+                        }
+                        else if (datacol.AggregateFun == AggregateFun.Sum)
+                        {
+                            foreach (EbDataRow dr in Customrows)
+                            {
+                                if (datacol.Type == EbDbTypes.Int32 || datacol.Type == EbDbTypes.Int64 || datacol.Type == EbDbTypes.Decimal)
+                                {
+                                    string unformated = Convert.ToDateTime(dr[DateColumn.OIndex]).ToString("H:mm");
+                                    var _hour = unformated.Split(":")[0];
+                                    var _data = Convert.ToInt32(dr[datacol.OIndex]);
+                                    if (_hourCount.ContainsKey(Convert.ToInt32(_hour)))
+                                        _hourCount[Convert.ToInt32(_hour)] += _data;
+                                }
+                            }
+                        }
+                        Dictionary<int, int> _hourCountCopy = new Dictionary<int, int>(_hourCount);
+                        _dict.Add(datacol.Name, _hourCountCopy);
+                    }
+                }
+
+                foreach (DVBaseColumn hourcol in (_dv as EbCalendarView).DateColumns)
+                {
+                    string _tooltip = "<table>";
+                    foreach (DVBaseColumn datacol in (_dv as EbCalendarView).DataColumns)
+                    {
+                        if (datacol.bVisible)
+                        {
+                            var _singledict = _dict[datacol.Name];
+                            int key = Convert.ToInt32(hourcol.Name.Split(":")[0]);
+                            object _formattedData = _singledict[key];
+                            _tooltip += $"<tr><td> {datacol.Name} &nbsp; : &nbsp; {_formattedData}</td></tr>";
+                        }
+                    }
+                    _tooltip += "</table>";
+
+                    string _data = string.Empty;
+                    foreach (DVBaseColumn datacol in (_dv as EbCalendarView).DataColumns)
+                    {
+                        if (datacol.bVisible)
+                        {
+                            var _singledict = _dict[datacol.Name];
+                            int key = Convert.ToInt32(hourcol.Name.Split(":")[0]);
+                            object _formattedData = _singledict[key];
+                            if (Convert.ToDecimal( _formattedData ) ==  0)
+                                _formattedData = string.Empty;
+                            _data += $"<div class='dataclass {datacol.Name}_class columntooltip' data-toggle='popover' data-contents='{_tooltip.ToBase64()}'>{ _formattedData }</div>";
+                            
+                        }
+                    }
+                    _formattedTable.Rows[i][hourcol.Data] = _data;
+                }
+            }
+            catch (Exception e)
+            {
+                Log.Info("PreProcessing in CalendarHours Exception........." + e.StackTrace );
+                Log.Info("PreProcessing in CalendarHours Exception........." + e.Message );
+                this._Responsestatus.Message = e.Message;
+            }
         }
 
         public object xxx(EbDataRow row, DVBaseColumn col, CultureInfo _user_culture, User _user, ref Globals globals)
@@ -1397,7 +1576,7 @@ namespace ExpressBase.ServiceStack
             }
             catch (Exception e)
             {
-                Log.Info("PreProcessing in Calendar Exception........." + e.StackTrace + "Column Name ....."+ col.Name);
+                Log.Info("PreProcessing in Calendar Exception........." + e.StackTrace + "Column Name ....." + col.Name);
                 Log.Info("PreProcessing in Calendar Exception........." + e.Message + "Column Name ....." + col.Name);
                 this._Responsestatus.Message = e.Message;
             }
@@ -1436,7 +1615,7 @@ namespace ExpressBase.ServiceStack
             }
             catch (Exception e)
             {
-                Log.Info("Modify EbColumns in datatable Exception........." + e.StackTrace + "Column Name  ......" +col.Name);
+                Log.Info("Modify EbColumns in datatable Exception........." + e.StackTrace + "Column Name  ......" + col.Name);
                 Log.Info("Modify EbColumns in datatable Exception........." + e.Message + "Column Name  ......" + col.Name);
                 this._Responsestatus.Message = e.Message;
             }
@@ -1470,7 +1649,7 @@ namespace ExpressBase.ServiceStack
             }
             catch (Exception e)
             {
-                Log.Info("DateTime Conversion in datatable Exception........." + e.StackTrace + "Column Name....."+ col.Name);
+                Log.Info("DateTime Conversion in datatable Exception........." + e.StackTrace + "Column Name....." + col.Name);
                 Log.Info("DateTime Conversion in datatable Exception........." + e.Message + "Column Name....." + col.Name);
                 this._Responsestatus.Message = e.Message;
             }

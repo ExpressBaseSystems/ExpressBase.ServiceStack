@@ -1303,6 +1303,8 @@ namespace ExpressBase.ServiceStack
         {
             if (obj is EbDataReader)
                 return EbObjectTypes.DataReader.IntCode;
+            else if (obj is EbCalendarView)
+                return EbObjectTypes.CalendarView.IntCode;
             else if (obj is EbTableVisualization)
                 return EbObjectTypes.TableVisualization.IntCode;
             else if (obj is EbChartVisualization)
@@ -1330,9 +1332,7 @@ namespace ExpressBase.ServiceStack
             else if (obj is EbApi)
                 return EbObjectTypes.Api.IntCode;
             else if (obj is EbDashBoard)
-                return EbObjectTypes.DashBoard.IntCode;
-            else if (obj is EbCalendarView)
-                return EbObjectTypes.CalendarView.IntCode;
+                return EbObjectTypes.DashBoard.IntCode;            
             else if(obj is EbMobilePage)
                 return EbObjectTypes.MobilePage.IntCode;
             else if (obj is EbSqlJob)
@@ -1357,6 +1357,10 @@ namespace ExpressBase.ServiceStack
             else if (obj is EbChartVisualization)
             {
                 Redis.Set(refId, (EbChartVisualization)obj);
+            }
+            else if (obj is EbCalendarView)
+            {
+                Redis.Set(refId, (EbCalendarView)obj);
             }
             else if (obj is EbTableVisualization)
             {
@@ -1401,11 +1405,7 @@ namespace ExpressBase.ServiceStack
             else if (obj is EbDashBoard)
             {
                 Redis.Set(refId, (EbDashBoard)obj);
-            }
-            else if (obj is EbCalendarView)
-            {
-                Redis.Set(refId, (EbCalendarView)obj);
-            }
+            }            
             else if (obj is EbMobilePage)
             {
                 Redis.Set(refId, (EbMobilePage)obj);
