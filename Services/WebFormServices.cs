@@ -935,7 +935,8 @@ namespace ExpressBase.ServiceStack.Services
                     Message = "Success",
                     RowId = FormObj.TableRowId,
                     FormData = FormObj.FormData,
-                    RowAffected = r,
+                    RowAffected = 1,
+                    AffectedEntries = r,
                     Status = (int)HttpStatusCodes.OK,
                 };
             }
