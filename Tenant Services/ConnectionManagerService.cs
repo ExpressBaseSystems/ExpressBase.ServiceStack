@@ -16,6 +16,7 @@ using System.Data;
 using System.Data.Common;
 using System.Linq;
 using System.IO;
+using ExpressBase.Common.Data.MSSQLServer;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -305,7 +306,11 @@ namespace ExpressBase.ServiceStack.Services
                     adminroles_enum = Enum.GetNames(typeof(MySqlSysRoles)).ToList();
                     adminroles_enum = adminroles_enum.ConvertAll(s => s.Replace("___", " "));
                 }
-
+                else if (request.DataDBConfig.DatabaseVendor == DatabaseVendors.MSSQL)
+                {
+                    DataDB = new MSSQLDatabase(request.DataDBConfig);
+                    adminroles_enum = Enum.GetNames(typeof(MSSqlSysRoles)).ToList();
+                }
                 EbDataTable dt = DataDB.DoQuery(DataDB.EB_USER_ROLE_PRIVS.Replace("@uname", request.DataDBConfig.UserName));
                 Console.WriteLine("User Role Privilages: " + dt.Rows.Count());
                 foreach (EbDataRow dr in dt.Rows)
