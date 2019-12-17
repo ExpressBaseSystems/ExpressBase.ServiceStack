@@ -69,13 +69,13 @@ namespace ExpressBase.ServiceStack.Services
                     {
                         if (_column.Control is EbAutoId)
                         {
-                            _listNamesAndTypes.Add(new TableColumnMeta { Name = _column.ColumnName, Type = vDbTypes.GetVendorDbTypeStruct((EbDbTypes)_column.EbDbType), Unique = true, Control = (_column.Control as EbControl), Label = (_column.Control as EbControl).Label });
-                            _listNamesAndTypes.Add(new TableColumnMeta { Name = _column.ColumnName + "_ebbkup", Type = vDbTypes.GetVendorDbTypeStruct((EbDbTypes)_column.EbDbType), Label = (_column.Control as EbControl).Label + "_ebbkup" });
+                            _listNamesAndTypes.Add(new TableColumnMeta { Name = _column.ColumnName, Type = vDbTypes.GetVendorDbTypeStruct((EbDbTypes)_column.EbDbType), Unique = true, Control = _column.Control, Label = _column.Control.Label });
+                            _listNamesAndTypes.Add(new TableColumnMeta { Name = _column.ColumnName + "_ebbkup", Type = vDbTypes.GetVendorDbTypeStruct((EbDbTypes)_column.EbDbType), Label = _column.Control.Label + "_ebbkup" });
                         }
-                        else if ((_column.Control as EbControl).IsSysControl)
+                        else if (_column.Control.DoNotPersist || _column.Control.IsSysControl)
                             continue;
                         else
-                            _listNamesAndTypes.Add(new TableColumnMeta { Name = _column.ColumnName, Type = vDbTypes.GetVendorDbTypeStruct((EbDbTypes)_column.EbDbType), Label = (_column.Control as EbControl).Label, Control = (_column.Control as EbControl) });
+                            _listNamesAndTypes.Add(new TableColumnMeta { Name = _column.ColumnName, Type = vDbTypes.GetVendorDbTypeStruct((EbDbTypes)_column.EbDbType), Label = _column.Control.Label, Control = _column.Control });
                     }
                     if (_table.TableName == _schema.MasterTable)
                     {
@@ -918,14 +918,12 @@ namespace ExpressBase.ServiceStack.Services
                 if (request.RowId > 0)
                     Operation = OperationConstants.EDIT;
                 if (!FormObj.HasPermission(Operation, request.CurrentLoc))
-                    return new InsertDataFromWebformResponse { Status = (int)HttpStatusCodes.FORBIDDEN, Message = "Access denied to save this data entry!", RowAffected = -2, RowId = -2 };
+                    return new InsertDataFromWebformResponse { Status = (int)HttpStatusCodes.FORBIDDEN, Message = "Access denied to save this data entry!", MessageInt = "Access denied" };
 
                 Console.WriteLine("Insert/Update WebFormData : MergeFormData start - " + DateTime.Now);
                 FormObj.MergeFormData();
                 Console.WriteLine("Insert/Update WebFormData : Save start - " + DateTime.Now);
-                int r = FormObj.Save(EbConnectionFactory.DataDB, this);
-                Console.WriteLine("Insert/Update WebFormData : AfterSave start - " + DateTime.Now);
-                int a = FormObj.AfterSave(EbConnectionFactory.DataDB, request.RowId > 0);
+                string r = FormObj.Save(EbConnectionFactory.DataDB, this);
                 if (this.EbConnectionFactory.EmailConnection != null && this.EbConnectionFactory.EmailConnection.Primary != null)
                 {
                     Console.WriteLine("Insert/Update WebFormData : SendMailIfUserCreated start - " + DateTime.Now);
@@ -937,8 +935,8 @@ namespace ExpressBase.ServiceStack.Services
                     Message = "Success",
                     RowId = FormObj.TableRowId,
                     FormData = FormObj.FormData,
-                    RowAffected = r,
-                    AfterSaveStatus = a,
+                    RowAffected = 1,
+                    AffectedEntries = r,
                     Status = (int)HttpStatusCodes.OK,
                 };
             }
