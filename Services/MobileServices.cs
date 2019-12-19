@@ -312,9 +312,9 @@ namespace ExpressBase.ServiceStack.Services
 
                 string idcheck = EbConnectionFactory.DataDB.EB_GET_MOBILE_PAGES;
 
-                const string Sql = @"SELECT obj_name,display_name,version_num,obj_json FROM (
+                const string Sql = @"SELECT obj_name,display_name,version_num,obj_json,refid FROM (
 				                                SELECT 
-					                                EO.id,EO.obj_name,EO.display_name,EOV.version_num, EOV.obj_json
+					                                EO.id,EO.obj_name,EO.display_name,EOV.version_num, EOV.obj_json,EOV.refid
 				                                FROM
 					                                eb_objects EO
 				                                LEFT JOIN 
@@ -361,7 +361,8 @@ namespace ExpressBase.ServiceStack.Services
                         Name = dr["obj_name"].ToString(),
                         DisplayName = dr["display_name"].ToString(),
                         Version = dr["version_num"].ToString(),
-                        Json = dr["obj_json"].ToString()
+                        Json = dr["obj_json"].ToString(),
+                        RefId = dr["refid"].ToString()
                     });
                 }
 
