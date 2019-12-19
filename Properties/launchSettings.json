@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "Eb": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "launchUrl": "http://localhost:41600",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}
