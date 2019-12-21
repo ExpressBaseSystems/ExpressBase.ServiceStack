@@ -33,6 +33,7 @@ using ExpressBase.Common.Extensions;
 using ExpressBase.Common.Singletons;
 using ExpressBase.Common.Helpers;
 using ExpressBase.Common.LocationNSolution;
+using System.Dynamic;
 
 namespace ExpressBase.ServiceStack
 {
@@ -308,7 +309,7 @@ namespace ExpressBase.ServiceStack
                     }
                     if (request.Params == null || request.Params.Count == 2)
                     {
-                        if(request.Params.Count == 2)
+                        if (request.Params.Count == 2)
                         {
                             request.Params = request.Params.Concat(_dsf.GetDefaultParams()).ToList();
                         }
@@ -951,7 +952,7 @@ namespace ExpressBase.ServiceStack
                 dataset = _dataset;
                 EbDataSet tempdataset = new EbDataSet();
                 Globals globals = new Globals();
-                Dictionary<int, int> _hourCount = new Dictionary<int, int>();
+                Dictionary<string, DynamicObj> _hourCount = new Dictionary<string, DynamicObj>();
                 this.CreateCustomcolumn4Calendar(_dataset, ref tempdataset, Parameters, ref _dv, ref _hourCount);
                 EbDataTable _formattedTable = tempdataset.Tables[0].GetEmptyTable();
                 _formattedTable.Columns.Add(_formattedTable.NewDataColumn(_dv.Columns.Count, "serial", EbDbTypes.Int32));
@@ -979,7 +980,7 @@ namespace ExpressBase.ServiceStack
             return null;
         }
 
-        public void CreateCustomcolumn4Calendar(EbDataSet _dataset, ref EbDataSet tempdataset, List<Param> Parameters, ref EbDataVisualization _dv, ref Dictionary<int, int> _hourCount)
+        public void CreateCustomcolumn4Calendar(EbDataSet _dataset, ref EbDataSet tempdataset, List<Param> Parameters, ref EbDataVisualization _dv, ref Dictionary<string, DynamicObj> _hourCount)
         {
             int i = 0;
             foreach (EbDataTable _table in _dataset.Tables)
@@ -1001,31 +1002,55 @@ namespace ExpressBase.ServiceStack
                 if (col.IsCustomColumn)
                     tempdataset.Tables[0].Columns.Add(new EbDataColumn { ColumnIndex = index++, ColumnName = col.Name, Type = col.Type });
             }
+
             if ((_dv as EbCalendarView).AttendanceType == AttendanceType.DayWise)
             {
-                DayWiseDateColumns(_dataset, ref tempdataset, Parameters, ref _dv);
+                DayWiseDateColumns(_dataset, ref tempdataset, Parameters, ref _dv, ref _hourCount);
             }
             else if ((_dv as EbCalendarView).AttendanceType == AttendanceType.Hourly)
             {
                 HourlyWiseDateColumns(_dataset, ref tempdataset, Parameters, ref _dv, ref _hourCount);
             }
+            else if ((_dv as EbCalendarView).AttendanceType == AttendanceType.Weekely)
+            {
+                WeekelyDateColumns(_dataset, ref tempdataset, Parameters, ref _dv, ref _hourCount);
+            }
+            else if ((_dv as EbCalendarView).AttendanceType == AttendanceType.Monthly)
+            {
+                MonthlyDateColumns(_dataset, ref tempdataset, Parameters, ref _dv, ref _hourCount);
+            }
+
+            else if ((_dv as EbCalendarView).AttendanceType == AttendanceType.Quarterly)
+            {
+                QuarterlyDateColumns(_dataset, ref tempdataset, Parameters, ref _dv, ref _hourCount);
+            }
+            else if ((_dv as EbCalendarView).AttendanceType == AttendanceType.HalfYearly)
+            {
+                HalfYearlyDateColumns(_dataset, ref tempdataset, Parameters, ref _dv, ref _hourCount);
+            }
         }
 
-        public void DayWiseDateColumns(EbDataSet _dataset, ref EbDataSet tempdataset, List<Param> Parameters, ref EbDataVisualization _dv)
+        public void DayWiseDateColumns(EbDataSet _dataset, ref EbDataSet tempdataset, List<Param> Parameters, ref EbDataVisualization _dv, ref Dictionary<string, DynamicObj> _hourCount)
         {
             int index = tempdataset.Tables[0].Columns.Count;
             int i = -1;
             string sql = $"SELECT eb_loc_id, holiday_date, holiday_name FROM eb_public_holidays WHERE eb_loc_id={CurLocId}";
             var _datatable = this.EbConnectionFactory.ObjectsDB.DoQuery(sql);
-            for (var date = Parameters[0].ValueTo; Parameters[0].ValueTo.Month == date.Month; date = date.AddDays(1))
+            DateTime paramdate = Parameters[0].ValueTo;
+            for (var date = paramdate; paramdate.Month == date.Month; date = date.AddDays(1))
             {
+                date = new DateTime(date.Year, date.Month, date.Day, 0, 0, 0);
+                var startDate = date;
+                date = new DateTime(date.Year, date.Month, date.Day, 23, 59, 59);
+                var endDate = date;
+                var key = GetKey(startDate, endDate);
                 tempdataset.Tables[0].Columns.Add(new EbDataColumn { ColumnIndex = index, ColumnName = date.Date.ToString(), Type = EbDbTypes.String });
                 i++;
                 if (Modifydv)
                 {
                     string cls = string.Empty;
                     string tooltip = string.Empty;
-                    var _hoidayRow = _datatable.Rows.FirstOrDefault(row => row["holiday_date"].Equals(date));
+                    var _hoidayRow = _datatable.Rows.FirstOrDefault(row => row["holiday_date"].Equals(startDate));
                     if (_hoidayRow != null)
                     {
                         cls = "holiday_class public-holiday";
@@ -1044,57 +1069,59 @@ namespace ExpressBase.ServiceStack
                     {
                         cls += "current_date_class";
                     }
-                    _dv.Columns.Add(new DVStringColumn
+                    CalendarDynamicColumn col = new CalendarDynamicColumn
                     {
                         Data = index,
-                        Name = date.ToString("dd-MM-yyyy"),
+                        Name = key,
                         sTitle = date.ToString("ddd")[0] + "</br>" + date.ToString("dd"),
                         Type = EbDbTypes.String,
                         RenderType = EbDbTypes.String,
                         IsCustomColumn = true,
                         bVisible = true,
-                        RenderAs = StringRenderType.Table,
                         ClassName = cls,
-                        HeaderTooltipText = tooltip
-                    });
+                        HeaderTooltipText = tooltip,
+                        StartDT = startDate,
+                        EndDT = endDate,
+                        Align = Align.Center
+                    };
+                    _dv.Columns.Add(col);
+                    col.OIndex = i;
 
-                    (_dv as EbCalendarView).DateColumns.Add(new DVStringColumn
-                    {
-                        Data = index,
-                        OIndex = i,
-                        Name = date.ToString("dd-MM-yyyy"),
-                        sTitle = date.ToString("ddd")[0] + "</br>" + date.ToString("dd"),
-                        Type = EbDbTypes.String,
-                        RenderType = EbDbTypes.String,
-                        IsCustomColumn = true,
-                        bVisible = true,
-                        RenderAs = StringRenderType.Table,
-                        ClassName = cls,
-                        HeaderTooltipText = tooltip
-                    });
+                    (_dv as EbCalendarView).DateColumns.Add(col);
                 }
                 index++;
+                if (!_hourCount.ContainsKey(key))
+                    _hourCount.Add(key, new DynamicObj());
             }
         }
 
-        public void HourlyWiseDateColumns(EbDataSet _dataset, ref EbDataSet tempdataset, List<Param> Parameters, ref EbDataVisualization _dv, ref Dictionary<int, int> _hourCount)
+        public void HourlyWiseDateColumns(EbDataSet _dataset, ref EbDataSet tempdataset, List<Param> Parameters, ref EbDataVisualization _dv, ref Dictionary<string, DynamicObj> _hourCount)
         {
             int index = tempdataset.Tables[0].Columns.Count;
             int i = -1;
             int starttime = 9;
             int endtime = starttime + 7 + 3;
             int interval = 1;
-            for (var time = starttime; time < endtime; time = time + interval)
+
+            DateTime paramdate = Parameters[0].ValueTo;
+
+            for (var time = starttime; time < endtime; time = (time + interval))
             {
-                var name = (time + ":" + (time + interval)).ToString();
-                var StartamOrPm = (time < 12) ? " AM " : " PM ";
-                var EndamOrPm = ((time + interval) < 12) ? " AM " : " PM ";
-                var _title = (time + StartamOrPm+"-" + (time + interval) + EndamOrPm).ToString();
+                paramdate = new DateTime(paramdate.Year, paramdate.Month, paramdate.Day, time, 0, 0);
+                var startDate = paramdate;
+                paramdate = new DateTime(paramdate.Year, paramdate.Month, paramdate.Day, time, 59, 59);
+                var endDate = paramdate;
+                var key = GetKey(startDate, endDate);
+                var nexttime = (time + interval);
+                var name = key;
+                var Starttime = (time < 12) ? time + "am" : time + "pm";
+                var Endtime = (nexttime < 12) ? nexttime + "am" : nexttime + "pm ";
+                var _title = (Starttime + "-" + Endtime).ToString();
                 tempdataset.Tables[0].Columns.Add(new EbDataColumn { ColumnIndex = index, ColumnName = name, Type = EbDbTypes.String });
                 i++;
                 if (Modifydv)
                 {
-                    _dv.Columns.Add(new DVStringColumn
+                    _dv.Columns.Add(new CalendarDynamicColumn
                     {
                         Data = index,
                         Name = name,
@@ -1103,10 +1130,12 @@ namespace ExpressBase.ServiceStack
                         RenderType = EbDbTypes.String,
                         IsCustomColumn = true,
                         bVisible = true,
-                        RenderAs = StringRenderType.Table,
+                        StartDT = startDate,
+                        EndDT = endDate,
+                        Align = Align.Center
                     });
 
-                    (_dv as EbCalendarView).DateColumns.Add(new DVStringColumn
+                    (_dv as EbCalendarView).DateColumns.Add(new CalendarDynamicColumn
                     {
                         Data = index,
                         OIndex = i,
@@ -1116,13 +1145,216 @@ namespace ExpressBase.ServiceStack
                         RenderType = EbDbTypes.String,
                         IsCustomColumn = true,
                         bVisible = true,
-                        RenderAs = StringRenderType.Table,
+                        StartDT = startDate,
+                        EndDT = endDate,
+                        Align = Align.Center
                     });
                 }
                 index++;
-                if (!_hourCount.ContainsKey(time))
-                    _hourCount.Add(time, 0);
+                if (!_hourCount.ContainsKey(key))
+                    _hourCount.Add(key, new DynamicObj());
             }
+        }
+
+        public void WeekelyDateColumns(EbDataSet _dataset, ref EbDataSet tempdataset, List<Param> Parameters, ref EbDataVisualization _dv, ref Dictionary<string, DynamicObj> _hourCount)
+        {
+            int index = tempdataset.Tables[0].Columns.Count;
+            int i = -1;
+            DateTime paramdate = Parameters[0].ValueTo;
+            Calendar calendar = CultureInfo.CurrentCulture.Calendar;
+
+            IEnumerable<int> daysInMonth = Enumerable.Range(1, calendar.GetDaysInMonth(paramdate.Year, paramdate.Month));
+
+            List<Tuple<DateTime, DateTime>> weeks = daysInMonth.Select(day => new DateTime(paramdate.Year, paramdate.Month, day))
+                .GroupBy(d => calendar.GetWeekOfYear(d, CalendarWeekRule.FirstFourDayWeek, DayOfWeek.Sunday))
+                .Select(g => new Tuple<DateTime, DateTime>(g.First(), g.Last()))
+                .ToList();
+
+            foreach (Tuple<DateTime, DateTime> x in weeks)
+            {
+                i++;
+                var date = new DateTime(x.Item1.Year, x.Item1.Month, x.Item1.Day, 0, 0, 0);
+                var startDate = date;
+                date = new DateTime(x.Item2.Year, x.Item2.Month, x.Item2.Day, 23, 59, 59);
+                var endDate = DateTimeHelper.EndOfDay(x.Item2);
+                var key = GetKey(startDate, endDate);
+                var _name = key;
+                var _title = (i + 1) + "week" + "</br>" + x.Item1.ToString("dd-MM-yyyy") + "-" + x.Item2.ToString("dd/MM/yyyy");
+                tempdataset.Tables[0].Columns.Add(new EbDataColumn { ColumnIndex = index, ColumnName = _name, Type = EbDbTypes.String });
+                if (Modifydv)
+                {
+                    CalendarDynamicColumn col = new CalendarDynamicColumn
+                    {
+                        Data = index,
+                        Name = _name,
+                        sTitle = _title,
+                        Type = EbDbTypes.String,
+                        RenderType = EbDbTypes.String,
+                        IsCustomColumn = true,
+                        bVisible = true,
+                        StartDT = startDate,
+                        EndDT = endDate,
+                        Align = Align.Center
+                    };
+                    _dv.Columns.Add(col);
+                    col.OIndex = i;
+
+                    (_dv as EbCalendarView).DateColumns.Add(col);
+                }
+                index++;
+                if (!_hourCount.ContainsKey(key))
+                    _hourCount.Add(key, new DynamicObj());
+            }
+        }
+
+        public void MonthlyDateColumns(EbDataSet _dataset, ref EbDataSet tempdataset, List<Param> Parameters, ref EbDataVisualization _dv, ref Dictionary<string, DynamicObj> _hourCount)
+        {
+            int index = tempdataset.Tables[0].Columns.Count;
+            int i = -1;
+            DateTime paramdate = Parameters[0].ValueTo;
+            for (var m = 1; m <= 12; m++)
+            {
+                var month = DateTimeFormatInfo.CurrentInfo.GetMonthName(m);
+                var date = new DateTime(paramdate.Year, m, 1, 0, 0, 0);
+                var startDate = date;
+                date = startDate.AddMonths(1).AddDays(-1);
+                var endDate = new DateTime(paramdate.Year, m, date.Day, 23, 59, 59);
+                var key = GetKey(startDate, endDate);
+                var title = month + "</br>" + startDate.ToString("dd-MM-yyyy") + "-" + endDate.ToString("dd/MM/yyyy");
+                tempdataset.Tables[0].Columns.Add(new EbDataColumn { ColumnIndex = index, ColumnName = date.Date.ToString(), Type = EbDbTypes.String });
+                i++;
+                if (Modifydv)
+                {
+                    CalendarDynamicColumn col = new CalendarDynamicColumn
+                    {
+                        Data = index,
+                        Name = key,
+                        sTitle = title,
+                        Type = EbDbTypes.String,
+                        RenderType = EbDbTypes.String,
+                        IsCustomColumn = true,
+                        bVisible = true,
+                        StartDT = startDate,
+                        EndDT = endDate,
+                        Align = Align.Center
+                    };
+                    _dv.Columns.Add(col);
+                    col.OIndex = i;
+
+                    (_dv as EbCalendarView).DateColumns.Add(col);
+                }
+                index++;
+                if (!_hourCount.ContainsKey(key))
+                    _hourCount.Add(key, new DynamicObj());
+            }
+        }
+
+        public void QuarterlyDateColumns(EbDataSet _dataset, ref EbDataSet tempdataset, List<Param> Parameters, ref EbDataVisualization _dv, ref Dictionary<string, DynamicObj> _hourCount)
+        {
+            int index = tempdataset.Tables[0].Columns.Count;
+            int i = -1;
+            DateTime paramdate = Parameters[0].ValueTo;
+            for (var m = 1; m <= 12; m += 3)
+            {
+                var month = DateTimeFormatInfo.CurrentInfo.GetMonthName(m);
+                var date = new DateTime(paramdate.Year, m, 1, 0, 0, 0);
+                var startDate = date;
+                date = startDate.AddMonths(3).AddDays(-1);
+                var endDate = new DateTime(date.Year, date.Month, date.Day, 23, 59, 59);
+                var key = GetKey(startDate, endDate);
+                var endmonth = DateTimeFormatInfo.CurrentInfo.GetMonthName(date.Month);
+                var title = month + "-" + endmonth + "</br>" + startDate.ToString("dd-MM-yyyy") + "-" + endDate.ToString("dd/MM/yyyy");
+                tempdataset.Tables[0].Columns.Add(new EbDataColumn { ColumnIndex = index, ColumnName = date.Date.ToString(), Type = EbDbTypes.String });
+                i++;
+                if (Modifydv)
+                {
+                    CalendarDynamicColumn col = new CalendarDynamicColumn
+                    {
+                        Data = index,
+                        Name = key,
+                        sTitle = title,
+                        Type = EbDbTypes.String,
+                        RenderType = EbDbTypes.String,
+                        IsCustomColumn = true,
+                        bVisible = true,
+                        StartDT = startDate,
+                        EndDT = endDate,
+                        Align = Align.Center
+                    };
+                    _dv.Columns.Add(col);
+                    col.OIndex = i;
+
+                    (_dv as EbCalendarView).DateColumns.Add(col);
+                }
+                index++;
+                if (!_hourCount.ContainsKey(key))
+                    _hourCount.Add(key, new DynamicObj());
+            }
+        }
+
+        public void HalfYearlyDateColumns(EbDataSet _dataset, ref EbDataSet tempdataset, List<Param> Parameters, ref EbDataVisualization _dv, ref Dictionary<string, DynamicObj> _hourCount)
+        {
+            int index = tempdataset.Tables[0].Columns.Count;
+            DateTime paramdate = Parameters[0].ValueTo;
+
+            var month = DateTimeFormatInfo.CurrentInfo.GetMonthName(1);
+            var startDate = new DateTime(paramdate.Year, 1, 1, 0, 0, 0);
+            var endDate = new DateTime(paramdate.Year, 6, 30, 23, 59, 59);
+            var endmonth = DateTimeFormatInfo.CurrentInfo.GetMonthName(6);
+            var key = GetKey(startDate, endDate);
+            var title = month + "-" + endmonth + "</br>" + startDate.ToString("dd-MM-yyyy") + "-" + endDate.ToString("dd/MM/yyyy");
+            tempdataset.Tables[0].Columns.Add(new EbDataColumn { ColumnIndex = index, ColumnName = key, Type = EbDbTypes.String });
+            if (Modifydv)
+            {
+                CalendarDynamicColumn col = new CalendarDynamicColumn
+                {
+                    Data = index,
+                    Name = key,
+                    sTitle = title,
+                    Type = EbDbTypes.String,
+                    RenderType = EbDbTypes.String,
+                    IsCustomColumn = true,
+                    bVisible = true,
+                    StartDT = startDate,
+                    EndDT = endDate,
+                    Align = Align.Center
+                };
+                _dv.Columns.Add(col);
+                col.OIndex = 0;
+                (_dv as EbCalendarView).DateColumns.Add(col);
+            }
+            if (!_hourCount.ContainsKey(key))
+                _hourCount.Add(key, new DynamicObj());
+
+             month = DateTimeFormatInfo.CurrentInfo.GetMonthName(7);
+             startDate = new DateTime(paramdate.Year, 7, 1, 0, 0, 0);
+             endDate = new DateTime(paramdate.Year, 12, 31, 23, 59, 59);
+             endmonth = DateTimeFormatInfo.CurrentInfo.GetMonthName(12);
+             key = GetKey(startDate, endDate);
+             title = month + "-" + endmonth + "</br>" + startDate.ToString("dd-MM-yyyy") + "-" + endDate.ToString("dd/MM/yyyy");
+            tempdataset.Tables[0].Columns.Add(new EbDataColumn { ColumnIndex = index, ColumnName = key, Type = EbDbTypes.String });
+            if (Modifydv)
+            {
+                CalendarDynamicColumn col = new CalendarDynamicColumn
+                {
+                    Data = index,
+                    Name = key,
+                    sTitle = title,
+                    Type = EbDbTypes.String,
+                    RenderType = EbDbTypes.String,
+                    IsCustomColumn = true,
+                    bVisible = true,
+                    StartDT = startDate,
+                    EndDT = endDate,
+                    Align = Align.Center
+                };
+                _dv.Columns.Add(col);
+                col.OIndex = 0;
+                (_dv as EbCalendarView).DateColumns.Add(col);
+            }
+            if (!_hourCount.ContainsKey(key))
+                _hourCount.Add(key, new DynamicObj());
+
         }
 
         public List<DVBaseColumn> CreateDependencyTable(EbDataVisualization _dv)
@@ -1383,7 +1615,7 @@ namespace ExpressBase.ServiceStack
 
         }
 
-        public void DataTable2FormatedTable4Calendar(EbDataRow row, List<EbDataRow> Customrows, EbDataVisualization _dv, CultureInfo _user_culture, User _user, ref EbDataTable _formattedTable, ref Globals globals, int i, Dictionary<int, int> _hourCount)
+        public void DataTable2FormatedTable4Calendar(EbDataRow row, List<EbDataRow> Customrows, EbDataVisualization _dv, CultureInfo _user_culture, User _user, ref EbDataTable _formattedTable, ref Globals globals, int i, Dictionary<string, DynamicObj> _hourCount)
         {
             try
             {
@@ -1399,17 +1631,7 @@ namespace ExpressBase.ServiceStack
                     //_tempdatatable.Rows[i][col.Data] = Customrows[0][col.OIndex];
                 }
 
-                if ((_dv as EbCalendarView).AttendanceType == AttendanceType.DayWise)
-                {
-                    foreach (DVBaseColumn col in (_dv as EbCalendarView).DateColumns)
-                    {
-                        this.CalendarDayWise(ref _formattedTable, Customrows, DateColumn, col, _dv, _islink, i, _user_culture, _user, ref globals);
-                    }
-                }
-                else if ((_dv as EbCalendarView).AttendanceType == AttendanceType.Hourly)
-                {
-                    this.CalendarHours(_hourCount, ref _formattedTable, Customrows, DateColumn, _dv, _islink, i, _user_culture, _user, ref globals);
-                }
+                this.CalendarProcessing(_hourCount, ref _formattedTable, Customrows, DateColumn, _dv, _islink, i, _user_culture, _user, ref globals);
 
             }
             catch (Exception e)
@@ -1421,142 +1643,132 @@ namespace ExpressBase.ServiceStack
 
         }
 
-
-        public void CalendarDayWise(ref EbDataTable _formattedTable, List<EbDataRow> Customrows, DVBaseColumn DateColumn, DVBaseColumn col, EbDataVisualization _dv, bool _islink, int i, CultureInfo _user_culture, User _user, ref Globals globals)
-        {
-            try
-            {
-                foreach (EbDataRow dr in Customrows)
-                {
-                    object unformated = Convert.ToDateTime(dr[DateColumn.OIndex]).ToString("dd-MM-yyyy");// date column date
-                    object _formattedData = null;
-                    if (unformated.ToString() == col.Name)
-                    {
-                        if ((col as DVStringColumn).RenderAs == StringRenderType.Table)
-                        {
-                            string _data = string.Empty;
-                            string _tooltip = "<table>";
-                            Dictionary<string, object> MyDynamic = new Dictionary<string, object>();
-                            foreach (DVBaseColumn _column in (_dv as EbCalendarView).DataColumns)
-                            {
-                                if (_column.bVisible)
-                                {
-                                    MyDynamic.Add(_column.Name, xxx(dr, _column, _user_culture, _user, ref globals));
-                                    _tooltip += $"<tr><td> {_column.Name} &nbsp; : &nbsp; {MyDynamic[_column.Name]}</td></tr>";
-                                }
-                            }
-                            _tooltip += "</table>";
-                            foreach (DVBaseColumn _column in (_dv as EbCalendarView).DataColumns)
-                            {
-                                if (_column.bVisible)
-                                {
-                                    _formattedData = MyDynamic[_column.Name];
-                                    if (_islink)
-                                        _formattedData = "<a href = '#' oncontextmenu = 'return false' class ='tablelink4calendar'  data-column='" + col.Name + "'>" + _formattedData + "</a>";
-                                    _data += $"<div hidden-row={System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(string.Join(",", dr.ToArray())))} class='dataclass {_column.Name}_class columntooltip' data-toggle='popover' data-contents='{_tooltip.ToBase64()}'>{ _formattedData }</div>";
-
-                                }
-                            }
-                            _formattedData = _data;
-                        }
-                        _formattedTable.Rows[i][col.Data] = _formattedData;
-
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                Log.Info("PreProcessing in CalendarDayWise Exception........." + e.StackTrace + "Column Name ....." + col.Name);
-                Log.Info("PreProcessing in CalendarDayWise Exception........." + e.Message + "Column Name ....." + col.Name);
-                this._Responsestatus.Message = e.Message;
-            }
-        }
-
-        public void CalendarHours(Dictionary<int, int> _hourCount, ref EbDataTable _formattedTable, List<EbDataRow> Customrows, DVBaseColumn DateColumn, EbDataVisualization _dv, bool _islink, int i, CultureInfo _user_culture, User _user, ref Globals globals)
+        public void CalendarProcessing(Dictionary<string, DynamicObj> _hourCount, ref EbDataTable _formattedTable, List<EbDataRow> Customrows, DVBaseColumn DateColumn, EbDataVisualization _dv, bool _islink, int i, CultureInfo _user_culture, User _user, ref Globals globals)
         {
             try
             {
                 var _array = _hourCount.Keys.ToList();
-                Dictionary<string, Dictionary<int, int>> _dict = new Dictionary<string, Dictionary<int, int>>();
-                foreach (DVBaseColumn datacol in (_dv as EbCalendarView).DataColumns)
+                Dictionary<string, Dictionary<string, DynamicObj>> _dict = new Dictionary<string, Dictionary<string, DynamicObj>>();
+                foreach (DVBaseColumn col in (_dv as EbCalendarView).DateColumns)
                 {
-                    if (datacol.bVisible)
-                    {
-                        _hourCount.Clear();
-                        foreach (var key in _array)
-                        {
-                            _hourCount.Add(key,0);
-                        }
-                        if (datacol.AggregateFun == AggregateFun.Count)
-                        {
-                            foreach (EbDataRow dr in Customrows)
-                            {
-                                if (datacol.Type == EbDbTypes.Date || datacol.Type == EbDbTypes.DateTime)
-                                {
-                                    string unformated = Convert.ToDateTime(dr[DateColumn.OIndex]).ToString("H:mm");
-                                    var _hour = unformated.Split(":")[0];
-                                    if (_hourCount.ContainsKey(Convert.ToInt32(_hour)))
-                                        _hourCount[Convert.ToInt32(_hour)]++;
-                                }
-                            }
-                        }
-                        else if (datacol.AggregateFun == AggregateFun.Sum)
-                        {
-                            foreach (EbDataRow dr in Customrows)
-                            {
-                                if (datacol.Type == EbDbTypes.Int32 || datacol.Type == EbDbTypes.Int64 || datacol.Type == EbDbTypes.Decimal)
-                                {
-                                    string unformated = Convert.ToDateTime(dr[DateColumn.OIndex]).ToString("H:mm");
-                                    var _hour = unformated.Split(":")[0];
-                                    var _data = Convert.ToInt32(dr[datacol.OIndex]);
-                                    if (_hourCount.ContainsKey(Convert.ToInt32(_hour)))
-                                        _hourCount[Convert.ToInt32(_hour)] += _data;
-                                }
-                            }
-                        }
-                        Dictionary<int, int> _hourCountCopy = new Dictionary<int, int>(_hourCount);
-                        _dict.Add(datacol.Name, _hourCountCopy);
-                    }
-                }
-
-                foreach (DVBaseColumn hourcol in (_dv as EbCalendarView).DateColumns)
-                {
+                    var CalendarCol = (col as CalendarDynamicColumn);
+                    var _key = GetKey(CalendarCol.StartDT, CalendarCol.EndDT);
+                    string _formatteddata = string.Empty;
                     string _tooltip = "<table>";
                     foreach (DVBaseColumn datacol in (_dv as EbCalendarView).DataColumns)
                     {
                         if (datacol.bVisible)
                         {
-                            var _singledict = _dict[datacol.Name];
-                            int key = Convert.ToInt32(hourcol.Name.Split(":")[0]);
-                            object _formattedData = _singledict[key];
-                            _tooltip += $"<tr><td> {datacol.Name} &nbsp; : &nbsp; {_formattedData}</td></tr>";
+                            _hourCount.Clear();
+                            foreach (var key in _array)
+                            {
+                                _hourCount.Add(key, new DynamicObj());
+                            }
+                            if (datacol.AggregateFun == AggregateFun.Count)
+                            {
+                                foreach (EbDataRow dr in Customrows)
+                                {
+                                    if (datacol.Type == EbDbTypes.Date || datacol.Type == EbDbTypes.DateTime)
+                                    {
+                                        DateTime unformated = Convert.ToDateTime(dr[datacol.OIndex]);
+                                        bool _flag = DateTimeHelper.IsBewteenTwoDates(unformated, CalendarCol.StartDT, CalendarCol.EndDT);
+                                        if (_flag)
+                                        {
+                                            if (_hourCount.ContainsKey(_key))
+                                            {
+                                                var _temp = new DynamicObj();
+                                                _temp.Row = System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(string.Join(",", dr.ToArray())));
+                                                var x = Convert.ToInt32(_hourCount[_key].Value);
+                                                _temp.Value = ++x;
+                                                _hourCount[_key] = _temp;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            else if (datacol.AggregateFun == AggregateFun.Sum)
+                            {
+                                foreach (EbDataRow dr in Customrows)
+                                {
+                                    if (datacol.Type == EbDbTypes.Int32 || datacol.Type == EbDbTypes.Int64 || datacol.Type == EbDbTypes.Decimal)
+                                    {
+                                        DateTime unformated = Convert.ToDateTime(dr[DateColumn.OIndex]);
+                                        bool _flag = DateTimeHelper.IsBewteenTwoDates(unformated, CalendarCol.StartDT, CalendarCol.EndDT);
+                                        if (_flag)
+                                        {
+                                            var _data = Convert.ToInt32(dr[datacol.OIndex]);
+                                            if (_hourCount.ContainsKey(_key))
+                                            {
+                                                var _temp = new DynamicObj();
+                                                _temp.Row = System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(string.Join(",", dr.ToArray())));
+                                                var x = Convert.ToInt32(_hourCount[_key].Value);
+                                                x += _data;
+                                                _temp.Value = x;
+                                                _hourCount[_key] = _temp;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            else if (datacol.AggregateFun == AggregateFun.Default)
+                            {
+                                foreach (EbDataRow dr in Customrows)
+                                {
+                                    DateTime unformated = Convert.ToDateTime(dr[DateColumn.OIndex]);
+                                    bool _flag = DateTimeHelper.IsBewteenTwoDates(unformated, CalendarCol.StartDT, CalendarCol.EndDT);
+                                    if (_flag)
+                                    {
+                                        var _data = xxx(dr, datacol, _user_culture, _user, ref globals);
+                                        if (_hourCount.ContainsKey(_key))
+                                        {
+                                            var _temp = new DynamicObj();
+                                            _temp.Row = System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(string.Join(",", dr.ToArray())));
+                                            _temp.Value = _data;
+                                            _hourCount[_key] = _temp;
+                                        }
+                                    }
+                                }
+                            }
+                            Dictionary<string, DynamicObj> _hourCountCopy = new Dictionary<string, DynamicObj>(_hourCount);
+                            _dict.Add(datacol.Name, _hourCountCopy);
+
+                            _tooltip += $"<tr><td> {datacol.Name} &nbsp; : &nbsp; {_hourCount[col.Name].Value}</td></tr>";
                         }
                     }
                     _tooltip += "</table>";
 
-                    string _data = string.Empty;
                     foreach (DVBaseColumn datacol in (_dv as EbCalendarView).DataColumns)
                     {
                         if (datacol.bVisible)
                         {
                             var _singledict = _dict[datacol.Name];
-                            int key = Convert.ToInt32(hourcol.Name.Split(":")[0]);
-                            object _formattedData = _singledict[key];
-                            if (Convert.ToDecimal( _formattedData ) ==  0)
-                                _formattedData = string.Empty;
-                            _data += $"<div class='dataclass {datacol.Name}_class columntooltip' data-toggle='popover' data-contents='{_tooltip.ToBase64()}'>{ _formattedData }</div>";
-                            
+                            var key = col.Name;
+                            DynamicObj _dynamicObj = _singledict[key];
+                            object _data = _dynamicObj.Value;
+                            if (_islink)
+                                _data = "<a href = '#' oncontextmenu = 'return false' class ='tablelink4calendar'  data-column='" + col.Name + "'>" + _data + "</a>";
+                            var _row = _dynamicObj.Row;
+                            var _span = $"<span hidden-row={_row} class='columntooltip' data-toggle='popover' data-contents='{_tooltip.ToBase64()}'>{_data}</span>";
+                            _formatteddata += $"<div class='dataclass { datacol.Name}_class'>{_span }</div>";
+
                         }
                     }
-                    _formattedTable.Rows[i][hourcol.Data] = _data;
+
+                    _formattedTable.Rows[i][col.Data] = _formatteddata;
+                    _dict.Clear();
                 }
             }
             catch (Exception e)
             {
-                Log.Info("PreProcessing in CalendarHours Exception........." + e.StackTrace );
-                Log.Info("PreProcessing in CalendarHours Exception........." + e.Message );
+                Log.Info("PreProcessing in CalendarDayWise Exception........." + e.StackTrace);
+                Log.Info("PreProcessing in CalendarDayWise Exception........." + e.Message);
                 this._Responsestatus.Message = e.Message;
             }
+        }
+        
+        public string GetKey(DateTime st, DateTime end)
+        {
+            return st.ToString("dd/MM/yyyy:HH:mm:ss") + end.ToString("dd/MM/yyyy:HH:mm:ss");
         }
 
         public object xxx(EbDataRow row, DVBaseColumn col, CultureInfo _user_culture, User _user, ref Globals globals)
@@ -1569,15 +1781,15 @@ namespace ExpressBase.ServiceStack
 
                 if (col.RenderType == EbDbTypes.Date || col.RenderType == EbDbTypes.DateTime)
                 {
-                    DateTimeformat(_unformattedData, ref _formattedData, ref row, col, cults, _user);
+                    //DateTimeformat(_unformattedData, ref _formattedData, ref row, col, cults, _user);
                 }
                 else if (col.RenderType == EbDbTypes.Decimal || col.RenderType == EbDbTypes.Int32 || col.RenderType == EbDbTypes.Int64)
                 {
                     _formattedData = Convert.ToDecimal(_unformattedData).ToString("N", cults.NumberFormat);
-                    if ((col as DVNumericColumn).RenderAs == NumericRenderType.Hours)
-                    {
-                        _formattedData = (Convert.ToDecimal(_formattedData) / 60).ToString("N", cults.NumberFormat);
-                    }
+                    //if ((col as DVNumericColumn).RenderAs == NumericRenderType.Hours)
+                    //{
+                    _formattedData = (Convert.ToDecimal(_formattedData) / 60).ToString("N", cults.NumberFormat);
+                    //}
                 }
                 this.conditinallyformatColumn(col, ref _formattedData, _unformattedData, row, ref globals);
 
@@ -1701,95 +1913,6 @@ namespace ExpressBase.ServiceStack
 
         }
 
-        //public bool NumericCompareValues(NumericCondition cond, object _unformattedData)
-        //{
-        //    if (cond.Operator == NumericOperators.Equals)
-        //    {
-        //        return Convert.ToInt32(_unformattedData) == Convert.ToInt32(cond.Value);
-        //    }
-        //    else if (cond.Operator == NumericOperators.LessThan)
-        //    {
-        //        return Convert.ToInt32(_unformattedData) < Convert.ToInt32(cond.Value);
-        //    }
-        //    else if (cond.Operator == NumericOperators.GreaterThan)
-        //    {
-        //        return Convert.ToInt32(_unformattedData) > Convert.ToInt32(cond.Value);
-        //    }
-        //    else if (cond.Operator == NumericOperators.LessThanOrEqual)
-        //    {
-        //        return Convert.ToInt32(_unformattedData) <= Convert.ToInt32(cond.Value);
-        //    }
-        //    else if (cond.Operator == NumericOperators.GreaterThanOrEqual)
-        //    {
-        //        return Convert.ToInt32(_unformattedData) >= Convert.ToInt32(cond.Value);
-        //    }
-        //    else if (cond.Operator == NumericOperators.Between)
-        //    {
-        //        return Convert.ToInt32(_unformattedData) >= Convert.ToInt32(cond.Value) && Convert.ToInt32(_unformattedData) <= Convert.ToInt32(cond.Value1);
-        //    }
-        //    return false;
-        //}
-
-        //public bool DateCompareValues(DateCondition cond, object _unformattedData)
-        //{
-        //    DateTime data = Convert.ToDateTime(_unformattedData);
-        //    DateTime value = Convert.ToDateTime(cond.Value);
-
-        //    if (cond.Operator == NumericOperators.Equals)
-        //    {
-        //        return data == value;
-        //    }
-        //    else if (cond.Operator == NumericOperators.LessThan)
-        //    {
-        //        return data < value;
-        //    }
-        //    else if (cond.Operator == NumericOperators.GreaterThan)
-        //    {
-        //        return data > value;
-        //    }
-        //    else if (cond.Operator == NumericOperators.LessThanOrEqual)
-        //    {
-        //        return data <= value;
-        //    }
-        //    else if (cond.Operator == NumericOperators.GreaterThanOrEqual)
-        //    {
-        //        return data >= value;
-        //    }
-        //    else if (cond.Operator == NumericOperators.Between)
-        //    {
-        //        return data >= value && data <= Convert.ToDateTime(cond.Value1);
-        //    }
-        //    return false;
-        //}
-
-        //public bool StringCompareValues(StringCondition cond, object _unformattedData)
-        //{
-        //    string data = _unformattedData.ToString().Trim().ToLower();
-        //    string searchval = cond.Value.Trim().ToLower().ToString();
-
-        //    if (cond.Operator == StringOperators.Startwith)
-        //    {
-        //        return data.StartsWith(searchval);
-        //    }
-        //    else if (cond.Operator == StringOperators.EndsWith)
-        //    {
-        //        return data.EndsWith(searchval);
-        //    }
-        //    else if (cond.Operator == StringOperators.Contains)
-        //    {
-        //        return data.Contains(searchval);
-        //    }
-        //    else if (cond.Operator == StringOperators.Equals)
-        //    {
-        //        return data == searchval;
-        //    }
-        //    return false;
-        //}
-
-        //public bool BooleanCompareValues(BooleanCondition cond, object _unformattedData)
-        //{
-        //    return false;
-        //}
 
         public string GetTreeHtml(object data, bool isgroup, int level)
         {
@@ -1835,74 +1958,6 @@ namespace ExpressBase.ServiceStack
             }
         }
 
-        //public List<GroupingDetails> RowGroupingCommon(EbDataTable Table, EbDataVisualization Visualization, CultureInfo Culture, ref EbDataTable FormattedTable, bool IsMultiLevelRowGrouping = false)
-        //{
-        //    Dictionary<string, GroupingDetails> RowGrouping = new Dictionary<string, GroupingDetails>();
-
-        //    int TotalLevels = (IsMultiLevelRowGrouping) ? (Visualization as EbTableVisualization).CurrentRowGroup.RowGrouping.Count : 1,
-        //    CurSortIndex = 0;
-
-        //    List<int> AggregateColumnIndexes = GetAggregateIndexes(Visualization.Columns);
-        //    List<DVBaseColumn> RowGroupingColumns = new List<DVBaseColumn>((Visualization as EbTableVisualization).CurrentRowGroup.RowGrouping);
-        //    int ColCount = Visualization.Columns.Count;
-        //    string PreviousGroupingText = string.Empty;
-        //    int SerialCount = 0, PrevRowIndex = 0;
-        //    for (int i = 0; i < Table.Rows.Count; i++)
-        //    {
-        //        CurSortIndex += TotalLevels + 30;
-
-        //        EbDataRow currentRow = Table.Rows[i];
-        //        int delimCount = 1;
-        //        string TempGroupingText = CreateCollectionKey(currentRow, IsMultiLevelRowGrouping, BlankText, TotalLevels, RowGroupingColumns, i, ref delimCount);
-
-        //        if (TempGroupingText.Equals(PreviousGroupingText) == false)
-        //        {
-        //            SerialCount = 0;
-        //            FormattedTable.Rows[i][Table.Columns.Count] = ++SerialCount;
-        //            CreateHeaderAndFooterPairs(currentRow, AggregateColumnIndexes, RowGroupingColumns, RowGrouping, Visualization.Columns, TotalLevels, IsMultiLevelRowGrouping, Culture, TempGroupingText, ref CurSortIndex, ColCount);
-
-        //            HeaderGroupingDetails HeaderObject = RowGrouping[HeaderPrefix + TempGroupingText] as HeaderGroupingDetails;
-        //            HeaderObject.SetRowIndex(i);
-        //            HeaderObject.InsertionType = BeforeText;
-
-        //            (RowGrouping[FooterPrefix + TempGroupingText] as FooterGroupingDetails).InsertionType = BeforeText;
-
-        //            if (i > 0)
-        //            {
-        //                (RowGrouping[FooterPrefix + PreviousGroupingText] as FooterGroupingDetails).SetRowIndex(i);
-
-        //                if (IsMultiLevelRowGrouping && i == Table.Rows.Count - 1 &&
-        //                    (RowGrouping[HeaderPrefix + TempGroupingText] as HeaderGroupingDetails).GroupingCount == 1 &&
-        //                    (RowGrouping[HeaderPrefix + TempGroupingText] as HeaderGroupingDetails).LevelCount == 0)
-        //                {
-        //                    SetFinalFooterRow(currentRow, RowGroupingColumns, IsMultiLevelRowGrouping, RowGrouping, i, TempGroupingText, CurSortIndex);
-        //                }
-        //            }
-        //            if (!IsMultiLevelRowGrouping && i == PrevRowIndex + 1 && i == Table.Rows.Count - 1)
-        //            {
-        //                SetFinalFooterRow(currentRow, RowGroupingColumns, IsMultiLevelRowGrouping, RowGrouping, i, TempGroupingText, CurSortIndex);
-        //            }
-        //        }
-        //        else
-        //        {
-        //            FormattedTable.Rows[i][Table.Columns.Count] = ++SerialCount;
-
-        //            (RowGrouping[HeaderPrefix + TempGroupingText] as HeaderGroupingDetails).GroupingCount++;
-        //            if (i == Table.Rows.Count - 1)
-        //            {
-        //                SetFinalFooterRow(currentRow, RowGroupingColumns, IsMultiLevelRowGrouping, RowGrouping, i, TempGroupingText, CurSortIndex);
-        //            }
-        //        }
-
-        //        (RowGrouping[FooterPrefix + TempGroupingText] as FooterGroupingDetails).SetValue(currentRow);
-
-        //        PreviousGroupingText = TempGroupingText;
-        //        PrevRowIndex = i;
-        //    }
-        //    List<GroupingDetails> SortedGroupings = RowGrouping.Values.ToList();
-        //    SortedGroupings.Sort();
-        //    return SortedGroupings;
-        //}
 
         public void DoRowGroupingCommon(EbDataRow currentRow, EbDataVisualization Visualization, CultureInfo Culture, User _user, ref EbDataTable FormattedTable, bool IsMultiLevelRowGrouping, ref Dictionary<string, GroupingDetails> RowGrouping, ref string PreviousGroupingText, ref int CurSortIndex, ref int SerialCount, int PrevRowIndex, int dvColCount, int TotalLevels, ref List<int> AggregateColumnIndexes, ref List<DVBaseColumn> RowGroupingColumns, int RowCount)
         {
@@ -2284,5 +2339,11 @@ namespace ExpressBase.ServiceStack
         public byte[] excel_file;
         public RowColletion rows;
         public List<Node<EbDataRow>> tree;
+    }
+
+    public class DynamicObj
+    {
+        public string Row;
+        public object Value;
     }
 }
