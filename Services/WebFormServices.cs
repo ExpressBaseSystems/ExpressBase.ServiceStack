@@ -934,7 +934,7 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     Message = "Success",
                     RowId = FormObj.TableRowId,
-                    FormData = FormObj.FormData,
+                    FormData = JsonConvert.SerializeObject(FormObj.FormData),
                     RowAffected = 1,
                     AffectedEntries = r,
                     Status = (int)HttpStatusCodes.OK,
