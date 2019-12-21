@@ -1419,7 +1419,7 @@ namespace ExpressBase.ServiceStack.Services
                 this.Redis.Set<EbUserControl>(Request.RefId, _ucObj);
             }
             //_ucObj.AfterRedisGet(this);
-            _ucObj.SetDataObjectControl(this.EbConnectionFactory.DataDB, this);
+            _ucObj.SetDataObjectControl(this.EbConnectionFactory.DataDB, this , Request.Param);
             _ucObj.IsRenderMode = true;
             return new GetDashBoardUserCtrlResponse()
             {
