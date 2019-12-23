@@ -35,6 +35,9 @@ namespace ExpressBase.ServiceStack.Auth0
                 var cid = request.Meta.ContainsKey(TokenConstants.CID) ? request.Meta[TokenConstants.CID] : string.Empty;
                 var socialId = request.Meta.ContainsKey(TokenConstants.SOCIALID) ? request.Meta[TokenConstants.SOCIALID] : string.Empty;
                 var whichContext = request.Meta[TokenConstants.WC].ToLower().Trim();
+                string ip = request.Meta.ContainsKey(TokenConstants.IP) ? request.Meta[TokenConstants.IP] : string.Empty;
+                string userAgent = request.Meta.ContainsKey("useragent") ? request.Meta["useragent"] : string.Empty;
+                string deviceId = request.Meta.ContainsKey("deviceid") ? request.Meta["deviceid"] : string.Empty;
 
                 var EbConnectionFactory = authService.TryResolve<IEbConnectionFactory>() as EbConnectionFactory;
 
@@ -52,7 +55,7 @@ namespace ExpressBase.ServiceStack.Auth0
                 User _authUser = null;
 				if (whichContext.Equals(RoutingConstants.TC))
 				{
-					_authUser = User.GetDetailsTenant(EbConnectionFactory.DataDB, UserName, password);
+					_authUser = User.GetDetailsTenant(EbConnectionFactory.DataDB, UserName, password, ip);
 					Logger.Info("TryAuthenticate -> Tenant");
 				}
                 else if (request.Meta.ContainsKey("anonymous"))// && whichContext.Equals("bc"))
@@ -79,20 +82,20 @@ namespace ExpressBase.ServiceStack.Auth0
                 else if (!string.IsNullOrEmpty(socialId))
                 {
 
-                    _authUser = User.GetDetailsSocial(EbConnectionFactory.DataDB, socialId, whichContext);
+                    _authUser = User.GetDetailsSocial(EbConnectionFactory.DataDB, socialId, whichContext, ip, deviceId, userAgent);
                     Logger.Info("TryAuthenticate -> socialId");
 
                 }
                 else if (request.Meta.ContainsKey("sso") && (whichContext.Equals("dc") || whichContext.Equals("uc")))
                 {
 
-                    _authUser = User.GetDetailsSSO(EbConnectionFactory.DataDB, UserName, whichContext);
+                    _authUser = User.GetDetailsSSO(EbConnectionFactory.DataDB, UserName, whichContext, ip, deviceId, userAgent);
                     Logger.Info("TryAuthenticate -> sso");
 
                 }
                 else
                 {
-                    _authUser = User.GetDetailsNormal(EbConnectionFactory.DataDB, UserName, password, whichContext,"","");
+                    _authUser = User.GetDetailsNormal(EbConnectionFactory.DataDB, UserName, password, whichContext, ip, deviceId, userAgent);
                     Logger.Info("TryAuthenticate -> Normal");
 
                 }
@@ -120,6 +123,7 @@ namespace ExpressBase.ServiceStack.Auth0
                         _authUser.wc = whichContext;
                         _authUser.AuthId = string.Format(TokenConstants.SUB_FORMAT, cid, _authUser.Email, whichContext);
                         session.UserAuthId = _authUser.AuthId;
+                        session.SourceIp = _authUser.SourceIp;
 
                         var authRepo = HostContext.AppHost.GetAuthRepository(authService.Request);
                         var existingUser = (authRepo as MyRedisAuthRepository).GetUserAuth(session.UserAuthId);

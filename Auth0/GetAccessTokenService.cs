@@ -86,6 +86,7 @@ namespace ExpressBase.ServiceStack.Auth0
                 session.Email = temp.Substring(0, temp.IndexOf(CharConstants.COLON));
                 session.Uid = (userAuth as User).UserId;
                 session.WhichConsole = userId.Substring(userId.Length - 2);
+                session.SourceIp = (userAuth as User).SourceIp;
                 session.Roles.Clear();
                 session.Permissions.Clear();
             }

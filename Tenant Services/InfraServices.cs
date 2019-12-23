@@ -1858,6 +1858,18 @@ namespace ExpressBase.ServiceStack.Services
 
         }
 
+        public UpdateSidMapResponse Post(UpdateSidMapRequest request)
+        {
+            this.MessageProducer3.Publish(new UpdateSidMapMqRequest());
+            return new UpdateSidMapResponse();
+        }
+
+        public UpdateRedisConnectionsResponse Post(UpdateRedisConnectionsRequest request)
+        {
+            this.MessageProducer3.Publish(new UpdateRedisConnectionsMqRequest());
+            return new UpdateRedisConnectionsResponse();
+        }
+
         public UniqueRequestResponse Any(UniqueRequest request)
         {
             UniqueRequestResponse res = new UniqueRequestResponse();

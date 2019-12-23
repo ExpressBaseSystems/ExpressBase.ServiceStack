@@ -114,6 +114,7 @@ namespace ExpressBase.ServiceStack
                     payload[TokenConstants.CID] = (session as CustomUserSession).CId;
                     payload[TokenConstants.UID] = (session as CustomUserSession).Uid.ToString();
                     payload[TokenConstants.WC] = (session as CustomUserSession).WhichConsole;
+                    payload[TokenConstants.IP] = (session as CustomUserSession).SourceIp;
                 },
 
                 PopulateSessionFilter = (session, token, req) =>
@@ -123,6 +124,7 @@ namespace ExpressBase.ServiceStack
                     csession.CId = token[TokenConstants.CID];
                     csession.Uid = Convert.ToInt32(token[TokenConstants.UID]);
                     csession.WhichConsole = token[TokenConstants.WC];
+                    csession.SourceIp = token[TokenConstants.IP];
                 }
             };
 
@@ -270,6 +272,7 @@ namespace ExpressBase.ServiceStack
             mqServer.RegisterHandler<ExportToExcelServiceRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<UpdateSidMapMqRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<UpdateRedisConnectionsMqRequest>(base.ExecuteMessage);
+            mqServer.RegisterHandler<SlackCreateRequest>(base.ExecuteMessage);
 
             mqServer.Start();
 

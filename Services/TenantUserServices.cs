@@ -327,7 +327,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             else
             {
-                query = string.Format(query, "AND eov.eb_objects_id = ANY(string_to_array(:ids,',')::int[])");
+                query = string.Format(query, EbConnectionFactory.DataDB.EB_GET_USER_DASHBOARD_OBJECTS);
                 DbParameter[] parameters =
                 {
                     this.EbConnectionFactory.DataDB.GetNewParameter("ids", EbDbTypes.String, String.Join(",",request.ObjectIds)),
