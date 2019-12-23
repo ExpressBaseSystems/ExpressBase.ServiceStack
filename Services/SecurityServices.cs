@@ -399,7 +399,7 @@ namespace ExpressBase.ServiceStack.Services
         public GetMyProfileResponse Any(GetMyProfileRequest request)
         {
             Dictionary<string, string> userData = new Dictionary<string, string>();
-            Dictionary<string , string>  RefIds = new Dictionary<string, string>();
+            Dictionary<string, string> RefIds = new Dictionary<string, string>();
             EbDataSet ds;
             if (request.WC == RoutingConstants.TC)
             {
@@ -483,7 +483,7 @@ namespace ExpressBase.ServiceStack.Services
                     userData.Add("preferences_json", dt.Rows[0]["preferences_json"].ToString());
                 }
                 else
-                { 
+                {
                     userData.Add("nickname", dt.Rows[0]["nickname"].ToString());
                     userData.Add("alternateemail", dt.Rows[0]["alternateemail"].ToString());
                     userData.Add("phnoprimary", dt.Rows[0]["phnoprimary"].ToString());
@@ -494,15 +494,15 @@ namespace ExpressBase.ServiceStack.Services
 
                     if (ds.Tables[1].Rows.Count > 0)
                     {
-                        for(int i = 0 ; i < ds.Tables[1].Rows.Count ; i++)
+                        for (int i = 0; i < ds.Tables[1].Rows.Count; i++)
                         {
-                            RefIds.Add(ds.Tables[1].Rows[i]["refid"].ToString() , ds.Tables[1].Rows[i]["display_name"].ToString());
+                            RefIds.Add(ds.Tables[1].Rows[i]["refid"].ToString(), ds.Tables[1].Rows[i]["display_name"].ToString());
                         }
                     }
                 }
             }
-           
-            return new GetMyProfileResponse { UserData = userData , RefIds = RefIds};
+
+            return new GetMyProfileResponse { UserData = userData, RefIds = RefIds };
         }
 
         public SaveMyProfileResponse Any(SaveMyProfileRequest request)
@@ -737,6 +737,8 @@ namespace ExpressBase.ServiceStack.Services
 										WHERE G.groupid = :id AND U.id=G.userid 
 										AND G.eb_del = 'F' AND U.eb_del = 'F';";
 
+                query += EbConstraints.GetSelectQuery(EbConstraintKeyTypes.UserGroup);
+
                 parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.id));
                 var ds = this.EbConnectionFactory.DataDB.DoQueries(query, parameters.ToArray());
                 if (ds.Tables.Count > 0)
@@ -748,6 +750,14 @@ namespace ExpressBase.ServiceStack.Services
                     {
                         _usersList.Add(new Eb_Users() { Id = Convert.ToInt32(dr[0]), Name = dr[1].ToString(), Email = dr[2].ToString() });
                     }
+
+                    EbConstraints con = new EbConstraints(ds.Tables[2]);
+                    foreach (var c in con.UgConstraints)
+                    {
+                        if (c.Value.Values.ElementAt(0).Value.Type == EbConstraintTypes.UserGroup_Ip)
+                            _ipConsList.Add(new Eb_Constraints1 { Id = c.Key, Title = c.Value.Values.ElementAt(0).Value.GetValue(), Description = c.Value.Description });
+                    }
+
                     //foreach (EbDataRow dr in ds.Tables[2].Rows)
                     //{
                     //    _ipConsList.Add(new Eb_Constraints1 { Id = Convert.ToInt32(dr["id"]), Title = dr["ip"].ToString(), Description = dr["description"].ToString() });
@@ -885,6 +895,11 @@ namespace ExpressBase.ServiceStack.Services
             //    sDtConstr = _sDtTitle.Substring(0, _sDtTitle.Length - 1) + "$$" + _sDtDesc.Substring(0, _sDtDesc.Length - 1) + "$$" + _sDtType.Substring(0, _sDtType.Length - 1) + "$$" + _sDtStart.Substring(0, _sDtStart.Length - 1) + "$$" + _sDtEnd.Substring(0, _sDtEnd.Length - 1) + "$$" + _sDtDays.Substring(0, _sDtDays.Length - 1);
             //}
 
+            List<IpConstraint> IpConstr = JsonConvert.DeserializeObject<List<IpConstraint>>(request.IpConstraintNw);
+            EbConstraints consObj = new EbConstraints();
+            consObj.SetConstraintObject(IpConstr);
+            request.IpConstraintNw = consObj.GetDataAsString();
+
             string sql = this.EbConnectionFactory.DataDB.EB_SAVEUSERGROUP_QUERY;
             using (var con = this.EbConnectionFactory.DataDB.GetNewConnection())
             {
@@ -898,8 +913,8 @@ namespace ExpressBase.ServiceStack.Services
                         this.EbConnectionFactory.DataDB.GetNewParameter("name", EbDbTypes.String, request.Name),
                         this.EbConnectionFactory.DataDB.GetNewParameter("description", EbDbTypes.String, request.Description),
                         this.EbConnectionFactory.DataDB.GetNewParameter("users", EbDbTypes.String,(request.Users != string.Empty? request.Users : string.Empty)),
-                        this.EbConnectionFactory.DataDB.GetNewParameter("constraints_add", EbDbTypes.String, string.Empty),
-                        this.EbConnectionFactory.DataDB.GetNewParameter("constraints_del", EbDbTypes.String, string.Empty)
+                        this.EbConnectionFactory.DataDB.GetNewParameter("constraints_add", EbDbTypes.String, request.IpConstraintNw),
+                        this.EbConnectionFactory.DataDB.GetNewParameter("constraints_del", EbDbTypes.String, request.IpConstraintOld)
                     };
                 if (EbConnectionFactory.DataDB.Vendor == DatabaseVendors.MYSQL)
                 {
@@ -1102,7 +1117,7 @@ namespace ExpressBase.ServiceStack.Services
 
                 authRepo.StoreAll(resp.APIKeys);
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 resp.ResponseStatus = new ResponseStatus()
                 {
