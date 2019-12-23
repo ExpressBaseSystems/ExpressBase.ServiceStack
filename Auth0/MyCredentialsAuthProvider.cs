@@ -123,6 +123,7 @@ namespace ExpressBase.ServiceStack.Auth0
                         _authUser.wc = whichContext;
                         _authUser.AuthId = string.Format(TokenConstants.SUB_FORMAT, cid, _authUser.Email, whichContext);
                         session.UserAuthId = _authUser.AuthId;
+                        session.SourceIp = _authUser.SourceIp;
 
                         var authRepo = HostContext.AppHost.GetAuthRepository(authService.Request);
                         var existingUser = (authRepo as MyRedisAuthRepository).GetUserAuth(session.UserAuthId);
