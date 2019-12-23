@@ -231,7 +231,7 @@ namespace ExpressBase.ServiceStack.Services
                     this.Redis.RenameKey(string.Format(CoreConstants.SOLUTION_ID_MAP, request.OldESolutionId), string.Format(CoreConstants.SOLUTION_ID_MAP, request.NewESolutionId));
                     resp.Status = true;
                     TenantUserServices _tenantUserService = base.ResolveService<TenantUserServices>();
-                    _tenantUserService.Post(new UpdateSolutionRequest
+                    _tenantUserService.Post(new UpdateSolutionObjectRequest
                     {
                         SolnId = isid,
                         UserId = request.UserId
@@ -467,7 +467,7 @@ namespace ExpressBase.ServiceStack.Services
                                 DbUsers = response.DbUsers
                             });
 
-                            _tenantUserService.Post(new UpdateSolutionRequest
+                            _tenantUserService.Post(new UpdateSolutionObjectRequest
                             {
                                 SolnId = Sol_id_autogen,
                                 UserId = request.UserId
@@ -1895,7 +1895,26 @@ namespace ExpressBase.ServiceStack.Services
 
         public UpdateSidMapResponse Post(UpdateSidMapRequest request)
         {
-            this.MessageProducer3.Publish(new UpdateSidMapMqRequest());
+            string q = @"SELECT esolution_id, isolution_id FROM eb_solutions WHERE eb_del = false;", esid = string.Empty, isid = string.Empty;
+            try
+            {
+                EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(q);
+                foreach (EbDataRow row in dt.Rows)
+                {
+                    esid = row["esolution_id"].ToString();
+                    isid = row["isolution_id"].ToString();
+                    if (string.IsNullOrEmpty(esid) || string.IsNullOrEmpty(isid))
+                        continue;
+                    else
+                        this.Redis.Set<string>(string.Format(CoreConstants.SOLUTION_ID_MAP, esid), isid);
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Exception at update sid map");
+                Console.WriteLine(e.Message);
+                Console.WriteLine(e.StackTrace);
+            }
             return new UpdateSidMapResponse();
         }
 

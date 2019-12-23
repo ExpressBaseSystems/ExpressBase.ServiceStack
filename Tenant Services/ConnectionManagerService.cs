@@ -719,7 +719,7 @@ namespace ExpressBase.ServiceStack.Services
                 if (response.DeploymentCompled || drop)
                 {
                     //Post(new InitialSolutionConnectionsRequest { NewSolnId = DbName, SolnId = request.SolnId, UserId = request.UserId, DbUsers = response.dbusers });
-                    _tenantUserService.Post(new UpdateSolutionRequest() { UserId = uid, SolnId = solid, });
+                    _tenantUserService.Post(new UpdateSolutionObjectRequest() { UserId = uid, SolnId = solid, });
                     return true;
                 }
 

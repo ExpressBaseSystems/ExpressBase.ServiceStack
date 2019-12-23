@@ -126,7 +126,7 @@ namespace ExpressBase.ServiceStack.Services
                     EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery(query1.ToString(), parameters.ToArray());
                     result = Convert.ToInt32(dt.Rows[0][0]);
                 }
-                this.Post(new UpdateSolutionRequest() { SolnId = request.SolnId, UserId = request.UserId });
+                this.Post(new UpdateSolutionObjectRequest() { SolnId = request.SolnId, UserId = request.UserId });
                 return new SaveLocationMetaResponse { Id = result };
             }
         }
@@ -140,7 +140,7 @@ namespace ExpressBase.ServiceStack.Services
             return new DeleteLocResponse { id = (dt == 1) ? request.Id : 0 };
         }
 
-        public UpdateSolutionResponse Post(UpdateSolutionRequest req)
+        public UpdateSolutionObjectResponse Post(UpdateSolutionObjectRequest req)
         {
             try
             {
@@ -173,7 +173,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 Console.WriteLine("Error UpdateSolutionRequest: " + e.Message + e.StackTrace);
             }
-            return new UpdateSolutionResponse { };
+            return new UpdateSolutionObjectResponse { };
         }
 
         public EbSolutionUsers GetUserInfo(string solnId)

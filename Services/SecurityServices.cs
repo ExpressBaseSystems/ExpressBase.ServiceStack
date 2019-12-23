@@ -358,7 +358,7 @@ namespace ExpressBase.ServiceStack.Services
             }
 
             TenantUserServices _tenantUserService = base.ResolveService<TenantUserServices>();
-            _tenantUserService.Post(new UpdateSolutionRequest() { SolnId = request.SolnId, UserId = request.UserId });
+            _tenantUserService.Post(new UpdateSolutionObjectRequest() { SolnId = request.SolnId, UserId = request.UserId });
 
             resp = new SaveUserResponse
             {
@@ -388,7 +388,7 @@ namespace ExpressBase.ServiceStack.Services
             if (t > 0)
             {
                 TenantUserServices _tenantUserService = base.ResolveService<TenantUserServices>();
-                _tenantUserService.Post(new UpdateSolutionRequest() { SolnId = request.SolnId, UserId = request.UserId });
+                _tenantUserService.Post(new UpdateSolutionObjectRequest() { SolnId = request.SolnId, UserId = request.UserId });
             }
 
             return new DeleteUserResponse() { Status = t };

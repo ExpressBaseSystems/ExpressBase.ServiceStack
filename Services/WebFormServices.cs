@@ -735,7 +735,7 @@ namespace ExpressBase.ServiceStack.Services
                 form.TableRowId = request.RowId;
                 form.RefId = request.RefId;
                 form.UserObj = request.UserObj;
-                form.SolutionObj = this.Redis.Get<Eb_Solution>(String.Format("solution_{0}", request.SolnId));
+                form.SolutionObj = GetSolutionObject(request.SolnId);
                 form.RefreshFormData(EbConnectionFactory.DataDB, this);
                 _dataset.FormData = form.FormData;
                 Console.WriteLine("Returning from GetRowData Service");
@@ -796,7 +796,7 @@ namespace ExpressBase.ServiceStack.Services
                 EbWebForm form = GetWebFormObject(request.RefId);
                 form.RefId = request.RefId;
                 form.UserObj = this.Redis.Get<User>(request.UserAuthId);
-                form.SolutionObj = this.Redis.Get<Eb_Solution>(String.Format("solution_{0}", request.SolnId));
+                form.SolutionObj = GetSolutionObject(request.SolnId);
                 form.ImportData(EbConnectionFactory.DataDB, this, request.Params, request.Trigger);
                 Console.WriteLine("End ImportFormData");
                 return new GetImportDataResponse() { FormDataWrap = new WebformDataWrapper { FormData = form.FormData, Status = 200 } };
@@ -900,7 +900,7 @@ namespace ExpressBase.ServiceStack.Services
                 FormObj.FormData = request.FormData;
                 FormObj.UserObj = request.UserObj;
                 FormObj.LocationId = request.CurrentLoc;
-                FormObj.SolutionObj = this.Redis.Get<Eb_Solution>(String.Format("solution_{0}", request.SolnId));
+                FormObj.SolutionObj = GetSolutionObject(request.SolnId);
 
                 string Operation = OperationConstants.NEW;
                 if (request.RowId > 0)
@@ -1308,7 +1308,7 @@ namespace ExpressBase.ServiceStack.Services
                 FormObj.RefId = request.FormId;
                 FormObj.TableRowId = request.RowId;
                 FormObj.UserObj = request.UserObj;
-                FormObj.SolutionObj = this.Redis.Get<Eb_Solution>(String.Format("solution_{0}", request.SolnId));
+                FormObj.SolutionObj = GetSolutionObject(request.SolnId);
 
                 string temp = FormObj.GetAuditTrail(EbConnectionFactory.DataDB, this);
 
@@ -1443,10 +1443,10 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
 
         }
-        
+
         public UpdateAllFormTablesResponse Post(UpdateAllFormTablesRequest request)
-        {            
-            string msg = $"Start* UpdateAllFormTables {DateTime.Now}\n\n";   
+        {
+            string msg = $"Start* UpdateAllFormTables {DateTime.Now}\n\n";
             try
             {
                 User u = this.Redis.Get<User>(request.UserAuthId);
@@ -1486,7 +1486,7 @@ namespace ExpressBase.ServiceStack.Services
                             {
                                 msg += $"\n\nDeserialization Failed, Name : {dr[1].ToString()}, Message : {ex.Message}";
                             }
-                            if(F != null)
+                            if (F != null)
                             {
                                 F.AutoDeployTV = false;
                                 try
@@ -1494,7 +1494,7 @@ namespace ExpressBase.ServiceStack.Services
                                     this.Any(new CreateWebFormTableRequest { WebObj = F });
                                     msg += $"\n\nSuccess   RefId : {dr[0].ToString()}, Name : {dr[1].ToString()} ";
                                 }
-                                catch(Exception e)
+                                catch (Exception e)
                                 {
                                     msg += $"\n\nWarning   RefId : {dr[0].ToString()}, Name : {dr[1].ToString()}, Message : {e.Message} ";
                                 }
@@ -1504,7 +1504,7 @@ namespace ExpressBase.ServiceStack.Services
                     msg += $"\n\nEnd* UpdateAllFormTables {DateTime.Now}";
                 }
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 msg += e.Message;
             }

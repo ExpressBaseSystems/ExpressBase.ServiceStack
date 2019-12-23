@@ -217,14 +217,23 @@ namespace ExpressBase.ServiceStack
 
             SetConfig(new HostConfig { DebugMode = true });
             SetConfig(new HostConfig { DefaultContentType = MimeTypes.Json });
-
-            var redisConnectionString = string.Format("redis://{0}@{1}:{2}",
-               Environment.GetEnvironmentVariable(EnvironmentConstants.EB_REDIS_PASSWORD),
-               Environment.GetEnvironmentVariable(EnvironmentConstants.EB_REDIS_SERVER),
-               Environment.GetEnvironmentVariable(EnvironmentConstants.EB_REDIS_PORT));
-
-            container.Register<IRedisClientsManager>(c => new RedisManagerPool(redisConnectionString));
-
+            var redisServer = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_REDIS_SERVER);
+            //if (true)
+            //{
+            //    container.Register<IRedisClientsManager>(c => new RedisManagerPool("34.93.50.143"));
+            //}
+            //else
+            if (env == "Development" || env == "Production")
+            {
+                var redisPassword = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_REDIS_PASSWORD);
+                var redisPort = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_REDIS_PORT);
+                var redisConnectionString = string.Format("redis://{0}@{1}:{2}", redisPassword, redisServer, redisPort);
+                container.Register<IRedisClientsManager>(c => new RedisManagerPool(redisConnectionString));
+            }
+            else
+            {
+                container.Register<IRedisClientsManager>(c => new RedisManagerPool(redisServer));
+            }
             container.Register<IAuthRepository>(c => new MyRedisAuthRepository(c.Resolve<IRedisClientsManager>()));
             //container.Register<IManageApiKeys>(c => new EbApiRedisAuthRepository(c.Resolve<IRedisClientsManager>()));
 
@@ -235,11 +244,11 @@ namespace ExpressBase.ServiceStack
             container.Register<IEbMqClient>(c => new EbMqClient()).ReusedWithin(ReuseScope.Request);
             container.Register<IEbStaticFileClient>(c => new EbStaticFileClient()).ReusedWithin(ReuseScope.Request);
 
-            //Setting Assembly version in Redis
-            //RedisClient client = (container.Resolve<IRedisClientsManager>() as RedisManagerPool).GetClient() as RedisClient;
-            //AssemblyName assembly = Assembly.GetExecutingAssembly().GetName();
-            //String version = assembly.Name.ToString() + " - " + assembly.Version.ToString();
-            //client.Set("ServiceStackAssembly", version);
+            // Setting Assembly version in Redis
+            RedisClient client = (container.Resolve<IRedisClientsManager>() as RedisManagerPool).GetClient() as RedisClient;
+            AssemblyName assembly = Assembly.GetExecutingAssembly().GetName();
+            String version = assembly.Name.ToString() + " - " + assembly.Version.ToString();
+            client.Set("ServiceStackAssembly", version);
 
             RabbitMqMessageFactory rabitFactory = new RabbitMqMessageFactory();
             rabitFactory.ConnectionFactory.UserName = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_RABBIT_USER);
@@ -301,7 +310,7 @@ namespace ExpressBase.ServiceStack
                 try
                 {
                     if (requestDto != null && requestDto.GetType() != typeof(Authenticate) && requestDto.GetType() != typeof(GetAccessToken) && requestDto.GetType() != typeof(UniqueRequest) /*&& requestDto.GetType() != typeof(EmailServicesMqRequest) */&& requestDto.GetType() != typeof(RegisterRequest) && requestDto.GetType() != typeof(JoinbetaReq) && requestDto.GetType() != typeof(GetBotsRequest)
-                    && requestDto.GetType() != typeof(GetEventSubscribers) && requestDto.GetType() != typeof(GetAllFromAppStoreExternalRequest) && requestDto.GetType() != typeof(GetOneFromAppStoreRequest) && !(requestDto is EbServiceStackNoAuthRequest)/* && !(requestDto is IEbTenentRequest)*/)
+                    && requestDto.GetType() != typeof(GetEventSubscribers) && requestDto.GetType() != typeof(GetAllFromAppStoreExternalRequest) && requestDto.GetType() != typeof(GetOneFromAppStoreRequest) && !(requestDto is EbServiceStackNoAuthRequest) && !(requestDto is UpdateSidMapRequest)/* && !(requestDto is IEbTenentRequest)*/)
                     {
                         var auth = req.Headers[HttpHeaders.Authorization];
                         if (string.IsNullOrEmpty(auth))

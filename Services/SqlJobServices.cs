@@ -65,234 +65,7 @@ namespace ExpressBase.ServiceStack.Services
             }
         }
 
-        public EbSqlJob SqlJob = new EbSqlJob
-        {
-            RefId = "My-Testid",
-            FirstReaderKeyColumns = new List<string> { "empmaster_name" },
-            ParameterKeyColumns = new List<string> { "date_to_consolidate" },
-            Resources = new OrderedList
-            {
-                new EbSqlJobReader
-                {
-                    Reference="ebdbllz23nkqd620180220120030-ebdbllz23nkqd620180220120030-2-2601-3480-2601-3480",
-                    RouteIndex=0
-                },
-                new EbLoop
-                {
-                    RouteIndex=1,
-                    InnerResources =new OrderedList
-                    {
-                        new  EbTransaction
-                        {
-                                RouteIndex=0,
-                                InnerResources = new OrderedList
-                                {
-                                    new EbSqlJobReader
-                                    {
-                                        Reference="ebdbllz23nkqd620180220120030-ebdbllz23nkqd620180220120030-2-2603-3489-2603-3489",
-                                        RouteIndex=0
-                                    },
-                                    new EbSqlProcessor
-                                    {
-                                        Script = new EbScript
-                                        {
-                                           // Code="Job.SetParam(\"val\",(Tables[0].Rows.Count>0)?Convert.ToInt32(Tables[0].Rows[0][0])/1000:0); return 100;",
-                                           // Code="Job.SetParam(\"val\",200);",
-                                           Code=@"  
-    internal class Attendance
-    {
-        internal int Empmaster_id { get; set; }
-        internal DateTime In_time { get; set; }
-        internal DateTime Out_time { get; set; }
-        internal int IWork { get; set; }
-        internal int IBreak { get; set; }
-        internal int IOverTime { get; set; }
-        internal int IOTHours { get; set; }
-        internal int IOTMinutes { get; set; }
-        internal string Notes { get; set; }
-        internal bool IsNightshift { get; set; }
-
-        internal int App_att_inout_id { get; set; }
-
-        internal Attendance(int empmaster_id)
-        {
-            this.Empmaster_id = empmaster_id;
-        }
-
-        internal Attendance(int empmaster_id, DateTime in_time, DateTime out_time, int iWork, int iBreak, int iOverTime, int iOTHours, int iOTMinutes, string notes, bool bNightshift)
-        {
-            this.Empmaster_id = empmaster_id;
-            this.In_time = in_time;
-            this.Out_time = out_time;
-            this.IWork = iWork;
-            this.IBreak = iBreak;
-            this.IOverTime = iOverTime;
-            this.IOTHours = iOTHours;
-            this.IOTMinutes = iOTMinutes;
-            this.Notes = notes;
-            this.IsNightshift = bNightshift;
-        }
-    }
-    enum InOutStatus
-        {
-            In,
-            UnKnown,
-            Out,
-            Ignored,
-            Excluded,
-            Error
-    }
- 
-        DateTime dateInQuestion = Convert.ToDateTime(Params.date_to_consolidate);
-        int empmaster_id =  Convert.ToInt32(Params.empid);
-
-        DateTime dtFirstIn = dateInQuestion;
-        DateTime dtLastIn = dateInQuestion;
-        DateTime dtLastOut = dateInQuestion;
-        InOutStatus lastKnownStatus = InOutStatus.UnKnown;
-        InOutStatus lastKnownInOutStatus = InOutStatus.UnKnown;
-        InOutStatus currentStatus = InOutStatus.UnKnown;
-        int iPos = 0;
-        InOutStatus status = InOutStatus.In;
-        Attendance att = new Attendance(empmaster_id);
-        EbDataTable dt_devattlogs =  Tables[0];
-
-            if (dt_devattlogs.Rows.Count > 1)
-            {
-
-                EbDataRow row = dt_devattlogs.Rows[0];
-                foreach ( EbDataRow _row_devattlogs in dt_devattlogs.Rows)
-                {
-                    if (iPos >= dt_devattlogs.Rows.IndexOf(row))
-                    {
-                        DateTime _punched_at = Convert.ToDateTime(_row_devattlogs[""punched_at""]);
-
-                        if (iPos == dt_devattlogs.Rows.IndexOf(row))
-                        {
-                            currentStatus = status;
-                 //  if (!att.IsNightshift)
-                 dtFirstIn = _punched_at;
-                            att.In_time = dtFirstIn;
-                            dtLastIn = dtFirstIn;
-                        }
-                        if (iPos > dt_devattlogs.Rows.IndexOf(row))
-                        {
-                              if (lastKnownStatus == InOutStatus.In)
-                            {
-                                if ((_punched_at - dtLastIn).TotalMinutes > 5)
-                                {
-                                    currentStatus = InOutStatus.UnKnown;
-                                    dtLastOut = _punched_at;
-                                    att.Out_time = dtLastOut;
-                                    att.IWork += Convert.ToInt32((dtLastOut - dtLastIn).TotalMinutes);
-                                }
-                                else
-                                    currentStatus = InOutStatus.Ignored;
-                            }
-                            else if (lastKnownStatus == InOutStatus.Out)
-                            {
-                                if ((_punched_at - dtLastOut).TotalMinutes > 5)
-                                {
-                                    currentStatus = InOutStatus.In;
-                                    dtLastIn = _punched_at;
-                                    att.IBreak += Convert.ToInt32((dtLastIn - dtLastOut).TotalMinutes);
-                                }
-                                else
-                                    currentStatus = InOutStatus.Ignored;
-                            }
-                            else if (lastKnownStatus == InOutStatus.Ignored)
-                            {
-                                bool bDoneAnything = false;
-                                if (dtLastOut > dtLastIn && (_punched_at - dtLastOut).TotalMinutes > 5)
-                                {
-                                    currentStatus = InOutStatus.In;
-                                    dtLastIn = _punched_at;
-                                    att.IBreak += Convert.ToInt32((dtLastIn - dtLastOut).TotalMinutes);
-                                    bDoneAnything = true;
-                                }
-
-                                if (dtLastIn > dtLastOut && (_punched_at - dtLastIn).TotalMinutes > 5)
-                                {
-                                    currentStatus = InOutStatus.Out;
-                                    dtLastOut = _punched_at;
-                                    att.Out_time = dtLastOut;
-                                    att.IWork += Convert.ToInt32((dtLastOut - dtLastIn).TotalMinutes);
-                                    bDoneAnything = true;
-                                }
-
-                                if (!bDoneAnything)
-                                    currentStatus = InOutStatus.Ignored;
-                            }
-                        }
-                        _row_devattlogs[""inout""] = currentStatus;
-
-                        //FillInOutString
-                        if (currentStatus ==InOutStatus.In)
-                            row[""inout_s""] = ""IN"";
-                        else if (currentStatus == InOutStatus.Out)
-                            row[""inout_s""] = ""OUT"";
-                        else if (currentStatus == InOutStatus.Ignored)
-                            row[""inout_s""] = ""Ignored"";
-                        else if (currentStatus == InOutStatus.Excluded)
-                            row[""inout_s""] = ""Excluded"";
-                         else if (currentStatus == InOutStatus.Error)
-                            row[""inout_s""] = ""ERROR"";
-
-                        if (row[""machineno""] != DBNull.Value)
-                            row[""type""] = ""Device"";
-                        else
-                            row[""type""] = ""Manual"";
-
-                        lastKnownStatus = currentStatus;
-                        if (currentStatus == InOutStatus.In || currentStatus == InOutStatus.Out)
-                            lastKnownInOutStatus = currentStatus;
-                    }
-                    iPos++;
-                }
-                if (att.In_time != DateTime.MinValue && att.Out_time != DateTime.MinValue)
-                {
-                    //this.MarkPresent(att.Empmaster_id, cell, null);
-                    //this.Save(devattlogs, att, dateInQuestion, break_time, bonus_ot);
-                }
-                //  else
-                // this.MarkError(cell, att.Empmaster_id, dateInQuestion, devattlogs.Rows.Count, Convert.ToInt32(att.IWork / 60), devattlogs, string.Empty);
-                // this.SetWorkBreakOT(dt_devattlogs, true, att);
-            }
-            else
-            {
-                //var DateTime_Now = CacheHelper.Get<DateTime>(CacheKeys.SYSVARS_NOW_LOCALE);
-                //if (((DateTime)cell.OwningColumn.Tag).Date == DateTime_Now.Date)
-                //    this.MarkUnReviewed(cell, empmaster_id, dateInQuestion, devattlogs.Rows.Count, devattlogs);
-                //else
-                //    this.MarkAbsent(cell, empmaster_id, dateInQuestion);
-            }
-
-Console.Write(JsonConvert.SerializeObject(att));
-            Job.SetParam(""in_time"",att.In_time.ToString(""yyyy-MM-dd HH:mm""));
-            Job.SetParam(""out_time"",att.Out_time.ToString(""yyyy-MM-dd HH:mm""));
-            Job.SetParam(""duration"",att.IWork);
-            Job.SetParam(""break_time"",att.IBreak);
-            Job.SetParam(""ot_time"",att.IOverTime);
-            Job.SetParam(""ot_time_approved"",(att.IOTHours * 60) + att.IOTMinutes);
-            Job.SetParam(""notes"",(att.Notes == """" || att.Notes == null)? ""_"" : att.Notes);
-            Job.SetParam(""night_shift"",att.IsNightshift);
-            Job.SetParam(""att_date"",dateInQuestion.ToString(""yyyy-MM-dd HH:mm""));
-            ",
-                                            Lang = ScriptingLanguage.CSharp
-                                        },
-                                        RouteIndex=1,
-                                    },
-                                    new EbSqlJobWriter
-                                    {
-                                        Reference="ebdbllz23nkqd620180220120030-ebdbllz23nkqd620180220120030-4-2622-3474-2622-3474",
-                                        RouteIndex=2,
-                                    }
-                                }
-                        },
-                    }
-                }
-            }
-        };
+        public EbSqlJob SqlJob { get; set; }
 
         public Dictionary<string, TV> Proc(List<Param> plist)
         {
@@ -310,6 +83,10 @@ Console.Write(JsonConvert.SerializeObject(att));
         {
             try
             {
+                EbObjectParticularVersionResponse version = (EbObjectParticularVersionResponse)this.StudioServices.Get(new EbObjectParticularVersionRequest { RefId = request.RefId });
+                SqlJob = EbSerializers.Json_Deserialize(version.Data[0].Json);
+                SqlJob.FirstReaderKeyColumns = new List<string> { "empmaster_name" };
+                SqlJob.ParameterKeyColumns = new List<string> { "date_to_consolidate" };
                 UserId = request.UserId;
                 string query = @" INSERT INTO eb_joblogs_master(refid, type, createdby, created_at) VALUES(:refid, :type, :createdby, NOW()) returning id;";
                 DbParameter[] parameters = new DbParameter[] {
@@ -352,12 +129,19 @@ Console.Write(JsonConvert.SerializeObject(att));
             SqlJobsListGetResponse resp = new SqlJobsListGetResponse();
             try
             {
-
-                string query = $"select logmaster_id , COALESCE (message, 'ffff') message,createdby,createdat," +
-                    $"COALESCE(status, 'F') status,id, keyvalues from eb_joblogs_lines where logmaster_id =" +
-                    $"(select id from eb_joblogs_master where to_char(created_at, 'dd-mm-yyyy') = '{request.Date}' and refid = '{request.Refid}'  limit 1) " +
-                    $"and id not in (select retry_of from eb_joblogs_lines) order by status,id; ";
-                EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(query);
+                EbObjectParticularVersionResponse version = (EbObjectParticularVersionResponse)this.StudioServices.Get(new EbObjectParticularVersionRequest { RefId = request.RefId });
+                SqlJob = EbSerializers.Json_Deserialize(version.Data[0].Json);
+                SqlJob.FirstReaderKeyColumns = new List<string> { "empmaster_name" };
+                SqlJob.ParameterKeyColumns = new List<string> { "date_to_consolidate" };
+                string query = @"SELECT logmaster_id , COALESCE (message, 'success') message, createdby, createdat,  
+                     COALESCE(status, 'F') status,id, keyvalues FROM eb_joblogs_lines WHERE logmaster_id = 
+                     (SELECT id FROM eb_joblogs_master WHERE to_char(created_at, 'dd-mm-yyyy') = :date AND refid = :refid  LIMIT 1)  
+                     AND id NOT IN (SELECT retry_of FROM eb_joblogs_lines) ORDER BY status, id; ";
+                DbParameter[] parameters = new DbParameter[] {
+                    this.EbConnectionFactory.DataDB.GetNewParameter(":date", EbDbTypes.String, request.Date ),
+                     this.EbConnectionFactory.DataDB.GetNewParameter(":refid", EbDbTypes.String, request.RefId ),
+                };
+                EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(query, parameters);
                 int capacity1 = dt.Columns.Count - 1;
 
                 RowColletion rc = new RowColletion();
@@ -420,8 +204,13 @@ Console.Write(JsonConvert.SerializeObject(att));
             response.Status = false;
             IsRetry = true;
             LogLine logline = GetLogLine(request.JoblogId);
+            this.LogMasterId = logline.linesid;
             this.GlobalParams = logline.Params;
-            LoopLocation loopLocation = this.SqlJob.GetLoop();
+            EbObjectParticularVersionResponse version = (EbObjectParticularVersionResponse)this.StudioServices.Get(new EbObjectParticularVersionRequest { RefId = request.RefId });
+            SqlJob = EbSerializers.Json_Deserialize(version.Data[0].Json);
+            SqlJob.FirstReaderKeyColumns = new List<string> { "empmaster_name" };
+            SqlJob.ParameterKeyColumns = new List<string> { "date_to_consolidate" };
+            LoopLocation loopLocation = SqlJob.GetLoop();
             try
             {
                 LoopExecution(loopLocation.Loop, request.JoblogId, loopLocation.Step, loopLocation.ParentIndex, null, logline.Keyvalues);
@@ -437,17 +226,10 @@ Console.Write(JsonConvert.SerializeObject(att));
 
         public ProcessorResponse Post(ProcessorRequest request)
         {
-            DateTime dateInQuestion = new DateTime(2015, 2, 28);
+
             int empmaster_id = 85;
-            DateTime dtFirstIn = dateInQuestion;
-            DateTime dtLastIn = dateInQuestion;
-            DateTime dtLastOut = dateInQuestion;
-            InOutStatus lastKnownStatus = InOutStatus.UnKnown;
-            InOutStatus lastKnownInOutStatus = InOutStatus.UnKnown;
-            InOutStatus currentStatus = InOutStatus.UnKnown;
-            int iPos = 0;
-            InOutStatus status = InOutStatus.In;
             Attendance att = new Attendance(empmaster_id);
+            att.DateInQuestion = new DateTime(2015, 2, 28);
             //string sql = @"SELECT 
             //            id, 
             //            machineno, 
@@ -482,10 +264,9 @@ Console.Write(JsonConvert.SerializeObject(att));
                 app_att_deviceattlogs
             WHERE
                 userid = :id AND
-                  (punched_at::date = :date_to_consolidate::date OR punched_at::date = (:date_to_consolidate::date - 1)) AND
-                      (COALESCE(app_att_inout_id, 0) <= 0 OR app_att_inout_id = (SELECT id FROM app_att_inout WHERE empmaster_id = :id
-      
-                                                                                AND att_date = :date_to_consolidate::date limit 1))
+                punched_at::date = :date_to_consolidate::date AND
+                (COALESCE(app_att_inout_id, 0) <= 0 OR app_att_inout_id = 
+                (SELECT id FROM app_att_inout WHERE empmaster_id = :id AND att_date = :date_to_consolidate::date limit 1))
             ORDER BY
                 punched_at ASC;
                 
@@ -508,7 +289,7 @@ Console.Write(JsonConvert.SerializeObject(att));
         B.id=C.shift_schedule_id AND 
         C.empmaster_id = :id;";
             DbParameter[] parameters = new DbParameter[] {
-                this.EbConnectionFactory.DataDB.GetNewParameter(":date_to_consolidate",EbDbTypes.DateTime,dateInQuestion),
+                this.EbConnectionFactory.DataDB.GetNewParameter(":date_to_consolidate",EbDbTypes.DateTime,att.DateInQuestion),
                 this.EbConnectionFactory.DataDB.GetNewParameter(":id",EbDbTypes.Int32,empmaster_id)
             };
 
@@ -521,105 +302,12 @@ Console.Write(JsonConvert.SerializeObject(att));
             var break_time_temp = (_row_empmaster["break_time"] != DBNull.Value) ? Convert.ToInt32(_row_empmaster["break_time"]) : 0;
             var bonus_ot_temp = (_row_empmaster["bonus_ot"] != DBNull.Value) ? Convert.ToInt32(_row_empmaster["bonus_ot"]) : 0;
             if (in_time_temp.Hour > 14)
-                att.DoProcessNightShift(break_time_temp, bonus_ot_temp, dateInQuestion);
+                att.DoProcessNightShift(break_time_temp, bonus_ot_temp, dt_devattlogs);
             else
-                att.DoProcessDayShift(break_time_temp, bonus_ot_temp, dateInQuestion);
-            if (dt_devattlogs.Rows.Count > 1)
-            {
-                EbDataRow row = dt_devattlogs.Rows[0];
-                foreach (EbDataRow _row_devattlogs in dt_devattlogs.Rows)
-                {
-                    if (iPos >= dt_devattlogs.Rows.IndexOf(row))
-                    {
-                        DateTime _punched_at = Convert.ToDateTime(_row_devattlogs["punched_at"]);
+                att.DoProcessDayShift(break_time_temp, bonus_ot_temp, dt_devattlogs);
 
-                        if (iPos == dt_devattlogs.Rows.IndexOf(row))
-                        {
-                            currentStatus = status;
-                            if (!att.IsNightshift)
-                            {
-                                dtFirstIn = _punched_at;
-                                att.In_time = dtFirstIn;
-                                dtLastIn = dtFirstIn;
-                            }
-                        }
-                        if (iPos > dt_devattlogs.Rows.IndexOf(row))
-                        {
-                            if (lastKnownStatus == InOutStatus.In)
-                            {
-                                if ((_punched_at - dtLastIn).TotalMinutes > 5)
-                                {
-                                    currentStatus = InOutStatus.UnKnown;
-                                    dtLastOut = _punched_at;
-                                    att.Out_time = dtLastOut;
-                                    att.IWork += Convert.ToInt32((dtLastOut - dtLastIn).TotalMinutes);
-                                }
-                                else
-                                    currentStatus = InOutStatus.Ignored;
-                            }
-                            else if (lastKnownStatus == InOutStatus.Out)
-                            {
-                                if ((_punched_at - dtLastOut).TotalMinutes > 5)
-                                {
-                                    currentStatus = InOutStatus.In;
-                                    dtLastIn = _punched_at;
-                                    att.IBreak += Convert.ToInt32((dtLastIn - dtLastOut).TotalMinutes);
-                                }
-                                else
-                                    currentStatus = InOutStatus.Ignored;
-                            }
-                            else if (lastKnownStatus == InOutStatus.Ignored)
-                            {
-                                bool bDoneAnything = false;
-                                if (dtLastOut > dtLastIn && (_punched_at - dtLastOut).TotalMinutes > 5)
-                                {
-                                    currentStatus = InOutStatus.In;
-                                    dtLastIn = _punched_at;
-                                    att.IBreak += Convert.ToInt32((dtLastIn - dtLastOut).TotalMinutes);
-                                    bDoneAnything = true;
-                                }
-
-                                if (dtLastIn > dtLastOut && (_punched_at - dtLastIn).TotalMinutes > 5)
-                                {
-                                    currentStatus = InOutStatus.Out;
-                                    dtLastOut = _punched_at;
-                                    att.Out_time = dtLastOut;
-                                    att.IWork += Convert.ToInt32((dtLastOut - dtLastIn).TotalMinutes);
-                                    bDoneAnything = true;
-                                }
-
-                                if (!bDoneAnything)
-                                    currentStatus = InOutStatus.Ignored;
-                            }
-                        }
-                        _row_devattlogs["inout"] = currentStatus;
-
-                       att.FillInOutString(_row_devattlogs, currentStatus);
-                        lastKnownStatus = currentStatus;
-                        if (currentStatus == InOutStatus.In || currentStatus == InOutStatus.Out)
-                            lastKnownInOutStatus = currentStatus;
-                    }
-                    iPos++;
-                }
-                if (att.In_time != DateTime.MinValue && att.Out_time != DateTime.MinValue)
-                {
-                    //this.MarkPresent(att.Empmaster_id, cell, null);
-                    //this.Save(devattlogs, att, dateInQuestion, break_time, bonus_ot);
-                }
-                //  else
-                // this.MarkError(cell, att.Empmaster_id, dateInQuestion, devattlogs.Rows.Count, Convert.ToInt32(att.IWork / 60), devattlogs, string.Empty);
-                // this.SetWorkBreakOT(dt_devattlogs, true, att);
-            }
-            else
-            {
-                //var DateTime_Now = CacheHelper.Get<DateTime>(CacheKeys.SYSVARS_NOW_LOCALE);
-                //if (((DateTime)cell.OwningColumn.Tag).Date == DateTime_Now.Date)
-                //    this.MarkUnReviewed(cell, empmaster_id, dateInQuestion, devattlogs.Rows.Count, devattlogs);
-                //else
-                //    this.MarkAbsent(cell, empmaster_id, dateInQuestion);
-            }
             string _insert_qry = string.Format("INSERT INTO app_att_inout (empmaster_id, in_time, out_time, duration, break_time, ot_time, ot_time_approved, notes, night_shift, att_date) SELECT {0}, '{1}', '{2}', {3}, {4}, {5}, {6}, '{7}', {8}, '{9}'",
-                  att.Empmaster_id, att.In_time.ToString("yyyy-MM-dd HH:mm"), att.Out_time.ToString("yyyy-MM-dd HH:mm"), att.IWork, att.IBreak, att.IOverTime, (att.IOTHours * 60) + att.IOTMinutes, att.Notes, att.IsNightshift, dateInQuestion.ToString("yyyy-MM-dd HH:mm"));
+                  att.Empmaster_id, att.In_time.ToString("yyyy-MM-dd HH:mm"), att.Out_time.ToString("yyyy-MM-dd HH:mm"), att.IWork, att.IBreak, att.IOverTime, (att.IOTHours * 60) + att.IOTMinutes, att.Notes, att.IsNightshift, att.DateInQuestion.ToString("yyyy-MM-dd HH:mm"));
             var p = this.EbConnectionFactory.DataDB.DoNonQuery(_insert_qry);
             return new ProcessorResponse();
         }
@@ -699,7 +387,7 @@ Console.Write(JsonConvert.SerializeObject(att));
                     Console.WriteLine("DataReader not found");
                 }
                 List<DbParameter> p = new List<DbParameter>();
-                List<Param> InputParams = (ObjectWrapper as EbDataReader).GetParams(this.Redis as RedisClient);
+                List<Param> InputParams = (ObjectWrapper as EbDataReader).GetParams(this.Redis as RedisClient, this);
                 this.FillParams(InputParams, step_c);//fill parameter value from prev component
                 foreach (Param pr in InputParams)
                 {
@@ -983,7 +671,97 @@ Console.Write(JsonConvert.SerializeObject(att));
         }
     }
 
+    internal class InOutFlatCollection : List<InOutFlat>
+    {
+        internal int WorkTime
+        {
+            get
+            {
+                int _work = 0;
 
+                foreach (InOutFlat _obj in this)
+                    _work += _obj.WorkTime;
+
+                return _work;
+            }
+        }
+
+        internal int BreakTime
+        {
+            get
+            {
+                int _break = 0;
+
+                foreach (InOutFlat _obj in this)
+                    _break += _obj.BreakTime;
+
+                return _break;
+            }
+        }
+    }
+
+    internal class InOutFlat
+    {
+        private InOutFlatCollection InOutFlatCollection { get; set; }
+        private bool InSet { get; set; }
+        private bool OutSet { get; set; }
+
+        internal InOutFlat(InOutFlatCollection _coll)
+        {
+            InOutFlatCollection = _coll;
+        }
+
+        private DateTime _in;
+        internal DateTime In
+        {
+            get { return _in; }
+            set
+            {
+                if (!InSet)
+                {
+                    _in = value;
+                    InSet = true;
+                }
+            }
+        }
+
+        private DateTime _out;
+        internal DateTime Out
+        {
+            get { return _out; }
+            set
+            {
+                if (!OutSet)
+                {
+                    _out = value;
+                    OutSet = true;
+                }
+            }
+        }
+
+        internal int WorkTime
+        {
+            get
+            {
+                if (InSet && OutSet)
+                    return Convert.ToInt32((Out - In).TotalMinutes);
+                else
+                    return 0;
+            }
+        }
+
+        internal int BreakTime
+        {
+            get
+            {
+                int myPos = InOutFlatCollection.IndexOf(this);
+                if (InOutFlatCollection.Count > myPos + 1 && InOutFlatCollection[myPos + 1].InSet)
+                    return Convert.ToInt32((InOutFlatCollection[myPos + 1].In - this.Out).TotalMinutes);
+                else
+                    return 0;
+            }
+        }
+    }
     internal class Attendance
     {
         internal int Empmaster_id { get; set; }
@@ -996,9 +774,10 @@ Console.Write(JsonConvert.SerializeObject(att));
         internal int IOTMinutes { get; set; }
         internal string Notes { get; set; }
         internal bool IsNightshift { get; set; }
-
         internal int App_att_inout_id { get; set; }
+        internal DateTime DateInQuestion { get; set; }
 
+        internal int IWorkTimeInMinutes = 540;
         internal Attendance(int empmaster_id)
         {
             this.Empmaster_id = empmaster_id;
@@ -1018,14 +797,116 @@ Console.Write(JsonConvert.SerializeObject(att));
             this.IsNightshift = bNightshift;
         }
 
-        public void DoProcessNightShift(int break_time, int bonus_ot, DateTime dateInQuestion)
+        public void DoProcessNightShift(int break_time, int bonus_ot, EbDataTable dt_devattlogs)
         {
 
         }
-        public void DoProcessDayShift(int break_time, int bonus_ot, DateTime dateInQuestion)
+        public void DoProcessDayShift(int break_time, int bonus_ot, EbDataTable dt_devattlogs)
         {
+            InOutStatus lastKnownStatus = InOutStatus.UnKnown;
+            InOutStatus lastKnownInOutStatus = InOutStatus.UnKnown;
+            InOutStatus currentStatus = InOutStatus.UnKnown;
+            DateTime dtFirstIn = this.DateInQuestion;
+            DateTime dtLastIn = this.DateInQuestion;
+            DateTime dtLastOut = this.DateInQuestion;
+            int iPos = 0;
+            InOutStatus status = InOutStatus.In;
+            if (dt_devattlogs.Rows.Count > 1)
+            {
+                EbDataRow row = dt_devattlogs.Rows[0];
+                foreach (EbDataRow _row_devattlogs in dt_devattlogs.Rows)
+                {
+                    if (iPos >= dt_devattlogs.Rows.IndexOf(row))
+                    {
+                        DateTime _punched_at = Convert.ToDateTime(_row_devattlogs["punched_at"]);
 
+                        if (iPos == dt_devattlogs.Rows.IndexOf(row))
+                        {
+                            currentStatus = status;
+                            if (!this.IsNightshift)
+                            {
+                                dtFirstIn = _punched_at;
+                                this.In_time = dtFirstIn;
+                                dtLastIn = dtFirstIn;
+                            }
+                        }
+                        if (iPos > dt_devattlogs.Rows.IndexOf(row))
+                        {
+                            if (lastKnownStatus == InOutStatus.In)
+                            {
+                                if ((_punched_at - dtLastIn).TotalMinutes > 5)
+                                {
+                                    currentStatus = InOutStatus.UnKnown;
+                                    dtLastOut = _punched_at;
+                                    this.Out_time = dtLastOut;
+                                    this.IWork += Convert.ToInt32((dtLastOut - dtLastIn).TotalMinutes);
+                                }
+                                else
+                                    currentStatus = InOutStatus.Ignored;
+                            }
+                            else if (lastKnownStatus == InOutStatus.Out)
+                            {
+                                if ((_punched_at - dtLastOut).TotalMinutes > 5)
+                                {
+                                    currentStatus = InOutStatus.In;
+                                    dtLastIn = _punched_at;
+                                    this.IBreak += Convert.ToInt32((dtLastIn - dtLastOut).TotalMinutes);
+                                }
+                                else
+                                    currentStatus = InOutStatus.Ignored;
+                            }
+                            else if (lastKnownStatus == InOutStatus.Ignored)
+                            {
+                                bool bDoneAnything = false;
+                                if (dtLastOut > dtLastIn && (_punched_at - dtLastOut).TotalMinutes > 5)
+                                {
+                                    currentStatus = InOutStatus.In;
+                                    dtLastIn = _punched_at;
+                                    this.IBreak += Convert.ToInt32((dtLastIn - dtLastOut).TotalMinutes);
+                                    bDoneAnything = true;
+                                }
+
+                                if (dtLastIn > dtLastOut && (_punched_at - dtLastIn).TotalMinutes > 5)
+                                {
+                                    currentStatus = InOutStatus.Out;
+                                    dtLastOut = _punched_at;
+                                    this.Out_time = dtLastOut;
+                                    this.IWork += Convert.ToInt32((dtLastOut - dtLastIn).TotalMinutes);
+                                    bDoneAnything = true;
+                                }
+
+                                if (!bDoneAnything)
+                                    currentStatus = InOutStatus.Ignored;
+                            }
+                        }
+                        _row_devattlogs["inout"] = currentStatus;
+
+                        this.FillInOutString(_row_devattlogs, currentStatus);
+                        lastKnownStatus = currentStatus;
+                        if (currentStatus == InOutStatus.In || currentStatus == InOutStatus.Out)
+                            lastKnownInOutStatus = currentStatus;
+                    }
+                    iPos++;
+                }
+                if (this.In_time != DateTime.MinValue && this.Out_time != DateTime.MinValue)
+                {
+                    this.Save(dt_devattlogs, break_time, bonus_ot);
+                }
+                else
+                    //  this.MarkError(cell, att.Empmaster_id, dateInQuestion, devattlogs.Rows.Count, Convert.ToInt32(att.IWork / 60), devattlogs, string.Empty);
+                    this.SetWorkBreakOT(dt_devattlogs, true);
+            }
+            else
+            {
+                //    var DateTime_Now = CacheHelper.Get<DateTime>(CacheKeys.SYSVARS_NOW_LOCALE);
+                //    if (((DateTime)cell.OwningColumn.Tag).Date == DateTime_Now.Date)
+                //        this.MarkUnReviewed(cell, empmaster_id, dateInQuestion, devattlogs.Rows.Count, devattlogs);
+                //    else
+                //        this.MarkAbsent(cell, empmaster_id, dateInQuestion);
+            }
         }
+        internal void MarkRowForDayShift(EbDataTable dt_devattlogs, EbDataRow row, InOutStatus status)
+        { }
         public void FillInOutString(EbDataRow row, InOutStatus currentStatus)
         {
             if (currentStatus == InOutStatus.In)
@@ -1042,16 +923,75 @@ Console.Write(JsonConvert.SerializeObject(att));
             if (row["machineno"] != DBNull.Value)
                 row["type"] = "Device";
             else
-                row["type"] = "Manual";           
+                row["type"] = "Manual";
         }
-        private void SetWorkBreakOT(EbDataTable dt_devattlogs, bool recalc, Attendance att)
+        private void SetWorkBreakOT(EbDataTable dt_devattlogs, bool recalc)
         {
             if (recalc)
             {
-               // ReCalcWorkBreak(dt_devattlogs, att);
-                //att.IOverTime = (att.IWork > CacheHelper.IWorkTimeInMinutes) ? att.IWork - CacheHelper.IWorkTimeInMinutes : 0;
-                att.IOTHours = Convert.ToInt32(att.IOverTime / 60);
-                att.IOTMinutes = att.IOverTime % 60;
+                ReCalcWorkBreak(dt_devattlogs);
+                this.IOverTime = (this.IWork > IWorkTimeInMinutes) ? this.IWork - IWorkTimeInMinutes : 0;
+                this.IOTHours = Convert.ToInt32(this.IOverTime / 60);
+                this.IOTMinutes = this.IOverTime % 60;
+            }
+        }
+        private void ReCalcWorkBreak(EbDataTable dt_devattlogs)
+        {
+            InOutFlatCollection _coll = new InOutFlatCollection();
+            foreach (EbDataRow _row_devattlogs in dt_devattlogs.Rows)
+            {
+                var status = (InOutStatus)Convert.ToInt32(_row_devattlogs["inout"]);
+                if (status == InOutStatus.In)
+                {
+                    var inoutobj = new InOutFlat(_coll);
+                    inoutobj.In = Convert.ToDateTime(_row_devattlogs["punched_at"]);
+                    _coll.Add(inoutobj);
+                }
+                else if (status == InOutStatus.Out)
+                {
+                    if (_coll.Count > 0)
+                        _coll[_coll.Count - 1].Out = Convert.ToDateTime(_row_devattlogs["punched_at"]);
+                }
+            }
+
+            this.IWork = _coll.WorkTime;
+            this.IBreak = _coll.BreakTime;
+        }
+        internal void Save(EbDataTable dt_devattlogs, int break_time, int bonus_ot)
+        {
+            if (this.In_time != DateTime.MinValue && this.Out_time != DateTime.MinValue)
+            {
+                if ((this.IWork / 60) > 6)
+                {
+                    if (bonus_ot > 0)
+                    {
+                        this.IOTHours += Convert.ToInt32(bonus_ot / 60);
+                        this.IOTMinutes += bonus_ot % 60;
+                    }
+
+                    if (break_time > 0)
+                        this.IBreak += break_time;
+                }
+
+                string _update_qry = string.Format("UPDATE app_att_inout SET in_time='{0}', out_time='{1}', duration={2}, break_time={3}, ot_time={4}, ot_time_approved={5}, notes='{6}', night_shift={7}, absent_type=null WHERE empmaster_id={8} AND att_date='{9}'",
+                    this.In_time.ToString("yyyy-MM-dd HH:mm"), this.Out_time.ToString("yyyy-MM-dd HH:mm"), this.IWork, this.IBreak, this.IOverTime, (this.IOTHours * 60) + this.IOTMinutes, this.Notes, this.IsNightshift, this.Empmaster_id, DateInQuestion.ToString("yyyy-MM-dd HH:mm"));
+
+                string _insert_qry = string.Format("INSERT INTO app_att_inout (empmaster_id, in_time, out_time, duration, break_time, ot_time, ot_time_approved, notes, night_shift, att_date) SELECT {0}, '{1}', '{2}', {3}, {4}, {5}, {6}, '{7}', {8}, '{9}'",
+                    this.Empmaster_id, this.In_time.ToString("yyyy-MM-dd HH:mm"), this.Out_time.ToString("yyyy-MM-dd HH:mm"), this.IWork, this.IBreak, this.IOverTime, (this.IOTHours * 60) + this.IOTMinutes, this.Notes, this.IsNightshift, DateInQuestion.ToString("yyyy-MM-dd HH:mm"));
+
+                string _sql = string.Format("WITH upsert AS ({0} RETURNING *) {1} WHERE NOT EXISTS (SELECT * FROM upsert)", _update_qry, _insert_qry);
+
+                foreach (EbDataRow _row_devattlogs in dt_devattlogs.Rows)
+                {
+                    if (Convert.ToInt32(_row_devattlogs["inout"]) != (int)InOutStatus.Excluded)
+                        _sql += string.Format("UPDATE app_att_deviceattlogs SET inout={0}, app_att_inout_id=(SELECT id FROM app_att_inout WHERE empmaster_id={1} AND att_date='{2}') WHERE id={3};",
+                            _row_devattlogs["inout"], this.Empmaster_id, DateInQuestion.ToString("yyyy-MM-dd HH:mm"), _row_devattlogs["id"]);
+                    else
+                        _sql += string.Format("UPDATE app_att_deviceattlogs SET inout={0}, app_att_inout_id=null WHERE id={1};", _row_devattlogs["inout"], _row_devattlogs["id"]);
+
+                }
+
+                //DBHelper.Instance.ExecuteNonQuery(WhichDatabase.CONFIG, _sql);
             }
         }
     }

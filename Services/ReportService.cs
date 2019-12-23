@@ -79,7 +79,7 @@ namespace ExpressBase.ServiceStack
                 Report.Groupheaders = new Dictionary<string, ReportGroupItem>();
                 Report.FileClient = new EbStaticFileClient();
                 Report.FileClient = FileClient;
-                Report.Solution = Redis.Get<Eb_Solution>(String.Format("solution_{0}", request.SolnId));
+                Report.Solution = GetSolutionObject(request.SolnId);
                 Report.ReadingUser = request.ReadingUser;
                 Report.RenderingUser = request.RenderingUser;
                 Report.CultureInfo = CultureInfo.GetCultureInfo(Report.ReadingUser.Preference.Locale);
