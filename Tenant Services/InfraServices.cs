@@ -1902,19 +1902,26 @@ namespace ExpressBase.ServiceStack.Services
 
         public UpdateSidMapResponse Post(UpdateSidMapRequest request)
         {
-            string q = @"SELECT esolution_id, isolution_id FROM eb_solutions WHERE eb_del = false;", esid = string.Empty, isid = string.Empty;
+            string q = @"SELECT esolution_id, isolution_id FROM eb_solutions WHERE eb_del = false";
+            string esid = string.Empty;
+            string isid = string.Empty;
+            if (request.ExtSolutionId != string.Empty)
+            {
+                q += " AND esolution_id = '" + request.ExtSolutionId + "';";
+            }
             try
             {
                 EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(q);
-                foreach (EbDataRow row in dt.Rows)
-                {
-                    esid = row["esolution_id"].ToString();
-                    isid = row["isolution_id"].ToString();
-                    if (string.IsNullOrEmpty(esid) || string.IsNullOrEmpty(isid))
-                        continue;
-                    else
-                        this.Redis.Set<string>(string.Format(CoreConstants.SOLUTION_ID_MAP, esid), isid);
-                }
+                if (dt != null && dt.Rows.Count > 0)
+                    foreach (EbDataRow row in dt.Rows)
+                    {
+                        esid = row["esolution_id"].ToString();
+                        isid = row["isolution_id"].ToString();
+                        if (string.IsNullOrEmpty(esid) || string.IsNullOrEmpty(isid))
+                            continue;
+                        else
+                            this.Redis.Set<string>(string.Format(CoreConstants.SOLUTION_ID_MAP, esid), isid);
+                    }
             }
             catch (Exception e)
             {
@@ -1924,7 +1931,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             return new UpdateSidMapResponse();
         }
- 
+
         //public InfraDb_GENERIC_SELECTResponse Any(InfraDb_GENERIC_SELECTRequest req)
         //{
         //    using (var con = InfraDatabaseFactory.InfraDB.GetNewConnection())
