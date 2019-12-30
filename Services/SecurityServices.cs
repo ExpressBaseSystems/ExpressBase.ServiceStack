@@ -166,11 +166,11 @@ namespace ExpressBase.ServiceStack.Services
             if (request.Id > 1)
             {
                 sql += @"SELECT fullname,nickname,email,alternateemail,dob,sex,phnoprimary,phnosecondary,landline,phextension,fbid,fbname,statusid,hide,preferencesjson,dprefid
-						FROM eb_users WHERE id = :id AND (statusid = 0 OR statusid = 1 OR statusid = 2) AND id > 1 AND eb_del = 'F';
-						SELECT role_id FROM eb_role2user WHERE user_id = :id AND eb_del = 'F';
-						SELECT groupid FROM eb_user2usergroup WHERE userid = :id AND eb_del = 'F';";
+						FROM eb_users WHERE id = @id AND (statusid = 0 OR statusid = 1 OR statusid = 2) AND id > 1 AND eb_del = 'F';
+						SELECT role_id FROM eb_role2user WHERE user_id = @id AND eb_del = 'F';
+						SELECT groupid FROM eb_user2usergroup WHERE userid = @id AND eb_del = 'F';";
 
-                sql += EbConstraints.GetSelectQuery(EbConstraintKeyTypes.User);
+                sql += EbConstraints.GetSelectQuery(EbConstraintKeyTypes.User,EbConnectionFactory.DataDB);
 
                 //SELECT m.id, m.key_id, m.key_type, m.description, l.id AS lid, l.c_type, l.c_operation, l.c_value 
                 //            FROM eb_constraints_master m, eb_constraints_line l
@@ -269,13 +269,13 @@ namespace ExpressBase.ServiceStack.Services
 
             if (!string.IsNullOrEmpty(request.email))
             {
-                sql = "SELECT id FROM eb_users WHERE LOWER(email) LIKE LOWER(:email) AND eb_del = 'F' AND (statusid = 0 OR statusid = 1 OR statusid = 2);";
+                sql = "SELECT id FROM eb_users WHERE LOWER(email) LIKE LOWER(@email) AND eb_del = 'F' AND (statusid = 0 OR statusid = 1 OR statusid = 2);";
                 parameters = new DbParameter[] { this.EbConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, string.IsNullOrEmpty(request.email) ? "" : request.email) };
             }
 
             if (!string.IsNullOrEmpty(request.roleName))
             {
-                sql = "SELECT id FROM eb_roles WHERE LOWER(role_name) LIKE LOWER(:roleName)";
+                sql = "SELECT id FROM eb_roles WHERE LOWER(role_name) LIKE LOWER(@roleName)";
                 parameters = new DbParameter[] { this.EbConnectionFactory.DataDB.GetNewParameter("roleName", EbDbTypes.String, string.IsNullOrEmpty(request.roleName) ? "" : request.roleName) };
             }
             var dt = this.EbConnectionFactory.DataDB.DoQuery(sql, parameters);
@@ -291,7 +291,7 @@ namespace ExpressBase.ServiceStack.Services
 
         public ResetUserPasswordResponse Any(ResetUserPasswordRequest request)
         {
-            string sql = "UPDATE eb_users SET pwd = :newpwd WHERE id = :userid;";
+            string sql = "UPDATE eb_users SET pwd = @newpwd WHERE id = @userid;";
             DbParameter[] parameters = new DbParameter[] {
                 this.EbConnectionFactory.DataDB.GetNewParameter("userid", EbDbTypes.Int32, request.Id),
                 this.EbConnectionFactory.DataDB.GetNewParameter("newpwd", EbDbTypes.String, (request.NewPwd + request.Email).ToMD5Hash())
@@ -378,8 +378,8 @@ namespace ExpressBase.ServiceStack.Services
 
         public DeleteUserResponse Post(DeleteUserRequest request)
         {
-            string sql = @"INSERT INTO eb_userstatus(userid, statusid, createdby, createdat) VALUES (:id, 3, :userid, NOW());
-                            UPDATE eb_users SET statusid = 3 WHERE id = :id AND eb_del = 'F';";
+            string sql = @"INSERT INTO eb_userstatus(userid, statusid, createdby, createdat) VALUES (@id, 3, @userid, NOW());
+                            UPDATE eb_users SET statusid = 3 WHERE id = @id AND eb_del = 'F';";
             DbParameter[] parameters = new DbParameter[] {
                 this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.Id),
                 this.EbConnectionFactory.DataDB.GetNewParameter("userid", EbDbTypes.Int32, request.UserId)
@@ -411,7 +411,7 @@ namespace ExpressBase.ServiceStack.Services
             else
             {
                 string selQry = @"SELECT fullname,nickname,email,alternateemail,dob,sex,phnoprimary,phnosecondary,landline,phextension,preferencesjson
-						FROM eb_users WHERE id = :id ; 
+						FROM eb_users WHERE id = @id ; 
                             SELECT t2.* FROM
                                 (
 	                                SELECT 
@@ -522,73 +522,73 @@ namespace ExpressBase.ServiceStack.Services
                 if (dict.TryGetValue("fullname", out found))
                 {
                     parameters.Add(ConnectionFactory.DataDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value.ToString()));
-                    upcolsvals += "fullname=:fullname,";
+                    upcolsvals += "fullname=@fullname,";
                 }
                 if (dict.TryGetValue("nickname", out found))
                 {
                     parameters.Add(ConnectionFactory.DataDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value.ToString()));
-                    upcolsvals += "nickname=:nickname,";
+                    upcolsvals += "nickname=@nickname,";
                 }
                 if (dict.TryGetValue("alternateemail", out found))
                 {
                     parameters.Add(ConnectionFactory.DataDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value.ToString()));
-                    upcolsvals += "alternateemail=:alternateemail,";
+                    upcolsvals += "alternateemail=@alternateemail,";
                 }
                 if (dict.TryGetValue("dob", out found))
                 {
                     parameters.Add(ConnectionFactory.DataDB.GetNewParameter(found.Key, EbDbTypes.Date, Convert.ToDateTime(DateTime.ParseExact(found.Value.ToString(), "dd-MM-yyyy", CultureInfo.InvariantCulture))));
-                    upcolsvals += "dob=:dob,";
+                    upcolsvals += "dob=@dob,";
                 }
                 if (dict.TryGetValue("sex", out found))
                 {
                     parameters.Add(ConnectionFactory.DataDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value.ToString()));
-                    upcolsvals += "sex=:sex,";
+                    upcolsvals += "sex=@sex,";
                 }
                 if (dict.TryGetValue("phnoprimary", out found))
                 {
                     parameters.Add(ConnectionFactory.DataDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value.ToString()));
-                    upcolsvals += "phnoprimary=:phnoprimary,";
+                    upcolsvals += "phnoprimary=@phnoprimary,";
                 }
                 if (dict.TryGetValue("phnosecondary", out found))
                 {
                     parameters.Add(ConnectionFactory.DataDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value.ToString()));
-                    upcolsvals += "phnosecondary=:phnosecondary,";
+                    upcolsvals += "phnosecondary=@phnosecondary,";
                 }
                 if (dict.TryGetValue("landline", out found))
                 {
                     parameters.Add(ConnectionFactory.DataDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value.ToString()));
-                    upcolsvals += "landline=:landline,";
+                    upcolsvals += "landline=@landline,";
                 }
                 if (dict.TryGetValue("phextension", out found))
                 {
                     parameters.Add(ConnectionFactory.DataDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value.ToString()));
-                    upcolsvals += "phextension=:phextension,";
+                    upcolsvals += "phextension=@phextension,";
                 }
                 //----------------------------
                 if (dict.TryGetValue("alternate_email", out found))
                 {
                     parameters.Add(ConnectionFactory.DataDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value.ToString()));
-                    upcolsvals += "alternate_email=:alternate_email,";
+                    upcolsvals += "alternate_email=@alternate_email,";
                 }
                 if (dict.TryGetValue("ph_primary", out found))
                 {
                     parameters.Add(ConnectionFactory.DataDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value.ToString()));
-                    upcolsvals += "ph_primary=:ph_primary,";
+                    upcolsvals += "ph_primary=@ph_primary,";
                 }
                 if (dict.TryGetValue("ph_secondary", out found))
                 {
                     parameters.Add(ConnectionFactory.DataDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value.ToString()));
-                    upcolsvals += "ph_secondary=:ph_secondary,";
+                    upcolsvals += "ph_secondary=@ph_secondary,";
                 }
                 if (dict.TryGetValue("ph_landline", out found))
                 {
                     parameters.Add(ConnectionFactory.DataDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value.ToString()));
-                    upcolsvals += "ph_landline=:ph_landline,";
+                    upcolsvals += "ph_landline=@ph_landline,";
                 }
                 if (dict.TryGetValue("ph_land_extensn", out found))
                 {
                     parameters.Add(ConnectionFactory.DataDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value.ToString()));
-                    upcolsvals += "ph_land_extension=:ph_land_extension,";
+                    upcolsvals += "ph_land_extension=@ph_land_extension,";
                 }
             }
 
@@ -598,7 +598,7 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     var temp = JsonConvert.DeserializeObject<Preferences>(found.Value.ToString());
                     parameters.Add(ConnectionFactory.DataDB.GetNewParameter(found.Key, EbDbTypes.String, JsonConvert.SerializeObject(temp)));
-                    upcolsvals += "preferencesjson=:preferencesjson,";
+                    upcolsvals += "preferencesjson=@preferencesjson,";
                 }
                 catch (Exception ex)
                 {
@@ -611,7 +611,7 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     var temp = JsonConvert.DeserializeObject<Preferences>(found.Value.ToString());
                     parameters.Add(ConnectionFactory.DataDB.GetNewParameter(found.Key, EbDbTypes.String, JsonConvert.SerializeObject(temp)));
-                    upcolsvals += "preferences_json=:preferences_json,";
+                    upcolsvals += "preferences_json=@preferences_json,";
                 }
                 catch (Exception ex)
                 {
@@ -627,7 +627,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             else
             {
-                string Qry = string.Format("UPDATE {0} SET {1} WHERE id=:id", "eb_users", upcolsvals.Substring(0, upcolsvals.Length - 1));
+                string Qry = string.Format("UPDATE {0} SET {1} WHERE id=@id", "eb_users", upcolsvals.Substring(0, upcolsvals.Length - 1));
                 rstatus = this.EbConnectionFactory.DataDB.UpdateTable(Qry, parameters.ToArray());
             }
             return new SaveMyProfileResponse { RowsAffectd = rstatus };
@@ -668,9 +668,9 @@ namespace ExpressBase.ServiceStack.Services
             Dictionary<string, string> Udata = new Dictionary<string, string>();
             string sql = @"SELECT A.id, A.fullname, A.email, A.phoneno, A.socialid, A.firstvisit, A.lastvisit, A.totalvisits, B.applicationname, A.remarks, A.browser, A.ipaddress
 								FROM eb_usersanonymous A, eb_applications B
-								WHERE A.appid = B.id AND A.ebuserid = 1 AND A.id = :id;
+								WHERE A.appid = B.id AND A.ebuserid = 1 AND A.id = @id;
 							SELECT B.fullname, A.modifiedat FROM eb_usersanonymous A, eb_users B 
-								WHERE A.modifiedby = B.id AND A.id = :id;";
+								WHERE A.modifiedby = B.id AND A.id = @id;";
 
             DbParameter[] parameters = { this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.Id) };
             var ds = this.EbConnectionFactory.DataDB.DoQueries(sql, parameters);
@@ -704,8 +704,8 @@ namespace ExpressBase.ServiceStack.Services
         public UpdateAnonymousUserResponse Any(UpdateAnonymousUserRequest request)
         {
             string sql = @"UPDATE eb_usersanonymous 
-								SET fullname=:fullname, email=:emailid, phoneno=:phoneno, remarks = :remarks, modifiedby = :modifiedby, modifiedat = :NOW
-								WHERE id=:id";
+								SET fullname=@fullname, email=@emailid, phoneno=@phoneno, remarks = @remarks, modifiedby = @modifiedby, modifiedat = @NOW
+								WHERE id=@id";
             DbParameter[] parameters = {
                 this.EbConnectionFactory.DataDB.GetNewParameter("fullname", EbDbTypes.String, request.FullName),
                 this.EbConnectionFactory.DataDB.GetNewParameter("emailid", EbDbTypes.String, request.EmailID),
@@ -731,13 +731,13 @@ namespace ExpressBase.ServiceStack.Services
             {
                 string query = @"	SELECT id,name,description 
 										FROM eb_usergroup 
-										WHERE id = :id;
+										WHERE id = @id;
 									SELECT U.id,U.fullname,U.email 
 										FROM eb_users U, eb_user2usergroup G 
-										WHERE G.groupid = :id AND U.id=G.userid 
+										WHERE G.groupid = @id AND U.id=G.userid 
 										AND G.eb_del = 'F' AND U.eb_del = 'F';";
 
-                query += EbConstraints.GetSelectQuery(EbConstraintKeyTypes.UserGroup);
+                query += EbConstraints.GetSelectQuery(EbConstraintKeyTypes.UserGroup, EbConnectionFactory.DataDB);
 
                 parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.id));
                 var ds = this.EbConnectionFactory.DataDB.DoQueries(query, parameters.ToArray());

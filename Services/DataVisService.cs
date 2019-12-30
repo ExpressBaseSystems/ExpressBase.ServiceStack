@@ -450,12 +450,12 @@ namespace ExpressBase.ServiceStack
                     _sql = _ds.Sql;
                     if (Treecol == null)
                     {
-                        if (!_ds.Sql.ToLower().Contains(":and_search"))
+                        if (!_ds.Sql.ToLower().Contains("@and_search") || !_ds.Sql.ToLower().Contains(":and_search"))
                         {
                             _ds.Sql = "SELECT * FROM (" + _ds.Sql + "\n ) data WHERE 1=1 :and_search order by :orderby";
                         }
                         _ds.Sql = _ds.Sql.ReplaceAll(";", string.Empty);
-                        _sql = _ds.Sql.Replace(":and_search", _c) + ";";
+                        _sql = _ds.Sql.Replace(":and_search", _c).Replace("@and_search", _c) + ";";
                         //}
                         if (request.Ispaging)
                         {

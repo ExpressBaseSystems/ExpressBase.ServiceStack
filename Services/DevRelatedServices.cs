@@ -29,7 +29,7 @@ namespace ExpressBase.ServiceStack
                 string sql = "";
                 if (request.Id > 0)
                 {
-                    sql = "SELECT id, applicationname, description, application_type, app_icon, app_settings FROM eb_applications WHERE id = :id AND eb_del = 'F'";
+                    sql = EbConnectionFactory.ObjectsDB.EB_GET_APPLICATIONS;
                 }
                 else
                 {
@@ -100,22 +100,7 @@ namespace ExpressBase.ServiceStack
             GetObjectsByAppIdResponse resp = new GetObjectsByAppIdResponse();
             try
             {
-                string sql = @" SELECT applicationname,description,app_icon,application_type, app_settings FROM eb_applications WHERE id=:appid AND  eb_del = 'F';
-				                SELECT 
-				                     EO.id, EO.obj_type, EO.obj_name, EO.obj_desc, EO.display_name,EOV.refid,EOV.working_mode
-				                FROM
-				                     eb_objects_ver EOV,eb_objects EO
-				                INNER JOIN
-				                     eb_objects2application EO2A
-				                ON
-				                     EO.id = EO2A.obj_id
-				                WHERE 
-				                    EO2A.app_id = :appid
-								    AND	EO.id = EOV.eb_objects_id
-                                    AND	COALESCE(EO.eb_del, 'F') = 'F'
-                                    AND COALESCE(EO2A.eb_del, 'F') = 'F'
-				                ORDER BY
-				                    EO.obj_type;";
+                string sql = EbConnectionFactory.ObjectsDB.EB_GET_OBJECTS_BY_APP_ID;
 
                 DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("appid", EbDbTypes.Int32, request.Id) };
 
@@ -279,7 +264,7 @@ namespace ExpressBase.ServiceStack
 
         public SaveAppSettingsResponse Any(SaveAppSettingsRequest request)
         {
-            string sql = "UPDATE eb_applications SET app_settings = :newsettings WHERE id = :appid AND application_type = :apptype AND eb_del='F';";
+            string sql = EbConnectionFactory.ObjectsDB.EB_SAVE_APP_SETTINGS;
             DbParameter[] parameters = new DbParameter[] {
                 this.EbConnectionFactory.ObjectsDB.GetNewParameter("appid", EbDbTypes.Int32, request.AppId),
                 this.EbConnectionFactory.ObjectsDB.GetNewParameter("apptype", EbDbTypes.Int32, request.AppType),
@@ -295,7 +280,7 @@ namespace ExpressBase.ServiceStack
         public UniqueApplicationNameCheckResponse Get(UniqueApplicationNameCheckRequest request)
         {
             DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("name", EbDbTypes.String, request.AppName) };
-            EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery("SELECT id FROM eb_applications WHERE applicationname = :name ;", parameters);
+            EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery(EbConnectionFactory.ObjectsDB.EB_UNIQUE_APPLICATION_NAME_CHECK, parameters);
             bool _isunique = (dt.Rows.Count > 0) ? false : true;
             return new UniqueApplicationNameCheckResponse { IsUnique = _isunique };
         }
@@ -308,7 +293,7 @@ namespace ExpressBase.ServiceStack
 
         public DeleteAppResponse Post(DeleteAppRequest request)
         {
-            string q = @"UPDATE eb_applications SET eb_del = 'T' WHERE id = :appid";
+            string q = EbConnectionFactory.ObjectsDB.EB_DELETE_APP;
             DeleteAppResponse resp = new DeleteAppResponse();
             try
             {
@@ -333,7 +318,7 @@ namespace ExpressBase.ServiceStack
 
         public UpdateAppSettingsResponse Post(UpdateAppSettingsRequest request)
         {
-            string sql = @"UPDATE eb_applications SET app_settings = :settings WHERE id = :appid";
+            string sql = EbConnectionFactory.ObjectsDB.EB_UPDATE_APP_SETTINGS;
             UpdateAppSettingsResponse resp = new UpdateAppSettingsResponse();
             try
             {

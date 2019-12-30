@@ -299,43 +299,11 @@ namespace ExpressBase.ServiceStack
 
         public EbObjAllVerWithoutCircularRefResp Get(EbObjAllVerWithoutCircularRefRqst request)// Get all latest committed versions of EbObject without json - circular reference situation avoided on query
         {
-            string query = @"
-            SELECT 
-                EO.id, EO.obj_name, EO.display_name, 
-                EOV.id, EOV.version_num, EOV.refid
-            FROM
-                eb_objects EO, eb_objects_ver EOV
-            WHERE
-                EO.id = EOV.eb_objects_id AND
-                EOV.working_mode = 'F' AND
-                EO.obj_type = :obj_type 
-            ORDER BY 
-                EO.display_name ASC, EOV.version_num DESC;
-            ";
+            string query = EbConnectionFactory.ObjectsDB.EB_OBJ_ALL_VER_WIHOUT_CIRCULAR_REF;
             List<DbParameter> parameters = new List<DbParameter>();
             if (!request.EbObjectRefId.IsNullOrEmpty())
             {
-                query = @"
-                SELECT 
-                    EO.id, EO.obj_name, EO.display_name, 
-                    EOV.id, EOV.version_num, EOV.refid
-                FROM
-                    eb_objects EO, eb_objects_ver EOV
-                WHERE
-                    EO.id = EOV.eb_objects_id AND
-                    EOV.working_mode = 'F' AND
-                    EO.obj_type = :obj_type AND
-                    EOV.refid != :dominant AND
-                    EOV.refid NOT IN (
-                        WITH RECURSIVE objects_relations AS (
-	                    SELECT dependant FROM eb_objects_relations WHERE eb_del='F' AND dominant = :dominant
-	                    UNION
-	                    SELECT a.dependant FROM eb_objects_relations a, objects_relations b WHERE a.eb_del='F' AND a.dominant = b.dependant
-                        )SELECT * FROM objects_relations
-                    )
-                ORDER BY 
-                    EO.display_name ASC, EOV.version_num DESC;    
-                ";
+                query = EbConnectionFactory.ObjectsDB.EB_OBJ_ALL_VER_WIHOUT_CIRCULAR_REF_REFID;
                 parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("dominant", EbDbTypes.String, request.EbObjectRefId));
             }
 
@@ -717,7 +685,7 @@ namespace ExpressBase.ServiceStack
         public UniqueObjectNameCheckResponse Get(UniqueObjectNameCheckRequest request)
         {
             DbParameter[] parameters = { EbConnectionFactory.ObjectsDB.GetNewParameter("name", EbDbTypes.String, request.ObjName) };
-            EbDataTable dt = EbConnectionFactory.ObjectsDB.DoQuery("SELECT id FROM eb_objects WHERE obj_name = :name ;", parameters);
+            EbDataTable dt = EbConnectionFactory.ObjectsDB.DoQuery(EbConnectionFactory.ObjectsDB.EB_UNIQUE_OBJECT_NAME_CHECK, parameters);
             bool _isunique = (dt.Rows.Count > 0) ? false : true;
             return new UniqueObjectNameCheckResponse { IsUnique = _isunique };
         }
@@ -1285,8 +1253,7 @@ namespace ExpressBase.ServiceStack
 
         public DeleteObjectResponse Post(DeleteEbObjectRequest request)
         {
-            string sql = @"UPDATE eb_objects SET eb_del='T' WHERE id = :id;             
-                           UPDATE eb_objects_ver SET eb_del='T' WHERE eb_objects_id = :id";
+            string sql = EbConnectionFactory.ObjectsDB.EB_DELETE_OBJECT;
 
             DbParameter[] p = { EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, request.ObjId) };
             int _rows = EbConnectionFactory.ObjectsDB.DoNonQuery(sql, p);
@@ -1295,7 +1262,7 @@ namespace ExpressBase.ServiceStack
 
         public EnableLogResponse Post(EnableLogRequest request)
         {
-            string sql = "UPDATE eb_objects SET is_logenabled=:log WHERE id = :id";
+            string sql = EbConnectionFactory.ObjectsDB.EB_ENABLE_LOG;
 
             DbParameter[] p = { EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, request.ObjId) ,
             EbConnectionFactory.ObjectsDB.GetNewParameter("log",EbDbTypes.String,(request.Islog==true)? "T":"F")};

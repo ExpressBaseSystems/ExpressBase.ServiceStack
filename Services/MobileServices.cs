@@ -332,11 +332,11 @@ namespace ExpressBase.ServiceStack.Services
 				                                ) OD 
                                 LEFT JOIN eb_objects2application EO2A ON (EO2A.obj_id = OD.id)
                                 WHERE 
-	                                EO2A.app_id = :appid 
+	                                EO2A.app_id = @appid 
                                 {0}
                                 AND 
 	                                COALESCE(EO2A.eb_del, 'F') = 'F';
-                                SELECT app_settings FROM eb_applications WHERE id = :appid";
+                                SELECT app_settings FROM eb_applications WHERE id = @appid";
 
                 List<DbParameter> parameters = new List<DbParameter> {
                     this.EbConnectionFactory.ObjectsDB.GetNewParameter("appid", EbDbTypes.Int32, request.AppId)
