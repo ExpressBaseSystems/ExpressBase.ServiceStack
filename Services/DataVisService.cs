@@ -1326,12 +1326,12 @@ namespace ExpressBase.ServiceStack
             if (!_hourCount.ContainsKey(key))
                 _hourCount.Add(key, new DynamicObj());
 
-             month = DateTimeFormatInfo.CurrentInfo.GetMonthName(7);
-             startDate = new DateTime(paramdate.Year, 7, 1, 0, 0, 0);
-             endDate = new DateTime(paramdate.Year, 12, 31, 23, 59, 59);
-             endmonth = DateTimeFormatInfo.CurrentInfo.GetMonthName(12);
-             key = GetKey(startDate, endDate);
-             title = month + "-" + endmonth + "</br>" + startDate.ToString("dd-MM-yyyy") + "-" + endDate.ToString("dd/MM/yyyy");
+            month = DateTimeFormatInfo.CurrentInfo.GetMonthName(7);
+            startDate = new DateTime(paramdate.Year, 7, 1, 0, 0, 0);
+            endDate = new DateTime(paramdate.Year, 12, 31, 23, 59, 59);
+            endmonth = DateTimeFormatInfo.CurrentInfo.GetMonthName(12);
+            key = GetKey(startDate, endDate);
+            title = month + "-" + endmonth + "</br>" + startDate.ToString("dd-MM-yyyy") + "-" + endDate.ToString("dd/MM/yyyy");
             tempdataset.Tables[0].Columns.Add(new EbDataColumn { ColumnIndex = index, ColumnName = key, Type = EbDbTypes.String });
             if (Modifydv)
             {
@@ -1466,13 +1466,16 @@ namespace ExpressBase.ServiceStack
                         }
                         else if (col.RenderType == EbDbTypes.Decimal || col.RenderType == EbDbTypes.Int32 || col.RenderType == EbDbTypes.Int64)
                         {
-                            if ((col as DVNumericColumn).SuppresIfZero && (_isexcel == false))
+                            if (col.Name != "id")
                             {
-                                _formattedData = (Convert.ToDecimal(_unformattedData) == 0) ? string.Empty : Convert.ToDecimal(_unformattedData).ToString("N", cults.NumberFormat);
+                                if ((col as DVNumericColumn).SuppresIfZero && (_isexcel == false))
+                                {
+                                    _formattedData = (Convert.ToDecimal(_unformattedData) == 0) ? string.Empty : Convert.ToDecimal(_unformattedData).ToString("N", cults.NumberFormat);
 
+                                }
+                                else
+                                    _formattedData = Convert.ToDecimal(_unformattedData).ToString("N", cults.NumberFormat);
                             }
-                            else
-                                _formattedData = Convert.ToDecimal(_unformattedData).ToString("N", cults.NumberFormat);
                         }
                         else if (col.RenderType == EbDbTypes.Boolean || col.RenderType == EbDbTypes.BooleanOriginal)
                         {
@@ -1765,7 +1768,7 @@ namespace ExpressBase.ServiceStack
                 this._Responsestatus.Message = e.Message;
             }
         }
-        
+
         public string GetKey(DateTime st, DateTime end)
         {
             return st.ToString("dd/MM/yyyy:HH:mm:ss") + end.ToString("dd/MM/yyyy:HH:mm:ss");
