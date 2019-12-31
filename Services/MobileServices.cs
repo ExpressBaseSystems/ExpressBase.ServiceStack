@@ -95,8 +95,8 @@ namespace ExpressBase.ServiceStack.Services
 
                 EbMobilePage vispage = new EbMobilePage
                 {
-                    Name = request.MobilePage.Name + "_AutoGenVis",
-                    DisplayName = request.MobilePage.DisplayName + "_AutoGenVis"
+                    Name = $"{request.MobilePage.Name}_list",
+                    DisplayName = $"{request.MobilePage.DisplayName} List"
                 };
 
                 EbMobileVisualization _vis = new EbMobileVisualization
@@ -126,6 +126,7 @@ namespace ExpressBase.ServiceStack.Services
                     ColumnName = _list.ToArray()[0].Name,
                     Type = _list.ToArray()[0].Type.EbDbType
                 });
+                _vis.SourceFormRefId = (request.MobilePage.Container as EbMobileForm).RefId;
                 vispage.Container = _vis;
 
                 string refid = this.CreateNewObjectRequest(request, vispage);
