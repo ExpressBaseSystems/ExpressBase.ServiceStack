@@ -105,6 +105,8 @@ namespace ExpressBase.ServiceStack.Services
                     DataSourceRefId = this.CreateDataReader(request, cols)
                 };
 
+                _vis.OfflineQuery = new EbScript { Code = $"SELECT * FROM {(request.MobilePage.Container as EbMobileForm).TableName};" };
+
                 _vis.DataLayout = new EbMobileTableLayout { RowCount = 2, ColumCount = 2 };
 
                 for (int i = 0; i < 2; i++)
@@ -396,10 +398,10 @@ namespace ExpressBase.ServiceStack.Services
 
             try
             {
-                foreach(DataImportMobile DI in Settings.DataImport)
+                foreach (DataImportMobile DI in Settings.DataImport)
                 {
                     int objtype = Convert.ToInt32(DI.RefId.Split(CharConstants.DASH)[2]);
-                    if(objtype == (int)EbObjectTypes.DataReader)
+                    if (objtype == (int)EbObjectTypes.DataReader)
                     {
                         var resp = this.Gateway.Send<DataSourceDataSetResponse>(new DataSourceDataSetRequest
                         {
