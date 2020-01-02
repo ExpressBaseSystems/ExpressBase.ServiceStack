@@ -185,6 +185,17 @@ namespace ExpressBase.ServiceStack.Auth0
 
         public override object Logout(IServiceBase service, Authenticate request)
         {
+            try
+            {
+                CustomUserSession session = service.GetSession() as CustomUserSession;
+                User User = (service as AuthenticateService).Redis.Get<User>(session.UserAuthId);
+                EbConnectionFactory EbConnectionFactory = service.TryResolve<IEbConnectionFactory>() as EbConnectionFactory;
+                User.Logout(EbConnectionFactory.DataDB);
+            }
+            catch(Exception ex)
+            {
+                Console.WriteLine("Exception in Logout : " + ex.Message);
+            }
             return base.Logout(service, request);
         }
     }
