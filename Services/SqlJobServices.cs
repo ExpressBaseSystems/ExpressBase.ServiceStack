@@ -32,6 +32,9 @@ namespace ExpressBase.ServiceStack.Services
 
         public Dictionary<string, object> TempParams { set; get; }
 
+
+        Script valscript = null;
+
         private SqlJobResponse JobResponse { get; set; }
 
         private EbObjectService StudioServices { set; get; }
@@ -113,7 +116,7 @@ namespace ExpressBase.ServiceStack.Services
                     this.EbConnectionFactory.DataDB.GetNewParameter("message",EbDbTypes.String, e.Message + e.StackTrace),
                     this.EbConnectionFactory.DataDB.GetNewParameter("id",EbDbTypes.Int32,LogMasterId)
                     };
-                    this.EbConnectionFactory.DataDB.DoNonQuery("UPDATE eb_joblogs_master SET status = 'FAILED', message = :message WHERE id = :id;", dbparameters);
+                    this.EbConnectionFactory.DataDB.DoNonQuery("UPDATE eb_joblogs_master SET status = 'F', message = :message WHERE id = :id;", dbparameters);
                 }
             }
             catch (Exception e)
@@ -548,20 +551,23 @@ namespace ExpressBase.ServiceStack.Services
             EbDataSet _ds = null;
             SqlJobScript script = new SqlJobScript();
 
-            Script valscript = CSharpScript.Create<dynamic>(code,
-                ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core")
-                .WithImports("System.Dynamic", "System", "System.Collections.Generic", "System.Diagnostics", "System.Linq", "Newtonsoft.Json", "ExpressBase.Common")
-                .AddReferences(typeof(ExpressBase.Common.EbDataSet).Assembly),
-                globalsType: typeof(SqlJobGlobals));
-
             if (_prevres != null)
                 _ds = _prevres.Result as EbDataSet;
             try
             {
-                valscript.Compile();
+                if (valscript == null) // 
+                {
+                    valscript = CSharpScript.Create<dynamic>(code,
+                         ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core")
+                         .WithImports("System.Dynamic", "System", "System.Collections.Generic", "System.Diagnostics", "System.Linq", "Newtonsoft.Json", "ExpressBase.Common")
+                         .AddReferences(typeof(ExpressBase.Common.EbDataSet).Assembly),
+                         globalsType: typeof(SqlJobGlobals));
+                    valscript.Compile();
+                }
             }
             catch (Exception e)
             {
+                valscript = null;
                 Console.WriteLine(e.Message + e.StackTrace);
                 throw e;
             }
