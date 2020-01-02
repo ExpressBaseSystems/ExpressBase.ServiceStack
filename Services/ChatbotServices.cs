@@ -66,7 +66,7 @@ namespace ExpressBase.ServiceStack
                             FROM 
 	                            eb_bots 
                             WHERE 
-	                            app_id = :appid;";
+	                            app_id = @appid;";
             EbDataTable table = this.EbConnectionFactory.ObjectsDB.DoQuery(Query1.Replace("@appid", request.AppId.ToString()));
             GetBotDetailsResponse resp = new GetBotDetailsResponse();
             foreach (EbDataRow row in table.Rows)
@@ -163,7 +163,7 @@ namespace ExpressBase.ServiceStack
                         FROM 
 	                        eb_bots 
                         WHERE 
-                            solution_id = :solid;";
+                            solution_id = @solid;";
             parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("solid", EbDbTypes.Int32, 100));//request.SolutionId));
             var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(sql, parameters.ToArray());
 
@@ -744,7 +744,7 @@ namespace ExpressBase.ServiceStack
         public string CreateDsAndDv4Cards(CreateBotFormTableRequest request, DVColumnCollection Columns, string ColumnName)
         {
             var dsobj = new EbDataReader();
-            dsobj.Sql = "SELECT @ColumnName@ FROM @tbl WHERE formid = :id".Replace("@tbl", request.BotObj.TableName + "_lines").Replace("@ColumnName@", ColumnName);
+            dsobj.Sql = "SELECT @ColumnName@ FROM @tbl WHERE formid = @id".Replace("@tbl", request.BotObj.TableName + "_lines").Replace("@ColumnName@", ColumnName);
             var ds = new EbObject_Create_New_ObjectRequest();
             ds.Name = request.BotObj.Name + "_datasource4Card";
             ds.Description = "desc";
@@ -811,8 +811,8 @@ namespace ExpressBase.ServiceStack
                     }
                     else
                     {
-                        vals += ":" + obj.Name + ",";
-                        colvals += obj.Name + " = :" + obj.Name + ", ";
+                        vals += "@" + obj.Name + ",";
+                        colvals += obj.Name + " = @" + obj.Name + ", ";
                         parameter1 = this.EbConnectionFactory.ObjectsDB.GetNewParameter(obj.Name, EbDbTypes.Decimal, double.Parse(obj.Value));
                         paramlist.Add(parameter1);
                     }
@@ -820,24 +820,24 @@ namespace ExpressBase.ServiceStack
                 else if (obj.Type == EbDbTypes.Date)
                 {
                     cols += obj.Name + ",";
-                    colvals += obj.Name + " = :" + obj.Name + ", ";
-                    vals += ":" + obj.Name + ",";
+                    colvals += obj.Name + " = @" + obj.Name + ", ";
+                    vals += "@" + obj.Name + ",";
                     parameter1 = this.EbConnectionFactory.ObjectsDB.GetNewParameter(obj.Name, EbDbTypes.Date, DateTime.Parse(obj.Value));
                     paramlist.Add(parameter1);
                 }
                 else if (obj.Type == EbDbTypes.DateTime)
                 {
                     cols += obj.Name + ",";
-                    colvals += obj.Name + " = :" + obj.Name + ", ";
-                    vals += ":" + obj.Name + ",";
+                    colvals += obj.Name + " = @" + obj.Name + ", ";
+                    vals += "@" + obj.Name + ",";
                     parameter1 = this.EbConnectionFactory.ObjectsDB.GetNewParameter(obj.Name, EbDbTypes.DateTime, DateTime.Parse(obj.Value));
                     paramlist.Add(parameter1);
                 }
                 else if (obj.Type == EbDbTypes.Time)
                 {
                     cols += obj.Name + ",";
-                    vals += ":" + obj.Name + ",";
-                    colvals += obj.Name + " = :" + obj.Name + ", ";
+                    vals += "@" + obj.Name + ",";
+                    colvals += obj.Name + " = @" + obj.Name + ", ";
                     DateTime dt = DateTime.Parse(obj.Value);
                     //DateTime.ParseExact(obj.Value, "HH:mm:ss", CultureInfo.InvariantCulture)
                     parameter1 = this.EbConnectionFactory.ObjectsDB.GetNewParameter(obj.Name, EbDbTypes.Time, dt.ToString("HH:mm:ss"));
@@ -849,8 +849,8 @@ namespace ExpressBase.ServiceStack
                     if (ObjectLines.Keys.Count > 0)
                     {
                         cols += obj.Name + ",";
-                        vals += ":" + obj.Name + ",";
-                        colvals += obj.Name + " = :" + obj.Name + ", ";
+                        vals += "@" + obj.Name + ",";
+                        colvals += obj.Name + " = @" + obj.Name + ", ";
                         parameter1 = this.EbConnectionFactory.ObjectsDB.GetNewParameter(obj.Name, EbDbTypes.String, "LINES");
                         paramlist.Add(parameter1);
                     }
@@ -866,19 +866,19 @@ namespace ExpressBase.ServiceStack
                                 Cols4Lines += objLines.Name + ",";
                             if (objLines.Type == EbDbTypes.Double)
                             {
-                                Vals4SingleLine += ":line" + cardCount + objLines.Name + ",";
+                                Vals4SingleLine += "@line" + cardCount + objLines.Name + ",";
                                 Param4Lines = this.EbConnectionFactory.ObjectsDB.GetNewParameter("line" + cardCount + objLines.Name, EbDbTypes.Double, double.Parse(objLines.Value));
                             }
                             else
                             {
-                                Vals4SingleLine += ":line" + cardCount + objLines.Name + ",";
+                                Vals4SingleLine += "@line" + cardCount + objLines.Name + ",";
                                 Param4Lines = this.EbConnectionFactory.ObjectsDB.GetNewParameter("line" + cardCount + objLines.Name, EbDbTypes.String, objLines.Value);
                             }
                             paramlist.Add(Param4Lines);
                         }
                         if (cardCount == 0)
                             Cols4Lines += "itemid";
-                        Vals4SingleLine += ":line" + cardCount + "_item_id";
+                        Vals4SingleLine += "@line" + cardCount + "_item_id";
                         paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("line" + cardCount + "_item_id", EbDbTypes.Int32, card.Key));
                         Vals4Lines.Add(Vals4SingleLine);
                         cardCount++;
@@ -887,8 +887,8 @@ namespace ExpressBase.ServiceStack
                 else
                 {
                     cols += obj.Name + ",";
-                    vals += ":" + obj.Name + ",";
-                    colvals += obj.Name + " = :" + obj.Name + ", ";
+                    vals += "@" + obj.Name + ",";
+                    colvals += obj.Name + " = @" + obj.Name + ", ";
                     parameter1 = this.EbConnectionFactory.ObjectsDB.GetNewParameter(obj.Name, EbDbTypes.String, obj.Value);
                     paramlist.Add(parameter1);
                 }
@@ -898,7 +898,7 @@ namespace ExpressBase.ServiceStack
             if (request.Id == 0)
             {
                 cols = cols + "eb_created_by, eb_created_aid, eb_created_at, eb_lastmodified_by, eb_lastmodified_aid, eb_lastmodified_at";
-                vals = vals + ":eb_created_by,:eb_created_aid,:eb_created_at,:eb_lastmodified_by,:eb_lastmodified_aid,:eb_lastmodified_at";
+                vals = vals + "@eb_created_by,@eb_created_aid,@eb_created_at,@eb_lastmodified_by,@eb_lastmodified_aid,@eb_lastmodified_at";
                 paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_created_by", EbDbTypes.Int32, request.UserId));
                 paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_created_aid", EbDbTypes.Int32, request.AnonUserId));
                 paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_created_at", EbDbTypes.DateTime, DateTime.Now));
@@ -923,13 +923,13 @@ namespace ExpressBase.ServiceStack
             }
             else
             {
-                colvals += "eb_lastmodified_by = :eb_lastmodified_by, eb_lastmodified_at = :eb_lastmodified_at";
+                colvals += "eb_lastmodified_by = @eb_lastmodified_by, eb_lastmodified_at = @eb_lastmodified_at";
 
                 paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, request.Id));
                 paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_lastmodified_by", EbDbTypes.Int32, request.UserId));
                 paramlist.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_lastmodified_at", EbDbTypes.DateTime, DateTime.Now));
 
-                qry = string.Format("UPDATE {0} SET {1} WHERE id = :id ;", request.TableName, colvals);
+                qry = string.Format("UPDATE {0} SET {1} WHERE id = @id ;", request.TableName, colvals);
                 rslt = this.EbConnectionFactory.ObjectsDB.UpdateTable(qry, paramlist.ToArray());
             }
             return new InsertIntoBotFormTableResponse { RowAffected = rslt };
@@ -975,7 +975,7 @@ namespace ExpressBase.ServiceStack
             {
                 cols += item.Name + ",";
             }
-            string selectQry = string.Format("SELECT {0} FROM {1} WHERE id=:id;", cols.Substring(0, cols.Length - 1), TableName);
+            string selectQry = string.Format("SELECT {0} FROM {1} WHERE id=@id;", cols.Substring(0, cols.Length - 1), TableName);
 
             var ds = this.EbConnectionFactory.DataDB.DoQueries(selectQry, new DbParameter[] { this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, Id) });
             if (ds.Tables.Count > 0 && ds.Tables[0].Rows.Count > 0)
@@ -992,14 +992,14 @@ namespace ExpressBase.ServiceStack
                             Value = Fields[i].Value,
                             OldValue = dr[i].ToString()
                         });
-                        colvals += Fields[i].Name + "=:" + Fields[i].Name + ",";
+                        colvals += Fields[i].Name + "=@" + Fields[i].Name + ",";
                         parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter(Fields[i].Name, Fields[i].Type, Fields[i].Value));
                     }
                 }
                 if (!colvals.IsNullOrEmpty())
                 {
                     parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, Id));
-                    string Qry = string.Format("UPDATE {0} SET {1} WHERE id=:id;", TableName, colvals.Substring(0, colvals.Length - 1));
+                    string Qry = string.Format("UPDATE {0} SET {1} WHERE id=@id;", TableName, colvals.Substring(0, colvals.Length - 1));
                     rstatus = this.EbConnectionFactory.ObjectsDB.UpdateTable(Qry, parameters.ToArray());
                 }
                 //UpdateLog(UpdateList, TableName, UserId);
@@ -1013,7 +1013,7 @@ namespace ExpressBase.ServiceStack
             parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("formid", EbDbTypes.String, _FormId));
             parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_createdby", EbDbTypes.Int32, _UserId));
             parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_createdat", EbDbTypes.DateTime, DateTime.Now));
-            string Qry = "INSERT INTO eb_audit_master(formid, eb_createdby, eb_createdat) VALUES (:formid, :eb_createdby, :eb_createdat) RETURNING id;";
+            string Qry = "INSERT INTO eb_audit_master(formid, eb_createdby, eb_createdat) VALUES (@formid, @eb_createdby, @eb_createdat) RETURNING id;";
             EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery(Qry, parameters.ToArray());
             var id = Convert.ToInt32(dt.Rows[0][0]);
 
@@ -1022,7 +1022,7 @@ namespace ExpressBase.ServiceStack
             parameters1.Add(this.EbConnectionFactory.DataDB.GetNewParameter("masterid", EbDbTypes.Int32, id));
             for (int i = 0; i < _Fields.Count; i++)
             {
-                lineQry += "(:masterid, :" + _Fields[i].Name + ", :old" + _Fields[i].Name + ", :new" + _Fields[i].Name + "),";
+                lineQry += "(@masterid, @" + _Fields[i].Name + ", @old" + _Fields[i].Name + ", @new" + _Fields[i].Name + "),";
                 parameters1.Add(this.EbConnectionFactory.DataDB.GetNewParameter(_Fields[i].Name, EbDbTypes.String, _Fields[i].Name));
                 parameters1.Add(this.EbConnectionFactory.DataDB.GetNewParameter("new" + _Fields[i].Name, EbDbTypes.String, _Fields[i].Value));
                 parameters1.Add(this.EbConnectionFactory.DataDB.GetNewParameter("old" + _Fields[i].Name, EbDbTypes.String, _Fields[i].OldValue));
@@ -1050,7 +1050,7 @@ namespace ExpressBase.ServiceStack
 
         public GetBotSettingsResponse Get(GetBotSettingsRequest request)
         {
-            string sql = "SELECT app_settings FROM eb_applications WHERE id = :appid AND application_type = 3 AND eb_del = 'F'";
+            string sql = "SELECT app_settings FROM eb_applications WHERE id = @appid AND application_type = 3 AND eb_del = 'F'";
             DbParameter[] parameters = new DbParameter[] {
                 this.EbConnectionFactory.ObjectsDB.GetNewParameter("appid", EbDbTypes.Int32, request.AppId)
             };

@@ -986,6 +986,35 @@ namespace ExpressBase.ServiceStack.Services
             };
         }
 
+        public InsertOrUpdateFormDataResp Any(InsertOrUpdateFormDataRqst request)
+        {
+            try
+            {
+                EbWebForm FormObj = GetWebFormObject(request.RefId);
+                FormObj.RefId = request.RefId;
+                FormObj.TableRowId = request.RecordId;
+                FormObj.UserObj = request.UserObj;
+                FormObj.LocationId = request.LocId;
+                FormObj.SolutionObj = GetSolutionObject(request.SolnId);
+                Console.WriteLine("InsertOrUpdateFormDataRqst PrepareWebFormData start : " + DateTime.Now);
+                FormObj.PrepareWebFormData(this.EbConnectionFactory.DataDB, this, request.PushJson, request.FormGlobals);
+                Console.WriteLine("InsertOrUpdateFormDataRqst Save start : " + DateTime.Now);
+                string r = FormObj.Save(this.EbConnectionFactory.DataDB);
+                Console.WriteLine("InsertOrUpdateFormDataRqst returning");
+                return new InsertOrUpdateFormDataResp() { Status = (int)HttpStatusCodes.OK, Message = "success", RecordId = FormObj.TableRowId };
+            }
+            catch (FormException ex)
+            {
+                Console.WriteLine("Exception in InsertOrUpdateFormDataRqst" + ex.Message + "\n" + ex.MessageInternal + "\n" + ex.StackTrace);
+                return new InsertOrUpdateFormDataResp() { Status = ex.ExceptionCode, Message = ex.Message };
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Exception in InsertOrUpdateFormDataRqst" + ex.Message + "\n" + ex.StackTrace);
+                return new InsertOrUpdateFormDataResp() { Status = (int)HttpStatusCodes.INTERNAL_SERVER_ERROR, Message = ex.Message };
+            }
+        }
+
 
         //================================= FORMULA AND VALIDATION =================================================
 
@@ -1419,7 +1448,7 @@ namespace ExpressBase.ServiceStack.Services
                 this.Redis.Set<EbUserControl>(Request.RefId, _ucObj);
             }
             //_ucObj.AfterRedisGet(this);
-            _ucObj.SetDataObjectControl(this.EbConnectionFactory.DataDB, this , Request.Param);
+            _ucObj.SetDataObjectControl(this.EbConnectionFactory.DataDB, this, Request.Param);
             _ucObj.IsRenderMode = true;
             return new GetDashBoardUserCtrlResponse()
             {

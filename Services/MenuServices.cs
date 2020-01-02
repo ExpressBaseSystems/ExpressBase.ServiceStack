@@ -187,9 +187,7 @@ namespace ExpressBase.ServiceStack.Services
             AddFavouriteResponse resp = new AddFavouriteResponse();
             try
             {
-                string sql = @"INSERT INTO 
-                                eb_objects_favourites(userid,object_id)
-                            VALUES(:userid,:objectid)";
+                string sql =EbConnectionFactory.ObjectsDB.EB_ADD_FAVOURITE;
                 DbParameter[] parameter =
                 {
                 this.EbConnectionFactory.ObjectsDB.GetNewParameter("userid",EbDbTypes.Int32,request.UserId),
@@ -216,12 +214,7 @@ namespace ExpressBase.ServiceStack.Services
             RemoveFavouriteResponse resp = new RemoveFavouriteResponse();
             try
             {
-                string sql = @"UPDATE 
-                                eb_objects_favourites SET eb_del= 'T' 
-                           WHERE 
-                                userid = :userid 
-                           AND 
-                                object_id = :objectid";
+                string sql = EbConnectionFactory.ObjectsDB.EB_REMOVE_FAVOURITE;
 
                 DbParameter[] parameter = {
                     this.EbConnectionFactory.ObjectsDB.GetNewParameter("userid",EbDbTypes.Int32,request.UserId),
