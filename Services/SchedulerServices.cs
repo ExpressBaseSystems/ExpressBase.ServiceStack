@@ -42,7 +42,7 @@ namespace ExpressBase.ServiceStack.Services
             using (var con = _ebConnectionFactory.DataDB.GetNewConnection())
             {
                 con.Open();
-                string sql = "UPDATE eb_schedules SET task = :task, name=:name WHERE id = :id";
+                string sql = "UPDATE eb_schedules SET task = @task, name=@name WHERE id = @id";
                 DbParameter[] parameters = {
                     _ebConnectionFactory.DataDB.GetNewParameter("task", EbDbTypes.Json,EbSerializers.Json_Serialize(request.Task)),
                     _ebConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32,request.Id),
@@ -61,7 +61,7 @@ namespace ExpressBase.ServiceStack.Services
             using (var con = _ebConnectionFactory.DataDB.GetNewConnection())
             {
                 con.Open();
-                string sql = "UPDATE eb_schedules SET status = :stat WHERE id = :id";
+                string sql = "UPDATE eb_schedules SET status = @stat WHERE id = @id";
                 DbParameter[] parameters = {
                     _ebConnectionFactory.DataDB.GetNewParameter("stat", EbDbTypes.Int32,(int)ScheduleStatuses.Deleted),
                     _ebConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32,request.Id) };
@@ -146,14 +146,14 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     sql = @"SELECT * FROM eb_schedules ES ,eb_users EU
                                WHERE EU.id = ES.created_by
-                               AND obj_id = :obj_id AND status != 3
+                               AND obj_id = @obj_id AND status != 3
                                 ORDER BY ES.id;";
                 }
                 else if(request.ObjectId ==-1)
                 {
                     sql = @"SELECT * FROM eb_schedules ES ,eb_users EU
                                WHERE EU.id = ES.created_by AND status != 3
-                               ORDER BY ES.id;;";
+                               ORDER BY ES.id;";
                 }
 
                 DbParameter[] parameters = {
@@ -193,7 +193,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 con.Open();
                 string sql = @"INSERT INTO eb_schedules(task, created_by, created_at, eb_del, jobkey, triggerkey, status, obj_id, name)
-                VALUES(:task, :created_by, NOW(), 'F', :jobkey, :triggerkey, :status, :obj_id, :name)";
+                VALUES(@task, @created_by, NOW(), 'F', @jobkey, @triggerkey, @status, @obj_id, @name)";
                 DbParameter[] parameters = { _ebConnectionFactory.DataDB.GetNewParameter("task", EbDbTypes.Json,EbSerializers.Json_Serialize(request.Task)),
                _ebConnectionFactory.DataDB.GetNewParameter("created_by", EbDbTypes.Int32,  request.Task.JobArgs.UserId),
                _ebConnectionFactory.DataDB.GetNewParameter("jobkey", EbDbTypes.String,  request.JobKey),

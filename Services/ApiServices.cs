@@ -478,21 +478,7 @@ namespace ExpressBase.ServiceStack.Services
         public ApiByNameResponse Get(ApiByNameRequest request)
         {
             EbApi api_o = null;
-            string sql = @"SELECT 
-	                            EOV.obj_json,EOV.version_num,EOS.status,EO.obj_tags, EO.obj_type
-                            FROM
-	                            eb_objects_ver EOV
-                            INNER JOIN
-	                            eb_objects EO ON EOV.eb_objects_id = EO.id
-                            INNER JOIN
-	                            eb_objects_status EOS ON EOS.eb_obj_ver_id = EOV.id
-                            WHERE
-	                            EO.obj_type=20 
-                            AND
-	                            EO.obj_name=:objname
-                            AND 
-	                            EOV.version_num =:version
-                            LIMIT 1;";
+            string sql = EbConnectionFactory.ObjectsDB.EB_API_BY_NAME;
 
             DbParameter[] parameter =
             {

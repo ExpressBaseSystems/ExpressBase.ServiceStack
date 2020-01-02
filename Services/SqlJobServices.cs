@@ -198,7 +198,7 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
-        public RetryJobResponse post(RetryJobRequest request)
+        public RetryJobResponse Post(RetryJobRequest request)
         {
             RetryJobResponse response = new RetryJobResponse();
             response.Status = false;
