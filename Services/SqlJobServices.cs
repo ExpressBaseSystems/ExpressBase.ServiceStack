@@ -21,7 +21,6 @@ namespace ExpressBase.ServiceStack.Services
 {
     public class SqlJobServices : EbBaseService
     {
-
         public int LogMasterId { get; set; }
 
         public int UserId { get; set; }
@@ -44,6 +43,7 @@ namespace ExpressBase.ServiceStack.Services
             this.StudioServices = base.ResolveService<EbObjectService>();
             this.JobResponse = new SqlJobResponse();
         }
+
         private Dictionary<string, TV> _keyValuePairs = null;
 
         public Dictionary<string, TV> GetKeyvalueDict
@@ -80,7 +80,6 @@ namespace ExpressBase.ServiceStack.Services
                 }
             return _fdict;
         }
-
 
         public SqlJobResponse Any(SqlJobRequest request)
         {
@@ -321,10 +320,12 @@ namespace ExpressBase.ServiceStack.Services
         public LogLine GetLogLine(int JoblogId)
         {
             LogLine logline = null;
-            string sql = @"SELECT l.* , m.refid 
-                        FROM  eb_joblogs_lines l, eb_joblogs_master m
-                        WHERE l.id = :id AND
-                        m.id = l.logmaster_id";
+            string sql = @" SELECT
+                                 l.* , m.refid 
+                             FROM 
+                                 eb_joblogs_lines l, eb_joblogs_master m
+                             WHERE
+                                 l.id = :id AND m.id = l.logmaster_id";
             DbParameter[] parameters = new DbParameter[] {
             this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, JoblogId) };
             EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(sql, parameters);
@@ -352,12 +353,19 @@ namespace ExpressBase.ServiceStack.Services
             {
                 if (resource is EbSqlJobReader)
                     res.Result = this.ExcDataReader(resource as EbSqlJobReader, index);
+
                 else if (resource is EbSqlJobWriter)
                     res.Result = this.ExcDataWriter(resource as EbSqlJobWriter, index);
+
                 else if (resource is EbLoop)
                     res.Result = ExecuteLoop(resource as EbLoop, index, parentindex);
+
                 else if (resource is EbTransaction)
                     res.Result = ExecuteTransaction(resource as EbTransaction, index);
+
+                else if (resource is EbSqlFormDataPusher)
+                    res.Result = ExecuteDataPush(resource as EbSqlFormDataPusher);
+
                 else if (resource is EbSqlProcessor)
                 {
                     SqlJobResource _prev = null;
@@ -368,6 +376,7 @@ namespace ExpressBase.ServiceStack.Services
 
                     res.Result = EvaluateProcessor(resource as EbSqlProcessor, _prev, this.GlobalParams);
                 }
+
                 return res.Result;
             }
             catch (Exception e)
@@ -674,6 +683,16 @@ namespace ExpressBase.ServiceStack.Services
         {
             EbObjectParticularVersionResponse resp = (EbObjectParticularVersionResponse)StudioServices.Get(new EbObjectParticularVersionRequest { RefId = refid });
             return EbSerializers.Json_Deserialize(resp.Data[0].Json);
+        }
+
+        private object ExecuteDataPush(EbSqlFormDataPusher dataPusher)
+        {
+            WebFormServices webFormServices = base.ResolveService<WebFormServices>();
+            webFormServices.Any(new InsertOrUpdateFormDataRqst
+            {
+                FormGlobals = new FormGlobals {   }
+            });
+            return new object();
         }
     }
 
