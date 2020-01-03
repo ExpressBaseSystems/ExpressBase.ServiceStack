@@ -21,7 +21,6 @@ namespace ExpressBase.ServiceStack.Services
 {
     public class SqlJobServices : EbBaseService
     {
-
         public int LogMasterId { get; set; }
 
         public int UserId { get; set; }
@@ -32,6 +31,9 @@ namespace ExpressBase.ServiceStack.Services
 
         public Dictionary<string, object> TempParams { set; get; }
 
+
+        Script valscript = null;
+
         private SqlJobResponse JobResponse { get; set; }
 
         private EbObjectService StudioServices { set; get; }
@@ -41,6 +43,7 @@ namespace ExpressBase.ServiceStack.Services
             this.StudioServices = base.ResolveService<EbObjectService>();
             this.JobResponse = new SqlJobResponse();
         }
+
         private Dictionary<string, TV> _keyValuePairs = null;
 
         public Dictionary<string, TV> GetKeyvalueDict
@@ -78,7 +81,6 @@ namespace ExpressBase.ServiceStack.Services
             return _fdict;
         }
 
-
         public SqlJobResponse Any(SqlJobRequest request)
         {
             try
@@ -113,7 +115,7 @@ namespace ExpressBase.ServiceStack.Services
                     this.EbConnectionFactory.DataDB.GetNewParameter("message",EbDbTypes.String, e.Message + e.StackTrace),
                     this.EbConnectionFactory.DataDB.GetNewParameter("id",EbDbTypes.Int32,LogMasterId)
                     };
-                    this.EbConnectionFactory.DataDB.DoNonQuery("UPDATE eb_joblogs_master SET status = 'FAILED', message = :message WHERE id = :id;", dbparameters);
+                    this.EbConnectionFactory.DataDB.DoNonQuery("UPDATE eb_joblogs_master SET status = 'F', message = :message WHERE id = :id;", dbparameters);
                 }
             }
             catch (Exception e)
@@ -318,10 +320,12 @@ namespace ExpressBase.ServiceStack.Services
         public LogLine GetLogLine(int JoblogId)
         {
             LogLine logline = null;
-            string sql = @"SELECT l.* , m.refid 
-                        FROM  eb_joblogs_lines l, eb_joblogs_master m
-                        WHERE l.id = :id AND
-                        m.id = l.logmaster_id";
+            string sql = @" SELECT
+                                 l.* , m.refid 
+                             FROM 
+                                 eb_joblogs_lines l, eb_joblogs_master m
+                             WHERE
+                                 l.id = :id AND m.id = l.logmaster_id";
             DbParameter[] parameters = new DbParameter[] {
             this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, JoblogId) };
             EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(sql, parameters);
@@ -349,12 +353,19 @@ namespace ExpressBase.ServiceStack.Services
             {
                 if (resource is EbSqlJobReader)
                     res.Result = this.ExcDataReader(resource as EbSqlJobReader, index);
+
                 else if (resource is EbSqlJobWriter)
                     res.Result = this.ExcDataWriter(resource as EbSqlJobWriter, index);
+
                 else if (resource is EbLoop)
                     res.Result = ExecuteLoop(resource as EbLoop, index, parentindex);
+
                 else if (resource is EbTransaction)
                     res.Result = ExecuteTransaction(resource as EbTransaction, index);
+
+                else if (resource is EbSqlFormDataPusher)
+                    res.Result = ExecuteDataPush(resource as EbSqlFormDataPusher);
+
                 else if (resource is EbSqlProcessor)
                 {
                     SqlJobResource _prev = null;
@@ -365,6 +376,7 @@ namespace ExpressBase.ServiceStack.Services
 
                     res.Result = EvaluateProcessor(resource as EbSqlProcessor, _prev, this.GlobalParams);
                 }
+
                 return res.Result;
             }
             catch (Exception e)
@@ -548,20 +560,23 @@ namespace ExpressBase.ServiceStack.Services
             EbDataSet _ds = null;
             SqlJobScript script = new SqlJobScript();
 
-            Script valscript = CSharpScript.Create<dynamic>(code,
-                ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core")
-                .WithImports("System.Dynamic", "System", "System.Collections.Generic", "System.Diagnostics", "System.Linq", "Newtonsoft.Json", "ExpressBase.Common")
-                .AddReferences(typeof(ExpressBase.Common.EbDataSet).Assembly),
-                globalsType: typeof(SqlJobGlobals));
-
             if (_prevres != null)
                 _ds = _prevres.Result as EbDataSet;
             try
             {
-                valscript.Compile();
+                if (valscript == null) // 
+                {
+                    valscript = CSharpScript.Create<dynamic>(code,
+                         ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core")
+                         .WithImports("System.Dynamic", "System", "System.Collections.Generic", "System.Diagnostics", "System.Linq", "Newtonsoft.Json", "ExpressBase.Common")
+                         .AddReferences(typeof(ExpressBase.Common.EbDataSet).Assembly),
+                         globalsType: typeof(SqlJobGlobals));
+                    valscript.Compile();
+                }
             }
             catch (Exception e)
             {
+                valscript = null;
                 Console.WriteLine(e.Message + e.StackTrace);
                 throw e;
             }
@@ -668,6 +683,16 @@ namespace ExpressBase.ServiceStack.Services
         {
             EbObjectParticularVersionResponse resp = (EbObjectParticularVersionResponse)StudioServices.Get(new EbObjectParticularVersionRequest { RefId = refid });
             return EbSerializers.Json_Deserialize(resp.Data[0].Json);
+        }
+
+        private object ExecuteDataPush(EbSqlFormDataPusher dataPusher)
+        {
+            WebFormServices webFormServices = base.ResolveService<WebFormServices>();
+            webFormServices.Any(new InsertOrUpdateFormDataRqst
+            {
+                FormGlobals = new FormGlobals {   }
+            });
+            return new object();
         }
     }
 

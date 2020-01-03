@@ -1135,18 +1135,17 @@ namespace ExpressBase.ServiceStack.Services
 			LoginActivityResponse Lar = new LoginActivityResponse();
 			try
 			{
-				var sql = string.Empty;
-				var parameters = new List<DbParameter>();
+				
 				if (LaReq.Alluser)
 				{
-					 sql = @"SELECT 
+					var sql = @"SELECT 
 										users.fullname,
 										signin.ip_address,
 										signin.signin_at,
 										TO_CHAR(signin.signin_at,'HH12:MI:SS') signin_time,
 										signin.signout_at,
 										TO_CHAR(signin.signout_at,'HH12:MI:SS') signout_time,
-										age(signout_at,signin_at)::text AS duration
+										age(date_trunc('second', signout_at),date_trunc('second', signin_at))::text AS duration
 										
 								FROM
 										eb_signin_log signin,
@@ -1157,18 +1156,42 @@ namespace ExpressBase.ServiceStack.Services
 										signin.user_id = users.id
 								ORDER BY 
 										signin.signin_at DESC;";
-					parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("islg", EbDbTypes.String, "F"));
+					DbParameter[] parameters = {
+					this.EbConnectionFactory.DataDB.GetNewParameter("islg", EbDbTypes.String, "F")
+					};
+					EbDataTable dt2 = this.EbConnectionFactory.DataDB.DoQuery(sql, parameters);
+					if (dt2.Rows.Count > 0)
+					{
+						for (int i = 0; i < dt2.Rows.Count; i++)
+						{
+
+							DateTime SinDateUTC = (DateTime)dt2.Rows[i][2];
+							DateTime SinDate = (SinDateUTC.ConvertFromUtc(LaReq.UserObject.Preference.TimeZone));
+							dt2.Rows[i][2] = SinDate;
+							dt2.Rows[i][3] = SinDate.ToString("hh:mm:ss tt");
+							DateTime SoutDateUTC = (DateTime)dt2.Rows[i][4];
+							if (!(SoutDateUTC == DateTime.MinValue))
+							{
+								DateTime SoutDate = (SoutDateUTC.ConvertFromUtc(LaReq.UserObject.Preference.TimeZone));
+								dt2.Rows[i][4] = SoutDate;
+								dt2.Rows[i][5] = SoutDate.ToString("hh:mm:ss tt");
+							}
+
+						}
+
+					}
+					Lar._data = dt2;
 				}
 				else
 				{
-					 sql = @"SELECT 
-										users.fullname,
+					var sql1 = @"SELECT 
+										
 										signin.ip_address,
 										signin.signin_at,
 										TO_CHAR(signin.signin_at,'HH12:MI:SS') signin_time,
 										signin.signout_at,
 										TO_CHAR(signin.signout_at,'HH12:MI:SS') signout_time,
-										age(signout_at,signin_at)::text AS duration
+										age(date_trunc('second', signout_at),date_trunc('second', signin_at))::text AS duration
 										
 								FROM
 										eb_signin_log signin,
@@ -1181,32 +1204,35 @@ namespace ExpressBase.ServiceStack.Services
 										signin.user_id = users.id
 								ORDER BY 
 										signin.signin_at DESC;";
-					parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("islg", EbDbTypes.String, "F"));
-					parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("usrid", EbDbTypes.Int32, LaReq.UserId));
-				}
-				DbParameter[] param = parameters.ToArray();
-				EbDataTable dt2 = this.EbConnectionFactory.DataDB.DoQuery(sql, param);
-				if (dt2.Rows.Count > 0)
-				{
-					for (int i = 0; i < dt2.Rows.Count; i++)
+					DbParameter[] parameters1 = {
+					this.EbConnectionFactory.DataDB.GetNewParameter("islg", EbDbTypes.String, "F"),
+					this.EbConnectionFactory.DataDB.GetNewParameter("usrid", EbDbTypes.Int32, LaReq.UserId)
+					};
+					EbDataTable dt3 = this.EbConnectionFactory.DataDB.DoQuery(sql1, parameters1);
+					if (dt3.Rows.Count > 0)
 					{
-						
-						DateTime SinDateUTC = (DateTime)dt2.Rows[i][2];
-						DateTime SinDate = (SinDateUTC.ConvertFromUtc(LaReq.UserObject.Preference.TimeZone));
-						dt2.Rows[i][2] = SinDate;
-						dt2.Rows[i][3] = SinDate.ToString("hh:mm tt");
-						DateTime SoutDateUTC = (DateTime)dt2.Rows[i][4];
-						if(!(SoutDateUTC == DateTime.MinValue))
+						for (int i = 0; i < dt3.Rows.Count; i++)
 						{
-							DateTime SoutDate = (SoutDateUTC.ConvertFromUtc(LaReq.UserObject.Preference.TimeZone));
-							dt2.Rows[i][4] = SoutDate;
-							dt2.Rows[i][5] = SoutDate.ToString("hh:mm tt");
-						}
-						
-					}
 
+							DateTime SinDateUTC = (DateTime)dt3.Rows[i][1];
+							DateTime SinDate = (SinDateUTC.ConvertFromUtc(LaReq.UserObject.Preference.TimeZone));
+							dt3.Rows[i][1] = SinDate;
+							dt3.Rows[i][2] = SinDate.ToString("hh:mm:ss tt");
+							DateTime SoutDateUTC = (DateTime)dt3.Rows[i][3];
+							if (!(SoutDateUTC == DateTime.MinValue))
+							{
+								DateTime SoutDate = (SoutDateUTC.ConvertFromUtc(LaReq.UserObject.Preference.TimeZone));
+								dt3.Rows[i][3] = SoutDate;
+								dt3.Rows[i][4] = SoutDate.ToString("hh:mm:ss tt");
+							}
+
+						}
+
+					}
+					Lar._data = dt3;
 				}
-				Lar._data = dt2;
+				
+				
 				return Lar;
 
 			}
