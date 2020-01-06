@@ -10,6 +10,7 @@ using ExpressBase.Objects;
 using ExpressBase.Objects.Objects;
 using ExpressBase.Objects.Objects.DVRelated;
 using ExpressBase.Objects.ServiceStack_Artifacts;
+using ExpressBase.Objects.WebFormRelated;
 using Jurassic;
 using Jurassic.Library;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
@@ -1021,7 +1022,7 @@ namespace ExpressBase.ServiceStack.Services
         public WebformData CalcFormula(WebformData _formData, EbWebForm _formObj)
         {
             Dictionary<int, EbControlWrapper> ctrls = new Dictionary<int, EbControlWrapper>();
-            EbWebForm.GetControlsAsDict(_formObj, "FORM", ctrls);
+            BeforeSaveHelper.GetControlsAsDict(_formObj, "FORM", ctrls);
             List<int> ExeOrder = GetExecutionOrder(ctrls);
 
             for (int i = 0; i < ExeOrder.Count; i++)
@@ -1035,7 +1036,7 @@ namespace ExpressBase.ServiceStack.Services
                 );
                 valscript.Compile();
 
-                FormAsGlobal g = _formObj.GetFormAsGlobal(_formData);
+                FormAsGlobal g = GlobalsGenerator.GetFormAsGlobal(_formObj, _formData);
                 FormGlobals globals = new FormGlobals() { form = g };
                 var result = (valscript.RunAsync(globals)).Result.ReturnValue;
 
@@ -1095,7 +1096,7 @@ namespace ExpressBase.ServiceStack.Services
             List<EbValidator> warnings = new List<EbValidator>();
             List<EbValidator> errors = new List<EbValidator>();
             Dictionary<int, EbControlWrapper> ctrls = new Dictionary<int, EbControlWrapper>();
-            EbWebForm.GetControlsAsDict(_formObj, "FORM", ctrls);
+            BeforeSaveHelper.GetControlsAsDict(_formObj, "FORM", ctrls);
             foreach (KeyValuePair<int, EbControlWrapper> ctrl in ctrls)
             {
                 for (int i = 0; i < ctrl.Value.Control.Validators.Count; i++)
