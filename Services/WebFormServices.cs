@@ -740,7 +740,14 @@ namespace ExpressBase.ServiceStack.Services
                 if (form.TableRowId > 0)
                     form.RefreshFormData(EbConnectionFactory.DataDB, this);
                 else
-                    form.GetEmptyModel();
+                {
+                    if (form.UserObj.LocationIds.Contains(-1) || form.UserObj.LocationIds.Contains(request.CurrentLoc))
+                    {
+                        if (form.SolutionObj.Locations.ContainsKey(request.CurrentLoc))
+                            form.UserObj.Preference.DefaultLocation = request.CurrentLoc;
+                    }
+                    form.GetEmptyModel();                    
+                }
                 if (!(form.HasPermission(OperationConstants.VIEW, form.LocationId) || form.HasPermission(OperationConstants.NEW, form.LocationId) || form.HasPermission(OperationConstants.EDIT, form.LocationId)))
                 {
                     throw new FormException("Error in loading data. Access Denied.", (int)HttpStatusCodes.UNAUTHORIZED, "Access Denied for rowid " + form.TableRowId + " , current location " + form.LocationId, string.Empty);
