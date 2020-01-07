@@ -45,10 +45,16 @@ namespace ExpressBase.ServiceStack.Services
         public IDatabase GetTenantDB(string SolutionId)
         {
             IDatabase _ebconfactoryDatadb = null;
-            EbConnectionFactory factory = new EbConnectionFactory(SolutionId, this.Redis, true);
-            if (factory != null && factory.DataDB != null)
-                _ebconfactoryDatadb = factory.DataDB;
-
+            try
+            {
+                EbConnectionFactory factory = new EbConnectionFactory(SolutionId, this.Redis, true);
+                if (factory != null && factory.DataDB != null)
+                    _ebconfactoryDatadb = factory.DataDB;
+            }
+            catch (Exception e)
+            {
+                throw e;
+            }
             return _ebconfactoryDatadb;
         }
 
@@ -221,7 +227,15 @@ namespace ExpressBase.ServiceStack.Services
         public UpdateInfraWithSqlScriptsResponse Post(UpdateInfraWithSqlScriptsRequest request)
         {
             UpdateInfraWithSqlScriptsResponse resp = new UpdateInfraWithSqlScriptsResponse();
-            SetFileMd5InfraReference();
+            resp.ErrorMessage = string.Empty;
+            try
+            {
+                SetFileMd5InfraReference();
+            }
+            catch (Exception e)
+            {
+                resp.ErrorMessage = e.Message;
+            }
             return resp;
         }
 
@@ -243,6 +257,7 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception e)
             {
                 Console.WriteLine(e.Message);
+                resp.ErrorMessage = e.Message;
                 return resp;
             }
             return resp;
@@ -273,32 +288,72 @@ namespace ExpressBase.ServiceStack.Services
         public GetFunctionOrProcedureQueriesResponse Post(GetFunctionOrProcedureQueriesRequest request)
         {
             GetFunctionOrProcedureQueriesResponse resp = new GetFunctionOrProcedureQueriesResponse();
-            IDatabase _ebconfactoryDatadb = GetTenantDB(request.SolutionId);
-            resp.Query = GetFunctionOrProcedureQuery(request.ChangeList, _ebconfactoryDatadb);
+            try
+            {
+                IDatabase _ebconfactoryDatadb = GetTenantDB(request.SolutionId);
+                resp.Query = GetFunctionOrProcedureQuery(request.ChangeList, _ebconfactoryDatadb);
+            }
+            catch (Exception e)
+            {
+                resp.ErrorMessage = e.Message;
+            }
             return resp;
         }
 
         public GetTableQueriesResponse Post(GetTableQueriesRequest request)
         {
             GetTableQueriesResponse resp = new GetTableQueriesResponse();
-            IDatabase _ebconfactoryDatadb = GetTenantDB(request.SolutionId);
-            resp.Query = UpdateTableOnTenant(request.ChangeList, _ebconfactoryDatadb, false, request.SolutionId);
+            try
+            {
+                IDatabase _ebconfactoryDatadb = GetTenantDB(request.SolutionId);
+                resp.Query = UpdateTableOnTenant(request.ChangeList, _ebconfactoryDatadb, false, request.SolutionId);
+            }
+            catch (Exception e)
+            {
+                resp.ErrorMessage = e.Message;
+            }
             return resp;
         }
 
-        public void Post(ExecuteQueriesRequest request)
+        public ExecuteQueriesResponse Post(ExecuteQueriesRequest request)
         {
-            IDatabase _ebconfactoryDatadb = GetTenantDB(request.SolutionId);
-            ExecuteQuery(request.Query, _ebconfactoryDatadb, request.SolutionId);
+            ExecuteQueriesResponse resp = new ExecuteQueriesResponse();
+            List<Eb_FileDetails> ChangesList = new List<Eb_FileDetails>();
+            try
+            {
+                IDatabase _ebconfactoryDatadb = GetTenantDB(request.SolutionId);
+                resp.ErrorMessage = ExecuteQuery(request.Query, _ebconfactoryDatadb, request.SolutionId);
+                GetAFileScriptFromInfra(_ebconfactoryDatadb, request.FileName);
+                ChangesList = GetAFileScriptFromTenant(_ebconfactoryDatadb, request.FileName, request.FileType);
+                if (ChangesList.Count != 0 && resp.ErrorMessage == "")
+                {
+                    resp.Changes = ChangesList;
+                    resp.ErrorMessage = "Execution Completed !!! Changes Found!!!";
+                }
+            }
+            catch(Exception e)
+            {
+                resp.Changes = null;
+                resp.ErrorMessage = e.Message;
+            }
+            
+            return resp;
         }
 
         public GetScriptsForDiffViewResponse Post(GetScriptsForDiffViewRequest request)
         {
             GetScriptsForDiffViewResponse resp = new GetScriptsForDiffViewResponse();
-            IDatabase _ebconfactoryDatadb = GetTenantDB(request.SolutionId);
-            List<string> contents = GetScriptContentForDiffView(request.FileHeader, request.FilePath, request.FileType, _ebconfactoryDatadb);
-            resp.InfraFileContent = contents[0];
-            resp.TenantFileContent = contents[1];
+            try
+            {
+                IDatabase _ebconfactoryDatadb = GetTenantDB(request.SolutionId);
+                List<string> contents = GetScriptContentForDiffView(request.FileHeader, request.FilePath, request.FileType, _ebconfactoryDatadb);
+                resp.InfraFileContent = contents[0];
+                resp.TenantFileContent = contents[1];
+            }
+            catch (Exception e)
+            {
+                resp.ErrorMessage = e.Message;
+            }
             return resp;
         }
 
@@ -313,31 +368,104 @@ namespace ExpressBase.ServiceStack.Services
             string file_name = string.Empty;
             string file_name_shrt = string.Empty;
             string[] func_create = SqlFiles.SQLSCRIPTS;
-            foreach (string vendor in Enum.GetNames(typeof(DatabaseVendors)))
+            try
             {
-                if (vendor == "PGSQL" || vendor == "MYSQL")
+                RemoveUnWantedFilesFromInfraTables();
+                foreach (string vendor in Enum.GetNames(typeof(DatabaseVendors)))
                 {
-                    string Urlstart = string.Format("ExpressBase.Common.sqlscripts.{0}.", vendor.ToLower());
-                    foreach (string file in func_create)
+                    if (vendor == "PGSQL" || vendor == "MYSQL")
                     {
-                        string path = Urlstart + file;
-                        var assembly = typeof(sqlscripts).Assembly;
-                        using (Stream stream = assembly.GetManifestResourceStream(path))
+                        string Urlstart = string.Format("ExpressBase.Common.sqlscripts.{0}.", vendor.ToLower());
+                        foreach (string file in func_create)
                         {
-                            if (stream != null)
+                            string path = Urlstart + file;
+                            var assembly = typeof(sqlscripts).Assembly;
+                            using (Stream stream = assembly.GetManifestResourceStream(path))
                             {
-                                using (StreamReader reader = new StreamReader(stream))
-                                    result = reader.ReadToEnd();
-                                if (result.Split("\n").Length > 1)
+                                if (stream != null)
                                 {
-                                    FileDetails fd = GetFileDetailsFromScript(result, vendor, file);
-                                    InsertOrUpdateValuesInInfraDB(fd.FileName, vendor, fd.Content, fd.FileNameShrt, file, fd.Type);
+                                    using (StreamReader reader = new StreamReader(stream))
+                                        result = reader.ReadToEnd();
+                                    if (result.Split("\n").Length > 1)
+                                    {
+                                        FileDetails fd = GetFileDetailsFromScript(result, vendor, file);
+                                        InsertOrUpdateValuesInInfraDB(fd.FileName, vendor, fd.Content, fd.FileNameShrt, file, fd.Type);
+                                    }
                                 }
                             }
                         }
                     }
                 }
             }
+            catch (Exception e)
+            {
+                throw e;
+            }
+        }
+
+        private void RemoveUnWantedFilesFromInfraTables ()
+        {
+            List<string> files_from_sqlscript = GetFilesListFromSqlScripts();
+            List<string> files_from_infra_table = GetFilesListFromInfraTable();
+            List<string> unwanted_files = UnwantedFiles(files_from_infra_table, files_from_sqlscript);
+            using (DbConnection con = this.InfraConnectionFactory.DataDB.GetNewConnection())
+            {
+                con.Open();
+                string str = string.Empty;
+                foreach(string file_name in unwanted_files)
+                {
+                    str += string.Format(@"update eb_dbmd5 set eb_del = 'T' where change_id in (select id from eb_dbstructure where filename = '{0}' );",
+                                        file_name);
+                    str += string.Format(@"update eb_dbstructure set eb_del = 'T' where filename = '{0}';", file_name);
+                }
+                
+                DbCommand cmd = InfraConnectionFactory.DataDB.GetNewCommand(con, str);
+                cmd.ExecuteNonQuery();
+            }
+        }
+
+        private List<string> GetFilesListFromSqlScripts()
+        {
+            string[] func_create = SqlFiles.SQLSCRIPTS;
+            List<string> file_name = new List<string>();
+            foreach (string file in func_create)
+            {
+                if(file.Split(".").Length >2)
+                    file_name.Add(file.Split(".")[2]);
+            }
+            return file_name;
+        }
+
+        private List<string> GetFilesListFromInfraTable()
+        {
+            List<string> file_name = new List<string>();
+            string str = @"
+                           SELECT DISTINCT filename 
+                           FROM eb_dbstructure";
+            EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(str);
+            for(int i = 0; i < dt.Rows.Count; i++)
+            {
+                file_name.Add(dt.Rows[i][0].ToString());
+            }
+            return file_name;
+        }
+
+        private List<string> UnwantedFiles(List<string> files_from_infra_table, List<string> files_from_sqlscript)
+        {
+            List<string> unwanted_files = new List<string>();
+            int f = 0;
+            foreach (string file_from_infra_table in files_from_infra_table)
+            {
+                foreach (string file_from_script in files_from_sqlscript)
+                {
+                    if (file_from_infra_table == file_from_script)
+                        f = 1;
+                }
+                if (f == 0)
+                    unwanted_files.Add(file_from_infra_table);
+                f = 0;
+            }
+            return unwanted_files;
         }
 
         private FileDetails GetFileDetailsFromScript(string result, string vendor, string file)
@@ -346,44 +474,58 @@ namespace ExpressBase.ServiceStack.Services
             string file_name = string.Empty;
             string file_name_shrt = string.Empty;
             string md5_or_json = string.Empty;
-            if (file.Split(".")[1] == "functioncreate")
+            FileDetails fd = null;
+            try
             {
-                type = CheckFunctionOrProcedure(result);
-                file_name = GetFileName(result, file, type, vendor); //function name with parameter
-                if (file_name.Contains("("))
-                    file_name_shrt = file_name.Split("(")[0]; // function name without parameter
-                else
+                if (file.Split(".")[1] == "functioncreate")
+                {
+                    type = CheckFunctionOrProcedure(result);
+                    file_name = GetFileName(result, file, type, vendor); //function name with parameter
+                    if (file_name.Contains("("))
+                        file_name_shrt = file_name.Split("(")[0]; // function name without parameter
+                    else
+                        file_name_shrt = file_name;
+                    md5_or_json = SetFunctionOrProcedureScriptFromScripts(result, vendor, type);
+                }
+                else if (file.Split(".")[1] == "tablecreate")
+                {
+                    type = DBManagerType.Table;
+                    file_name = GetFileName(result, file, type, vendor); //table name
                     file_name_shrt = file_name;
-                md5_or_json = SetFunctionOrProcedureScriptFromScripts(result, vendor, type);
+                    md5_or_json = SetTableScriptFromInfra(file_name, vendor).Replace("'", "''");
+                }
+                fd = new FileDetails
+                {
+                    FileName = file_name,
+                    FileNameShrt = file_name_shrt,
+                    Type = type,
+                    Content = md5_or_json
+                };
             }
-            else if (file.Split(".")[1] == "tablecreate")
+            catch (Exception e)
             {
-                type = DBManagerType.Table;
-                file_name = GetFileName(result, file, type, vendor); //table name
-                file_name_shrt = file_name;
-                md5_or_json = SetTableScriptFromInfra(file_name, vendor).Replace("'", "''");
+                throw e;
             }
-
-            FileDetails fd = new FileDetails
-            {
-                FileName = file_name,
-                FileNameShrt = file_name_shrt,
-                Type = type,
-                Content = md5_or_json
-            };
             return fd;
         }
 
         private void InsertOrUpdateValuesInInfraDB(string file_name, string vendor, string md5_or_json, string file_name_shrt, string file, DBManagerType type)
         {
-            var t = IsTableOrFuncPresentInInfraDb(file_name, vendor);
-            if (t.IsPresent)
+            try
             {
-                if (IsContentSameCheckInInfraDB(md5_or_json, t.ChangeID))
-                    UpdateValuesInInfraDB(file_name, md5_or_json, t.ChangeID);
+                var t = IsTableOrFuncPresentInInfraDb(file_name, vendor);
+                if (t.IsPresent)
+                {
+                    if (IsContentSameCheckInInfraDB(md5_or_json, t.ChangeID))
+                        UpdateValuesInInfraDB(file_name, md5_or_json, t.ChangeID);
+                }
+                else
+                    InsertNewValueToInfraDB(file_name, md5_or_json, vendor, file_name_shrt, file, type);
             }
-            else
-                InsertNewValueToInfraDB(file_name, md5_or_json, vendor, file_name_shrt, file, type);
+            catch (Exception e)
+            {
+                throw e;
+            }
         }
 
         private TableOrFuncPresence IsTableOrFuncPresentInInfraDb(string file_name, string vendor)
@@ -415,31 +557,45 @@ namespace ExpressBase.ServiceStack.Services
 
         private void UpdateValuesInInfraDB(string file_name, string md5_or_json, int change_id)
         {
-            using (DbConnection con = this.InfraConnectionFactory.DataDB.GetNewConnection())
+            try
             {
-                con.Open();
-                string str = string.Format(@"UPDATE eb_dbmd5 SET eb_del = 'T' WHERE filename = '{0}' AND eb_del = 'F' AND change_id = '{1}';",
-                    file_name, change_id);
-                str += string.Format(@"INSERT INTO eb_dbmd5 (change_id, filename, contents, eb_del) VALUES ('{0}','{1}','{2}','F')",
-                    change_id, file_name, md5_or_json);
+                using (DbConnection con = this.InfraConnectionFactory.DataDB.GetNewConnection())
+                {
+                    con.Open();
+                    string str = string.Format(@"UPDATE eb_dbmd5 SET eb_del = 'T' WHERE filename = '{0}' AND eb_del = 'F' AND change_id = '{1}';",
+                        file_name, change_id);
+                    str += string.Format(@"INSERT INTO eb_dbmd5 (change_id, filename, contents, eb_del) VALUES ('{0}','{1}','{2}','F')",
+                        change_id, file_name, md5_or_json);
 
-                DbCommand cmd = InfraConnectionFactory.DataDB.GetNewCommand(con, str);
-                cmd.ExecuteNonQuery();
+                    DbCommand cmd = InfraConnectionFactory.DataDB.GetNewCommand(con, str);
+                    cmd.ExecuteNonQuery();
+                }
+            }
+            catch (Exception e)
+            {
+                throw e;
             }
         }
 
         private void InsertNewValueToInfraDB(string file_name, string content, string vendor, string file_name_shrt, string file, DBManagerType type)
         {
-            using (DbConnection con = this.InfraConnectionFactory.DataDB.GetNewConnection())
+            try
             {
-                con.Open();
-                string str = string.Format(@"INSERT INTO eb_dbstructure (filename, filepath, vendor, type) VALUES ('{0}','{1}','{2}','{3}');",
-                    file_name_shrt, file, vendor, (int)type);
-                str += string.Format(@"INSERT INTO  eb_dbmd5 (change_id, filename, contents, eb_del) VALUES ((SELECT id FROM eb_dbstructure WHERE filename = '{0}' AND vendor = '{1}'),'{2}','{3}','F')",
-                    file_name_shrt, vendor, file_name, content);
+                using (DbConnection con = this.InfraConnectionFactory.DataDB.GetNewConnection())
+                {
+                    con.Open();
+                    string str = string.Format(@"INSERT INTO eb_dbstructure (filename, filepath, vendor, type, eb_del) VALUES ('{0}','{1}','{2}','{3}','F');",
+                        file_name_shrt, file, vendor, (int)type);
+                    str += string.Format(@"INSERT INTO  eb_dbmd5 (change_id, filename, contents, eb_del) VALUES ((SELECT id FROM eb_dbstructure WHERE filename = '{0}' AND vendor = '{1}'),'{2}','{3}','F')",
+                        file_name_shrt, vendor, file_name, content);
 
-                DbCommand cmd = InfraConnectionFactory.DataDB.GetNewCommand(con, str);
-                cmd.ExecuteNonQuery();
+                    DbCommand cmd = InfraConnectionFactory.DataDB.GetNewCommand(con, str);
+                    cmd.ExecuteNonQuery();
+                }
+            }
+            catch (Exception e)
+            {
+                throw e;
             }
         }
 
@@ -556,10 +712,12 @@ namespace ExpressBase.ServiceStack.Services
                         data_type = IndexCheckForMysqlDatatypeInPostgres(data_type, column_name, table_name);
                     }
                 }
+                if (vendor != "PGSQL")
+                    column_default = DbColumnDefaultIntegrityCollection.GetColumnDefault((DatabaseVendors)Enum.Parse(typeof(DatabaseVendors), vendor), column_default);
                 Fields.Add(column_name, new List<Eb_TableFieldChanges> {
                         new Eb_TableFieldChanges{
                             Data_type = DbTypeIntegrityCollection.GetDbType((DatabaseVendors)Enum.Parse(typeof(DatabaseVendors), vendor),data_type),
-                            Column_default = column_default.Contains("nextval")?column_default: DbColumnDefaultIntegrityCollection.GetColumnDefault((DatabaseVendors)Enum.Parse(typeof(DatabaseVendors), vendor),column_default ),
+                            Column_default = column_default,
                             Constraint_name = constraint_name,
                             Constraint_type = constraint_type
                         }
@@ -675,12 +833,14 @@ namespace ExpressBase.ServiceStack.Services
                 DbParameter[] parameters = { _ebconfactoryDatadb.GetNewParameter("table_name", Common.Structures.EbDbTypes.String, table_name),
                                             _ebconfactoryDatadb.GetNewParameter("db_name", Common.Structures.EbDbTypes.String, _ebconfactoryDatadb.DBName.ToString())};
                 dt = _ebconfactoryDatadb.DoQueries(str, parameters);
+
+                json = CreateTableJson(table_name, dt, vendor);
             }
             catch (Exception e)
             {
                 Console.WriteLine(e.Message + e.StackTrace);
+                throw e;
             }
-            json = CreateTableJson(table_name, dt, vendor);
             return json;
         }
 
@@ -697,12 +857,13 @@ namespace ExpressBase.ServiceStack.Services
                     changes.Fields = TenantFieldsDetailsForJsonConvert(dt.Tables[0], vendor);
                     changes.Indexs = GetTenantIndexDetailsForJSON(dt.Tables[1]);
                 }
+                json = JsonConvert.SerializeObject(changes);
             }
             catch (Exception e)
             {
                 Console.WriteLine(e.Message);
+                throw e;
             }
-            json = JsonConvert.SerializeObject(changes);
             return json;
         }
 
@@ -728,7 +889,7 @@ namespace ExpressBase.ServiceStack.Services
                     Fields.Add(column_name, new List<Eb_TableFieldChanges> {
                             new Eb_TableFieldChanges{
                                 Data_type = data_type,
-                                Column_default = column_default.Contains("nextval")?column_default: DbColumnDefaultIntegrityCollection.GetColumnDefault((DatabaseVendors)Enum.Parse(typeof(DatabaseVendors), vendor),column_default ),
+                                Column_default = column_default,
                                 Constraint_name = constraint_name,
                                 Constraint_type = constraint_type
                             }
@@ -758,32 +919,76 @@ namespace ExpressBase.ServiceStack.Services
 
         void GetFileScriptFromInfra(IDatabase _ebconfactoryDatadb)
         {
-            string vendor = _ebconfactoryDatadb.Vendor.ToString();
-            dictInfra.Clear();
-            string str = string.Format(@"
+            try
+            {
+                string vendor = _ebconfactoryDatadb.Vendor.ToString();
+                dictInfra.Clear();
+                string str = string.Format(@"
                         SELECT d.change_id, d.filename, d.contents, c.filepath, c.type
                         FROM eb_dbmd5 as d, eb_dbstructure as c
                         WHERE c.vendor = '{0}'
                         AND d.eb_del = 'F'
+                        AND c.eb_del = 'F'
                         AND c.id = d.change_id
                         AND (c.type = '0'
                         OR c.type='1'
                         OR c.type ='2')
                         ORDER BY c.type", vendor);
-            EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(str);
-            if (dt != null && dt.Rows.Count > 0)
-            {
-                for (int i = 0; i < dt.Rows.Count; i++)
+                EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(str);
+                if (dt != null && dt.Rows.Count > 0)
                 {
-                    dictInfra.Add(dt.Rows[i]["filename"].ToString(), new Eb_FileDetails
+                    for (int i = 0; i < dt.Rows.Count; i++)
                     {
-                        Id = dt.Rows[i]["change_id"].ToString(),
-                        Vendor = vendor,
-                        FilePath = dt.Rows[i]["filepath"].ToString(),
-                        Content = dt.Rows[i]["contents"].ToString().Contains("''") ? dt.Rows[i]["contents"].ToString().Replace("''", "'").Trim() : dt.Rows[i]["contents"].ToString().Trim(),
-                        Type = (DBManagerType)Convert.ToInt32(dt.Rows[i]["type"])
-                    });
+                        dictInfra.Add(dt.Rows[i]["filename"].ToString(), new Eb_FileDetails
+                        {
+                            Id = dt.Rows[i]["change_id"].ToString(),
+                            Vendor = vendor,
+                            FilePath = dt.Rows[i]["filepath"].ToString(),
+                            Content = dt.Rows[i]["contents"].ToString().Contains("''") ? dt.Rows[i]["contents"].ToString().Replace("''", "'").Trim() : dt.Rows[i]["contents"].ToString().Trim(),
+                            Type = (DBManagerType)Convert.ToInt32(dt.Rows[i]["type"])
+                        });
+                    }
                 }
+            }
+            catch (Exception e)
+            {
+                throw e;
+            }
+
+        }
+
+        void GetAFileScriptFromInfra(IDatabase _ebconfactoryDatadb, string filename)
+        {
+            try
+            {
+                string vendor = _ebconfactoryDatadb.Vendor.ToString();
+                dictInfra.Clear();
+                string str = string.Format(@"
+                        SELECT d.change_id, d.filename, d.contents, c.filepath, c.type
+                        FROM eb_dbmd5 as d, eb_dbstructure as c
+                        WHERE c.vendor = '{0}'
+                        AND d.eb_del = 'F'
+                        AND c.id = d.change_id
+                        AND d.filename = '{1}'", vendor, filename);
+                EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(str);
+                if (dt != null && dt.Rows.Count > 0)
+                {
+                    for (int i = 0; i < dt.Rows.Count; i++)
+                    {
+                        dictInfra.Add(dt.Rows[i]["filename"].ToString(), new Eb_FileDetails
+                        {
+                            Id = dt.Rows[i]["change_id"].ToString(),
+                            Vendor = vendor,
+                            FilePath = dt.Rows[i]["filepath"].ToString(),
+                            Content = dt.Rows[i]["contents"].ToString().Contains("''") ? dt.Rows[i]["contents"].ToString().Replace("''", "'").Trim() : dt.Rows[i]["contents"].ToString().Trim(),
+                            Type = (DBManagerType)Convert.ToInt32(dt.Rows[i]["type"])
+                        });
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                throw e;
             }
 
         }
@@ -792,10 +997,34 @@ namespace ExpressBase.ServiceStack.Services
 
         List<Eb_FileDetails> GetFileScriptFromTenant(IDatabase _ebconfactoryDatadb)
         {
-            dictTenant.Clear();
-            GetFunctionDetailsFromTenant(_ebconfactoryDatadb);
-            GetTableDetailsFromTenant(_ebconfactoryDatadb);
+            try
+            {
+                dictTenant.Clear();
+                GetFunctionDetailsFromTenant(_ebconfactoryDatadb);
+                GetTableDetailsFromTenant(_ebconfactoryDatadb);
+            }
+            catch (Exception e)
+            {
+                throw e;
+            }
+            return CompareScripts(_ebconfactoryDatadb);
+        }
 
+        List<Eb_FileDetails> GetAFileScriptFromTenant(IDatabase _ebconfactoryDatadb, string filename, string filetype)
+        {
+            try
+            {
+                dictTenant.Clear();
+                if (filetype == "Table")
+                    GetATableDetailsFromTenant(_ebconfactoryDatadb, filename);
+                else
+                    GetAFunctionDetailsFromTenant(_ebconfactoryDatadb, filename);
+
+            }
+            catch (Exception e)
+            {
+                throw e;
+            }
             return CompareScripts(_ebconfactoryDatadb);
         }
 
@@ -870,6 +1099,81 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception e)
             {
                 Console.WriteLine(e.Message);
+                throw e;
+            }
+        }
+
+        void GetAFunctionDetailsFromTenant(IDatabase _ebconfactoryDatadb, string filename)
+        {
+            try
+            {
+                string MD5 = string.Empty;
+                string result = string.Empty;
+                string str = string.Empty;
+                string file_name = string.Empty;
+                string file_name_shrt = filename.Split("(")[0];
+                DBManagerType type = 0;
+                string vendor = _ebconfactoryDatadb.Vendor.ToString();
+                if (vendor == "PGSQL")
+                {
+                    str = String.Format(@"
+                            SELECT pg_get_functiondef(oid)::text as definition, proname as routine_name
+                            FROM pg_proc 
+                            WHERE proname 
+                            IN 
+                                (SELECT routine_name 
+                                FROM information_schema.routines 
+                                WHERE routine_type = 'FUNCTION' 
+                                    AND specific_schema = 'public'
+                                    AND routine_name = '{0}')", file_name_shrt);
+                }
+                else if (vendor == "MYSQL")
+                {
+                    str = String.Format(@"
+                                        SELECT routine_schema AS database_name,
+                                               routine_name AS routine_name,
+                                               CASE routine_type
+                                               WHEN 'FUNCTION' THEN 0
+                                               ELSE 2
+                                               END
+                                               AS type,
+                                               data_type AS return_type,
+                                               routine_definition AS definition
+                                        FROM information_schema.routines
+                                        WHERE routine_schema NOT IN ('sys', 'information_schema',
+                                                                     'mysql', 'performance_schema')
+                                        AND routine_schema = '{0}'
+                                        AND routine_name = '{1}';
+                            ", _ebconfactoryDatadb.DBName, file_name_shrt);
+                }
+                EbDataTable dt = _ebconfactoryDatadb.DoQuery(str);
+                if (dt != null && dt.Rows.Count > 0)
+                {
+                    for (int i = 0; i < dt.Rows.Count; i++)
+                    {
+                        result = dt.Rows[i]["definition"].ToString();
+                        if (vendor == "PGSQL")
+                        {
+                            type = DBManagerType.Function;
+                            file_name = filename;
+                            result = FormatDBStringPGSQL(result, DBManagerType.Function);
+                        }
+                        else if (vendor == "MYSQL")
+                        {
+                            type = (DBManagerType)Enum.ToObject(typeof(DBManagerType), dt.Rows[i]["type"]);
+                            file_name = filename;
+                            result = result.Replace(" ", "").Replace("\r", "").Replace("\t", "").Replace("\n", "");
+                        }
+
+                        MD5 = StringToMD5Converter(result);
+                        dictTenant.Add(file_name, new[] { vendor, MD5, type.ToString() });
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+                throw e;
             }
         }
 
@@ -877,20 +1181,55 @@ namespace ExpressBase.ServiceStack.Services
         {
             string result = string.Empty;
             string file_name;
-            string vendor = _ebconfactoryDatadb.Vendor.ToString();
-            string str = @"
+            try
+            {
+                string vendor = _ebconfactoryDatadb.Vendor.ToString();
+                string str = @"
                         SELECT DISTINCT table_name
                         FROM information_schema.tables
 	                    WHERE table_name LIKE 'eb_%'";
-            EbDataTable dt1 = _ebconfactoryDatadb.DoQuery(str);
-            if (dt1 != null && dt1.Rows.Count > 0)
-            {
-                for (int i = 0; i < dt1.Rows.Count; i++)
+                EbDataTable dt1 = _ebconfactoryDatadb.DoQuery(str);
+                if (dt1 != null && dt1.Rows.Count > 0)
                 {
-                    result = GetTableScriptFromTenant(dt1.Rows[i][0].ToString(), _ebconfactoryDatadb, vendor);
-                    file_name = GetFileName(result, null, DBManagerType.Table, vendor);
-                    dictTenant.Add(file_name, new[] { vendor, result, DBManagerType.Table.ToString() });
+                    for (int i = 0; i < dt1.Rows.Count; i++)
+                    {
+                        result = GetTableScriptFromTenant(dt1.Rows[i][0].ToString(), _ebconfactoryDatadb, vendor);
+                        file_name = GetFileName(result, null, DBManagerType.Table, vendor);
+                        dictTenant.Add(file_name, new[] { vendor, result, DBManagerType.Table.ToString() });
+                    }
                 }
+            }
+            catch (Exception e)
+            {
+                throw e;
+            }
+        }
+
+        void GetATableDetailsFromTenant(IDatabase _ebconfactoryDatadb, string filename)
+        {
+            string result = string.Empty;
+            string file_name;
+            try
+            {
+                string vendor = _ebconfactoryDatadb.Vendor.ToString();
+                string str = String.Format(@"
+                        SELECT DISTINCT table_name
+                        FROM information_schema.tables
+	                    WHERE table_name = '{0}'", filename);
+                EbDataTable dt1 = _ebconfactoryDatadb.DoQuery(str);
+                if (dt1 != null && dt1.Rows.Count > 0)
+                {
+                    for (int i = 0; i < dt1.Rows.Count; i++)
+                    {
+                        result = GetTableScriptFromTenant(dt1.Rows[i][0].ToString(), _ebconfactoryDatadb, vendor);
+                        file_name = filename;
+                        dictTenant.Add(file_name, new[] { vendor, result, DBManagerType.Table.ToString() });
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                throw e;
             }
         }
 
@@ -909,15 +1248,17 @@ namespace ExpressBase.ServiceStack.Services
                         {
                             if (_infraitem.Value.Type == DBManagerType.Table)
                             {
-                                bool _isChange = false;
+                                bool _isChangeinFields = false;
+                                bool _isChangeinIndexs = false;
                                 Eb_TableFieldChangesList infra_table_details = JsonConvert.DeserializeObject<Eb_TableFieldChangesList>(_infraitem.Value.Content);
                                 Eb_TableFieldChangesList tenant_table_details = JsonConvert.DeserializeObject<Eb_TableFieldChangesList>(_tenantitem[1]);
-                                _isChange = IsChangeInTableFields(infra_table_details.Fields, tenant_table_details.Fields);
-                                _isChange = IsChangeInTableIndexs(infra_table_details.Indexs, tenant_table_details.Indexs);
-                                if (_isChange == true)
+                                _isChangeinFields = IsChangeInTableFields(infra_table_details.Fields, tenant_table_details.Fields);
+                                _isChangeinIndexs = IsChangeInTableIndexs(infra_table_details.Indexs, tenant_table_details.Indexs);
+                                if (_isChangeinFields == true || _isChangeinIndexs == true)
                                 {
                                     ChangesList.AddRange(CreateListofChanges(_infraitem, false));
-                                    _isChange = false;
+                                    _isChangeinFields = false;
+                                    _isChangeinIndexs = false;
                                 }
                             }
                             else
@@ -930,6 +1271,7 @@ namespace ExpressBase.ServiceStack.Services
                 catch (Exception e)
                 {
                     Console.WriteLine(e.Message);
+                    throw e;
                 }
             }
             return ChangesList;
@@ -943,7 +1285,7 @@ namespace ExpressBase.ServiceStack.Services
             else
                 foreach (KeyValuePair<string, List<Eb_TableFieldChanges>> _infratableitem in infra_table_field_details)
                 {
-                    if (!infra_table_field_details.TryGetValue(_infratableitem.Key, out List<Eb_TableFieldChanges> _tenanttableitem)) // checking table fields
+                    if (!tenant_table_field_details.TryGetValue(_infratableitem.Key, out List<Eb_TableFieldChanges> _tenanttableitem)) // checking table fields
                     {
                         _isChange = true;
                     }
@@ -1069,7 +1411,7 @@ namespace ExpressBase.ServiceStack.Services
                             query += func_or_proc_drop + ";";
                         }
                         query += result;
-                        DbCommand cmd = _ebconfactoryDatadb.GetNewCommand(con, query); 
+                        DbCommand cmd = _ebconfactoryDatadb.GetNewCommand(con, query);
                         cmd.ExecuteNonQuery();
                     }
                 }
@@ -1092,7 +1434,7 @@ namespace ExpressBase.ServiceStack.Services
                     string func_def = dt.Rows[j][0].ToString();
                     string file_name = GetFileName(func_def, dt.Rows[j][1].ToString(), DBManagerType.Function, _ebconfactoryDatadb.Vendor.ToString()); // function name with parameters
                     if (file_name != ChangesList.FileHeader)
-                        query += "DROP FUNCTION" + file_name + ";\n";
+                        query += "DROP FUNCTION " + file_name + ";\n";
                 }
             }
             return query;
@@ -1280,7 +1622,7 @@ namespace ExpressBase.ServiceStack.Services
             //Foreign Key 
             return changes;
         }
-        
+
         //-----------------------------------Check Index For MySql (text datatype)------------------------------------
 
         string IndexCheckForMysqlDatatypeInPostgres(string data_type, string column_name, string table_name)
@@ -1455,7 +1797,7 @@ namespace ExpressBase.ServiceStack.Services
                 }
                 else
                 {
-                    if (!int.TryParse(infra_column_default, out int x))
+                    if (!int.TryParse(infra_column_default, out int x) && infra_column_default != "'F'::\"char\"")
                         infra_column_default = "'" + infra_column_default + "'";
                     if (vendor == "PGSQL")
                         changes = changes + string.Format(@"
@@ -1567,8 +1909,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             return changes;
         }
-
-
+        
         //-------------------------------------------------------------------------------------------------------------------------
 
         string GetFunctionOrProcedureQuery(Eb_FileDetails ChangesList, IDatabase _ebconfactoryDatadb)
@@ -1579,49 +1920,69 @@ namespace ExpressBase.ServiceStack.Services
             string result = string.Empty;
             string str = string.Empty;
             string query = string.Empty;
-            using (Stream stream = assembly.GetManifestResourceStream(path))
+            try
             {
-                if (stream != null)
+                using (Stream stream = assembly.GetManifestResourceStream(path))
                 {
-                    using (StreamReader reader = new StreamReader(stream))
-                        result = reader.ReadToEnd();
-                    string func_or_proc_drop = GetFuncOrProcDrop(result, ChangesList.FileHeader, ChangesList.Vendor);
-                    if (ChangesList.Vendor == "PGSQL") // Postgress can have functions having same name with different parameters (not for MySQL )
+                    if (stream != null)
                     {
-                        query += DropFunctionsWithSameNameAndDifferentParametersPGSQL(ChangesList, _ebconfactoryDatadb);
+                        using (StreamReader reader = new StreamReader(stream))
+                            result = reader.ReadToEnd();
+                        string func_or_proc_drop = GetFuncOrProcDrop(result, ChangesList.FileHeader, ChangesList.Vendor);
+                        if (ChangesList.Vendor == "PGSQL") // Postgress can have functions having same name with different parameters (not for MySQL )
+                        {
+                            query += DropFunctionsWithSameNameAndDifferentParametersPGSQL(ChangesList, _ebconfactoryDatadb);
+                            if (!ChangesList.NewItem)
+                            {
+                                query += func_or_proc_drop + ";\n";
+                            }
+                            result = result.Replace(result.Split("\r\n\r\n")[0] + "\r\n\r\n", "").Replace(result.Split("\r\n\r\n")[1] + "\r\n\r\n", "");
+                        }
+                        query += result;
                     }
-                    if (!ChangesList.NewItem && ChangesList.Vendor == "PGSQL")
-                    {
-                        query += func_or_proc_drop + ";\n";
-                    }
-                    result = result.Replace(result.Split("\r\n\r\n")[0] + "\r\n\r\n", "").Replace(result.Split("\r\n\r\n")[1] + "\r\n\r\n", "");
-                    query += result;
                 }
+            }
+            catch (Exception e)
+            {
+                throw e;
             }
             return query;
         }
 
-        void ExecuteQuery(string Query, IDatabase _ebconfactoryDatadb, string solution_id)
+        string ExecuteQuery(string Query, IDatabase _ebconfactoryDatadb, string solution_id)
         {
-            using (DbConnection con = _ebconfactoryDatadb.GetNewConnection())
+            string Message = string.Empty;
+            try
             {
-                con.Open();
-                DbCommand cmd = _ebconfactoryDatadb.GetNewCommand(con, Query);
-                int x = cmd.ExecuteNonQuery();
-                con.Close();
-            }
-            using (DbConnection con1 = this.InfraConnectionFactory.DataDB.GetNewConnection())
-            {
-                con1.Open();
-                string str1 = string.Format(@"
+                using (DbConnection con = _ebconfactoryDatadb.GetNewConnection())
+                {
+                    con.Open();
+                    DbCommand cmd = _ebconfactoryDatadb.GetNewCommand(con, Query);
+                    int x = cmd.ExecuteNonQuery();
+                    con.Close();
+                }
+                using (DbConnection con1 = this.InfraConnectionFactory.DataDB.GetNewConnection())
+                {
+                    con1.Open();
+                    string str1 = string.Format(@"
                                               UPDATE eb_dbchangeslog 
                                               SET modified_at = NOW()
                                               WHERE solution_id = '{0}'", solution_id);
-                DbCommand cmd1 = InfraConnectionFactory.DataDB.GetNewCommand(con1, str1);
-                cmd1.ExecuteNonQuery();
-                con1.Close();
+                    DbCommand cmd1 = InfraConnectionFactory.DataDB.GetNewCommand(con1, str1);
+                    cmd1.ExecuteNonQuery();
+                    con1.Close();
+                }
             }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+                Message = e.Message;
+                return Message;
+                throw e;
+            }
+            return Message;
         }
+
         //-------------------------------------------------------------------------------------------------------------------------
         //-----------------------------------------------------DIFF----------------------------------------------------------------
 
@@ -1630,35 +1991,49 @@ namespace ExpressBase.ServiceStack.Services
             string infra_content = string.Empty;
             string tenant_file_content = string.Empty;
             List<string> result = new List<string>();
-            if (filetype == "Table")
+            try
             {
-                infra_content = GetJSONFromInfra(filename, _ebconfactoryDatadb.Vendor.ToString());
-                tenant_file_content = FormatJSON(GetTableScriptFromTenant(filename, _ebconfactoryDatadb, _ebconfactoryDatadb.Vendor.ToString()));
+                if (filetype == "Table")
+                {
+                    infra_content = GetJSONFromInfra(filename, _ebconfactoryDatadb.Vendor.ToString());
+                    tenant_file_content = FormatJSON(GetTableScriptFromTenant(filename, _ebconfactoryDatadb, _ebconfactoryDatadb.Vendor.ToString()));
+                }
+                else
+                {
+                    infra_content = GetFuncOrProcCreateScriptFromInfra(filename, filepath, filetype, _ebconfactoryDatadb.Vendor.ToString());
+                    tenant_file_content = GetFuncorProcCreateScriptFromTenant(filename, filepath, filetype, _ebconfactoryDatadb);
+                }
+                result.Add(infra_content);
+                result.Add(tenant_file_content);
             }
-            else
+            catch (Exception e)
             {
-                infra_content = GetFuncOrProcCreateScriptFromInfra(filename, filepath, filetype, _ebconfactoryDatadb.Vendor.ToString());
-                tenant_file_content = GetFuncorProcCreateScriptFromTenant(filename, filepath, filetype, _ebconfactoryDatadb);
+                throw e;
             }
-            result.Add(infra_content);
-            result.Add(tenant_file_content);
             return result;
         }
 
         string GetJSONFromInfra(string table_name, string vendor)
         {
             string json = string.Empty;
-            string str = string.Format(@"
+            try
+            {
+                string str = string.Format(@"
                         SELECT d.contents
                         FROM eb_dbmd5 as d, eb_dbstructure as c
                         WHERE d.filename = '{0}'
                         AND d.eb_del = 'F'
 						AND c.id = d.change_id
 						AND c.vendor = '{1}'", table_name, vendor);
-            EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(str);
-            if (dt != null && dt.Rows.Count > 0)
+                EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(str);
+                if (dt != null && dt.Rows.Count > 0)
+                {
+                    json = FormatJSON(dt.Rows[0]["contents"].ToString().Replace("''", "'"));
+                }
+            }
+            catch (Exception e)
             {
-                json = FormatJSON(dt.Rows[0]["contents"].ToString().Replace("''", "'"));
+                throw e;
             }
             return json;
         }
@@ -1666,25 +2041,32 @@ namespace ExpressBase.ServiceStack.Services
         string GetFuncOrProcCreateScriptFromInfra(string filename, string filepath, string filetype, string vendor)
         {
             string result = string.Empty;
-            string Urlstart = string.Format("ExpressBase.Common.sqlscripts.{0}.", vendor.ToLower());
-            string path = Urlstart + filepath;
-            var assembly = typeof(sqlscripts).Assembly;
-            using (Stream stream = assembly.GetManifestResourceStream(path))
+            try
             {
-                if (stream != null)
+                string Urlstart = string.Format("ExpressBase.Common.sqlscripts.{0}.", vendor.ToLower());
+                string path = Urlstart + filepath;
+                var assembly = typeof(sqlscripts).Assembly;
+                using (Stream stream = assembly.GetManifestResourceStream(path))
                 {
-                    using (StreamReader reader = new StreamReader(stream))
-                        result = reader.ReadToEnd();
-                    if (vendor == "PGSQL")
-                        result = FormatFuncStringPGSQL(result, DBManagerType.Function); //remove escape sequences, spaces
-                    else if (vendor == "MYSQL")
+                    if (stream != null)
                     {
-                        if (filetype == "Function")
-                            result = FormatFuncOrProcStringMYSQL(result, DBManagerType.Function); //remove escape sequences, spaces
-                        else if (filetype == "Procedure")
-                            result = FormatFuncOrProcStringMYSQL(result, DBManagerType.Procedure); //remove escape sequences, spaces
+                        using (StreamReader reader = new StreamReader(stream))
+                            result = reader.ReadToEnd();
+                        if (vendor == "PGSQL")
+                            result = FormatFuncStringPGSQL(result, DBManagerType.Function); //remove escape sequences, spaces
+                        else if (vendor == "MYSQL")
+                        {
+                            if (filetype == "Function")
+                                result = FormatFuncOrProcStringMYSQL(result, DBManagerType.Function); //remove escape sequences, spaces
+                            else if (filetype == "Procedure")
+                                result = FormatFuncOrProcStringMYSQL(result, DBManagerType.Procedure); //remove escape sequences, spaces
+                        }
                     }
                 }
+            }
+            catch (Exception e)
+            {
+                throw e;
             }
             return result;
         }
@@ -1694,10 +2076,12 @@ namespace ExpressBase.ServiceStack.Services
             string result = string.Empty;
             string str = string.Empty;
             string file_name = string.Empty;
-            string vendor = _ebconfactoryDatadb.Vendor.ToString();
-            if (vendor == "PGSQL")
+            try
             {
-                str = String.Format(@"
+                string vendor = _ebconfactoryDatadb.Vendor.ToString();
+                if (vendor == "PGSQL")
+                {
+                    str = String.Format(@"
                             SELECT pg_get_functiondef(oid)::text as definition, proname as routine_name
                             FROM pg_proc 
                             WHERE proname 
@@ -1707,44 +2091,33 @@ namespace ExpressBase.ServiceStack.Services
                                 WHERE routine_type = 'FUNCTION' 
                                     AND specific_schema = 'public'
                                     AND routine_name ='{0}')", filename.Split("(")[0]);
-            }
-            else if (vendor == "MYSQL")
-            {
-                str = String.Format(@"
-                                        SELECT routine_schema AS database_name,
-                                               routine_name AS routine_name,
-                                               CASE routine_type
-                                               WHEN 'FUNCTION' THEN 0
-                                               ELSE 2
-                                               END
-                                               AS type,
-                                               data_type AS return_type,
-                                               routine_definition AS definition
-                                        FROM information_schema.routines
-                                        WHERE routine_schema NOT IN ('sys', 'information_schema',
-                                                                     'mysql', 'performance_schema')
-                                        AND routine_schema = '{0}'
-                                        AND routine_name ='{1}'
-                                        ORDER BY routine_schema,
-                                                 routine_name;
-                            ", _ebconfactoryDatadb.DBName, filename.Split("(")[0]);
-            }
-            EbDataTable dt = _ebconfactoryDatadb.DoQuery(str);
-            if (dt != null && dt.Rows.Count > 0)
-            {
-                result = dt.Rows[0]["definition"].ToString();
-                if (vendor == "PGSQL")
-                {
-                    result = FormatDBStringPGSQLForDiffView(result, DBManagerType.Function);
+                    EbDataTable dt = _ebconfactoryDatadb.DoQuery(str);
+                    if (dt != null && dt.Rows.Count > 0)
+                    {
+                        result = FormatDBStringPGSQLForDiffView(dt.Rows[0]["definition"].ToString(), DBManagerType.Function);
+                    }
                 }
                 else if (vendor == "MYSQL")
                 {
+                    filetype = filetype.ToUpper();
+                    str = String.Format(@"
+                                                SHOW CREATE {0} {1}
+                                            ", filetype, filename.Split("(")[0]);
+                    EbDataTable dt = _ebconfactoryDatadb.DoQuery(str);
+                    if (dt != null && dt.Rows.Count > 0)
+                    {
+                        result = FormatDBStringMYSQLForDiffView(dt.Rows[0][2].ToString()); 
+                    }
                 }
+
+            }
+            catch (Exception e)
+            {
+                throw e;
             }
             return result;
         }
-
-
+        
         //-------------------------------------------------------------------------------------------------------------------------
 
         string GetFuncOrProcDrop(string str, string filename, string vendor)
@@ -1922,7 +2295,14 @@ namespace ExpressBase.ServiceStack.Services
 
         string FormatJSON(string json)
         {
-            json = JValue.Parse(json).ToString(Formatting.Indented);
+            try
+            {
+                json = JValue.Parse(json).ToString(Formatting.Indented);
+            }
+            catch (Exception e)
+            {
+                throw e;
+            }
             return json;
         }
 
@@ -1936,7 +2316,17 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     string[] split1 = split[0].Split("\r\n\r\n");
                     str = split1[2] + split[1] + "$function$";
-                    str = str.Replace("  ", "").Replace("\t", "").Replace("'plpgsql'", "plpgsql\nAS $function$").Replace("plpgsqlAS$function$AS", "plpgsql\nAS $function$").Replace(",\r\n", ", ").Replace("RETURNS", " RETURNS").Replace("LANGUAGE", " LANGUAGE");
+                    if (split1.Length < 4)
+                    {
+                        string x = split1[2].Split("'plpgsql'")[1].ToString();
+                        str = str.Replace("'plpgsql'" + x, "plpgsql\nAS $function$");
+                    }
+                    else if (split1.Length == 4)
+                    {
+                        str = str.Replace("'plpgsql'", "plpgsql\nAS $function$");
+                    }
+                       
+                    str = str.Replace("  ", "").Replace("\t", "").Replace(",\r\n", ", ").Replace("RETURNS", " RETURNS").Replace("LANGUAGE", " LANGUAGE").Trim();
                 }
                 else if (split.Length == 1)
                 {
@@ -1950,8 +2340,8 @@ namespace ExpressBase.ServiceStack.Services
         {
             if (type == DBManagerType.Procedure || type == DBManagerType.Function)
             {
-                string drop = str.Split("BEGIN")[0];
-                str = str.Replace(drop, "");
+                string drop = str.Split("\r\n\r\n")[0];
+                str = str.Replace(drop, "").Trim();
             }
             return str;
         }
@@ -1966,6 +2356,14 @@ namespace ExpressBase.ServiceStack.Services
                 string s = "(\n" + x;
                 str = str.Replace("  ", "").Replace("\t", "").Replace(matches[0].ToString(), s).Trim();
             }
+            return str;
+        }
+
+        string FormatDBStringMYSQLForDiffView(string str)
+        {
+            Regex regex = new Regex(@"DEFINER=[`a-zA-Z@%]* ");
+            MatchCollection matches = regex.Matches(str);
+            str = str.Replace(matches[0].ToString(), "").Replace("`", "");
             return str;
         }
     }
