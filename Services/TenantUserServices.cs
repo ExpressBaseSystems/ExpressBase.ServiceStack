@@ -110,7 +110,7 @@ namespace ExpressBase.ServiceStack.Services
                 List<DbParameter> parameters = new List<DbParameter>();
                 int result = 0;
                 string query1 = EbConnectionFactory.ObjectsDB.EB_SAVELOCATION;
-                string query2 = "UPDATE eb_locations SET longname= :lname, shortname = :sname, image = :img, meta_json = :meta WHERE id = :lid;";
+                string query2 = EbConnectionFactory.ObjectsDB.EB_SAVE_LOCATION_2Q;
                 parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("lname", EbDbTypes.String, request.Longname));
                 parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("sname", EbDbTypes.String, request.Shortname));
                 parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("img", EbDbTypes.String, request.Img));
@@ -126,7 +126,7 @@ namespace ExpressBase.ServiceStack.Services
                     EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery(query1.ToString(), parameters.ToArray());
                     result = Convert.ToInt32(dt.Rows[0][0]);
                 }
-                this.Post(new UpdateSolutionRequest() { SolnId = request.SolnId, UserId = request.UserId });
+                this.Post(new UpdateSolutionObjectRequest() { SolnId = request.SolnId, UserId = request.UserId });
                 return new SaveLocationMetaResponse { Id = result };
             }
         }
@@ -134,13 +134,13 @@ namespace ExpressBase.ServiceStack.Services
         public DeleteLocResponse Post(DeleteLocRequest request)
         {
             List<DbParameter> parameters = new List<DbParameter>();
-            string query = "UPDATE eb_location_config SET eb_del = 'T' WHERE id=:id";//RETURNING id is removed
+            string query = EbConnectionFactory.ObjectsDB.EB_DELETE_LOC;//RETURNING id is removed
             parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, request.Id));
             int dt = this.EbConnectionFactory.ObjectsDB.DoNonQuery(query.ToString(), parameters.ToArray());
             return new DeleteLocResponse { id = (dt == 1) ? request.Id : 0 };
         }
 
-        public UpdateSolutionResponse Post(UpdateSolutionRequest req)
+        public UpdateSolutionObjectResponse Post(UpdateSolutionObjectRequest req)
         {
             try
             {
@@ -173,7 +173,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 Console.WriteLine("Error UpdateSolutionRequest: " + e.Message + e.StackTrace);
             }
-            return new UpdateSolutionResponse { };
+            return new UpdateSolutionObjectResponse { };
         }
 
         public EbSolutionUsers GetUserInfo(string solnId)

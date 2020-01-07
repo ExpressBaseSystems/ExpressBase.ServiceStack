@@ -68,7 +68,7 @@ namespace ExpressBase.ServiceStack.Services
 
         public GetLogdetailsResponse Get(GetLogdetailsRequest request)
         {
-            string sql = "SELECT * FROM eb_executionlogs WHERE id = :id";
+            string sql = "SELECT * FROM eb_executionlogs WHERE id = @id";
             DbParameter[] p = { EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, request.Index) };
             EbDataTable _logdetails = EbConnectionFactory.ObjectsDB.DoQuery(sql, p);
 

@@ -290,7 +290,7 @@ namespace ExpressBase.ServiceStack.MQServices
             Eb_Solution soln = this.Redis.Get<Eb_Solution>(String.Format("solution_{0}", selectedSolnId));
             if (soln == null)
             {
-                base.ResolveService<TenantUserServices>().Post(new UpdateSolutionRequest { SolnId = selectedSolnId, UserId = uid });
+                base.ResolveService<TenantUserServices>().Post(new UpdateSolutionObjectRequest { SolnId = selectedSolnId, UserId = uid });
                 soln = this.Redis.Get<Eb_Solution>(String.Format("solution_{0}", selectedSolnId));
             }
             return soln.IsVersioningEnabled;

@@ -834,7 +834,7 @@ namespace ExpressBase.ServiceStack.Services
                 //}
 
                 TenantUserServices _tenantUserService = base.ResolveService<TenantUserServices>();
-                _tenantUserService.Post(new UpdateSolutionRequest() { SolnId = request.SolnId, UserId = request.UserId });
+                _tenantUserService.Post(new UpdateSolutionObjectRequest() { SolnId = request.SolnId, UserId = request.UserId });
 
                 resp.PeriodStart = ((DateTime)subscription.CurrentPeriodStart).ToString("dd MMM,yyyy");
                 resp.PeriodEnd = ((DateTime)subscription.CurrentPeriodEnd).ToString("dd MMM,yyyy");

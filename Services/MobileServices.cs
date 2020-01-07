@@ -95,8 +95,8 @@ namespace ExpressBase.ServiceStack.Services
 
                 EbMobilePage vispage = new EbMobilePage
                 {
-                    Name = request.MobilePage.Name + "_AutoGenVis",
-                    DisplayName = request.MobilePage.DisplayName + "_AutoGenVis"
+                    Name = $"{request.MobilePage.Name}_list",
+                    DisplayName = $"{request.MobilePage.DisplayName} List"
                 };
 
                 EbMobileVisualization _vis = new EbMobileVisualization
@@ -104,6 +104,8 @@ namespace ExpressBase.ServiceStack.Services
                     Name = "tab0_visualization_autogen",
                     DataSourceRefId = this.CreateDataReader(request, cols)
                 };
+
+                _vis.OfflineQuery = new EbScript { Code = $"SELECT * FROM {(request.MobilePage.Container as EbMobileForm).TableName};" };
 
                 _vis.DataLayout = new EbMobileTableLayout { RowCount = 2, ColumCount = 2 };
 
@@ -126,6 +128,7 @@ namespace ExpressBase.ServiceStack.Services
                     ColumnName = _list.ToArray()[0].Name,
                     Type = _list.ToArray()[0].Type.EbDbType
                 });
+                _vis.SourceFormRefId = (request.MobilePage.Container as EbMobileForm).RefId;
                 vispage.Container = _vis;
 
                 string refid = this.CreateNewObjectRequest(request, vispage);
@@ -312,9 +315,9 @@ namespace ExpressBase.ServiceStack.Services
 
                 string idcheck = EbConnectionFactory.DataDB.EB_GET_MOBILE_PAGES;
 
-                const string Sql = @"SELECT obj_name,display_name,version_num,obj_json FROM (
+                const string Sql = @"SELECT obj_name,display_name,version_num,obj_json,refid FROM (
 				                                SELECT 
-					                                EO.id,EO.obj_name,EO.display_name,EOV.version_num, EOV.obj_json
+					                                EO.id,EO.obj_name,EO.display_name,EOV.version_num, EOV.obj_json,EOV.refid
 				                                FROM
 					                                eb_objects EO
 				                                LEFT JOIN 
@@ -332,11 +335,11 @@ namespace ExpressBase.ServiceStack.Services
 				                                ) OD 
                                 LEFT JOIN eb_objects2application EO2A ON (EO2A.obj_id = OD.id)
                                 WHERE 
-	                                EO2A.app_id = :appid 
+	                                EO2A.app_id = @appid 
                                 {0}
                                 AND 
 	                                COALESCE(EO2A.eb_del, 'F') = 'F';
-                                SELECT app_settings FROM eb_applications WHERE id = :appid";
+                                SELECT app_settings FROM eb_applications WHERE id = @appid";
 
                 List<DbParameter> parameters = new List<DbParameter> {
                     this.EbConnectionFactory.ObjectsDB.GetNewParameter("appid", EbDbTypes.Int32, request.AppId)
@@ -361,7 +364,8 @@ namespace ExpressBase.ServiceStack.Services
                         Name = dr["obj_name"].ToString(),
                         DisplayName = dr["display_name"].ToString(),
                         Version = dr["version_num"].ToString(),
-                        Json = dr["obj_json"].ToString()
+                        Json = dr["obj_json"].ToString(),
+                        RefId = dr["refid"].ToString()
                     });
                 }
 
@@ -394,10 +398,10 @@ namespace ExpressBase.ServiceStack.Services
 
             try
             {
-                foreach(DataImportMobile DI in Settings.DataImport)
+                foreach (DataImportMobile DI in Settings.DataImport)
                 {
                     int objtype = Convert.ToInt32(DI.RefId.Split(CharConstants.DASH)[2]);
-                    if(objtype == (int)EbObjectTypes.DataReader)
+                    if (objtype == (int)EbObjectTypes.DataReader)
                     {
                         var resp = this.Gateway.Send<DataSourceDataSetResponse>(new DataSourceDataSetRequest
                         {

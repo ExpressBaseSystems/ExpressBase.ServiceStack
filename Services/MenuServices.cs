@@ -117,7 +117,22 @@ namespace ExpressBase.ServiceStack.Services
 
         public SidebarDevResponse Get(SidebarDevRequest request)
         {
-            var ds = this.EbConnectionFactory.ObjectsDB.DoQueries(this.EbConnectionFactory.ObjectsDB.EB_SIDEBARDEV_REQUEST);
+            string sql = @"SELECT id, applicationname,app_icon FROM eb_applications
+                                WHERE COALESCE(eb_del, 'F') = 'F' ORDER BY applicationname;
+                        SELECT 
+                                EO.id, EO.obj_type, EO.obj_name, EO.obj_desc, COALESCE(EO2A.app_id, 0),display_name
+                            FROM 
+	                            eb_objects EO
+                            LEFT JOIN
+	                            eb_objects2application EO2A 
+                            ON
+	                            EO.id = EO2A.obj_id 
+                            WHERE
+	                           COALESCE(EO2A.eb_del, 'F') = 'F' 
+                               AND COALESCE( EO.eb_del, 'F') = 'F'
+                            ORDER BY 
+	                            EO.obj_type;";
+            var ds = this.EbConnectionFactory.ObjectsDB.DoQueries(sql);
 
             Dictionary<int, AppObject> appColl = new Dictionary<int, AppObject>();
 
@@ -172,9 +187,7 @@ namespace ExpressBase.ServiceStack.Services
             AddFavouriteResponse resp = new AddFavouriteResponse();
             try
             {
-                string sql = @"INSERT INTO 
-                                eb_objects_favourites(userid,object_id)
-                            VALUES(:userid,:objectid)";
+                string sql =EbConnectionFactory.ObjectsDB.EB_ADD_FAVOURITE;
                 DbParameter[] parameter =
                 {
                 this.EbConnectionFactory.ObjectsDB.GetNewParameter("userid",EbDbTypes.Int32,request.UserId),
@@ -201,12 +214,7 @@ namespace ExpressBase.ServiceStack.Services
             RemoveFavouriteResponse resp = new RemoveFavouriteResponse();
             try
             {
-                string sql = @"UPDATE 
-                                eb_objects_favourites SET eb_del= 'T' 
-                           WHERE 
-                                userid = :userid 
-                           AND 
-                                object_id = :objectid";
+                string sql = EbConnectionFactory.ObjectsDB.EB_REMOVE_FAVOURITE;
 
                 DbParameter[] parameter = {
                     this.EbConnectionFactory.ObjectsDB.GetNewParameter("userid",EbDbTypes.Int32,request.UserId),

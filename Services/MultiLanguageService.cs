@@ -167,7 +167,7 @@ namespace ExpressBase.ServiceStack.Services
             rcount = 0;
             foreach (MLKeyValue obj in list)
             {
-                string t = string.Format("UPDATE eb_keyvalue SET value=:{0} WHERE id=:{1};", "keyvalvalue_" + rcount, "keyvalid_" + rcount);
+                string t = string.Format("UPDATE eb_keyvalue SET value=@{0} WHERE id=@{1};", "keyvalvalue_" + rcount, "keyvalid_" + rcount);
                 sb.Append(t);                
                 parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("keyvalid_" + rcount, EbDbTypes.Int64, obj.KeyVal_Id));
                 parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("keyvalvalue_" + rcount, EbDbTypes.String, obj.KeyVal_Value));
