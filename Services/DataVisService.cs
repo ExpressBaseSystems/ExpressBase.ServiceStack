@@ -307,7 +307,7 @@ namespace ExpressBase.ServiceStack
                         _dsf = EbSerializers.Json_Deserialize(result.Data[0].Json);
                         Redis.Set<EbFilterDialog>(_ds.FilterDialogRefId, _dsf);
                     }
-                    if (request.Params == null || request.Params.Count == 2)
+                    if (!(_dV is EbCalendarView) && (request.Params == null || request.Params.Count == 2))
                     {
                         if (request.Params.Count == 2)
                         {
@@ -1003,28 +1003,28 @@ namespace ExpressBase.ServiceStack
                     tempdataset.Tables[0].Columns.Add(new EbDataColumn { ColumnIndex = index++, ColumnName = col.Name, Type = col.Type });
             }
 
-            if ((_dv as EbCalendarView).AttendanceType == AttendanceType.DayWise)
+            if ((_dv as EbCalendarView).CalendarType == AttendanceType.DayWise)
             {
                 DayWiseDateColumns(_dataset, ref tempdataset, Parameters, ref _dv, ref _hourCount);
             }
-            else if ((_dv as EbCalendarView).AttendanceType == AttendanceType.Hourly)
+            else if ((_dv as EbCalendarView).CalendarType == AttendanceType.Hourly)
             {
                 HourlyWiseDateColumns(_dataset, ref tempdataset, Parameters, ref _dv, ref _hourCount);
             }
-            else if ((_dv as EbCalendarView).AttendanceType == AttendanceType.Weekely)
+            else if ((_dv as EbCalendarView).CalendarType == AttendanceType.Weekely)
             {
                 WeekelyDateColumns(_dataset, ref tempdataset, Parameters, ref _dv, ref _hourCount);
             }
-            else if ((_dv as EbCalendarView).AttendanceType == AttendanceType.Monthly)
+            else if ((_dv as EbCalendarView).CalendarType == AttendanceType.Monthly)
             {
                 MonthlyDateColumns(_dataset, ref tempdataset, Parameters, ref _dv, ref _hourCount);
             }
 
-            else if ((_dv as EbCalendarView).AttendanceType == AttendanceType.Quarterly)
+            else if ((_dv as EbCalendarView).CalendarType == AttendanceType.Quarterly)
             {
                 QuarterlyDateColumns(_dataset, ref tempdataset, Parameters, ref _dv, ref _hourCount);
             }
-            else if ((_dv as EbCalendarView).AttendanceType == AttendanceType.HalfYearly)
+            else if ((_dv as EbCalendarView).CalendarType == AttendanceType.HalfYearly)
             {
                 HalfYearlyDateColumns(_dataset, ref tempdataset, Parameters, ref _dv, ref _hourCount);
             }
