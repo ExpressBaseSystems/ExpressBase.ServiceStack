@@ -6,7 +6,6 @@ using ExpressBase.Common.ServiceClients;
 using ExpressBase.Common.ServiceStack.Auth;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ExpressBase.ServiceStack.Auth0;
-using ExpressBase.ServiceStack.MQServices;
 using Funq;
 using iTextSharp.text;
 using Microsoft.AspNetCore.Builder;
@@ -16,13 +15,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using ServiceStack;
 using ServiceStack.Auth;
-using ServiceStack.Caching;
 using ServiceStack.Logging;
 using ServiceStack.Messaging;
 using ServiceStack.RabbitMq;
 using ServiceStack.Redis;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Reflection;
@@ -217,7 +214,9 @@ namespace ExpressBase.ServiceStack
 
             this.ContentTypes.Register(MimeTypes.ProtoBuf, (reqCtx, res, stream) => ProtoBuf.Serializer.NonGeneric.Serialize(stream, res), ProtoBuf.Serializer.NonGeneric.Deserialize);
 
+#if (DEBUG)
             SetConfig(new HostConfig { DebugMode = true });
+#endif
             SetConfig(new HostConfig { DefaultContentType = MimeTypes.Json });
             var redisServer = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_REDIS_SERVER);
             //if (true)
@@ -246,6 +245,10 @@ namespace ExpressBase.ServiceStack
             container.Register<IEbServerEventClient>(c => new EbServerEventClient()).ReusedWithin(ReuseScope.Request);
             container.Register<IEbMqClient>(c => new EbMqClient()).ReusedWithin(ReuseScope.Request);
             container.Register<IEbStaticFileClient>(c => new EbStaticFileClient()).ReusedWithin(ReuseScope.Request);
+
+
+            //Plugins.Add(new RedisServiceDiscoveryFeature());
+
 
             // Setting Assembly version in Redis
             RedisClient client = (container.Resolve<IRedisClientsManager>() as RedisManagerPool).GetClient() as RedisClient;
