@@ -420,5 +420,59 @@ namespace ExpressBase.ServiceStack.Services
             }
             return DataSet;
         }
+
+        public GetMobileVisDataResponse Get(GetMobileVisDataRequest request)
+        {
+            GetMobileVisDataResponse resp = new GetMobileVisDataResponse();
+            try
+            {
+                EbDataReader _ds = this.Redis.Get<EbDataReader>(request.DataSourceRefId);
+                if (_ds == null)
+                {
+                    var obj = this.Gateway.Send<EbObjectParticularVersionResponse>(new EbObjectParticularVersionRequest
+                    {
+                        RefId = request.DataSourceRefId
+                    });
+                    _ds = EbSerializers.Json_Deserialize<EbDataReader>(obj.Data[0].Json);
+                }
+
+                List<DbParameter> parameters = request.Params.ParamsToDbParameters(this.EbConnectionFactory);
+
+                if (request.Limit != 0 && request.Offset != 0)
+                {
+                    parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@limit", EbDbTypes.Int32, request.Limit));
+                    parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@offset", EbDbTypes.Int32, request.Offset));
+                }
+                string wraped = WrapQuery(_ds.Sql, request.Limit, request.Offset);
+
+                resp.Data = this.EbConnectionFactory.DataDB.DoQueries(wraped, parameters.ToArray());
+
+            }
+            catch (Exception ex)
+            {
+                resp.Message = "No Data";
+                Console.WriteLine("Exception at object list for user mobile req ::" + ex.Message);
+            }
+            return resp;
+        }
+
+        private string WrapQuery(string sql, int limit, int offset)
+        {
+            string wraped = string.Empty;
+            if (limit != 0 && offset != 0)
+            {
+                string[] queries = sql.Split(';');
+
+                for (int i = 0; i < queries.Length; i++)
+                {
+                    wraped += $"SELECT * FROM ({queries[i]}) AS WRPR{i} LIMIT @limit OFFSET @offset;";
+                }
+            }
+            else
+            {
+                wraped = sql;
+            }
+            return wraped;
+        }
     }
 }
