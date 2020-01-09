@@ -782,15 +782,15 @@ namespace ExpressBase.ServiceStack.Services
                 EbWebForm form = GetWebFormObject(request.RefId);
                 form.RefId = request.RefId;
                 form.RefreshFormData(EbConnectionFactory.DataDB, this, request.Params);
-                _dataset.FormData = new WebformDataWrapper { FormData = form.FormData, Status = (int)HttpStatusCodes.OK, Message = "Success" };
+                _dataset.FormDataWrap = JsonConvert.SerializeObject(new WebformDataWrapper { FormData = form.FormData, Status = (int)HttpStatusCodes.OK, Message = "Success" });
             }
             catch (FormException ex)
             {
-                _dataset.FormData = new WebformDataWrapper { Message = ex.Message, Status = ex.ExceptionCode, MessageInt = ex.MessageInternal, StackTraceInt = ex.StackTraceInternal };
+                _dataset.FormDataWrap = JsonConvert.SerializeObject(new WebformDataWrapper { Message = ex.Message, Status = ex.ExceptionCode, MessageInt = ex.MessageInternal, StackTraceInt = ex.StackTraceInternal });
             }
             catch (Exception e)
             {
-                _dataset.FormData = new WebformDataWrapper { Message = "Something went wrong.", Status = (int)HttpStatusCodes.INTERNAL_SERVER_ERROR, MessageInt = e.Message, StackTraceInt = e.StackTrace };
+                _dataset.FormDataWrap = JsonConvert.SerializeObject(new WebformDataWrapper { Message = "Something went wrong.", Status = (int)HttpStatusCodes.INTERNAL_SERVER_ERROR, MessageInt = e.Message, StackTraceInt = e.StackTrace });
             }
             Console.WriteLine("End GetPrefillData");
             return _dataset;
