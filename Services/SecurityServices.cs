@@ -1188,10 +1188,7 @@ namespace ExpressBase.ServiceStack.Services
 										afterSplit[j] = afterSplit[j] + "m :";
 								if (j == lgth - 2)
 										afterSplit[j] = afterSplit[j] + "h :";
-								if (j == lgth - 3)
-										afterSplit[j] = afterSplit[j] + "d :";
-								if (j == lgth - 4)
-										afterSplit[j] = afterSplit[j] + "yr :";
+								
 							}
 
 								dt2.Rows[i][6] = string.Concat(afterSplit); ;
