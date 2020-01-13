@@ -154,23 +154,23 @@ namespace ExpressBase.ServiceStack.Services
 
 
 
-        //----MANAGE USER START---------------------------------
-        public GetManageUserResponse Any(GetManageUserRequest request)
-        {
-            GetManageUserResponse resp = new GetManageUserResponse();
-            if (request.RqstMode == 3)//Mode == 3 for MyProfile View
-            {
-                request.Id = request.UserId;
-            }
-            string sql = this.EbConnectionFactory.DataDB.EB_MANAGEUSER_FIRST_QUERY;
-            if (request.Id > 1)
-            {
-                sql += @"SELECT fullname,nickname,email,alternateemail,dob,sex,phnoprimary,phnosecondary,landline,phextension,fbid,fbname,statusid,hide,preferencesjson,dprefid
+		//----MANAGE USER START---------------------------------
+		public GetManageUserResponse Any(GetManageUserRequest request)
+		{
+			GetManageUserResponse resp = new GetManageUserResponse();
+			if (request.RqstMode == 3)//Mode == 3 for MyProfile View
+			{
+				request.Id = request.UserId;
+			}
+			string sql = this.EbConnectionFactory.DataDB.EB_MANAGEUSER_FIRST_QUERY;
+			if (request.Id > 1)
+			{
+				sql += @"SELECT fullname,nickname,email,alternateemail,dob,sex,phnoprimary,phnosecondary,landline,phextension,fbid,fbname,statusid,hide,preferencesjson,dprefid
 						FROM eb_users WHERE id = @id AND (statusid = 0 OR statusid = 1 OR statusid = 2) AND id > 1 AND eb_del = 'F';
 						SELECT role_id FROM eb_role2user WHERE user_id = @id AND eb_del = 'F';
 						SELECT groupid FROM eb_user2usergroup WHERE userid = @id AND eb_del = 'F';";
 
-                sql += EbConstraints.GetSelectQuery(EbConstraintKeyTypes.User,EbConnectionFactory.DataDB);
+				sql += EbConstraints.GetSelectQuery(EbConstraintKeyTypes.User, EbConnectionFactory.DataDB);
 
 				//SELECT m.id, m.key_id, m.key_type, m.description, l.id AS lid, l.c_type, l.c_operation, l.c_value 
 				//            FROM eb_constraints_master m, eb_constraints_line l
@@ -267,40 +267,40 @@ namespace ExpressBase.ServiceStack.Services
 			string sql = string.Empty;
 			DbParameter[] parameters = new DbParameter[] { };
 
-            if (!string.IsNullOrEmpty(request.email))
-            {
-                sql = "SELECT id FROM eb_users WHERE LOWER(email) LIKE LOWER(@email) AND eb_del = 'F' AND (statusid = 0 OR statusid = 1 OR statusid = 2);";
-                parameters = new DbParameter[] { this.EbConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, string.IsNullOrEmpty(request.email) ? "" : request.email) };
-            }
+			if (!string.IsNullOrEmpty(request.email))
+			{
+				sql = "SELECT id FROM eb_users WHERE LOWER(email) LIKE LOWER(@email) AND eb_del = 'F' AND (statusid = 0 OR statusid = 1 OR statusid = 2);";
+				parameters = new DbParameter[] { this.EbConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, string.IsNullOrEmpty(request.email) ? "" : request.email) };
+			}
 
-            if (!string.IsNullOrEmpty(request.roleName))
-            {
-                sql = "SELECT id FROM eb_roles WHERE LOWER(role_name) LIKE LOWER(@roleName)";
-                parameters = new DbParameter[] { this.EbConnectionFactory.DataDB.GetNewParameter("roleName", EbDbTypes.String, string.IsNullOrEmpty(request.roleName) ? "" : request.roleName) };
-            }
-            var dt = this.EbConnectionFactory.DataDB.DoQuery(sql, parameters);
-            if (dt.Rows.Count > 0)
-            {
-                return new UniqueCheckResponse { unrespose = true };
-            }
-            else
-            {
-                return new UniqueCheckResponse { unrespose = false };
-            }
-        }
+			if (!string.IsNullOrEmpty(request.roleName))
+			{
+				sql = "SELECT id FROM eb_roles WHERE LOWER(role_name) LIKE LOWER(@roleName)";
+				parameters = new DbParameter[] { this.EbConnectionFactory.DataDB.GetNewParameter("roleName", EbDbTypes.String, string.IsNullOrEmpty(request.roleName) ? "" : request.roleName) };
+			}
+			var dt = this.EbConnectionFactory.DataDB.DoQuery(sql, parameters);
+			if (dt.Rows.Count > 0)
+			{
+				return new UniqueCheckResponse { unrespose = true };
+			}
+			else
+			{
+				return new UniqueCheckResponse { unrespose = false };
+			}
+		}
 
-        public ResetUserPasswordResponse Any(ResetUserPasswordRequest request)
-        {
-            string sql = "UPDATE eb_users SET pwd = @newpwd WHERE id = @userid;";
-            DbParameter[] parameters = new DbParameter[] {
-                this.EbConnectionFactory.DataDB.GetNewParameter("userid", EbDbTypes.Int32, request.Id),
-                this.EbConnectionFactory.DataDB.GetNewParameter("newpwd", EbDbTypes.String, (request.NewPwd + request.Email).ToMD5Hash())
-            };
-            return new ResetUserPasswordResponse()
-            {
-                isSuccess = this.EbConnectionFactory.DataDB.DoNonQuery(sql, parameters) > 0 ? true : false
-            };
-        }
+		public ResetUserPasswordResponse Any(ResetUserPasswordRequest request)
+		{
+			string sql = "UPDATE eb_users SET pwd = @newpwd WHERE id = @userid;";
+			DbParameter[] parameters = new DbParameter[] {
+				this.EbConnectionFactory.DataDB.GetNewParameter("userid", EbDbTypes.Int32, request.Id),
+				this.EbConnectionFactory.DataDB.GetNewParameter("newpwd", EbDbTypes.String, (request.NewPwd + request.Email).ToMD5Hash())
+			};
+			return new ResetUserPasswordResponse()
+			{
+				isSuccess = this.EbConnectionFactory.DataDB.DoNonQuery(sql, parameters) > 0 ? true : false
+			};
+		}
 
 		public SaveUserResponse Post(SaveUserRequest request)
 		{
@@ -376,20 +376,20 @@ namespace ExpressBase.ServiceStack.Services
 			return resp;
 		}
 
-        public DeleteUserResponse Post(DeleteUserRequest request)
-        {
-            string sql = @"INSERT INTO eb_userstatus(userid, statusid, createdby, createdat) VALUES (@id, 3, @userid, NOW());
+		public DeleteUserResponse Post(DeleteUserRequest request)
+		{
+			string sql = @"INSERT INTO eb_userstatus(userid, statusid, createdby, createdat) VALUES (@id, 3, @userid, NOW());
                             UPDATE eb_users SET statusid = 3 WHERE id = @id AND eb_del = 'F';";
-            DbParameter[] parameters = new DbParameter[] {
-                this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.Id),
-                this.EbConnectionFactory.DataDB.GetNewParameter("userid", EbDbTypes.Int32, request.UserId)
-            };
-            int t = this.EbConnectionFactory.DataDB.DoNonQuery(sql, parameters.ToArray());
-            if (t > 0)
-            {
-                TenantUserServices _tenantUserService = base.ResolveService<TenantUserServices>();
-                _tenantUserService.Post(new UpdateSolutionObjectRequest() { SolnId = request.SolnId, UserId = request.UserId });
-            }
+			DbParameter[] parameters = new DbParameter[] {
+				this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.Id),
+				this.EbConnectionFactory.DataDB.GetNewParameter("userid", EbDbTypes.Int32, request.UserId)
+			};
+			int t = this.EbConnectionFactory.DataDB.DoNonQuery(sql, parameters.ToArray());
+			if (t > 0)
+			{
+				TenantUserServices _tenantUserService = base.ResolveService<TenantUserServices>();
+				_tenantUserService.Post(new UpdateSolutionObjectRequest() { SolnId = request.SolnId, UserId = request.UserId });
+			}
 
 			return new DeleteUserResponse() { Status = t };
 		}
@@ -405,12 +405,12 @@ namespace ExpressBase.ServiceStack.Services
 			{
 				string selQry = @"SELECT fullname,email,alternate_email,dob,sex,ph_primary,ph_secondary,ph_landline,ph_land_extensn,preferences_json
 						FROM eb_tenants WHERE id = :id";
-                DbParameter[] parameters = { this.InfraConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.UserId) };
-                ds = this.InfraConnectionFactory.DataDB.DoQueries(selQry, parameters);
-            }
-            else
-            {
-                string selQry = @"SELECT fullname,nickname,email,alternateemail,dob,sex,phnoprimary,phnosecondary,landline,phextension,preferencesjson
+				DbParameter[] parameters = { this.InfraConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.UserId) };
+				ds = this.InfraConnectionFactory.DataDB.DoQueries(selQry, parameters);
+			}
+			else
+			{
+				string selQry = @"SELECT fullname,nickname,email,alternateemail,dob,sex,phnoprimary,phnosecondary,landline,phextension,preferencesjson
 						FROM eb_users WHERE id = @id ; 
                             SELECT t2.* FROM
                                 (
@@ -505,133 +505,133 @@ namespace ExpressBase.ServiceStack.Services
 			return new GetMyProfileResponse { UserData = userData, RefIds = RefIds };
 		}
 
-        public SaveMyProfileResponse Any(SaveMyProfileRequest request)
-        {
-            List<KeyValueType_Field> Fields = JsonConvert.DeserializeObject<List<KeyValueType_Field>>(request.UserData);
-            var dict = Fields.ToDictionary(x => x.Key);
-            KeyValueType_Field found;
-            List<DbParameter> parameters = new List<DbParameter>();
-            string upcolsvals = string.Empty;
-            EbConnectionFactory ConnectionFactory = null;
-            if (request.WC == RoutingConstants.TC)
-                ConnectionFactory = this.InfraConnectionFactory;
-            else
-                ConnectionFactory = this.EbConnectionFactory;
-            if (!request.PreferenceOnly)
-            {
-                if (dict.TryGetValue("fullname", out found))
-                {
-                    parameters.Add(ConnectionFactory.DataDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value.ToString()));
-                    upcolsvals += "fullname=@fullname,";
-                }
-                if (dict.TryGetValue("nickname", out found))
-                {
-                    parameters.Add(ConnectionFactory.DataDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value.ToString()));
-                    upcolsvals += "nickname=@nickname,";
-                }
-                if (dict.TryGetValue("alternateemail", out found))
-                {
-                    parameters.Add(ConnectionFactory.DataDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value.ToString()));
-                    upcolsvals += "alternateemail=@alternateemail,";
-                }
-                if (dict.TryGetValue("dob", out found))
-                {
-                    parameters.Add(ConnectionFactory.DataDB.GetNewParameter(found.Key, EbDbTypes.Date, Convert.ToDateTime(DateTime.ParseExact(found.Value.ToString(), "dd-MM-yyyy", CultureInfo.InvariantCulture))));
-                    upcolsvals += "dob=@dob,";
-                }
-                if (dict.TryGetValue("sex", out found))
-                {
-                    parameters.Add(ConnectionFactory.DataDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value.ToString()));
-                    upcolsvals += "sex=@sex,";
-                }
-                if (dict.TryGetValue("phnoprimary", out found))
-                {
-                    parameters.Add(ConnectionFactory.DataDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value.ToString()));
-                    upcolsvals += "phnoprimary=@phnoprimary,";
-                }
-                if (dict.TryGetValue("phnosecondary", out found))
-                {
-                    parameters.Add(ConnectionFactory.DataDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value.ToString()));
-                    upcolsvals += "phnosecondary=@phnosecondary,";
-                }
-                if (dict.TryGetValue("landline", out found))
-                {
-                    parameters.Add(ConnectionFactory.DataDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value.ToString()));
-                    upcolsvals += "landline=@landline,";
-                }
-                if (dict.TryGetValue("phextension", out found))
-                {
-                    parameters.Add(ConnectionFactory.DataDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value.ToString()));
-                    upcolsvals += "phextension=@phextension,";
-                }
-                //----------------------------
-                if (dict.TryGetValue("alternate_email", out found))
-                {
-                    parameters.Add(ConnectionFactory.DataDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value.ToString()));
-                    upcolsvals += "alternate_email=@alternate_email,";
-                }
-                if (dict.TryGetValue("ph_primary", out found))
-                {
-                    parameters.Add(ConnectionFactory.DataDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value.ToString()));
-                    upcolsvals += "ph_primary=@ph_primary,";
-                }
-                if (dict.TryGetValue("ph_secondary", out found))
-                {
-                    parameters.Add(ConnectionFactory.DataDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value.ToString()));
-                    upcolsvals += "ph_secondary=@ph_secondary,";
-                }
-                if (dict.TryGetValue("ph_landline", out found))
-                {
-                    parameters.Add(ConnectionFactory.DataDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value.ToString()));
-                    upcolsvals += "ph_landline=@ph_landline,";
-                }
-                if (dict.TryGetValue("ph_land_extensn", out found))
-                {
-                    parameters.Add(ConnectionFactory.DataDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value.ToString()));
-                    upcolsvals += "ph_land_extension=@ph_land_extension,";
-                }
-            }
+		public SaveMyProfileResponse Any(SaveMyProfileRequest request)
+		{
+			List<KeyValueType_Field> Fields = JsonConvert.DeserializeObject<List<KeyValueType_Field>>(request.UserData);
+			var dict = Fields.ToDictionary(x => x.Key);
+			KeyValueType_Field found;
+			List<DbParameter> parameters = new List<DbParameter>();
+			string upcolsvals = string.Empty;
+			EbConnectionFactory ConnectionFactory = null;
+			if (request.WC == RoutingConstants.TC)
+				ConnectionFactory = this.InfraConnectionFactory;
+			else
+				ConnectionFactory = this.EbConnectionFactory;
+			if (!request.PreferenceOnly)
+			{
+				if (dict.TryGetValue("fullname", out found))
+				{
+					parameters.Add(ConnectionFactory.DataDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value.ToString()));
+					upcolsvals += "fullname=@fullname,";
+				}
+				if (dict.TryGetValue("nickname", out found))
+				{
+					parameters.Add(ConnectionFactory.DataDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value.ToString()));
+					upcolsvals += "nickname=@nickname,";
+				}
+				if (dict.TryGetValue("alternateemail", out found))
+				{
+					parameters.Add(ConnectionFactory.DataDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value.ToString()));
+					upcolsvals += "alternateemail=@alternateemail,";
+				}
+				if (dict.TryGetValue("dob", out found))
+				{
+					parameters.Add(ConnectionFactory.DataDB.GetNewParameter(found.Key, EbDbTypes.Date, Convert.ToDateTime(DateTime.ParseExact(found.Value.ToString(), "dd-MM-yyyy", CultureInfo.InvariantCulture))));
+					upcolsvals += "dob=@dob,";
+				}
+				if (dict.TryGetValue("sex", out found))
+				{
+					parameters.Add(ConnectionFactory.DataDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value.ToString()));
+					upcolsvals += "sex=@sex,";
+				}
+				if (dict.TryGetValue("phnoprimary", out found))
+				{
+					parameters.Add(ConnectionFactory.DataDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value.ToString()));
+					upcolsvals += "phnoprimary=@phnoprimary,";
+				}
+				if (dict.TryGetValue("phnosecondary", out found))
+				{
+					parameters.Add(ConnectionFactory.DataDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value.ToString()));
+					upcolsvals += "phnosecondary=@phnosecondary,";
+				}
+				if (dict.TryGetValue("landline", out found))
+				{
+					parameters.Add(ConnectionFactory.DataDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value.ToString()));
+					upcolsvals += "landline=@landline,";
+				}
+				if (dict.TryGetValue("phextension", out found))
+				{
+					parameters.Add(ConnectionFactory.DataDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value.ToString()));
+					upcolsvals += "phextension=@phextension,";
+				}
+				//----------------------------
+				if (dict.TryGetValue("alternate_email", out found))
+				{
+					parameters.Add(ConnectionFactory.DataDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value.ToString()));
+					upcolsvals += "alternate_email=@alternate_email,";
+				}
+				if (dict.TryGetValue("ph_primary", out found))
+				{
+					parameters.Add(ConnectionFactory.DataDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value.ToString()));
+					upcolsvals += "ph_primary=@ph_primary,";
+				}
+				if (dict.TryGetValue("ph_secondary", out found))
+				{
+					parameters.Add(ConnectionFactory.DataDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value.ToString()));
+					upcolsvals += "ph_secondary=@ph_secondary,";
+				}
+				if (dict.TryGetValue("ph_landline", out found))
+				{
+					parameters.Add(ConnectionFactory.DataDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value.ToString()));
+					upcolsvals += "ph_landline=@ph_landline,";
+				}
+				if (dict.TryGetValue("ph_land_extensn", out found))
+				{
+					parameters.Add(ConnectionFactory.DataDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value.ToString()));
+					upcolsvals += "ph_land_extension=@ph_land_extension,";
+				}
+			}
 
-            if (dict.TryGetValue("preferencesjson", out found))
-            {
-                try
-                {
-                    var temp = JsonConvert.DeserializeObject<Preferences>(found.Value.ToString());
-                    parameters.Add(ConnectionFactory.DataDB.GetNewParameter(found.Key, EbDbTypes.String, JsonConvert.SerializeObject(temp)));
-                    upcolsvals += "preferencesjson=@preferencesjson,";
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine("Failed - preferencesjson may not be in correct format  : " + ex.Message);
-                }
-            }
-            if (dict.TryGetValue("preferences_json", out found))
-            {
-                try
-                {
-                    var temp = JsonConvert.DeserializeObject<Preferences>(found.Value.ToString());
-                    parameters.Add(ConnectionFactory.DataDB.GetNewParameter(found.Key, EbDbTypes.String, JsonConvert.SerializeObject(temp)));
-                    upcolsvals += "preferences_json=@preferences_json,";
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine("Failed - preferences_json may not be in correct format  : " + ex.Message);
-                }
-            }
-            parameters.Add(ConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.UserId));
-            var rstatus = 0;
-            if (request.WC == RoutingConstants.TC)
-            {
-                string Qry = string.Format("UPDATE {0} SET {1} WHERE id=:id", "eb_tenants", upcolsvals.Substring(0, upcolsvals.Length - 1));
-                rstatus = this.InfraConnectionFactory.DataDB.UpdateTable(Qry, parameters.ToArray());
-            }
-            else
-            {
-                string Qry = string.Format("UPDATE {0} SET {1} WHERE id=@id", "eb_users", upcolsvals.Substring(0, upcolsvals.Length - 1));
-                rstatus = this.EbConnectionFactory.DataDB.UpdateTable(Qry, parameters.ToArray());
-            }
-            return new SaveMyProfileResponse { RowsAffectd = rstatus };
-        }
+			if (dict.TryGetValue("preferencesjson", out found))
+			{
+				try
+				{
+					var temp = JsonConvert.DeserializeObject<Preferences>(found.Value.ToString());
+					parameters.Add(ConnectionFactory.DataDB.GetNewParameter(found.Key, EbDbTypes.String, JsonConvert.SerializeObject(temp)));
+					upcolsvals += "preferencesjson=@preferencesjson,";
+				}
+				catch (Exception ex)
+				{
+					Console.WriteLine("Failed - preferencesjson may not be in correct format  : " + ex.Message);
+				}
+			}
+			if (dict.TryGetValue("preferences_json", out found))
+			{
+				try
+				{
+					var temp = JsonConvert.DeserializeObject<Preferences>(found.Value.ToString());
+					parameters.Add(ConnectionFactory.DataDB.GetNewParameter(found.Key, EbDbTypes.String, JsonConvert.SerializeObject(temp)));
+					upcolsvals += "preferences_json=@preferences_json,";
+				}
+				catch (Exception ex)
+				{
+					Console.WriteLine("Failed - preferences_json may not be in correct format  : " + ex.Message);
+				}
+			}
+			parameters.Add(ConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.UserId));
+			var rstatus = 0;
+			if (request.WC == RoutingConstants.TC)
+			{
+				string Qry = string.Format("UPDATE {0} SET {1} WHERE id=:id", "eb_tenants", upcolsvals.Substring(0, upcolsvals.Length - 1));
+				rstatus = this.InfraConnectionFactory.DataDB.UpdateTable(Qry, parameters.ToArray());
+			}
+			else
+			{
+				string Qry = string.Format("UPDATE {0} SET {1} WHERE id=@id", "eb_users", upcolsvals.Substring(0, upcolsvals.Length - 1));
+				rstatus = this.EbConnectionFactory.DataDB.UpdateTable(Qry, parameters.ToArray());
+			}
+			return new SaveMyProfileResponse { RowsAffectd = rstatus };
+		}
 
 		public ChangeUserPasswordResponse Any(ChangeUserPasswordRequest request)
 		{
@@ -701,22 +701,22 @@ namespace ExpressBase.ServiceStack.Services
 			return new GetManageAnonymousUserResponse { UserData = Udata };
 		}
 
-        public UpdateAnonymousUserResponse Any(UpdateAnonymousUserRequest request)
-        {
-            string sql = @"UPDATE eb_usersanonymous 
+		public UpdateAnonymousUserResponse Any(UpdateAnonymousUserRequest request)
+		{
+			string sql = @"UPDATE eb_usersanonymous 
 								SET fullname=@fullname, email=@emailid, phoneno=@phoneno, remarks = @remarks, modifiedby = @modifiedby, modifiedat = @NOW
 								WHERE id=@id";
-            DbParameter[] parameters = {
-                this.EbConnectionFactory.DataDB.GetNewParameter("fullname", EbDbTypes.String, request.FullName),
-                this.EbConnectionFactory.DataDB.GetNewParameter("emailid", EbDbTypes.String, request.EmailID),
-                this.EbConnectionFactory.DataDB.GetNewParameter("phoneno", EbDbTypes.String, request.PhoneNumber),
-                this.EbConnectionFactory.DataDB.GetNewParameter("remarks", EbDbTypes.String, request.Remarks),
-                this.EbConnectionFactory.DataDB.GetNewParameter("modifiedby", EbDbTypes.Int32, request.UserId),
-                this.EbConnectionFactory.DataDB.GetNewParameter("NOW", EbDbTypes.DateTime, DateTime.Now),
-                this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.Id)
-            };
-            return new UpdateAnonymousUserResponse { RowAffected = this.EbConnectionFactory.DataDB.DoNonQuery(sql, parameters) };
-        }
+			DbParameter[] parameters = {
+				this.EbConnectionFactory.DataDB.GetNewParameter("fullname", EbDbTypes.String, request.FullName),
+				this.EbConnectionFactory.DataDB.GetNewParameter("emailid", EbDbTypes.String, request.EmailID),
+				this.EbConnectionFactory.DataDB.GetNewParameter("phoneno", EbDbTypes.String, request.PhoneNumber),
+				this.EbConnectionFactory.DataDB.GetNewParameter("remarks", EbDbTypes.String, request.Remarks),
+				this.EbConnectionFactory.DataDB.GetNewParameter("modifiedby", EbDbTypes.Int32, request.UserId),
+				this.EbConnectionFactory.DataDB.GetNewParameter("NOW", EbDbTypes.DateTime, DateTime.Now),
+				this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.Id)
+			};
+			return new UpdateAnonymousUserResponse { RowAffected = this.EbConnectionFactory.DataDB.DoNonQuery(sql, parameters) };
+		}
 
 		//------MANAGE USER GROUP START------------------------------
 
@@ -737,7 +737,7 @@ namespace ExpressBase.ServiceStack.Services
 										WHERE G.groupid = @id AND U.id=G.userid 
 										AND G.eb_del = 'F' AND U.eb_del = 'F';";
 
-                query += EbConstraints.GetSelectQuery(EbConstraintKeyTypes.UserGroup, EbConnectionFactory.DataDB);
+				query += EbConstraints.GetSelectQuery(EbConstraintKeyTypes.UserGroup, EbConnectionFactory.DataDB);
 
 				parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.id));
 				var ds = this.EbConnectionFactory.DataDB.DoQueries(query, parameters.ToArray());
@@ -1135,7 +1135,7 @@ namespace ExpressBase.ServiceStack.Services
 			LoginActivityResponse Lar = new LoginActivityResponse();
 			try
 			{
-				
+
 				if (LaReq.Alluser)
 				{
 					var sql = @"SELECT 
@@ -1176,15 +1176,35 @@ namespace ExpressBase.ServiceStack.Services
 								dt2.Rows[i][4] = SoutDate;
 								dt2.Rows[i][5] = SoutDate.ToString("hh:mm:ss tt");
 							}
+							if (!(dt2.Rows[i][6].ToString() == ""))
+						{
+							string[] afterSplit = (dt2.Rows[i][6]).ToString().Split(':');
+							int lgth = afterSplit.Length-1;
+							for (int j = lgth; j >= 0; j--)
+							{
+								if (j == lgth)
+										afterSplit[j] = afterSplit[j] + "s";
+								if (j == lgth - 1)
+										afterSplit[j] = afterSplit[j] + "m :";
+								if (j == lgth - 2)
+										afterSplit[j] = afterSplit[j] + "h :";
+								if (j == lgth - 3)
+										afterSplit[j] = afterSplit[j] + "d :";
+								if (j == lgth - 4)
+										afterSplit[j] = afterSplit[j] + "yr :";
+							}
 
+								dt2.Rows[i][6] = string.Concat(afterSplit); ;
 						}
 
 					}
-					Lar._data = dt2;
+
 				}
+				Lar._data = dt2;
+			}
 				else
-				{
-					var sql1 = @"SELECT 
+			{
+				var sql1 = @"SELECT 
 										
 										signin.ip_address,
 										signin.signin_at,
@@ -1204,38 +1224,38 @@ namespace ExpressBase.ServiceStack.Services
 										signin.user_id = users.id
 								ORDER BY 
 										signin.signin_at DESC;";
-					DbParameter[] parameters1 = {
+				DbParameter[] parameters1 = {
 					this.EbConnectionFactory.DataDB.GetNewParameter("islg", EbDbTypes.String, "F"),
 					this.EbConnectionFactory.DataDB.GetNewParameter("usrid", EbDbTypes.Int32, LaReq.UserId)
 					};
-					EbDataTable dt3 = this.EbConnectionFactory.DataDB.DoQuery(sql1, parameters1);
-					if (dt3.Rows.Count > 0)
+				EbDataTable dt3 = this.EbConnectionFactory.DataDB.DoQuery(sql1, parameters1);
+				if (dt3.Rows.Count > 0)
+				{
+					for (int i = 0; i < dt3.Rows.Count; i++)
 					{
-						for (int i = 0; i < dt3.Rows.Count; i++)
+
+						DateTime SinDateUTC = (DateTime)dt3.Rows[i][1];
+						DateTime SinDate = (SinDateUTC.ConvertFromUtc(LaReq.UserObject.Preference.TimeZone));
+						dt3.Rows[i][1] = SinDate;
+						dt3.Rows[i][2] = SinDate.ToString("hh:mm:ss tt");
+						DateTime SoutDateUTC = (DateTime)dt3.Rows[i][3];
+						if (!(SoutDateUTC == DateTime.MinValue))
 						{
-
-							DateTime SinDateUTC = (DateTime)dt3.Rows[i][1];
-							DateTime SinDate = (SinDateUTC.ConvertFromUtc(LaReq.UserObject.Preference.TimeZone));
-							dt3.Rows[i][1] = SinDate;
-							dt3.Rows[i][2] = SinDate.ToString("hh:mm:ss tt");
-							DateTime SoutDateUTC = (DateTime)dt3.Rows[i][3];
-							if (!(SoutDateUTC == DateTime.MinValue))
-							{
-								DateTime SoutDate = (SoutDateUTC.ConvertFromUtc(LaReq.UserObject.Preference.TimeZone));
-								dt3.Rows[i][3] = SoutDate;
-								dt3.Rows[i][4] = SoutDate.ToString("hh:mm:ss tt");
-							}
-
+							DateTime SoutDate = (SoutDateUTC.ConvertFromUtc(LaReq.UserObject.Preference.TimeZone));
+							dt3.Rows[i][3] = SoutDate;
+							dt3.Rows[i][4] = SoutDate.ToString("hh:mm:ss tt");
 						}
 
 					}
-					Lar._data = dt3;
-				}
-				
-				
-				return Lar;
 
+				}
+				Lar._data = dt3;
 			}
+
+
+			return Lar;
+
+		}
 			catch (Exception e)
 			{
 				Console.WriteLine("Exception: " + e.Message + e.StackTrace);
