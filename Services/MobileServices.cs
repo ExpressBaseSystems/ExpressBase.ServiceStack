@@ -165,8 +165,24 @@ namespace ExpressBase.ServiceStack.Services
                         else
                             counter[name] = 0;
 
-                        EbControl Wctrl = ctrl.GetWebFormCtrl(counter[name]);
-                        webform.Controls.Add(Wctrl);
+                        EbControl Wctrl;
+
+                        if (ctrl is EbMobileTableLayout)
+                        {
+                            foreach (EbMobileTableCell cell in (ctrl as EbMobileTableLayout).CellCollection)
+                            {
+                                foreach (EbMobileControl tctrl in cell.ControlCollection)
+                                {
+                                    Wctrl = ctrl.GetWebFormCtrl(counter[name]);
+                                    webform.Controls.Add(Wctrl);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            Wctrl = ctrl.GetWebFormCtrl(counter[name]);
+                            webform.Controls.Add(Wctrl);
+                        }
                     }
 
                     string refid = this.CreateNewObjectRequest(request, webform);

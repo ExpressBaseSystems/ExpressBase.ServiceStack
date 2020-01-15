@@ -16,6 +16,7 @@ using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
 using System.Threading.Tasks;
+using ExpressBase.Security;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -24,6 +25,10 @@ namespace ExpressBase.ServiceStack.Services
         public int LogMasterId { get; set; }
 
         public int UserId { get; set; }
+
+        public string UserAuthId { get; set; }
+
+        public string SolutionId { get; set; }
 
         public bool IsRetry = false;
 
@@ -34,6 +39,7 @@ namespace ExpressBase.ServiceStack.Services
 
         Script valscript = null;
 
+        SqlJobGlobals Globals = null;
         private SqlJobResponse JobResponse { get; set; }
 
         private EbObjectService StudioServices { set; get; }
@@ -87,9 +93,9 @@ namespace ExpressBase.ServiceStack.Services
             {
                 EbObjectParticularVersionResponse version = (EbObjectParticularVersionResponse)this.StudioServices.Get(new EbObjectParticularVersionRequest { RefId = request.RefId });
                 SqlJob = EbSerializers.Json_Deserialize(version.Data[0].Json);
-                SqlJob.FirstReaderKeyColumns = new List<string> { "empmaster_name" };
-                SqlJob.ParameterKeyColumns = new List<string> { "date_to_consolidate" };
                 UserId = request.UserId;
+                UserAuthId = request.UserAuthId;
+                SolutionId = request.SolnId;
                 string query = @" INSERT INTO eb_joblogs_master(refid, type, createdby, created_at) VALUES(:refid, :type, :createdby, NOW()) returning id;";
                 DbParameter[] parameters = new DbParameter[] {
                     this.EbConnectionFactory.DataDB.GetNewParameter("refid", EbDbTypes.String, this.SqlJob.RefId) ,
@@ -133,8 +139,6 @@ namespace ExpressBase.ServiceStack.Services
             {
                 EbObjectParticularVersionResponse version = (EbObjectParticularVersionResponse)this.StudioServices.Get(new EbObjectParticularVersionRequest { RefId = request.RefId });
                 SqlJob = EbSerializers.Json_Deserialize(version.Data[0].Json);
-                SqlJob.FirstReaderKeyColumns = new List<string> { "empmaster_name" };
-                SqlJob.ParameterKeyColumns = new List<string> { "date_to_consolidate" };
                 string query = @"SELECT logmaster_id , COALESCE (message, 'success') message, createdby, createdat,  
                      COALESCE(status, 'F') status,id, keyvalues FROM eb_joblogs_lines WHERE logmaster_id = 
                      (SELECT id FROM eb_joblogs_master WHERE to_char(created_at, 'dd-mm-yyyy') = :date AND refid = :refid  LIMIT 1)  
@@ -210,8 +214,6 @@ namespace ExpressBase.ServiceStack.Services
             this.GlobalParams = logline.Params;
             EbObjectParticularVersionResponse version = (EbObjectParticularVersionResponse)this.StudioServices.Get(new EbObjectParticularVersionRequest { RefId = request.RefId });
             SqlJob = EbSerializers.Json_Deserialize(version.Data[0].Json);
-            SqlJob.FirstReaderKeyColumns = new List<string> { "empmaster_name" };
-            SqlJob.ParameterKeyColumns = new List<string> { "date_to_consolidate" };
             LoopLocation loopLocation = SqlJob.GetLoop();
             try
             {
@@ -364,7 +366,7 @@ namespace ExpressBase.ServiceStack.Services
                     res.Result = ExecuteTransaction(resource as EbTransaction, index);
 
                 else if (resource is EbSqlFormDataPusher)
-                    res.Result = ExecuteDataPush(resource as EbSqlFormDataPusher);
+                    res.Result = ExecuteDataPush(resource as EbSqlFormDataPusher, index);
 
                 else if (resource is EbSqlProcessor)
                 {
@@ -484,9 +486,9 @@ namespace ExpressBase.ServiceStack.Services
                     };
                     this.SqlJob.Resources[step].Result = _outparam;
                     if (this.GlobalParams.ContainsKey(_outparam.Name))
-                        this.GlobalParams[_outparam.Name] = new TV { Value = _outparam.Value };
+                        this.GlobalParams[_outparam.Name] = new TV { Type = _outparam.Type, Value = _outparam.Value };
                     else
-                        this.GlobalParams.Add(_outparam.Name, new TV { Value = _outparam.Value });
+                        this.GlobalParams.Add(_outparam.Name, new TV { Type = _outparam.Type, Value = _outparam.Value });
 
                     LoopExecution(loop, 0, step, parentindex, _table.Rows[i], null);
                 }
@@ -583,11 +585,11 @@ namespace ExpressBase.ServiceStack.Services
 
             try
             {
-                SqlJobGlobals globals = new SqlJobGlobals(_ds, ref GlobalParams);
+                Globals = new SqlJobGlobals(_ds, ref GlobalParams);
 
                 foreach (KeyValuePair<string, TV> kp in GlobalParams)
                 {
-                    globals["Params"].Add(kp.Key, new NTV
+                    Globals["Params"].Add(kp.Key, new NTV
                     {
                         Name = kp.Key,
                         Type = (kp.Value.Value.GetType() == typeof(JObject)) ? EbDbTypes.Object : (EbDbTypes)Enum.Parse(typeof(EbDbTypes), kp.Value.Value.GetType().Name, true),
@@ -595,7 +597,7 @@ namespace ExpressBase.ServiceStack.Services
                     });
                 }
 
-                script.Data = JsonConvert.SerializeObject(valscript.RunAsync(globals).Result.ReturnValue);
+                script.Data = JsonConvert.SerializeObject(valscript.RunAsync(Globals).Result.ReturnValue);
             }
             catch (Exception e)
             {
@@ -685,13 +687,22 @@ namespace ExpressBase.ServiceStack.Services
             return EbSerializers.Json_Deserialize(resp.Data[0].Json);
         }
 
-        private object ExecuteDataPush(EbSqlFormDataPusher dataPusher)
+        private object ExecuteDataPush(EbSqlFormDataPusher dataPusher, int step)
         {
             WebFormServices webFormServices = base.ResolveService<WebFormServices>();
             webFormServices.Any(new InsertOrUpdateFormDataRqst
             {
-                FormGlobals = new FormGlobals {   }
-            });
+                RefId = dataPusher.Pusher,
+                PushJson = dataPusher.PushJson,
+                UserId = UserId,
+                UserAuthId = UserAuthId,
+                RecordId = 0,
+                UserObj = this.Redis.Get<User>(UserAuthId),
+                LocId=-1,
+                SolnId =SolutionId,
+                WhichConsole = "uc",
+                FormGlobals = new FormGlobals { Params = Globals.Params }
+            }); 
             return new object();
         }
     }
