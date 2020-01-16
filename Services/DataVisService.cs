@@ -62,6 +62,8 @@ namespace ExpressBase.ServiceStack
 
         private int CurLocId = 0;
 
+        List<FileMetaInfo> _ImageList = new List<FileMetaInfo>();
+
         //[CompressResponse]
         //public DataSourceDataResponse Any(DataVisDataRequest request)
         //{
@@ -579,7 +581,8 @@ namespace ExpressBase.ServiceStack
                     TableName = _dataset.Tables[0].TableName,
                     Tree = ReturnObj?.tree,
                     ResponseStatus = this._Responsestatus,
-                    ReturnObjString = (_dV is EbCalendarView) ? EbSerializers.Json_Serialize((_dV as EbCalendarView)) : null
+                    ReturnObjString = (_dV is EbCalendarView) ? EbSerializers.Json_Serialize((_dV as EbCalendarView)) : null,
+                    ImageList =JsonConvert.SerializeObject( _ImageList)
                 };
                 this.Log.Info(" dataviz dataresponse*****" + dsresponse.Data);
                 EbSerializers.Json_Serialize(dsresponse);
@@ -1518,6 +1521,25 @@ namespace ExpressBase.ServiceStack
                             {
                                 if ((col as DVStringColumn).RenderAs == StringRenderType.Marker)
                                     _formattedData = "<a href = '#' class ='columnMarker" + this.TableId + "' data-latlong='" + _unformattedData + "'><i class='fa fa-map-marker fa-2x' style='color:red;'></i></a>";
+                                else if ((col as DVStringColumn).RenderAs == StringRenderType.Image)
+                                {
+                                    var _height = (col as DVStringColumn).ImageHeight == 0 ? "auto" : (col as DVStringColumn).ImageHeight + "px";
+                                    var _width = (col as DVStringColumn).ImageWidth == 0 ? "auto" : (col as DVStringColumn).ImageWidth + "px";
+                                    var _quality = (col as DVStringColumn).ImageQuality.ToString().ToLower();
+                                    if (_unformattedData.ToString() != "")
+                                    {
+                                        _formattedData = $"<img class='img-thumbnail columnimage' src='/images/{_quality}/{_unformattedData}.jpg' style='height:{_height};width:{_width};'/>";
+                                        _ImageList.Add(new FileMetaInfo
+                                        {
+                                            FileName = string.Empty,
+                                            FileRefId = Convert.ToInt32(_unformattedData),
+                                            FileCategory = Common.Enums.EbFileCategory.Images
+                                        });
+                                    }
+                                    else
+                                        _formattedData = $"<img class='img-thumbnail' src='/images/image.png' style='height:{_height};width:{_width};'/>";
+                                    
+                                }
                             }
                             string info = string.Empty;
                             if (col.AllowedCharacterLength > 0 || col.InfoWindow.Count > 0)
