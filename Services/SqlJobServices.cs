@@ -133,8 +133,8 @@ namespace ExpressBase.ServiceStack.Services
 
         public SqlJobsListGetResponse Get(SqlJobsListGetRequest request)
         {
-
             SqlJobsListGetResponse resp = new SqlJobsListGetResponse();
+            EbDataTable dtNew = new EbDataTable();
             try
             {
                 EbObjectParticularVersionResponse version = (EbObjectParticularVersionResponse)this.StudioServices.Get(new EbObjectParticularVersionRequest { RefId = request.RefId });
@@ -148,58 +148,68 @@ namespace ExpressBase.ServiceStack.Services
                      this.EbConnectionFactory.DataDB.GetNewParameter(":refid", EbDbTypes.String, request.RefId ),
                 };
                 EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(query, parameters);
-                int capacity1 = dt.Columns.Count - 1;
-
-                RowColletion rc = new RowColletion();
-                EbDataTable dtNew = new EbDataTable();
-                Dictionary<string, TV> _columnTypeCollection = null;
-                if (dt.Rows[0] != null)
+                if (dt.Rows.Count > 0)
                 {
-                    _columnTypeCollection = JsonConvert.DeserializeObject<Dictionary<string, TV>>(dt.Rows[0]["keyvalues"].ToString());
-                }
+                    int capacity = 0;
+                    Dictionary<string, TV> _columnTypeCollection = null;
 
-                foreach (string DataCol in this.SqlJob.FirstReaderKeyColumns)
-                {
-                    EbDbTypes _type = (_columnTypeCollection.ContainsKey(DataCol)) ? (EbDbTypes)(Convert.ToInt32(_columnTypeCollection[DataCol].Type)) : EbDbTypes.String;
-                    dt.Columns.Add(new EbDataColumn(++capacity1, DataCol, _type));
-                }
-
-                foreach (string DataCol in this.SqlJob.ParameterKeyColumns)
-                {
-                    EbDbTypes _type = (_columnTypeCollection.ContainsKey(DataCol)) ? (EbDbTypes)(Convert.ToInt32(_columnTypeCollection[DataCol].Type)) : EbDbTypes.String;
-                    dt.Columns.Add(new EbDataColumn(++capacity1, DataCol, _type));
-                }
-
-                dtNew.Columns = dt.Columns;
-                int i = 0;
-                foreach (EbDataRow dr in dt.Rows)
-                {
-
-                    int Col = dt.Columns["keyvalues"].ColumnIndex;
-                    dtNew.Rows.Add(dr);
-                    if (dr["keyvalues"].ToString() != "")
+                    //Adding Columns in DataTable
+                    if (dt.Rows[0] != null)
                     {
-                        Dictionary<string, TV> _list = JsonConvert.DeserializeObject<Dictionary<string, TV>>(dr["keyvalues"].ToString());
-
-                        foreach (KeyValuePair<string, TV> _c in _list)
+                        string _tempkeyvalues = dt.Rows[0]["keyvalues"].ToString();
+                        if (_tempkeyvalues == String.Empty)
+                            _tempkeyvalues = dt.Rows[dt.Rows.Count - 1]["keyvalues"].ToString();
+                        if (_tempkeyvalues != String.Empty)
                         {
-                            Param obj = new Param();
-                            obj.Value = _c.Value.Value.ToString();
-                            obj.Type = _c.Value.Type;
-                            dtNew.Rows[i][++Col] = obj.ValueTo;
+                            _columnTypeCollection = JsonConvert.DeserializeObject<Dictionary<string, TV>>(_tempkeyvalues);
+                            foreach (string DataCol in this.SqlJob.FirstReaderKeyColumns)
+                            {
+                                EbDbTypes _type = (_columnTypeCollection.ContainsKey(DataCol)) ? (EbDbTypes)(Convert.ToInt32(_columnTypeCollection[DataCol].Type)) : EbDbTypes.String;
+                                dtNew.Columns.Add(new EbDataColumn(capacity++, DataCol, _type));
+                            }
+
+                            foreach (string DataCol in this.SqlJob.ParameterKeyColumns)
+                            {
+                                EbDbTypes _type = (_columnTypeCollection.ContainsKey(DataCol)) ? (EbDbTypes)(Convert.ToInt32(_columnTypeCollection[DataCol].Type)) : EbDbTypes.String;
+                                dtNew.Columns.Add(new EbDataColumn(capacity++, DataCol, _type));
+                            }
                         }
-
                     }
-                    i++;
+                    int customColumnCount = dtNew.Columns.Count;
+                    for (int i = 0; i < dt.Columns.Count; i++)
+                    {
+                        dtNew.Columns.Add(new EbDataColumn(capacity++, dt.Columns[i].ColumnName, dt.Columns[i].Type));
+                    }
+                    int _rowCount = 0;
+                    foreach (EbDataRow dr in dt.Rows)
+                    {
+                        dtNew.Rows.Add(dtNew.NewDataRow2());
+                        if (dr["keyvalues"].ToString() != "")
+                        {
+                            Dictionary<string, TV> _list = JsonConvert.DeserializeObject<Dictionary<string, TV>>(dr["keyvalues"].ToString());
+                            int _columnCount = 0;
+                            foreach (KeyValuePair<string, TV> _c in _list)
+                            {
+                                Param obj = new Param();
+                                obj.Value = _c.Value.Value.ToString();
+                                obj.Type = _c.Value.Type;
+
+                                dtNew.Rows[_rowCount][_columnCount++] = obj.ValueTo;
+                            }
+                        }
+                        for (int i = 0; i < dr.Count; i++)
+                        {
+                            dtNew.Rows[_rowCount][i + customColumnCount] = dt.Rows[_rowCount][i];
+                        }
+                        _rowCount++;
+                    }
                 }
-
-
                 resp.SqlJobsColumns = dtNew.Columns;
                 resp.SqlJobsRows = dtNew.Rows;
             }
             catch (Exception e)
             {
-                Console.WriteLine("ERROR: SqlFetch Exception: " + e.Message);
+                Console.WriteLine("ERROR: SqlFetch Exception: " + e.Message + e.StackTrace);
             }
             return resp;
         }
@@ -698,11 +708,11 @@ namespace ExpressBase.ServiceStack.Services
                 UserAuthId = UserAuthId,
                 RecordId = 0,
                 UserObj = this.Redis.Get<User>(UserAuthId),
-                LocId=-1,
-                SolnId =SolutionId,
+                LocId = -1,
+                SolnId = SolutionId,
                 WhichConsole = "uc",
                 FormGlobals = new FormGlobals { Params = Globals.Params }
-            }); 
+            });
             return new object();
         }
     }
