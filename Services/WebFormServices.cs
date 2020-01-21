@@ -850,6 +850,34 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
+        public GetDynamicGridDataResponse Any(GetDynamicGridDataRequest request)
+        {
+            WebformDataWrapper data;
+            try
+            {
+                Console.WriteLine("Start GetDynamicGridData");
+                EbWebForm form = GetWebFormObject(request.RefId);
+                form.RefId = request.RefId;
+                form.TableRowId = request.RowId;
+                form.UserObj = this.Redis.Get<User>(request.UserAuthId);
+                form.SolutionObj = GetSolutionObject(request.SolnId);
+                WebformData wfd = form.GetDynamicGridData(EbConnectionFactory.DataDB, this, request.SourceId, request.Target);
+                Console.WriteLine("End GetDynamicGridData");
+                data = new WebformDataWrapper { FormData = wfd, Status = (int)HttpStatusCodes.OK, Message = "Success" };
+            }
+            catch (FormException ex)
+            {
+                Console.WriteLine("FormException in GetDynamicGridDataRequest Service" + ex.Message);
+                data = new WebformDataWrapper { Status = ex.ExceptionCode, Message = ex.Message, MessageInt = ex.MessageInternal, StackTraceInt = ex.StackTraceInternal };
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Exception in GetDynamicGridDataRequest Service" + ex.Message + "\n" + ex.StackTrace);
+                data = new WebformDataWrapper { Status = (int)HttpStatusCodes.INTERNAL_SERVER_ERROR, Message = "Exception in GetDynamicGridDataRequest", MessageInt = ex.Message, StackTraceInt = ex.StackTrace };
+            }
+            return new GetDynamicGridDataResponse() { FormDataWrap = JsonConvert.SerializeObject(data) };
+        }
+
         public ExecuteSqlValueExprResponse Any(ExecuteSqlValueExprRequest request)
         {
             Console.WriteLine("Start ExecuteSqlValueExpr");
