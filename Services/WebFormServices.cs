@@ -825,7 +825,7 @@ namespace ExpressBase.ServiceStack.Services
 
         public GetImportDataResponse Any(GetImportDataRequest request)
         {
-            GetImportDataResponse resp = new GetImportDataResponse();
+            WebformDataWrapper data;
             try
             {
                 Console.WriteLine("Start ImportFormData");
@@ -835,19 +835,19 @@ namespace ExpressBase.ServiceStack.Services
                 form.SolutionObj = GetSolutionObject(request.SolnId);
                 form.ImportData(EbConnectionFactory.DataDB, this, request.Params, request.Trigger);
                 Console.WriteLine("End ImportFormData");
-                resp.FormDataWrap = new WebformDataWrapper { FormData = form.FormData, Status = (int)HttpStatusCodes.OK, Message = "Success" };
+                data = new WebformDataWrapper { FormData = form.FormData, Status = (int)HttpStatusCodes.OK, Message = "Success" };
             }
             catch (FormException ex)
             {
                 Console.WriteLine("FormException in GetImportDataRequest Service" + ex.Message);
-                resp.FormDataWrap = new WebformDataWrapper { Status = ex.ExceptionCode, Message = ex.Message, MessageInt = ex.MessageInternal, StackTraceInt = ex.StackTraceInternal };
+                data = new WebformDataWrapper { Status = ex.ExceptionCode, Message = ex.Message, MessageInt = ex.MessageInternal, StackTraceInt = ex.StackTraceInternal };
             }
             catch (Exception ex)
             {
                 Console.WriteLine("Exception in GetImportDataRequest Service" + ex.Message + "\n" + ex.StackTrace);
-                resp.FormDataWrap = new WebformDataWrapper { Status = (int)HttpStatusCodes.INTERNAL_SERVER_ERROR, Message = "Exception in GetImportDataRequest", MessageInt = ex.Message, StackTraceInt = ex.StackTrace };
+                data = new WebformDataWrapper { Status = (int)HttpStatusCodes.INTERNAL_SERVER_ERROR, Message = "Exception in GetImportDataRequest", MessageInt = ex.Message, StackTraceInt = ex.StackTrace };
             }
-            return resp;
+            return new GetImportDataResponse() { FormDataWrap = JsonConvert.SerializeObject(data) };
         }
 
         public GetDynamicGridDataResponse Any(GetDynamicGridDataRequest request)

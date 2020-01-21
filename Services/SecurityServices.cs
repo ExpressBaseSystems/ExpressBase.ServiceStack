@@ -15,6 +15,7 @@ using Newtonsoft.Json;
 using ExpressBase.Security;
 using ExpressBase.Common.Singletons;
 using ServiceStack.Auth;
+using Newtonsoft.Json.Linq;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -1137,9 +1138,10 @@ namespace ExpressBase.ServiceStack.Services
 			{
 
 				if (LaReq.Alluser)
-				{
+			{
 					var sql = @"SELECT 
 										users.fullname,
+										signin.device_info AS usertype,
 										signin.ip_address,
 										signin.signin_at,
 										TO_CHAR(signin.signin_at,'HH12:MI:SS') signin_time,
@@ -1165,46 +1167,57 @@ namespace ExpressBase.ServiceStack.Services
 						for (int i = 0; i < dt2.Rows.Count; i++)
 						{
 
-							DateTime SinDateUTC = (DateTime)dt2.Rows[i][2];
+							DateTime SinDateUTC = (DateTime)dt2.Rows[i][3];
 							DateTime SinDate = (SinDateUTC.ConvertFromUtc(LaReq.UserObject.Preference.TimeZone));
-							dt2.Rows[i][2] = SinDate;
-							dt2.Rows[i][3] = SinDate.ToString("hh:mm:ss tt");
-							DateTime SoutDateUTC = (DateTime)dt2.Rows[i][4];
+							dt2.Rows[i][3] = SinDate;
+							dt2.Rows[i][4] = SinDate.ToString("hh:mm:ss tt");
+							DateTime SoutDateUTC = (DateTime)dt2.Rows[i][5];
 							if (!(SoutDateUTC == DateTime.MinValue))
 							{
 								DateTime SoutDate = (SoutDateUTC.ConvertFromUtc(LaReq.UserObject.Preference.TimeZone));
-								dt2.Rows[i][4] = SoutDate;
-								dt2.Rows[i][5] = SoutDate.ToString("hh:mm:ss tt");
+								dt2.Rows[i][5] = SoutDate;
+								dt2.Rows[i][6] = SoutDate.ToString("hh:mm:ss tt");
 							}
-							if (!(dt2.Rows[i][6].ToString() == ""))
-						{
-							string[] afterSplit = (dt2.Rows[i][6]).ToString().Split(':');
-							int lgth = afterSplit.Length-1;
-							for (int j = lgth; j >= 0; j--)
+							if (!(dt2.Rows[i][7].ToString() == ""))
 							{
-								if (j == lgth)
+								string[] afterSplit = (dt2.Rows[i][7]).ToString().Split(':');
+								int lgth = afterSplit.Length - 1;
+								for (int j = lgth; j >= 0; j--)
+								{
+									if (j == lgth)
 										afterSplit[j] = afterSplit[j] + "s";
-								if (j == lgth - 1)
+									if (j == lgth - 1)
 										afterSplit[j] = afterSplit[j] + "m :";
-								if (j == lgth - 2)
+									if (j == lgth - 2)
 										afterSplit[j] = afterSplit[j] + "h :";
-								if (j == lgth - 3)
-										afterSplit[j] = afterSplit[j] + "d :";
-								if (j == lgth - 4)
-										afterSplit[j] = afterSplit[j] + "yr :";
-							}
 
-								dt2.Rows[i][6] = string.Concat(afterSplit); ;
+								}
+
+								dt2.Rows[i][7] = string.Concat(afterSplit); ;
+							}
+							string usrtyp = "";
+							DeviceInfo Dci = JsonConvert.DeserializeObject<DeviceInfo>(dt2.Rows[i][1].ToString());
+							if (!(Dci == null)){
+								if (Dci.WC == "uc")
+								{
+									usrtyp = "User";
+								}
+								else
+									if (Dci.WC == "dc")
+								{
+									usrtyp = "Developer";
+								}
+							}
+							dt2.Rows[i][1] = usrtyp;
+
 						}
 
 					}
-
+					Lar._data = dt2;
 				}
-				Lar._data = dt2;
-			}
 				else
-			{
-				var sql1 = @"SELECT 
+				{
+					var sql1 = @"SELECT 
 										
 										signin.ip_address,
 										signin.signin_at,
@@ -1224,38 +1237,38 @@ namespace ExpressBase.ServiceStack.Services
 										signin.user_id = users.id
 								ORDER BY 
 										signin.signin_at DESC;";
-				DbParameter[] parameters1 = {
+					DbParameter[] parameters1 = {
 					this.EbConnectionFactory.DataDB.GetNewParameter("islg", EbDbTypes.String, "F"),
 					this.EbConnectionFactory.DataDB.GetNewParameter("usrid", EbDbTypes.Int32, LaReq.UserId)
 					};
-				EbDataTable dt3 = this.EbConnectionFactory.DataDB.DoQuery(sql1, parameters1);
-				if (dt3.Rows.Count > 0)
-				{
-					for (int i = 0; i < dt3.Rows.Count; i++)
+					EbDataTable dt3 = this.EbConnectionFactory.DataDB.DoQuery(sql1, parameters1);
+					if (dt3.Rows.Count > 0)
 					{
-
-						DateTime SinDateUTC = (DateTime)dt3.Rows[i][1];
-						DateTime SinDate = (SinDateUTC.ConvertFromUtc(LaReq.UserObject.Preference.TimeZone));
-						dt3.Rows[i][1] = SinDate;
-						dt3.Rows[i][2] = SinDate.ToString("hh:mm:ss tt");
-						DateTime SoutDateUTC = (DateTime)dt3.Rows[i][3];
-						if (!(SoutDateUTC == DateTime.MinValue))
+						for (int i = 0; i < dt3.Rows.Count; i++)
 						{
-							DateTime SoutDate = (SoutDateUTC.ConvertFromUtc(LaReq.UserObject.Preference.TimeZone));
-							dt3.Rows[i][3] = SoutDate;
-							dt3.Rows[i][4] = SoutDate.ToString("hh:mm:ss tt");
+
+							DateTime SinDateUTC = (DateTime)dt3.Rows[i][1];
+							DateTime SinDate = (SinDateUTC.ConvertFromUtc(LaReq.UserObject.Preference.TimeZone));
+							dt3.Rows[i][1] = SinDate;
+							dt3.Rows[i][2] = SinDate.ToString("hh:mm:ss tt");
+							DateTime SoutDateUTC = (DateTime)dt3.Rows[i][3];
+							if (!(SoutDateUTC == DateTime.MinValue))
+							{
+								DateTime SoutDate = (SoutDateUTC.ConvertFromUtc(LaReq.UserObject.Preference.TimeZone));
+								dt3.Rows[i][3] = SoutDate;
+								dt3.Rows[i][4] = SoutDate.ToString("hh:mm:ss tt");
+							}
+
 						}
 
 					}
-
+					Lar._data = dt3;
 				}
-				Lar._data = dt3;
+
+
+				return Lar;
+
 			}
-
-
-			return Lar;
-
-		}
 			catch (Exception e)
 			{
 				Console.WriteLine("Exception: " + e.Message + e.StackTrace);
