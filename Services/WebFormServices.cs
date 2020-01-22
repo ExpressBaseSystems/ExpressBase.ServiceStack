@@ -88,7 +88,14 @@ namespace ExpressBase.ServiceStack.Services
                     else
                         _listNamesAndTypes.Add(new TableColumnMeta { Name = _schema.MasterTable + "_id", Type = vDbTypes.Decimal });// id refernce to the parent table will store in this column - foreignkey
                     if (_table.TableType == WebFormTableTypes.Grid)
+                    {
                         _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_row_num", Type = vDbTypes.Decimal });// data grid row number
+                        if (_table.IsDynamic)// if data grid is in dynamic tab then adding column for source reference - foreignkey
+                        {
+                            foreach (TableSchema _t in _schema.Tables.FindAll(e => e.TableType == WebFormTableTypes.Grid && e != _table))
+                                _listNamesAndTypes.Add(new TableColumnMeta { Name = _t.TableName + "_id", Type = vDbTypes.Decimal });
+                        }
+                    }
 
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_by", Type = vDbTypes.Decimal, Label = "Created By" });
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_at", Type = vDbTypes.DateTime, Label = "Created At" });
@@ -841,6 +848,34 @@ namespace ExpressBase.ServiceStack.Services
                 data = new WebformDataWrapper { Status = (int)HttpStatusCodes.INTERNAL_SERVER_ERROR, Message = "Exception in GetImportDataRequest", MessageInt = ex.Message, StackTraceInt = ex.StackTrace };
             }
             return new GetImportDataResponse() { FormDataWrap = JsonConvert.SerializeObject(data) };
+        }
+
+        public GetDynamicGridDataResponse Any(GetDynamicGridDataRequest request)
+        {
+            WebformDataWrapper data;
+            try
+            {
+                Console.WriteLine("Start GetDynamicGridData");
+                EbWebForm form = GetWebFormObject(request.RefId);
+                form.RefId = request.RefId;
+                form.TableRowId = request.RowId;
+                form.UserObj = this.Redis.Get<User>(request.UserAuthId);
+                form.SolutionObj = GetSolutionObject(request.SolnId);
+                WebformData wfd = form.GetDynamicGridData(EbConnectionFactory.DataDB, this, request.SourceId, request.Target);
+                Console.WriteLine("End GetDynamicGridData");
+                data = new WebformDataWrapper { FormData = wfd, Status = (int)HttpStatusCodes.OK, Message = "Success" };
+            }
+            catch (FormException ex)
+            {
+                Console.WriteLine("FormException in GetDynamicGridDataRequest Service" + ex.Message);
+                data = new WebformDataWrapper { Status = ex.ExceptionCode, Message = ex.Message, MessageInt = ex.MessageInternal, StackTraceInt = ex.StackTraceInternal };
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Exception in GetDynamicGridDataRequest Service" + ex.Message + "\n" + ex.StackTrace);
+                data = new WebformDataWrapper { Status = (int)HttpStatusCodes.INTERNAL_SERVER_ERROR, Message = "Exception in GetDynamicGridDataRequest", MessageInt = ex.Message, StackTraceInt = ex.StackTrace };
+            }
+            return new GetDynamicGridDataResponse() { FormDataWrap = JsonConvert.SerializeObject(data) };
         }
 
         public ExecuteSqlValueExprResponse Any(ExecuteSqlValueExprRequest request)
