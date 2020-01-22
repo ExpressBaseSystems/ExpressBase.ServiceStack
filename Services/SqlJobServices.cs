@@ -139,7 +139,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 EbObjectParticularVersionResponse version = (EbObjectParticularVersionResponse)this.StudioServices.Get(new EbObjectParticularVersionRequest { RefId = request.RefId });
                 SqlJob = EbSerializers.Json_Deserialize(version.Data[0].Json);
-                string query = @"SELECT logmaster_id , COALESCE (message, 'success') message, createdby, createdat,  
+                string query = @"SELECT logmaster_id , message, createdby, createdat,  
                      COALESCE(status, 'F') status,id, keyvalues FROM eb_joblogs_lines WHERE logmaster_id = 
                      (SELECT id FROM eb_joblogs_master WHERE to_char(created_at, 'dd-mm-yyyy') = :date AND refid = :refid  LIMIT 1)  
                      AND id NOT IN (SELECT retry_of FROM eb_joblogs_lines) ORDER BY status, id; ";
@@ -197,6 +197,16 @@ namespace ExpressBase.ServiceStack.Services
                                 dtNew.Rows[_rowCount][_columnCount++] = obj.ValueTo;
                             }
                         }
+                        if (dt.Rows[_rowCount]["message"].ToString() == String.Empty)
+                            if (dt.Rows[_rowCount]["status"].ToString() == "S")
+                            {
+                                dt.Rows[_rowCount]["message"] = "Success";
+                            }
+                            else
+                            {
+                                dt.Rows[_rowCount]["message"] = "Failed";
+                            }
+
                         for (int i = 0; i < dr.Count; i++)
                         {
                             dtNew.Rows[_rowCount][i + customColumnCount] = dt.Rows[_rowCount][i];
@@ -217,10 +227,13 @@ namespace ExpressBase.ServiceStack.Services
         public RetryJobResponse Post(RetryJobRequest request)
         {
             RetryJobResponse response = new RetryJobResponse();
+            UserId = request.UserId;
+            UserAuthId = request.UserAuthId;
+            SolutionId = request.SolnId;
             response.Status = false;
             IsRetry = true;
             LogLine logline = GetLogLine(request.JoblogId);
-            this.LogMasterId = logline.linesid;
+            this.LogMasterId = logline.masterid;
             this.GlobalParams = logline.Params;
             EbObjectParticularVersionResponse version = (EbObjectParticularVersionResponse)this.StudioServices.Get(new EbObjectParticularVersionRequest { RefId = request.RefId });
             SqlJob = EbSerializers.Json_Deserialize(version.Data[0].Json);
@@ -542,6 +555,8 @@ namespace ExpressBase.ServiceStack.Services
                         }
                         loop.InnerResources[counter].Result = this.GetResult(loop.InnerResources[counter], counter, step, parentindex);
                     }
+
+                    //throw new Exception();
                     DbParameter[] e_parameters = new DbParameter[]
                     { this.EbConnectionFactory.DataDB.GetNewParameter("linesid", EbDbTypes.Int32, linesid) ,
                     this.EbConnectionFactory.DataDB.GetNewParameter("keyvalues",EbDbTypes.Json,  _keyvalues)};
@@ -708,7 +723,7 @@ namespace ExpressBase.ServiceStack.Services
                 UserAuthId = UserAuthId,
                 RecordId = 0,
                 UserObj = this.Redis.Get<User>(UserAuthId),
-                LocId = -1,
+                LocId = 1,
                 SolnId = SolutionId,
                 WhichConsole = "uc",
                 FormGlobals = new FormGlobals { Params = Globals.Params }
