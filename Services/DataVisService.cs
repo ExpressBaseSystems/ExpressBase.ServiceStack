@@ -857,7 +857,7 @@ namespace ExpressBase.ServiceStack
                 List<DVBaseColumn> RowGroupingColumns = new List<DVBaseColumn>();
                 int dvColCount = _dv.Columns.Count;
                 string PreviousGroupingText = string.Empty;
-                int SerialCount = 0, PrevRowIndex = 0;
+                int SerialCount = 0;
                 bool isTree = false;
                 FileInfo file = null;
                 ExcelPackage package = null;
@@ -1446,59 +1446,8 @@ namespace ExpressBase.ServiceStack
                 _formattedTable.Rows.Add(_formattedTable.NewDataRow2());
                 _formattedTable.Rows[i][_formattedTable.Columns.Count - 1] = i + 1;//serial
                 int j = 0;
-                foreach (DVBaseColumn col in dependencyTable)
-                {
-                    try
-                    {
-                        if (col.IsCustomColumn)
-                            CustomColumDoCalc4Row(row, _dv, globals, col);
-                        var cults = col.GetColumnCultureInfo(_user_culture);
-                        object _unformattedData = (_dv.AutoGen && col.Name == "eb_action") ? "<i class='fa fa-edit'></i>" : row[col.Data];
-                        object _formattedData = _unformattedData;
-
-                        if (col.RenderType == EbDbTypes.Date || col.RenderType == EbDbTypes.DateTime)
-                        {
-                            DateTimeformat(_unformattedData, ref _formattedData, ref row, col, cults, _user);
-                        }
-                        else if (col.RenderType == EbDbTypes.Decimal || col.RenderType == EbDbTypes.Int32 || col.RenderType == EbDbTypes.Int64)
-                        {
-                            if (col.Name != "id")
-                            {
-                                if ((col as DVNumericColumn).SuppresIfZero && (_isexcel == false))
-                                {
-                                    _formattedData = (Convert.ToDecimal(_unformattedData) == 0) ? string.Empty : Convert.ToDecimal(_unformattedData).ToString("N", cults.NumberFormat);
-
-                                }
-                                else
-                                    _formattedData = Convert.ToDecimal(_unformattedData).ToString("N", cults.NumberFormat);
-                            }
-                        }
-                        else if (col.RenderType == EbDbTypes.Boolean || col.RenderType == EbDbTypes.BooleanOriginal)
-                        {
-                            if (col.Type == EbDbTypes.Decimal || col.Type == EbDbTypes.Int32 || col.Type == EbDbTypes.Int64)
-                                _formattedData = Convert.ToDecimal(_unformattedData);
-                            else if (col.Type == EbDbTypes.String)
-                                _formattedData = _unformattedData.ToString();
-                        }
-                        if (col.Name == "eb_created_by" || col.Name == "eb_lastmodified_by" || col.Name == "eb_loc_id" || col.Name == "eb_createdby")
-                        {
-                            ModifyEbColumns(col, ref _formattedData, _unformattedData);
-                        }
-                        if (col.ColumnQueryMapping != null && col.ColumnQueryMapping.Values.Count > 0)
-                            _formattedData = (col.ColumnQueryMapping.Values.ContainsKey(Convert.ToInt32(_formattedData))) ? col.ColumnQueryMapping.Values[Convert.ToInt32(_formattedData)] : string.Empty;
-                        IntermediateDic.Add(col.Data, _formattedData);
-                        if ((_dv as EbChartVisualization) != null || (_dv as Objects.EbGoogleMap) != null)
-                        {
-                            _formattedTable.Rows[i][col.Data] = _formattedData;
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        Log.Info("PreProcessing in Create IntermediateDictionay........." + e.StackTrace + "Column Name  ......" + col.Name);
-                        Log.Info("PreProcessing in Create IntermediateDictionay........." + e.Message + "Column Name  ......" + col.Name);
-                        this._Responsestatus.Message = e.Message;
-                    }
-                }
+                CreateIntermediateDict(row, _dv, _user_culture, _user, ref _formattedTable, ref globals, _isexcel, i);
+                
                 if ((_dv as EbTableVisualization) != null)
                 {
                     foreach (DVBaseColumn col in dependencyTable)
@@ -1631,6 +1580,63 @@ namespace ExpressBase.ServiceStack
                 this._Responsestatus.Message = e.Message;
             }
 
+        }
+
+        public void CreateIntermediateDict(EbDataRow row, EbDataVisualization _dv, CultureInfo _user_culture, User _user, ref EbDataTable _formattedTable, ref Globals globals,  bool _isexcel,  int i)
+        {
+            foreach (DVBaseColumn col in dependencyTable)
+            {
+                try
+                {
+                    if (col.IsCustomColumn)
+                        CustomColumDoCalc4Row(row, _dv, globals, col);
+                    var cults = col.GetColumnCultureInfo(_user_culture);
+                    object _unformattedData = (_dv.AutoGen && col.Name == "eb_action") ? "<i class='fa fa-edit'></i>" : row[col.Data];
+                    object _formattedData = _unformattedData;
+
+                    if (col.RenderType == EbDbTypes.Date || col.RenderType == EbDbTypes.DateTime)
+                    {
+                        DateTimeformat(_unformattedData, ref _formattedData, ref row, col, cults, _user);
+                    }
+                    else if (col.RenderType == EbDbTypes.Decimal || col.RenderType == EbDbTypes.Int32 || col.RenderType == EbDbTypes.Int64)
+                    {
+                        if (col.Name != "id")
+                        {
+                            if ((col as DVNumericColumn).SuppresIfZero && (_isexcel == false))
+                            {
+                                _formattedData = (Convert.ToDecimal(_unformattedData) == 0) ? string.Empty : Convert.ToDecimal(_unformattedData).ToString("N", cults.NumberFormat);
+
+                            }
+                            else
+                                _formattedData = Convert.ToDecimal(_unformattedData).ToString("N", cults.NumberFormat);
+                        }
+                    }
+                    else if (col.RenderType == EbDbTypes.Boolean || col.RenderType == EbDbTypes.BooleanOriginal)
+                    {
+                        if (col.Type == EbDbTypes.Decimal || col.Type == EbDbTypes.Int32 || col.Type == EbDbTypes.Int64)
+                            _formattedData = Convert.ToDecimal(_unformattedData);
+                        else if (col.Type == EbDbTypes.String)
+                            _formattedData = _unformattedData.ToString();
+                    }
+                    if (col.Name == "eb_created_by" || col.Name == "eb_lastmodified_by" || col.Name == "eb_loc_id" || col.Name == "eb_createdby")
+                    {
+                        ModifyEbColumns(col, ref _formattedData, _unformattedData);
+                    }
+                    if (col.ColumnQueryMapping != null && col.ColumnQueryMapping.Values.Count > 0)
+                        _formattedData = (col.ColumnQueryMapping.Values.ContainsKey(Convert.ToInt32(_formattedData))) ? col.ColumnQueryMapping.Values[Convert.ToInt32(_formattedData)] : string.Empty;
+                    IntermediateDic.Add(col.Data, _formattedData);
+                    if ((_dv as EbChartVisualization) != null || (_dv as Objects.EbGoogleMap) != null)
+                    {
+                        _formattedTable.Rows[i][col.Data] = _formattedData;
+                    }
+                }
+                catch (Exception e)
+                {
+                    Log.Info("PreProcessing in Create IntermediateDictionay........." + e.StackTrace + "Column Name  ......" + col.Name);
+                    Log.Info("PreProcessing in Create IntermediateDictionay........." + e.Message + "Column Name  ......" + col.Name);
+                    this._Responsestatus.Message = e.Message;
+                }
+            }
         }
 
         public void DataTable2FormatedTable4Calendar(EbDataRow row, List<EbDataRow> Customrows, EbDataVisualization _dv, CultureInfo _user_culture, User _user,
@@ -1978,8 +1984,21 @@ namespace ExpressBase.ServiceStack
             }
         }
 
+        public void DoRowGrouping4Sqljob(EbDataRow currentRow, EbDataVisualization Visualization, CultureInfo Culture, User _user, ref EbDataTable FormattedTable, 
+            bool IsMultiLevelRowGrouping, ref Dictionary<string, GroupingDetails> RowGrouping, ref string PreviousGroupingText, ref int CurSortIndex, ref int SerialCount, 
+            int i, int dvColCount, int TotalLevels, ref List<int> AggregateColumnIndexes, ref List<DVBaseColumn> RowGroupingColumns, int RowCount, Globals globals)
+        {
+            IntermediateDic = new Dictionary<int, object>();
+            dependencyTable = CreateDependencyTable(Visualization);
+            CreateIntermediateDict(currentRow, Visualization, Culture, _user, ref FormattedTable, ref globals, false, i);
+            DoRowGroupingCommon(currentRow, Visualization, Culture, _user,ref FormattedTable, IsMultiLevelRowGrouping, ref RowGrouping,
+            ref PreviousGroupingText, ref CurSortIndex, ref SerialCount, i, dvColCount, TotalLevels, ref AggregateColumnIndexes, ref RowGroupingColumns, RowCount);
 
-        public void DoRowGroupingCommon(EbDataRow currentRow, EbDataVisualization Visualization, CultureInfo Culture, User _user, ref EbDataTable FormattedTable, bool IsMultiLevelRowGrouping, ref Dictionary<string, GroupingDetails> RowGrouping, ref string PreviousGroupingText, ref int CurSortIndex, ref int SerialCount, int PrevRowIndex, int dvColCount, int TotalLevels, ref List<int> AggregateColumnIndexes, ref List<DVBaseColumn> RowGroupingColumns, int RowCount)
+        }
+        public void DoRowGroupingCommon(EbDataRow currentRow, EbDataVisualization Visualization, CultureInfo Culture, User _user, 
+            ref EbDataTable FormattedTable, bool IsMultiLevelRowGrouping, ref Dictionary<string, GroupingDetails> RowGrouping, 
+            ref string PreviousGroupingText, ref int CurSortIndex, ref int SerialCount, int PrevRowIndex, int dvColCount, int TotalLevels, 
+            ref List<int> AggregateColumnIndexes, ref List<DVBaseColumn> RowGroupingColumns, int RowCount)
         {
             CurSortIndex += TotalLevels + 30;
 
@@ -2055,7 +2074,7 @@ namespace ExpressBase.ServiceStack
             }
         }
 
-        private List<int> GetAggregateIndexes(DVColumnCollection VisualizationColumns)
+        public List<int> GetAggregateIndexes(DVColumnCollection VisualizationColumns)
         {
             List<int> AggregateColumnIndexes = new List<int>();
             foreach (DVBaseColumn _column in VisualizationColumns)
