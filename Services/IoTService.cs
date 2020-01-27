@@ -10,7 +10,9 @@ namespace ExpressBase.ServiceStack.Services
     {
         public object Any(IoTDataRequest request)
         {
+            request.SolnId = "ronds";
             string _sql = $"INSERT INTO ronds_sample(json) values({request.Data});";
+            this.EbConnectionFactory = new Common.Data.EbConnectionFactory(request.SolnId,this.Redis);
             int result = this.EbConnectionFactory.ObjectsDB.DoNonQuery(_sql);
             return new IoTDataResponse();
         }
