@@ -535,6 +535,7 @@ namespace ExpressBase.ServiceStack
             this.Log.Info("data request");
 
             DataSourceDataSetResponse resp = new DataSourceDataSetResponse();
+            resp.Columns = new List<ColumnColletion>();
             string _sql = string.Empty;
             try
             {
@@ -573,6 +574,9 @@ namespace ExpressBase.ServiceStack
                 {
                     IEnumerable<DbParameter> parameters = DataHelper.GetParams(this.EbConnectionFactory, false, request.Params, 0, 0);
                     resp.DataSet = this.EbConnectionFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray<System.Data.Common.DbParameter>());
+
+                    foreach (EbDataTable dt in resp.DataSet.Tables)
+                        resp.Columns.Add(dt.Columns);
 
                     if (GetLogEnabled(request.RefId))
                     {

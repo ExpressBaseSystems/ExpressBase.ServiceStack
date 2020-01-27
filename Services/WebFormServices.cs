@@ -169,7 +169,8 @@ namespace ExpressBase.ServiceStack.Services
                                 (entry.Type.EbDbType.ToString().Equals("Date") && dr.Type.ToString().Equals("DateTime")) ||
                                 (entry.Type.EbDbType.ToString().Equals("Time") && dr.Type.ToString().Equals("DateTime"))
                                 ))
-                                Msg += string.Format("Already exists '{0}' Column for {1}.{2}({3}); ", dr.Type.ToString(), tableName, entry.Name, entry.Type.EbDbType);
+                                Msg += $"Type mismatch found '{dr.Type.ToString()}' instead of '{entry.Type.EbDbType}' for {tableName}.{entry.Name}; ";
+                            //Msg += string.Format("Already exists '{0}' Column for {1}.{2}({3}); ", dr.Type.ToString(), tableName, entry.Name, entry.Type.EbDbType);                           
                             isFound = true;
                             break;
                         }
