@@ -79,14 +79,14 @@ namespace ExpressBase.ServiceStack.Services
             Dictionary<int, AppWrap> _Coll = new Dictionary<int, AppWrap>();
             foreach (EbDataRow dr in ds.Tables[1].Rows)
             {
-                int appid = Convert.ToInt32(dr[5]);
+                int appid = Convert.ToInt32(dr["app_id"]);
 
                 if (!_Coll.Keys.Contains<int>(appid))
                     _Coll.Add(appid, new AppWrap { Types = new Dictionary<int, TypeWrap>() });
 
                 Dictionary<int, TypeWrap> _types = new Dictionary<int, TypeWrap>();
-                int typeId = Convert.ToInt32(dr[1]);
-                EbObjectType ___otyp = (EbObjectType)Convert.ToInt32(dr[1]);
+                int typeId = Convert.ToInt32(dr["obj_type"]);
+                EbObjectType ___otyp = (EbObjectType)Convert.ToInt32(typeId);
 
                 if (___otyp.IsUserFacing)
                 {
@@ -95,12 +95,12 @@ namespace ExpressBase.ServiceStack.Services
 
                     ObjWrap owrap = new ObjWrap
                     {
-                        Id = Convert.ToInt32(dr[0]),
-                        EbObjectType = Convert.ToInt32(dr[1]),
-                        Refid = dr[4].ToString(),
-                        AppId = Convert.ToInt32(dr[5]),
+                        Id = Convert.ToInt32(dr["objectid"]),
+                        EbObjectType = typeId,
+                        Refid = dr["refid"].ToString(),
+                        AppId = appid,
                         EbType = ___otyp.Name,
-                        DisplayName = dr[9].ToString()
+                        DisplayName = dr["display_name"].ToString()
                     };
 
                     _Coll[appid].Types[typeId].Objects.Add(owrap);
