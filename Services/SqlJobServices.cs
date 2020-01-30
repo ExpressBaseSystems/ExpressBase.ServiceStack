@@ -130,7 +130,7 @@ namespace ExpressBase.ServiceStack.Services
                     this.EbConnectionFactory.DataDB.GetNewParameter("refid", EbDbTypes.String, this.SqlJob.RefId) ,
                     this.EbConnectionFactory.DataDB.GetNewParameter("type",EbDbTypes.Int32,this.SqlJob.Type),
                     this.EbConnectionFactory.ObjectsDB.GetNewParameter("createdby",EbDbTypes.Int32, UserId),
-                    this.EbConnectionFactory.ObjectsDB.GetNewParameter("params",EbDbTypes.Json, EbSerializers.Json_Serialize(request.GlobalParams))
+                    this.EbConnectionFactory.ObjectsDB.GetNewParameter("params",EbDbTypes.Json, JsonConvert.SerializeObject(request.GlobalParams))
                 };
                     EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(query, parameters);
                     LogMasterId = Convert.ToInt32(dt.Rows[0][0]);
@@ -176,12 +176,13 @@ namespace ExpressBase.ServiceStack.Services
                 SqlJob = EbSerializers.Json_Deserialize(version.Data[0].Json);
                 string query = @"
                     SELECT
-                        logmaster_id , message, createdby, createdat, COALESCE(status, 'F') status, id, keyvalues 
+                        logmaster_id , message, u.firstname as executedby, l.createdat, COALESCE(status, 'F') status, l.id, keyvalues 
                     FROM
-                        eb_joblogs_lines 
-                    WHERE 
+                        eb_joblogs_lines l, eb_users u 
+                    WHERE
+                        u.id =l.createdby AND
                         logmaster_id IN (SELECT id FROM eb_joblogs_master WHERE to_char(created_at, 'dd-mm-yyyy') = :date AND refid = :refid) AND 
-                        id NOT IN (SELECT retry_of FROM eb_joblogs_lines) 
+                        l.id NOT IN (SELECT retry_of FROM eb_joblogs_lines) 
                     ORDER BY 
                         logmaster_id DESC, status ASC; ";
                 DbParameter[] parameters = new DbParameter[] {
@@ -250,11 +251,11 @@ namespace ExpressBase.ServiceStack.Services
                                 {
                                     if (dt.Rows[_rowCount]["status"].ToString() == "S")
                                     {
-                                        dt.Rows[_rowCount]["message"] = "Success";
+                                        dt.Rows[_rowCount]["status"] = "Success"; 
                                     }
-                                    else
+                                    else if (dt.Rows[_rowCount]["status"].ToString() == "F")
                                     {
-                                        dt.Rows[_rowCount]["message"] = "Failed";
+                                        dt.Rows[_rowCount]["status"] = "Failed";
                                     }
                                 }
 
@@ -308,7 +309,7 @@ namespace ExpressBase.ServiceStack.Services
                     else if (column.Type == EbDbTypes.Bytea)
                         _col = new DVStringColumn { Data = column.ColumnIndex, Name = column.ColumnName, sTitle = column.ColumnName, Type = column.Type, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
                     _col.RenderType = _col.Type;
-                    if (column.ColumnName == "keyvalues" || column.ColumnName == "logmaster_id" || column.ColumnName == "createdby")
+                    if (column.ColumnName == "keyvalues" || column.ColumnName == "logmaster_id")
                         _col.bVisible = false;
                     Columns.Add(_col);
                 }
@@ -376,7 +377,7 @@ namespace ExpressBase.ServiceStack.Services
             return response;
         }
 
-     
+
 
         //---------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -751,6 +752,7 @@ namespace ExpressBase.ServiceStack.Services
                     trans.Rollback();
                     throw e;
                 }
+                TransactionConnection = null;
             }
             return true;
         }
@@ -817,7 +819,7 @@ namespace ExpressBase.ServiceStack.Services
                 SolnId = SolutionId,
                 WhichConsole = "uc",
                 FormGlobals = new FormGlobals { Params = Globals.Params },
-                TransactionConnection =TransactionConnection
+                TransactionConnection = TransactionConnection
             });
             return resp;
         }
