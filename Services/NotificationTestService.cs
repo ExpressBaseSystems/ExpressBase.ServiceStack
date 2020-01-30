@@ -7,6 +7,7 @@ using ExpressBase.Common.ServerEvents_Artifacts;
 using ExpressBase.Common.Constants;
 using ExpressBase.Common.ServiceClients;
 using ExpressBase.Common.Data;
+using ServiceStack;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -17,12 +18,24 @@ namespace ExpressBase.ServiceStack.Services
         public NotifyTestResponse Post(NotifyTestRequest request)
         {
             NotifyTestResponse res = new NotifyTestResponse();
+            Notifications n = new Notifications();
+            n.Add(new NotificationContents
+            {
+                Link = "abc.xyz",
+                Title = "abc"
+            });
             this.ServerEventClient.Post<NotifyResponse>(new NotifyUserIdRequest
             {
-                Msg = "LogOut",
-                Selector = "cmd.onLogOut",
+                Msg = JSON.stringify(n),
+                Selector = "cmd.onNotification",
                 ToUserAuthId = request.UserAuthId,
             });
+
+            //this.ServerEventClient.Post<NotifyResponse>(new NotifySubsribtionRequest
+            //{
+            //    Msg = "LogOut",
+            //    Selector = "cmd.onLogOut"
+            //});
             return res;
         }
     }
