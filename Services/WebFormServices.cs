@@ -834,7 +834,7 @@ namespace ExpressBase.ServiceStack.Services
                 form.RefId = request.RefId;
                 form.UserObj = this.Redis.Get<User>(request.UserAuthId);
                 form.SolutionObj = GetSolutionObject(request.SolnId);
-                form.ImportData(EbConnectionFactory.DataDB, this, request.Params, request.Trigger);
+                form.ImportData(EbConnectionFactory.DataDB, this, request.Params, request.Trigger, request.RowId);
                 Console.WriteLine("End ImportFormData");
                 data = new WebformDataWrapper { FormData = form.FormData, Status = (int)HttpStatusCodes.OK, Message = "Success" };
             }
