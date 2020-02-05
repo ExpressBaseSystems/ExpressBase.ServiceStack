@@ -1489,6 +1489,10 @@ namespace ExpressBase.ServiceStack
                                         _formattedData = $"<img class='img-thumbnail' src='/images/image.png' style='height:{_height};width:{_width};'/>";
                                     
                                 }
+                                if((col as DVStringColumn).AllowMultilineText)
+                                {
+                                    _formattedData = $"<div class='multi-line-column'>{_formattedData}</div>";
+                                }
                             }
                             string info = string.Empty;
                             if (col.AllowedCharacterLength > 0 || col.InfoWindow.Count > 0)
