@@ -21,7 +21,7 @@ namespace ExpressBase.ServiceStack.Services
 		public GetManageLeadResponse Any(GetManageLeadRequest request)
 		{
 			string SqlQry = @"SELECT id, longname FROM eb_locations WHERE id > 0;
-							  SELECT id, name FROM doctors ORDER BY name;
+							  SELECT id, name FROM hoc_staff WHERE type='doctor' AND eb_del='F' ORDER BY name;
 							  SELECT id, INITCAP(TRIM(fullname)) FROM eb_users WHERE id > 1 ORDER BY fullname;
 							SELECT DISTINCT INITCAP(TRIM(clcity)) AS clcity FROM customers WHERE LENGTH(clcity) > 2 ORDER BY clcity;
 							SELECT DISTINCT INITCAP(TRIM(clcountry)) AS clcountry FROM customers WHERE LENGTH(clcountry) > 2 ORDER BY clcountry;
@@ -31,7 +31,7 @@ namespace ExpressBase.ServiceStack.Services
 							SELECT DISTINCT INITCAP(TRIM(subcategory)) AS subcategory FROM customers WHERE LENGTH(subcategory) > 2 ORDER BY subcategory;
 							SELECT status,nextstatus FROM lead_status WHERE eb_del='F' ORDER BY status;
 							SELECT service FROM lead_service WHERE eb_del='F' ORDER BY service;
-							SELECT id, name FROM nurses ORDER BY name;";
+							SELECT id, name FROM hoc_staff WHERE type='nurse' AND eb_del='F' ORDER BY name;";
 			List<DbParameter> paramList = new List<DbParameter>();
 			Dictionary<int, string> CostCenter = new Dictionary<int, string>();
 			Dictionary<string, int> DocDict = new Dictionary<string, int>();
