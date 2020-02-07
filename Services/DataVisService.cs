@@ -823,7 +823,7 @@ namespace ExpressBase.ServiceStack
             return string.Empty;
         }
 
-        public PrePrcessorReturn PreProcessing(ref EbDataSet _dataset, List<Param> Parameters, EbDataVisualization _dv, User _user, ref List<GroupingDetails> _levels, Boolean _isexcel)
+        public PrePrcessorReturn PreProcessing(ref EbDataSet _dataset, List<Param> Parameters, EbDataVisualization _dv, User _user, ref List<GroupingDetails> _levels, Boolean _isexcel, bool isSQljob = false)
         {
             try
             {
@@ -843,7 +843,7 @@ namespace ExpressBase.ServiceStack
                 this.PreCustomColumDoCalc(ref _dataset, Parameters, _dv, globals);
                 this.GetDictonaries4Columns(_dv);
                 EbDataTable _formattedTable = _dataset.Tables[0].GetEmptyTable();
-                if (_dv.AutoGen)
+                if (_dv.AutoGen || isSQljob)
                     _formattedTable.Columns.Add(_formattedTable.NewDataColumn(_dv.Columns.Count - 1, "action", EbDbTypes.String));
                 _formattedTable.Columns.Add(_formattedTable.NewDataColumn(_dv.Columns.Count, "serial", EbDbTypes.Int32));
                 Dictionary<int, List<object>> Summary = new Dictionary<int, List<object>>();
@@ -1983,18 +1983,7 @@ namespace ExpressBase.ServiceStack
                 Summary[col.Data][1] = (Convert.ToDecimal(Summary[col.Data][0]) / count).ToString("N", cults.NumberFormat);
             }
         }
-
-        public void DoRowGrouping4Sqljob(EbDataRow currentRow, EbDataVisualization Visualization, CultureInfo Culture, User _user, ref EbDataTable FormattedTable, 
-            bool IsMultiLevelRowGrouping, ref Dictionary<string, GroupingDetails> RowGrouping, ref string PreviousGroupingText, ref int CurSortIndex, ref int SerialCount, 
-            int i, int dvColCount, int TotalLevels, ref List<int> AggregateColumnIndexes, ref List<DVBaseColumn> RowGroupingColumns, int RowCount, Globals globals)
-        {
-            IntermediateDic = new Dictionary<int, object>();
-            dependencyTable = CreateDependencyTable(Visualization);
-            CreateIntermediateDict(currentRow, Visualization, Culture, _user, ref FormattedTable, ref globals, false, i);
-            DoRowGroupingCommon(currentRow, Visualization, Culture, _user,ref FormattedTable, IsMultiLevelRowGrouping, ref RowGrouping,
-            ref PreviousGroupingText, ref CurSortIndex, ref SerialCount, i, dvColCount, TotalLevels, ref AggregateColumnIndexes, ref RowGroupingColumns, RowCount);
-
-        }
+       
         public void DoRowGroupingCommon(EbDataRow currentRow, EbDataVisualization Visualization, CultureInfo Culture, User _user, 
             ref EbDataTable FormattedTable, bool IsMultiLevelRowGrouping, ref Dictionary<string, GroupingDetails> RowGrouping, 
             ref string PreviousGroupingText, ref int CurSortIndex, ref int SerialCount, int PrevRowIndex, int dvColCount, int TotalLevels, 
