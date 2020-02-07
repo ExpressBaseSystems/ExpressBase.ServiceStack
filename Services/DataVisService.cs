@@ -582,7 +582,7 @@ namespace ExpressBase.ServiceStack
                     Tree = ReturnObj?.tree,
                     ResponseStatus = this._Responsestatus,
                     ReturnObjString = (_dV is EbCalendarView) ? EbSerializers.Json_Serialize((_dV as EbCalendarView)) : null,
-                    ImageList =JsonConvert.SerializeObject( _ImageList)
+                    ImageList = JsonConvert.SerializeObject(_ImageList)
                 };
                 this.Log.Info(" dataviz dataresponse*****" + dsresponse.Data);
                 EbSerializers.Json_Serialize(dsresponse);
@@ -1073,7 +1073,7 @@ namespace ExpressBase.ServiceStack
                         {
                             _tooltip += "</br>" + this._ebSolution.Locations[CurLocId].WeekHoliday2;
                             cls = "holiday_class week-holiday";
-                        }                            
+                        }
                     }
                     if (DateTime.Now.Date.Equals(date))
                     {
@@ -1169,7 +1169,7 @@ namespace ExpressBase.ServiceStack
                 date = new DateTime(x.Item2.Year, x.Item2.Month, x.Item2.Day, 23, 59, 59);
                 var endDate = DateTimeHelper.EndOfDay(x.Item2);
                 var key = GetKey(startDate, endDate);
-                var _title =  "week " + (i + 1);
+                var _title = "week " + (i + 1);
                 string _tooltip = x.Item1.ToString("dd-MM-yyyy") + " to " + x.Item2.ToString("dd-MM-yyyy");
                 tempdataset.Tables[0].Columns.Add(new EbDataColumn { ColumnIndex = index, ColumnName = key, Type = EbDbTypes.String });
                 if (Modifydv)
@@ -1187,7 +1187,7 @@ namespace ExpressBase.ServiceStack
                         StartDT = startDate,
                         EndDT = endDate,
                         Align = Align.Center,
-                        HeaderTooltipText= _tooltip
+                        HeaderTooltipText = _tooltip
                     };
                     _dv.Columns.Add(col);
                     (_dv as EbCalendarView).DateColumns.Add(col);
@@ -1255,8 +1255,8 @@ namespace ExpressBase.ServiceStack
                 var endDate = new DateTime(date.Year, date.Month, date.Day, 23, 59, 59);
                 var key = GetKey(startDate, endDate);
                 var endmonth = DateTimeFormatInfo.CurrentInfo.GetMonthName(date.Month);
-                var title = "Quarter "+(i+1);
-                string _tooltip = month + "-" + endmonth + "</br>"+ startDate.ToString("dd-MM-yyyy") + " to " + endDate.ToString("dd-MM-yyyy");
+                var title = "Quarter " + (i + 1);
+                string _tooltip = month + "-" + endmonth + "</br>" + startDate.ToString("dd-MM-yyyy") + " to " + endDate.ToString("dd-MM-yyyy");
                 tempdataset.Tables[0].Columns.Add(new EbDataColumn { ColumnIndex = index, ColumnName = key, Type = EbDbTypes.String });
                 if (Modifydv)
                 {
@@ -1294,7 +1294,7 @@ namespace ExpressBase.ServiceStack
             var endDate = new DateTime(paramdate.Year, 6, 30, 23, 59, 59);
             var endmonth = DateTimeFormatInfo.CurrentInfo.GetMonthName(6);
             var key = GetKey(startDate, endDate);
-            var title = "HF "+1;
+            var title = "HF " + 1;
             var _tooltip = month + "-" + endmonth + "</br>" + startDate.ToString("dd-MM-yyyy") + " to " + endDate.ToString("dd-MM-yyyy");
             tempdataset.Tables[0].Columns.Add(new EbDataColumn { ColumnIndex = index, ColumnName = key, Type = EbDbTypes.String });
             if (Modifydv)
@@ -1447,7 +1447,7 @@ namespace ExpressBase.ServiceStack
                 _formattedTable.Rows[i][_formattedTable.Columns.Count - 1] = i + 1;//serial
                 int j = 0;
                 CreateIntermediateDict(row, _dv, _user_culture, _user, ref _formattedTable, ref globals, _isexcel, i);
-                
+
                 if ((_dv as EbTableVisualization) != null)
                 {
                     foreach (DVBaseColumn col in dependencyTable)
@@ -1487,7 +1487,15 @@ namespace ExpressBase.ServiceStack
                                     }
                                     else
                                         _formattedData = $"<img class='img-thumbnail' src='/images/image.png' style='height:{_height};width:{_width};'/>";
-                                    
+
+                                }
+                                if ((col as DVStringColumn).AllowMultilineText)
+                                {
+                                    if ((col as DVStringColumn).NoOfCharactersPerLine > 0 && (col as DVStringColumn).NoOfLines > 0)
+                                    {
+                                        if (_formattedData.ToString().Length > (col as DVStringColumn).NoOfCharactersPerLine)
+                                            _formattedData = GetMultilineText(_formattedData.ToString(), (col as DVStringColumn).NoOfCharactersPerLine, (col as DVStringColumn).NoOfLines);
+                                    }
                                 }
                             }
                             string info = string.Empty;
@@ -1582,7 +1590,30 @@ namespace ExpressBase.ServiceStack
 
         }
 
-        public void CreateIntermediateDict(EbDataRow row, EbDataVisualization _dv, CultureInfo _user_culture, User _user, ref EbDataTable _formattedTable, ref Globals globals,  bool _isexcel,  int i)
+        private object GetMultilineText(string data, int _length, int _lines)
+        {
+            string info = $"<table><tr><td>{data}</td></tr></table>";
+            string formatted = string.Empty;
+            int count = 0;
+            while (data.Length > _length && count< _lines)
+            {
+                //trim the string to the maximum length
+                var trimmedString = data.Substring(0, _length);
+
+                //re-trim if we are in the middle of a word and 
+                trimmedString = trimmedString.Substring(0, Math.Min(trimmedString.Length, trimmedString.LastIndexOf(" ")));
+                formatted += trimmedString + "</br> ";
+                data = data.Remove(0, trimmedString.Length);
+                count++;
+            };
+            if(data.Length > _length) 
+                    formatted = formatted.Substring(0, formatted.LastIndexOf("</br>")) + " ...";
+            else
+                 formatted = formatted + data + " ...";
+            return  "<span class='columntooltip' data-toggle='popover' data-contents='" + info.ToBase64() + "'>" + formatted + "</span>"; ;
+        }
+
+        public void CreateIntermediateDict(EbDataRow row, EbDataVisualization _dv, CultureInfo _user_culture, User _user, ref EbDataTable _formattedTable, ref Globals globals, bool _isexcel, int i)
         {
             foreach (DVBaseColumn col in dependencyTable)
             {
