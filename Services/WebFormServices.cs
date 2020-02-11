@@ -1479,5 +1479,18 @@ namespace ExpressBase.ServiceStack.Services
             Console.WriteLine(msg);
             return new UpdateAllFormTablesResponse() { Message = msg };
         }
+
+        public GetAllRolesResponse Get(GetAllRolesRequest Req)
+        {
+            string query = "SELECT id, role_name FROM eb_roles WHERE COALESCE(eb_del, 'F') = 'F';";
+            EbDataTable datatbl = this.EbConnectionFactory.DataDB.DoQuery(query);
+            Dictionary<int, string> t = new Dictionary<int, string>();
+            foreach (var dr in datatbl.Rows)
+            {
+                t.Add(Convert.ToInt32(dr[0]), dr[1].ToString());
+            }
+
+            return new GetAllRolesResponse { Roles = t };
+        }
     }
 }
