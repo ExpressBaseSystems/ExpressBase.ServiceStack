@@ -1620,7 +1620,12 @@ namespace ExpressBase.ServiceStack
                 try
                 {
                     if (col.IsCustomColumn)
-                        CustomColumDoCalc4Row(row, _dv, globals, col);
+                    {
+                        if (col is DVButtonColumn)
+                            ProcessButtoncolumn(row, globals, col);
+                        else
+                            CustomColumDoCalc4Row(row, _dv, globals, col);
+                    }
                     var cults = col.GetColumnCultureInfo(_user_culture);
                     object _unformattedData = (_dv.AutoGen && col.Name == "eb_action") ? "<i class='fa fa-edit'></i>" : row[col.Data];
                     object _formattedData = _unformattedData;
@@ -1666,6 +1671,19 @@ namespace ExpressBase.ServiceStack
                     Log.Info("PreProcessing in Create IntermediateDictionay........." + e.StackTrace + "Column Name  ......" + col.Name);
                     Log.Info("PreProcessing in Create IntermediateDictionay........." + e.Message + "Column Name  ......" + col.Name);
                     this._Responsestatus.Message = e.Message;
+                }
+            }
+        }
+
+        public void ProcessButtoncolumn(EbDataRow row, Globals globals, DVBaseColumn customCol)
+        {
+            if (customCol is DVButtonColumn)
+            {
+                bool result = (customCol as DVButtonColumn).RenderCondition.EvaluateExpression(row, ref globals);
+                if ((customCol as DVButtonColumn).RenderCondition.RenderAS == AdvancedRenderType.Default)
+                {
+                    if (result == (customCol as DVButtonColumn).RenderCondition.GetBoolValue())
+                        row[customCol.Data] = $"<button class='{(customCol as DVButtonColumn).ButtonClassName}'>{(customCol as DVButtonColumn).ButtonText}</button>";
                 }
             }
         }
