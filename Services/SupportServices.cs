@@ -305,7 +305,7 @@ namespace ExpressBase.ServiceStack.Services
 						fr.ErMsg = "No tickets found";
 					}
 				}
-				else if(fsreq.WhichConsole.Equals("dc"))
+				else if (fsreq.WhichConsole.Equals("dc"))
 				{
 					string sql3 = @"SELECT 
 										support_ticket.title, 
@@ -349,7 +349,7 @@ namespace ExpressBase.ServiceStack.Services
 							st.priority = dt.Rows[i][2].ToString();
 							st.solutionid = dt.Rows[i][3].ToString();
 							DateTime stdate = (DateTime)dt.Rows[i][4];
-							st.NoHour =(tdate - stdate).Hours.ToString() ;
+							st.NoHour = (tdate - stdate).Hours.ToString();
 							st.NoDays = (tdate - stdate).Days.ToString();
 							st.lstmodified = dt.Rows[i][4].ToString();
 							st.status = dt.Rows[i][5].ToString();
@@ -650,7 +650,7 @@ namespace ExpressBase.ServiceStack.Services
 						parameters1.Add(this.InfraConnectionFactory.DataDB.GetNewParameter("fals", EbDbTypes.String, "F"));
 
 					}
-					else 
+					else
 					{
 						sql = string.Format(@"SELECT 
 												support_ticket.title, 
@@ -795,7 +795,12 @@ namespace ExpressBase.ServiceStack.Services
 
 				if (utreq.chngedtkt.Count > 0)
 				{
-
+					//// alternate code for  bleow 2 loop
+					////foreach (var dct in utreq.chngedtkt)
+					////{
+					////	tem += dct.Key + "=" + ":" + dct.Key + ",";
+					////	p.Add(this.InfraConnectionFactory.DataDB.GetNewParameter(":" + dct.Key, EbDbTypes.String, dct.Value));
+					////}
 
 					for (int i = 0; i < DBcolms.Length; i++)
 					{
@@ -906,12 +911,12 @@ namespace ExpressBase.ServiceStack.Services
 				}
 
 				//remove previouse upload files ie set false
-				
-					if (utreq.Filedel.Length > 0)
+
+				if (utreq.Filedel.Length > 0)
+				{
+					for (var m = 0; m < utreq.Filedel.Length; m++)
 					{
-						for (var m = 0; m < utreq.Filedel.Length; m++)
-						{
-							string k1 = String.Format(@"UPDATE 
+						string k1 = String.Format(@"UPDATE 
 											support_ticket_files 
 											SET
 											eb_del=:tru 
@@ -919,36 +924,36 @@ namespace ExpressBase.ServiceStack.Services
 												ticket_id=:tktid
 												and eb_del=:fals
 												and id=:fileid"
-												);
+											);
 
 
-							DbParameter[] parameters5 = {
+						DbParameter[] parameters5 = {
 									this.InfraConnectionFactory.DataDB.GetNewParameter("tru", EbDbTypes.String, "T"),
 									this.InfraConnectionFactory.DataDB.GetNewParameter("fals", EbDbTypes.String, "F"),
 									this.InfraConnectionFactory.DataDB.GetNewParameter("tktid", EbDbTypes.String, utreq.ticketid),
 									this.InfraConnectionFactory.DataDB.GetNewParameter("fileid", EbDbTypes.Int32, utreq.Filedel[m])
 									};
 
-							int dt5 = this.InfraConnectionFactory.DataDB.DoNonQuery(k1, parameters5);
+						int dt5 = this.InfraConnectionFactory.DataDB.DoNonQuery(k1, parameters5);
 						if (dt5 < 1)
 						{
 							utr.ErMsg = "Unexpected error occurred while updating";
 						}
 					}
 
-					}
+				}
 
 
 
-					//to upload images
-					FileUploadCls flupcl = new FileUploadCls();
-					if (utreq.Fileuploadlst.Count > 0)
+				//to upload images
+				FileUploadCls flupcl = new FileUploadCls();
+				if (utreq.Fileuploadlst.Count > 0)
+				{
+					for (var i = 0; i < utreq.Fileuploadlst.Count; i++)
 					{
-						for (var i = 0; i < utreq.Fileuploadlst.Count; i++)
-						{
-							byte[] sa = utreq.Fileuploadlst[i].Filecollection;
+						byte[] sa = utreq.Fileuploadlst[i].Filecollection;
 
-							string sql3 = @"INSERT INTO  support_ticket_files(
+						string sql3 = @"INSERT INTO  support_ticket_files(
 																		ticket_id,
 																		eb_del,
 																		img_bytea,
@@ -964,7 +969,7 @@ namespace ExpressBase.ServiceStack.Services
 																		:flname,
 																		:solu
 																		)RETURNING id;";
-							DbParameter[] parameters3 = {
+						DbParameter[] parameters3 = {
 									this.InfraConnectionFactory.DataDB.GetNewParameter("fals", EbDbTypes.String, "F"),
 									this.InfraConnectionFactory.DataDB.GetNewParameter("tktid", EbDbTypes.String, utreq.ticketid),
 									this.InfraConnectionFactory.DataDB.GetNewParameter("solu", EbDbTypes.String, utreq.solution_id),
@@ -973,20 +978,20 @@ namespace ExpressBase.ServiceStack.Services
 									this.InfraConnectionFactory.DataDB.GetNewParameter("flname", EbDbTypes.String, utreq.Fileuploadlst[i].FileName),
 									};
 
-							EbDataTable dt4 = this.InfraConnectionFactory.DataDB.DoQuery(sql3, parameters3);
-							var iden = Convert.ToInt32(dt4.Rows[0][0]);
-							if (dt4.Rows.Count < 0)
-							{
-								utr.ErMsg = "Unexpected error occurred while updating";
-							}
-
+						EbDataTable dt4 = this.InfraConnectionFactory.DataDB.DoQuery(sql3, parameters3);
+						var iden = Convert.ToInt32(dt4.Rows[0][0]);
+						if (dt4.Rows.Count < 0)
+						{
+							utr.ErMsg = "Unexpected error occurred while updating";
 						}
+
 					}
+				}
 
 
 
 
-				
+
 				utr.status = true;
 			}
 			catch (Exception e)
@@ -1224,7 +1229,7 @@ namespace ExpressBase.ServiceStack.Services
 			SupportHistoryResponse Shr = new SupportHistoryResponse();
 			try
 			{
-					string Sql = @"SELECT 
+				string Sql = @"SELECT 
 								id, 
 								ticket_id,
 								solution_id, 
@@ -1240,19 +1245,19 @@ namespace ExpressBase.ServiceStack.Services
 							eb_del=:fals
 							;";
 
-					DbParameter[] parameters = {
+				DbParameter[] parameters = {
 						this.InfraConnectionFactory.DataDB.GetNewParameter("ticketno", EbDbTypes.String, Shreq.TicketNo),
 						this.InfraConnectionFactory.DataDB.GetNewParameter("fals", EbDbTypes.String, "F")
 							};
-				
+
 				EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(Sql, parameters);
-				
+
 				if (dt.Rows.Count > 0)
 				{
 					for (int i = 0; i < dt.Rows.Count; i++)
 					{
 						SupportHistory Sh = new SupportHistory();
-						Sh.Id =(int) dt.Rows[i][0];
+						Sh.Id = (int)dt.Rows[i][0];
 						Sh.TicketId = dt.Rows[i][1].ToString();
 						Sh.SolutionId = dt.Rows[i][2].ToString();
 						Sh.Field = dt.Rows[i][3].ToString();
