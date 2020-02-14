@@ -1,6 +1,7 @@
 ﻿using ExpressBase.Objects.ServiceStack_Artifacts;
 using System;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -11,16 +12,17 @@ namespace ExpressBase.ServiceStack.Services
         public object Any(IoTDataRequest request)
         {
             request.SolnId = "ebdblvnzp5spac20200127092930";
-            string _sql = $"INSERT INTO ronds_sample(json) values({request.Data});";
+            string _sql = "INSERT INTO ronds_sample(json) values(:json);";
             try
             {
                 this.EbConnectionFactory = new Common.Data.EbConnectionFactory(request.SolnId, this.Redis);
+                DbParameter[] parameters = new DbParameter[] { this.EbConnectionFactory.DataDB.GetNewParameter("json", Common.Structures.EbDbTypes.String, request.Data) };
+                int result = this.EbConnectionFactory.ObjectsDB.DoNonQuery(_sql, parameters);
             }
-            catch(Exception e)
+            catch (Exception e)
             {
-                Console.WriteLine("IoT -----------------"+ e.Message + "Stacktrace:----------"+e.StackTrace);
+                Console.WriteLine("IoT -----------------" + e.Message + "Stacktrace:----------" + e.StackTrace);
             }
-            int result = this.EbConnectionFactory.ObjectsDB.DoNonQuery(_sql);
             return new IoTDataResponse();
         }
     }
