@@ -1001,6 +1001,21 @@ namespace ExpressBase.ServiceStack
                             Json = request.Json
                         });
                     }
+                    else if (obj is EbMobilePage)
+                    {
+                        if ((obj as EbMobilePage).Container is EbMobileForm)
+                        {
+                            MobileServices mobservice = base.ResolveService<MobileServices>();
+                            CreateMobileFormTableResponse res = mobservice.Post(new CreateMobileFormTableRequest
+                            {
+                                MobilePage = obj as EbMobilePage,
+                                Apps = request.Apps,
+                                SolnId = request.SolnId,
+                                UserId = request.UserId,
+                                WhichConsole = request.WhichConsole
+                            });
+                        }
+                    }
                 }
             }
             catch (FormException e)

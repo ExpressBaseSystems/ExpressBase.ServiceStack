@@ -348,8 +348,7 @@ namespace ExpressBase.ServiceStack.Services
         public DeleteJobExecutionResponse Post(DeleteJobExecutionRequest request)
         {
             DeleteJobExecutionResponse resp = new DeleteJobExecutionResponse();
-            WebFormServices webFormServices = base.ResolveService<WebFormServices>();
-            User User = this.Redis.Get<User>(UserAuthId);
+
             using (DbConnection Connection = this.EbConnectionFactory.DataDB.GetNewConnection())
             {
                 Connection.Open();
@@ -358,26 +357,54 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     string query = "SELECT result FROM eb_joblogs_lines WHERE logmaster_id = :masterid AND COALESCE( eb_del,'F') ='F'; ";
                     DbParameter[] parameteres = { this.EbConnectionFactory.DataDB.GetNewParameter("masterid", EbDbTypes.Int32, request.MasterId) };
-                    EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(query, parameteres);
+                    EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(Connection, query, parameteres);
+
                     List<int> _rowIds = new List<int>();
-                    foreach (EbDataRow dr in dt.Rows)
+                    if (dt.Rows.Count > 0)
                     {
-                        object result = JsonConvert.DeserializeObject(dr["result"].ToString());
-                        _rowIds.Add((result as InsertOrUpdateFormDataResp).RecordId);
+                        WebFormServices webFormServices = base.ResolveService<WebFormServices>();
+                        User User = this.Redis.Get<User>(request.UserAuthId);
+                        string _pusherRefid = string.Empty;
+
+                        foreach (EbDataRow dr in dt.Rows)
+                        {
+                            SqlJobResults results = JsonConvert.DeserializeObject<SqlJobResults>(dr["result"].ToString());
+                            SqlJobResult _result = results.GetDataPusher();
+
+                            if (_result != null)
+                            {
+                                if (_pusherRefid == string.Empty && _result.RefId != string.Empty)
+                                    _pusherRefid = _result.RefId;
+                                _rowIds.Add(_result.RtnId);
+                            }
+                        }
+                        if (_pusherRefid != null)
+                        {
+                            DeleteDataFromWebformResponse response = webFormServices.Any(new DeleteDataFromWebformRequest
+                            {
+                                RefId = _pusherRefid,
+                                RowId = _rowIds,
+                                UserObj = User,
+                                TransactionConnection = Connection
+                            });
+
+                            string del_master = "UPDATE eb_joblogs_master SET eb_del ='T' WHERE  id = :masterid; ";
+                            DbParameter[] parameteres1 = { this.EbConnectionFactory.DataDB.GetNewParameter("masterid", EbDbTypes.Int32, request.MasterId) };
+                            int c = this.EbConnectionFactory.DataDB.DoNonQuery(Connection, del_master, parameteres1);
+
+                            string del_lines = "UPDATE eb_joblogs_lines SET eb_del ='T' WHERE logmaster_id = :masterid AND COALESCE( eb_del,'F') ='F' ;";
+                            DbParameter[] parameteres2 = { this.EbConnectionFactory.DataDB.GetNewParameter("masterid", EbDbTypes.Int32, request.MasterId) };
+                            int d = this.EbConnectionFactory.DataDB.DoNonQuery(Connection, del_lines, parameteres2);
+                        }
                     }
-                    DeleteDataFromWebformResponse response = webFormServices.Any(new DeleteDataFromWebformRequest
-                    {
-                        RefId = request.RefId,
-                        RowId = _rowIds,
-                        UserObj = User
-                    });
                     transaction.Commit();
+                    resp.ResponseStatus.Message = "Deletion completed";
                 }
                 catch (Exception e)
                 {
+                    resp.ResponseStatus.Message = "Deletion Failed";
                     Console.WriteLine(e.Message + e.StackTrace);
                     transaction.Rollback();
-                    throw e;
                 }
             }
             return resp;
@@ -500,9 +527,9 @@ namespace ExpressBase.ServiceStack.Services
             }
 
             if (IsBeforeLoop)
-                MasterResult.Add(new SqlJobResult { RefId = sqlreader.Reference, Message = message, Type = "DataReader" });
+                MasterResult.Add(new SqlJobResult { RefId = sqlreader.Reference, Message = message, Type = ResourceType.DataReader });
             else
-                LinesResult.Add(new SqlJobResult { RefId = sqlreader.Reference, Message = message, Type = "DataReader" });
+                LinesResult.Add(new SqlJobResult { RefId = sqlreader.Reference, Message = message, Type = ResourceType.DataReader });
             return dt;
         }
 
@@ -541,7 +568,7 @@ namespace ExpressBase.ServiceStack.Services
                 Console.WriteLine(e.Message + e.StackTrace);
             }
 
-            LinesResult.Add(new SqlJobResult { RefId = writer.Reference, Message = message, Type = "DataWriter" });
+            LinesResult.Add(new SqlJobResult { RefId = writer.Reference, Message = message, Type = ResourceType.DataWriter });
 
             if (status > 0)
                 return true;
@@ -551,7 +578,7 @@ namespace ExpressBase.ServiceStack.Services
 
         public bool DoLoop(EbLoop loop, int step, int parentindex)
         {
-            string message;
+            // string message;
             EbDataTable _table = null;
             IsBeforeLoop = false;
             GlobalParams = Proc(this.ExternalGlobalParams);
@@ -591,20 +618,20 @@ namespace ExpressBase.ServiceStack.Services
                         }
 
                         ExecuteLoop(loop, 0, step, parentindex, _table.Rows[i], null);
-                        message = "Loop Execution Success. counter " + i + " of " + _rowcount;
+                        //    message = "Loop Execution Success. counter " + i + " of " + _rowcount;
                     }
                     catch (Exception e)
                     {
-                        message = "Loop Failed to execute. counter " + i + " of " + _rowcount;
+                        // message = "Loop Failed to execute. counter " + i + " of " + _rowcount;
                         Console.WriteLine(e.Message + e.StackTrace);
                     }
-                    LinesResult.Add(new SqlJobResult { Message = message, Type="Loop" });
+                    // LinesResult.Add(new SqlJobResult { Message = message, Type = ResourceType.Loop }); 
                 }
-                MasterResult.Add(new SqlJobResult { Message = "Loop execution Success", Type = "Loop" });
+                MasterResult.Add(new SqlJobResult { Message = "Loop execution Success", Type = ResourceType.Loop });
             }
             catch (Exception e)
             {
-                MasterResult.Add(new SqlJobResult { Message = "Loop execution Failed" + e.Message, Type = "Loop" });
+                MasterResult.Add(new SqlJobResult { Message = "Loop execution Failed" + e.Message, Type = ResourceType.Loop });
                 Console.WriteLine(e.Message + e.StackTrace);
             }
             return true;
@@ -745,7 +772,7 @@ namespace ExpressBase.ServiceStack.Services
                 throw e;
             }
 
-            LinesResult.Add(new SqlJobResult { Message = message, Type = "Processor" });
+            LinesResult.Add(new SqlJobResult { Message = message, Type = ResourceType.Processor });
             return script;
         }
 
@@ -799,9 +826,9 @@ namespace ExpressBase.ServiceStack.Services
                 TransactionConnection = null;
             }
             if (IsBeforeLoop)
-                MasterResult.Add(new SqlJobResult { Message = message, Type = "Transaction" });
+                MasterResult.Add(new SqlJobResult { Message = message, Type = ResourceType.Transaction });
             else
-                LinesResult.Add(new SqlJobResult { Message = message, Type = "Transaction" });
+                LinesResult.Add(new SqlJobResult { Message = message, Type = ResourceType.Transaction });
             return true;
         }
 
@@ -877,7 +904,7 @@ namespace ExpressBase.ServiceStack.Services
                 resp.Message = e.Message;
                 Console.WriteLine(e.Message + e.StackTrace);
             }
-            LinesResult.Add(new SqlJobResult { RefId = dataPusher.Pusher, Message = resp.Message, Status = resp.Status.ToString(), RtnId = resp.RecordId, Type = "DataPusher" });
+            LinesResult.Add(new SqlJobResult { RefId = dataPusher.Pusher, Message = resp.Message, Status = resp.Status.ToString(), RtnId = resp.RecordId, Type = ResourceType.DataPusher });
             return resp;
         }
 
@@ -890,24 +917,25 @@ namespace ExpressBase.ServiceStack.Services
                 foreach (EbDataColumn column in __columns)
                 {
                     DVBaseColumn _col = null;
-                    if (column.Type == EbDbTypes.String)
-                        _col = new DVStringColumn { Data = column.ColumnIndex, Name = column.ColumnName, sTitle = column.ColumnName, Type = column.Type, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
-                    else if (column.Type == EbDbTypes.Int16 || column.Type == EbDbTypes.Int32 || column.Type == EbDbTypes.Int64 || column.Type == EbDbTypes.Double || column.Type == EbDbTypes.Decimal || column.Type == EbDbTypes.VarNumeric)
-                        _col = new DVNumericColumn { Data = column.ColumnIndex, Name = column.ColumnName, sTitle = column.ColumnName, Type = column.Type, bVisible = true, sWidth = "100px", ClassName = "tdheight dt-body-right" };
-                    else if (column.Type == EbDbTypes.Boolean)
-                        _col = new DVBooleanColumn { Data = column.ColumnIndex, Name = column.ColumnName, sTitle = column.ColumnName, Type = column.Type, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
-                    else if (column.Type == EbDbTypes.DateTime || column.Type == EbDbTypes.Date || column.Type == EbDbTypes.Time)
-                        _col = new DVDateTimeColumn { Data = column.ColumnIndex, Name = column.ColumnName, sTitle = column.ColumnName, Type = column.Type, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
-                    else if (column.Type == EbDbTypes.Bytea)
-                        _col = new DVStringColumn { Data = column.ColumnIndex, Name = column.ColumnName, sTitle = column.ColumnName, Type = column.Type, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
-                    _col.RenderType = _col.Type;
-                    if (column.ColumnName == "keyvalues" || column.ColumnName == "logmaster_id")
-                        _col.bVisible = false;
-                    if (column.Type == EbDbTypes.DateTime)
-                        (_col as DVDateTimeColumn).Format = DateFormat.DateTime;
-                    _col.Font = null;
-                    _col.Align = Align.Left;
-                    Columns.Add(_col);
+                    if (column.ColumnName == "")
+                        //if (column.Type == EbDbTypes.String)
+                        //    _col = new DVStringColumn { Data = column.ColumnIndex, Name = column.ColumnName, sTitle = column.ColumnName, Type = column.Type, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
+                        //else if (column.Type == EbDbTypes.Int16 || column.Type == EbDbTypes.Int32 || column.Type == EbDbTypes.Int64 || column.Type == EbDbTypes.Double || column.Type == EbDbTypes.Decimal || column.Type == EbDbTypes.VarNumeric)
+                        //    _col = new DVNumericColumn { Data = column.ColumnIndex, Name = column.ColumnName, sTitle = column.ColumnName, Type = column.Type, bVisible = true, sWidth = "100px", ClassName = "tdheight dt-body-right" };
+                        //else if (column.Type == EbDbTypes.Boolean)
+                        //    _col = new DVBooleanColumn { Data = column.ColumnIndex, Name = column.ColumnName, sTitle = column.ColumnName, Type = column.Type, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
+                        //else if (column.Type == EbDbTypes.DateTime || column.Type == EbDbTypes.Date || column.Type == EbDbTypes.Time)
+                        //    _col = new DVDateTimeColumn { Data = column.ColumnIndex, Name = column.ColumnName, sTitle = column.ColumnName, Type = column.Type, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
+                        //else if (column.Type == EbDbTypes.Bytea)
+                        //    _col = new DVStringColumn { Data = column.ColumnIndex, Name = column.ColumnName, sTitle = column.ColumnName, Type = column.Type, bVisible = true, sWidth = "100px", ClassName = "tdheight" };
+                        //_col.RenderType = _col.Type;
+                        //if (column.ColumnName == "keyvalues" || column.ColumnName == "logmaster_id")
+                        //    _col.bVisible = false;
+                        //if (column.Type == EbDbTypes.DateTime)
+                        //    (_col as DVDateTimeColumn).Format = DateFormat.DateTime;
+                        //_col.Font = null;
+                        //_col.Align = Align.Left;
+                        Columns.Add(_col);
                 }
             }
             catch (Exception e)
@@ -932,7 +960,7 @@ namespace ExpressBase.ServiceStack.Services
         }
 
     }
-     
+
     [Restrict(InternalOnly = true)]
     public class SqlJobInternalService : EbMqBaseService
     {

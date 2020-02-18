@@ -1203,7 +1203,7 @@ namespace ExpressBase.ServiceStack.Services
                     var sql1 = EbConnectionFactory.DataDB.EB_LOGIN_ACTIVITY_USERS;
                     DbParameter[] parameters1 = {
                     this.EbConnectionFactory.DataDB.GetNewParameter("islg", EbDbTypes.String, "F"),
-                    this.EbConnectionFactory.DataDB.GetNewParameter("usrid", EbDbTypes.Int32, LaReq.UserId)
+                    this.EbConnectionFactory.DataDB.GetNewParameter("usrid", EbDbTypes.Int32, LaReq.TargetUser)
                     };
                     EbDataTable dt3 = this.EbConnectionFactory.DataDB.DoQuery(sql1, parameters1);
                     if (dt3.Rows.Count > 0)
