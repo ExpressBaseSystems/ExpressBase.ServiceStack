@@ -1752,8 +1752,24 @@ namespace ExpressBase.ServiceStack
                             {
                                 _hourCount.Add(key, new DynamicObj());
                             }
+                            if(datacol.ConditionalFormating.Count >0)
+                            {
+                                foreach (EbDataRow dr in Customrows)
+                                {
+                                    if (DateTimeHelper.IsBewteenTwoDates(Convert.ToDateTime(dr[DateColumn.OIndex]), CalendarCol.StartDT, CalendarCol.EndDT))
+                                    {
+                                        if (_hourCount[CalendarCol.Name].Row == null)
+                                            _hourCount[CalendarCol.Name].Row = System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(string.Join(",", dr.ToArray())));
 
-                            if (datacol.AggregateFun == AggregateFun.Count)
+                                        var _data = dr[datacol.OIndex];
+
+                                        this.conditinallyformatColumn(datacol, ref _data, _data, dr, ref globals);
+
+                                        _hourCount[CalendarCol.Name].Value = _data; 
+                                    }
+                                }
+                            }
+                            else if (datacol.AggregateFun == AggregateFun.Count)
                             {
                                 foreach (EbDataRow dr in Customrows)
                                 {
@@ -1763,8 +1779,8 @@ namespace ExpressBase.ServiceStack
                                         {
                                             if (_hourCount[CalendarCol.Name].Row == null)
                                                 _hourCount[CalendarCol.Name].Row = System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(string.Join(",", dr.ToArray())));
-
-                                            _hourCount[CalendarCol.Name].Value++;
+                                            var data = Convert.ToInt32(_hourCount[CalendarCol.Name].Value);
+                                            _hourCount[CalendarCol.Name].Value = data++;
                                         }
                                     }
                                     if (datacol.Type == EbDbTypes.Int32 || datacol.Type == EbDbTypes.Int64 || datacol.Type == EbDbTypes.Decimal)
@@ -1773,7 +1789,9 @@ namespace ExpressBase.ServiceStack
                                         {
                                             if (_hourCount[CalendarCol.Name].Row == null)
                                                 _hourCount[CalendarCol.Name].Row = System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(string.Join(",", dr.ToArray())));
-                                            _hourCount[CalendarCol.Name].Value++;
+
+                                            var data = Convert.ToInt32(_hourCount[CalendarCol.Name].Value);
+                                            _hourCount[CalendarCol.Name].Value = data++;
                                         }
                                     }
                                 }
@@ -1791,14 +1809,15 @@ namespace ExpressBase.ServiceStack
                                             var _data = dr[datacol.OIndex];
                                             if (_hourCount[CalendarCol.Name].Row == null)
                                                 _hourCount[CalendarCol.Name].Row = System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(string.Join(",", dr.ToArray())));
-
-                                            _hourCount[CalendarCol.Name].Value += Convert.ToInt32(_data);
+                                            var data = Convert.ToInt32(_hourCount[CalendarCol.Name].Value);
+                                            _hourCount[CalendarCol.Name].Value = data+ Convert.ToInt32(_data);
                                         }
                                     }
                                 }
                             }
 
                             var ValueTo = this.formatColumn(datacol as CalendarDynamicColumn, _hourCount[col.Name].Value, _user_culture, _user, ref globals);
+                            ValueTo = (ValueTo == null) ? "" : ValueTo;
 
                             _tooltip += $"<tr><td> {datacol.Name} &nbsp; : &nbsp; {ValueTo}</td></tr>";
 
@@ -1835,9 +1854,13 @@ namespace ExpressBase.ServiceStack
                 {
                     if (col.SubType == NumericSubType.None)
                     {
-                        //if(col.ConditionalFormating.Count >0)
+                        //if (col.ConditionalFormating.Count > 0)
+                        //{
                         //    this.conditinallyformatColumn(col, ref _formattedData, _unformattedData, ref globals);
-                        return (Convert.ToInt32(_formattedData) == 0) ? string.Empty : _formattedData.ToString();
+                        //}
+                        //else
+                        // return (Convert.ToInt32(_formattedData) == 0) ? string.Empty : _formattedData.ToString();
+                        return _formattedData;
                     }
                     else
                     {
@@ -2004,7 +2027,6 @@ namespace ExpressBase.ServiceStack
             }
 
         }
-
 
         public string GetTreeHtml(object data, bool isgroup, int level)
         {
@@ -2438,7 +2460,7 @@ namespace ExpressBase.ServiceStack
     public class DynamicObj
     {
         public string Row;
-        public decimal Value;
+        public object Value;
     }
 
     public class HourCountDictionary : Dictionary<string, DynamicObj>
