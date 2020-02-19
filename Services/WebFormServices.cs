@@ -754,7 +754,7 @@ namespace ExpressBase.ServiceStack.Services
                         if (form.SolutionObj.Locations.ContainsKey(request.CurrentLoc))
                             form.UserObj.Preference.DefaultLocation = request.CurrentLoc;
                     }
-                    form.GetEmptyModel();                    
+                    form.GetEmptyModel();
                 }
                 if (!(form.HasPermission(OperationConstants.VIEW, form.LocationId) || form.HasPermission(OperationConstants.NEW, form.LocationId) || form.HasPermission(OperationConstants.EDIT, form.LocationId)))
                 {
@@ -834,7 +834,7 @@ namespace ExpressBase.ServiceStack.Services
                 form.RefId = request.RefId;
                 form.UserObj = this.Redis.Get<User>(request.UserAuthId);
                 form.SolutionObj = GetSolutionObject(request.SolnId);
-                form.ImportData(EbConnectionFactory.DataDB, this, request.Params, request.Trigger);
+                form.ImportData(EbConnectionFactory.DataDB, this, request.Params, request.Trigger, request.RowId);
                 Console.WriteLine("End ImportFormData");
                 data = new WebformDataWrapper { FormData = form.FormData, Status = (int)HttpStatusCodes.OK, Message = "Success" };
             }
@@ -1020,11 +1020,15 @@ namespace ExpressBase.ServiceStack.Services
         public DeleteDataFromWebformResponse Any(DeleteDataFromWebformRequest request)
         {
             EbWebForm FormObj = GetWebFormObject(request.RefId);
-            FormObj.TableRowId = request.RowId;
             FormObj.UserObj = request.UserObj;
+            foreach (int _rowId in request.RowId)
+            {
+                FormObj.TableRowId = _rowId;
+                FormObj.Delete(EbConnectionFactory.DataDB);
+            }
             return new DeleteDataFromWebformResponse
             {
-                RowAffected = FormObj.Delete(EbConnectionFactory.DataDB)
+                RowAffected = request.RowId.Count()
             };
         }
 
@@ -1052,7 +1056,7 @@ namespace ExpressBase.ServiceStack.Services
                 Console.WriteLine("InsertOrUpdateFormDataRqst PrepareWebFormData start : " + DateTime.Now);
                 FormObj.PrepareWebFormData(this.EbConnectionFactory.DataDB, this, request.PushJson, request.FormGlobals);
                 Console.WriteLine("InsertOrUpdateFormDataRqst Save start : " + DateTime.Now);
-                string r = FormObj.Save(this.EbConnectionFactory.DataDB);
+                string r = FormObj.Save(this.EbConnectionFactory.DataDB, this, request.TransactionConnection);
                 Console.WriteLine("InsertOrUpdateFormDataRqst returning");
                 return new InsertOrUpdateFormDataResp() { Status = (int)HttpStatusCodes.OK, Message = "success", RecordId = FormObj.TableRowId };
             }
@@ -1474,6 +1478,19 @@ namespace ExpressBase.ServiceStack.Services
             }
             Console.WriteLine(msg);
             return new UpdateAllFormTablesResponse() { Message = msg };
+        }
+
+        public GetAllRolesResponse Get(GetAllRolesRequest Req)
+        {
+            string query = "SELECT id, role_name FROM eb_roles WHERE COALESCE(eb_del, 'F') = 'F';";
+            EbDataTable datatbl = this.EbConnectionFactory.DataDB.DoQuery(query);
+            Dictionary<int, string> t = new Dictionary<int, string>();
+            foreach (var dr in datatbl.Rows)
+            {
+                t.Add(Convert.ToInt32(dr[0]), dr[1].ToString());
+            }
+
+            return new GetAllRolesResponse { Roles = t };
         }
     }
 }

@@ -306,13 +306,13 @@ namespace ExpressBase.ServiceStack
                 query = EbConnectionFactory.ObjectsDB.EB_OBJ_ALL_VER_WIHOUT_CIRCULAR_REF_REFID;
                 parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("dominant", EbDbTypes.String, request.EbObjectRefId));
             }
-
+            query += "SELECT id, role_name FROM eb_roles WHERE COALESCE(eb_del, 'F') = 'F';";
             parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("obj_type", EbDbTypes.Int32, request.EbObjType));
-            EbDataTable dt = EbConnectionFactory.ObjectsDB.DoQuery(query, parameters.ToArray());
+            EbDataSet ds = EbConnectionFactory.ObjectsDB.DoQueries(query, parameters.ToArray());
 
             Dictionary<string, List<EbObjectWrapper>> obj_dict = new Dictionary<string, List<EbObjectWrapper>>();
             List<EbObjectWrapper> wrap_list = null;
-            foreach (EbDataRow dr in dt.Rows)
+            foreach (EbDataRow dr in ds.Tables[0].Rows)
             {
                 string _nameKey = dr[1].ToString();
                 if (!obj_dict.ContainsKey(_nameKey))
@@ -330,8 +330,13 @@ namespace ExpressBase.ServiceStack
                     RefId = dr[5].ToString()
                 });
             }
+            Dictionary<int, string> _roles = new Dictionary<int, string>();
+            foreach (EbDataRow dr in ds.Tables[1].Rows)
+            {
+                _roles.Add(Convert.ToInt32(dr[0]), dr[1].ToString());
+            }
 
-            return new EbObjAllVerWithoutCircularRefResp { Data = obj_dict };
+            return new EbObjAllVerWithoutCircularRefResp { Data = obj_dict, Roles = _roles };
         }
 
         [CompressResponse]
@@ -995,6 +1000,21 @@ namespace ExpressBase.ServiceStack
                             UserAuthId = request.UserAuthId,
                             Json = request.Json
                         });
+                    }
+                    else if (obj is EbMobilePage)
+                    {
+                        if ((obj as EbMobilePage).Container is EbMobileForm)
+                        {
+                            MobileServices mobservice = base.ResolveService<MobileServices>();
+                            CreateMobileFormTableResponse res = mobservice.Post(new CreateMobileFormTableRequest
+                            {
+                                MobilePage = obj as EbMobilePage,
+                                Apps = request.Apps,
+                                SolnId = request.SolnId,
+                                UserId = request.UserId,
+                                WhichConsole = request.WhichConsole
+                            });
+                        }
                     }
                 }
             }

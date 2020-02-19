@@ -289,270 +289,280 @@ namespace ExpressBase.ServiceStack
 
                 DataSourceDataResponse dsresponse = null;
                 //this._replaceEbColumns = request.ReplaceEbColumns;
-
-                var _ds = this.Redis.Get<EbDataReader>(request.RefId);
-
-                if (_ds == null)
+                EbDataReader _ds = null;
+                EbDataSet _dataset = null;
+                bool _isPaged = false;
+                if (request.RefId != string.Empty && request.RefId != null)
+                    _ds = this.Redis.Get<EbDataReader>(request.RefId);
+                else if (_dV.Sql != null)
                 {
-                    var myService = base.ResolveService<EbObjectService>();
-                    var result = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = request.RefId });
-                    _ds = EbSerializers.Json_Deserialize(result.Data[0].Json);
-                    Redis.Set<EbDataReader>(request.RefId, _ds);
+                    _ds = new EbDataReader { Sql = _dV.Sql };
+                    request.Params.AddRange(_dV.ParamsList);
                 }
-                if (_ds.FilterDialogRefId != string.Empty)
+                else
+                    _dataset = GetDatafromUrl(_dV.Url);
+                if (_dataset == null)
                 {
-                    var _dsf = this.Redis.Get<EbFilterDialog>(_ds.FilterDialogRefId);
-                    if (_dsf == null)
+                    if (_ds == null)
                     {
                         var myService = base.ResolveService<EbObjectService>();
-                        var result = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = _ds.FilterDialogRefId });
-                        _dsf = EbSerializers.Json_Deserialize(result.Data[0].Json);
-                        Redis.Set<EbFilterDialog>(_ds.FilterDialogRefId, _dsf);
+                        var result = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = request.RefId });
+                        _ds = EbSerializers.Json_Deserialize(result.Data[0].Json);
+                        Redis.Set<EbDataReader>(request.RefId, _ds);
                     }
-                    if (!(_dV is EbCalendarView) && (request.Params == null || request.Params.Count == 2))
+                    if (_ds.FilterDialogRefId != string.Empty && _ds.FilterDialogRefId != null)
                     {
-                        if (request.Params.Count == 2)
+                        var _dsf = this.Redis.Get<EbFilterDialog>(_ds.FilterDialogRefId);
+                        if (_dsf == null)
                         {
-                            request.Params = request.Params.Concat(_dsf.GetDefaultParams()).ToList();
+                            var myService = base.ResolveService<EbObjectService>();
+                            var result = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = _ds.FilterDialogRefId });
+                            _dsf = EbSerializers.Json_Deserialize(result.Data[0].Json);
+                            Redis.Set<EbFilterDialog>(_ds.FilterDialogRefId, _dsf);
                         }
-                        else
+                        if (!(_dV is EbCalendarView) && (request.Params == null || request.Params.Count == 2))
                         {
-                            request.Params = _dsf.GetDefaultParams();
-                        }
-                    }
-                }
-                string _sql = string.Empty;
-                string tempsql = string.Empty;
-
-                bool _isPaged = false;
-                if (_ds != null && !(_dV is EbCalendarView))
-                {
-                    string _c = string.Empty;
-                    DVBaseColumn Treecol = null;
-                    DVBaseColumn AutoResolve = null;
-                    if (_dV is EbTableVisualization)
-                    {
-                        Treecol = this.Check4Tree((_dV as EbTableVisualization));
-                    }
-
-                    if (request.TFilters != null && request.TFilters.Count > 0)
-                    {
-                        foreach (TFilters _dic in request.TFilters)
-                        {
-                            string _cond = string.Empty;
-                            var op = _dic.Operator.Trim(); var col = _dic.Column; var val = _dic.Value; var type = _dic.Type;
-                            var array = _dic.Value.Split("|");
-                            AutoResolve = _dV.Columns.Find(x => x.Name == col && x.AutoResolve);
-                            if (AutoResolve != null)
+                            if (request.Params.Count == 2)
                             {
-                                string _auto = string.Empty;
+                                request.Params = request.Params.Concat(_dsf.GetDefaultParams()).ToList();
+                            }
+                            else
+                            {
+                                request.Params = _dsf.GetDefaultParams();
+                            }
+                        }
+                    }
+                    string _sql = string.Empty;
+                    string tempsql = string.Empty;
+
+                    if (_ds != null && !(_dV is EbCalendarView))
+                    {
+                        string _c = string.Empty;
+                        DVBaseColumn Treecol = null;
+                        DVBaseColumn AutoResolve = null;
+                        if (_dV is EbTableVisualization)
+                        {
+                            Treecol = this.Check4Tree((_dV as EbTableVisualization));
+                        }
+
+                        if (request.TFilters != null && request.TFilters.Count > 0)
+                        {
+                            foreach (TFilters _dic in request.TFilters)
+                            {
+                                string _cond = string.Empty;
+                                var op = _dic.Operator.Trim(); var col = _dic.Column; var val = _dic.Value; var type = _dic.Type;
+                                var array = _dic.Value.Split("|");
+                                AutoResolve = _dV.Columns.Find(x => x.Name == col && x.AutoResolve);
+                                if (AutoResolve != null)
+                                {
+                                    string _auto = string.Empty;
+                                    for (int i = 0; i < array.Length; i++)
+                                    {
+                                        if (array[i].Trim() != "")
+                                        {
+                                            col = AutoResolve.ColumnQueryMapping.DisplayMember[0].Name;
+                                            if (op == "x*")
+                                                _auto += string.Format(" LOWER({0}) LIKE LOWER('{1}%') OR", col, val);
+                                            else if (op == "*x")
+                                                _auto += string.Format(" LOWER({0}) LIKE LOWER('%{1}') OR", col, val);
+                                            else if (op == "*x*")
+                                                _auto += string.Format(" LOWER({0}) LIKE LOWER('%{1}%') OR ", col, val);
+                                            else if (op == "=")
+                                                _auto += string.Format(" LOWER({0}) = LOWER('{1}') OR", col, val);
+                                            else
+                                                _auto += string.Format(" {0} {1} '{2}' OR", col, op, val);
+                                        }
+                                    }
+                                    int _place = _auto.LastIndexOf("OR");
+                                    string ccc = _auto.Substring(0, _place);
+                                    array = GetValue4Columns(_dV as EbTableVisualization, ccc).Split(",");
+                                    if (array[0].Trim() == "")
+                                        _cond += string.Format(" {0} = '{1}' OR", _dic.Column, 0);
+                                    else
+                                        op = "=";
+                                }
+                                else if (col == "eb_created_by" || col == "eb_lastmodified_by" || col == "eb_loc_id")
+                                {
+                                    if (col == "eb_created_by" || col == "eb_lastmodified_by")
+                                    {
+                                        if (this._ebSolution.Users != null)
+                                        {
+                                            if (op == "x*")
+                                                array = this._ebSolution.Users.Where(pair => pair.Value.StartsWith(array[0].Trim())).Select(pair => pair.Key.ToString()).ToArray();
+                                            else if (op == "*x")
+                                                array = this._ebSolution.Users.Where(pair => pair.Value.EndsWith(array[0].Trim())).Select(pair => pair.Key.ToString()).ToArray();
+                                            else if (op == "*x*")
+                                                array = this._ebSolution.Users.Where(pair => pair.Value.Contains(array[0].Trim())).Select(pair => pair.Key.ToString()).ToArray();
+                                            else if (op == "=")
+                                                array = this._ebSolution.Users.Where(pair => pair.Value == array[0].Trim()).Select(pair => pair.Key.ToString()).ToArray();
+                                        }
+                                    }
+                                    else
+                                    {
+                                        if (op == "x*")
+                                            array = this._ebSolution.Locations.Where(pair => pair.Value.ShortName.StartsWith(array[0].Trim())).Select(pair => pair.Key.ToString()).ToArray();
+                                        else if (op == "*x")
+                                            array = this._ebSolution.Locations.Where(pair => pair.Value.ShortName.EndsWith(array[0].Trim())).Select(pair => pair.Key.ToString()).ToArray();
+                                        else if (op == "*x*")
+                                            array = this._ebSolution.Locations.Where(pair => pair.Value.ShortName.Contains(array[0].Trim())).Select(pair => pair.Key.ToString()).ToArray();
+                                        else if (op == "=")
+                                            array = this._ebSolution.Locations.Where(pair => pair.Value.ShortName == array[0].Trim()).Select(pair => pair.Key.ToString()).ToArray();
+                                    }
+                                    if (array.Length == 0)
+                                        _cond += string.Format(" {0} = '{1}' OR", _dic.Column, 0);
+                                    op = "=";
+                                }
+                                col = _dic.Column;
                                 for (int i = 0; i < array.Length; i++)
                                 {
                                     if (array[i].Trim() != "")
                                     {
-                                        col = AutoResolve.ColumnQueryMapping.DisplayMember[0].Name;
-                                        if (op == "x*")
-                                            _auto += string.Format(" LOWER({0}) LIKE LOWER('{1}%') OR", col, val);
-                                        else if (op == "*x")
-                                            _auto += string.Format(" LOWER({0}) LIKE LOWER('%{1}') OR", col, val);
-                                        else if (op == "*x*")
-                                            _auto += string.Format(" LOWER({0}) LIKE LOWER('%{1}%') OR ", col, val);
-                                        else if (op == "=")
-                                            _auto += string.Format(" LOWER({0}) = LOWER('{1}') OR", col, val);
-                                        else
-                                            _auto += string.Format(" {0} {1} '{2}' OR", col, op, val);
-                                    }
-                                }
-                                int _place = _auto.LastIndexOf("OR");
-                                string ccc = _auto.Substring(0, _place);
-                                array = GetValue4Columns(_dV as EbTableVisualization, ccc).Split(",");
-                                if (array[0].Trim() == "")
-                                    _cond += string.Format(" {0} = '{1}' OR", _dic.Column, 0);
-                                else
-                                    op = "=";
-                            }
-                            else if (col == "eb_created_by" || col == "eb_lastmodified_by" || col == "eb_loc_id")
-                            {
-                                if (col == "eb_created_by" || col == "eb_lastmodified_by")
-                                {
-                                    if (this._ebSolution.Users != null)
-                                    {
-                                        if (op == "x*")
-                                            array = this._ebSolution.Users.Where(pair => pair.Value.StartsWith(array[0].Trim())).Select(pair => pair.Key.ToString()).ToArray();
-                                        else if (op == "*x")
-                                            array = this._ebSolution.Users.Where(pair => pair.Value.EndsWith(array[0].Trim())).Select(pair => pair.Key.ToString()).ToArray();
-                                        else if (op == "*x*")
-                                            array = this._ebSolution.Users.Where(pair => pair.Value.Contains(array[0].Trim())).Select(pair => pair.Key.ToString()).ToArray();
-                                        else if (op == "=")
-                                            array = this._ebSolution.Users.Where(pair => pair.Value == array[0].Trim()).Select(pair => pair.Key.ToString()).ToArray();
-                                    }
-                                }
-                                else
-                                {
-                                    if (op == "x*")
-                                        array = this._ebSolution.Locations.Where(pair => pair.Value.ShortName.StartsWith(array[0].Trim())).Select(pair => pair.Key.ToString()).ToArray();
-                                    else if (op == "*x")
-                                        array = this._ebSolution.Locations.Where(pair => pair.Value.ShortName.EndsWith(array[0].Trim())).Select(pair => pair.Key.ToString()).ToArray();
-                                    else if (op == "*x*")
-                                        array = this._ebSolution.Locations.Where(pair => pair.Value.ShortName.Contains(array[0].Trim())).Select(pair => pair.Key.ToString()).ToArray();
-                                    else if (op == "=")
-                                        array = this._ebSolution.Locations.Where(pair => pair.Value.ShortName == array[0].Trim()).Select(pair => pair.Key.ToString()).ToArray();
-                                }
-                                if (array.Length == 0)
-                                    _cond += string.Format(" {0} = '{1}' OR", _dic.Column, 0);
-                                op = "=";
-                            }
-                            col = _dic.Column;
-                            for (int i = 0; i < array.Length; i++)
-                            {
-                                if (array[i].Trim() != "")
-                                {
-                                    if (type == EbDbTypes.String)
-                                    {
-                                        if (op == "x*")
-                                            _cond += string.Format(" LOWER({0}) LIKE LOWER('{1}%') OR", col, array[i].Trim());
-                                        else if (op == "*x")
-                                            _cond += string.Format(" LOWER({0}) LIKE LOWER('%{1}') OR", col, array[i].Trim());
-                                        else if (op == "*x*")
-                                            _cond += string.Format(" LOWER({0}) LIKE LOWER('%{1}%') OR", col, array[i].Trim());
-                                        else if (op == "=")
-                                            _cond += string.Format(" LOWER({0}) = LOWER('{1}') OR", col, array[i].Trim());
-                                    }
-                                    else
-                                    {
-                                        if (this.EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.ORACLE)
+                                        if (type == EbDbTypes.String)
                                         {
-                                            if (type == EbDbTypes.Date || type == EbDbTypes.DateTime)
-                                                _cond += string.Format(" {0} {1} date '{2}' OR", col, op, array[i].Trim());
-                                            else
-                                                _cond += string.Format(" {0} {1} '{2}' OR", col, op, array[i].Trim());
-                                        }
-                                        else if (this.EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.MYSQL)
-                                        {
-                                            if (type == EbDbTypes.Date || type == EbDbTypes.DateTime)
-                                                _cond += string.Format(" CAST({0} AS date) {1} '{2}' OR", col, op, array[i].Trim());
-                                            else
-                                                _cond += string.Format(" {0} {1} '{2}' OR", col, op, array[i].Trim());
+                                            if (op == "x*")
+                                                _cond += string.Format(" LOWER({0}) LIKE LOWER('{1}%') OR", col, array[i].Trim());
+                                            else if (op == "*x")
+                                                _cond += string.Format(" LOWER({0}) LIKE LOWER('%{1}') OR", col, array[i].Trim());
+                                            else if (op == "*x*")
+                                                _cond += string.Format(" LOWER({0}) LIKE LOWER('%{1}%') OR", col, array[i].Trim());
+                                            else if (op == "=")
+                                                _cond += string.Format(" LOWER({0}) = LOWER('{1}') OR", col, array[i].Trim());
                                         }
                                         else
                                         {
-                                            if (type == EbDbTypes.Date || type == EbDbTypes.DateTime)
-                                                _cond += string.Format(" {0}::date {1} '{2}' OR", col, op, array[i].Trim());
+                                            if (this.EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.ORACLE)
+                                            {
+                                                if (type == EbDbTypes.Date || type == EbDbTypes.DateTime)
+                                                    _cond += string.Format(" {0} {1} date '{2}' OR", col, op, array[i].Trim());
+                                                else
+                                                    _cond += string.Format(" {0} {1} '{2}' OR", col, op, array[i].Trim());
+                                            }
+                                            else if (this.EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.MYSQL)
+                                            {
+                                                if (type == EbDbTypes.Date || type == EbDbTypes.DateTime)
+                                                    _cond += string.Format(" CAST({0} AS date) {1} '{2}' OR", col, op, array[i].Trim());
+                                                else
+                                                    _cond += string.Format(" {0} {1} '{2}' OR", col, op, array[i].Trim());
+                                            }
                                             else
-                                                _cond += string.Format(" {0} {1} '{2}' OR", col, op, array[i].Trim());
+                                            {
+                                                if (type == EbDbTypes.Date || type == EbDbTypes.DateTime)
+                                                    _cond += string.Format(" {0}::date {1} '{2}' OR", col, op, array[i].Trim());
+                                                else
+                                                    _cond += string.Format(" {0} {1} '{2}' OR", col, op, array[i].Trim());
+                                            }
                                         }
                                     }
                                 }
+                                int place = _cond.LastIndexOf("OR");
+                                _cond = _cond.Substring(0, place);
+                                _c += "AND (" + _cond + ")";
                             }
-                            int place = _cond.LastIndexOf("OR");
-                            _cond = _cond.Substring(0, place);
-                            _c += "AND (" + _cond + ")";
                         }
-                    }
-                    _sql = _ds.Sql;
-                    if (Treecol == null)
-                    {
-                        if (!_ds.Sql.ToLower().Contains("@and_search") || !_ds.Sql.ToLower().Contains(":and_search"))
+                        _sql = _ds.Sql;
+                        if (Treecol == null)
                         {
-                            _ds.Sql = "SELECT * FROM (" + _ds.Sql + "\n ) data WHERE 1=1 :and_search order by :orderby";
-                        }
-                        _ds.Sql = _ds.Sql.ReplaceAll(";", string.Empty);
-                        _sql = _ds.Sql.Replace(":and_search", _c).Replace("@and_search", _c) + ";";
-                        //}
-                        if (request.Ispaging)
-                        {
-                            var matches = Regex.Matches(_sql, @"\;\s*SELECT\s*COUNT\(\*\)\s*FROM");
-                            if (matches.Count == 0)
+                            if (!_ds.Sql.ToLower().Contains("@and_search") || !_ds.Sql.ToLower().Contains(":and_search"))
                             {
-                                tempsql = _sql.ReplaceAll(";", string.Empty);
-                                tempsql = "SELECT COUNT(*) FROM (" + tempsql + ") data1;";
+                                _ds.Sql = "SELECT * FROM (" + _ds.Sql + "\n ) data WHERE 1=1 :and_search order by :orderby";
+                            }
+                            _ds.Sql = _ds.Sql.ReplaceAll(";", string.Empty);
+                            _sql = _ds.Sql.Replace(":and_search", _c).Replace("@and_search", _c) + ";";
+                            //}
+                            if (request.Ispaging)
+                            {
+                                var matches = Regex.Matches(_sql, @"\;\s*SELECT\s*COUNT\(\*\)\s*FROM");
+                                if (matches.Count == 0)
+                                {
+                                    tempsql = _sql.ReplaceAll(";", string.Empty);
+                                    tempsql = "SELECT COUNT(*) FROM (" + tempsql + ") data1;";
+                                }
+
+                                var sql1 = _sql.ReplaceAll(";", string.Empty);
+                                if (this.EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.ORACLE)
+                                {
+                                    sql1 = "SELECT * FROM ( SELECT a.*,ROWNUM rnum FROM (" + sql1 + ")a WHERE ROWNUM <= :limit+:offset) WHERE rnum > :offset;";
+                                    //sql1 += "ALTER TABLE T1 DROP COLUMN rnum;SELECT * FROM T1;";
+                                }
+                                else
+                                {
+                                    if (!sql1.ToLower().Contains(":limit"))
+                                        sql1 = sql1 + " LIMIT :limit OFFSET :offset;";
+                                }
+                                _sql = sql1 + tempsql;
                             }
 
-                            var sql1 = _sql.ReplaceAll(";", string.Empty);
-                            if (this.EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.ORACLE)
+                            string __order = string.Empty;
+                            if (request.OrderBy != null && request.OrderBy.Count > 0)
                             {
-                                sql1 = "SELECT * FROM ( SELECT a.*,ROWNUM rnum FROM (" + sql1 + ")a WHERE ROWNUM <= :limit+:offset) WHERE rnum > :offset;";
-                                //sql1 += "ALTER TABLE T1 DROP COLUMN rnum;SELECT * FROM T1;";
+                                foreach (OrderBy order in request.OrderBy)
+                                {
+                                    __order += string.Format("{0} {1},", order.Column, (order.Direction == 1) ? "DESC" : "ASC");
+                                }
+                                int indx = __order.LastIndexOf(",");
+                                __order = __order.Substring(0, indx);
                             }
+                            if (string.IsNullOrEmpty(__order))
+                                _sql = _sql.Replace("order by :orderby", string.Empty);
                             else
-                            {
-                                if (!sql1.ToLower().Contains(":limit"))
-                                    sql1 = sql1 + " LIMIT :limit OFFSET :offset;";
-                            }
-                            _sql = sql1 + tempsql;
-                        }
+                                _sql = _sql.Replace(":orderby", __order);
 
-                        string __order = string.Empty;
-                        if (request.OrderBy != null && request.OrderBy.Count > 0)
-                        {
-                            foreach (OrderBy order in request.OrderBy)
-                            {
-                                __order += string.Format("{0} {1},", order.Column, (order.Direction == 1) ? "DESC" : "ASC");
-                            }
-                            int indx = __order.LastIndexOf(",");
-                            __order = __order.Substring(0, indx);
+                            _isPaged = (_sql.ToLower().Contains(":offset") && _sql.ToLower().Contains(":limit"));
                         }
-                        if (string.IsNullOrEmpty(__order))
-                            _sql = _sql.Replace("order by :orderby", string.Empty);
                         else
-                            _sql = _sql.Replace(":orderby", __order);
-
-                        _isPaged = (_sql.ToLower().Contains(":offset") && _sql.ToLower().Contains(":limit"));
+                        {
+                            string pattern = $"(?i)(order by {Treecol.ParentColumn[0].Name})";
+                            var matches = Regex.Matches(_sql, pattern);
+                            if (matches.Count == 0)
+                                _sql = $"SELECT * FROM ({_sql.ReplaceAll(";", string.Empty)}) data ORDER BY {Treecol.ParentColumn[0].Name}";
+                        }
                     }
                     else
                     {
-                        string pattern = $"(?i)(order by {Treecol.ParentColumn[0].Name})";
-                        var matches = Regex.Matches(_sql, pattern);
-                        if (matches.Count == 0)
-                            _sql = $"SELECT * FROM ({_sql.ReplaceAll(";", string.Empty)}) data ORDER BY {Treecol.ParentColumn[0].Name}";
+                        _sql = _ds.Sql;
                     }
-                }
-                else
-                {
-                    _sql = _ds.Sql;
-                }
 
-
-                if (request.Params == null)
-                    _sql = _sql.Replace(":id", "0");
-                //}
-                var parameters = DataHelper.GetParams(this.EbConnectionFactory, _isPaged, request.Params, request.Length, request.Start);
-                Console.WriteLine("Before :  " + DateTime.Now);
-                var dtStart = DateTime.Now;
-                Console.WriteLine("................................................dataviz datarequest start " + DateTime.Now);
-                EbDataSet _dataset = null;
-                try
-                {
-                    _dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray<System.Data.Common.DbParameter>());
+                    if (request.Params == null)
+                        _sql = _sql.Replace(":id", "0");
+                    //}
+                    var parameters = DataHelper.GetParams(this.EbConnectionFactory, _isPaged, request.Params, request.Length, request.Start);
+                    Console.WriteLine("Before :  " + DateTime.Now);
+                    var dtStart = DateTime.Now;
+                    Console.WriteLine("................................................dataviz datarequest start " + DateTime.Now);
+                    try
+                    {
+                        _dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray<System.Data.Common.DbParameter>());
+                    }
+                    catch (Exception e)
+                    {
+                        Log.Info("Datviz Qurey Exception........." + e.StackTrace);
+                        Log.Info("Datviz Qurey Exception........." + e.Message);
+                        this._Responsestatus.Message = e.Message;
+                    }
+                    Console.WriteLine("................................................dataviz datarequest end " + DateTime.Now);
+                    var dtstop = DateTime.Now;
+                    Console.WriteLine("..................................totaltimeinSeconds" + dtstop.Subtract(dtStart).Seconds);
+                    if (request.RefId != null &&  GetLogEnabled(request.RefId))
+                    {
+                        TimeSpan T = _dataset.EndTime - _dataset.StartTime;
+                        InsertExecutionLog(_dataset.RowNumbers, T, _dataset.StartTime, request.UserId, request.Params, request.RefId);
+                    }
+                    //-- 
+                    Console.WriteLine(DateTime.Now);
+                    var dtEnd = DateTime.Now;
+                    var ts = (dtEnd - dtStart).TotalMilliseconds;
+                    Console.WriteLine("final:::" + ts);
                 }
-                catch (Exception e)
-                {
-                    Log.Info("Datviz Qurey Exception........." + e.StackTrace);
-                    Log.Info("Datviz Qurey Exception........." + e.Message);
-                    this._Responsestatus.Message = e.Message;
-                }
-                Console.WriteLine("................................................dataviz datarequest end " + DateTime.Now);
-                var dtstop = DateTime.Now;
-                Console.WriteLine("..................................totaltimeinSeconds" + dtstop.Subtract(dtStart).Seconds);
-                if (GetLogEnabled(request.RefId))
-                {
-                    TimeSpan T = _dataset.EndTime - _dataset.StartTime;
-                    InsertExecutionLog(_dataset.RowNumbers, T, _dataset.StartTime, request.UserId, request.Params, request.RefId);
-                }
-                //-- 
-                Console.WriteLine(DateTime.Now);
-                var dtEnd = DateTime.Now;
-                var ts = (dtEnd - dtStart).TotalMilliseconds;
-                Console.WriteLine("final:::" + ts);
-                int _recordsTotal = 0, _recordsFiltered = 0;
-                if (_isPaged)
-                {
-                    Int32.TryParse(_dataset.Tables[_dataset.Tables.Count - 1].Rows[0][0].ToString(), out _recordsTotal);
-                    Int32.TryParse(_dataset.Tables[_dataset.Tables.Count - 1].Rows[0][0].ToString(), out _recordsFiltered);
-                }
-                _recordsTotal = (_recordsTotal > 0) ? _recordsTotal : _dataset.Tables[_dataset.Tables.Count - 1].Rows.Count;
-                _recordsFiltered = (_recordsFiltered > 0) ? _recordsFiltered : _dataset.Tables[_dataset.Tables.Count - 1].Rows.Count;
-                //-- 
+                    int _recordsTotal = 0, _recordsFiltered = 0;
+                    if (_isPaged)
+                    {
+                        Int32.TryParse(_dataset.Tables[_dataset.Tables.Count - 1].Rows[0][0].ToString(), out _recordsTotal);
+                        Int32.TryParse(_dataset.Tables[_dataset.Tables.Count - 1].Rows[0][0].ToString(), out _recordsFiltered);
+                    }
+                    _recordsTotal = (_recordsTotal > 0) ? _recordsTotal : _dataset.Tables[_dataset.Tables.Count - 1].Rows.Count;
+                    _recordsFiltered = (_recordsFiltered > 0) ? _recordsFiltered : _dataset.Tables[_dataset.Tables.Count - 1].Rows.Count;
+                    //-- 
+                
                 PrePrcessorReturn ReturnObj = null;
                 List<GroupingDetails> _levels = new List<GroupingDetails>();
                 if (_dataset.Tables.Count > 0 && _dV != null)
@@ -582,7 +592,7 @@ namespace ExpressBase.ServiceStack
                     Tree = ReturnObj?.tree,
                     ResponseStatus = this._Responsestatus,
                     ReturnObjString = (_dV is EbCalendarView) ? EbSerializers.Json_Serialize((_dV as EbCalendarView)) : null,
-                    ImageList =JsonConvert.SerializeObject( _ImageList)
+                    ImageList = JsonConvert.SerializeObject(_ImageList)
                 };
                 this.Log.Info(" dataviz dataresponse*****" + dsresponse.Data);
                 EbSerializers.Json_Serialize(dsresponse);
@@ -595,6 +605,11 @@ namespace ExpressBase.ServiceStack
                 this._Responsestatus.Message = e.Message;
             }
             return null;
+        }
+
+        private EbDataSet GetDatafromUrl(string url)
+        {
+            return new EbDataSet();
         }
 
         [CompressResponse]
@@ -823,7 +838,7 @@ namespace ExpressBase.ServiceStack
             return string.Empty;
         }
 
-        public PrePrcessorReturn PreProcessing(ref EbDataSet _dataset, List<Param> Parameters, EbDataVisualization _dv, User _user, ref List<GroupingDetails> _levels, Boolean _isexcel)
+        public PrePrcessorReturn PreProcessing(ref EbDataSet _dataset, List<Param> Parameters, EbDataVisualization _dv, User _user, ref List<GroupingDetails> _levels, Boolean _isexcel, bool isSQljob = false)
         {
             try
             {
@@ -843,7 +858,7 @@ namespace ExpressBase.ServiceStack
                 this.PreCustomColumDoCalc(ref _dataset, Parameters, _dv, globals);
                 this.GetDictonaries4Columns(_dv);
                 EbDataTable _formattedTable = _dataset.Tables[0].GetEmptyTable();
-                if (_dv.AutoGen)
+                if (_dv.AutoGen || isSQljob)
                     _formattedTable.Columns.Add(_formattedTable.NewDataColumn(_dv.Columns.Count - 1, "action", EbDbTypes.String));
                 _formattedTable.Columns.Add(_formattedTable.NewDataColumn(_dv.Columns.Count, "serial", EbDbTypes.Int32));
                 Dictionary<int, List<object>> Summary = new Dictionary<int, List<object>>();
@@ -1073,7 +1088,7 @@ namespace ExpressBase.ServiceStack
                         {
                             _tooltip += "</br>" + this._ebSolution.Locations[CurLocId].WeekHoliday2;
                             cls = "holiday_class week-holiday";
-                        }                            
+                        }
                     }
                     if (DateTime.Now.Date.Equals(date))
                     {
@@ -1169,7 +1184,7 @@ namespace ExpressBase.ServiceStack
                 date = new DateTime(x.Item2.Year, x.Item2.Month, x.Item2.Day, 23, 59, 59);
                 var endDate = DateTimeHelper.EndOfDay(x.Item2);
                 var key = GetKey(startDate, endDate);
-                var _title =  "week " + (i + 1);
+                var _title = "week " + (i + 1);
                 string _tooltip = x.Item1.ToString("dd-MM-yyyy") + " to " + x.Item2.ToString("dd-MM-yyyy");
                 tempdataset.Tables[0].Columns.Add(new EbDataColumn { ColumnIndex = index, ColumnName = key, Type = EbDbTypes.String });
                 if (Modifydv)
@@ -1187,7 +1202,7 @@ namespace ExpressBase.ServiceStack
                         StartDT = startDate,
                         EndDT = endDate,
                         Align = Align.Center,
-                        HeaderTooltipText= _tooltip
+                        HeaderTooltipText = _tooltip
                     };
                     _dv.Columns.Add(col);
                     (_dv as EbCalendarView).DateColumns.Add(col);
@@ -1255,8 +1270,8 @@ namespace ExpressBase.ServiceStack
                 var endDate = new DateTime(date.Year, date.Month, date.Day, 23, 59, 59);
                 var key = GetKey(startDate, endDate);
                 var endmonth = DateTimeFormatInfo.CurrentInfo.GetMonthName(date.Month);
-                var title = "Quarter "+(i+1);
-                string _tooltip = month + "-" + endmonth + "</br>"+ startDate.ToString("dd-MM-yyyy") + " to " + endDate.ToString("dd-MM-yyyy");
+                var title = "Quarter " + (i + 1);
+                string _tooltip = month + "-" + endmonth + "</br>" + startDate.ToString("dd-MM-yyyy") + " to " + endDate.ToString("dd-MM-yyyy");
                 tempdataset.Tables[0].Columns.Add(new EbDataColumn { ColumnIndex = index, ColumnName = key, Type = EbDbTypes.String });
                 if (Modifydv)
                 {
@@ -1294,7 +1309,7 @@ namespace ExpressBase.ServiceStack
             var endDate = new DateTime(paramdate.Year, 6, 30, 23, 59, 59);
             var endmonth = DateTimeFormatInfo.CurrentInfo.GetMonthName(6);
             var key = GetKey(startDate, endDate);
-            var title = "HF "+1;
+            var title = "HF " + 1;
             var _tooltip = month + "-" + endmonth + "</br>" + startDate.ToString("dd-MM-yyyy") + " to " + endDate.ToString("dd-MM-yyyy");
             tempdataset.Tables[0].Columns.Add(new EbDataColumn { ColumnIndex = index, ColumnName = key, Type = EbDbTypes.String });
             if (Modifydv)
@@ -1447,7 +1462,7 @@ namespace ExpressBase.ServiceStack
                 _formattedTable.Rows[i][_formattedTable.Columns.Count - 1] = i + 1;//serial
                 int j = 0;
                 CreateIntermediateDict(row, _dv, _user_culture, _user, ref _formattedTable, ref globals, _isexcel, i);
-                
+
                 if ((_dv as EbTableVisualization) != null)
                 {
                     foreach (DVBaseColumn col in dependencyTable)
@@ -1487,7 +1502,15 @@ namespace ExpressBase.ServiceStack
                                     }
                                     else
                                         _formattedData = $"<img class='img-thumbnail' src='/images/image.png' style='height:{_height};width:{_width};'/>";
-                                    
+
+                                }
+                                if ((col as DVStringColumn).AllowMultilineText)
+                                {
+                                    if ((col as DVStringColumn).NoOfCharactersPerLine > 0 && (col as DVStringColumn).NoOfLines > 0)
+                                    {
+                                        if (_formattedData.ToString().Length > (col as DVStringColumn).NoOfCharactersPerLine)
+                                            _formattedData = GetMultilineText(_formattedData.ToString(), (col as DVStringColumn).NoOfCharactersPerLine, (col as DVStringColumn).NoOfLines);
+                                    }
                                 }
                             }
                             string info = string.Empty;
@@ -1582,14 +1605,42 @@ namespace ExpressBase.ServiceStack
 
         }
 
-        public void CreateIntermediateDict(EbDataRow row, EbDataVisualization _dv, CultureInfo _user_culture, User _user, ref EbDataTable _formattedTable, ref Globals globals,  bool _isexcel,  int i)
+        private object GetMultilineText(string data, int _length, int _lines)
+        {
+            string info = $"<table><tr><td>{data}</td></tr></table>";
+            string formatted = string.Empty;
+            int count = 0;
+            while (data.Length > _length && count< _lines)
+            {
+                //trim the string to the maximum length
+                var trimmedString = data.Substring(0, _length);
+
+                //re-trim if we are in the middle of a word and 
+                trimmedString = trimmedString.Substring(0, Math.Min(trimmedString.Length, trimmedString.LastIndexOf(" ")));
+                formatted += trimmedString + "</br> ";
+                data = data.Remove(0, trimmedString.Length);
+                count++;
+            };
+            if(data.Length > _length) 
+                    formatted = formatted.Substring(0, formatted.LastIndexOf("</br>")) + " ...";
+            else
+                 formatted = formatted + data + " ...";
+            return  "<span class='columntooltip' data-toggle='popover' data-contents='" + info.ToBase64() + "'>" + formatted + "</span>"; ;
+        }
+
+        public void CreateIntermediateDict(EbDataRow row, EbDataVisualization _dv, CultureInfo _user_culture, User _user, ref EbDataTable _formattedTable, ref Globals globals, bool _isexcel, int i)
         {
             foreach (DVBaseColumn col in dependencyTable)
             {
                 try
                 {
                     if (col.IsCustomColumn)
-                        CustomColumDoCalc4Row(row, _dv, globals, col);
+                    {
+                        if (col is DVButtonColumn)
+                            ProcessButtoncolumn(row, globals, col);
+                        else
+                            CustomColumDoCalc4Row(row, _dv, globals, col);
+                    }
                     var cults = col.GetColumnCultureInfo(_user_culture);
                     object _unformattedData = (_dv.AutoGen && col.Name == "eb_action") ? "<i class='fa fa-edit'></i>" : row[col.Data];
                     object _formattedData = _unformattedData;
@@ -1635,6 +1686,21 @@ namespace ExpressBase.ServiceStack
                     Log.Info("PreProcessing in Create IntermediateDictionay........." + e.StackTrace + "Column Name  ......" + col.Name);
                     Log.Info("PreProcessing in Create IntermediateDictionay........." + e.Message + "Column Name  ......" + col.Name);
                     this._Responsestatus.Message = e.Message;
+                }
+            }
+        }
+
+        public void ProcessButtoncolumn(EbDataRow row, Globals globals, DVBaseColumn customCol)
+        {
+            if (customCol is DVButtonColumn)
+            {
+                bool result = (customCol as DVButtonColumn).RenderCondition.EvaluateExpression(row, ref globals);
+                if ((customCol as DVButtonColumn).RenderCondition.RenderAS == AdvancedRenderType.Default)
+                {
+                    if (result == (customCol as DVButtonColumn).RenderCondition.GetBoolValue())
+                        row[customCol.Data] = $"<button class='{(customCol as DVButtonColumn).ButtonClassName}'>{(customCol as DVButtonColumn).ButtonText}</button>";
+                    else
+                        row[customCol.Data] = string.Empty;
                 }
             }
         }
@@ -1983,18 +2049,7 @@ namespace ExpressBase.ServiceStack
                 Summary[col.Data][1] = (Convert.ToDecimal(Summary[col.Data][0]) / count).ToString("N", cults.NumberFormat);
             }
         }
-
-        public void DoRowGrouping4Sqljob(EbDataRow currentRow, EbDataVisualization Visualization, CultureInfo Culture, User _user, ref EbDataTable FormattedTable, 
-            bool IsMultiLevelRowGrouping, ref Dictionary<string, GroupingDetails> RowGrouping, ref string PreviousGroupingText, ref int CurSortIndex, ref int SerialCount, 
-            int i, int dvColCount, int TotalLevels, ref List<int> AggregateColumnIndexes, ref List<DVBaseColumn> RowGroupingColumns, int RowCount, Globals globals)
-        {
-            IntermediateDic = new Dictionary<int, object>();
-            dependencyTable = CreateDependencyTable(Visualization);
-            CreateIntermediateDict(currentRow, Visualization, Culture, _user, ref FormattedTable, ref globals, false, i);
-            DoRowGroupingCommon(currentRow, Visualization, Culture, _user,ref FormattedTable, IsMultiLevelRowGrouping, ref RowGrouping,
-            ref PreviousGroupingText, ref CurSortIndex, ref SerialCount, i, dvColCount, TotalLevels, ref AggregateColumnIndexes, ref RowGroupingColumns, RowCount);
-
-        }
+       
         public void DoRowGroupingCommon(EbDataRow currentRow, EbDataVisualization Visualization, CultureInfo Culture, User _user, 
             ref EbDataTable FormattedTable, bool IsMultiLevelRowGrouping, ref Dictionary<string, GroupingDetails> RowGrouping, 
             ref string PreviousGroupingText, ref int CurSortIndex, ref int SerialCount, int PrevRowIndex, int dvColCount, int TotalLevels, 
