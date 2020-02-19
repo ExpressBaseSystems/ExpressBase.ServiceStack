@@ -326,14 +326,11 @@ namespace ExpressBase.ServiceStack.Services
             {
                 User UserObject = this.Redis.Get<User>(request.UserAuthId);
                 string[] PermIds = UserObject.GetAccessIds(request.LocationId);
-
                 string query = string.Empty;
-
                 string idcheck = EbConnectionFactory.DataDB.EB_GET_MOBILE_PAGES;
-
-                const string Sql = @"SELECT obj_name,display_name,version_num,obj_json,refid FROM (
+                const string Sql = @"SELECT obj_name,display_name,obj_type,version_num,obj_json,refid FROM (
 				                                SELECT 
-					                                EO.id,EO.obj_name,EO.display_name,EOV.version_num, EOV.obj_json,EOV.refid
+					                                EO.id,EO.obj_name,EO.display_name,EO.obj_type,EOV.version_num, EOV.obj_json,EOV.refid
 				                                FROM
 					                                eb_objects EO
 				                                LEFT JOIN 
@@ -345,7 +342,7 @@ namespace ExpressBase.ServiceStack.Services
 				                                AND
 					                                EOS.status = 3
 				                                AND 
-					                                EO.obj_type = 13
+					                                EO.obj_type = ANY(ARRAY[13,3])
 				                                AND 
 					                                EOS.id = ANY( Select MAX(id) from eb_objects_status EOS Where EOS.eb_obj_ver_id = EOV.id)
 				                                ) OD 
@@ -360,31 +357,41 @@ namespace ExpressBase.ServiceStack.Services
                 List<DbParameter> parameters = new List<DbParameter> {
                     this.EbConnectionFactory.ObjectsDB.GetNewParameter("appid", EbDbTypes.Int32, request.AppId)
                 };
-
-                if (UserObject.Roles.Contains(SystemRoles.SolutionOwner.ToString()) || UserObject.Roles.Contains(SystemRoles.SolutionAdmin.ToString()))
-                {
+                if (UserObject.Roles.Contains(SystemRoles.SolutionOwner.ToString()) || UserObject.Roles.Contains(SystemRoles.SolutionAdmin.ToString()))              
                     query = string.Format(Sql, string.Empty);
-                }
                 else
                 {
                     parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("objids", EbDbTypes.String, string.Join(",", PermIds)));
                     query = string.Format(Sql, idcheck);
                 }
-
                 EbDataSet ds = this.EbConnectionFactory.DataDB.DoQueries(query, parameters.ToArray());
-
                 foreach (EbDataRow dr in ds.Tables[0].Rows)
                 {
-                    response.Pages.Add(new MobilePagesWraper
+                    EbObjectType objType = (EbObjectType)Convert.ToInt32(dr["obj_type"]);
+                    if(objType.IntCode == EbObjectTypes.MobilePage)
                     {
-                        Name = dr["obj_name"].ToString(),
-                        DisplayName = dr["display_name"].ToString(),
-                        Version = dr["version_num"].ToString(),
-                        Json = dr["obj_json"].ToString(),
-                        RefId = dr["refid"].ToString()
-                    });
+                        response.Pages.Add(new MobilePagesWraper
+                        {
+                            Name = dr["obj_name"].ToString(),
+                            DisplayName = dr["display_name"].ToString(),
+                            Version = dr["version_num"].ToString(),
+                            Json = dr["obj_json"].ToString(),
+                            RefId = dr["refid"].ToString()
+                        });
+                    }
+                    else
+                    {
+                        response.WebObjects.Add(new WebObjectsWraper
+                        {
+                            Name = dr["obj_name"].ToString(),
+                            DisplayName = dr["display_name"].ToString(),
+                            Version = dr["version_num"].ToString(),
+                            Json = dr["obj_json"].ToString(),
+                            RefId = dr["refid"].ToString(),
+                            ObjectType = objType.IntCode
+                        });
+                    }
                 }
-
                 //apps settings
                 if (ds.Tables.Count >= 2 && ds.Tables[1].Rows.Any())
                 {
@@ -393,9 +400,7 @@ namespace ExpressBase.ServiceStack.Services
                     {
                         response.TableNames = settings.DataImport.Select(i => i.TableName).ToList();
                         if (request.PullData)
-                        {
                             response.Data = this.PullAppConfiguredData(settings);
-                        }
                     }
                 }
             }
@@ -404,7 +409,6 @@ namespace ExpressBase.ServiceStack.Services
                 Console.WriteLine("Exception at object list for user mobile req ::" + ex.Message);
                 return response;
             }
-
             return response;
         }
 
