@@ -1780,7 +1780,7 @@ namespace ExpressBase.ServiceStack
                                             if (_hourCount[CalendarCol.Name].Row == null)
                                                 _hourCount[CalendarCol.Name].Row = System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(string.Join(",", dr.ToArray())));
                                             var data = Convert.ToInt32(_hourCount[CalendarCol.Name].Value);
-                                            _hourCount[CalendarCol.Name].Value = data++;
+                                            _hourCount[CalendarCol.Name].Value = ++data;
                                         }
                                     }
                                     if (datacol.Type == EbDbTypes.Int32 || datacol.Type == EbDbTypes.Int64 || datacol.Type == EbDbTypes.Decimal)
@@ -1791,7 +1791,7 @@ namespace ExpressBase.ServiceStack
                                                 _hourCount[CalendarCol.Name].Row = System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(string.Join(",", dr.ToArray())));
 
                                             var data = Convert.ToInt32(_hourCount[CalendarCol.Name].Value);
-                                            _hourCount[CalendarCol.Name].Value = data++;
+                                            _hourCount[CalendarCol.Name].Value = ++data;
                                         }
                                     }
                                 }
