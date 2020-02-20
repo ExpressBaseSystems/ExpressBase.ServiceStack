@@ -327,32 +327,8 @@ namespace ExpressBase.ServiceStack.Services
                 User UserObject = this.Redis.Get<User>(request.UserAuthId);
                 string[] PermIds = UserObject.GetAccessIds(request.LocationId);
                 string query = string.Empty;
-                string idcheck = EbConnectionFactory.DataDB.EB_GET_MOBILE_PAGES;
-                const string Sql = @"SELECT obj_name,display_name,obj_type,version_num,obj_json,refid FROM (
-				                                SELECT 
-					                                EO.id,EO.obj_name,EO.display_name,EO.obj_type,EOV.version_num, EOV.obj_json,EOV.refid
-				                                FROM
-					                                eb_objects EO
-				                                LEFT JOIN 
-					                                eb_objects_ver EOV ON (EOV.eb_objects_id = EO.id)
-				                                LEFT JOIN
-					                                eb_objects_status EOS ON (EOS.eb_obj_ver_id = EOV.id)
-				                                WHERE
-					                                COALESCE(EO.eb_del, 'F') = 'F'
-				                                AND
-					                                EOS.status = 3
-				                                AND 
-					                                EO.obj_type = ANY(ARRAY[13,3])
-				                                AND 
-					                                EOS.id = ANY( Select MAX(id) from eb_objects_status EOS Where EOS.eb_obj_ver_id = EOV.id)
-				                                ) OD 
-                                LEFT JOIN eb_objects2application EO2A ON (EO2A.obj_id = OD.id)
-                                WHERE 
-	                                EO2A.app_id = @appid 
-                                {0}
-                                AND 
-	                                COALESCE(EO2A.eb_del, 'F') = 'F';
-                                SELECT app_settings FROM eb_applications WHERE id = @appid";
+                string idcheck = EbConnectionFactory.ObjectsDB.EB_GET_MOBILE_PAGES;
+                string Sql = EbConnectionFactory.ObjectsDB.EB_GET_MOBILE_PAGES_OBJS;
 
                 List<DbParameter> parameters = new List<DbParameter> {
                     this.EbConnectionFactory.ObjectsDB.GetNewParameter("appid", EbDbTypes.Int32, request.AppId)
