@@ -151,7 +151,7 @@ namespace ExpressBase.ServiceStack.Services
         {
             string str = string.Format(@"
                                    SELECT * 
-                                   FROM eb_dbchangeslog
+                                   FROM infra_dbchangeslog
                                    WHERE solution_id = '{0}' ", solution_name);
             return InfraConnectionFactory.DataDB.DoQuery(str);
         }
@@ -162,7 +162,7 @@ namespace ExpressBase.ServiceStack.Services
                     SELECT 
                         D.modified_at, T.email , T.fullname 
                     FROM 
-                        eb_dbchangeslog AS D, eb_tenants AS T, eb_solutions AS S 
+                        infra_dbchangeslog AS D, eb_tenants AS T, eb_solutions AS S 
                     WHERE 
                         T.id = S.tenant_id AND D.solution_id = '{0}' AND S.isolution_id = D.solution_id  AND COALESCE(S.eb_del, FALSE) = FALSE", solution_name);
 
@@ -194,7 +194,7 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     string str1 = @"
                                                   INSERT INTO 
-                                                      eb_dbchangeslog (solution_id, vendor, modified_at)
+                                                      infra_dbchangeslog (solution_id, vendor, modified_at)
                                                   VALUES (:solution_name, :vendor, :modified_at)";
 
                     DbParameter[] parameters = { this.InfraConnectionFactory.DataDB.GetNewParameter("solution_name",Common.Structures.EbDbTypes.String, solution_name.ToString()),
@@ -414,9 +414,9 @@ namespace ExpressBase.ServiceStack.Services
                 string str = string.Empty;
                 foreach(string file_name in unwanted_files)
                 {
-                    str += string.Format(@"update eb_dbmd5 set eb_del = 'T' where change_id in (select id from eb_dbstructure where filename = '{0}' );",
+                    str += string.Format(@"update infra_dbmd5 set eb_del = 'T' where change_id in (select id from infra_dbstructure where filename = '{0}' );",
                                         file_name);
-                    str += string.Format(@"update eb_dbstructure set eb_del = 'T' where filename = '{0}';", file_name);
+                    str += string.Format(@"update infra_dbstructure set eb_del = 'T' where filename = '{0}';", file_name);
                 }
                 
                 DbCommand cmd = InfraConnectionFactory.DataDB.GetNewCommand(con, str);
@@ -441,7 +441,7 @@ namespace ExpressBase.ServiceStack.Services
             List<string> file_name = new List<string>();
             string str = @"
                            SELECT DISTINCT filename 
-                           FROM eb_dbstructure";
+                           FROM infra_dbstructure";
             EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(str);
             for(int i = 0; i < dt.Rows.Count; i++)
             {
@@ -532,7 +532,7 @@ namespace ExpressBase.ServiceStack.Services
         {
             string str = string.Format(@"
                                                 SELECT * 
-                                                FROM eb_dbmd5 as d , eb_dbstructure as c
+                                                FROM infra_dbmd5 as d , infra_dbstructure as c
                                                 WHERE d.filename = '{0}' 
                                                     AND d.eb_del = 'F' 
                                                     AND c.vendor = '{1}'
@@ -546,7 +546,7 @@ namespace ExpressBase.ServiceStack.Services
         {
             string str = string.Format(@"
                                             SELECT * 
-                                            FROM eb_dbmd5 as d , eb_dbstructure as c
+                                            FROM infra_dbmd5 as d , infra_dbstructure as c
                                             WHERE  d.change_id = {0}
                                                 AND c.id = {0}
                                                 AND d.eb_del = 'F'
@@ -562,9 +562,9 @@ namespace ExpressBase.ServiceStack.Services
                 using (DbConnection con = this.InfraConnectionFactory.DataDB.GetNewConnection())
                 {
                     con.Open();
-                    string str = string.Format(@"UPDATE eb_dbmd5 SET eb_del = 'T' WHERE filename = '{0}' AND eb_del = 'F' AND change_id = '{1}';",
+                    string str = string.Format(@"UPDATE infra_dbmd5 SET eb_del = 'T' WHERE filename = '{0}' AND eb_del = 'F' AND change_id = '{1}';",
                         file_name, change_id);
-                    str += string.Format(@"INSERT INTO eb_dbmd5 (change_id, filename, contents, eb_del) VALUES ('{0}','{1}','{2}','F')",
+                    str += string.Format(@"INSERT INTO infra_dbmd5 (change_id, filename, contents, eb_del) VALUES ('{0}','{1}','{2}','F')",
                         change_id, file_name, md5_or_json);
 
                     DbCommand cmd = InfraConnectionFactory.DataDB.GetNewCommand(con, str);
@@ -584,9 +584,9 @@ namespace ExpressBase.ServiceStack.Services
                 using (DbConnection con = this.InfraConnectionFactory.DataDB.GetNewConnection())
                 {
                     con.Open();
-                    string str = string.Format(@"INSERT INTO eb_dbstructure (filename, filepath, vendor, type, eb_del) VALUES ('{0}','{1}','{2}','{3}','F');",
+                    string str = string.Format(@"INSERT INTO infra_dbstructure (filename, filepath, vendor, type, eb_del) VALUES ('{0}','{1}','{2}','{3}','F');",
                         file_name_shrt, file, vendor, (int)type);
-                    str += string.Format(@"INSERT INTO  eb_dbmd5 (change_id, filename, contents, eb_del) VALUES ((SELECT id FROM eb_dbstructure WHERE filename = '{0}' AND vendor = '{1}'),'{2}','{3}','F')",
+                    str += string.Format(@"INSERT INTO  infra_dbmd5 (change_id, filename, contents, eb_del) VALUES ((SELECT id FROM infra_dbstructure WHERE filename = '{0}' AND vendor = '{1}'),'{2}','{3}','F')",
                         file_name_shrt, vendor, file_name, content);
 
                     DbCommand cmd = InfraConnectionFactory.DataDB.GetNewCommand(con, str);
@@ -925,7 +925,7 @@ namespace ExpressBase.ServiceStack.Services
                 dictInfra.Clear();
                 string str = string.Format(@"
                         SELECT d.change_id, d.filename, d.contents, c.filepath, c.type
-                        FROM eb_dbmd5 as d, eb_dbstructure as c
+                        FROM infra_dbmd5 as d, infra_dbstructure as c
                         WHERE c.vendor = '{0}'
                         AND d.eb_del = 'F'
                         AND c.eb_del = 'F'
@@ -965,7 +965,7 @@ namespace ExpressBase.ServiceStack.Services
                 dictInfra.Clear();
                 string str = string.Format(@"
                         SELECT d.change_id, d.filename, d.contents, c.filepath, c.type
-                        FROM eb_dbmd5 as d, eb_dbstructure as c
+                        FROM infra_dbmd5 as d, infra_dbstructure as c
                         WHERE c.vendor = '{0}'
                         AND d.eb_del = 'F'
                         AND c.id = d.change_id
@@ -1358,7 +1358,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 con.Open();
                 string str1 = string.Format(@"
-                                              UPDATE eb_dbchangeslog 
+                                              UPDATE infra_dbchangeslog 
                                               SET modified_at = NOW()
                                               WHERE solution_id = '{0}'", Solution);
                 DbCommand cmd2 = InfraConnectionFactory.DataDB.GetNewCommand(con, str1);
@@ -1965,7 +1965,7 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     con1.Open();
                     string str1 = string.Format(@"
-                                              UPDATE eb_dbchangeslog 
+                                              UPDATE infra_dbchangeslog 
                                               SET modified_at = NOW()
                                               WHERE solution_id = '{0}'", solution_id);
                     DbCommand cmd1 = InfraConnectionFactory.DataDB.GetNewCommand(con1, str1);
@@ -2020,7 +2020,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 string str = string.Format(@"
                         SELECT d.contents
-                        FROM eb_dbmd5 as d, eb_dbstructure as c
+                        FROM infra_dbmd5 as d, infra_dbstructure as c
                         WHERE d.filename = '{0}'
                         AND d.eb_del = 'F'
 						AND c.id = d.change_id
