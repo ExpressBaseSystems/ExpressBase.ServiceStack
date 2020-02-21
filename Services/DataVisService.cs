@@ -1971,7 +1971,7 @@ namespace ExpressBase.ServiceStack
                     else
                         _formattedData = (((DateTime)_unformattedData).Date != DateTime.MinValue) ? Convert.ToDateTime(_unformattedData).ToString("d", cults.DateTimeFormat) : string.Empty;
                     if (col.Data < row.Count)
-                        row[col.Data] = Convert.ToDateTime(_unformattedData).ToString("yyyy-MM-dd");
+                        row[col.Data] = Convert.ToDateTime(_unformattedData).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
                 }
                 else if ((col as DVDateTimeColumn).Format == DateFormat.DateTime)
                 {
@@ -1980,7 +1980,7 @@ namespace ExpressBase.ServiceStack
                     else
                         _formattedData = (((DateTime)_unformattedData).Date != DateTime.MinValue) ? Convert.ToDateTime(_unformattedData).ToString(cults.DateTimeFormat.ShortDatePattern + " " + cults.DateTimeFormat.ShortTimePattern) : string.Empty;
                     if (col.Data < row.Count)
-                        row[col.Data] = Convert.ToDateTime(_unformattedData);
+                        row[col.Data] = Convert.ToDateTime(_unformattedData).ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
                 }
             }
             catch (Exception e)
