@@ -74,12 +74,15 @@ namespace ExpressBase.ServiceStack.Services
 
             });
             n.Notification = Notification;
-            foreach (string role_name in request.RoleName)
+            foreach (int role_id in request.RoleID)
             {
-                string str = string.Format(@" select user_id from eb_role2user where role_id = (select id from eb_roles where role_name='{0}')", role_name);
+                string str = string.Format(@" select user_id from eb_role2user where role_id = '{0}'", role_id);
                 EbDataTable dt = EbConnectionFactory.DataDB.DoQuery(str);
                 for (int i = 0; i < dt.Rows.Count; i++)
-                    user_id.Add(int.Parse(dt.Rows[i][0].ToString()));
+                {
+                    if (!user_id.Contains(int.Parse(dt.Rows[i][0].ToString())))
+                        user_id.Add(int.Parse(dt.Rows[i][0].ToString()));
+                }
             }
             this.ServerEventClient.Post<NotifyResponse>(new NotifyUsersRequest
             {
@@ -113,7 +116,10 @@ namespace ExpressBase.ServiceStack.Services
                 string str = string.Format(@" select userid from eb_user2usergroup where groupid =(select id from eb_usergroup where name ='{0}')", grp_name);
                 EbDataTable dt = EbConnectionFactory.DataDB.DoQuery(str);
                 for (int i = 0; i < dt.Rows.Count; i++)
-                    user_id.Add(int.Parse(dt.Rows[i][0].ToString()));
+                {
+                    if (!user_id.Contains(int.Parse(dt.Rows[i][0].ToString())))
+                        user_id.Add(int.Parse(dt.Rows[i][0].ToString()));
+                }
             }
             this.ServerEventClient.Post<NotifyResponse>(new NotifyUsersRequest
             {
