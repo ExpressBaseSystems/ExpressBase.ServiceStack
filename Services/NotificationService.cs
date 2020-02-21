@@ -23,7 +23,7 @@ namespace ExpressBase.ServiceStack.Services
         public NotifyLogOutResponse Post(NotifyLogOutRequest request)
         {
             NotifyLogOutResponse res = new NotifyLogOutResponse();
-            this.ServerEventClient.Post<NotifyResponse>(new NotifySubsribtionRequest
+            this.ServerEventClient.Post<NotifyResponse>(new NotifySubscriptionRequest
             {
                 Msg = "LogOut",
                 Selector = "cmd.onLogOut"
@@ -39,8 +39,8 @@ namespace ExpressBase.ServiceStack.Services
             string notification_id = GenerateNotificationId();
             Notification.Add(new NotificationInfo
             {
-                Link = "https://expressbase.com/",
-                Title = "EXPRESSbase",
+                Link = request.Link,
+                Title = request.Title,
                 NotificationId = notification_id,
                 Duration = "Today"
 
@@ -64,29 +64,30 @@ namespace ExpressBase.ServiceStack.Services
             Notifications n = new Notifications();
             List<NotificationInfo> Notification = new List<NotificationInfo>();
             string notification_id = GenerateNotificationId();
-            string role_name = request.RoleName;
+            List<int> user_id = new List<int>();
             Notification.Add(new NotificationInfo
             {
-                Link = "https://expressbase.com/",
-                Title = "EXPRESSbase is a Platform on the cloud to build & run business applications 10x faster.",
+                Link = request.Link,
+                Title = request.Title,
                 NotificationId = notification_id,
                 Duration = "Today"
 
             });
             n.Notification = Notification;
-
-            string str = string.Format(@" select user_id from eb_role2user where role_id = (select id from eb_roles where role_name='{0}')", role_name);
-            EbDataTable dt = EbConnectionFactory.DataDB.DoQuery(str);
-            int[] ar = new int[dt.Rows.Count];
-            for(int i = 0 ; i < dt.Rows.Count ; i++)
-                ar[i] = int.Parse(dt.Rows[i][0].ToString());
+            foreach (string role_name in request.RoleName)
+            {
+                string str = string.Format(@" select user_id from eb_role2user where role_id = (select id from eb_roles where role_name='{0}')", role_name);
+                EbDataTable dt = EbConnectionFactory.DataDB.DoQuery(str);
+                for (int i = 0; i < dt.Rows.Count; i++)
+                    user_id.Add(int.Parse(dt.Rows[i][0].ToString()));
+            }
             this.ServerEventClient.Post<NotifyResponse>(new NotifyUsersRequest
             {
                 Msg = JsonConvert.SerializeObject(n),
                 Selector = "cmd.onNotification",
                 ToUserAuthId = request.UserAuthId,
                 NotificationId = notification_id,
-                UsersId = ar
+                UsersId = user_id
             });
             return res;
         }
@@ -96,32 +97,32 @@ namespace ExpressBase.ServiceStack.Services
             NotifyByUserGroupResponse res = new NotifyByUserGroupResponse();
             Notifications n = new Notifications();
             List<NotificationInfo> Notification = new List<NotificationInfo>();
+            List<int> user_id = new List<int>();
             string notification_id = GenerateNotificationId();
-            string grp_name = request.GroupName;
             Notification.Add(new NotificationInfo
             {
-                Link = "https://expressbase.com/",
-                Title = "EXPRESSbase is a Platform on the cloud to build & run business applications 10x faster.",
+                Link = request.Link,
+                Title = request.Title,
                 NotificationId = notification_id,
                 Duration = "Today"
 
             });
             n.Notification = Notification;
-
-            string str = string.Format(@" select userid from eb_user2usergroup where groupid =(select id from eb_usergroup where name ='{0}')", grp_name);
-            EbDataTable dt = EbConnectionFactory.DataDB.DoQuery(str);
-            int[] ar = new int[dt.Rows.Count];
-            for (int i = 0; i < dt.Rows.Count; i++)
-                ar[i] = int.Parse(dt.Rows[i][0].ToString());
+            foreach (string grp_name in request.GroupName)
+            {
+                string str = string.Format(@" select userid from eb_user2usergroup where groupid =(select id from eb_usergroup where name ='{0}')", grp_name);
+                EbDataTable dt = EbConnectionFactory.DataDB.DoQuery(str);
+                for (int i = 0; i < dt.Rows.Count; i++)
+                    user_id.Add(int.Parse(dt.Rows[i][0].ToString()));
+            }
             this.ServerEventClient.Post<NotifyResponse>(new NotifyUsersRequest
             {
                 Msg = JsonConvert.SerializeObject(n),
                 Selector = "cmd.onNotification",
                 ToUserAuthId = request.UserAuthId,
                 NotificationId = notification_id,
-                UsersId = ar
+                UsersId = user_id
             });
-
             return res;
         }
 
