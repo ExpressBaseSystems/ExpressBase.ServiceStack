@@ -34,6 +34,7 @@ using System.Net;
 using ServiceStack.Messaging;
 using System.Globalization;
 using Rectangle = iTextSharp.text.Rectangle;
+using iTextSharp.text.html.simpleparser;
 
 namespace ExpressBase.ServiceStack
 {
@@ -112,7 +113,6 @@ namespace ExpressBase.ServiceStack
                 Report.PageNumber = Report.Writer.PageNumber;
                 Report.GetWatermarkImages();
                 FillingCollections(Report);
-
                 Report.Doc.NewPage();
                 Report.DrawReportHeader();
                 Report.DrawDetail();
@@ -140,6 +140,28 @@ namespace ExpressBase.ServiceStack
                 ReportBytea = Report.Ms1.ToArray(),
                 CurrentTimestamp = Report.CurrentTimestamp
             };
+        }
+        private Paragraph CreateSimpleHtmlParagraph(String text)
+        {
+
+            // Report.Doc.Add(CreateSimpleHtmlParagraph("this is <b>bold</b> text"));
+            // Report.Doc.Add(CreateSimpleHtmlParagraph("this is <i>italic</i> text"));
+            //Our return object
+            Paragraph p = new Paragraph();
+
+            //ParseToList requires a StreamReader instead of just text
+            using (StringReader sr = new StringReader(text))
+            {
+                //Parse and get a collection of elements
+                var elements = HtmlWorker.ParseToList(sr, null);
+                foreach (IElement e in elements)
+                {
+                    //Add those elements to the paragraph
+                    p.Add(e);
+                }
+            }
+            //Return the paragraph
+            return p;
         }
         public void FillingCollections(EbReport Report)
         {
