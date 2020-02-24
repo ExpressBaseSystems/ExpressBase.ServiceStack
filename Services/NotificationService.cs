@@ -36,25 +36,38 @@ namespace ExpressBase.ServiceStack.Services
             NotifyByUserIDResponse res = new NotifyByUserIDResponse();
             Notifications n = new Notifications();
             List<NotificationInfo> Notification = new List<NotificationInfo>();
-            string notification_id = GenerateNotificationId();
-            Notification.Add(new NotificationInfo
+            try
             {
-                Link = request.Link,
-                Title = request.Title,
-                NotificationId = notification_id,
-                Duration = "Today"
+                if (request.Link != null && request.Title != null)
+                {
+                    string notification_id = GenerateNotificationId();
+                    Notification.Add(new NotificationInfo
+                    {
+                        Link = request.Link,
+                        Title = request.Title,
+                        NotificationId = notification_id,
+                        Duration = "Today"
 
-            });
-            n.Notification = Notification;
-            this.ServerEventClient.Post<NotifyResponse>(new NotifyUserIdRequest
+                    });
+                    n.Notification = Notification;
+                    this.ServerEventClient.Post<NotifyResponse>(new NotifyUserIdRequest
+                    {
+                        Msg = JsonConvert.SerializeObject(n),
+                        Selector = "cmd.onNotification",
+                        ToUserAuthId = request.UserAuthId,
+                        NotificationId = notification_id,
+                        NotifyUserId = request.UsersID
+                    });
+                }
+                else
+                {
+                    throw new Exception("Notification Title or Link Empty");
+                }
+            }
+            catch (Exception e)
             {
-                Msg = JsonConvert.SerializeObject(n),
-                Selector = "cmd.onNotification",
-                ToUserAuthId = request.UserAuthId,
-                NotificationId = notification_id,
-                NotifyUserId = request.UsersID
-            });
-
+                throw e;
+            }
             return res;
         }
 
@@ -63,35 +76,49 @@ namespace ExpressBase.ServiceStack.Services
             NotifyByUserRoleResponse res = new NotifyByUserRoleResponse();
             Notifications n = new Notifications();
             List<NotificationInfo> Notification = new List<NotificationInfo>();
-            string notification_id = GenerateNotificationId();
             List<int> user_id = new List<int>();
-            Notification.Add(new NotificationInfo
+            try
             {
-                Link = request.Link,
-                Title = request.Title,
-                NotificationId = notification_id,
-                Duration = "Today"
-
-            });
-            n.Notification = Notification;
-            foreach (int role_id in request.RoleID)
-            {
-                string str = string.Format(@" select user_id from eb_role2user where role_id = '{0}'", role_id);
-                EbDataTable dt = EbConnectionFactory.DataDB.DoQuery(str);
-                for (int i = 0; i < dt.Rows.Count; i++)
+                if (request.Link != null && request.Title != null)
                 {
-                    if (!user_id.Contains(int.Parse(dt.Rows[i][0].ToString())))
-                        user_id.Add(int.Parse(dt.Rows[i][0].ToString()));
+                    string notification_id = GenerateNotificationId();
+                    Notification.Add(new NotificationInfo
+                    {
+                        Link = request.Link,
+                        Title = request.Title,
+                        NotificationId = notification_id,
+                        Duration = "Today"
+
+                    });
+                    n.Notification = Notification;
+                    foreach (int role_id in request.RoleID)
+                    {
+                        string str = string.Format(@" select user_id from eb_role2user where role_id = '{0}'", role_id);
+                        EbDataTable dt = EbConnectionFactory.DataDB.DoQuery(str);
+                        for (int i = 0; i < dt.Rows.Count; i++)
+                        {
+                            if (!user_id.Contains(int.Parse(dt.Rows[i][0].ToString())))
+                                user_id.Add(int.Parse(dt.Rows[i][0].ToString()));
+                        }
+                    }
+                    this.ServerEventClient.Post<NotifyResponse>(new NotifyUsersRequest
+                    {
+                        Msg = JsonConvert.SerializeObject(n),
+                        Selector = "cmd.onNotification",
+                        ToUserAuthId = request.UserAuthId,
+                        NotificationId = notification_id,
+                        UsersId = user_id
+                    });
+                }
+                else
+                {
+                    throw new Exception("Notification Title or Link Empty");
                 }
             }
-            this.ServerEventClient.Post<NotifyResponse>(new NotifyUsersRequest
+            catch(Exception e)
             {
-                Msg = JsonConvert.SerializeObject(n),
-                Selector = "cmd.onNotification",
-                ToUserAuthId = request.UserAuthId,
-                NotificationId = notification_id,
-                UsersId = user_id
-            });
+                throw e;
+            }
             return res;
         }
 
@@ -101,34 +128,48 @@ namespace ExpressBase.ServiceStack.Services
             Notifications n = new Notifications();
             List<NotificationInfo> Notification = new List<NotificationInfo>();
             List<int> user_id = new List<int>();
-            string notification_id = GenerateNotificationId();
-            Notification.Add(new NotificationInfo
+            try
             {
-                Link = request.Link,
-                Title = request.Title,
-                NotificationId = notification_id,
-                Duration = "Today"
-
-            });
-            n.Notification = Notification;
-            foreach (string grp_name in request.GroupName)
-            {
-                string str = string.Format(@" select userid from eb_user2usergroup where groupid =(select id from eb_usergroup where name ='{0}')", grp_name);
-                EbDataTable dt = EbConnectionFactory.DataDB.DoQuery(str);
-                for (int i = 0; i < dt.Rows.Count; i++)
+                if(request.Link != null && request.Title != null)
                 {
-                    if (!user_id.Contains(int.Parse(dt.Rows[i][0].ToString())))
-                        user_id.Add(int.Parse(dt.Rows[i][0].ToString()));
+                    string notification_id = GenerateNotificationId();
+                    Notification.Add(new NotificationInfo
+                    {
+                        Link = request.Link,
+                        Title = request.Title,
+                        NotificationId = notification_id,
+                        Duration = "Today"
+
+                    });
+                    n.Notification = Notification;
+                    foreach (string grp_name in request.GroupName)
+                    {
+                        string str = string.Format(@" select userid from eb_user2usergroup where groupid =(select id from eb_usergroup where name ='{0}')", grp_name);
+                        EbDataTable dt = EbConnectionFactory.DataDB.DoQuery(str);
+                        for (int i = 0; i < dt.Rows.Count; i++)
+                        {
+                            if (!user_id.Contains(int.Parse(dt.Rows[i][0].ToString())))
+                                user_id.Add(int.Parse(dt.Rows[i][0].ToString()));
+                        }
+                    }
+                    this.ServerEventClient.Post<NotifyResponse>(new NotifyUsersRequest
+                    {
+                        Msg = JsonConvert.SerializeObject(n),
+                        Selector = "cmd.onNotification",
+                        ToUserAuthId = request.UserAuthId,
+                        NotificationId = notification_id,
+                        UsersId = user_id
+                    });
+                }
+                else
+                {
+                    throw new Exception("Notification Title or Link Empty");
                 }
             }
-            this.ServerEventClient.Post<NotifyResponse>(new NotifyUsersRequest
+            catch(Exception e)
             {
-                Msg = JsonConvert.SerializeObject(n),
-                Selector = "cmd.onNotification",
-                ToUserAuthId = request.UserAuthId,
-                NotificationId = notification_id,
-                UsersId = user_id
-            });
+                throw e;
+            }
             return res;
         }
 
