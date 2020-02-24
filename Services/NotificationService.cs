@@ -142,9 +142,9 @@ namespace ExpressBase.ServiceStack.Services
 
                     });
                     n.Notification = Notification;
-                    foreach (string grp_name in request.GroupName)
+                    foreach (int grp_id in request.GroupId)
                     {
-                        string str = string.Format(@" select userid from eb_user2usergroup where groupid =(select id from eb_usergroup where name ='{0}')", grp_name);
+                        string str = string.Format(@" select userid from eb_user2usergroup where groupid ='{0}'", grp_id);
                         EbDataTable dt = EbConnectionFactory.DataDB.DoQuery(str);
                         for (int i = 0; i < dt.Rows.Count; i++)
                         {
