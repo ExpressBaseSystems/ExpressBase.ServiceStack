@@ -161,7 +161,8 @@ namespace ExpressBase.ServiceStack.Services
                     PricingTier = wrap_sol.PricingTier,
                     Users = users.UserList,
                     IsVersioningEnabled = wrap_sol.IsVersioningEnabled,
-                    PlanUserCount = users.PlanUserCount
+                    PlanUserCount = users.PlanUserCount,
+                    SolutionSettings = wrap_sol.SolutionSettings
                 };
 
                 this.Redis.Set<Eb_Solution>(String.Format("solution_{0}", req.SolnId), sol_Obj);
