@@ -1765,7 +1765,13 @@ namespace ExpressBase.ServiceStack
 
                                         this.conditinallyformatColumn(datacol, ref _data, _data, dr, ref globals);
 
-                                        _hourCount[CalendarCol.Name].Value = _data; 
+                                        _hourCount[CalendarCol.Name].Value = _data;
+                                    }
+                                    else 
+                                    {
+                                        var _data = dr[datacol.OIndex];
+                                        this.conditinallyformatColumnforElse(datacol, ref _data);
+                                        _hourCount[CalendarCol.Name].Value = _data;
                                     }
                                 }
                             }
@@ -2016,6 +2022,30 @@ namespace ExpressBase.ServiceStack
                     if (cond.CompareValues(_unformattedData))
                     {
                         _formattedData = "<div class='conditionformat' style='background-color:" + cond.BackGroundColor + ";color:" + cond.FontColor + ";'>" + _formattedData + "</div>";
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Log.Info("Condition Formatting in datatable Exception........." + e.StackTrace + "Column Name....." + col.Name);
+                Log.Info("Condition Formatting in datatable Exception........." + e.Message + "Column Name....." + col.Name);
+                this._Responsestatus.Message = e.Message;
+            }
+
+        }
+
+        public void conditinallyformatColumnforElse(DVBaseColumn col, ref object _formattedData)
+        {
+            try
+            {
+                foreach (ColumnCondition cond in col.ConditionalFormating)
+                {
+                    if (cond is AdvancedCondition)
+                    {
+                        if ((cond as AdvancedCondition).RenderAS == AdvancedRenderType.Icon)
+                        {
+                            _formattedData = "<i class='fa fa-times' aria-hidden='true' style='color:red'></i>";
+                        }
                     }
                 }
             }
