@@ -625,9 +625,8 @@ namespace ExpressBase.ServiceStack.Services
                         // message = "Loop Failed to execute. counter " + i + " of " + _rowcount;
                         Console.WriteLine(e.Message + e.StackTrace);
                     }
-                    // LinesResult.Add(new SqlJobResult { Message = message, Type = ResourceType.Loop }); 
                 }
-                MasterResult.Add(new SqlJobResult { Message = "Loop execution Success", Type = ResourceType.Loop });
+                MasterResult.Add(new SqlJobResult { Message = "Loop execution Success with " + _rowcount +" iterations.", Type = ResourceType.Loop });
             }
             catch (Exception e)
             {
@@ -681,6 +680,8 @@ namespace ExpressBase.ServiceStack.Services
                         }
                         loop.InnerResources[counter].Result = this.GetResult(loop.InnerResources[counter], counter, step, parentindex);
                     }
+
+                    // LinesResult.Add(new SqlJobResult { Mess, Type = ResourceType.Loop }); 
                     DbParameter[] e_parameters = new DbParameter[]
                     {    this.EbConnectionFactory.DataDB.GetNewParameter("linesid", EbDbTypes.Int32, linesid) ,
                          this.EbConnectionFactory.DataDB.GetNewParameter("keyvalues",EbDbTypes.Json,  _keyvalues),

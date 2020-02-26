@@ -53,8 +53,62 @@ namespace ExpressBase.ServiceStack.Services
                     }
                 }
                 CreateWebFormTables(Form.FormSchema, request);
+                InsertDataIfRequired(Form.FormSchema, Form.RefId);
             }
             return new CreateWebFormTableResponse { };
+        }
+
+        //Review control related data
+        private void InsertDataIfRequired(WebFormSchema _schema, string _refId)
+        {
+            EbReview reviewCtrl = (EbReview)_schema.ExtendedControls.Find(e => e is EbReview);
+            if (reviewCtrl == null || _refId == null)
+                return;
+            int[] stageIds = new int[reviewCtrl.FormStages.Count];
+            string selQ = @"SELECT id FROM eb_stages WHERE form_ref_id = @form_ref_id AND COALESCE(eb_del, 'F') = 'F' ORDER BY id; ";
+            EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(selQ, new DbParameter[] { this.EbConnectionFactory.DataDB.GetNewParameter("form_ref_id", EbDbTypes.String, _refId) });
+            for (int i = 0; i < dt.Rows.Count && i < stageIds.Length; i++)
+            {
+                int.TryParse(dt.Rows[i][0].ToString(), out stageIds[i]);
+            }
+            string fullQ = $@"UPDATE eb_stage_actions SET eb_del = 'T' WHERE COALESCE(eb_del, 'F') = 'F' AND eb_stages_id IN (SELECT id FROM eb_stages WHERE  form_ref_id = @form_ref_id AND COALESCE(eb_del, 'F') = 'F');
+                            UPDATE eb_stages SET eb_del = 'T' WHERE form_ref_id = @form_ref_id AND COALESCE(eb_del, 'F') = 'F' AND id NOT IN ({stageIds.Join(",")}); ";
+
+            List<DbParameter> param = new List<DbParameter>();
+            param.Add(this.EbConnectionFactory.DataDB.GetNewParameter("form_ref_id", EbDbTypes.String, _refId));
+            for (int i = 0; i < stageIds.Length; i++)
+            {
+                EbReviewStage reviewStage = reviewCtrl.FormStages[i] as EbReviewStage;
+                string stageid = "(SELECT eb_currval('eb_stages_id_seq'))";
+                if (stageIds[i] == 0)
+                {
+                    fullQ += $@"INSERT INTO eb_stages(stage_name, stage_unique_id, form_ref_id, eb_del) 
+                                VALUES (@stage_name_{i}, @stage_unique_id_{i}, @form_ref_id, 'F'); ";
+                    if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.MYSQL)
+                        fullQ += $"SELECT eb_persist_currval('eb_stages_id_seq'); ";
+                }
+                else
+                {
+                    fullQ += $@"UPDATE eb_stages SET stage_name = @stage_name_{i}, stage_unique_id = @stage_unique_id_{i}
+                                    WHERE form_ref_id = @form_ref_id AND id = {stageIds[i]}; ";
+                    stageid = stageIds[i].ToString();
+                }
+
+                param.Add(this.EbConnectionFactory.DataDB.GetNewParameter($"stage_name_{i}", EbDbTypes.String, reviewStage.Name));
+                param.Add(this.EbConnectionFactory.DataDB.GetNewParameter($"stage_unique_id_{i}", EbDbTypes.String, reviewStage.EbSid));
+
+                for (int j = 0; j < reviewStage.StageActions.Count; j++)
+                {
+                    EbReviewAction reviewAction = reviewStage.StageActions[j] as EbReviewAction;
+                    fullQ += $@"INSERT INTO eb_stage_actions(action_name, action_unique_id, eb_stages_id, eb_del) 
+                                    VALUES (@action_name_{i}_{j}, @action_unique_id_{i}_{j}, {stageid}, 'F'); ";
+                    param.Add(this.EbConnectionFactory.DataDB.GetNewParameter($"action_name_{i}_{j}", EbDbTypes.String, reviewAction.Name));
+                    param.Add(this.EbConnectionFactory.DataDB.GetNewParameter($"action_unique_id_{i}_{j}", EbDbTypes.String, reviewAction.EbSid));
+                }
+            }
+
+            this.EbConnectionFactory.DataDB.DoNonQuery(fullQ, param.ToArray());
+
         }
 
         private void CreateWebFormTables(WebFormSchema _schema, CreateWebFormTableRequest request)
@@ -756,7 +810,11 @@ namespace ExpressBase.ServiceStack.Services
                     }
                     form.GetEmptyModel();
                 }
-                if (!(form.HasPermission(OperationConstants.VIEW, form.LocationId) || form.HasPermission(OperationConstants.NEW, form.LocationId) || form.HasPermission(OperationConstants.EDIT, form.LocationId)))
+                if (form.SolutionObj.SolutionSettings != null && form.SolutionObj.SolutionSettings.SignupFormRefid != string.Empty && form.SolutionObj.SolutionSettings.SignupFormRefid == form.RefId)
+                {
+
+                }
+                else if (!(form.HasPermission(OperationConstants.VIEW, form.LocationId) || form.HasPermission(OperationConstants.NEW, form.LocationId) || form.HasPermission(OperationConstants.EDIT, form.LocationId)))
                 {
                     throw new FormException("Error in loading data. Access Denied.", (int)HttpStatusCodes.UNAUTHORIZED, "Access Denied for rowid " + form.TableRowId + " , current location " + form.LocationId, string.Empty);
                 }
