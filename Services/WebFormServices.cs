@@ -1423,7 +1423,7 @@ namespace ExpressBase.ServiceStack.Services
         {
             bool isAvail = false;
             if (this.EbConnectionFactory.EmailConnection != null)
-                isAvail = this.EbConnectionFactory.EmailConnection.Count > 0;
+                isAvail = this.EbConnectionFactory.EmailConnection.Primary != null;
             return new CheckEmailConAvailableResponse { ConnectionAvailable = isAvail };
         }
 
