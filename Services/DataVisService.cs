@@ -1767,12 +1767,15 @@ namespace ExpressBase.ServiceStack
 
                                         _hourCount[CalendarCol.Name].Value = _data;
                                     }
-                                    //else
-                                    //{
-                                    //    var _data = dr[datacol.OIndex];
-                                    //    this.conditinallyformatColumnforElse(datacol, ref _data);
-                                    //    _hourCount[CalendarCol.Name].Value = _data;
-                                    //}
+                                    else
+                                    {
+                                        if (CalendarCol.StartDT.Date <= DateTime.Now)
+                                        {
+                                            var _data = dr[datacol.OIndex];
+                                            this.conditinallyformatColumnforElse(datacol, ref _data);
+                                            _hourCount[CalendarCol.Name].Value = _data;
+                                        }
+                                    }
                                 }
                             }
                             else if (datacol.AggregateFun == AggregateFun.Count)
