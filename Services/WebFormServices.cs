@@ -118,7 +118,7 @@ namespace ExpressBase.ServiceStack.Services
             foreach (TableSchema _table in _schema.Tables)
             {
                 List<TableColumnMeta> _listNamesAndTypes = new List<TableColumnMeta>();
-                if (_table.Columns.Count > 0)
+                if (_table.Columns.Count > 0 && _table.TableType != WebFormTableTypes.Review)
                 {
                     foreach (ColumnSchema _column in _table.Columns)
                     {
