@@ -386,7 +386,8 @@ namespace ExpressBase.ServiceStack.Services
                             {
                                 (int)SystemRoles.SolutionOwner,
                                 (int)SystemRoles.SolutionAdmin
-                            }
+                            },
+                        SolutionId = request.SolnId
                     });
                 }
                 catch (Exception e)
