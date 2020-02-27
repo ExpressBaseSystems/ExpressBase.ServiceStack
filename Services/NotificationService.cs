@@ -76,7 +76,7 @@ namespace ExpressBase.ServiceStack.Services
             NotifyByUserRoleResponse res = new NotifyByUserRoleResponse();
             Notifications n = new Notifications();
             List<NotificationInfo> Notification = new List<NotificationInfo>();
-            List<int> user_id = new List<int>();
+            Dictionary<int,string> user_details = new Dictionary<int, string>();
             try
             {
                 if (request.Link != null && request.Title != null)
@@ -93,21 +93,23 @@ namespace ExpressBase.ServiceStack.Services
                     n.Notification = Notification;
                     foreach (int role_id in request.RoleID)
                     {
-                        string str = string.Format(@" select user_id from eb_role2user where role_id = '{0}'", role_id);
+                        string str = string.Format(@"select ru.user_id, u.email from eb_role2user as ru, eb_users as u where ru.role_id = '{0}' and ru.user_id = u.id ", role_id);
                         EbDataTable dt = EbConnectionFactory.DataDB.DoQuery(str);
                         for (int i = 0; i < dt.Rows.Count; i++)
                         {
-                            if (!user_id.Contains(int.Parse(dt.Rows[i][0].ToString())))
-                                user_id.Add(int.Parse(dt.Rows[i][0].ToString()));
+                            string user_auth_id = request.SolutionId + ":" + dt.Rows[i][1].ToString() + ":uc";
+                            if (!user_details.ContainsKey(int.Parse(dt.Rows[i][0].ToString())))
+                                user_details.Add(int.Parse(dt.Rows[i][0].ToString()), user_auth_id);
                         }
                     }
+
                     this.ServerEventClient.Post<NotifyResponse>(new NotifyUsersRequest
                     {
                         Msg = JsonConvert.SerializeObject(n),
                         Selector = "cmd.onNotification",
-                        ToUserAuthId = request.UserAuthId,
                         NotificationId = notification_id,
-                        UsersId = user_id
+                        UsersDetails = user_details,
+                        SolnId = request.SolutionId
                     });
                 }
                 else
@@ -127,7 +129,7 @@ namespace ExpressBase.ServiceStack.Services
             NotifyByUserGroupResponse res = new NotifyByUserGroupResponse();
             Notifications n = new Notifications();
             List<NotificationInfo> Notification = new List<NotificationInfo>();
-            List<int> user_id = new List<int>();
+            Dictionary<int, string> user_details = new Dictionary<int, string>();
             try
             {
                 if(request.Link != null && request.Title != null)
@@ -144,12 +146,13 @@ namespace ExpressBase.ServiceStack.Services
                     n.Notification = Notification;
                     foreach (int grp_id in request.GroupId)
                     {
-                        string str = string.Format(@" select userid from eb_user2usergroup where groupid ='{0}'", grp_id);
+                        string str = string.Format(@" select ug.userid, u.email from eb_user2usergroup as ug, eb_users as u where ug.groupid ='{0}' and ug.user_id = u.id  ", grp_id);
                         EbDataTable dt = EbConnectionFactory.DataDB.DoQuery(str);
                         for (int i = 0; i < dt.Rows.Count; i++)
                         {
-                            if (!user_id.Contains(int.Parse(dt.Rows[i][0].ToString())))
-                                user_id.Add(int.Parse(dt.Rows[i][0].ToString()));
+                            string user_auth_id = request.SolutionId + ":" + dt.Rows[i][1].ToString() + ":uc";
+                            if (!user_details.ContainsKey(int.Parse(dt.Rows[i][0].ToString())))
+                                user_details.Add(int.Parse(dt.Rows[i][0].ToString()), user_auth_id);
                         }
                     }
                     this.ServerEventClient.Post<NotifyResponse>(new NotifyUsersRequest
@@ -158,7 +161,7 @@ namespace ExpressBase.ServiceStack.Services
                         Selector = "cmd.onNotification",
                         ToUserAuthId = request.UserAuthId,
                         NotificationId = notification_id,
-                        UsersId = user_id
+                        UsersDetails = user_details
                     });
                 }
                 else
@@ -247,13 +250,14 @@ namespace ExpressBase.ServiceStack.Services
             GetNotificationsResponse res = new GetNotificationsResponse();
             List<NotificationInfo> Notifications = new List<NotificationInfo>();
             this.EbConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
-            string str = string.Format(@"
+            try
+            {
+                string str = string.Format(@"
                                                 SELECT notification_id, notification, created_at  
                                                 FROM eb_notifications 
                                                 WHERE user_id = '{0}'
                                                 AND message_seen ='F'
                                                 ORDER BY created_at DESC;", request.UserId);
-
             EbDataTable dt = EbConnectionFactory.DataDB.DoQuery(str);
             for (int i = 0; i < dt.Rows.Count; i++)
             {
@@ -270,7 +274,13 @@ namespace ExpressBase.ServiceStack.Services
                 });
             }
             res.Notifications = Notifications;
-            //res.PendingActions = GetPendingActions(request);
+            res.PendingActions = Post(new GetPendingActionRequest { user = request.user}).PendingActions;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Pending Action -----"+e.Message);
+                Console.WriteLine("Pending Action -----" + e.StackTrace);
+            }
             return res;
         }
 
@@ -296,21 +306,28 @@ namespace ExpressBase.ServiceStack.Services
             return duration;
         }
 
-        List<string> GetPendingActions(GetNotificationsRequest request)
+        public GetPendingActionResponse Post(GetPendingActionRequest request)
         {
+            GetPendingActionResponse res = new GetPendingActionResponse();
+            res.PendingActions = new List<PendingActionInfo>();
             string _roles = string.Join(",", request.user.Roles
                                             .Select(x => string.Format("'{0}'", x)));
             string str = string.Format(@"SELECT *
                     FROM eb_my_actions
                     WHERE '{0}' = any(string_to_array(user_ids, ',')) OR
-                     role_id IN(select id from eb_roles where role_name IN({1}));", request.UserId, _roles);
+                     role_id IN(select id from eb_roles where role_name IN({1}));", request.user.UserId, _roles);
             EbDataTable dt = EbConnectionFactory.DataDB.DoQuery(str);
-            List<string>  PendingActions = new List<string>();
             for (int i = 0; i < dt.Rows.Count; i++)
             {
-                PendingActions.Add(dt.Rows[i]["description"].ToString());
+                res.PendingActions.Add(new PendingActionInfo
+                { 
+                    Description =  dt.Rows[i]["description"].ToString(),
+                    Link = dt.Rows[i]["form_ref_id"].ToString(),
+                    DataId = dt.Rows[i]["form_data_id"].ToString(),
+                    CreatedDate =Convert.ToDateTime( dt.Rows[i]["from_datetime"]).ToString("dd-MM-yyyy")
+                });
             }
-            return PendingActions;
+            return res;
         }
     }
 }
