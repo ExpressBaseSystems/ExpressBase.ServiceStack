@@ -373,19 +373,27 @@ namespace ExpressBase.ServiceStack.Services
             //	}
             //}
 
-            if(request.Id == 0 && id > 0)
+            if (request.Id == 0 && id > 0)
             {
-                var service = base.ResolveService<NotificationService>();
-                var r = (NotifyByUserRoleResponse)service.Post(new NotifyByUserRoleRequest
+                try
                 {
-                    Link = $"/Security/ManageUser?itemid={id}&Mode=2",
-                    Title = "New User "+ request.FullName + " Created" ,
-                    RoleID = new List<int>
+                    var service = base.ResolveService<NotificationService>();
+                    var r = (NotifyByUserRoleResponse)service.Post(new NotifyByUserRoleRequest
+                    {
+                        Link = $"/Security/ManageUser?itemid={id}&Mode=2",
+                        Title = "New User " + request.FullName + " Created",
+                        RoleID = new List<int>
                             {
                                 (int)SystemRoles.SolutionOwner,
                                 (int)SystemRoles.SolutionAdmin
-                            }
-                });
+                            },
+                        SolutionId = request.SolnId
+                    });
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e.Message + e.StackTrace);
+                }
             }
 
             return resp;

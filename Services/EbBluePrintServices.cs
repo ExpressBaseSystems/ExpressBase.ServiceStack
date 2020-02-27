@@ -32,8 +32,11 @@ namespace ExpressBase.ServiceStack.Services
 					
 					DbParameter[] parameters = {
 									this.EbConnectionFactory.DataDB.GetNewParameter("svgst", EbDbTypes.String, svgreq.Txtsvg),
-									this.EbConnectionFactory.DataDB.GetNewParameter("imgbytea", EbDbTypes.Bytea, svgreq.BgFile),
+									this.EbConnectionFactory.DataDB.GetNewParameter("imgbytea", EbDbTypes.Bytea, svgreq.BgFile ),
 									this.EbConnectionFactory.DataDB.GetNewParameter("bpmeta", EbDbTypes.String, svgreq.MetaBluePrint)
+									//this.EbConnectionFactory.DataDB.GetNewParameter("svgst", EbDbTypes.String, (String.IsNullOrEmpty(svgreq.Txtsvg))?null:svgreq.Txtsvg),
+									//this.EbConnectionFactory.DataDB.GetNewParameter("imgbytea", EbDbTypes.Bytea, (svgreq.BgFile != null  && svgreq.BgFile.Length > 0)?null:svgreq.BgFile ),
+									//this.EbConnectionFactory.DataDB.GetNewParameter("bpmeta", EbDbTypes.String, String.IsNullOrEmpty(svgreq.MetaBluePrint)?null:svgreq.MetaBluePrint)
 									};
 					
 					EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(sql, parameters);

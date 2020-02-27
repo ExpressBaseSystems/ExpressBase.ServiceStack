@@ -1421,7 +1421,10 @@ namespace ExpressBase.ServiceStack.Services
 
         public CheckEmailConAvailableResponse Post(CheckEmailConAvailableRequest request)
         {
-            return new CheckEmailConAvailableResponse { ConnectionAvailable = this.EbConnectionFactory.EmailConnection.Primary != null };
+            bool isAvail = false;
+            if (this.EbConnectionFactory.EmailConnection != null)
+                isAvail = this.EbConnectionFactory.EmailConnection.Primary != null;
+            return new CheckEmailConAvailableResponse { ConnectionAvailable = isAvail };
         }
 
 
