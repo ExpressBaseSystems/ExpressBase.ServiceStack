@@ -542,7 +542,7 @@ namespace ExpressBase.ServiceStack
                     Console.WriteLine("................................................dataviz datarequest end " + DateTime.Now);
                     var dtstop = DateTime.Now;
                     Console.WriteLine("..................................totaltimeinSeconds" + dtstop.Subtract(dtStart).Seconds);
-                    if (request.RefId != null &&  GetLogEnabled(request.RefId))
+                    if (request.RefId != null && GetLogEnabled(request.RefId))
                     {
                         TimeSpan T = _dataset.EndTime - _dataset.StartTime;
                         InsertExecutionLog(_dataset.RowNumbers, T, _dataset.StartTime, request.UserId, request.Params, request.RefId);
@@ -553,16 +553,16 @@ namespace ExpressBase.ServiceStack
                     var ts = (dtEnd - dtStart).TotalMilliseconds;
                     Console.WriteLine("final:::" + ts);
                 }
-                    int _recordsTotal = 0, _recordsFiltered = 0;
-                    if (_isPaged)
-                    {
-                        Int32.TryParse(_dataset.Tables[_dataset.Tables.Count - 1].Rows[0][0].ToString(), out _recordsTotal);
-                        Int32.TryParse(_dataset.Tables[_dataset.Tables.Count - 1].Rows[0][0].ToString(), out _recordsFiltered);
-                    }
-                    _recordsTotal = (_recordsTotal > 0) ? _recordsTotal : _dataset.Tables[_dataset.Tables.Count - 1].Rows.Count;
-                    _recordsFiltered = (_recordsFiltered > 0) ? _recordsFiltered : _dataset.Tables[_dataset.Tables.Count - 1].Rows.Count;
-                    //-- 
-                
+                int _recordsTotal = 0, _recordsFiltered = 0;
+                if (_isPaged)
+                {
+                    Int32.TryParse(_dataset.Tables[_dataset.Tables.Count - 1].Rows[0][0].ToString(), out _recordsTotal);
+                    Int32.TryParse(_dataset.Tables[_dataset.Tables.Count - 1].Rows[0][0].ToString(), out _recordsFiltered);
+                }
+                _recordsTotal = (_recordsTotal > 0) ? _recordsTotal : _dataset.Tables[_dataset.Tables.Count - 1].Rows.Count;
+                _recordsFiltered = (_recordsFiltered > 0) ? _recordsFiltered : _dataset.Tables[_dataset.Tables.Count - 1].Rows.Count;
+                //-- 
+
                 PrePrcessorReturn ReturnObj = null;
                 List<GroupingDetails> _levels = new List<GroupingDetails>();
                 if (_dataset.Tables.Count > 0 && _dV != null)
@@ -1610,7 +1610,7 @@ namespace ExpressBase.ServiceStack
             string info = $"<table><tr><td>{data}</td></tr></table>";
             string formatted = string.Empty;
             int count = 0;
-            while (data.Length > _length && count< _lines)
+            while (data.Length > _length && count < _lines)
             {
                 //trim the string to the maximum length
                 var trimmedString = data.Substring(0, _length);
@@ -1621,11 +1621,11 @@ namespace ExpressBase.ServiceStack
                 data = data.Remove(0, trimmedString.Length);
                 count++;
             };
-            if(data.Length > _length) 
-                    formatted = formatted.Substring(0, formatted.LastIndexOf("</br>")) + " ...";
+            if (data.Length > _length)
+                formatted = formatted.Substring(0, formatted.LastIndexOf("</br>")) + " ...";
             else
-                 formatted = formatted + data + " ...";
-            return  "<span class='columntooltip' data-toggle='popover' data-contents='" + info.ToBase64() + "'>" + formatted + "</span>"; ;
+                formatted = formatted + data + " ...";
+            return "<span class='columntooltip' data-toggle='popover' data-contents='" + info.ToBase64() + "'>" + formatted + "</span>"; ;
         }
 
         public void CreateIntermediateDict(EbDataRow row, EbDataVisualization _dv, CultureInfo _user_culture, User _user, ref EbDataTable _formattedTable, ref Globals globals, bool _isexcel, int i)
@@ -1752,73 +1752,55 @@ namespace ExpressBase.ServiceStack
                             {
                                 _hourCount.Add(key, new DynamicObj());
                             }
-                            if(datacol.ConditionalFormating.Count >0)
+
+                            var _Customrows = Customrows.FindAll(row => DateTimeHelper.IsBewteenTwoDates(Convert.ToDateTime(row[DateColumn.OIndex]), CalendarCol.StartDT, CalendarCol.EndDT));
+
+                            if (datacol.ConditionalFormating.Count > 0)
                             {
-                                foreach (EbDataRow dr in Customrows)
+                                if (_Customrows.Count > 0)
                                 {
-                                    if (DateTimeHelper.IsBewteenTwoDates(Convert.ToDateTime(dr[DateColumn.OIndex]), CalendarCol.StartDT, CalendarCol.EndDT))
+                                    EbDataRow dr = _Customrows[0];
+                                    if (_hourCount[CalendarCol.Name].Row == null)
+                                        _hourCount[CalendarCol.Name].Row = System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(string.Join(",", dr.ToArray())));
+
+                                    var _data = dr[datacol.OIndex];
+
+                                    this.conditinallyformatColumn(datacol, ref _data, _data, dr, ref globals);
+
+                                    _hourCount[CalendarCol.Name].Value = _data;
+                                }
+                                else
+                                {
+                                    if (CalendarCol.StartDT.Date <= DateTime.Now)
                                     {
-                                        if (_hourCount[CalendarCol.Name].Row == null)
-                                            _hourCount[CalendarCol.Name].Row = System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(string.Join(",", dr.ToArray())));
-
-                                        var _data = dr[datacol.OIndex];
-
-                                        this.conditinallyformatColumn(datacol, ref _data, _data, dr, ref globals);
-
-                                        _hourCount[CalendarCol.Name].Value = _data;
-                                    }
-                                    else
-                                    {
-                                        if (CalendarCol.StartDT.Date <= DateTime.Now)
-                                        {
-                                            _hourCount[CalendarCol.Name].Value = "<i class='fa fa-times' aria-hidden='true' style='color:red'></i>";
-                                        }
+                                        _hourCount[CalendarCol.Name].Value = "<i class='fa fa-times' aria-hidden='true' style='color:red'></i>";
                                     }
                                 }
                             }
+
                             else if (datacol.AggregateFun == AggregateFun.Count)
                             {
-                                foreach (EbDataRow dr in Customrows)
+                                foreach (EbDataRow dr in _Customrows)
                                 {
-                                    if (datacol.Type == EbDbTypes.Date || datacol.Type == EbDbTypes.DateTime)
-                                    {
-                                        if (DateTimeHelper.IsBewteenTwoDates(Convert.ToDateTime(dr[DateColumn.OIndex]), CalendarCol.StartDT, CalendarCol.EndDT))
-                                        {
-                                            if (_hourCount[CalendarCol.Name].Row == null)
-                                                _hourCount[CalendarCol.Name].Row = System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(string.Join(",", dr.ToArray())));
-                                            var data = Convert.ToInt32(_hourCount[CalendarCol.Name].Value);
-                                            _hourCount[CalendarCol.Name].Value = ++data;
-                                        }
-                                    }
-                                    if (datacol.Type == EbDbTypes.Int32 || datacol.Type == EbDbTypes.Int64 || datacol.Type == EbDbTypes.Decimal)
-                                    {
-                                        if (DateTimeHelper.IsBewteenTwoDates(Convert.ToDateTime(dr[DateColumn.OIndex]), CalendarCol.StartDT, CalendarCol.EndDT))
-                                        {
-                                            if (_hourCount[CalendarCol.Name].Row == null)
-                                                _hourCount[CalendarCol.Name].Row = System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(string.Join(",", dr.ToArray())));
+                                    if (_hourCount[CalendarCol.Name].Row == null)
+                                        _hourCount[CalendarCol.Name].Row = System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(string.Join(",", dr.ToArray())));
+                                    var data = Convert.ToInt32(_hourCount[CalendarCol.Name].Value);
+                                    _hourCount[CalendarCol.Name].Value = ++data;
 
-                                            var data = Convert.ToInt32(_hourCount[CalendarCol.Name].Value);
-                                            _hourCount[CalendarCol.Name].Value = ++data;
-                                        }
-                                    }
                                 }
                             }
 
                             else if (datacol.AggregateFun == AggregateFun.Sum)
                             {
-                                foreach (EbDataRow dr in Customrows)
+                                if (datacol.Type == EbDbTypes.Int32 || datacol.Type == EbDbTypes.Int64 || datacol.Type == EbDbTypes.Decimal)
                                 {
-                                    if (datacol.Type == EbDbTypes.Int32 || datacol.Type == EbDbTypes.Int64 || datacol.Type == EbDbTypes.Decimal)
+                                    foreach (EbDataRow dr in _Customrows)
                                     {
-                                        if (DateTimeHelper.IsBewteenTwoDates(Convert.ToDateTime(dr[DateColumn.OIndex]), CalendarCol.StartDT, CalendarCol.EndDT))
-                                        {
-                                            //var _data = xxx(dr, datacol, _user_culture, _user, ref globals);
-                                            var _data = dr[datacol.OIndex];
-                                            if (_hourCount[CalendarCol.Name].Row == null)
-                                                _hourCount[CalendarCol.Name].Row = System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(string.Join(",", dr.ToArray())));
-                                            var data = Convert.ToInt32(_hourCount[CalendarCol.Name].Value);
-                                            _hourCount[CalendarCol.Name].Value = data+ Convert.ToInt32(_data);
-                                        }
+                                        var _data = dr[datacol.OIndex];
+                                        if (_hourCount[CalendarCol.Name].Row == null)
+                                            _hourCount[CalendarCol.Name].Row = System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(string.Join(",", dr.ToArray())));
+                                        var data = Convert.ToInt32(_hourCount[CalendarCol.Name].Value);
+                                        _hourCount[CalendarCol.Name].Value = data + Convert.ToInt32(_data);
                                     }
                                 }
                             }
@@ -1861,17 +1843,11 @@ namespace ExpressBase.ServiceStack
                 {
                     if (col.SubType == NumericSubType.None)
                     {
-                        //if (col.ConditionalFormating.Count > 0)
-                        //{
-                        //    this.conditinallyformatColumn(col, ref _formattedData, _unformattedData, ref globals);
-                        //}
-                        //else
-                        // return (Convert.ToInt32(_formattedData) == 0) ? string.Empty : _formattedData.ToString();
                         return _formattedData;
                     }
                     else
                     {
-                        _formattedData = ConverToTime(col, _formattedData);
+                        return ConverToTime(col, _formattedData);
                     }
                 }
                 else
@@ -2102,10 +2078,10 @@ namespace ExpressBase.ServiceStack
                 Summary[col.Data][1] = (Convert.ToDecimal(Summary[col.Data][0]) / count).ToString("N", cults.NumberFormat);
             }
         }
-       
-        public void DoRowGroupingCommon(EbDataRow currentRow, EbDataVisualization Visualization, CultureInfo Culture, User _user, 
-            ref EbDataTable FormattedTable, bool IsMultiLevelRowGrouping, ref Dictionary<string, GroupingDetails> RowGrouping, 
-            ref string PreviousGroupingText, ref int CurSortIndex, ref int SerialCount, int PrevRowIndex, int dvColCount, int TotalLevels, 
+
+        public void DoRowGroupingCommon(EbDataRow currentRow, EbDataVisualization Visualization, CultureInfo Culture, User _user,
+            ref EbDataTable FormattedTable, bool IsMultiLevelRowGrouping, ref Dictionary<string, GroupingDetails> RowGrouping,
+            ref string PreviousGroupingText, ref int CurSortIndex, ref int SerialCount, int PrevRowIndex, int dvColCount, int TotalLevels,
             ref List<int> AggregateColumnIndexes, ref List<DVBaseColumn> RowGroupingColumns, int RowCount)
         {
             CurSortIndex += TotalLevels + 30;
