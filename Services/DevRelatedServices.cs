@@ -4,6 +4,7 @@ using ExpressBase.Common.Constants;
 using ExpressBase.Common.Data;
 using ExpressBase.Common.Structures;
 using ExpressBase.Objects.ServiceStack_Artifacts;
+using ExpressBase.ServiceStack.Services;
 using Newtonsoft.Json;
 using ServiceStack.Messaging;
 using System;
@@ -350,6 +351,27 @@ namespace ExpressBase.ServiceStack
                 Console.WriteLine("EXCEPTION AT APPLICATION SETTINGS UPDATE :", e.Message);
             }
             return resp;
+        }
+
+        public SaveSolutionSettingsResponse Post(SaveSolutionSettingsRequest request)
+        {
+            SaveSolutionSettingsResponse response = new SaveSolutionSettingsResponse();
+            try
+            {
+                string query = "UPDATE eb_solutions SET solution_settings = :solutionSettings WHERE isolution_id = :solutionId";
+                DbParameter[] parameters = new DbParameter[] {
+           this.InfraConnectionFactory.DataDB.GetNewParameter("solutionSettings", EbDbTypes.Json, request.SolutionSettings),
+           this.InfraConnectionFactory.DataDB.GetNewParameter("solutionId", EbDbTypes.String, request.SolnId) };
+                int c = this.InfraConnectionFactory.DataDB.DoNonQuery(query, parameters);
+                base.ResolveService<TenantUserServices>().Post(new UpdateSolutionObjectRequest { SolnId = request.SolnId, UserId = request.UserId });
+                response.Message ="Saved Successfully";
+            }
+            catch (Exception e)
+            {
+                response.Message = "Something went wrong..!";
+                Console.WriteLine(e.Message + e.StackTrace);
+            }
+            return response;
         }
     }
 }

@@ -73,13 +73,13 @@ namespace ExpressBase.ServiceStack.Services
             }
             string fullQ = $@"UPDATE eb_stage_actions SET eb_del = 'T' WHERE COALESCE(eb_del, 'F') = 'F' AND eb_stages_id IN (SELECT id FROM eb_stages WHERE  form_ref_id = @form_ref_id AND COALESCE(eb_del, 'F') = 'F');
                             UPDATE eb_stages SET eb_del = 'T' WHERE form_ref_id = @form_ref_id AND COALESCE(eb_del, 'F') = 'F' AND id NOT IN ({stageIds.Join(",")}); ";
-            
+
             List<DbParameter> param = new List<DbParameter>();
             param.Add(this.EbConnectionFactory.DataDB.GetNewParameter("form_ref_id", EbDbTypes.String, _refId));
             for (int i = 0; i < stageIds.Length; i++)
             {
                 EbReviewStage reviewStage = reviewCtrl.FormStages[i] as EbReviewStage;
-                string stageid = "(SELECT eb_currval('eb_stages_id_seq'))"; 
+                string stageid = "(SELECT eb_currval('eb_stages_id_seq'))";
                 if (stageIds[i] == 0)
                 {
                     fullQ += $@"INSERT INTO eb_stages(stage_name, stage_unique_id, form_ref_id, eb_del) 
@@ -810,7 +810,11 @@ namespace ExpressBase.ServiceStack.Services
                     }
                     form.GetEmptyModel();
                 }
-                if (!(form.HasPermission(OperationConstants.VIEW, form.LocationId) || form.HasPermission(OperationConstants.NEW, form.LocationId) || form.HasPermission(OperationConstants.EDIT, form.LocationId)))
+                if (form.SolutionObj.SolutionSettings != null && form.SolutionObj.SolutionSettings.SignupFormRefid != string.Empty && form.SolutionObj.SolutionSettings.SignupFormRefid == form.RefId)
+                {
+
+                }
+                else if (!(form.HasPermission(OperationConstants.VIEW, form.LocationId) || form.HasPermission(OperationConstants.NEW, form.LocationId) || form.HasPermission(OperationConstants.EDIT, form.LocationId)))
                 {
                     throw new FormException("Error in loading data. Access Denied.", (int)HttpStatusCodes.UNAUTHORIZED, "Access Denied for rowid " + form.TableRowId + " , current location " + form.LocationId, string.Empty);
                 }
@@ -1417,7 +1421,10 @@ namespace ExpressBase.ServiceStack.Services
 
         public CheckEmailConAvailableResponse Post(CheckEmailConAvailableRequest request)
         {
-            return new CheckEmailConAvailableResponse { ConnectionAvailable = this.EbConnectionFactory.EmailConnection.Primary != null };
+            bool isAvail = false;
+            if (this.EbConnectionFactory.EmailConnection != null)
+                isAvail = this.EbConnectionFactory.EmailConnection.Primary != null;
+            return new CheckEmailConAvailableResponse { ConnectionAvailable = isAvail };
         }
 
 

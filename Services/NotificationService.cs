@@ -252,7 +252,7 @@ namespace ExpressBase.ServiceStack.Services
                                                 FROM eb_notifications 
                                                 WHERE user_id = '{0}'
                                                 AND message_seen ='F'
-                                                ORDER BY created_at DESC", request.UserId);
+                                                ORDER BY created_at DESC;", request.UserId);
 
             EbDataTable dt = EbConnectionFactory.DataDB.DoQuery(str);
             for (int i = 0; i < dt.Rows.Count; i++)
@@ -270,6 +270,7 @@ namespace ExpressBase.ServiceStack.Services
                 });
             }
             res.Notifications = Notifications;
+            //res.PendingActions = GetPendingActions(request);
             return res;
         }
 
@@ -293,6 +294,23 @@ namespace ExpressBase.ServiceStack.Services
                 duration = (day>1)? day + " days ago": day + " day ago";
             }
             return duration;
+        }
+
+        List<string> GetPendingActions(GetNotificationsRequest request)
+        {
+            string _roles = string.Join(",", request.user.Roles
+                                            .Select(x => string.Format("'{0}'", x)));
+            string str = string.Format(@"SELECT *
+                    FROM eb_my_actions
+                    WHERE '{0}' = any(string_to_array(user_ids, ',')) OR
+                     role_id IN(select id from eb_roles where role_name IN({1}));", request.UserId, _roles);
+            EbDataTable dt = EbConnectionFactory.DataDB.DoQuery(str);
+            List<string>  PendingActions = new List<string>();
+            for (int i = 0; i < dt.Rows.Count; i++)
+            {
+                PendingActions.Add(dt.Rows[i]["description"].ToString());
+            }
+            return PendingActions;
         }
     }
 }
