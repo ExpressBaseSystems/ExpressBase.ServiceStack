@@ -333,7 +333,7 @@ namespace ExpressBase.ServiceStack.Services
                 List<DbParameter> parameters = new List<DbParameter> {
                     this.EbConnectionFactory.ObjectsDB.GetNewParameter("appid", EbDbTypes.Int32, request.AppId)
                 };
-                if (UserObject.Roles.Contains(SystemRoles.SolutionOwner.ToString()) || UserObject.Roles.Contains(SystemRoles.SolutionAdmin.ToString()))              
+                if (UserObject.Roles.Contains(SystemRoles.SolutionOwner.ToString()) || UserObject.Roles.Contains(SystemRoles.SolutionAdmin.ToString()))
                     query = string.Format(Sql, string.Empty);
                 else
                 {
@@ -344,7 +344,7 @@ namespace ExpressBase.ServiceStack.Services
                 foreach (EbDataRow dr in ds.Tables[0].Rows)
                 {
                     EbObjectType objType = (EbObjectType)Convert.ToInt32(dr["obj_type"]);
-                    if(objType.IntCode == EbObjectTypes.MobilePage)
+                    if (objType.IntCode == EbObjectTypes.MobilePage)
                     {
                         response.Pages.Add(new MobilePagesWraper
                         {
@@ -434,7 +434,7 @@ namespace ExpressBase.ServiceStack.Services
 
                 List<DbParameter> parameters = request.Params.ParamsToDbParameters(this.EbConnectionFactory);
 
-                if (request.Limit != 0 && request.Offset != 0)
+                if (request.Limit != 0)
                 {
                     parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@limit", EbDbTypes.Int32, request.Limit));
                     parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@offset", EbDbTypes.Int32, request.Offset));
@@ -442,7 +442,6 @@ namespace ExpressBase.ServiceStack.Services
                 string wraped = WrapQuery(_ds.Sql, request.Limit, request.Offset);
 
                 resp.Data = this.EbConnectionFactory.DataDB.DoQueries(wraped, parameters.ToArray());
-
             }
             catch (Exception ex)
             {
@@ -454,20 +453,20 @@ namespace ExpressBase.ServiceStack.Services
 
         private string WrapQuery(string sql, int limit, int offset)
         {
-            string wraped = string.Empty;
-            if (limit != 0 && offset != 0)
+            string wraped = $"SELECT COUNT(*) FROM ({sql.TrimEnd(CharConstants.SEMI_COLON)}) AS COUNT_STAR;";
+            if (limit != 0)
             {
-                string[] queries = sql.Split(';');
+                string[] queries = sql.Split(CharConstants.SEMI_COLON);
 
                 for (int i = 0; i < queries.Length; i++)
-                {
                     wraped += $"SELECT * FROM ({queries[i]}) AS WRPR{i} LIMIT @limit OFFSET @offset;";
-                }
             }
             else
-            {
-                wraped = sql;
-            }
+                wraped += sql;
+
+            if (!wraped.EndsWith(CharConstants.SEMI_COLON))
+                wraped += CharConstants.SEMI_COLON;
+
             return wraped;
         }
     }
