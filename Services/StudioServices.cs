@@ -306,7 +306,8 @@ namespace ExpressBase.ServiceStack
                 query = EbConnectionFactory.ObjectsDB.EB_OBJ_ALL_VER_WIHOUT_CIRCULAR_REF_REFID;
                 parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("dominant", EbDbTypes.String, request.EbObjectRefId));
             }
-            query += "SELECT id, role_name FROM eb_roles WHERE COALESCE(eb_del, 'F') = 'F';";
+            query += @"SELECT id, role_name FROM eb_roles WHERE COALESCE(eb_del, 'F') = 'F' ORDER BY role_name;
+                       SELECT id, name FROM eb_usergroup WHERE COALESCE(eb_del, 'F') = 'F' ORDER BY name;";
             parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("obj_type", EbDbTypes.Int32, request.EbObjType));
             EbDataSet ds = EbConnectionFactory.ObjectsDB.DoQueries(query, parameters.ToArray());
 
@@ -330,13 +331,20 @@ namespace ExpressBase.ServiceStack
                     RefId = dr[5].ToString()
                 });
             }
+
             Dictionary<int, string> _roles = new Dictionary<int, string>();
             foreach (EbDataRow dr in ds.Tables[1].Rows)
             {
                 _roles.Add(Convert.ToInt32(dr[0]), dr[1].ToString());
             }
+            
+            Dictionary<int, string> _usergroup = new Dictionary<int, string>();
+            foreach (EbDataRow dr in ds.Tables[2].Rows)
+            {
+                _usergroup.Add(Convert.ToInt32(dr[0]), dr[1].ToString());
+            }
 
-            return new EbObjAllVerWithoutCircularRefResp { Data = obj_dict, Roles = _roles };
+            return new EbObjAllVerWithoutCircularRefResp { Data = obj_dict, Roles = _roles, UserGroups= _usergroup };
         }
 
         [CompressResponse]
