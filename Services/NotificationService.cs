@@ -325,29 +325,5 @@ namespace ExpressBase.ServiceStack.Services
             }
             return duration;
         }
-
-        public GetPendingActionResponse Post(GetPendingActionRequest request)
-        {
-            GetPendingActionResponse res = new GetPendingActionResponse();
-            res.PendingActions = new List<PendingActionInfo>();
-            string _roles = string.Join(",", request.user.Roles
-                                            .Select(x => string.Format("'{0}'", x)));
-            string str = string.Format(@"SELECT *
-                    FROM eb_my_actions
-                    WHERE '{0}' = any(string_to_array(user_ids, ',')) OR
-                     role_id IN(select id from eb_roles where role_name IN({1}));", request.user.UserId, _roles);
-            EbDataTable dt = EbConnectionFactory.DataDB.DoQuery(str);
-            for (int i = 0; i < dt.Rows.Count; i++)
-            {
-                res.PendingActions.Add(new PendingActionInfo
-                { 
-                    Description =  dt.Rows[i]["description"].ToString(),
-                    Link = dt.Rows[i]["form_ref_id"].ToString(),
-                    DataId = dt.Rows[i]["form_data_id"].ToString(),
-                    CreatedDate =Convert.ToDateTime( dt.Rows[i]["from_datetime"]).ToString("dd-MM-yyyy")
-                });
-            }
-            return res;
-        }
     }
 }

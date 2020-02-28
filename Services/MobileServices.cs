@@ -332,10 +332,7 @@ namespace ExpressBase.ServiceStack.Services
                 string Sql = EbConnectionFactory.ObjectsDB.EB_GET_MOBILE_PAGES_OBJS;
 
                 List<DbParameter> parameters = new List<DbParameter> {
-                    this.EbConnectionFactory.ObjectsDB.GetNewParameter("appid", EbDbTypes.Int32, request.AppId),
-                    this.EbConnectionFactory.ObjectsDB.GetNewParameter("userid", EbDbTypes.Int32, request.UserId),
-                    this.EbConnectionFactory.ObjectsDB.GetNewParameter("roleids", EbDbTypes.String, UserObject.RoleIds.Join(",")),
-                    this.EbConnectionFactory.ObjectsDB.GetNewParameter("usergroupids", EbDbTypes.String, UserObject.UserGroupIds.Join(","))
+                    this.EbConnectionFactory.ObjectsDB.GetNewParameter("appid", EbDbTypes.Int32, request.AppId)
                 };
 
                 if (UserObject.Roles.Contains(SystemRoles.SolutionOwner.ToString()) || UserObject.Roles.Contains(SystemRoles.SolutionAdmin.ToString()))
@@ -382,24 +379,6 @@ namespace ExpressBase.ServiceStack.Services
                         response.TableNames = settings.DataImport.Select(i => i.TableName).ToList();
                         if (request.PullData)
                             response.Data = this.PullAppConfiguredData(settings);
-                    }
-                }
-
-                if (ds.Tables.Count >= 3 && ds.Tables[2].Rows.Any())
-                {
-                    foreach (EbDataRow row in ds.Tables[2].Rows)
-                    {
-                        response.MyActions.Add(new EbMyActionsMobile
-                        {
-                            Id = Convert.ToInt32(row["id"]),
-                            StartDate = Convert.ToDateTime(row["from_datetime"]),
-                            EndDate = Convert.ToDateTime(row["completed_at"]),
-                            StageId = Convert.ToInt32(row["eb_stages_id"]),
-                            WebFormRefId = row["form_ref_id"].ToString(),
-                            WebFormDataId = Convert.ToInt32(row["form_data_id"]),
-                            ApprovalLinesId = Convert.ToInt32(row["eb_approval_lines_id"]),
-                            Description = row["description"].ToString()
-                        });
                     }
                 }
             }
@@ -492,6 +471,57 @@ namespace ExpressBase.ServiceStack.Services
                 wraped += CharConstants.SEMI_COLON;
 
             return wraped;
+        }
+
+        public GetMyActionsResponse Get(GetMyActionsRequest request)
+        {
+            GetMyActionsResponse response = new GetMyActionsResponse();
+            try
+            {
+                User UserObject = this.Redis.Get<User>(request.UserAuthId);
+
+                string query = @"SELECT * FROM eb_my_actions EACT 
+                                WHERE 
+                                    COALESCE(EACT.is_completed, 'F') = 'F' 
+                                AND 
+                                    COALESCE(EACT.eb_del, 'F') = 'F'
+                                AND	
+                                (:userid = ANY(string_to_array(EACT.user_ids, ',')::int[])
+                                OR
+	                                EACT.role_id = ANY(string_to_array(:roleids,',')::int[]) 
+                                OR 
+	                                EACT.usergroup_id = ANY(string_to_array(:usergroupids,',')::int[])
+                                );";
+
+                List<DbParameter> parameters = new List<DbParameter> {
+                    this.EbConnectionFactory.ObjectsDB.GetNewParameter("userid", EbDbTypes.Int32, request.UserId),
+                    this.EbConnectionFactory.ObjectsDB.GetNewParameter("roleids", EbDbTypes.String, UserObject.RoleIds.Join(",")),
+                    this.EbConnectionFactory.ObjectsDB.GetNewParameter("usergroupids", EbDbTypes.String, UserObject.UserGroupIds.Join(","))
+                };
+
+                EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(query, parameters.ToArray()) ?? new EbDataTable();
+
+                foreach (EbDataRow row in dt.Rows)
+                {
+                    response.Actions.Add(new EbMyActionsMobile
+                    {
+                        Id = Convert.ToInt32(row["id"]),
+                        StartDate = Convert.ToDateTime(row["from_datetime"]),
+                        EndDate = Convert.ToDateTime(row["completed_at"]),
+                        StageId = Convert.ToInt32(row["eb_stages_id"]),
+                        WebFormRefId = row["form_ref_id"].ToString(),
+                        WebFormDataId = Convert.ToInt32(row["form_data_id"]),
+                        ApprovalLinesId = Convert.ToInt32(row["eb_approval_lines_id"]),
+                        Description = row["description"].ToString()
+                    });
+                }
+
+            }
+            catch(Exception ex)
+            {
+                Console.WriteLine("Exception at GetMyActionsRequest ::" + ex.Message);
+            }
+            return response;
         }
     }
 }
