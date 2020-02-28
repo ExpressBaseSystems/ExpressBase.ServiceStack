@@ -248,7 +248,8 @@ namespace ExpressBase.ServiceStack.Services
         public GetNotificationsResponse Post(GetNotificationsRequest request)
         {
             GetNotificationsResponse res = new GetNotificationsResponse();
-            List<NotificationInfo> Notifications = new List<NotificationInfo>();
+            res.Notifications = new List<NotificationInfo>();
+            res.PendingActions = new List<PendingActionInfo>();
             this.EbConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
             try
             {
@@ -258,23 +259,42 @@ namespace ExpressBase.ServiceStack.Services
                                                 WHERE user_id = '{0}'
                                                 AND message_seen ='F'
                                                 ORDER BY created_at DESC;", request.UserId);
-            EbDataTable dt = EbConnectionFactory.DataDB.DoQuery(str);
-            for (int i = 0; i < dt.Rows.Count; i++)
-            {
-                string notif = dt.Rows[i]["notification"].ToString();
-                Notifications list = JsonConvert.DeserializeObject<Notifications>(notif);
-                DateTime created_dtime = Convert.ToDateTime(dt.Rows[i]["created_at"].ToString());
-                string duration = GetNotificationDuration(created_dtime);
-                Notifications.Add(new NotificationInfo
+
+                string _roles = string.Join(",", request.user.Roles
+                                            .Select(x => string.Format("'{0}'", x)));
+                 str += string.Format(@"SELECT *
+                    FROM eb_my_actions
+                    WHERE '{0}' = any(string_to_array(user_ids, ',')) OR
+                     role_id IN(select id from eb_roles where role_name IN({1}));", request.UserId, _roles);
+
+                EbDataSet ds = EbConnectionFactory.DataDB.DoQueries(str);
+                EbDataTable dt = ds.Tables[0];
+                for (int i = 0; i < dt.Rows.Count; i++)
                 {
-                    Link = list.Notification[0].Link,
-                    NotificationId = list.Notification[0].NotificationId,
-                    Title = list.Notification[0].Title,
-                    Duration = duration
-                });
-            }
-            res.Notifications = Notifications;
-            res.PendingActions = Post(new GetPendingActionRequest { user = request.user}).PendingActions;
+                    string notif = dt.Rows[i]["notification"].ToString();
+                    Notifications list = JsonConvert.DeserializeObject<Notifications>(notif);
+                    DateTime created_dtime = Convert.ToDateTime(dt.Rows[i]["created_at"].ToString());
+                    string duration = GetNotificationDuration(created_dtime);
+                    res.Notifications.Add(new NotificationInfo
+                    {
+                        Link = list.Notification[0].Link,
+                        NotificationId = list.Notification[0].NotificationId,
+                        Title = list.Notification[0].Title,
+                        Duration = duration
+                    });
+                }
+                dt = ds.Tables[1];
+
+                for (int i = 0; i < dt.Rows.Count; i++)
+                {
+                    res.PendingActions.Add(new PendingActionInfo
+                    {
+                        Description = dt.Rows[i]["description"].ToString(),
+                        Link = dt.Rows[i]["form_ref_id"].ToString(),
+                        DataId = dt.Rows[i]["form_data_id"].ToString(),
+                        CreatedDate = Convert.ToDateTime(dt.Rows[i]["from_datetime"]).ToString("dd-MM-yyyy")
+                    });
+                }
             }
             catch (Exception e)
             {
