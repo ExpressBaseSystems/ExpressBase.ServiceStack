@@ -14,6 +14,7 @@ using ExpressBase.Common.Extensions;
 using System.Data.Common;
 using ExpressBase.Common.Application;
 using Newtonsoft.Json;
+using ServiceStack;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -331,13 +332,17 @@ namespace ExpressBase.ServiceStack.Services
                 string Sql = EbConnectionFactory.ObjectsDB.EB_GET_MOBILE_PAGES_OBJS;
 
                 List<DbParameter> parameters = new List<DbParameter> {
-                    this.EbConnectionFactory.ObjectsDB.GetNewParameter("appid", EbDbTypes.Int32, request.AppId)
+                    this.EbConnectionFactory.ObjectsDB.GetNewParameter("appid", EbDbTypes.Int32, request.AppId),
+                    this.EbConnectionFactory.ObjectsDB.GetNewParameter("userid", EbDbTypes.Int32, request.UserId),
+                    this.EbConnectionFactory.ObjectsDB.GetNewParameter("roleids", EbDbTypes.String, UserObject.RoleIds.Join(",")),
+                    this.EbConnectionFactory.ObjectsDB.GetNewParameter("usergroupids", EbDbTypes.String, UserObject.UserGroupIds.Join(","))
                 };
+
                 if (UserObject.Roles.Contains(SystemRoles.SolutionOwner.ToString()) || UserObject.Roles.Contains(SystemRoles.SolutionAdmin.ToString()))
                     query = string.Format(Sql, string.Empty);
                 else
                 {
-                    parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("objids", EbDbTypes.String, string.Join(",", PermIds)));
+                    parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("objids", EbDbTypes.String, PermIds.Join(",")));
                     query = string.Format(Sql, idcheck);
                 }
                 EbDataSet ds = this.EbConnectionFactory.DataDB.DoQueries(query, parameters.ToArray());
@@ -379,10 +384,29 @@ namespace ExpressBase.ServiceStack.Services
                             response.Data = this.PullAppConfiguredData(settings);
                     }
                 }
+
+                if (ds.Tables.Count >= 3 && ds.Tables[2].Rows.Any())
+                {
+                    foreach (EbDataRow row in ds.Tables[2].Rows)
+                    {
+                        response.MyActions.Add(new EbMyActionsMobile
+                        {
+                            Id = Convert.ToInt32(row["id"]),
+                            StartDate = Convert.ToDateTime(row["from_datetime"]),
+                            EndDate = Convert.ToDateTime(row["completed_at"]),
+                            StageId = Convert.ToInt32(row["eb_stages_id"]),
+                            WebFormRefId = row["form_ref_id"].ToString(),
+                            WebFormDataId = Convert.ToInt32(row["form_data_id"]),
+                            ApprovalLinesId = Convert.ToInt32(row["eb_approval_lines_id"]),
+                            Description = row["description"].ToString()
+                        });
+                    }
+                }
             }
             catch (Exception ex)
             {
                 Console.WriteLine("Exception at object list for user mobile req ::" + ex.Message);
+                Console.WriteLine(ex.StackTrace);
                 return response;
             }
             return response;
