@@ -480,18 +480,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 User UserObject = this.Redis.Get<User>(request.UserAuthId);
 
-                string query = @"SELECT * FROM eb_my_actions EACT 
-                                WHERE 
-                                    COALESCE(EACT.is_completed, 'F') = 'F' 
-                                AND 
-                                    COALESCE(EACT.eb_del, 'F') = 'F'
-                                AND	
-                                (:userid = ANY(string_to_array(EACT.user_ids, ',')::int[])
-                                OR
-	                                EACT.role_id = ANY(string_to_array(:roleids,',')::int[]) 
-                                OR 
-	                                EACT.usergroup_id = ANY(string_to_array(:usergroupids,',')::int[])
-                                );";
+                string query = EbConnectionFactory.ObjectsDB.EB_GET_MYACTIONS;
 
                 List<DbParameter> parameters = new List<DbParameter> {
                     this.EbConnectionFactory.ObjectsDB.GetNewParameter("userid", EbDbTypes.Int32, request.UserId),
