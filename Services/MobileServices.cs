@@ -490,23 +490,52 @@ namespace ExpressBase.ServiceStack.Services
 
                 EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(query, parameters.ToArray()) ?? new EbDataTable();
 
+                Dictionary<int, EbMyActionsMobile> temp = new Dictionary<int, EbMyActionsMobile>();
+
                 foreach (EbDataRow row in dt.Rows)
                 {
-                    response.Actions.Add(new EbMyActionsMobile
-                    {
-                        Id = Convert.ToInt32(row["id"]),
-                        StartDate = Convert.ToDateTime(row["from_datetime"]),
-                        EndDate = Convert.ToDateTime(row["completed_at"]),
-                        StageId = Convert.ToInt32(row["eb_stages_id"]),
-                        WebFormRefId = row["form_ref_id"].ToString(),
-                        WebFormDataId = Convert.ToInt32(row["form_data_id"]),
-                        ApprovalLinesId = Convert.ToInt32(row["eb_approval_lines_id"]),
-                        Description = row["description"].ToString()
-                    });
-                }
+                    int aid = Convert.ToInt32(row["id"]);
 
+                    if (!temp.ContainsKey(aid))
+                    {
+                        var action = new EbMyActionsMobile
+                        {
+                            Id = aid,
+                            StartDate = Convert.ToDateTime(row["from_datetime"]),
+                            EndDate = Convert.ToDateTime(row["completed_at"]),
+                            StageId = Convert.ToInt32(row["eb_stages_id"]),
+                            WebFormRefId = row["form_ref_id"].ToString(),
+                            WebFormDataId = Convert.ToInt32(row["form_data_id"]),
+                            ApprovalLinesId = Convert.ToInt32(row["eb_approval_lines_id"]),
+                            Description = row["description"].ToString()
+                        };
+
+                        action.StageInfo = new EbStageInfoMobile
+                        {
+                            StageUniqueId = row["stage_unique_id"]?.ToString(),
+                            StageActions =
+                            {
+                                new EbStageActionsMobile
+                                {
+                                    ActionName = row["action_name"].ToString(),
+                                    ActionUniqueId = row["action_unique_id"].ToString()
+                                }
+                            }
+                        };
+                        temp.Add(aid, action);
+                        response.Actions.Add(action);
+                    }
+                    else
+                    {
+                        temp[aid].StageInfo.StageActions.Add(new EbStageActionsMobile
+                        {
+                            ActionName = row["action_name"].ToString(),
+                            ActionUniqueId = row["action_unique_id"].ToString()
+                        });
+                    }
+                }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 Console.WriteLine("Exception at GetMyActionsRequest ::" + ex.Message);
             }
