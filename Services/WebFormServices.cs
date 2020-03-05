@@ -861,6 +861,33 @@ namespace ExpressBase.ServiceStack.Services
             Console.WriteLine("End GetPrefillData");
             return _dataset;
         }
+        public GetFormData4MobileResponse Any(GetFormData4MobileRequest request)
+        {
+            Console.WriteLine("Start GetFormData4Mobile");
+            GetFormData4MobileResponse resp = null;
+            try
+            {
+                EbWebForm form = GetWebFormObject(request.RefId);
+                form.TableRowId = request.DataId;
+                form.RefId = request.RefId;
+                form.UserObj = request.UserObj;
+                form.SolutionObj = GetSolutionObject(request.SolnId);
+                List<Param> data = null;
+                if (form.TableRowId > 0)
+                    data = form.GetFormData4Mobile(EbConnectionFactory.DataDB, this);
+                resp = new GetFormData4MobileResponse() { Params = data, Status = (int)HttpStatusCodes.OK, Message = "Success" };
+            }
+            catch (FormException ex)
+            {
+                resp = new GetFormData4MobileResponse() { Status = (int)HttpStatusCodes.INTERNAL_SERVER_ERROR, Message = $"{ex.Message} {ex.MessageInternal}" };
+            }
+            catch (Exception e)
+            {
+                resp = new GetFormData4MobileResponse() { Status = (int)HttpStatusCodes.INTERNAL_SERVER_ERROR, Message = $"{e.Message} {e.StackTrace}" };
+            }
+            Console.WriteLine("End GetFormData4Mobile");
+            return resp;
+        }
 
         //public GetImportDataResponse Any(GetImportDataRequest request)
         //{
