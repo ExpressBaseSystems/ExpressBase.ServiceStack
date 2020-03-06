@@ -28,22 +28,26 @@ namespace ExpressBase.ServiceStack.Services
             string msg = string.Empty;
             try
             {
-                WebFormSchema schema = (request.MobilePage.Container as EbMobileForm).ToWebFormSchema();
-
-                List<TableColumnMeta> _TableColMeta = this.GenerateTableColumnMeta(schema);
+                EbMobileForm mobileForm = (request.MobilePage.Container as EbMobileForm);
+                IVendorDbTypes vDbTypes = this.EbConnectionFactory.DataDB.VendorDbTypes;
+                var tableMetaDict = mobileForm.GetTableMetaCollection(vDbTypes);
 
                 WebFormServices webservices = base.ResolveService<WebFormServices>();
 
-                int status = webservices.CreateOrAlterTable(schema.FormName, _TableColMeta, ref msg);
+                int status = 0;
+                foreach (var pair in tableMetaDict)
+                {
+                    int s = webservices.CreateOrAlterTable(pair.Key, pair.Value, ref msg);
+                    if (pair.Key.Equals(mobileForm.TableName))
+                        status = s;
+                }
 
                 //deploy webform if create 
                 if (status == 0)
-                {
                     this.DeployWebForm(request);
-                }
 
-                if ((request.MobilePage.Container as EbMobileForm).AutoDeployMV)
-                    this.DeployMobileVis(request, _TableColMeta);
+                if (mobileForm.AutoDeployMV)
+                    this.DeployMobileVis(request, tableMetaDict[mobileForm.TableName]);
             }
             catch (Exception e)
             {
@@ -51,38 +55,6 @@ namespace ExpressBase.ServiceStack.Services
                 Console.WriteLine(e.StackTrace);
             }
             return response;
-        }
-
-        private List<TableColumnMeta> GenerateTableColumnMeta(WebFormSchema _webschema)
-        {
-            IVendorDbTypes vDbTypes = this.EbConnectionFactory.DataDB.VendorDbTypes;
-            List<TableColumnMeta> _metaList = new List<TableColumnMeta>();
-            foreach (TableSchema _table in _webschema.Tables)
-            {
-                if (_table.Columns.Count > 0)
-                {
-                    foreach (ColumnSchema _column in _table.Columns)
-                    {
-                        _metaList.Add(new TableColumnMeta
-                        {
-                            Name = _column.ColumnName,
-                            Type = vDbTypes.GetVendorDbTypeStruct((EbDbTypes)_column.EbDbType)
-                        });
-                    }
-
-                    _metaList.Add(new TableColumnMeta { Name = "eb_created_by", Type = vDbTypes.Decimal, Label = "Created By" });
-                    _metaList.Add(new TableColumnMeta { Name = "eb_created_at", Type = vDbTypes.DateTime, Label = "Created At" });
-                    _metaList.Add(new TableColumnMeta { Name = "eb_lastmodified_by", Type = vDbTypes.Decimal, Label = "Last Modified By" });
-                    _metaList.Add(new TableColumnMeta { Name = "eb_lastmodified_at", Type = vDbTypes.DateTime, Label = "Last Modified At" });
-                    _metaList.Add(new TableColumnMeta { Name = "eb_del", Type = vDbTypes.Boolean, Default = "F" });
-                    _metaList.Add(new TableColumnMeta { Name = "eb_void", Type = vDbTypes.Boolean, Default = "F", Label = "Void ?" });
-                    _metaList.Add(new TableColumnMeta { Name = "eb_loc_id", Type = vDbTypes.Int32, Label = "Location" });
-                    _metaList.Add(new TableColumnMeta { Name = "eb_device_id", Type = vDbTypes.String, Label = "Device Id" });
-                    _metaList.Add(new TableColumnMeta { Name = "eb_appversion", Type = vDbTypes.String, Label = "App Version" });
-                    _metaList.Add(new TableColumnMeta { Name = "eb_created_at_device", Type = vDbTypes.DateTime, Label = "Sync Time" });
-                }
-            }
-            return _metaList;
         }
 
         private void DeployMobileVis(CreateMobileFormTableRequest request, List<TableColumnMeta> tablemeta)
@@ -157,7 +129,7 @@ namespace ExpressBase.ServiceStack.Services
                     };
 
                     var counter = new Dictionary<string, int>();
-                    foreach (EbMobileControl ctrl in mobileform.ChiledControls)
+                    foreach (EbMobileControl ctrl in mobileform.ChildControls)
                     {
                         string name = ctrl.GetType().Name;
 
