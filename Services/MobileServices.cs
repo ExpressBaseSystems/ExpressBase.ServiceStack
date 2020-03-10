@@ -462,44 +462,80 @@ namespace ExpressBase.ServiceStack.Services
 
                 EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(query, parameters.ToArray()) ?? new EbDataTable();
 
-                Dictionary<int, EbMyActionsMobile> temp = new Dictionary<int, EbMyActionsMobile>();
-
                 foreach (EbDataRow row in dt.Rows)
                 {
-                    int aid = Convert.ToInt32(row["id"]);
-
-                    if (!temp.ContainsKey(aid))
+                    response.Actions.Add(new EbMyActionsMobile
                     {
-                        var action = new EbMyActionsMobile
-                        {
-                            Id = aid,
-                            StartDate = Convert.ToDateTime(row["from_datetime"]),
-                            EndDate = Convert.ToDateTime(row["completed_at"]),
-                            StageId = Convert.ToInt32(row["eb_stages_id"]),
-                            WebFormRefId = row["form_ref_id"].ToString(),
-                            WebFormDataId = Convert.ToInt32(row["form_data_id"]),
-                            ApprovalLinesId = Convert.ToInt32(row["eb_approval_lines_id"]),
-                            Description = row["description"].ToString()
-                        };
+                        Id = Convert.ToInt32(row["id"]),
+                        StartDate = Convert.ToDateTime(row["from_datetime"]),
+                        EndDate = Convert.ToDateTime(row["completed_at"]),
+                        StageId = Convert.ToInt32(row["eb_stages_id"]),
+                        WebFormRefId = row["form_ref_id"].ToString(),
+                        WebFormDataId = Convert.ToInt32(row["form_data_id"]),
+                        ApprovalLinesId = Convert.ToInt32(row["eb_approval_lines_id"]),
+                        Description = row["description"].ToString()
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Exception at GetMyActionsRequest ::" + ex.Message);
+            }
+            return response;
+        }
 
-                        action.StageInfo = new EbStageInfoMobile
-                        {
-                            StageUniqueId = row["stage_unique_id"]?.ToString(),
-                            StageActions =
-                            {
-                                new EbStageActionsMobile
-                                {
-                                    ActionName = row["action_name"].ToString(),
-                                    ActionUniqueId = row["action_unique_id"].ToString()
-                                }
-                            }
-                        };
-                        temp.Add(aid, action);
-                        response.Actions.Add(action);
-                    }
-                    else
+        public GetMyActionInfoResponse Get(GetMyActionInfoRequest request)
+        {
+            GetMyActionInfoResponse response = new GetMyActionInfoResponse();
+            try
+            {
+                User UserObject = this.Redis.Get<User>(request.UserAuthId);
+                string query = @"SELECT 
+	                                ES.stage_name,ES.stage_unique_id,ESA.action_unique_id,ESA.action_name
+                                FROM 
+	                                eb_stages ES
+                                LEFT JOIN 
+	                                eb_stage_actions ESA
+                                ON 
+	                                ESA.eb_stages_id = ES.id
+                                WHERE 
+	                                ES.id = :stageid
+                                AND
+	                                COALESCE(ES.eb_del, 'F') = 'F'
+                                AND
+	                                COALESCE(ESA.eb_del, 'F') = 'F';";
+
+                List<DbParameter> parameters = new List<DbParameter> {
+                    this.EbConnectionFactory.ObjectsDB.GetNewParameter("stageid", EbDbTypes.Int32, request.StageId)
+                };
+
+                EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(query, parameters.ToArray()) ?? new EbDataTable();
+
+                WebFormServices webFormService = base.ResolveService<WebFormServices>();
+                GetFormData4MobileResponse resp = webFormService.Any(new GetFormData4MobileRequest
+                {
+                    RefId = request.WebFormRefId,
+                    DataId = request.WebFormDataId,
+                    UserObj = UserObject,
+                    SolnId = request.SolnId,
+                    UserAuthId = request.UserAuthId,
+                    UserId = request.UserId
+                });
+                response.Data = resp.Params;
+
+                if (dt.Rows.Any())
+                {
+                    var first = dt.Rows.First();
+
+                    foreach (EbDataRow row in dt.Rows)
                     {
-                        temp[aid].StageInfo.StageActions.Add(new EbStageActionsMobile
+                        if (row == first)
+                        {
+                            response.StageUniqueId = first["stage_unique_id"].ToString();
+                            response.StageName = first["stage_name"].ToString();
+                        }
+
+                        response.StageActions.Add(new EbStageActionsMobile
                         {
                             ActionName = row["action_name"].ToString(),
                             ActionUniqueId = row["action_unique_id"].ToString()
@@ -509,7 +545,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Exception at GetMyActionsRequest ::" + ex.Message);
+                Console.WriteLine(ex.Message);
             }
             return response;
         }
