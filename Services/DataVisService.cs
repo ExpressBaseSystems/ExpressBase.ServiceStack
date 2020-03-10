@@ -788,7 +788,9 @@ namespace ExpressBase.ServiceStack
                         dr = EbSerializers.Json_Deserialize(result.Data[0].Json);
                         Redis.Set<EbDataReader>(col.ColumnQueryMapping.DataSourceId, dr);
                     }
-                    col.ColumnQueryMapping.Values = this.EbConnectionFactory.ObjectsDB.GetDictionary(dr.Sql, col.ColumnQueryMapping.DisplayMember[0].Name, col.ColumnQueryMapping.ValueMember.Name);
+                    //string _name = string.Join(",", col.ColumnQueryMapping.DisplayMember.Select(obj => obj.Name));
+                    string _name = col.ColumnQueryMapping.DisplayMember[0].Name;
+                    col.ColumnQueryMapping.Values = this.EbConnectionFactory.ObjectsDB.GetDictionary(dr.Sql, _name, col.ColumnQueryMapping.ValueMember.Name);
                 }
             }
             catch (Exception e)
@@ -1684,7 +1686,9 @@ namespace ExpressBase.ServiceStack
                         ModifyEbColumns(col, ref _formattedData, _unformattedData);
                     }
                     if (col.ColumnQueryMapping != null && col.ColumnQueryMapping.Values.Count > 0)
-                        _formattedData = (col.ColumnQueryMapping.Values.ContainsKey(Convert.ToInt32(_formattedData))) ? col.ColumnQueryMapping.Values[Convert.ToInt32(_formattedData)] : string.Empty;
+                    {
+                        _formattedData = GetDataforPowerSelect(col, _formattedData);
+                    }
                     IntermediateDic.Add(col.Data, _formattedData);
                     if ((_dv as EbChartVisualization) != null || (_dv as Objects.EbGoogleMap) != null)
                     {
@@ -1698,6 +1702,15 @@ namespace ExpressBase.ServiceStack
                     this._Responsestatus.Message = e.Message;
                 }
             }
+        }
+
+        private object GetDataforPowerSelect(DVBaseColumn col, object _formattedData)
+        {
+            string[] vmArray = _formattedData.ToString().Split(",");
+            string data = string.Empty;
+            foreach(string vm in vmArray)
+                data += (col.ColumnQueryMapping.Values.ContainsKey(Convert.ToInt32(vm))) ? col.ColumnQueryMapping.Values[Convert.ToInt32(vm)] + " ," : string.Empty + " ,";
+            return data.Substring(0, data.Length - 1);
         }
 
         public void ProcessButtoncolumn(EbDataRow row, Globals globals, DVBaseColumn customCol)

@@ -463,25 +463,22 @@ namespace ExpressBase.ServiceStack.Services
 
                     if (column.Control is EbPowerSelect)
                     {
-                        if (!(column.Control as EbPowerSelect).MultiSelect)
+                        _control = new ControlClass
                         {
-                            _control = new ControlClass
-                            {
-                                DataSourceId = (column.Control as EbPowerSelect).DataSourceId,
-                                ValueMember = (column.Control as EbPowerSelect).ValueMember
-                            };
-                            if ((column.Control as EbPowerSelect).RenderAsSimpleSelect)
-                            {
-                                _control.DisplayMember.Add((column.Control as EbPowerSelect).DisplayMember);
-                            }
-                            else
-                            {
-                                _control.DisplayMember = (column.Control as EbPowerSelect).DisplayMembers;
-                            }
-                            _autoresolve = true;
-                            _align = Align.Center;
-                            _RenderType = EbDbTypes.String;
+                            DataSourceId = (column.Control as EbPowerSelect).DataSourceId,
+                            ValueMember = (column.Control as EbPowerSelect).ValueMember
+                        };
+                        if ((column.Control as EbPowerSelect).RenderAsSimpleSelect)
+                        {
+                            _control.DisplayMember.Add((column.Control as EbPowerSelect).DisplayMember);
                         }
+                        else
+                        {
+                            _control.DisplayMember = (column.Control as EbPowerSelect).DisplayMembers;
+                        }
+                        _autoresolve = true;
+                        _align = Align.Center;
+                        _RenderType = EbDbTypes.String;
                     }
                     else if (column.Control is EbTextBox)
                     {
@@ -602,25 +599,22 @@ namespace ExpressBase.ServiceStack.Services
                     EbDbTypes _RenderType = column.Type.EbDbType;
                     if (column.Control is EbPowerSelect)
                     {
-                        if (!(column.Control as EbPowerSelect).MultiSelect)
+                        _control = new ControlClass
                         {
-                            _control = new ControlClass
-                            {
-                                DataSourceId = (column.Control as EbPowerSelect).DataSourceId,
-                                ValueMember = (column.Control as EbPowerSelect).ValueMember
-                            };
-                            if ((column.Control as EbPowerSelect).RenderAsSimpleSelect)
-                            {
-                                _control.DisplayMember.Add((column.Control as EbPowerSelect).DisplayMember);
-                            }
-                            else
-                            {
-                                _control.DisplayMember = (column.Control as EbPowerSelect).DisplayMembers;
-                            }
-                            _autoresolve = true;
-                            _align = Align.Center;
-                            _RenderType = EbDbTypes.String;
+                            DataSourceId = (column.Control as EbPowerSelect).DataSourceId,
+                            ValueMember = (column.Control as EbPowerSelect).ValueMember
+                        };
+                        if ((column.Control as EbPowerSelect).RenderAsSimpleSelect)
+                        {
+                            _control.DisplayMember.Add((column.Control as EbPowerSelect).DisplayMember);
                         }
+                        else
+                        {
+                            _control.DisplayMember = (column.Control as EbPowerSelect).DisplayMembers;
+                        }
+                        _autoresolve = true;
+                        _align = Align.Center;
+                        _RenderType = EbDbTypes.String;
                     }
                     else if (column.Control is EbTextBox)
                     {
