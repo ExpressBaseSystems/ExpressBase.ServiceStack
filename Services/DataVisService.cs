@@ -1709,7 +1709,7 @@ namespace ExpressBase.ServiceStack
             string[] vmArray = _formattedData.ToString().Split(",");
             string data = string.Empty;
             foreach(string vm in vmArray)
-                data += (col.ColumnQueryMapping.Values.ContainsKey(Convert.ToInt32(vm))) ? col.ColumnQueryMapping.Values[Convert.ToInt32(vm)] + " ," : string.Empty + " ,";
+                data += (vm != "" && col.ColumnQueryMapping.Values.ContainsKey(Convert.ToInt32(vm))) ? col.ColumnQueryMapping.Values[Convert.ToInt32(vm)] + " ," : string.Empty + " ,";
             return data.Substring(0, data.Length - 1);
         }
 
@@ -1915,10 +1915,10 @@ namespace ExpressBase.ServiceStack
         public string ToReadableString(TimeSpan span)
         {
             string formatted = string.Format("{0}{1}{2}{3}",
-                span.Duration().Days > 0 ? string.Format("{0} d ", span.Days) : string.Empty,
-                span.Duration().Hours > 0 ? string.Format("{0} h ", span.Hours) : string.Empty,
-                span.Duration().Minutes > 0 ? string.Format("{0} m ", span.Minutes) : string.Empty,
-                span.Duration().Seconds > 0 ? string.Format("{0} s", span.Seconds) : string.Empty);
+                span.Duration().Days > 0 ? string.Format("{0}d ", span.Days) : string.Empty,
+                span.Duration().Hours > 0 ? string.Format("{0}h ", span.Hours) : string.Empty,
+                span.Duration().Minutes > 0 ? string.Format("{0}m ", span.Minutes) : string.Empty,
+                span.Duration().Seconds > 0 ? string.Format("{0}s", span.Seconds) : string.Empty);
 
             if (string.IsNullOrEmpty(formatted)) formatted = string.Empty;
 
