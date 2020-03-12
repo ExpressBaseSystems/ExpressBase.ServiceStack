@@ -49,17 +49,23 @@ namespace ExpressBase.ServiceStack.Services
                         Title = request.Title,
                         NotificationId = notification_id,
                         Duration = "Today"
-
                     });
                     n.Notification = Notification;
-                    this.ServerEventClient.Post<NotifyResponse>(new NotifyUserIdRequest
+                    string str = string.Format(@"select email from eb_users where id = {0} ", request.UsersID);
+                    EbDataTable dt = EbConnectionFactory.DataDB.DoQuery(str);
+                    if (dt.Rows.Count > 0)
                     {
-                        Msg = JsonConvert.SerializeObject(n),
-                        Selector = "cmd.onNotification",
-                        ToUserAuthId = request.UserAuthId,
-                        NotificationId = notification_id,
-                        NotifyUserId = request.UsersID
-                    });
+                        string user_auth_id = request.SolnId + ":" + dt.Rows[0][0].ToString() + ":uc";
+                        this.ServerEventClient.Post<NotifyResponse>(new NotifyUserIdRequest
+                        {
+                            Msg = JsonConvert.SerializeObject(n),
+                            Selector = "cmd.onNotification",
+                            ToUserAuthId = user_auth_id,
+                            NotificationId = notification_id,
+                            NotifyUserId = request.UsersID
+                        });
+                    }
+
                 }
                 else
                 {
@@ -72,7 +78,6 @@ namespace ExpressBase.ServiceStack.Services
             }
             return res;
         }
-
         public NotifyByUserRoleResponse Post(NotifyByUserRoleRequest request)
         {
             NotifyByUserRoleResponse res = new NotifyByUserRoleResponse();
