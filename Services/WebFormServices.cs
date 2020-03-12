@@ -840,7 +840,10 @@ namespace ExpressBase.ServiceStack.Services
             try
             {
                 EbWebForm form = GetWebFormObject(request.RefId);
+                form.TableRowId = 0;
                 form.RefId = request.RefId;
+                form.UserObj = request.UserObj;
+                form.SolutionObj = GetSolutionObject(request.SolnId);
                 form.RefreshFormData(EbConnectionFactory.DataDB, this, request.Params);
                 _dataset.FormDataWrap = JsonConvert.SerializeObject(new WebformDataWrapper { FormData = form.FormData, Status = (int)HttpStatusCodes.OK, Message = "Success" });
             }
