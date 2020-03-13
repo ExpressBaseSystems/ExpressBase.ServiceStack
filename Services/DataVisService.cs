@@ -788,7 +788,9 @@ namespace ExpressBase.ServiceStack
                         dr = EbSerializers.Json_Deserialize(result.Data[0].Json);
                         Redis.Set<EbDataReader>(col.ColumnQueryMapping.DataSourceId, dr);
                     }
-                    col.ColumnQueryMapping.Values = this.EbConnectionFactory.ObjectsDB.GetDictionary(dr.Sql, col.ColumnQueryMapping.DisplayMember[0].Name, col.ColumnQueryMapping.ValueMember.Name);
+                    //string _name = string.Join(",", col.ColumnQueryMapping.DisplayMember.Select(obj => obj.Name));
+                    string _name = col.ColumnQueryMapping.DisplayMember[0].Name;
+                    col.ColumnQueryMapping.Values = this.EbConnectionFactory.ObjectsDB.GetDictionary(dr.Sql, _name, col.ColumnQueryMapping.ValueMember.Name);
                 }
             }
             catch (Exception e)
@@ -1485,6 +1487,7 @@ namespace ExpressBase.ServiceStack
                             {
                                 if ((col as DVStringColumn).RenderAs == StringRenderType.Marker)
                                     _formattedData = "<a href = '#' class ='columnMarker" + this.TableId + "' data-latlong='" + _unformattedData + "'><i class='fa fa-map-marker fa-2x' style='color:red;'></i></a>";
+                                
                                 else if ((col as DVStringColumn).RenderAs == StringRenderType.Image)
                                 {
                                     var _height = (col as DVStringColumn).ImageHeight == 0 ? "auto" : (col as DVStringColumn).ImageHeight + "px";
@@ -1504,6 +1507,7 @@ namespace ExpressBase.ServiceStack
                                         _formattedData = $"<img class='img-thumbnail' src='/images/image.png' style='height:{_height};width:{_width};'/>";
 
                                 }
+
                                 if ((col as DVStringColumn).AllowMultilineText)
                                 {
                                     if ((col as DVStringColumn).NoOfCharactersPerLine > 0 && (col as DVStringColumn).NoOfLines > 0)
@@ -1557,6 +1561,14 @@ namespace ExpressBase.ServiceStack
                                         _formattedData = "<a  href= '#' oncontextmenu= 'return false' class ='tablelink" + this.TableId + "' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-column='" + col.Name + "' data-popup='true' data-data='" + _formattedData + "'>" + _formattedData + "</a>";
                                 }
                             }
+
+                            if (col.RenderType == EbDbTypes.String && (col as DVStringColumn).RenderAs == StringRenderType.LinkFromColumn && (_isexcel == false))
+                            {
+                                if (_formattedData.ToString() == string.Empty)
+                                    _formattedData = "...";
+                                _formattedData = "<a href='#' class ='tablelinkfromcolumn" + this.TableId + "' data-link='" + row[col.RefidColumn.Data] + "' data-id='" + row[col.IdColumn.Data] + "'>" + _formattedData + "</a>";
+                            }
+
                             if (col.RenderType == EbDbTypes.String && (col as DVStringColumn).RenderAs == StringRenderType.Link && col.LinkType == LinkTypeEnum.Tab && (_isexcel == false))/////////////////
                             {
                                 _formattedData = "<a href='../leadmanagement/" + row[0] + "' target='_blank'>" + _formattedData + "</a>";
@@ -1674,7 +1686,9 @@ namespace ExpressBase.ServiceStack
                         ModifyEbColumns(col, ref _formattedData, _unformattedData);
                     }
                     if (col.ColumnQueryMapping != null && col.ColumnQueryMapping.Values.Count > 0)
-                        _formattedData = (col.ColumnQueryMapping.Values.ContainsKey(Convert.ToInt32(_formattedData))) ? col.ColumnQueryMapping.Values[Convert.ToInt32(_formattedData)] : string.Empty;
+                    {
+                        _formattedData = GetDataforPowerSelect(col, _formattedData);
+                    }
                     IntermediateDic.Add(col.Data, _formattedData);
                     if ((_dv as EbChartVisualization) != null || (_dv as Objects.EbGoogleMap) != null)
                     {
@@ -1688,6 +1702,15 @@ namespace ExpressBase.ServiceStack
                     this._Responsestatus.Message = e.Message;
                 }
             }
+        }
+
+        private object GetDataforPowerSelect(DVBaseColumn col, object _formattedData)
+        {
+            string[] vmArray = _formattedData.ToString().Split(",");
+            string data = string.Empty;
+            foreach(string vm in vmArray)
+                data += (vm != "" && col.ColumnQueryMapping.Values.ContainsKey(Convert.ToInt32(vm))) ? col.ColumnQueryMapping.Values[Convert.ToInt32(vm)] + " ," : string.Empty + " ,";
+            return data.Substring(0, data.Length - 1);
         }
 
         public void ProcessButtoncolumn(EbDataRow row, Globals globals, DVBaseColumn customCol)
@@ -1892,10 +1915,10 @@ namespace ExpressBase.ServiceStack
         public string ToReadableString(TimeSpan span)
         {
             string formatted = string.Format("{0}{1}{2}{3}",
-                span.Duration().Days > 0 ? string.Format("{0} d ", span.Days) : string.Empty,
-                span.Duration().Hours > 0 ? string.Format("{0} h ", span.Hours) : string.Empty,
-                span.Duration().Minutes > 0 ? string.Format("{0} m ", span.Minutes) : string.Empty,
-                span.Duration().Seconds > 0 ? string.Format("{0} s", span.Seconds) : string.Empty);
+                span.Duration().Days > 0 ? string.Format("{0}d ", span.Days) : string.Empty,
+                span.Duration().Hours > 0 ? string.Format("{0}h ", span.Hours) : string.Empty,
+                span.Duration().Minutes > 0 ? string.Format("{0}m ", span.Minutes) : string.Empty,
+                span.Duration().Seconds > 0 ? string.Format("{0}s", span.Seconds) : string.Empty);
 
             if (string.IsNullOrEmpty(formatted)) formatted = string.Empty;
 

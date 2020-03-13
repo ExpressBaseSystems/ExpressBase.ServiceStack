@@ -14,6 +14,7 @@ using ExpressBase.Common.Extensions;
 using System.Data.Common;
 using ExpressBase.Common.Application;
 using Newtonsoft.Json;
+using ServiceStack;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -27,22 +28,26 @@ namespace ExpressBase.ServiceStack.Services
             string msg = string.Empty;
             try
             {
-                WebFormSchema schema = (request.MobilePage.Container as EbMobileForm).ToWebFormSchema();
-
-                List<TableColumnMeta> _TableColMeta = this.GenerateTableColumnMeta(schema);
+                EbMobileForm mobileForm = (request.MobilePage.Container as EbMobileForm);
+                IVendorDbTypes vDbTypes = this.EbConnectionFactory.DataDB.VendorDbTypes;
+                var tableMetaDict = mobileForm.GetTableMetaCollection(vDbTypes);
 
                 WebFormServices webservices = base.ResolveService<WebFormServices>();
 
-                int status = webservices.CreateOrAlterTable(schema.FormName, _TableColMeta, ref msg);
+                int status = 0;
+                foreach (var pair in tableMetaDict)
+                {
+                    int s = webservices.CreateOrAlterTable(pair.Key, pair.Value, ref msg);
+                    if (pair.Key.Equals(mobileForm.TableName))
+                        status = s;
+                }
 
                 //deploy webform if create 
                 if (status == 0)
-                {
                     this.DeployWebForm(request);
-                }
 
-                if ((request.MobilePage.Container as EbMobileForm).AutoDeployMV)
-                    this.DeployMobileVis(request, _TableColMeta);
+                if (mobileForm.AutoDeployMV)
+                    this.DeployMobileVis(request, tableMetaDict[mobileForm.TableName]);
             }
             catch (Exception e)
             {
@@ -50,38 +55,6 @@ namespace ExpressBase.ServiceStack.Services
                 Console.WriteLine(e.StackTrace);
             }
             return response;
-        }
-
-        private List<TableColumnMeta> GenerateTableColumnMeta(WebFormSchema _webschema)
-        {
-            IVendorDbTypes vDbTypes = this.EbConnectionFactory.DataDB.VendorDbTypes;
-            List<TableColumnMeta> _metaList = new List<TableColumnMeta>();
-            foreach (TableSchema _table in _webschema.Tables)
-            {
-                if (_table.Columns.Count > 0)
-                {
-                    foreach (ColumnSchema _column in _table.Columns)
-                    {
-                        _metaList.Add(new TableColumnMeta
-                        {
-                            Name = _column.ColumnName,
-                            Type = vDbTypes.GetVendorDbTypeStruct((EbDbTypes)_column.EbDbType)
-                        });
-                    }
-
-                    _metaList.Add(new TableColumnMeta { Name = "eb_created_by", Type = vDbTypes.Decimal, Label = "Created By" });
-                    _metaList.Add(new TableColumnMeta { Name = "eb_created_at", Type = vDbTypes.DateTime, Label = "Created At" });
-                    _metaList.Add(new TableColumnMeta { Name = "eb_lastmodified_by", Type = vDbTypes.Decimal, Label = "Last Modified By" });
-                    _metaList.Add(new TableColumnMeta { Name = "eb_lastmodified_at", Type = vDbTypes.DateTime, Label = "Last Modified At" });
-                    _metaList.Add(new TableColumnMeta { Name = "eb_del", Type = vDbTypes.Boolean, Default = "F" });
-                    _metaList.Add(new TableColumnMeta { Name = "eb_void", Type = vDbTypes.Boolean, Default = "F", Label = "Void ?" });
-                    _metaList.Add(new TableColumnMeta { Name = "eb_loc_id", Type = vDbTypes.Int32, Label = "Location" });
-                    _metaList.Add(new TableColumnMeta { Name = "eb_device_id", Type = vDbTypes.String, Label = "Device Id" });
-                    _metaList.Add(new TableColumnMeta { Name = "eb_appversion", Type = vDbTypes.String, Label = "App Version" });
-                    _metaList.Add(new TableColumnMeta { Name = "eb_created_at_device", Type = vDbTypes.DateTime, Label = "Sync Time" });
-                }
-            }
-            return _metaList;
         }
 
         private void DeployMobileVis(CreateMobileFormTableRequest request, List<TableColumnMeta> tablemeta)
@@ -156,7 +129,7 @@ namespace ExpressBase.ServiceStack.Services
                     };
 
                     var counter = new Dictionary<string, int>();
-                    foreach (EbMobileControl ctrl in mobileform.ChiledControls)
+                    foreach (EbMobileControl ctrl in mobileform.ChildControls)
                     {
                         string name = ctrl.GetType().Name;
 
@@ -333,11 +306,12 @@ namespace ExpressBase.ServiceStack.Services
                 List<DbParameter> parameters = new List<DbParameter> {
                     this.EbConnectionFactory.ObjectsDB.GetNewParameter("appid", EbDbTypes.Int32, request.AppId)
                 };
+
                 if (UserObject.Roles.Contains(SystemRoles.SolutionOwner.ToString()) || UserObject.Roles.Contains(SystemRoles.SolutionAdmin.ToString()))
                     query = string.Format(Sql, string.Empty);
                 else
                 {
-                    parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("objids", EbDbTypes.String, string.Join(",", PermIds)));
+                    parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("objids", EbDbTypes.String, PermIds.Join(",")));
                     query = string.Format(Sql, idcheck);
                 }
                 EbDataSet ds = this.EbConnectionFactory.DataDB.DoQueries(query, parameters.ToArray());
@@ -383,6 +357,7 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception ex)
             {
                 Console.WriteLine("Exception at object list for user mobile req ::" + ex.Message);
+                Console.WriteLine(ex.StackTrace);
                 return response;
             }
             return response;
@@ -468,6 +443,111 @@ namespace ExpressBase.ServiceStack.Services
                 wraped += CharConstants.SEMI_COLON;
 
             return wraped;
+        }
+
+        public GetMyActionsResponse Get(GetMyActionsRequest request)
+        {
+            GetMyActionsResponse response = new GetMyActionsResponse();
+            try
+            {
+                User UserObject = this.Redis.Get<User>(request.UserAuthId);
+
+                string query = EbConnectionFactory.ObjectsDB.EB_GET_MYACTIONS;
+
+                List<DbParameter> parameters = new List<DbParameter> {
+                    this.EbConnectionFactory.ObjectsDB.GetNewParameter("userid", EbDbTypes.Int32, request.UserId),
+                    this.EbConnectionFactory.ObjectsDB.GetNewParameter("roleids", EbDbTypes.String, UserObject.RoleIds.Join(",")),
+                    this.EbConnectionFactory.ObjectsDB.GetNewParameter("usergroupids", EbDbTypes.String, UserObject.UserGroupIds.Join(","))
+                };
+
+                EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(query, parameters.ToArray()) ?? new EbDataTable();
+
+                foreach (EbDataRow row in dt.Rows)
+                {
+                    response.Actions.Add(new EbMyActionsMobile
+                    {
+                        Id = Convert.ToInt32(row["id"]),
+                        StartDate = Convert.ToDateTime(row["from_datetime"]),
+                        EndDate = Convert.ToDateTime(row["completed_at"]),
+                        StageId = Convert.ToInt32(row["eb_stages_id"]),
+                        WebFormRefId = row["form_ref_id"].ToString(),
+                        WebFormDataId = Convert.ToInt32(row["form_data_id"]),
+                        ApprovalLinesId = Convert.ToInt32(row["eb_approval_lines_id"]),
+                        Description = row["description"].ToString()
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Exception at GetMyActionsRequest ::" + ex.Message);
+            }
+            return response;
+        }
+
+        public GetMyActionInfoResponse Get(GetMyActionInfoRequest request)
+        {
+            GetMyActionInfoResponse response = new GetMyActionInfoResponse();
+            try
+            {
+                User UserObject = this.Redis.Get<User>(request.UserAuthId);
+                string query = @"SELECT 
+	                                ES.stage_name,ES.stage_unique_id,ESA.action_unique_id,ESA.action_name
+                                FROM 
+	                                eb_stages ES
+                                LEFT JOIN 
+	                                eb_stage_actions ESA
+                                ON 
+	                                ESA.eb_stages_id = ES.id
+                                WHERE 
+	                                ES.id = :stageid
+                                AND
+	                                COALESCE(ES.eb_del, 'F') = 'F'
+                                AND
+	                                COALESCE(ESA.eb_del, 'F') = 'F';";
+
+                List<DbParameter> parameters = new List<DbParameter> {
+                    this.EbConnectionFactory.ObjectsDB.GetNewParameter("stageid", EbDbTypes.Int32, request.StageId)
+                };
+
+                EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(query, parameters.ToArray()) ?? new EbDataTable();
+
+                WebFormServices webFormService = base.ResolveService<WebFormServices>();
+                GetFormData4MobileResponse resp = webFormService.Any(new GetFormData4MobileRequest
+                {
+                    RefId = request.WebFormRefId,
+                    DataId = request.WebFormDataId,
+                    UserObj = UserObject,
+                    SolnId = request.SolnId,
+                    UserAuthId = request.UserAuthId,
+                    UserId = request.UserId
+                });
+                response.Data = resp.Params;
+
+                if (dt.Rows.Any())
+                {
+                    var first = dt.Rows.First();
+
+                    foreach (EbDataRow row in dt.Rows)
+                    {
+                        if (row == first)
+                        {
+                            response.StageUniqueId = first["stage_unique_id"].ToString();
+                            response.StageName = first["stage_name"].ToString();
+                        }
+
+                        response.StageActions.Add(new EbStageActionsMobile
+                        {
+                            ActionName = row["action_name"].ToString(),
+                            ActionUniqueId = row["action_unique_id"].ToString()
+                        });
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+            return response;
         }
     }
 }

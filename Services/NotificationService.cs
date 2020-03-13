@@ -13,6 +13,8 @@ using System.Data.Common;
 using ExpressBase.Common;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using ExpressBase.Common.Singletons;
+using ExpressBase.Common.Extensions;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -47,17 +49,23 @@ namespace ExpressBase.ServiceStack.Services
                         Title = request.Title,
                         NotificationId = notification_id,
                         Duration = "Today"
-
                     });
                     n.Notification = Notification;
-                    this.ServerEventClient.Post<NotifyResponse>(new NotifyUserIdRequest
+                    string str = string.Format(@"select email from eb_users where id = {0} ", request.UsersID);
+                    EbDataTable dt = EbConnectionFactory.DataDB.DoQuery(str);
+                    if (dt.Rows.Count > 0)
                     {
-                        Msg = JsonConvert.SerializeObject(n),
-                        Selector = "cmd.onNotification",
-                        ToUserAuthId = request.UserAuthId,
-                        NotificationId = notification_id,
-                        NotifyUserId = request.UsersID
-                    });
+                        string user_auth_id = request.SolnId + ":" + dt.Rows[0][0].ToString() + ":uc";
+                        this.ServerEventClient.Post<NotifyResponse>(new NotifyUserIdRequest
+                        {
+                            Msg = JsonConvert.SerializeObject(n),
+                            Selector = "cmd.onNotification",
+                            ToUserAuthId = user_auth_id,
+                            NotificationId = notification_id,
+                            NotifyUserId = request.UsersID
+                        });
+                    }
+
                 }
                 else
                 {
@@ -70,7 +78,6 @@ namespace ExpressBase.ServiceStack.Services
             }
             return res;
         }
-
         public NotifyByUserRoleResponse Post(NotifyByUserRoleRequest request)
         {
             NotifyByUserRoleResponse res = new NotifyByUserRoleResponse();
@@ -248,7 +255,8 @@ namespace ExpressBase.ServiceStack.Services
         public GetNotificationsResponse Post(GetNotificationsRequest request)
         {
             GetNotificationsResponse res = new GetNotificationsResponse();
-            List<NotificationInfo> Notifications = new List<NotificationInfo>();
+            res.Notifications = new List<NotificationInfo>();
+            res.PendingActions = new List<PendingActionInfo>();
             this.EbConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
             try
             {
@@ -258,23 +266,43 @@ namespace ExpressBase.ServiceStack.Services
                                                 WHERE user_id = '{0}'
                                                 AND message_seen ='F'
                                                 ORDER BY created_at DESC;", request.UserId);
-            EbDataTable dt = EbConnectionFactory.DataDB.DoQuery(str);
-            for (int i = 0; i < dt.Rows.Count; i++)
-            {
-                string notif = dt.Rows[i]["notification"].ToString();
-                Notifications list = JsonConvert.DeserializeObject<Notifications>(notif);
-                DateTime created_dtime = Convert.ToDateTime(dt.Rows[i]["created_at"].ToString());
-                string duration = GetNotificationDuration(created_dtime);
-                Notifications.Add(new NotificationInfo
+
+                var _roles = string.Join(",", request.user.RoleIds.ToArray());
+
+                 str += string.Format(@"SELECT *
+                    FROM eb_my_actions
+                    WHERE ('{0}' = any(string_to_array(user_ids, ',')) OR
+                     (string_to_array(role_ids,',')) && (string_to_array('{1}',',')))
+                        AND is_completed='F' AND eb_del='F' ;", request.UserId, _roles);
+
+                EbDataSet ds = EbConnectionFactory.DataDB.DoQueries(str);
+                EbDataTable dt = ds.Tables[0];
+                for (int i = 0; i < dt.Rows.Count; i++)
                 {
-                    Link = list.Notification[0].Link,
-                    NotificationId = list.Notification[0].NotificationId,
-                    Title = list.Notification[0].Title,
-                    Duration = duration
-                });
-            }
-            res.Notifications = Notifications;
-            res.PendingActions = Post(new GetPendingActionRequest { user = request.user}).PendingActions;
+                    string notif = dt.Rows[i]["notification"].ToString();
+                    Notifications list = JsonConvert.DeserializeObject<Notifications>(notif);
+                    DateTime created_dtime = Convert.ToDateTime(dt.Rows[i]["created_at"].ToString());
+                    string duration = GetNotificationDuration(created_dtime);
+                    res.Notifications.Add(new NotificationInfo
+                    {
+                        Link = list.Notification[0].Link,
+                        NotificationId = list.Notification[0].NotificationId,
+                        Title = list.Notification[0].Title,
+                        Duration = duration
+                    });
+                }
+                dt = ds.Tables[1];
+                var _user_culture = CultureHelper.GetSerializedCultureInfo(request.user.Preference.Locale).GetCultureInfo();
+                for (int i = 0; i < dt.Rows.Count; i++)
+                {
+                    res.PendingActions.Add(new PendingActionInfo
+                    {
+                        Description = dt.Rows[i]["description"].ToString(),
+                        Link = dt.Rows[i]["form_ref_id"].ToString(),
+                        DataId = dt.Rows[i]["form_data_id"].ToString(),
+                        CreatedDate = Convert.ToDateTime(dt.Rows[i]["from_datetime"]).ConvertFromUtc(request.user.Preference.TimeZone).ToString(_user_culture.DateTimeFormat.ShortDatePattern + " " + _user_culture.DateTimeFormat.ShortTimePattern)
+                    });
+                }
             }
             catch (Exception e)
             {
@@ -304,30 +332,6 @@ namespace ExpressBase.ServiceStack.Services
                 duration = (day>1)? day + " days ago": day + " day ago";
             }
             return duration;
-        }
-
-        public GetPendingActionResponse Post(GetPendingActionRequest request)
-        {
-            GetPendingActionResponse res = new GetPendingActionResponse();
-            res.PendingActions = new List<PendingActionInfo>();
-            string _roles = string.Join(",", request.user.Roles
-                                            .Select(x => string.Format("'{0}'", x)));
-            string str = string.Format(@"SELECT *
-                    FROM eb_my_actions
-                    WHERE '{0}' = any(string_to_array(user_ids, ',')) OR
-                     role_id IN(select id from eb_roles where role_name IN({1}));", request.user.UserId, _roles);
-            EbDataTable dt = EbConnectionFactory.DataDB.DoQuery(str);
-            for (int i = 0; i < dt.Rows.Count; i++)
-            {
-                res.PendingActions.Add(new PendingActionInfo
-                { 
-                    Description =  dt.Rows[i]["description"].ToString(),
-                    Link = dt.Rows[i]["form_ref_id"].ToString(),
-                    DataId = dt.Rows[i]["form_data_id"].ToString(),
-                    CreatedDate =Convert.ToDateTime( dt.Rows[i]["from_datetime"]).ToString("dd-MM-yyyy")
-                });
-            }
-            return res;
         }
     }
 }

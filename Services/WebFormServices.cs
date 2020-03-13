@@ -463,25 +463,22 @@ namespace ExpressBase.ServiceStack.Services
 
                     if (column.Control is EbPowerSelect)
                     {
-                        if (!(column.Control as EbPowerSelect).MultiSelect)
+                        _control = new ControlClass
                         {
-                            _control = new ControlClass
-                            {
-                                DataSourceId = (column.Control as EbPowerSelect).DataSourceId,
-                                ValueMember = (column.Control as EbPowerSelect).ValueMember
-                            };
-                            if ((column.Control as EbPowerSelect).RenderAsSimpleSelect)
-                            {
-                                _control.DisplayMember.Add((column.Control as EbPowerSelect).DisplayMember);
-                            }
-                            else
-                            {
-                                _control.DisplayMember = (column.Control as EbPowerSelect).DisplayMembers;
-                            }
-                            _autoresolve = true;
-                            _align = Align.Center;
-                            _RenderType = EbDbTypes.String;
+                            DataSourceId = (column.Control as EbPowerSelect).DataSourceId,
+                            ValueMember = (column.Control as EbPowerSelect).ValueMember
+                        };
+                        if ((column.Control as EbPowerSelect).RenderAsSimpleSelect)
+                        {
+                            _control.DisplayMember.Add((column.Control as EbPowerSelect).DisplayMember);
                         }
+                        else
+                        {
+                            _control.DisplayMember = (column.Control as EbPowerSelect).DisplayMembers;
+                        }
+                        _autoresolve = true;
+                        _align = Align.Center;
+                        _RenderType = EbDbTypes.String;
                     }
                     else if (column.Control is EbTextBox)
                     {
@@ -602,25 +599,22 @@ namespace ExpressBase.ServiceStack.Services
                     EbDbTypes _RenderType = column.Type.EbDbType;
                     if (column.Control is EbPowerSelect)
                     {
-                        if (!(column.Control as EbPowerSelect).MultiSelect)
+                        _control = new ControlClass
                         {
-                            _control = new ControlClass
-                            {
-                                DataSourceId = (column.Control as EbPowerSelect).DataSourceId,
-                                ValueMember = (column.Control as EbPowerSelect).ValueMember
-                            };
-                            if ((column.Control as EbPowerSelect).RenderAsSimpleSelect)
-                            {
-                                _control.DisplayMember.Add((column.Control as EbPowerSelect).DisplayMember);
-                            }
-                            else
-                            {
-                                _control.DisplayMember = (column.Control as EbPowerSelect).DisplayMembers;
-                            }
-                            _autoresolve = true;
-                            _align = Align.Center;
-                            _RenderType = EbDbTypes.String;
+                            DataSourceId = (column.Control as EbPowerSelect).DataSourceId,
+                            ValueMember = (column.Control as EbPowerSelect).ValueMember
+                        };
+                        if ((column.Control as EbPowerSelect).RenderAsSimpleSelect)
+                        {
+                            _control.DisplayMember.Add((column.Control as EbPowerSelect).DisplayMember);
                         }
+                        else
+                        {
+                            _control.DisplayMember = (column.Control as EbPowerSelect).DisplayMembers;
+                        }
+                        _autoresolve = true;
+                        _align = Align.Center;
+                        _RenderType = EbDbTypes.String;
                     }
                     else if (column.Control is EbTextBox)
                     {
@@ -846,7 +840,10 @@ namespace ExpressBase.ServiceStack.Services
             try
             {
                 EbWebForm form = GetWebFormObject(request.RefId);
+                form.TableRowId = 0;
                 form.RefId = request.RefId;
+                form.UserObj = request.UserObj;
+                form.SolutionObj = GetSolutionObject(request.SolnId);
                 form.RefreshFormData(EbConnectionFactory.DataDB, this, request.Params);
                 _dataset.FormDataWrap = JsonConvert.SerializeObject(new WebformDataWrapper { FormData = form.FormData, Status = (int)HttpStatusCodes.OK, Message = "Success" });
             }
@@ -860,6 +857,33 @@ namespace ExpressBase.ServiceStack.Services
             }
             Console.WriteLine("End GetPrefillData");
             return _dataset;
+        }
+        public GetFormData4MobileResponse Any(GetFormData4MobileRequest request)
+        {
+            Console.WriteLine("Start GetFormData4Mobile");
+            GetFormData4MobileResponse resp = null;
+            try
+            {
+                EbWebForm form = GetWebFormObject(request.RefId);
+                form.TableRowId = request.DataId;
+                form.RefId = request.RefId;
+                form.UserObj = request.UserObj;
+                form.SolutionObj = GetSolutionObject(request.SolnId);
+                List<Param> data = null;
+                if (form.TableRowId > 0)
+                    data = form.GetFormData4Mobile(EbConnectionFactory.DataDB, this);
+                resp = new GetFormData4MobileResponse() { Params = data, Status = (int)HttpStatusCodes.OK, Message = "Success" };
+            }
+            catch (FormException ex)
+            {
+                resp = new GetFormData4MobileResponse() { Status = (int)HttpStatusCodes.INTERNAL_SERVER_ERROR, Message = $"{ex.Message} {ex.MessageInternal}" };
+            }
+            catch (Exception e)
+            {
+                resp = new GetFormData4MobileResponse() { Status = (int)HttpStatusCodes.INTERNAL_SERVER_ERROR, Message = $"{e.Message} {e.StackTrace}" };
+            }
+            Console.WriteLine("End GetFormData4Mobile");
+            return resp;
         }
 
         //public GetImportDataResponse Any(GetImportDataRequest request)
