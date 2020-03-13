@@ -16,6 +16,7 @@ using ExpressBase.Security;
 using ExpressBase.Common.Singletons;
 using ServiceStack.Auth;
 using Newtonsoft.Json.Linq;
+using ExpressBase.Common.LocationNSolution;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -1264,7 +1265,24 @@ namespace ExpressBase.ServiceStack.Services
             return Lar;
         }
 
-
+        public GetUserTypesResponse Post(GetUserTypesRequest request)
+        {
+            GetUserTypesResponse response = new GetUserTypesResponse();
+            string query = "SELECT * FROM eb_user_types WHERE COALESCE(eb_del, 'F') = 'F'";
+            EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(query);
+            List<EbProfileUserType> userTypes = new List<EbProfileUserType>();
+            foreach (EbDataRow _dr in dt.Rows)
+            {
+                EbProfileUserType _type = new EbProfileUserType
+                {
+                    Id = Convert.ToInt32(_dr["id"]),
+                    Name = _dr["name"].ToString()
+                };
+                userTypes.Add(_type);
+            }
+            response.UserTypes = userTypes;
+            return response;
+        }
 
 
 

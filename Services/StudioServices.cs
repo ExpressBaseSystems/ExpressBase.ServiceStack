@@ -184,6 +184,37 @@ namespace ExpressBase.ServiceStack
                 });
             }
             return new EbObjectObjListAllVerResponse { Data = f_dict };
+        } 
+        
+        public object Get(PublicObjListAllVerRequest request)
+        {
+            List<EbObjectWrapper> wrap = new List<EbObjectWrapper>();
+            DbParameter[] parameters = { EbConnectionFactory.ObjectsDB.GetNewParameter("type", EbDbTypes.Int32, request.EbObjectType) };
+            EbDataTable dt = EbConnectionFactory.ObjectsDB.DoQuery(EbConnectionFactory.ObjectsDB.EB_GET_ALL_PUBLIC_COMMITTED_VERSION_LIST, parameters);
+
+            Dictionary<string, List<EbObjectWrapper>> f_dict = new Dictionary<string, List<EbObjectWrapper>>();
+            List<EbObjectWrapper> wrap_list = null;
+            foreach (EbDataRow dr in dt.Rows)
+            {
+                string _nameKey = dr[1].ToString();
+                if (!f_dict.ContainsKey(_nameKey))
+                {
+                    wrap_list = new List<EbObjectWrapper>();
+                    f_dict.Add(_nameKey, wrap_list);
+                }
+
+                wrap_list.Add(new EbObjectWrapper
+                {
+                    Id = Convert.ToInt32(dr[0]),
+                    Name = dr[1].ToString(),
+                    EbObjectType = ((EbObjectType)Convert.ToInt32(dr[2])).IntCode,
+                    Status = Enum.GetName(typeof(ObjectLifeCycleStatus), Convert.ToInt32(dr[3])),
+                    VersionNumber = dr[7].ToString(),
+                    RefId = dr[11].ToString(),
+                    DisplayName = dr[13].ToString()
+                });
+            }
+            return new EbObjectObjListAllVerResponse { Data = f_dict };
         }
 
         [CompressResponse]
@@ -191,7 +222,7 @@ namespace ExpressBase.ServiceStack
         {
             List<EbObjectWrapper> wrap = new List<EbObjectWrapper>();
             string Typestring = string.Empty;
-            foreach(int type in request.Typelist)
+            foreach (int type in request.Typelist)
             {
                 Typestring += $"obj_type = {type} or ";
             }
@@ -337,14 +368,14 @@ namespace ExpressBase.ServiceStack
             {
                 _roles.Add(Convert.ToInt32(dr[0]), dr[1].ToString());
             }
-            
+
             Dictionary<int, string> _usergroup = new Dictionary<int, string>();
             foreach (EbDataRow dr in ds.Tables[2].Rows)
             {
                 _usergroup.Add(Convert.ToInt32(dr[0]), dr[1].ToString());
             }
 
-            return new EbObjAllVerWithoutCircularRefResp { Data = obj_dict, Roles = _roles, UserGroups= _usergroup };
+            return new EbObjAllVerWithoutCircularRefResp { Data = obj_dict, Roles = _roles, UserGroups = _usergroup };
         }
 
         [CompressResponse]
@@ -532,8 +563,9 @@ namespace ExpressBase.ServiceStack
                             OwnerName = dr[33].ToString()
                         },
                         DisplayName = dr[34].ToString(),
-                        IsLogEnabled = (dr[35].ToString() == "F") ? false : true
-                    });
+                        IsLogEnabled = (dr[35].ToString() == "F") ? false : true,
+                        IsPublic = (dr[36].ToString() == "T") ? true : false
+                    }); 
 
                     wrap.Add(_ebObject);
                 }
@@ -622,7 +654,8 @@ namespace ExpressBase.ServiceStack
                             OwnerUid = Convert.ToInt32(dr[22]),
                             OwnerTs = Convert.ToDateTime((dr[23].ToString()) == "" || (dr[23].ToString()) == "" ? DateTime.MinValue : dr[23]),
                             OwnerName = dr[24].ToString()
-                        }
+                        },                        
+                        IsPublic = (dr[25].ToString() == "T") ? true : false
                     });
                     wrap.Add(_ebObject);
                 }
@@ -891,9 +924,9 @@ namespace ExpressBase.ServiceStack
                             Json = request.Json
                         });
                     }
-                    else if(obj is EbMobilePage)
+                    else if (obj is EbMobilePage)
                     {
-                        if((obj as EbMobilePage).Container is EbMobileForm)
+                        if ((obj as EbMobilePage).Container is EbMobileForm)
                         {
                             MobileServices mobservice = base.ResolveService<MobileServices>();
                             CreateMobileFormTableResponse res = mobservice.Post(new CreateMobileFormTableRequest
@@ -995,8 +1028,8 @@ namespace ExpressBase.ServiceStack
                     else if (obj is EbWebForm)
                     {
                         WebFormServices myService = base.ResolveService<WebFormServices>();
-                        myService.EbConnectionFactory = this.EbConnectionFactory;                        
-                        CreateWebFormTableResponse res = (CreateWebFormTableResponse)myService.Any(new CreateWebFormTableRequest() { WebObj = obj, Apps = request.Apps, IsImport= request.IsImport, SolnId = request.SolnId, UserId = request.UserId, WhichConsole = request.WhichConsole });
+                        myService.EbConnectionFactory = this.EbConnectionFactory;
+                        CreateWebFormTableResponse res = (CreateWebFormTableResponse)myService.Any(new CreateWebFormTableRequest() { WebObj = obj, Apps = request.Apps, IsImport = request.IsImport, SolnId = request.SolnId, UserId = request.UserId, WhichConsole = request.WhichConsole });
                     }
                     else if (obj is EbSqlFunction)
                     {
@@ -1288,6 +1321,25 @@ namespace ExpressBase.ServiceStack
             return new DeleteObjectResponse { RowsDeleted = _rows };
         }
 
+        public ChangeObjectAccessResponse Post(ChangeObjectAccessRequest request)
+        {
+            bool status = false;
+            try
+            {
+                string sql = EbConnectionFactory.ObjectsDB.EB_CHANGE_OBJECT_ACCESS;
+
+                DbParameter[] p = { EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, request.ObjId),
+                    EbConnectionFactory.ObjectsDB.GetNewParameter("status", EbDbTypes.String, (request.Status == 1)?'T':'F') };
+                int _rows = EbConnectionFactory.ObjectsDB.DoNonQuery(sql, p);
+                status = true;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message + e.StackTrace);
+            }
+            return new ChangeObjectAccessResponse { Status = status };
+        }
+
         public EnableLogResponse Post(EnableLogRequest request)
         {
             string sql = EbConnectionFactory.ObjectsDB.EB_ENABLE_LOG;
@@ -1331,8 +1383,8 @@ namespace ExpressBase.ServiceStack
             else if (obj is EbApi)
                 return EbObjectTypes.Api.IntCode;
             else if (obj is EbDashBoard)
-                return EbObjectTypes.DashBoard.IntCode;            
-            else if(obj is EbMobilePage)
+                return EbObjectTypes.DashBoard.IntCode;
+            else if (obj is EbMobilePage)
                 return EbObjectTypes.MobilePage.IntCode;
             else if (obj is EbSqlJob)
                 return EbObjectTypes.SqlJob.IntCode;
@@ -1404,7 +1456,7 @@ namespace ExpressBase.ServiceStack
             else if (obj is EbDashBoard)
             {
                 Redis.Set(refId, (EbDashBoard)obj);
-            }            
+            }
             else if (obj is EbMobilePage)
             {
                 Redis.Set(refId, (EbMobilePage)obj);
