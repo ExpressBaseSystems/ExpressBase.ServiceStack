@@ -1577,5 +1577,16 @@ namespace ExpressBase.ServiceStack.Services
 
             return new GetAllRolesResponse { Roles = t };
         }
+
+        public GetMyProfileEntryResponse Get(GetMyProfileEntryRequest request)
+        {
+            int id = 0;
+            String _query = string.Format("SELECT id from {0} where eb_users_id = {1};", request.TableName, request.UserId);
+            EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(_query);
+            if (dt.Rows.Count > 0)
+                id = Convert.ToInt32(dt.Rows[0][0]);
+
+            return new GetMyProfileEntryResponse { RowId = id };
+        }
     }
 }
