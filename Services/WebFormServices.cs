@@ -58,6 +58,22 @@ namespace ExpressBase.ServiceStack.Services
             return new CreateWebFormTableResponse { };
         }
 
+        public CreateMyProfileTableResponse Any(CreateMyProfileTableRequest request)
+        {
+            foreach (EbProfileUserType eput in request.UserTypeForms)
+            {
+                EbWebForm form = GetWebFormObject(eput.RefId);
+                TableSchema _table = form.FormSchema.Tables.Find(e => e.TableName.Equals(form.FormSchema.MasterTable));
+                if (_table != null)
+                {
+                    form.AutoDeployTV = false;
+                    _table.Columns.Add(new ColumnSchema { ColumnName = "eb_users_id", EbDbType = (int)EbDbTypes.Int32, Control = new EbNumeric { Name = "eb_users_id", Label = "User Id" } });
+                    CreateWebFormTables(form.FormSchema, new CreateWebFormTableRequest { WebObj = form, DontThrowException = true });
+                }
+            }
+            return new CreateMyProfileTableResponse { };
+        }
+
         //Review control related data
         private void InsertDataIfRequired(WebFormSchema _schema, string _refId)
         {
@@ -166,7 +182,7 @@ namespace ExpressBase.ServiceStack.Services
                         CreateOrUpdateDsAndDv(request, _listNamesAndTypes);
                 }
             }
-            if (!Msg.IsEmpty())
+            if (!request.DontThrowException && !Msg.IsEmpty())
                 throw new FormException(Msg);
         }
 
