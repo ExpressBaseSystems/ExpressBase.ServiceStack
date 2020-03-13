@@ -307,7 +307,8 @@ namespace ExpressBase.ServiceStack
                 parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("dominant", EbDbTypes.String, request.EbObjectRefId));
             }
             query += @"SELECT id, role_name FROM eb_roles WHERE COALESCE(eb_del, 'F') = 'F' ORDER BY role_name;
-                       SELECT id, name FROM eb_usergroup WHERE COALESCE(eb_del, 'F') = 'F' ORDER BY name;";
+                       SELECT id, name FROM eb_usergroup WHERE COALESCE(eb_del, 'F') = 'F' ORDER BY name;
+                       SELECT id, name FROM eb_user_types WHERE COALESCE(eb_del, 'F') = 'F';";
             parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("obj_type", EbDbTypes.Int32, request.EbObjType));
             EbDataSet ds = EbConnectionFactory.ObjectsDB.DoQueries(query, parameters.ToArray());
 
@@ -344,7 +345,13 @@ namespace ExpressBase.ServiceStack
                 _usergroup.Add(Convert.ToInt32(dr[0]), dr[1].ToString());
             }
 
-            return new EbObjAllVerWithoutCircularRefResp { Data = obj_dict, Roles = _roles, UserGroups= _usergroup };
+            Dictionary<int, string> _usertypes = new Dictionary<int, string>();
+            foreach (EbDataRow dr in ds.Tables[3].Rows)
+            {
+                _usertypes.Add(Convert.ToInt32(dr[0]), dr[1].ToString());
+            }
+
+            return new EbObjAllVerWithoutCircularRefResp { Data = obj_dict, Roles = _roles, UserGroups= _usergroup, UserTypes = _usertypes };
         }
 
         [CompressResponse]
