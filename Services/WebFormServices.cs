@@ -808,7 +808,7 @@ namespace ExpressBase.ServiceStack.Services
                 {
 
                 }
-                else if (!(form.HasPermission(OperationConstants.VIEW, form.LocationId) || form.HasPermission(OperationConstants.NEW, form.LocationId) || form.HasPermission(OperationConstants.EDIT, form.LocationId)))
+                else if (!(form.HasPermission(OperationConstants.VIEW, request.CurrentLoc) || form.HasPermission(OperationConstants.NEW, request.CurrentLoc) || form.HasPermission(OperationConstants.EDIT, request.CurrentLoc)))
                 {
                     throw new FormException("Error in loading data. Access Denied.", (int)HttpStatusCodes.UNAUTHORIZED, "Access Denied for rowid " + form.TableRowId + " , current location " + form.LocationId, string.Empty);
                 }
