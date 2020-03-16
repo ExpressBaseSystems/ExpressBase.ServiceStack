@@ -518,6 +518,7 @@ namespace ExpressBase.ServiceStack
                 parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewOutParameter("owner_nameVal", EbDbTypes.String));
                 parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewOutParameter("dispnameval", EbDbTypes.String));
                 parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewOutParameter("is_logv", EbDbTypes.String));
+                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewOutParameter("is_publicv", EbDbTypes.String));
 
                 dt = this.EbConnectionFactory.ObjectsDB.DoProcedure(EbConnectionFactory.ObjectsDB.EB_EXPLORE_OBJECT, parameters.ToArray());
             }
@@ -619,6 +620,7 @@ namespace ExpressBase.ServiceStack
                 para.Add(EbConnectionFactory.ObjectsDB.GetNewOutParameter("owner_uidval", EbDbTypes.Int32));
                 para.Add(EbConnectionFactory.ObjectsDB.GetNewOutParameter("owner_tsval", EbDbTypes.String));
                 para.Add(EbConnectionFactory.ObjectsDB.GetNewOutParameter("owner_nameval", EbDbTypes.String));
+                para.Add(EbConnectionFactory.ObjectsDB.GetNewOutParameter("is_public", EbDbTypes.String));
 
 
                 dt = EbConnectionFactory.ObjectsDB.DoProcedure(EbConnectionFactory.ObjectsDB.EB_UPDATE_DASHBOARD, para.ToArray());
