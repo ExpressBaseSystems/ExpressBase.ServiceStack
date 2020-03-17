@@ -1480,6 +1480,8 @@ namespace ExpressBase.ServiceStack
                             {
                                 if (((col as DVNumericColumn).RenderAs == NumericRenderType.ProgressBar) && (_isexcel == false))
                                     _formattedData = "<div class='progress'><div class='progress-bar' role='progressbar' aria-valuenow='" + _formattedData + "' aria-valuemin='0' aria-valuemax='100' style='width:" + _unformattedData.ToString() + "%'>" + _formattedData + "</div></div>";
+                                else if (((col as DVNumericColumn).RenderAs == NumericRenderType.Rating) && (_isexcel == false))
+                                    _formattedData = GetDataforRating((col as DVNumericColumn), _formattedData);
 
                                 SummaryCalc(ref Summary, col, _unformattedData, cults);
                             }
@@ -1615,6 +1617,23 @@ namespace ExpressBase.ServiceStack
                 this._Responsestatus.Message = e.Message;
             }
 
+        }
+
+        private object GetDataforRating(DVNumericColumn dVNumericColumn, object _formattedData)
+        {
+            if(_formattedData != null && Convert.ToDecimal(_formattedData) != -1)
+            {
+                var deci = Convert.ToDecimal(_formattedData);
+                decimal dPart = Convert.ToDecimal(_formattedData) % 1.0m;
+                if (deci > dVNumericColumn.MaxLimit)
+                    deci = dVNumericColumn.MaxLimit;
+                return  $"<div class='rating' data-rateyo-num-stars='{dVNumericColumn.MaxLimit}' data-rateyo-rating='{deci}' data-rateyo-half-star='true'> </div>";
+            }
+            else
+            {
+                return  "<div class='ratingg'> NA </div>";
+            }
+            throw new NotImplementedException();
         }
 
         private object GetMultilineText(string data, int _length, int _lines)
