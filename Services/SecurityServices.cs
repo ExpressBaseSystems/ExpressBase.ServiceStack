@@ -16,6 +16,7 @@ using ExpressBase.Security;
 using ExpressBase.Common.Singletons;
 using ServiceStack.Auth;
 using Newtonsoft.Json.Linq;
+using ExpressBase.Common.LocationNSolution;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -166,7 +167,7 @@ namespace ExpressBase.ServiceStack.Services
             string sql = this.EbConnectionFactory.DataDB.EB_MANAGEUSER_FIRST_QUERY;
             if (request.Id > 1)
             {
-                sql += @"SELECT fullname,nickname,email,alternateemail,dob,sex,phnoprimary,phnosecondary,landline,phextension,fbid,fbname,statusid,hide,preferencesjson,dprefid
+                sql += @"SELECT fullname,nickname,email,alternateemail,dob,sex,phnoprimary,phnosecondary,landline,phextension,fbid,fbname,statusid,hide,preferencesjson,dprefid,eb_user_types_id
 						FROM eb_users WHERE id = @id AND (statusid = 0 OR statusid = 1 OR statusid = 2) AND id > 1 AND eb_del = 'F';
 						SELECT role_id FROM eb_role2user WHERE user_id = @id AND eb_del = 'F';
 						SELECT groupid FROM eb_user2usergroup WHERE userid = @id AND eb_del = 'F';";
@@ -216,13 +217,18 @@ namespace ExpressBase.ServiceStack.Services
                 });
             }
 
+            resp.UserTypes = new Dictionary<int, string>();
+            foreach (EbDataRow dr in ds.Tables[3].Rows)
+            {
+                resp.UserTypes.Add(Convert.ToInt32(dr[0]), Convert.ToString(dr[1]));
+            }
 
             if (request.Id > 1)
             {
                 resp.UserData = new Dictionary<string, string>();
-                if (ds.Tables[3].Rows.Count == 0)
+                if (ds.Tables[4].Rows.Count == 0)
                     return resp;
-                foreach (var dr in ds.Tables[3].Rows)
+                foreach (var dr in ds.Tables[4].Rows)
                 {
                     resp.UserData.Add("id", request.Id.ToString());
                     resp.UserData.Add("fullname", dr[0].ToString());
@@ -241,17 +247,18 @@ namespace ExpressBase.ServiceStack.Services
                     resp.UserData.Add("hide", dr[13].ToString());
                     resp.UserData.Add("preference", dr[14].ToString());
                     resp.UserData.Add("dprefid", dr[15].ToString());
+                    resp.UserData.Add("eb_user_types_id", dr[16].ToString());
                 }
 
                 resp.UserRoles = new List<int>();
-                foreach (var dr in ds.Tables[4].Rows)
+                foreach (var dr in ds.Tables[5].Rows)
                     resp.UserRoles.Add(Convert.ToInt32(dr[0]));
 
                 resp.UserGroups = new List<int>();
-                foreach (var dr in ds.Tables[5].Rows)
+                foreach (var dr in ds.Tables[6].Rows)
                     resp.UserGroups.Add(Convert.ToInt32(dr[0]));
 
-                EbConstraints con = new EbConstraints(ds.Tables[6]);
+                EbConstraints con = new EbConstraints(ds.Tables[7]);
                 resp.LocConstraint = new Dictionary<int, int>();
                 foreach (var c in con.UConstraints)
                 {
@@ -338,6 +345,7 @@ namespace ExpressBase.ServiceStack.Services
                 this.EbConnectionFactory.DataDB.GetNewParameter("_hide", EbDbTypes.String, request.Hide),
                 this.EbConnectionFactory.DataDB.GetNewParameter("_anonymoususerid", EbDbTypes.Int32, request.AnonymousUserId),
                 this.EbConnectionFactory.DataDB.GetNewParameter("_preferences", EbDbTypes.String, request.Preference),
+                this.EbConnectionFactory.DataDB.GetNewParameter("_usertype", EbDbTypes.Int32, request.UserType),
                 this.EbConnectionFactory.DataDB.GetNewParameter("_consadd", EbDbTypes.String, request.LocationAdd),
                 this.EbConnectionFactory.DataDB.GetNewParameter("_consdel", EbDbTypes.String, request.LocationDelete)
             };
@@ -1264,7 +1272,24 @@ namespace ExpressBase.ServiceStack.Services
             return Lar;
         }
 
-
+        public GetUserTypesResponse Post(GetUserTypesRequest request)
+        {
+            GetUserTypesResponse response = new GetUserTypesResponse();
+            string query = "SELECT * FROM eb_user_types WHERE COALESCE(eb_del, 'F') = 'F'";
+            EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(query);
+            List<EbProfileUserType> userTypes = new List<EbProfileUserType>();
+            foreach (EbDataRow _dr in dt.Rows)
+            {
+                EbProfileUserType _type = new EbProfileUserType
+                {
+                    Id = Convert.ToInt32(_dr["id"]),
+                    Name = _dr["name"].ToString()
+                };
+                userTypes.Add(_type);
+            }
+            response.UserTypes = userTypes;
+            return response;
+        }
 
 
 

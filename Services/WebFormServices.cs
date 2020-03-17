@@ -58,6 +58,22 @@ namespace ExpressBase.ServiceStack.Services
             return new CreateWebFormTableResponse { };
         }
 
+        public CreateMyProfileTableResponse Any(CreateMyProfileTableRequest request)
+        {
+            foreach (EbProfileUserType eput in request.UserTypeForms)
+            {
+                EbWebForm form = GetWebFormObject(eput.RefId);
+                TableSchema _table = form.FormSchema.Tables.Find(e => e.TableName.Equals(form.FormSchema.MasterTable));
+                if (_table != null)
+                {
+                    form.AutoDeployTV = false;
+                    _table.Columns.Add(new ColumnSchema { ColumnName = "eb_users_id", EbDbType = (int)EbDbTypes.Int32, Control = new EbNumeric { Name = "eb_users_id", Label = "User Id" } });
+                    CreateWebFormTables(form.FormSchema, new CreateWebFormTableRequest { WebObj = form, DontThrowException = true });
+                }
+            }
+            return new CreateMyProfileTableResponse { };
+        }
+
         //Review control related data
         private void InsertDataIfRequired(WebFormSchema _schema, string _refId)
         {
@@ -166,7 +182,7 @@ namespace ExpressBase.ServiceStack.Services
                         CreateOrUpdateDsAndDv(request, _listNamesAndTypes);
                 }
             }
-            if (!Msg.IsEmpty())
+            if (!request.DontThrowException && !Msg.IsEmpty())
                 throw new FormException(Msg);
         }
 
@@ -806,9 +822,11 @@ namespace ExpressBase.ServiceStack.Services
                 }
                 if (form.SolutionObj.SolutionSettings != null && form.SolutionObj.SolutionSettings.SignupFormRefid != string.Empty && form.SolutionObj.SolutionSettings.SignupFormRefid == form.RefId)
                 {
-
                 }
-                else if (!(form.HasPermission(OperationConstants.VIEW, form.LocationId) || form.HasPermission(OperationConstants.NEW, form.LocationId) || form.HasPermission(OperationConstants.EDIT, form.LocationId)))
+                else if (form.SolutionObj.SolutionSettings != null && form.SolutionObj.SolutionSettings.UserTypeForms != null && form.SolutionObj.SolutionSettings.UserTypeForms.Any(x => x.RefId == form.RefId))
+                { 
+                }
+                else if (!(form.HasPermission(OperationConstants.VIEW, request.CurrentLoc) || form.HasPermission(OperationConstants.NEW, request.CurrentLoc) || form.HasPermission(OperationConstants.EDIT, request.CurrentLoc)))
                 {
                     throw new FormException("Error in loading data. Access Denied.", (int)HttpStatusCodes.UNAUTHORIZED, "Access Denied for rowid " + form.TableRowId + " , current location " + form.LocationId, string.Empty);
                 }
@@ -1576,6 +1594,17 @@ namespace ExpressBase.ServiceStack.Services
             }
 
             return new GetAllRolesResponse { Roles = t };
+        }
+
+        public GetMyProfileEntryResponse Get(GetMyProfileEntryRequest request)
+        {
+            int id = 0;
+            String _query = string.Format("SELECT id from {0} where eb_users_id = {1};", request.TableName, request.UserId);
+            EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(_query);
+            if (dt.Rows.Count > 0)
+                id = Convert.ToInt32(dt.Rows[0][0]);
+
+            return new GetMyProfileEntryResponse { RowId = id };
         }
     }
 }
