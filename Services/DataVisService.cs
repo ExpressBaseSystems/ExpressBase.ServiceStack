@@ -1489,7 +1489,7 @@ namespace ExpressBase.ServiceStack
                             {
                                 if ((col as DVStringColumn).RenderAs == StringRenderType.Marker)
                                     _formattedData = "<a href = '#' class ='columnMarker" + this.TableId + "' data-latlong='" + _unformattedData + "'><i class='fa fa-map-marker fa-2x' style='color:red;'></i></a>";
-                                
+
                                 else if ((col as DVStringColumn).RenderAs == StringRenderType.Image)
                                 {
                                     var _height = (col as DVStringColumn).ImageHeight == 0 ? "auto" : (col as DVStringColumn).ImageHeight + "px";
@@ -1510,6 +1510,9 @@ namespace ExpressBase.ServiceStack
 
                                 }
 
+                                else if ((col as DVStringColumn).RenderAs == StringRenderType.Tag)
+                                    _formattedData = GetTaggedData((col as DVStringColumn), _formattedData);
+                                
                                 if ((col as DVStringColumn).AllowMultilineText)
                                 {
                                     if ((col as DVStringColumn).NoOfCharactersPerLine > 0 && (col as DVStringColumn).NoOfLines > 0)
@@ -1619,19 +1622,34 @@ namespace ExpressBase.ServiceStack
 
         }
 
+        private object GetTaggedData(DVStringColumn dVStringColumn, object _formattedData)
+        {
+            string _html = string.Empty;
+            if(_formattedData.ToString() != string.Empty)
+            {
+                _html = "<div class='dvtaginput'>";
+                foreach(string str in _formattedData.ToString().Split(","))
+                {
+                    _html += $"<span class='dvtagspan'>{str}</span>";
+                }
+                _html += "</div>";
+            }
+            return _html;
+        }
+
         private object GetDataforRating(DVNumericColumn dVNumericColumn, object _formattedData)
         {
-            if(_formattedData != null && Convert.ToDecimal(_formattedData) != -1)
+            if (_formattedData != null && Convert.ToDecimal(_formattedData) != -1)
             {
                 var deci = Convert.ToDecimal(_formattedData);
                 decimal dPart = Convert.ToDecimal(_formattedData) % 1.0m;
                 if (deci > dVNumericColumn.MaxLimit)
                     deci = dVNumericColumn.MaxLimit;
-                return  $"<div class='rating' data-rateyo-num-stars='{dVNumericColumn.MaxLimit}' data-rateyo-rating='{deci}' data-rateyo-half-star='true'> </div>";
+                return $"<div class='rating' data-rateyo-num-stars='{dVNumericColumn.MaxLimit}' data-rateyo-rating='{deci}' data-rateyo-half-star='true'> </div>";
             }
             else
             {
-                return  "<div class='ratingg'> NA </div>";
+                return "<div class='ratingg'> NA </div>";
             }
             throw new NotImplementedException();
         }
@@ -1727,7 +1745,7 @@ namespace ExpressBase.ServiceStack
         {
             string[] vmArray = _formattedData.ToString().Split(",");
             string data = string.Empty;
-            foreach(string vm in vmArray)
+            foreach (string vm in vmArray)
                 data += (vm != "" && col.ColumnQueryMapping.Values.ContainsKey(Convert.ToInt32(vm))) ? col.ColumnQueryMapping.Values[Convert.ToInt32(vm)] + " ," : string.Empty + " ,";
             return data.Substring(0, data.Length - 1);
         }
