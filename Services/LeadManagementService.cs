@@ -249,17 +249,22 @@ namespace ExpressBase.ServiceStack.Services
         public GetImageInfoResponse Any(GetImageInfoRequest request)
         {
 
-            string Qry = @"
-SELECT 
-	B.id, B.filename, B.tags, B.uploadts
-FROM
-	customer_files A,
-	eb_files_ref B
-WHERE
-	A.eb_files_ref_id = B.id AND
-	A.customer_id = :accountid AND A.eb_del = false;";
+			//            string Qry = $@"
+			//SELECT 
+			//	B.id, B.filename, B.tags, B.uploadts
+			//FROM
+			//	customer_files A,
+			//	eb_files_ref B
+			//WHERE
+			//	(A.eb_files_ref_id = B.id AND
+			//	A.customer_id = :accountid AND A.eb_del = false) OR B.context_sec = 'CustomersId:{request.CustomerId}';";
+			string Qry = $@"
+			SELECT B.id, B.filename, B.tags, B.uploadts
+				FROM eb_files_ref B LEFT JOIN customer_files A 
+				ON A.eb_files_ref_id = B.id				
+			WHERE (A.customer_id = :accountid AND A.eb_del = false) OR B.context_sec = 'CustomersId:{request.CustomerId}';";
 
-            List<FileMetaInfo> _list = new List<FileMetaInfo>();
+			List<FileMetaInfo> _list = new List<FileMetaInfo>();
 
             DbParameter[] param = new DbParameter[]
             {
