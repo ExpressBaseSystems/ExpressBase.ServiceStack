@@ -112,6 +112,8 @@ namespace ExpressBase.ServiceStack.Services
                     res.Result = this.ExecuteConnectApi((resource as EbConnectApi), index);
                 else if (resource is EbThirdPartyApi)
                     res.Result = (resource as EbThirdPartyApi).Execute();
+                else if (resource is EbFormResource)
+                    res.Result = this.ExecuteFormResource((resource as EbFormResource), index);
                 return res.Result;
             }
             catch (Exception e)
@@ -122,9 +124,7 @@ namespace ExpressBase.ServiceStack.Services
                     this.ApiResponse.Message.ErrorCode = ApiErrorCode.ExplicitExit;
                 }
                 else
-                {
                     this.ApiResponse.Message.ErrorCode = ApiErrorCode.Failed;
-                }
                 throw new ApiException();
             }
         }
@@ -133,7 +133,7 @@ namespace ExpressBase.ServiceStack.Services
         private object ExcDataReader(EbSqlReader sqlreader, int step_c)
         {
             ObjWrapperInt ObjectWrapper = null;
-            EbDataSet dt = null;
+            EbDataSet dt;
             try
             {
                 ObjectWrapper = this.GetObjectByVer(sqlreader.Reference);
@@ -145,15 +145,16 @@ namespace ExpressBase.ServiceStack.Services
                 List<DbParameter> p = new List<DbParameter>();
                 List<Param> InputParams = (ObjectWrapper.EbObj as EbDataReader).GetParams(this.Redis as RedisClient);
                 this.FillParams(InputParams, step_c);//fill parameter value from prev component
+
                 foreach (Param pr in InputParams)
-                {
                     p.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(pr.Name, (EbDbTypes)Convert.ToInt32(pr.Type), pr.ValueTo));
-                }
+
                 dt = this.EbConnectionFactory.ObjectsDB.DoQueries((ObjectWrapper.EbObj as EbDataReader).Sql, p.ToArray());
                 this.ApiResponse.Message.Description = ApiConstants.EXE_SUCCESS;
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
+                Console.WriteLine(ex.Message);
                 this.ApiResponse.Message.Description = string.Format(ApiConstants.DESCRPT_ERR, step_c, "DataReader", ObjectWrapper.EbObj.Name);
                 throw new ApiException("Excecution Failed");
             }
@@ -178,9 +179,7 @@ namespace ExpressBase.ServiceStack.Services
                 this.FillParams(InputParams, step);//fill parameter value from prev component
 
                 foreach (Param pr in InputParams)
-                {
                     p.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(pr.Name, (EbDbTypes)Convert.ToInt32(pr.Type), pr.ValueTo));
-                }
 
                 int status = this.EbConnectionFactory.ObjectsDB.DoNonQuery((ObjectWrapper.EbObj as EbDataWriter).Sql, p.ToArray());
 
@@ -234,7 +233,7 @@ namespace ExpressBase.ServiceStack.Services
         {
             var EmailService = base.ResolveService<PdfToEmailService>();
             ObjWrapperInt ObjectWrapper = null;
-            bool stat = false;
+            bool stat;
             try
             {
                 ObjectWrapper = this.GetObjectByVer(template.Reference);
@@ -262,7 +261,6 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
-                stat = false;
                 this.ApiResponse.Message.Description = string.Format(ApiConstants.DESCRPT_ERR, step, "Mail", ObjectWrapper.EbObj.Name);
                 throw new ApiException(e.Message);
             }
@@ -302,9 +300,7 @@ namespace ExpressBase.ServiceStack.Services
                         throw new ApiException(ApiConstants.API_NOTFOUND);
                     }
                     else if (resp.Message.ErrorCode == ApiErrorCode.Success)
-                    {
                         this.ApiResponse.Message.Description = ApiConstants.EXE_SUCCESS;
-                    }
                 }
             }
             catch (Exception e)
@@ -313,6 +309,20 @@ namespace ExpressBase.ServiceStack.Services
                 throw new ApiException(e.Message);
             }
             return resp;
+        }
+
+        private object ExecuteFormResource(EbFormResource formResource, int step)
+        {
+            try
+            {
+
+            }
+            catch (Exception ex)
+            {
+                this.ApiResponse.Message.Description = string.Format(ApiConstants.DESCRPT_ERR, formResource.RouteIndex, "Form", formResource.RefName);
+                throw new ApiException(ex.Message);
+            }
+            return null;
         }
 
         //get email parameters
@@ -362,7 +372,6 @@ namespace ExpressBase.ServiceStack.Services
                     this.ApiResponse.Message.Status = string.Format(ApiConstants.UNSET_PARAM, p.Name);
                     throw new ApiException(((int)ApiErrorCode.Failed).ToString());
                 }
-
             }
         }
 
@@ -403,10 +412,9 @@ namespace ExpressBase.ServiceStack.Services
                             AND
 	                            EOS.status = 3";
             var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(sql);
+
             foreach (EbDataRow row in dt.Rows)
-            {
                 resp.AllMetas.Add(new EbObjectWrapper { Name = row[0].ToString(), VersionNumber = row["version_num"].ToString() });
-            }
 
             return resp;
         }
@@ -463,6 +471,11 @@ namespace ExpressBase.ServiceStack.Services
                         Data = this.GlobalParams
                     });
                 }
+                else if (request.Component is EbFormResource)
+                    request.Component.Result = this.ExecuteFormResource(request.Component as EbFormResource, 0);
+                else
+                    request.Component.Result = null;
+
                 this.ApiResponse.Result = request.Component.GetResult();
             }
             catch (Exception e)

@@ -414,7 +414,9 @@ namespace ExpressBase.ServiceStack.Services
                     parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@limit", EbDbTypes.Int32, request.Limit));
                     parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@offset", EbDbTypes.Int32, request.Offset));
                 }
-                string wraped = WrapQuery(_ds.Sql, request.Limit, request.Offset);
+                Param p = request.Params.Any() ? request.Params[0] : null;
+
+                string wraped = WrapQuery(_ds.Sql, request.Limit, request.Offset, request.IsPowerSelect, p);
 
                 resp.Data = this.EbConnectionFactory.DataDB.DoQueries(wraped, parameters.ToArray());
             }
@@ -426,21 +428,29 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
-        private string WrapQuery(string sql, int limit, int offset)
+        private string WrapQuery(string sql, int limit, int offset, bool is_powerselect, Param p)
         {
             string wraped = $"SELECT COUNT(*) FROM ({sql.TrimEnd(CharConstants.SEMI_COLON)}) AS COUNT_STAR;";
-            if (limit != 0)
-            {
-                string[] queries = sql.Split(CharConstants.SEMI_COLON);
 
-                for (int i = 0; i < queries.Length; i++)
-                    wraped += $"SELECT * FROM ({queries[i]}) AS WRPR{i} LIMIT @limit OFFSET @offset;";
+            if (is_powerselect && p != null)
+            {
+                wraped += $"SELECT * FROM ({sql.TrimEnd(CharConstants.SEMI_COLON)}) AS PWWRP WHERE PWWRP.{p.Name} LIKE '%{p.Value}%';";
             }
             else
-                wraped += sql;
+            {
+                if (limit != 0)
+                {
+                    string[] queries = sql.Split(CharConstants.SEMI_COLON);
 
-            if (!wraped.EndsWith(CharConstants.SEMI_COLON))
-                wraped += CharConstants.SEMI_COLON;
+                    for (int i = 0; i < queries.Length; i++)
+                        wraped += $"SELECT * FROM ({queries[i]}) AS WRPR{i} LIMIT @limit OFFSET @offset;";
+                }
+                else
+                    wraped += sql;
+
+                if (!wraped.EndsWith(CharConstants.SEMI_COLON))
+                    wraped += CharConstants.SEMI_COLON;
+            }
 
             return wraped;
         }
