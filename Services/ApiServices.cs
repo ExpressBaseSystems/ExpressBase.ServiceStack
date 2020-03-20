@@ -31,6 +31,8 @@ namespace ExpressBase.ServiceStack.Services
 
         private ApiResponse ApiResponse { set; get; }
 
+        private User UserObject { set; get; }
+
         private string SolutionId { set; get; }
 
         public ApiServices(IEbConnectionFactory _dbf) : base(_dbf)
@@ -60,12 +62,15 @@ namespace ExpressBase.ServiceStack.Services
         //api execution init
         public ApiResponse Any(ApiRequest request)
         {
-            this.SolutionId = request.SolnId;
-            this.GlobalParams = this.Proc(request.Data);
-            int step = 0;
-            this.Api = this.Get(new ApiByNameRequest { Name = request.Name, Version = request.Version }).Api;
             try
             {
+                this.SolutionId = request.SolnId;
+                this.GlobalParams = this.Proc(request.Data);
+                this.UserObject = this.Redis.Get<User>(request.UserAuthId);
+
+                int step = 0;
+                this.Api = this.Get(new ApiByNameRequest { Name = request.Name, Version = request.Version }).Api;
+
                 if (Api != null)
                 {
                     int r_count = this.Api.Resources.Count;
