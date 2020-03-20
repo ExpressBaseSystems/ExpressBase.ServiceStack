@@ -1272,10 +1272,13 @@ namespace ExpressBase.ServiceStack.Services
             return Lar;
         }
 
-        public GetUserTypesResponse Post(GetUserTypesRequest request)
+        public GetUserTypesResponse Get(GetUserTypesRequest request)
         {
             GetUserTypesResponse response = new GetUserTypesResponse();
-            string query = "SELECT * FROM eb_user_types WHERE COALESCE(eb_del, 'F') = 'F'";
+            string query = "SELECT id, name FROM eb_user_types WHERE COALESCE(eb_del, 'F') = 'F'";
+            if (request.Id > 0)
+                query += String.Format(" AND id = {0} ", request.Id);
+            query += " ORDER BY id";
             EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(query);
             List<EbProfileUserType> userTypes = new List<EbProfileUserType>();
             foreach (EbDataRow _dr in dt.Rows)
@@ -1288,13 +1291,43 @@ namespace ExpressBase.ServiceStack.Services
                 userTypes.Add(_type);
             }
             response.UserTypes = userTypes;
+
             return response;
         }
 
+        public UpdateUserTypeResponse Post(UpdateUserTypeRequset request)
+        {
+            UpdateUserTypeResponse response = new UpdateUserTypeResponse { };
+            try
+            {
+                string query;
+                DbParameter[] parameters = new DbParameter[] { this.EbConnectionFactory.DataDB.GetNewParameter("name", EbDbTypes.String,request.Name),
+                     this.EbConnectionFactory.DataDB.GetNewParameter("by", EbDbTypes.Int32, request.UserId),
+                      this.EbConnectionFactory.DataDB.GetNewParameter("at", EbDbTypes.DateTime, DateTime.Now),
+                this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.Id)
+                };
 
+                if (request.Id > 0)
+                {
+                    query = @"UPDATE eb_user_types SET name = @name , eb_lastmodified_by = @by, eb_lastmodified_at = @at WHERE id = @id;";
+                }
+                else
+                {
+                    query = string.Format("INSERT INTO eb_user_types(name, eb_created_by, eb_created_at) VALUES(@name, @by, @at)");
+                }
 
-
-
-
+                int c = this.EbConnectionFactory.DataDB.DoNonQuery(query, parameters);
+                if (c > 0)
+                    response.Status = true;
+                else
+                    response.Status = false;
+            }
+            catch (Exception e)
+            {
+                response.Status = false;
+                Console.WriteLine(e.Message + e.StackTrace);
+            }
+            return response;
+        }
     }
 }
