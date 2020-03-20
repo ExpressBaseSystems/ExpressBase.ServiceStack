@@ -1475,11 +1475,14 @@ namespace ExpressBase.ServiceStack
                             var cults = col.GetColumnCultureInfo(_user_culture);
                             object _unformattedData = (_dv.AutoGen && col.Name == "eb_action") ? "<i class='fa fa-edit'></i>" : row[col.Data];
                             object _formattedData = IntermediateDic[col.Data];
+                            object ActualFormatteddata = IntermediateDic[col.Data];
 
                             if (col.RenderType == EbDbTypes.Decimal || col.RenderType == EbDbTypes.Int32 || col.RenderType == EbDbTypes.Int64)
                             {
                                 if (((col as DVNumericColumn).RenderAs == NumericRenderType.ProgressBar) && (_isexcel == false))
                                     _formattedData = "<div class='progress'><div class='progress-bar' role='progressbar' aria-valuenow='" + _formattedData + "' aria-valuemin='0' aria-valuemax='100' style='width:" + _unformattedData.ToString() + "%'>" + _formattedData + "</div></div>";
+                                else if (((col as DVNumericColumn).RenderAs == NumericRenderType.Rating) && (_isexcel == false))
+                                    _formattedData = GetDataforRating((col as DVNumericColumn), _formattedData);
 
                                 SummaryCalc(ref Summary, col, _unformattedData, cults);
                             }
@@ -1487,7 +1490,7 @@ namespace ExpressBase.ServiceStack
                             {
                                 if ((col as DVStringColumn).RenderAs == StringRenderType.Marker)
                                     _formattedData = "<a href = '#' class ='columnMarker" + this.TableId + "' data-latlong='" + _unformattedData + "'><i class='fa fa-map-marker fa-2x' style='color:red;'></i></a>";
-                                
+
                                 else if ((col as DVStringColumn).RenderAs == StringRenderType.Image)
                                 {
                                     var _height = (col as DVStringColumn).ImageHeight == 0 ? "auto" : (col as DVStringColumn).ImageHeight + "px";
@@ -1508,6 +1511,9 @@ namespace ExpressBase.ServiceStack
 
                                 }
 
+                                else if ((col as DVStringColumn).RenderAs == StringRenderType.Tag)
+                                    _formattedData = GetTaggedData((col as DVStringColumn), _formattedData);
+                                
                                 if ((col as DVStringColumn).AllowMultilineText)
                                 {
                                     if ((col as DVStringColumn).NoOfCharactersPerLine > 0 && (col as DVStringColumn).NoOfLines > 0)
@@ -1522,14 +1528,14 @@ namespace ExpressBase.ServiceStack
                             {
                                 info = "<table>";
                                 if (col.AllowedCharacterLength > 0)
-                                    info += "<tr><td>" + col.sTitle + " &nbsp; : &nbsp;</td><td>" + _formattedData + "</td></tr>";
+                                    info += "<tr><td><span class='headspan'>" + col.sTitle + " &nbsp; : &nbsp;</span></br><span class='bodyspan'>" + _formattedData + "</span></td></tr>";
                                 if (col.InfoWindow.Count > 0)
                                 {
                                     foreach (DVBaseColumn _column in col.InfoWindow)
                                     {
                                         if (_column.Name != col.Name)
                                         {
-                                            info += "<tr><td>" + _column.sTitle + " &nbsp; : &nbsp;</td><td>" + IntermediateDic[_column.Data] + "</td></tr>";
+                                            info += "<tr><td><span class='headspan'>" + _column.sTitle + " &nbsp; : &nbsp;</span></br><span class='bodyspan'>" + IntermediateDic[_column.Data] + "</span></td></tr>";
                                         }
                                     }
                                 }
@@ -1554,11 +1560,11 @@ namespace ExpressBase.ServiceStack
                                     if (col.LinkType == LinkTypeEnum.Popout)
                                         _formattedData = "<a href='#' oncontextmenu='return false' class ='tablelink" + this.TableId + "' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-column='" + col.Name + "'>" + _formattedData + "</a>";
                                     else if (col.LinkType == LinkTypeEnum.Inline)
-                                        _formattedData = _formattedData + "&nbsp; <a  href= '#' oncontextmenu= 'return false' class ='tablelink" + this.TableId + "' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-column='" + col.Name + "' data-inline='true' data-data='" + _formattedData + "'><i class='fa fa-caret-down'></i></a>";
+                                        _formattedData = _formattedData + "&nbsp; <a  href= '#' oncontextmenu= 'return false' class ='tablelink" + this.TableId + "' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-column='" + col.Name + "' data-inline='true' data-data='" + ActualFormatteddata + "'><i class='fa fa-caret-down'></i></a>";
                                     else if (col.LinkType == LinkTypeEnum.Both)
-                                        _formattedData = "<a href='#' oncontextmenu='return false' class ='tablelink" + this.TableId + "' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-column='" + col.Name + "' >" + _formattedData + "</a>" + "&nbsp; <a  href ='#' oncontextmenu='return false' class='tablelink" + this.TableId + "' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-column='" + col.Name + "' data-inline='true' data-data='" + _formattedData + "'> <i class='fa fa-caret-down'></i></a>";
+                                        _formattedData = "<a href='#' oncontextmenu='return false' class ='tablelink" + this.TableId + "' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-column='" + col.Name + "' >" + _formattedData + "</a>" + "&nbsp; <a  href ='#' oncontextmenu='return false' class='tablelink" + this.TableId + "' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-column='" + col.Name + "' data-inline='true' data-data='" + ActualFormatteddata + "'> <i class='fa fa-caret-down'></i></a>";
                                     else if (col.LinkType == LinkTypeEnum.Popup)
-                                        _formattedData = "<a  href= '#' oncontextmenu= 'return false' class ='tablelink" + this.TableId + "' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-column='" + col.Name + "' data-popup='true' data-data='" + _formattedData + "'>" + _formattedData + "</a>";
+                                        _formattedData = "<a  href= '#' oncontextmenu= 'return false' class ='tablelink" + this.TableId + "' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-column='" + col.Name + "' data-popup='true' data-data='" + ActualFormatteddata + "'>" + _formattedData + "</a>";
                                 }
                             }
 
@@ -1615,6 +1621,38 @@ namespace ExpressBase.ServiceStack
                 this._Responsestatus.Message = e.Message;
             }
 
+        }
+
+        private object GetTaggedData(DVStringColumn dVStringColumn, object _formattedData)
+        {
+            string _html = string.Empty;
+            if(_formattedData.ToString() != string.Empty)
+            {
+                _html = "<div class='dvtaginput'>";
+                foreach(string str in _formattedData.ToString().Split(","))
+                {
+                    _html += $"<span class='dvtagspan'>{str}</span>";
+                }
+                _html += "</div>";
+            }
+            return _html;
+        }
+
+        private object GetDataforRating(DVNumericColumn dVNumericColumn, object _formattedData)
+        {
+            if (_formattedData != null && Convert.ToDecimal(_formattedData) != -1)
+            {
+                var deci = Convert.ToDecimal(_formattedData);
+                decimal dPart = Convert.ToDecimal(_formattedData) % 1.0m;
+                if (deci > dVNumericColumn.MaxLimit)
+                    deci = dVNumericColumn.MaxLimit;
+                return $"<div class='rating' data-rateyo-num-stars='{dVNumericColumn.MaxLimit}' data-rateyo-rating='{deci}' data-rateyo-half-star='true'> </div>";
+            }
+            else
+            {
+                return "<div class='ratingg'> NA </div>";
+            }
+            throw new NotImplementedException();
         }
 
         private object GetMultilineText(string data, int _length, int _lines)
@@ -1708,7 +1746,7 @@ namespace ExpressBase.ServiceStack
         {
             string[] vmArray = _formattedData.ToString().Split(",");
             string data = string.Empty;
-            foreach(string vm in vmArray)
+            foreach (string vm in vmArray)
                 data += (vm != "" && col.ColumnQueryMapping.Values.ContainsKey(Convert.ToInt32(vm))) ? col.ColumnQueryMapping.Values[Convert.ToInt32(vm)] + " ," : string.Empty + " ,";
             return data.Substring(0, data.Length - 1);
         }

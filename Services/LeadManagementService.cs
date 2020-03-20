@@ -56,7 +56,7 @@ namespace ExpressBase.ServiceStack.Services
 			{
 				SqlQry += @"SELECT id, eb_loc_id, trdate, genurl, name, dob, genphoffice, profession, genemail, customertype, clcity, clcountry, city,
 								typeofcustomer, sourcecategory, subcategory, consultation, picsrcvd, dprefid, sex, district, leadowner,
-                                baldnessgrade, diffusepattern, hfcurrently, htpreviously
+                                baldnessgrade, diffusepattern, hfcurrently, htpreviously, country_code
 								FROM customers WHERE id = :accountid AND eb_del='F';
 							SELECT id,trdate,status,followupdate,narration, eb_createdby, eb_createddt,isnotpickedup FROM leaddetails
 								WHERE customers_id=:accountid ORDER BY eb_createddt DESC;
@@ -146,6 +146,7 @@ namespace ExpressBase.ServiceStack.Services
 				CustomerData.Add("diffusepattern", dr[23].ToString().ToLower());
 				CustomerData.Add("hfcurrently", dr[24].ToString().ToLower());
 				CustomerData.Add("htpreviously", dr[25].ToString().ToLower());
+				CustomerData.Add("country_code", dr[26].ToString());
 				
 				if (ds.Tables[Qcnt + 4].Rows.Count > 0)
 				{
@@ -249,17 +250,22 @@ namespace ExpressBase.ServiceStack.Services
         public GetImageInfoResponse Any(GetImageInfoRequest request)
         {
 
-            string Qry = @"
-SELECT 
-	B.id, B.filename, B.tags, B.uploadts
-FROM
-	customer_files A,
-	eb_files_ref B
-WHERE
-	A.eb_files_ref_id = B.id AND
-	A.customer_id = :accountid AND A.eb_del = false;";
+			//            string Qry = $@"
+			//SELECT 
+			//	B.id, B.filename, B.tags, B.uploadts
+			//FROM
+			//	customer_files A,
+			//	eb_files_ref B
+			//WHERE
+			//	(A.eb_files_ref_id = B.id AND
+			//	A.customer_id = :accountid AND A.eb_del = false) OR B.context_sec = 'CustomersId:{request.CustomerId}';";
+			string Qry = $@"
+			SELECT B.id, B.filename, B.tags, B.uploadts
+				FROM eb_files_ref B LEFT JOIN customer_files A 
+				ON A.eb_files_ref_id = B.id				
+			WHERE (A.customer_id = :accountid AND A.eb_del = false) OR B.context_sec = 'CustomersId:{request.CustomerId}';";
 
-            List<FileMetaInfo> _list = new List<FileMetaInfo>();
+			List<FileMetaInfo> _list = new List<FileMetaInfo>();
 
             DbParameter[] param = new DbParameter[]
             {
@@ -486,15 +492,22 @@ WHERE
                 vals += ":hfcurrently,";
                 upcolsvals += "hfcurrently=:hfcurrently,";
             }
-            if (dict.TryGetValue("htpreviously", out found))
+			if (dict.TryGetValue("htpreviously", out found))
             {
                 parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.BooleanOriginal, Convert.ToBoolean(found.Value)));
                 cols += "htpreviously,";
                 vals += ":htpreviously,";
                 upcolsvals += "htpreviously=:htpreviously,";
-            }
-            //------------------------------------------------------
-            if (dict.TryGetValue("consdate", out found))
+			}
+			if (dict.TryGetValue("country_code", out found))
+			{
+				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
+				cols += "country_code,";
+				vals += ":country_code,";
+				upcolsvals += "country_code=:country_code,";
+			}
+			//------------------------------------------------------
+			if (dict.TryGetValue("consdate", out found))
 			{
 				parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Date, Convert.ToDateTime(DateTime.ParseExact(found.Value.ToString(), "dd-MM-yyyy", CultureInfo.InvariantCulture))));
 				cols2 += "consdate,";
