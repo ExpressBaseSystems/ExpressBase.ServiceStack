@@ -416,7 +416,7 @@ namespace ExpressBase.ServiceStack.Services
                 }
                 Param p = request.Params.Any() ? request.Params[0] : null;
 
-                string wraped = WrapQuery(_ds.Sql, request.Limit, request.Offset, request.IsPowerSelect, p);
+                string wraped = WrapQuery(_ds.Sql, request.Limit > 0, request.IsPowerSelect, p);
 
                 resp.Data = this.EbConnectionFactory.DataDB.DoQueries(wraped, parameters.ToArray());
             }
@@ -428,29 +428,22 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
-        private string WrapQuery(string sql, int limit, int offset, bool is_powerselect, Param p)
+        private string WrapQuery(string sql, bool has_limit, bool is_powerselect, Param p)
         {
-            string wraped = $"SELECT COUNT(*) FROM ({sql.TrimEnd(CharConstants.SEMI_COLON)}) AS COUNT_STAR;";
+            sql = sql.Trim().TrimEnd(CharConstants.SEMI_COLON);
+
+            string wraped = $"SELECT COUNT(*) FROM ({sql}) AS COUNT_STAR;";
 
             if (is_powerselect && p != null)
-            {
-                wraped += $"SELECT * FROM ({sql.TrimEnd(CharConstants.SEMI_COLON)}) AS PWWRP WHERE PWWRP.{p.Name} LIKE '%{p.Value}%';";
-            }
+                wraped += $"SELECT * FROM ({sql}) AS PWWRP WHERE PWWRP.{p.Name} LIKE '%{p.Value}%'";
             else
-            {
-                if (limit != 0)
-                {
-                    string[] queries = sql.Split(CharConstants.SEMI_COLON);
+                wraped += $"SELECT * FROM ({sql}) AS PWWRP";
 
-                    for (int i = 0; i < queries.Length; i++)
-                        wraped += $"SELECT * FROM ({queries[i]}) AS WRPR{i} LIMIT @limit OFFSET @offset;";
-                }
-                else
-                    wraped += sql;
+            if (has_limit)
+                wraped += $" LIMIT @limit OFFSET @offset;";
 
-                if (!wraped.EndsWith(CharConstants.SEMI_COLON))
-                    wraped += CharConstants.SEMI_COLON;
-            }
+            if (!wraped.EndsWith(CharConstants.SEMI_COLON))
+                wraped += CharConstants.SEMI_COLON;
 
             return wraped;
         }
