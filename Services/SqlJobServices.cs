@@ -893,7 +893,7 @@ namespace ExpressBase.ServiceStack.Services
                     UserAuthId = UserAuthId,
                     RecordId = 0,
                     UserObj = User,
-                    LocId = 1,
+                    LocId = LocId,
                     SolnId = SolutionId,
                     WhichConsole = "uc",
                     FormGlobals = new FormGlobals { Params = Globals.Params },
