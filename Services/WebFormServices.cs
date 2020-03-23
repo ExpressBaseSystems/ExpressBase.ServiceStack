@@ -824,7 +824,7 @@ namespace ExpressBase.ServiceStack.Services
                 {
                 }
                 else if (form.SolutionObj.SolutionSettings != null && form.SolutionObj.SolutionSettings.UserTypeForms != null && form.SolutionObj.SolutionSettings.UserTypeForms.Any(x => x.RefId == form.RefId))
-                { 
+                {
                 }
                 else if (!(form.HasPermission(OperationConstants.VIEW, request.CurrentLoc) || form.HasPermission(OperationConstants.NEW, request.CurrentLoc) || form.HasPermission(OperationConstants.EDIT, request.CurrentLoc)))
                 {
@@ -876,6 +876,42 @@ namespace ExpressBase.ServiceStack.Services
             Console.WriteLine("End GetPrefillData");
             return _dataset;
         }
+
+        public GetExportFormDataResponse Any(GetExportFormDataRequest request)
+        {
+            Console.WriteLine("Start GetExportFormData");
+            GetExportFormDataResponse _dataset = new GetExportFormDataResponse();
+            try
+            {
+                EbWebForm sourceForm = GetWebFormObject(request.SourceRefId);
+                sourceForm.TableRowId = request.SourceRowId;
+                sourceForm.RefId = request.SourceRefId;
+                sourceForm.UserObj = request.UserObj;
+                sourceForm.SolutionObj = GetSolutionObject(request.SolnId); 
+
+                EbWebForm destForm = GetWebFormObject(request.DestRefId);
+                destForm.RefId = request.DestRefId;
+                destForm.UserObj = request.UserObj;
+                destForm.SolutionObj = sourceForm.SolutionObj;
+                if (request.SourceRowId > 0)
+                    sourceForm.GetImportData(EbConnectionFactory.DataDB, this, destForm);
+                else
+                    destForm.GetEmptyModel();
+
+                _dataset.FormDataWrap = JsonConvert.SerializeObject(new WebformDataWrapper { FormData = destForm.FormData, Status = (int)HttpStatusCodes.OK, Message = "Success" });
+            }
+            catch (FormException ex)
+            {
+                _dataset.FormDataWrap = JsonConvert.SerializeObject(new WebformDataWrapper { Message = ex.Message, Status = ex.ExceptionCode, MessageInt = ex.MessageInternal, StackTraceInt = ex.StackTraceInternal });
+            }
+            catch (Exception e)
+            {
+                _dataset.FormDataWrap = JsonConvert.SerializeObject(new WebformDataWrapper { Message = "Something went wrong.", Status = (int)HttpStatusCodes.INTERNAL_SERVER_ERROR, MessageInt = e.Message, StackTraceInt = e.StackTrace });
+            }
+            Console.WriteLine("End GetExportFormData");
+            return _dataset;
+        }
+
         public GetFormData4MobileResponse Any(GetFormData4MobileRequest request)
         {
             Console.WriteLine("Start GetFormData4Mobile");
