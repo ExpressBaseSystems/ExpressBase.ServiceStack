@@ -7,6 +7,7 @@ using ExpressBase.Objects;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ExpressBase.Security.Core;
 using Newtonsoft.Json;
+using Npgsql;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
@@ -916,24 +917,29 @@ namespace ExpressBase.ServiceStack.Services
         public CreateLocationTypeResponse post(CreateLocationTypeRequest request)
         {
             CreateLocationTypeResponse resp = new CreateLocationTypeResponse();
-            string query;
-            DbParameter[] parameters = new DbParameter[] {
-                     this.EbConnectionFactory.DataDB.GetNewParameter("type", EbDbTypes.String,request.LocationType.Type),
-                     this.EbConnectionFactory.DataDB.GetNewParameter("by", EbDbTypes.Int32, request.UserId),
-                     this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.LocationType.Id)
-                };
-
-            if (request.LocationType.Id > 0)
-                query = "UPDATE eb_location_types SET type = @type , eb_lastmodified_by = @by, eb_lastmodified_at = now() WHERE id = @id  RETURNING id;";
-            else
-                query = "INSERT INTO eb_location_types(type, eb_created_by, eb_created_at) VALUES(@type, @by, now()) RETURNING id";
-
-            EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(query, parameters);
-            if (dt != null && dt.Rows != null && dt.Rows.Count > 0)
+            try
             {
-                resp.Id = Convert.ToInt32(dt.Rows[0][0]);
-                if (resp.Id > 0)
+                string query;
+                if (request.LocationType.Id > 0)
+                    query = "UPDATE eb_location_types SET type = @type , eb_lastmodified_by = @by, eb_lastmodified_at = now() WHERE id = @id  RETURNING id;";
+                else
+                    query = "INSERT INTO eb_location_types(type, eb_created_by, eb_created_at) VALUES(@type, @by, now()) RETURNING id";
+
+                using (NpgsqlConnection con = this.EbConnectionFactory.DataDB.GetNewConnection() as NpgsqlConnection)
+                {
+                    con.Open();
+                    NpgsqlCommand cmd = new NpgsqlCommand(query, con);
+                    cmd.Parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("type", EbDbTypes.String, request.LocationType.Type));
+                    cmd.Parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("by", EbDbTypes.Int32, request.UserId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.LocationType.Id));
+
+                    resp.Id = Convert.ToInt32(cmd.ExecuteScalar());
                     resp.Status = true;
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message + e.StackTrace);
             }
             return resp;
         }
