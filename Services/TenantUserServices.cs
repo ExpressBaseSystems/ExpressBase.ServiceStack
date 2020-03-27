@@ -7,6 +7,7 @@ using ExpressBase.Objects;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ExpressBase.Security.Core;
 using Newtonsoft.Json;
+using Npgsql;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
@@ -264,8 +265,12 @@ namespace ExpressBase.ServiceStack.Services
         {
             List<EbLocationCustomField> Conf = new List<EbLocationCustomField>();
             Dictionary<int, EbLocation> locs = new Dictionary<int, EbLocation>();
+            List<EbLocationType> locTypes = new List<EbLocationType>();
 
-            string query = "SELECT * FROM eb_location_config WHERE eb_del = 'F' ORDER BY id; SELECT * FROM eb_locations;";
+            string query = @"
+                            SELECT * FROM eb_location_config WHERE eb_del = 'F' ORDER BY id;
+                            SELECT * FROM eb_locations; 
+                            SELECT * FROM eb_location_types WHERE eb_del = 'F' ORDER BY id";
             EbDataSet dt = this.EbConnectionFactory.ObjectsDB.DoQueries(query);
 
             foreach (EbDataRow r in dt.Tables[0].Rows)
@@ -290,7 +295,15 @@ namespace ExpressBase.ServiceStack.Services
                     Meta = JsonConvert.DeserializeObject<Dictionary<string, string>>(r[4].ToString())
                 });
             }
-            return new LocationInfoResponse { Locations = locs, Config = Conf };
+            foreach (var r in dt.Tables[2].Rows)
+            {
+                locTypes.Add(new EbLocationType
+                {
+                    Id = Convert.ToInt32(r[0]),
+                    Type = r[1].ToString()
+                });
+            }
+            return new LocationInfoResponse { Locations = locs, Config = Conf, LocationTypes = locTypes };
         }
 
         public GetUserDashBoardObjectsResponse Any(GetUserDashBoardObjectsRequest request)
@@ -339,7 +352,7 @@ namespace ExpressBase.ServiceStack.Services
 
             Dictionary<string, EbDashBoard> Wrap = new Dictionary<string, EbDashBoard>();
 
-            if(dt.Rows.Count != 0)
+            if (dt.Rows.Count != 0)
             {
                 foreach (EbDataRow dr in dt.Rows)
                 {
@@ -347,7 +360,7 @@ namespace ExpressBase.ServiceStack.Services
 
                 }
             }
-            
+
             return new GetUserDashBoardObjectsResponse { DashBoardObjectIds = Wrap };
         }
 
@@ -900,6 +913,44 @@ namespace ExpressBase.ServiceStack.Services
         //         }
         //         return resp;
         //     }
+
+        public CreateLocationTypeResponse post(CreateLocationTypeRequest request)
+        {
+            CreateLocationTypeResponse resp = new CreateLocationTypeResponse();
+            try
+            {
+                string query;
+                if (request.LocationType.Id > 0)
+                    query = "UPDATE eb_location_types SET type = @type , eb_lastmodified_by = @by, eb_lastmodified_at = now() WHERE id = @id  RETURNING id;";
+                else
+                    query = "INSERT INTO eb_location_types(type, eb_created_by, eb_created_at) VALUES(@type, @by, now()) RETURNING id";
+
+                using (NpgsqlConnection con = this.EbConnectionFactory.DataDB.GetNewConnection() as NpgsqlConnection)
+                {
+                    con.Open();
+                    NpgsqlCommand cmd = new NpgsqlCommand(query, con);
+                    cmd.Parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("type", EbDbTypes.String, request.LocationType.Type));
+                    cmd.Parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("by", EbDbTypes.Int32, request.UserId));
+                    cmd.Parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.LocationType.Id));
+
+                    resp.Id = Convert.ToInt32(cmd.ExecuteScalar());
+                    resp.Status = true;
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message + e.StackTrace);
+            }
+            return resp;
+        }
+        public DeleteLocationTypeResponse Post(DeleteLocationTypeRequest request)
+        {
+            string query = "UPDATE eb_location_types SET eb_del = 'T' WHERE id = @id ;";
+            DbParameter[] parameters = new DbParameter[]{
+                this.EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, request.Id) };
+            int c = this.EbConnectionFactory.ObjectsDB.DoNonQuery(query, parameters);
+            return new DeleteLocationTypeResponse { Id = (c == 1) ? request.Id : 0, Status = (c == 1) ? true : false };
+        }
     }
     public class EbSolutionUsers
     {
