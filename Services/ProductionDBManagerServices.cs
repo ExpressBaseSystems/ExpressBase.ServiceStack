@@ -53,6 +53,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
+                Console.WriteLine("ERROR : " + e.Message + " : " + e.StackTrace);
                 throw e;
             }
             return _ebconfactoryDatadb;
@@ -129,6 +130,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
+                Console.WriteLine("ERROR : " + e.Message + " : " + e.StackTrace);
                 Console.WriteLine(e.Message);
             }
             resp.ChangesLog = list;
@@ -234,6 +236,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
+                Console.WriteLine("ERROR : " + e.Message + " : " + e.StackTrace);
                 resp.ErrorMessage = e.Message;
             }
             return resp;
@@ -256,7 +259,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.Message);
+                Console.WriteLine("ERROR : " + e.Message + " : " + e.StackTrace);
                 resp.ErrorMessage = e.Message;
                 return resp;
             }
@@ -295,6 +298,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
+                Console.WriteLine("ERROR : " + e.Message + " : " + e.StackTrace);
                 resp.ErrorMessage = e.Message;
             }
             return resp;
@@ -310,6 +314,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
+                Console.WriteLine("ERROR : " + e.Message + " : " + e.StackTrace);
                 resp.ErrorMessage = e.Message;
             }
             return resp;
@@ -333,6 +338,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch(Exception e)
             {
+                Console.WriteLine("ERROR : " + e.Message + " : " + e.StackTrace);
                 resp.Changes = null;
                 resp.ErrorMessage = e.Message;
             }
@@ -352,6 +358,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
+                Console.WriteLine("ERROR : " + e.Message + " : " + e.StackTrace);
                 resp.ErrorMessage = e.Message;
             }
             return resp;
@@ -399,6 +406,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
+                Console.WriteLine("ERROR : " + e.Message + " : " + e.StackTrace);
                 throw e;
             }
         }
@@ -407,20 +415,23 @@ namespace ExpressBase.ServiceStack.Services
         {
             List<string> files_from_sqlscript = GetFilesListFromSqlScripts();
             List<string> files_from_infra_table = GetFilesListFromInfraTable();
-            List<string> unwanted_files = UnwantedFiles(files_from_infra_table, files_from_sqlscript);
-            using (DbConnection con = this.InfraConnectionFactory.DataDB.GetNewConnection())
+            if (files_from_infra_table.Count > 0)
             {
-                con.Open();
-                string str = string.Empty;
-                foreach(string file_name in unwanted_files)
+                List<string> unwanted_files = UnwantedFiles(files_from_infra_table, files_from_sqlscript);
+                using (DbConnection con = this.InfraConnectionFactory.DataDB.GetNewConnection())
                 {
-                    str += string.Format(@"update infra_dbmd5 set eb_del = 'T' where change_id in (select id from infra_dbstructure where filename = '{0}' );",
-                                        file_name);
-                    str += string.Format(@"update infra_dbstructure set eb_del = 'T' where filename = '{0}';", file_name);
+                    con.Open();
+                    string str = string.Empty;
+                    foreach (string file_name in unwanted_files)
+                    {
+                        str += string.Format(@"update infra_dbmd5 set eb_del = 'T' where change_id in (select id from infra_dbstructure where filename = '{0}' );",
+                                            file_name);
+                        str += string.Format(@"update infra_dbstructure set eb_del = 'T' where filename = '{0}';", file_name);
+                    }
+
+                    DbCommand cmd = InfraConnectionFactory.DataDB.GetNewCommand(con, str);
+                    cmd.ExecuteNonQuery();
                 }
-                
-                DbCommand cmd = InfraConnectionFactory.DataDB.GetNewCommand(con, str);
-                cmd.ExecuteNonQuery();
             }
         }
 
@@ -443,9 +454,12 @@ namespace ExpressBase.ServiceStack.Services
                            SELECT DISTINCT filename 
                            FROM infra_dbstructure";
             EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(str);
-            for(int i = 0; i < dt.Rows.Count; i++)
+            if (dt.Rows.Count > 0)
             {
-                file_name.Add(dt.Rows[i][0].ToString());
+                for (int i = 0; i < dt.Rows.Count; i++)
+                {
+                    file_name.Add(dt.Rows[i][0].ToString());
+                }
             }
             return file_name;
         }
@@ -504,6 +518,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
+                Console.WriteLine("ERROR : " + e.Message + " : " + e.StackTrace);
                 throw e;
             }
             return fd;
@@ -524,6 +539,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
+                Console.WriteLine("ERROR : " + e.Message + " : " + e.StackTrace);
                 throw e;
             }
         }
@@ -573,6 +589,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
+                Console.WriteLine("ERROR : " + e.Message + " : " + e.StackTrace);
                 throw e;
             }
         }
@@ -595,6 +612,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
+                Console.WriteLine("ERROR : " + e.Message + " : " + e.StackTrace);
                 throw e;
             }
         }
@@ -678,7 +696,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.Message);
+                Console.WriteLine("ERROR : " + e.Message + " : " + e.StackTrace);
             }
             json = JsonConvert.SerializeObject(changes);
             return json;
@@ -838,7 +856,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.Message + e.StackTrace);
+                Console.WriteLine("ERROR : " + e.Message + " : " + e.StackTrace);
                 throw e;
             }
             return json;
@@ -861,7 +879,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.Message);
+                Console.WriteLine("ERROR : " + e.Message + " : " + e.StackTrace);
                 throw e;
             }
             return json;
@@ -952,6 +970,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
+                Console.WriteLine("ERROR : " + e.Message + " : " + e.StackTrace);
                 throw e;
             }
 
@@ -988,6 +1007,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
+                Console.WriteLine("ERROR : " + e.Message + " : " + e.StackTrace);
                 throw e;
             }
 
@@ -1005,6 +1025,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
+                Console.WriteLine("ERROR : " + e.Message + " : " + e.StackTrace);
                 throw e;
             }
             return CompareScripts(_ebconfactoryDatadb);
@@ -1023,6 +1044,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
+                Console.WriteLine("ERROR : " + e.Message + " : " + e.StackTrace);
                 throw e;
             }
             return CompareScripts(_ebconfactoryDatadb);
@@ -1098,7 +1120,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.Message);
+                Console.WriteLine("ERROR : " + e.Message + " : " + e.StackTrace);
                 throw e;
             }
         }
@@ -1172,7 +1194,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.Message);
+                Console.WriteLine("ERROR : " + e.Message + " : " + e.StackTrace);
                 throw e;
             }
         }
@@ -1201,6 +1223,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
+                Console.WriteLine("ERROR : " + e.Message + " : " + e.StackTrace);
                 throw e;
             }
         }
@@ -1229,6 +1252,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
+                Console.WriteLine("ERROR : " + e.Message + " : " + e.StackTrace);
                 throw e;
             }
         }
@@ -1270,7 +1294,7 @@ namespace ExpressBase.ServiceStack.Services
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine(e.Message);
+                    Console.WriteLine("ERROR : " + e.Message + " : " + e.StackTrace);
                     throw e;
                 }
             }
@@ -1944,6 +1968,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
+                Console.WriteLine("ERROR : " + e.Message + " : " + e.StackTrace);
                 throw e;
             }
             return query;
@@ -1975,7 +2000,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.Message);
+                Console.WriteLine("ERROR : " + e.Message + " : " + e.StackTrace);
                 Message = e.Message;
                 return Message;
                 throw e;
@@ -2008,6 +2033,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
+                Console.WriteLine("ERROR : " + e.Message + " : " + e.StackTrace);
                 throw e;
             }
             return result;
@@ -2033,6 +2059,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
+                Console.WriteLine("ERROR : " + e.Message + " : " + e.StackTrace);
                 throw e;
             }
             return json;
@@ -2066,6 +2093,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
+                Console.WriteLine("ERROR : " + e.Message + " : " + e.StackTrace);
                 throw e;
             }
             return result;
@@ -2113,6 +2141,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
+                Console.WriteLine("ERROR : " + e.Message + " : " + e.StackTrace);
                 throw e;
             }
             return result;
@@ -2301,6 +2330,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
+                Console.WriteLine("ERROR : " + e.Message + " : " + e.StackTrace);
                 throw e;
             }
             return json;
