@@ -603,7 +603,7 @@ namespace ExpressBase.ServiceStack.Services
                     con.Open();
                     string str = string.Format(@"INSERT INTO infra_dbstructure (filename, filepath, vendor, type, eb_del) VALUES ('{0}','{1}','{2}','{3}','F');",
                         file_name_shrt, file, vendor, (int)type);
-                    str += string.Format(@"INSERT INTO  infra_dbmd5 (change_id, filename, contents, eb_del) VALUES ((SELECT id FROM infra_dbstructure WHERE filename = '{0}' AND vendor = '{1}'),'{2}','{3}','F')",
+                    str += string.Format(@"INSERT INTO  infra_dbmd5 (change_id, filename, contents, eb_del) VALUES ((SELECT max(id) FROM infra_dbstructure WHERE filename = '{0}' AND vendor = '{1}' AND eb_del = 'F'),'{2}','{3}','F')",
                         file_name_shrt, vendor, file_name, content);
 
                     DbCommand cmd = InfraConnectionFactory.DataDB.GetNewCommand(con, str);
@@ -612,7 +612,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
-                Console.WriteLine("ERROR : " + e.Message + " : " + e.StackTrace);
+                Console.WriteLine("ERROR : " + e.Message + " : " + e.StackTrace+"\n FileName : "+ file_name_shrt);
                 throw e;
             }
         }
