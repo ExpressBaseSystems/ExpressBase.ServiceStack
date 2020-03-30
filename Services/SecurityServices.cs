@@ -926,7 +926,7 @@ namespace ExpressBase.ServiceStack.Services
             //    sDtConstr = _sDtTitle.Substring(0, _sDtTitle.Length - 1) + "$$" + _sDtDesc.Substring(0, _sDtDesc.Length - 1) + "$$" + _sDtType.Substring(0, _sDtType.Length - 1) + "$$" + _sDtStart.Substring(0, _sDtStart.Length - 1) + "$$" + _sDtEnd.Substring(0, _sDtEnd.Length - 1) + "$$" + _sDtDays.Substring(0, _sDtDays.Length - 1);
             //}
 
-            EbDataTable d = this.EbConnectionFactory.DataDB.DoQuery("SELECT id FROM eb_usergroup WHERE LOWER(name) LIKE LOWER(@ugname);",
+            EbDataTable d = this.EbConnectionFactory.DataDB.DoQuery($"SELECT id FROM eb_usergroup WHERE LOWER(name) LIKE LOWER(@ugname) {(request.Id > 0 ? "AND id <> "+ request.Id : "")};",
                 new DbParameter[] { this.EbConnectionFactory.DataDB.GetNewParameter("ugname", EbDbTypes.String, request.Name) });
             if (d.Rows.Count > 0)
             {
@@ -1076,8 +1076,8 @@ namespace ExpressBase.ServiceStack.Services
         public SaveRoleResponse Post(SaveRoleRequest request)
         {
             SaveRoleResponse resp = new SaveRoleResponse() { id = 0 };
-
-            EbDataTable d = this.EbConnectionFactory.DataDB.DoQuery("SELECT id FROM eb_roles WHERE LOWER(role_name) LIKE LOWER(@roleName);",
+            int role_id = Convert.ToInt32(request.Colvalues["roleid"]);
+            EbDataTable d = this.EbConnectionFactory.DataDB.DoQuery($"SELECT id FROM eb_roles WHERE LOWER(role_name) LIKE LOWER(@roleName) {(role_id > 0 ? "AND id <> "+ role_id : "")};",
                 new DbParameter[] { this.EbConnectionFactory.DataDB.GetNewParameter("roleName", EbDbTypes.String, request.Colvalues["role_name"]) });
             if (d.Rows.Count > 0)
             {
@@ -1087,7 +1087,7 @@ namespace ExpressBase.ServiceStack.Services
 
             List<DbParameter> parameters = new List<DbParameter>
             {
-                this.EbConnectionFactory.DataDB.GetNewParameter("role_id", EbDbTypes.Int32, Convert.ToInt32(request.Colvalues["roleid"])),
+                this.EbConnectionFactory.DataDB.GetNewParameter("role_id", EbDbTypes.Int32, role_id),
                 this.EbConnectionFactory.DataDB.GetNewParameter("applicationid", EbDbTypes.Int32, Convert.ToInt32(request.Colvalues["applicationid"])),
                 this.EbConnectionFactory.DataDB.GetNewParameter("createdby", EbDbTypes.Int32, request.UserId),
                 this.EbConnectionFactory.DataDB.GetNewParameter("role_name", EbDbTypes.String, request.Colvalues["role_name"]),
