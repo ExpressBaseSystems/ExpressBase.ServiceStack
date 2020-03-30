@@ -875,7 +875,7 @@ namespace ExpressBase.ServiceStack.Services
 
         public SaveUserGroupResponse Post(SaveUserGroupRequest request)
         {
-            SaveUserGroupResponse resp;
+            SaveUserGroupResponse resp = new SaveUserGroupResponse() { id = 0 };
             //List<IpConstraint> IpConstr = JsonConvert.DeserializeObject<List<IpConstraint>>(request.IpConstraintNw);
             //List<DateTimeConstraint> DtConstr = JsonConvert.DeserializeObject<List<DateTimeConstraint>>(request.DtConstraintNw);
             //string sIpConstr = string.Empty;
@@ -926,56 +926,42 @@ namespace ExpressBase.ServiceStack.Services
             //    sDtConstr = _sDtTitle.Substring(0, _sDtTitle.Length - 1) + "$$" + _sDtDesc.Substring(0, _sDtDesc.Length - 1) + "$$" + _sDtType.Substring(0, _sDtType.Length - 1) + "$$" + _sDtStart.Substring(0, _sDtStart.Length - 1) + "$$" + _sDtEnd.Substring(0, _sDtEnd.Length - 1) + "$$" + _sDtDays.Substring(0, _sDtDays.Length - 1);
             //}
 
+            EbDataTable d = this.EbConnectionFactory.DataDB.DoQuery("SELECT id FROM eb_usergroup WHERE LOWER(name) LIKE LOWER(@ugname);",
+                new DbParameter[] { this.EbConnectionFactory.DataDB.GetNewParameter("ugname", EbDbTypes.String, request.Name) });
+            if (d.Rows.Count > 0)
+            {
+                resp.id = -1;
+                return resp;
+            }
+
             List<IpConstraint> IpConstr = JsonConvert.DeserializeObject<List<IpConstraint>>(request.IpConstraintNw);
             EbConstraints consObj = new EbConstraints();
             consObj.SetConstraintObject(IpConstr);
             request.IpConstraintNw = consObj.GetDataAsString();
-
-            string sql = this.EbConnectionFactory.DataDB.EB_SAVEUSERGROUP_QUERY;
-            using (var con = this.EbConnectionFactory.DataDB.GetNewConnection())
-            {
-                con.Open();
-                int id = 0;
-                int[] emptyarr = new int[] { };
-                List<DbParameter> parameters = new List<DbParameter>
-                    {
-                        this.EbConnectionFactory.DataDB.GetNewParameter("userid", EbDbTypes.Int32, request.UserId),
-                        this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.Id),
-                        this.EbConnectionFactory.DataDB.GetNewParameter("name", EbDbTypes.String, request.Name),
-                        this.EbConnectionFactory.DataDB.GetNewParameter("description", EbDbTypes.String, request.Description),
-                        this.EbConnectionFactory.DataDB.GetNewParameter("users", EbDbTypes.String,(request.Users != string.Empty? request.Users : string.Empty)),
-                        this.EbConnectionFactory.DataDB.GetNewParameter("constraints_add", EbDbTypes.String, request.IpConstraintNw),
-                        this.EbConnectionFactory.DataDB.GetNewParameter("constraints_del", EbDbTypes.String, request.IpConstraintOld)
-                    };
-                if (EbConnectionFactory.DataDB.Vendor == DatabaseVendors.MYSQL)
+                        
+            List<DbParameter> parameters = new List<DbParameter>
                 {
-                    parameters.Add(this.EbConnectionFactory.DataDB.GetNewOutParameter("out_gid", EbDbTypes.Int32));
-                    EbDataTable ds = EbConnectionFactory.DataDB.DoProcedure(EbConnectionFactory.DataDB.EB_SAVEUSERGROUP_QUERY, parameters.ToArray());
-                    if (ds.Rows.Count > 0)
-                    {
-                        id = Int32.Parse(ds.Rows[0][0].ToString());
-                    }
-                }
-                else
-                {
-                    EbDataSet dt = this.EbConnectionFactory.DataDB.DoQueries(sql, parameters.ToArray());
-                    id = Convert.ToInt32(dt.Tables[0].Rows[0][0]);
-                }
-
-
-                //if (string.IsNullOrEmpty(request.Colvalues["pwd"].ToString()) && request.Id < 0)
-                //{
-                //	using (var service = base.ResolveService<EmailService>())
-                //	{
-                //		//  service.Post(new EmailServicesRequest() { To = request.Colvalues["email"].ToString(), Subject = "New User", Message = string.Format("You are invited to join as user. Log in {0}.localhost:53431 using Username: {1} and Password : {2}", request.TenantAccountId, request.Colvalues["email"].ToString(), dt.Tables[0].Rows[0][1]) });
-                //	}
-                //}
-                resp = new SaveUserGroupResponse
-                {
-                    id = Convert.ToInt32(id)
-
+                    this.EbConnectionFactory.DataDB.GetNewParameter("userid", EbDbTypes.Int32, request.UserId),
+                    this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.Id),
+                    this.EbConnectionFactory.DataDB.GetNewParameter("name", EbDbTypes.String, request.Name),
+                    this.EbConnectionFactory.DataDB.GetNewParameter("description", EbDbTypes.String, request.Description),
+                    this.EbConnectionFactory.DataDB.GetNewParameter("users", EbDbTypes.String,(request.Users != string.Empty? request.Users : string.Empty)),
+                    this.EbConnectionFactory.DataDB.GetNewParameter("constraints_add", EbDbTypes.String, request.IpConstraintNw),
+                    this.EbConnectionFactory.DataDB.GetNewParameter("constraints_del", EbDbTypes.String, request.IpConstraintOld)
                 };
+            if (EbConnectionFactory.DataDB.Vendor == DatabaseVendors.MYSQL)
+            {
+                parameters.Add(this.EbConnectionFactory.DataDB.GetNewOutParameter("out_gid", EbDbTypes.Int32));
+                EbDataTable dt = EbConnectionFactory.DataDB.DoProcedure(this.EbConnectionFactory.DataDB.EB_SAVEUSERGROUP_QUERY, parameters.ToArray());
+                if (dt.Rows.Count > 0)
+                    resp.id = Convert.ToInt32(dt.Rows[0][0]);
             }
+            else
+            {
+                EbDataSet dt = this.EbConnectionFactory.DataDB.DoQueries(this.EbConnectionFactory.DataDB.EB_SAVEUSERGROUP_QUERY, parameters.ToArray());
+                resp.id = Convert.ToInt32(dt.Tables[0].Rows[0][0]);
+            }
+            
             return resp;
         }
 
@@ -1089,46 +1075,43 @@ namespace ExpressBase.ServiceStack.Services
 
         public SaveRoleResponse Post(SaveRoleRequest request)
         {
-            SaveRoleResponse resp;
-            using (var con = this.EbConnectionFactory.DataDB.GetNewConnection())
+            SaveRoleResponse resp = new SaveRoleResponse() { id = 0 };
+
+            EbDataTable d = this.EbConnectionFactory.DataDB.DoQuery("SELECT id FROM eb_roles WHERE LOWER(role_name) LIKE LOWER(@roleName);",
+                new DbParameter[] { this.EbConnectionFactory.DataDB.GetNewParameter("roleName", EbDbTypes.String, request.Colvalues["role_name"]) });
+            if (d.Rows.Count > 0)
             {
-                con.Open();
-                string sql = this.EbConnectionFactory.DataDB.EB_SAVEROLES_QUERY;
-                int[] emptyarr = new int[] { };
-                int id = 0;
-                List<DbParameter> parameters = new List<DbParameter>{ this.EbConnectionFactory.DataDB.GetNewParameter("role_id", EbDbTypes.Int32, Convert.ToInt32(request.Colvalues["roleid"])),
-                                            this.EbConnectionFactory.DataDB.GetNewParameter("applicationid", EbDbTypes.Int32, Convert.ToInt32(request.Colvalues["applicationid"])),
-                                            this.EbConnectionFactory.DataDB.GetNewParameter("createdby", EbDbTypes.Int32, request.UserId),
-                                            this.EbConnectionFactory.DataDB.GetNewParameter("role_name", EbDbTypes.String, request.Colvalues["role_name"]),
-                                            this.EbConnectionFactory.DataDB.GetNewParameter("description", EbDbTypes.String, request.Colvalues["Description"]),
-                                            this.EbConnectionFactory.DataDB.GetNewParameter("is_anonym", EbDbTypes.String, request.Colvalues["IsAnonymous"]),
-                                            this.EbConnectionFactory.DataDB.GetNewParameter("users", EbDbTypes.String, (request.Colvalues["users"].ToString() != string.Empty) ? request.Colvalues["users"] : string.Empty),
-                                            this.EbConnectionFactory.DataDB.GetNewParameter("dependants", EbDbTypes.String, (request.Colvalues["dependants"].ToString() != string.Empty) ? request.Colvalues["dependants"] : string.Empty),
-                                            this.EbConnectionFactory.DataDB.GetNewParameter("permission", EbDbTypes.String , (request.Colvalues["permission"].ToString() != string.Empty) ? request.Colvalues["permission"]: string.Empty),
-                                            this.EbConnectionFactory.DataDB.GetNewParameter("locations", EbDbTypes.String , request.Colvalues["locations"].ToString())
-                                        };
-
-                if (EbConnectionFactory.DataDB.Vendor == DatabaseVendors.MYSQL)
-                {
-                    parameters.Add(this.EbConnectionFactory.DataDB.GetNewOutParameter("out_r", EbDbTypes.Int32));
-                    EbDataTable dt = EbConnectionFactory.DataDB.DoProcedure(EbConnectionFactory.DataDB.EB_SAVEROLES_QUERY, parameters.ToArray());
-
-                    if (dt.Rows.Count > 0)
-                    {
-                        id = Int32.Parse(dt.Rows[0][0].ToString());
-                    }
-                }
-                else
-                {
-                    EbDataTable ds = this.EbConnectionFactory.DataDB.DoQuery(sql, parameters.ToArray());
-                    id = Convert.ToInt32(ds.Rows[0][0]);
-                }
-
-                resp = new SaveRoleResponse
-                {
-                    id = Convert.ToInt32(id)
-                };
+                resp.id = -1;
+                return resp;
             }
+
+            List<DbParameter> parameters = new List<DbParameter>
+            {
+                this.EbConnectionFactory.DataDB.GetNewParameter("role_id", EbDbTypes.Int32, Convert.ToInt32(request.Colvalues["roleid"])),
+                this.EbConnectionFactory.DataDB.GetNewParameter("applicationid", EbDbTypes.Int32, Convert.ToInt32(request.Colvalues["applicationid"])),
+                this.EbConnectionFactory.DataDB.GetNewParameter("createdby", EbDbTypes.Int32, request.UserId),
+                this.EbConnectionFactory.DataDB.GetNewParameter("role_name", EbDbTypes.String, request.Colvalues["role_name"]),
+                this.EbConnectionFactory.DataDB.GetNewParameter("description", EbDbTypes.String, request.Colvalues["Description"]),
+                this.EbConnectionFactory.DataDB.GetNewParameter("is_anonym", EbDbTypes.String, request.Colvalues["IsAnonymous"]),
+                this.EbConnectionFactory.DataDB.GetNewParameter("users", EbDbTypes.String, (request.Colvalues["users"].ToString() != string.Empty) ? request.Colvalues["users"] : string.Empty),
+                this.EbConnectionFactory.DataDB.GetNewParameter("dependants", EbDbTypes.String, (request.Colvalues["dependants"].ToString() != string.Empty) ? request.Colvalues["dependants"] : string.Empty),
+                this.EbConnectionFactory.DataDB.GetNewParameter("permission", EbDbTypes.String , (request.Colvalues["permission"].ToString() != string.Empty) ? request.Colvalues["permission"]: string.Empty),
+                this.EbConnectionFactory.DataDB.GetNewParameter("locations", EbDbTypes.String , request.Colvalues["locations"].ToString())
+            };
+
+            if (EbConnectionFactory.DataDB.Vendor == DatabaseVendors.MYSQL)
+            {
+                parameters.Add(this.EbConnectionFactory.DataDB.GetNewOutParameter("out_r", EbDbTypes.Int32));
+                EbDataTable dt = EbConnectionFactory.DataDB.DoProcedure(this.EbConnectionFactory.DataDB.EB_SAVEROLES_QUERY, parameters.ToArray());
+                if (dt.Rows.Count > 0)
+                    resp.id = Convert.ToInt32(dt.Rows[0][0]);
+            }
+            else
+            {
+                EbDataTable ds = this.EbConnectionFactory.DataDB.DoQuery(this.EbConnectionFactory.DataDB.EB_SAVEROLES_QUERY, parameters.ToArray());
+                resp.id = Convert.ToInt32(ds.Rows[0][0]);
+            }
+
             return resp;
         }
 
@@ -1272,10 +1255,13 @@ namespace ExpressBase.ServiceStack.Services
             return Lar;
         }
 
-        public GetUserTypesResponse Post(GetUserTypesRequest request)
+        public GetUserTypesResponse Get(GetUserTypesRequest request)
         {
             GetUserTypesResponse response = new GetUserTypesResponse();
-            string query = "SELECT * FROM eb_user_types WHERE COALESCE(eb_del, 'F') = 'F'";
+            string query = "SELECT id, name FROM eb_user_types WHERE COALESCE(eb_del, 'F') = 'F'";
+            if (request.Id > 0)
+                query += String.Format(" AND id = {0} ", request.Id);
+            query += " ORDER BY id";
             EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(query);
             List<EbProfileUserType> userTypes = new List<EbProfileUserType>();
             foreach (EbDataRow _dr in dt.Rows)
@@ -1288,13 +1274,43 @@ namespace ExpressBase.ServiceStack.Services
                 userTypes.Add(_type);
             }
             response.UserTypes = userTypes;
+
             return response;
         }
 
+        public UpdateUserTypeResponse Post(UpdateUserTypeRequset request)
+        {
+            UpdateUserTypeResponse response = new UpdateUserTypeResponse { };
+            try
+            {
+                string query;
+                DbParameter[] parameters = new DbParameter[] { this.EbConnectionFactory.DataDB.GetNewParameter("name", EbDbTypes.String,request.Name),
+                     this.EbConnectionFactory.DataDB.GetNewParameter("by", EbDbTypes.Int32, request.UserId),
+                      this.EbConnectionFactory.DataDB.GetNewParameter("at", EbDbTypes.DateTime, DateTime.Now),
+                this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.Id)
+                };
 
+                if (request.Id > 0)
+                {
+                    query = @"UPDATE eb_user_types SET name = @name , eb_lastmodified_by = @by, eb_lastmodified_at = @at WHERE id = @id;";
+                }
+                else
+                {
+                    query = string.Format("INSERT INTO eb_user_types(name, eb_created_by, eb_created_at) VALUES(@name, @by, @at)");
+                }
 
-
-
-
+                int c = this.EbConnectionFactory.DataDB.DoNonQuery(query, parameters);
+                if (c > 0)
+                    response.Status = true;
+                else
+                    response.Status = false;
+            }
+            catch (Exception e)
+            {
+                response.Status = false;
+                Console.WriteLine(e.Message + e.StackTrace);
+            }
+            return response;
+        }
     }
 }

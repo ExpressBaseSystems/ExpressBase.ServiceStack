@@ -263,7 +263,7 @@ namespace ExpressBase.ServiceStack.Services
 			SELECT B.id, B.filename, B.tags, B.uploadts
 				FROM eb_files_ref B LEFT JOIN customer_files A 
 				ON A.eb_files_ref_id = B.id				
-			WHERE (A.customer_id = :accountid AND A.eb_del = false) OR B.context_sec = 'CustomersId:{request.CustomerId}';";
+			WHERE (A.customer_id = :accountid AND A.eb_del = false) OR B.context_sec = 'CustomerId:{request.CustomerId}';";
 
 			List<FileMetaInfo> _list = new List<FileMetaInfo>();
 
@@ -276,11 +276,12 @@ namespace ExpressBase.ServiceStack.Services
 
             foreach(EbDataRow dr in dt.Rows)
             {
+	    	string tags = string.IsNullOrEmpty(dr["tags"] as string) ? "{}" : (dr["tags"] as string);
                 FileMetaInfo info = new FileMetaInfo
                 {
                     FileRefId = Convert.ToInt32(dr["id"]),
                     FileName = dr["filename"] as string,
-                    Meta = JsonConvert.DeserializeObject<Dictionary<string, List<string>>>(dr["tags"] as string),
+                    Meta = JsonConvert.DeserializeObject<Dictionary<string, List<string>>>(tags),
                     UploadTime = Convert.ToDateTime(dr["uploadts"]).ToString("dd-MM-yyyy hh:mm tt")
                 };
 
