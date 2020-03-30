@@ -424,11 +424,18 @@ namespace ExpressBase.ServiceStack.Services
                     string str = string.Empty;
                     foreach (string file_name in unwanted_files)
                     {
-                        str += string.Format(@"update infra_dbmd5 set eb_del = 'T' where change_id in (select id from infra_dbstructure where filename = '{0}' );",
+                        int change_id=0;
+                        string str1 = string.Format(@"select change_id from infra_dbmd5 where filename = '{0}' and eb_del = 'F';",
                                             file_name);
-                        str += string.Format(@"update infra_dbstructure set eb_del = 'T' where filename = '{0}';", file_name);
+                        EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(str1);
+                        if (dt.Rows.Count > 0)
+                        {
+                            change_id = (int)dt.Rows[0][0];
+                            str += string.Format(@"update infra_dbmd5 set eb_del = 'T' where change_id = {0};",
+                                            change_id);
+                            str += string.Format(@"update infra_dbstructure set eb_del = 'T' where id = {0};", change_id);
+                        }
                     }
-
                     DbCommand cmd = InfraConnectionFactory.DataDB.GetNewCommand(con, str);
                     cmd.ExecuteNonQuery();
                 }
@@ -438,11 +445,38 @@ namespace ExpressBase.ServiceStack.Services
         private List<string> GetFilesListFromSqlScripts()
         {
             string[] func_create = SqlFiles.SQLSCRIPTS;
+            string result = string.Empty;
+            DBManagerType type = DBManagerType.Function;
             List<string> file_name = new List<string>();
-            foreach (string file in func_create)
+            foreach (string vendor in Enum.GetNames(typeof(DatabaseVendors)))
             {
-                if (file.Split(".").Length > 2)
-                    file_name.Add(file.Split(".")[2]);
+                if (vendor == "PGSQL" || vendor == "MYSQL")
+                {
+                    string Urlstart = string.Format("ExpressBase.Common.sqlscripts.{0}.", vendor.ToLower());
+                    foreach (string file in func_create)
+                    {
+                        string path = Urlstart + file;
+                        var assembly = typeof(sqlscripts).Assembly;
+                        using (Stream stream = assembly.GetManifestResourceStream(path))
+                        {
+                            if (stream != null)
+                            {
+                                using (StreamReader reader = new StreamReader(stream))
+                                    result = reader.ReadToEnd();
+                                if (file.Split(".")[1] == "functioncreate")
+                                {
+                                    type = CheckFunctionOrProcedure(result);
+                                    file_name.Add(GetFileName(result, file, type, vendor)); //function name with parameter
+                                }
+                                else if (file.Split(".")[1] == "tablecreate")
+                                {
+                                    type = DBManagerType.Table;
+                                    file_name.Add(GetFileName(result, file, type, vendor)); //table name
+                                }
+                            }
+                        }
+                    }
+                }
             }
             return file_name;
         }
@@ -452,7 +486,7 @@ namespace ExpressBase.ServiceStack.Services
             List<string> file_name = new List<string>();
             string str = @"
                            SELECT DISTINCT filename 
-                           FROM infra_dbstructure";
+                           FROM infra_dbmd5";
             EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(str);
             if (dt.Rows.Count > 0)
             {
@@ -603,7 +637,7 @@ namespace ExpressBase.ServiceStack.Services
                     con.Open();
                     string str = string.Format(@"INSERT INTO infra_dbstructure (filename, filepath, vendor, type, eb_del) VALUES ('{0}','{1}','{2}','{3}','F');",
                         file_name_shrt, file, vendor, (int)type);
-                    str += string.Format(@"INSERT INTO  infra_dbmd5 (change_id, filename, contents, eb_del) VALUES ((SELECT id FROM infra_dbstructure WHERE filename = '{0}' AND vendor = '{1}'),'{2}','{3}','F')",
+                    str += string.Format(@"INSERT INTO  infra_dbmd5 (change_id, filename, contents, eb_del) VALUES ((SELECT max(id) FROM infra_dbstructure WHERE filename = '{0}' AND vendor = '{1}' AND eb_del = 'F'),'{2}','{3}','F')",
                         file_name_shrt, vendor, file_name, content);
 
                     DbCommand cmd = InfraConnectionFactory.DataDB.GetNewCommand(con, str);
@@ -612,7 +646,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
-                Console.WriteLine("ERROR : " + e.Message + " : " + e.StackTrace);
+                Console.WriteLine("ERROR : " + e.Message + " : " + e.StackTrace + "\n FileName : " + file_name_shrt);
                 throw e;
             }
         }
