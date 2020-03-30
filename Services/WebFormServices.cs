@@ -362,13 +362,13 @@ namespace ExpressBase.ServiceStack.Services
             dvobj.OrderBy = new List<DVBaseColumn>();
             dvobj.RowGroupCollection = new List<RowGroupParent>();
             dvobj.OrderBy.Add(columns.Get("eb_created_at"));
-            RowGroupParent _rowgroup = new RowGroupParent();
+            SingleLevelRowGroup _rowgroup = new SingleLevelRowGroup();
             _rowgroup.DisplayName = "By Location";
             _rowgroup.Name = "groupbylocation";
             _rowgroup.RowGrouping.Add(columns.Get("eb_loc_id"));
 
             dvobj.RowGroupCollection.Add(_rowgroup);
-            _rowgroup = new RowGroupParent();
+            _rowgroup = new SingleLevelRowGroup();
             _rowgroup.DisplayName = "By Created By";
             _rowgroup.Name = "groupbycreatedby";
             _rowgroup.RowGrouping.Add(columns.Get("eb_created_by"));
@@ -578,7 +578,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             List<DVBaseColumn> _formid = new List<DVBaseColumn>() { col };
 
-            Columns.Add(new DVStringColumn
+            Columns.Add(new DVActionColumn
             {
                 Data = (index + 1),//index+1 for serial column in datavis service
                 Name = "eb_action",
@@ -587,12 +587,12 @@ namespace ExpressBase.ServiceStack.Services
                 bVisible = true,
                 sWidth = "100px",
                 ClassName = "tdheight",
-                RenderAs = StringRenderType.Link,
                 LinkRefId = request.WebObj.RefId,
                 LinkType = LinkTypeEnum.Popout,
                 FormMode = WebFormDVModes.View_Mode,
                 FormId = _formid,
-                Align = Align.Center
+                Align = Align.Center,
+                IsCustomColumn = true
             });
             return Columns;
         }
@@ -724,8 +724,29 @@ namespace ExpressBase.ServiceStack.Services
             }
             Columns.Add(dv.Columns.Get("id"));
             DVBaseColumn Col = dv.Columns.Get("eb_action");
-            Col.Data = ++index;
-            Columns.Add(Col);
+            DVBaseColumn actcol = null;
+            if (Col is DVStringColumn)
+            {
+                actcol = new DVActionColumn
+                {
+                    Name = Col.Name,
+                    sTitle = Col.sTitle,
+                    Type = EbDbTypes.String,
+                    bVisible = true,
+                    sWidth = "100px",
+                    ClassName = Col.ClassName,
+                    LinkRefId = Col.LinkRefId,
+                    LinkType = Col.LinkType,
+                    FormMode = Col.FormMode,
+                    FormId = Col.FormId,
+                    Align = Align.Center,
+                    IsCustomColumn = true
+                };
+            }
+            else
+                actcol = Col;
+            actcol.Data = ++index;
+            Columns.Add(actcol);
             return Columns;
         }
 
