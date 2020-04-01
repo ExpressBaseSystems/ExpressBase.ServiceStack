@@ -1,21 +1,15 @@
 ﻿using ExpressBase.Common;
 using ExpressBase.Common.Application;
-using ExpressBase.Common.Constants;
 using ExpressBase.Common.Data;
 using ExpressBase.Common.Objects;
 using ExpressBase.Common.Structures;
 using ExpressBase.Objects;
-using ExpressBase.Objects.Objects.DVRelated;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using Newtonsoft.Json;
 using ServiceStack;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
-using System.Globalization;
-using System.Linq;
-using System.Threading.Tasks;
-using ExpressBase.Common.Extensions;
 
 namespace ExpressBase.ServiceStack
 {
@@ -25,6 +19,118 @@ namespace ExpressBase.ServiceStack
     {
         public ChatbotServices(IEbConnectionFactory _dbf) : base(_dbf) { }
 
+        public CreateBotFormTableResponse Any(CreateBotFormTableRequest request)// redirecting to Webform table create logic
+        {
+            EbBotForm _botForm = string.IsNullOrEmpty(request.BotObj.RefId) ? null : this.Redis.Get<EbBotForm>(request.BotObj.RefId);
+
+            if (string.IsNullOrEmpty(request.BotObj.WebFormRefId) && string.IsNullOrEmpty(_botForm?.WebFormRefId))// new object
+            {
+                EbWebForm WebForm = new EbWebForm();
+                this.CompareBothForms(request.BotObj, WebForm);
+                string _rel_obj_tmp = string.Join(",", WebForm.DiscoverRelatedRefids());
+
+                EbObject_Create_New_ObjectRequest _form_req = new EbObject_Create_New_ObjectRequest
+                {
+                    Name = WebForm.Name,
+                    Description = WebForm.Description?? string.Empty,
+                    Json = EbSerializers.Json_Serialize(WebForm),
+                    Status = ObjectLifeCycleStatus.Live,
+                    IsSave = false,
+                    Tags = string.Empty,
+                    Apps = request.Apps,
+                    SolnId = request.SolnId,
+                    WhichConsole = request.WhichConsole,
+                    UserId = request.UserId,
+                    SourceObjId = "0",
+                    SourceVerID = "0",
+                    DisplayName = WebForm.DisplayName,
+                    SourceSolutionId = request.SolnId,
+                    Relations = _rel_obj_tmp
+                };
+                EbObjectService myService = base.ResolveService<EbObjectService>();
+                EbObject_Create_New_ObjectResponse resp = myService.Post(_form_req);
+                request.BotObj.WebFormRefId = resp.RefId;
+                SaveObjectRequest(request.BotObj, request.Apps);
+            }
+            else
+            {
+                EbWebForm WebForm = this.GetWebFormObject(request.BotObj.WebFormRefId);
+                if(this.CompareBothForms(request.BotObj, WebForm))
+                {
+                    SaveObjectRequest(WebForm, request.Apps);
+                }
+            }
+            return new CreateBotFormTableResponse();
+        }
+
+        private void SaveObjectRequest(EbObject obj, string Apps)
+        {
+            string _rel_obj_tmp = string.Join(",", obj.DiscoverRelatedRefids());
+            EbObject_SaveRequest req = new EbObject_SaveRequest
+            {
+                RefId = obj.RefId,
+                Name = obj.Name,
+                Description = obj.Description,
+                Json = EbSerializers.Json_Serialize(obj),
+                Relations = _rel_obj_tmp,
+                Tags = "",
+                Apps = Apps,
+                DisplayName = obj.DisplayName
+            };
+            EbObjectService myService = base.ResolveService<EbObjectService>();
+            EbObject_SaveResponse resp = myService.Post(req);
+        }
+     
+        private bool CompareBothForms(EbBotForm BotForm, EbWebForm WebForm)
+        {
+            bool changeFlag = false; 
+            if (WebForm == null)
+            {
+                WebForm.EbSid = "webform_autogen_1";
+                WebForm.Name = BotForm.Name + "_autogen_webform";
+                WebForm.DisplayName = BotForm.DisplayName + " AutoGen Webform";
+                WebForm.TableName = BotForm.TableName;
+                WebForm.Padding = new UISides { Top = 8, Right = 8, Bottom = 8, Left = 8 };
+                WebForm.Validators = new List<EbValidator>();
+                WebForm.Controls = BotForm.Controls;
+                WebForm.BeforeSave(this);
+                changeFlag = true;
+            }
+            else
+            {
+                foreach (EbControl _control in BotForm.Controls)
+                {
+                    if (WebForm.Controls.Find(e => e.Name == _control.Name) == null)
+                    {
+                        changeFlag = true;
+                        break;
+                    }
+                }
+                if (changeFlag == false && WebForm.Name != (BotForm.Name + "_autogen_webform"))
+                    changeFlag = true;
+                
+                WebForm.Name = BotForm.Name + "_autogen_webform";
+                WebForm.DisplayName = BotForm.DisplayName + " AutoGen Webform";
+                WebForm.TableName = BotForm.TableName;
+                WebForm.Controls = BotForm.Controls;
+                WebForm.BeforeSave(this);
+            }
+            return changeFlag;
+        }
+
+        private EbWebForm GetWebFormObject(string RefId)
+        {
+            EbWebForm _form = this.Redis.Get<EbWebForm>(RefId);
+            if (_form == null)
+            {
+                EbObjectService myService = base.ResolveService<EbObjectService>();
+                EbObjectParticularVersionResponse formObj = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = RefId });
+                _form = EbSerializers.Json_Deserialize(formObj.Data[0].Json);
+                this.Redis.Set<EbWebForm>(RefId, _form);
+            }
+            _form.AfterRedisGet(this);
+            return _form;
+        }
 
         public GetAppListResponse Get(AppListRequest request)
         {
@@ -206,222 +312,222 @@ namespace ExpressBase.ServiceStack
             }
         }
 
-        private CreateWebFormTableResponse CreateWebFormTableHelper(CreateWebFormTableRequest request)
-        {
-            IVendorDbTypes vDbTypes = this.EbConnectionFactory.ObjectsDB.VendorDbTypes;
-            List<TableColumnMeta> _listNamesAndTypes = new List<TableColumnMeta>();
+        //private CreateWebFormTableResponse CreateWebFormTableHelper(CreateWebFormTableRequest request)
+        //{
+        //    IVendorDbTypes vDbTypes = this.EbConnectionFactory.ObjectsDB.VendorDbTypes;
+        //    List<TableColumnMeta> _listNamesAndTypes = new List<TableColumnMeta>();
 
-            IEnumerable<EbControl> _flatControls = request.WebObj.Controls.Get1stLvlControls();
+        //    IEnumerable<EbControl> _flatControls = request.WebObj.Controls.Get1stLvlControls();
 
-            foreach (EbControl control in _flatControls)
-            {
-                //this.addControlToColl(control, ref _listNamesAndTypes, vDbTypes);
-                _listNamesAndTypes.Add(new TableColumnMeta { Name = control.Name, Type = control.GetvDbType(vDbTypes) });
-            }
+        //    foreach (EbControl control in _flatControls)
+        //    {
+        //        //this.addControlToColl(control, ref _listNamesAndTypes, vDbTypes);
+        //        _listNamesAndTypes.Add(new TableColumnMeta { Name = control.Name, Type = control.GetvDbType(vDbTypes) });
+        //    }
 
-            _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_by", Type = vDbTypes.Decimal });
-            _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_aid", Type = vDbTypes.Decimal });
-            _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_at", Type = vDbTypes.DateTime });
-            _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_by", Type = vDbTypes.Decimal });
-            _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_aid", Type = vDbTypes.Decimal });
-            _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_at", Type = vDbTypes.DateTime });
-            _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_del", Type = vDbTypes.Boolean, Default = "F" });
-            _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_void", Type = vDbTypes.Boolean, Default = "F" });
+        //    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_by", Type = vDbTypes.Decimal });
+        //    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_aid", Type = vDbTypes.Decimal });
+        //    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_at", Type = vDbTypes.DateTime });
+        //    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_by", Type = vDbTypes.Decimal });
+        //    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_aid", Type = vDbTypes.Decimal });
+        //    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_at", Type = vDbTypes.DateTime });
+        //    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_del", Type = vDbTypes.Boolean, Default = "F" });
+        //    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_void", Type = vDbTypes.Boolean, Default = "F" });
 
-            CreateOrAlterTable(request.WebObj.TableName.ToLower(), _listNamesAndTypes);
+        //    CreateOrAlterTable(request.WebObj.TableName.ToLower(), _listNamesAndTypes);
 
-            return new CreateWebFormTableResponse();
-        }
+        //    return new CreateWebFormTableResponse();
+        //}
 
-        private CreateWebFormTableResponse CreateWebFormTableRec(CreateWebFormTableRequest request)
-        {
-            foreach (EbControl _control in request.WebObj.Controls)
-            {
-                if (_control is EbControlContainer)
-                {
-                    EbControlContainer Container = _control as EbControlContainer;
-                    Container.TableName = Container.TableName.IsNullOrEmpty() ? request.WebObj.TableName : Container.TableName;
-                    request.WebObj = Container;
-                    CreateWebFormTableResponse Response = CreateWebFormTableHelper(request);
-                    CreateWebFormTableRec(request);
-                }
-            }
+        //private CreateWebFormTableResponse CreateWebFormTableRec(CreateWebFormTableRequest request)
+        //{
+        //    foreach (EbControl _control in request.WebObj.Controls)
+        //    {
+        //        if (_control is EbControlContainer)
+        //        {
+        //            EbControlContainer Container = _control as EbControlContainer;
+        //            Container.TableName = Container.TableName.IsNullOrEmpty() ? request.WebObj.TableName : Container.TableName;
+        //            request.WebObj = Container;
+        //            CreateWebFormTableResponse Response = CreateWebFormTableHelper(request);
+        //            CreateWebFormTableRec(request);
+        //        }
+        //    }
 
-            return new CreateWebFormTableResponse();
-        }
+        //    return new CreateWebFormTableResponse();
+        //}
 
-        public object Any(CreateBotFormTableRequest request)
-        {
-            var vDbTypes = this.EbConnectionFactory.DataDB.VendorDbTypes;
-            List<TableColumnMeta> _listNamesAndTypes = new List<TableColumnMeta>();
+        //public object Any(CreateBotFormTableRequest request)
+        //{
+        //    var vDbTypes = this.EbConnectionFactory.DataDB.VendorDbTypes;
+        //    List<TableColumnMeta> _listNamesAndTypes = new List<TableColumnMeta>();
 
-            foreach (EbControl control in request.BotObj.Controls)
-            {
-                if (control is EbNumeric)
-                    _listNamesAndTypes.Add(new TableColumnMeta { Name = control.Name, Type = vDbTypes.Decimal });
-                else if (control is EbDate)
-                {
-                    VendorDbType _vdbtype = vDbTypes.String;
-                    if ((control as EbDate).EbDateType == EbDateType.Date)
-                        _vdbtype = vDbTypes.Date;
-                    else if ((control as EbDate).EbDateType == EbDateType.DateTime)
-                        _vdbtype = vDbTypes.DateTime;
-                    else if ((control as EbDate).EbDateType == EbDateType.Time)
-                        _vdbtype = vDbTypes.Time;
-                    _listNamesAndTypes.Add(new TableColumnMeta { Name = control.Name, Type = _vdbtype });
-                }
-                else if (control is EbCardSetParent)
-                {
-                    List<TableColumnMeta> listLine = new List<TableColumnMeta>();
-                    foreach (EbCardField CardField in (control as EbCardSetParent).CardFields)
-                    {
-                        if (!CardField.DoNotPersist)
-                        {
-                            if (CardField is EbCardNumericField)
-                                listLine.Add(new TableColumnMeta { Name = CardField.Name, Type = vDbTypes.Decimal });
-                            else
-                                listLine.Add(new TableColumnMeta { Name = CardField.Name, Type = vDbTypes.String });
-                        }
-                    }
-                    listLine.Add(new TableColumnMeta { Name = "formid", Type = vDbTypes.Decimal });
-                    listLine.Add(new TableColumnMeta { Name = "itemid", Type = vDbTypes.Decimal });//selected card id
+        //    foreach (EbControl control in request.BotObj.Controls)
+        //    {
+        //        if (control is EbNumeric)
+        //            _listNamesAndTypes.Add(new TableColumnMeta { Name = control.Name, Type = vDbTypes.Decimal });
+        //        else if (control is EbDate)
+        //        {
+        //            VendorDbType _vdbtype = vDbTypes.String;
+        //            if ((control as EbDate).EbDateType == EbDateType.Date)
+        //                _vdbtype = vDbTypes.Date;
+        //            else if ((control as EbDate).EbDateType == EbDateType.DateTime)
+        //                _vdbtype = vDbTypes.DateTime;
+        //            else if ((control as EbDate).EbDateType == EbDateType.Time)
+        //                _vdbtype = vDbTypes.Time;
+        //            _listNamesAndTypes.Add(new TableColumnMeta { Name = control.Name, Type = _vdbtype });
+        //        }
+        //        else if (control is EbCardSetParent)
+        //        {
+        //            List<TableColumnMeta> listLine = new List<TableColumnMeta>();
+        //            foreach (EbCardField CardField in (control as EbCardSetParent).CardFields)
+        //            {
+        //                if (!CardField.DoNotPersist)
+        //                {
+        //                    if (CardField is EbCardNumericField)
+        //                        listLine.Add(new TableColumnMeta { Name = CardField.Name, Type = vDbTypes.Decimal });
+        //                    else
+        //                        listLine.Add(new TableColumnMeta { Name = CardField.Name, Type = vDbTypes.String });
+        //                }
+        //            }
+        //            listLine.Add(new TableColumnMeta { Name = "formid", Type = vDbTypes.Decimal });
+        //            listLine.Add(new TableColumnMeta { Name = "itemid", Type = vDbTypes.Decimal });//selected card id
 
-                    CreateOrAlterTable((request.BotObj.TableName.ToLower() + "_lines"), listLine);
-                }
-                else if (control is EbSurvey)
-                {
-                    _listNamesAndTypes.Add(new TableColumnMeta { Name = control.Name, Type = vDbTypes.String });
-                    List<TableColumnMeta> listLine = new List<TableColumnMeta>();
-                    listLine.Add(new TableColumnMeta { Name = "formid", Type = vDbTypes.Decimal });
-                    listLine.Add(new TableColumnMeta { Name = "itemid", Type = vDbTypes.Decimal });//survey id
-                    listLine.Add(new TableColumnMeta { Name = "surveyid", Type = vDbTypes.Decimal });
-                    listLine.Add(new TableColumnMeta { Name = "option", Type = vDbTypes.String });
-                    CreateOrAlterTable((request.BotObj.TableName.ToLower() + "_lines"), listLine);
-                }
-                else //(control is EbTextBox || control is EbInputGeoLocation)
-                    _listNamesAndTypes.Add(new TableColumnMeta { Name = control.Name, Type = vDbTypes.String });
-            }
-            _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_by", Type = vDbTypes.Decimal });
-            _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_aid", Type = vDbTypes.Decimal });
-            _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_at", Type = vDbTypes.DateTime });
-            _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_by", Type = vDbTypes.Decimal });
-            _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_aid", Type = vDbTypes.Decimal });
-            _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_at", Type = vDbTypes.DateTime });
-            _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_del", Type = vDbTypes.Boolean, Default = "F" });
-            _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_void", Type = vDbTypes.Boolean, Default = "F" });
+        //            CreateOrAlterTable((request.BotObj.TableName.ToLower() + "_lines"), listLine);
+        //        }
+        //        else if (control is EbSurvey)
+        //        {
+        //            _listNamesAndTypes.Add(new TableColumnMeta { Name = control.Name, Type = vDbTypes.String });
+        //            List<TableColumnMeta> listLine = new List<TableColumnMeta>();
+        //            listLine.Add(new TableColumnMeta { Name = "formid", Type = vDbTypes.Decimal });
+        //            listLine.Add(new TableColumnMeta { Name = "itemid", Type = vDbTypes.Decimal });//survey id
+        //            listLine.Add(new TableColumnMeta { Name = "surveyid", Type = vDbTypes.Decimal });
+        //            listLine.Add(new TableColumnMeta { Name = "option", Type = vDbTypes.String });
+        //            CreateOrAlterTable((request.BotObj.TableName.ToLower() + "_lines"), listLine);
+        //        }
+        //        else //(control is EbTextBox || control is EbInputGeoLocation)
+        //            _listNamesAndTypes.Add(new TableColumnMeta { Name = control.Name, Type = vDbTypes.String });
+        //    }
+        //    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_by", Type = vDbTypes.Decimal });
+        //    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_aid", Type = vDbTypes.Decimal });
+        //    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_at", Type = vDbTypes.DateTime });
+        //    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_by", Type = vDbTypes.Decimal });
+        //    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_aid", Type = vDbTypes.Decimal });
+        //    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_at", Type = vDbTypes.DateTime });
+        //    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_del", Type = vDbTypes.Boolean, Default = "F" });
+        //    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_void", Type = vDbTypes.Boolean, Default = "F" });
 
-            CreateOrAlterTable(request.BotObj.TableName.ToLower(), _listNamesAndTypes);
+        //    CreateOrAlterTable(request.BotObj.TableName.ToLower(), _listNamesAndTypes);
 
-            return new CreateBotFormTableResponse();
-        }
+        //    return new CreateBotFormTableResponse();
+        //}
 
-        private int CreateOrAlterTable(string tableName, List<TableColumnMeta> listNamesAndTypes)
-        {
-            //checking for space in column name, table name
-            foreach (TableColumnMeta entry in listNamesAndTypes)
-            {
-                if (entry.Name.Contains(CharConstants.SPACE) || tableName.Contains(CharConstants.SPACE))
-                    return -1;
-            }
-            var isTableExists = this.EbConnectionFactory.ObjectsDB.IsTableExists(this.EbConnectionFactory.ObjectsDB.IS_TABLE_EXIST, new DbParameter[] { this.EbConnectionFactory.ObjectsDB.GetNewParameter("tbl", EbDbTypes.String, tableName) });
-            if (!isTableExists)
-            {
-                string cols = string.Join(CharConstants.COMMA + CharConstants.SPACE.ToString(), listNamesAndTypes.Select(x => x.Name + CharConstants.SPACE + x.Type.VDbType.ToString() + (x.Default.IsNullOrEmpty() ? "" : (" DEFAULT '" + x.Default + "'"))).ToArray());
-                string sql = string.Empty;
-                if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.ORACLE)////////////
-                {
-                    sql = "CREATE TABLE @tbl(id NUMBER(10), @cols)".Replace("@cols", cols).Replace("@tbl", tableName);
-                    this.EbConnectionFactory.ObjectsDB.CreateTable(sql);//Table Creation
-                    CreateSquenceAndTrigger(tableName);//
-                }
-                else if(this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.PGSQL)
-                {
-                    sql = "CREATE TABLE @tbl( id SERIAL PRIMARY KEY, @cols)".Replace("@cols", cols).Replace("@tbl", tableName);
-                    this.EbConnectionFactory.ObjectsDB.CreateTable(sql);
-                }
-                else if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.MYSQL)
-                {
-                    sql = "CREATE TABLE @tbl( id INTEGER AUTO_INCREMENT PRIMARY KEY, @cols)".Replace("@cols", cols).Replace("@tbl", tableName);
-                    this.EbConnectionFactory.ObjectsDB.CreateTable(sql);
-                }
-                return 0;
-            }
-            else
-            {
-                var colSchema = this.EbConnectionFactory.ObjectsDB.GetColumnSchema(tableName);
-                string sql = string.Empty;
-                foreach (TableColumnMeta entry in listNamesAndTypes)
-                {
-                    bool isFound = false;
-                    foreach (EbDataColumn dr in colSchema)
-                    {
-                        if (entry.Name.ToLower() == (dr.ColumnName.ToLower()))
-                        {
-                            isFound = true;
-                            break;
-                        }
-                    }
-                    if (!isFound)
-                    {
-                        sql += entry.Name + " " + entry.Type.VDbType.ToString() + " " + (entry.Default.IsNullOrEmpty() ? "" : (" DEFAULT '" + entry.Default + "'")) + ",";
-                    }
-                }
-                bool appendId = false;
-                var existingIdCol = colSchema.FirstOrDefault(o => o.ColumnName.ToLower() == "id");
-                if (existingIdCol == null)
-                    appendId = true;
-                if (!sql.IsEmpty() || appendId)
-                {
-                    if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.ORACLE)/////////////////////////
-                    {
-                        sql = (appendId ? "id NUMBER(10)," : "") + sql;
-                        if (!sql.IsEmpty())
-                        {
-                            sql = "ALTER TABLE @tbl ADD (" + sql.Substring(0, sql.Length - 1) + ")";
-                            sql = sql.Replace("@tbl", tableName);
-                            this.EbConnectionFactory.ObjectsDB.UpdateTable(sql);
-                            if (appendId)
-                                CreateSquenceAndTrigger(tableName);
-                        }
-                    }
-                    else if(this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.PGSQL)
-                    {
-                        sql = (appendId ? "id SERIAL PRIMARY KEY," : "") + sql;
-                        if (!sql.IsEmpty())
-                        {
-                            sql = "ALTER TABLE @tbl ADD COLUMN " + (sql.Substring(0, sql.Length - 1)).Replace(",", ", ADD COLUMN ");
-                            sql = sql.Replace("@tbl", tableName);
-                            this.EbConnectionFactory.ObjectsDB.UpdateTable(sql);
-                        }
-                    }
-                    else if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.MYSQL)
-                    {
-                        sql = (appendId ? "id INTEGER AUTO_INCREMENT PRIMARY KEY," : "") + sql;
-                        if (!sql.IsEmpty())
-                        {
-                            sql = "ALTER TABLE @tbl ADD COLUMN " + (sql.Substring(0, sql.Length - 1)).Replace(",", ", ADD COLUMN ");
-                            sql = sql.Replace("@tbl", tableName);
-                            this.EbConnectionFactory.ObjectsDB.UpdateTable(sql);
-                        }
-                    }
-                    return (0);
-                }
-            }
-            return -1;
-        }
+        //private int CreateOrAlterTable(string tableName, List<TableColumnMeta> listNamesAndTypes)
+        //{
+        //    //checking for space in column name, table name
+        //    foreach (TableColumnMeta entry in listNamesAndTypes)
+        //    {
+        //        if (entry.Name.Contains(CharConstants.SPACE) || tableName.Contains(CharConstants.SPACE))
+        //            return -1;
+        //    }
+        //    var isTableExists = this.EbConnectionFactory.ObjectsDB.IsTableExists(this.EbConnectionFactory.ObjectsDB.IS_TABLE_EXIST, new DbParameter[] { this.EbConnectionFactory.ObjectsDB.GetNewParameter("tbl", EbDbTypes.String, tableName) });
+        //    if (!isTableExists)
+        //    {
+        //        string cols = string.Join(CharConstants.COMMA + CharConstants.SPACE.ToString(), listNamesAndTypes.Select(x => x.Name + CharConstants.SPACE + x.Type.VDbType.ToString() + (x.Default.IsNullOrEmpty() ? "" : (" DEFAULT '" + x.Default + "'"))).ToArray());
+        //        string sql = string.Empty;
+        //        if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.ORACLE)////////////
+        //        {
+        //            sql = "CREATE TABLE @tbl(id NUMBER(10), @cols)".Replace("@cols", cols).Replace("@tbl", tableName);
+        //            this.EbConnectionFactory.ObjectsDB.CreateTable(sql);//Table Creation
+        //            CreateSquenceAndTrigger(tableName);//
+        //        }
+        //        else if(this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.PGSQL)
+        //        {
+        //            sql = "CREATE TABLE @tbl( id SERIAL PRIMARY KEY, @cols)".Replace("@cols", cols).Replace("@tbl", tableName);
+        //            this.EbConnectionFactory.ObjectsDB.CreateTable(sql);
+        //        }
+        //        else if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.MYSQL)
+        //        {
+        //            sql = "CREATE TABLE @tbl( id INTEGER AUTO_INCREMENT PRIMARY KEY, @cols)".Replace("@cols", cols).Replace("@tbl", tableName);
+        //            this.EbConnectionFactory.ObjectsDB.CreateTable(sql);
+        //        }
+        //        return 0;
+        //    }
+        //    else
+        //    {
+        //        var colSchema = this.EbConnectionFactory.ObjectsDB.GetColumnSchema(tableName);
+        //        string sql = string.Empty;
+        //        foreach (TableColumnMeta entry in listNamesAndTypes)
+        //        {
+        //            bool isFound = false;
+        //            foreach (EbDataColumn dr in colSchema)
+        //            {
+        //                if (entry.Name.ToLower() == (dr.ColumnName.ToLower()))
+        //                {
+        //                    isFound = true;
+        //                    break;
+        //                }
+        //            }
+        //            if (!isFound)
+        //            {
+        //                sql += entry.Name + " " + entry.Type.VDbType.ToString() + " " + (entry.Default.IsNullOrEmpty() ? "" : (" DEFAULT '" + entry.Default + "'")) + ",";
+        //            }
+        //        }
+        //        bool appendId = false;
+        //        var existingIdCol = colSchema.FirstOrDefault(o => o.ColumnName.ToLower() == "id");
+        //        if (existingIdCol == null)
+        //            appendId = true;
+        //        if (!sql.IsEmpty() || appendId)
+        //        {
+        //            if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.ORACLE)/////////////////////////
+        //            {
+        //                sql = (appendId ? "id NUMBER(10)," : "") + sql;
+        //                if (!sql.IsEmpty())
+        //                {
+        //                    sql = "ALTER TABLE @tbl ADD (" + sql.Substring(0, sql.Length - 1) + ")";
+        //                    sql = sql.Replace("@tbl", tableName);
+        //                    this.EbConnectionFactory.ObjectsDB.UpdateTable(sql);
+        //                    if (appendId)
+        //                        CreateSquenceAndTrigger(tableName);
+        //                }
+        //            }
+        //            else if(this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.PGSQL)
+        //            {
+        //                sql = (appendId ? "id SERIAL PRIMARY KEY," : "") + sql;
+        //                if (!sql.IsEmpty())
+        //                {
+        //                    sql = "ALTER TABLE @tbl ADD COLUMN " + (sql.Substring(0, sql.Length - 1)).Replace(",", ", ADD COLUMN ");
+        //                    sql = sql.Replace("@tbl", tableName);
+        //                    this.EbConnectionFactory.ObjectsDB.UpdateTable(sql);
+        //                }
+        //            }
+        //            else if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.MYSQL)
+        //            {
+        //                sql = (appendId ? "id INTEGER AUTO_INCREMENT PRIMARY KEY," : "") + sql;
+        //                if (!sql.IsEmpty())
+        //                {
+        //                    sql = "ALTER TABLE @tbl ADD COLUMN " + (sql.Substring(0, sql.Length - 1)).Replace(",", ", ADD COLUMN ");
+        //                    sql = sql.Replace("@tbl", tableName);
+        //                    this.EbConnectionFactory.ObjectsDB.UpdateTable(sql);
+        //                }
+        //            }
+        //            return (0);
+        //        }
+        //    }
+        //    return -1;
+        //}
 
-        private void CreateSquenceAndTrigger(string tableName)
-        {
-            string sqnceSql = "CREATE SEQUENCE @name_sequence".Replace("@name", tableName);
-            string trgrSql = string.Format(@"CREATE OR REPLACE TRIGGER {0}_on_insert
-													BEFORE INSERT ON {0}
-													FOR EACH ROW
-													BEGIN
-														SELECT {0}_sequence.nextval INTO :new.id FROM dual;
-													END;", tableName);
-            this.EbConnectionFactory.ObjectsDB.CreateTable(sqnceSql);//Sequence Creation
-            this.EbConnectionFactory.ObjectsDB.CreateTable(trgrSql);//Trigger Creation
-        }
+        //private void CreateSquenceAndTrigger(string tableName)
+        //{
+        //    string sqnceSql = "CREATE SEQUENCE @name_sequence".Replace("@name", tableName);
+        //    string trgrSql = string.Format(@"CREATE OR REPLACE TRIGGER {0}_on_insert
+								//					BEFORE INSERT ON {0}
+								//					FOR EACH ROW
+								//					BEGIN
+								//						SELECT {0}_sequence.nextval INTO :new.id FROM dual;
+								//					END;", tableName);
+        //    this.EbConnectionFactory.ObjectsDB.CreateTable(sqnceSql);//Sequence Creation
+        //    this.EbConnectionFactory.ObjectsDB.CreateTable(trgrSql);//Trigger Creation
+        //}
 
         //public object Any123(CreateBotFormTableRequest request)
         //{
@@ -701,87 +807,87 @@ namespace ExpressBase.ServiceStack
         //	return new CreateBotFormTableResponse();
         //}
 
-        public void CreateDsAndDv(CreateBotFormTableRequest request, DVColumnCollection Columns, string ColumnName)
-        {
-            var dsobj = new EbDataReader();
-            dsobj.Sql = "SELECT @colname@ FROM @tbl".Replace("@tbl", request.BotObj.TableName).Replace("@colname@", ColumnName);
-            var ds = new EbObject_Create_New_ObjectRequest();
-            ds.Name = request.BotObj.Name + "_datasource";
-            ds.Description = "desc";
-            ds.Json = EbSerializers.Json_Serialize(dsobj);
-            ds.Status = ObjectLifeCycleStatus.Live;
-            ds.Relations = "";
-            ds.IsSave = false;
-            ds.Tags = "";
-            ds.Apps = request.Apps;
-            ds.SolnId = request.SolnId;
-            ds.WhichConsole = request.WhichConsole;
-            ds.UserId = request.UserId;
-            var myService = base.ResolveService<EbObjectService>();
-            var res = myService.Post(ds);
-            var refid = res.RefId;
+        //public void CreateDsAndDv(CreateBotFormTableRequest request, DVColumnCollection Columns, string ColumnName)
+        //{
+        //    var dsobj = new EbDataReader();
+        //    dsobj.Sql = "SELECT @colname@ FROM @tbl".Replace("@tbl", request.BotObj.TableName).Replace("@colname@", ColumnName);
+        //    var ds = new EbObject_Create_New_ObjectRequest();
+        //    ds.Name = request.BotObj.Name + "_datasource";
+        //    ds.Description = "desc";
+        //    ds.Json = EbSerializers.Json_Serialize(dsobj);
+        //    ds.Status = ObjectLifeCycleStatus.Live;
+        //    ds.Relations = "";
+        //    ds.IsSave = false;
+        //    ds.Tags = "";
+        //    ds.Apps = request.Apps;
+        //    ds.SolnId = request.SolnId;
+        //    ds.WhichConsole = request.WhichConsole;
+        //    ds.UserId = request.UserId;
+        //    var myService = base.ResolveService<EbObjectService>();
+        //    var res = myService.Post(ds);
+        //    var refid = res.RefId;
 
-            var dvobj = new EbTableVisualization();
-            dvobj.DataSourceRefId = refid;
-            dvobj.Columns = Columns;
-            dvobj.DSColumns = Columns;
-            var ds1 = new EbObject_Create_New_ObjectRequest();
-            ds1.Name = request.BotObj.Name + "_response";
-            ds1.Description = "desc";
-            ds1.Json = EbSerializers.Json_Serialize(dvobj);
-            ds1.Status = ObjectLifeCycleStatus.Live;
-            ds1.Relations = refid;
-            ds1.IsSave = false;
-            ds1.Tags = "";
-            ds1.Apps = request.Apps;
-            ds1.SolnId = request.SolnId;
-            ds1.WhichConsole = request.WhichConsole;
-            ds1.UserId = request.UserId;
-            var res1 = myService.Post(ds1);
-            var refid1 = res.RefId;
-        }
+        //    var dvobj = new EbTableVisualization();
+        //    dvobj.DataSourceRefId = refid;
+        //    dvobj.Columns = Columns;
+        //    dvobj.DSColumns = Columns;
+        //    var ds1 = new EbObject_Create_New_ObjectRequest();
+        //    ds1.Name = request.BotObj.Name + "_response";
+        //    ds1.Description = "desc";
+        //    ds1.Json = EbSerializers.Json_Serialize(dvobj);
+        //    ds1.Status = ObjectLifeCycleStatus.Live;
+        //    ds1.Relations = refid;
+        //    ds1.IsSave = false;
+        //    ds1.Tags = "";
+        //    ds1.Apps = request.Apps;
+        //    ds1.SolnId = request.SolnId;
+        //    ds1.WhichConsole = request.WhichConsole;
+        //    ds1.UserId = request.UserId;
+        //    var res1 = myService.Post(ds1);
+        //    var refid1 = res.RefId;
+        //}
 
-        public string CreateDsAndDv4Cards(CreateBotFormTableRequest request, DVColumnCollection Columns, string ColumnName)
-        {
-            var dsobj = new EbDataReader();
-            dsobj.Sql = "SELECT @ColumnName@ FROM @tbl WHERE formid = @id".Replace("@tbl", request.BotObj.TableName + "_lines").Replace("@ColumnName@", ColumnName);
-            var ds = new EbObject_Create_New_ObjectRequest();
-            ds.Name = request.BotObj.Name + "_datasource4Card";
-            ds.Description = "desc";
-            ds.Json = EbSerializers.Json_Serialize(dsobj);
-            ds.Status = ObjectLifeCycleStatus.Live;
-            ds.Relations = "";
-            ds.IsSave = false;
-            ds.Tags = "";
-            ds.Apps = request.Apps;
-            ds.SolnId = request.SolnId;
-            ds.WhichConsole = request.WhichConsole;
-            ds.UserId = request.UserId;
-            var myService = base.ResolveService<EbObjectService>();
-            var res = myService.Post(ds);
-            var refid = res.RefId;
+        //public string CreateDsAndDv4Cards(CreateBotFormTableRequest request, DVColumnCollection Columns, string ColumnName)
+        //{
+        //    var dsobj = new EbDataReader();
+        //    dsobj.Sql = "SELECT @ColumnName@ FROM @tbl WHERE formid = @id".Replace("@tbl", request.BotObj.TableName + "_lines").Replace("@ColumnName@", ColumnName);
+        //    var ds = new EbObject_Create_New_ObjectRequest();
+        //    ds.Name = request.BotObj.Name + "_datasource4Card";
+        //    ds.Description = "desc";
+        //    ds.Json = EbSerializers.Json_Serialize(dsobj);
+        //    ds.Status = ObjectLifeCycleStatus.Live;
+        //    ds.Relations = "";
+        //    ds.IsSave = false;
+        //    ds.Tags = "";
+        //    ds.Apps = request.Apps;
+        //    ds.SolnId = request.SolnId;
+        //    ds.WhichConsole = request.WhichConsole;
+        //    ds.UserId = request.UserId;
+        //    var myService = base.ResolveService<EbObjectService>();
+        //    var res = myService.Post(ds);
+        //    var refid = res.RefId;
 
-            var dvobj = new EbTableVisualization();
-            dvobj.DataSourceRefId = refid;
-            dvobj.Columns = Columns;
-            dvobj.DSColumns = Columns;
-            var ds1 = new EbObject_Create_New_ObjectRequest();
-            ds1.Name = request.BotObj.Name + "_response4Card";
-            ds1.Description = "desc";
-            ds1.Json = EbSerializers.Json_Serialize(dvobj);
-            ds1.Status = ObjectLifeCycleStatus.Live;
-            ds1.Relations = refid;
-            ds1.IsSave = false;
-            ds1.Tags = "";
-            ds1.Apps = request.Apps;
-            ds1.SolnId = request.SolnId;
-            ds1.WhichConsole = request.WhichConsole;
-            ds1.UserId = request.UserId;
-            var res1 = myService.Post(ds1);
-            //var refid1 = res1.RefId;	
+        //    var dvobj = new EbTableVisualization();
+        //    dvobj.DataSourceRefId = refid;
+        //    dvobj.Columns = Columns;
+        //    dvobj.DSColumns = Columns;
+        //    var ds1 = new EbObject_Create_New_ObjectRequest();
+        //    ds1.Name = request.BotObj.Name + "_response4Card";
+        //    ds1.Description = "desc";
+        //    ds1.Json = EbSerializers.Json_Serialize(dvobj);
+        //    ds1.Status = ObjectLifeCycleStatus.Live;
+        //    ds1.Relations = refid;
+        //    ds1.IsSave = false;
+        //    ds1.Tags = "";
+        //    ds1.Apps = request.Apps;
+        //    ds1.SolnId = request.SolnId;
+        //    ds1.WhichConsole = request.WhichConsole;
+        //    ds1.UserId = request.UserId;
+        //    var res1 = myService.Post(ds1);
+        //    //var refid1 = res1.RefId;	
 
-            return res1.RefId;
-        }
+        //    return res1.RefId;
+        //}
 
         public object Any(InsertIntoBotFormTableRequest request)
         {
