@@ -1525,14 +1525,7 @@ namespace ExpressBase.ServiceStack
 
                                     else if ((col as DVStringColumn).RenderAs == StringRenderType.Tag)
                                         _formattedData = GetTaggedData((col as DVStringColumn), _formattedData);
-                                    else if ((col as DVStringColumn).RenderAs == StringRenderType.LinkFromColumn)
-                                    {
-                                        if (_formattedData.ToString() == string.Empty)
-                                            _formattedData = "...";
-                                        _formattedData = "<a href='#' class ='tablelinkfromcolumn" + this.TableId + "' data-link='" + row[col.RefidColumn.Data] + "' data-id='" + row[col.IdColumn.Data] + "'>" + _formattedData + "</a>";
-                                    }
-                                    else if ((col as DVStringColumn).RenderAs == StringRenderType.Link && col.LinkType == LinkTypeEnum.Tab)
-                                        _formattedData = "<a href='../leadmanagement/" + row[0] + "' target='_blank'>" + _formattedData + "</a>";
+                                   
 
                                     if ((col as DVStringColumn).AllowMultilineText)
                                     {
@@ -1588,7 +1581,19 @@ namespace ExpressBase.ServiceStack
                                         _formattedData = "<a  href= '#' oncontextmenu= 'return false' class ='tablelink" + this.TableId + "' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-column='" + col.Name + "' data-popup='true' data-data='" + ActualFormatteddata + "'>" + _formattedData + "</a>";
                                 }
                             }
-                            
+
+                            if (col is DVStringColumn && col.RenderType == EbDbTypes.String && (col as DVStringColumn).RenderAs == StringRenderType.LinkFromColumn && (_isexcel == false))
+                            {
+                                if (_formattedData.ToString() == string.Empty)
+                                    _formattedData = "...";
+                                _formattedData = "<a href='#' class ='tablelinkfromcolumn" + this.TableId + "' data-link='" + row[col.RefidColumn.Data] + "' data-id='" + row[col.IdColumn.Data] + "'>" + _formattedData + "</a>";
+                            }
+
+                            if (col is DVStringColumn && col.RenderType == EbDbTypes.String && (col as DVStringColumn).RenderAs == StringRenderType.Link && col.LinkType == LinkTypeEnum.Tab && (_isexcel == false))/////////////////
+                            {
+                                _formattedData = "<a href='../leadmanagement/" + row[0] + "' target='_blank'>" + _formattedData + "</a>";
+                            }
+
                             if (bObfuscute && (_isexcel == false))
                             {
                                 if (col.HideDataRowMoreThan > 0 && col.HideDataRowMoreThan < count)
