@@ -2521,7 +2521,7 @@ namespace ExpressBase.ServiceStack.Services
                         if (split1.Length >= 3)
                             str = split1[2] + split[1] + "$function$";
                         else
-                            Console.WriteLine("Error : Cannot split " + filename + " file and content is" + split1);
+                            Console.WriteLine("Error : Cannot split " + filename + " file and content is" + split[0].ToString().Replace("\n","#").Replace("\r","*").Replace("\t","@"));
                         str = str.Replace(" ", "").Replace("\r", "").Replace("\t", "").Replace("\n", "").Replace("'plpgsql'", "plpgsqlAS$function$").Replace("plpgsqlAS$function$AS", "plpgsqlAS$function$");
                     }
                     else if (split.Length == 1)
@@ -2679,5 +2679,6 @@ namespace ExpressBase.ServiceStack.Services
             str = str.Replace(matches[0].ToString(), "").Replace("`", "");
             return str;
         }
+        
     }
 }
