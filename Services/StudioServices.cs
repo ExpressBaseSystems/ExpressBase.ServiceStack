@@ -810,7 +810,7 @@ namespace ExpressBase.ServiceStack
                     {
                         ChatbotServices myService = base.ResolveService<ChatbotServices>();
                         myService.EbConnectionFactory = this.EbConnectionFactory;
-                        CreateBotFormTableResponse res = (CreateBotFormTableResponse)myService.Any(new CreateBotFormTableRequest() { BotObj = obj, Apps = request.Apps, SolnId = request.SolnId, UserId = request.UserId, WhichConsole = request.WhichConsole });
+                        CreateBotFormTableResponse res = (CreateBotFormTableResponse)myService.Any(new CreateBotFormTableRequest() { BotObj = obj as EbBotForm, Apps = request.Apps, SolnId = request.SolnId, UserId = request.UserId, WhichConsole = request.WhichConsole });
                     }
                     else if (obj is EbWebForm)
                     {
@@ -914,7 +914,7 @@ namespace ExpressBase.ServiceStack
                     {
                         ChatbotServices myService = base.ResolveService<ChatbotServices>();
                         myService.EbConnectionFactory = this.EbConnectionFactory;
-                        CreateBotFormTableResponse res = (CreateBotFormTableResponse)myService.Any(new CreateBotFormTableRequest() { BotObj = obj, Apps = request.Apps, SolnId = request.SolnId, UserId = request.UserId, WhichConsole = request.WhichConsole });
+                        CreateBotFormTableResponse res = (CreateBotFormTableResponse)myService.Any(new CreateBotFormTableRequest() { BotObj = obj as EbBotForm, Apps = request.Apps, SolnId = request.SolnId, UserId = request.UserId, WhichConsole = request.WhichConsole });
                     }
                     else if (obj is EbWebForm)
                     {
