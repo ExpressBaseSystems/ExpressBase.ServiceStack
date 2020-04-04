@@ -1256,7 +1256,15 @@ namespace ExpressBase.ServiceStack.Services
             try
             {
                 string vendor = _ebconfactoryDatadb.Vendor.ToString();
-                string str = @"
+                string str = null;
+                if (vendor == "MYSQL")
+                    str = String.Format(@"
+                        SELECT DISTINCT table_name
+                        FROM information_schema.tables
+	                    WHERE table_name LIKE 'eb_%'
+                        AND TABLE_SCHEMA = '{0}'", _ebconfactoryDatadb.DBName);
+                else 
+                    str = @"
                         SELECT DISTINCT table_name
                         FROM information_schema.tables
 	                    WHERE table_name LIKE 'eb_%'";
@@ -1285,7 +1293,15 @@ namespace ExpressBase.ServiceStack.Services
             try
             {
                 string vendor = _ebconfactoryDatadb.Vendor.ToString();
-                string str = String.Format(@"
+                string str = null;
+                if (vendor == "MYSQL")
+                    str = String.Format(@"
+                        SELECT DISTINCT table_name
+                        FROM information_schema.tables
+	                    WHERE table_name ='{0}'
+                        AND TABLE_SCHEMA = '{1}'", filename, _ebconfactoryDatadb.DBName);
+                else
+                    str = String.Format(@"
                         SELECT DISTINCT table_name
                         FROM information_schema.tables
 	                    WHERE table_name = '{0}'", filename);
@@ -1992,7 +2008,7 @@ namespace ExpressBase.ServiceStack.Services
                     }
                     else
                     {
-                        if (!int.TryParse(infra_column_default, out int x) && infra_column_default != "'F'::\"char\"")
+                        if (!int.TryParse(infra_column_default, out int x) && infra_column_default != "'F'::\"char\"" && infra_column_default != "'F'::bpchar")
                             infra_column_default = "'" + infra_column_default + "'";
                         if (vendor == "PGSQL")
                             changes = changes + string.Format(@"
