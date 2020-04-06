@@ -123,6 +123,7 @@ namespace ExpressBase.ServiceStack.Services
 
                     EbWebForm webform = new EbWebForm
                     {
+                        EbSid = Guid.NewGuid().ToString("N"),
                         Name = request.MobilePage.Name + "_autogen_webform",
                         DisplayName = request.MobilePage.DisplayName + " AutoGen Webform",
                         TableName = mobileform.TableName,
@@ -437,12 +438,10 @@ namespace ExpressBase.ServiceStack.Services
             {
                 sql = sql.Trim().TrimEnd(CharConstants.SEMI_COLON);
 
-                wraped = $"SELECT COUNT(*) FROM ({sql}) AS COUNT_STAR;";
-
                 if (is_powerselect && parameters.Any())
                 {
                     var p = parameters[0];
-                    wraped += $"SELECT * FROM ({sql}) AS PWWRP WHERE PWWRP.{p.Name} LIKE '%{p.Value}%'";
+                    wraped += $"SELECT * FROM ({sql}) AS PWWRP WHERE LOWER(PWWRP.{p.Name}) LIKE '%{p.Value.ToLower()}%'";
                 }
                 else
                 {
@@ -464,7 +463,9 @@ namespace ExpressBase.ServiceStack.Services
                 }
 
                 if (has_limit)
-                    wraped += $" LIMIT :limit OFFSET :offset;";
+                    wraped += $" LIMIT :limit OFFSET :offset";
+
+                wraped = $"SELECT COUNT(*) FROM ({wraped}) AS COUNT_STAR;" + wraped;
 
                 if (!wraped.EndsWith(CharConstants.SEMI_COLON))
                     wraped += CharConstants.SEMI_COLON;
@@ -474,6 +475,52 @@ namespace ExpressBase.ServiceStack.Services
                 Console.WriteLine(ex.Message);
             }
             return wraped;
+        }
+
+        public GetMobileFormDataResponse Get(GetMobileFormDataRequest request)
+        {
+            GetMobileFormDataResponse response = new GetMobileFormDataResponse();
+            try
+            {
+                EbMobilePage mPage = this.Redis.Get<EbMobilePage>(request.MobilePageRefId);
+                if (mPage == null)
+                {
+                    var obj = this.Gateway.Send<EbObjectParticularVersionResponse>(new EbObjectParticularVersionRequest
+                    {
+                        RefId = request.MobilePageRefId
+                    });
+                    mPage = EbSerializers.Json_Deserialize<EbMobilePage>(obj.Data[0].Json);
+                }
+
+                EbMobileForm formContainer = mPage.Container as EbMobileForm;
+                if (!string.IsNullOrEmpty(formContainer.WebFormRefId))
+                {
+                    if (request.RowId != 0)
+                    {
+                        GetRowDataResponse row_resp = this.Gateway.Send<GetRowDataResponse>(new GetRowDataRequest
+                        {
+                            SolnId = request.SolnId,
+                            UserId = request.UserId,
+                            UserAuthId = request.UserAuthId,
+                            RefId = formContainer.WebFormRefId,
+                            RowId = request.RowId,
+                            CurrentLoc = request.LocId,
+                        });
+
+                        if (!string.IsNullOrEmpty(row_resp.FormDataWrap))
+                        {
+                            WebformDataWrapper wraper = JsonConvert.DeserializeObject<WebformDataWrapper>(row_resp.FormDataWrap);
+                            response.Data = wraper.FormData;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                Console.WriteLine(ex.StackTrace);
+            }
+            return response;
         }
 
         public GetMyActionsResponse Get(GetMyActionsRequest request)

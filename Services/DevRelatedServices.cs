@@ -102,56 +102,56 @@ namespace ExpressBase.ServiceStack
             try
             {
                 string sql = EbConnectionFactory.ObjectsDB.EB_GET_OBJECTS_BY_APP_ID;
-
                 DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("appid", EbDbTypes.Int32, request.Id) };
-
                 var dt = this.EbConnectionFactory.ObjectsDB.DoQueries(sql, parameters);
-
-                int appType = Convert.ToInt32(dt.Tables[0].Rows[0][3]);
 
                 resp.AppInfo = new AppWrapper
                 {
                     Id = request.Id,
-                    Name = dt.Tables[0].Rows[0][0].ToString(),
-                    Description = dt.Tables[0].Rows[0][1].ToString(),
-                    Icon = dt.Tables[0].Rows[0][2].ToString(),
-                    AppType = appType,
-                    AppSettings = dt.Tables[0].Rows[0][4].ToString(),
+                    Name = dt.Tables[0].Rows[0]["applicationname"].ToString(),
+                    Description = dt.Tables[0].Rows[0]["description"].ToString(),
+                    Icon = dt.Tables[0].Rows[0]["app_icon"].ToString(),
+                    AppType = (int)request.AppType,
+                    AppSettings = dt.Tables[0].Rows[0]["app_settings"].ToString(),
                 };
-                resp.ObjectsCount = dt.Tables[1].Rows.Count;
 
                 Dictionary<int, TypeWrap> _types = new Dictionary<int, TypeWrap>();
+                List<int> objids = new List<int>();
+
                 foreach (EbDataRow dr in dt.Tables[1].Rows)
                 {
-                    var typeId = Convert.ToInt32(dr[1]);
-
-                    var ___otyp = (EbObjectType)Convert.ToInt32(dr[1]);
+                    int typeId = Convert.ToInt32(dr["obj_type"]);
+                    EbObjectType ___otyp = (EbObjectType)typeId;
 
                     if (___otyp.IsAvailableIn(request.AppType))
                     {
                         if (!_types.Keys.Contains<int>(typeId))
                             _types.Add(typeId, new TypeWrap { Objects = new List<ObjWrap>() });
 
+                        int id = (dr["id"] != null) ? Convert.ToInt32(dr["id"]) : 0;
+                        if (objids.Contains(id)) continue;
+
                         _types[typeId].Objects.Add(new ObjWrap
                         {
-                            Id = (dr[0] != null) ? Convert.ToInt32(dr[0]) : 0,
-                            EbObjectType = (dr[1] != null) ? Convert.ToInt32(dr[1]) : 0,
-                            ObjName = dr[2].ToString(),
-                            Description = dr[3].ToString(),
+                            Id = id,
+                            EbObjectType = typeId,
+                            ObjName = dr["obj_name"].ToString(),
+                            Description = dr["obj_desc"].ToString(),
                             EbType = ___otyp.ToString(),
-                            DisplayName = dr[4].ToString(),
-                            Refid = dr[5].ToString(),
-                            IsCommitted = (dr[6].ToString() == "F") ? true : false
+                            DisplayName = dr["display_name"].ToString(),
+                            Refid = dr["refid"].ToString(),
+                            IsCommitted = (dr["working_mode"].ToString() == "F") ? true : false
                         });
+                        objids.Add(id);
                     }
                 }
+                resp.ObjectsCount = objids.Count;
                 resp.Data = _types;
             }
             catch (Exception e)
             {
                 Console.WriteLine("Exception" + e.Message);
             }
-
             return resp;
         }
 
@@ -364,7 +364,7 @@ namespace ExpressBase.ServiceStack
            this.InfraConnectionFactory.DataDB.GetNewParameter("solutionId", EbDbTypes.String, request.SolnId) };
                 int c = this.InfraConnectionFactory.DataDB.DoNonQuery(query, parameters);
                 base.ResolveService<TenantUserServices>().Post(new UpdateSolutionObjectRequest { SolnId = request.SolnId, UserId = request.UserId });
-                response.Message ="Saved Successfully";
+                response.Message = "Saved Successfully";
             }
             catch (Exception e)
             {
