@@ -15,6 +15,7 @@ using System.Data.Common;
 using ExpressBase.Common.Application;
 using Newtonsoft.Json;
 using ServiceStack;
+using ExpressBase.Objects.Helpers;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -122,6 +123,7 @@ namespace ExpressBase.ServiceStack.Services
 
                     EbWebForm webform = new EbWebForm
                     {
+                        EbSid = Guid.NewGuid().ToString("N"),
                         Name = request.MobilePage.Name + "_autogen_webform",
                         DisplayName = request.MobilePage.DisplayName + " AutoGen Webform",
                         TableName = mobileform.TableName,
@@ -409,14 +411,15 @@ namespace ExpressBase.ServiceStack.Services
 
                 List<DbParameter> parameters = request.Params.ParamsToDbParameters(this.EbConnectionFactory);
 
+                parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_currentuser_id", EbDbTypes.Int32, request.UserId));
+
                 if (request.Limit != 0)
                 {
-                    parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@limit", EbDbTypes.Int32, request.Limit));
-                    parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("@offset", EbDbTypes.Int32, request.Offset));
+                    parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("limit", EbDbTypes.Int32, request.Limit));
+                    parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("offset", EbDbTypes.Int32, request.Offset));
                 }
-                Param p = request.Params.Any() ? request.Params[0] : null;
 
-                string wraped = WrapQuery(_ds.Sql, request.Limit > 0, request.IsPowerSelect, p);
+                string wraped = WrapQuery(_ds.Sql, request.Limit > 0, request.IsPowerSelect, request.Params);
 
                 resp.Data = this.EbConnectionFactory.DataDB.DoQueries(wraped, parameters.ToArray());
             }
@@ -428,24 +431,96 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
-        private string WrapQuery(string sql, bool has_limit, bool is_powerselect, Param p)
+        private string WrapQuery(string sql, bool has_limit, bool is_powerselect, List<Param> parameters)
         {
-            sql = sql.Trim().TrimEnd(CharConstants.SEMI_COLON);
+            string wraped = string.Empty;
+            try
+            {
+                sql = sql.Trim().TrimEnd(CharConstants.SEMI_COLON);
 
-            string wraped = $"SELECT COUNT(*) FROM ({sql}) AS COUNT_STAR;";
+                if (is_powerselect && parameters.Any())
+                {
+                    var p = parameters[0];
+                    wraped += $"SELECT * FROM ({sql}) AS PWWRP WHERE LOWER(PWWRP.{p.Name}) LIKE '%{p.Value.ToLower()}%'";
+                }
+                else
+                {
+                    List<Param> sqlP = SqlHelper.GetSqlParams(sql, (int)EbObjectTypes.DataReader);
+                    List<string> filterList = new List<string>();
 
-            if (is_powerselect && p != null)
-                wraped += $"SELECT * FROM ({sql}) AS PWWRP WHERE PWWRP.{p.Name} LIKE '%{p.Value}%'";
-            else
-                wraped += $"SELECT * FROM ({sql}) AS PWWRP";
+                    wraped += $"SELECT * FROM ({sql}) AS PWWRP ";
+                    foreach (Param param in parameters)
+                    {
+                        var p = sqlP.Find(item => item.Name == param.Name);
+                        if (p == null)
+                            filterList.Add($"PWWRP.{param.Name} = :{param.Name}");
+                    }
 
-            if (has_limit)
-                wraped += $" LIMIT @limit OFFSET @offset;";
+                    if (filterList.Any())
+                        wraped += " WHERE ";
 
-            if (!wraped.EndsWith(CharConstants.SEMI_COLON))
-                wraped += CharConstants.SEMI_COLON;
+                    wraped += filterList.Join(" AND ");
+                }
 
+                if (has_limit)
+                    wraped += $" LIMIT :limit OFFSET :offset";
+
+                wraped = $"SELECT COUNT(*) FROM ({wraped}) AS COUNT_STAR;" + wraped;
+
+                if (!wraped.EndsWith(CharConstants.SEMI_COLON))
+                    wraped += CharConstants.SEMI_COLON;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
             return wraped;
+        }
+
+        public GetMobileFormDataResponse Get(GetMobileFormDataRequest request)
+        {
+            GetMobileFormDataResponse response = new GetMobileFormDataResponse();
+            try
+            {
+                EbMobilePage mPage = this.Redis.Get<EbMobilePage>(request.MobilePageRefId);
+                if (mPage == null)
+                {
+                    var obj = this.Gateway.Send<EbObjectParticularVersionResponse>(new EbObjectParticularVersionRequest
+                    {
+                        RefId = request.MobilePageRefId
+                    });
+                    mPage = EbSerializers.Json_Deserialize<EbMobilePage>(obj.Data[0].Json);
+                }
+
+                EbMobileForm formContainer = mPage.Container as EbMobileForm;
+                if (!string.IsNullOrEmpty(formContainer.WebFormRefId))
+                {
+                    if (request.RowId != 0)
+                    {
+                        GetRowDataResponse row_resp = this.Gateway.Send<GetRowDataResponse>(new GetRowDataRequest
+                        {
+                            SolnId = request.SolnId,
+                            UserId = request.UserId,
+                            UserAuthId = request.UserAuthId,
+                            RefId = formContainer.WebFormRefId,
+                            RowId = request.RowId,
+                            CurrentLoc = request.LocId,
+                        });
+
+                        if (!string.IsNullOrEmpty(row_resp.FormDataWrap))
+                        {
+                            WebformDataWrapper wraper = JsonConvert.DeserializeObject<WebformDataWrapper>(row_resp.FormDataWrap);
+                            response.Data = wraper.FormData;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                Console.WriteLine(ex.StackTrace);
+            }
+            return response;
         }
 
         public GetMyActionsResponse Get(GetMyActionsRequest request)

@@ -64,6 +64,8 @@ namespace ExpressBase.ServiceStack
 
         List<FileMetaInfo> _ImageList = new List<FileMetaInfo>();
 
+        EbDataSet _approvaldata = null;
+
         //[CompressResponse]
         //public DataSourceDataResponse Any(DataVisDataRequest request)
         //{
@@ -694,7 +696,9 @@ namespace ExpressBase.ServiceStack
         {
             foreach (DVBaseColumn col in _dv.Columns)
             {
-                if (col.IsCustomColumn)
+                if (col is DVStringColumn && _dv.AutoGen && col.Name == "eb_action")
+                    _dataset.Tables[0].Columns.Add(new EbDataColumn { ColumnIndex = col.Data, ColumnName = col.Name, Type = col.Type });
+                else if (col.IsCustomColumn)
                     _dataset.Tables[0].Columns.Add(new EbDataColumn { ColumnIndex = col.Data, ColumnName = col.Name, Type = col.Type });
             }
 
@@ -860,7 +864,7 @@ namespace ExpressBase.ServiceStack
                 this.PreCustomColumDoCalc(ref _dataset, Parameters, _dv, globals);
                 this.GetDictonaries4Columns(_dv);
                 EbDataTable _formattedTable = _dataset.Tables[0].GetEmptyTable();
-                if (_dv.AutoGen || isSQljob)
+                if (isSQljob)
                     _formattedTable.Columns.Add(_formattedTable.NewDataColumn(_dv.Columns.Count - 1, "action", EbDbTypes.String));
                 _formattedTable.Columns.Add(_formattedTable.NewDataColumn(_dv.Columns.Count, "serial", EbDbTypes.Int32));
                 Dictionary<int, List<object>> Summary = new Dictionary<int, List<object>>();
@@ -887,6 +891,9 @@ namespace ExpressBase.ServiceStack
                 RowColletion rows = _dataset.Tables[0].Rows;
                 if ((_dv as EbTableVisualization) != null)
                 {
+                    List<DVBaseColumn> ApprovalColumns = GetApprovalColumn(_dv as EbTableVisualization);
+                    if(ApprovalColumns.Count > 0)
+                        GetApprovalData(_user, ApprovalColumns);
                     if ((_dv as EbTableVisualization).RowGroupCollection.Count > 0 && (_dv as EbTableVisualization).CurrentRowGroup.RowGrouping.Count > 0 && !(_dv as EbTableVisualization).DisableRowGrouping)
                     {
                         isRowgrouping = true;
@@ -898,6 +905,8 @@ namespace ExpressBase.ServiceStack
                             TotalLevels = (_dv as EbTableVisualization).CurrentRowGroup.RowGrouping.Count;
                             IsMultiLevelRowGrouping = true;
                         }
+                        else// type change in old forms (rowgroup parent)
+                            TotalLevels = 1;
                     }
                     string sFileName = _dv.DisplayName + ".xlsx";
 
@@ -961,6 +970,7 @@ namespace ExpressBase.ServiceStack
             return null;
         }
 
+        
         public PrePrcessorReturn PreProcessingCalendarView(ref EbDataSet _dataset, List<Param> Parameters, ref EbDataVisualization _dv, User _user)
         {
             try
@@ -1473,7 +1483,7 @@ namespace ExpressBase.ServiceStack
                         {
                             bool AllowLinkifNoData = true;
                             var cults = col.GetColumnCultureInfo(_user_culture);
-                            object _unformattedData = (_dv.AutoGen && col.Name == "eb_action") ? "<i class='fa fa-edit'></i>" : row[col.Data];
+                            object _unformattedData =  row[col.Data];//(_dv.AutoGen && col.Name == "eb_action") ? "<i class='fa fa-edit'></i>" :
                             object _formattedData = IntermediateDic[col.Data];
                             object ActualFormatteddata = IntermediateDic[col.Data];
 
@@ -1488,38 +1498,42 @@ namespace ExpressBase.ServiceStack
                             }
                             else if (col.RenderType == EbDbTypes.String && (_isexcel == false))
                             {
-                                if ((col as DVStringColumn).RenderAs == StringRenderType.Marker)
-                                    _formattedData = "<a href = '#' class ='columnMarker" + this.TableId + "' data-latlong='" + _unformattedData + "'><i class='fa fa-map-marker fa-2x' style='color:red;'></i></a>";
-
-                                else if ((col as DVStringColumn).RenderAs == StringRenderType.Image)
+                                 if (col is DVStringColumn)
                                 {
-                                    var _height = (col as DVStringColumn).ImageHeight == 0 ? "auto" : (col as DVStringColumn).ImageHeight + "px";
-                                    var _width = (col as DVStringColumn).ImageWidth == 0 ? "auto" : (col as DVStringColumn).ImageWidth + "px";
-                                    var _quality = (col as DVStringColumn).ImageQuality.ToString().ToLower();
-                                    if (_unformattedData.ToString() != "")
+                                    if ((col as DVStringColumn).RenderAs == StringRenderType.Marker)
+                                        _formattedData = "<a href = '#' class ='columnMarker" + this.TableId + "' data-latlong='" + _unformattedData + "'><i class='fa fa-map-marker fa-2x' style='color:red;'></i></a>";
+
+                                    else if ((col as DVStringColumn).RenderAs == StringRenderType.Image)
                                     {
-                                        _formattedData = $"<img class='img-thumbnail columnimage' src='/images/{_quality}/{_unformattedData}.jpg' style='height:{_height};width:{_width};'/>";
-                                        _ImageList.Add(new FileMetaInfo
+                                        var _height = (col as DVStringColumn).ImageHeight == 0 ? "auto" : (col as DVStringColumn).ImageHeight + "px";
+                                        var _width = (col as DVStringColumn).ImageWidth == 0 ? "auto" : (col as DVStringColumn).ImageWidth + "px";
+                                        var _quality = (col as DVStringColumn).ImageQuality.ToString().ToLower();
+                                        if (_unformattedData.ToString() != "")
                                         {
-                                            FileName = string.Empty,
-                                            FileRefId = Convert.ToInt32(_unformattedData),
-                                            FileCategory = Common.Enums.EbFileCategory.Images
-                                        });
+                                            _formattedData = $"<img class='img-thumbnail columnimage' src='/images/{_quality}/{_unformattedData}.jpg' style='height:{_height};width:{_width};'/>";
+                                            _ImageList.Add(new FileMetaInfo
+                                            {
+                                                FileName = string.Empty,
+                                                FileRefId = Convert.ToInt32(_unformattedData),
+                                                FileCategory = Common.Enums.EbFileCategory.Images
+                                            });
+                                        }
+                                        else
+                                            _formattedData = $"<img class='img-thumbnail' src='/images/image.png' style='height:{_height};width:{_width};'/>";
+
                                     }
-                                    else
-                                        _formattedData = $"<img class='img-thumbnail' src='/images/image.png' style='height:{_height};width:{_width};'/>";
 
-                                }
+                                    else if ((col as DVStringColumn).RenderAs == StringRenderType.Tag)
+                                        _formattedData = GetTaggedData((col as DVStringColumn), _formattedData);
+                                   
 
-                                else if ((col as DVStringColumn).RenderAs == StringRenderType.Tag)
-                                    _formattedData = GetTaggedData((col as DVStringColumn), _formattedData);
-                                
-                                if ((col as DVStringColumn).AllowMultilineText)
-                                {
-                                    if ((col as DVStringColumn).NoOfCharactersPerLine > 0 && (col as DVStringColumn).NoOfLines > 0)
+                                    if ((col as DVStringColumn).AllowMultilineText)
                                     {
-                                        if (_formattedData.ToString().Length > (col as DVStringColumn).NoOfCharactersPerLine)
-                                            _formattedData = GetMultilineText(_formattedData.ToString(), (col as DVStringColumn).NoOfCharactersPerLine, (col as DVStringColumn).NoOfLines);
+                                        if ((col as DVStringColumn).NoOfCharactersPerLine > 0 && (col as DVStringColumn).NoOfLines > 0)
+                                        {
+                                            if (_formattedData.ToString().Length > (col as DVStringColumn).NoOfCharactersPerLine)
+                                                _formattedData = GetMultilineText(_formattedData.ToString(), (col as DVStringColumn).NoOfCharactersPerLine, (col as DVStringColumn).NoOfLines);
+                                        }
                                     }
                                 }
                             }
@@ -1568,14 +1582,14 @@ namespace ExpressBase.ServiceStack
                                 }
                             }
 
-                            if (col.RenderType == EbDbTypes.String && (col as DVStringColumn).RenderAs == StringRenderType.LinkFromColumn && (_isexcel == false))
+                            if (col is DVStringColumn && col.RenderType == EbDbTypes.String && (col as DVStringColumn).RenderAs == StringRenderType.LinkFromColumn && (_isexcel == false))
                             {
                                 if (_formattedData.ToString() == string.Empty)
                                     _formattedData = "...";
                                 _formattedData = "<a href='#' class ='tablelinkfromcolumn" + this.TableId + "' data-link='" + row[col.RefidColumn.Data] + "' data-id='" + row[col.IdColumn.Data] + "'>" + _formattedData + "</a>";
                             }
 
-                            if (col.RenderType == EbDbTypes.String && (col as DVStringColumn).RenderAs == StringRenderType.Link && col.LinkType == LinkTypeEnum.Tab && (_isexcel == false))/////////////////
+                            if (col is DVStringColumn && col.RenderType == EbDbTypes.String && (col as DVStringColumn).RenderAs == StringRenderType.Link && col.LinkType == LinkTypeEnum.Tab && (_isexcel == false))/////////////////
                             {
                                 _formattedData = "<a href='../leadmanagement/" + row[0] + "' target='_blank'>" + _formattedData + "</a>";
                             }
@@ -1589,7 +1603,7 @@ namespace ExpressBase.ServiceStack
                             }
 
                             this.conditinallyformatColumn(col, ref _formattedData, _unformattedData, row, ref globals);
-
+                            
                             _formattedTable.Rows[i][col.Data] = _formattedData;
                             if (_isexcel)
                                 worksheet.Cells[i + 2, j + 1].Value = _formattedData;
@@ -1688,17 +1702,26 @@ namespace ExpressBase.ServiceStack
                     {
                         if (col is DVButtonColumn)
                             ProcessButtoncolumn(row, globals, col);
+                        else if (col is DVApprovalColumn)
+                        {
+                            ProcessApprovalcolumn(col, row);
+                        }
+                        else if(col is DVActionColumn)
+                            row[col.Data] = "<i class='fa fa-edit'></i>";
                         else
                             CustomColumDoCalc4Row(row, _dv, globals, col);
                     }
+                    else if (col is DVStringColumn && _dv.AutoGen && col.Name == "eb_action")
+                        row[col.Data] = "<i class='fa fa-edit'></i>";
                     var cults = col.GetColumnCultureInfo(_user_culture);
-                    object _unformattedData = (_dv.AutoGen && col.Name == "eb_action") ? "<i class='fa fa-edit'></i>" : row[col.Data];
+                    object _unformattedData =  row[col.Data];
                     object _formattedData = _unformattedData;
 
                     if (col.RenderType == EbDbTypes.Date || col.RenderType == EbDbTypes.DateTime)
                     {
                         DateTimeformat(_unformattedData, ref _formattedData, ref row, col, cults, _user);
                     }
+
                     else if (col.RenderType == EbDbTypes.Decimal || col.RenderType == EbDbTypes.Int32 || col.RenderType == EbDbTypes.Int64)
                     {
                         if (col.Name != "id")
@@ -1712,6 +1735,7 @@ namespace ExpressBase.ServiceStack
                                 _formattedData = Convert.ToDecimal(_unformattedData).ToString("N", cults.NumberFormat);
                         }
                     }
+
                     else if (col.RenderType == EbDbTypes.Boolean || col.RenderType == EbDbTypes.BooleanOriginal)
                     {
                         if (col.Type == EbDbTypes.Decimal || col.Type == EbDbTypes.Int32 || col.Type == EbDbTypes.Int64)
@@ -1719,6 +1743,7 @@ namespace ExpressBase.ServiceStack
                         else if (col.Type == EbDbTypes.String)
                             _formattedData = _unformattedData.ToString();
                     }
+
                     if (col.Name == "eb_created_by" || col.Name == "eb_lastmodified_by" || col.Name == "eb_loc_id" || col.Name == "eb_createdby")
                     {
                         ModifyEbColumns(col, ref _formattedData, _unformattedData);
@@ -1740,6 +1765,158 @@ namespace ExpressBase.ServiceStack
                     this._Responsestatus.Message = e.Message;
                 }
             }
+        }
+               
+        private List<DVBaseColumn> GetApprovalColumn(EbTableVisualization ebTableVisualization)
+        {
+            return ebTableVisualization.Columns.FindAll(e => e is DVApprovalColumn);
+        }
+
+        private void GetApprovalData(User _user, List<DVBaseColumn> cols)
+        {
+            try
+            {
+                foreach (DVBaseColumn _col in cols)
+                {
+                    DVApprovalColumn col = _col as DVApprovalColumn;
+                    var _roles = string.Join(",", _user.RoleIds.ToArray());
+                    var verid = col.FormRefid.Split("-")[4];
+                    string str = string.Format(@"
+                    SELECT Q1.*,act.action_name,act.action_unique_id
+                    FROM(
+	                    SELECT my.id, st.stage_name,st.id as stage_id,my.form_ref_id,my.form_data_id,st.stage_unique_id
+	                    FROM eb_my_actions my, eb_stages st
+	                    WHERE ('{0}' = any(string_to_array(user_ids, ',')) OR
+	 		                    (string_to_array(role_ids,',')) && (string_to_array('{1}',',')))
+                                AND my.form_ref_id ='{2}'
+			                    AND my.is_completed='F' AND my.eb_del='F'
+			                    AND st.id=my.eb_stages_id AND st.eb_del='F' 
+	                    ) Q1
+                    LEFT JOIN
+	                    eb_stage_actions act
+                    ON
+	                    Q1.stage_id=act.eb_stages_id AND act.eb_del='F' ;", _user.UserId, _roles, col.FormRefid);
+                    str += string.Format(@"
+	                    SELECT app.review_status,app.eb_src_id,my.id,st.stage_name
+	                    FROM eb_approval app,eb_my_actions my, eb_stages st
+	                    WHERE  app.eb_ver_id ='{0}' AND app.eb_del='F'
+			                    AND my.id=app.eb_my_actions_id
+			                    AND st.id = my.eb_stages_id;", verid);
+                    col.ApprovalData = this.EbConnectionFactory.DataDB.DoQueries(str);
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
+
+        }
+
+        public ParticularApprovalColumnResponse Any(ParticularApprovalColumnRequest request)
+        {
+            ParticularApprovalColumnResponse resp = new ParticularApprovalColumnResponse();
+            try
+            {
+                var _roles = string.Join(",", request.UserObj.RoleIds.ToArray());
+                var verid = request.RefId.Split("-")[4];
+                string str = string.Format(@"
+                    SELECT Q1.*,act.action_name,act.action_unique_id
+                    FROM(
+	                    SELECT my.id, st.stage_name,st.id as stage_id,my.form_ref_id,my.form_data_id,st.stage_unique_id
+	                    FROM eb_my_actions my, eb_stages st
+	                    WHERE ('{0}' = any(string_to_array(user_ids, ',')) OR
+	 		                    (string_to_array(role_ids,',')) && (string_to_array('{1}',',')))
+                                AND my.form_ref_id ='{2}' AND my.form_data_id ={3}
+			                    AND my.is_completed='F' AND my.eb_del='F'
+			                    AND st.id=my.eb_stages_id AND st.eb_del='F' 
+	                    ) Q1
+                    LEFT JOIN
+	                    eb_stage_actions act
+                    ON
+	                    Q1.stage_id=act.eb_stages_id AND act.eb_del='F' ;", request.UserObj.UserId, _roles, request.RefId, request.RowId);
+                str += string.Format(@"
+	                    SELECT app.review_status,app.eb_src_id,my.id,st.stage_name
+	                    FROM eb_approval app,eb_my_actions my, eb_stages st
+	                    WHERE  app.eb_ver_id ='{0}' AND app.eb_del='F' AND app.eb_src_id={1}
+			                    AND my.id=app.eb_my_actions_id
+			                    AND st.id = my.eb_stages_id;", verid, request.RowId);
+                _approvaldata = this.EbConnectionFactory.DataDB.DoQueries(str);
+                resp._data = ProcessParticularApprovalcolumn();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
+            return resp;
+        }
+
+        private string ProcessParticularApprovalcolumn()
+        {
+            string _formattedData = string.Empty;
+            var _rows = _approvaldata.Tables[0].Rows;
+            if (_rows.Count > 0)
+                _formattedData = GetDataforPermissedApprovalColumn(_rows);
+            else
+            {
+                _rows = _approvaldata.Tables[1].Rows;
+                if (_rows.Count > 0)
+                    _formattedData = GetDataforNotPermissedApprovalColumn(_rows);
+                else
+                    _formattedData = string.Empty;
+            }
+            return _formattedData;
+        }
+
+        private void ProcessApprovalcolumn(DVBaseColumn col, EbDataRow row)
+        {
+            string _formattedData = string.Empty;
+            if (col.ApprovalData != null)
+            {
+                var _rows = col.ApprovalData.Tables[0].Rows.FindAll(_row => Convert.ToInt32(_row["form_data_id"]) == Convert.ToInt32(row[(col as DVApprovalColumn).FormDataId[0].Data]));
+                if (_rows.Count > 0)
+                    _formattedData = GetDataforPermissedApprovalColumn(_rows);
+                else
+                {
+                    _rows = col.ApprovalData.Tables[1].Rows.FindAll(_row => Convert.ToInt32(_row["eb_src_id"]) == Convert.ToInt32(row[(col as DVApprovalColumn).FormDataId[0].Data]));
+                    if (_rows.Count > 0)
+                        _formattedData = GetDataforNotPermissedApprovalColumn(_rows);
+                    else
+                        _formattedData = string.Empty;
+                }
+            }
+            row[col.Data] = _formattedData;
+        }
+
+        private string GetDataforPermissedApprovalColumn(List<EbDataRow> rows)
+        {
+            string _data = "<div class='stage_actions_inner'><select class='selectpicker stage_actions'>";
+            string _stage = string.Empty;
+            ApprovalData _obj = new ApprovalData();
+            foreach (EbDataRow _ebdatarow in rows)
+            {
+                _obj.Action_unique_id = _ebdatarow["action_unique_id"].ToString();
+                _obj.Stage_unique_id = _ebdatarow["stage_unique_id"].ToString();
+                _obj.My_action_id = _ebdatarow["id"].ToString();
+                _obj.Form_ref_id = _ebdatarow["form_ref_id"].ToString();
+                _obj.Form_data_id = _ebdatarow["form_data_id"].ToString();
+                _stage = "<label>" + _ebdatarow["stage_name"].ToString() + "</label>";
+                _data += "<option value='" + Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(_obj))) + "'>" + _ebdatarow["action_name"].ToString() + "</option>";
+            }
+            _data += "</select>";
+            _data += "<button class='btn btn-action_execute'><i class='fa fa-play' aria-hidden='true'></i></button></div>";
+
+            return "<div class='stage_actions_cont'>"+_stage + _data+"</div>";
+        }
+
+        private string GetDataforNotPermissedApprovalColumn(List<EbDataRow> rows)
+        {
+            string _stage = "<div class='stage_actions_cont'>";
+            foreach (EbDataRow _ebdatarow in rows)
+            {
+                _stage += "<label>" + _ebdatarow["stage_name"].ToString() + "</label>";
+                _stage += "<div>" + _ebdatarow["review_status"].ToString() + "</div>";
+            }
+            return _stage+"</div>";
         }
 
         private object GetDataforPowerSelect(DVBaseColumn col, object _formattedData)
@@ -2540,5 +2717,14 @@ namespace ExpressBase.ServiceStack
                 this[key] = new DynamicObj();
             }
         }
+    }
+
+    public class ApprovalData
+    {
+        public string Action_unique_id;
+        public string Stage_unique_id;
+        public string My_action_id;
+        public string Form_data_id;
+        public string Form_ref_id;
     }
 }

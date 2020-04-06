@@ -810,7 +810,7 @@ namespace ExpressBase.ServiceStack
                     {
                         ChatbotServices myService = base.ResolveService<ChatbotServices>();
                         myService.EbConnectionFactory = this.EbConnectionFactory;
-                        CreateBotFormTableResponse res = (CreateBotFormTableResponse)myService.Any(new CreateBotFormTableRequest() { BotObj = obj, Apps = request.Apps, SolnId = request.SolnId, UserId = request.UserId, WhichConsole = request.WhichConsole });
+                        CreateBotFormTableResponse res = (CreateBotFormTableResponse)myService.Any(new CreateBotFormTableRequest() { BotObj = obj as EbBotForm, Apps = request.Apps, SolnId = request.SolnId, UserId = request.UserId, WhichConsole = request.WhichConsole });
                     }
                     else if (obj is EbWebForm)
                     {
@@ -914,7 +914,7 @@ namespace ExpressBase.ServiceStack
                     {
                         ChatbotServices myService = base.ResolveService<ChatbotServices>();
                         myService.EbConnectionFactory = this.EbConnectionFactory;
-                        CreateBotFormTableResponse res = (CreateBotFormTableResponse)myService.Any(new CreateBotFormTableRequest() { BotObj = obj, Apps = request.Apps, SolnId = request.SolnId, UserId = request.UserId, WhichConsole = request.WhichConsole });
+                        CreateBotFormTableResponse res = (CreateBotFormTableResponse)myService.Any(new CreateBotFormTableRequest() { BotObj = obj as EbBotForm, Apps = request.Apps, SolnId = request.SolnId, UserId = request.UserId, WhichConsole = request.WhichConsole });
                     }
                     else if (obj is EbWebForm)
                     {
@@ -1369,8 +1369,8 @@ namespace ExpressBase.ServiceStack
                 return EbObjectTypes.TableVisualization.IntCode;
             else if (obj is EbChartVisualization)
                 return EbObjectTypes.ChartVisualization.IntCode;
-            else if (obj is Objects.EbGoogleMap)
-                return EbObjectTypes.GoogleMap.IntCode;
+            else if (obj is Objects.EbMapView)
+                return EbObjectTypes.MapView.IntCode;
             else if (obj is EbWebForm)
                 return EbObjectTypes.WebForm.IntCode;
             else if (obj is EbUserControl)
@@ -1426,9 +1426,9 @@ namespace ExpressBase.ServiceStack
             {
                 Redis.Set(refId, (EbTableVisualization)obj);
             }
-            else if (obj is Objects.EbGoogleMap)
+            else if (obj is Objects.EbMapView)
             {
-                Redis.Set(refId, (Objects.EbGoogleMap)obj);
+                Redis.Set(refId, (Objects.EbMapView)obj);
             }
             else if (obj is EbWebForm)
             {

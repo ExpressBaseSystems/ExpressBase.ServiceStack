@@ -362,13 +362,13 @@ namespace ExpressBase.ServiceStack.Services
             dvobj.OrderBy = new List<DVBaseColumn>();
             dvobj.RowGroupCollection = new List<RowGroupParent>();
             dvobj.OrderBy.Add(columns.Get("eb_created_at"));
-            RowGroupParent _rowgroup = new RowGroupParent();
+            SingleLevelRowGroup _rowgroup = new SingleLevelRowGroup();
             _rowgroup.DisplayName = "By Location";
             _rowgroup.Name = "groupbylocation";
             _rowgroup.RowGrouping.Add(columns.Get("eb_loc_id"));
 
             dvobj.RowGroupCollection.Add(_rowgroup);
-            _rowgroup = new RowGroupParent();
+            _rowgroup = new SingleLevelRowGroup();
             _rowgroup.DisplayName = "By Created By";
             _rowgroup.Name = "groupbycreatedby";
             _rowgroup.RowGrouping.Add(columns.Get("eb_created_by"));
@@ -578,7 +578,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             List<DVBaseColumn> _formid = new List<DVBaseColumn>() { col };
 
-            Columns.Add(new DVStringColumn
+            Columns.Add(new DVActionColumn
             {
                 Data = (index + 1),//index+1 for serial column in datavis service
                 Name = "eb_action",
@@ -587,12 +587,12 @@ namespace ExpressBase.ServiceStack.Services
                 bVisible = true,
                 sWidth = "100px",
                 ClassName = "tdheight",
-                RenderAs = StringRenderType.Link,
                 LinkRefId = request.WebObj.RefId,
                 LinkType = LinkTypeEnum.Popout,
                 FormMode = WebFormDVModes.View_Mode,
                 FormId = _formid,
-                Align = Align.Center
+                Align = Align.Center,
+                IsCustomColumn = true
             });
             return Columns;
         }
@@ -724,8 +724,29 @@ namespace ExpressBase.ServiceStack.Services
             }
             Columns.Add(dv.Columns.Get("id"));
             DVBaseColumn Col = dv.Columns.Get("eb_action");
-            Col.Data = ++index;
-            Columns.Add(Col);
+            DVBaseColumn actcol = null;
+            if (Col is DVStringColumn)
+            {
+                actcol = new DVActionColumn
+                {
+                    Name = Col.Name,
+                    sTitle = Col.sTitle,
+                    Type = EbDbTypes.String,
+                    bVisible = true,
+                    sWidth = "100px",
+                    ClassName = Col.ClassName,
+                    LinkRefId = Col.LinkRefId,
+                    LinkType = Col.LinkType,
+                    FormMode = Col.FormMode,
+                    FormId = Col.FormId,
+                    Align = Align.Center,
+                    IsCustomColumn = true
+                };
+            }
+            else
+                actcol = Col;
+            actcol.Data = ++index;
+            Columns.Add(actcol);
             return Columns;
         }
 
@@ -807,7 +828,7 @@ namespace ExpressBase.ServiceStack.Services
                 EbWebForm form = GetWebFormObject(request.RefId);
                 form.TableRowId = request.RowId;
                 form.RefId = request.RefId;
-                form.UserObj = request.UserObj;
+                form.UserObj = request.UserObj ?? this.Redis.Get<User>(request.UserAuthId);
                 form.SolutionObj = GetSolutionObject(request.SolnId);
                 if (form.TableRowId > 0)
                     form.RefreshFormData(EbConnectionFactory.DataDB, this);
@@ -826,10 +847,11 @@ namespace ExpressBase.ServiceStack.Services
                 else if (form.SolutionObj.SolutionSettings != null && form.SolutionObj.SolutionSettings.UserTypeForms != null && form.SolutionObj.SolutionSettings.UserTypeForms.Any(x => x.RefId == form.RefId))
                 {
                 }
-                else if (!(form.HasPermission(OperationConstants.VIEW, request.CurrentLoc) || form.HasPermission(OperationConstants.NEW, request.CurrentLoc) || form.HasPermission(OperationConstants.EDIT, request.CurrentLoc)))
-                {
-                    throw new FormException("Error in loading data. Access Denied.", (int)HttpStatusCodes.UNAUTHORIZED, "Access Denied for rowid " + form.TableRowId + " , current location " + form.LocationId, string.Empty);
-                }
+                //bot c
+                //else if (!(form.HasPermission(OperationConstants.VIEW, request.CurrentLoc) || form.HasPermission(OperationConstants.NEW, request.CurrentLoc) || form.HasPermission(OperationConstants.EDIT, request.CurrentLoc)))
+                //{
+                //    throw new FormException("Error in loading data. Access Denied.", (int)HttpStatusCodes.UNAUTHORIZED, "Access Denied for rowid " + form.TableRowId + " , current location " + form.LocationId, string.Empty);
+                //}
                 _dataset.FormDataWrap = JsonConvert.SerializeObject(new WebformDataWrapper()
                 {
                     FormData = form.FormData,
@@ -1099,15 +1121,15 @@ namespace ExpressBase.ServiceStack.Services
                 FormObj.RefId = request.RefId;
                 FormObj.TableRowId = request.RowId;
                 FormObj.FormData = request.FormData;
-                FormObj.UserObj = request.UserObj;
+                FormObj.UserObj = request.UserObj ?? this.Redis.Get<User>(request.UserAuthId);
                 FormObj.LocationId = request.CurrentLoc;
                 FormObj.SolutionObj = GetSolutionObject(request.SolnId);
 
                 string Operation = OperationConstants.NEW;
                 if (request.RowId > 0)
                     Operation = OperationConstants.EDIT;
-                if (!FormObj.HasPermission(Operation, request.CurrentLoc))
-                    return new InsertDataFromWebformResponse { Status = (int)HttpStatusCodes.FORBIDDEN, Message = "Access denied to save this data entry!", MessageInt = "Access denied" };
+                //if (!FormObj.HasPermission(Operation, request.CurrentLoc))////bot c
+                //    return new InsertDataFromWebformResponse { Status = (int)HttpStatusCodes.FORBIDDEN, Message = "Access denied to save this data entry!", MessageInt = "Access denied" };
 
                 Console.WriteLine("Insert/Update WebFormData : MergeFormData start - " + DateTime.Now);
                 FormObj.MergeFormData();
