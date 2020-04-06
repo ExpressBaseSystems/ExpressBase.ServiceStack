@@ -424,7 +424,7 @@ namespace ExpressBase.ServiceStack.Services
                     string str = string.Empty;
                     foreach (string file_name in unwanted_files)
                     {
-                        int change_id=0;
+                        int change_id = 0;
                         string str1 = string.Format(@"select change_id from infra_dbmd5 where filename = '{0}' and eb_del = 'F';",
                                             file_name);
                         EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(str1);
@@ -1256,7 +1256,15 @@ namespace ExpressBase.ServiceStack.Services
             try
             {
                 string vendor = _ebconfactoryDatadb.Vendor.ToString();
-                string str = @"
+                string str = null;
+                if (vendor == "MYSQL")
+                    str = String.Format(@"
+                        SELECT DISTINCT table_name
+                        FROM information_schema.tables
+	                    WHERE table_name LIKE 'eb_%'
+                        AND TABLE_SCHEMA = '{0}'", _ebconfactoryDatadb.DBName);
+                else 
+                    str = @"
                         SELECT DISTINCT table_name
                         FROM information_schema.tables
 	                    WHERE table_name LIKE 'eb_%'";
@@ -1285,7 +1293,15 @@ namespace ExpressBase.ServiceStack.Services
             try
             {
                 string vendor = _ebconfactoryDatadb.Vendor.ToString();
-                string str = String.Format(@"
+                string str = null;
+                if (vendor == "MYSQL")
+                    str = String.Format(@"
+                        SELECT DISTINCT table_name
+                        FROM information_schema.tables
+	                    WHERE table_name ='{0}'
+                        AND TABLE_SCHEMA = '{1}'", filename, _ebconfactoryDatadb.DBName);
+                else
+                    str = String.Format(@"
                         SELECT DISTINCT table_name
                         FROM information_schema.tables
 	                    WHERE table_name = '{0}'", filename);
@@ -1516,7 +1532,7 @@ namespace ExpressBase.ServiceStack.Services
                             }
                             if (!ChangesList.NewItem && ChangesList.Vendor == "PGSQL")
                             {
-                                query += func_or_proc_drop + ";";
+                                query += func_or_proc_drop ;
                             }
                             query += result;
                             DbCommand cmd = _ebconfactoryDatadb.GetNewCommand(con, query);
@@ -1992,7 +2008,7 @@ namespace ExpressBase.ServiceStack.Services
                     }
                     else
                     {
-                        if (!int.TryParse(infra_column_default, out int x) && infra_column_default != "'F'::\"char\"")
+                        if (!int.TryParse(infra_column_default, out int x) && infra_column_default != "'F'::\"char\"" && infra_column_default != "'F'::bpchar")
                             infra_column_default = "'" + infra_column_default + "'";
                         if (vendor == "PGSQL")
                             changes = changes + string.Format(@"
@@ -2159,9 +2175,14 @@ namespace ExpressBase.ServiceStack.Services
                             query += DropFunctionsWithSameNameAndDifferentParametersPGSQL(ChangesList, _ebconfactoryDatadb);
                             if (!ChangesList.NewItem)
                             {
-                                query += func_or_proc_drop + ";\n";
+                                query += func_or_proc_drop + "\n";
                             }
-                            result = result.Replace(result.Split("\r\n\r\n")[0] + "\r\n\r\n", "").Replace(result.Split("\r\n\r\n")[1] + "\r\n\r\n", "");
+                            Regex regex = new Regex(@"CREATE(.|\n)*\$BODY\$;");
+                            MatchCollection matches = regex.Matches(result);
+                            if (matches.Count > 0)
+                                result = matches[0].ToString();
+                            else
+                                result = "";
                         }
                         query += result;
                     }
@@ -2354,17 +2375,15 @@ namespace ExpressBase.ServiceStack.Services
         {
             try
             {
-                string[] split = str.Split("\r\n\r\n");
                 if (vendor == "PGSQL")
-                    if (split.Length > 1)
-                    {
-                        str = split[1];
-                        str = str.Replace("-- ", "").Replace(";", "");
-                    }
+                {
+                    Regex regex = new Regex(@"DROP.*\);");
+                    MatchCollection matches = regex.Matches(str);
+                    if (matches.Count > 0)
+                        str = matches[0].ToString();
                     else
-                    {
                         str = "DROP FUNCTION " + filename;
-                    }
+                }
                 else if (vendor == "MYSQL")
                 {
 
@@ -2514,20 +2533,12 @@ namespace ExpressBase.ServiceStack.Services
                 if (type == DBManagerType.Function)
                 {
                     str = str.Replace("$BODY$", "$function$");
-                    string[] split = str.Split("$function$");
-                    if (split.Length == 3)
-                    {
-                        string[] split1 = split[0].Split("\r\n\r\n");
-                        if (split1.Length >= 3)
-                            str = split1[2] + split[1] + "$function$";
-                        else
-                            Console.WriteLine("Error : Cannot split " + filename + " file and content is" + split[0].ToString().Replace("\n","#").Replace("\r","*").Replace("\t","@"));
-                        str = str.Replace(" ", "").Replace("\r", "").Replace("\t", "").Replace("\n", "").Replace("'plpgsql'", "plpgsqlAS$function$").Replace("plpgsqlAS$function$AS", "plpgsqlAS$function$");
-                    }
-                    else if (split.Length == 1)
-                    {
+                    Regex regex = new Regex(@"CREATE(.|\n)*\$function\$;");
+                    MatchCollection matches = regex.Matches(str);
+                    if (matches.Count > 0)
+                        str = matches[0].ToString().Replace("'plpgsql'", "plpgsql").Replace(" ", "").Replace("\t", "").Replace("\n", "").Replace("$function$;", "$function$").Replace("\r", "");
+                    else
                         str = "";
-                    }
                 }
             }
             catch (Exception e)
@@ -2559,7 +2570,9 @@ namespace ExpressBase.ServiceStack.Services
 
         string GetFuncDef(string str)
         {
-            string[] split = str.Split("\r\n\r\n");
+            if (str.Contains("\r"))
+                str = str.Replace("\r", "");
+            string[] split = str.Split("\n\n");
             if (split.Length > 1)
             {
                 str = split[1];
@@ -2602,27 +2615,15 @@ namespace ExpressBase.ServiceStack.Services
                 if (type == DBManagerType.Function)
                 {
                     str = str.Replace("$BODY$", "$function$");
-                    string[] split = str.Split("$function$");
-                    if (split.Length == 3)
+                    Regex regex = new Regex(@"CREATE(.|\n)*\$function\$;");
+                    MatchCollection matches = regex.Matches(str);
+                    if (matches.Count > 0)
                     {
-                        string[] split1 = split[0].Split("\r\n\r\n");
-                        str = split1[2] + split[1] + "$function$";
-                        if (split1.Length < 4)
-                        {
-                            string x = split1[2].Split("'plpgsql'")[1].ToString();
-                            str = str.Replace("'plpgsql'" + x, "plpgsql\nAS $function$");
-                        }
-                        else if (split1.Length == 4)
-                        {
-                            str = str.Replace("'plpgsql'", "plpgsql\nAS $function$");
-                        }
-
-                        str = str.Replace("  ", "").Replace("\t", "").Replace(",\r\n", ", ").Replace("RETURNS", " RETURNS").Replace("LANGUAGE", " LANGUAGE").Trim();
+                        str = matches[0].ToString().Replace("'plpgsql'", "plpgsql").Replace("$function$;", "$function$").Replace("\r", "");
+                        str = str.Replace("  ", "").Replace("\t", "").Replace(",\n", ", ").Replace("RETURNS", " RETURNS").Replace("LANGUAGE", " LANGUAGE").Trim();
                     }
-                    else if (split.Length == 1)
-                    {
+                    else
                         str = "";
-                    }
                 }
             }
             catch (Exception e)
@@ -2639,7 +2640,9 @@ namespace ExpressBase.ServiceStack.Services
             {
                 if (type == DBManagerType.Procedure || type == DBManagerType.Function)
                 {
-                    string drop = str.Split("\r\n\r\n")[0];
+                    if (str.Contains("\r"))
+                        str = str.Replace("\r", "");
+                    string drop = str.Split("\n\n")[0];
                     str = str.Replace(drop, "").Trim();
                 }
             }
@@ -2657,11 +2660,11 @@ namespace ExpressBase.ServiceStack.Services
             {
                 if (type == DBManagerType.Function)
                 {
-                    Regex regex = new Regex(@"\([a-z]*");
+                    Regex regex = new Regex(@"\(.[a-z]*");
                     MatchCollection matches = regex.Matches(str);
                     string x = matches[0].ToString().Replace("(", "");
                     string s = "(\n" + x;
-                    str = str.Replace("  ", "").Replace("\t", "").Replace(matches[0].ToString(), s).Trim();
+                    str = str.Replace("  ", "").Replace("\r","").Replace(",\n",",").Replace("\t", "").Replace(matches[0].ToString(), s).Trim();
                 }
             }
             catch (Exception e)
@@ -2679,6 +2682,6 @@ namespace ExpressBase.ServiceStack.Services
             str = str.Replace(matches[0].ToString(), "").Replace("`", "");
             return str;
         }
-        
+
     }
 }
