@@ -828,7 +828,7 @@ namespace ExpressBase.ServiceStack.Services
                 EbWebForm form = GetWebFormObject(request.RefId);
                 form.TableRowId = request.RowId;
                 form.RefId = request.RefId;
-                form.UserObj = request.UserObj;
+                form.UserObj = request.UserObj ?? this.Redis.Get<User>(request.UserAuthId);
                 form.SolutionObj = GetSolutionObject(request.SolnId);
                 if (form.TableRowId > 0)
                     form.RefreshFormData(EbConnectionFactory.DataDB, this);
@@ -847,10 +847,11 @@ namespace ExpressBase.ServiceStack.Services
                 else if (form.SolutionObj.SolutionSettings != null && form.SolutionObj.SolutionSettings.UserTypeForms != null && form.SolutionObj.SolutionSettings.UserTypeForms.Any(x => x.RefId == form.RefId))
                 {
                 }
-                else if (!(form.HasPermission(OperationConstants.VIEW, request.CurrentLoc) || form.HasPermission(OperationConstants.NEW, request.CurrentLoc) || form.HasPermission(OperationConstants.EDIT, request.CurrentLoc)))
-                {
-                    throw new FormException("Error in loading data. Access Denied.", (int)HttpStatusCodes.UNAUTHORIZED, "Access Denied for rowid " + form.TableRowId + " , current location " + form.LocationId, string.Empty);
-                }
+                //bot c
+                //else if (!(form.HasPermission(OperationConstants.VIEW, request.CurrentLoc) || form.HasPermission(OperationConstants.NEW, request.CurrentLoc) || form.HasPermission(OperationConstants.EDIT, request.CurrentLoc)))
+                //{
+                //    throw new FormException("Error in loading data. Access Denied.", (int)HttpStatusCodes.UNAUTHORIZED, "Access Denied for rowid " + form.TableRowId + " , current location " + form.LocationId, string.Empty);
+                //}
                 _dataset.FormDataWrap = JsonConvert.SerializeObject(new WebformDataWrapper()
                 {
                     FormData = form.FormData,
@@ -1120,15 +1121,15 @@ namespace ExpressBase.ServiceStack.Services
                 FormObj.RefId = request.RefId;
                 FormObj.TableRowId = request.RowId;
                 FormObj.FormData = request.FormData;
-                FormObj.UserObj = request.UserObj;
+                FormObj.UserObj = request.UserObj ?? this.Redis.Get<User>(request.UserAuthId);
                 FormObj.LocationId = request.CurrentLoc;
                 FormObj.SolutionObj = GetSolutionObject(request.SolnId);
 
                 string Operation = OperationConstants.NEW;
                 if (request.RowId > 0)
                     Operation = OperationConstants.EDIT;
-                if (!FormObj.HasPermission(Operation, request.CurrentLoc))
-                    return new InsertDataFromWebformResponse { Status = (int)HttpStatusCodes.FORBIDDEN, Message = "Access denied to save this data entry!", MessageInt = "Access denied" };
+                //if (!FormObj.HasPermission(Operation, request.CurrentLoc))////bot c
+                //    return new InsertDataFromWebformResponse { Status = (int)HttpStatusCodes.FORBIDDEN, Message = "Access denied to save this data entry!", MessageInt = "Access denied" };
 
                 Console.WriteLine("Insert/Update WebFormData : MergeFormData start - " + DateTime.Now);
                 FormObj.MergeFormData();
