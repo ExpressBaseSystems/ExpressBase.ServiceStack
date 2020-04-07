@@ -1802,6 +1802,9 @@ namespace ExpressBase.ServiceStack
 	                    WHERE  app.eb_ver_id ='{0}' AND app.eb_del='F'
 			                    AND my.id=app.eb_my_actions_id
 			                    AND st.id = my.eb_stages_id;", verid);
+                    str += string.Format(@"SELECT usr.fullname,app.comments,app.eb_created_by,app.eb_created_at,app.eb_src_id
+                            FROM eb_approval_lines app,eb_users usr
+                            WHERE  app.eb_ver_id ='{0}' AND app.eb_created_by = usr.id;", verid);
                     col.ApprovalData = this.EbConnectionFactory.DataDB.DoQueries(str);
                 }
             }
@@ -1840,6 +1843,9 @@ namespace ExpressBase.ServiceStack
 	                    WHERE  app.eb_ver_id ='{0}' AND app.eb_del='F' AND app.eb_src_id={1}
 			                    AND my.id=app.eb_my_actions_id
 			                    AND st.id = my.eb_stages_id;", verid, request.RowId);
+                str += string.Format(@"SELECT usr.fullname,app.comments,app.eb_created_by,app.eb_created_at,app.eb_src_id
+                            FROM eb_approval_lines app,eb_users usr
+                            WHERE  app.eb_ver_id ='{0}' AND app.eb_src_id={1} AND app.eb_created_by = usr.id;", verid, request.RowId);
                 _approvaldata = this.EbConnectionFactory.DataDB.DoQueries(str);
                 resp._data = ProcessParticularApprovalcolumn();
             }
@@ -1860,7 +1866,9 @@ namespace ExpressBase.ServiceStack
             {
                 _rows = _approvaldata.Tables[1].Rows;
                 if (_rows.Count > 0)
-                    _formattedData = GetDataforNotPermissedApprovalColumn(_rows);
+                {
+                    _formattedData = GetDataforNotPermissedApprovalColumn(_rows, _approvaldata.Tables[2].Rows);
+                }
                 else
                     _formattedData = string.Empty;
             }
@@ -1879,7 +1887,10 @@ namespace ExpressBase.ServiceStack
                 {
                     _rows = col.ApprovalData.Tables[1].Rows.FindAll(_row => Convert.ToInt32(_row["eb_src_id"]) == Convert.ToInt32(row[(col as DVApprovalColumn).FormDataId[0].Data]));
                     if (_rows.Count > 0)
-                        _formattedData = GetDataforNotPermissedApprovalColumn(_rows);
+                    {
+                        var linesRows = col.ApprovalData.Tables[2].Rows.FindAll(_row => Convert.ToInt32(_row["eb_src_id"]) == Convert.ToInt32(row[(col as DVApprovalColumn).FormDataId[0].Data]));
+                        _formattedData = GetDataforNotPermissedApprovalColumn(_rows, linesRows);
+                    }
                     else
                         _formattedData = string.Empty;
                 }
@@ -1889,8 +1900,8 @@ namespace ExpressBase.ServiceStack
 
         private string GetDataforPermissedApprovalColumn(List<EbDataRow> rows)
         {
-            string _data = "<div class='stage_actions_inner'><select class='selectpicker stage_actions'>";
-            string _stage = string.Empty;
+            string _data = "<div class='stage_actions_inner stage-div'><select class='selectpicker stage_actions'>";
+            string _stage = "<div class='stage_comments_cont stage-div'>";
             ApprovalData _obj = new ApprovalData();
             foreach (EbDataRow _ebdatarow in rows)
             {
@@ -1899,24 +1910,41 @@ namespace ExpressBase.ServiceStack
                 _obj.My_action_id = _ebdatarow["id"].ToString();
                 _obj.Form_ref_id = _ebdatarow["form_ref_id"].ToString();
                 _obj.Form_data_id = _ebdatarow["form_data_id"].ToString();
-                _stage = "<label>" + _ebdatarow["stage_name"].ToString() + "</label>";
                 _data += "<option value='" + Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(_obj))) + "'>" + _ebdatarow["action_name"].ToString() + "</option>";
             }
+            _stage += "<label>" + rows[0]["stage_name"].ToString() + "</label>";
+            _stage += "<button class='btn stage-btn btn-action_comment' data-toggle='popover'><i class='fa fa-comments-o' aria-hidden='true'></i></button></div>";
             _data += "</select>";
-            _data += "<button class='btn btn-action_execute'><i class='fa fa-play' aria-hidden='true'></i></button></div>";
+            _data += "<button class='btn stage-btn btn-action_execute' data-toggle='tooltip' title='Execute Review'><i class='fa fa-play' aria-hidden='true'></i></button></div>";
 
             return "<div class='stage_actions_cont'>"+_stage + _data+"</div>";
         }
 
-        private string GetDataforNotPermissedApprovalColumn(List<EbDataRow> rows)
+        private string GetDataforNotPermissedApprovalColumn(List<EbDataRow> rows, List<EbDataRow> linesRows=null)
         {
             string _stage = "<div class='stage_actions_cont'>";
+            string _stage_name = "<div class='stage-div'>";
+            string review_status = "<div class='stage-div'>";
+            string _history = string.Empty;
+            if (linesRows != null && linesRows.Count > 0)
+            {
+                _history = "<table class='table'><thead><tr><th>fullname</th><th>Comments</th><th>created at</th></tr></thead><tbody>";
+                foreach (EbDataRow _ebdatarow in linesRows)
+                {
+                    _history += "<tr><td>" + _ebdatarow["fullname"].ToString() + "</td>";
+                    _history += "<td>" + _ebdatarow["comments"].ToString() + "</td>";
+                    _history += "<td>" + _ebdatarow["eb_created_at"].ToString() + "</td></tr>";
+                }
+                _history += "</tbody></table>";
+            }
             foreach (EbDataRow _ebdatarow in rows)
             {
-                _stage += "<label>" + _ebdatarow["stage_name"].ToString() + "</label>";
-                _stage += "<div>" + _ebdatarow["review_status"].ToString() + "</div>";
+                _stage_name += "<label>" + _ebdatarow["stage_name"].ToString() + "</label>";
+                review_status += "<div>" + _ebdatarow["review_status"].ToString() + "</div>";
             }
-            return _stage+"</div>";
+            _stage_name += "<button class='btn stage-btn btn-action_history' data-contents='"+ _history .ToBase64()+ "' data-toggle='popover'><i class='fa fa-history' aria-hidden='true'></i></button></div>";
+            review_status += "</div>";
+            return _stage+ _stage_name + review_status +"</div>";
         }
 
         private object GetDataforPowerSelect(DVBaseColumn col, object _formattedData)
