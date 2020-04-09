@@ -462,10 +462,10 @@ namespace ExpressBase.ServiceStack.Services
                     wraped += filterList.Join(" AND ");
                 }
 
+                wraped = $"SELECT COUNT(*) FROM ({wraped}) AS COUNT_STAR;" + wraped;
+
                 if (has_limit)
                     wraped += $" LIMIT :limit OFFSET :offset";
-
-                wraped = $"SELECT COUNT(*) FROM ({wraped}) AS COUNT_STAR;" + wraped;
 
                 if (!wraped.EndsWith(CharConstants.SEMI_COLON))
                     wraped += CharConstants.SEMI_COLON;
