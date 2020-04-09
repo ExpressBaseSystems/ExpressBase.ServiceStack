@@ -1802,9 +1802,13 @@ namespace ExpressBase.ServiceStack
 	                    WHERE  app.eb_ver_id ='{0}' AND app.eb_del='F'
 			                    AND my.id=app.eb_my_actions_id
 			                    AND st.id = my.eb_stages_id;", verid);
-                    str += string.Format(@"SELECT usr.fullname,app.comments,app.eb_created_by,app.eb_created_at,app.eb_src_id
-                            FROM eb_approval_lines app,eb_users usr
-                            WHERE  app.eb_ver_id ='{0}' AND app.eb_created_by = usr.id;", verid);
+                    str += string.Format(@"SELECT app.id,usr.fullname,app.comments,app.eb_created_by,app.eb_created_at,
+	 	                                app.eb_src_id,st.stage_name,act.action_name
+	                                FROM eb_approval_lines app,eb_users usr,eb_stages st,eb_stage_actions act
+	                                WHERE  app.eb_ver_id ='{0}' AND app.eb_created_by = usr.id  AND st.stage_unique_id=app.stage_unique_id
+	 		                                AND st.form_ref_id='{1}'
+	 		                                AND act.action_unique_id=app.action_unique_id AND act.eb_stages_id = st.id
+	 		                                AND act.eb_del='F';", verid, col.FormRefid);
                     col.ApprovalData = this.EbConnectionFactory.DataDB.DoQueries(str);
                 }
             }
@@ -1843,9 +1847,13 @@ namespace ExpressBase.ServiceStack
 	                    WHERE  app.eb_ver_id ='{0}' AND app.eb_del='F' AND app.eb_src_id={1}
 			                    AND my.id=app.eb_my_actions_id
 			                    AND st.id = my.eb_stages_id;", verid, request.RowId);
-                str += string.Format(@"SELECT usr.fullname,app.comments,app.eb_created_by,app.eb_created_at,app.eb_src_id
-                            FROM eb_approval_lines app,eb_users usr
-                            WHERE  app.eb_ver_id ='{0}' AND app.eb_src_id={1} AND app.eb_created_by = usr.id;", verid, request.RowId);
+                str += string.Format(@"SELECT app.id,usr.fullname,app.comments,app.eb_created_by,app.eb_created_at,
+	 	                        app.eb_src_id,st.stage_name,act.action_name
+	                        FROM eb_approval_lines app,eb_users usr,eb_stages st,eb_stage_actions act
+	                        WHERE  app.eb_ver_id ='{0}' AND app.eb_src_id ='{1}' AND app.eb_created_by = usr.id  AND st.stage_unique_id=app.stage_unique_id
+	 		                        AND st.form_ref_id='{2}'
+	 		                        AND act.action_unique_id=app.action_unique_id AND act.eb_stages_id = st.id
+	 		                        AND act.eb_del='F';", verid, request.RowId, request.RefId);
                 _approvaldata = this.EbConnectionFactory.DataDB.DoQueries(str);
                 resp._data = ProcessParticularApprovalcolumn();
             }
@@ -1900,8 +1908,14 @@ namespace ExpressBase.ServiceStack
 
         private string GetDataforPermissedApprovalColumn(List<EbDataRow> rows)
         {
-            string _data = "<div class='stage_actions_inner stage-div'><select class='selectpicker stage_actions'>";
-            string _stage = "<div class='stage_comments_cont stage-div'>";
+            string _data = @"<nav>
+                          <div class='nav nav-tabs'  role='tablist'>
+                            <a class='nav-item nav-link active' data-toggle='tab' href='#action' role='tab'>Action</a>
+                            </div></nav>";
+            _data += @"<div class='tab-content'>
+                                  <div class='tab-pane show active' id='action'>";
+            _data += "<table class='action-table'><tr><td class='action-td stage-label' colspan='2'><label>" + rows[0]["stage_name"].ToString() + "</label></tr>";
+            _data += "<tr><td class='action-td'>Actions</td><td class='action-td'><select class='selectpicker stage_actions'>";
             ApprovalData _obj = new ApprovalData();
             foreach (EbDataRow _ebdatarow in rows)
             {
@@ -1912,12 +1926,16 @@ namespace ExpressBase.ServiceStack
                 _obj.Form_data_id = _ebdatarow["form_data_id"].ToString();
                 _data += "<option value='" + Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(_obj))) + "'>" + _ebdatarow["action_name"].ToString() + "</option>";
             }
+            _data += "</select></td></tr>";
+            _data += "<tr><td class='action-td'>Comments</td><td class='action-td'><textarea class='comment-text'></textarea></td></tr>";
+            _data += "<tr><td class='action-td'></td><td class='action-td'><button class='btn stage-btn btn-action_execute' data-toggle='tooltip' title='Execute Review'>Execute</button></td></tr>";//<i class='fa fa-play' aria-hidden='true'></i>
+            _data += "</table></div></div>";
+            string _stage = "<div class='stage_comments_cont stage-div'>";
             _stage += "<label>" + rows[0]["stage_name"].ToString() + "</label>";
-            _stage += "<button class='btn stage-btn btn-action_comment' data-toggle='popover'><i class='fa fa-comments-o' aria-hidden='true'></i></button></div>";
-            _data += "</select>";
-            _data += "<button class='btn stage-btn btn-action_execute' data-toggle='tooltip' title='Execute Review'><i class='fa fa-play' aria-hidden='true'></i></button></div>";
+            _stage += "<button class='btn stage-btn btn-approval_popover' data-contents='"+ _data .ToBase64()+ "' data-toggle='popover'><i class='fa fa-comments-o' aria-hidden='true'></i></button></div>";//
 
-            return "<div class='stage_actions_cont'>"+_stage + _data+"</div>";
+
+            return "<div class='stage_actions_cont'>"+_stage +"</div>";
         }
 
         private string GetDataforNotPermissedApprovalColumn(List<EbDataRow> rows, List<EbDataRow> linesRows=null)
@@ -1928,21 +1946,29 @@ namespace ExpressBase.ServiceStack
             string _history = string.Empty;
             if (linesRows != null && linesRows.Count > 0)
             {
-                _history = "<table class='table'><thead><tr><th>fullname</th><th>Comments</th><th>created at</th></tr></thead><tbody>";
+                _history = @"<nav>
+                          <div class='nav nav-tabs'  role='tablist'>
+                            <a class='nav-item nav-link active' data-toggle='tab' href='#history' role='tab'>History</a>
+                            </div></nav>";
+                _history += @"<div class='tab-content'>
+                                  <div class='tab-pane show active' id='history'>";
+                _history += "<table class='table'><thead><tr><th>Date</th><th>Stage</th><th>Action</th><th>User</th><th>Comments</th></tr></thead><tbody>";
                 foreach (EbDataRow _ebdatarow in linesRows)
                 {
-                    _history += "<tr><td>" + _ebdatarow["fullname"].ToString() + "</td>";
-                    _history += "<td>" + _ebdatarow["comments"].ToString() + "</td>";
-                    _history += "<td>" + _ebdatarow["eb_created_at"].ToString() + "</td></tr>";
+                    _history += "<tr><td>" + _ebdatarow["eb_created_at"].ToString() + "</td>";
+                    _history += "<td>" + _ebdatarow["stage_name"].ToString() + "</td>";
+                    _history += "<td>" + _ebdatarow["action_name"].ToString() + "</td>";
+                    _history += "<td>" + _ebdatarow["fullname"].ToString() + "</td>";
+                    _history += "<td>" + _ebdatarow["comments"].ToString() + "</td></tr>";
                 }
-                _history += "</tbody></table>";
+                _history += "</tbody></table></div></div> ";
             }
             foreach (EbDataRow _ebdatarow in rows)
             {
                 _stage_name += "<label>" + _ebdatarow["stage_name"].ToString() + "</label>";
                 review_status += "<div>" + _ebdatarow["review_status"].ToString() + "</div>";
             }
-            _stage_name += "<button class='btn stage-btn btn-action_history' data-contents='"+ _history .ToBase64()+ "' data-toggle='popover'><i class='fa fa-history' aria-hidden='true'></i></button></div>";
+            _stage_name += "<button class='btn stage-btn btn-approval_popover' data-contents='" + _history .ToBase64()+ "' data-toggle='popover'><i class='fa fa-history' aria-hidden='true'></i></button></div>";
             review_status += "</div>";
             return _stage+ _stage_name + review_status +"</div>";
         }
