@@ -1952,14 +1952,14 @@ namespace ExpressBase.ServiceStack
                             </div></nav>";
                 _history += @"<div class='tab-content'>
                                   <div class='tab-pane show active' id='history'>";
-                _history += "<table class='table'><thead><tr><th>Date</th><th>Stage</th><th>Action</th><th>User</th><th>Comments</th></tr></thead><tbody>";
+                _history += "<table class='table'><thead class='history-head'><tr><th>Date</th><th>Stage</th><th>Action</th><th>User</th><th>Comments</th></tr></thead><tbody class='history-body'>";
                 foreach (EbDataRow _ebdatarow in linesRows)
                 {
                     _history += "<tr><td>" + _ebdatarow["eb_created_at"].ToString() + "</td>";
                     _history += "<td>" + _ebdatarow["stage_name"].ToString() + "</td>";
                     _history += "<td>" + _ebdatarow["action_name"].ToString() + "</td>";
                     _history += "<td>" + _ebdatarow["fullname"].ToString() + "</td>";
-                    _history += "<td>" + _ebdatarow["comments"].ToString() + "</td></tr>";
+                    _history += "<td class='comment-td'>" + _ebdatarow["comments"].ToString() + "</td></tr>";
                 }
                 _history += "</tbody></table></div></div> ";
             }
