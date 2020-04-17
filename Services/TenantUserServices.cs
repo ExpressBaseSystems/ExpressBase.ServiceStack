@@ -302,7 +302,7 @@ namespace ExpressBase.ServiceStack.Services
 
             string query = @"
                             SELECT * FROM eb_location_config WHERE eb_del = 'F' ORDER BY id;
-                            SELECT * FROM eb_locations; 
+                            SELECT * FROM eb_locations WHERE eb_del = 'F' ORDER BY id; 
                             SELECT * FROM eb_location_types WHERE eb_del = 'F' ORDER BY id";
             EbDataSet dt = this.EbConnectionFactory.ObjectsDB.DoQueries(query);
 
