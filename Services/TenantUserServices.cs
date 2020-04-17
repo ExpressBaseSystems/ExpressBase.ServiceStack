@@ -301,9 +301,9 @@ namespace ExpressBase.ServiceStack.Services
             List<EbLocationType> locTypes = new List<EbLocationType>();
 
             string query = @"
-                            SELECT * FROM eb_location_config WHERE eb_del = 'F' ORDER BY id;
-                            SELECT * FROM eb_locations WHERE eb_del = 'F' ORDER BY id; 
-                            SELECT * FROM eb_location_types WHERE eb_del = 'F' ORDER BY id";
+                            SELECT * FROM eb_location_config WHERE COALESCE(eb_del,'F')  = 'F' ORDER BY id;
+                            SELECT * FROM eb_locations WHERE COALESCE(eb_del,'F') = 'F' ORDER BY id; 
+                            SELECT * FROM eb_location_types WHERE COALESCE(eb_del,'F')  = 'F' ORDER BY id";
             EbDataSet dt = this.EbConnectionFactory.ObjectsDB.DoQueries(query);
 
             foreach (EbDataRow r in dt.Tables[0].Rows)
