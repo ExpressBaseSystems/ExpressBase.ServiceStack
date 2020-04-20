@@ -1118,11 +1118,8 @@ namespace ExpressBase.ServiceStack.Services
                 FormObj.MergeFormData();
                 Console.WriteLine("Insert/Update WebFormData : Save start - " + DateTime.Now);
                 string r = FormObj.Save(EbConnectionFactory.DataDB, this);
-                if (this.EbConnectionFactory.EmailConnection != null && this.EbConnectionFactory.EmailConnection.Primary != null)
-                {
-                    Console.WriteLine("Insert/Update WebFormData : SendMailIfUserCreated start - " + DateTime.Now);
-                    FormObj.SendMailIfUserCreated(MessageProducer3);
-                }
+                Console.WriteLine("Insert/Update WebFormData : AfterExecutionIfUserCreated start - " + DateTime.Now);
+                FormObj.AfterExecutionIfUserCreated(this, this.EbConnectionFactory.EmailConnection, MessageProducer3);
                 Console.WriteLine("Insert/Update WebFormData end : Execution Time = " + (DateTime.Now - startdt).TotalMilliseconds);
                 return new InsertDataFromWebformResponse()
                 {
@@ -1213,6 +1210,37 @@ namespace ExpressBase.ServiceStack.Services
                 return new InsertOrUpdateFormDataResp() { Status = (int)HttpStatusCodes.INTERNAL_SERVER_ERROR, Message = ex.Message };
             }
         }
+
+        public InsertBatchDataResponse Any(InsertBatchDataRequest request)
+        {
+            try
+            {
+                Console.WriteLine("InsertBatchDataRequest Service start");
+                EbWebForm FormObj = GetWebFormObject(request.RefId);
+                FormObj.RefId = request.RefId;
+                FormObj.UserObj = this.Redis.Get<User>(request.UserAuthId);
+                FormObj.LocationId = request.LocId;
+                FormObj.SolutionObj = GetSolutionObject(request.SolnId);
+                
+                //FormObj.PrepareWebFormData(this.EbConnectionFactory.DataDB, this, request.PushJson, request.FormGlobals);                
+                //string r = FormObj.Save(this.EbConnectionFactory.DataDB, this, request.TransactionConnection);
+
+                Console.WriteLine("InsertBatchDataRequest returning");
+                return new InsertBatchDataResponse() { Status = (int)HttpStatusCodes.OK, Message = "success" };
+            }
+            catch (FormException ex)
+            {
+                Console.WriteLine("FormException in InsertOrUpdateFormDataRqst\nMessage : " + ex.Message + "\nMessageInternal : " + ex.MessageInternal + "\nStackTraceInternal : " + ex.StackTraceInternal + "\nStackTrace : " + ex.StackTrace);
+                return new InsertBatchDataResponse() { Status = ex.ExceptionCode, Message = ex.Message };
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Exception in InsertOrUpdateFormDataRqst\nMessage" + ex.Message + "\nStackTrace" + ex.StackTrace);
+                return new InsertBatchDataResponse() { Status = (int)HttpStatusCodes.INTERNAL_SERVER_ERROR, Message = ex.Message };
+            }
+        }
+
+
 
 
         //================================= FORMULA AND VALIDATION =================================================
