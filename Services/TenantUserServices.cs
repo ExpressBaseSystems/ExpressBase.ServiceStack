@@ -85,7 +85,7 @@ namespace ExpressBase.ServiceStack.Services
                 string exeq = "";
 
                 List<DbParameter> parameters = new List<DbParameter>();
-                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("keys", EbDbTypes.String, conf.Name));
+                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("keys", EbDbTypes.String, conf.DisplayName));
                 parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("isrequired", EbDbTypes.Boolean, conf.IsRequired));
                 parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("type", EbDbTypes.String, conf.Type));
 
@@ -130,6 +130,39 @@ namespace ExpressBase.ServiceStack.Services
                 this.Post(new UpdateSolutionObjectRequest() { SolnId = request.SolnId, UserId = request.UserId });
                 return new SaveLocationMetaResponse { Id = result };
             }
+        }
+        public SaveLocationResponse Post(SaveLocationRequest request)
+        {
+            SaveLocationResponse resp = new SaveLocationResponse();
+            try
+            {
+                string query;
+                if (request.Location.LocId > 0)
+                    query = @"UPDATE eb_locations SET longname = @lname, shortname = @sname, image = @img, meta_json = @meta, parent_id = @parentid,
+                            is_group = @isgroup, eb_location_types_id = @type_id,  eb_lastmodified_by = @by, eb_lastmodified_at = now()
+                            WHERE id = @lid RETURNING id;";
+                else
+                    query = @"INSERT INTO eb_locations(longname,shortname,image,meta_json, parent_id, is_group, eb_location_types_id, eb_created_by, eb_created_at) 
+                            VALUES(:lname, :sname, :img, :meta, :parentid, :isgroup, :type_id, :by, now()) RETURNING id;";
+                DbParameter[] parameters = {
+                this.EbConnectionFactory.ObjectsDB.GetNewParameter("lname", EbDbTypes.String, request.Location.LongName),
+                this.EbConnectionFactory.ObjectsDB.GetNewParameter("sname", EbDbTypes.String, request.Location.ShortName),
+                this.EbConnectionFactory.ObjectsDB.GetNewParameter("img", EbDbTypes.String, request.Location.Logo),
+                this.EbConnectionFactory.ObjectsDB.GetNewParameter("meta", EbDbTypes.String, (request.Location.Meta != null) ? JsonConvert.SerializeObject(request.Location.Meta) : ""),
+                this.EbConnectionFactory.ObjectsDB.GetNewParameter("parentid", EbDbTypes.Int32, request.Location.ParentId),
+                this.EbConnectionFactory.ObjectsDB.GetNewParameter("isgroup", EbDbTypes.String, (request.Location.IsGroup) ? 'T' : 'F'),
+                this.EbConnectionFactory.ObjectsDB.GetNewParameter("type_id", EbDbTypes.Int32, request.Location.TypeId),
+                this.EbConnectionFactory.ObjectsDB.GetNewParameter("lid", EbDbTypes.Int32, request.Location.LocId),
+                this.EbConnectionFactory.DataDB.GetNewParameter("by", EbDbTypes.Int32, request.UserId),
+                };
+                resp.Id = this.EbConnectionFactory.DataDB.ExecuteScalar<Int32>(query, parameters);
+                this.Post(new UpdateSolutionObjectRequest() { SolnId = request.SolnId, UserId = request.UserId });
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message + e.StackTrace);
+            }
+            return resp;
         }
 
         public DeleteLocResponse Post(DeleteLocRequest request)
@@ -268,16 +301,17 @@ namespace ExpressBase.ServiceStack.Services
             List<EbLocationType> locTypes = new List<EbLocationType>();
 
             string query = @"
-                            SELECT * FROM eb_location_config WHERE eb_del = 'F' ORDER BY id;
-                            SELECT * FROM eb_locations; 
-                            SELECT * FROM eb_location_types WHERE eb_del = 'F' ORDER BY id";
+                            SELECT * FROM eb_location_config WHERE COALESCE(eb_del,'F')  = 'F' ORDER BY id;
+                            SELECT * FROM eb_locations WHERE COALESCE(eb_del,'F') = 'F' ORDER BY id; 
+                            SELECT * FROM eb_location_types WHERE COALESCE(eb_del,'F')  = 'F' ORDER BY id";
             EbDataSet dt = this.EbConnectionFactory.ObjectsDB.DoQueries(query);
 
             foreach (EbDataRow r in dt.Tables[0].Rows)
             {
                 Conf.Add(new EbLocationCustomField
                 {
-                    Name = r[1].ToString(),
+                    DisplayName = r[1].ToString(),
+                    Name = r[1].ToString().Replace(" ", ""),
                     IsRequired = (r[2].ToString() == "T") ? true : false,
                     Id = r[0].ToString(),
                     Type = r[3].ToString()
@@ -924,18 +958,13 @@ namespace ExpressBase.ServiceStack.Services
                     query = "UPDATE eb_location_types SET type = @type , eb_lastmodified_by = @by, eb_lastmodified_at = now() WHERE id = @id  RETURNING id;";
                 else
                     query = "INSERT INTO eb_location_types(type, eb_created_by, eb_created_at) VALUES(@type, @by, now()) RETURNING id";
+                DbParameter[] parameters = { this.EbConnectionFactory.DataDB.GetNewParameter("type", EbDbTypes.String, request.LocationType.Type),
+                    this.EbConnectionFactory.DataDB.GetNewParameter("by", EbDbTypes.Int32, request.UserId),
+                    this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.LocationType.Id)
+                };
 
-                using (NpgsqlConnection con = this.EbConnectionFactory.DataDB.GetNewConnection() as NpgsqlConnection)
-                {
-                    con.Open();
-                    NpgsqlCommand cmd = new NpgsqlCommand(query, con);
-                    cmd.Parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("type", EbDbTypes.String, request.LocationType.Type));
-                    cmd.Parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("by", EbDbTypes.Int32, request.UserId));
-                    cmd.Parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.LocationType.Id));
-
-                    resp.Id = Convert.ToInt32(cmd.ExecuteScalar());
-                    resp.Status = true;
-                }
+                resp.Id = this.EbConnectionFactory.DataDB.ExecuteScalar<Int32>(query, parameters);
+                resp.Status = true;
             }
             catch (Exception e)
             {
