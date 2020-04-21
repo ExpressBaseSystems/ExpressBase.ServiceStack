@@ -64,23 +64,26 @@ namespace ExpressBase.ServiceStack.Services
             GetSolutionForIntegrityCheckResponse resp = new GetSolutionForIntegrityCheckResponse();
             List<Eb_Changes_Log> list = new List<Eb_Changes_Log>();
             string solution_name = string.Empty;
+            string i_solution_id = string.Empty;
             try
             {
                 EbDataTable dt = SelectSolutionsFromDB(); // Will contain Solution names
                 for (int i = 0; i < dt.Rows.Count; i++)
                 {
-                    solution_name = dt.Rows[i]["isolution_id"].ToString();
-                    IDatabase _ebconfactoryDatadb = GetTenantDB(solution_name);
-                    EbDataTable dt1 = CheckInfraDbForSolution(solution_name); //Check Solution Details from eb_changeslog table in Infra DB
+                    solution_name = dt.Rows[i]["esolution_id"].ToString();
+                    i_solution_id = dt.Rows[i]["isolution_id"].ToString();
+                    IDatabase _ebconfactoryDatadb = GetTenantDB(i_solution_id);
+                    EbDataTable dt1 = CheckInfraDbForSolution(i_solution_id); //Check Solution Details from eb_changeslog table in Infra DB
                     if (dt1 != null && dt1.Rows.Count > 0)
                     {
                         try
                         {
-                            var sd = GetSolutionDetailsFromInfra(solution_name); // Get Solution details and place to list 
+                            var sd = GetSolutionDetailsFromInfra(i_solution_id); // Get Solution details and place to list 
                             if (sd != null)
                                 list.Add(new Eb_Changes_Log
                                 {
                                     Solution = solution_name,
+                                    ISolutionId = i_solution_id,
                                     DBName = _ebconfactoryDatadb.DBName,
                                     TenantName = sd.TenantName,
                                     TenantEmail = sd.TenantEmail,
@@ -102,10 +105,11 @@ namespace ExpressBase.ServiceStack.Services
                             {
                                 try
                                 {
-                                    SolutionDetails sd = AddSolutionDetailsToInfraDb(solution_name, _ebconfactoryDatadb);
+                                    SolutionDetails sd = AddSolutionDetailsToInfraDb(i_solution_id, _ebconfactoryDatadb);
                                     list.Add(new Eb_Changes_Log
                                     {
                                         Solution = solution_name,
+                                        ISolutionId = i_solution_id,
                                         DBName = _ebconfactoryDatadb.DBName,
                                         TenantName = sd.TenantName,
                                         TenantEmail = sd.TenantEmail,
