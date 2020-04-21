@@ -60,13 +60,16 @@ namespace ExpressBase.ServiceStack.Services
         {
             foreach (EbProfileUserType eput in request.UserTypeForms)
             {
-                EbWebForm form = GetWebFormObject(eput.RefId);
-                TableSchema _table = form.FormSchema.Tables.Find(e => e.TableName.Equals(form.FormSchema.MasterTable));
-                if (_table != null)
+                if (eput.RefId != string.Empty)
                 {
-                    form.AutoDeployTV = false;
-                    _table.Columns.Add(new ColumnSchema { ColumnName = "eb_users_id", EbDbType = (int)EbDbTypes.Int32, Control = new EbNumeric { Name = "eb_users_id", Label = "User Id" } });
-                    CreateWebFormTables(form.FormSchema, new CreateWebFormTableRequest { WebObj = form, DontThrowException = true });
+                    EbWebForm form = GetWebFormObject(eput.RefId);
+                    TableSchema _table = form.FormSchema.Tables.Find(e => e.TableName.Equals(form.FormSchema.MasterTable));
+                    if (_table != null)
+                    {
+                        form.AutoDeployTV = false;
+                        _table.Columns.Add(new ColumnSchema { ColumnName = "eb_users_id", EbDbType = (int)EbDbTypes.Int32, Control = new EbNumeric { Name = "eb_users_id", Label = "User Id" } });
+                        CreateWebFormTables(form.FormSchema, new CreateWebFormTableRequest { WebObj = form, DontThrowException = true });
+                    }
                 }
             }
             return new CreateMyProfileTableResponse { };
@@ -909,7 +912,7 @@ namespace ExpressBase.ServiceStack.Services
                 sourceForm.TableRowId = request.SourceRowId;
                 sourceForm.RefId = request.SourceRefId;
                 sourceForm.UserObj = request.UserObj;
-                sourceForm.SolutionObj = GetSolutionObject(request.SolnId); 
+                sourceForm.SolutionObj = GetSolutionObject(request.SolnId);
 
                 EbWebForm destForm = GetWebFormObject(request.DestRefId);
                 destForm.RefId = request.DestRefId;
@@ -1136,7 +1139,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (FormException ex)
             {
-                Console.WriteLine("FormException in Insert/Update WebFormData\nMessage : " + ex.Message +"\nMessageInternal : " + ex.MessageInternal + "\nStackTraceInternal : " + ex.StackTraceInternal + "\nStackTrace" + ex.StackTrace);
+                Console.WriteLine("FormException in Insert/Update WebFormData\nMessage : " + ex.Message + "\nMessageInternal : " + ex.MessageInternal + "\nStackTraceInternal : " + ex.StackTraceInternal + "\nStackTrace" + ex.StackTrace);
                 return new InsertDataFromWebformResponse()
                 {
                     Message = ex.Message,
