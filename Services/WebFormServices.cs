@@ -909,7 +909,7 @@ namespace ExpressBase.ServiceStack.Services
                 sourceForm.TableRowId = request.SourceRowId;
                 sourceForm.RefId = request.SourceRefId;
                 sourceForm.UserObj = request.UserObj;
-                sourceForm.SolutionObj = GetSolutionObject(request.SolnId); 
+                sourceForm.SolutionObj = GetSolutionObject(request.SolnId);
 
                 EbWebForm destForm = GetWebFormObject(request.DestRefId);
                 destForm.RefId = request.DestRefId;
@@ -1664,5 +1664,266 @@ namespace ExpressBase.ServiceStack.Services
 
             return new GetMyProfileEntryResponse { RowId = id };
         }
+
+        public GetMeetingSlotsResponse Post(GetMeetingSlotsRequest request)
+        {
+            GetMeetingSlotsResponse Slots = new GetMeetingSlotsResponse();
+            string _qry = @"
+        SELECT 
+		A.id, A.no_of_attendee, A.no_of_hosts,
+	
+		B.id as slot_id , B.eb_meeting_schedule_id, B.title , B.description , B.is_approved, 
+		B.meeting_date, B.time_from, B.time_to, B.venue, B.integration,
+	
+		COALESCE (C.slot_host, 0) as slot_host_count,
+		COALESCE (C.slot_host_attendee, 0) as slot_attendee_count,
+	    COALESCE (D.id, 0) as meeting_id	
+		FROM	
+			(SELECT 
+						id, no_of_attendee, no_of_hosts 
+					FROM  
+						eb_meeting_schedule 
+					WHERE 
+						eb_del = 'F' AND id = 1 AND meeting_date='2020-04-07')A
+				LEFT JOIN
+					(SELECT 
+							id, eb_meeting_schedule_id , title , description , is_approved, 
+		                        meeting_date, time_from, time_to , venue, integration 
+	                        FROM 
+		                        eb_meeting_slots 
+	                        WHERE 
+		                        eb_del = 'F')B 
+                        ON B.eb_meeting_schedule_id	= A.id 
+                        LEFT JOIN 
+                        (SELECT 
+		                        eb_meeting_schedule_id,approved_slot_id ,type_of_user, COUNT(approved_slot_id)filter(where type_of_user = 1) as slot_host,
+						 		COUNT(approved_slot_id)filter(where type_of_user = 2) as slot_host_attendee
+	                        FROM 
+		                        eb_meeting_slot_participants
+	                        GROUP BY
+		                        eb_meeting_schedule_id, approved_slot_id, type_of_user, eb_del
+	                        Having
+		                        eb_del = 'F')C	
+                        ON
+ 	                        C.eb_meeting_schedule_id = A.id and C.approved_slot_id = B.id
+	
+                        LEFT JOIN 
+                        (SELECT 
+		                        id, eb_meeting_slots_id
+	                        FROM 
+		                        eb_meetings
+	                        where
+		                        eb_del = 'F') D
+		                        ON
+ 	                        D.eb_meeting_slots_id = B.id
+";
+            String _query = string.Format(_qry, request.MeetingScheduleId, request.Date);
+            try
+            {
+                EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(_query);
+                int capacity1 = dt.Rows.Count;
+                for (int i = 0; i < capacity1; i++)
+                {
+                    Slots.AllSlots.Add(
+                        new SlotProcess()
+                        {
+                            Meeting_Id = Convert.ToInt32(dt.Rows[i]["id"]),
+                            Slot_id = Convert.ToInt32(dt.Rows[i]["slot_id"]),
+                            Meeting_schedule_id = Convert.ToInt32(dt.Rows[i]["eb_meeting_schedule_id"]),
+                            Title = Convert.ToString(dt.Rows[i]["title"]),
+                            Description = Convert.ToString(dt.Rows[i]["description"]),
+                            Is_approved = Convert.ToString(dt.Rows[i]["is_approved"]),
+                            Date = Convert.ToString(dt.Rows[i]["date"]),
+                            Time_from = Convert.ToString(dt.Rows[i]["time_from"]),
+                            Time_to = Convert.ToString(dt.Rows[i]["time_to"]),
+                            Venue = Convert.ToString(dt.Rows[i]["venue"]),
+                            Integration = Convert.ToString(dt.Rows[i]["integration"]),
+                            No_Host = Convert.ToInt32(dt.Rows[i]["no_of_hosts"]),
+                            No_Attendee = Convert.ToInt32(dt.Rows[i]["no_of_attendee"]),
+                            SlotAttendeeCount = Convert.ToInt32(dt.Rows[i]["slot_attendee_count"]),
+                            SlotHostCount = Convert.ToInt32(dt.Rows[i]["slot_participant_count"]),
+                            MeetingId = Convert.ToInt32(dt.Rows[i]["slot_participant_count"]),
+                        });
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message, e.StackTrace);
+            }
+            return Slots;
+        }
+
+        public MeetingSaveValidateResponse Post(MeetingSaveValidateRequest request)
+        {
+            MeetingSaveValidateResponse Resp = new MeetingSaveValidateResponse();
+            string query = @" 
+            SELECT 
+		     A.id as slot_id , A.eb_meeting_schedule_id, A.is_approved,
+			 B.no_of_attendee, B.no_of_hosts,
+			 COALESCE (C.slot_host, 0) as slot_host_count,
+		     COALESCE (C.slot_host_attendee, 0) as slot_attendee_count,
+			 COALESCE (D.id, 0) as meeting_id,
+			 COALESCE (E.id, 0) as participant_id
+	            FROM
+				(SELECT 
+						id, eb_meeting_schedule_id , title , description , is_approved, 
+					meeting_date, time_from, time_to , venue, integration 
+	                     FROM 
+		                     eb_meeting_slots 
+	                     WHERE 
+		                     eb_del = 'F' and id = {0})A
+						LEFT JOIN	 
+							 (SELECT id, no_of_attendee, no_of_hosts FROM  eb_meeting_schedule)B
+							 ON
+ 	                     B.id = A.eb_meeting_schedule_id
+						LEFT JOIN	
+						(SELECT 
+		                     eb_meeting_schedule_id,approved_slot_id ,type_of_user, COUNT(approved_slot_id)filter(where type_of_user = 1) as slot_host,
+						 		                    COUNT(approved_slot_id)filter(where type_of_user = 2) as slot_host_attendee
+	                     FROM 
+		                     eb_meeting_slot_participants
+	                     GROUP BY
+		                     eb_meeting_schedule_id, approved_slot_id, type_of_user, eb_del
+	                     Having
+		                     eb_del = 'F')C	
+                     ON
+ 	                     C.eb_meeting_schedule_id = B.id and C.approved_slot_id = A.id
+                     LEFT JOIN 
+                     (SELECT 
+		                     id, eb_meeting_slots_id
+	                     FROM 
+		                     eb_meetings
+	                     where
+		                     eb_del = 'F') D
+		                     ON
+ 	                     D.eb_meeting_slots_id = A.id
+						 LEFT JOIN (
+						 SELECT id , eb_meeting_schedule_id , approved_slot_id ,type_of_user, COUNT(approved_slot_id)filter(where type_of_user = 1) as slot_host,
+					COUNT(approved_slot_id)filter(where type_of_user = 2) as slot_host_attendee
+	                     FROM 
+		                     eb_meeting_slot_participants
+							  GROUP BY
+		                        eb_meeting_schedule_id, approved_slot_id, type_of_user, eb_del , id)E
+								  ON
+ 	                     E.approved_slot_id = A.id						 
+                                        ";
+            List<DetailsBySlotid> SlotObj = new List<DetailsBySlotid>();
+            bool Status = false;
+            try
+            {
+                String _query = string.Format(query, request.SlotParticipant.ApprovedSlotId); ;
+                EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(_query);
+                int capacity1 = dt.Rows.Count;
+                for (int i = 0; i < capacity1; i++)
+                {
+                    SlotObj.Add(
+                        new DetailsBySlotid()
+                        {
+                            Slot_id = Convert.ToInt32(dt.Rows[i]["slot_id"]),
+                            Meeting_schedule_id = Convert.ToInt32(dt.Rows[i]["eb_meeting_schedule_id"]),
+                            MeetingId = Convert.ToInt32(dt.Rows[i]["eb_meeting_id"]),
+                            No_Attendee = Convert.ToInt32(dt.Rows[i]["no_of_attendee"]),
+                            No_Host = Convert.ToInt32(dt.Rows[i]["no_of_host"]),
+                            SlotHostCount = Convert.ToInt32(dt.Rows[i]["slot_host_count"]),
+                            SlotAttendeeCount = Convert.ToInt32(dt.Rows[i]["slot_attendee_count"]),
+                            Is_approved = Convert.ToString(dt.Rows[i]["is_approved"]),
+                            Participant_id = Convert.ToInt32(dt.Rows[i]["participant_id"]),
+                        });
+                }
+                if (request.SlotParticipant.Participant_type == 2)
+
+                {
+                    if (SlotObj[0].No_Attendee >= SlotObj[0].SlotAttendeeCount)
+                    {
+                        Status = true;
+                    }
+                }
+                else
+                {
+                    if (SlotObj[0].No_Host >= SlotObj[0].SlotHostCount)
+                    {
+                        Status = true;
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Status = false;
+                Console.WriteLine(e.Message, e.StackTrace);
+            }
+
+            if (Status)
+            {
+                if (SlotObj[0].Is_approved == "T")
+                {
+                    query = $"insert into eb_meeting_slot_participants( user_id ,role_id ,user_group_id , confirmation , eb_meeting_schedule_id , approved_slot_id ,name ,email,phone_num," +
+                            $" type_of_user,participant_type) values ({request.SlotParticipant.UserId},{request.SlotParticipant.RoleId},{request.SlotParticipant.UserGroupId},{request.SlotParticipant.Confirmation}," +
+                            $"{SlotObj[0].Meeting_schedule_id},{request.SlotParticipant.ApprovedSlotId},'{request.SlotParticipant.Name}','{request.SlotParticipant.Email}','{request.SlotParticipant.PhoneNum}'," +
+                            $"{request.SlotParticipant.TypeOfUser},{request.SlotParticipant.Participant_type});" +
+                            $"insert into eb_meeting_participants (eb_meeting_id, eb_slot_participant_id ) values ({SlotObj[0].MeetingId} ,eb_currval('eb_meeting_slot_participants_id_seq'));";
+                }
+                else if (SlotObj[0].Is_approved == "F" )
+                {
+                    query = $"insert into eb_meetings (eb_meeting_slots_id , eb_created_by)values({SlotObj[0].Slot_id}, 1);" +
+                            $"insert into eb_meeting_slot_participants( user_id ,role_id ,user_group_id , confirmation , eb_meeting_schedule_id , approved_slot_id ,name ,email,phone_num," +
+                            $" type_of_user,participant_type) values ({request.SlotParticipant.UserId},{request.SlotParticipant.RoleId},{request.SlotParticipant.UserGroupId},{request.SlotParticipant.Confirmation}," +
+                            $"{SlotObj[0].Meeting_schedule_id},{request.SlotParticipant.ApprovedSlotId},'{request.SlotParticipant.Name}','{request.SlotParticipant.Email}','{request.SlotParticipant.PhoneNum}'," +
+                            $"{request.SlotParticipant.TypeOfUser},{request.SlotParticipant.Participant_type});";
+                    for (int i = 0; i < SlotObj.Count(); i++)
+                    {
+                        query += $"insert into eb_meeting_participants (eb_meeting_id, eb_slot_participant_id ) values ( eb_currval('eb_meetings_id_seq'),{SlotObj[i].Participant_id} );";
+                    }
+                    query += $"insert into eb_meeting_participants (eb_meeting_id, eb_slot_participant_id ) values (eb_currval('eb_meetings_id_seq') , eb_currval('eb_meeting_slot_participants_id_seq'));";
+                    query += $"update eb_meeting_slots set is_approved = 'T' where  id ={request.SlotParticipant.ApprovedSlotId}";
+                }
+
+                try
+                {
+                    EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(query);
+                    Resp.ResponseStatus = true;
+                }
+                catch (Exception e)
+                {
+                    Resp.ResponseStatus = false;
+                    Console.WriteLine(e.Message, e.StackTrace);
+                }
+            }
+            return Resp;
+        }
     }
 }
+
+//        public UpdateSlotParticipantResponse Post(UpdateSlotParticipantRequest request)
+//        {
+//            UpdateSlotParticipantResponse Resp = new UpdateSlotParticipantResponse();
+//            Resp.ResponseStatus = true;
+//            string query = "";
+//            if (request.SlotInfo.Is_approved == "T")
+//            {
+//                query = $"insert into eb_meeting_participants (eb_meeting_id, eb_slot_participant_id ) values ({request.SlotInfo.MeetingId} ," +
+//              $"insert into eb_meeting_slot_participants( user_id ,role_id ,user_group_id , confirmation , eb_meeting_schedule_id , approved_slot_id ,name ,email,phone_num," +
+//              $" type_of_user,participant_type) values ({request.SlotParticipant.UserId},{request.SlotParticipant.RoleId},{request.SlotParticipant.UserGroupId},{request.SlotParticipant.Confirmation}," +
+//              $"{request.SlotInfo.Meeting_schedule_id},{request.SlotParticipant.ApprovedSlotId},'{request.SlotParticipant.Name}','{request.SlotParticipant.Email}','{request.SlotParticipant.PhoneNum}'," +
+//              $"{request.SlotParticipant.TypeOfUser},{request.SlotParticipant.Participant_type}));";
+//            }
+//            else if (request.SlotInfo.Is_approved == "F")
+//            {
+//                query = $"insert into eb_meeting_slot_participants( user_id ,role_id ,user_group_id , confirmation , eb_meeting_schedule_id , approved_slot_id ,name ,email,phone_num," +
+//                                $" type_of_user,participant_type) values ({request.SlotParticipant.UserId},{request.SlotParticipant.RoleId},{request.SlotParticipant.UserGroupId},{request.SlotParticipant.Confirmation}," +
+//                                $"{request.SlotInfo.Meeting_schedule_id},{request.SlotParticipant.ApprovedSlotId},'{request.SlotParticipant.Name}','{request.SlotParticipant.Email}','{request.SlotParticipant.PhoneNum}'," +
+//                                $"{request.SlotParticipant.TypeOfUser},{request.SlotParticipant.Participant_type})";
+//            }
+
+//            try
+//            {
+//                EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(query);
+//            }
+//            catch (Exception e)
+//            {
+//                Resp.ResponseStatus = false;
+//                Console.WriteLine(e.Message, e.StackTrace);
+//            }
+//            return Resp;
+//        }
+//    }
+//}
