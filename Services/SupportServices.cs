@@ -460,7 +460,7 @@ namespace ExpressBase.ServiceStack.Services
 									support_ticket.remarks, 
 									support_ticket.assigned_to, 
 									support_ticket.type_bg_fr,
-									support_ticket.ticket_id
+									support_ticket.ticket_id,
 									eb_solutions.solution_name,
 									eb_solutions.esolution_id	
 								FROM 

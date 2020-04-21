@@ -45,11 +45,7 @@ namespace ExpressBase.ServiceStack.Services
                 foreach(var _col in _tbl.Columns)
                 {
                     _cols.Add(new ColumnsInfo { Name = _col.Control.Name, Label = _col.Control.Label, DbType = _col.Control.EbDbType, TableName = _tblName });
-                    //List<string> colInfo = new List<string>();
-                    //string _comments = JsonConvert.SerializeObject(new ExcelColumns { Name = _col.Control.Name, TableName = _tblName});
-                    //colInfo.Add(_comments);
-                    //colInfo.Add(_col.Control.EbDbType.ToString());
-                    //_cols.Add(_col.Control.Label, colInfo);
+                    //_cols.Add(new ColumnsInfo { Name = _col.Control.Name, DbType = _col.Control.EbDbType, TableName = _tblName });
                 }
             }
 

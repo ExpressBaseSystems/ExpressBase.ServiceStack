@@ -21,8 +21,6 @@ using ServiceStack.Messaging;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
-using System.Dynamic;
-using System.Globalization;
 using System.Linq;
 
 namespace ExpressBase.ServiceStack.Services
@@ -62,13 +60,16 @@ namespace ExpressBase.ServiceStack.Services
         {
             foreach (EbProfileUserType eput in request.UserTypeForms)
             {
-                EbWebForm form = GetWebFormObject(eput.RefId);
-                TableSchema _table = form.FormSchema.Tables.Find(e => e.TableName.Equals(form.FormSchema.MasterTable));
-                if (_table != null)
+                if (eput.RefId != string.Empty)
                 {
-                    form.AutoDeployTV = false;
-                    _table.Columns.Add(new ColumnSchema { ColumnName = "eb_users_id", EbDbType = (int)EbDbTypes.Int32, Control = new EbNumeric { Name = "eb_users_id", Label = "User Id" } });
-                    CreateWebFormTables(form.FormSchema, new CreateWebFormTableRequest { WebObj = form, DontThrowException = true });
+                    EbWebForm form = GetWebFormObject(eput.RefId);
+                    TableSchema _table = form.FormSchema.Tables.Find(e => e.TableName.Equals(form.FormSchema.MasterTable));
+                    if (_table != null)
+                    {
+                        form.AutoDeployTV = false;
+                        _table.Columns.Add(new ColumnSchema { ColumnName = "eb_users_id", EbDbType = (int)EbDbTypes.Int32, Control = new EbNumeric { Name = "eb_users_id", Label = "User Id" } });
+                        CreateWebFormTables(form.FormSchema, new CreateWebFormTableRequest { WebObj = form, DontThrowException = true });
+                    }
                 }
             }
             return new CreateMyProfileTableResponse { };
@@ -858,16 +859,16 @@ namespace ExpressBase.ServiceStack.Services
                     Status = (int)HttpStatusCodes.OK,
                     Message = "Success"
                 });
-                Console.WriteLine("Returning from GetRowData Service");
+                Console.WriteLine("Returning from GetRowData Service : Success");
             }
             catch (FormException ex)
             {
-                Console.WriteLine("FormException in GetRowData Service \nMessage : " + ex.Message + "\n" + ex.StackTrace);
+                Console.WriteLine("FormException in GetRowData Service \nMessage : " + ex.Message + "\nMessageInternal : " + ex.MessageInternal + "\nStackTraceInternal : " + ex.StackTraceInternal + "\nStackTrace : " + ex.StackTrace);
                 _dataset.FormDataWrap = JsonConvert.SerializeObject(new WebformDataWrapper() { Message = ex.Message, Status = ex.ExceptionCode, MessageInt = ex.MessageInternal, StackTraceInt = ex.StackTraceInternal });
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Exception in GetRowData Service \nMessage : " + ex.Message + "\n" + ex.StackTrace);
+                Console.WriteLine("Exception in GetRowData Service \nMessage : " + ex.Message + "\nStackTrace : " + ex.StackTrace);
                 _dataset.FormDataWrap = JsonConvert.SerializeObject(new WebformDataWrapper() { Message = "Something went wrong", Status = (int)HttpStatusCodes.INTERNAL_SERVER_ERROR, MessageInt = ex.Message, StackTraceInt = ex.StackTrace });
             }
             return _dataset;
@@ -886,16 +887,18 @@ namespace ExpressBase.ServiceStack.Services
                 form.SolutionObj = GetSolutionObject(request.SolnId);
                 form.RefreshFormData(EbConnectionFactory.DataDB, this, request.Params);
                 _dataset.FormDataWrap = JsonConvert.SerializeObject(new WebformDataWrapper { FormData = form.FormData, Status = (int)HttpStatusCodes.OK, Message = "Success" });
+                Console.WriteLine("End GetPrefillData : Success");
             }
             catch (FormException ex)
             {
+                Console.WriteLine("FormException in GetPrefillData Service \nMessage : " + ex.Message + "\nMessageInternal : " + ex.MessageInternal + "\nStackTraceInternal : " + ex.StackTraceInternal + "\nStackTrace : " + ex.StackTrace);
                 _dataset.FormDataWrap = JsonConvert.SerializeObject(new WebformDataWrapper { Message = ex.Message, Status = ex.ExceptionCode, MessageInt = ex.MessageInternal, StackTraceInt = ex.StackTraceInternal });
             }
             catch (Exception e)
             {
+                Console.WriteLine("Exception in GetPrefillData Service \nMessage : " + e.Message + "\nStackTrace : " + e.StackTrace);
                 _dataset.FormDataWrap = JsonConvert.SerializeObject(new WebformDataWrapper { Message = "Something went wrong.", Status = (int)HttpStatusCodes.INTERNAL_SERVER_ERROR, MessageInt = e.Message, StackTraceInt = e.StackTrace });
             }
-            Console.WriteLine("End GetPrefillData");
             return _dataset;
         }
 
@@ -919,18 +922,19 @@ namespace ExpressBase.ServiceStack.Services
                     sourceForm.GetImportData(EbConnectionFactory.DataDB, this, destForm);
                 else
                     destForm.GetEmptyModel();
-
                 _dataset.FormDataWrap = JsonConvert.SerializeObject(new WebformDataWrapper { FormData = destForm.FormData, Status = (int)HttpStatusCodes.OK, Message = "Success" });
+                Console.WriteLine("End GetExportFormData : Success");
             }
             catch (FormException ex)
             {
+                Console.WriteLine("FormException in GetExportFormData Service \nMessage : " + ex.Message + "\nMessageInternal : " + ex.MessageInternal + "\nStackTraceInternal : " + ex.StackTraceInternal + "\nStackTrace : " + ex.StackTrace);
                 _dataset.FormDataWrap = JsonConvert.SerializeObject(new WebformDataWrapper { Message = ex.Message, Status = ex.ExceptionCode, MessageInt = ex.MessageInternal, StackTraceInt = ex.StackTraceInternal });
             }
             catch (Exception e)
             {
+                Console.WriteLine("Exception in GetExportFormData Service \nMessage : " + e.Message + "\nStackTrace : " + e.StackTrace);
                 _dataset.FormDataWrap = JsonConvert.SerializeObject(new WebformDataWrapper { Message = "Something went wrong.", Status = (int)HttpStatusCodes.INTERNAL_SERVER_ERROR, MessageInt = e.Message, StackTraceInt = e.StackTrace });
             }
-            Console.WriteLine("End GetExportFormData");
             return _dataset;
         }
 
@@ -949,38 +953,20 @@ namespace ExpressBase.ServiceStack.Services
                 if (form.TableRowId > 0)
                     data = form.GetFormData4Mobile(EbConnectionFactory.DataDB, this);
                 resp = new GetFormData4MobileResponse() { Params = data, Status = (int)HttpStatusCodes.OK, Message = "Success" };
+                Console.WriteLine("End GetFormData4Mobile : Success");
             }
             catch (FormException ex)
             {
+                Console.WriteLine("FormException in GetFormData4Mobile Service \nMessage : " + ex.Message + "\nMessageInternal : " + ex.MessageInternal + "\nStackTraceInternal : " + ex.StackTraceInternal + "\nStackTrace : " + ex.StackTrace);
                 resp = new GetFormData4MobileResponse() { Status = (int)HttpStatusCodes.INTERNAL_SERVER_ERROR, Message = $"{ex.Message} {ex.MessageInternal}" };
             }
             catch (Exception e)
             {
+                Console.WriteLine("Exception in GetFormData4Mobile Service \nMessage : " + e.Message + "\nStackTrace : " + e.StackTrace);
                 resp = new GetFormData4MobileResponse() { Status = (int)HttpStatusCodes.INTERNAL_SERVER_ERROR, Message = $"{e.Message} {e.StackTrace}" };
             }
-            Console.WriteLine("End GetFormData4Mobile");
             return resp;
         }
-
-        //public GetImportDataResponse Any(GetImportDataRequest request)
-        //{
-        //    try
-        //    {
-        //        DataSourceService myService = base.ResolveService<DataSourceService>();
-        //        DataSourceDataSetResponse response = (DataSourceDataSetResponse)myService.Any(new DataSourceDataSetRequest() { RefId = request.RefId, Params = request.Params });
-        //        SingleTable Table = new SingleTable();
-        //        EbWebForm WebForm = new EbWebForm();
-        //        WebForm.GetFormattedData(response.DataSet.Tables[0], Table);
-        //        WebformData formData = new WebformData { MultipleTables = new Dictionary<string, SingleTable>() { { "Table1", Table } } };
-        //        return new GetImportDataResponse() { FormData = formData };
-        //    }
-        //    catch(Exception ex)
-        //    {
-        //        Console.WriteLine("Exception in GetImportDataRequest Service" + ex.Message);
-        //        Console.WriteLine(ex.StackTrace);
-        //        throw ex;
-        //    }
-        //}
 
         public GetImportDataResponse Any(GetImportDataRequest request)
         {
@@ -993,17 +979,17 @@ namespace ExpressBase.ServiceStack.Services
                 form.UserObj = this.Redis.Get<User>(request.UserAuthId);
                 form.SolutionObj = GetSolutionObject(request.SolnId);
                 form.ImportData(EbConnectionFactory.DataDB, this, request.Params, request.Trigger, request.RowId);
-                Console.WriteLine("End ImportFormData");
                 data = new WebformDataWrapper { FormData = form.FormData, Status = (int)HttpStatusCodes.OK, Message = "Success" };
+                Console.WriteLine("End ImportFormData : Success");
             }
             catch (FormException ex)
             {
-                Console.WriteLine("FormException in GetImportDataRequest Service" + ex.Message);
+                Console.WriteLine("FormException in GetImportDataRequest Service \nMessage : " + ex.Message + "\nMessageInternal : " + ex.MessageInternal + "\nStackTraceInternal : " + ex.StackTraceInternal + "\nStackTrace : " + ex.StackTrace);
                 data = new WebformDataWrapper { Status = ex.ExceptionCode, Message = ex.Message, MessageInt = ex.MessageInternal, StackTraceInt = ex.StackTraceInternal };
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Exception in GetImportDataRequest Service" + ex.Message + "\n" + ex.StackTrace);
+                Console.WriteLine("Exception in GetImportDataRequest Service \nMessage : " + ex.Message + "\nStackTrace" + ex.StackTrace);
                 data = new WebformDataWrapper { Status = (int)HttpStatusCodes.INTERNAL_SERVER_ERROR, Message = "Exception in GetImportDataRequest", MessageInt = ex.Message, StackTraceInt = ex.StackTrace };
             }
             return new GetImportDataResponse() { FormDataWrap = JsonConvert.SerializeObject(data) };
@@ -1021,17 +1007,17 @@ namespace ExpressBase.ServiceStack.Services
                 form.UserObj = this.Redis.Get<User>(request.UserAuthId);
                 form.SolutionObj = GetSolutionObject(request.SolnId);
                 WebformData wfd = form.GetDynamicGridData(EbConnectionFactory.DataDB, this, request.SourceId, request.Target);
-                Console.WriteLine("End GetDynamicGridData");
                 data = new WebformDataWrapper { FormData = wfd, Status = (int)HttpStatusCodes.OK, Message = "Success" };
+                Console.WriteLine("End GetDynamicGridData : Success");
             }
             catch (FormException ex)
             {
-                Console.WriteLine("FormException in GetDynamicGridDataRequest Service" + ex.Message);
+                Console.WriteLine("FormException in GetDynamicGridDataRequest Service \nMessage : " + ex.Message + "\nMessageInternal : " + ex.MessageInternal + "\nStackTraceInternal : " + ex.StackTraceInternal + "\nStackTrace : " + ex.StackTrace);
                 data = new WebformDataWrapper { Status = ex.ExceptionCode, Message = ex.Message, MessageInt = ex.MessageInternal, StackTraceInt = ex.StackTraceInternal };
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Exception in GetDynamicGridDataRequest Service" + ex.Message + "\n" + ex.StackTrace);
+                Console.WriteLine("Exception in GetDynamicGridDataRequest Service \nMessage : " + ex.Message + "\n" + ex.StackTrace);
                 data = new WebformDataWrapper { Status = (int)HttpStatusCodes.INTERNAL_SERVER_ERROR, Message = "Exception in GetDynamicGridDataRequest", MessageInt = ex.Message, StackTraceInt = ex.StackTrace };
             }
             return new GetDynamicGridDataResponse() { FormDataWrap = JsonConvert.SerializeObject(data) };
@@ -1125,9 +1111,9 @@ namespace ExpressBase.ServiceStack.Services
                 FormObj.LocationId = request.CurrentLoc;
                 FormObj.SolutionObj = GetSolutionObject(request.SolnId);
 
-                string Operation = OperationConstants.NEW;
-                if (request.RowId > 0)
-                    Operation = OperationConstants.EDIT;
+                //string Operation = OperationConstants.NEW;
+                //if (request.RowId > 0)
+                //    Operation = OperationConstants.EDIT;
                 //if (!FormObj.HasPermission(Operation, request.CurrentLoc))////bot c
                 //    return new InsertDataFromWebformResponse { Status = (int)HttpStatusCodes.FORBIDDEN, Message = "Access denied to save this data entry!", MessageInt = "Access denied" };
 
@@ -1135,12 +1121,9 @@ namespace ExpressBase.ServiceStack.Services
                 FormObj.MergeFormData();
                 Console.WriteLine("Insert/Update WebFormData : Save start - " + DateTime.Now);
                 string r = FormObj.Save(EbConnectionFactory.DataDB, this);
-                if (this.EbConnectionFactory.EmailConnection != null && this.EbConnectionFactory.EmailConnection.Primary != null)
-                {
-                    Console.WriteLine("Insert/Update WebFormData : SendMailIfUserCreated start - " + DateTime.Now);
-                    FormObj.SendMailIfUserCreated(MessageProducer3);
-                }
-                Console.WriteLine("Insert/Update WebFormData : Execution Time = " + (DateTime.Now - startdt).TotalMilliseconds);
+                Console.WriteLine("Insert/Update WebFormData : AfterExecutionIfUserCreated start - " + DateTime.Now);
+                FormObj.AfterExecutionIfUserCreated(this, this.EbConnectionFactory.EmailConnection, MessageProducer3);
+                Console.WriteLine("Insert/Update WebFormData end : Execution Time = " + (DateTime.Now - startdt).TotalMilliseconds);
                 return new InsertDataFromWebformResponse()
                 {
                     Message = "Success",
@@ -1153,7 +1136,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (FormException ex)
             {
-                Console.WriteLine("Exception in Insert/Update WebFormData" + ex.Message + "\n" + ex.StackTrace);
+                Console.WriteLine("FormException in Insert/Update WebFormData\nMessage : " + ex.Message + "\nMessageInternal : " + ex.MessageInternal + "\nStackTraceInternal : " + ex.StackTraceInternal + "\nStackTrace" + ex.StackTrace);
                 return new InsertDataFromWebformResponse()
                 {
                     Message = ex.Message,
@@ -1164,7 +1147,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Exception in Insert/Update WebFormData" + ex.Message + "\n" + ex.StackTrace);
+                Console.WriteLine("Exception in Insert/Update WebFormData\nMessage : " + ex.Message + "\nStackTrace : " + ex.StackTrace);
                 return new InsertDataFromWebformResponse()
                 {
                     Message = "Something went wrong",
@@ -1205,6 +1188,7 @@ namespace ExpressBase.ServiceStack.Services
         {
             try
             {
+                Console.WriteLine("InsertOrUpdateFormDataRqst Service start");
                 EbWebForm FormObj = GetWebFormObject(request.RefId);
                 FormObj.RefId = request.RefId;
                 FormObj.TableRowId = request.RecordId;
@@ -1220,15 +1204,46 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (FormException ex)
             {
-                Console.WriteLine("Exception in InsertOrUpdateFormDataRqst" + ex.Message + "\n" + ex.MessageInternal + "\n" + ex.StackTrace);
+                Console.WriteLine("FormException in InsertOrUpdateFormDataRqst\nMessage : " + ex.Message + "\nMessageInternal : " + ex.MessageInternal + "\nStackTraceInternal : " + ex.StackTraceInternal + "\nStackTrace : " + ex.StackTrace);
                 return new InsertOrUpdateFormDataResp() { Status = ex.ExceptionCode, Message = ex.Message };
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Exception in InsertOrUpdateFormDataRqst" + ex.Message + "\n" + ex.StackTrace);
+                Console.WriteLine("Exception in InsertOrUpdateFormDataRqst\nMessage" + ex.Message + "\nStackTrace" + ex.StackTrace);
                 return new InsertOrUpdateFormDataResp() { Status = (int)HttpStatusCodes.INTERNAL_SERVER_ERROR, Message = ex.Message };
             }
         }
+
+        //public InsertBatchDataResponse Any(InsertBatchDataRequest request)
+        //{
+        //    try
+        //    {
+        //        Console.WriteLine("InsertBatchDataRequest Service start");
+        //        EbWebForm FormObj = GetWebFormObject(request.RefId);
+        //        FormObj.RefId = request.RefId;
+        //        FormObj.UserObj = this.Redis.Get<User>(request.UserAuthId);
+        //        FormObj.LocationId = request.LocId;
+        //        FormObj.SolutionObj = GetSolutionObject(request.SolnId);
+                
+        //        //FormObj.PrepareWebFormData(this.EbConnectionFactory.DataDB, this, request.PushJson, request.FormGlobals);                
+        //        //string r = FormObj.Save(this.EbConnectionFactory.DataDB, this, request.TransactionConnection);
+
+        //        Console.WriteLine("InsertBatchDataRequest returning");
+        //        return new InsertBatchDataResponse() { Status = (int)HttpStatusCodes.OK, Message = "success" };
+        //    }
+        //    catch (FormException ex)
+        //    {
+        //        Console.WriteLine("FormException in InsertOrUpdateFormDataRqst\nMessage : " + ex.Message + "\nMessageInternal : " + ex.MessageInternal + "\nStackTraceInternal : " + ex.StackTraceInternal + "\nStackTrace : " + ex.StackTrace);
+        //        return new InsertBatchDataResponse() { Status = ex.ExceptionCode, Message = ex.Message };
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Console.WriteLine("Exception in InsertOrUpdateFormDataRqst\nMessage" + ex.Message + "\nStackTrace" + ex.StackTrace);
+        //        return new InsertBatchDataResponse() { Status = (int)HttpStatusCodes.INTERNAL_SERVER_ERROR, Message = ex.Message };
+        //    }
+        //}
+
+
 
 
         //================================= FORMULA AND VALIDATION =================================================
@@ -1478,20 +1493,19 @@ namespace ExpressBase.ServiceStack.Services
         {
             try
             {
+                Console.WriteLine("GetAuditTrail Service start. RefId : " + request.FormId + "\nDataId : " + request.RowId);
                 EbWebForm FormObj = GetWebFormObject(request.FormId);
                 FormObj.RefId = request.FormId;
                 FormObj.TableRowId = request.RowId;
                 FormObj.UserObj = request.UserObj;
                 FormObj.SolutionObj = GetSolutionObject(request.SolnId);
-
                 string temp = FormObj.GetAuditTrail(EbConnectionFactory.DataDB, this);
-
+                Console.WriteLine("GetAuditTrail Service end");
                 return new GetAuditTrailResponse() { Json = temp };
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Exception in GetAuditTrail Service" + ex.Message);
-                Console.WriteLine(ex.StackTrace);
+                Console.WriteLine("Exception in GetAuditTrail Service\nMessage : " + ex.Message + "\nStackTrace : " + ex.StackTrace);
                 throw new FormException("Terminated GetAuditTrail. Check servicestack log for stack trace.");
             }
         }
