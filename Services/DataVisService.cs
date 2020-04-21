@@ -1783,7 +1783,26 @@ namespace ExpressBase.ServiceStack
                     DVApprovalColumn col = _col as DVApprovalColumn;
                     var _roles = string.Join(",", _user.RoleIds.ToArray());
                     var verid = col.FormRefid.Split("-")[4];
-                    string str = string.Format(@"
+                    string str = string.Empty;
+                    if (_user.Roles.Contains(SystemRoles.SolutionOwner.ToString()) || _user.Roles.Contains(SystemRoles.SolutionAdmin.ToString()))
+                    {
+                        str = string.Format(@"
+                    SELECT Q1.*,act.action_name,act.action_unique_id
+                    FROM(
+	                    SELECT my.id, st.stage_name,st.id as stage_id,my.form_ref_id,my.form_data_id,st.stage_unique_id
+	                    FROM eb_my_actions my, eb_stages st
+	                    WHERE  my.form_ref_id ='{0}'
+			                    AND my.is_completed='F' AND my.eb_del='F'
+			                    AND st.id=my.eb_stages_id AND st.eb_del='F' 
+	                    ) Q1
+                    LEFT JOIN
+	                    eb_stage_actions act
+                    ON
+	                    Q1.stage_id=act.eb_stages_id AND act.eb_del='F' ;", col.FormRefid);
+                    }
+                    else
+                    {
+                        str = string.Format(@"
                     SELECT Q1.*,act.action_name,act.action_unique_id
                     FROM(
 	                    SELECT my.id, st.stage_name,st.id as stage_id,my.form_ref_id,my.form_data_id,st.stage_unique_id
@@ -1798,6 +1817,7 @@ namespace ExpressBase.ServiceStack
 	                    eb_stage_actions act
                     ON
 	                    Q1.stage_id=act.eb_stages_id AND act.eb_del='F' ;", _user.UserId, _roles, col.FormRefid);
+                    }
                     str += string.Format(@"
 	                    SELECT app.review_status,app.eb_src_id,my.id,st.stage_name
 	                    FROM eb_approval app,eb_my_actions my, eb_stages st
@@ -1828,7 +1848,27 @@ namespace ExpressBase.ServiceStack
             {
                 var _roles = string.Join(",", request.UserObj.RoleIds.ToArray());
                 var verid = request.RefId.Split("-")[4];
-                string str = string.Format(@"
+                string str = string.Empty;
+                if (request.UserObj.Roles.Contains(SystemRoles.SolutionOwner.ToString()) || request.UserObj.Roles.Contains(SystemRoles.SolutionAdmin.ToString()))
+                {
+                    str = string.Format(@"
+                    SELECT Q1.*,act.action_name,act.action_unique_id
+                    FROM(
+	                    SELECT my.id, st.stage_name,st.id as stage_id,my.form_ref_id,my.form_data_id,st.stage_unique_id
+	                    FROM eb_my_actions my, eb_stages st
+	                    WHERE 
+                                 my.form_ref_id ='{0}' AND my.form_data_id ={1}
+			                    AND my.is_completed='F' AND my.eb_del='F'
+			                    AND st.id=my.eb_stages_id AND st.eb_del='F' 
+	                    ) Q1
+                    LEFT JOIN
+	                    eb_stage_actions act
+                    ON
+	                    Q1.stage_id=act.eb_stages_id AND act.eb_del='F' ;", request.RefId, request.RowId);
+                }
+                else
+                {
+                     str = string.Format(@"
                     SELECT Q1.*,act.action_name,act.action_unique_id
                     FROM(
 	                    SELECT my.id, st.stage_name,st.id as stage_id,my.form_ref_id,my.form_data_id,st.stage_unique_id
@@ -1843,6 +1883,7 @@ namespace ExpressBase.ServiceStack
 	                    eb_stage_actions act
                     ON
 	                    Q1.stage_id=act.eb_stages_id AND act.eb_del='F' ;", request.UserObj.UserId, _roles, request.RefId, request.RowId);
+                }
                 str += string.Format(@"
 	                    SELECT app.review_status,app.eb_src_id,my.id,st.stage_name
 	                    FROM eb_approval app,eb_my_actions my, eb_stages st
