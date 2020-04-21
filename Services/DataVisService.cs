@@ -1954,7 +1954,7 @@ namespace ExpressBase.ServiceStack
             _data += "<tr><td class='action-td'></td><td class='action-td'><button class='btn stage-btn btn-action_execute' data-toggle='tooltip' title='Execute Review'>Execute</button></td></tr>";//<i class='fa fa-play' aria-hidden='true'></i>
             _data += "</table></div></div>";
             string _stage = "<div class='stage_comments_cont stage-div'>";
-            _stage += "<label>" + stage_status[0]["stage_name"].ToString() + "</label>";
+            _stage += "<label>" + rows[0]["stage_name"].ToString() + "</label>";
             _stage += "<button class='btn stage-btn btn-approval_popover' data-contents='"+ _data .ToBase64()+ "' data-toggle='popover'><i class='fa fa-comments-o' aria-hidden='true'></i></button></div>";//
             if (row != null)
             {
@@ -1969,12 +1969,12 @@ namespace ExpressBase.ServiceStack
                 if (_dV.Columns.Get("eb_review_stage") != null)
                 {
                     indx = _dV.Columns.Get("eb_review_stage").Data;
-                    row[indx] = stage_status[0]["stage_name"].ToString();
+                    row[indx] = rows[0]["stage_name"].ToString();
                     //if (IntermediateDic.ContainsKey(indx))
                     //    IntermediateDic[indx] = stage_status[0]["stage_name"].ToString();
                 }
             }
-            return "<div class='stage_actions_cont'>"+_stage + "<div class='stage-div'><div>Action Pending</div></div></div>";
+            return "<div class='stage_actions_cont'>"+_stage + "<div class='stage-div'><div><span class='status-icon'><i class='fa fa-commenting' aria-hidden='true'></i></span><span class='status-label label label-info'>Action Pending</span></div></div></div>";
         }
 
         private string GetDataforNotPermissedApprovalColumn(List<EbDataRow> rows, User _user, List<EbDataRow> linesRows, EbDataRow row =null)
@@ -2005,8 +2005,9 @@ namespace ExpressBase.ServiceStack
             }
             foreach (EbDataRow _ebdatarow in rows)
             {
+                var _icon = GetIconforReviewStatus(_ebdatarow["review_status"].ToString());
                 _stage_name += "<label>" + _ebdatarow["stage_name"].ToString() + "</label>";
-                review_status += "<div>" + _ebdatarow["review_status"].ToString() + "</div>";
+                review_status += "<div><span class='status-icon'><i class='"+ _icon + "' aria-hidden='true'></i></span><span class='status-label label label-info'>" + _ebdatarow["review_status"].ToString() + "</span></div>";
                 if (row != null)
                 {
                     var indx = -1;
@@ -2029,6 +2030,17 @@ namespace ExpressBase.ServiceStack
             _stage_name += "<button class='btn stage-btn btn-approval_popover' data-contents='" + _history .ToBase64()+ "' data-toggle='popover'><i class='fa fa-history' aria-hidden='true'></i></button></div>";
             review_status += "</div>";
             return _stage+ _stage_name + review_status +"</div>";
+        }
+
+        private string GetIconforReviewStatus(string status)
+        {
+            if (status == "Abandoned")
+                return "fa fa-ban color-red";
+            else if (status == "Completed")
+                return "fa fa-check color-green";
+            else if (status == "In Process")
+                return "fa fa-spinner color-blue";
+            return string.Empty;
         }
 
         private object GetDataforPowerSelect(DVBaseColumn col, object _formattedData)
