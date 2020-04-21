@@ -60,13 +60,16 @@ namespace ExpressBase.ServiceStack.Services
         {
             foreach (EbProfileUserType eput in request.UserTypeForms)
             {
-                EbWebForm form = GetWebFormObject(eput.RefId);
-                TableSchema _table = form.FormSchema.Tables.Find(e => e.TableName.Equals(form.FormSchema.MasterTable));
-                if (_table != null)
+                if (eput.RefId != string.Empty)
                 {
-                    form.AutoDeployTV = false;
-                    _table.Columns.Add(new ColumnSchema { ColumnName = "eb_users_id", EbDbType = (int)EbDbTypes.Int32, Control = new EbNumeric { Name = "eb_users_id", Label = "User Id" } });
-                    CreateWebFormTables(form.FormSchema, new CreateWebFormTableRequest { WebObj = form, DontThrowException = true });
+                    EbWebForm form = GetWebFormObject(eput.RefId);
+                    TableSchema _table = form.FormSchema.Tables.Find(e => e.TableName.Equals(form.FormSchema.MasterTable));
+                    if (_table != null)
+                    {
+                        form.AutoDeployTV = false;
+                        _table.Columns.Add(new ColumnSchema { ColumnName = "eb_users_id", EbDbType = (int)EbDbTypes.Int32, Control = new EbNumeric { Name = "eb_users_id", Label = "User Id" } });
+                        CreateWebFormTables(form.FormSchema, new CreateWebFormTableRequest { WebObj = form, DontThrowException = true });
+                    }
                 }
             }
             return new CreateMyProfileTableResponse { };
@@ -909,7 +912,7 @@ namespace ExpressBase.ServiceStack.Services
                 sourceForm.TableRowId = request.SourceRowId;
                 sourceForm.RefId = request.SourceRefId;
                 sourceForm.UserObj = request.UserObj;
-                sourceForm.SolutionObj = GetSolutionObject(request.SolnId); 
+                sourceForm.SolutionObj = GetSolutionObject(request.SolnId);
 
                 EbWebForm destForm = GetWebFormObject(request.DestRefId);
                 destForm.RefId = request.DestRefId;
@@ -1118,11 +1121,8 @@ namespace ExpressBase.ServiceStack.Services
                 FormObj.MergeFormData();
                 Console.WriteLine("Insert/Update WebFormData : Save start - " + DateTime.Now);
                 string r = FormObj.Save(EbConnectionFactory.DataDB, this);
-                if (this.EbConnectionFactory.EmailConnection != null && this.EbConnectionFactory.EmailConnection.Primary != null)
-                {
-                    Console.WriteLine("Insert/Update WebFormData : SendMailIfUserCreated start - " + DateTime.Now);
-                    FormObj.SendMailIfUserCreated(MessageProducer3);
-                }
+                Console.WriteLine("Insert/Update WebFormData : AfterExecutionIfUserCreated start - " + DateTime.Now);
+                FormObj.AfterExecutionIfUserCreated(this, this.EbConnectionFactory.EmailConnection, MessageProducer3);
                 Console.WriteLine("Insert/Update WebFormData end : Execution Time = " + (DateTime.Now - startdt).TotalMilliseconds);
                 return new InsertDataFromWebformResponse()
                 {
@@ -1136,7 +1136,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (FormException ex)
             {
-                Console.WriteLine("FormException in Insert/Update WebFormData\nMessage : " + ex.Message +"\nMessageInternal : " + ex.MessageInternal + "\nStackTraceInternal : " + ex.StackTraceInternal + "\nStackTrace" + ex.StackTrace);
+                Console.WriteLine("FormException in Insert/Update WebFormData\nMessage : " + ex.Message + "\nMessageInternal : " + ex.MessageInternal + "\nStackTraceInternal : " + ex.StackTraceInternal + "\nStackTrace" + ex.StackTrace);
                 return new InsertDataFromWebformResponse()
                 {
                     Message = ex.Message,
@@ -1213,6 +1213,37 @@ namespace ExpressBase.ServiceStack.Services
                 return new InsertOrUpdateFormDataResp() { Status = (int)HttpStatusCodes.INTERNAL_SERVER_ERROR, Message = ex.Message };
             }
         }
+
+        //public InsertBatchDataResponse Any(InsertBatchDataRequest request)
+        //{
+        //    try
+        //    {
+        //        Console.WriteLine("InsertBatchDataRequest Service start");
+        //        EbWebForm FormObj = GetWebFormObject(request.RefId);
+        //        FormObj.RefId = request.RefId;
+        //        FormObj.UserObj = this.Redis.Get<User>(request.UserAuthId);
+        //        FormObj.LocationId = request.LocId;
+        //        FormObj.SolutionObj = GetSolutionObject(request.SolnId);
+                
+        //        //FormObj.PrepareWebFormData(this.EbConnectionFactory.DataDB, this, request.PushJson, request.FormGlobals);                
+        //        //string r = FormObj.Save(this.EbConnectionFactory.DataDB, this, request.TransactionConnection);
+
+        //        Console.WriteLine("InsertBatchDataRequest returning");
+        //        return new InsertBatchDataResponse() { Status = (int)HttpStatusCodes.OK, Message = "success" };
+        //    }
+        //    catch (FormException ex)
+        //    {
+        //        Console.WriteLine("FormException in InsertOrUpdateFormDataRqst\nMessage : " + ex.Message + "\nMessageInternal : " + ex.MessageInternal + "\nStackTraceInternal : " + ex.StackTraceInternal + "\nStackTrace : " + ex.StackTrace);
+        //        return new InsertBatchDataResponse() { Status = ex.ExceptionCode, Message = ex.Message };
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Console.WriteLine("Exception in InsertOrUpdateFormDataRqst\nMessage" + ex.Message + "\nStackTrace" + ex.StackTrace);
+        //        return new InsertBatchDataResponse() { Status = (int)HttpStatusCodes.INTERNAL_SERVER_ERROR, Message = ex.Message };
+        //    }
+        //}
+
+
 
 
         //================================= FORMULA AND VALIDATION =================================================
