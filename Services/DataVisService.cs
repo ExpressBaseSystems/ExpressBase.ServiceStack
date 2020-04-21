@@ -66,6 +66,8 @@ namespace ExpressBase.ServiceStack
 
         EbDataSet _approvaldata = null;
 
+        EbDataVisualization _dV = null;
+
         //[CompressResponse]
         //public DataSourceDataResponse Any(DataVisDataRequest request)
         //{
@@ -287,7 +289,7 @@ namespace ExpressBase.ServiceStack
                 this.Log.Info("data request");
                 CurLocId = request.LocId;
 
-                EbDataVisualization _dV = request.EbDataVisualization;
+                 _dV = request.EbDataVisualization;
 
                 DataSourceDataResponse dsresponse = null;
                 //this._replaceEbColumns = request.ReplaceEbColumns;
@@ -1698,13 +1700,13 @@ namespace ExpressBase.ServiceStack
             {
                 try
                 {
-                    if (col.IsCustomColumn)
+                    if (col.IsCustomColumn && col.Name != "app_status" && col.Name != "app_stage")
                     {
                         if (col is DVButtonColumn)
                             ProcessButtoncolumn(row, globals, col);
                         else if (col is DVApprovalColumn)
                         {
-                            ProcessApprovalcolumn(col, row);
+                            ProcessApprovalcolumn(col, row, _user);
                         }
                         else if(col is DVActionColumn)
                             row[col.Data] = "<i class='fa fa-edit'></i>";
@@ -1855,7 +1857,7 @@ namespace ExpressBase.ServiceStack
 	 		                        AND act.action_unique_id=app.action_unique_id AND act.eb_stages_id = st.id
 	 		                        AND act.eb_del='F';", verid, request.RowId, request.RefId);
                 _approvaldata = this.EbConnectionFactory.DataDB.DoQueries(str);
-                resp._data = ProcessParticularApprovalcolumn();
+                resp._data = ProcessParticularApprovalcolumn(request.UserObj);
             }
             catch (Exception e)
             {
@@ -1864,18 +1866,18 @@ namespace ExpressBase.ServiceStack
             return resp;
         }
 
-        private string ProcessParticularApprovalcolumn()
+        private string ProcessParticularApprovalcolumn(User _user)
         {
             string _formattedData = string.Empty;
             var _rows = _approvaldata.Tables[0].Rows;
             if (_rows.Count > 0)
-                _formattedData = GetDataforPermissedApprovalColumn(_rows);
+                _formattedData = GetDataforPermissedApprovalColumn(_rows, _approvaldata.Tables[1].Rows);
             else
             {
                 _rows = _approvaldata.Tables[1].Rows;
                 if (_rows.Count > 0)
                 {
-                    _formattedData = GetDataforNotPermissedApprovalColumn(_rows, _approvaldata.Tables[2].Rows);
+                    _formattedData = GetDataforNotPermissedApprovalColumn(_rows, _user, _approvaldata.Tables[2].Rows);
                 }
                 else
                     _formattedData = string.Empty;
@@ -1883,30 +1885,40 @@ namespace ExpressBase.ServiceStack
             return _formattedData;
         }
 
-        private void ProcessApprovalcolumn(DVBaseColumn col, EbDataRow row)
+        private void ProcessApprovalcolumn(DVBaseColumn col, EbDataRow row, User _user)
         {
             string _formattedData = string.Empty;
+            List<EbDataRow> stage_status = null;
             if (col.ApprovalData != null)
             {
                 var _rows = col.ApprovalData.Tables[0].Rows.FindAll(_row => Convert.ToInt32(_row["form_data_id"]) == Convert.ToInt32(row[(col as DVApprovalColumn).FormDataId[0].Data]));
                 if (_rows.Count > 0)
-                    _formattedData = GetDataforPermissedApprovalColumn(_rows);
+                {
+                    stage_status = col.ApprovalData.Tables[1].Rows.FindAll(_row => Convert.ToInt32(_row["eb_src_id"]) == Convert.ToInt32(row[(col as DVApprovalColumn).FormDataId[0].Data]));
+                    _formattedData = GetDataforPermissedApprovalColumn(_rows, stage_status, row);
+                }
                 else
                 {
-                    _rows = col.ApprovalData.Tables[1].Rows.FindAll(_row => Convert.ToInt32(_row["eb_src_id"]) == Convert.ToInt32(row[(col as DVApprovalColumn).FormDataId[0].Data]));
-                    if (_rows.Count > 0)
+                    stage_status = col.ApprovalData.Tables[1].Rows.FindAll(_row => Convert.ToInt32(_row["eb_src_id"]) == Convert.ToInt32(row[(col as DVApprovalColumn).FormDataId[0].Data]));
+                    if (stage_status.Count > 0)
                     {
                         var linesRows = col.ApprovalData.Tables[2].Rows.FindAll(_row => Convert.ToInt32(_row["eb_src_id"]) == Convert.ToInt32(row[(col as DVApprovalColumn).FormDataId[0].Data]));
-                        _formattedData = GetDataforNotPermissedApprovalColumn(_rows, linesRows);
+                        _formattedData = GetDataforNotPermissedApprovalColumn(stage_status, _user, linesRows, row);
                     }
                     else
+                    {
                         _formattedData = string.Empty;
+                        if (_dV.Columns.Get("app_status") != null)
+                            row[_dV.Columns.Get("app_status").Data] = _formattedData;
+                        if (_dV.Columns.Get("app_stage") != null)
+                            row[_dV.Columns.Get("app_stage").Data] = _formattedData;
+                    }
                 }
             }
             row[col.Data] = _formattedData;
         }
 
-        private string GetDataforPermissedApprovalColumn(List<EbDataRow> rows)
+        private string GetDataforPermissedApprovalColumn(List<EbDataRow> rows, List<EbDataRow> stage_status, EbDataRow row =null)
         {
             string _data = @"<nav>
                           <div class='nav nav-tabs'  role='tablist'>
@@ -1931,14 +1943,19 @@ namespace ExpressBase.ServiceStack
             _data += "<tr><td class='action-td'></td><td class='action-td'><button class='btn stage-btn btn-action_execute' data-toggle='tooltip' title='Execute Review'>Execute</button></td></tr>";//<i class='fa fa-play' aria-hidden='true'></i>
             _data += "</table></div></div>";
             string _stage = "<div class='stage_comments_cont stage-div'>";
-            _stage += "<label>" + rows[0]["stage_name"].ToString() + "</label>";
+            _stage += "<label>" + stage_status[0]["stage_name"].ToString() + "</label>";
             _stage += "<button class='btn stage-btn btn-approval_popover' data-contents='"+ _data .ToBase64()+ "' data-toggle='popover'><i class='fa fa-comments-o' aria-hidden='true'></i></button></div>";//
-
-
-            return "<div class='stage_actions_cont'>"+_stage +"</div>";
+            if (row != null)
+            {
+                if(_dV.Columns.Get("app_status") != null)
+                    row[_dV.Columns.Get("app_status").Data] = "Action Pending";
+                if(_dV.Columns.Get("app_stage")!= null)
+                    row[_dV.Columns.Get("app_stage").Data] = stage_status[0]["stage_name"].ToString();
+            }
+            return "<div class='stage_actions_cont'>"+_stage + "<div class='stage-div'><div>Action Pending</div></div></div>";
         }
 
-        private string GetDataforNotPermissedApprovalColumn(List<EbDataRow> rows, List<EbDataRow> linesRows=null)
+        private string GetDataforNotPermissedApprovalColumn(List<EbDataRow> rows, User _user, List<EbDataRow> linesRows, EbDataRow row =null)
         {
             string _stage = "<div class='stage_actions_cont'>";
             string _stage_name = "<div class='stage-div'>";
@@ -1955,18 +1972,27 @@ namespace ExpressBase.ServiceStack
                 _history += "<table class='table'><thead class='history-head'><tr><th>Date</th><th>Stage</th><th>Action</th><th>User</th><th>Comments</th></tr></thead><tbody class='history-body'>";
                 foreach (EbDataRow _ebdatarow in linesRows)
                 {
-                    _history += "<tr><td>" + _ebdatarow["eb_created_at"].ToString() + "</td>";
+                    var __date = Convert.ToDateTime(_ebdatarow["eb_created_at"]).ConvertFromUtc(_user.Preference.TimeZone).ToString(_user.Preference.GetShortDatePattern() + " " + _user.Preference.GetShortTimePattern());
+                    _history += "<tr><td>" + __date.ToString() + "</td>";
                     _history += "<td>" + _ebdatarow["stage_name"].ToString() + "</td>";
                     _history += "<td>" + _ebdatarow["action_name"].ToString() + "</td>";
-                    _history += "<td>" + _ebdatarow["fullname"].ToString() + "</td>";
+                    _history += "<td>" + _ebdatarow["fullname"].ToString() + "<img src='/images/dp/" + _ebdatarow["eb_created_by"].ToString() + ".png' class='history-image Eb_Image'></td>";
                     _history += "<td class='comment-td'>" + _ebdatarow["comments"].ToString() + "</td></tr>";
                 }
                 _history += "</tbody></table></div></div> ";
             }
             foreach (EbDataRow _ebdatarow in rows)
             {
+                var _pro = (_ebdatarow["review_status"].ToString() == "processing") ? "In processing" : _ebdatarow["review_status"].ToString();
                 _stage_name += "<label>" + _ebdatarow["stage_name"].ToString() + "</label>";
-                review_status += "<div>" + _ebdatarow["review_status"].ToString() + "</div>";
+                review_status += "<div>" + _pro + "</div>";
+                if (row != null)
+                {
+                    if(_dV.Columns.Get("app_status") != null)
+                        row[_dV.Columns.Get("app_status").Data] = _pro;
+                    if(_dV.Columns.Get("app_stage")!= null)
+                        row[_dV.Columns.Get("app_stage").Data] = _ebdatarow["stage_name"].ToString();
+                }
             }
             _stage_name += "<button class='btn stage-btn btn-approval_popover' data-contents='" + _history .ToBase64()+ "' data-toggle='popover'><i class='fa fa-history' aria-hidden='true'></i></button></div>";
             review_status += "</div>";
