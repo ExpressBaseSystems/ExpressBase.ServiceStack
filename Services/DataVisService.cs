@@ -1700,7 +1700,7 @@ namespace ExpressBase.ServiceStack
             {
                 try
                 {
-                    if (col.IsCustomColumn && col.Name != "app_status" && col.Name != "app_stage")
+                    if (col.IsCustomColumn && col.Name != "eb_review_status" && col.Name != "eb_review_stage")
                     {
                         if (col is DVButtonColumn)
                             ProcessButtoncolumn(row, globals, col);
@@ -1908,10 +1908,21 @@ namespace ExpressBase.ServiceStack
                     else
                     {
                         _formattedData = string.Empty;
-                        if (_dV.Columns.Get("app_status") != null)
-                            row[_dV.Columns.Get("app_status").Data] = _formattedData;
-                        if (_dV.Columns.Get("app_stage") != null)
-                            row[_dV.Columns.Get("app_stage").Data] = _formattedData;
+                        var indx = -1;
+                        if (_dV.Columns.Get("eb_review_status") != null)
+                        {
+                            indx = _dV.Columns.Get("eb_review_status").Data;
+                            row[indx] = _formattedData;
+                            //if (IntermediateDic.ContainsKey(indx))
+                            //    IntermediateDic[indx] = _formattedData;
+                        }
+                        if (_dV.Columns.Get("eb_review_stage") != null)
+                        {
+                            indx = _dV.Columns.Get("eb_review_stage").Data;
+                            row[indx] = _formattedData;
+                            //if (IntermediateDic.ContainsKey(indx))
+                            //    IntermediateDic[indx] = _formattedData;
+                        }
                     }
                 }
             }
@@ -1947,10 +1958,21 @@ namespace ExpressBase.ServiceStack
             _stage += "<button class='btn stage-btn btn-approval_popover' data-contents='"+ _data .ToBase64()+ "' data-toggle='popover'><i class='fa fa-comments-o' aria-hidden='true'></i></button></div>";//
             if (row != null)
             {
-                if(_dV.Columns.Get("app_status") != null)
-                    row[_dV.Columns.Get("app_status").Data] = "Action Pending";
-                if(_dV.Columns.Get("app_stage")!= null)
-                    row[_dV.Columns.Get("app_stage").Data] = stage_status[0]["stage_name"].ToString();
+                var indx = -1;
+                if (_dV.Columns.Get("eb_review_status") != null)
+                {
+                    indx = _dV.Columns.Get("eb_review_status").Data;
+                    row[indx] = "Action Pending";
+                    //if(IntermediateDic.ContainsKey(indx))
+                    //    IntermediateDic[indx] = "Action Pending";
+                }
+                if (_dV.Columns.Get("eb_review_stage") != null)
+                {
+                    indx = _dV.Columns.Get("eb_review_stage").Data;
+                    row[indx] = stage_status[0]["stage_name"].ToString();
+                    //if (IntermediateDic.ContainsKey(indx))
+                    //    IntermediateDic[indx] = stage_status[0]["stage_name"].ToString();
+                }
             }
             return "<div class='stage_actions_cont'>"+_stage + "<div class='stage-div'><div>Action Pending</div></div></div>";
         }
@@ -1976,22 +1998,32 @@ namespace ExpressBase.ServiceStack
                     _history += "<tr><td>" + __date.ToString() + "</td>";
                     _history += "<td>" + _ebdatarow["stage_name"].ToString() + "</td>";
                     _history += "<td>" + _ebdatarow["action_name"].ToString() + "</td>";
-                    _history += "<td>" + _ebdatarow["fullname"].ToString() + "<img src='/images/dp/" + _ebdatarow["eb_created_by"].ToString() + ".png' class='history-image Eb_Image'></td>";
+                    _history += "<td><img src='/images/dp/" + _ebdatarow["eb_created_by"].ToString() + ".png' class='history-image Eb_Image'>" + _ebdatarow["fullname"].ToString() + "</td>";
                     _history += "<td class='comment-td'>" + _ebdatarow["comments"].ToString() + "</td></tr>";
                 }
                 _history += "</tbody></table></div></div> ";
             }
             foreach (EbDataRow _ebdatarow in rows)
             {
-                var _pro = (_ebdatarow["review_status"].ToString() == "processing") ? "In processing" : _ebdatarow["review_status"].ToString();
                 _stage_name += "<label>" + _ebdatarow["stage_name"].ToString() + "</label>";
-                review_status += "<div>" + _pro + "</div>";
+                review_status += "<div>" + _ebdatarow["review_status"].ToString() + "</div>";
                 if (row != null)
                 {
-                    if(_dV.Columns.Get("app_status") != null)
-                        row[_dV.Columns.Get("app_status").Data] = _pro;
-                    if(_dV.Columns.Get("app_stage")!= null)
-                        row[_dV.Columns.Get("app_stage").Data] = _ebdatarow["stage_name"].ToString();
+                    var indx = -1;
+                    if (_dV.Columns.Get("eb_review_status") != null)
+                    {
+                        indx = _dV.Columns.Get("eb_review_status").Data;
+                        row[indx] = _ebdatarow["review_status"].ToString();
+                        //if (IntermediateDic.ContainsKey(indx))
+                        //    IntermediateDic[indx] = _ebdatarow["review_status"].ToString();
+                    }
+                    if (_dV.Columns.Get("eb_review_stage") != null)
+                    {
+                        indx = _dV.Columns.Get("eb_review_stage").Data;
+                        row[indx] = _ebdatarow["stage_name"].ToString();
+                        //if (IntermediateDic.ContainsKey(indx))
+                        //    IntermediateDic[indx] = _ebdatarow["stage_name"].ToString();
+                    }
                 }
             }
             _stage_name += "<button class='btn stage-btn btn-approval_popover' data-contents='" + _history .ToBase64()+ "' data-toggle='popover'><i class='fa fa-history' aria-hidden='true'></i></button></div>";
