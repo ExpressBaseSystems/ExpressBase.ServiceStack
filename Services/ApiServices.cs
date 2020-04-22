@@ -68,6 +68,10 @@ namespace ExpressBase.ServiceStack.Services
                 this.GlobalParams = this.Proc(request.Data);
                 this.UserObject = this.Redis.Get<User>(request.UserAuthId);
 
+                //fill default param
+                this.GlobalParams["eb_loc_id"] = this.UserObject.Preference.DefaultLocation;
+                this.GlobalParams["eb_currentuser_id"] = request.UserId;
+
                 int step = 0;
                 this.Api = this.Get(new ApiByNameRequest { Name = request.Name, Version = request.Version }).Api;
 
@@ -354,29 +358,38 @@ namespace ExpressBase.ServiceStack.Services
         //fill inputparam
         private void FillParams(List<Param> InputParam, int step)
         {
-            if (step != 0 && this.Api.Resources[step - 1].Result != null)
+            try
             {
-                List<Param> OutParams = this.Api.Resources[step - 1].GetOutParams(InputParam);
-                this.TempParams = OutParams.Select(i => new { prop = i.Name, val = i.ValueTo })
-                        .ToDictionary(x => x.prop, x => x.val as object);
-            }
+                if (step != 0 && this.Api.Resources[step - 1].Result != null)
+                {
+                    List<Param> OutParams = this.Api.Resources[step - 1].GetOutParams(InputParam);
+                    this.TempParams = OutParams.Select(i => new { prop = i.Name, val = i.ValueTo })
+                            .ToDictionary(x => x.prop, x => x.val as object);
+                }
 
-            foreach (Param p in InputParam)
+                foreach (Param p in InputParam)
+                {
+                    if (this.TempParams != null && this.TempParams.ContainsKey(p.Name))
+                        p.Value = this.TempParams[p.Name].ToString();
+                    else if (this.GlobalParams.ContainsKey(p.Name))
+                        p.Value = this.GlobalParams[p.Name].ToString();
+                    else
+                    {
+                        this.ApiResponse.Message.Status = $"Parameter not found";
+                        throw new ApiException($"Parameter {p.Name} not found!");
+                    } 
+
+                    if (string.IsNullOrEmpty(p.Value))
+                    {
+                        this.ApiResponse.Message.Status = string.Format(ApiConstants.UNSET_PARAM, p.Name);
+                        throw new ApiException(((int)ApiErrorCode.Failed).ToString());
+                    }
+                }
+            }
+            catch(Exception ex)
             {
-                if (this.TempParams != null && this.TempParams.ContainsKey(p.Name))
-                    p.Value = this.TempParams[p.Name].ToString();
-                else if (this.GlobalParams.ContainsKey(p.Name))
-                    p.Value = this.GlobalParams[p.Name].ToString();
-                else if (string.IsNullOrEmpty(p.Value))
-                {
-                    this.ApiResponse.Message.Status = string.Format(ApiConstants.UNSET_PARAM, p.Name);
-                    throw new ApiException(((int)ApiErrorCode.Failed).ToString());
-                }
-                else
-                {
-                    this.ApiResponse.Message.Status = string.Format(ApiConstants.UNSET_PARAM, p.Name);
-                    throw new ApiException(((int)ApiErrorCode.Failed).ToString());
-                }
+                this.ApiResponse.Message.Description = ex.Message;
+                throw new ApiException(ex.Message);
             }
         }
 

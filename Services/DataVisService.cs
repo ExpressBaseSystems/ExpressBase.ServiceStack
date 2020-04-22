@@ -1996,7 +1996,7 @@ namespace ExpressBase.ServiceStack
             _data += "</table></div></div>";
             string _stage = "<div class='stage_comments_cont stage-div'>";
             _stage += "<label>" + rows[0]["stage_name"].ToString() + "</label>";
-            _stage += "<button class='btn stage-btn btn-approval_popover' data-contents='"+ _data .ToBase64()+ "' data-toggle='popover'><i class='fa fa-comments-o' aria-hidden='true'></i></button></div>";//
+            _stage += "<button class='btn stage-btn btn-approval_popover' data-contents='"+ _data .ToBase64()+ "' data-toggle='popover'><i class='fa fa-pencil' aria-hidden='true'></i></button></div>";//
             if (row != null)
             {
                 var indx = -1;
@@ -2015,7 +2015,7 @@ namespace ExpressBase.ServiceStack
                     //    IntermediateDic[indx] = stage_status[0]["stage_name"].ToString();
                 }
             }
-            return "<div class='stage_actions_cont'>"+_stage + "<div class='stage-div'><div><span class='status-icon'><i class='fa fa-commenting' aria-hidden='true'></i></span><span class='status-label label label-info'>Action Pending</span></div></div></div>";
+            return "<div class='stage_actions_cont'>"+_stage + "<div class='stage-div'><span class='status-label label label-warning'>Action Pending</span><span class='status-icon'><i class='fa fa-commenting color-warning' aria-hidden='true'></i></span></div></div>";
         }
 
         private string GetDataforNotPermissedApprovalColumn(List<EbDataRow> rows, User _user, List<EbDataRow> linesRows, EbDataRow row =null)
@@ -2035,11 +2035,12 @@ namespace ExpressBase.ServiceStack
                 _history += "<table class='table'><thead class='history-head'><tr><th>Date</th><th>Stage</th><th>Action</th><th>User</th><th>Comments</th></tr></thead><tbody class='history-body'>";
                 foreach (EbDataRow _ebdatarow in linesRows)
                 {
-                    var __date = Convert.ToDateTime(_ebdatarow["eb_created_at"]).ConvertFromUtc(_user.Preference.TimeZone).ToString(_user.Preference.GetShortDatePattern() + " " + _user.Preference.GetShortTimePattern());
+                    var _zone = Convert.ToDateTime(_ebdatarow["eb_created_at"]).ConvertFromUtc(_user.Preference.TimeZone);
+                    var __date = _zone.ToString(_user.Preference.GetShortDatePattern()) + "<br>" + _zone.ToString(_user.Preference.GetShortTimePattern());
                     _history += "<tr><td>" + __date.ToString() + "</td>";
                     _history += "<td>" + _ebdatarow["stage_name"].ToString() + "</td>";
                     _history += "<td>" + _ebdatarow["action_name"].ToString() + "</td>";
-                    _history += "<td><img src='/images/dp/" + _ebdatarow["eb_created_by"].ToString() + ".png' class='history-image Eb_Image'>" + _ebdatarow["fullname"].ToString() + "</td>";
+                    _history += "<td><img src='/images/dp/" + _ebdatarow["eb_created_by"].ToString() + ".png' class='history-image Eb_Image' onerror='imgError(this);'> " + _ebdatarow["fullname"].ToString() + "</td>";
                     _history += "<td class='comment-td'>" + _ebdatarow["comments"].ToString() + "</td></tr>";
                 }
                 _history += "</tbody></table></div></div> ";
@@ -2047,8 +2048,9 @@ namespace ExpressBase.ServiceStack
             foreach (EbDataRow _ebdatarow in rows)
             {
                 var _icon = GetIconforReviewStatus(_ebdatarow["review_status"].ToString());
+                var _label = GetLabelStyleforReviewStatus(_ebdatarow["review_status"].ToString());
                 _stage_name += "<label>" + _ebdatarow["stage_name"].ToString() + "</label>";
-                review_status += "<div><span class='status-icon'><i class='"+ _icon + "' aria-hidden='true'></i></span><span class='status-label label label-info'>" + _ebdatarow["review_status"].ToString() + "</span></div>";
+                review_status += "<span class='status-label label "+ _label + "'>" + _ebdatarow["review_status"].ToString() + "</span><span class='status-icon'><i class='" + _icon + "' aria-hidden='true'></i></span>";
                 if (row != null)
                 {
                     var indx = -1;
@@ -2081,6 +2083,17 @@ namespace ExpressBase.ServiceStack
                 return "fa fa-check color-green";
             else if (status == "In Process")
                 return "fa fa-spinner color-blue";
+            return string.Empty;
+        }
+
+        private string GetLabelStyleforReviewStatus(string status)
+        {
+            if (status == "Abandoned")
+                return "label-danger";
+            else if (status == "Completed")
+                return "label-success";
+            else if (status == "In Process")
+                return "label-info";
             return string.Empty;
         }
 
