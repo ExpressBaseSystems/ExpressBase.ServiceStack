@@ -2040,7 +2040,7 @@ namespace ExpressBase.ServiceStack
                     _history += "<tr><td>" + __date.ToString() + "</td>";
                     _history += "<td>" + _ebdatarow["stage_name"].ToString() + "</td>";
                     _history += "<td>" + _ebdatarow["action_name"].ToString() + "</td>";
-                    _history += "<td><img src='/images/dp/" + _ebdatarow["eb_created_by"].ToString() + ".png' class='history-image Eb_Image'>" + _ebdatarow["fullname"].ToString() + "</td>";
+                    _history += "<td><img src='/images/dp/" + _ebdatarow["eb_created_by"].ToString() + ".png' class='history-image Eb_Image' onerror='imgError(this);'> " + _ebdatarow["fullname"].ToString() + "</td>";
                     _history += "<td class='comment-td'>" + _ebdatarow["comments"].ToString() + "</td></tr>";
                 }
                 _history += "</tbody></table></div></div> ";
