@@ -976,11 +976,18 @@ namespace ExpressBase.ServiceStack.Services
             Dictionary<string, string> Indexs = new Dictionary<string, string>();
             for (int i = 0; i < dt.Rows.Count; i++)
             {
+                string indexname = dt.Rows[i]["indexname"].ToString();
+                string indexdef = dt.Rows[i]["indexdef"].ToString();
+                if (!indexdef.Contains("public."))
+                {
+                    indexdef.Replace(indexname, "public." + indexname);
+                }
+
                 if (!Indexs.ContainsKey(dt.Rows[i]["indexname"].ToString()))
                 {
                     Indexs.Add(
-                    dt.Rows[i]["indexname"].ToString(),
-                    dt.Rows[i]["indexdef"].ToString().Replace("USING BTREE", "using btree").Replace("  ", " ")
+                    indexname,
+                    indexdef.Replace("USING BTREE", "using btree").Replace("  ", " ")
                     );
                 }
             }
