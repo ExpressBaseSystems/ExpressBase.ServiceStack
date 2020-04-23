@@ -1783,7 +1783,26 @@ namespace ExpressBase.ServiceStack
                     DVApprovalColumn col = _col as DVApprovalColumn;
                     var _roles = string.Join(",", _user.RoleIds.ToArray());
                     var verid = col.FormRefid.Split("-")[4];
-                    string str = string.Format(@"
+                    string str = string.Empty;
+                    if (_user.Roles.Contains(SystemRoles.SolutionOwner.ToString()) || _user.Roles.Contains(SystemRoles.SolutionAdmin.ToString()))
+                    {
+                        str = string.Format(@"
+                    SELECT Q1.*,act.action_name,act.action_unique_id
+                    FROM(
+	                    SELECT my.id, st.stage_name,st.id as stage_id,my.form_ref_id,my.form_data_id,st.stage_unique_id
+	                    FROM eb_my_actions my, eb_stages st
+	                    WHERE  my.form_ref_id ='{0}'
+			                    AND my.is_completed='F' AND my.eb_del='F'
+			                    AND st.id=my.eb_stages_id AND st.eb_del='F' 
+	                    ) Q1
+                    LEFT JOIN
+	                    eb_stage_actions act
+                    ON
+	                    Q1.stage_id=act.eb_stages_id AND act.eb_del='F' ;", col.FormRefid);
+                    }
+                    else
+                    {
+                        str = string.Format(@"
                     SELECT Q1.*,act.action_name,act.action_unique_id
                     FROM(
 	                    SELECT my.id, st.stage_name,st.id as stage_id,my.form_ref_id,my.form_data_id,st.stage_unique_id
@@ -1798,6 +1817,7 @@ namespace ExpressBase.ServiceStack
 	                    eb_stage_actions act
                     ON
 	                    Q1.stage_id=act.eb_stages_id AND act.eb_del='F' ;", _user.UserId, _roles, col.FormRefid);
+                    }
                     str += string.Format(@"
 	                    SELECT app.review_status,app.eb_src_id,my.id,st.stage_name
 	                    FROM eb_approval app,eb_my_actions my, eb_stages st
@@ -1828,7 +1848,27 @@ namespace ExpressBase.ServiceStack
             {
                 var _roles = string.Join(",", request.UserObj.RoleIds.ToArray());
                 var verid = request.RefId.Split("-")[4];
-                string str = string.Format(@"
+                string str = string.Empty;
+                if (request.UserObj.Roles.Contains(SystemRoles.SolutionOwner.ToString()) || request.UserObj.Roles.Contains(SystemRoles.SolutionAdmin.ToString()))
+                {
+                    str = string.Format(@"
+                    SELECT Q1.*,act.action_name,act.action_unique_id
+                    FROM(
+	                    SELECT my.id, st.stage_name,st.id as stage_id,my.form_ref_id,my.form_data_id,st.stage_unique_id
+	                    FROM eb_my_actions my, eb_stages st
+	                    WHERE 
+                                 my.form_ref_id ='{0}' AND my.form_data_id ={1}
+			                    AND my.is_completed='F' AND my.eb_del='F'
+			                    AND st.id=my.eb_stages_id AND st.eb_del='F' 
+	                    ) Q1
+                    LEFT JOIN
+	                    eb_stage_actions act
+                    ON
+	                    Q1.stage_id=act.eb_stages_id AND act.eb_del='F' ;", request.RefId, request.RowId);
+                }
+                else
+                {
+                     str = string.Format(@"
                     SELECT Q1.*,act.action_name,act.action_unique_id
                     FROM(
 	                    SELECT my.id, st.stage_name,st.id as stage_id,my.form_ref_id,my.form_data_id,st.stage_unique_id
@@ -1843,6 +1883,7 @@ namespace ExpressBase.ServiceStack
 	                    eb_stage_actions act
                     ON
 	                    Q1.stage_id=act.eb_stages_id AND act.eb_del='F' ;", request.UserObj.UserId, _roles, request.RefId, request.RowId);
+                }
                 str += string.Format(@"
 	                    SELECT app.review_status,app.eb_src_id,my.id,st.stage_name
 	                    FROM eb_approval app,eb_my_actions my, eb_stages st
@@ -1954,8 +1995,8 @@ namespace ExpressBase.ServiceStack
             _data += "<tr><td class='action-td'></td><td class='action-td'><button class='btn stage-btn btn-action_execute' data-toggle='tooltip' title='Execute Review'>Execute</button></td></tr>";//<i class='fa fa-play' aria-hidden='true'></i>
             _data += "</table></div></div>";
             string _stage = "<div class='stage_comments_cont stage-div'>";
-            _stage += "<label>" + stage_status[0]["stage_name"].ToString() + "</label>";
-            _stage += "<button class='btn stage-btn btn-approval_popover' data-contents='"+ _data .ToBase64()+ "' data-toggle='popover'><i class='fa fa-comments-o' aria-hidden='true'></i></button></div>";//
+            _stage += "<label>" + rows[0]["stage_name"].ToString() + "</label>";
+            _stage += "<button class='btn stage-btn btn-approval_popover' data-contents='"+ _data .ToBase64()+ "' data-toggle='popover'><i class='fa fa-pencil' aria-hidden='true'></i></button></div>";//
             if (row != null)
             {
                 var indx = -1;
@@ -1969,12 +2010,12 @@ namespace ExpressBase.ServiceStack
                 if (_dV.Columns.Get("eb_review_stage") != null)
                 {
                     indx = _dV.Columns.Get("eb_review_stage").Data;
-                    row[indx] = stage_status[0]["stage_name"].ToString();
+                    row[indx] = rows[0]["stage_name"].ToString();
                     //if (IntermediateDic.ContainsKey(indx))
                     //    IntermediateDic[indx] = stage_status[0]["stage_name"].ToString();
                 }
             }
-            return "<div class='stage_actions_cont'>"+_stage + "<div class='stage-div'><div>Action Pending</div></div></div>";
+            return "<div class='stage_actions_cont'>"+_stage + "<div class='stage-div'><span class='status-label label label-warning'>Action Pending</span><span class='status-icon'><i class='fa fa-commenting color-warning' aria-hidden='true'></i></span></div></div>";
         }
 
         private string GetDataforNotPermissedApprovalColumn(List<EbDataRow> rows, User _user, List<EbDataRow> linesRows, EbDataRow row =null)
@@ -1994,19 +2035,22 @@ namespace ExpressBase.ServiceStack
                 _history += "<table class='table'><thead class='history-head'><tr><th>Date</th><th>Stage</th><th>Action</th><th>User</th><th>Comments</th></tr></thead><tbody class='history-body'>";
                 foreach (EbDataRow _ebdatarow in linesRows)
                 {
-                    var __date = Convert.ToDateTime(_ebdatarow["eb_created_at"]).ConvertFromUtc(_user.Preference.TimeZone).ToString(_user.Preference.GetShortDatePattern() + " " + _user.Preference.GetShortTimePattern());
+                    var _zone = Convert.ToDateTime(_ebdatarow["eb_created_at"]).ConvertFromUtc(_user.Preference.TimeZone);
+                    var __date = _zone.ToString(_user.Preference.GetShortDatePattern()) + "<br>" + _zone.ToString(_user.Preference.GetShortTimePattern());
                     _history += "<tr><td>" + __date.ToString() + "</td>";
                     _history += "<td>" + _ebdatarow["stage_name"].ToString() + "</td>";
                     _history += "<td>" + _ebdatarow["action_name"].ToString() + "</td>";
-                    _history += "<td><img src='/images/dp/" + _ebdatarow["eb_created_by"].ToString() + ".png' class='history-image Eb_Image'>" + _ebdatarow["fullname"].ToString() + "</td>";
+                    _history += "<td><img src='/images/dp/" + _ebdatarow["eb_created_by"].ToString() + ".png' class='history-image Eb_Image' onerror='imgError(this);'> " + _ebdatarow["fullname"].ToString() + "</td>";
                     _history += "<td class='comment-td'>" + _ebdatarow["comments"].ToString() + "</td></tr>";
                 }
                 _history += "</tbody></table></div></div> ";
             }
             foreach (EbDataRow _ebdatarow in rows)
             {
+                var _icon = GetIconforReviewStatus(_ebdatarow["review_status"].ToString());
+                var _label = GetLabelStyleforReviewStatus(_ebdatarow["review_status"].ToString());
                 _stage_name += "<label>" + _ebdatarow["stage_name"].ToString() + "</label>";
-                review_status += "<div>" + _ebdatarow["review_status"].ToString() + "</div>";
+                review_status += "<span class='status-label label "+ _label + "'>" + _ebdatarow["review_status"].ToString() + "</span><span class='status-icon'><i class='" + _icon + "' aria-hidden='true'></i></span>";
                 if (row != null)
                 {
                     var indx = -1;
@@ -2029,6 +2073,28 @@ namespace ExpressBase.ServiceStack
             _stage_name += "<button class='btn stage-btn btn-approval_popover' data-contents='" + _history .ToBase64()+ "' data-toggle='popover'><i class='fa fa-history' aria-hidden='true'></i></button></div>";
             review_status += "</div>";
             return _stage+ _stage_name + review_status +"</div>";
+        }
+
+        private string GetIconforReviewStatus(string status)
+        {
+            if (status == "Abandoned")
+                return "fa fa-ban color-red";
+            else if (status == "Completed")
+                return "fa fa-check color-green";
+            else if (status == "In Process")
+                return "fa fa-spinner color-blue";
+            return string.Empty;
+        }
+
+        private string GetLabelStyleforReviewStatus(string status)
+        {
+            if (status == "Abandoned")
+                return "label-danger";
+            else if (status == "Completed")
+                return "label-success";
+            else if (status == "In Process")
+                return "label-info";
+            return string.Empty;
         }
 
         private object GetDataforPowerSelect(DVBaseColumn col, object _formattedData)

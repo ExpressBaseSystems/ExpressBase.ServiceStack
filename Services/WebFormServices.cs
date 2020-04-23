@@ -1214,34 +1214,31 @@ namespace ExpressBase.ServiceStack.Services
             }
         }
 
-        //public InsertBatchDataResponse Any(InsertBatchDataRequest request)
-        //{
-        //    try
-        //    {
-        //        Console.WriteLine("InsertBatchDataRequest Service start");
-        //        EbWebForm FormObj = GetWebFormObject(request.RefId);
-        //        FormObj.RefId = request.RefId;
-        //        FormObj.UserObj = this.Redis.Get<User>(request.UserAuthId);
-        //        FormObj.LocationId = request.LocId;
-        //        FormObj.SolutionObj = GetSolutionObject(request.SolnId);
-                
-        //        //FormObj.PrepareWebFormData(this.EbConnectionFactory.DataDB, this, request.PushJson, request.FormGlobals);                
-        //        //string r = FormObj.Save(this.EbConnectionFactory.DataDB, this, request.TransactionConnection);
-
-        //        Console.WriteLine("InsertBatchDataRequest returning");
-        //        return new InsertBatchDataResponse() { Status = (int)HttpStatusCodes.OK, Message = "success" };
-        //    }
-        //    catch (FormException ex)
-        //    {
-        //        Console.WriteLine("FormException in InsertOrUpdateFormDataRqst\nMessage : " + ex.Message + "\nMessageInternal : " + ex.MessageInternal + "\nStackTraceInternal : " + ex.StackTraceInternal + "\nStackTrace : " + ex.StackTrace);
-        //        return new InsertBatchDataResponse() { Status = ex.ExceptionCode, Message = ex.Message };
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        Console.WriteLine("Exception in InsertOrUpdateFormDataRqst\nMessage" + ex.Message + "\nStackTrace" + ex.StackTrace);
-        //        return new InsertBatchDataResponse() { Status = (int)HttpStatusCodes.INTERNAL_SERVER_ERROR, Message = ex.Message };
-        //    }
-        //}
+        public InsertBatchDataResponse Any(InsertBatchDataRequest request)
+        {
+            try
+            {
+                Console.WriteLine("InsertBatchDataRequest Service start");
+                EbWebForm FormObj = GetWebFormObject(request.RefId);
+                FormObj.RefId = request.RefId;
+                FormObj.UserObj = this.Redis.Get<User>(request.UserAuthId);
+                FormObj.LocationId = request.LocId;
+                FormObj.SolutionObj = GetSolutionObject(request.SolnId);
+                List<int> Ids = FormObj.ProcessBatchRequest(request.Data, this.EbConnectionFactory.DataDB, this, request.TransactionConnection);
+                Console.WriteLine("InsertBatchDataRequest returning");
+                return new InsertBatchDataResponse() { Status = (int)HttpStatusCodes.OK, Message = "success", RecordIds = Ids };
+            }
+            catch (FormException ex)
+            {
+                Console.WriteLine("FormException in InsertOrUpdateFormDataRqst\nMessage : " + ex.Message + "\nMessageInternal : " + ex.MessageInternal + "\nStackTraceInternal : " + ex.StackTraceInternal + "\nStackTrace : " + ex.StackTrace);
+                return new InsertBatchDataResponse() { Status = ex.ExceptionCode, Message = ex.Message };
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Exception in InsertOrUpdateFormDataRqst\nMessage" + ex.Message + "\nStackTrace" + ex.StackTrace);
+                return new InsertBatchDataResponse() { Status = (int)HttpStatusCodes.INTERNAL_SERVER_ERROR, Message = ex.Message };
+            }
+        }
 
 
 
