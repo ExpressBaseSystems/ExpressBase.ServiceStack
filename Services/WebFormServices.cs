@@ -1730,6 +1730,7 @@ namespace ExpressBase.ServiceStack.Services
 		                        eb_del = 'F') D
 		                        ON
  	                        D.eb_meeting_slots_id = B.id
+		ORDER BY slot_id
 ";
             String _query = string.Format(_qry, request.MeetingScheduleId, request.Date);
             try
