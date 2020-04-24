@@ -919,7 +919,7 @@ namespace ExpressBase.ServiceStack.Services
                 if (dt != null && dt.Tables.Count > 0)
                 {
                     changes.Fields = TenantFieldsDetailsForJsonConvert(dt.Tables[0], vendor);
-                    changes.Indexs = GetTenantIndexDetailsForJSON(dt.Tables[1]);
+                    changes.Indexs = GetTenantIndexDetailsForJSON(dt.Tables[1],table_name);
                 }
                 json = JsonConvert.SerializeObject(changes);
             }
@@ -971,7 +971,7 @@ namespace ExpressBase.ServiceStack.Services
             return Fields;
         }
 
-        Dictionary<string, string> GetTenantIndexDetailsForJSON(EbDataTable dt)
+        Dictionary<string, string> GetTenantIndexDetailsForJSON(EbDataTable dt, string table_name)
         {
             Dictionary<string, string> Indexs = new Dictionary<string, string>();
             for (int i = 0; i < dt.Rows.Count; i++)
@@ -980,7 +980,7 @@ namespace ExpressBase.ServiceStack.Services
                 string indexdef = dt.Rows[i]["indexdef"].ToString();
                 if (!indexdef.Contains("public."))
                 {
-                    indexdef.Replace(indexname, "public." + indexname);
+                    indexdef = indexdef.Replace(table_name, "public." + table_name);
                 }
 
                 if (!Indexs.ContainsKey(dt.Rows[i]["indexname"].ToString()))
