@@ -978,7 +978,6 @@ namespace ExpressBase.ServiceStack.Services
             {
                 string indexname = dt.Rows[i]["indexname"].ToString();
                 string indexdef = dt.Rows[i]["indexdef"].ToString();
-                indexdef = indexdef.Replace( "public.", " ");
                 if (!indexdef.Contains("public."))
                 {
                     indexdef = indexdef.Replace(table_name + " ", "public." + table_name + " ");
