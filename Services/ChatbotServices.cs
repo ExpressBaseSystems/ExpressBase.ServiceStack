@@ -1219,7 +1219,7 @@ namespace ExpressBase.ServiceStack
                     id = Convert.ToInt32(row[0]),
                     name = row[1].ToString(),
                     icon = row[2].ToString(),
-                    //botsettings = JsonConvert.DeserializeObject<EbBotSettings>(row[3].ToString())
+                    botsettings = JsonConvert.DeserializeObject<EbBotSettings>(row[3].ToString())
                 });
             }
             return new GetBotsResponse { BotList = list };
