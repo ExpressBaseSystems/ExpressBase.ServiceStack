@@ -681,6 +681,7 @@ namespace ExpressBase.ServiceStack.Services
 
         private string StringToMD5Converter(string result)
         {
+            Console.WriteLine("Tenant Func StringToMD5Converter... Line No: 684");
             StringBuilder hash = new StringBuilder();
             MD5CryptoServiceProvider md5provider = new MD5CryptoServiceProvider();
             byte[] bytes = md5provider.ComputeHash(new UTF8Encoding().GetBytes(result));
@@ -831,6 +832,7 @@ namespace ExpressBase.ServiceStack.Services
             EbDataSet dt = null;
             string json = string.Empty;
             string str = string.Empty;
+            Console.WriteLine("Tenant Table script... Line No: 835");
             try
             {
                 if (vendor == "PGSQL")
@@ -913,6 +915,7 @@ namespace ExpressBase.ServiceStack.Services
             string json = string.Empty;
             Eb_TableFieldChangesList changes = new Eb_TableFieldChangesList();
             Dictionary<string, string> Indexs = new Dictionary<string, string>();
+            Console.WriteLine("Tenant Table Json... Line No: 918");
             changes.Table_name = table_name;
             try
             {
@@ -1080,6 +1083,7 @@ namespace ExpressBase.ServiceStack.Services
         {
             try
             {
+                Console.WriteLine("Tenant File Details... Line No: 1086");
                 dictTenant.Clear();
                 GetFunctionDetailsFromTenant(_ebconfactoryDatadb);
                 GetTableDetailsFromTenant(_ebconfactoryDatadb);
@@ -1115,6 +1119,7 @@ namespace ExpressBase.ServiceStack.Services
         {
             try
             {
+                Console.WriteLine("Tenant Func Details... Line No: 1122");
                 string MD5 = string.Empty;
                 string result = string.Empty;
                 string str = string.Empty;
@@ -1266,6 +1271,7 @@ namespace ExpressBase.ServiceStack.Services
             string file_name;
             try
             {
+                Console.WriteLine("Tenant Table Details... Line No: 1274");
                 string vendor = _ebconfactoryDatadb.Vendor.ToString();
                 string str = null;
                 if (vendor == "MYSQL")
@@ -1339,6 +1345,7 @@ namespace ExpressBase.ServiceStack.Services
         List<Eb_FileDetails> CompareScripts(IDatabase _ebconfactoryDatadb)
         {
             List<Eb_FileDetails> ChangesList = new List<Eb_FileDetails>();
+            Console.WriteLine("Tenant Compare Scriptes... Line No: 1348");
             foreach (KeyValuePair<string, Eb_FileDetails> _infraitem in dictInfra)
             {
                 try
@@ -1381,6 +1388,7 @@ namespace ExpressBase.ServiceStack.Services
         bool IsChangeInTableFields(Dictionary<string, List<Eb_TableFieldChanges>> infra_table_field_details, Dictionary<string, List<Eb_TableFieldChanges>> tenant_table_field_details)
         {
             bool _isChange = false;
+            Console.WriteLine("Tenant Comparing Changes in Table Fields... Line No: 1391");
             try
             {
                 if (tenant_table_field_details == null)
@@ -1416,6 +1424,7 @@ namespace ExpressBase.ServiceStack.Services
         bool IsChangeInTableIndexs(Dictionary<string, string> infra_table_index_details, Dictionary<string, string> tenant_table_index_details)
         {
             bool _isChange = false;
+            Console.WriteLine("Tenant Comparing Changes in Index... Line No: 1427");
             try
             {
                 if (tenant_table_index_details == null)
@@ -1444,6 +1453,7 @@ namespace ExpressBase.ServiceStack.Services
 
         List<Eb_FileDetails> CreateListofChanges(KeyValuePair<string, Eb_FileDetails> _infraitem, bool _newItem)
         {
+            Console.WriteLine("Tenant Creating Changes List... Line No: 1456");
             List<Eb_FileDetails> ChangesList = new List<Eb_FileDetails>
             {
                 new Eb_FileDetails
