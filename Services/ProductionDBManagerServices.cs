@@ -260,6 +260,10 @@ namespace ExpressBase.ServiceStack.Services
                     ChangesList = GetFileScriptFromTenant(_ebconfactoryDatadb);
                     resp.Changes = ChangesList;
                 }
+                if (ChangesList == null)
+                    Console.WriteLine("ChangesList is null");
+                else
+                    Console.WriteLine("ChangesList count: " + ChangesList.Count);
             }
             catch (Exception e)
             {
@@ -922,7 +926,7 @@ namespace ExpressBase.ServiceStack.Services
                 if (dt != null && dt.Tables.Count > 0)
                 {
                     changes.Fields = TenantFieldsDetailsForJsonConvert(dt.Tables[0], vendor);
-                    changes.Indexs = GetTenantIndexDetailsForJSON(dt.Tables[1],table_name);
+                    changes.Indexs = GetTenantIndexDetailsForJSON(dt.Tables[1], table_name);
                 }
                 json = JsonConvert.SerializeObject(changes);
             }
@@ -1280,7 +1284,7 @@ namespace ExpressBase.ServiceStack.Services
                         FROM information_schema.tables
 	                    WHERE table_name LIKE 'eb_%'
                         AND TABLE_SCHEMA = '{0}'", _ebconfactoryDatadb.DBName);
-                else 
+                else
                     str = @"
                         SELECT DISTINCT table_name
                         FROM information_schema.tables
@@ -1553,7 +1557,7 @@ namespace ExpressBase.ServiceStack.Services
                             }
                             if (!ChangesList.NewItem && ChangesList.Vendor == "PGSQL")
                             {
-                                query += func_or_proc_drop ;
+                                query += func_or_proc_drop;
                             }
                             query += result;
                             DbCommand cmd = _ebconfactoryDatadb.GetNewCommand(con, query);
@@ -2685,7 +2689,7 @@ namespace ExpressBase.ServiceStack.Services
                     MatchCollection matches = regex.Matches(str);
                     string x = matches[0].ToString().Replace("(", "");
                     string s = "(\n" + x;
-                    str = str.Replace("  ", "").Replace("\r","").Replace(",\n",",").Replace("\t", "").Replace(matches[0].ToString(), s).Trim();
+                    str = str.Replace("  ", "").Replace("\r", "").Replace(",\n", ",").Replace("\t", "").Replace(matches[0].ToString(), s).Trim();
                 }
             }
             catch (Exception e)
