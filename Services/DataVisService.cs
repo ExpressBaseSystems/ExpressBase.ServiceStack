@@ -1533,6 +1533,8 @@ namespace ExpressBase.ServiceStack
                                     {
                                         if ((col as DVStringColumn).NoOfCharactersPerLine > 0 && (col as DVStringColumn).NoOfLines > 0)
                                         {
+                                            //var _formattedData = HtmlUtilities.ConvertToPlainText(_formattedData);
+                                            _formattedData = Regex.Replace(_formattedData.ToString(), "<.*?>", string.Empty);
                                             if (_formattedData.ToString().Length > (col as DVStringColumn).NoOfCharactersPerLine)
                                                 _formattedData = GetMultilineText(_formattedData.ToString(), (col as DVStringColumn).NoOfCharactersPerLine, (col as DVStringColumn).NoOfLines);
                                         }
@@ -1971,16 +1973,16 @@ namespace ExpressBase.ServiceStack
                                   <div class='tab-pane active' id='action'>";
             _data += "<table class='action-table'><tr><td class='action-td stage-label' colspan='2'><label>" + rows[0]["stage_name"].ToString() + "</label></tr>";
             _data += "<tr><td class='action-td'>Actions</td><td class='action-td'><select class='selectpicker stage_actions'>";
-            ApprovalData _obj = new ApprovalData();
-            _obj.Action_unique_id = rows[0]["action_unique_id"].ToString();
+            ApprovalData _obj = new ApprovalData();            
             _obj.Stage_unique_id = rows[0]["stage_unique_id"].ToString();
             _obj.My_action_id = rows[0]["id"].ToString();
             _obj.Form_ref_id = rows[0]["form_ref_id"].ToString();
             _obj.Form_data_id = rows[0]["form_data_id"].ToString();
-            var _date = Convert.ToDateTime(rows[0]["from_datetime"]).ConvertFromUtc(_user.Preference.TimeZone);
-            var _time = GetDifferenceInTime(_date);
+            var _date = Convert.ToDateTime(rows[0]["from_datetime"]);
+            var _time = _date.DateInNotification((_user.Preference.TimeZone));
             foreach (EbDataRow _ebdatarow in rows)
             {
+                _obj.Action_unique_id = _ebdatarow["action_unique_id"].ToString();
                 _data += "<option value='" + Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(_obj))) + "'>" + _ebdatarow["action_name"].ToString() + "</option>";
             }
             _data += "</select></td></tr>";
@@ -1993,9 +1995,13 @@ namespace ExpressBase.ServiceStack
             string _stage = "<div class='stage-div'>";
             var _latestHistory = GetLatestHistory(linesRows);
             if (!string.IsNullOrEmpty(_latestHistory))
-                _latestHistory += " -> ";
+                _latestHistory += "<span><i class='fa fa-arrow-right size11' aria-hidden='true'></i></span> ";
             _stage += "<div class='stage-div-inner stage-status-cont'><span class='stage-status'>" + _latestHistory + rows[0]["stage_name"].ToString() + "</span></div>";
-            _stage += $"<div class='stage-div-inner'><span class='status-icon'><i class='fa fa-commenting color-warning' aria-hidden='true'></i></span><span class='status-label label label-warning'>Review Required</span><span class='status-time'>{_time}</span></div></div>";
+            _stage += $"<div class='stage-div-inner'><div class='icon-status-cont'>" +
+                $"<span class='status-icon'><i class='fa fa-commenting color-warning' aria-hidden='true'></i></span>" +
+                $"<span class='status-label label label-warning'>Review Required</span></div>" +
+                $"<span class='status-time' title='{_date.ToString(_user.Preference.GetShortDatePattern()) + " " + _date.ToString(_user.Preference.GetShortTimePattern())}'>{_time}</span>" +
+                $"</div></div>";
             string _button = "<div class='stage-div'><div class='stage-div-inner'><button class='btn stage-btn btn-approval_popover' data-contents='" + _data .ToBase64()+ "' data-toggle='popover'><i class='fa fa-pencil' aria-hidden='true'></i></button></div></div>";//
             if (row != null)
             {
@@ -2034,7 +2040,8 @@ namespace ExpressBase.ServiceStack
                 var _label = GetLabelStyleforReviewStatus(_ebdatarow["review_status"].ToString());
                 var _latestHistory = GetLatestHistory(linesRows);
                 _stage_name += "<div class='stage-div-inner stage-status-cont'><span class='stage-status'>" + _latestHistory + "</span></div>";
-                _stage_name += "<div class='stage-div-inner'><span class='status-icon'><i class='" + _icon + "' aria-hidden='true'></i></span><span class='status-label label " + _label + "'>" + _status + "</span></div>";
+                _stage_name += "<div class='stage-div-inner'><div class='icon-status-cont'>" +
+                    "<span class='status-icon'><i class='" + _icon + "' aria-hidden='true'></i></span><span class='status-label label " + _label + "'>" + _status + "</span></div></div>";
                 if (row != null)
                 {
                     var indx = -1;
