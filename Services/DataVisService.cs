@@ -1533,6 +1533,8 @@ namespace ExpressBase.ServiceStack
                                     {
                                         if ((col as DVStringColumn).NoOfCharactersPerLine > 0 && (col as DVStringColumn).NoOfLines > 0)
                                         {
+                                            //var _formattedData = HtmlUtilities.ConvertToPlainText(_formattedData);
+                                            _formattedData = Regex.Replace(_formattedData.ToString(), "<.*?>", string.Empty);
                                             if (_formattedData.ToString().Length > (col as DVStringColumn).NoOfCharactersPerLine)
                                                 _formattedData = GetMultilineText(_formattedData.ToString(), (col as DVStringColumn).NoOfCharactersPerLine, (col as DVStringColumn).NoOfLines);
                                         }
@@ -1976,8 +1978,8 @@ namespace ExpressBase.ServiceStack
             _obj.My_action_id = rows[0]["id"].ToString();
             _obj.Form_ref_id = rows[0]["form_ref_id"].ToString();
             _obj.Form_data_id = rows[0]["form_data_id"].ToString();
-            var _date = Convert.ToDateTime(rows[0]["from_datetime"]).ConvertFromUtc(_user.Preference.TimeZone);
-            var _time = GetDifferenceInTime(_date);
+            var _date = Convert.ToDateTime(rows[0]["from_datetime"]);
+            var _time = _date.DateInNotification((_user.Preference.TimeZone));
             foreach (EbDataRow _ebdatarow in rows)
             {
                 _obj.Action_unique_id = _ebdatarow["action_unique_id"].ToString();

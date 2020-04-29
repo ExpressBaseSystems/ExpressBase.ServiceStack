@@ -15,6 +15,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using ExpressBase.Common.Singletons;
 using ExpressBase.Common.Extensions;
+using ExpressBase.Common.Helpers;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -273,7 +274,7 @@ namespace ExpressBase.ServiceStack.Services
                     FROM eb_my_actions
                     WHERE ('{0}' = any(string_to_array(user_ids, ',')) OR
                      (string_to_array(role_ids,',')) && (string_to_array('{1}',',')))
-                        AND is_completed='F' AND eb_del='F' ;", request.UserId, _roles);
+                        AND is_completed='F' AND eb_del='F' ORDER BY from_datetime DESC;", request.UserId, _roles);
 
                 EbDataSet ds = EbConnectionFactory.DataDB.DoQueries(str);
                 EbDataTable dt = ds.Tables[0];
@@ -283,6 +284,8 @@ namespace ExpressBase.ServiceStack.Services
                     Notifications list = JsonConvert.DeserializeObject<Notifications>(notif);
                     DateTime created_dtime = Convert.ToDateTime(dt.Rows[i]["created_at"].ToString());
                     string duration = GetNotificationDuration(created_dtime);
+                    //var created_dtime = Convert.ToDateTime(dt.Rows[i]["created_at"]);
+                    //var duration = created_dtime.DateInNotification((request.user.Preference.TimeZone));
                     res.Notifications.Add(new NotificationInfo
                     {
                         Link = list.Notification[0].Link,
@@ -295,12 +298,16 @@ namespace ExpressBase.ServiceStack.Services
                 var _user_culture = CultureHelper.GetSerializedCultureInfo(request.user.Preference.Locale).GetCultureInfo();
                 for (int i = 0; i < dt.Rows.Count; i++)
                 {
+                    var _date = Convert.ToDateTime(dt.Rows[i]["from_datetime"]);
+                    var _time = _date.DateInNotification((request.user.Preference.TimeZone));
                     res.PendingActions.Add(new PendingActionInfo
                     {
                         Description = dt.Rows[i]["description"].ToString(),
                         Link = dt.Rows[i]["form_ref_id"].ToString(),
                         DataId = dt.Rows[i]["form_data_id"].ToString(),
-                        CreatedDate = Convert.ToDateTime(dt.Rows[i]["from_datetime"]).ConvertFromUtc(request.user.Preference.TimeZone).ToString(_user_culture.DateTimeFormat.ShortDatePattern + " " + _user_culture.DateTimeFormat.ShortTimePattern)
+                        CreatedDate = _date.ConvertFromUtc(request.user.Preference.TimeZone).ToString(request.user.Preference.GetShortDatePattern() + " " + request.user.Preference.GetShortTimePattern()),
+                        DateInString = _time,
+                        ActionType = dt.Rows[i]["my_action_type"].ToString()
                     });
                 }
             }
