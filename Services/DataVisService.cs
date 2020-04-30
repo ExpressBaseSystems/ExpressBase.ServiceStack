@@ -1980,6 +1980,7 @@ namespace ExpressBase.ServiceStack
             _obj.Form_data_id = rows[0]["form_data_id"].ToString();
             var _date = Convert.ToDateTime(rows[0]["from_datetime"]);
             var _time = _date.DateInNotification((_user.Preference.TimeZone));
+            var _tooltipdate = _date.ConvertFromUtc(_user.Preference.TimeZone).ToString(_user.Preference.GetShortDatePattern()) + " " + _date.ConvertFromUtc(_user.Preference.TimeZone).ToString(_user.Preference.GetShortTimePattern());
             foreach (EbDataRow _ebdatarow in rows)
             {
                 _obj.Action_unique_id = _ebdatarow["action_unique_id"].ToString();
@@ -2000,7 +2001,7 @@ namespace ExpressBase.ServiceStack
             _stage += $"<div class='stage-div-inner'><div class='icon-status-cont'>" +
                 $"<span class='status-icon'><i class='fa fa-commenting color-warning' aria-hidden='true'></i></span>" +
                 $"<span class='status-label label label-warning'>Review Required</span></div>" +
-                $"<span class='status-time' title='{_date.ToString(_user.Preference.GetShortDatePattern()) + " " + _date.ToString(_user.Preference.GetShortTimePattern())}'>{_time}</span>" +
+                $"<span class='status-time' title='{_tooltipdate}'>{_time}</span>" +
                 $"</div></div>";
             string _button = "<div class='stage-div'><div class='stage-div-inner'><button class='btn stage-btn btn-approval_popover' data-contents='" + _data .ToBase64()+ "' data-toggle='popover'><i class='fa fa-pencil' aria-hidden='true'></i></button></div></div>";//
             if (row != null)
@@ -2033,6 +2034,9 @@ namespace ExpressBase.ServiceStack
                                   <div class='tab-pane active' id='history'>";
                 _history += GetApprovalHistoryString(linesRows, _user);
                 _history += "</div></div></div> ";
+            var _date = Convert.ToDateTime(linesRows[0]["eb_created_at"]);
+            var _time = _date.DateInNotification((_user.Preference.TimeZone));
+            var _tooltipdate = _date.ConvertFromUtc(_user.Preference.TimeZone).ToString(_user.Preference.GetShortDatePattern()) + " " + _date.ConvertFromUtc(_user.Preference.TimeZone).ToString(_user.Preference.GetShortTimePattern());
             foreach (EbDataRow _ebdatarow in rows)
             {
                 var _status = GetSynonymsforReviewStatus(_ebdatarow["review_status"].ToString());
@@ -2041,7 +2045,10 @@ namespace ExpressBase.ServiceStack
                 var _latestHistory = GetLatestHistory(linesRows);
                 _stage_name += "<div class='stage-div-inner stage-status-cont'><span class='stage-status'>" + _latestHistory + "</span></div>";
                 _stage_name += "<div class='stage-div-inner'><div class='icon-status-cont'>" +
-                    "<span class='status-icon'><i class='" + _icon + "' aria-hidden='true'></i></span><span class='status-label label " + _label + "'>" + _status + "</span></div></div>";
+                    "<span class='status-icon'><i class='" + _icon + "' aria-hidden='true'></i></span>" +
+                    "<span class='status-label label " + _label + "'>" + _status + "</span>" +
+                    $"<span class='status-time' title='{_tooltipdate}'>{_time}</span>" +
+                    "</div></div>";
                 if (row != null)
                 {
                     var indx = -1;
@@ -2073,10 +2080,11 @@ namespace ExpressBase.ServiceStack
                 {
                     var _zone = Convert.ToDateTime(_ebdatarow["eb_created_at"]).ConvertFromUtc(_user.Preference.TimeZone);
                     var __date = _zone.ToString(_user.Preference.GetShortDatePattern()) + "<br>" + _zone.ToString(_user.Preference.GetShortTimePattern());
-                    _history += "<tr><td>" + __date.ToString() + "</td>";
+                    _history += "<tr><td class='datetime-td'>" + __date.ToString() + "</td>";
                     _history += "<td>" + _ebdatarow["stage_name"].ToString() + "</td>";
                     _history += "<td>" + _ebdatarow["action_name"].ToString() + "</td>";
-                    _history += "<td><img src='/images/dp/" + _ebdatarow["eb_created_by"].ToString() + ".png' class='history-image Eb_Image' onerror='imgError(this);'> " + _ebdatarow["fullname"].ToString() + "</td>";
+                    _history += "<td class='image-td'><span><img src='/images/dp/" + _ebdatarow["eb_created_by"].ToString() + ".png' class='history-image Eb_Image' onerror='imgError(this);'></span>"+
+                                "<span>" + _ebdatarow["fullname"].ToString() + "</span></td>";
                     _history += "<td class='comment-td'>" + _ebdatarow["comments"].ToString() + "</td></tr>";
                 }
 
