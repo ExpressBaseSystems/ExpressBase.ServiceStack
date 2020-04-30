@@ -32,7 +32,7 @@ namespace ExpressBase.ServiceStack
                 EbObject_Create_New_ObjectRequest _form_req = new EbObject_Create_New_ObjectRequest
                 {
                     Name = WebForm.Name,
-                    Description = WebForm.Description?? string.Empty,
+                    Description = WebForm.Description ?? string.Empty,
                     Json = EbSerializers.Json_Serialize(WebForm),
                     Status = ObjectLifeCycleStatus.Live,
                     IsSave = false,
@@ -55,7 +55,7 @@ namespace ExpressBase.ServiceStack
             else
             {
                 EbWebForm WebForm = this.GetWebFormObject(request.BotObj.WebFormRefId);
-                if(this.CompareBothForms(request.BotObj, WebForm))
+                if (this.CompareBothForms(request.BotObj, WebForm))
                 {
                     SaveObjectRequest(WebForm, request.Apps);
                 }
@@ -80,10 +80,10 @@ namespace ExpressBase.ServiceStack
             EbObjectService myService = base.ResolveService<EbObjectService>();
             EbObject_SaveResponse resp = myService.Post(req);
         }
-     
+
         private bool CompareBothForms(EbBotForm BotForm, EbWebForm WebForm)
         {
-            bool changeFlag = false; 
+            bool changeFlag = false;
             if (WebForm == null)
             {
                 WebForm.EbSid = "webform_autogen_1";
@@ -92,30 +92,101 @@ namespace ExpressBase.ServiceStack
                 WebForm.TableName = BotForm.TableName;
                 WebForm.Padding = new UISides { Top = 8, Right = 8, Bottom = 8, Left = 8 };
                 WebForm.Validators = new List<EbValidator>();
-                WebForm.Controls = BotForm.Controls;
+                WebForm.Controls = this.GetMappedControls(BotForm.Controls);
                 WebForm.BeforeSave(this);
                 changeFlag = true;
             }
             else
             {
-                foreach (EbControl _control in BotForm.Controls)
-                {
-                    if (WebForm.Controls.Find(e => e.Name == _control.Name) == null)
-                    {
-                        changeFlag = true;
-                        break;
-                    }
-                }
-                if (changeFlag == false && WebForm.Name != (BotForm.Name + "_autogen_webform"))
-                    changeFlag = true;
-                
+                //foreach (EbControl _control in BotForm.Controls)
+                //{
+                //    if (WebForm.Controls.Find(e => e.Name == _control.Name) == null)
+                //    {
+                //        changeFlag = true;
+                //        break;
+                //    }
+                //}
+                //if (changeFlag == false && WebForm.Name != (BotForm.Name + "_autogen_webform"))
+                //    changeFlag = true;
+                changeFlag = true;//temp
+
+                WebForm.EbSid = "webform_autogen_1";
                 WebForm.Name = BotForm.Name + "_autogen_webform";
                 WebForm.DisplayName = BotForm.DisplayName + " AutoGen Webform";
                 WebForm.TableName = BotForm.TableName;
-                WebForm.Controls = BotForm.Controls;
+                WebForm.Controls = this.GetMappedControls(BotForm.Controls);
                 WebForm.BeforeSave(this);
             }
             return changeFlag;
+        }
+
+        private List<EbControl> GetMappedControls(List<EbControl> BotControls)
+        {
+            List<EbControl> WebControls = new List<EbControl>();
+            foreach (EbControl _control in BotControls)
+            {
+                if (_control is EbCardSetParent)
+                {
+                    EbCardSetParent _ctrl = _control as EbCardSetParent;
+                    List<EbControl> gridCtrls = new List<EbControl>();
+                    
+                    //Card id - power select column is more suitable for dynamic cards
+                    gridCtrls.Add(new EbDGNumericColumn()
+                    {
+                        Name = "card_id",
+                        DisplayName = "Card Id",
+                        EbSid = "CardId1",
+                        DecimalPlaces = 2,
+                        Title = "Card Id"
+                    });
+
+                    foreach (EbCardField cardField in _ctrl.CardFields)
+                    {
+                        if (cardField.DoNotPersist)
+                            continue;
+                        if (cardField is EbCardNumericField)
+                        {
+                            gridCtrls.Add(new EbDGNumericColumn()
+                            {
+                                Name = cardField.Name,
+                                DisplayName = cardField.DisplayName,
+                                EbSid = cardField.EbSid,
+                                DecimalPlaces = 0,
+                                Title = cardField.Name
+                            });
+                        }
+                        else
+                        {
+                            gridCtrls.Add(new EbDGStringColumn()
+                            {
+                                Name = cardField.Name,
+                                DisplayName = cardField.DisplayName,
+                                EbSid = cardField.EbSid,
+                                RowsVisible = 3,
+                                Title = cardField.Name
+                            });
+                        }
+                    }
+                    EbDataGrid dataGrid = new EbDataGrid() {
+                        Name = _ctrl.Name,
+                        DisplayName = _ctrl.DisplayName,
+                        EbSid = _ctrl.EbSid,
+                        TableName = _ctrl.TableName,
+                        Controls = gridCtrls,
+                        Height = 200,
+                        LeftFixedColumnCount = 1,
+                        IsShowSerialNumber = true,
+                        IsColumnsResizable = true,
+                        IsAddable = true,
+                        Padding = new UISides() { Top = 8, Right = 8, Bottom = 8, Left = 8 },
+                        Margin = new UISides() { Top = 4, Right = 4, Bottom = 4, Left = 4 }
+                    };
+                    WebControls.Add(dataGrid);
+                }
+                else
+                    WebControls.Add(_control);
+            }
+            return WebControls;
         }
 
         private EbWebForm GetWebFormObject(string RefId)
@@ -520,11 +591,11 @@ namespace ExpressBase.ServiceStack
         //{
         //    string sqnceSql = "CREATE SEQUENCE @name_sequence".Replace("@name", tableName);
         //    string trgrSql = string.Format(@"CREATE OR REPLACE TRIGGER {0}_on_insert
-								//					BEFORE INSERT ON {0}
-								//					FOR EACH ROW
-								//					BEGIN
-								//						SELECT {0}_sequence.nextval INTO :new.id FROM dual;
-								//					END;", tableName);
+        //					BEFORE INSERT ON {0}
+        //					FOR EACH ROW
+        //					BEGIN
+        //						SELECT {0}_sequence.nextval INTO :new.id FROM dual;
+        //					END;", tableName);
         //    this.EbConnectionFactory.ObjectsDB.CreateTable(sqnceSql);//Sequence Creation
         //    this.EbConnectionFactory.ObjectsDB.CreateTable(trgrSql);//Trigger Creation
         //}

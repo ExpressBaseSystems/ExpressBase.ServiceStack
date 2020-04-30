@@ -1533,6 +1533,8 @@ namespace ExpressBase.ServiceStack
                                     {
                                         if ((col as DVStringColumn).NoOfCharactersPerLine > 0 && (col as DVStringColumn).NoOfLines > 0)
                                         {
+                                            //var _formattedData = HtmlUtilities.ConvertToPlainText(_formattedData);
+                                            _formattedData = Regex.Replace(_formattedData.ToString(), "<.*?>", string.Empty);
                                             if (_formattedData.ToString().Length > (col as DVStringColumn).NoOfCharactersPerLine)
                                                 _formattedData = GetMultilineText(_formattedData.ToString(), (col as DVStringColumn).NoOfCharactersPerLine, (col as DVStringColumn).NoOfLines);
                                         }
@@ -1700,7 +1702,7 @@ namespace ExpressBase.ServiceStack
             {
                 try
                 {
-                    if (col.IsCustomColumn && col.Name != "eb_review_status" && col.Name != "eb_review_stage")
+                    if (col.IsCustomColumn)
                     {
                         if (col is DVButtonColumn)
                             ProcessButtoncolumn(row, globals, col);
@@ -1789,7 +1791,7 @@ namespace ExpressBase.ServiceStack
                         str = string.Format(@"
                     SELECT Q1.*,act.action_name,act.action_unique_id
                     FROM(
-	                    SELECT my.id, st.stage_name,st.id as stage_id,my.form_ref_id,my.form_data_id,st.stage_unique_id
+	                    SELECT my.id, st.stage_name,st.id as stage_id,my.form_ref_id,my.form_data_id,st.stage_unique_id, my.from_datetime
 	                    FROM eb_my_actions my, eb_stages st
 	                    WHERE  my.form_ref_id ='{0}'
 			                    AND my.is_completed='F' AND my.eb_del='F'
@@ -1805,7 +1807,7 @@ namespace ExpressBase.ServiceStack
                         str = string.Format(@"
                     SELECT Q1.*,act.action_name,act.action_unique_id
                     FROM(
-	                    SELECT my.id, st.stage_name,st.id as stage_id,my.form_ref_id,my.form_data_id,st.stage_unique_id
+	                    SELECT my.id, st.stage_name,st.id as stage_id,my.form_ref_id,my.form_data_id,st.stage_unique_id, my.from_datetime
 	                    FROM eb_my_actions my, eb_stages st
 	                    WHERE ('{0}' = any(string_to_array(user_ids, ',')) OR
 	 		                    (string_to_array(role_ids,',')) && (string_to_array('{1}',',')))
@@ -1830,7 +1832,7 @@ namespace ExpressBase.ServiceStack
 	                                WHERE  app.eb_ver_id ='{0}' AND app.eb_created_by = usr.id  AND st.stage_unique_id=app.stage_unique_id
 	 		                                AND st.form_ref_id='{1}'
 	 		                                AND act.action_unique_id=app.action_unique_id AND act.eb_stages_id = st.id
-	 		                                AND act.eb_del='F';", verid, col.FormRefid);
+	 		                                AND act.eb_del='F' ORDER BY app.eb_created_at DESC;", verid, col.FormRefid);
                     col.ApprovalData = this.EbConnectionFactory.DataDB.DoQueries(str);
                 }
             }
@@ -1854,7 +1856,7 @@ namespace ExpressBase.ServiceStack
                     str = string.Format(@"
                     SELECT Q1.*,act.action_name,act.action_unique_id
                     FROM(
-	                    SELECT my.id, st.stage_name,st.id as stage_id,my.form_ref_id,my.form_data_id,st.stage_unique_id
+	                    SELECT my.id, st.stage_name,st.id as stage_id,my.form_ref_id,my.form_data_id,st.stage_unique_id,my.from_datetime
 	                    FROM eb_my_actions my, eb_stages st
 	                    WHERE 
                                  my.form_ref_id ='{0}' AND my.form_data_id ={1}
@@ -1871,7 +1873,7 @@ namespace ExpressBase.ServiceStack
                      str = string.Format(@"
                     SELECT Q1.*,act.action_name,act.action_unique_id
                     FROM(
-	                    SELECT my.id, st.stage_name,st.id as stage_id,my.form_ref_id,my.form_data_id,st.stage_unique_id
+	                    SELECT my.id, st.stage_name,st.id as stage_id,my.form_ref_id,my.form_data_id,st.stage_unique_id,my.from_datetime
 	                    FROM eb_my_actions my, eb_stages st
 	                    WHERE ('{0}' = any(string_to_array(user_ids, ',')) OR
 	 		                    (string_to_array(role_ids,',')) && (string_to_array('{1}',',')))
@@ -1896,7 +1898,7 @@ namespace ExpressBase.ServiceStack
 	                        WHERE  app.eb_ver_id ='{0}' AND app.eb_src_id ='{1}' AND app.eb_created_by = usr.id  AND st.stage_unique_id=app.stage_unique_id
 	 		                        AND st.form_ref_id='{2}'
 	 		                        AND act.action_unique_id=app.action_unique_id AND act.eb_stages_id = st.id
-	 		                        AND act.eb_del='F';", verid, request.RowId, request.RefId);
+	 		                        AND act.eb_del='F' ORDER BY app.eb_created_at DESC;", verid, request.RowId, request.RefId);
                 _approvaldata = this.EbConnectionFactory.DataDB.DoQueries(str);
                 resp._data = ProcessParticularApprovalcolumn(request.UserObj);
             }
@@ -1912,7 +1914,7 @@ namespace ExpressBase.ServiceStack
             string _formattedData = string.Empty;
             var _rows = _approvaldata.Tables[0].Rows;
             if (_rows.Count > 0)
-                _formattedData = GetDataforPermissedApprovalColumn(_rows, _approvaldata.Tables[1].Rows);
+                _formattedData = GetDataforPermissedApprovalColumn(_rows, _user, _approvaldata.Tables[2].Rows);
             else
             {
                 _rows = _approvaldata.Tables[1].Rows;
@@ -1929,23 +1931,17 @@ namespace ExpressBase.ServiceStack
         private void ProcessApprovalcolumn(DVBaseColumn col, EbDataRow row, User _user)
         {
             string _formattedData = string.Empty;
-            List<EbDataRow> stage_status = null;
             if (col.ApprovalData != null)
             {
                 var _rows = col.ApprovalData.Tables[0].Rows.FindAll(_row => Convert.ToInt32(_row["form_data_id"]) == Convert.ToInt32(row[(col as DVApprovalColumn).FormDataId[0].Data]));
+                var linesRows = col.ApprovalData.Tables[2].Rows.FindAll(_row => Convert.ToInt32(_row["eb_src_id"]) == Convert.ToInt32(row[(col as DVApprovalColumn).FormDataId[0].Data]));
                 if (_rows.Count > 0)
-                {
-                    stage_status = col.ApprovalData.Tables[1].Rows.FindAll(_row => Convert.ToInt32(_row["eb_src_id"]) == Convert.ToInt32(row[(col as DVApprovalColumn).FormDataId[0].Data]));
-                    _formattedData = GetDataforPermissedApprovalColumn(_rows, stage_status, row);
-                }
+                    _formattedData = GetDataforPermissedApprovalColumn(_rows, _user, linesRows, row);
                 else
                 {
-                    stage_status = col.ApprovalData.Tables[1].Rows.FindAll(_row => Convert.ToInt32(_row["eb_src_id"]) == Convert.ToInt32(row[(col as DVApprovalColumn).FormDataId[0].Data]));
-                    if (stage_status.Count > 0)
-                    {
-                        var linesRows = col.ApprovalData.Tables[2].Rows.FindAll(_row => Convert.ToInt32(_row["eb_src_id"]) == Convert.ToInt32(row[(col as DVApprovalColumn).FormDataId[0].Data]));
-                        _formattedData = GetDataforNotPermissedApprovalColumn(stage_status, _user, linesRows, row);
-                    }
+                    _rows = col.ApprovalData.Tables[1].Rows.FindAll(_row => Convert.ToInt32(_row["eb_src_id"]) == Convert.ToInt32(row[(col as DVApprovalColumn).FormDataId[0].Data]));
+                    if (_rows.Count > 0)
+                        _formattedData = GetDataforNotPermissedApprovalColumn(_rows, _user, linesRows, row);
                     else
                     {
                         _formattedData = string.Empty;
@@ -1954,15 +1950,11 @@ namespace ExpressBase.ServiceStack
                         {
                             indx = _dV.Columns.Get("eb_review_status").Data;
                             row[indx] = _formattedData;
-                            //if (IntermediateDic.ContainsKey(indx))
-                            //    IntermediateDic[indx] = _formattedData;
                         }
                         if (_dV.Columns.Get("eb_review_stage") != null)
                         {
                             indx = _dV.Columns.Get("eb_review_stage").Data;
                             row[indx] = _formattedData;
-                            //if (IntermediateDic.ContainsKey(indx))
-                            //    IntermediateDic[indx] = _formattedData;
                         }
                     }
                 }
@@ -1970,87 +1962,93 @@ namespace ExpressBase.ServiceStack
             row[col.Data] = _formattedData;
         }
 
-        private string GetDataforPermissedApprovalColumn(List<EbDataRow> rows, List<EbDataRow> stage_status, EbDataRow row =null)
+        private string GetDataforPermissedApprovalColumn(List<EbDataRow> rows, User _user, List<EbDataRow> linesRows, EbDataRow row =null)
         {
-            string _data = @"<nav>
-                          <div class='nav nav-tabs'  role='tablist'>
-                            <a class='nav-item nav-link active' data-toggle='tab' href='#action' role='tab'>Action</a>
-                            </div></nav>";
+            string _data = @"<div class='nav-container'>
+                          <ul class='nav nav-tabs'>
+                            <li class='active'><a data-toggle='tab' href='#action'>Action</a></li>
+                            <li><a data-toggle='tab' href='#history'>History</a></li>
+                            </ul>";
             _data += @"<div class='tab-content'>
-                                  <div class='tab-pane show active' id='action'>";
+                                  <div class='tab-pane active' id='action'>";
             _data += "<table class='action-table'><tr><td class='action-td stage-label' colspan='2'><label>" + rows[0]["stage_name"].ToString() + "</label></tr>";
             _data += "<tr><td class='action-td'>Actions</td><td class='action-td'><select class='selectpicker stage_actions'>";
-            ApprovalData _obj = new ApprovalData();
+            ApprovalData _obj = new ApprovalData();            
+            _obj.Stage_unique_id = rows[0]["stage_unique_id"].ToString();
+            _obj.My_action_id = rows[0]["id"].ToString();
+            _obj.Form_ref_id = rows[0]["form_ref_id"].ToString();
+            _obj.Form_data_id = rows[0]["form_data_id"].ToString();
+            var _date = Convert.ToDateTime(rows[0]["from_datetime"]);
+            var _time = _date.DateInNotification((_user.Preference.TimeZone));
+            var _tooltipdate = _date.ConvertFromUtc(_user.Preference.TimeZone).ToString(_user.Preference.GetShortDatePattern()) + " " + _date.ConvertFromUtc(_user.Preference.TimeZone).ToString(_user.Preference.GetShortTimePattern());
             foreach (EbDataRow _ebdatarow in rows)
             {
                 _obj.Action_unique_id = _ebdatarow["action_unique_id"].ToString();
-                _obj.Stage_unique_id = _ebdatarow["stage_unique_id"].ToString();
-                _obj.My_action_id = _ebdatarow["id"].ToString();
-                _obj.Form_ref_id = _ebdatarow["form_ref_id"].ToString();
-                _obj.Form_data_id = _ebdatarow["form_data_id"].ToString();
                 _data += "<option value='" + Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(_obj))) + "'>" + _ebdatarow["action_name"].ToString() + "</option>";
             }
             _data += "</select></td></tr>";
             _data += "<tr><td class='action-td'>Comments</td><td class='action-td'><textarea class='comment-text'></textarea></td></tr>";
             _data += "<tr><td class='action-td'></td><td class='action-td'><button class='btn stage-btn btn-action_execute' data-toggle='tooltip' title='Execute Review'>Execute</button></td></tr>";//<i class='fa fa-play' aria-hidden='true'></i>
-            _data += "</table></div></div>";
-            string _stage = "<div class='stage_comments_cont stage-div'>";
-            _stage += "<label>" + rows[0]["stage_name"].ToString() + "</label>";
-            _stage += "<button class='btn stage-btn btn-approval_popover' data-contents='"+ _data .ToBase64()+ "' data-toggle='popover'><i class='fa fa-pencil' aria-hidden='true'></i></button></div>";//
+            _data += "</table></div>";
+            _data += "<div class='tab-pane' id='history'>";
+            _data += GetApprovalHistoryString(linesRows, _user);
+            _data += "</div></div></div>";
+            string _stage = "<div class='stage-div'>";
+            var _latestHistory = GetLatestHistory(linesRows);
+            if (!string.IsNullOrEmpty(_latestHistory))
+                _latestHistory += "<span><i class='fa fa-arrow-right size11' aria-hidden='true'></i></span> ";
+            _stage += "<div class='stage-div-inner stage-status-cont'><span class='stage-status'>" + _latestHistory + rows[0]["stage_name"].ToString() + "</span></div>";
+            _stage += $"<div class='stage-div-inner'><div class='icon-status-cont'>" +
+                $"<span class='status-icon'><i class='fa fa-commenting color-warning' aria-hidden='true'></i></span>" +
+                $"<span class='status-label label label-warning'>Review Required</span></div>" +
+                $"<span class='status-time' title='{_tooltipdate}'>{_time}</span>" +
+                $"</div></div>";
+            string _button = "<div class='stage-div'><div class='stage-div-inner'><button class='btn stage-btn btn-approval_popover' data-contents='" + _data .ToBase64()+ "' data-toggle='popover'><i class='fa fa-pencil' aria-hidden='true'></i></button></div></div>";//
             if (row != null)
             {
                 var indx = -1;
                 if (_dV.Columns.Get("eb_review_status") != null)
                 {
                     indx = _dV.Columns.Get("eb_review_status").Data;
-                    row[indx] = "Action Pending";
-                    //if(IntermediateDic.ContainsKey(indx))
-                    //    IntermediateDic[indx] = "Action Pending";
+                    row[indx] = "Review Required";
                 }
                 if (_dV.Columns.Get("eb_review_stage") != null)
                 {
                     indx = _dV.Columns.Get("eb_review_stage").Data;
                     row[indx] = rows[0]["stage_name"].ToString();
-                    //if (IntermediateDic.ContainsKey(indx))
-                    //    IntermediateDic[indx] = stage_status[0]["stage_name"].ToString();
                 }
             }
-            return "<div class='stage_actions_cont'>"+_stage + "<div class='stage-div'><span class='status-label label label-warning'>Action Pending</span><span class='status-icon'><i class='fa fa-commenting color-warning' aria-hidden='true'></i></span></div></div>";
+            
+            return "<div class='stage_actions_cont'>"+_stage + _button + "</div>";
         }
 
         private string GetDataforNotPermissedApprovalColumn(List<EbDataRow> rows, User _user, List<EbDataRow> linesRows, EbDataRow row =null)
         {
             string _stage = "<div class='stage_actions_cont'>";
             string _stage_name = "<div class='stage-div'>";
-            string review_status = "<div class='stage-div'>";
-            string _history = string.Empty;
-            if (linesRows != null && linesRows.Count > 0)
-            {
-                _history = @"<nav>
-                          <div class='nav nav-tabs'  role='tablist'>
-                            <a class='nav-item nav-link active' data-toggle='tab' href='#history' role='tab'>History</a>
-                            </div></nav>";
+            string _history = @"<div class='nav-container'>
+                          <ul class='nav nav-tabs'>
+                            <li class='active'><a data-toggle='tab' href='#history'>History</a></li>
+                            </ul>";
                 _history += @"<div class='tab-content'>
-                                  <div class='tab-pane show active' id='history'>";
-                _history += "<table class='table'><thead class='history-head'><tr><th>Date</th><th>Stage</th><th>Action</th><th>User</th><th>Comments</th></tr></thead><tbody class='history-body'>";
-                foreach (EbDataRow _ebdatarow in linesRows)
-                {
-                    var _zone = Convert.ToDateTime(_ebdatarow["eb_created_at"]).ConvertFromUtc(_user.Preference.TimeZone);
-                    var __date = _zone.ToString(_user.Preference.GetShortDatePattern()) + "<br>" + _zone.ToString(_user.Preference.GetShortTimePattern());
-                    _history += "<tr><td>" + __date.ToString() + "</td>";
-                    _history += "<td>" + _ebdatarow["stage_name"].ToString() + "</td>";
-                    _history += "<td>" + _ebdatarow["action_name"].ToString() + "</td>";
-                    _history += "<td><img src='/images/dp/" + _ebdatarow["eb_created_by"].ToString() + ".png' class='history-image Eb_Image' onerror='imgError(this);'> " + _ebdatarow["fullname"].ToString() + "</td>";
-                    _history += "<td class='comment-td'>" + _ebdatarow["comments"].ToString() + "</td></tr>";
-                }
-                _history += "</tbody></table></div></div> ";
-            }
+                                  <div class='tab-pane active' id='history'>";
+                _history += GetApprovalHistoryString(linesRows, _user);
+                _history += "</div></div></div> ";
+            var _date = Convert.ToDateTime(linesRows[0]["eb_created_at"]);
+            var _time = _date.DateInNotification((_user.Preference.TimeZone));
+            var _tooltipdate = _date.ConvertFromUtc(_user.Preference.TimeZone).ToString(_user.Preference.GetShortDatePattern()) + " " + _date.ConvertFromUtc(_user.Preference.TimeZone).ToString(_user.Preference.GetShortTimePattern());
             foreach (EbDataRow _ebdatarow in rows)
             {
+                var _status = GetSynonymsforReviewStatus(_ebdatarow["review_status"].ToString());
                 var _icon = GetIconforReviewStatus(_ebdatarow["review_status"].ToString());
                 var _label = GetLabelStyleforReviewStatus(_ebdatarow["review_status"].ToString());
-                _stage_name += "<label>" + _ebdatarow["stage_name"].ToString() + "</label>";
-                review_status += "<span class='status-label label "+ _label + "'>" + _ebdatarow["review_status"].ToString() + "</span><span class='status-icon'><i class='" + _icon + "' aria-hidden='true'></i></span>";
+                var _latestHistory = GetLatestHistory(linesRows);
+                _stage_name += "<div class='stage-div-inner stage-status-cont'><span class='stage-status'>" + _latestHistory + "</span></div>";
+                _stage_name += "<div class='stage-div-inner'><div class='icon-status-cont'>" +
+                    "<span class='status-icon'><i class='" + _icon + "' aria-hidden='true'></i></span>" +
+                    "<span class='status-label label " + _label + "'>" + _status + "</span>" +
+                    $"<span class='status-time' title='{_tooltipdate}'>{_time}</span>" +
+                    "</div></div>";
                 if (row != null)
                 {
                     var indx = -1;
@@ -2058,21 +2056,54 @@ namespace ExpressBase.ServiceStack
                     {
                         indx = _dV.Columns.Get("eb_review_status").Data;
                         row[indx] = _ebdatarow["review_status"].ToString();
-                        //if (IntermediateDic.ContainsKey(indx))
-                        //    IntermediateDic[indx] = _ebdatarow["review_status"].ToString();
                     }
                     if (_dV.Columns.Get("eb_review_stage") != null)
                     {
                         indx = _dV.Columns.Get("eb_review_stage").Data;
                         row[indx] = _ebdatarow["stage_name"].ToString();
-                        //if (IntermediateDic.ContainsKey(indx))
-                        //    IntermediateDic[indx] = _ebdatarow["stage_name"].ToString();
                     }
                 }
             }
-            _stage_name += "<button class='btn stage-btn btn-approval_popover' data-contents='" + _history .ToBase64()+ "' data-toggle='popover'><i class='fa fa-history' aria-hidden='true'></i></button></div>";
-            review_status += "</div>";
-            return _stage+ _stage_name + review_status +"</div>";
+            string _button = "<div class='stage-div'><div class='stage-div-inner'><button class='btn stage-btn btn-approval_popover' data-contents='" + _history .ToBase64()+ "' data-toggle='popover'><i class='fa fa-history' aria-hidden='true'></i></button></div></div>";
+            _stage_name += "</div>";
+            return _stage+ _stage_name + _button + "</div>";
+        }
+
+        private string GetApprovalHistoryString(List<EbDataRow> ebDataRows, User _user)
+        {
+            string _history = string.Empty;
+            if (ebDataRows != null && ebDataRows.Count > 0)
+            {
+                _history += "<table class='table'><thead class='history-head'><tr><th>Date</th><th>Stage</th><th>Action</th><th>User</th><th>Comments</th></tr></thead><tbody class='history-body'>";
+
+                foreach (EbDataRow _ebdatarow in ebDataRows)
+                {
+                    var _zone = Convert.ToDateTime(_ebdatarow["eb_created_at"]).ConvertFromUtc(_user.Preference.TimeZone);
+                    var __date = _zone.ToString(_user.Preference.GetShortDatePattern()) + "<br>" + _zone.ToString(_user.Preference.GetShortTimePattern());
+                    _history += "<tr><td class='datetime-td'>" + __date.ToString() + "</td>";
+                    _history += "<td>" + _ebdatarow["stage_name"].ToString() + "</td>";
+                    _history += "<td>" + _ebdatarow["action_name"].ToString() + "</td>";
+                    _history += "<td class='image-td'><span><img src='/images/dp/" + _ebdatarow["eb_created_by"].ToString() + ".png' class='history-image Eb_Image' onerror='imgError(this);'></span>"+
+                                "<span>" + _ebdatarow["fullname"].ToString() + "</span></td>";
+                    _history += "<td class='comment-td'>" + _ebdatarow["comments"].ToString() + "</td></tr>";
+                }
+
+                _history += "</tbody></table>";
+            }
+            else
+                _history = "No Action Performed yet.";
+            return _history;
+        }
+
+        private string GetSynonymsforReviewStatus(string status)
+        {
+            if (status == "Abandoned")
+                return "Review Abandoned";
+            else if (status == "Completed")
+                return "Review Completed";
+            else if (status == "In Process")
+                return "Review Pending";
+            return string.Empty;
         }
 
         private string GetIconforReviewStatus(string status)
@@ -2095,6 +2126,46 @@ namespace ExpressBase.ServiceStack
             else if (status == "In Process")
                 return "label-info";
             return string.Empty;
+        }
+
+        private string GetLatestHistory(List<EbDataRow> rows)
+        {
+            string _history = string.Empty;
+            if (rows != null && rows.Count > 0)
+            {
+                _history += rows[0]["stage_name"].ToString();
+                _history += " (" + rows[0]["action_name"].ToString() + ") ";
+            }
+            return _history;
+        }
+
+        private string GetDifferenceInTime(DateTime _date)
+        {
+            try
+            {
+                TimeSpan time = (DateTime.Now - _date);
+                return DateStringForNotification(time);
+            }
+            catch(Exception e)
+            {
+                Log.Info("Get Difference In Time Exception------------" + e.Message);
+                Log.Info(e.StackTrace);
+            }
+            return string.Empty;
+        }
+
+        public string DateStringForNotification(TimeSpan span)
+        {
+            string formatted = string.Empty;
+            if ((int)span.TotalMinutes < 5)
+                formatted = "Just Now";
+            else
+                formatted = string.Format("{0}{1}{2}",
+                span.Duration().Days > 0 ? string.Format("{0}d ", span.Days) : string.Empty,
+                span.Duration().Hours > 0 ? string.Format("{0}h ", span.Hours) : string.Empty,
+                span.Duration().Minutes > 0 ? string.Format("{0}m ", span.Minutes) : string.Empty);
+
+            return formatted;
         }
 
         private object GetDataforPowerSelect(DVBaseColumn col, object _formattedData)
