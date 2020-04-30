@@ -1681,34 +1681,33 @@ namespace ExpressBase.ServiceStack.Services
             GetMeetingSlotsResponse Slots = new GetMeetingSlotsResponse();
             string _qry = @"
         SELECT 
-		A.id, A.no_of_attendee, A.no_of_hosts,
-	
-		B.id as slot_id , B.eb_meeting_schedule_id, B.title , B.description , B.is_approved, 
-		B.meeting_date, B.time_from, B.time_to, B.venue, B.integration,
+		A.id, A.no_of_attendee, A.no_of_hosts,A.title , A.description ,A.venue, A.integration,
+		B.id as slot_id , B.eb_meeting_schedule_id,  B.is_approved, 
+		B.meeting_date, B.time_from, B.time_to,
 	
 		COALESCE (C.slot_host, 0) as slot_host_count,
 		COALESCE (C.slot_host_attendee, 0) as slot_attendee_count,
 	    COALESCE (D.id, 0) as meeting_id	
 		FROM	
 			(SELECT 
-						id, no_of_attendee, no_of_hosts 
+						id, no_of_attendee, no_of_hosts ,title , description , venue, integration 
 					FROM  
 						eb_meeting_schedule 
 					WHERE 
-						eb_del = 'F' AND id = 1 AND meeting_date='2020-04-07')A
+						eb_del = 'F' AND id = 1 )A
 				LEFT JOIN
 					(SELECT 
-							id, eb_meeting_schedule_id , title , description , is_approved, 
-		                        meeting_date, time_from, time_to , venue, integration 
+							id, eb_meeting_schedule_id , is_approved, 
+		                        meeting_date, time_from, time_to 
 	                        FROM 
 		                        eb_meeting_slots 
 	                        WHERE 
-		                        eb_del = 'F')B 
+		                        eb_del = 'F' AND meeting_date='{1}' )B 
                         ON B.eb_meeting_schedule_id	= A.id 
                         LEFT JOIN 
                         (SELECT 
-		                        eb_meeting_schedule_id,approved_slot_id ,type_of_user, COUNT(approved_slot_id)filter(where type_of_user = 1) as slot_host,
-						 		COUNT(approved_slot_id)filter(where type_of_user = 2) as slot_host_attendee
+		                        eb_meeting_schedule_id,approved_slot_id ,type_of_user, COUNT(approved_slot_id)filter(where participant_type = 1) as slot_host,
+						 		COUNT(approved_slot_id)filter(where participant_type = 2) as slot_host_attendee
 	                        FROM 
 		                        eb_meeting_slot_participants
 	                        GROUP BY
@@ -1778,8 +1777,8 @@ namespace ExpressBase.ServiceStack.Services
 			 COALESCE (E.id, 0) as participant_id
 	            FROM
 				(SELECT 
-						id, eb_meeting_schedule_id , title , description , is_approved, 
-					meeting_date, time_from, time_to , venue, integration 
+						id, eb_meeting_schedule_id , is_approved, 
+					meeting_date, time_from, time_to
 	                     FROM 
 		                     eb_meeting_slots 
 	                     WHERE 
@@ -1817,7 +1816,8 @@ namespace ExpressBase.ServiceStack.Services
 							  GROUP BY
 		                        eb_meeting_schedule_id, approved_slot_id, type_of_user, eb_del , id)E
 								  ON
- 	                     E.approved_slot_id = A.id						 
+ 	                     E.approved_slot_id = A.id ; 
+
                                         ";
             List<DetailsBySlotid> SlotObj = new List<DetailsBySlotid>();
             bool Status = false;
@@ -1901,6 +1901,30 @@ namespace ExpressBase.ServiceStack.Services
                 }
             }
             return Resp;
+        }
+        public AddMeetingSlotResponse Post(AddMeetingSlotRequest request)
+        {
+            string qry ="";
+            string date = request.Date;
+            TimeSpan today = new TimeSpan(09, 00, 00);
+            TimeSpan duration = new System.TimeSpan(00, 29, 00);
+            TimeSpan intervals = new System.TimeSpan(00, 30, 00);
+            for(int i = 0; i < 14; i++)
+            {
+                TimeSpan temp = today.Add(duration);
+                qry += $"insert into eb_meeting_slots (eb_meeting_schedule_id,meeting_date,time_from,time_to,eb_created_by) values " +
+                    $"('1','{request.Date}','{today}','{temp}', 2 );";
+                today = today.Add(intervals);
+            }
+            try
+            {
+               int a = this.EbConnectionFactory.DataDB.DoNonQuery(qry);
+            }
+            catch(Exception e)
+            {
+                Console.WriteLine(e.StackTrace, e.Message);
+            }
+                return new AddMeetingSlotResponse();
         }
     }
 }
