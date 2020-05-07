@@ -2000,9 +2000,9 @@ namespace ExpressBase.ServiceStack
             _stage += "<div class='stage-div-inner stage-status-cont'><span class='stage-status'>" + _latestHistory + rows[0]["stage_name"].ToString() + "</span></div>";
             _stage += $"<div class='stage-div-inner'><div class='icon-status-cont'>" +
                 $"<span class='status-icon'><i class='fa fa-commenting color-warning' aria-hidden='true'></i></span>" +
-                $"<span class='status-label label label-warning'>Review Required</span></div>" +
+                $"<span class='status-label label label-warning'>Review Required</span>" +
                 $"<span class='status-time' title='{_tooltipdate}'>{_time}</span>" +
-                $"</div></div>";
+                $"</div></div></div>";
             string _button = "<div class='stage-div'><div class='stage-div-inner'><button class='btn stage-btn btn-approval_popover' data-contents='" + _data .ToBase64()+ "' data-toggle='popover'><i class='fa fa-pencil' aria-hidden='true'></i></button></div></div>";//
             if (row != null)
             {
