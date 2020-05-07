@@ -224,18 +224,18 @@ namespace ExpressBase.ServiceStack
             //    container.Register<IRedisClientsManager>(c => new RedisManagerPool("34.93.50.143"));
             //}
             //else
-            if (env == "Staging")
-            {
-                container.Register<IRedisClientsManager>(c => new RedisManagerPool(redisServer));
-            }
-            else
-            {
+            //if (env == "Staging")
+            //{
+            //    container.Register<IRedisClientsManager>(c => new RedisManagerPool(redisServer));
+            //}
+            //else
+            //{
                 var redisPassword = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_REDIS_PASSWORD);
                 var redisPort = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_REDIS_PORT);
                 var redisConnectionString = string.Format("redis://{0}@{1}:{2}", redisPassword, redisServer, redisPort);
                 container.Register<IRedisClientsManager>(c => new RedisManagerPool(redisConnectionString));
 
-            }
+            //}
             container.Register<IAuthRepository>(c => new MyRedisAuthRepository(c.Resolve<IRedisClientsManager>()));
             //container.Register<IManageApiKeys>(c => new EbApiRedisAuthRepository(c.Resolve<IRedisClientsManager>()));
 
