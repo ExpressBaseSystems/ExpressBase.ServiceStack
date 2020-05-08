@@ -1681,7 +1681,7 @@ namespace ExpressBase.ServiceStack.Services
             GetMeetingSlotsResponse Slots = new GetMeetingSlotsResponse();
             string _qry = @"
         SELECT 
-		A.id, A.no_of_attendee, A.no_of_hosts,A.title , A.description ,A.venue, A.integration,
+		A.id, A.no_of_attendee, A.no_of_hosts,A.title , A.description ,A.venue, A.integration,A.duration,
 		B.id as slot_id , B.eb_meeting_schedule_id,  B.is_approved, 
 		B.meeting_date, B.time_from, B.time_to,
 	
@@ -1690,7 +1690,7 @@ namespace ExpressBase.ServiceStack.Services
 	    COALESCE (D.id, 0) as meeting_id	
 		FROM	
 			(SELECT 
-						id, no_of_attendee, no_of_hosts ,title , description , venue, integration 
+						id, no_of_attendee, no_of_hosts ,title , description , venue, integration ,duration
 					FROM  
 						eb_meeting_schedule 
 					WHERE 
@@ -1754,6 +1754,7 @@ namespace ExpressBase.ServiceStack.Services
                             SlotAttendeeCount = Convert.ToInt32(dt.Rows[i]["slot_attendee_count"]),
                             SlotHostCount = Convert.ToInt32(dt.Rows[i]["slot_participant_count"]),
                             MeetingId = Convert.ToInt32(dt.Rows[i]["slot_participant_count"]),
+                            Duration = Convert.ToInt32(dt.Rows[i]["duration"]),
                         });
                 }
             }
