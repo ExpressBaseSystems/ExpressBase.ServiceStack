@@ -49,6 +49,8 @@ namespace ExpressBase.ServiceStack
                 };
                 EbObjectService myService = base.ResolveService<EbObjectService>();
                 EbObject_Create_New_ObjectResponse resp = myService.Post(_form_req);
+                if (string.IsNullOrEmpty(resp.RefId))
+                    throw new FormException(resp.Message);
                 request.BotObj.WebFormRefId = resp.RefId;
                 SaveObjectRequest(request.BotObj, request.Apps);
             }
@@ -79,6 +81,8 @@ namespace ExpressBase.ServiceStack
             };
             EbObjectService myService = base.ResolveService<EbObjectService>();
             EbObject_SaveResponse resp = myService.Post(req);
+            if (!string.IsNullOrEmpty(resp.Message))
+                throw new FormException(resp.Message);
         }
 
         private bool CompareBothForms(EbBotForm BotForm, EbWebForm WebForm)

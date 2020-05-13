@@ -1,6 +1,7 @@
 ﻿using ExpressBase.Common;
 using ExpressBase.Common.Connections;
 using ExpressBase.Common.Data;
+using ExpressBase.Common.ServiceClients;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ServiceStack;
 using System;
@@ -13,7 +14,7 @@ namespace ExpressBase.ServiceStack.Services
 {
     public class DbClientServices : EbBaseService
     {
-        public DbClientServices(IEbConnectionFactory _dbf) : base(_dbf) { }
+        public DbClientServices(IEbConnectionFactory _dbf, IEbMqClient _mq) : base(_dbf, _mq) { }
 
 
         public EbConnectionFactory GetFactory(bool IsAdminOwn, string ClientSolnid)
@@ -23,9 +24,14 @@ namespace ExpressBase.ServiceStack.Services
             {
                 if (IsAdminOwn && ClientSolnid != null)
                 {
-                    EbConnectionsConfig conf = EbConnectionsConfigProvider.GetDataCenterConnections();
-                    conf.DataDbConfig.DatabaseName = ClientSolnid;
-                    factory = new EbConnectionFactory(conf, ClientSolnid);
+                    RefreshSolutionConnectionsAsyncResponse resp = new RefreshSolutionConnectionsAsyncResponse();
+                    //EbConnectionsConfig conf = EbConnectionsConfigProvider.GetDataCenterConnections();
+                    //conf.DataDbConfig.DatabaseName = ClientSolnid;
+                    factory = new EbConnectionFactory(ClientSolnid, this.Redis);
+                    resp = this.MQClient.Post<RefreshSolutionConnectionsAsyncResponse>(new RefreshSolutionConnectionsBySolutionIdAsyncRequest()
+                    {
+                        SolutionId = ClientSolnid
+                    });
                 }
                 else
                     factory = this.EbConnectionFactory;

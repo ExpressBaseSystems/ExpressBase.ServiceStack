@@ -15,6 +15,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using ExpressBase.Common.Singletons;
 using ExpressBase.Common.Extensions;
+using ExpressBase.Common.Helpers;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -273,7 +274,7 @@ namespace ExpressBase.ServiceStack.Services
                     FROM eb_my_actions
                     WHERE ('{0}' = any(string_to_array(user_ids, ',')) OR
                      (string_to_array(role_ids,',')) && (string_to_array('{1}',',')))
-                        AND is_completed='F' AND eb_del='F' ;", request.UserId, _roles);
+                        AND is_completed='F' AND eb_del='F' ORDER BY from_datetime DESC;", request.UserId, _roles);
 
                 EbDataSet ds = EbConnectionFactory.DataDB.DoQueries(str);
                 EbDataTable dt = ds.Tables[0];
@@ -281,26 +282,31 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     string notif = dt.Rows[i]["notification"].ToString();
                     Notifications list = JsonConvert.DeserializeObject<Notifications>(notif);
-                    DateTime created_dtime = Convert.ToDateTime(dt.Rows[i]["created_at"].ToString());
-                    string duration = GetNotificationDuration(created_dtime);
+                    DateTime created_dtime = Convert.ToDateTime(dt.Rows[i]["created_at"]);
+                    var duration = TimeAgo(created_dtime.ConvertFromUtc(request.user.Preference.TimeZone));
+                    var _date = created_dtime.ConvertFromUtc(request.user.Preference.TimeZone).ToString(request.user.Preference.GetShortDatePattern() + " " + request.user.Preference.GetShortTimePattern());
                     res.Notifications.Add(new NotificationInfo
                     {
                         Link = list.Notification[0].Link,
                         NotificationId = list.Notification[0].NotificationId,
                         Title = list.Notification[0].Title,
-                        Duration = duration
+                        Duration = duration,
+                        CreatedDate = _date
                     });
                 }
                 dt = ds.Tables[1];
-                var _user_culture = CultureHelper.GetSerializedCultureInfo(request.user.Preference.Locale).GetCultureInfo();
                 for (int i = 0; i < dt.Rows.Count; i++)
                 {
+                    var _date = Convert.ToDateTime(dt.Rows[i]["from_datetime"]);
+                    var _time = TimeAgo(_date.ConvertFromUtc(request.user.Preference.TimeZone));
                     res.PendingActions.Add(new PendingActionInfo
                     {
                         Description = dt.Rows[i]["description"].ToString(),
                         Link = dt.Rows[i]["form_ref_id"].ToString(),
                         DataId = dt.Rows[i]["form_data_id"].ToString(),
-                        CreatedDate = Convert.ToDateTime(dt.Rows[i]["from_datetime"]).ConvertFromUtc(request.user.Preference.TimeZone).ToString(_user_culture.DateTimeFormat.ShortDatePattern + " " + _user_culture.DateTimeFormat.ShortTimePattern)
+                        CreatedDate = _date.ConvertFromUtc(request.user.Preference.TimeZone).ToString(request.user.Preference.GetShortDatePattern() + " " + request.user.Preference.GetShortTimePattern()),
+                        DateInString = _time,
+                        ActionType = dt.Rows[i]["my_action_type"].ToString()
                     });
                 }
             }
@@ -332,6 +338,49 @@ namespace ExpressBase.ServiceStack.Services
                 duration = (day>1)? day + " days ago": day + " day ago";
             }
             return duration;
+        }
+
+        public  string TimeAgo(DateTime dateTime)
+        {
+            string result = string.Empty;
+            var timeSpan = DateTime.Now.Subtract(dateTime);
+
+            if (timeSpan <= TimeSpan.FromSeconds(60))
+            {
+                result = string.Format("{0} seconds ago", timeSpan.Seconds);
+            }
+            else if (timeSpan <= TimeSpan.FromMinutes(60))
+            {
+                result = timeSpan.Minutes > 1 ?
+                    String.Format("{0} minutes ago", timeSpan.Minutes) :
+                    "a minute ago";
+            }
+            else if (timeSpan <= TimeSpan.FromHours(24))
+            {
+                result = timeSpan.Hours > 1 ?
+                    String.Format("{0} hours ago", timeSpan.Hours) :
+                    "an hour ago";
+            }
+            else if (timeSpan <= TimeSpan.FromDays(30))
+            {
+                result = timeSpan.Days > 1 ?
+                    String.Format("{0} days ago", timeSpan.Days) :
+                    "yesterday";
+            }
+            else if (timeSpan <= TimeSpan.FromDays(365))
+            {
+                result = timeSpan.Days > 30 ?
+                    String.Format("{0} months ago", timeSpan.Days / 30) :
+                    "a month ago";
+            }
+            else
+            {
+                result = timeSpan.Days > 365 ?
+                    String.Format("{0} years ago", timeSpan.Days / 365) :
+                    "a year ago";
+            }
+
+            return result;
         }
     }
 }
