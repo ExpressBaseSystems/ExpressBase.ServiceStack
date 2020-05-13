@@ -132,9 +132,9 @@ namespace ExpressBase.ServiceStack.Services
         {
             IVendorDbTypes vDbTypes = this.EbConnectionFactory.DataDB.VendorDbTypes;
             string Msg = string.Empty;
-            List<TableColumnMeta> _listNamesAndTypes = new List<TableColumnMeta>();
             foreach (TableSchema _table in _schema.Tables)
             {
+                List<TableColumnMeta> _listNamesAndTypes = new List<TableColumnMeta>();
                 if (_table.Columns.Count > 0 && _table.TableType != WebFormTableTypes.Review)
                 {
                     foreach (ColumnSchema _column in _table.Columns)
@@ -179,13 +179,15 @@ namespace ExpressBase.ServiceStack.Services
                     //_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_default", Type = vDbTypes.Boolean, Default = "F" });
 
                     int _rowaff = CreateOrAlterTable(_table.TableName, _listNamesAndTypes, ref Msg);
+                    if (_table.TableName == _schema.MasterTable && !request.IsImport && (request.WebObj as EbWebForm).AutoDeployTV)
+                    {
+                        if(_schema.ExtendedControls.Find(e => e is EbReview) != null)
+                            _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_approval", Label = "Approval" });
+                        CreateOrUpdateDsAndDv(request, _listNamesAndTypes);
+                    }
                 }
-                else if (_table.TableType == WebFormTableTypes.Review)
-                    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_approval", Type = vDbTypes.String, Label = "Approval" });
             }
-            TableSchema table = _schema.Tables.Find(tab => tab.TableName == _schema.MasterTable);
-            if (table.TableName == _schema.MasterTable && !request.IsImport && (request.WebObj as EbWebForm).AutoDeployTV)
-                CreateOrUpdateDsAndDv(request, _listNamesAndTypes);
+            
             if (!request.DontThrowException && !Msg.IsEmpty())
                 throw new FormException(Msg);
         }
@@ -755,6 +757,34 @@ namespace ExpressBase.ServiceStack.Services
                         }
                         else
                             _col.RenderType = column.Type.EbDbType;
+
+                        if (column.Control is EbPowerSelect)
+                        {
+                           var _control = new ControlClass
+                            {
+                                DataSourceId = (column.Control as EbPowerSelect).DataSourceId,
+                                ValueMember = (column.Control as EbPowerSelect).ValueMember
+                            };
+                            if ((column.Control as EbPowerSelect).RenderAsSimpleSelect)
+                            {
+                                _control.DisplayMember.Add((column.Control as EbPowerSelect).DisplayMember);
+                            }
+                            else
+                            {
+                                _control.DisplayMember = (column.Control as EbPowerSelect).DisplayMembers;
+                            }
+                            _col.ColumnQueryMapping = _control;
+                            _col.AutoResolve = true;
+                            _col.Align = Align.Center;
+                            _col.RenderType = EbDbTypes.String;
+                        }
+                        else if (column.Control is EbTextBox)
+                        {
+                            if ((column.Control as EbTextBox).TextMode == TextMode.MultiLine)
+                            {
+                                _col.AllowedCharacterLength = 20;
+                            }
+                        }
                         _col.Data = ++index;
                         Columns.Add(_col);
                     }
