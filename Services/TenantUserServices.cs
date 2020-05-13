@@ -255,7 +255,7 @@ namespace ExpressBase.ServiceStack.Services
             Dictionary<int, EbLocation> locs = new Dictionary<int, EbLocation>();
             try
             {
-                string query = "SELECT * FROM eb_location_config WHERE eb_del = 'F' ORDER BY id; SELECT * FROM eb_locations;";
+                string query = "SELECT * FROM eb_location_config WHERE eb_del = 'F' ORDER BY id; SELECT * FROM eb_locations WHERE COALESCE(eb_del,'F') = 'F';";
                 EbConnectionFactory ebConnectionFactory = new EbConnectionFactory(req.SolnId.ToLower(), this.Redis);
                 EbDataSet dt = ebConnectionFactory.DataDB.DoQueries(query);
                 if (dt != null && dt.Tables.Count > 0)
