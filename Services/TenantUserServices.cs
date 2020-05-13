@@ -255,7 +255,12 @@ namespace ExpressBase.ServiceStack.Services
             Dictionary<int, EbLocation> locs = new Dictionary<int, EbLocation>();
             try
             {
-                string query = "SELECT * FROM eb_location_config WHERE eb_del = 'F' ORDER BY id; SELECT * FROM eb_locations WHERE COALESCE(eb_del,'F') = 'F';";
+                string query = @"SELECT * FROM eb_location_config WHERE eb_del = 'F' ORDER BY id;
+                                SELECT L.id, L.shortname, L.longname, L.image, L.meta_json, L.week_holiday1, L.week_holiday2,
+                                L.is_group, L.parent_id, T.id, T.type
+                                FROM eb_locations L, eb_location_types T
+                                WHERE COALESCE(L.eb_del,'F') = 'F'
+                                AND L.eb_location_types_id = T.id;";
                 EbConnectionFactory ebConnectionFactory = new EbConnectionFactory(req.SolnId.ToLower(), this.Redis);
                 EbDataSet dt = ebConnectionFactory.DataDB.DoQueries(query);
                 if (dt != null && dt.Tables.Count > 0)
@@ -280,8 +285,12 @@ namespace ExpressBase.ServiceStack.Services
                             LongName = r[2].ToString(),
                             Logo = r[3].ToString(),
                             Meta = JsonConvert.DeserializeObject<Dictionary<string, string>>(r[4].ToString()),
-                            WeekHoliday1 = r["week_holiday1"].ToString(),
-                            WeekHoliday2 = r["week_holiday2"].ToString()
+                            WeekHoliday1 = r[5].ToString(),
+                            WeekHoliday2 = r[6].ToString(),
+                            IsGroup = (r[7].ToString() == "T") ? true : false,
+                            ParentId = Convert.ToInt32(r[8]),
+                            TypeId = Convert.ToInt32(r[9]),
+                            TypeName = r[10].ToString()
                         });
                     }
                 }
