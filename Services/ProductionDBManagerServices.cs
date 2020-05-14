@@ -2033,8 +2033,8 @@ namespace ExpressBase.ServiceStack.Services
                     }
                     else
                     {
-                        if (!int.TryParse(infra_column_default, out int x) && infra_column_default != "'F'::\"char\"" && infra_column_default != "'F'::bpchar")
-                            infra_column_default = "'" + infra_column_default + "'";
+                        if (!int.TryParse(infra_column_default, out int x) && infra_column_default != "'F'::\"char\"" && infra_column_default != "'F'::bpchar" && infra_column_default != "'default'::text")
+                            infra_column_default = "'" + infra_column_default + "'"; 
                         if (vendor == "PGSQL")
                             changes = changes + string.Format(@"
                                                    ALTER TABLE {0} ALTER COLUMN {1} SET DEFAULT {2};
