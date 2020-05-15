@@ -229,6 +229,16 @@ namespace ExpressBase.ServiceStack
                         resp.Id = request.AppId;
                     }
                 }
+				if (resp.Id > 0)
+				{
+					if (request.AppType==3)
+					{
+						EbBotSettings botstng = new EbBotSettings() { Name = request.AppName, Description = request.Description,AppIcon= request.AppIcon };
+						string settings = JsonConvert.SerializeObject(botstng);
+						SaveAppSettingsResponse appresponse = this.Any(new SaveAppSettingsRequest { AppId = resp.Id, AppType = request.AppType, Settings = settings });
+
+					}
+				}
             }
             catch (Exception e)
             {
