@@ -147,7 +147,7 @@ namespace ExpressBase.ServiceStack.Services
                                 SELECT * 
                                 FROM eb_solutions 
                                 WHERE eb_del = false 
-                                AND tenant_id IN (select id from eb_tenants) 
+                                AND tenant_id IN (select id from eb_tenants)
                                 AND isolution_id != ''";
             return InfraConnectionFactory.DataDB.DoQuery(str);
 
@@ -2714,8 +2714,8 @@ namespace ExpressBase.ServiceStack.Services
             string accesString = string.Empty;
             try
             {
-                InfraServices _InfraServices = base.ResolveService<InfraServices>();
-                UpdateRedisConnectionsResponse resp = _InfraServices.Post(new UpdateRedisConnectionsRequest());
+                //InfraServices _InfraServices = base.ResolveService<InfraServices>();
+                //UpdateRedisConnectionsResponse resp = _InfraServices.Post(new UpdateRedisConnectionsRequest());
                 EbDataTable dt = SelectSolutionsFromDB();
                 List<LastDbAccess> LastDbAccess = new List<LastDbAccess>();
                 for (int i = 0; i < dt.Rows.Count; i++)
@@ -2726,8 +2726,7 @@ namespace ExpressBase.ServiceStack.Services
                     if (_ebconfactoryDatadb != null)
                     {
                         LastDbAccess access = new LastDbAccess();
-
-                        access.ESolution = dt.Rows[i]["esolution_id"].ToString();
+                        access.ESolution = new Dbdetail { Name = dt.Rows[i]["esolution_id"].ToString(), On = dt.Rows[i]["date_created"].ToString() };
                         access.ISolution = dt.Rows[i]["isolution_id"].ToString();
                         try
                         {
@@ -2766,16 +2765,17 @@ namespace ExpressBase.ServiceStack.Services
                     }
                 }
 
-                for (int i = 0; i < LastDbAccess.Count; i++)
+                for (int j = 0; j < LastDbAccess.Count; j++)
                 {
-                    LastDbAccess a = LastDbAccess[i];
-                    accesString += "\n" + i+1 + ".   EsolutionId :" + a.ESolution + "  ISolution id :" + a.ISolution;
+                    LastDbAccess a = LastDbAccess[j];
+                    accesString += "\n" + (j + 1) + ".    EsolutionId :" + a.ESolution.Name + "  " + a.ESolution.On;
+                    accesString += "\n      ISolution id :" + a.ISolution;
                     if (a.LastObject != null)
-                        accesString += "\n       Last Object: " + a.LastObject.Name + " , " + a.LastObject.On;
+                        accesString += "\n      Last Object: " + a.LastObject.Name + " , " + a.LastObject.On;
                     if (a.LastUser != null)
-                        accesString += "\n       Last User: " + a.LastUser.Name + " , " + a.LastUser.On;
+                        accesString += "\n      Last User: " + a.LastUser.Name + " , " + a.LastUser.On;
                     if (a.LastLogin != null)
-                        accesString += "\n       Last Login: " + a.LastLogin.Name + " , " + a.LastLogin.On + "\n";
+                        accesString += "\n      Last Login: " + a.LastLogin.Name + " , " + a.LastLogin.On + "\n";
                     accesString += "\n------------------------------------------------------------------------------\n";
                 }
             }
@@ -2793,7 +2793,7 @@ namespace ExpressBase.ServiceStack.Services
     public class LastDbAccess
     {
         public string ISolution { get; set; }
-        public string ESolution { get; set; }
+        public Dbdetail ESolution { get; set; }
         public Dbdetail LastObject { get; set; }
         public Dbdetail LastUser { get; set; }
         public Dbdetail LastLogin { get; set; }
