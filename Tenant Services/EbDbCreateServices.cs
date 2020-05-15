@@ -392,7 +392,7 @@ namespace ExpressBase.ServiceStack.Services
 
                 //..............insert into client tbl eb_users............ to SOLUTION
                 string sql2 = @"INSERT INTO eb_users(email,pwd,statusid) VALUES ('anonymous@anonym.com','294de3557d9d00b3d2d8a1e6aab028cf',0); 
-                                INSERT INTO eb_locations(shortname,longname) VALUES ('default','default');
+                                INSERT INTO eb_locations(shortname, longname, eb_location_types_id) VALUES ('default', 'default', 1);
                                 INSERT INTO eb_location_types(type) VALUES ('default');
                                 INSERT INTO eb_languages(language) VALUES ('English (en-US)');
                                 INSERT INTO eb_meeting_schedule (title,description,meeting_date,time_from,time_to,duration,venue,integration,max_hosts,max_attendees,
