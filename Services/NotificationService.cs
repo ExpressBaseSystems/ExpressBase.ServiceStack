@@ -306,7 +306,8 @@ namespace ExpressBase.ServiceStack.Services
                         DataId = dt.Rows[i]["form_data_id"].ToString(),
                         CreatedDate = _date.ConvertFromUtc(request.user.Preference.TimeZone).ToString(request.user.Preference.GetShortDatePattern() + " " + request.user.Preference.GetShortTimePattern()),
                         DateInString = _time,
-                        ActionType = dt.Rows[i]["my_action_type"].ToString()
+                        ActionType = dt.Rows[i]["my_action_type"].ToString(),
+                        MyActionId = Convert.ToInt32( dt.Rows[i]["id"])
                     });
                 }
             }
