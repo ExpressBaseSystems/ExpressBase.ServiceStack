@@ -1243,5 +1243,36 @@ namespace ExpressBase.ServiceStack
             };
         }
 
-    }
+		public RedisBotSettingsResponse Post(RedisBotSettingsRequest request)
+		{
+			RedisBotSettingsResponse stgRes = new RedisBotSettingsResponse();
+
+			try
+			{
+				this.EbConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
+				string sql = @"SELECT app_settings FROM eb_applications  WHERE id = @appid AND application_type = @apptype AND eb_del='F';";
+				DbParameter[] parameters = new DbParameter[] {
+				this.EbConnectionFactory.ObjectsDB.GetNewParameter("appid", EbDbTypes.Int32, request.AppId),
+				this.EbConnectionFactory.ObjectsDB.GetNewParameter("apptype", EbDbTypes.Int32, request.AppType)
+					};
+				EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery(sql, parameters);
+				if (dt.Rows.Count > 0)
+				{
+					stgRes.Settings = dt.Rows[0][0].ToString();
+					this.Redis.Set<EbBotSettings>(string.Format("{0}-{1}_app_settings", request.SolnId, request.AppId), JsonConvert.DeserializeObject<EbBotSettings>(stgRes.Settings));
+					stgRes.ResStatus = 1;
+				}
+				else
+				{
+					stgRes.ResStatus = 0;
+				}
+			}
+			catch (Exception e)
+			{
+				Console.WriteLine("Excetion " + e.Message + e.StackTrace);
+			}
+			return stgRes;
+		}
+
+	}
 }

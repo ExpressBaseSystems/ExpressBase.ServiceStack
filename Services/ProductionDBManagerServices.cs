@@ -2034,7 +2034,7 @@ namespace ExpressBase.ServiceStack.Services
                     else
                     {
                         if (!int.TryParse(infra_column_default, out int x) && infra_column_default != "'F'::\"char\"" && infra_column_default != "'F'::bpchar" && infra_column_default != "'default'::text")
-                            infra_column_default = "'" + infra_column_default + "'"; 
+                            infra_column_default = "'" + infra_column_default + "'";
                         if (vendor == "PGSQL")
                             changes = changes + string.Format(@"
                                                    ALTER TABLE {0} ALTER COLUMN {1} SET DEFAULT {2};
@@ -2708,5 +2708,101 @@ namespace ExpressBase.ServiceStack.Services
             return str;
         }
 
+        public LastSolnAccessResponse Post(LastSolnAccessRequest request)
+        {
+            string i_solution_id = string.Empty;
+            string accesString = string.Empty;
+            try
+            {
+                InfraServices _InfraServices = base.ResolveService<InfraServices>();
+                UpdateRedisConnectionsResponse resp = _InfraServices.Post(new UpdateRedisConnectionsRequest());
+                EbDataTable dt = SelectSolutionsFromDB();
+                List<LastDbAccess> LastDbAccess = new List<LastDbAccess>();
+                for (int i = 0; i < dt.Rows.Count; i++)
+                {
+                    i_solution_id = dt.Rows[i]["isolution_id"].ToString();
+                    IDatabase _ebconfactoryDatadb = GetTenantDB(i_solution_id);
+
+                    if (_ebconfactoryDatadb != null)
+                    {
+                        LastDbAccess access = new LastDbAccess();
+
+                        access.ESolution = dt.Rows[i]["esolution_id"].ToString();
+                        access.ISolution = dt.Rows[i]["isolution_id"].ToString();
+                        try
+                        {
+                            string query = @"SELECT display_name, commit_ts 
+                                FROM eb_objects O, eb_objects_ver v 
+                                WHERE 
+                                v.eb_objects_id = o.id AND commit_ts = (SELECT MAX(commit_ts) FROM eb_objects_ver);
+
+                                SELECT fullname,eb_created_at 
+                                FROM eb_users WHERE id =(SELECT MAX(id) FROM eb_users);
+
+                                SELECT fullname, signin_at 
+                                FROM eb_signin_log s, eb_users u WHERE s.id = (SELECT MAX(id) FROM eb_signin_log)
+                                AND user_id = u.id;
+                                ";
+                            EbDataSet ds = _ebconfactoryDatadb.DoQueries(query);
+                            if (ds.Tables[0] != null && ds.Tables[0].Rows != null && ds.Tables[0].Rows.Count > 0)
+                            {
+                                access.LastObject = new Dbdetail { Name = ds.Tables[0].Rows[0][0].ToString(), On = ds.Tables[0].Rows[0][1].ToString() };
+                            }
+                            if (ds.Tables[1] != null && ds.Tables[1].Rows != null && ds.Tables[1].Rows.Count > 0)
+                            {
+                                access.LastUser = new Dbdetail { Name = ds.Tables[1].Rows[0][0].ToString(), On = ds.Tables[1].Rows[0][1].ToString() };
+                            }
+                            if (ds.Tables[2] != null && ds.Tables[2].Rows != null && ds.Tables[2].Rows.Count > 0)
+                            {
+                                access.LastLogin = new Dbdetail { Name = ds.Tables[2].Rows[0][0].ToString(), On = ds.Tables[2].Rows[0][1].ToString() };
+                            }
+                            LastDbAccess.Add(access);
+                        }
+                        catch (Exception e)
+                        {
+                            LastDbAccess.Add(access);
+                            Console.WriteLine("Error in LastSolnAccessRequest. Isolnid:-i_solution_id" + i_solution_id + "  " + e.Message);
+                        }
+                    }
+                }
+
+                for (int i = 0; i < LastDbAccess.Count; i++)
+                {
+                    LastDbAccess a = LastDbAccess[i];
+                    accesString += "\n" + i+1 + ".   EsolutionId :" + a.ESolution + "  ISolution id :" + a.ISolution;
+                    if (a.LastObject != null)
+                        accesString += "\n       Last Object: " + a.LastObject.Name + " , " + a.LastObject.On;
+                    if (a.LastUser != null)
+                        accesString += "\n       Last User: " + a.LastUser.Name + " , " + a.LastUser.On;
+                    if (a.LastLogin != null)
+                        accesString += "\n       Last Login: " + a.LastLogin.Name + " , " + a.LastLogin.On + "\n";
+                    accesString += "\n------------------------------------------------------------------------------\n";
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message + e.StackTrace);
+            }
+            return new LastSolnAccessResponse
+            {
+                LastDbAccess = accesString
+            };
+        }
+    }
+
+    public class LastDbAccess
+    {
+        public string ISolution { get; set; }
+        public string ESolution { get; set; }
+        public Dbdetail LastObject { get; set; }
+        public Dbdetail LastUser { get; set; }
+        public Dbdetail LastLogin { get; set; }
+
+    }
+
+    public class Dbdetail
+    {
+        public string Name { get; set; }
+        public string On { get; set; }
     }
 }
