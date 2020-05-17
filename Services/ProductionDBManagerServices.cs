@@ -5,6 +5,7 @@ using ExpressBase.Common.ProductionDBManager;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using ServiceStack.Messaging;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
@@ -38,7 +39,7 @@ namespace ExpressBase.ServiceStack.Services
 
     public class ProductionDBManagerServices : EbBaseService
     {
-        public ProductionDBManagerServices(IEbConnectionFactory _dbf) : base(_dbf) { }
+        public ProductionDBManagerServices(IEbConnectionFactory _dbf, IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_dbf, _mqp, _mqc) { }
         Dictionary<string, string[]> dictTenant = new Dictionary<string, string[]>();
         Dictionary<string, Eb_FileDetails> dictInfra = new Dictionary<string, Eb_FileDetails>();
 
@@ -2711,6 +2712,7 @@ namespace ExpressBase.ServiceStack.Services
         public LastSolnAccessResponse Post(LastSolnAccessRequest request)
         {
             string i_solution_id = string.Empty;
+            string accesStringMail = "<html><body>";
             string accesString = string.Empty;
             try
             {
@@ -2730,17 +2732,27 @@ namespace ExpressBase.ServiceStack.Services
                         access.ISolution = dt.Rows[i]["isolution_id"].ToString();
                         try
                         {
-                            string query = @"SELECT display_name, commit_ts 
-                                FROM eb_objects O, eb_objects_ver v 
+                            string query = @"   
+                                SELECT display_name, commit_ts 
+                                FROM 
+                                    eb_objects O, eb_objects_ver v 
                                 WHERE 
-                                v.eb_objects_id = o.id AND commit_ts = (SELECT MAX(commit_ts) FROM eb_objects_ver);
+                                    v.eb_objects_id = o.id AND commit_ts = (SELECT MAX(commit_ts) FROM eb_objects_ver);
 
                                 SELECT fullname,eb_created_at 
-                                FROM eb_users WHERE id =(SELECT MAX(id) FROM eb_users);
+                                FROM 
+                                    eb_users 
+                                WHERE id =(SELECT MAX(id) FROM eb_users);
 
                                 SELECT fullname, signin_at 
-                                FROM eb_signin_log s, eb_users u WHERE s.id = (SELECT MAX(id) FROM eb_signin_log)
-                                AND user_id = u.id;
+                                FROM
+                                    eb_signin_log s, eb_users u 
+                                WHERE s.id = (SELECT MAX(id) FROM eb_signin_log)
+                                    AND user_id = u.id;
+
+                                SELECT string_agg(applicationname,',') 
+                                FROM 
+                                    eb_applications WHERE COALESCE(eb_del,'F')='F'
                                 ";
                             EbDataSet ds = _ebconfactoryDatadb.DoQueries(query);
                             if (ds.Tables[0] != null && ds.Tables[0].Rows != null && ds.Tables[0].Rows.Count > 0)
@@ -2755,6 +2767,11 @@ namespace ExpressBase.ServiceStack.Services
                             {
                                 access.LastLogin = new Dbdetail { Name = ds.Tables[2].Rows[0][0].ToString(), On = ds.Tables[2].Rows[0][1].ToString() };
                             }
+                            if (ds.Tables[3] != null && ds.Tables[3].Rows != null && ds.Tables[3].Rows.Count > 0)
+                            {
+                                access.Applications =  ds.Tables[3].Rows[0][0].ToString();
+                            }
+
                             LastDbAccess.Add(access);
                         }
                         catch (Exception e)
@@ -2775,14 +2792,38 @@ namespace ExpressBase.ServiceStack.Services
                     if (a.LastUser != null)
                         accesString += "\n      Last User: " + a.LastUser.Name + " , " + a.LastUser.On;
                     if (a.LastLogin != null)
-                        accesString += "\n      Last Login: " + a.LastLogin.Name + " , " + a.LastLogin.On + "\n";
-                    accesString += "\n------------------------------------------------------------------------------\n";
+                        accesString += "\n      Last Login: " + a.LastLogin.Name + " , " + a.LastLogin.On ;
+                    accesString += "\n      Applications: " + a.Applications;
+                   accesString += "\n------------------------------------------------------------------------------\n";
+
+                    accesStringMail += "<br />" + (j + 1) + ".    <b>EsolutionId :</b><u>" + a.ESolution.Name + "</u>" + a.ESolution.On;
+                    accesStringMail += "<br />      <b>ISolution id :</b>" + a.ISolution;
+                    if (a.LastObject != null)
+                        accesStringMail += "<br />      <b>Last Object:</b> " + a.LastObject.Name + " , " + a.LastObject.On;
+                    if (a.LastUser != null)
+                        accesStringMail += "<br />      <b>Last User:</b> " + a.LastUser.Name + " , " + a.LastUser.On;
+                    if (a.LastLogin != null)
+                        accesStringMail += "<br />      <b>Last Login:</b> " + a.LastLogin.Name + " , " + a.LastLogin.On;
+                    accesStringMail += "<br />      <b>Applications:</b> " + a.Applications;
+                    accesStringMail += "<br /><br />";
                 }
+                accesStringMail += "</body> </html>";
             }
             catch (Exception e)
             {
                 Console.WriteLine(e.Message + e.StackTrace);
             }
+            MessageProducer3.Publish(new EmailServicesRequest()
+            {
+                From = "request.from",
+                To = "donajose@expressbase.com",
+                Message = accesStringMail,
+                Subject = "DB Last Access Log",
+                UserId = request.UserId,
+                //  UserAuthId = request.UserAuthId,
+                SolnId = request.SolnId
+
+            });
             return new LastSolnAccessResponse
             {
                 LastDbAccess = accesString
@@ -2798,6 +2839,7 @@ namespace ExpressBase.ServiceStack.Services
         public Dbdetail LastUser { get; set; }
         public Dbdetail LastLogin { get; set; }
 
+        public string Applications { get; set; }
     }
 
     public class Dbdetail
