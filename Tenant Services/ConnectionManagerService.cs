@@ -311,7 +311,7 @@ namespace ExpressBase.ServiceStack.Services
                     DataDB = new MSSQLDatabase(request.DataDBConfig);
                     adminroles_enum = Enum.GetNames(typeof(MSSqlSysRoles)).ToList();
                 }
-                EbDataTable dt = DataDB.DoQuery(DataDB.EB_USER_ROLE_PRIVS.Replace("@uname", request.DataDBConfig.UserName));
+                EbDataTable dt = DataDB.DoQuery(DataDB.EB_USER_ROLE_PRIVS.Replace("@uname", request.DataDBConfig.UserName.Split('@')[0]));
                 Console.WriteLine("User Role Privilages: " + dt.Rows.Count());
                 foreach (EbDataRow dr in dt.Rows)
                 {
@@ -787,7 +787,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
-                Console.WriteLine("Fail : "+ e.Message.ToString() + e.StackTrace.ToString());
+                Console.WriteLine("Fail : " + e.Message.ToString() + e.StackTrace.ToString());
             }
         }
 
@@ -876,7 +876,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
-                Console.WriteLine("GETting all data : "+e.Message.ToString() + e.StackTrace.ToString());
+                Console.WriteLine("GETting all data : " + e.Message.ToString() + e.StackTrace.ToString());
             }
             return resp;
         }
