@@ -419,7 +419,7 @@ namespace ExpressBase.ServiceStack.Services
                     parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("offset", EbDbTypes.Int32, request.Offset));
                 }
 
-                string wraped = WrapQuery(_ds.Sql, request.Limit > 0, request.IsPowerSelect, request.Params);
+                string wraped = WrapQuery(_ds.Sql, request.Limit > 0, request.IsPowerSelect, request.Params, request.SortOrder);
 
                 resp.Data = this.EbConnectionFactory.DataDB.DoQueries(wraped, parameters.ToArray());
             }
@@ -431,7 +431,7 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
-        private string WrapQuery(string sql, bool has_limit, bool is_powerselect, List<Param> parameters)
+        private string WrapQuery(string sql, bool has_limit, bool is_powerselect, List<Param> parameters, List<SortColumn> sort_order)
         {
             string wraped = string.Empty;
             try
@@ -452,19 +452,26 @@ namespace ExpressBase.ServiceStack.Services
                     foreach (Param param in parameters)
                     {
                         var p = sqlP.Find(item => item.Name == param.Name);
-                        if (p == null)
+                        if (p == null) 
                             filterList.Add($"PWWRP.{param.Name} = :{param.Name}");
                     }
 
                     if (filterList.Any())
-                        wraped += " WHERE ";
+                    {
+                        wraped = wraped + " WHERE " + filterList.Join(" AND ");
+                    }
 
-                    wraped += filterList.Join(" AND ");
+                    if (sort_order.Any())
+                    {
+                        List<string> sort = new List<string>();
+                        sort_order.ForEach(item => sort.Add($"{item.Name} {item.GetString()}"));
+                        wraped = wraped + " ORDER BY " + sort.Join($" {CharConstants.COMMA} ");
+                    }
                 }
 
                 wraped = $"SELECT COUNT(*) FROM ({wraped}) AS COUNT_STAR;" + wraped;
 
-                if (has_limit)
+                if (has_limit) 
                     wraped += $" LIMIT :limit OFFSET :offset";
 
                 if (!wraped.EndsWith(CharConstants.SEMI_COLON))

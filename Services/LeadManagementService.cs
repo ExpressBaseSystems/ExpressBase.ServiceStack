@@ -30,7 +30,7 @@ namespace ExpressBase.ServiceStack.Services
 							SELECT source FROM lead_source WHERE eb_del='F' ORDER BY source;
 							SELECT DISTINCT INITCAP(TRIM(subcategory)) AS subcategory FROM customers WHERE LENGTH(subcategory) > 2 ORDER BY subcategory;
 							SELECT status,nextstatus FROM lead_status WHERE eb_del='F' ORDER BY status;
-							SELECT service FROM lead_service WHERE eb_del='F' ORDER BY service;
+							SELECT service FROM lead_service WHERE eb_del='F' ORDER BY order_id;
 							SELECT id, name FROM hoc_staff WHERE type='nurse' AND eb_del='F' ORDER BY name;";
 			List<DbParameter> paramList = new List<DbParameter>();
 			Dictionary<int, string> CostCenter = new Dictionary<int, string>();
@@ -56,7 +56,7 @@ namespace ExpressBase.ServiceStack.Services
 			{
 				SqlQry += @"SELECT id, eb_loc_id, trdate, genurl, name, dob, genphoffice, profession, genemail, customertype, clcity, clcountry, city,
 								typeofcustomer, sourcecategory, subcategory, consultation, picsrcvd, dprefid, sex, district, leadowner,
-                                baldnessgrade, diffusepattern, hfcurrently, htpreviously, country_code
+                                baldnessgrade, diffusepattern, hfcurrently, htpreviously, country_code, watsapp_phno
 								FROM customers WHERE id = :accountid AND eb_del='F';
 							SELECT id,trdate,status,followupdate,narration, eb_createdby, eb_createddt,isnotpickedup FROM leaddetails
 								WHERE customers_id=:accountid ORDER BY eb_createddt DESC;
@@ -147,6 +147,7 @@ namespace ExpressBase.ServiceStack.Services
 				CustomerData.Add("hfcurrently", dr[24].ToString().ToLower());
 				CustomerData.Add("htpreviously", dr[25].ToString().ToLower());
 				CustomerData.Add("country_code", dr[26].ToString());
+				CustomerData.Add("watsapp_phno", dr[27].ToString());
 				
 				if (ds.Tables[Qcnt + 4].Rows.Count > 0)
 				{
@@ -366,6 +367,13 @@ namespace ExpressBase.ServiceStack.Services
 				cols += "genphoffice,";
 				vals += ":genphoffice,";
 				upcolsvals += "genphoffice=:genphoffice,";
+			}
+			if (dict.TryGetValue("watsapp_phno", out found))
+			{
+				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
+				cols += "watsapp_phno,";
+				vals += ":watsapp_phno,";
+				upcolsvals += "watsapp_phno=:watsapp_phno,";
 			}
 			if (dict.TryGetValue("profession", out found))
 			{
@@ -820,7 +828,7 @@ namespace ExpressBase.ServiceStack.Services
 			{
 				this.EbConnectionFactory.ObjectsDB.GetNewParameter("value", EbDbTypes.String, request.Value.Trim())
 			};
-			EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery("SELECT id FROM customers WHERE genurl = :value OR genphoffice = :value;", parameters);
+			EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery("SELECT id FROM customers WHERE genurl = :value OR genphoffice = :value OR watsapp_phno = :value;", parameters);
 			if (dt.Rows.Count == 0)
 				rstatus = true;
 			return new LmUniqueCheckResponse { Status = rstatus };

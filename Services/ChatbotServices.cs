@@ -1214,7 +1214,7 @@ namespace ExpressBase.ServiceStack
         public GetBotsResponse Get(GetBotsRequest request)
         {
             List<BotDetails> list = new List<BotDetails>();
-            string qry = @"SELECT id, applicationname, app_icon, app_settings FROM eb_applications WHERE application_type = 3 AND eb_del = 'F'";
+            string qry = @"SELECT id, applicationname, app_icon,description, app_settings FROM eb_applications WHERE application_type = 3 AND eb_del = 'F'";
             var table = this.EbConnectionFactory.DataDB.DoQuery(qry);
             foreach (EbDataRow row in table.Rows)
             {
@@ -1223,7 +1223,8 @@ namespace ExpressBase.ServiceStack
                     id = Convert.ToInt32(row[0]),
                     name = row[1].ToString(),
                     icon = row[2].ToString(),
-                    botsettings = JsonConvert.DeserializeObject<EbBotSettings>(row[3].ToString())
+                    Description = row[3].ToString(),
+                    botsettings = JsonConvert.DeserializeObject<EbBotSettings>(row[4].ToString())
                 });
             }
             return new GetBotsResponse { BotList = list };
