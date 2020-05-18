@@ -51,17 +51,26 @@ namespace ExpressBase.ServiceStack.Services
         {
             string DB_Name = "";
             int TableCount = 0;
+            string FuntionQuery = @"select n.nspname as function_schema, p.proname as function_name, pg_get_functiondef(p.oid) as Functions
+                                        from pg_proc p left
+                                        join pg_namespace n on p.pronamespace = n.oid
+                                        where n.nspname not in ('pg_catalog', 'information_schema')
+                                        order by function_schema, function_name; ";
             try
-            {                
+            {
                 EbConnectionFactory factory = GetFactory(request.IsAdminOwn, request.ClientSolnid);
                 string sql = factory.DataDB.EB_GETDBCLIENTTTABLES;
-                if (request.IsAdminOwn)
+                sql = sql + FuntionQuery;
+                if (request.IsAdminOwn || request.SupportLogin)
                 {
-                    string sql1 = "SELECT isolution_id FROM eb_solutions WHERE eb_del ='F';";
-                    EbDataTable solutionTable = this.InfraConnectionFactory.DataDB.DoQuery(sql1);
-                    foreach (var Row in solutionTable.Rows)
+                    if (request.IsAdminOwn)
                     {
-                        solutions.Add(Row[0].ToString());
+                        string sql1 = "SELECT isolution_id FROM eb_solutions WHERE eb_del ='F';";
+                        EbDataTable solutionTable = this.InfraConnectionFactory.DataDB.DoQuery(sql1);
+                        foreach (var Row in solutionTable.Rows)
+                        {
+                            solutions.Add(Row[0].ToString());
+                        }
                     }
                     sql = string.Format(sql, "");
                 }
@@ -159,8 +168,18 @@ namespace ExpressBase.ServiceStack.Services
                         }
                     }
                 }
+                Data = dt.Tables[3];
+                foreach (var Row in Data.Rows)
+                {
+                    EbDbExplorerFunctions Fun = new EbDbExplorerFunctions()
+                    {
+                        FunctionName = Row[1].ToString(),
+                        FunctionQuery = Row[2].ToString()
+                    };
+                    Table.FunctionCollection.Add(Fun);
+                }
                 DB_Name = factory.ObjectsDB.DBName;
-                
+
             }
             catch (Exception e)
             {
