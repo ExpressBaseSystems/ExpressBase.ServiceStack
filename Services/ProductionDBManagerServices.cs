@@ -2749,7 +2749,7 @@ namespace ExpressBase.ServiceStack.Services
                                 WHERE 
                                     v.eb_objects_id = o.id AND commit_ts = (SELECT MAX(commit_ts) FROM eb_objects_ver);
 
-                                SELECT fullname,eb_created_at 
+                                SELECT fullname 
                                 FROM 
                                     eb_users 
                                 WHERE id =(SELECT MAX(id) FROM eb_users);
@@ -2771,7 +2771,7 @@ namespace ExpressBase.ServiceStack.Services
                             }
                             if (ds.Tables[1] != null && ds.Tables[1].Rows != null && ds.Tables[1].Rows.Count > 0)
                             {
-                                access.LastUser = ds.Tables[1].Rows[0][0].ToString() + ", " + ds.Tables[1].Rows[0][1].ToString();
+                                access.LastUser = ds.Tables[1].Rows[0][0].ToString();
                             }
                             if (ds.Tables[2] != null && ds.Tables[2].Rows != null && ds.Tables[2].Rows.Count > 0)
                             {
