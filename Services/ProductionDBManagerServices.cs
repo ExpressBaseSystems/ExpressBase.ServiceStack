@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.IO;
+using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -51,6 +52,7 @@ namespace ExpressBase.ServiceStack.Services
                 EbConnectionFactory factory = new EbConnectionFactory(SolutionId, this.Redis, true);
                 if (factory != null && factory.DataDB != null)
                     _ebconfactoryDatadb = factory.DataDB;
+
             }
             catch (Exception e)
             {
@@ -2711,25 +2713,33 @@ namespace ExpressBase.ServiceStack.Services
 
         public LastSolnAccessResponse Post(LastSolnAccessRequest request)
         {
-            string i_solution_id = string.Empty;
-            string accesStringMail = "<html><body>";
-            string accesString = string.Empty;
+            StringBuilder sb = new StringBuilder();
             try
             {
-                //InfraServices _InfraServices = base.ResolveService<InfraServices>();
-                //UpdateRedisConnectionsResponse resp = _InfraServices.Post(new UpdateRedisConnectionsRequest());
-                EbDataTable dt = SelectSolutionsFromDB();
-                List<LastDbAccess> LastDbAccess = new List<LastDbAccess>();
-                for (int i = 0; i < dt.Rows.Count; i++)
+                EbDataTable solutionlist = SelectSolutionsFromDB();
+                List<LastDbAccess> LastDbAccessList = new List<LastDbAccess>();
+                for (int i = 0; i < solutionlist.Rows.Count; i++)
                 {
-                    i_solution_id = dt.Rows[i]["isolution_id"].ToString();
-                    IDatabase _ebconfactoryDatadb = GetTenantDB(i_solution_id);
+                    string i_solution_id = solutionlist.Rows[i]["isolution_id"].ToString();
+                    EbConnectionsConfig Conf = this.Redis.Get<EbConnectionsConfig>(string.Format(CoreConstants.SOLUTION_INTEGRATION_REDIS_KEY, i_solution_id));
 
-                    if (_ebconfactoryDatadb != null)
+                    if (Conf != null && Conf.DataDbConfig != null)
                     {
-                        LastDbAccess access = new LastDbAccess();
-                        access.ESolution = new Dbdetail { Name = dt.Rows[i]["esolution_id"].ToString(), On = dt.Rows[i]["date_created"].ToString() };
-                        access.ISolution = dt.Rows[i]["isolution_id"].ToString();
+                        EbConnectionFactory factory = new EbConnectionFactory(Conf, i_solution_id);
+                        LastDbAccess access = new LastDbAccess
+                        {
+                            ISolution = i_solution_id,
+                            ESolution = solutionlist.Rows[i]["esolution_id"].ToString() + ", " + solutionlist.Rows[i]["date_created"].ToString(),
+                            AdminUserName = Conf.DataDbConfig.UserName,
+                            AdminPassword = Conf.DataDbConfig.Password,
+                            ReadWriteUserName = Conf.DataDbConfig.ReadWriteUserName,
+                            ReadWritePassword = Conf.DataDbConfig.ReadWritePassword,
+                            ReadOnlyUserName = Conf.DataDbConfig.ReadOnlyUserName,
+                            ReadOnlyPassword = Conf.DataDbConfig.ReadOnlyPassword,
+                            DbName = Conf.DataDbConfig.DatabaseName,
+                            DbVendor = Conf.DataDbConfig.DatabaseVendor.ToString()
+                        };
+
                         try
                         {
                             string query = @"   
@@ -2739,7 +2749,7 @@ namespace ExpressBase.ServiceStack.Services
                                 WHERE 
                                     v.eb_objects_id = o.id AND commit_ts = (SELECT MAX(commit_ts) FROM eb_objects_ver);
 
-                                SELECT fullname,eb_created_at 
+                                SELECT fullname 
                                 FROM 
                                     eb_users 
                                 WHERE id =(SELECT MAX(id) FROM eb_users);
@@ -2754,60 +2764,38 @@ namespace ExpressBase.ServiceStack.Services
                                 FROM 
                                     eb_applications WHERE COALESCE(eb_del,'F')='F'
                                 ";
-                            EbDataSet ds = _ebconfactoryDatadb.DoQueries(query);
+                            EbDataSet ds = factory.DataDB.DoQueries(query);
                             if (ds.Tables[0] != null && ds.Tables[0].Rows != null && ds.Tables[0].Rows.Count > 0)
                             {
-                                access.LastObject = new Dbdetail { Name = ds.Tables[0].Rows[0][0].ToString(), On = ds.Tables[0].Rows[0][1].ToString() };
+                                access.LastObject = ds.Tables[0].Rows[0][0].ToString() + ", " + ds.Tables[0].Rows[0][1].ToString();
                             }
                             if (ds.Tables[1] != null && ds.Tables[1].Rows != null && ds.Tables[1].Rows.Count > 0)
                             {
-                                access.LastUser = new Dbdetail { Name = ds.Tables[1].Rows[0][0].ToString(), On = ds.Tables[1].Rows[0][1].ToString() };
+                                access.LastUser = ds.Tables[1].Rows[0][0].ToString();
                             }
                             if (ds.Tables[2] != null && ds.Tables[2].Rows != null && ds.Tables[2].Rows.Count > 0)
                             {
-                                access.LastLogin = new Dbdetail { Name = ds.Tables[2].Rows[0][0].ToString(), On = ds.Tables[2].Rows[0][1].ToString() };
+                                access.LastLogin = ds.Tables[2].Rows[0][0].ToString() + ", " + ds.Tables[2].Rows[0][1].ToString();
                             }
                             if (ds.Tables[3] != null && ds.Tables[3].Rows != null && ds.Tables[3].Rows.Count > 0)
                             {
-                                access.Applications =  ds.Tables[3].Rows[0][0].ToString();
+                                access.Applications = ds.Tables[3].Rows[0][0].ToString();
                             }
 
-                            LastDbAccess.Add(access);
+                            LastDbAccessList.Add(access);
                         }
                         catch (Exception e)
                         {
-                            LastDbAccess.Add(access);
+                            LastDbAccessList.Add(access);
                             Console.WriteLine("Error in LastSolnAccessRequest. Isolnid:-i_solution_id" + i_solution_id + "  " + e.Message);
                         }
                     }
                 }
-
-                for (int j = 0; j < LastDbAccess.Count; j++)
+                for (int j = 0; j < LastDbAccessList.Count; j++)
                 {
-                    LastDbAccess a = LastDbAccess[j];
-                    accesString += "\n" + (j + 1) + ".    EsolutionId :" + a.ESolution.Name + "  " + a.ESolution.On;
-                    accesString += "\n      ISolution id :" + a.ISolution;
-                    if (a.LastObject != null)
-                        accesString += "\n      Last Object: " + a.LastObject.Name + " , " + a.LastObject.On;
-                    if (a.LastUser != null)
-                        accesString += "\n      Last User: " + a.LastUser.Name + " , " + a.LastUser.On;
-                    if (a.LastLogin != null)
-                        accesString += "\n      Last Login: " + a.LastLogin.Name + " , " + a.LastLogin.On ;
-                    accesString += "\n      Applications: " + a.Applications;
-                   accesString += "\n------------------------------------------------------------------------------\n";
-
-                    accesStringMail += "<br />" + (j + 1) + ".    <b>EsolutionId :</b><u>" + a.ESolution.Name + "</u>" + a.ESolution.On;
-                    accesStringMail += "<br />      <b>ISolution id :</b>" + a.ISolution;
-                    if (a.LastObject != null)
-                        accesStringMail += "<br />      <b>Last Object:</b> " + a.LastObject.Name + " , " + a.LastObject.On;
-                    if (a.LastUser != null)
-                        accesStringMail += "<br />      <b>Last User:</b> " + a.LastUser.Name + " , " + a.LastUser.On;
-                    if (a.LastLogin != null)
-                        accesStringMail += "<br />      <b>Last Login:</b> " + a.LastLogin.Name + " , " + a.LastLogin.On;
-                    accesStringMail += "<br />      <b>Applications:</b> " + a.Applications;
-                    accesStringMail += "<br /><br />";
+                    LastDbAccess a = LastDbAccessList[j];
+                    sb=FormatAccessObj(a, sb, j);
                 }
-                accesStringMail += "</body> </html>";
             }
             catch (Exception e)
             {
@@ -2817,7 +2805,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 From = "request.from",
                 To = "donajose@expressbase.com",
-                Message = accesStringMail,
+                Message = sb.ToString(),
                 Subject = "DB Last Access Log",
                 UserId = request.UserId,
                 //  UserAuthId = request.UserAuthId,
@@ -2826,25 +2814,75 @@ namespace ExpressBase.ServiceStack.Services
             });
             return new LastSolnAccessResponse
             {
-                LastDbAccess = accesString
+                LastDbAccess = sb.ToString()
             };
+        }
+
+
+        private const string NEW_LINE = "<br>";
+        private const char SPACE = ' ';
+        private const char COLON = ':';
+        private const string BOLD = "<b>";
+        private const string CLOSE_BOLD = "</b>";
+        public StringBuilder FormatAccessObj(object o, StringBuilder sb, int j)
+        {
+            sb.Append((j + 1) + ". ");
+            PropertyInfo[] props = o.GetType().GetTypeInfo().GetProperties();
+            foreach (PropertyInfo prop in props)
+            { 
+                if (prop.GetValue(o) != null)
+                {
+                    sb.Append(BOLD);
+                    sb.Append(prop.Name);
+                    sb.Append(COLON);
+                    sb.Append(CLOSE_BOLD);
+                    sb.Append(SPACE);
+                    if (prop.PropertyType == typeof(string))
+                    { 
+                        sb.Append(prop.GetValue(o).ToString());
+                        sb.Append(NEW_LINE);
+                    }
+                }
+            }
+            sb.Append(NEW_LINE);
+            return sb;
         }
     }
 
     public class LastDbAccess
     {
         public string ISolution { get; set; }
-        public Dbdetail ESolution { get; set; }
-        public Dbdetail LastObject { get; set; }
-        public Dbdetail LastUser { get; set; }
-        public Dbdetail LastLogin { get; set; }
+
+        public string ESolution { get; set; }
+
+        public string LastObject { get; set; }
+
+        public string LastUser { get; set; }
+
+        public string LastLogin { get; set; }
 
         public string Applications { get; set; }
+
+        public string DbName { get; set; }
+
+        public string DbVendor { get; set; }
+
+        public string AdminUserName { get; set; }
+
+        public string AdminPassword { get; set; }
+
+        public string ReadWriteUserName { get; set; }
+
+        public string ReadWritePassword { get; set; }
+
+        public string ReadOnlyUserName { get; set; }
+
+        public string ReadOnlyPassword { get; set; }
     }
 
-    public class Dbdetail
-    {
-        public string Name { get; set; }
-        public string On { get; set; }
-    }
+    //public class ND
+    //{
+    //    public string Name { get; set; }
+    //    public string On { get; set; }
+    //}
 }
