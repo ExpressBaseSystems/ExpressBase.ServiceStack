@@ -5,10 +5,12 @@ using ExpressBase.Common.ProductionDBManager;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using ServiceStack.Messaging;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.IO;
+using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -38,7 +40,7 @@ namespace ExpressBase.ServiceStack.Services
 
     public class ProductionDBManagerServices : EbBaseService
     {
-        public ProductionDBManagerServices(IEbConnectionFactory _dbf) : base(_dbf) { }
+        public ProductionDBManagerServices(IEbConnectionFactory _dbf, IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_dbf, _mqp, _mqc) { }
         Dictionary<string, string[]> dictTenant = new Dictionary<string, string[]>();
         Dictionary<string, Eb_FileDetails> dictInfra = new Dictionary<string, Eb_FileDetails>();
 
@@ -50,6 +52,7 @@ namespace ExpressBase.ServiceStack.Services
                 EbConnectionFactory factory = new EbConnectionFactory(SolutionId, this.Redis, true);
                 if (factory != null && factory.DataDB != null)
                     _ebconfactoryDatadb = factory.DataDB;
+
             }
             catch (Exception e)
             {
@@ -147,7 +150,7 @@ namespace ExpressBase.ServiceStack.Services
                                 SELECT * 
                                 FROM eb_solutions 
                                 WHERE eb_del = false 
-                                AND tenant_id IN (select id from eb_tenants) 
+                                AND tenant_id IN (select id from eb_tenants)
                                 AND isolution_id != ''";
             return InfraConnectionFactory.DataDB.DoQuery(str);
 
@@ -2710,99 +2713,176 @@ namespace ExpressBase.ServiceStack.Services
 
         public LastSolnAccessResponse Post(LastSolnAccessRequest request)
         {
-            string i_solution_id = string.Empty;
-            string accesString = string.Empty;
+            StringBuilder sb = new StringBuilder();
             try
             {
-                InfraServices _InfraServices = base.ResolveService<InfraServices>();
-                UpdateRedisConnectionsResponse resp = _InfraServices.Post(new UpdateRedisConnectionsRequest());
-                EbDataTable dt = SelectSolutionsFromDB();
-                List<LastDbAccess> LastDbAccess = new List<LastDbAccess>();
-                for (int i = 0; i < dt.Rows.Count; i++)
+                EbDataTable solutionlist = SelectSolutionsFromDB();
+                List<LastDbAccess> LastDbAccessList = new List<LastDbAccess>();
+                for (int i = 0; i < solutionlist.Rows.Count; i++)
                 {
-                    i_solution_id = dt.Rows[i]["isolution_id"].ToString();
-                    IDatabase _ebconfactoryDatadb = GetTenantDB(i_solution_id);
+                    string i_solution_id = solutionlist.Rows[i]["isolution_id"].ToString();
+                    EbConnectionsConfig Conf = this.Redis.Get<EbConnectionsConfig>(string.Format(CoreConstants.SOLUTION_INTEGRATION_REDIS_KEY, i_solution_id));
 
-                    if (_ebconfactoryDatadb != null)
+                    if (Conf != null && Conf.DataDbConfig != null)
                     {
-                        LastDbAccess access = new LastDbAccess();
+                        EbConnectionFactory factory = new EbConnectionFactory(Conf, i_solution_id);
+                        LastDbAccess access = new LastDbAccess
+                        {
+                            ISolution = i_solution_id,
+                            ESolution = solutionlist.Rows[i]["esolution_id"].ToString() + ", " + solutionlist.Rows[i]["date_created"].ToString(),
+                            AdminUserName = Conf.DataDbConfig.UserName,
+                            AdminPassword = Conf.DataDbConfig.Password,
+                            ReadWriteUserName = Conf.DataDbConfig.ReadWriteUserName,
+                            ReadWritePassword = Conf.DataDbConfig.ReadWritePassword,
+                            ReadOnlyUserName = Conf.DataDbConfig.ReadOnlyUserName,
+                            ReadOnlyPassword = Conf.DataDbConfig.ReadOnlyPassword,
+                            DbName = Conf.DataDbConfig.DatabaseName,
+                            DbVendor = Conf.DataDbConfig.DatabaseVendor.ToString()
+                        };
 
-                        access.ESolution = dt.Rows[i]["esolution_id"].ToString();
-                        access.ISolution = dt.Rows[i]["isolution_id"].ToString();
                         try
                         {
-                            string query = @"SELECT display_name, commit_ts 
-                                FROM eb_objects O, eb_objects_ver v 
+                            string query = @"   
+                                SELECT display_name, commit_ts 
+                                FROM 
+                                    eb_objects O, eb_objects_ver v 
                                 WHERE 
-                                v.eb_objects_id = o.id AND commit_ts = (SELECT MAX(commit_ts) FROM eb_objects_ver);
+                                    v.eb_objects_id = o.id AND commit_ts = (SELECT MAX(commit_ts) FROM eb_objects_ver);
 
-                                SELECT fullname,eb_created_at 
-                                FROM eb_users WHERE id =(SELECT MAX(id) FROM eb_users);
+                                SELECT fullname 
+                                FROM 
+                                    eb_users 
+                                WHERE id =(SELECT MAX(id) FROM eb_users);
 
                                 SELECT fullname, signin_at 
-                                FROM eb_signin_log s, eb_users u WHERE s.id = (SELECT MAX(id) FROM eb_signin_log)
-                                AND user_id = u.id;
+                                FROM
+                                    eb_signin_log s, eb_users u 
+                                WHERE s.id = (SELECT MAX(id) FROM eb_signin_log)
+                                    AND user_id = u.id;
+
+                                SELECT string_agg(applicationname,',') 
+                                FROM 
+                                    eb_applications WHERE COALESCE(eb_del,'F')='F'
                                 ";
-                            EbDataSet ds = _ebconfactoryDatadb.DoQueries(query);
+                            EbDataSet ds = factory.DataDB.DoQueries(query);
                             if (ds.Tables[0] != null && ds.Tables[0].Rows != null && ds.Tables[0].Rows.Count > 0)
                             {
-                                access.LastObject = new Dbdetail { Name = ds.Tables[0].Rows[0][0].ToString(), On = ds.Tables[0].Rows[0][1].ToString() };
+                                access.LastObject = ds.Tables[0].Rows[0][0].ToString() + ", " + ds.Tables[0].Rows[0][1].ToString();
                             }
                             if (ds.Tables[1] != null && ds.Tables[1].Rows != null && ds.Tables[1].Rows.Count > 0)
                             {
-                                access.LastUser = new Dbdetail { Name = ds.Tables[1].Rows[0][0].ToString(), On = ds.Tables[1].Rows[0][1].ToString() };
+                                access.LastUser = ds.Tables[1].Rows[0][0].ToString();
                             }
                             if (ds.Tables[2] != null && ds.Tables[2].Rows != null && ds.Tables[2].Rows.Count > 0)
                             {
-                                access.LastLogin = new Dbdetail { Name = ds.Tables[2].Rows[0][0].ToString(), On = ds.Tables[2].Rows[0][1].ToString() };
+                                access.LastLogin = ds.Tables[2].Rows[0][0].ToString() + ", " + ds.Tables[2].Rows[0][1].ToString();
                             }
-                            LastDbAccess.Add(access);
+                            if (ds.Tables[3] != null && ds.Tables[3].Rows != null && ds.Tables[3].Rows.Count > 0)
+                            {
+                                access.Applications = ds.Tables[3].Rows[0][0].ToString();
+                            }
+
+                            LastDbAccessList.Add(access);
                         }
                         catch (Exception e)
                         {
-                            LastDbAccess.Add(access);
+                            LastDbAccessList.Add(access);
                             Console.WriteLine("Error in LastSolnAccessRequest. Isolnid:-i_solution_id" + i_solution_id + "  " + e.Message);
                         }
                     }
                 }
-
-                for (int i = 0; i < LastDbAccess.Count; i++)
+                for (int j = 0; j < LastDbAccessList.Count; j++)
                 {
-                    LastDbAccess a = LastDbAccess[i];
-                    accesString += "\n" + i+1 + ".   EsolutionId :" + a.ESolution + "  ISolution id :" + a.ISolution;
-                    if (a.LastObject != null)
-                        accesString += "\n       Last Object: " + a.LastObject.Name + " , " + a.LastObject.On;
-                    if (a.LastUser != null)
-                        accesString += "\n       Last User: " + a.LastUser.Name + " , " + a.LastUser.On;
-                    if (a.LastLogin != null)
-                        accesString += "\n       Last Login: " + a.LastLogin.Name + " , " + a.LastLogin.On + "\n";
-                    accesString += "\n------------------------------------------------------------------------------\n";
+                    LastDbAccess a = LastDbAccessList[j];
+                    sb=FormatAccessObj(a, sb, j);
                 }
             }
             catch (Exception e)
             {
                 Console.WriteLine(e.Message + e.StackTrace);
             }
+            MessageProducer3.Publish(new EmailServicesRequest()
+            {
+                From = "request.from",
+                To = "donajose@expressbase.com",
+                Message = sb.ToString(),
+                Subject = "DB Last Access Log",
+                UserId = request.UserId,
+                //  UserAuthId = request.UserAuthId,
+                SolnId = request.SolnId
+
+            });
             return new LastSolnAccessResponse
             {
-                LastDbAccess = accesString
+                LastDbAccess = sb.ToString()
             };
+        }
+
+
+        private const string NEW_LINE = "<br>";
+        private const char SPACE = ' ';
+        private const char COLON = ':';
+        private const string BOLD = "<b>";
+        private const string CLOSE_BOLD = "</b>";
+        public StringBuilder FormatAccessObj(object o, StringBuilder sb, int j)
+        {
+            sb.Append((j + 1) + ". ");
+            PropertyInfo[] props = o.GetType().GetTypeInfo().GetProperties();
+            foreach (PropertyInfo prop in props)
+            { 
+                if (prop.GetValue(o) != null)
+                {
+                    sb.Append(BOLD);
+                    sb.Append(prop.Name);
+                    sb.Append(COLON);
+                    sb.Append(CLOSE_BOLD);
+                    sb.Append(SPACE);
+                    if (prop.PropertyType == typeof(string))
+                    { 
+                        sb.Append(prop.GetValue(o).ToString());
+                        sb.Append(NEW_LINE);
+                    }
+                }
+            }
+            sb.Append(NEW_LINE);
+            return sb;
         }
     }
 
     public class LastDbAccess
     {
         public string ISolution { get; set; }
+
         public string ESolution { get; set; }
-        public Dbdetail LastObject { get; set; }
-        public Dbdetail LastUser { get; set; }
-        public Dbdetail LastLogin { get; set; }
 
+        public string LastObject { get; set; }
+
+        public string LastUser { get; set; }
+
+        public string LastLogin { get; set; }
+
+        public string Applications { get; set; }
+
+        public string DbName { get; set; }
+
+        public string DbVendor { get; set; }
+
+        public string AdminUserName { get; set; }
+
+        public string AdminPassword { get; set; }
+
+        public string ReadWriteUserName { get; set; }
+
+        public string ReadWritePassword { get; set; }
+
+        public string ReadOnlyUserName { get; set; }
+
+        public string ReadOnlyPassword { get; set; }
     }
 
-    public class Dbdetail
-    {
-        public string Name { get; set; }
-        public string On { get; set; }
-    }
+    //public class ND
+    //{
+    //    public string Name { get; set; }
+    //    public string On { get; set; }
+    //}
 }

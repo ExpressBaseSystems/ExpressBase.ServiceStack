@@ -255,12 +255,24 @@ namespace ExpressBase.ServiceStack.Services
             Dictionary<int, EbLocation> locs = new Dictionary<int, EbLocation>();
             try
             {
-                string query = @"SELECT * FROM eb_location_config WHERE eb_del = 'F' ORDER BY id;
-                                SELECT L.id, L.shortname, L.longname, L.image, L.meta_json, L.week_holiday1, L.week_holiday2,
-                                L.is_group, L.parent_id, T.id, T.type
-                                FROM eb_locations L, eb_location_types T
-                                WHERE COALESCE(L.eb_del,'F') = 'F'
-                                AND L.eb_location_types_id = T.id ORDER BY L.parent_id;";
+                string query = @"SELECT
+                                        * 
+                                FROM 
+                                    eb_location_config 
+                                WHERE 
+                                    eb_del = 'F' 
+                                ORDER BY id;
+
+                                SELECT 
+                                    L.id, L.shortname, L.longname, L.image, L.meta_json, L.week_holiday1, L.week_holiday2, L.is_group, L.parent_id, T.id, T.type
+                                FROM 
+                                    eb_locations L
+                                LEFT JOIN 
+                                    eb_location_types T
+                                ON 
+                                    L.eb_location_types_id = T.id
+                                WHERE 
+                                    COALESCE(L.eb_del,'F') = 'F'";
                 EbConnectionFactory ebConnectionFactory = new EbConnectionFactory(req.SolnId.ToLower(), this.Redis);
                 EbDataSet dt = ebConnectionFactory.DataDB.DoQueries(query);
                 if (dt != null && dt.Tables.Count > 0)
@@ -292,6 +304,10 @@ namespace ExpressBase.ServiceStack.Services
                             TypeId = Convert.ToInt32(r[9]),
                             TypeName = r[10].ToString()
                         });
+                        if (r[10].ToString() == string.Empty)
+                        {
+                            Console.WriteLine("Location: "+ r[2].ToString()+" , Location Type Not Set");
+                        }
                     }
 
                 }
