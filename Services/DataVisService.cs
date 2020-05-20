@@ -1821,7 +1821,7 @@ namespace ExpressBase.ServiceStack
 	                    Q1.stage_id=act.eb_stages_id AND act.eb_del='F' ;", _user.UserId, _roles, col.FormRefid);
                     }
                     str += string.Format(@"
-	                    SELECT app.review_status,app.eb_src_id,my.id,st.stage_name
+	                    SELECT app.review_status,app.eb_src_id,my.id,st.stage_name,app.eb_lastmodified_at, app.eb_created_at
 	                    FROM eb_approval app,eb_my_actions my, eb_stages st
 	                    WHERE  app.eb_ver_id ='{0}' AND app.eb_del='F'
 			                    AND my.id=app.eb_my_actions_id
@@ -1887,7 +1887,7 @@ namespace ExpressBase.ServiceStack
 	                    Q1.stage_id=act.eb_stages_id AND act.eb_del='F' ;", request.UserObj.UserId, _roles, request.RefId, request.RowId);
                 }
                 str += string.Format(@"
-	                    SELECT app.review_status,app.eb_src_id,my.id,st.stage_name
+	                    SELECT app.review_status,app.eb_src_id,my.id,st.stage_name,app.eb_lastmodified_at, app.eb_created_at
 	                    FROM eb_approval app,eb_my_actions my, eb_stages st
 	                    WHERE  app.eb_ver_id ='{0}' AND app.eb_del='F' AND app.eb_src_id={1}
 			                    AND my.id=app.eb_my_actions_id
@@ -2034,34 +2034,48 @@ namespace ExpressBase.ServiceStack
                                   <div class='tab-pane active' id='history'>";
                 _history += GetApprovalHistoryString(linesRows, _user);
                 _history += "</div></div></div> ";
-            var _date = Convert.ToDateTime(linesRows[0]["eb_created_at"]);
-            var _time = _date.DateInNotification((_user.Preference.TimeZone));
-            var _tooltipdate = _date.ConvertFromUtc(_user.Preference.TimeZone).ToString(_user.Preference.GetShortDatePattern()) + " " + _date.ConvertFromUtc(_user.Preference.TimeZone).ToString(_user.Preference.GetShortTimePattern());
-            foreach (EbDataRow _ebdatarow in rows)
+            var _time = string.Empty; var _tooltipdate = string.Empty;
+            DateTime _date = DateTime.Now;
+            var _latestHistory = string.Empty;
+            if (linesRows != null && linesRows.Count > 0)
             {
-                var _status = GetSynonymsforReviewStatus(_ebdatarow["review_status"].ToString());
-                var _icon = GetIconforReviewStatus(_ebdatarow["review_status"].ToString());
-                var _label = GetLabelStyleforReviewStatus(_ebdatarow["review_status"].ToString());
-                var _latestHistory = GetLatestHistory(linesRows);
+                _date = Convert.ToDateTime(linesRows[0]["eb_created_at"]);
+                _latestHistory = GetLatestHistory(linesRows);
+            }
+            else
+            {
+                _date = Convert.ToDateTime(rows[0]["eb_lastmodified_at"]);
+                if(_date == DateTime.MinValue)
+                    _date = Convert.ToDateTime(rows[0]["eb_created_at"]);
+                _latestHistory = rows[0]["stage_name"].ToString();
+            }
+            _time = _date.DateInNotification((_user.Preference.TimeZone));
+            _tooltipdate = _date.ConvertFromUtc(_user.Preference.TimeZone).ToString(_user.Preference.GetShortDatePattern()) + " " + _date.ConvertFromUtc(_user.Preference.TimeZone).ToString(_user.Preference.GetShortTimePattern());
+            if(rows != null && rows.Count == 1)
+            {
+                var _status = GetSynonymsforReviewStatus(rows[0]["review_status"].ToString());
+                var _icon = GetIconforReviewStatus(rows[0]["review_status"].ToString());
+                var _label = GetLabelStyleforReviewStatus(rows[0]["review_status"].ToString());
+                
                 _stage_name += "<div class='stage-div-inner stage-status-cont'><span class='stage-status'>" + _latestHistory + "</span></div>";
                 _stage_name += "<div class='stage-div-inner'><div class='icon-status-cont'>" +
                     "<span class='status-icon'><i class='" + _icon + "' aria-hidden='true'></i></span>" +
                     "<span class='status-label label " + _label + "'>" + _status + "</span>" +
                     $"<span class='status-time' title='{_tooltipdate}'>{_time}</span>" +
                     "</div></div>";
-                if (row != null)
+            }
+            if (row != null)
+            {
+                var indx = -1;
+                if (_dV.Columns.Get("eb_review_status") != null)
                 {
-                    var indx = -1;
-                    if (_dV.Columns.Get("eb_review_status") != null)
-                    {
-                        indx = _dV.Columns.Get("eb_review_status").Data;
-                        row[indx] = _ebdatarow["review_status"].ToString();
-                    }
-                    if (_dV.Columns.Get("eb_review_stage") != null)
-                    {
-                        indx = _dV.Columns.Get("eb_review_stage").Data;
-                        row[indx] = _ebdatarow["stage_name"].ToString();
-                    }
+                    indx = _dV.Columns.Get("eb_review_status").Data;
+                    row[indx] = rows[0]["review_status"].ToString();
+                }
+                if (_dV.Columns.Get("eb_review_stage") != null)
+                {
+                    indx = _dV.Columns.Get("eb_review_stage").Data;
+                    row[indx] = rows[0]["stage_name"].ToString();
                 }
             }
             string _button = "<div class='stage-div'><div class='stage-div-inner'><button class='btn stage-btn btn-approval_popover' data-contents='" + _history .ToBase64()+ "' data-toggle='popover'><i class='fa fa-history' aria-hidden='true'></i></button></div></div>";
