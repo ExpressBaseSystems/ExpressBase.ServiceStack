@@ -45,7 +45,18 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     int id = Convert.ToInt32(row["id"]);
 
-                    EbFileMeta meta = JsonConvert.DeserializeObject<EbFileMeta>(row["tags"].ToString());
+                    EbFileMeta meta;
+                    try
+                    {
+                        meta = JsonConvert.DeserializeObject<EbFileMeta>(row["tags"].ToString());
+                        if (meta == null)
+                            meta = new EbFileMeta();
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine(ex.Message);
+                        meta = new EbFileMeta();
+                    }
 
                     meta.Category.Clear();
                     meta.Category.Add(request.Category);
