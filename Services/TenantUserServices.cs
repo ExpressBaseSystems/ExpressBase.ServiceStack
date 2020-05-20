@@ -260,7 +260,7 @@ namespace ExpressBase.ServiceStack.Services
                                 L.is_group, L.parent_id, T.id, T.type
                                 FROM eb_locations L, eb_location_types T
                                 WHERE COALESCE(L.eb_del,'F') = 'F'
-                                AND L.eb_location_types_id = T.id;";
+                                AND L.eb_location_types_id = T.id ORDER BY L.parent_id;";
                 EbConnectionFactory ebConnectionFactory = new EbConnectionFactory(req.SolnId.ToLower(), this.Redis);
                 EbDataSet dt = ebConnectionFactory.DataDB.DoQueries(query);
                 if (dt != null && dt.Tables.Count > 0)
@@ -293,7 +293,19 @@ namespace ExpressBase.ServiceStack.Services
                             TypeName = r[10].ToString()
                         });
                     }
+
                 }
+
+                var LocationTree = new Dictionary<int, EbLocation>();
+                var tree = dt.Tables[1].Enumerate().ToTree(row => true,
+                        (parent, child) => Convert.ToInt32(parent["id"]) == Convert.ToInt32(child["parent_id"]),"is_group");
+                foreach (Node<EbDataRow> Nodedr in tree.Tree)
+                {
+                    LocationTree.Add(Convert.ToInt32(Nodedr.Item["id"]), CreateLocationObject(Nodedr.Item));
+                    if(Nodedr.Children.Count >0)
+                        RecursivelyGetChildren(LocationTree, Nodedr);
+                }
+
             }
             catch (Exception e)
             {
@@ -981,6 +993,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             return resp;
         }
+
         public DeleteLocationTypeResponse Post(DeleteLocationTypeRequest request)
         {
             string query = "UPDATE eb_location_types SET eb_del = 'T' WHERE id = @id ;";
@@ -988,6 +1001,51 @@ namespace ExpressBase.ServiceStack.Services
                 this.EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, request.Id) };
             int c = this.EbConnectionFactory.ObjectsDB.DoNonQuery(query, parameters);
             return new DeleteLocationTypeResponse { Id = (c == 1) ? request.Id : 0, Status = (c == 1) ? true : false };
+        }
+
+        public EbLocation CreateLocationObject(EbDataRow r)
+        {
+            return new EbLocation
+            {
+                LocId = Convert.ToInt32(r[0]),
+                ShortName = r[1].ToString(),
+                LongName = r[2].ToString(),
+                Logo = r[3].ToString(),
+                Meta = JsonConvert.DeserializeObject<Dictionary<string, string>>(r[4].ToString()),
+                WeekHoliday1 = r[5].ToString(),
+                WeekHoliday2 = r[6].ToString(),
+                IsGroup = (r[7].ToString() == "T") ? true : false,
+                ParentId = Convert.ToInt32(r[8]),
+                TypeId = Convert.ToInt32(r[9]),
+                TypeName = r[10].ToString(),
+                Children = new Dictionary<int, EbLocation>()
+            };
+        }
+
+        public void RecursivelyGetChildren(Dictionary<int, EbLocation> LocationTree, Node<EbDataRow> node)
+        {
+            foreach(Node<EbDataRow> Nodedr in node.Children)
+            {
+                RecursivelyfindKey(LocationTree, Nodedr);
+                if (Nodedr.Children.Count > 0)
+                    RecursivelyGetChildren(LocationTree, Nodedr);
+            }
+        }
+
+        public void RecursivelyfindKey(Dictionary<int, EbLocation> Items, Node<EbDataRow> Nodedr)
+        {
+            int targetkey = Convert.ToInt32(Nodedr.Item["parent_id"]);
+            foreach (var item in Items)
+            {
+                if(item.Key == targetkey)
+                {
+                    Items[item.Key].Children.Add(Convert.ToInt32(Nodedr.Item["id"]), CreateLocationObject(Nodedr.Item));
+                }
+                else
+                {
+                    RecursivelyfindKey(item.Value.Children, Nodedr);
+                }
+            }
         }
     }
     public class EbSolutionUsers
