@@ -107,7 +107,7 @@ namespace ExpressBase.ServiceStack.MQServices
                     UserAuthId = request.UserAuthId,
                     SolnId = request.SolnId,
                     AttachmentReport = RepRes.ReportBytea,
-                    AttachmentName = RepRes.ReportName
+                    AttachmentName = RepRes.ReportName + ".pdf"
                 });
             }
         }

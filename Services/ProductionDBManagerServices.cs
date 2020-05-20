@@ -5,6 +5,7 @@ using ExpressBase.Common.ProductionDBManager;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using ServiceStack;
 using ServiceStack.Messaging;
 using System;
 using System.Collections.Generic;
@@ -2714,11 +2715,12 @@ namespace ExpressBase.ServiceStack.Services
         public LastSolnAccessResponse Post(LastSolnAccessRequest request)
         {
             StringBuilder sb = new StringBuilder();
-            try
+
+            EbDataTable solutionlist = SelectSolutionsFromDB();
+            List<LastDbAccess> LastDbAccessList = new List<LastDbAccess>();
+            for (int i = 0; i < solutionlist.Rows.Count; i++)
             {
-                EbDataTable solutionlist = SelectSolutionsFromDB();
-                List<LastDbAccess> LastDbAccessList = new List<LastDbAccess>();
-                for (int i = 0; i < solutionlist.Rows.Count; i++)
+                try
                 {
                     string i_solution_id = solutionlist.Rows[i]["isolution_id"].ToString();
                     EbConnectionsConfig Conf = this.Redis.Get<EbConnectionsConfig>(string.Format(CoreConstants.SOLUTION_INTEGRATION_REDIS_KEY, i_solution_id));
@@ -2743,13 +2745,13 @@ namespace ExpressBase.ServiceStack.Services
                         try
                         {
                             string query = @"   
-                                SELECT display_name, commit_ts 
+                                SELECT display_name, commit_ts, (select count(*) from eb_objects)
                                 FROM 
                                     eb_objects O, eb_objects_ver v 
                                 WHERE 
                                     v.eb_objects_id = o.id AND commit_ts = (SELECT MAX(commit_ts) FROM eb_objects_ver);
 
-                                SELECT fullname 
+                                SELECT fullname ,(select count(*) from eb_users)
                                 FROM 
                                     eb_users 
                                 WHERE id =(SELECT MAX(id) FROM eb_users);
@@ -2760,7 +2762,7 @@ namespace ExpressBase.ServiceStack.Services
                                 WHERE s.id = (SELECT MAX(id) FROM eb_signin_log)
                                     AND user_id = u.id;
 
-                                SELECT string_agg(applicationname,',') 
+                                SELECT string_agg(applicationname,',') , (select count(*) from eb_applications)
                                 FROM 
                                     eb_applications WHERE COALESCE(eb_del,'F')='F'
                                 ";
@@ -2768,10 +2770,12 @@ namespace ExpressBase.ServiceStack.Services
                             if (ds.Tables[0] != null && ds.Tables[0].Rows != null && ds.Tables[0].Rows.Count > 0)
                             {
                                 access.LastObject = ds.Tables[0].Rows[0][0].ToString() + ", " + ds.Tables[0].Rows[0][1].ToString();
+                                access.ObjCount = ds.Tables[0].Rows[0][2].ToString();
                             }
                             if (ds.Tables[1] != null && ds.Tables[1].Rows != null && ds.Tables[1].Rows.Count > 0)
                             {
                                 access.LastUser = ds.Tables[1].Rows[0][0].ToString();
+                                access.UsrCount = ds.Tables[1].Rows[0][1].ToString();
                             }
                             if (ds.Tables[2] != null && ds.Tables[2].Rows != null && ds.Tables[2].Rows.Count > 0)
                             {
@@ -2780,6 +2784,7 @@ namespace ExpressBase.ServiceStack.Services
                             if (ds.Tables[3] != null && ds.Tables[3].Rows != null && ds.Tables[3].Rows.Count > 0)
                             {
                                 access.Applications = ds.Tables[3].Rows[0][0].ToString();
+                                access.AppCount = ds.Tables[3].Rows[0][1].ToString();
                             }
 
                             LastDbAccessList.Add(access);
@@ -2789,18 +2794,23 @@ namespace ExpressBase.ServiceStack.Services
                             LastDbAccessList.Add(access);
                             Console.WriteLine("Error in LastSolnAccessRequest. Isolnid:-i_solution_id" + i_solution_id + "  " + e.Message);
                         }
+
                     }
                 }
-                for (int j = 0; j < LastDbAccessList.Count; j++)
+                catch (Exception e)
                 {
-                    LastDbAccess a = LastDbAccessList[j];
-                    sb=FormatAccessObj(a, sb, j);
+
+                    Console.WriteLine(e.Message + e.StackTrace);
+                    continue;
                 }
             }
-            catch (Exception e)
-            {
-                Console.WriteLine(e.Message + e.StackTrace);
-            }
+            //for (int j = 0; j < LastDbAccessList.Count; j++)
+            //{
+            //    LastDbAccess a = LastDbAccessList[j];
+            //    // sb = FormatAccessObj(a, sb, j);
+            //}
+            var csv = LastDbAccessList.ToCsv();
+            byte[] b = Encoding.ASCII.GetBytes(csv);
             MessageProducer3.Publish(new EmailServicesRequest()
             {
                 From = "request.from",
@@ -2808,6 +2818,8 @@ namespace ExpressBase.ServiceStack.Services
                 Message = sb.ToString(),
                 Subject = "DB Last Access Log",
                 UserId = request.UserId,
+                AttachmentReport = b,
+                AttachmentName = "Lastaccess" + ".txt",
                 //  UserAuthId = request.UserAuthId,
                 SolnId = request.SolnId
 
@@ -2829,7 +2841,7 @@ namespace ExpressBase.ServiceStack.Services
             sb.Append((j + 1) + ". ");
             PropertyInfo[] props = o.GetType().GetTypeInfo().GetProperties();
             foreach (PropertyInfo prop in props)
-            { 
+            {
                 if (prop.GetValue(o) != null)
                 {
                     sb.Append(BOLD);
@@ -2838,7 +2850,7 @@ namespace ExpressBase.ServiceStack.Services
                     sb.Append(CLOSE_BOLD);
                     sb.Append(SPACE);
                     if (prop.PropertyType == typeof(string))
-                    { 
+                    {
                         sb.Append(prop.GetValue(o).ToString());
                         sb.Append(NEW_LINE);
                     }
@@ -2847,6 +2859,7 @@ namespace ExpressBase.ServiceStack.Services
             sb.Append(NEW_LINE);
             return sb;
         }
+
     }
 
     public class LastDbAccess
@@ -2855,11 +2868,17 @@ namespace ExpressBase.ServiceStack.Services
 
         public string ESolution { get; set; }
 
+        public string ObjCount  { get; set; }
+
         public string LastObject { get; set; }
+
+        public string UsrCount { get; set; }
 
         public string LastUser { get; set; }
 
         public string LastLogin { get; set; }
+
+        public string AppCount { get; set; }
 
         public string Applications { get; set; }
 
