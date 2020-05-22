@@ -9,9 +9,11 @@ using System.Linq;
 using System.Threading.Tasks;
 using ExpressBase.Common.SqlProfiler;
 using Newtonsoft.Json;
+using ServiceStack;
 
 namespace ExpressBase.ServiceStack.Services
 {
+    [Authenticate]
     public class ProfilerServices : EbBaseService
     {
         public ProfilerServices(IEbConnectionFactory _dbf) : base(_dbf) { }
