@@ -120,11 +120,11 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
-        public void Post(sampletest set)
-        {
-            byte[] byteaa = null;
-            this.EbConnectionFactory.SMSConnection.SendSMS("7012153871","haiiiiii");
-        }
+        //public void Post(sampletest set)
+        //{
+        //    byte[] byteaa = null;
+        //    this.EbConnectionFactory.SMSConnection.SendSMS("condact no. to be send","haiiiiii");
+        //}
 
         [Authenticate]
         public void Post(InitialSolutionConnectionsRequest request)
