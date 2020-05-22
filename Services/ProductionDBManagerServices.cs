@@ -5,6 +5,7 @@ using ExpressBase.Common.ProductionDBManager;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using ServiceStack;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
@@ -59,6 +60,7 @@ namespace ExpressBase.ServiceStack.Services
             return _ebconfactoryDatadb;
         }
 
+        [Authenticate]
         public GetSolutionForIntegrityCheckResponse Post(GetSolutionForIntegrityCheckRequest request)
         {
             GetSolutionForIntegrityCheckResponse resp = new GetSolutionForIntegrityCheckResponse();
@@ -230,6 +232,7 @@ namespace ExpressBase.ServiceStack.Services
         }
 
         //Update Infra with SQL Script buttom click
+        [Authenticate]
         public UpdateInfraWithSqlScriptsResponse Post(UpdateInfraWithSqlScriptsRequest request)
         {
             UpdateInfraWithSqlScriptsResponse resp = new UpdateInfraWithSqlScriptsResponse();
@@ -247,6 +250,7 @@ namespace ExpressBase.ServiceStack.Services
         }
 
         //Check Integrity Buttom click
+        [Authenticate]
         public CheckChangesInFilesResponse Post(CheckChangesInFilesRequest request)
         {
             CheckChangesInFilesResponse resp = new CheckChangesInFilesResponse();
@@ -275,6 +279,7 @@ namespace ExpressBase.ServiceStack.Services
         }
 
         // Change button click
+        [Authenticate]
         public UpdateDBFilesByDBResponse Post(UpdateDBFileByDBRequest request)
         {
             UpdateDBFilesByDBResponse resp = new UpdateDBFilesByDBResponse();
@@ -296,6 +301,7 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
+        [Authenticate]
         public GetFunctionOrProcedureQueriesResponse Post(GetFunctionOrProcedureQueriesRequest request)
         {
             GetFunctionOrProcedureQueriesResponse resp = new GetFunctionOrProcedureQueriesResponse();
@@ -312,6 +318,7 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
+        [Authenticate]
         public GetTableQueriesResponse Post(GetTableQueriesRequest request)
         {
             GetTableQueriesResponse resp = new GetTableQueriesResponse();
@@ -328,6 +335,7 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
+        [Authenticate]
         public ExecuteQueriesResponse Post(ExecuteQueriesRequest request)
         {
             ExecuteQueriesResponse resp = new ExecuteQueriesResponse();
@@ -354,6 +362,7 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
+        [Authenticate]
         public GetScriptsForDiffViewResponse Post(GetScriptsForDiffViewRequest request)
         {
             GetScriptsForDiffViewResponse resp = new GetScriptsForDiffViewResponse();
