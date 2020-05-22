@@ -10,6 +10,7 @@ using Stripe;
 using ExpressBase.Common.Stripe;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using ServiceStack;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -20,6 +21,7 @@ namespace ExpressBase.ServiceStack.Services
         public static int i = 1;
         public const string USD = "USD";
 
+        [Authenticate]
         public CheckCustomerResponse Post(CheckCustomerRequest request)
         {
             CheckCustomerResponse resp = new CheckCustomerResponse();
@@ -58,6 +60,7 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
+        [Authenticate]
         public CheckCustomerSubscribedResponse Post(CheckCustomerSubscribedRequest request)
         {
             CheckCustomerSubscribedResponse resp = new CheckCustomerSubscribedResponse();
@@ -100,6 +103,7 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
+        [Authenticate]
         public CreateCustomerResponse Post(CreateCustomerRequest request)
         {
             CreateCustomerResponse resp = new CreateCustomerResponse();
@@ -179,6 +183,7 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
+        [Authenticate]
         public GetCustomerResponse Post(GetCustomerRequest request)
         {
             GetCustomerResponse resp = new GetCustomerResponse();
@@ -204,6 +209,7 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
+        [Authenticate]
         public GetCardResponse Post(GetCardRequest request)
         {
             GetCardResponse resp = new GetCardResponse();
@@ -239,6 +245,7 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
+        [Authenticate]
         public void Post(UpdateCardRequest request)
         {
             //UpdateCardResponse resp = new UpdateCardResponse();
@@ -309,6 +316,7 @@ namespace ExpressBase.ServiceStack.Services
             }
         }
 
+        [Authenticate]
         public UpdateCustomerCardResponse Post(UpdateCustomerCardRequest request)
         {
             UpdateCustomerCardResponse resp = new UpdateCustomerCardResponse();
@@ -367,6 +375,7 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
+        [Authenticate]
         public AddCustomerCardResponse Post(AddCustomerCardRequest request)
         {
             AddCustomerCardResponse resp = new AddCustomerCardResponse();
@@ -437,6 +446,7 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
+        [Authenticate]
         public RemoveCustomerCardResponse Post(RemoveCustomerCardRequest request)
         {
             RemoveCustomerCardResponse resp = new RemoveCustomerCardResponse();
@@ -498,6 +508,7 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
+        [Authenticate]
         public EditCardExpResponse Post(EditCardExpRequest request)
         {
             EditCardExpResponse resp = new EditCardExpResponse();
@@ -551,6 +562,7 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
+        [Authenticate]
         public void Post(CreateChargeRequest request)
         {
             //CreateChargeResponse resp = new CreateChargeResponse();
@@ -565,6 +577,7 @@ namespace ExpressBase.ServiceStack.Services
 
         }
 
+        [Authenticate]
         public void Post(CreateCharge2Request request)
         {
             CreateChargeResponse resp = new CreateChargeResponse();
@@ -601,6 +614,7 @@ namespace ExpressBase.ServiceStack.Services
 
         }
 
+        [Authenticate]
         public CreatePlanResponse Post(CreatePlanRequest request)
         {
             CreatePlanResponse resp = new CreatePlanResponse();
@@ -661,6 +675,7 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
+        [Authenticate]
         public GetPlansResponse Post(GetPlansRequest request)
         {
             GetPlansResponse resp = new GetPlansResponse();
@@ -691,6 +706,7 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
+        [Authenticate]
         public CreateCouponResponse Post(CreateCouponRequest request)
         {
             CreateCouponResponse resp = new CreateCouponResponse();
@@ -747,6 +763,7 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
+        [Authenticate]
         public CreateSubscriptionResponse Post(CreateSubscriptionRequest request)
         {
             CreateSubscriptionResponse resp = new CreateSubscriptionResponse();
@@ -849,6 +866,7 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
+        [Authenticate]
         public UpgradeSubscriptionResponse Post(UpgradeSubscriptionRequest request)
         {
             StripeConfiguration.ApiKey = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_STRIPE_SECRET_KEY);
@@ -900,6 +918,7 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
+        [Authenticate]
         public void Post(CreateInvoiceRequest request)
         {
             CreateInvoiceResponse resp = new CreateInvoiceResponse();
@@ -911,6 +930,7 @@ namespace ExpressBase.ServiceStack.Services
             });
         }
 
+        [Authenticate]
         public void Post(StripewebhookRequest request)
         {
             const string secret = "whsec_GqJuzEFUWI3I3ylB0aPTDax5mIWn2jR9";
@@ -1650,6 +1670,7 @@ namespace ExpressBase.ServiceStack.Services
             }
         }
 
+        [Authenticate]
         public GetCustomerInvoiceResponse Post(GetCustomerInvoiceRequest request)
         {
             GetCustomerInvoiceResponse resp = new GetCustomerInvoiceResponse();
@@ -1713,6 +1734,7 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
+        [Authenticate]
         public GetCustomerUpcomingInvoiceResponse Post(GetCustomerUpcomingInvoiceRequest request)
         {
             GetCustomerUpcomingInvoiceResponse resp = new GetCustomerUpcomingInvoiceResponse();
@@ -1752,6 +1774,7 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
+        [Authenticate]
         public ChangeCardSourceResponse Post(ChangeCardSourceRequest request)
         {
             ChangeCardSourceResponse resp = new ChangeCardSourceResponse();
