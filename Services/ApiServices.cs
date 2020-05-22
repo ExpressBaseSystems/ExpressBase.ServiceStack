@@ -69,8 +69,12 @@ namespace ExpressBase.ServiceStack.Services
                 this.UserObject = this.Redis.Get<User>(request.UserAuthId);
 
                 //fill default param
-                this.GlobalParams["eb_loc_id"] = this.UserObject.Preference.DefaultLocation;
                 this.GlobalParams["eb_currentuser_id"] = request.UserId;
+
+                if (!this.GlobalParams.ContainsKey("eb_loc_id"))
+                {
+                    this.GlobalParams["eb_loc_id"] = this.UserObject.Preference.DefaultLocation;
+                }
 
                 int step = 0;
                 this.Api = this.Get(new ApiByNameRequest { Name = request.Name, Version = request.Version }).Api;
