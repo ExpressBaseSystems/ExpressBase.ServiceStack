@@ -21,6 +21,7 @@ namespace ExpressBase.ServiceStack.Services
     {
         public AppStoreService(IEbConnectionFactory _dbf) : base(_dbf) { }
 
+        [Authenticate]
         public GetOneFromAppstoreResponse Get(GetOneFromAppStoreRequest request)
         {
             DbParameter[] Parameters = { this.InfraConnectionFactory.ObjectsDB.GetNewParameter(":id", EbDbTypes.Int32, request.Id) };
@@ -88,6 +89,7 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
+        [Authenticate]
         public GetAllFromAppstoreResponse Get(GetAllFromAppStoreExternalRequest request)
         {
             GetAllFromAppstoreResponse resp = new GetAllFromAppstoreResponse();
@@ -202,6 +204,8 @@ namespace ExpressBase.ServiceStack.Services
 
             return resp;
         }
+
+        [Authenticate]
         public SaveToAppStoreResponse Post(SaveToAppStoreRequest request)
         {
             using (DbConnection con = this.InfraConnectionFactory.ObjectsDB.GetNewConnection())
@@ -225,6 +229,7 @@ namespace ExpressBase.ServiceStack.Services
             }
         }
 
+        [Authenticate]
         public ShareToPublicResponse Post(ShareToPublicRequest request)
         {
             Log.Info("Entered ShareToPublicRequest");
@@ -268,6 +273,7 @@ namespace ExpressBase.ServiceStack.Services
             return new ShareToPublicResponse { ReturningId = _id };
         }
 
+        [Authenticate]
         public GetAppDetailsResponse Get(GetAppDetailsRequest request)
         {
             DbParameter[] Parameters = { InfraConnectionFactory.ObjectsDB.GetNewParameter(":id", EbDbTypes.Int32, request.Id) };
@@ -299,6 +305,7 @@ namespace ExpressBase.ServiceStack.Services
             return new GetAppDetailsResponse { StoreCollection = _storeCollection };
         }
 
+        [Authenticate]
         public AppAndsolutionInfoResponse Get(AppAndsolutionInfoRequest request)
         {
             AppAndsolutionInfoResponse resp = new AppAndsolutionInfoResponse();

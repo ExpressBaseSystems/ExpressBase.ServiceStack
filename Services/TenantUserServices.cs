@@ -8,6 +8,7 @@ using ExpressBase.Objects.ServiceStack_Artifacts;
 using ExpressBase.Security.Core;
 using Newtonsoft.Json;
 using Npgsql;
+using ServiceStack;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
@@ -73,7 +74,7 @@ namespace ExpressBase.ServiceStack.Services
         //    }
         //}
 
-
+        [Authenticate]
         public CreateLocationConfigResponse Post(CreateLocationConfigRequest request)
         {
             using (var con = this.EbConnectionFactory.ObjectsDB.GetNewConnection())
@@ -103,6 +104,7 @@ namespace ExpressBase.ServiceStack.Services
             }
         }
 
+        [Authenticate]
         public SaveLocationMetaResponse Post(SaveLocationMetaRequest request)
         {
             using (var con = this.EbConnectionFactory.ObjectsDB.GetNewConnection())
@@ -131,6 +133,8 @@ namespace ExpressBase.ServiceStack.Services
                 return new SaveLocationMetaResponse { Id = result };
             }
         }
+
+        [Authenticate]
         public SaveLocationResponse Post(SaveLocationRequest request)
         {
             SaveLocationResponse resp = new SaveLocationResponse();
@@ -165,6 +169,7 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
+        [Authenticate]
         public DeleteLocResponse Post(DeleteLocRequest request)
         {
             List<DbParameter> parameters = new List<DbParameter>();
@@ -249,18 +254,31 @@ namespace ExpressBase.ServiceStack.Services
             return SolutionUsers;
         }
 
+        [Authenticate]
         public LocationInfoTenantResponse Get(LocationInfoTenantRequest req)
         {
             List<EbLocationCustomField> Conf = new List<EbLocationCustomField>();
             Dictionary<int, EbLocation> locs = new Dictionary<int, EbLocation>();
             try
             {
-                string query = @"SELECT * FROM eb_location_config WHERE eb_del = 'F' ORDER BY id;
-                                SELECT L.id, L.shortname, L.longname, L.image, L.meta_json, L.week_holiday1, L.week_holiday2,
-                                L.is_group, L.parent_id, T.id, T.type
-                                FROM eb_locations L, eb_location_types T
-                                WHERE COALESCE(L.eb_del,'F') = 'F'
-                                AND L.eb_location_types_id = T.id;";
+                string query = @"SELECT
+                                        * 
+                                FROM 
+                                    eb_location_config 
+                                WHERE 
+                                    eb_del = 'F' 
+                                ORDER BY id;
+
+                                SELECT 
+                                    L.id, L.shortname, L.longname, L.image, L.meta_json, L.week_holiday1, L.week_holiday2, L.is_group, L.parent_id, T.id, T.type
+                                FROM 
+                                    eb_locations L
+                                LEFT JOIN 
+                                    eb_location_types T
+                                ON 
+                                    L.eb_location_types_id = T.id
+                                WHERE 
+                                    COALESCE(L.eb_del,'F') = 'F'";
                 EbConnectionFactory ebConnectionFactory = new EbConnectionFactory(req.SolnId.ToLower(), this.Redis);
                 EbDataSet dt = ebConnectionFactory.DataDB.DoQueries(query);
                 if (dt != null && dt.Tables.Count > 0)
@@ -292,8 +310,24 @@ namespace ExpressBase.ServiceStack.Services
                             TypeId = Convert.ToInt32(r[9]),
                             TypeName = r[10].ToString()
                         });
+                        if (r[10].ToString() == string.Empty)
+                        {
+                            Console.WriteLine("Location: "+ r[2].ToString()+" , Location Type Not Set");
+                        }
                     }
+
                 }
+
+                var LocationTree = new Dictionary<int, EbLocation>();
+                var tree = dt.Tables[1].Enumerate().ToTree(row => true,
+                        (parent, child) => Convert.ToInt32(parent["id"]) == Convert.ToInt32(child["parent_id"]),"is_group");
+                foreach (Node<EbDataRow> Nodedr in tree.Tree)
+                {
+                    LocationTree.Add(Convert.ToInt32(Nodedr.Item["id"]), CreateLocationObject(Nodedr.Item));
+                    if(Nodedr.Children.Count >0)
+                        RecursivelyGetChildren(LocationTree, Nodedr);
+                }
+
             }
             catch (Exception e)
             {
@@ -303,6 +337,7 @@ namespace ExpressBase.ServiceStack.Services
             return new LocationInfoTenantResponse { Locations = locs, Config = Conf };
         }
 
+        [Authenticate]
         public LocationInfoResponse Get(LocationInfoRequest req)
         {
             List<EbLocationCustomField> Conf = new List<EbLocationCustomField>();
@@ -349,6 +384,7 @@ namespace ExpressBase.ServiceStack.Services
             return new LocationInfoResponse { Locations = locs, Config = Conf, LocationTypes = locTypes };
         }
 
+        [Authenticate]
         public GetUserDashBoardObjectsResponse Any(GetUserDashBoardObjectsRequest request)
         {
             string query = @"SELECT t2.* FROM
@@ -957,6 +993,7 @@ namespace ExpressBase.ServiceStack.Services
         //         return resp;
         //     }
 
+        [Authenticate]
         public CreateLocationTypeResponse post(CreateLocationTypeRequest request)
         {
             CreateLocationTypeResponse resp = new CreateLocationTypeResponse();
@@ -981,6 +1018,8 @@ namespace ExpressBase.ServiceStack.Services
             }
             return resp;
         }
+
+        [Authenticate]
         public DeleteLocationTypeResponse Post(DeleteLocationTypeRequest request)
         {
             string query = "UPDATE eb_location_types SET eb_del = 'T' WHERE id = @id ;";
@@ -988,6 +1027,51 @@ namespace ExpressBase.ServiceStack.Services
                 this.EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, request.Id) };
             int c = this.EbConnectionFactory.ObjectsDB.DoNonQuery(query, parameters);
             return new DeleteLocationTypeResponse { Id = (c == 1) ? request.Id : 0, Status = (c == 1) ? true : false };
+        }
+
+        public EbLocation CreateLocationObject(EbDataRow r)
+        {
+            return new EbLocation
+            {
+                LocId = Convert.ToInt32(r[0]),
+                ShortName = r[1].ToString(),
+                LongName = r[2].ToString(),
+                Logo = r[3].ToString(),
+                Meta = JsonConvert.DeserializeObject<Dictionary<string, string>>(r[4].ToString()),
+                WeekHoliday1 = r[5].ToString(),
+                WeekHoliday2 = r[6].ToString(),
+                IsGroup = (r[7].ToString() == "T") ? true : false,
+                ParentId = Convert.ToInt32(r[8]),
+                TypeId = Convert.ToInt32(r[9]),
+                TypeName = r[10].ToString(),
+                Children = new Dictionary<int, EbLocation>()
+            };
+        }
+
+        public void RecursivelyGetChildren(Dictionary<int, EbLocation> LocationTree, Node<EbDataRow> node)
+        {
+            foreach(Node<EbDataRow> Nodedr in node.Children)
+            {
+                RecursivelyfindKey(LocationTree, Nodedr);
+                if (Nodedr.Children.Count > 0)
+                    RecursivelyGetChildren(LocationTree, Nodedr);
+            }
+        }
+
+        public void RecursivelyfindKey(Dictionary<int, EbLocation> Items, Node<EbDataRow> Nodedr)
+        {
+            int targetkey = Convert.ToInt32(Nodedr.Item["parent_id"]);
+            foreach (var item in Items)
+            {
+                if(item.Key == targetkey)
+                {
+                    Items[item.Key].Children.Add(Convert.ToInt32(Nodedr.Item["id"]), CreateLocationObject(Nodedr.Item));
+                }
+                else
+                {
+                    RecursivelyfindKey(item.Value.Children, Nodedr);
+                }
+            }
         }
     }
     public class EbSolutionUsers
