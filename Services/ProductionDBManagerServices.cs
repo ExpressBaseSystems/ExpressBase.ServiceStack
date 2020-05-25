@@ -2720,10 +2720,8 @@ namespace ExpressBase.ServiceStack.Services
             return str;
         }
 
-        public LastSolnAccessResponse Post(LastSolnAccessRequest request)
-        {
-            StringBuilder sb = new StringBuilder();
-
+        public void Post(LastSolnAccessRequest request)
+        { 
             EbDataTable solutionlist = SelectSolutionsFromDB();
             List<LastDbAccess> LastDbAccessList = new List<LastDbAccess>();
             for (int i = 0; i < solutionlist.Rows.Count; i++)
@@ -2811,105 +2809,24 @@ namespace ExpressBase.ServiceStack.Services
                     Console.WriteLine(e.Message + e.StackTrace);
                     continue;
                 }
-            }
-            //for (int j = 0; j < LastDbAccessList.Count; j++)
-            //{
-            //    LastDbAccess a = LastDbAccessList[j];
-            //    // sb = FormatAccessObj(a, sb, j);
-            //}
-            var csv = LastDbAccessList.ToCsv();
+            } 
+            string csv = LastDbAccessList.ToCsv();
             byte[] b = Encoding.ASCII.GetBytes(csv);
             MessageProducer3.Publish(new EmailServicesRequest()
             {
                 From = "request.from",
                 To = "donajose@expressbase.com",
-                Message = sb.ToString(),
+                Message = "Hi, PFA",
                 Subject = "DB Last Access Log",
                 UserId = request.UserId,
                 AttachmentReport = b,
-                AttachmentName = "Lastaccess" + ".txt",
+                AttachmentName = "Lastaccess" + ".csv",
                 //  UserAuthId = request.UserAuthId,
                 SolnId = request.SolnId
 
             });
-            return new LastSolnAccessResponse
-            {
-                LastDbAccess = sb.ToString()
-            };
-        }
-
-
-        private const string NEW_LINE = "<br>";
-        private const char SPACE = ' ';
-        private const char COLON = ':';
-        private const string BOLD = "<b>";
-        private const string CLOSE_BOLD = "</b>";
-        public StringBuilder FormatAccessObj(object o, StringBuilder sb, int j)
-        {
-            sb.Append((j + 1) + ". ");
-            PropertyInfo[] props = o.GetType().GetTypeInfo().GetProperties();
-            foreach (PropertyInfo prop in props)
-            {
-                if (prop.GetValue(o) != null)
-                {
-                    sb.Append(BOLD);
-                    sb.Append(prop.Name);
-                    sb.Append(COLON);
-                    sb.Append(CLOSE_BOLD);
-                    sb.Append(SPACE);
-                    if (prop.PropertyType == typeof(string))
-                    {
-                        sb.Append(prop.GetValue(o).ToString());
-                        sb.Append(NEW_LINE);
-                    }
-                }
-            }
-            sb.Append(NEW_LINE);
-            return sb;
-        }
-
+        } 
     }
 
-    public class LastDbAccess
-    {
-        public string ISolution { get; set; }
-
-        public string ESolution { get; set; }
-
-        public string ObjCount  { get; set; }
-
-        public string LastObject { get; set; }
-
-        public string UsrCount { get; set; }
-
-        public string LastUser { get; set; }
-
-        public string LastLogin { get; set; }
-
-        public string AppCount { get; set; }
-
-        public string Applications { get; set; }
-
-        public string DbName { get; set; }
-
-        public string DbVendor { get; set; }
-
-        public string AdminUserName { get; set; }
-
-        public string AdminPassword { get; set; }
-
-        public string ReadWriteUserName { get; set; }
-
-        public string ReadWritePassword { get; set; }
-
-        public string ReadOnlyUserName { get; set; }
-
-        public string ReadOnlyPassword { get; set; }
-    }
-
-    //public class ND
-    //{
-    //    public string Name { get; set; }
-    //    public string On { get; set; }
-    //}
+    
 }
