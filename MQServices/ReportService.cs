@@ -211,7 +211,7 @@ namespace ExpressBase.ServiceStack.MQServices
                 UserAuthId = JobArgs.UserAuthId,
                 SolnId = JobArgs.SolnId,
                 AttachmentReport = RepRes.ReportBytea,
-                AttachmentName = RepRes.ReportName + " - " + RepRes.CurrentTimestamp.ToString("dd-MM-yy")
+                AttachmentName = RepRes.ReportName + " - " + RepRes.CurrentTimestamp.ToString("dd-MM-yy") + ".pdf"
             });
             Console.WriteLine("Email to " + _mailId + " pushed.....");
         }

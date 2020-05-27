@@ -123,8 +123,7 @@ namespace ExpressBase.ServiceStack.Services
         //public void Post(sampletest set)
         //{
         //    byte[] byteaa = null;
-        //    this.EbConnectionFactory.ChatConnection.Send("channel", "Hello", byteaa,"hahaha");
-
+        //    this.EbConnectionFactory.SMSConnection.SendSMS("condact no. to be send","haiiiiii");
         //}
 
         [Authenticate]
@@ -374,6 +373,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             return res;
         }
+
         public AddUnifonicResponse Post(AddUnifonicRequest request)
         {
             AddUnifonicResponse res = new AddUnifonicResponse();
@@ -392,6 +392,21 @@ namespace ExpressBase.ServiceStack.Services
         public AddETResponse Post(AddETRequest request)
         {
             AddETResponse res = new AddETResponse();
+            try
+            {
+                request.Config.PersistIntegrationConf(request.SolnId, this.InfraConnectionFactory, request.UserId);
+            }
+            catch (Exception e)
+            {
+                res.ResponseStatus.Message = e.Message;
+                Console.WriteLine("Add Fail : " + e.ToString() + e.StackTrace.ToString());
+            }
+            return res;
+        }
+
+        public AddTLResponse Post(AddTLRequest request)
+        {
+            AddTLResponse res = new AddTLResponse();
             try
             {
                 request.Config.PersistIntegrationConf(request.SolnId, this.InfraConnectionFactory, request.UserId);

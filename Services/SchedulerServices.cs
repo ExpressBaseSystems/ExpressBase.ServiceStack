@@ -15,6 +15,7 @@ using System.Threading.Tasks;
 
 namespace ExpressBase.ServiceStack.Services
 {
+    [Authenticate]
     public class SchedulerServices : EbBaseService
     {
         public SchedulerServices(IEbConnectionFactory _dbf, IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_dbf, _mqp, _mqc) { }

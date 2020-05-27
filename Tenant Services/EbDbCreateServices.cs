@@ -15,6 +15,7 @@ using System.Linq;
 
 namespace ExpressBase.ServiceStack.Services
 {
+    [Authenticate]
     public class EbDbCreateServices : EbBaseService
     {
         private EbConnectionFactory _dcConnectionFactory = null;

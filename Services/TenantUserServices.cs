@@ -8,6 +8,7 @@ using ExpressBase.Objects.ServiceStack_Artifacts;
 using ExpressBase.Security.Core;
 using Newtonsoft.Json;
 using Npgsql;
+using ServiceStack;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
@@ -73,7 +74,7 @@ namespace ExpressBase.ServiceStack.Services
         //    }
         //}
 
-
+        [Authenticate]
         public CreateLocationConfigResponse Post(CreateLocationConfigRequest request)
         {
             using (var con = this.EbConnectionFactory.ObjectsDB.GetNewConnection())
@@ -103,6 +104,7 @@ namespace ExpressBase.ServiceStack.Services
             }
         }
 
+        [Authenticate]
         public SaveLocationMetaResponse Post(SaveLocationMetaRequest request)
         {
             using (var con = this.EbConnectionFactory.ObjectsDB.GetNewConnection())
@@ -131,6 +133,8 @@ namespace ExpressBase.ServiceStack.Services
                 return new SaveLocationMetaResponse { Id = result };
             }
         }
+
+        [Authenticate]
         public SaveLocationResponse Post(SaveLocationRequest request)
         {
             SaveLocationResponse resp = new SaveLocationResponse();
@@ -165,6 +169,7 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
+        [Authenticate]
         public DeleteLocResponse Post(DeleteLocRequest request)
         {
             List<DbParameter> parameters = new List<DbParameter>();
@@ -250,6 +255,7 @@ namespace ExpressBase.ServiceStack.Services
             return SolutionUsers;
         }
 
+        [Authenticate]
         public LocationInfoTenantResponse Get(LocationInfoTenantRequest req)
         {
             List<EbLocationCustomField> Conf = new List<EbLocationCustomField>();
@@ -333,6 +339,7 @@ namespace ExpressBase.ServiceStack.Services
             return new LocationInfoTenantResponse { Locations = locs, Config = Conf , LocationTree= loctree };
         }
 
+        [Authenticate]
         public LocationInfoResponse Get(LocationInfoRequest req)
         {
             List<EbLocationCustomField> Conf = new List<EbLocationCustomField>();
@@ -379,6 +386,7 @@ namespace ExpressBase.ServiceStack.Services
             return new LocationInfoResponse { Locations = locs, Config = Conf, LocationTypes = locTypes };
         }
 
+        [Authenticate]
         public GetUserDashBoardObjectsResponse Any(GetUserDashBoardObjectsRequest request)
         {
             string query = @"SELECT t2.* FROM
@@ -987,6 +995,7 @@ namespace ExpressBase.ServiceStack.Services
         //         return resp;
         //     }
 
+        [Authenticate]
         public CreateLocationTypeResponse post(CreateLocationTypeRequest request)
         {
             CreateLocationTypeResponse resp = new CreateLocationTypeResponse();
@@ -1012,6 +1021,7 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
+        [Authenticate]
         public DeleteLocationTypeResponse Post(DeleteLocationTypeRequest request)
         {
             string query = "UPDATE eb_location_types SET eb_del = 'T' WHERE id = @id ;";
