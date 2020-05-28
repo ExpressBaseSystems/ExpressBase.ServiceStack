@@ -67,13 +67,16 @@ namespace ExpressBase.ServiceStack.Services
                     string usersql = string.Format("SELECT * FROM eb_assignprivileges('{0}_admin','{0}_ro','{0}_rw');", request.DBName);
                     // EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(usersql);
                     EbDataTable dt = DataDB.DoQuery(usersql);
+                    string extension = "";
+                    if (_solutionConnections.DataDbConfig.UserName.Split('@').Length > 1)
+                        extension = "@" + _solutionConnections.DataDbConfig.UserName.Split('@')[1];
                     ebdbusers = new EbDbUsers
                     {
-                        AdminUserName = request.DBName + "_admin",
+                        AdminUserName = request.DBName + "_admin" + extension,
                         AdminPassword = dt.Rows[0][0].ToString(),
-                        ReadOnlyUserName = request.DBName + "_ro",
+                        ReadOnlyUserName = request.DBName + "_ro" + extension,
                         ReadOnlyPassword = dt.Rows[0][1].ToString(),
-                        ReadWriteUserName = request.DBName + "_rw",
+                        ReadWriteUserName = request.DBName + "_rw" + extension,
                         ReadWritePassword = dt.Rows[0][2].ToString(),
                     };
                     EbConnectionsConfig _dcConnections = EbConnectionsConfigProvider.GetDataCenterConnections();
@@ -82,8 +85,8 @@ namespace ExpressBase.ServiceStack.Services
                     _dcConnections.DataDbConfig.Password = ebdbusers.AdminPassword;
                     DataDB = new EbConnectionFactory(_dcConnections, request.DBName).DataDB;
                 }
-                
-                return DbOperations(request, ebdbusers,DataDB);
+
+                return DbOperations(request, ebdbusers, DataDB);
             }
             catch (Exception e)
             {
@@ -138,7 +141,7 @@ namespace ExpressBase.ServiceStack.Services
                         "objectsdb.tablecreate.eb_google_map.sql", "objectsdb.tablecreate.eb_locations.sql", "objectsdb.tablecreate.eb_location_config.sql",
                         "objectsdb.tablecreate.eb_objects.sql", "objectsdb.tablecreate.eb_objects2application.sql", "objectsdb.tablecreate.eb_objects_favourites.sql",
                         "objectsdb.tablecreate.eb_objects_relations.sql", "objectsdb.tablecreate.eb_objects_status.sql", "objectsdb.tablecreate.eb_objects_ver.sql"};
-*/                    
+*/
                     string[] _filepath = SqlFiles.SQLSCRIPTS;
                     Console.WriteLine(".............Reached CreateOrAlter_Structure. Total Files: " + _filepath.Length);
 
@@ -208,7 +211,7 @@ namespace ExpressBase.ServiceStack.Services
                                GRANT CONNECT ON DATABASE ""{0}"" TO {0}_admin;
                                GRANT CONNECT ON DATABASE ""{0}"" TO {0}_ro;     
                                GRANT CONNECT ON DATABASE ""{0}"" TO {0}_rw;", _dbname,
-                               Environment.GetEnvironmentVariable(EnvironmentConstants.EB_DATACENTRE_ADMIN_USER));
+                               Environment.GetEnvironmentVariable(EnvironmentConstants.EB_DATACENTRE_ADMIN_USER).Split('@')[0]);
 
                 //@"REVOKE connect ON DATABASE ""@dbname"" FROM PUBLIC;
                 //               GRANT ALL PRIVILEGES ON DATABASE ""@dbname"" TO @ebadmin;                   
@@ -271,7 +274,7 @@ namespace ExpressBase.ServiceStack.Services
                             GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO {0}_rw;
                             ALTER DEFAULT PRIVILEGES FOR ROLE {0}_admin IN SCHEMA public GRANT EXECUTE ON FUNCTIONS TO {0}_rw;
                             ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT EXECUTE ON FUNCTIONS TO {0}_rw;", _dbname,
-                            Environment.GetEnvironmentVariable(EnvironmentConstants.EB_DATACENTRE_ADMIN_USER)
+                            Environment.GetEnvironmentVariable(EnvironmentConstants.EB_DATACENTRE_ADMIN_USER).Split('@')[0]
                             );
 
                 //string sql2 = string.Format(@"
