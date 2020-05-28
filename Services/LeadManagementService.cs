@@ -264,7 +264,8 @@ namespace ExpressBase.ServiceStack.Services
 			SELECT B.id, B.filename, B.tags, B.uploadts
 				FROM eb_files_ref B LEFT JOIN customer_files A 
 				ON A.eb_files_ref_id = B.id				
-			WHERE (A.customer_id = :accountid AND A.eb_del = false) OR B.context_sec = 'CustomerId:{request.CustomerId}';";
+			WHERE ((A.customer_id = :accountid AND A.eb_del = false) OR B.context_sec = 'CustomerId:{request.CustomerId}')
+				AND COALESCE(B.eb_del, 'F') = 'F';";
 
 			List<FileMetaInfo> _list = new List<FileMetaInfo>();
 
@@ -837,22 +838,22 @@ namespace ExpressBase.ServiceStack.Services
         public LmDeleteImageResponse Any(LmDeleteImageRequest request)
         {
             string query = @"
-UPDATE 
-    customer_files 
-SET 
-    eb_del = true 
+UPDATE customer_files SET eb_del = true 
 WHERE 
     customer_id = :customer_id AND 
     eb_del = false AND 
-    eb_files_ref_id = ANY(STRING_TO_ARRAY(:ids, ',')::INT[]);";
+    eb_files_ref_id = ANY(STRING_TO_ARRAY(:ids, ',')::INT[]);
 
-            int[] refIds = JsonConvert.DeserializeObject<int[]>(request.ImgRefIds);
+UPDATE eb_files_ref SET eb_del = 'T'
+WHERE id = ANY(STRING_TO_ARRAY(:ids, ',')::INT[]) AND COALESCE(eb_del, 'F') = 'F';";//B.context_sec = 'CustomerId:{request.CustomerId}
+
+			int[] refIds = JsonConvert.DeserializeObject<int[]>(request.ImgRefIds);
             DbParameter[] parameters = new DbParameter[] {
                 this.EbConnectionFactory.ObjectsDB.GetNewParameter("customer_id", EbDbTypes.Int32, request.CustId),
                 this.EbConnectionFactory.ObjectsDB.GetNewParameter("ids", EbDbTypes.String, refIds.Join(","))
             };
 
-            int rstatus = this.EbConnectionFactory.ObjectsDB.UpdateTable(query, parameters);
+            int rstatus = this.EbConnectionFactory.DataDB.DoNonQuery(query, parameters);
 
             return new LmDeleteImageResponse { RowsAffected = rstatus};
         }

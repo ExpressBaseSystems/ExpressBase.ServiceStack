@@ -202,7 +202,8 @@ namespace ExpressBase.ServiceStack.Services
                     IsVersioningEnabled = wrap_sol.IsVersioningEnabled,
                     PlanUserCount = users.PlanUserCount,
                     SolutionSettings = wrap_sol.SolutionSettings,
-                    ExtSolutionID = wrap_sol.EsolutionId
+                    ExtSolutionID = wrap_sol.EsolutionId,
+                    LocationTree = Loc.LocationTree
                 };
 
                 this.Redis.Set<Eb_Solution>(String.Format("solution_{0}", req.SolnId), sol_Obj);
@@ -259,6 +260,7 @@ namespace ExpressBase.ServiceStack.Services
         {
             List<EbLocationCustomField> Conf = new List<EbLocationCustomField>();
             Dictionary<int, EbLocation> locs = new Dictionary<int, EbLocation>();
+            Dictionary<int, EbLocation> loctree = new Dictionary<int, EbLocation>();
             try
             {
                 string query = @"SELECT
@@ -278,7 +280,8 @@ namespace ExpressBase.ServiceStack.Services
                                 ON 
                                     L.eb_location_types_id = T.id
                                 WHERE 
-                                    COALESCE(L.eb_del,'F') = 'F'";
+                                    COALESCE(L.eb_del,'F') = 'F'
+                                ORDER BY parent_id";
                 EbConnectionFactory ebConnectionFactory = new EbConnectionFactory(req.SolnId.ToLower(), this.Redis);
                 EbDataSet dt = ebConnectionFactory.DataDB.DoQueries(query);
                 if (dt != null && dt.Tables.Count > 0)
@@ -318,14 +321,13 @@ namespace ExpressBase.ServiceStack.Services
 
                 }
 
-                var LocationTree = new Dictionary<int, EbLocation>();
                 var tree = dt.Tables[1].Enumerate().ToTree(row => true,
                         (parent, child) => Convert.ToInt32(parent["id"]) == Convert.ToInt32(child["parent_id"]),"is_group");
                 foreach (Node<EbDataRow> Nodedr in tree.Tree)
                 {
-                    LocationTree.Add(Convert.ToInt32(Nodedr.Item["id"]), CreateLocationObject(Nodedr.Item));
+                    loctree.Add(Convert.ToInt32(Nodedr.Item["id"]), CreateLocationObject(Nodedr.Item));
                     if(Nodedr.Children.Count >0)
-                        RecursivelyGetChildren(LocationTree, Nodedr);
+                        RecursivelyGetChildren(loctree, Nodedr);
                 }
 
             }
@@ -334,7 +336,7 @@ namespace ExpressBase.ServiceStack.Services
                 Console.WriteLine("Erron in Getting location info" + e.Message + e.StackTrace);
             }
 
-            return new LocationInfoTenantResponse { Locations = locs, Config = Conf };
+            return new LocationInfoTenantResponse { Locations = locs, Config = Conf , LocationTree= loctree };
         }
 
         [Authenticate]
