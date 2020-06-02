@@ -2232,6 +2232,64 @@ namespace ExpressBase.ServiceStack.Services
             }
             return resp;
         }
+
+        public MeetingCancelByHostResponse Post(MeetingCancelByHostRequest request)
+        {
+            string query = @"
+             select id, user_ids,usergroup_id,role_ids, form_ref_id, form_data_id , description, expiry_datetime, eb_meeting_slots_id ,except_user_ids from eb_my_actions 
+            where eb_meeting_slots_id = {0} and id= {1} and is_completed='F';
+                                        ";
+            List<MyAction> MyActionObj = new List<MyAction>();
+            MeetingCancelByHostResponse Resp = new MeetingCancelByHostResponse();
+            string qry_ = "";
+            try
+            {
+                EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(query);
+                int capacity1 = dt.Rows.Count;
+                for (int i = 0; i < capacity1; i++)
+                {
+                    MyActionObj.Add(new MyAction()
+                    {
+                        Id = Convert.ToInt32(dt.Rows[i]["id"]),
+                        SlotId = Convert.ToInt32(dt.Rows[i]["eb_meeting_slots_id"]),
+                        Description = Convert.ToString(dt.Rows[i]["description"]),
+                        UserIds = Convert.ToString(dt.Rows[i]["user_ids"]),
+                        RoleIds = Convert.ToString(dt.Rows[i]["role_ids"]),
+                        FormRefId = Convert.ToString(dt.Rows[i]["form_ref_id"]),
+                        ExpiryDateTime = Convert.ToString(dt.Rows[i]["expiry_datetime"]),
+                        ExceptUserIds = Convert.ToString(dt.Rows[i]["except_user_ids"]),
+                        UserGroupId = Convert.ToInt32(dt.Rows[i]["usergroup_id"]),
+                        FormDataId = Convert.ToInt32(dt.Rows[i]["form_data_id"]),
+                    });
+                 }
+                qry_ += $"update eb_my_actions set completed_at = now(), completed_by ={request.UserInfo.UserId} , is_completed='T' where eb_meeting_slots_id = {request.SlotId} " +
+                      $"and id= {request.MyActionId};";
+                qry_ += $@"insert into eb_my_actions (user_ids,usergroup_id,role_ids,from_datetime,form_ref_id,form_data_id,description,my_action_type , eb_meeting_slots_id,
+                        is_completed,eb_del , except_user_ids)
+                        values('{MyActionObj[0].UserIds}',{MyActionObj[0].UserGroupId},'{MyActionObj[0].RoleIds}',
+                        NOW(),{MyActionObj[0].FormRefId}, {request.SlotId}, {MyActionObj[0].Description},'{MyActionTypes.Meeting}',
+                        {MyActionObj[0].Description} , 'F','F' ,'{request.UserInfo.UserId},{MyActionObj[0].ExceptUserIds}');";
+
+                    int a = this.EbConnectionFactory.DataDB.DoNonQuery(qry_);
+                Resp.ResponseStatus = true;
+             
+            }
+            catch (Exception e)
+            {
+                Resp.ResponseStatus = false;
+                Console.WriteLine(e.StackTrace, e.Message);
+            }
+            return Resp;
+        }
+        public MeetingRejectByHostResponse Post(MeetingRejectByHostRequest request)
+        {
+
+            return new MeetingRejectByHostResponse();
+        }
+        //public MeetingRequestByEligibleAttendeeResponse(MeetingRequestByEligibleAttendeeRequest request)
+        //{
+
+        //}
     }
 }
 
