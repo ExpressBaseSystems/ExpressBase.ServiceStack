@@ -17,6 +17,7 @@ namespace ExpressBase.ServiceStack.Services
         public DbClientServices(IEbConnectionFactory _dbf, IEbMqClient _mq) : base(_dbf, _mq) { }
 
 
+        [Authenticate]
         public EbConnectionFactory GetFactory(bool IsAdminOwn, string ClientSolnid)
         {
             EbConnectionFactory factory = null;
@@ -46,7 +47,7 @@ namespace ExpressBase.ServiceStack.Services
         List<object> Row = new List<object>();
         List<string> solutions = new List<string>();
 
-
+        [Authenticate]
         public GetDbTablesResponse Get(GetDbTablesRequest request)
         {
             string DB_Name = "";
@@ -201,6 +202,7 @@ namespace ExpressBase.ServiceStack.Services
 
 
         [CompressResponse]
+        [Authenticate]
         public DbClientQueryResponse Post(DbClientSelectRequest request)
         {
             EbDataSet _dataset = null;
@@ -218,6 +220,7 @@ namespace ExpressBase.ServiceStack.Services
         }
 
         [CompressResponse]
+        [Authenticate]
         public DbClientQueryResponse Post(DbClientInsertRequest request)
         {
             int res = 0;
@@ -235,6 +238,7 @@ namespace ExpressBase.ServiceStack.Services
         }
 
         [CompressResponse]
+        [Authenticate]
         public DbClientQueryResponse Post(DbClientDeleteRequest request)
         {
             int res = 0;
@@ -252,6 +256,7 @@ namespace ExpressBase.ServiceStack.Services
         }
 
         [CompressResponse]
+        [Authenticate]
         public DbClientQueryResponse Post(DbClientDropRequest request)
         {
             EbConnectionFactory factory = GetFactory(request.IsAdminOwn, request.ClientSolnid);
@@ -260,6 +265,7 @@ namespace ExpressBase.ServiceStack.Services
         }
 
         [CompressResponse]
+        [Authenticate]
         public DbClientQueryResponse Post(DbClientTruncateRequest request)
         {
             EbConnectionFactory factory = GetFactory(request.IsAdminOwn, request.ClientSolnid);
@@ -268,6 +274,7 @@ namespace ExpressBase.ServiceStack.Services
         }
 
         [CompressResponse]
+        [Authenticate]
         public DbClientQueryResponse Post(DbClientUpdateRequest request)
         {
             int res = 0;
@@ -286,6 +293,7 @@ namespace ExpressBase.ServiceStack.Services
         }
 
         [CompressResponse]
+        [Authenticate]
         public DbClientQueryResponse Post(DbClientAlterRequest request)
         {
             int res = 0;
@@ -303,6 +311,7 @@ namespace ExpressBase.ServiceStack.Services
         }
 
         [CompressResponse]
+        [Authenticate]
         public DbClientQueryResponse Post(DbClientCreateRequest request)
         {
             int res = 0;
