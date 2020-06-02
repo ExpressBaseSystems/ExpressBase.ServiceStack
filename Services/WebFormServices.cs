@@ -1563,7 +1563,7 @@ namespace ExpressBase.ServiceStack.Services
                 EbWebForm FormObj = GetWebFormObject(request.FormId);
                 FormObj.RefId = request.FormId;
                 FormObj.TableRowId = request.RowId;
-                FormObj.UserObj = request.UserObj;
+                FormObj.UserObj = this.Redis.Get<User>(request.UserAuthId);
                 FormObj.SolutionObj = GetSolutionObject(request.SolnId);
                 string temp = FormObj.GetAuditTrail(EbConnectionFactory.DataDB, this);
                 Console.WriteLine("GetAuditTrail Service end");
