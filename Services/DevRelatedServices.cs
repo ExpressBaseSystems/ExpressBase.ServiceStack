@@ -6,6 +6,7 @@ using ExpressBase.Common.Structures;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ExpressBase.ServiceStack.Services;
 using Newtonsoft.Json;
+using ServiceStack;
 using ServiceStack.Messaging;
 using System;
 using System.Collections.Generic;
@@ -17,6 +18,7 @@ using System.Threading.Tasks;
 
 namespace ExpressBase.ServiceStack
 {
+    [Authenticate]
     public class DevRelatedServices : EbBaseService
     {
         public DevRelatedServices(IEbConnectionFactory _dbf, IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_dbf, _mqp, _mqc) { }
