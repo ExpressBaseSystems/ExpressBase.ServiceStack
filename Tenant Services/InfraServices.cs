@@ -1871,12 +1871,12 @@ public UniqueRequestResponse Any(UniqueRequest request)
 {
     UniqueRequestResponse res = new UniqueRequestResponse();
     ILog log = LogManager.GetLogger(GetType());
-    string sql = "SELECT id, pwd FROM eb_tenants WHERE email ~* @email and eb_del='F'";
+    string sql = "SELECT id, pwd FROM eb_tenants WHERE email = @email and eb_del='F'";
     DbParameter[] parameters = { this.InfraConnectionFactory.ObjectsDB.GetNewParameter("email", EbDbTypes.String, request.email) };
     var dt = this.InfraConnectionFactory.ObjectsDB.DoQuery(sql, parameters);
     if (dt.Rows.Count > 0)
     {
-        res.Unique = false;
+        @res.Unique = false;
         res.Id = Convert.ToInt32(dt.Rows[0]["id"]);
         res.HasPassword = (string.IsNullOrEmpty(dt.Rows[0]["pwd"].ToString())) ? false : true;
     }
