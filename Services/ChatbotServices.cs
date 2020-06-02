@@ -1229,14 +1229,7 @@ namespace ExpressBase.ServiceStack
 				else
 				{
 					int[] idlst = new int[] { };
-					if (request.Id_lst.Contains('-'))
-					{
-						 idlst = request.Id_lst.Split('-').Select(x => int.Parse(x)).ToArray();
-					}
-					else
-					{
-						//idlst = int.Parse(request.Id_lst.ToArray());
-					}
+					idlst = request.Id_lst.Split('-').Select(x => int.Parse(x)).ToArray();
 					
 					qry = string.Format(@"SELECT id, applicationname, app_icon,description, app_settings FROM eb_applications WHERE application_type = 3 AND eb_del = 'F' AND id = ANY (ARRAY[{0}])", string.Join(",", idlst));
 					//parameters = this.EbConnectionFactory.ObjectsDB.GetNewParameter("idlst", EbDbTypes.Int32, idlst[0]);
