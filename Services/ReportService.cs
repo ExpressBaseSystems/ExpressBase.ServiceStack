@@ -35,9 +35,11 @@ using ServiceStack.Messaging;
 using System.Globalization;
 using Rectangle = iTextSharp.text.Rectangle;
 using iTextSharp.text.html.simpleparser;
+using ServiceStack;
 
 namespace ExpressBase.ServiceStack
 {
+    [Authenticate]
     public class ReportService : EbBaseService
     {
         //private iTextSharp.text.Font f = FontFactory.GetFont(FontFactory.HELVETICA, 12);
