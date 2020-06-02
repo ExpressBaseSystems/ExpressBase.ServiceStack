@@ -26,6 +26,7 @@ using ExpressBase.Objects.Objects.DVRelated;
 
 namespace ExpressBase.ServiceStack.Services
 {
+    [Authenticate]
     public class SqlJobServices : EbBaseService
     {
 
@@ -962,6 +963,7 @@ namespace ExpressBase.ServiceStack.Services
 
     }
 
+    [Authenticate]
     [Restrict(InternalOnly = true)]
     public class SqlJobInternalService : EbMqBaseService
     {

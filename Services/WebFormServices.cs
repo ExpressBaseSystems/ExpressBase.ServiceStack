@@ -2003,7 +2003,7 @@ namespace ExpressBase.ServiceStack.Services
             SlotDetailsResponse Resp = new SlotDetailsResponse();
             string _qry = $@"
                  SELECT 
-	            A.id,A.is_completed, B.id as slot_id,C.id as meeting_schedule_id,C.description,C.time_from,C.time_to,
+	            A.id,A.is_completed, B.id as slot_id,C.id as meeting_schedule_id,C.description,B.time_from,B.time_to,
 				C.meeting_date ,C.venue,C.integration,C.title,
 				D.user_id , D.type_of_user,D.participant_type,E.fullname
 			        FROM
@@ -2011,10 +2011,10 @@ namespace ExpressBase.ServiceStack.Services
 						id, eb_meeting_slots_id,is_completed FROM  eb_my_actions 
 	                     WHERE  eb_del = 'F' and id ={request.Id} )A
 						LEFT JOIN
-							 (SELECT id , eb_meeting_schedule_id FROM  eb_meeting_slots)B
+							 (SELECT id , eb_meeting_schedule_id,time_from,time_to FROM  eb_meeting_slots)B
 							 ON B.id = A.eb_meeting_slots_id		
 							 LEFT JOIN	
-							 (SELECT id ,title, meeting_date,venue,integration,description,time_from,time_to FROM  eb_meeting_schedule )C
+							 (SELECT id ,title, meeting_date,venue,integration,description FROM  eb_meeting_schedule )C
 							 ON C.id = B.eb_meeting_schedule_id	
 							 LEFT JOIN	
 							 (SELECT id , approved_slot_id, eb_meeting_schedule_id , user_id ,type_of_user,participant_type FROM  eb_meeting_slot_participants )D

@@ -11,8 +11,8 @@ using ServiceStack;
 
 namespace ExpressBase.ServiceStack.Services
 {
-	[Authenticate]
-	public class RedisClientServices : EbBaseService
+    [Authenticate]
+    public class RedisClientServices : EbBaseService
     {
         public RedisClientServices(IEbConnectionFactory _dbf) : base(_dbf) { }
 
