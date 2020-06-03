@@ -7,9 +7,11 @@ using System.Data.Common;
 using System.Linq;
 using System.Threading.Tasks;
 using ExpressBase.Common;
+using ServiceStack;
 
 namespace ExpressBase.ServiceStack.Services
 {
+    [Authenticate]
     public class RedisClientServices : EbBaseService
     {
         public RedisClientServices(IEbConnectionFactory _dbf) : base(_dbf) { }

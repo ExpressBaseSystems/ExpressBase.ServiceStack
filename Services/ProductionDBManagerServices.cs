@@ -2720,6 +2720,7 @@ namespace ExpressBase.ServiceStack.Services
             return str;
         }
 
+        [Authenticate]
         public void Post(LastSolnAccessRequest request)
         { 
             EbDataTable solutionlist = SelectSolutionsFromDB();

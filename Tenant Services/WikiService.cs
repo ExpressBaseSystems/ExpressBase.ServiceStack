@@ -11,6 +11,7 @@ using ServiceStack.Redis;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Text;
+using ServiceStack;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -19,6 +20,7 @@ namespace ExpressBase.ServiceStack.Services
         public WikiService()
         { }
 
+        [Authenticate]
         public PersistWikiResponse Post(PersistWikiRequest request)
         {
             PersistWikiResponse resp = new PersistWikiResponse()
@@ -65,6 +67,7 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
+        [Authenticate]
         public UpdateWikiResponse Post(UpdateWikiRequest request)
         {
             UpdateWikiResponse resp = new UpdateWikiResponse()
@@ -163,6 +166,7 @@ namespace ExpressBase.ServiceStack.Services
         }
 
 
+        [Authenticate]
         public AddNewWikiResponse Get(AddNewWikiRequest request)
         {
             AddNewWikiResponse resp = new AddNewWikiResponse();
@@ -416,6 +420,7 @@ namespace ExpressBase.ServiceStack.Services
 
 
 
+        [Authenticate]
         public Admin_Wiki_ListResponse Get(Admin_Wiki_ListRequest request)
         {
             Admin_Wiki_ListResponse resp = new Admin_Wiki_ListResponse();
@@ -473,7 +478,7 @@ namespace ExpressBase.ServiceStack.Services
         }
 
 
-
+        [Authenticate]
         public Publish_wikiResponse Post(Publish_wikiRequest request)
         {
             Publish_wikiResponse resp = new Publish_wikiResponse()
@@ -563,6 +568,7 @@ namespace ExpressBase.ServiceStack.Services
         }
 
 
+        [Authenticate]
         public UpdateOrderResponse Post(UpdateOrderRequest request)
         {
             UpdateOrderResponse resp = new UpdateOrderResponse();
@@ -602,6 +608,7 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
+        [Authenticate]
         public FileRefByContextResponse Get(FileRefByContextRequest request)
         {
             string Qry = @"

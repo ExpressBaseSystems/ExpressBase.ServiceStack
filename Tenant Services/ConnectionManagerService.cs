@@ -280,6 +280,7 @@ namespace ExpressBase.ServiceStack.Services
         //    return res;
         //}
 
+        [Authenticate]
         public TestConnectionResponse Post(TestConnectionRequest request)
         {
             TestConnectionResponse res = new TestConnectionResponse { ConnectionStatus = false };
@@ -343,6 +344,8 @@ namespace ExpressBase.ServiceStack.Services
         //}
 
         //--------------------------------------------------------------------------------Integrations-----------------------------------------------------
+
+        [Authenticate]
         public AddDBResponse Post(AddDBRequest request)
         {
             AddDBResponse res = new AddDBResponse();
@@ -359,6 +362,7 @@ namespace ExpressBase.ServiceStack.Services
             return res;
         }
 
+        [Authenticate]
         public AddTwilioResponse Post(AddTwilioRequest request)
         {
             AddTwilioResponse res = new AddTwilioResponse();
@@ -374,6 +378,7 @@ namespace ExpressBase.ServiceStack.Services
             return res;
         }
 
+        [Authenticate]
         public AddUnifonicResponse Post(AddUnifonicRequest request)
         {
             AddUnifonicResponse res = new AddUnifonicResponse();
@@ -389,6 +394,7 @@ namespace ExpressBase.ServiceStack.Services
             return res;
         }
 
+        [Authenticate]
         public AddETResponse Post(AddETRequest request)
         {
             AddETResponse res = new AddETResponse();
@@ -404,6 +410,7 @@ namespace ExpressBase.ServiceStack.Services
             return res;
         }
 
+        [Authenticate]
         public AddTLResponse Post(AddTLRequest request)
         {
             AddTLResponse res = new AddTLResponse();
@@ -419,6 +426,7 @@ namespace ExpressBase.ServiceStack.Services
             return res;
         }
 
+        [Authenticate]
         public AddMongoResponse Post(AddMongoRequest request)
         {
             AddMongoResponse res = new AddMongoResponse();
@@ -433,6 +441,8 @@ namespace ExpressBase.ServiceStack.Services
             }
             return res;
         }
+
+        [Authenticate]
         public AddSmtpResponse Post(AddSmtpRequest request)
         {
             AddSmtpResponse res = new AddSmtpResponse();
@@ -447,6 +457,8 @@ namespace ExpressBase.ServiceStack.Services
             }
             return res;
         }
+
+        [Authenticate]
         public AddCloudinaryResponse Post(AddCloudinaryRequest request)
         {
             AddCloudinaryResponse res = new AddCloudinaryResponse();
@@ -462,6 +474,7 @@ namespace ExpressBase.ServiceStack.Services
             return res;
         }
 
+        [Authenticate]
         public AddGoogleMapResponse Post(AddGoogleMapRequest request)
         {
             AddGoogleMapResponse res = new AddGoogleMapResponse();
@@ -476,6 +489,8 @@ namespace ExpressBase.ServiceStack.Services
             }
             return res;
         }
+
+        [Authenticate]
         public AddSendGridResponse Post(AddSendGridRequest request)
         {
             AddSendGridResponse res = new AddSendGridResponse();
@@ -490,6 +505,8 @@ namespace ExpressBase.ServiceStack.Services
             }
             return res;
         }
+
+        [Authenticate]
         public AddGoogleDriveResponse Post(AddGoogleDriveRequest request)
         {
             AddGoogleDriveResponse res = new AddGoogleDriveResponse();
@@ -505,6 +522,7 @@ namespace ExpressBase.ServiceStack.Services
             return res;
         }
 
+        [Authenticate]
         public AddSlackResponse Post(AddSlackRequest request)
         {
             AddSlackResponse res = new AddSlackResponse();
@@ -520,6 +538,7 @@ namespace ExpressBase.ServiceStack.Services
             return res;
         }
 
+        [Authenticate]
         public AddfacebookResponse Post(AddfacebookRequest request)
         {
             AddfacebookResponse res = new AddfacebookResponse();
@@ -534,6 +553,8 @@ namespace ExpressBase.ServiceStack.Services
             }
             return res;
         }
+
+        [Authenticate]
         public AddDropBoxResponse Post(AddDropBoxRequest request)
         {
             AddDropBoxResponse res = new AddDropBoxResponse();
@@ -549,6 +570,7 @@ namespace ExpressBase.ServiceStack.Services
             return res;
         }
 
+        [Authenticate]
         public AddAWSS3Response Post(AddAWSS3Request request)
         {
             AddAWSS3Response res = new AddAWSS3Response();
@@ -564,6 +586,7 @@ namespace ExpressBase.ServiceStack.Services
             return res;
         }
 
+        [Authenticate]
         public GetIntegrationConfigsResponse Get(GetIntegrationConfigsRequest request)
         {
             GetIntegrationConfigsResponse res = new GetIntegrationConfigsResponse();
@@ -581,6 +604,7 @@ namespace ExpressBase.ServiceStack.Services
             return res;
         }
 
+        [Authenticate]
         public GetIntegrationsResponse Get(GetIntegrationsRequest request)
         {
             GetIntegrationsResponse res = new GetIntegrationsResponse();
@@ -598,6 +622,7 @@ namespace ExpressBase.ServiceStack.Services
             return res;
         }
 
+        [Authenticate]
         public EbIntegrationResponse Post(EbIntegrationRequest request)
         {
             EbIntegrationResponse res = new EbIntegrationResponse();
@@ -655,6 +680,7 @@ namespace ExpressBase.ServiceStack.Services
             return res;
         }
 
+        [Authenticate]
         public EbIntegrationConfDeleteResponse Post(EbIntergationConfDeleteRequest request)
         {
             EbIntegrationConfDeleteResponse res = new EbIntegrationConfDeleteResponse();
@@ -670,6 +696,7 @@ namespace ExpressBase.ServiceStack.Services
             return res;
         }
 
+        [Authenticate]
         public EbIntegrationDeleteResponse Post(EbIntergationDeleteRequest request)
         {
             EbIntegrationDeleteResponse res = new EbIntegrationDeleteResponse();
@@ -689,6 +716,7 @@ namespace ExpressBase.ServiceStack.Services
             return res;
         }
 
+        [Authenticate]
         public EbIntegrationSwitchResponse Post(EbIntergationSwitchRequest request)
         {
             EbIntegrationSwitchResponse res = new EbIntegrationSwitchResponse();
@@ -723,7 +751,7 @@ namespace ExpressBase.ServiceStack.Services
 
 
 
-
+        [Authenticate]
         public bool InitializeDataDb(int confid, string solid, int uid, bool drop)
         {
             try
@@ -749,6 +777,7 @@ namespace ExpressBase.ServiceStack.Services
             return false;
         }
 
+        [Authenticate]
         public void InitializeFileDb(int confid)
         {
             try
@@ -806,6 +835,7 @@ namespace ExpressBase.ServiceStack.Services
             }
         }
 
+        [Authenticate]
         public CredientialBotResponse Get(CredientialBotRequest request)
         {
             CredientialBotResponse response = new CredientialBotResponse();
@@ -836,6 +866,7 @@ namespace ExpressBase.ServiceStack.Services
             return response;
         }
 
+        [Authenticate]
         public GetSolutioInfoResponses Get(GetSolutioInfoRequests request)
         {
             GetSolutioInfoResponses resp = new GetSolutioInfoResponses();

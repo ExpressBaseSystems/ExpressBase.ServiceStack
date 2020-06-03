@@ -18,6 +18,7 @@ using System.Threading.Tasks;
 
 namespace ExpressBase.ServiceStack.MQServices
 {
+    [Authenticate]
     public class PdfToEmailService : EbBaseService
     {
         public PdfToEmailService(IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_mqp, _mqc) { }
@@ -34,6 +35,8 @@ namespace ExpressBase.ServiceStack.MQServices
             });
         }
     }
+
+    [Authenticate]
     [Restrict(InternalOnly = true)]
     public class PdfToEmailInternalService : EbMqBaseService
     {
