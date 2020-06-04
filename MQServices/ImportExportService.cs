@@ -113,7 +113,7 @@ namespace ExpressBase.ServiceStack.MQServices
             }
             catch (Exception e)
             {
-                Console.WriteLine("ExportApplication" + e.Message);
+                Console.WriteLine("ExportApplication" + e.Message + e.StackTrace);
             }
 
             return null;
@@ -180,7 +180,7 @@ namespace ExpressBase.ServiceStack.MQServices
                                     obj.Name = obj.Name + "(" + o + ")";
                             }
                             while (!uniqnameresp.IsUnique);
-                                                       
+
                             ObjectLifeCycleStatus _status;
                             if (request.IsDemoApp || !_isVersionedSolution)
                                 _status = ObjectLifeCycleStatus.Live;
