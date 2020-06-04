@@ -387,31 +387,47 @@ namespace ExpressBase.ServiceStack
                                 }
                                 else if (col == "eb_created_by" || col == "eb_lastmodified_by" || col == "eb_loc_id")
                                 {
+                                    List<string> templist = new List<string>();
                                     if (col == "eb_created_by" || col == "eb_lastmodified_by")
                                     {
                                         if (this._ebSolution.Users != null)
                                         {
-                                            if (op == "x*")
-                                                array = this._ebSolution.Users.Where(pair => pair.Value.StartsWith(array[0].Trim())).Select(pair => pair.Key.ToString()).ToArray();
-                                            else if (op == "*x")
-                                                array = this._ebSolution.Users.Where(pair => pair.Value.EndsWith(array[0].Trim())).Select(pair => pair.Key.ToString()).ToArray();
-                                            else if (op == "*x*")
-                                                array = this._ebSolution.Users.Where(pair => pair.Value.Contains(array[0].Trim())).Select(pair => pair.Key.ToString()).ToArray();
-                                            else if (op == "=")
-                                                array = this._ebSolution.Users.Where(pair => pair.Value == array[0].Trim()).Select(pair => pair.Key.ToString()).ToArray();
+                                            for (int i = 0; i < array.Length; i++)
+                                            {
+                                                if (array[i].Trim() != "")
+                                                {
+                                                    if (op == "x*")
+                                                        templist.AddRange( this._ebSolution.Users.Where(pair => pair.Value.ToLower().StartsWith(array[i].Trim().ToLower())).Select(pair => pair.Key.ToString()).ToList());
+                                                    else if (op == "*x")
+                                                        templist.AddRange(this._ebSolution.Users.Where(pair => pair.Value.ToLower().EndsWith(array[i].Trim().ToLower())).Select(pair => pair.Key.ToString()).ToList());
+                                                    else if (op == "*x*")
+                                                        templist.AddRange(this._ebSolution.Users.Where(pair => pair.Value.ToLower().Contains(array[i].Trim().ToLower())).Select(pair => pair.Key.ToString()).ToList());
+                                                    else if (op == "=")
+                                                        templist.AddRange(this._ebSolution.Users.Where(pair => pair.Value.ToLower() == array[i].Trim().ToLower()).Select(pair => pair.Key.ToString()).ToList());
+
+                                                }
+                                            }
                                         }
+
                                     }
                                     else
                                     {
-                                        if (op == "x*")
-                                            array = this._ebSolution.Locations.Where(pair => pair.Value.ShortName.StartsWith(array[0].Trim())).Select(pair => pair.Key.ToString()).ToArray();
-                                        else if (op == "*x")
-                                            array = this._ebSolution.Locations.Where(pair => pair.Value.ShortName.EndsWith(array[0].Trim())).Select(pair => pair.Key.ToString()).ToArray();
-                                        else if (op == "*x*")
-                                            array = this._ebSolution.Locations.Where(pair => pair.Value.ShortName.Contains(array[0].Trim())).Select(pair => pair.Key.ToString()).ToArray();
-                                        else if (op == "=")
-                                            array = this._ebSolution.Locations.Where(pair => pair.Value.ShortName == array[0].Trim()).Select(pair => pair.Key.ToString()).ToArray();
+                                        for (int i = 0; i < array.Length; i++)
+                                        {
+                                            if (array[i].Trim() != "")
+                                            {
+                                                if (op == "x*")
+                                                    templist.AddRange(this._ebSolution.Locations.Where(pair => pair.Value.ShortName.ToLower().StartsWith(array[i].Trim().ToLower())).Select(pair => pair.Key.ToString()).ToList());
+                                                else if (op == "*x")
+                                                    templist.AddRange(this._ebSolution.Locations.Where(pair => pair.Value.ShortName.ToLower().EndsWith(array[i].Trim().ToLower())).Select(pair => pair.Key.ToString()).ToList());
+                                                else if (op == "*x*")
+                                                    templist.AddRange(this._ebSolution.Locations.Where(pair => pair.Value.ShortName.ToLower().Contains(array[i].Trim().ToLower())).Select(pair => pair.Key.ToString()).ToList());
+                                                else if (op == "=")
+                                                    templist.AddRange(this._ebSolution.Locations.Where(pair => pair.Value.ShortName.ToLower() == array[i].Trim().ToLower()).Select(pair => pair.Key.ToString()).ToList());
+                                            }
+                                        }
                                     }
+                                    array = templist.ToArray();
                                     if (array.Length == 0)
                                         _cond += string.Format(" {0} = '{1}' OR", _dic.Column, 0);
                                     op = "=";
