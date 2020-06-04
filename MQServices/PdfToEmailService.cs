@@ -56,8 +56,8 @@ namespace ExpressBase.ServiceStack.MQServices
 
             if (request.ObjId > 0)
                 template_res = (EbObjectFetchLiveVersionResponse)objservice.Get(new EbObjectFetchLiveVersionRequest() { Id = request.ObjId });
-            else if (request.Refid != string.Empty)
-                template_res = (EbObjectFetchLiveVersionResponse)objservice.Get(new EbObjectParticularVersionRequest() { RefId = request.Refid });
+            else if (request.RefId != string.Empty)
+                template_res = (EbObjectFetchLiveVersionResponse)objservice.Get(new EbObjectParticularVersionRequest() { RefId = request.RefId });
 
             if (template_res != null && template_res.Data.Count > 0)
             {
