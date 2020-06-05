@@ -203,7 +203,7 @@ namespace ExpressBase.ServiceStack.Services
                     PlanUserCount = users.PlanUserCount,
                     SolutionSettings = wrap_sol.SolutionSettings,
                     ExtSolutionID = wrap_sol.EsolutionId,
-                    LocationTree = Loc.LocationTree
+                    //LocationTree = Loc.LocationTree
                 };
 
                 this.Redis.Set<Eb_Solution>(String.Format("solution_{0}", req.SolnId), sol_Obj);
