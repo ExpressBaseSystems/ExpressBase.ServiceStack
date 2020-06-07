@@ -46,72 +46,86 @@ namespace ExpressBase.ServiceStack.MQServices
         {
             string mailTo = string.Empty;
             EbConnectionFactory ebConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
-            var objservice = base.ResolveService<EbObjectService>();
-            objservice.EbConnectionFactory = ebConnectionFactory;
-            var dataservice = base.ResolveService<DataSourceService>();
-            dataservice.EbConnectionFactory = ebConnectionFactory;
-            var reportservice = base.ResolveService<ReportService>();
-            reportservice.EbConnectionFactory = ebConnectionFactory;
+            EbObjectService objservice = base.ResolveService<EbObjectService>();
+            DataSourceService dataservice = base.ResolveService<DataSourceService>();
+            ReportService reportservice = base.ResolveService<ReportService>();
+            reportservice.EbConnectionFactory = objservice.EbConnectionFactory = dataservice.EbConnectionFactory = ebConnectionFactory;
+            EbObjectFetchLiveVersionResponse template_res = null;
             ReportRenderResponse RepRes = new ReportRenderResponse();
-            EbObjectFetchLiveVersionResponse res = (EbObjectFetchLiveVersionResponse)objservice.Get(new EbObjectFetchLiveVersionRequest() { Id = request.ObjId });
-            EbEmailTemplate ebEmailTemplate = new EbEmailTemplate();
-            if (res.Data.Count > 0)
-            {
-                ebEmailTemplate = EbSerializers.Json_Deserialize(res.Data[0].Json);
-                if (ebEmailTemplate.DataSourceRefId != string.Empty)
-                {
-                    EbObjectParticularVersionResponse myDsres = (EbObjectParticularVersionResponse)objservice.Get(new EbObjectParticularVersionRequest() { RefId = ebEmailTemplate.DataSourceRefId });
-                    EbDataReader ebDataSource = new EbDataReader();
-                    ebDataSource = EbSerializers.Json_Deserialize(myDsres.Data[0].Json);
-                    var parameters = DataHelper.GetParams(ebConnectionFactory, false, request.Params, 0, 0);
-                    var ds = ebConnectionFactory.ObjectsDB.DoQueries(ebDataSource.Sql, parameters.ToArray());
-                    var pattern = @"\{{(.*?)\}}";
-                    IEnumerable<string> matches = Regex.Matches(ebEmailTemplate.Body, pattern).OfType<Match>()
-                     .Select(m => m.Groups[0].Value)
-                     .Distinct();
-                    foreach (var _col in matches /*ebEmailTemplate.DsColumnsCollection*/)
-                    {
-                        string str = /*dscol.Title*/_col.Replace("{{", "").Replace("}}", "");
+            EbEmailTemplate EmailTemplate = new EbEmailTemplate();
 
-                        foreach (var dt in ds.Tables)
-                        {
-                            string colname = dt.Rows[0][str.Split('.')[1]].ToString();
-                            ebEmailTemplate.Body = ebEmailTemplate.Body.Replace(/*dscol.Title*/_col, colname);
-                        }
-                    }
-                    if (ebEmailTemplate.To != string.Empty)
-                    {
-                        foreach (var dt in ds.Tables)
-                        {
-                            mailTo = dt.Rows[0][ebEmailTemplate.To.Split('.')[1]].ToString();
-                        }
-                    }
-                    }
-                if (ebEmailTemplate.DataSourceRefId != string.Empty)
+            if (request.ObjId > 0)
+                template_res = (EbObjectFetchLiveVersionResponse)objservice.Get(new EbObjectFetchLiveVersionRequest() { Id = request.ObjId });
+            else if (request.RefId != string.Empty)
+                template_res = (EbObjectFetchLiveVersionResponse)objservice.Get(new EbObjectParticularVersionRequest() { RefId = request.RefId });
+
+            if (template_res != null && template_res.Data.Count > 0)
+            {
+                EmailTemplate = EbSerializers.Json_Deserialize(template_res.Data[0].Json);
+                if (EmailTemplate.DataSourceRefId != string.Empty)
                 {
-                     RepRes = reportservice.Get(new ReportRenderRequest
+                    EbObjectParticularVersionResponse mailDs = (EbObjectParticularVersionResponse)objservice.Get(new EbObjectParticularVersionRequest() { RefId = EmailTemplate.DataSourceRefId });
+                    if (mailDs.Data.Count > 0)
                     {
-                        Refid = ebEmailTemplate.AttachmentReportRefID,
-                        RenderingUser = new User { FullName = "Machine User" },
-                        ReadingUser = new User { Preference = new Preferences { Locale = "en-US", TimeZone = "(UTC) Coordinated Universal Time" } },
-                        Params = request.Params
-                    });
-                    RepRes.StreamWrapper.Memorystream.Position = 0;
+                        EbDataReader dr = EbSerializers.Json_Deserialize(mailDs.Data[0].Json);
+                        IEnumerable<DbParameter> parameters = DataHelper.GetParams(ebConnectionFactory, false, request.Params, 0, 0);
+                        EbDataSet ds = ebConnectionFactory.ObjectsDB.DoQueries(dr.Sql, parameters.ToArray());
+                        string pattern = @"\{{(.*?)\}}";
+                        IEnumerable<string> matches = Regex.Matches(EmailTemplate.Body, pattern).OfType<Match>()
+                         .Select(m => m.Groups[0].Value)
+                         .Distinct();
+                        foreach (string _col in matches)
+                        {
+                            string str = _col.Replace("{{", "").Replace("}}", "");
+
+                            foreach (EbDataTable dt in ds.Tables)
+                            {
+                                string colval = dt.Rows[0][str.Split('.')[1]].ToString();
+                                EmailTemplate.Body = EmailTemplate.Body.Replace(_col, colval);
+                            }
+                        }
+                        if (EmailTemplate.To != string.Empty)
+                        {
+                            foreach (var dt in ds.Tables)
+                            {
+                                mailTo = dt.Rows[0][EmailTemplate.To.Split('.')[1]].ToString();
+                            }
+                        }
+                    }
                 }
-                MessageProducer3.Publish(new EmailServicesRequest()
+
+                EmailServicesRequest request1 = new EmailServicesRequest()
                 {
                     From = "request.from",
                     To = mailTo,
-                    Cc = ebEmailTemplate.Cc.Split(","),
-                    Bcc = ebEmailTemplate.Bcc.Split(","),
-                    Message = ebEmailTemplate.Body,
-                    Subject = ebEmailTemplate.Subject,
+                    Cc = EmailTemplate.Cc.Split(","),
+                    Bcc = EmailTemplate.Bcc.Split(","),
+                    Message = EmailTemplate.Body,
+                    Subject = EmailTemplate.Subject,
                     UserId = request.UserId,
                     UserAuthId = request.UserAuthId,
                     SolnId = request.SolnId,
-                    AttachmentReport = RepRes.ReportBytea,
-                    AttachmentName = RepRes.ReportName + ".pdf"
-                });
+                };
+
+                //adding email attachment. type pdf
+                if (EmailTemplate.AttachmentReportRefID != string.Empty)
+                {
+                    RepRes = reportservice.Get(new ReportRenderRequest
+                    {
+                        Refid = EmailTemplate.AttachmentReportRefID,
+                        RenderingUser = new User { FullName = "Machine User" },
+                        ReadingUser = new User { Preference = new Preferences { Locale = "en-US", TimeZone = "(UTC) Coordinated Universal Time" } },
+                        Params = request.Params
+                    }); 
+                    if (RepRes != null && RepRes.StreamWrapper != null && RepRes.StreamWrapper.Memorystream != null)
+                    {
+                        RepRes.StreamWrapper.Memorystream.Position = 0; 
+                        request1.AttachmentReport = RepRes.ReportBytea;
+                        request1.AttachmentName = RepRes.ReportName + ".pdf";
+                    }
+                }
+
+                MessageProducer3.Publish(request1);
             }
         }
     }
