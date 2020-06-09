@@ -3,7 +3,6 @@ using ExpressBase.Common.Data;
 using ExpressBase.Common.ServiceClients;
 using ExpressBase.Common.Structures;
 using ExpressBase.Objects;
-using ExpressBase.Objects.EmailRelated;
 using ExpressBase.Objects.Services;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ExpressBase.Security;
@@ -19,11 +18,11 @@ using System.Threading.Tasks;
 namespace ExpressBase.ServiceStack.MQServices
 {
     [Authenticate]
-    public class PdfToEmailService : EbBaseService
+    public class EmailTemplateSendService : EbBaseService
     {
-        public PdfToEmailService(IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_mqp, _mqc) { }
+        public EmailTemplateSendService(IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_mqp, _mqc) { }
 
-        public void Post(EmailAttachmentMqRequest request)
+        public void Post(EmailTemplateWithAttachmentMqRequest request)
         {
             MessageProducer3.Publish(new EmailAttachmenRequest()
             {
@@ -31,16 +30,17 @@ namespace ExpressBase.ServiceStack.MQServices
                 Params = request.Params,
                 UserId = request.UserId,
                 UserAuthId = request.UserAuthId,
-                SolnId = request.SolnId
+                SolnId = request.SolnId,
+                RefId = request.RefId
             });
         }
     }
 
     [Authenticate]
     [Restrict(InternalOnly = true)]
-    public class PdfToEmailInternalService : EbMqBaseService
+    public class EmailTemplateSendInternalService : EbMqBaseService
     {
-        public PdfToEmailInternalService(IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_mqp, _mqc) { }
+        public EmailTemplateSendInternalService(IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_mqp, _mqc) { }
 
         public void Post(EmailAttachmenRequest request)
         {
@@ -116,10 +116,10 @@ namespace ExpressBase.ServiceStack.MQServices
                         RenderingUser = new User { FullName = "Machine User" },
                         ReadingUser = new User { Preference = new Preferences { Locale = "en-US", TimeZone = "(UTC) Coordinated Universal Time" } },
                         Params = request.Params
-                    }); 
+                    });
                     if (RepRes != null && RepRes.StreamWrapper != null && RepRes.StreamWrapper.Memorystream != null)
                     {
-                        RepRes.StreamWrapper.Memorystream.Position = 0; 
+                        RepRes.StreamWrapper.Memorystream.Position = 0;
                         request1.AttachmentReport = RepRes.ReportBytea;
                         request1.AttachmentName = RepRes.ReportName + ".pdf";
                     }
