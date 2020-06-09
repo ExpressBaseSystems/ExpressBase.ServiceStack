@@ -2254,7 +2254,7 @@ namespace ExpressBase.ServiceStack.Services
                 }
                 else if (MSD[0].IsApproved == "F")
                 {
-                    qry_ += $@"update eb_meeting_slot_participants(confirmation)  values (1) where id = {CurrentUser.ParticipantId} ; ";
+                    qry_ += $@"update eb_meeting_slot_participants set confirmation = 1 where id = {CurrentUser.ParticipantId} ; ";
                 }
 
                 if (CurrentUser.ParticipantType == 1 && MSD[0].MaxHosts == (SPC.SlotHostCount + 1) )
