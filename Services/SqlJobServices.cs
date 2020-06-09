@@ -385,7 +385,6 @@ namespace ExpressBase.ServiceStack.Services
                             {
                                 RefId = _pusherRefid,
                                 RowId = _rowIds,
-                                UserObj = User,
                                 TransactionConnection = Connection
                             });
 
@@ -893,7 +892,6 @@ namespace ExpressBase.ServiceStack.Services
                     UserId = UserId,
                     UserAuthId = UserAuthId,
                     RecordId = 0,
-                    UserObj = User,
                     LocId = LocId,
                     SolnId = SolutionId,
                     WhichConsole = "uc",

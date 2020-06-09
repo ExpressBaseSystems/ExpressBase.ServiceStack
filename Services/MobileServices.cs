@@ -601,7 +601,6 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     RefId = request.WebFormRefId,
                     DataId = request.WebFormDataId,
-                    UserObj = UserObject,
                     SolnId = request.SolnId,
                     UserAuthId = request.UserAuthId,
                     UserId = request.UserId

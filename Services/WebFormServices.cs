@@ -43,7 +43,7 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     foreach (EbDataPusher pusher in Form.DataPushers)
                     {
-                        EbWebForm _form = GetWebFormObject(pusher.FormRefId);
+                        EbWebForm _form = this.GetWebFormObject(pusher.FormRefId, null, null);
                         TableSchema _table = _form.FormSchema.Tables.Find(e => e.TableName.Equals(_form.FormSchema.MasterTable));
                         //_table.Columns.Add(new ColumnSchema { ColumnName = "eb_push_id", EbDbType = (int)EbDbTypes.String, Control = new EbTextBox { Name = "eb_push_id", Label = "Push Id" } });// multi push id
                         //_table.Columns.Add(new ColumnSchema { ColumnName = "eb_src_id", EbDbType = (int)EbDbTypes.Decimal, Control = new EbNumeric { Name = "eb_src_id", Label = "Source Id" } });// source master table id
@@ -63,7 +63,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 if (eput.RefId != string.Empty)
                 {
-                    EbWebForm form = GetWebFormObject(eput.RefId);
+                    EbWebForm form = this.GetWebFormObject(eput.RefId, null, null);
                     TableSchema _table = form.FormSchema.Tables.Find(e => e.TableName.Equals(form.FormSchema.MasterTable));
                     if (_table != null)
                     {
@@ -896,11 +896,8 @@ namespace ExpressBase.ServiceStack.Services
             try
             {
                 Console.WriteLine("Requesting for WebFormData( Refid : " + request.RefId + ", Rowid : " + request.RowId + " ).................");
-                EbWebForm form = GetWebFormObject(request.RefId);
+                EbWebForm form = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId);
                 form.TableRowId = request.RowId;
-                form.RefId = request.RefId;
-                form.UserObj = request.UserObj ?? this.Redis.Get<User>(request.UserAuthId);
-                form.SolutionObj = GetSolutionObject(request.SolnId);
                 if (form.TableRowId > 0)
                     form.RefreshFormData(EbConnectionFactory.DataDB, this);
                 else
@@ -950,11 +947,8 @@ namespace ExpressBase.ServiceStack.Services
             GetPrefillDataResponse _dataset = new GetPrefillDataResponse();
             try
             {
-                EbWebForm form = GetWebFormObject(request.RefId);
+                EbWebForm form = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId);
                 form.TableRowId = 0;
-                form.RefId = request.RefId;
-                form.UserObj = request.UserObj;
-                form.SolutionObj = GetSolutionObject(request.SolnId);
                 form.RefreshFormData(EbConnectionFactory.DataDB, this, request.Params);
                 _dataset.FormDataWrap = JsonConvert.SerializeObject(new WebformDataWrapper { FormData = form.FormData, Status = (int)HttpStatusCodes.OK, Message = "Success" });
                 Console.WriteLine("End GetPrefillData : Success");
@@ -978,15 +972,11 @@ namespace ExpressBase.ServiceStack.Services
             GetExportFormDataResponse _dataset = new GetExportFormDataResponse();
             try
             {
-                EbWebForm sourceForm = GetWebFormObject(request.SourceRefId);
+                EbWebForm sourceForm = this.GetWebFormObject(request.SourceRefId, request.UserAuthId, request.SolnId);
                 sourceForm.TableRowId = request.SourceRowId;
-                sourceForm.RefId = request.SourceRefId;
-                sourceForm.UserObj = request.UserObj;
-                sourceForm.SolutionObj = GetSolutionObject(request.SolnId);
 
-                EbWebForm destForm = GetWebFormObject(request.DestRefId);
-                destForm.RefId = request.DestRefId;
-                destForm.UserObj = request.UserObj;
+                EbWebForm destForm = this.GetWebFormObject(request.DestRefId, null, null);
+                destForm.UserObj = sourceForm.UserObj;
                 destForm.SolutionObj = sourceForm.SolutionObj;
                 if (request.SourceRowId > 0)
                     sourceForm.GetImportData(EbConnectionFactory.DataDB, this, destForm);
@@ -1014,11 +1004,8 @@ namespace ExpressBase.ServiceStack.Services
             GetFormData4MobileResponse resp = null;
             try
             {
-                EbWebForm form = GetWebFormObject(request.RefId);
+                EbWebForm form = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId);
                 form.TableRowId = request.DataId;
-                form.RefId = request.RefId;
-                form.UserObj = request.UserObj;
-                form.SolutionObj = GetSolutionObject(request.SolnId);
                 List<Param> data = null;
                 if (form.TableRowId > 0)
                     data = form.GetFormData4Mobile(EbConnectionFactory.DataDB, this);
@@ -1044,10 +1031,7 @@ namespace ExpressBase.ServiceStack.Services
             try
             {
                 Console.WriteLine("Start ImportFormData");
-                EbWebForm form = GetWebFormObject(request.RefId);
-                form.RefId = request.RefId;
-                form.UserObj = this.Redis.Get<User>(request.UserAuthId);
-                form.SolutionObj = GetSolutionObject(request.SolnId);
+                EbWebForm form = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId);
                 form.ImportData(EbConnectionFactory.DataDB, this, request.Params, request.Trigger, request.RowId);
                 data = new WebformDataWrapper { FormData = form.FormData, Status = (int)HttpStatusCodes.OK, Message = "Success" };
                 Console.WriteLine("End ImportFormData : Success");
@@ -1071,11 +1055,8 @@ namespace ExpressBase.ServiceStack.Services
             try
             {
                 Console.WriteLine("Start GetDynamicGridData");
-                EbWebForm form = GetWebFormObject(request.RefId);
-                form.RefId = request.RefId;
+                EbWebForm form = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId);
                 form.TableRowId = request.RowId;
-                form.UserObj = this.Redis.Get<User>(request.UserAuthId);
-                form.SolutionObj = GetSolutionObject(request.SolnId);
                 WebformData wfd = form.GetDynamicGridData(EbConnectionFactory.DataDB, this, request.SourceId, request.Target);
                 data = new WebformDataWrapper { FormData = wfd, Status = (int)HttpStatusCodes.OK, Message = "Success" };
                 Console.WriteLine("End GetDynamicGridData : Success");
@@ -1096,7 +1077,7 @@ namespace ExpressBase.ServiceStack.Services
         public ExecuteSqlValueExprResponse Any(ExecuteSqlValueExprRequest request)
         {
             Console.WriteLine("Start ExecuteSqlValueExpr");
-            EbWebForm form = GetWebFormObject(request.RefId);
+            EbWebForm form = this.GetWebFormObject(request.RefId, null, null);
             string val = form.ExecuteSqlValueExpression(EbConnectionFactory.DataDB, this, request.Params, request.Trigger);
             Console.WriteLine("End ExecuteSqlValueExpr");
             return new ExecuteSqlValueExprResponse() { Data = val };
@@ -1105,14 +1086,14 @@ namespace ExpressBase.ServiceStack.Services
         public GetDataPusherJsonResponse Any(GetDataPusherJsonRequest request)
         {
             Console.WriteLine("Start GetDataPusherJson");
-            EbWebForm form = GetWebFormObject(request.RefId);
+            EbWebForm form = this.GetWebFormObject(request.RefId, null, null);
             string val = form.GetDataPusherJson();
             Console.WriteLine("End GetDataPusherJson");
             return new GetDataPusherJsonResponse() { Json = val };
         }
 
 
-        private EbWebForm GetWebFormObject(string RefId)
+        private EbWebForm GetWebFormObject(string RefId, string UserAuthId, string SolnId)
         {
             EbWebForm _form = this.Redis.Get<EbWebForm>(RefId);
             if (_form == null)
@@ -1122,6 +1103,11 @@ namespace ExpressBase.ServiceStack.Services
                 _form = EbSerializers.Json_Deserialize(formObj.Data[0].Json);
                 this.Redis.Set<EbWebForm>(RefId, _form);
             }
+            _form.RefId = RefId;
+            if (UserAuthId != null)
+                _form.UserObj = this.Redis.Get<User>(UserAuthId);
+            if (SolnId != null)
+                _form.SolutionObj = this.GetSolutionObject(SolnId);
             _form.AfterRedisGet(this);
             return _form;
         }
@@ -1173,13 +1159,10 @@ namespace ExpressBase.ServiceStack.Services
             {
                 DateTime startdt = DateTime.Now;
                 Console.WriteLine("Insert/Update WebFormData : start - " + startdt);
-                EbWebForm FormObj = GetWebFormObject(request.RefId);
-                FormObj.RefId = request.RefId;
+                EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId);
                 FormObj.TableRowId = request.RowId;
                 FormObj.FormData = request.FormData;
-                FormObj.UserObj = request.UserObj ?? this.Redis.Get<User>(request.UserAuthId);
                 FormObj.LocationId = request.CurrentLoc;
-                FormObj.SolutionObj = GetSolutionObject(request.SolnId);
 
                 //string Operation = OperationConstants.NEW;
                 //if (request.RowId > 0)
@@ -1246,8 +1229,7 @@ namespace ExpressBase.ServiceStack.Services
 
         public DeleteDataFromWebformResponse Any(DeleteDataFromWebformRequest request)
         {
-            EbWebForm FormObj = GetWebFormObject(request.RefId);
-            FormObj.UserObj = request.UserObj;
+            EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, null);
             foreach (int _rowId in request.RowId)
             {
                 FormObj.TableRowId = _rowId;
@@ -1261,9 +1243,8 @@ namespace ExpressBase.ServiceStack.Services
 
         public CancelDataFromWebformResponse Any(CancelDataFromWebformRequest request)
         {
-            EbWebForm FormObj = GetWebFormObject(request.RefId);
+            EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, null);
             FormObj.TableRowId = request.RowId;
-            FormObj.UserObj = request.UserObj;
             return new CancelDataFromWebformResponse
             {
                 RowAffected = FormObj.Cancel(EbConnectionFactory.DataDB)
@@ -1275,12 +1256,9 @@ namespace ExpressBase.ServiceStack.Services
             try
             {
                 Console.WriteLine("InsertOrUpdateFormDataRqst Service start");
-                EbWebForm FormObj = GetWebFormObject(request.RefId);
-                FormObj.RefId = request.RefId;
+                EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId);
                 FormObj.TableRowId = request.RecordId;
-                FormObj.UserObj = request.UserObj;
                 FormObj.LocationId = request.LocId;
-                FormObj.SolutionObj = GetSolutionObject(request.SolnId);
                 Console.WriteLine("InsertOrUpdateFormDataRqst PrepareWebFormData start : " + DateTime.Now);
                 FormObj.PrepareWebFormData(this.EbConnectionFactory.DataDB, this, request.PushJson, request.FormGlobals);
                 Console.WriteLine("InsertOrUpdateFormDataRqst Save start : " + DateTime.Now);
@@ -1305,11 +1283,8 @@ namespace ExpressBase.ServiceStack.Services
             try
             {
                 Console.WriteLine("InsertBatchDataRequest Service start");
-                EbWebForm FormObj = GetWebFormObject(request.RefId);
-                FormObj.RefId = request.RefId;
-                FormObj.UserObj = this.Redis.Get<User>(request.UserAuthId);
+                EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId);
                 FormObj.LocationId = request.LocId;
-                FormObj.SolutionObj = GetSolutionObject(request.SolnId);
                 List<int> Ids = FormObj.ProcessBatchRequest(request.Data, this.EbConnectionFactory.DataDB, this, request.TransactionConnection);
                 Console.WriteLine("InsertBatchDataRequest returning");
                 return new InsertBatchDataResponse() { Status = (int)HttpStatusCodes.OK, Message = "success", RecordIds = Ids };
@@ -1577,11 +1552,8 @@ namespace ExpressBase.ServiceStack.Services
             try
             {
                 Console.WriteLine("GetAuditTrail Service start. RefId : " + request.FormId + "\nDataId : " + request.RowId);
-                EbWebForm FormObj = GetWebFormObject(request.FormId);
-                FormObj.RefId = request.FormId;
+                EbWebForm FormObj = this.GetWebFormObject(request.FormId, request.UserAuthId, request.SolnId);
                 FormObj.TableRowId = request.RowId;
-                FormObj.UserObj = this.Redis.Get<User>(request.UserAuthId);
-                FormObj.SolutionObj = GetSolutionObject(request.SolnId);
                 string temp = FormObj.GetAuditTrail(EbConnectionFactory.DataDB, this);
                 Console.WriteLine("GetAuditTrail Service end");
                 return new GetAuditTrailResponse() { Json = temp };
@@ -1609,7 +1581,7 @@ namespace ExpressBase.ServiceStack.Services
         }
         public GetCtrlsFlatResponse Post(GetCtrlsFlatRequest request)
         {
-            EbWebForm form = this.GetWebFormObject(request.RefId);
+            EbWebForm form = this.GetWebFormObject(request.RefId, null, null);
 
             IEnumerable<EbControl> ctrls = form.Controls.FlattenEbControls();
 
@@ -2038,7 +2010,7 @@ namespace ExpressBase.ServiceStack.Services
 							 ON D.approved_slot_id = B.id
 							 LEFT JOIN	
 							 (select id, fullname from eb_users where eb_del = 'F')E
-							 ON E.id = D.user_id" ;
+							 ON E.id = D.user_id";
 
             try
             {
@@ -2105,24 +2077,24 @@ namespace ExpressBase.ServiceStack.Services
  	                     D.eb_meeting_slots_id = A.id ;
                 SELECT 
 		     A.id as slot_id , A.eb_meeting_schedule_id,
-			 COALESCE (B.id, 0) as participant_id,B.participant_type,B.type_of_user,B.user_id
+			 COALESCE (B.id, 0) as participant_id,B.participant_type,B.type_of_user,B.user_id,B.confirmation
 	            FROM
 				(SELECT id, eb_meeting_schedule_id
 	                     FROM  eb_meeting_slots 
 	                     WHERE  eb_del = 'F' and id = {0})A
 						LEFT JOIN	
-						(SELECT id, user_id,eb_meeting_schedule_id,approved_slot_id ,type_of_user,participant_type
+						(SELECT id, user_id,eb_meeting_schedule_id,approved_slot_id ,type_of_user,participant_type,confirmation
 	                     FROM eb_meeting_slot_participants
 	                     GROUP BY
-		                     id,user_id,eb_meeting_schedule_id, approved_slot_id, type_of_user,participant_type, eb_del
+		                     id,user_id,eb_meeting_schedule_id, approved_slot_id, type_of_user,participant_type, eb_del,confirmation
 	                     Having eb_del = 'F')B
                      ON B.eb_meeting_schedule_id = A.eb_meeting_schedule_id and B.approved_slot_id = A.id 
                          where participant_type is not null; 
  
  						select count(*) as slot_attendee_count from eb_meeting_slot_participants where approved_slot_id = {0} 
-									   and participant_type=2;
+									   and participant_type=2 and confirmation = 1;
 						select count(*) as slot_host_count from eb_meeting_slot_participants where approved_slot_id = {0} 
-									   and participant_type=1;
+									   and participant_type=1 and confirmation = 1;
             select id, user_ids,usergroup_id,role_ids, form_ref_id, form_data_id , description, expiry_datetime, eb_meeting_slots_id ,except_user_ids from eb_my_actions 
             where eb_meeting_slots_id = {0} and id= {1} and is_completed='F';
                                         ";
@@ -2131,11 +2103,13 @@ namespace ExpressBase.ServiceStack.Services
 
             List<MeetingScheduleDetails> MSD = new List<MeetingScheduleDetails>(); //MSD Meeting Schedule Details
             List<SlotParticipantsDetails> SPL = new List<SlotParticipantsDetails>(); //SPL Slot Participant List
+            SlotParticipantsDetails CurrentUser = new SlotParticipantsDetails(); //SPL Slot Participant List
             SlotParticipantCount SPC = new SlotParticipantCount(); //SPL Slot Participant Count
 
             MeetingUpdateByUsersResponse resp = new MeetingUpdateByUsersResponse();
             resp.ResponseStatus = true;
             bool Status = false;
+            bool IsDirectMeeting = false;
             try
             {
                 String _query = string.Format(query, request.Id, request.MyActionId); ;
@@ -2164,6 +2138,7 @@ namespace ExpressBase.ServiceStack.Services
                         ParticipantType = Convert.ToInt32(ds.Tables[1].Rows[k]["participant_type"]),
                         TypeOfUser = Convert.ToInt32(ds.Tables[1].Rows[k]["type_of_user"]),
                         UserId = Convert.ToInt32(ds.Tables[1].Rows[k]["user_id"]),
+                        Confirmation = Convert.ToInt32(ds.Tables[1].Rows[k]["confirmation"]),
                     });
                 }
                 SPC.SlotAttendeeCount = Convert.ToInt32(ds.Tables[2].Rows[0]["slot_attendee_count"]);
@@ -2192,9 +2167,23 @@ namespace ExpressBase.ServiceStack.Services
                 Console.WriteLine(e.Message, e.StackTrace);
             }
             string qry_ = "";
-            if (MSD[0].MaxHosts > SPC.SlotHostCount && MyActionObj.Count != 0)
+            for (int i = 0; i < SPL.Count; i++)
             {
-                if (MSD[0].IsApproved=="F" && MSD[0].MinHosts == (SPC.SlotHostCount + 1) && MSD[0].MinAttendees <= SPC.SlotAttendeeCount && MSD[0].MaxAttendees >= SPC.SlotAttendeeCount)
+                if (SPL[i].UserId == request.UserInfo.UserId)
+                {
+                    CurrentUser.UserId = SPL[i].UserId;
+                    CurrentUser.TypeOfUser = SPL[i].TypeOfUser;
+                    CurrentUser.ParticipantId = SPL[i].ParticipantId;
+                    CurrentUser.ParticipantType = SPL[i].ParticipantType;
+                    CurrentUser.ParticipantType = SPL[i].ParticipantType;
+                    CurrentUser.SlotId = SPL[i].SlotId;
+                    CurrentUser.MeetingScheduleId = SPL[i].MeetingScheduleId;
+                    IsDirectMeeting = true;
+                }
+            }
+            if (MSD[0].MaxHosts > SPC.SlotHostCount && MyActionObj.Count != 0 && IsDirectMeeting == false)
+            {
+                if (MSD[0].IsApproved == "F" && MSD[0].MinHosts == (SPC.SlotHostCount + 1) && MSD[0].MinAttendees <= SPC.SlotAttendeeCount && MSD[0].MaxAttendees >= SPC.SlotAttendeeCount)
                 {
                     qry_ += $@"insert into eb_meetings (eb_meeting_slots_id, eb_created_at, eb_created_by) values({MSD[0].SlotId}, now(), {request.UserInfo.UserId});
                         insert into eb_meeting_slot_participants(user_id, confirmation, eb_meeting_schedule_id, approved_slot_id, name, email, type_of_user, participant_type) 
@@ -2232,11 +2221,86 @@ namespace ExpressBase.ServiceStack.Services
                         NOW(),{MyActionObj[0].FormRefId}, {request.Id}, {MyActionObj[0].Description},'{MyActionTypes.Meeting}',
                         {MyActionObj[0].Description} , 'F','F' ,'{request.UserInfo.UserId},{MyActionObj[0].ExceptUserIds}');";
                 }
-               
-            }
-            else
-            {
 
+            }
+            else if (CurrentUser.ParticipantType == 1 && IsDirectMeeting  && MyActionObj.Count != 0 && MSD[0].MaxHosts > SPC.SlotHostCount )
+            {
+                if (MSD[0].IsApproved == "F" && MSD[0].MinHosts == (SPC.SlotHostCount + 1) && MSD[0].MinAttendees <= SPC.SlotAttendeeCount && MSD[0].MaxAttendees >= SPC.SlotAttendeeCount)
+                {
+                    qry_ += $@"insert into eb_meetings (eb_meeting_slots_id, eb_created_at, eb_created_by) values({MSD[0].SlotId}, now(), {request.UserInfo.UserId});
+                        update eb_meeting_slot_participants set confirmation = 1 where id = {CurrentUser.ParticipantId} ; ";
+                    for (int k = 0; k < SPL.Count; k++)
+                    {
+                        if (SPL[k].Confirmation == 1)
+                            qry_ += $"insert into eb_meeting_participants(eb_meeting_id, eb_slot_participant_id) values ( eb_currval('eb_meetings_id_seq'),{SPL[k].ParticipantId}); ";
+                    }
+                  qry_ += $"update eb_meeting_slots set is_approved = 'T' where  id = {request.Id}; ";
+                }
+                else if (MSD[0].IsApproved == "T" && MSD[0].MeetingId > 0)
+                {
+                    qry_ += $@"update eb_meeting_slot_participants set confirmation = 1 where id = {CurrentUser.ParticipantId} ;  ";
+                    qry_ += $"insert into eb_meeting_participants(eb_meeting_id, eb_slot_participant_id ) values ({MSD[0].MeetingId}, {CurrentUser.ParticipantId} );";
+                }
+                else if (MSD[0].IsApproved == "F")
+                {
+                    qry_ += $@"update eb_meeting_slot_participants set confirmation = 1 where id = {CurrentUser.ParticipantId} ; ";
+                }
+
+                if (CurrentUser.ParticipantType == 1 && MSD[0].MaxHosts == (SPC.SlotHostCount + 1) )
+                {
+                    qry_ += $"update eb_my_actions set completed_at = now(), completed_by ={request.UserInfo.UserId} , is_completed='T' where eb_meeting_slots_id = {request.Id} " +
+                        $"and id= {request.MyActionId}; ";
+                }
+                else
+                {
+                    qry_ += $"update eb_my_actions set completed_at = now(), completed_by ={request.UserInfo.UserId} , is_completed='T' where eb_meeting_slots_id = {request.Id} " +
+                       $"and id= {request.MyActionId};";
+                    qry_ += $@"insert into eb_my_actions (user_ids,usergroup_id,role_ids,from_datetime,form_ref_id,form_data_id,description,my_action_type , eb_meeting_slots_id,
+                        is_completed,eb_del , except_user_ids)
+                        values('{MyActionObj[0].UserIds}',{MyActionObj[0].UserGroupId},'{MyActionObj[0].RoleIds}',
+                        NOW(),{MyActionObj[0].FormRefId}, {request.Id}, {MyActionObj[0].Description},'{MyActionTypes.Meeting}',
+                        {MyActionObj[0].Description} , 'F','F' ,'{request.UserInfo.UserId},{MyActionObj[0].ExceptUserIds}');";
+                }
+
+            }
+            else if(CurrentUser.ParticipantType == 2 && IsDirectMeeting && MyActionObj.Count != 0 &&  MSD[0].MaxAttendees > SPC.SlotAttendeeCount)
+            {
+                if (MSD[0].IsApproved == "F" && MSD[0].MinAttendees == (SPC.SlotAttendeeCount + 1) && MSD[0].MinHosts <= SPC.SlotHostCount && MSD[0].MaxHosts >= SPC.SlotHostCount)
+                {
+                    qry_ += $@"insert into eb_meetings (eb_meeting_slots_id, eb_created_at, eb_created_by) values({MSD[0].SlotId}, now(), {request.UserInfo.UserId});
+                        update eb_meeting_slot_participants set confirmation = 1 where id = {CurrentUser.ParticipantId} ;";
+                    for (int k = 0; k < SPL.Count; k++)
+                    {
+                        if (SPL[k].Confirmation == 1)
+                            qry_ += $"insert into eb_meeting_participants(eb_meeting_id, eb_slot_participant_id) values ( eb_currval('eb_meetings_id_seq'),{SPL[k].ParticipantId}); ";
+                    }
+                  qry_ += $"update eb_meeting_slots set is_approved = 'T' where  id = {request.Id}; ";
+                }
+                else if (MSD[0].IsApproved == "T" && MSD[0].MeetingId > 0)
+                {
+                    qry_ += $@"update eb_meeting_slot_participants set confirmation = 1 where id = {CurrentUser.ParticipantId} ;";
+                    qry_ += $"insert into eb_meeting_participants(eb_meeting_id, eb_slot_participant_id ) values ({MSD[0].MeetingId}, {CurrentUser.ParticipantId} );";
+                }
+                else if (MSD[0].IsApproved == "F")
+                {
+                    qry_ += $@"update eb_meeting_slot_participants set confirmation = 1 where id = {CurrentUser.ParticipantId} ; ";
+                }
+
+                if (CurrentUser.ParticipantType == 2 && MSD[0].MaxAttendees == (SPC.SlotAttendeeCount + 1))
+                {
+                    qry_ += $"update eb_my_actions set completed_at = now(), completed_by ={request.UserInfo.UserId} , is_completed='T' where eb_meeting_slots_id = {request.Id} " +
+                        $"and id= {request.MyActionId}; ";
+                }
+                else
+                {
+                    qry_ += $"update eb_my_actions set completed_at = now(), completed_by ={request.UserInfo.UserId} , is_completed='T' where eb_meeting_slots_id = {request.Id} " +
+                       $"and id= {request.MyActionId};";
+                    qry_ += $@"insert into eb_my_actions (user_ids,usergroup_id,role_ids,from_datetime,form_ref_id,form_data_id,description,my_action_type , eb_meeting_slots_id,
+                        is_completed,eb_del , except_user_ids)
+                        values('{MyActionObj[0].UserIds}',{MyActionObj[0].UserGroupId},'{MyActionObj[0].RoleIds}',
+                        NOW(),{MyActionObj[0].FormRefId}, {request.Id}, {MyActionObj[0].Description},'{MyActionTypes.Meeting}',
+                        {MyActionObj[0].Description} , 'F','F' ,'{request.UserInfo.UserId},{MyActionObj[0].ExceptUserIds}');";
+                }
             }
             try
             {
@@ -2278,7 +2342,7 @@ namespace ExpressBase.ServiceStack.Services
                         UserGroupId = Convert.ToInt32(dt.Rows[i]["usergroup_id"]),
                         FormDataId = Convert.ToInt32(dt.Rows[i]["form_data_id"]),
                     });
-                 }
+                }
                 qry_ += $"update eb_my_actions set completed_at = now(), completed_by ={request.UserInfo.UserId} , is_completed='T' where eb_meeting_slots_id = {request.SlotId} " +
                       $"and id= {request.MyActionId};";
                 qry_ += $@"insert into eb_my_actions (user_ids,usergroup_id,role_ids,from_datetime,form_ref_id,form_data_id,description,my_action_type , eb_meeting_slots_id,
@@ -2287,9 +2351,9 @@ namespace ExpressBase.ServiceStack.Services
                         NOW(),{MyActionObj[0].FormRefId}, {request.SlotId}, {MyActionObj[0].Description},'{MyActionTypes.Meeting}',
                         {MyActionObj[0].Description} , 'F','F' ,'{request.UserInfo.UserId},{MyActionObj[0].ExceptUserIds}');";
 
-                    int a = this.EbConnectionFactory.DataDB.DoNonQuery(qry_);
+                int a = this.EbConnectionFactory.DataDB.DoNonQuery(qry_);
                 Resp.ResponseStatus = true;
-             
+
             }
             catch (Exception e)
             {
