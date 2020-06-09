@@ -39,34 +39,50 @@ namespace ExpressBase.ServiceStack.MQServices
     public class SMSService : EbMqBaseService
     {
         public SMSService(IMessageProducer _mqp) : base(_mqp) { }
-        
+
         public void Post(SMSCreateRequest request)
         {
+            string smsTo = string.Empty;
             EbConnectionFactory ebConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
             EbObjectService objservice = base.ResolveService<EbObjectService>();
             objservice.EbConnectionFactory = ebConnectionFactory;
             EbObjectFetchLiveVersionResponse res = (EbObjectFetchLiveVersionResponse)objservice.Get(new EbObjectFetchLiveVersionRequest() { Id = request.ObjId });
-            EbSmsTemplate SmsTemplate = new EbSmsTemplate();
-            SmsTemplate = EbSerializers.Json_Deserialize(res.Data[0].Json);
-            if (SmsTemplate.DataSourceRefId != string.Empty)
-            {
-                EbObjectParticularVersionResponse myDsres = (EbObjectParticularVersionResponse)objservice.Get(new EbObjectParticularVersionRequest() { RefId = SmsTemplate.DataSourceRefId });
-                EbDataReader reader = new EbDataReader();
-                reader = EbSerializers.Json_Deserialize(myDsres.Data[0].Json);
-                IEnumerable<DbParameter> parameters = DataHelper.GetParams(ebConnectionFactory, false, request.Params, 0, 0);
-                EbDataSet ds = ebConnectionFactory.ObjectsDB.DoQueries(reader.Sql, parameters.ToArray());
-                string pattern = @"\{{(.*?)\}}";
-                IEnumerable<string> matches = Regex.Matches(SmsTemplate.Body, pattern).OfType<Match>()
-                 .Select(m => m.Groups[0].Value)
-                 .Distinct();
-                foreach (string _col in matches)
-                {
-                    string str = _col.Replace("{{", "").Replace("}}", "");
+            EbSmsTemplate SmsTemplate = new EbSmsTemplate();            
 
-                    foreach (EbDataTable dt in ds.Tables)
+            if (res != null && (SmsTemplate.DataSourceRefId != string.Empty || SmsTemplate.To != string.Empty))
+            {
+                SmsTemplate = EbSerializers.Json_Deserialize(res.Data[0].Json);
+                if (SmsTemplate.DataSourceRefId != string.Empty)
+                {
+                    EbObjectParticularVersionResponse myDsres = (EbObjectParticularVersionResponse)objservice.Get(new EbObjectParticularVersionRequest() { RefId = SmsTemplate.DataSourceRefId });
+                    if (myDsres.Data.Count > 0)
                     {
-                        string colname = dt.Rows[0][str.Split('.')[1]].ToString();
-                        SmsTemplate.Body = SmsTemplate.Body.Replace(_col, colname);
+                        EbDataReader reader = new EbDataReader();
+                        reader = EbSerializers.Json_Deserialize(myDsres.Data[0].Json);
+                        IEnumerable<DbParameter> parameters = DataHelper.GetParams(ebConnectionFactory, false, request.Params, 0, 0);
+                        EbDataSet ds = ebConnectionFactory.ObjectsDB.DoQueries(reader.Sql, parameters.ToArray());
+                        string pattern = @"\{{(.*?)\}}";
+                        IEnumerable<string> matches = Regex.Matches(SmsTemplate.Body, pattern).OfType<Match>()
+                         .Select(m => m.Groups[0].Value)
+                         .Distinct();
+                        foreach (string _col in matches)
+                        {
+                            string str = _col.Replace("{{", "").Replace("}}", "");
+
+                            foreach (EbDataTable dt in ds.Tables)
+                            {
+                                string colname = dt.Rows[0][str.Split('.')[1]].ToString();
+                                SmsTemplate.Body = SmsTemplate.Body.Replace(_col, colname);
+                            }
+                        }
+
+                        if (SmsTemplate.To != string.Empty)
+                        {
+                            foreach (var dt in ds.Tables)
+                            {
+                                smsTo = dt.Rows[0][SmsTemplate.To.Split('.')[1]].ToString();
+                            }
+                        }
                     }
                 }
             }
