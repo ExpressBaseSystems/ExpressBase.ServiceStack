@@ -1177,22 +1177,7 @@ namespace ExpressBase.ServiceStack.Services
                 Console.WriteLine("Insert/Update WebFormData : AfterExecutionIfUserCreated start - " + DateTime.Now);
                 FormObj.AfterExecutionIfUserCreated(this, this.EbConnectionFactory.EmailConnection, MessageProducer3);
                 Console.WriteLine("Insert/Update WebFormData end : Execution Time = " + (DateTime.Now - startdt).TotalMilliseconds);
-               
-                //if (FormObj.Notifications.Count > 0 && FormObj.Notifications[0] is EbFnEmail)
-                //{
-                //    string _refid = (FormObj.Notifications[0] as EbFnEmail).RefId;
-                //    EmailTemplateSendService service = base.ResolveService<EmailTemplateSendService>();
-                //    service.Post(new EmailTemplateWithAttachmentMqRequest
-                //    {
-                //        RefId = _refid,
-                //        Params = new List<Param> { },
-                //        SolnId = request.SolnId,
-                //        UserAuthId = request.UserAuthId,
-                //        UserId = request.UserId
-                //    });
-
-                //}
-
+                
                 return new InsertDataFromWebformResponse()
                 {
                     Message = "Success",
