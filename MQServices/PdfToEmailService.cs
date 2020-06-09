@@ -3,7 +3,6 @@ using ExpressBase.Common.Data;
 using ExpressBase.Common.ServiceClients;
 using ExpressBase.Common.Structures;
 using ExpressBase.Objects;
-using ExpressBase.Objects.EmailRelated;
 using ExpressBase.Objects.Services;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ExpressBase.Security;
@@ -19,30 +18,31 @@ using System.Threading.Tasks;
 namespace ExpressBase.ServiceStack.MQServices
 {
     [Authenticate]
-    public class PdfToEmailService : EbBaseService
+    public class EmailTemplateSendService : EbBaseService
     {
-        public PdfToEmailService(IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_mqp, _mqc) { }
+        public EmailTemplateSendService(IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_mqp, _mqc) { }
 
-        public void Post(EmailAttachmentMqRequest request)
+        public void Post(EmailTemplateWithAttachmentMqRequest request)
         {
-            MessageProducer3.Publish(new EmailAttachmenRequest()
+            MessageProducer3.Publish(new EmailAttachmentRequest()
             {
                 ObjId = request.ObjId,
                 Params = request.Params,
                 UserId = request.UserId,
                 UserAuthId = request.UserAuthId,
-                SolnId = request.SolnId
+                SolnId = request.SolnId,
+                RefId = request.RefId
             });
         }
     }
 
     [Authenticate]
     [Restrict(InternalOnly = true)]
-    public class PdfToEmailInternalService : EbMqBaseService
+    public class EmailTemplateSendInternalService : EbMqBaseService
     {
-        public PdfToEmailInternalService(IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_mqp, _mqc) { }
+        public EmailTemplateSendInternalService(IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_mqp, _mqc) { }
 
-        public void Post(EmailAttachmenRequest request)
+        public void Post(EmailAttachmentRequest request)
         {
             string mailTo = string.Empty;
             EbConnectionFactory ebConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
@@ -50,18 +50,28 @@ namespace ExpressBase.ServiceStack.MQServices
             DataSourceService dataservice = base.ResolveService<DataSourceService>();
             ReportService reportservice = base.ResolveService<ReportService>();
             reportservice.EbConnectionFactory = objservice.EbConnectionFactory = dataservice.EbConnectionFactory = ebConnectionFactory;
-            EbObjectFetchLiveVersionResponse template_res = null;
             ReportRenderResponse RepRes = new ReportRenderResponse();
             EbEmailTemplate EmailTemplate = new EbEmailTemplate();
 
             if (request.ObjId > 0)
-                template_res = (EbObjectFetchLiveVersionResponse)objservice.Get(new EbObjectFetchLiveVersionRequest() { Id = request.ObjId });
-            else if (request.RefId != string.Empty)
-                template_res = (EbObjectFetchLiveVersionResponse)objservice.Get(new EbObjectParticularVersionRequest() { RefId = request.RefId });
-
-            if (template_res != null && template_res.Data.Count > 0)
             {
-                EmailTemplate = EbSerializers.Json_Deserialize(template_res.Data[0].Json);
+                EbObjectFetchLiveVersionResponse template_res = (EbObjectFetchLiveVersionResponse)objservice.Get(new EbObjectFetchLiveVersionRequest() { Id = request.ObjId });
+                if (template_res != null && template_res.Data.Count > 0)
+                {
+                    EmailTemplate = EbSerializers.Json_Deserialize(template_res.Data[0].Json);
+                }
+            }
+            else if (request.RefId != string.Empty)
+            {
+                EbObjectParticularVersionResponse template_res = (EbObjectParticularVersionResponse)objservice.Get(new EbObjectParticularVersionRequest() { RefId = request.RefId });
+                if (template_res != null && template_res.Data.Count > 0)
+                {
+                    EmailTemplate = EbSerializers.Json_Deserialize(template_res.Data[0].Json);
+                }
+            }
+
+            if (EmailTemplate != null)
+            {
                 if (EmailTemplate.DataSourceRefId != string.Empty)
                 {
                     EbObjectParticularVersionResponse mailDs = (EbObjectParticularVersionResponse)objservice.Get(new EbObjectParticularVersionRequest() { RefId = EmailTemplate.DataSourceRefId });
@@ -95,8 +105,7 @@ namespace ExpressBase.ServiceStack.MQServices
                 }
 
                 EmailServicesRequest request1 = new EmailServicesRequest()
-                {
-                    From = "request.from",
+                {                    
                     To = mailTo,
                     Cc = EmailTemplate.Cc.Split(","),
                     Bcc = EmailTemplate.Bcc.Split(","),
@@ -116,10 +125,10 @@ namespace ExpressBase.ServiceStack.MQServices
                         RenderingUser = new User { FullName = "Machine User" },
                         ReadingUser = new User { Preference = new Preferences { Locale = "en-US", TimeZone = "(UTC) Coordinated Universal Time" } },
                         Params = request.Params
-                    }); 
+                    });
                     if (RepRes != null && RepRes.StreamWrapper != null && RepRes.StreamWrapper.Memorystream != null)
                     {
-                        RepRes.StreamWrapper.Memorystream.Position = 0; 
+                        RepRes.StreamWrapper.Memorystream.Position = 0;
                         request1.AttachmentReport = RepRes.ReportBytea;
                         request1.AttachmentName = RepRes.ReportName + ".pdf";
                     }

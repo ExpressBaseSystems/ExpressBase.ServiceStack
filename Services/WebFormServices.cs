@@ -22,6 +22,7 @@ using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
+using ExpressBase.ServiceStack.MQServices;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -1176,6 +1177,7 @@ namespace ExpressBase.ServiceStack.Services
                 Console.WriteLine("Insert/Update WebFormData : AfterExecutionIfUserCreated start - " + DateTime.Now);
                 FormObj.AfterExecutionIfUserCreated(this, this.EbConnectionFactory.EmailConnection, MessageProducer3);
                 Console.WriteLine("Insert/Update WebFormData end : Execution Time = " + (DateTime.Now - startdt).TotalMilliseconds);
+                
                 return new InsertDataFromWebformResponse()
                 {
                     Message = "Success",
@@ -2226,7 +2228,7 @@ namespace ExpressBase.ServiceStack.Services
                 }
                 else if (MSD[0].IsApproved == "F")
                 {
-                    qry_ += $@"update eb_meeting_slot_participants(confirmation)  values (1) where id = {CurrentUser.ParticipantId} ; ";
+                    qry_ += $@"update eb_meeting_slot_participants set confirmation = 1 where id = {CurrentUser.ParticipantId} ; ";
                 }
 
                 if (CurrentUser.ParticipantType == 1 && MSD[0].MaxHosts == (SPC.SlotHostCount + 1) )
