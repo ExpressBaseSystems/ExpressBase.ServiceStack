@@ -72,7 +72,7 @@ namespace ExpressBase.ServiceStack.MQServices
 
             if (EmailTemplate != null)
             {
-                if (EmailTemplate.DataSourceRefId != string.Empty)
+                if (EmailTemplate.DataSourceRefId != string.Empty && EmailTemplate.To != string.Empty)
                 {
                     EbObjectParticularVersionResponse mailDs = (EbObjectParticularVersionResponse)objservice.Get(new EbObjectParticularVersionRequest() { RefId = EmailTemplate.DataSourceRefId });
                     if (mailDs.Data.Count > 0)
@@ -94,18 +94,15 @@ namespace ExpressBase.ServiceStack.MQServices
                                 EmailTemplate.Body = EmailTemplate.Body.Replace(_col, colval);
                             }
                         }
-                        if (EmailTemplate.To != string.Empty)
+                        foreach (var dt in ds.Tables)
                         {
-                            foreach (var dt in ds.Tables)
-                            {
-                                mailTo = dt.Rows[0][EmailTemplate.To.Split('.')[1]].ToString();
-                            }
+                            mailTo = dt.Rows[0][EmailTemplate.To.Split('.')[1]].ToString();
                         }
                     }
                 }
 
                 EmailServicesRequest request1 = new EmailServicesRequest()
-                {                    
+                {
                     To = mailTo,
                     Cc = EmailTemplate.Cc.Split(","),
                     Bcc = EmailTemplate.Bcc.Split(","),
