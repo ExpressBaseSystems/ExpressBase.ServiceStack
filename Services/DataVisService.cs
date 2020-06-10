@@ -34,6 +34,7 @@ using ExpressBase.Common.Singletons;
 using ExpressBase.Common.Helpers;
 using ExpressBase.Common.LocationNSolution;
 using System.Dynamic;
+using ExpressBase.ServiceStack.Services;
 
 namespace ExpressBase.ServiceStack
 {
@@ -296,16 +297,17 @@ namespace ExpressBase.ServiceStack
                 EbDataReader _ds = null;
                 EbDataSet _dataset = null;
                 bool _isPaged = false;
-                if (request.RefId != string.Empty && request.RefId != null)
+                if(_dV.IsDataFromApi)
+                    _dataset = GetDatafromUrl();
+                else if (request.RefId != string.Empty && request.RefId != null)
                     _ds = this.Redis.Get<EbDataReader>(request.RefId);
-                else if (_dV.Sql != null)
+                else if (_dV.Sql != null && _dV.Sql != string.Empty)
                 {
                     _ds = new EbDataReader { Sql = _dV.Sql };
                     request.Params.AddRange(_dV.ParamsList);
                 }
-                else
-                    _dataset = GetDatafromUrl(_dV.Url);
-                if (_dataset == null)
+
+                if (!_dV.IsDataFromApi )
                 {
                     if (_ds == null)
                     {
@@ -627,9 +629,11 @@ namespace ExpressBase.ServiceStack
             return null;
         }
 
-        private EbDataSet GetDatafromUrl(string url)
+        private EbDataSet GetDatafromUrl()
         {
-            return new EbDataSet();
+            var _service = base.ResolveService<ApiConversionService>();
+            var result = (ApiConversionResponse)_service.Any(new ApiConversionRequest() { Url = _dV.Url, Method=_dV.Method, Parameters= _dV.Parameters, Headers = _dV.Headers });
+            return result.dataset;
         }
 
         [CompressResponse]
