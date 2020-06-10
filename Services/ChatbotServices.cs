@@ -91,6 +91,7 @@ namespace ExpressBase.ServiceStack
 			bool changeFlag = false;
 			if (WebForm == null)
 			{
+				WebForm = new EbWebForm();
 				WebForm.EbSid = "webform_autogen_1";
 				WebForm.Name = BotForm.Name + "_autogen_webform";
 				WebForm.DisplayName = BotForm.DisplayName + " AutoGen Webform";
@@ -98,6 +99,7 @@ namespace ExpressBase.ServiceStack
 				WebForm.Padding = new UISides { Top = 8, Right = 8, Bottom = 8, Left = 8 };
 				WebForm.Validators = new List<EbValidator>();
 				WebForm.Controls = this.GetMappedControls(BotForm.Controls);
+				WebForm.Notifications = BotForm.Notifications;
 				WebForm.BeforeSave(this);
 				changeFlag = true;
 			}
@@ -120,6 +122,7 @@ namespace ExpressBase.ServiceStack
 				WebForm.DisplayName = BotForm.DisplayName + " AutoGen Webform";
 				WebForm.TableName = BotForm.TableName;
 				WebForm.Controls = this.GetMappedControls(BotForm.Controls);
+				WebForm.Notifications = BotForm.Notifications;
 				WebForm.BeforeSave(this);
 			}
 			return changeFlag;

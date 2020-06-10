@@ -267,10 +267,10 @@ namespace ExpressBase.ServiceStack
             mqServer.RetryCount = 1;
 
             mqServer.RegisterHandler<EmailServicesRequest>(base.ExecuteMessage);
-            mqServer.RegisterHandler<EmailAttachmenRequest>(base.ExecuteMessage);
+            mqServer.RegisterHandler<EmailAttachmentRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<ExportApplicationRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<ImportApplicationRequest>(base.ExecuteMessage);
-            mqServer.RegisterHandler<SMSCreateRequest>(base.ExecuteMessage);
+            mqServer.RegisterHandler<SMSPrepareRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<ReportInternalRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<AddSchedulesToSolutionRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<ExportToExcelServiceRequest>(base.ExecuteMessage);

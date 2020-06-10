@@ -233,7 +233,7 @@ namespace ExpressBase.ServiceStack.MQServices
 
         public void PublishSMS(string _to)
         {
-            MessageProducer3.Publish(new SMSCreateRequest
+            MessageProducer3.Publish(new SMSPrepareRequest
             {
                 ObjId = JobArgs.ObjId,
                 Params = JobArgs.Params,

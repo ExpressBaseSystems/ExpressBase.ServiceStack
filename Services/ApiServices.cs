@@ -5,7 +5,6 @@ using ExpressBase.Common.Extensions;
 using ExpressBase.Common.Objects;
 using ExpressBase.Common.Structures;
 using ExpressBase.Objects;
-using ExpressBase.Objects.EmailRelated;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ExpressBase.ServiceStack.MQServices;
 using Newtonsoft.Json;
@@ -244,7 +243,7 @@ namespace ExpressBase.ServiceStack.Services
         //execute email template object
         private bool ExcEmail(EbEmailNode template, int step)
         {
-            var EmailService = base.ResolveService<PdfToEmailService>();
+            var EmailService = base.ResolveService<EmailTemplateSendService>();
             ObjWrapperInt ObjectWrapper = null;
             bool stat;
             try
@@ -260,7 +259,7 @@ namespace ExpressBase.ServiceStack.Services
 
                 this.FillParams(InputParams, step);//fill parameter value from prev component
 
-                EmailService.Post(new EmailAttachmentMqRequest
+                EmailService.Post(new EmailTemplateWithAttachmentMqRequest
                 {
                     SolnId = this.SolutionId,
                     Params = InputParams,
