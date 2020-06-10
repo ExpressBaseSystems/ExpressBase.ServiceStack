@@ -94,44 +94,46 @@ namespace ExpressBase.ServiceStack.MQServices
                                 EmailTemplate.Body = EmailTemplate.Body.Replace(_col, colval);
                             }
                         }
-                        foreach (var dt in ds.Tables)
+                        foreach (EbDataTable dt in ds.Tables)
                         {
                             mailTo = dt.Rows[0][EmailTemplate.To.Split('.')[1]].ToString();
                         }
                     }
                 }
-
-                EmailServicesRequest request1 = new EmailServicesRequest()
+                if (mailTo != string.Empty)
                 {
-                    To = mailTo,
-                    Cc = EmailTemplate.Cc.Split(","),
-                    Bcc = EmailTemplate.Bcc.Split(","),
-                    Message = EmailTemplate.Body,
-                    Subject = EmailTemplate.Subject,
-                    UserId = request.UserId,
-                    UserAuthId = request.UserAuthId,
-                    SolnId = request.SolnId,
-                };
+                    EmailServicesRequest request1 = new EmailServicesRequest()
+                    {
+                        To = mailTo,
+                        Cc = EmailTemplate.Cc.Split(","),
+                        Bcc = EmailTemplate.Bcc.Split(","),
+                        Message = EmailTemplate.Body,
+                        Subject = EmailTemplate.Subject,
+                        UserId = request.UserId,
+                        UserAuthId = request.UserAuthId,
+                        SolnId = request.SolnId,
+                    };
 
-                //adding email attachment. type pdf
-                if (EmailTemplate.AttachmentReportRefID != string.Empty)
-                {
-                    RepRes = reportservice.Get(new ReportRenderRequest
+                    //adding email attachment. type pdf
+                    if (EmailTemplate.AttachmentReportRefID != string.Empty)
                     {
-                        Refid = EmailTemplate.AttachmentReportRefID,
-                        RenderingUser = new User { FullName = "Machine User" },
-                        ReadingUser = new User { Preference = new Preferences { Locale = "en-US", TimeZone = "(UTC) Coordinated Universal Time" } },
-                        Params = request.Params
-                    });
-                    if (RepRes != null && RepRes.StreamWrapper != null && RepRes.StreamWrapper.Memorystream != null)
-                    {
-                        RepRes.StreamWrapper.Memorystream.Position = 0;
-                        request1.AttachmentReport = RepRes.ReportBytea;
-                        request1.AttachmentName = RepRes.ReportName + ".pdf";
+                        RepRes = reportservice.Get(new ReportRenderRequest
+                        {
+                            Refid = EmailTemplate.AttachmentReportRefID,
+                            RenderingUser = new User { FullName = "Machine User" },
+                            ReadingUser = new User { Preference = new Preferences { Locale = "en-US", TimeZone = "(UTC) Coordinated Universal Time" } },
+                            Params = request.Params
+                        });
+                        if (RepRes != null && RepRes.StreamWrapper != null && RepRes.StreamWrapper.Memorystream != null)
+                        {
+                            RepRes.StreamWrapper.Memorystream.Position = 0;
+                            request1.AttachmentReport = RepRes.ReportBytea;
+                            request1.AttachmentName = RepRes.ReportName + ".pdf";
+                        }
                     }
-                }
 
-                MessageProducer3.Publish(request1);
+                    MessageProducer3.Publish(request1);
+                }
             }
         }
     }

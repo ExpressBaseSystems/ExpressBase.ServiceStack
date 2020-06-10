@@ -47,8 +47,8 @@ namespace ExpressBase.ServiceStack.MQServices
             EbConnectionFactory ebConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
             EbObjectService objservice = base.ResolveService<EbObjectService>();
             objservice.EbConnectionFactory = ebConnectionFactory;
-            // EbObjectFetchLiveVersionResponse res = (EbObjectFetchLiveVersionResponse)objservice.Get(new EbObjectFetchLiveVersionRequest() { Id = request.ObjId });
             EbSmsTemplate SmsTemplate = new EbSmsTemplate();
+
             if (request.ObjId > 0)
             {
                 EbObjectFetchLiveVersionResponse template_res = (EbObjectFetchLiveVersionResponse)objservice.Get(new EbObjectFetchLiveVersionRequest() { Id = request.ObjId });
@@ -68,7 +68,7 @@ namespace ExpressBase.ServiceStack.MQServices
 
             if (SmsTemplate != null)
             {
-                if (SmsTemplate.DataSourceRefId != string.Empty && SmsTemplate.To != string.Empty && SmsTemplate.To != null)
+                if (SmsTemplate.DataSourceRefId != string.Empty && !string.IsNullOrEmpty(SmsTemplate.To))
                 {
                     EbObjectParticularVersionResponse myDsres = (EbObjectParticularVersionResponse)objservice.Get(new EbObjectParticularVersionRequest() { RefId = SmsTemplate.DataSourceRefId });
                     if (myDsres.Data.Count > 0)
@@ -91,28 +91,31 @@ namespace ExpressBase.ServiceStack.MQServices
                                 SmsTemplate.Body = SmsTemplate.Body.Replace(_col, colname);
                             }
                         }
-                        foreach (var dt in ds.Tables)
+                        foreach (EbDataTable dt in ds.Tables)
                         {
                             smsTo = dt.Rows[0][SmsTemplate.To.Split('.')[1]].ToString();
                         }
                     }
-                    try
+                    if (smsTo != string.Empty)
                     {
-                        this.MessageProducer3.Publish(new SMSSentRequest
+                        try
                         {
-                            To = smsTo,
-                            Body = SmsTemplate.Body,
-                            SolnId = request.SolnId,
-                            UserId = request.UserId,
-                            WhichConsole = request.WhichConsole,
-                            UserAuthId = request.UserAuthId
-                        });
-                        //return true;
-                    }
-                    catch (Exception e)
-                    {
-                        Log.Info("Exception in SMSSentRequest publish to " + smsTo + e.Message + e.StackTrace);
-                        //return false;
+                            this.MessageProducer3.Publish(new SMSSentRequest
+                            {
+                                To = smsTo,
+                                Body = SmsTemplate.Body,
+                                SolnId = request.SolnId,
+                                UserId = request.UserId,
+                                WhichConsole = request.WhichConsole,
+                                UserAuthId = request.UserAuthId
+                            });
+                            //return true;
+                        }
+                        catch (Exception e)
+                        {
+                            Log.Info("Exception in SMSSentRequest publish to " + smsTo + e.Message + e.StackTrace);
+                            //return false;
+                        }
                     }
                 }
             }
