@@ -327,61 +327,71 @@ namespace ExpressBase.ServiceStack
             return new GetAllCommitedObjectsResp { Data = f_dict };
         }
 
-        public EbObjAllVerWithoutCircularRefResp Get(EbObjAllVerWithoutCircularRefRqst request)// Get all latest committed versions of EbObject without json - circular reference situation avoided on query
+        // Get all latest committed versions of EbObject without json - circular reference situation avoided on query
+        // + role list + user group list + user type list
+        public GetFormBuilderRelatedDataResp Get(GetFormBuilderRelatedDataRqst request)
         {
-            string query = EbConnectionFactory.ObjectsDB.EB_OBJ_ALL_VER_WIHOUT_CIRCULAR_REF;
+            string query = string.Empty;
             List<DbParameter> parameters = new List<DbParameter>();
-            if (!request.EbObjectRefId.IsNullOrEmpty())
+            int drIndx = 0;
+            if (request.EbObjType != EbObjectTypes.Null.IntCode)
             {
-                query = EbConnectionFactory.ObjectsDB.EB_OBJ_ALL_VER_WIHOUT_CIRCULAR_REF_REFID;
-                parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("dominant", EbDbTypes.String, request.EbObjectRefId));
-            }
+                query = EbConnectionFactory.ObjectsDB.EB_OBJ_ALL_VER_WIHOUT_CIRCULAR_REF;
+                if (!string.IsNullOrEmpty(request.EbObjectRefId))
+                {
+                    query = EbConnectionFactory.ObjectsDB.EB_OBJ_ALL_VER_WIHOUT_CIRCULAR_REF_REFID;
+                    parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("dominant", EbDbTypes.String, request.EbObjectRefId));
+                }
+                parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("obj_type", EbDbTypes.Int32, request.EbObjType));
+            }            
             query += @"SELECT id, role_name FROM eb_roles WHERE COALESCE(eb_del, 'F') = 'F' ORDER BY role_name;
                        SELECT id, name FROM eb_usergroup WHERE COALESCE(eb_del, 'F') = 'F' ORDER BY name;
                        SELECT id, name FROM eb_user_types WHERE COALESCE(eb_del, 'F') = 'F';";
-            parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("obj_type", EbDbTypes.Int32, request.EbObjType));
+
             EbDataSet ds = EbConnectionFactory.ObjectsDB.DoQueries(query, parameters.ToArray());
-
             Dictionary<string, List<EbObjectWrapper>> obj_dict = new Dictionary<string, List<EbObjectWrapper>>();
-            List<EbObjectWrapper> wrap_list = null;
-            foreach (EbDataRow dr in ds.Tables[0].Rows)
+            if (request.EbObjType != EbObjectTypes.Null.IntCode)
             {
-                string _nameKey = dr[1].ToString();
-                if (!obj_dict.ContainsKey(_nameKey))
+                List<EbObjectWrapper> wrap_list = null;
+                foreach (EbDataRow dr in ds.Tables[drIndx++].Rows)
                 {
-                    wrap_list = new List<EbObjectWrapper>();
-                    obj_dict.Add(_nameKey, wrap_list);
-                }
+                    string _nameKey = dr[1].ToString();
+                    if (!obj_dict.ContainsKey(_nameKey))
+                    {
+                        wrap_list = new List<EbObjectWrapper>();
+                        obj_dict.Add(_nameKey, wrap_list);
+                    }
 
-                wrap_list.Add(new EbObjectWrapper
-                {
-                    Id = Convert.ToInt32(dr[0]),
-                    Name = _nameKey,
-                    DisplayName = dr[2].ToString(),
-                    VersionNumber = dr[4].ToString(),
-                    RefId = dr[5].ToString()
-                });
-            }
+                    wrap_list.Add(new EbObjectWrapper
+                    {
+                        Id = Convert.ToInt32(dr[0]),
+                        Name = _nameKey,
+                        DisplayName = dr[2].ToString(),
+                        VersionNumber = dr[4].ToString(),
+                        RefId = dr[5].ToString()
+                    });
+                }
+            }           
 
             Dictionary<int, string> _roles = new Dictionary<int, string>();
-            foreach (EbDataRow dr in ds.Tables[1].Rows)
+            foreach (EbDataRow dr in ds.Tables[drIndx++].Rows)
             {
                 _roles.Add(Convert.ToInt32(dr[0]), dr[1].ToString());
             }
 
             Dictionary<int, string> _usergroup = new Dictionary<int, string>();
-            foreach (EbDataRow dr in ds.Tables[2].Rows)
+            foreach (EbDataRow dr in ds.Tables[drIndx++].Rows)
             {
                 _usergroup.Add(Convert.ToInt32(dr[0]), dr[1].ToString());
             }
 
             Dictionary<int, string> _usertypes = new Dictionary<int, string>();
-            foreach (EbDataRow dr in ds.Tables[3].Rows)
+            foreach (EbDataRow dr in ds.Tables[drIndx].Rows)
             {
                 _usertypes.Add(Convert.ToInt32(dr[0]), dr[1].ToString());
             }
 
-            return new EbObjAllVerWithoutCircularRefResp { Data = obj_dict, Roles = _roles, UserGroups= _usergroup, UserTypes = _usertypes };
+            return new GetFormBuilderRelatedDataResp { Data = obj_dict, Roles = _roles, UserGroups= _usergroup, UserTypes = _usertypes };
         }
 
         [CompressResponse]
