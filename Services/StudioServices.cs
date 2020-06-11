@@ -333,7 +333,7 @@ namespace ExpressBase.ServiceStack
         {
             string query = string.Empty;
             List<DbParameter> parameters = new List<DbParameter>();
-            int drIndx = 0;
+            int dsIndx = 0;
             if (request.EbObjType != EbObjectTypes.Null.IntCode)
             {
                 query = EbConnectionFactory.ObjectsDB.EB_OBJ_ALL_VER_WIHOUT_CIRCULAR_REF;
@@ -353,7 +353,7 @@ namespace ExpressBase.ServiceStack
             if (request.EbObjType != EbObjectTypes.Null.IntCode)
             {
                 List<EbObjectWrapper> wrap_list = null;
-                foreach (EbDataRow dr in ds.Tables[drIndx++].Rows)
+                foreach (EbDataRow dr in ds.Tables[dsIndx++].Rows)
                 {
                     string _nameKey = dr[1].ToString();
                     if (!obj_dict.ContainsKey(_nameKey))
@@ -374,19 +374,19 @@ namespace ExpressBase.ServiceStack
             }           
 
             Dictionary<int, string> _roles = new Dictionary<int, string>();
-            foreach (EbDataRow dr in ds.Tables[drIndx++].Rows)
+            foreach (EbDataRow dr in ds.Tables[dsIndx++].Rows)
             {
                 _roles.Add(Convert.ToInt32(dr[0]), dr[1].ToString());
             }
 
             Dictionary<int, string> _usergroup = new Dictionary<int, string>();
-            foreach (EbDataRow dr in ds.Tables[drIndx++].Rows)
+            foreach (EbDataRow dr in ds.Tables[dsIndx++].Rows)
             {
                 _usergroup.Add(Convert.ToInt32(dr[0]), dr[1].ToString());
             }
 
             Dictionary<int, string> _usertypes = new Dictionary<int, string>();
-            foreach (EbDataRow dr in ds.Tables[drIndx].Rows)
+            foreach (EbDataRow dr in ds.Tables[dsIndx].Rows)
             {
                 _usertypes.Add(Convert.ToInt32(dr[0]), dr[1].ToString());
             }
