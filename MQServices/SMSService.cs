@@ -17,20 +17,21 @@ using ExpressBase.Objects.Services;
 namespace ExpressBase.ServiceStack.MQServices
 {
     [Authenticate]
-    public class  SmsCreateService: EbBaseService
+    public class SmsCreateService : EbBaseService
     {
         public SmsCreateService(IMessageProducer _mqp) : base(_mqp) { }
 
         public void Post(SMSInitialRequest request)
         {
-            this.MessageProducer3.Publish(new SMSCreateRequest
+            this.MessageProducer3.Publish(new SMSPrepareRequest
             {
                 ObjId = request.ObjId,
-                Params=request.Params,
-                SolnId=request.SolnId,
-                UserId=request.UserId,
-                UserAuthId=request.UserAuthId,
-                MediaUrl = request.MediaUrl
+                Params = request.Params,
+                SolnId = request.SolnId,
+                UserId = request.UserId,
+                UserAuthId = request.UserAuthId,
+                MediaUrl = request.MediaUrl,
+                RefId = request.RefId
             });
         }
     }
@@ -40,19 +41,34 @@ namespace ExpressBase.ServiceStack.MQServices
     {
         public SMSService(IMessageProducer _mqp) : base(_mqp) { }
 
-        public void Post(SMSCreateRequest request)
+        public void Post(SMSPrepareRequest request)
         {
             string smsTo = string.Empty;
             EbConnectionFactory ebConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
             EbObjectService objservice = base.ResolveService<EbObjectService>();
             objservice.EbConnectionFactory = ebConnectionFactory;
-            EbObjectFetchLiveVersionResponse res = (EbObjectFetchLiveVersionResponse)objservice.Get(new EbObjectFetchLiveVersionRequest() { Id = request.ObjId });
-            EbSmsTemplate SmsTemplate = new EbSmsTemplate();            
+            EbSmsTemplate SmsTemplate = new EbSmsTemplate();
 
-            if (res != null && (SmsTemplate.DataSourceRefId != string.Empty || SmsTemplate.To != string.Empty))
+            if (request.ObjId > 0)
             {
-                SmsTemplate = EbSerializers.Json_Deserialize(res.Data[0].Json);
-                if (SmsTemplate.DataSourceRefId != string.Empty)
+                EbObjectFetchLiveVersionResponse template_res = (EbObjectFetchLiveVersionResponse)objservice.Get(new EbObjectFetchLiveVersionRequest() { Id = request.ObjId });
+                if (template_res != null && template_res.Data.Count > 0)
+                {
+                    SmsTemplate = EbSerializers.Json_Deserialize(template_res.Data[0].Json);
+                }
+            }
+            else if (request.RefId != string.Empty)
+            {
+                EbObjectParticularVersionResponse template_res = (EbObjectParticularVersionResponse)objservice.Get(new EbObjectParticularVersionRequest() { RefId = request.RefId });
+                if (template_res != null && template_res.Data.Count > 0)
+                {
+                    SmsTemplate = EbSerializers.Json_Deserialize(template_res.Data[0].Json);
+                }
+            }
+
+            if (SmsTemplate != null)
+            {
+                if (SmsTemplate.DataSourceRefId != string.Empty && !string.IsNullOrEmpty(SmsTemplate.To))
                 {
                     EbObjectParticularVersionResponse myDsres = (EbObjectParticularVersionResponse)objservice.Get(new EbObjectParticularVersionRequest() { RefId = SmsTemplate.DataSourceRefId });
                     if (myDsres.Data.Count > 0)
@@ -75,32 +91,33 @@ namespace ExpressBase.ServiceStack.MQServices
                                 SmsTemplate.Body = SmsTemplate.Body.Replace(_col, colname);
                             }
                         }
-
-                        if (SmsTemplate.To != string.Empty)
+                        foreach (EbDataTable dt in ds.Tables)
                         {
-                            foreach (var dt in ds.Tables)
+                            smsTo = dt.Rows[0][SmsTemplate.To.Split('.')[1]].ToString();
+                        }
+                    }
+                    if (smsTo != string.Empty)
+                    {
+                        try
+                        {
+                            this.MessageProducer3.Publish(new SMSSentRequest
                             {
-                                smsTo = dt.Rows[0][SmsTemplate.To.Split('.')[1]].ToString();
-                            }
+                                To = smsTo,
+                                Body = SmsTemplate.Body,
+                                SolnId = request.SolnId,
+                                UserId = request.UserId,
+                                WhichConsole = request.WhichConsole,
+                                UserAuthId = request.UserAuthId
+                            });
+                            //return true;
+                        }
+                        catch (Exception e)
+                        {
+                            Log.Info("Exception in SMSSentRequest publish to " + smsTo + e.Message + e.StackTrace);
+                            //return false;
                         }
                     }
                 }
-            }
-            try
-            {
-                this.MessageProducer3.Publish(new SMSSentRequest {
-                    To = SmsTemplate.To,
-                    Body = SmsTemplate.Body,
-                    SolnId = request.SolnId,
-                    UserId = request.UserId,
-                    WhichConsole = request.WhichConsole
-                });
-                //return true;
-            }
-            catch (Exception e)
-            {
-                Log.Info("Exception:" + e.ToString());
-                //return false;
             }
         }
 
