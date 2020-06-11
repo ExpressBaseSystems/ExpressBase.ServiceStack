@@ -154,7 +154,7 @@ namespace ExpressBase.ServiceStack.Services
                     n.Notification = Notification;
                     foreach (int grp_id in request.GroupId)
                     {
-                        string str = string.Format(@" select ug.userid, u.email from eb_user2usergroup as ug, eb_users as u where ug.groupid ='{0}' and ug.user_id = u.id  ", grp_id);
+                        string str = string.Format(@" select ug.userid, u.email from eb_user2usergroup as ug, eb_users as u where ug.groupid ='{0}' and ug.userid = u.id  ", grp_id);
                         EbDataTable dt = EbConnectionFactory.DataDB.DoQuery(str);
                         for (int i = 0; i < dt.Rows.Count; i++)
                         {
