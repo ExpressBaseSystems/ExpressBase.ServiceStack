@@ -257,7 +257,8 @@ namespace ExpressBase.ServiceStack.Services
         {
             GetNotificationsResponse res = new GetNotificationsResponse();
             res.Notifications = new List<NotificationInfo>();
-            res.PendingActions = new List<PendingActionInfo>();
+            res.PendingActions = new List<PendingActionAndMeetingInfo>();
+            res.MyMeetings = new List<PendingActionAndMeetingInfo>();
             this.EbConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
             try
             {
@@ -275,6 +276,68 @@ namespace ExpressBase.ServiceStack.Services
                     WHERE ('{0}' = any(string_to_array(user_ids, ',')) OR
                      (string_to_array(role_ids,',')) && (string_to_array('{1}',',')))
                         AND is_completed='F' AND eb_del='F' ORDER BY from_datetime DESC;", request.UserId, _roles);
+
+                str += string.Format(@"SELECT 
+	A.user_id,A.approved_slot_id,A.eb_meeting_schedule_id,B.meeting_date,B.time_from,B.time_to,
+	D.title,D.Description,E.id as meeting_id
+	FROM
+	(
+		SELECT 
+			id, user_id,approved_slot_id,eb_meeting_schedule_id
+	    FROM
+			eb_meeting_slot_participants
+	    WHERE  
+			eb_del = 'F' and user_id= {0}
+	)A
+	LEFT JOIN
+	(
+		SELECT
+			id,meeting_date,time_from,time_to,
+			meeting_date + time_from datetime_merge
+		FROM
+			eb_meeting_slots
+		GROUP BY
+		    id,meeting_date,time_from,time_to,eb_del,is_approved
+	    Having 
+			eb_del = 'F' and is_approved ='T'
+	)B
+    ON B.id = A.approved_slot_id
+	LEFT JOIN	
+	(
+		SELECT 
+			id,eb_meeting_id,eb_slot_participant_id
+	    FROM 
+			eb_meeting_participants
+		GROUP BY
+			id,eb_slot_participant_id,eb_meeting_id,eb_del
+		Having eb_del = 'F'
+	)C
+	ON C.eb_slot_participant_id = A.id
+	LEFT JOIN	
+	(
+		SELECT
+			id,title,description
+		FROM
+			eb_meeting_schedule
+		GROUP BY
+			id,title,description,eb_del
+		Having eb_del = 'F'
+	)D
+	ON D.id = A.eb_meeting_schedule_id
+	LEFT JOIN	
+	(
+		SELECT
+			id,eb_meeting_slots_id
+		FROM 
+			eb_meetings
+		GROUP BY
+			id,eb_meeting_slots_id,eb_del
+		Having eb_del = 'F'
+	)E
+	ON E.eb_meeting_slots_id = A.approved_slot_id
+	WHERE 
+		E.id is not null AND
+		B.datetime_merge >= current_timestamp", request.UserId);
 
                 EbDataSet ds = EbConnectionFactory.DataDB.DoQueries(str);
                 EbDataTable dt = ds.Tables[0];
@@ -299,7 +362,7 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     var _date = Convert.ToDateTime(dt.Rows[i]["from_datetime"]);
                     var _time = TimeAgo(_date.ConvertFromUtc(request.user.Preference.TimeZone));
-                    res.PendingActions.Add(new PendingActionInfo
+                    res.PendingActions.Add(new PendingActionAndMeetingInfo
                     {
                         Description = dt.Rows[i]["description"].ToString(),
                         Link = dt.Rows[i]["form_ref_id"].ToString(),
@@ -308,6 +371,19 @@ namespace ExpressBase.ServiceStack.Services
                         DateInString = _time,
                         ActionType = dt.Rows[i]["my_action_type"].ToString(),
                         MyActionId = Convert.ToInt32( dt.Rows[i]["id"])
+                    });
+                }
+                dt = ds.Tables[2];
+                for (int i = 0; i < dt.Rows.Count; i++)
+                {
+                    var _date = Convert.ToDateTime(dt.Rows[i]["meeting_date"]);
+                    var _time = TimeAgo(_date.ConvertFromUtc(request.user.Preference.TimeZone));
+                    res.MyMeetings.Add(new PendingActionAndMeetingInfo
+                    {
+                        Description = dt.Rows[i]["title"].ToString(),
+                        CreatedDate = _date.ConvertFromUtc(request.user.Preference.TimeZone).ToString(request.user.Preference.GetShortDatePattern() + " " + request.user.Preference.GetShortTimePattern()),
+                        DateInString = _time,
+                        MyActionId = Convert.ToInt32(dt.Rows[i]["meeting_id"])
                     });
                 }
             }
