@@ -290,19 +290,20 @@ namespace ExpressBase.ServiceStack
                             Match matchResult = regexObj.Match(subjectString);
                             while (matchResult.Success)
                             {
-                                resultList=matchResult.Value.ToString();
+                                resultList = matchResult.Value.ToString();
                                 _ds.Sql = _ds.Sql.Replace(resultList.Trim(), string.Empty);
                                 matchResult = matchResult.NextMatch();
-                            }                            
+                            }
                         }
                         catch (ArgumentException ex)
                         {
+                            throw ex;
                             // Syntax error in the regular expression
-                        }                        
-                        
+                        }
+
                         string[] sqlArray = _ds.Sql.Trim().Split(";");
                         foreach (string _sql in sqlArray)
-                        {                            
+                        {
                             if (_sql != string.Empty && !_sql.ToLower().Contains("limit") && !_sql.ToLower().Contains("offset"))
                                 sql += _sql + " LIMIT :limit OFFSET :offset;";
                             else
@@ -382,6 +383,7 @@ namespace ExpressBase.ServiceStack
                 }
                 catch (ArgumentException ex)
                 {
+                    throw ex;
                     // Syntax error in the regular expression
                 }
                 string[] sqlArray = _ds.Sql.Trim().Split(";");

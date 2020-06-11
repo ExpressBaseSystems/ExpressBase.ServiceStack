@@ -57,7 +57,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch(Exception e)
             {
-
+                throw e;
             }
             return response.Content.ReadAsStringAsync().Result;
         }

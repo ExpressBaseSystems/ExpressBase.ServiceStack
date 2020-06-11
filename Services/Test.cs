@@ -34,13 +34,13 @@ namespace ExpressBase.ServiceStack.Services
                 cmd.CommandText = sql1;
                 cmd.ExecuteNonQuery();
             }
-            catch (Exception e)
+            catch
             {
             }
 
             return null;
         }
-                
+
 
 
 
