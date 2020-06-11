@@ -39,8 +39,8 @@ namespace ExpressBase.ServiceStack.Auth0
                     SocialSignup sco_signup = new SocialSignup();
                     bool unique = false;
 					string urllink = session.ReferrerUrl;
-					string pathsignup = "Platform/OnBoarding";
-					string pathsignin = "TenantSignIn";
+					//string pathsignup = "Platform/OnBoarding";
+					//string pathsignin = "TenantSignIn";
 
 					string sql1 = "SELECT id,fb_id,github_id,twitter_id,google_id FROM eb_tenants WHERE email ~* @email and eb_del='F'";
                     DbParameter[] parameters2 = { InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, t.Email) };
