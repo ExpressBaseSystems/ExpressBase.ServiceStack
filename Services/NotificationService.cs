@@ -210,7 +210,7 @@ namespace ExpressBase.ServiceStack.Services
                 string notif = dt.Rows[i]["notification"].ToString();
                 Notifications list = JsonConvert.DeserializeObject<Notifications>(notif);
                 DateTime created_dtime = Convert.ToDateTime(dt.Rows[i]["created_at"].ToString());
-                string duration = GetNotificationDuration(created_dtime);
+                string duration = TimeAgo(created_dtime);
                 n.Add(new NotificationInfo
                 {
                     Link = list.Notification[0].Link,
@@ -346,7 +346,7 @@ namespace ExpressBase.ServiceStack.Services
                     string notif = dt.Rows[i]["notification"].ToString();
                     Notifications list = JsonConvert.DeserializeObject<Notifications>(notif);
                     DateTime created_dtime = Convert.ToDateTime(dt.Rows[i]["created_at"]);
-                    var duration = TimeAgo(created_dtime.ConvertFromUtc(request.user.Preference.TimeZone));
+                    var duration = TimeAgo(created_dtime);
                     var _date = created_dtime.ConvertFromUtc(request.user.Preference.TimeZone).ToString(request.user.Preference.GetShortDatePattern() + " " + request.user.Preference.GetShortTimePattern());
                     res.Notifications.Add(new NotificationInfo
                     {
@@ -361,7 +361,7 @@ namespace ExpressBase.ServiceStack.Services
                 for (int i = 0; i < dt.Rows.Count; i++)
                 {
                     var _date = Convert.ToDateTime(dt.Rows[i]["from_datetime"]);
-                    var _time = TimeAgo(_date.ConvertFromUtc(request.user.Preference.TimeZone));
+                    var _time = TimeAgo(_date);
                     res.PendingActions.Add(new PendingActionAndMeetingInfo
                     {
                         Description = dt.Rows[i]["description"].ToString(),
@@ -376,13 +376,21 @@ namespace ExpressBase.ServiceStack.Services
                 dt = ds.Tables[2];
                 for (int i = 0; i < dt.Rows.Count; i++)
                 {
-                    var _date = Convert.ToDateTime(dt.Rows[i]["meeting_date"]);
-                    var _time = TimeAgo(_date.ConvertFromUtc(request.user.Preference.TimeZone));
+                    var _date1 = Convert.ToDateTime(dt.Rows[i]["meeting_date"]);
+                    TimeSpan time = TimeSpan.Parse(dt.Rows[i]["time_from"].ToString());
+                    _date1 = _date1.Add(time);
+                    var _date2 = Convert.ToDateTime(dt.Rows[i]["meeting_date"]);
+                    time = TimeSpan.Parse(dt.Rows[i]["time_to"].ToString());
+                    _date2 = _date2.Add(time);
+                    string _date = _date1.ConvertFromUtc(request.user.Preference.TimeZone).ToString(request.user.Preference.GetShortDatePattern());
+                    string time1 = _date1.ToString(request.user.Preference.GetShortTimePattern());
+                    string time2 = _date2.ToString(request.user.Preference.GetShortTimePattern());
+                    _date = _date + ": " + time1 + " - " + time2;
                     res.MyMeetings.Add(new PendingActionAndMeetingInfo
                     {
                         Description = dt.Rows[i]["title"].ToString(),
-                        CreatedDate = _date.ConvertFromUtc(request.user.Preference.TimeZone).ToString(request.user.Preference.GetShortDatePattern() + " " + request.user.Preference.GetShortTimePattern()),
-                        DateInString = _time,
+                        CreatedDate = _date,
+                        //DateInString = _time,
                         MyActionId = Convert.ToInt32(dt.Rows[i]["meeting_id"])
                     });
                 }
@@ -395,32 +403,10 @@ namespace ExpressBase.ServiceStack.Services
             return res;
         }
 
-        string GetNotificationDuration(DateTime created_dtime)
-        {
-            string duration = "Today";
-            DateTime now = DateTime.Now;
-            if(now.Year > created_dtime.Year)
-            {
-                int yr = (now.Year - created_dtime.Year);
-                duration = (yr>1)? yr + " years ago": yr + " year ago";
-            }
-            else if(now.Month > created_dtime.Month)
-            {
-                int mnth = (now.Month - created_dtime.Month);
-                duration = (mnth>1)? mnth + " months ago": mnth + " month ago";
-            }
-            else if(now.Day > created_dtime.Day)
-            {
-                int day = (now.Day - created_dtime.Day);
-                duration = (day>1)? day + " days ago": day + " day ago";
-            }
-            return duration;
-        }
-
         public  string TimeAgo(DateTime dateTime)
         {
             string result = string.Empty;
-            var timeSpan = DateTime.Now.Subtract(dateTime);
+            var timeSpan = DateTime.UtcNow.Subtract(dateTime);
 
             if (timeSpan <= TimeSpan.FromSeconds(60))
             {
