@@ -297,7 +297,7 @@ namespace ExpressBase.ServiceStack
                 EbDataReader _ds = null;
                 EbDataSet _dataset = null;
                 bool _isPaged = false;
-                if(_dV.IsDataFromApi)
+                if(_dV != null && _dV.IsDataFromApi)
                     _dataset = GetDatafromUrl();
                 else if (request.RefId != string.Empty && request.RefId != null)
                     _ds = this.Redis.Get<EbDataReader>(request.RefId);
