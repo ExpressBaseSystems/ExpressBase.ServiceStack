@@ -665,5 +665,60 @@ namespace ExpressBase.ServiceStack.Services
 
             return new MeetingRejectByHostResponse();
         }
+        public GetMeetingDetailsResponse Post(GetMeetingDetailRequest request)
+        {
+            GetMeetingDetailsResponse Resp = new GetMeetingDetailsResponse();
+            string _qry = $@"
+                 SELECT 
+	           A.id, A.eb_meeting_slots_id, B.id as slot_id,C.id as meeting_schedule_id,C.description,B.time_from,B.time_to,
+				C.meeting_date ,C.venue,C.integration,C.title,
+				D.user_id , D.type_of_user,D.participant_type,E.fullname
+			        FROM
+					(select id , eb_meeting_slots_id from eb_meetings where id= {request.MeetingId} and eb_del = 'F' )A
+						LEFT JOIN
+							 (SELECT id , eb_meeting_schedule_id,time_from,time_to FROM  eb_meeting_slots)B
+							 ON B.id = A.eb_meeting_slots_id		
+							 LEFT JOIN	
+							 (SELECT id ,title, meeting_date,venue,integration,description FROM  eb_meeting_schedule )C
+							 ON C.id = B.eb_meeting_schedule_id	
+							 LEFT JOIN	
+							 (SELECT id , approved_slot_id, eb_meeting_schedule_id , user_id ,type_of_user,participant_type FROM  eb_meeting_slot_participants )D
+							 ON D.approved_slot_id = B.id
+							 LEFT JOIN	
+							 (select id, fullname from eb_users where eb_del = 'F')E
+							 ON E.id = D.user_id";
+
+            try
+            {
+                EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(_qry);
+                int capacity1 = dt.Rows.Count;
+                for (int i = 0; i < capacity1; i++)
+                {
+                    Resp.MeetingRequest.Add(
+                        new MeetingRequest()
+                        {
+                            MeetingId = Convert.ToInt32(dt.Rows[i]["id"]),
+                            Slotid = Convert.ToInt32(dt.Rows[i]["slot_id"]),
+                            MeetingScheduleid = Convert.ToInt32(dt.Rows[i]["meeting_schedule_id"]),
+                            Description = Convert.ToString(dt.Rows[i]["description"]),
+                            TimeFrom = Convert.ToString(dt.Rows[i]["time_from"]),
+                            TimeTo = Convert.ToString(dt.Rows[i]["time_to"]),
+                            Title = Convert.ToString(dt.Rows[i]["title"]),
+                            MeetingDate = Convert.ToString(dt.Rows[0]["meeting_date"]),
+                            Venue = Convert.ToString(dt.Rows[i]["venue"]),
+                            Integration = Convert.ToString(dt.Rows[i]["integration"]),
+                            fullname = Convert.ToString(dt.Rows[i]["fullname"]),
+                            UserId = Convert.ToInt32(dt.Rows[i]["user_id"]),
+                            TypeofUser = Convert.ToInt32(dt.Rows[i]["type_of_user"]),
+                            ParticipantType = Convert.ToInt32(dt.Rows[i]["participant_type"]),
+                        });
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.StackTrace, e.Message);
+            }
+            return Resp;
+        }
     }
 }
