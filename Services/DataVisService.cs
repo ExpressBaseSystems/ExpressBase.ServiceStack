@@ -290,14 +290,14 @@ namespace ExpressBase.ServiceStack
                 this.Log.Info("data request");
                 CurLocId = request.LocId;
 
-                 _dV = request.EbDataVisualization;
+                _dV = request.EbDataVisualization;
 
                 DataSourceDataResponse dsresponse = null;
                 //this._replaceEbColumns = request.ReplaceEbColumns;
                 EbDataReader _ds = null;
                 EbDataSet _dataset = null;
                 bool _isPaged = false;
-                if(_dV != null && _dV.IsDataFromApi)
+                if (_dV != null && _dV.IsDataFromApi)
                     _dataset = GetDatafromUrl();
                 else if (request.RefId != string.Empty && request.RefId != null)
                     _ds = this.Redis.Get<EbDataReader>(request.RefId);
@@ -307,7 +307,7 @@ namespace ExpressBase.ServiceStack
                     request.Params.AddRange(_dV.ParamsList);
                 }
 
-                if (!_dV.IsDataFromApi )
+                if (!_dV.IsDataFromApi)
                 {
                     if (_ds == null)
                     {
@@ -399,7 +399,7 @@ namespace ExpressBase.ServiceStack
                                                 if (array[i].Trim() != "")
                                                 {
                                                     if (op == "x*")
-                                                        templist.AddRange( this._ebSolution.Users.Where(pair => pair.Value.ToLower().StartsWith(array[i].Trim().ToLower())).Select(pair => pair.Key.ToString()).ToList());
+                                                        templist.AddRange(this._ebSolution.Users.Where(pair => pair.Value.ToLower().StartsWith(array[i].Trim().ToLower())).Select(pair => pair.Key.ToString()).ToList());
                                                     else if (op == "*x")
                                                         templist.AddRange(this._ebSolution.Users.Where(pair => pair.Value.ToLower().EndsWith(array[i].Trim().ToLower())).Select(pair => pair.Key.ToString()).ToList());
                                                     else if (op == "*x*")
@@ -632,7 +632,7 @@ namespace ExpressBase.ServiceStack
         private EbDataSet GetDatafromUrl()
         {
             var _service = base.ResolveService<ApiConversionService>();
-            var result = (ApiConversionResponse)_service.Any(new ApiConversionRequest() { Url = _dV.Url, Method=_dV.Method, Parameters= _dV.Parameters, Headers = _dV.Headers });
+            var result = (ApiConversionResponse)_service.Any(new ApiConversionRequest() { Url = _dV.Url, Method = _dV.Method, Parameters = _dV.Parameters, Headers = _dV.Headers });
             return result.dataset;
         }
 
@@ -914,7 +914,7 @@ namespace ExpressBase.ServiceStack
                 if ((_dv as EbTableVisualization) != null)
                 {
                     List<DVBaseColumn> ApprovalColumns = GetApprovalColumn(_dv as EbTableVisualization);
-                    if(ApprovalColumns.Count > 0)
+                    if (ApprovalColumns.Count > 0)
                         GetApprovalData(_user, ApprovalColumns);
                     if ((_dv as EbTableVisualization).RowGroupCollection.Count > 0 && (_dv as EbTableVisualization).CurrentRowGroup.RowGrouping.Count > 0 && !(_dv as EbTableVisualization).DisableRowGrouping)
                     {
@@ -992,7 +992,7 @@ namespace ExpressBase.ServiceStack
             return null;
         }
 
-        
+
         public PrePrcessorReturn PreProcessingCalendarView(ref EbDataSet _dataset, List<Param> Parameters, ref EbDataVisualization _dv, User _user)
         {
             try
@@ -1505,7 +1505,7 @@ namespace ExpressBase.ServiceStack
                         {
                             bool AllowLinkifNoData = true;
                             var cults = col.GetColumnCultureInfo(_user_culture);
-                            object _unformattedData =  row[col.Data];//(_dv.AutoGen && col.Name == "eb_action") ? "<i class='fa fa-edit'></i>" :
+                            object _unformattedData = row[col.Data];//(_dv.AutoGen && col.Name == "eb_action") ? "<i class='fa fa-edit'></i>" :
                             object _formattedData = IntermediateDic[col.Data];
                             object ActualFormatteddata = IntermediateDic[col.Data];
 
@@ -1520,7 +1520,7 @@ namespace ExpressBase.ServiceStack
                             }
                             else if (col.RenderType == EbDbTypes.String && (_isexcel == false))
                             {
-                                 if (col is DVStringColumn)
+                                if (col is DVStringColumn)
                                 {
                                     if ((col as DVStringColumn).RenderAs == StringRenderType.Marker)
                                         _formattedData = "<a href = '#' class ='columnMarker" + this.TableId + "' data-latlong='" + _unformattedData + "'><i class='fa fa-map-marker fa-2x' style='color:red;'></i></a>";
@@ -1547,7 +1547,7 @@ namespace ExpressBase.ServiceStack
 
                                     else if ((col as DVStringColumn).RenderAs == StringRenderType.Tag)
                                         _formattedData = GetTaggedData((col as DVStringColumn), _formattedData);
-                                   
+
 
                                     if ((col as DVStringColumn).AllowMultilineText)
                                     {
@@ -1627,7 +1627,7 @@ namespace ExpressBase.ServiceStack
                             }
 
                             this.conditinallyformatColumn(col, ref _formattedData, _unformattedData, row, ref globals);
-                            
+
                             _formattedTable.Rows[i][col.Data] = _formattedData;
                             if (_isexcel)
                                 worksheet.Cells[i + 2, j + 1].Value = _formattedData;
@@ -1664,10 +1664,10 @@ namespace ExpressBase.ServiceStack
         private object GetTaggedData(DVStringColumn dVStringColumn, object _formattedData)
         {
             string _html = string.Empty;
-            if(_formattedData.ToString() != string.Empty)
+            if (_formattedData.ToString() != string.Empty)
             {
                 _html = "<div class='dvtaginput'>";
-                foreach(string str in _formattedData.ToString().Split(","))
+                foreach (string str in _formattedData.ToString().Split(","))
                 {
                     _html += $"<span class='dvtagspan'>{str}</span>";
                 }
@@ -1730,7 +1730,7 @@ namespace ExpressBase.ServiceStack
                         {
                             ProcessApprovalcolumn(col, row, _user);
                         }
-                        else if(col is DVActionColumn)
+                        else if (col is DVActionColumn)
                             row[col.Data] = "<i class='fa fa-edit'></i>";
                         else
                             CustomColumDoCalc4Row(row, _dv, globals, col);
@@ -1738,7 +1738,7 @@ namespace ExpressBase.ServiceStack
                     else if (col is DVStringColumn && _dv.AutoGen && col.Name == "eb_action")
                         row[col.Data] = "<i class='fa fa-edit'></i>";
                     var cults = col.GetColumnCultureInfo(_user_culture);
-                    object _unformattedData =  row[col.Data];
+                    object _unformattedData = row[col.Data];
                     object _formattedData = _unformattedData;
 
                     if (col.RenderType == EbDbTypes.Date || col.RenderType == EbDbTypes.DateTime)
@@ -1790,7 +1790,7 @@ namespace ExpressBase.ServiceStack
                 }
             }
         }
-               
+
         private List<DVBaseColumn> GetApprovalColumn(EbTableVisualization ebTableVisualization)
         {
             return ebTableVisualization.Columns.FindAll(e => e is DVApprovalColumn);
@@ -1890,7 +1890,7 @@ namespace ExpressBase.ServiceStack
                 }
                 else
                 {
-                     str = string.Format(@"
+                    str = string.Format(@"
                     SELECT Q1.*,act.action_name,act.action_unique_id
                     FROM(
 	                    SELECT my.id, st.stage_name,st.id as stage_id,my.form_ref_id,my.form_data_id,st.stage_unique_id,my.from_datetime
@@ -1982,7 +1982,7 @@ namespace ExpressBase.ServiceStack
             row[col.Data] = _formattedData;
         }
 
-        private string GetDataforPermissedApprovalColumn(List<EbDataRow> rows, User _user, List<EbDataRow> linesRows, EbDataRow row =null)
+        private string GetDataforPermissedApprovalColumn(List<EbDataRow> rows, User _user, List<EbDataRow> linesRows, EbDataRow row = null)
         {
             string _data = @"<div class='nav-container'>
                           <ul class='nav nav-tabs'>
@@ -1993,7 +1993,7 @@ namespace ExpressBase.ServiceStack
                                   <div class='tab-pane active' id='action'>";
             _data += "<table class='action-table'><tr><td class='action-td stage-label' colspan='2'><label>" + rows[0]["stage_name"].ToString() + "</label></tr>";
             _data += "<tr><td class='action-td'>Actions</td><td class='action-td'><select class='selectpicker stage_actions'>";
-            ApprovalData _obj = new ApprovalData();            
+            ApprovalData _obj = new ApprovalData();
             _obj.Stage_unique_id = rows[0]["stage_unique_id"].ToString();
             _obj.My_action_id = rows[0]["id"].ToString();
             _obj.Form_ref_id = rows[0]["form_ref_id"].ToString();
@@ -2023,7 +2023,7 @@ namespace ExpressBase.ServiceStack
                 $"<span class='status-label label label-warning'>Review Required</span>" +
                 $"<span class='status-time' title='{_tooltipdate}'>{_time}</span>" +
                 $"</div></div></div>";
-            string _button = "<div class='stage-div'><div class='stage-div-inner'><button class='btn stage-btn btn-approval_popover' data-contents='" + _data .ToBase64()+ "' data-toggle='popover'><i class='fa fa-pencil' aria-hidden='true'></i></button></div></div>";//
+            string _button = "<div class='stage-div'><div class='stage-div-inner'><button class='btn stage-btn btn-approval_popover' data-contents='" + _data.ToBase64() + "' data-toggle='popover'><i class='fa fa-pencil' aria-hidden='true'></i></button></div></div>";//
             if (row != null)
             {
                 var indx = -1;
@@ -2038,11 +2038,11 @@ namespace ExpressBase.ServiceStack
                     row[indx] = rows[0]["stage_name"].ToString();
                 }
             }
-            
-            return "<div class='stage_actions_cont'>"+_stage + _button + "</div>";
+
+            return "<div class='stage_actions_cont'>" + _stage + _button + "</div>";
         }
 
-        private string GetDataforNotPermissedApprovalColumn(List<EbDataRow> rows, User _user, List<EbDataRow> linesRows, EbDataRow row =null)
+        private string GetDataforNotPermissedApprovalColumn(List<EbDataRow> rows, User _user, List<EbDataRow> linesRows, EbDataRow row = null)
         {
             string _stage = "<div class='stage_actions_cont'>";
             string _stage_name = "<div class='stage-div'>";
@@ -2050,10 +2050,10 @@ namespace ExpressBase.ServiceStack
                           <ul class='nav nav-tabs'>
                             <li class='active'><a data-toggle='tab' href='#history'>History</a></li>
                             </ul>";
-                _history += @"<div class='tab-content'>
+            _history += @"<div class='tab-content'>
                                   <div class='tab-pane active' id='history'>";
-                _history += GetApprovalHistoryString(linesRows, _user);
-                _history += "</div></div></div> ";
+            _history += GetApprovalHistoryString(linesRows, _user);
+            _history += "</div></div></div> ";
             var _time = string.Empty; var _tooltipdate = string.Empty;
             DateTime _date = DateTime.Now;
             var _latestHistory = string.Empty;
@@ -2065,18 +2065,18 @@ namespace ExpressBase.ServiceStack
             else
             {
                 _date = Convert.ToDateTime(rows[0]["eb_lastmodified_at"]);
-                if(_date == DateTime.MinValue)
+                if (_date == DateTime.MinValue)
                     _date = Convert.ToDateTime(rows[0]["eb_created_at"]);
                 _latestHistory = rows[0]["stage_name"].ToString();
             }
             _time = _date.DateInNotification((_user.Preference.TimeZone));
             _tooltipdate = _date.ConvertFromUtc(_user.Preference.TimeZone).ToString(_user.Preference.GetShortDatePattern()) + " " + _date.ConvertFromUtc(_user.Preference.TimeZone).ToString(_user.Preference.GetShortTimePattern());
-            if(rows != null && rows.Count == 1)
+            if (rows != null && rows.Count == 1)
             {
                 var _status = GetSynonymsforReviewStatus(rows[0]["review_status"].ToString());
                 var _icon = GetIconforReviewStatus(rows[0]["review_status"].ToString());
                 var _label = GetLabelStyleforReviewStatus(rows[0]["review_status"].ToString());
-                
+
                 _stage_name += "<div class='stage-div-inner stage-status-cont'><span class='stage-status'>" + _latestHistory + "</span></div>";
                 _stage_name += "<div class='stage-div-inner'><div class='icon-status-cont'>" +
                     "<span class='status-icon'><i class='" + _icon + "' aria-hidden='true'></i></span>" +
@@ -2098,9 +2098,9 @@ namespace ExpressBase.ServiceStack
                     row[indx] = rows[0]["stage_name"].ToString();
                 }
             }
-            string _button = "<div class='stage-div'><div class='stage-div-inner'><button class='btn stage-btn btn-approval_popover' data-contents='" + _history .ToBase64()+ "' data-toggle='popover'><i class='fa fa-history' aria-hidden='true'></i></button></div></div>";
+            string _button = "<div class='stage-div'><div class='stage-div-inner'><button class='btn stage-btn btn-approval_popover' data-contents='" + _history.ToBase64() + "' data-toggle='popover'><i class='fa fa-history' aria-hidden='true'></i></button></div></div>";
             _stage_name += "</div>";
-            return _stage+ _stage_name + _button + "</div>";
+            return _stage + _stage_name + _button + "</div>";
         }
 
         private string GetApprovalHistoryString(List<EbDataRow> ebDataRows, User _user)
@@ -2117,7 +2117,7 @@ namespace ExpressBase.ServiceStack
                     _history += "<tr><td class='datetime-td'>" + __date.ToString() + "</td>";
                     _history += "<td>" + _ebdatarow["stage_name"].ToString() + "</td>";
                     _history += "<td>" + _ebdatarow["action_name"].ToString() + "</td>";
-                    _history += "<td class='image-td'><span><img src='/images/dp/" + _ebdatarow["eb_created_by"].ToString() + ".png' class='history-image Eb_Image' onerror='imgError(this);'></span>"+
+                    _history += "<td class='image-td'><span><img src='/images/dp/" + _ebdatarow["eb_created_by"].ToString() + ".png' class='history-image Eb_Image' onerror='imgError(this);'></span>" +
                                 "<span>" + _ebdatarow["fullname"].ToString() + "</span></td>";
                     _history += "<td class='comment-td'>" + _ebdatarow["comments"].ToString() + "</td></tr>";
                 }
@@ -2180,7 +2180,7 @@ namespace ExpressBase.ServiceStack
                 TimeSpan time = (DateTime.Now - _date);
                 return DateStringForNotification(time);
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 Log.Info("Get Difference In Time Exception------------" + e.Message);
                 Log.Info(e.StackTrace);
@@ -2441,6 +2441,7 @@ namespace ExpressBase.ServiceStack
                     }
                     catch (Exception e)
                     {
+                        Console.WriteLine(e.Message + e.StackTrace);
                         _formattedData = _unformattedData.ToString();
                     }
                 }
@@ -2939,7 +2940,7 @@ namespace ExpressBase.ServiceStack
             _recordsTotal = (_recordsTotal > 0) ? _recordsTotal : _dataset.Tables[0].Rows.Count;
             _recordsFiltered = (_recordsFiltered > 0) ? _recordsFiltered : _dataset.Tables[0].Rows.Count;
             //-- 
-            EbDataTable _formattedDataTable = null;
+            // EbDataTable _formattedDataTable = null;
             List<GroupingDetails> _levels = new List<GroupingDetails>();
             PrePrcessorReturn returnObj = new PrePrcessorReturn();
             if (_dataset.Tables.Count > 0 && _dV != null)

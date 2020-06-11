@@ -183,8 +183,8 @@ namespace ExpressBase.ServiceStack
                 });
             }
             return new EbObjectObjListAllVerResponse { Data = f_dict };
-        } 
-        
+        }
+
         public object Get(PublicObjListAllVerRequest request)
         {
             List<EbObjectWrapper> wrap = new List<EbObjectWrapper>();
@@ -343,7 +343,7 @@ namespace ExpressBase.ServiceStack
                     parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("dominant", EbDbTypes.String, request.EbObjectRefId));
                 }
                 parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("obj_type", EbDbTypes.Int32, request.EbObjType));
-            }            
+            }
             query += @"SELECT id, role_name FROM eb_roles WHERE COALESCE(eb_del, 'F') = 'F' ORDER BY role_name;
                        SELECT id, name FROM eb_usergroup WHERE COALESCE(eb_del, 'F') = 'F' ORDER BY name;
                        SELECT id, name FROM eb_user_types WHERE COALESCE(eb_del, 'F') = 'F';";
@@ -371,7 +371,7 @@ namespace ExpressBase.ServiceStack
                         RefId = dr[5].ToString()
                     });
                 }
-            }           
+            }
 
             Dictionary<int, string> _roles = new Dictionary<int, string>();
             foreach (EbDataRow dr in ds.Tables[dsIndx++].Rows)
@@ -391,7 +391,7 @@ namespace ExpressBase.ServiceStack
                 _usertypes.Add(Convert.ToInt32(dr[0]), dr[1].ToString());
             }
 
-            return new GetFormBuilderRelatedDataResp { Data = obj_dict, Roles = _roles, UserGroups= _usergroup, UserTypes = _usertypes };
+            return new GetFormBuilderRelatedDataResp { Data = obj_dict, Roles = _roles, UserGroups = _usergroup, UserTypes = _usertypes };
         }
 
         [CompressResponse]
@@ -582,7 +582,7 @@ namespace ExpressBase.ServiceStack
                         DisplayName = dr[34].ToString(),
                         IsLogEnabled = (dr[35].ToString() == "F") ? false : true,
                         IsPublic = (dr[36].ToString() == "T") ? true : false
-                    }); 
+                    });
 
                     wrap.Add(_ebObject);
                 }
@@ -672,7 +672,7 @@ namespace ExpressBase.ServiceStack
                             OwnerUid = Convert.ToInt32(dr[22]),
                             OwnerTs = Convert.ToDateTime((dr[23].ToString()) == "" || (dr[23].ToString()) == "" ? DateTime.MinValue : dr[23]),
                             OwnerName = dr[24].ToString()
-                        },                        
+                        },
                         IsPublic = (dr[25].ToString() == "T") ? true : false
                     });
                     wrap.Add(_ebObject);
@@ -1290,6 +1290,7 @@ namespace ExpressBase.ServiceStack
                 }
                 catch (Exception e)
                 {
+                    Console.WriteLine(e.Message + e.StackTrace);
                     status = 0;
                 }
                 return new RunSqlFunctionResponse() { Status = status };

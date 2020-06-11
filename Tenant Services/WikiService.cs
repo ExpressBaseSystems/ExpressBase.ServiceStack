@@ -57,10 +57,11 @@ namespace ExpressBase.ServiceStack.Services
                 request.Wiki.Id = resp.Wiki.Id;
                 var hashfield = Encoding.UTF8.GetBytes(resp.Wiki.Id.ToString());
                 var hashval = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(resp.Wiki));
-                var Temp = (this.Redis as RedisClient).HSet("wiki", hashfield, hashval); 
+                var Temp = (this.Redis as RedisClient).HSet("wiki", hashfield, hashval);
             }
             catch (Exception e)
             {
+                Console.WriteLine(e.Message + e.StackTrace);
                 resp.ResponseStatus = false;
             }
 
@@ -96,7 +97,7 @@ namespace ExpressBase.ServiceStack.Services
                 };
 
                 int x = InfraConnectionFactory.DataDB.DoNonQuery(query, parameters);
-                if(x > 0)
+                if (x > 0)
                 {
                     resp.ResponseStatus = true;
                 }
@@ -105,10 +106,11 @@ namespace ExpressBase.ServiceStack.Services
                 var hashfield = Encoding.UTF8.GetBytes(resp.Wiki.Id.ToString());
                 var hashval = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(resp.Wiki));
                 var Temp = (this.Redis as RedisClient).HSet("wiki", hashfield, hashval);
-               
+
             }
             catch (Exception e)
             {
+                Console.WriteLine(e.Message + e.StackTrace);
                 resp.ResponseStatus = false;
             }
 
@@ -185,7 +187,7 @@ namespace ExpressBase.ServiceStack.Services
                         {
                             WikiCategory = dt.Rows[i]["category"].ToString(),
                             WikiIconClass = dt.Rows[i]["icon_class"].ToString(),
-                            WikiCatId = (int) dt.Rows[i]["id"]
+                            WikiCatId = (int)dt.Rows[i]["id"]
                         });
 
                 }
@@ -195,7 +197,7 @@ namespace ExpressBase.ServiceStack.Services
                 Console.WriteLine("ERROR: GetWikiList Exception: " + e.Message);
             }
             return resp;
-      }
+        }
 
 
 
@@ -208,7 +210,7 @@ namespace ExpressBase.ServiceStack.Services
                     {
                 this.InfraConnectionFactory.DataDB.GetNewParameter("search_wiki", EbDbTypes.String, request.Wiki_Search)
                     };
-              string query = @"
+                string query = @"
                 SELECT *
                 FROM
                     wiki
@@ -284,7 +286,7 @@ namespace ExpressBase.ServiceStack.Services
                             WikiCategory = ds.Tables[1].Rows[i]["category"].ToString(),
                             WikiIconClass = ds.Tables[1].Rows[i]["icon_class"].ToString(),
                             WikiDescription = ds.Tables[1].Rows[i]["description"].ToString(),
-                            WikiCatId = (int) ds.Tables[1].Rows[i]["id"]
+                            WikiCatId = (int)ds.Tables[1].Rows[i]["id"]
                         });
 
                 }
@@ -317,28 +319,28 @@ namespace ExpressBase.ServiceStack.Services
                     resp.Wiki.Title = obj.Title.ToString();
                     resp.Wiki.HTML = obj.HTML.ToString();
                     resp.Wiki.Tags = obj.Tags.ToString();
-                    
+
                     resp.Wiki.CreatedBy = obj.CreatedBy;
                     resp.Wiki.Id = request.Id;
                     if (obj.AuthorName == null)
                     {
-                       
+
                         DbParameter[] parameters = new DbParameter[]
                           {
                         this.InfraConnectionFactory.DataDB.GetNewParameter("createdby", EbDbTypes.Int32,obj.CreatedBy)
                           };
-                         string query = @"
+                        string query = @"
                          SELECT fullname
                          FROM
                             eb_users  
                          WHERE
                             id = @createdby";
 
-                                EbDataTable table = InfraConnectionFactory.DataDB.DoQuery(query, parameters);
-                                resp.Wiki.AuthorName = table.Rows[0]["fullname"].ToString();
-                                var hashval = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(resp.Wiki));
-                                var Temp = (this.Redis as RedisClient).HSet("wiki", hashfield, hashval);
-                        }
+                        EbDataTable table = InfraConnectionFactory.DataDB.DoQuery(query, parameters);
+                        resp.Wiki.AuthorName = table.Rows[0]["fullname"].ToString();
+                        var hashval = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(resp.Wiki));
+                        var Temp = (this.Redis as RedisClient).HSet("wiki", hashfield, hashval);
+                    }
                     else
                     {
                         resp.Wiki.AuthorName = obj.AuthorName.ToString();
@@ -366,7 +368,7 @@ namespace ExpressBase.ServiceStack.Services
                     resp.Wiki.Tags = table.Rows[0]["eb_tags"].ToString();
                     resp.Wiki.Id = request.Id;
                     resp.Wiki.CreatedBy = (int)table.Rows[0]["eb_created_by"];
-               
+
                     var hashval = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(resp.Wiki));
                     var Temp = (this.Redis as RedisClient).HSet("wiki", hashfield, hashval);
                 }
@@ -437,7 +439,7 @@ namespace ExpressBase.ServiceStack.Services
                  WHERE
                     status = @status AND eb_del='F'; 
                  SELECT * FROM wiki_category WHERE status='publish'; ";
-                EbDataSet ds = InfraConnectionFactory.DataDB.DoQueries(query , parameters);
+                EbDataSet ds = InfraConnectionFactory.DataDB.DoQueries(query, parameters);
 
                 int capacity = ds.Tables[0].Rows.Count;
 
@@ -465,7 +467,7 @@ namespace ExpressBase.ServiceStack.Services
                     resp.WikiCat.Add(
                         new WikiCat()
                         {
-                            WikiCategory = ds.Tables[1].Rows[i]["category"].ToString(), 
+                            WikiCategory = ds.Tables[1].Rows[i]["category"].ToString(),
                         });
 
                 }
@@ -509,7 +511,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
-
+                Console.WriteLine(e.Message + e.StackTrace);
             }
 
             return resp;
@@ -603,6 +605,7 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception e)
             {
                 resp.ResponseStatus = false;
+                Console.WriteLine(e.Message + e.StackTrace);
             }
 
             return resp;
@@ -645,7 +648,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
-
+                Console.WriteLine(e.Message + e.StackTrace);
             }
             return resp;
         }
