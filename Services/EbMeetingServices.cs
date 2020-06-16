@@ -23,6 +23,7 @@ using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
 using ExpressBase.ServiceStack.MQServices;
+using static ExpressBase.Objects.EbMeetingScheduler;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -350,7 +351,7 @@ namespace ExpressBase.ServiceStack.Services
             string query = @"        
             SELECT 
 		     A.id as slot_id , A.eb_meeting_schedule_id, A.is_approved,
-			 B.no_of_attendee, B.no_of_hosts,B.max_hosts,B.max_attendees,
+			 B.no_of_attendee, B.no_of_hosts,B.max_hosts,B.max_attendees,  COALESCE (B.meeting_opts, 0) as meeting_opts,
 			 COALESCE (D.id, 0) as meeting_id
 	            FROM
 				(SELECT 
@@ -361,7 +362,7 @@ namespace ExpressBase.ServiceStack.Services
 	                     WHERE 
 		                     eb_del = 'F' and id = {0})A
 						LEFT JOIN	 
-							 (SELECT id, no_of_attendee, no_of_hosts,max_hosts,max_attendees FROM  eb_meeting_schedule)B
+							 (SELECT id, no_of_attendee, no_of_hosts,max_hosts,max_attendees ,meeting_opts FROM  eb_meeting_schedule)B
 							 ON
  	                     B.id = A.eb_meeting_schedule_id	
                      LEFT JOIN 
@@ -423,7 +424,8 @@ namespace ExpressBase.ServiceStack.Services
                         MinHosts = Convert.ToInt32(ds.Tables[0].Rows[k]["no_of_hosts"]),
                         MaxAttendees = Convert.ToInt32(ds.Tables[0].Rows[k]["max_attendees"]),
                         MaxHosts = Convert.ToInt32(ds.Tables[0].Rows[k]["max_hosts"]),
-                        IsApproved = Convert.ToString(ds.Tables[0].Rows[k]["is_approved"])
+                        IsApproved = Convert.ToString(ds.Tables[0].Rows[k]["is_approved"]),
+                        MeetingOpts = (MeetingOptions) Convert.ToInt32(ds.Tables[0].Rows[k]["meeting_opts"])
                     });
                 }
                 for (int k = 0; k < ds.Tables[1].Rows.Count; k++)
@@ -479,45 +481,104 @@ namespace ExpressBase.ServiceStack.Services
                     IsDirectMeeting = true;
                 }
             }
-            if (MSD[0].MaxHosts > SPC.SlotHostCount && MyActionObj.Count != 0 && IsDirectMeeting == false)
+
+            //fixed host and fixed attendee
+            if (CurrentUser.ParticipantType == 1 && MyActionObj.Count != 0 && MSD[0].MeetingOpts == MeetingOptions.F_H_F_A)
             {
                 if (MSD[0].IsApproved == "F" && MSD[0].MinHosts == (SPC.SlotHostCount + 1) && MSD[0].MinAttendees <= SPC.SlotAttendeeCount && MSD[0].MaxAttendees >= SPC.SlotAttendeeCount)
                 {
-                    qry_ += $@"insert into eb_meetings (eb_meeting_slots_id, eb_created_at, eb_created_by) values({MSD[0].SlotId}, now(), {request.UserInfo.UserId});
-                        insert into eb_meeting_slot_participants(user_id, confirmation, eb_meeting_schedule_id, approved_slot_id, name, email, type_of_user, participant_type) 
-                            values ({request.UserInfo.UserId}, 1, {MSD[0].MeetingScheduleId}, {request.Id}, '{request.UserInfo.FullName}', '{request.UserInfo.Email}', 1, 1); ";
+                    qry_ += Insert_EbMeetings(MSD[0].SlotId, request.UserInfo.UserId);
+                    qry_ += $@"update eb_meeting_slot_participants set confirmation = 1 where id = {CurrentUser.ParticipantId} ; ";
                     for (int k = 0; k < SPL.Count; k++)
-                        qry_ += $"insert into eb_meeting_participants(eb_meeting_id, eb_slot_participant_id) values ( eb_currval('eb_meetings_id_seq'),{SPL[k].ParticipantId}); ";
-
-                    qry_ += $"insert into eb_meeting_participants(eb_meeting_id, eb_slot_participant_id ) values (eb_currval('eb_meetings_id_seq'), eb_currval('eb_meeting_slot_participants_id_seq'));";
+                    {
+                        if (SPL[k].Confirmation == 1)
+                            qry_ += Insert_Participants(0, SPL[k].ParticipantId);
+                    }
                     qry_ += $"update eb_meeting_slots set is_approved = 'T' where  id = {request.Id}; ";
                 }
                 else if (MSD[0].IsApproved == "T" && MSD[0].MeetingId > 0)
                 {
-                    qry_ += $@"insert into eb_meeting_slot_participants(user_id, confirmation, eb_meeting_schedule_id, approved_slot_id, name, email, type_of_user, participant_type) 
-                            values ({request.UserInfo.Id}, 1, {MSD[0].MeetingScheduleId}, {request.Id}, '{request.UserInfo.FullName}', '', 1, 1); ";
-                    qry_ += $"insert into eb_meeting_participants(eb_meeting_id, eb_slot_participant_id ) values ({MSD[0].MeetingId}, eb_currval('eb_meeting_slot_participants_id_seq'));";
+                    qry_ += $@"update eb_meeting_slot_participants set confirmation = 1 where id = {CurrentUser.ParticipantId} ;  ";
+                    qry_ += Insert_Participants(MSD[0].MeetingId, CurrentUser.ParticipantId);
+                }
+                else if (MSD[0].IsApproved == "F")
+                {
+                    qry_ += $@"update eb_meeting_slot_participants set confirmation = 1 where id = {CurrentUser.ParticipantId} ; ";
+                }
+
+                if (CurrentUser.ParticipantType == 1 && MSD[0].MaxHosts == (SPC.SlotHostCount + 1))
+                {
+                    qry_ += Insert_Myaction(MyActionObj, request.Id, request.UserInfo.UserId, request.MyActionId, 2);
+                }
+                else
+                {
+                    qry_ += Insert_Myaction(MyActionObj, request.Id, request.UserInfo.UserId, request.MyActionId, 2);
+                    qry_ += Insert_Myaction(MyActionObj, request.Id, request.UserInfo.UserId, request.MyActionId, 1);
+                }
+
+            }
+            else if (CurrentUser.ParticipantType == 2 && MyActionObj.Count != 0 && MSD[0].MeetingOpts == MeetingOptions.F_H_F_A)
+            {
+                if (MSD[0].IsApproved == "F" && MSD[0].MinAttendees == (SPC.SlotAttendeeCount + 1) && MSD[0].MinHosts <= SPC.SlotHostCount && MSD[0].MaxHosts >= SPC.SlotHostCount)
+                {
+                    qry_ += Insert_EbMeetings(MSD[0].SlotId, request.UserInfo.UserId);
+                    qry_ += $@"update eb_meeting_slot_participants set confirmation = 1 where id = {CurrentUser.ParticipantId} ; ";
+                    for (int k = 0; k < SPL.Count; k++)
+                    {
+                        if (SPL[k].Confirmation == 1)
+                            qry_ += Insert_Participants(0, SPL[k].ParticipantId);
+                    }
+                    qry_ += $"update eb_meeting_slots set is_approved = 'T' where  id = {request.Id}; ";
+                }
+                else if (MSD[0].IsApproved == "T" && MSD[0].MeetingId > 0)
+                {
+                    qry_ += $@"update eb_meeting_slot_participants set confirmation = 1 where id = {CurrentUser.ParticipantId} ;";
+                    qry_ += Insert_Participants(MSD[0].MeetingId, CurrentUser.ParticipantId);
+                }
+                else if (MSD[0].IsApproved == "F")
+                {
+                    qry_ += $@"update eb_meeting_slot_participants set confirmation = 1 where id = {CurrentUser.ParticipantId} ; ";
+                }
+
+                if (CurrentUser.ParticipantType == 2 && MSD[0].MaxAttendees == (SPC.SlotAttendeeCount + 1))
+                {
+                    qry_ += Insert_Myaction(MyActionObj, request.Id, request.UserInfo.UserId, request.MyActionId, 2);
+                }
+                else
+                {
+                    qry_ += Insert_Myaction(MyActionObj, request.Id, request.UserInfo.UserId, request.MyActionId, 2);
+                    qry_ += Insert_Myaction(MyActionObj, request.Id, request.UserInfo.UserId, request.MyActionId, 1);
+                }
+            }
+            else if (MSD[0].MaxHosts > SPC.SlotHostCount && MyActionObj.Count != 0 && MSD[0].MeetingOpts == MeetingOptions.F_H_F_A)
+            {
+                if (MSD[0].IsApproved == "F" && MSD[0].MinHosts == (SPC.SlotHostCount + 1) && MSD[0].MinAttendees <= SPC.SlotAttendeeCount && MSD[0].MaxAttendees >= SPC.SlotAttendeeCount)
+                {
+                    qry_ += Insert_EbMeetings(MSD[0].SlotId, request.UserInfo.UserId);
+                    qry_ += Insert_Slot_Participants(request.UserInfo, MSD[0].MeetingScheduleId, request.Id);
+                    for (int k = 0; k < SPL.Count; k++)
+                        qry_ += Insert_Participants(0, SPL[k].ParticipantId);
+                    qry_ += qry_ += Insert_Participants(0, 0);
+                    qry_ += $"update eb_meeting_slots set is_approved = 'T' where  id = {request.Id}; ";
+                }
+                else if (MSD[0].IsApproved == "T" && MSD[0].MeetingId > 0)
+                {
+                    qry_ += Insert_Slot_Participants(request.UserInfo, MSD[0].MeetingScheduleId, request.Id);
+                    qry_ += Insert_Participants(MSD[0].MeetingId, 0);
                 }
                 else if (MSD[0].IsApproved == "F" && MSD[0].MinHosts > (SPC.SlotHostCount + 1))
                 {
-                    qry_ += $@"insert into eb_meeting_slot_participants(user_id, confirmation, eb_meeting_schedule_id, approved_slot_id, name, email, type_of_user, participant_type) 
-                            values ({request.UserInfo.Id}, 1, {MSD[0].MeetingScheduleId}, {request.Id}, '{request.UserInfo.FullName}', '', 1, 1); ";
+                    qry_ += Insert_Slot_Participants(request.UserInfo, MSD[0].MeetingScheduleId, request.Id);
                 }
 
                 if (MSD[0].MaxHosts == (SPC.SlotHostCount + 1))
                 {
-                    qry_ += $"update eb_my_actions set completed_at = now(), completed_by ={request.UserInfo.UserId} , is_completed='T' where eb_meeting_slots_id = {request.Id} " +
-                        $"and id= {request.MyActionId}; ";
+                    qry_ += Insert_Myaction(MyActionObj, request.Id, request.UserInfo.UserId, request.MyActionId, 2);
                 }
                 else
                 {
-                    qry_ += $"update eb_my_actions set completed_at = now(), completed_by ={request.UserInfo.UserId} , is_completed='T' where eb_meeting_slots_id = {request.Id} " +
-                       $"and id= {request.MyActionId};";
-                    qry_ += $@"insert into eb_my_actions (user_ids,usergroup_id,role_ids,from_datetime,form_ref_id,form_data_id,description,my_action_type , eb_meeting_slots_id,
-                        is_completed,eb_del , except_user_ids)
-                        values('{MyActionObj[0].UserIds}',{MyActionObj[0].UserGroupId},'{MyActionObj[0].RoleIds}',
-                        NOW(),'{MyActionObj[0].FormRefId}',{MyActionObj[0].FormDataId}, '{MyActionObj[0].Description}','{MyActionTypes.Meeting}',{request.Id},
-                         'F','F' ,'{request.UserInfo.UserId},{MyActionObj[0].ExceptUserIds}');";
+                    qry_ += Insert_Myaction(MyActionObj, request.Id, request.UserInfo.UserId, request.MyActionId, 2);
+                    qry_ += Insert_Myaction(MyActionObj, request.Id, request.UserInfo.UserId, request.MyActionId, 1);
                 }
 
             }
@@ -546,18 +607,12 @@ namespace ExpressBase.ServiceStack.Services
 
                 if (CurrentUser.ParticipantType == 1 && MSD[0].MaxHosts == (SPC.SlotHostCount + 1))
                 {
-                    qry_ += $"update eb_my_actions set completed_at = now(), completed_by ={request.UserInfo.UserId} , is_completed='T' where eb_meeting_slots_id = {request.Id} " +
-                        $"and id= {request.MyActionId}; ";
+                    Insert_Myaction(MyActionObj, request.Id, request.UserInfo.UserId, request.MyActionId, 2);
                 }
                 else
                 {
-                    qry_ += $"update eb_my_actions set completed_at = now(), completed_by ={request.UserInfo.UserId} , is_completed='T' where eb_meeting_slots_id = {request.Id} " +
-                       $"and id= {request.MyActionId};"; 
-                    qry_ += $@"insert into eb_my_actions (user_ids,usergroup_id,role_ids,from_datetime,form_ref_id,form_data_id,description,my_action_type , eb_meeting_slots_id,
-                        is_completed,eb_del , except_user_ids)
-                        values('{MyActionObj[0].UserIds}',{MyActionObj[0].UserGroupId},'{MyActionObj[0].RoleIds}',
-                        NOW(),'{MyActionObj[0].FormRefId}',{MyActionObj[0].FormDataId}, '{MyActionObj[0].Description}','{MyActionTypes.Meeting}',{request.Id},
-                         'F','F' ,'{request.UserInfo.UserId},{MyActionObj[0].ExceptUserIds}');";
+                    qry_ += Insert_Myaction(MyActionObj, request.Id, request.UserInfo.UserId, request.MyActionId, 2);
+                    qry_ += Insert_Myaction(MyActionObj, request.Id, request.UserInfo.UserId, request.MyActionId, 1);
                 }
 
             }
@@ -610,6 +665,60 @@ namespace ExpressBase.ServiceStack.Services
                 Console.WriteLine(e.StackTrace, e.Message);
             }
             return resp;
+        }
+
+ 
+        public string Insert_EbMeetings(int slot_id, int user_id)
+        {
+            string qry_ = $@"insert into eb_meetings (eb_meeting_slots_id, eb_created_at, eb_created_by) values({slot_id}, now(), {user_id})";
+            return qry_;
+        }
+        public string Insert_Slot_Participants(User user, int scheduled_id, int slot_id)
+        {
+            string qry_ = $@"insert into eb_meeting_slot_participants(user_id, confirmation, eb_meeting_schedule_id, approved_slot_id, name, email, type_of_user, participant_type) 
+                            values ({user.UserId}, 1, {scheduled_id}, {slot_id}, '{user.FullName}', '{user.Email}', 1, 1); ";
+            return qry_;
+        }
+        public string Insert_Participants(int meetingid, int slot_participant_id)
+        {
+            string qry_ = "";
+            if (meetingid == 0 && slot_participant_id == 0)
+            {
+                qry_ += $@"insert into eb_meeting_participants(eb_meeting_id, eb_slot_participant_id ) values 
+                (eb_currval('eb_meetings_id_seq'), eb_currval('eb_meeting_slot_participants_id_seq'));";
+            }
+            else if (meetingid == 0 && slot_participant_id > 0)
+            {
+                qry_ += $"insert into eb_meeting_participants(eb_meeting_id, eb_slot_participant_id) values ( eb_currval('eb_meetings_id_seq'),{slot_participant_id}); ";
+
+            }
+            else if (meetingid > 0 && slot_participant_id == 0)
+            {
+                qry_ += $"insert into eb_meeting_participants(eb_meeting_id, eb_slot_participant_id ) values ({meetingid}, eb_currval('eb_meeting_slot_participants_id_seq'));";
+            }
+            else if(meetingid > 0 && slot_participant_id > 0)
+            {
+                qry_ += $"insert into eb_meeting_participants(eb_meeting_id, eb_slot_participant_id ) values ({meetingid}, {slot_participant_id});";
+            }
+            return qry_;
+        }
+        public string Insert_Myaction( List <MyAction> MyActionObj,int slotid,int userid,int myactionid, int QueryOpts)
+        {
+            string qry_ = "";
+            if(QueryOpts == 1)
+            {
+                qry_ += $@"insert into eb_my_actions (user_ids,usergroup_id,role_ids,from_datetime,form_ref_id,form_data_id,description,my_action_type , eb_meeting_slots_id,
+                        is_completed,eb_del , except_user_ids)
+                        values('{MyActionObj[0].UserIds}',{MyActionObj[0].UserGroupId},'{MyActionObj[0].RoleIds}',
+                        NOW(),'{MyActionObj[0].FormRefId}',{MyActionObj[0].FormDataId}, '{MyActionObj[0].Description}','{MyActionTypes.Meeting}',{slotid},
+                         'F','F' ,'{userid},{MyActionObj[0].ExceptUserIds}');";
+            }
+            else if (QueryOpts == 2)
+            {
+                qry_ += $"update eb_my_actions set completed_at = now(), completed_by ={userid} , is_completed='T' where eb_meeting_slots_id = {slotid} " +
+                      $"and id= {myactionid};";
+            }
+            return qry_;
         }
 
         public MeetingCancelByHostResponse Post(MeetingCancelByHostRequest request)
