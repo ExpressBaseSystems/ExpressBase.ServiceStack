@@ -5,6 +5,7 @@ using ExpressBase.Objects;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using ServiceStack;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -18,14 +19,16 @@ namespace ExpressBase.ServiceStack.Services
 {
     public class ApiConversionService : EbBaseService
     {
+        private ResponseStatus _Responsestatus = new ResponseStatus();
+
         public ApiConversionResponse Any(ApiConversionRequest request)
         {
-            ApiConversionResponse resp = new ApiConversionResponse();
-            resp.dataset = start_get(request);
+            ApiConversionResponse resp = null;
+            resp = start_get(request);
             return resp;
         }
 
-        public string Execute(ApiConversionRequest request)
+        public HttpResponseMessage Execute(ApiConversionRequest request)
         {
             List<Param> param = GetParams(request.Parameters);
             var uri = new Uri(request.Url);
@@ -59,7 +62,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 throw e;
             }
-            return response.Content.ReadAsStringAsync().Result;
+            return response;
         }
 
         private List<Param> GetParams(List<ApiRequestParam>  Parameters)
@@ -68,13 +71,15 @@ namespace ExpressBase.ServiceStack.Services
                     .ToList();
         }
 
-        private EbDataSet start_get(ApiConversionRequest request)
+        private ApiConversionResponse start_get(ApiConversionRequest request)
         {
+            ApiConversionResponse resp = new ApiConversionResponse();
+            HttpResponseMessage response = null;
             EbDataSet ds = new EbDataSet();
             try
             {
-                string json = Execute(request);
-                var jsonObject = JObject.Parse(json);
+                response = Execute(request);
+                var jsonObject = JObject.Parse(response.Content.ReadAsStringAsync().Result);
                 int i = -1;
                 foreach (var item in jsonObject)
                 {
@@ -108,8 +113,12 @@ namespace ExpressBase.ServiceStack.Services
             {
                 Console.WriteLine(e.StackTrace);
                 Console.WriteLine(e.Message);
+                this._Responsestatus.Message = e.Message;
             }
-            return ds;
+            resp.dataset = ds;
+            if(response != null)
+                resp.statusCode = (int)response.StatusCode;
+            return resp;
         }
 
         public EbDbTypes ConvertToEbdbType(JTokenType _type)
