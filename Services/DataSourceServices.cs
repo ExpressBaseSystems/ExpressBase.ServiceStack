@@ -589,6 +589,8 @@ namespace ExpressBase.ServiceStack
                 catch (Exception e)
                 {
                     resp.ResponseStatus = new ResponseStatus { Message = e.Message };
+                    Console.WriteLine("DataSourceDataSetResponse------"+e.StackTrace);
+                    Console.WriteLine("DataSourceDataSetResponse------"+e.Message);
                 }
             }
             catch (Exception e)
