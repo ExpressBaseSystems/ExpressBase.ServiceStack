@@ -895,7 +895,8 @@ namespace ExpressBase.ServiceStack.Services
                         EsolutionId = _temp.Rows[0]["esolution_id"].ToString(),
                         IsolutionId = request.IsolutionId,
                         PricingTier = Enum.Parse<PricingTiers>(_temp.Rows[0]["pricing_tier"].ToString()),
-                        IsVersioningEnabled = Convert.ToBoolean(_temp.Rows[0]["versioning"])
+                        IsVersioningEnabled = Convert.ToBoolean(_temp.Rows[0]["versioning"]),
+                        Is2faEnabled = Convert.ToBoolean(_temp.Rows[0]["is2fa"]),
                     };
 
                     _temp = dt.Tables[1];
@@ -922,7 +923,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
-                Console.WriteLine("GETting all data : " + e.Message.ToString() + e.StackTrace.ToString());
+                Console.WriteLine("Getting all data : " + e.Message.ToString() + e.StackTrace.ToString());
             }
             return resp;
         }
