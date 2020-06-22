@@ -903,7 +903,7 @@ namespace ExpressBase.ServiceStack.Services
                     Dictionary<string, List<EbIntegrationConfData>> _conf = new Dictionary<string, List<EbIntegrationConfData>>();
                     foreach (var _row in _temp.Rows)
                     {
-                        string type = _row[3].ToString();
+                        string type = _row["type"].ToString();
                         if (!_conf.ContainsKey(type))
                             _conf.Add(type, new List<EbIntegrationConfData>());
                         _conf[type].Add(new EbIntegrationConfData(_row));
@@ -913,7 +913,7 @@ namespace ExpressBase.ServiceStack.Services
                     Dictionary<string, List<EbIntegrationData>> _intgre = new Dictionary<string, List<EbIntegrationData>>();
                     foreach (var _row in _temp.Rows)
                     {
-                        string Type = _row[12].ToString();
+                        string Type = _row["type"].ToString();
                         if (!_intgre.ContainsKey(Type))
                             _intgre.Add(Type, new List<EbIntegrationData>());
                         _intgre[Type].Add(new EbIntegrationData(_row));
