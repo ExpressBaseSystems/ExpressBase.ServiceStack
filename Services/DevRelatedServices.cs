@@ -142,7 +142,8 @@ namespace ExpressBase.ServiceStack
                             EbType = ___otyp.ToString(),
                             DisplayName = dr["display_name"].ToString(),
                             Refid = dr["refid"].ToString(),
-                            IsCommitted = (dr["working_mode"].ToString() == "F") ? true : false
+                            IsCommitted = (dr["working_mode"].ToString() == "F") ? true : false,
+                            VersionNumber = dr["version_num"].ToString()
                         });
                         objids.Add(id);
                     }
