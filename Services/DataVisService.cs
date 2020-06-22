@@ -589,10 +589,19 @@ namespace ExpressBase.ServiceStack
                 List<GroupingDetails> _levels = new List<GroupingDetails>();
                 if (_dataset.Tables.Count > 0 && _dV != null)
                 {
-                    if (_dV is EbCalendarView)
-                        ReturnObj = PreProcessingCalendarView(ref _dataset, request.Params, ref _dV, request.UserInfo);
-                    else
-                        ReturnObj = PreProcessing(ref _dataset, request.Params, _dV, request.UserInfo, ref _levels, request.IsExcel);
+                    try
+                    {
+                        if (_dV is EbCalendarView)
+                            ReturnObj = PreProcessingCalendarView(ref _dataset, request.Params, ref _dV, request.UserInfo);
+                        else
+                            ReturnObj = PreProcessing(ref _dataset, request.Params, _dV, request.UserInfo, ref _levels, request.IsExcel);
+                    }
+                    catch(Exception e)
+                    {
+                        Log.Info("Call to PreProcessing ----" + e.StackTrace);
+                        Log.Info("Call to PreProcessing ----" + e.Message);
+                        this._Responsestatus.Message = e.Message;
+                    }
                 }
 
                 List<string> _permission = new List<string>();
@@ -1505,9 +1514,9 @@ namespace ExpressBase.ServiceStack
                         {
                             bool AllowLinkifNoData = true;
                             var cults = col.GetColumnCultureInfo(_user_culture);
-                            object _unformattedData = row[col.Data];//(_dv.AutoGen && col.Name == "eb_action") ? "<i class='fa fa-edit'></i>" :
-                            object _formattedData = IntermediateDic[col.Data];
-                            object ActualFormatteddata = IntermediateDic[col.Data];
+                            object _unformattedData = row[col.Data] == null ? "" : row[col.Data];//(_dv.AutoGen && col.Name == "eb_action") ? "<i class='fa fa-edit'></i>" :
+                            object _formattedData = IntermediateDic[col.Data] == null ? "" : IntermediateDic[col.Data];
+                            object ActualFormatteddata = IntermediateDic[col.Data] == null ? "" : IntermediateDic[col.Data];
 
                             if (col.RenderType == EbDbTypes.Decimal || col.RenderType == EbDbTypes.Int32 || col.RenderType == EbDbTypes.Int64)
                             {
@@ -1727,11 +1736,11 @@ namespace ExpressBase.ServiceStack
                         if (col is DVButtonColumn)
                             ProcessButtoncolumn(row, globals, col);
                         else if (col is DVApprovalColumn)
-                        {
                             ProcessApprovalcolumn(col, row, _user);
-                        }
                         else if (col is DVActionColumn)
                             row[col.Data] = "<i class='fa fa-edit'></i>";
+                        else if (col is DVPhoneColumn)
+                            ProcessPhonecolumn(col, row, _user);
                         else
                             CustomColumDoCalc4Row(row, _dv, globals, col);
                     }
@@ -2223,6 +2232,16 @@ namespace ExpressBase.ServiceStack
                     else
                         row[customCol.Data] = string.Empty;
                 }
+            }
+        }
+
+        public void ProcessPhonecolumn(DVBaseColumn customCol, EbDataRow row, User _user)
+        {
+            if (customCol is DVPhoneColumn)
+            {
+                DVPhoneColumn Phonecolumn = customCol as DVPhoneColumn;
+                DVBaseColumn MapColumn = Phonecolumn.MappingColumn;
+                row[customCol.Data] = "<div class='smsdiv'><span class='smstext'>"+IntermediateDic[MapColumn.Data]+ "</span><button class='smsbutton btn' data-colname='"+ customCol .Name+ "'><i class='fa fa-caret-right smsicon' aria-hidden='true'></i></button></div>";
             }
         }
 
