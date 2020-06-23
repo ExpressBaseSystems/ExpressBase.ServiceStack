@@ -228,6 +228,133 @@ namespace ExpressBase.ServiceStack.Services
             EbObject_SaveResponse res = myService.Post(ds);
         }
 
+        //get solution data
+        public EbMobileSolutionData Get(MobileSolutionDataRequest request)
+        {
+            EbMobileSolutionData data = new EbMobileSolutionData();
+
+            string idcheck = EbConnectionFactory.DataDB.EB_GET_MOB_MENU_OBJ_IDS;
+            const string acquery = @"SELECT 
+	                                        EA.id, EA.applicationname,EA.app_icon,EA.application_type,EA.app_settings
+                                        FROM 
+	                                        eb_applications EA
+                                        WHERE
+	                                        EXISTS (SELECT * FROM eb_objects2application EOA WHERE EOA.app_id = EA.id AND EOA.eb_del = 'F' {0})
+                                        AND
+	                                        EA.eb_del = 'F'
+                                        AND
+	                                        EA.application_type = 2;";
+
+            User UserObject = this.Redis.Get<User>(request.UserAuthId);
+            bool isAdmin = (UserObject.Roles.Contains(SystemRoles.SolutionOwner.ToString()) || UserObject.Roles.Contains(SystemRoles.SolutionAdmin.ToString()));
+            string sql;
+            EbDataTable dt;
+
+            try
+            {
+                if (isAdmin)
+                {
+                    sql = string.Format(acquery, string.Empty);
+                    dt = this.EbConnectionFactory.ObjectsDB.DoQuery(sql);
+                }
+                else
+                {
+                    string[] Ids = UserObject.GetAccessIds();
+                    sql = string.Format(acquery, idcheck);
+                    DbParameter[] parameters = { this.EbConnectionFactory.DataDB.GetNewParameter("ids", EbDbTypes.String, String.Join(",", Ids)) };
+                    dt = this.EbConnectionFactory.ObjectsDB.DoQuery(sql, parameters);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("exception at get all application [MobileSolutionDataRequest] ::" + ex.Message);
+                dt = new EbDataTable();
+            }
+
+            foreach (EbDataRow row in dt.Rows)
+            {
+                data.Applications.Add(new EbApplicationDataMobile
+                {
+                    AppId = Convert.ToInt32(row["id"]),
+                    AppName = row["applicationname"].ToString(),
+                    AppIcon = row["app_icon"].ToString(),
+                    AppSettings = JsonConvert.DeserializeObject<EbMobileSettings>(row["app_settings"].ToString())
+                });
+            }
+
+            GetMobilePagesByAppliation(data, UserObject, isAdmin);
+
+            return data;
+        }
+
+
+        private void GetMobilePagesByAppliation(EbMobileSolutionData data, User user, bool isAdmin)
+        {
+            string idcheck = EbConnectionFactory.ObjectsDB.EB_GET_MOBILE_PAGES;
+            string Sql = EbConnectionFactory.ObjectsDB.EB_GET_MOBILE_PAGES_OBJS;
+
+            foreach (var app in data.Applications)
+            {
+                if (app.AppSettings != null)
+                {
+                    EbDataSet ds = PullAppConfiguredData(app.AppSettings);
+                    data.OfflineData.Tables.AddRange(ds.Tables);
+                }
+
+                List<DbParameter> parameters = new List<DbParameter> {
+                    this.EbConnectionFactory.ObjectsDB.GetNewParameter("appid", EbDbTypes.Int32, app.AppId)
+                };
+
+                string query;
+
+                if (isAdmin)
+                    query = string.Format(Sql, string.Empty);
+                else
+                {
+                    string[] objids = user.GetAccessIds();
+                    parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("objids", EbDbTypes.String, objids.Join(",")));
+                    query = string.Format(Sql, idcheck);
+                }
+
+                try
+                {
+                    EbDataSet ds = this.EbConnectionFactory.DataDB.DoQueries(query, parameters.ToArray());
+
+                    foreach (EbDataRow dr in ds.Tables[0].Rows)
+                    {
+                        EbObjectType objType = (EbObjectType)Convert.ToInt32(dr["obj_type"]);
+                        if (objType.IntCode == EbObjectTypes.MobilePage)
+                        {
+                            app.MobilePages.Add(new MobilePagesWraper
+                            {
+                                Name = dr["obj_name"].ToString(),
+                                DisplayName = dr["display_name"].ToString(),
+                                Version = dr["version_num"].ToString(),
+                                Json = dr["obj_json"].ToString(),
+                                RefId = dr["refid"].ToString()
+                            });
+                        }
+                        else
+                        {
+                            app.WebObjects.Add(new WebObjectsWraper
+                            {
+                                Name = dr["obj_name"].ToString(),
+                                DisplayName = dr["display_name"].ToString(),
+                                Version = dr["version_num"].ToString(),
+                                Json = dr["obj_json"].ToString(),
+                                RefId = dr["refid"].ToString(),
+                                ObjectType = objType.IntCode
+                            });
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
+            }
+        }
+
         //get applist for mobile
         public GetMobMenuResonse Get(GetMobMenuRequest request)
         {
@@ -381,8 +508,11 @@ namespace ExpressBase.ServiceStack.Services
                             RefId = DI.RefId
                         });
 
-                        resp.DataSet.Tables[0].TableName = DI.TableName;
-                        DataSet.Tables.Add(resp.DataSet.Tables[0]);
+                        if (resp.DataSet.Tables.Any())
+                        {
+                            resp.DataSet.Tables[0].TableName = DI.TableName;
+                            DataSet.Tables.Add(resp.DataSet.Tables[0]);
+                        }
                     }
 
                 }
@@ -452,7 +582,7 @@ namespace ExpressBase.ServiceStack.Services
                     foreach (Param param in parameters)
                     {
                         var p = sqlP.Find(item => item.Name == param.Name);
-                        if (p == null) 
+                        if (p == null)
                             filterList.Add($"PWWRP.{param.Name} = :{param.Name}");
                     }
 
@@ -471,7 +601,7 @@ namespace ExpressBase.ServiceStack.Services
 
                 wraped = $"SELECT COUNT(*) FROM ({wraped}) AS COUNT_STAR;" + wraped;
 
-                if (has_limit) 
+                if (has_limit)
                     wraped += $" LIMIT :limit OFFSET :offset";
 
                 if (!wraped.EndsWith(CharConstants.SEMI_COLON))
