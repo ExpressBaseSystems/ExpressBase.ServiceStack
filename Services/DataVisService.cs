@@ -2241,7 +2241,10 @@ namespace ExpressBase.ServiceStack
             {
                 DVPhoneColumn Phonecolumn = customCol as DVPhoneColumn;
                 DVBaseColumn MapColumn = Phonecolumn.MappingColumn;
-                row[customCol.Data] = "<div class='smsdiv'><span class='smstext'>"+IntermediateDic[MapColumn.Data]+ "</span><button class='smsbutton btn' data-colname='"+ customCol .Name+ "'><i class='fa fa-caret-right smsicon' aria-hidden='true'></i></button></div>";
+                if (this.EbConnectionFactory.SMSConnection != null)
+                    row[customCol.Data] = "<div class='smsdiv'><span class='smstext'>" + IntermediateDic[MapColumn.Data] + "</span><button class='smsbutton btn' data-colname='" + customCol.Name + "'><i class='fa fa-caret-right smsicon' aria-hidden='true'></i></button></div>";
+                else
+                    row[customCol.Data] = string.Empty;
             }
         }
 
