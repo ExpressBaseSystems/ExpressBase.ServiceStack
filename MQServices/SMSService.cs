@@ -27,7 +27,7 @@ namespace ExpressBase.ServiceStack.MQServices
             {
                 ObjId = request.ObjId,
                 Params = request.Params,
-                SolnId = request.SolnId,
+                SolnId = request.SolnId,                  
                 UserId = request.UserId,
                 UserAuthId = request.UserAuthId,
                 MediaUrl = request.MediaUrl,
@@ -107,7 +107,9 @@ namespace ExpressBase.ServiceStack.MQServices
                                 SolnId = request.SolnId,
                                 UserId = request.UserId,
                                 WhichConsole = request.WhichConsole,
-                                UserAuthId = request.UserAuthId
+                                UserAuthId = request.UserAuthId,
+                                RefId = request.RefId,
+                                Params = request.Params
                             });
                             //return true;
                         }

@@ -873,7 +873,7 @@ namespace ExpressBase.ServiceStack.Services
 
             string sql = string.Format(@"SELECT * FROM eb_solutions WHERE isolution_id='{0}';
                 SELECT * FROM eb_integration_configs WHERE solution_id = '{0}' AND eb_del = 'F';
-                SELECT * FROM
+                  SELECT * ,  EI.type as itype FROM
                     eb_integration_configs EC,
                     eb_integrations EI 
                 where 
@@ -903,7 +903,7 @@ namespace ExpressBase.ServiceStack.Services
                     Dictionary<string, List<EbIntegrationConfData>> _conf = new Dictionary<string, List<EbIntegrationConfData>>();
                     foreach (var _row in _temp.Rows)
                     {
-                        string type = _row[3].ToString();
+                        string type = _row["type"].ToString();
                         if (!_conf.ContainsKey(type))
                             _conf.Add(type, new List<EbIntegrationConfData>());
                         _conf[type].Add(new EbIntegrationConfData(_row));
@@ -913,7 +913,7 @@ namespace ExpressBase.ServiceStack.Services
                     Dictionary<string, List<EbIntegrationData>> _intgre = new Dictionary<string, List<EbIntegrationData>>();
                     foreach (var _row in _temp.Rows)
                     {
-                        string Type = _row[12].ToString();
+                        string Type = _row["itype"].ToString();
                         if (!_intgre.ContainsKey(Type))
                             _intgre.Add(Type, new List<EbIntegrationData>());
                         _intgre[Type].Add(new EbIntegrationData(_row));
