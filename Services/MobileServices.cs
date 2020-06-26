@@ -273,7 +273,7 @@ namespace ExpressBase.ServiceStack.Services
 
             foreach (EbDataRow row in dt.Rows)
             {
-                data.Applications.Add(new EbApplicationDataMobile
+                data.Applications.Add(new AppDataToMob
                 {
                     AppId = Convert.ToInt32(row["id"]),
                     AppName = row["applicationname"].ToString(),
@@ -298,7 +298,7 @@ namespace ExpressBase.ServiceStack.Services
                 if (app.AppSettings != null)
                 {
                     EbDataSet ds = PullAppConfiguredData(app.AppSettings);
-                    data.OfflineData.Tables.AddRange(ds.Tables);
+                    app.OfflineData.Tables.AddRange(ds.Tables);
                 }
 
                 List<DbParameter> parameters = new List<DbParameter> {
@@ -364,20 +364,11 @@ namespace ExpressBase.ServiceStack.Services
                 string sql = string.Empty;
                 EbDataTable dt = null;
                 string idcheck = EbConnectionFactory.DataDB.EB_GET_MOB_MENU_OBJ_IDS;
-                const string acquery = @"SELECT 
-	                                        EA.id,
-	                                        EA.applicationname,
-	                                        EA.app_icon,
-	                                        EA.application_type 
+                const string acquery = @"SELECT EA.id,EA.applicationname,EA.app_icon,EA.application_type,EA.app_settings
                                         FROM 
 	                                        eb_applications EA
                                         WHERE
-	                                        EXISTS
-                                                (
-                                                SELECT *
-                                                FROM eb_objects2application EOA
-                                                WHERE EOA.app_id = EA.id AND EOA.eb_del = 'F' {0}
-                                                )
+	                                        EXISTS(SELECT * FROM eb_objects2application EOA WHERE EOA.app_id = EA.id AND EOA.eb_del = 'F' {0})
                                         AND
 	                                        EA.eb_del = 'F'
                                         AND
@@ -409,6 +400,7 @@ namespace ExpressBase.ServiceStack.Services
                         AppId = Convert.ToInt32(row["id"]),
                         AppName = row["applicationname"].ToString(),
                         AppIcon = row["app_icon"].ToString(),
+                        AppSettings = JsonConvert.DeserializeObject<EbMobileSettings>(row["app_settings"].ToString())
                     });
                 }
             }
