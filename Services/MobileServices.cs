@@ -246,7 +246,7 @@ namespace ExpressBase.ServiceStack.Services
 	                                        EA.application_type = 2;";
 
             User UserObject = this.Redis.Get<User>(request.UserAuthId);
-            bool isAdmin = (UserObject.Roles.Contains(SystemRoles.SolutionOwner.ToString()) || UserObject.Roles.Contains(SystemRoles.SolutionAdmin.ToString()));
+            bool isAdmin = UserObject.IsAdmin();
             string sql;
             EbDataTable dt;
 
