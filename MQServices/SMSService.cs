@@ -21,6 +21,17 @@ namespace ExpressBase.ServiceStack.MQServices
     {
         public SmsCreateService(IMessageProducer _mqp) : base(_mqp) { }
 
+        public void Post(SmsDirectRequest request) {
+            this.MessageProducer3.Publish(new SMSSentRequest
+            {
+                To = request.To,
+                Body = request.Body,
+                SolnId = request.SolnId,
+                UserId = request.UserId,
+                WhichConsole = request.WhichConsole,
+                UserAuthId = request.UserAuthId 
+            });
+        }
         public void Post(SMSInitialRequest request)
         {
             this.MessageProducer3.Publish(new SMSPrepareRequest

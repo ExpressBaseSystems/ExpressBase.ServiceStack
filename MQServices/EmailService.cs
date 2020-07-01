@@ -27,11 +27,31 @@ namespace ExpressBase.ServiceStack
     {
         public EmailService(IEbConnectionFactory _dbf, IMessageProducer _mqp, IMessageQueueClient _mqc, IEbServerEventClient _sec) : base(_dbf, _mqp, _mqc, _sec) { }
 
-        //public EmailServicesResponse Post(EmailServicesMqRequest request)
-        //{
-        //    EmailServicesResponse resp = new EmailServicesResponse();
-        //    return resp;
-        //}
+        public EmailServicesResponse Post(EmailDirectRequest request)
+        {
+            EmailServicesResponse resp = new EmailServicesResponse();
+            try
+            {
+                MessageProducer3.Publish(new EmailServicesRequest()
+                {
+                    To = request.To,
+                    Message = request.Message,
+                    Subject = request.Subject,
+                    UserId = request.UserId,
+                    UserAuthId = request.UserAuthId,
+                    SolnId = request.SolnId,
+                    WhichConsole = request.WhichConsole
+                });
+                resp.Success = true;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message + e.StackTrace);
+                resp.Success = false;
+            }
+            return resp;
+        }
+
 
         //public ResetPasswordMqResponse Post(ResetPasswordMqRequest request)
         //{
@@ -56,7 +76,7 @@ namespace ExpressBase.ServiceStack
         //    });
         //    return new ResetPasswordMqResponse { };
         //}
-    } 
+    }
 
     [Restrict(InternalOnly = true)]
     public class EmailInternalService : EbMqBaseService

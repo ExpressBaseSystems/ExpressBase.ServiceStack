@@ -72,7 +72,7 @@ namespace ExpressBase.ServiceStack.Services
                 }
                 else if (request.ChangeColumn == solutionChangeColumn.TwoFa)
                 {
-                    string sql = string.Format("UPDATE eb_solutions SET is2fa = {1} WHERE isolution_id = '{0}';", request.solution_id, request.Value);
+                    string sql = string.Format("UPDATE eb_solutions SET is2fa = {1}, otp_delivery = '{2}' WHERE isolution_id = '{0}';", request.solution_id, request.Value, request.DeliveryMethod);
                     int r = this.InfraConnectionFactory.DataDB.DoNonQuery(sql);
 
                     if (r > 0)
@@ -556,7 +556,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 Console.WriteLine("GetSolutioInfoRequest started - " + request.IsolutionId);
                 ConnectionManager _conService = base.ResolveService<ConnectionManager>();
-                string sql = string.Format("SELECT solution_name, description, date_created, esolution_id, pricing_tier, versioning, solution_settings   FROM eb_solutions WHERE isolution_id='{0}'", request.IsolutionId);
+                string sql = string.Format("SELECT solution_name, description, date_created, esolution_id, pricing_tier, versioning, solution_settings, is2fa, otp_delivery FROM eb_solutions WHERE isolution_id='{0}'", request.IsolutionId);
                 EbDataTable dt = (new EbConnectionFactory(CoreConstants.EXPRESSBASE, this.Redis)).DataDB.DoQuery(sql);
                 if (dt.Rows.Count > 0)
                 {
@@ -569,7 +569,9 @@ namespace ExpressBase.ServiceStack.Services
                         PricingTier = (PricingTiers)Convert.ToInt32(dt.Rows[0][4]),
                         IsVersioningEnabled = (dt.Rows[0][5] == null || dt.Rows[0][5].ToString() == "") ? false : (bool)dt.Rows[0][5],
                         IsolutionId = request.IsolutionId,
-                        SolutionSettings = JsonConvert.DeserializeObject<SolutionSettings>(dt.Rows[0]["solution_settings"].ToString())
+                        SolutionSettings = JsonConvert.DeserializeObject<SolutionSettings>(dt.Rows[0][6].ToString()),
+                        Is2faEnabled = (dt.Rows[0][7] == null || dt.Rows[0][7].ToString() == "") ? false : (bool)dt.Rows[0][7],
+                        OtpDelivery = dt.Rows[0][8].ToString(),
                     };
                     resp = new GetSolutioInfoResponse() { Data = _ebSolutions };
                     if (resp.Data != null)
