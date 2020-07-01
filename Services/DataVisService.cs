@@ -1636,6 +1636,8 @@ namespace ExpressBase.ServiceStack
                             }
 
                             this.conditinallyformatColumn(col, ref _formattedData, _unformattedData, row, ref globals);
+                            if (col is DVPhoneColumn)
+                                this.ModifyPhonecolumn(col, ref _formattedData);
 
                             _formattedTable.Rows[i][col.Data] = _formattedData;
                             if (_isexcel)
@@ -2241,11 +2243,18 @@ namespace ExpressBase.ServiceStack
             {
                 DVPhoneColumn Phonecolumn = customCol as DVPhoneColumn;
                 DVBaseColumn MapColumn = Phonecolumn.MappingColumn;
-                if (this.EbConnectionFactory.SMSConnection != null)
-                    row[customCol.Data] = "<div class='smsdiv'><span class='smstext'>" + IntermediateDic[MapColumn.Data] + "</span><button class='smsbutton btn' data-colname='" + customCol.Name + "'><i class='fa fa-phone smsicon' aria-hidden='true'></i></button></div>";
+                if (MapColumn.Name != null)
+                    row[customCol.Data] = IntermediateDic[MapColumn.Data];
                 else
-                    row[customCol.Data] = "<div class='smsdiv'><span class='smstext'>" + IntermediateDic[MapColumn.Data] + "</span><button class='smsbutton btn' data-colname='" + customCol.Name + "' disabled><i class='fa fa-phone smsicon' aria-hidden='true'></i></button></div>";
+                    row[customCol.Data] = string.Empty;
             }
+        }
+
+        public void ModifyPhonecolumn(DVBaseColumn phonecol, ref object _formattedData)
+        {
+            string _disabled = (this.EbConnectionFactory.SMSConnection != null) ? string.Empty : "disabled";
+            _formattedData = "<div class='smsdiv'><button class='smsbutton btn' data-colname='" + phonecol.Name + "' " + _disabled + "><i class='fa fa-phone smsicon' aria-hidden='true'></i></button><span class='smstext'>" + _formattedData + "</span></div>";
+            
         }
 
         public void DataTable2FormatedTable4Calendar(EbDataRow row, List<EbDataRow> Customrows, EbDataVisualization _dv, CultureInfo _user_culture, User _user,

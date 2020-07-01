@@ -246,7 +246,7 @@ namespace ExpressBase.ServiceStack.Services
 	                                        EA.application_type = 2;";
 
             User UserObject = this.Redis.Get<User>(request.UserAuthId);
-            bool isAdmin = (UserObject.Roles.Contains(SystemRoles.SolutionOwner.ToString()) || UserObject.Roles.Contains(SystemRoles.SolutionAdmin.ToString()));
+            bool isAdmin = UserObject.IsAdmin();
             string sql;
             EbDataTable dt;
 
@@ -282,20 +282,20 @@ namespace ExpressBase.ServiceStack.Services
                 });
             }
 
-            GetMobilePagesByAppliation(data, UserObject, isAdmin);
+            GetMobilePagesByAppliation(data, UserObject, isAdmin, request.Export);
 
             return data;
         }
 
 
-        private void GetMobilePagesByAppliation(EbMobileSolutionData data, User user, bool isAdmin)
+        private void GetMobilePagesByAppliation(EbMobileSolutionData data, User user, bool isAdmin, bool export)
         {
             string idcheck = EbConnectionFactory.ObjectsDB.EB_GET_MOBILE_PAGES;
             string Sql = EbConnectionFactory.ObjectsDB.EB_GET_MOBILE_PAGES_OBJS;
 
-            foreach (var app in data.Applications)
+            foreach (AppDataToMob app in data.Applications)
             {
-                if (app.AppSettings != null)
+                if (app.AppSettings != null && export)
                 {
                     EbDataSet ds = PullAppConfiguredData(app.AppSettings);
                     app.OfflineData.Tables.AddRange(ds.Tables);
