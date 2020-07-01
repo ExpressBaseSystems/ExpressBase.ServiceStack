@@ -21,7 +21,8 @@ namespace ExpressBase.ServiceStack.MQServices
     {
         public SmsCreateService(IMessageProducer _mqp) : base(_mqp) { }
 
-        public void Post(SmsDirectRequest request) {
+        public void Post(SmsDirectRequest request)
+        {
             this.MessageProducer3.Publish(new SMSSentRequest
             {
                 To = request.To,
@@ -29,7 +30,7 @@ namespace ExpressBase.ServiceStack.MQServices
                 SolnId = request.SolnId,
                 UserId = request.UserId,
                 WhichConsole = request.WhichConsole,
-                UserAuthId = request.UserAuthId 
+                UserAuthId = request.UserAuthId
             });
         }
         public void Post(SMSInitialRequest request)
@@ -38,28 +39,38 @@ namespace ExpressBase.ServiceStack.MQServices
             {
                 ObjId = request.ObjId,
                 Params = request.Params,
-                SolnId = request.SolnId,                  
+                SolnId = request.SolnId,
                 UserId = request.UserId,
                 UserAuthId = request.UserAuthId,
                 MediaUrl = request.MediaUrl,
                 RefId = request.RefId
             });
         }
-    }
 
-    [Restrict(InternalOnly = true)]
-    public class SMSService : EbMqBaseService
-    {
-        public SMSService(IMessageProducer _mqp) : base(_mqp) { }
+        public GetFilledSmsTemplateResponse Get(GetFilledSmsTemplateRequest request)
+        {
+            GetFilledSmsTemplateResponse resp = null;
+            try
+            {
+                SMSPrepareRequest request1 = new SMSPrepareRequest();
+                FilledSmsTemplate FilledSmsTemplate = FillSmsTemplate(request1);
+                resp = new GetFilledSmsTemplateResponse { FilledSmsTemplate = FilledSmsTemplate };
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message + e.StackTrace);
+            }
+            return resp;
+        }
 
-        public void Post(SMSPrepareRequest request)
+        public FilledSmsTemplate FillSmsTemplate(SMSPrepareRequest request)
         {
             string smsTo = string.Empty;
             EbConnectionFactory ebConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
+            SmsCreateService SmsCreateService = base.ResolveService<SmsCreateService>();
             EbObjectService objservice = base.ResolveService<EbObjectService>();
             objservice.EbConnectionFactory = ebConnectionFactory;
             EbSmsTemplate SmsTemplate = new EbSmsTemplate();
-
             if (request.ObjId > 0)
             {
                 EbObjectFetchLiveVersionResponse template_res = (EbObjectFetchLiveVersionResponse)objservice.Get(new EbObjectFetchLiveVersionRequest() { Id = request.ObjId });
@@ -107,31 +118,42 @@ namespace ExpressBase.ServiceStack.MQServices
                             smsTo = dt.Rows[0][SmsTemplate.To.Split('.')[1]].ToString();
                         }
                     }
-                    if (smsTo != string.Empty)
-                    {
-                        try
-                        {
-                            this.MessageProducer3.Publish(new SMSSentRequest
-                            {
-                                To = smsTo,
-                                Body = SmsTemplate.Body,
-                                SolnId = request.SolnId,
-                                UserId = request.UserId,
-                                WhichConsole = request.WhichConsole,
-                                UserAuthId = request.UserAuthId,
-                                RefId = request.RefId,
-                                Params = request.Params
-                            });
-                            //return true;
-                        }
-                        catch (Exception e)
-                        {
-                            Log.Info("Exception in SMSSentRequest publish to " + smsTo + e.Message + e.StackTrace);
-                            //return false;
-                        }
-                    }
                 }
             }
+            return new FilledSmsTemplate { SmsTemplate = SmsTemplate, SmsTo = smsTo };
+        }
+    }
+
+    [Restrict(InternalOnly = true)]
+    public class SMSService : EbMqBaseService
+    {
+        public SMSService(IMessageProducer _mqp) : base(_mqp) { }
+
+        public void Post(SMSPrepareRequest request)
+        {
+            SmsCreateService SmsCreateService = base.ResolveService<SmsCreateService>();
+            FilledSmsTemplate FilledSmsTemplate = SmsCreateService.FillSmsTemplate(request);
+            if (FilledSmsTemplate != null && FilledSmsTemplate.SmsTemplate != null && string.IsNullOrEmpty(FilledSmsTemplate.SmsTo))
+                try
+                {
+                    this.MessageProducer3.Publish(new SMSSentRequest
+                    {
+                        To = FilledSmsTemplate.SmsTo,
+                        Body = FilledSmsTemplate.SmsTemplate.Body,
+                        SolnId = request.SolnId,
+                        UserId = request.UserId,
+                        WhichConsole = request.WhichConsole,
+                        UserAuthId = request.UserAuthId,
+                        RefId = request.RefId,
+                        Params = request.Params
+                    });
+                    //return true;
+                }
+                catch (Exception e)
+                {
+                    Log.Info("Exception in SMSSentRequest publish to " + FilledSmsTemplate.SmsTo + e.Message + e.StackTrace);
+                    //return false;
+                }
         }
 
         //[Route("/callback/{apikey}")]
