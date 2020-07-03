@@ -53,6 +53,9 @@ namespace ExpressBase.ServiceStack.MQServices
             try
             {
                 SMSPrepareRequest request1 = new SMSPrepareRequest();
+                request1.SolnId = request.SolnId;
+                request1.RefId = request.RefId;
+                request1.Params = request.Params;
                 FilledSmsTemplate FilledSmsTemplate = FillSmsTemplate(request1);
                 resp = new GetFilledSmsTemplateResponse { FilledSmsTemplate = FilledSmsTemplate };
             }
