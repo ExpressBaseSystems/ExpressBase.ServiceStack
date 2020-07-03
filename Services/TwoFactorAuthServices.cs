@@ -22,7 +22,7 @@ namespace ExpressBase.ServiceStack.Services
     {
         public TwoFactorAuthServices(IEbConnectionFactory _dbf) : base(_dbf) { }
 
-        public const string OtpMessage = "One-Time Password for log in to {0} is {1}. Do not share with anyone. This OTP is valid for 5 minutes.";
+        public const string OtpMessage = "One-Time Password for log in to {0} is {1}. Do not share with anyone. This OTP is valid for 3 minutes.";
         public MyAuthenticateResponse MyAuthenticateResponse { get; set; }
 
         public Authenticate2FAResponse AuthResponse { get; set; }
@@ -133,7 +133,7 @@ namespace ExpressBase.ServiceStack.Services
                         new Claim[] {
                         new Claim("AuthId", this.MyAuthenticateResponse.User.AuthId),
                         }),
-                    Expires = DateTime.UtcNow.AddMinutes(5),
+                    Expires = DateTime.UtcNow.AddMinutes(10),
                     SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature),
                 };
                 SecurityToken token = tokenHandler.CreateToken(tokenDescriptor);
@@ -169,7 +169,15 @@ namespace ExpressBase.ServiceStack.Services
                         if (!string.IsNullOrEmpty(_usr.Email))
                         {
                             SendOtpEmail(_usr, sol_Obj);
-                            AuthResponse.OtpTo = _usr.Email;
+
+                            int end = _usr.Email.IndexOf('@');
+                            if (end > 0)
+                            {
+                                string name = _usr.Email.Substring(3, end - 3);
+                                string newString = new string('*', name.Length);
+                                string final = _usr.Email.Replace(name, newString);
+                                AuthResponse.OtpTo = final;
+                            }
                         }
                         else
                         {
