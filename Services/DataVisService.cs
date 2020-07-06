@@ -38,6 +38,7 @@ using ExpressBase.ServiceStack.Services;
 using ExpressBase.Common.EbServiceStack.ReqNRes;
 using System.Drawing;
 using OfficeOpenXml.Drawing;
+using ExpressBase.Common.ServiceClients;
 
 namespace ExpressBase.ServiceStack
 {
@@ -54,7 +55,7 @@ namespace ExpressBase.ServiceStack
 
         private Dictionary<int, object> IntermediateDic = new Dictionary<int, object>();
 
-        public DataVisService(IEbConnectionFactory _dbf) : base(_dbf) { }
+        public DataVisService(IEbConnectionFactory _dbf, IEbStaticFileClient _sfc) : base(_dbf, _sfc) { }
 
         private string TableId = null;
 
@@ -287,6 +288,8 @@ namespace ExpressBase.ServiceStack
         {
             try
             {
+                this.FileClient.BearerToken = request.Token;
+                this.FileClient.RefreshToken = request.rToken;
                 _ebSolution = request.eb_Solution;
                 this.TableId = request.TableId;
                 Modifydv = request.Modifydv;
@@ -1581,22 +1584,32 @@ namespace ExpressBase.ServiceStack
                                     var _height = (col as DVStringColumn).ImageHeight == 0 ? "auto" : (col as DVStringColumn).ImageHeight + "px";
                                     var _width = (col as DVStringColumn).ImageWidth == 0 ? "auto" : (col as DVStringColumn).ImageWidth + "px";
                                     var _quality = (col as DVStringColumn).ImageQuality.ToString().ToLower();
-                                    var src = "/images/{_quality}/{_unformattedData}.jpg";
-                                    int rowIndex = i+2;
-                                    int colIndex = j+1;
+                                    //var src = "/images/{_quality}/{_unformattedData}.jpg"; 
+                                    int rowIndex = i + 2;
+                                    int colIndex = j + 1;
                                     int PixelTop = 88;
                                     int PixelLeft = 129;
                                     int Height = 320;
                                     int Width = 200;
-                                    Image img = Image.FromFile(src);
-                                    ExcelPicture pic = worksheet.Drawings.AddPicture("Sample", img);
-                                    pic.SetPosition(rowIndex, 0, colIndex, 0);
-                                    //pic.SetPosition(PixelTop, PixelLeft);  
-                                    pic.SetSize(Height, Width);
-                                    //pic.SetSize(40);  
-                                    worksheet.Protection.IsProtected = false;
-                                    worksheet.Protection.AllowSelectLockedCells = false;
-                                    isnotAdded = false;
+                                    int imgid = Convert.ToInt32(_unformattedData);
+                                    if (imgid > 0)
+                                    {
+                                        byte[] bytea = GetImage(imgid);
+                                        if (bytea.Length > 0)
+                                        {
+                                            MemoryStream ms = new MemoryStream(bytea);
+                                            Image img = Image.FromStream(ms);
+                                            //img = Image.FromFile(src); 
+                                            ExcelPicture pic = worksheet.Drawings.AddPicture(_unformattedData + ".jpg", img);
+                                            pic.SetPosition(rowIndex, 0, colIndex, 0);
+                                            //pic.SetPosition(PixelTop, PixelLeft);  
+                                            pic.SetSize(Height, Width);
+                                            //pic.SetSize(40);  
+                                            worksheet.Protection.IsProtected = false;
+                                            worksheet.Protection.AllowSelectLockedCells = false;
+                                            isnotAdded = false;
+                                        }
+                                    }
                                 }
                             }
 
@@ -1672,7 +1685,7 @@ namespace ExpressBase.ServiceStack
                             _formattedTable.Rows[i][col.Data] = _formattedData;
                             if (_isexcel && isnotAdded)
                                 worksheet.Cells[i + 2, j + 1].Value = _formattedData;
-                            
+
                             if (i + 1 == count)
                             {
                                 SummaryCalcAverage(ref Summary, col, cults, count);
