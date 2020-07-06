@@ -35,6 +35,9 @@ using ExpressBase.Common.Helpers;
 using ExpressBase.Common.LocationNSolution;
 using System.Dynamic;
 using ExpressBase.ServiceStack.Services;
+using ExpressBase.Common.EbServiceStack.ReqNRes;
+using System.Drawing;
+using OfficeOpenXml.Drawing;
 
 namespace ExpressBase.ServiceStack
 {
@@ -596,7 +599,7 @@ namespace ExpressBase.ServiceStack
                         else
                             ReturnObj = PreProcessing(ref _dataset, request.Params, _dV, request.UserInfo, ref _levels, request.IsExcel);
                     }
-                    catch(Exception e)
+                    catch (Exception e)
                     {
                         Log.Info("Call to PreProcessing ----" + e.StackTrace);
                         Log.Info("Call to PreProcessing ----" + e.Message);
@@ -1498,6 +1501,7 @@ namespace ExpressBase.ServiceStack
 
         public void DataTable2FormatedTable(EbDataRow row, EbDataVisualization _dv, CultureInfo _user_culture, User _user, ref EbDataTable _formattedTable, ref Globals globals, bool bObfuscute, bool _isexcel, ref Dictionary<int, List<object>> Summary, ref ExcelWorksheet worksheet, int i, int count, bool isgroup = false, int level = 0, bool isTree = false)
         {
+            bool isnotAdded = true;
             try
             {
                 IntermediateDic = new Dictionary<int, object>();
@@ -1570,6 +1574,32 @@ namespace ExpressBase.ServiceStack
                                     }
                                 }
                             }
+                            else if (col.RenderType == EbDbTypes.String && _isexcel)
+                            {
+                                if ((col as DVStringColumn).RenderAs == StringRenderType.Image)
+                                {
+                                    var _height = (col as DVStringColumn).ImageHeight == 0 ? "auto" : (col as DVStringColumn).ImageHeight + "px";
+                                    var _width = (col as DVStringColumn).ImageWidth == 0 ? "auto" : (col as DVStringColumn).ImageWidth + "px";
+                                    var _quality = (col as DVStringColumn).ImageQuality.ToString().ToLower();
+                                    var src = "/images/{_quality}/{_unformattedData}.jpg";
+                                    int rowIndex = i+2;
+                                    int colIndex = j+1;
+                                    int PixelTop = 88;
+                                    int PixelLeft = 129;
+                                    int Height = 320;
+                                    int Width = 200;
+                                    Image img = Image.FromFile(src);
+                                    ExcelPicture pic = worksheet.Drawings.AddPicture("Sample", img);
+                                    pic.SetPosition(rowIndex, 0, colIndex, 0);
+                                    //pic.SetPosition(PixelTop, PixelLeft);  
+                                    pic.SetSize(Height, Width);
+                                    //pic.SetSize(40);  
+                                    worksheet.Protection.IsProtected = false;
+                                    worksheet.Protection.AllowSelectLockedCells = false;
+                                    isnotAdded = false;
+                                }
+                            }
+
                             string info = string.Empty;
                             if (col.AllowedCharacterLength > 0 || col.InfoWindow.Count > 0)
                             {
@@ -1640,9 +1670,9 @@ namespace ExpressBase.ServiceStack
                                 this.ModifyPhonecolumn(col, ref _formattedData);
 
                             _formattedTable.Rows[i][col.Data] = _formattedData;
-                            if (_isexcel)
+                            if (_isexcel && isnotAdded)
                                 worksheet.Cells[i + 2, j + 1].Value = _formattedData;
-
+                            
                             if (i + 1 == count)
                             {
                                 SummaryCalcAverage(ref Summary, col, cults, count);
@@ -1670,6 +1700,29 @@ namespace ExpressBase.ServiceStack
                 this._Responsestatus.Message = e.Message;
             }
 
+        }
+
+        private byte[] GetImage(int refId)
+        {
+            DownloadFileResponse dfs = null;
+
+            byte[] fileByte = new byte[0];
+            dfs = FileClient.Get
+                 (new DownloadImageByIdRequest
+                 {
+                     ImageInfo = new ImageMeta
+                     {
+                         FileRefId = refId,
+                         FileCategory = Common.Enums.EbFileCategory.Images
+                     }
+                 });
+            if (dfs.StreamWrapper != null)
+            {
+                dfs.StreamWrapper.Memorystream.Position = 0;
+                fileByte = dfs.StreamWrapper.Memorystream.ToBytes();
+            }
+
+            return fileByte;
         }
 
         private object GetTaggedData(DVStringColumn dVStringColumn, object _formattedData)
@@ -2254,7 +2307,7 @@ namespace ExpressBase.ServiceStack
         {
             string _disabled = (this.EbConnectionFactory.SMSConnection != null) ? string.Empty : "disabled";
             _formattedData = "<div class='smsdiv'><button class='smsbutton btn' data-colname='" + phonecol.Name + "' " + _disabled + "><i class='fa fa-phone smsicon' aria-hidden='true'></i></button><span class='smstext'>" + _formattedData + "</span></div>";
-            
+
         }
 
         public void DataTable2FormatedTable4Calendar(EbDataRow row, List<EbDataRow> Customrows, EbDataVisualization _dv, CultureInfo _user_culture, User _user,
