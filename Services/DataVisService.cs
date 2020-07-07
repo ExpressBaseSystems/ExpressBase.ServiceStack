@@ -39,6 +39,7 @@ using ExpressBase.Common.EbServiceStack.ReqNRes;
 using System.Drawing;
 using OfficeOpenXml.Drawing;
 using ExpressBase.Common.ServiceClients;
+using OfficeOpenXml.Style;
 
 namespace ExpressBase.ServiceStack
 {
@@ -72,6 +73,8 @@ namespace ExpressBase.ServiceStack
         EbDataSet _approvaldata = null;
 
         EbDataVisualization _dV = null;
+
+        int ExcelRowcount = 1;
 
         //[CompressResponse]
         //public DataSourceDataResponse Any(DataVisDataRequest request)
@@ -885,6 +888,7 @@ namespace ExpressBase.ServiceStack
         {
             try
             {
+                _dv.ParamsList = Parameters;
                 var _user_culture = CultureHelper.GetSerializedCultureInfo(_user.Preference.Locale).GetCultureInfo();
 
                 var colCount = _dataset.Tables[0].Columns.Count;
@@ -1581,16 +1585,12 @@ namespace ExpressBase.ServiceStack
                             {
                                 if ((col as DVStringColumn).RenderAs == StringRenderType.Image)
                                 {
-                                    var _height = (col as DVStringColumn).ImageHeight == 0 ? "auto" : (col as DVStringColumn).ImageHeight + "px";
-                                    var _width = (col as DVStringColumn).ImageWidth == 0 ? "auto" : (col as DVStringColumn).ImageWidth + "px";
+                                    var _height = (col as DVStringColumn).ImageHeight == 0 ? 40 : (col as DVStringColumn).ImageHeight;
+                                    var _width = (col as DVStringColumn).ImageWidth == 0 ? 40 : (col as DVStringColumn).ImageWidth;
                                     var _quality = (col as DVStringColumn).ImageQuality.ToString().ToLower();
                                     //var src = "/images/{_quality}/{_unformattedData}.jpg"; 
-                                    int rowIndex = i + 2;
+                                    int rowIndex = i + ExcelRowcount;
                                     int colIndex = j + 1;
-                                    int PixelTop = 88;
-                                    int PixelLeft = 129;
-                                    int Height = 320;
-                                    int Width = 200;
                                     int imgid = Convert.ToInt32(_unformattedData);
                                     if (imgid > 0)
                                     {
@@ -1599,17 +1599,18 @@ namespace ExpressBase.ServiceStack
                                         {
                                             MemoryStream ms = new MemoryStream(bytea);
                                             Image img = Image.FromStream(ms);
-                                            //img = Image.FromFile(src); 
                                             ExcelPicture pic = worksheet.Drawings.AddPicture(_unformattedData + ".jpg", img);
-                                            pic.SetPosition(rowIndex, 0, colIndex, 0);
-                                            //pic.SetPosition(PixelTop, PixelLeft);  
-                                            pic.SetSize(Height, Width);
-                                            //pic.SetSize(40);  
-                                            worksheet.Protection.IsProtected = false;
-                                            worksheet.Protection.AllowSelectLockedCells = false;
-                                            isnotAdded = false;
+                                            pic.SetPosition(rowIndex - 1, 0, colIndex - 1, 0);
+                                            pic.SetSize(_height, _width);
+                                            //pic.From.Column = colIndex;
+                                            //pic.From.Row = rowIndex;
+                                            //pic.SetSize(100, 100);
+                                            // 2x2 px space for better alignment
                                         }
                                     }
+                                    worksheet.Column(colIndex).Width = _width;
+                                    worksheet.Row(rowIndex).Height = _height;
+                                    isnotAdded = false;
                                 }
                             }
 
@@ -1684,7 +1685,9 @@ namespace ExpressBase.ServiceStack
 
                             _formattedTable.Rows[i][col.Data] = _formattedData;
                             if (_isexcel && isnotAdded)
-                                worksheet.Cells[i + 2, j + 1].Value = _formattedData;
+                            {
+                                worksheet.Cells[i + ExcelRowcount, j + 1].Value = _formattedData;
+                            }
 
                             if (i + 1 == count)
                             {
@@ -1699,6 +1702,8 @@ namespace ExpressBase.ServiceStack
                             this._Responsestatus.Message = e.Message;
                         }
                     }
+                    if (_isexcel)
+                        worksheet.Cells.AutoFitColumns();
                     if (isTree)
                     {
                         var treecol = _dv.Columns.FirstOrDefault(e => e.IsTree == true);
@@ -3066,10 +3071,25 @@ namespace ExpressBase.ServiceStack
 
         public void PreExcelAddHeader(ref ExcelWorksheet worksheet, EbDataVisualization _dv)
         {
-            for (var i = 0; i < _dv.Columns.Count; i++)
+            ExcelRowcount = 1;
+            var Columns = _dv.Columns.FindAll(col => col.bVisible).ToList();
+            worksheet.Cells[1, 1].Value = _dv.DisplayName;
+            worksheet.Cells[1, 1,  1, Columns.Count].Merge = true;
+            worksheet.Cells[1, 1, 1, Columns.Count].Style.Font.Bold = true; //Font should be bold
+            worksheet.Cells[1, 1, 1, Columns.Count].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center; // Alignment is center
+            worksheet.Cells[1, 1, 1, Columns.Count].Style.Font.Size = 15;
+            for(var i=1;i<= _dv.ParamsList.Count; i++)
             {
-                worksheet.Cells[1, i + 1].Value = _dv.Columns[i].Name;
+                worksheet.Cells[i+1, 1].Value = _dv.ParamsList[i-1].Name + " = " + _dv.ParamsList[i - 1].Value;
+                worksheet.Cells[i + 1, 1, i + 1, 2].Merge = true;
+                ExcelRowcount++;
             }
+            ExcelRowcount++;
+            for (var i = 0; i < Columns.Count; i++)
+            {
+                worksheet.Cells[ExcelRowcount, i + 1].Value = Columns[i].Name;
+            }
+            ExcelRowcount++;
         }
 
     }
