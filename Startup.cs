@@ -274,7 +274,7 @@ namespace ExpressBase.ServiceStack
             mqServer.RegisterHandler<ReportInternalRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<AddSchedulesToSolutionRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<ExportToExcelServiceRequest>(base.ExecuteMessage);
-            mqServer.RegisterHandler<UpdateSidMapMqRequest>(base.ExecuteMessage);
+            //mqServer.RegisterHandler<UpdateSidMapMqRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<UpdateRedisConnectionsMqRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<SlackCreateRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<SqlJobInternalRequest>(base.ExecuteMessage);

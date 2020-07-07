@@ -23,10 +23,10 @@ namespace ExpressBase.ServiceStack.MQServices
     {
         public RefreshSolutionIdMap() : base() { }
 
-        public UpdateSidMapMqResponse Post(UpdateSidMapMqRequest request)
-        {
+        //public UpdateSidMapMqResponse Post(UpdateSidMapMqRequest request)
+        //{
             
-            return new UpdateSidMapMqResponse();
-        }
+        //    return new UpdateSidMapMqResponse();
+        //}
     }
 }
