@@ -96,10 +96,10 @@ namespace ExpressBase.ServiceStack
                 HashAlgorithm = "RS256",
                 PrivateKeyXml = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_JWT_PRIVATE_KEY_XML),
                 PublicKeyXml = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_JWT_PUBLIC_KEY_XML),
-#if (DEBUG)
+//#if (DEBUG)
                 RequireSecureConnection = false,
                 //EncryptPayload = true,
-#endif
+//#endif
                 ExpireTokensIn = TimeSpan.FromSeconds(90),
                 ExpireRefreshTokensIn = TimeSpan.FromHours(24),
                 PersistSession = true,
@@ -127,10 +127,10 @@ namespace ExpressBase.ServiceStack
 
             EbApiAuthProvider apiprovider = new EbApiAuthProvider(AppSettings)
             {
-#if (DEBUG)
+//#if (DEBUG)
                 RequireSecureConnection = false,
                 //EncryptPayload = true,
-#endif
+//#endif
             };
 
             string env = Environment.GetEnvironmentVariable(EnvironmentConstants.ASPNETCORE_ENVIRONMENT);
@@ -274,7 +274,7 @@ namespace ExpressBase.ServiceStack
             mqServer.RegisterHandler<ReportInternalRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<AddSchedulesToSolutionRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<ExportToExcelServiceRequest>(base.ExecuteMessage);
-            mqServer.RegisterHandler<UpdateSidMapMqRequest>(base.ExecuteMessage);
+            //mqServer.RegisterHandler<UpdateSidMapMqRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<UpdateRedisConnectionsMqRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<SlackCreateRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<SqlJobInternalRequest>(base.ExecuteMessage);

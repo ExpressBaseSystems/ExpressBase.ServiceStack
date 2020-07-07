@@ -517,57 +517,57 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
-        public PublicViewResponse Get(PublicViewRequest request)
-        {
-            PublicViewResponse resp = new PublicViewResponse();
+        //public PublicViewResponse Get(PublicViewRequest request)
+        //{
+        //    PublicViewResponse resp = new PublicViewResponse();
 
-            try
-            {
+        //    try
+        //    {
 
-                string query = @"
-                SELECT *
-                FROM
-                    wiki 
-                WHERE 
-                    eb_del='F' AND status='Publish' order by list_order ; 
-                SELECT* FROM wiki_category WHERE status = 'publish';";
-                EbDataSet ds = InfraConnectionFactory.DataDB.DoQueries(query);
+        //        string query = @"
+        //        SELECT *
+        //        FROM
+        //            wiki 
+        //        WHERE 
+        //            eb_del='F' AND status='Publish' order by list_order ; 
+        //        SELECT* FROM wiki_category WHERE status = 'publish';";
+        //        EbDataSet ds = InfraConnectionFactory.DataDB.DoQueries(query);
 
-                int capacity = ds.Tables[0].Rows.Count;
+        //        int capacity = ds.Tables[0].Rows.Count;
 
-                Console.WriteLine("INFO: Wiki Count: " + capacity);
+        //        Console.WriteLine("INFO: Wiki Count: " + capacity);
 
-                for (int i = 0; i < capacity; i++)
-                {
-                    resp.WikiList.Add(
-                        new Wiki()
-                        {
-                            Category = ds.Tables[0].Rows[i]["category"].ToString(),
-                            HTML = ds.Tables[0].Rows[i]["html"].ToString(),
-                            Title = ds.Tables[0].Rows[i]["title"].ToString(),
-                            Id = (int)ds.Tables[0].Rows[i]["id"],
-                            Order = (int)ds.Tables[0].Rows[i]["list_order"],
-                            Status = ds.Tables[0].Rows[i]["status"].ToString()
-                        });
-                }
-                int capacity1 = ds.Tables[1].Rows.Count;
-                Console.WriteLine("INFO: Wiki Count: " + capacity1);
-                for (int i = 0; i < capacity1; i++)
-                {
-                    resp.WikiCat.Add(
-                        new WikiCat()
-                        {
-                            WikiCategory = ds.Tables[1].Rows[i]["category"].ToString(),
-                        });
+        //        for (int i = 0; i < capacity; i++)
+        //        {
+        //            resp.WikiList.Add(
+        //                new Wiki()
+        //                {
+        //                    Category = ds.Tables[0].Rows[i]["category"].ToString(),
+        //                    HTML = ds.Tables[0].Rows[i]["html"].ToString(),
+        //                    Title = ds.Tables[0].Rows[i]["title"].ToString(),
+        //                    Id = (int)ds.Tables[0].Rows[i]["id"],
+        //                    Order = (int)ds.Tables[0].Rows[i]["list_order"],
+        //                    Status = ds.Tables[0].Rows[i]["status"].ToString()
+        //                });
+        //        }
+        //        int capacity1 = ds.Tables[1].Rows.Count;
+        //        Console.WriteLine("INFO: Wiki Count: " + capacity1);
+        //        for (int i = 0; i < capacity1; i++)
+        //        {
+        //            resp.WikiCat.Add(
+        //                new WikiCat()
+        //                {
+        //                    WikiCategory = ds.Tables[1].Rows[i]["category"].ToString(),
+        //                });
 
-                }
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("ERROR: GetWikiList Exception: " + e.Message);
-            }
-            return resp;
-        }
+        //        }
+        //    }
+        //    catch (Exception e)
+        //    {
+        //        Console.WriteLine("ERROR: GetWikiList Exception: " + e.Message);
+        //    }
+        //    return resp;
+        //}
 
 
         [Authenticate]
