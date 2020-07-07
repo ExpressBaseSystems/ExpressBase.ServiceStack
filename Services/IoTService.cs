@@ -1,4 +1,5 @@
 ﻿using ExpressBase.Objects.ServiceStack_Artifacts;
+using ServiceStack;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
@@ -7,8 +8,9 @@ using System.Threading.Tasks;
 
 namespace ExpressBase.ServiceStack.Services
 {
+    [Authenticate]
     public class IoTService : EbBaseService
-    {
+    {       
         public object Any(IoTDataRequest request)
         {
             request.SolnId = "ebdblvnzp5spac20200127092930";

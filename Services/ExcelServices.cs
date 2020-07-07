@@ -19,6 +19,7 @@ using ExpressBase.Common.Excel;
 
 namespace ExpressBase.ServiceStack.Services
 {
+    [Authenticate]
     public class ExcelServices : EbBaseService
     {
         public ExcelServices(IEbConnectionFactory _dbf) : base() { }
@@ -38,11 +39,11 @@ namespace ExpressBase.ServiceStack.Services
             }
             _form.AfterRedisGet(this);
 
-            List< ColumnsInfo> _cols = new List<ColumnsInfo>();
-            foreach(var _tbl in _form.FormSchema.Tables)
+            List<ColumnsInfo> _cols = new List<ColumnsInfo>();
+            foreach (var _tbl in _form.FormSchema.Tables)
             {
                 string _tblName = _tbl.TableName;
-                foreach(var _col in _tbl.Columns)
+                foreach (var _col in _tbl.Columns)
                 {
                     _cols.Add(new ColumnsInfo { Name = _col.Control.Name, Label = _col.Control.Label, DbType = _col.Control.EbDbType, TableName = _tblName });
                     //_cols.Add(new ColumnsInfo { Name = _col.Control.Name, DbType = _col.Control.EbDbType, TableName = _tblName });
@@ -50,10 +51,10 @@ namespace ExpressBase.ServiceStack.Services
             }
 
             string _formName = _form.Name;
-    
 
-            return new ExcelDownloadResponse{ colsInfo = _cols, formName = _formName }; 
+
+            return new ExcelDownloadResponse { colsInfo = _cols, formName = _formName };
         }
     }
-   
+
 }
