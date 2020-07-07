@@ -1521,6 +1521,7 @@ namespace ExpressBase.ServiceStack
                 {
                     foreach (DVBaseColumn col in dependencyTable)
                     {
+                        isnotAdded = true;
                         try
                         {
                             bool AllowLinkifNoData = true;
@@ -1581,7 +1582,7 @@ namespace ExpressBase.ServiceStack
                                     }
                                 }
                             }
-                            else if (col.RenderType == EbDbTypes.String && _isexcel)
+                            else if (col.RenderType == EbDbTypes.String && _isexcel && col.bVisible)
                             {
                                 if ((col as DVStringColumn).RenderAs == StringRenderType.Image)
                                 {
@@ -1614,77 +1615,80 @@ namespace ExpressBase.ServiceStack
                                 }
                             }
 
-                            string info = string.Empty;
-                            if (col.AllowedCharacterLength > 0 || col.InfoWindow.Count > 0)
+                            if (!_isexcel)
                             {
-                                info = "<table>";
-                                if (col.AllowedCharacterLength > 0)
-                                    info += "<tr><td><span class='headspan'>" + col.sTitle + " &nbsp; : &nbsp;</span></br><span class='bodyspan'>" + _formattedData + "</span></td></tr>";
-                                if (col.InfoWindow.Count > 0)
+                                string info = string.Empty;
+                                if (col.AllowedCharacterLength > 0 || col.InfoWindow.Count > 0)
                                 {
-                                    foreach (DVBaseColumn _column in col.InfoWindow)
+                                    info = "<table>";
+                                    if (col.AllowedCharacterLength > 0)
+                                        info += "<tr><td><span class='headspan'>" + col.sTitle + " &nbsp; : &nbsp;</span></br><span class='bodyspan'>" + _formattedData + "</span></td></tr>";
+                                    if (col.InfoWindow.Count > 0)
                                     {
-                                        if (_column.Name != col.Name)
+                                        foreach (DVBaseColumn _column in col.InfoWindow)
                                         {
-                                            info += "<tr><td><span class='headspan'>" + _column.sTitle + " &nbsp; : &nbsp;</span></br><span class='bodyspan'>" + IntermediateDic[_column.Data] + "</span></td></tr>";
+                                            if (_column.Name != col.Name)
+                                            {
+                                                info += "<tr><td><span class='headspan'>" + _column.sTitle + " &nbsp; : &nbsp;</span></br><span class='bodyspan'>" + IntermediateDic[_column.Data] + "</span></td></tr>";
+                                            }
                                         }
                                     }
+                                    info += "</table>";
+
+                                    _formattedData = _formattedData.ToString().Truncate(col.AllowedCharacterLength);
+                                    _formattedData = "<span class='columntooltip' data-toggle='popover' data-contents='" + info.ToBase64() + "'>" + _formattedData + "</span>";
                                 }
-                                info += "</table>";
 
-                                _formattedData = _formattedData.ToString().Truncate(col.AllowedCharacterLength);
-                                _formattedData = "<span class='columntooltip' data-toggle='popover' data-contents='" + info.ToBase64() + "'>" + _formattedData + "</span>";
-                            }
+                                if (_formattedData.ToString() == string.Empty)
+                                    AllowLinkifNoData = false;
+                                if (col.ShowLinkifNoData)
+                                    AllowLinkifNoData = true;
 
-                            if (_formattedData.ToString() == string.Empty)
-                                AllowLinkifNoData = false;
-                            if (col.ShowLinkifNoData)
-                                AllowLinkifNoData = true;
-
-                            if (!string.IsNullOrEmpty(col.LinkRefId) && (_isexcel == false))
-                            {
-                                if (AllowLinkifNoData)
+                                if (!string.IsNullOrEmpty(col.LinkRefId) && (_isexcel == false))
                                 {
-                                    string _link = col.LinkRefId;
+                                    if (AllowLinkifNoData)
+                                    {
+                                        string _link = col.LinkRefId;
+                                        if (_formattedData.ToString() == string.Empty)
+                                            _formattedData = "...";
+                                        if (col.LinkType == LinkTypeEnum.Popout)
+                                            _formattedData = "<a href='#' oncontextmenu='return false' class ='tablelink" + this.TableId + "' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-column='" + col.Name + "'>" + _formattedData + "</a>";
+                                        else if (col.LinkType == LinkTypeEnum.Inline)
+                                            _formattedData = _formattedData + "&nbsp; <a  href= '#' oncontextmenu= 'return false' class ='tablelink" + this.TableId + "' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-column='" + col.Name + "' data-inline='true' data-data='" + ActualFormatteddata + "'><i class='fa fa-caret-down'></i></a>";
+                                        else if (col.LinkType == LinkTypeEnum.Both)
+                                            _formattedData = "<a href='#' oncontextmenu='return false' class ='tablelink" + this.TableId + "' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-column='" + col.Name + "' >" + _formattedData + "</a>" + "&nbsp; <a  href ='#' oncontextmenu='return false' class='tablelink" + this.TableId + "' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-column='" + col.Name + "' data-inline='true' data-data='" + ActualFormatteddata + "'> <i class='fa fa-caret-down'></i></a>";
+                                        else if (col.LinkType == LinkTypeEnum.Popup)
+                                            _formattedData = "<a  href= '#' oncontextmenu= 'return false' class ='tablelink" + this.TableId + "' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-column='" + col.Name + "' data-popup='true' data-data='" + ActualFormatteddata + "'>" + _formattedData + "</a>";
+                                    }
+                                }
+
+                                if (col is DVStringColumn && col.RenderType == EbDbTypes.String && (col as DVStringColumn).RenderAs == StringRenderType.LinkFromColumn && (_isexcel == false))
+                                {
                                     if (_formattedData.ToString() == string.Empty)
                                         _formattedData = "...";
-                                    if (col.LinkType == LinkTypeEnum.Popout)
-                                        _formattedData = "<a href='#' oncontextmenu='return false' class ='tablelink" + this.TableId + "' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-column='" + col.Name + "'>" + _formattedData + "</a>";
-                                    else if (col.LinkType == LinkTypeEnum.Inline)
-                                        _formattedData = _formattedData + "&nbsp; <a  href= '#' oncontextmenu= 'return false' class ='tablelink" + this.TableId + "' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-column='" + col.Name + "' data-inline='true' data-data='" + ActualFormatteddata + "'><i class='fa fa-caret-down'></i></a>";
-                                    else if (col.LinkType == LinkTypeEnum.Both)
-                                        _formattedData = "<a href='#' oncontextmenu='return false' class ='tablelink" + this.TableId + "' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-column='" + col.Name + "' >" + _formattedData + "</a>" + "&nbsp; <a  href ='#' oncontextmenu='return false' class='tablelink" + this.TableId + "' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-column='" + col.Name + "' data-inline='true' data-data='" + ActualFormatteddata + "'> <i class='fa fa-caret-down'></i></a>";
-                                    else if (col.LinkType == LinkTypeEnum.Popup)
-                                        _formattedData = "<a  href= '#' oncontextmenu= 'return false' class ='tablelink" + this.TableId + "' data-colindex='" + col.Data + "' data-link='" + col.LinkRefId + "' data-column='" + col.Name + "' data-popup='true' data-data='" + ActualFormatteddata + "'>" + _formattedData + "</a>";
+                                    _formattedData = "<a href='#' class ='tablelinkfromcolumn" + this.TableId + "' data-link='" + row[col.RefidColumn.Data] + "' data-id='" + row[col.IdColumn.Data] + "'>" + _formattedData + "</a>";
                                 }
-                            }
 
-                            if (col is DVStringColumn && col.RenderType == EbDbTypes.String && (col as DVStringColumn).RenderAs == StringRenderType.LinkFromColumn && (_isexcel == false))
-                            {
-                                if (_formattedData.ToString() == string.Empty)
-                                    _formattedData = "...";
-                                _formattedData = "<a href='#' class ='tablelinkfromcolumn" + this.TableId + "' data-link='" + row[col.RefidColumn.Data] + "' data-id='" + row[col.IdColumn.Data] + "'>" + _formattedData + "</a>";
-                            }
-
-                            if (col is DVStringColumn && col.RenderType == EbDbTypes.String && (col as DVStringColumn).RenderAs == StringRenderType.Link && col.LinkType == LinkTypeEnum.Tab && (_isexcel == false))/////////////////
-                            {
-                                _formattedData = "<a href='../leadmanagement/" + row[0] + "' target='_blank'>" + _formattedData + "</a>";
-                            }
-
-                            if (bObfuscute && (_isexcel == false))
-                            {
-                                if (col.HideDataRowMoreThan > 0 && col.HideDataRowMoreThan < count)
+                                if (col is DVStringColumn && col.RenderType == EbDbTypes.String && (col as DVStringColumn).RenderAs == StringRenderType.Link && col.LinkType == LinkTypeEnum.Tab && (_isexcel == false))/////////////////
                                 {
-                                    _formattedData = "********";
+                                    _formattedData = "<a href='../leadmanagement/" + row[0] + "' target='_blank'>" + _formattedData + "</a>";
                                 }
-                            }
 
-                            this.conditinallyformatColumn(col, ref _formattedData, _unformattedData, row, ref globals);
-                            if (col is DVPhoneColumn)
-                                this.ModifyPhonecolumn(col, ref _formattedData);
+                                if (bObfuscute && (_isexcel == false))
+                                {
+                                    if (col.HideDataRowMoreThan > 0 && col.HideDataRowMoreThan < count)
+                                    {
+                                        _formattedData = "********";
+                                    }
+                                }
+
+                                this.conditinallyformatColumn(col, ref _formattedData, _unformattedData, row, ref globals);
+                                if (col is DVPhoneColumn)
+                                    this.ModifyPhonecolumn(col, ref _formattedData);
+                            }
 
                             _formattedTable.Rows[i][col.Data] = _formattedData;
-                            if (_isexcel && isnotAdded)
+                            if (_isexcel && isnotAdded && col.bVisible)
                             {
                                 worksheet.Cells[i + ExcelRowcount, j + 1].Value = _formattedData;
                             }
@@ -3074,13 +3078,13 @@ namespace ExpressBase.ServiceStack
             ExcelRowcount = 1;
             var Columns = _dv.Columns.FindAll(col => col.bVisible).ToList();
             worksheet.Cells[1, 1].Value = _dv.DisplayName;
-            worksheet.Cells[1, 1,  1, Columns.Count].Merge = true;
+            worksheet.Cells[1, 1, 1, Columns.Count].Merge = true;
             worksheet.Cells[1, 1, 1, Columns.Count].Style.Font.Bold = true; //Font should be bold
             worksheet.Cells[1, 1, 1, Columns.Count].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center; // Alignment is center
             worksheet.Cells[1, 1, 1, Columns.Count].Style.Font.Size = 15;
-            for(var i=1;i<= _dv.ParamsList.Count; i++)
+            for (var i = 1; i <= _dv.ParamsList.Count; i++)
             {
-                worksheet.Cells[i+1, 1].Value = _dv.ParamsList[i-1].Name + " = " + _dv.ParamsList[i - 1].Value;
+                worksheet.Cells[i + 1, 1].Value = _dv.ParamsList[i - 1].Name + " = " + _dv.ParamsList[i - 1].Value;
                 worksheet.Cells[i + 1, 1, i + 1, 2].Merge = true;
                 ExcelRowcount++;
             }
@@ -3088,6 +3092,9 @@ namespace ExpressBase.ServiceStack
             for (var i = 0; i < Columns.Count; i++)
             {
                 worksheet.Cells[ExcelRowcount, i + 1].Value = Columns[i].Name;
+                worksheet.Cells[ExcelRowcount, i + 1].Style.Font.Bold = true;
+                worksheet.Cells[ExcelRowcount, i + 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center; // Alignment is center
+                worksheet.Cells[ExcelRowcount, i + 1].Style.Font.Size = 12;
             }
             ExcelRowcount++;
         }
