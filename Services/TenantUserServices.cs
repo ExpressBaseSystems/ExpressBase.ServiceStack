@@ -179,6 +179,7 @@ namespace ExpressBase.ServiceStack.Services
             return new DeleteLocResponse { id = (dt == 1) ? request.Id : 0 };
         }
 
+        [Authenticate]
         public UpdateSolutionObjectResponse Post(UpdateSolutionObjectRequest req)
         {
             try

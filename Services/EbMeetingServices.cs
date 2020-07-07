@@ -1051,7 +1051,7 @@ B.participant_type , B.type_of_user from
                         id= {request.MyActionId};";
                     }
                 }
-                else if(ds.Tables[4].Rows.Count > 0 && SP.ParticipantType == 2 && MSD[0].MaxAttendees > SPC.SlotAttendeeCount)
+                else if (ds.Tables[4].Rows.Count > 0 && SP.ParticipantType == 2 && MSD[0].MaxAttendees > SPC.SlotAttendeeCount)
                 {
                     if (MSD[0].IsApproved == "F" && MSD[0].MinAttendees == (SPC.SlotAttendeeCount + 1) && MSD[0].MinHosts <= SPC.SlotHostCount && MSD[0].MaxHosts >= SPC.SlotHostCount)
                     {
@@ -1092,8 +1092,8 @@ B.participant_type , B.type_of_user from
                         id= {request.MyActionId};";
                     }
                 }
-                    EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(qry_);
-                    
+                EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(qry_);
+
             }
             catch (Exception e)
             {
@@ -1101,6 +1101,49 @@ B.participant_type , B.type_of_user from
                 Console.WriteLine(e.Message, e.StackTrace);
             }
 
+            return Resp;
+        }
+        public ParticipantsListResponse Post(ParticipantsListRequest request)
+        {
+            ParticipantsListResponse Resp = new ParticipantsListResponse();
+            string qry_ = @"select id , fullname from eb_users;
+                    select id,role_name from eb_roles;
+                    select id , name from eb_usergroup;";
+            try
+            {
+                EbDataSet ds = this.EbConnectionFactory.DataDB.DoQueries(qry_);
+                for (int i = 0; i < ds.Tables[0].Rows.Count; i++)
+                {
+                    Resp.ParticipantsList.Add(new Participants()
+                    {
+                        Id = Convert.ToInt32(ds.Tables[0].Rows[i]["id"]),
+                        Name = Convert.ToString(ds.Tables[0].Rows[i]["fullname"]) + " - USER",
+                        Type = UsersType.UserIds,
+                    });
+                 }
+                for (int i = 0; i < ds.Tables[1].Rows.Count; i++)
+                {
+                    Resp.ParticipantsList.Add(new Participants()
+                    {
+                        Id = Convert.ToInt32(ds.Tables[1].Rows[i]["id"]),
+                        Name = Convert.ToString(ds.Tables[1].Rows[i]["role_name"]) + " - ROLE",
+                        Type = UsersType.RoleId,
+                    });
+                 }
+                for (int i = 0; i < ds.Tables[2].Rows.Count; i++)
+                {
+                    Resp.ParticipantsList.Add(new Participants()
+                    {
+                        Id = Convert.ToInt32(ds.Tables[2].Rows[i]["id"]),
+                        Name = Convert.ToString(ds.Tables[2].Rows[i]["name"]) + " - GrOUP",
+                        Type = UsersType.UserGroupId,
+                    });
+                 }
+            }
+            catch (Exception e)
+            {
+
+            }
             return Resp;
         }
     }
