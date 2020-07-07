@@ -203,6 +203,8 @@ namespace ExpressBase.ServiceStack.Services
                     PlanUserCount = users.PlanUserCount,
                     SolutionSettings = wrap_sol.SolutionSettings,
                     ExtSolutionID = wrap_sol.EsolutionId,
+                    Is2faEnabled = wrap_sol.Is2faEnabled,
+                    OtpDelivery = wrap_sol.OtpDelivery
                     //LocationTree = Loc.LocationTree
                 };
 

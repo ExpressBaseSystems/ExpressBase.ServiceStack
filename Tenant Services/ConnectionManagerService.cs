@@ -897,6 +897,7 @@ namespace ExpressBase.ServiceStack.Services
                         PricingTier = Enum.Parse<PricingTiers>(_temp.Rows[0]["pricing_tier"].ToString()),
                         IsVersioningEnabled = Convert.ToBoolean(_temp.Rows[0]["versioning"]),
                         Is2faEnabled = Convert.ToBoolean(_temp.Rows[0]["is2fa"]),
+                        OtpDelivery = _temp.Rows[0]["otp_delivery"].ToString(),
                     };
 
                     _temp = dt.Tables[1];
@@ -919,6 +920,15 @@ namespace ExpressBase.ServiceStack.Services
                         _intgre[Type].Add(new EbIntegrationData(_row));
                     }
                     resp.Integrations = _intgre;
+                }
+                EbConnectionFactory _ebConnectionFactory = new EbConnectionFactory(request.IsolutionId, Redis);
+                if (_ebConnectionFactory.EmailConnection != null && _ebConnectionFactory.EmailConnection.Primary != null)
+                {
+                    resp.IsEmailIntegrated = true;
+                }
+                if (_ebConnectionFactory.SMSConnection != null && _ebConnectionFactory.SMSConnection.Primary != null)
+                {
+                    resp.IsSmsIntegrated = true;
                 }
             }
             catch (Exception e)

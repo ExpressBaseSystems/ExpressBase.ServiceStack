@@ -59,7 +59,8 @@ namespace ExpressBase.ServiceStack.MQServices
                 _req.RefId = request.RefId;
                 _req.IsExcel = true;
                 _req.Params = request.Params;
-
+                _req.Token = request.BToken;
+                _req.rToken = request.RToken;
                 res = (DataSourceDataResponse)dataservice.Any(_req);
                 byte[] compressedData = Compress(res.excel_file);
                 this.Redis.Set("excel" + (request.EbDataVisualization.RefId + request.UserInfo.UserId), compressedData);
@@ -68,7 +69,7 @@ namespace ExpressBase.ServiceStack.MQServices
                 this.ServerEventClient.RefreshTokenUri = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GET_ACCESS_TOKEN_URL);
                 this.ServerEventClient.Post<NotifyResponse>(new NotifyUserIdRequest
                 {
-                    Msg = "../DV/GetExcel?refid=" + (request.EbDataVisualization.RefId + request.UserInfo.UserId) + "&filename=" + request.EbDataVisualization.DisplayName+".xlsx",
+                    Msg = "../DV/GetExcel?refid=" + (request.EbDataVisualization.RefId + request.UserInfo.UserId) + "&filename=" + request.EbDataVisualization.DisplayName + ".xlsx",
                     Selector = StaticFileConstants.EXPORTTOEXCELSUCCESS,
                     ToUserAuthId = request.UserAuthId,
                 });

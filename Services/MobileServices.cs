@@ -246,7 +246,7 @@ namespace ExpressBase.ServiceStack.Services
 	                                        EA.application_type = 2;";
 
             User UserObject = this.Redis.Get<User>(request.UserAuthId);
-            bool isAdmin = (UserObject.Roles.Contains(SystemRoles.SolutionOwner.ToString()) || UserObject.Roles.Contains(SystemRoles.SolutionAdmin.ToString()));
+            bool isAdmin = UserObject.IsAdmin();
             string sql;
             EbDataTable dt;
 
@@ -273,7 +273,7 @@ namespace ExpressBase.ServiceStack.Services
 
             foreach (EbDataRow row in dt.Rows)
             {
-                data.Applications.Add(new EbApplicationDataMobile
+                data.Applications.Add(new AppDataToMob
                 {
                     AppId = Convert.ToInt32(row["id"]),
                     AppName = row["applicationname"].ToString(),
@@ -282,23 +282,23 @@ namespace ExpressBase.ServiceStack.Services
                 });
             }
 
-            GetMobilePagesByAppliation(data, UserObject, isAdmin);
+            GetMobilePagesByAppliation(data, UserObject, isAdmin, request.Export);
 
             return data;
         }
 
 
-        private void GetMobilePagesByAppliation(EbMobileSolutionData data, User user, bool isAdmin)
+        private void GetMobilePagesByAppliation(EbMobileSolutionData data, User user, bool isAdmin, bool export)
         {
             string idcheck = EbConnectionFactory.ObjectsDB.EB_GET_MOBILE_PAGES;
             string Sql = EbConnectionFactory.ObjectsDB.EB_GET_MOBILE_PAGES_OBJS;
 
-            foreach (var app in data.Applications)
+            foreach (AppDataToMob app in data.Applications)
             {
-                if (app.AppSettings != null)
+                if (app.AppSettings != null && export)
                 {
                     EbDataSet ds = PullAppConfiguredData(app.AppSettings);
-                    data.OfflineData.Tables.AddRange(ds.Tables);
+                    app.OfflineData.Tables.AddRange(ds.Tables);
                 }
 
                 List<DbParameter> parameters = new List<DbParameter> {
@@ -364,20 +364,11 @@ namespace ExpressBase.ServiceStack.Services
                 string sql = string.Empty;
                 EbDataTable dt = null;
                 string idcheck = EbConnectionFactory.DataDB.EB_GET_MOB_MENU_OBJ_IDS;
-                const string acquery = @"SELECT 
-	                                        EA.id,
-	                                        EA.applicationname,
-	                                        EA.app_icon,
-	                                        EA.application_type 
+                const string acquery = @"SELECT EA.id,EA.applicationname,EA.app_icon,EA.application_type,EA.app_settings
                                         FROM 
 	                                        eb_applications EA
                                         WHERE
-	                                        EXISTS
-                                                (
-                                                SELECT *
-                                                FROM eb_objects2application EOA
-                                                WHERE EOA.app_id = EA.id AND EOA.eb_del = 'F' {0}
-                                                )
+	                                        EXISTS(SELECT * FROM eb_objects2application EOA WHERE EOA.app_id = EA.id AND EOA.eb_del = 'F' {0})
                                         AND
 	                                        EA.eb_del = 'F'
                                         AND
@@ -409,6 +400,7 @@ namespace ExpressBase.ServiceStack.Services
                         AppId = Convert.ToInt32(row["id"]),
                         AppName = row["applicationname"].ToString(),
                         AppIcon = row["app_icon"].ToString(),
+                        AppSettings = JsonConvert.DeserializeObject<EbMobileSettings>(row["app_settings"].ToString())
                     });
                 }
             }
