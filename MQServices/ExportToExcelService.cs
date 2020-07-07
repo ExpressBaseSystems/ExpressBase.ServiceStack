@@ -20,6 +20,7 @@ namespace ExpressBase.ServiceStack.MQServices
     {
         public ExportToExcelService(IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_mqp, _mqc) { }
 
+        [Authenticate]
         public void Post(ExportToExcelMqRequest request)
         {
             MessageProducer3.Publish(new ExportToExcelServiceRequest()

@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 
 namespace ExpressBase.ServiceStack.Services
 {
+    [Authenticate]
     public class FilterDialogService :EbBaseService
     {
         public FilterDialogService(IEbConnectionFactory _dbf) : base(_dbf) { }

@@ -317,10 +317,10 @@ namespace ExpressBase.ServiceStack
                 }
                 try
                 {
-                    if (requestDto != null && requestDto.GetType() != typeof(Authenticate) && requestDto.GetType() != typeof(GetAccessToken) && requestDto.GetType() != typeof(UniqueRequest) /*&& requestDto.GetType() != typeof(EmailServicesMqRequest) */&& requestDto.GetType() != typeof(RegisterRequest) && requestDto.GetType() != typeof(JoinbetaReq) && requestDto.GetType() != typeof(GetBotsRequest)
-                    && requestDto.GetType() != typeof(GetEventSubscribers) && requestDto.GetType() != typeof(GetAllFromAppStoreExternalRequest) &&
-                    requestDto.GetType() != typeof(GetOneFromAppStoreRequest) && !(requestDto is EbServiceStackNoAuthRequest) && !(requestDto is UpdateSidMapRequest)
-                    && !(requestDto is IoTDataRequest)/* && !(requestDto is IEbTenentRequest)*/)
+                    if (requestDto != null && requestDto.GetType() != typeof(Authenticate) && requestDto.GetType() != typeof(GetAccessToken) && requestDto.GetType() != typeof(UniqueRequest) /*&& requestDto.GetType() != typeof(EmailServicesMqRequest) */&& requestDto.GetType() != typeof(RegisterRequest) /*&& requestDto.GetType() != typeof(JoinbetaReq)*/ /*&& requestDto.GetType() != typeof(GetBotsRequest)*/
+                    && requestDto.GetType() != typeof(GetEventSubscribers) /*&& requestDto.GetType() != typeof(GetAllFromAppStoreExternalRequest)*/ &&
+                    /*requestDto.GetType() != typeof(GetOneFromAppStoreRequest) &&*/ !(requestDto is EbServiceStackNoAuthRequest) /*&& !(requestDto is UpdateSidMapRequest)*/
+                    /*&& !(requestDto is IoTDataRequest)*//* && !(requestDto is IEbTenentRequest)*/)
                     {
                         var auth = req.Headers[HttpHeaders.Authorization];
                         if (string.IsNullOrEmpty(auth))

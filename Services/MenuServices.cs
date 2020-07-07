@@ -11,9 +11,11 @@ using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using ExpressBase.Security;
 using ExpressBase.Common.Constants;
+using ServiceStack;
 
 namespace ExpressBase.ServiceStack.Services
 {
+    [Authenticate]
     public class MenuServices : EbBaseService
     {
         public MenuServices(IEbConnectionFactory _dbf) : base(_dbf) { }
@@ -181,7 +183,7 @@ namespace ExpressBase.ServiceStack.Services
             return new SidebarDevResponse { Data = _Coll, AppList = appColl };
         }
 
-
+        
         public AddFavouriteResponse Post(AddFavouriteRequest request)
         {
             AddFavouriteResponse resp = new AddFavouriteResponse();

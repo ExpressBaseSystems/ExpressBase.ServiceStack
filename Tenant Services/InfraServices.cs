@@ -36,25 +36,25 @@ namespace ExpressBase.ServiceStack.Services
     {
         public InfraServices(IEbConnectionFactory _dbf, IMessageProducer _mqp) : base(_dbf, _mqp) { }
 
-        public JoinbetaResponse Post(JoinbetaReq r)
-        {
-            JoinbetaResponse resp = new JoinbetaResponse();
-            try
-            {
-                string sql = string.Format("INSERT INTO eb_beta_enq(email,time) values('{0}','now()') RETURNING id", r.Email);
-                var f = this.InfraConnectionFactory.DataDB.DoQuery(sql);
-                if (f.Rows.Count > 0)
-                    resp.Status = true;
-                else
-                    resp.Status = false;
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("Exception: " + e.ToString());
-                resp.Status = false;
-            }
-            return resp;
-        }
+        //public JoinbetaResponse Post(JoinbetaReq r)
+        //{
+        //    JoinbetaResponse resp = new JoinbetaResponse();
+        //    try
+        //    {
+        //        string sql = string.Format("INSERT INTO eb_beta_enq(email,time) values('{0}','now()') RETURNING id", r.Email);
+        //        var f = this.InfraConnectionFactory.DataDB.DoQuery(sql);
+        //        if (f.Rows.Count > 0)
+        //            resp.Status = true;
+        //        else
+        //            resp.Status = false;
+        //    }
+        //    catch (Exception e)
+        //    {
+        //        Console.WriteLine("Exception: " + e.ToString());
+        //        resp.Status = false;
+        //    }
+        //    return resp;
+        //}
 
         public GetVersioning Post(SolutionEditRequest request)
         {
