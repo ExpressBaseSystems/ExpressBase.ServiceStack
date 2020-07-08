@@ -1591,6 +1591,7 @@ namespace ExpressBase.ServiceStack
                             {
                                 if ((col as DVStringColumn).RenderAs == StringRenderType.Image)
                                 {
+                                    Log.Info("Rendar As Image-------");
                                     isnotAdded = false;
                                     var _height = (col as DVStringColumn).ImageHeight == 0 ? 40 : (col as DVStringColumn).ImageHeight;
                                     var _width = (col as DVStringColumn).ImageWidth == 0 ? 40 : (col as DVStringColumn).ImageWidth;
@@ -1614,7 +1615,7 @@ namespace ExpressBase.ServiceStack
                                             //pic.From.Row = rowIndex;
                                             //pic.SetSize(100, 100);
                                             // 2x2 px space for better alignment
-                                            Log.Info("Image added-----" + img);
+                                            Log.Info("Image added in excel-----");
                                         }
                                     }
                                     worksheet.Column(colIndex).Width = _width;
