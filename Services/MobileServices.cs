@@ -19,6 +19,7 @@ using ExpressBase.Objects.Helpers;
 
 namespace ExpressBase.ServiceStack.Services
 {
+    [Authenticate]
     public class MobileServices : EbBaseService
     {
         public MobileServices(IEbConnectionFactory _dbf, IMessageProducer _mqp) : base(_dbf, _mqp) { }

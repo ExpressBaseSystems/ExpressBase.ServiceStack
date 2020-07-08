@@ -976,9 +976,13 @@ namespace ExpressBase.ServiceStack.Services
                 EbWebForm sourceForm = this.GetWebFormObject(request.SourceRefId, request.UserAuthId, request.SolnId);
                 sourceForm.TableRowId = request.SourceRowId;
 
-                EbWebForm destForm = this.GetWebFormObject(request.DestRefId, null, null);
-                destForm.UserObj = sourceForm.UserObj;
-                destForm.SolutionObj = sourceForm.SolutionObj;
+                EbWebForm destForm = sourceForm;
+                if (request.SourceRefId != request.DestRefId)
+                {
+                    destForm = this.GetWebFormObject(request.DestRefId, null, null);
+                    destForm.UserObj = sourceForm.UserObj;
+                    destForm.SolutionObj = sourceForm.SolutionObj;
+                }
                 if (request.SourceRowId > 0)
                     sourceForm.GetImportData(EbConnectionFactory.DataDB, this, destForm);
                 else
@@ -1101,6 +1105,8 @@ namespace ExpressBase.ServiceStack.Services
             {
                 var myService = base.ResolveService<EbObjectService>();
                 EbObjectParticularVersionResponse formObj = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = RefId });
+                if (formObj.Data == null || formObj.Data.Count == 0)
+                    throw new FormException("Bad request.", (int)HttpStatusCode.BadRequest, "WebForm not found with refId: " + RefId, "WebFormSevice -> GetWebFormObject");
                 _form = EbSerializers.Json_Deserialize(formObj.Data[0].Json);
                 this.Redis.Set<EbWebForm>(RefId, _form);
             }
