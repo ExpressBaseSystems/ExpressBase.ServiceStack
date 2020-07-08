@@ -567,7 +567,7 @@ namespace ExpressBase.ServiceStack
                     Console.WriteLine("................................................dataviz datarequest start " + DateTime.Now);
                     try
                     {
-                        Inpuparams =SqlHelper.GetSqlParams(_sql, 2);
+                        Inpuparams = SqlHelper.GetSqlParams(_sql, 2);
                         _dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray<System.Data.Common.DbParameter>());
                     }
                     catch (Exception e)
@@ -895,7 +895,7 @@ namespace ExpressBase.ServiceStack
             try
             {
                 var _array = Inpuparams.Select(para => para.Name).ToArray();
-                _dv.ParamsList = Parameters.FindAll(para => Array.IndexOf(_array,para.Name) > -1);
+                _dv.ParamsList = Parameters.FindAll(para => Array.IndexOf(_array, para.Name) > -1);
                 var _user_culture = CultureHelper.GetSerializedCultureInfo(_user.Preference.Locale).GetCultureInfo();
 
                 var colCount = _dataset.Tables[0].Columns.Count;
@@ -1530,7 +1530,7 @@ namespace ExpressBase.ServiceStack
                     {
                         isnotAdded = true;
                         if (col.bVisible)
-                            ExcelColIndex = (_dv as EbTableVisualization).Columns.IndexOf(col)+1;
+                            ExcelColIndex = (_dv as EbTableVisualization).Columns.IndexOf(col) + 1;
                         try
                         {
                             bool AllowLinkifNoData = true;
@@ -1610,8 +1610,11 @@ namespace ExpressBase.ServiceStack
                                         if (bytea.Length > 0)
                                         {
                                             MemoryStream ms = new MemoryStream(bytea);
+                                            Log.Info("MemoryStream ok-----" + imgid);
                                             Image img = Image.FromStream(ms);
+                                            Log.Info("Drawings.Image ok-----" + imgid);
                                             ExcelPicture pic = worksheet.Drawings.AddPicture(_unformattedData + ".jpg", img);
+                                            Log.Info("ExcelPicture ok-----" + imgid);
                                             pic.SetPosition(rowIndex - 1, 0, ExcelColIndex - 1, 0);
                                             pic.SetSize(_height, _width);
                                             //pic.From.Column = colIndex;
@@ -1708,7 +1711,7 @@ namespace ExpressBase.ServiceStack
                             {
                                 SummaryCalcAverage(ref Summary, col, cults, count);
                             }
-                            
+
                         }
                         catch (Exception e)
                         {
@@ -3105,7 +3108,7 @@ namespace ExpressBase.ServiceStack
             }
             for (var i = ExcelRowcount; i <= TableFilters.Count; i++)
             {
-                worksheet.Cells[i + 1, 1].Value = TableFilters[i - 1].Column + " " + TableFilters[i - 1].Operator+" " + TableFilters[i - 1].Value;
+                worksheet.Cells[i + 1, 1].Value = TableFilters[i - 1].Column + " " + TableFilters[i - 1].Operator + " " + TableFilters[i - 1].Value;
                 worksheet.Cells[i + 1, 1, i + 1, 2].Merge = true;
                 ExcelRowcount++;
             }
