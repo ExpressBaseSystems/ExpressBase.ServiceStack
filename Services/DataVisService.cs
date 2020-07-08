@@ -303,7 +303,7 @@ namespace ExpressBase.ServiceStack
                 Modifydv = request.Modifydv;
                 this.Log.Info("data request");
                 CurLocId = request.LocId;
-                if(request.TFilters !=null)
+                if (request.TFilters != null)
                     TableFilters = request.TFilters;
                 _dV = request.EbDataVisualization;
 
@@ -1610,11 +1610,17 @@ namespace ExpressBase.ServiceStack
                                         byte[] bytea = GetImage(imgid);
                                         if (bytea.Length > 0)
                                         {
-                                            MemoryStream ms = new MemoryStream(bytea);
-                                            Log.Info("MemoryStream ok-----" + imgid);
-                                            Image img = Image.FromStream(ms);
-                                            Log.Info("Drawings.Image ok-----" + imgid);
-                                            ExcelPicture pic = worksheet.Drawings.AddPicture(_unformattedData + ".jpg", img);
+                                            //MemoryStream ms = new MemoryStream(bytea);
+                                            //Log.Info("MemoryStream ok-----" + imgid);
+                                            //Image img = Image.FromStream(ms);
+                                            //Log.Info("Drawings.Image ok-----" + imgid);
+                                            string sFilePath = string.Format("../StaticFiles/{0}/{1}", this._ebSolution.SolutionID, imgid);
+                                            using (FileStream file = new FileStream(sFilePath, FileMode.Create, System.IO.FileAccess.Write))
+                                            {
+                                                file.Write(bytea, 0, bytea.Length);
+                                            }
+                                            FileInfo fileInfo = new FileInfo(sFilePath);
+                                            ExcelPicture pic = worksheet.Drawings.AddPicture(_unformattedData + ".jpg", fileInfo);
                                             Log.Info("ExcelPicture ok-----" + imgid);
                                             pic.SetPosition(rowIndex - 1, 0, ExcelColIndex - 1, 0);
                                             pic.SetSize(_height, _width);
