@@ -96,10 +96,10 @@ namespace ExpressBase.ServiceStack
                 HashAlgorithm = "RS256",
                 PrivateKeyXml = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_JWT_PRIVATE_KEY_XML),
                 PublicKeyXml = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_JWT_PUBLIC_KEY_XML),
-#if (DEBUG)
+//#if (DEBUG)
                 RequireSecureConnection = false,
                 //EncryptPayload = true,
-#endif
+//#endif
                 ExpireTokensIn = TimeSpan.FromSeconds(90),
                 ExpireRefreshTokensIn = TimeSpan.FromHours(24),
                 PersistSession = true,
@@ -127,10 +127,10 @@ namespace ExpressBase.ServiceStack
 
             EbApiAuthProvider apiprovider = new EbApiAuthProvider(AppSettings)
             {
-#if (DEBUG)
+//#if (DEBUG)
                 RequireSecureConnection = false,
                 //EncryptPayload = true,
-#endif
+//#endif
             };
 
             string env = Environment.GetEnvironmentVariable(EnvironmentConstants.ASPNETCORE_ENVIRONMENT);
@@ -317,10 +317,10 @@ namespace ExpressBase.ServiceStack
                 }
                 try
                 {
-                    if (requestDto != null && requestDto.GetType() != typeof(Authenticate) && requestDto.GetType() != typeof(GetAccessToken) && requestDto.GetType() != typeof(UniqueRequest) /*&& requestDto.GetType() != typeof(EmailServicesMqRequest) */&& requestDto.GetType() != typeof(RegisterRequest) && requestDto.GetType() != typeof(JoinbetaReq) && requestDto.GetType() != typeof(GetBotsRequest)
-                    && requestDto.GetType() != typeof(GetEventSubscribers) && requestDto.GetType() != typeof(GetAllFromAppStoreExternalRequest) &&
-                    requestDto.GetType() != typeof(GetOneFromAppStoreRequest) && !(requestDto is EbServiceStackNoAuthRequest) && !(requestDto is UpdateSidMapRequest)
-                    && !(requestDto is IoTDataRequest)/* && !(requestDto is IEbTenentRequest)*/)
+                    if (requestDto != null && requestDto.GetType() != typeof(Authenticate) && requestDto.GetType() != typeof(GetAccessToken) && requestDto.GetType() != typeof(UniqueRequest) /*&& requestDto.GetType() != typeof(EmailServicesMqRequest) */&& requestDto.GetType() != typeof(RegisterRequest) /*&& requestDto.GetType() != typeof(JoinbetaReq)*/ /*&& requestDto.GetType() != typeof(GetBotsRequest)*/
+                    && requestDto.GetType() != typeof(GetEventSubscribers) /*&& requestDto.GetType() != typeof(GetAllFromAppStoreExternalRequest)*/ &&
+                    /*requestDto.GetType() != typeof(GetOneFromAppStoreRequest) &&*/ !(requestDto is EbServiceStackNoAuthRequest) /*&& !(requestDto is UpdateSidMapRequest)*/
+                    /*&& !(requestDto is IoTDataRequest)*//* && !(requestDto is IEbTenentRequest)*/)
                     {
                         var auth = req.Headers[HttpHeaders.Authorization];
                         if (string.IsNullOrEmpty(auth))

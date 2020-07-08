@@ -14,10 +14,11 @@ using ExpressBase.Common.LocationNSolution;
 using ExpressBase.Common.Constants;
 using ExpressBase.ServiceStack.MQServices;
 using System.Security.Principal;
+using ServiceStack;
 
 namespace ExpressBase.ServiceStack.Services
 {
-
+    [Authenticate]
     public class TwoFactorAuthServices : EbBaseService
     {
         public TwoFactorAuthServices(IEbConnectionFactory _dbf) : base(_dbf) { }

@@ -19,6 +19,7 @@ using ExpressBase.Common.Helpers;
 
 namespace ExpressBase.ServiceStack.Services
 {
+    [Authenticate]
     public class NotificationService : EbBaseService
     {
         public NotificationService(IEbConnectionFactory _dbf, IEbServerEventClient _sec) : base(_dbf, _sec) { }
@@ -79,6 +80,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             return res;
         }
+
         public NotifyByUserRoleResponse Post(NotifyByUserRoleRequest request)
         {
             NotifyByUserRoleResponse res = new NotifyByUserRoleResponse();
