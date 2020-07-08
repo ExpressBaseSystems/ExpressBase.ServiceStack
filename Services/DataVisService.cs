@@ -79,6 +79,8 @@ namespace ExpressBase.ServiceStack
 
         List<Param> Inpuparams = null;
 
+        List<TFilters> TableFilters = null;
+
         //[CompressResponse]
         //public DataSourceDataResponse Any(DataVisDataRequest request)
         //{
@@ -301,7 +303,7 @@ namespace ExpressBase.ServiceStack
                 Modifydv = request.Modifydv;
                 this.Log.Info("data request");
                 CurLocId = request.LocId;
-
+                TableFilters = request.TFilters;
                 _dV = request.EbDataVisualization;
 
                 DataSourceDataResponse dsresponse = null;
@@ -1519,14 +1521,16 @@ namespace ExpressBase.ServiceStack
                 IntermediateDic = new Dictionary<int, object>();
                 _formattedTable.Rows.Add(_formattedTable.NewDataRow2());
                 _formattedTable.Rows[i][_formattedTable.Columns.Count - 1] = i + 1;//serial
-                int j = 0;
                 CreateIntermediateDict(row, _dv, _user_culture, _user, ref _formattedTable, ref globals, _isexcel, i);
 
                 if ((_dv as EbTableVisualization) != null)
                 {
+                    int ExcelColIndex = -1;
                     foreach (DVBaseColumn col in dependencyTable)
                     {
                         isnotAdded = true;
+                        if (col.bVisible)
+                            ExcelColIndex = (_dv as EbTableVisualization).Columns.IndexOf(col)+1;
                         try
                         {
                             bool AllowLinkifNoData = true;
@@ -1589,7 +1593,7 @@ namespace ExpressBase.ServiceStack
                             }
                             else if (col.RenderType == EbDbTypes.String && _isexcel && col.bVisible)
                             {
-                                if ((col as DVStringColumn).RenderAs == StringRenderType.Image)
+                                if (col is DVStringColumn && (col as DVStringColumn).RenderAs == StringRenderType.Image)
                                 {
                                     Log.Info("Rendar As Image-------");
                                     isnotAdded = false;
@@ -1598,7 +1602,6 @@ namespace ExpressBase.ServiceStack
                                     var _quality = (col as DVStringColumn).ImageQuality.ToString().ToLower();
                                     //var src = "/images/{_quality}/{_unformattedData}.jpg"; 
                                     int rowIndex = i + ExcelRowcount;
-                                    int colIndex = j + 1;
                                     int imgid = Convert.ToInt32(_unformattedData);
                                     if (imgid > 0)
                                     {
@@ -1609,7 +1612,7 @@ namespace ExpressBase.ServiceStack
                                             MemoryStream ms = new MemoryStream(bytea);
                                             Image img = Image.FromStream(ms);
                                             ExcelPicture pic = worksheet.Drawings.AddPicture(_unformattedData + ".jpg", img);
-                                            pic.SetPosition(rowIndex - 1, 0, colIndex - 1, 0);
+                                            pic.SetPosition(rowIndex - 1, 0, ExcelColIndex - 1, 0);
                                             pic.SetSize(_height, _width);
                                             //pic.From.Column = colIndex;
                                             //pic.From.Row = rowIndex;
@@ -1618,7 +1621,7 @@ namespace ExpressBase.ServiceStack
                                             Log.Info("Image added in excel-----");
                                         }
                                     }
-                                    worksheet.Column(colIndex).Width = _width;
+                                    worksheet.Column(ExcelColIndex).Width = _width;
                                     worksheet.Row(rowIndex).Height = _height;
                                 }
                             }
@@ -1696,16 +1699,16 @@ namespace ExpressBase.ServiceStack
                             }
 
                             _formattedTable.Rows[i][col.Data] = _formattedData;
-                            if (_isexcel && isnotAdded && col.bVisible)
+                            if (_isexcel && isnotAdded && col.bVisible && !(col is DVApprovalColumn) && !(col is DVActionColumn))
                             {
-                                worksheet.Cells[i + ExcelRowcount, j + 1].Value = _formattedData;
+                                worksheet.Cells[i + ExcelRowcount, ExcelColIndex].Value = _formattedData;
                             }
 
                             if (i + 1 == count)
                             {
                                 SummaryCalcAverage(ref Summary, col, cults, count);
                             }
-                            j++;
+                            
                         }
                         catch (Exception e)
                         {
@@ -3084,15 +3087,21 @@ namespace ExpressBase.ServiceStack
         public void PreExcelAddHeader(ref ExcelWorksheet worksheet, EbDataVisualization _dv)
         {
             ExcelRowcount = 1;
-            var Columns = _dv.Columns.FindAll(col => col.bVisible).ToList();
+            var Columns = _dv.Columns.FindAll(col => col.bVisible && !(col is DVApprovalColumn) && !(col is DVActionColumn)).ToList();
             worksheet.Cells[1, 1].Value = _dv.DisplayName;
             worksheet.Cells[1, 1, 1, Columns.Count].Merge = true;
             worksheet.Cells[1, 1, 1, Columns.Count].Style.Font.Bold = true; //Font should be bold
             worksheet.Cells[1, 1, 1, Columns.Count].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center; // Alignment is center
             worksheet.Cells[1, 1, 1, Columns.Count].Style.Font.Size = 15;
-            for (var i = 1; i <= _dv.ParamsList.Count; i++)
+            for (var i = ExcelRowcount; i <= _dv.ParamsList.Count; i++)
             {
                 worksheet.Cells[i + 1, 1].Value = _dv.ParamsList[i - 1].Name + " = " + _dv.ParamsList[i - 1].Value;
+                worksheet.Cells[i + 1, 1, i + 1, 2].Merge = true;
+                ExcelRowcount++;
+            }
+            for (var i = ExcelRowcount; i <= TableFilters.Count; i++)
+            {
+                worksheet.Cells[i + 1, 1].Value = TableFilters[i - 1].Column + " " + TableFilters[i - 1].Operator+" " + TableFilters[i - 1].Value;
                 worksheet.Cells[i + 1, 1, i + 1, 2].Merge = true;
                 ExcelRowcount++;
             }

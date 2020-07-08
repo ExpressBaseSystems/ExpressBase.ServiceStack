@@ -31,6 +31,7 @@ namespace ExpressBase.ServiceStack.MQServices
                 RefId = request.RefId,
                 IsExcel = request.IsExcel,
                 Params = request.Params,
+                TFilters = request.TFilters,
                 UserId = request.UserId,
                 UserAuthId = request.UserAuthId,
                 SolnId = request.SolnId,
@@ -61,6 +62,7 @@ namespace ExpressBase.ServiceStack.MQServices
                 _req.RefId = request.RefId;
                 _req.IsExcel = true;
                 _req.Params = request.Params;
+                _req.TFilters = request.TFilters;
                 _req.Token = request.BToken;
                 _req.rToken = request.RToken;
                 _req.eb_Solution = request.eb_solution;
