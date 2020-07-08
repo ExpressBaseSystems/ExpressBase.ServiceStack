@@ -1601,6 +1601,7 @@ namespace ExpressBase.ServiceStack
                                     int imgid = Convert.ToInt32(_unformattedData);
                                     if (imgid > 0)
                                     {
+                                        Log.Info("dprefid----" + imgid);
                                         byte[] bytea = GetImage(imgid);
                                         if (bytea.Length > 0)
                                         {
@@ -1613,6 +1614,7 @@ namespace ExpressBase.ServiceStack
                                             //pic.From.Row = rowIndex;
                                             //pic.SetSize(100, 100);
                                             // 2x2 px space for better alignment
+                                            Log.Info("Image added-----" + img);
                                         }
                                     }
                                     worksheet.Column(colIndex).Width = _width;
