@@ -40,6 +40,7 @@ using System.Drawing;
 using OfficeOpenXml.Drawing;
 using ExpressBase.Common.ServiceClients;
 using OfficeOpenXml.Style;
+using ExpressBase.Objects.Helpers;
 
 namespace ExpressBase.ServiceStack
 {
@@ -75,6 +76,8 @@ namespace ExpressBase.ServiceStack
         EbDataVisualization _dV = null;
 
         int ExcelRowcount = 1;
+
+        List<Param> Inpuparams = null;
 
         //[CompressResponse]
         //public DataSourceDataResponse Any(DataVisDataRequest request)
@@ -562,6 +565,7 @@ namespace ExpressBase.ServiceStack
                     Console.WriteLine("................................................dataviz datarequest start " + DateTime.Now);
                     try
                     {
+                        Inpuparams =SqlHelper.GetSqlParams(_sql, 2);
                         _dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray<System.Data.Common.DbParameter>());
                     }
                     catch (Exception e)
@@ -888,7 +892,8 @@ namespace ExpressBase.ServiceStack
         {
             try
             {
-                _dv.ParamsList = Parameters;
+                var _array = Inpuparams.Select(para => para.Name).ToArray();
+                _dv.ParamsList = Parameters.FindAll(para => Array.IndexOf(_array,para.Name) > -1);
                 var _user_culture = CultureHelper.GetSerializedCultureInfo(_user.Preference.Locale).GetCultureInfo();
 
                 var colCount = _dataset.Tables[0].Columns.Count;
@@ -1586,6 +1591,7 @@ namespace ExpressBase.ServiceStack
                             {
                                 if ((col as DVStringColumn).RenderAs == StringRenderType.Image)
                                 {
+                                    isnotAdded = false;
                                     var _height = (col as DVStringColumn).ImageHeight == 0 ? 40 : (col as DVStringColumn).ImageHeight;
                                     var _width = (col as DVStringColumn).ImageWidth == 0 ? 40 : (col as DVStringColumn).ImageWidth;
                                     var _quality = (col as DVStringColumn).ImageQuality.ToString().ToLower();
@@ -1611,7 +1617,6 @@ namespace ExpressBase.ServiceStack
                                     }
                                     worksheet.Column(colIndex).Width = _width;
                                     worksheet.Row(rowIndex).Height = _height;
-                                    isnotAdded = false;
                                 }
                             }
 
@@ -3091,7 +3096,7 @@ namespace ExpressBase.ServiceStack
             ExcelRowcount++;
             for (var i = 0; i < Columns.Count; i++)
             {
-                worksheet.Cells[ExcelRowcount, i + 1].Value = Columns[i].Name;
+                worksheet.Cells[ExcelRowcount, i + 1].Value = Columns[i].sTitle;
                 worksheet.Cells[ExcelRowcount, i + 1].Style.Font.Bold = true;
                 worksheet.Cells[ExcelRowcount, i + 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center; // Alignment is center
                 worksheet.Cells[ExcelRowcount, i + 1].Style.Font.Size = 12;
