@@ -1714,8 +1714,8 @@ namespace ExpressBase.ServiceStack
                             this._Responsestatus.Message = e.Message;
                         }
                     }
-                    if (_isexcel)
-                        worksheet.Cells.AutoFitColumns();
+                    //if (_isexcel)
+                    //    worksheet.Cells.AutoFitColumns();
                     if (isTree)
                     {
                         var treecol = _dv.Columns.FirstOrDefault(e => e.IsTree == true);
