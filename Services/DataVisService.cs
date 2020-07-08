@@ -79,7 +79,7 @@ namespace ExpressBase.ServiceStack
 
         List<Param> Inpuparams = null;
 
-        List<TFilters> TableFilters = null;
+        List<TFilters> TableFilters = new List<TFilters>();
 
         //[CompressResponse]
         //public DataSourceDataResponse Any(DataVisDataRequest request)
