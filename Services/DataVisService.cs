@@ -303,7 +303,8 @@ namespace ExpressBase.ServiceStack
                 Modifydv = request.Modifydv;
                 this.Log.Info("data request");
                 CurLocId = request.LocId;
-                TableFilters = request.TFilters;
+                if(request.TFilters !=null)
+                    TableFilters = request.TFilters;
                 _dV = request.EbDataVisualization;
 
                 DataSourceDataResponse dsresponse = null;
