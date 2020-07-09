@@ -303,7 +303,7 @@ namespace ExpressBase.ServiceStack
                 Modifydv = request.Modifydv;
                 this.Log.Info("data request");
                 CurLocId = request.LocId;
-                if(request.TFilters !=null)
+                if (request.TFilters != null)
                     TableFilters = request.TFilters;
                 _dV = request.EbDataVisualization;
 
@@ -568,7 +568,7 @@ namespace ExpressBase.ServiceStack
                     Console.WriteLine("................................................dataviz datarequest start " + DateTime.Now);
                     try
                     {
-                        Inpuparams =SqlHelper.GetSqlParams(_sql, 2);
+                        Inpuparams = SqlHelper.GetSqlParams(_sql, 2);
                         _dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray<System.Data.Common.DbParameter>());
                     }
                     catch (Exception e)
@@ -896,7 +896,7 @@ namespace ExpressBase.ServiceStack
             try
             {
                 var _array = Inpuparams.Select(para => para.Name).ToArray();
-                _dv.ParamsList = Parameters.FindAll(para => Array.IndexOf(_array,para.Name) > -1);
+                _dv.ParamsList = Parameters.FindAll(para => Array.IndexOf(_array, para.Name) > -1);
                 var _user_culture = CultureHelper.GetSerializedCultureInfo(_user.Preference.Locale).GetCultureInfo();
 
                 var colCount = _dataset.Tables[0].Columns.Count;
@@ -1611,8 +1611,21 @@ namespace ExpressBase.ServiceStack
                                         if (bytea.Length > 0)
                                         {
                                             MemoryStream ms = new MemoryStream(bytea);
-                                            Image img = Image.FromStream(ms);
+                                            Log.Info("MemoryStream ok-----" + imgid);
+                                            // Image img = Image.FromStream(ms);
+                                            Log.Info("Drawings.Image ok-----" + imgid);
+                                            //string sFilePath = string.Format("../StaticFiles/{0}/{1}", this._ebSolution.SolutionID, imgid);
+                                            //using (FileStream file = new FileStream(sFilePath, FileMode.Create, System.IO.FileAccess.Write))
+                                            //{
+                                            //    file.Write(bytea, 0, bytea.Length);
+                                            //}
+                                            //FileInfo fileInfo = new FileInfo(sFilePath);
+                                            Bitmap img = new Bitmap(ms);
+                                            if (img.HorizontalResolution == 0 || img.VerticalResolution == 0)
+                                                img.SetResolution(96, 96);
+
                                             ExcelPicture pic = worksheet.Drawings.AddPicture(_unformattedData + ".jpg", img);
+                                            Log.Info("ExcelPicture ok-----" + imgid);
                                             pic.SetPosition(rowIndex - 1, 0, ExcelColIndex - 1, 0);
                                             pic.SetSize(_height, _width);
                                             //pic.From.Column = colIndex;
@@ -1709,7 +1722,7 @@ namespace ExpressBase.ServiceStack
                             {
                                 SummaryCalcAverage(ref Summary, col, cults, count);
                             }
-                            
+
                         }
                         catch (Exception e)
                         {
@@ -1721,7 +1734,7 @@ namespace ExpressBase.ServiceStack
                     if (_isexcel)
                     {
                         Log.Info("Before AutoFitColumns");
-                        worksheet.Cells.AutoFitColumns();
+                        //worksheet.Cells.AutoFitColumns();
                         Log.Info("After AutoFitColumns");
                     }
                     if (isTree)

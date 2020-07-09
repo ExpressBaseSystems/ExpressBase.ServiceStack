@@ -1121,13 +1121,28 @@ namespace ExpressBase.ServiceStack.Services
 
         public DoUniqueCheckResponse Any(DoUniqueCheckRequest Req)
         {
-            string query = string.Format("SELECT id FROM {0} WHERE {1} = :value;", Req.TableName, Req.Field);
-            EbControl obj = Activator.CreateInstance(typeof(ExpressBase.Objects.Margin).Assembly.GetType("ExpressBase.Objects." + Req.TypeS, true), true) as EbControl;
-            DbParameter[] param = {
-                this.EbConnectionFactory.DataDB.GetNewParameter("value",obj.EbDbType, Req.Value)
-            };
-            EbDataTable datatbl = this.EbConnectionFactory.DataDB.DoQuery(query, param);
-            return new DoUniqueCheckResponse { NoRowsWithSameValue = datatbl.Rows.Count };
+            string fullQuery = string.Empty;
+            List<DbParameter> Dbparams = new List<DbParameter>();
+            Dictionary<string, bool> resp = new Dictionary<string, bool>();
+
+            for (int i = 0; i < Req.UniqCheckParam.Length; i++)
+            {
+                fullQuery += string.Format("SELECT id FROM {0} WHERE {1} = :value_{2};", Req.UniqCheckParam[i].TableName, Req.UniqCheckParam[i].Field, i);
+                Dbparams.Add(this.EbConnectionFactory.DataDB.GetNewParameter("value_" + i, (EbDbTypes)Req.UniqCheckParam[i].TypeI, Req.UniqCheckParam[i].Value));
+            }
+
+            if (fullQuery != string.Empty)
+            {
+                EbDataSet ds = this.EbConnectionFactory.DataDB.DoQueries(fullQuery, Dbparams.ToArray());
+                for (int i = 0; i < ds.Tables.Count; i++)
+                {
+                    if (ds.Tables[i].Rows.Count > 0)
+                        resp.Add(Req.UniqCheckParam[i].Field, false);
+                    else
+                        resp.Add(Req.UniqCheckParam[i].Field, true);
+                }
+            }
+            return new DoUniqueCheckResponse { Response = resp };
         }
 
         public GetDictionaryValueResponse Any(GetDictionaryValueRequest request)
@@ -1184,7 +1199,7 @@ namespace ExpressBase.ServiceStack.Services
                 Console.WriteLine("Insert/Update WebFormData : AfterExecutionIfUserCreated start - " + DateTime.Now);
                 FormObj.AfterExecutionIfUserCreated(this, this.EbConnectionFactory.EmailConnection, MessageProducer3);
                 Console.WriteLine("Insert/Update WebFormData end : Execution Time = " + (DateTime.Now - startdt).TotalMilliseconds);
-                
+
                 return new InsertDataFromWebformResponse()
                 {
                     Message = "Success",
