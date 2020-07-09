@@ -1531,7 +1531,7 @@ namespace ExpressBase.ServiceStack
                     {
                         isnotAdded = true;
                         if (col.bVisible)
-                            ExcelColIndex = (_dv as EbTableVisualization).Columns.IndexOf(col)+1;
+                            ExcelColIndex = (_dv as EbTableVisualization).Columns.FindIndex(_col => _col.Name == col.Name )+1;
                         try
                         {
                             bool AllowLinkifNoData = true;
@@ -3095,27 +3095,28 @@ namespace ExpressBase.ServiceStack
             var Columns = _dv.Columns.FindAll(col => col.bVisible && !(col is DVApprovalColumn) && !(col is DVActionColumn)).ToList();
             worksheet.Cells[1, 1].Value = _dv.DisplayName;
             worksheet.Cells[1, 1, 1, Columns.Count].Merge = true;
-            worksheet.Cells[1, 1, 1, Columns.Count].Style.Font.Bold = true; //Font should be bold
-            worksheet.Cells[1, 1, 1, Columns.Count].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center; // Alignment is center
+            worksheet.Cells[1, 1, 1, Columns.Count].Style.Font.Bold = true;
+            worksheet.Cells[1, 1, 1, Columns.Count].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
             worksheet.Cells[1, 1, 1, Columns.Count].Style.Font.Size = 15;
-            for (var i = ExcelRowcount; i <= _dv.ParamsList.Count; i++)
+            for (var i = 1; i <= _dv.ParamsList.Count; i++)
             {
                 worksheet.Cells[i + 1, 1].Value = _dv.ParamsList[i - 1].Name + " = " + _dv.ParamsList[i - 1].Value;
                 worksheet.Cells[i + 1, 1, i + 1, 2].Merge = true;
                 ExcelRowcount++;
             }
-            for (var i = ExcelRowcount; i <= TableFilters.Count; i++)
+            for (var i = 1; i <= TableFilters.Count; i++)
             {
-                worksheet.Cells[i + 1, 1].Value = TableFilters[i - 1].Column + " " + TableFilters[i - 1].Operator+" " + TableFilters[i - 1].Value;
-                worksheet.Cells[i + 1, 1, i + 1, 2].Merge = true;
                 ExcelRowcount++;
+                var col = Columns.Find(_col => _col.Name == TableFilters[i - 1].Column);
+                worksheet.Cells[ExcelRowcount, 1].Value = col.sTitle + " " + TableFilters[i - 1].Operator+" " + TableFilters[i - 1].Value;
+                worksheet.Cells[ExcelRowcount, 1, ExcelRowcount, 2].Merge = true;
             }
             ExcelRowcount++;
             for (var i = 0; i < Columns.Count; i++)
             {
                 worksheet.Cells[ExcelRowcount, i + 1].Value = Columns[i].sTitle;
                 worksheet.Cells[ExcelRowcount, i + 1].Style.Font.Bold = true;
-                worksheet.Cells[ExcelRowcount, i + 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center; // Alignment is center
+                worksheet.Cells[ExcelRowcount, i + 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
                 worksheet.Cells[ExcelRowcount, i + 1].Style.Font.Size = 12;
             }
             ExcelRowcount++;
