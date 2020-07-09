@@ -1734,7 +1734,7 @@ namespace ExpressBase.ServiceStack
                     if (_isexcel)
                     {
                         Log.Info("Before AutoFitColumns");
-                        //worksheet.Cells.AutoFitColumns();
+                        worksheet.Cells.AutoFitColumns();
                         Log.Info("After AutoFitColumns");
                     }
                     if (isTree)
