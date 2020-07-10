@@ -998,7 +998,10 @@ namespace ExpressBase.ServiceStack
                     SortedGroupings.Sort();
                     _levels = SortedGroupings;
                     if (_isexcel)
+                    {
+                        worksheet.Cells.AutoFitColumns();
                         bytes = package.GetAsByteArray();
+                    }
                 }
                 else
                 {
@@ -1531,7 +1534,7 @@ namespace ExpressBase.ServiceStack
                     {
                         isnotAdded = true;
                         if (col.bVisible)
-                            ExcelColIndex = (_dv as EbTableVisualization).Columns.FindIndex(_col => _col.Name == col.Name )+1;
+                            ExcelColIndex = (_dv as EbTableVisualization).Columns.FindIndex(_col => _col.Name == col.Name) + 1;
                         try
                         {
                             bool AllowLinkifNoData = true;
@@ -3121,7 +3124,7 @@ namespace ExpressBase.ServiceStack
             {
                 ExcelRowcount++;
                 var col = Columns.Find(_col => _col.Name == TableFilters[i - 1].Column);
-                worksheet.Cells[ExcelRowcount, 1].Value = col.sTitle + " " + TableFilters[i - 1].Operator+" " + TableFilters[i - 1].Value;
+                worksheet.Cells[ExcelRowcount, 1].Value = col.sTitle + " " + TableFilters[i - 1].Operator + " " + TableFilters[i - 1].Value;
                 worksheet.Cells[ExcelRowcount, 1, ExcelRowcount, 2].Merge = true;
             }
             ExcelRowcount++;
