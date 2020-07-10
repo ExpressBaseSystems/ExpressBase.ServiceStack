@@ -1731,12 +1731,12 @@ namespace ExpressBase.ServiceStack
                             this._Responsestatus.Message = e.Message;
                         }
                     }
-                    if (_isexcel)
-                    {
-                        Log.Info("Before AutoFitColumns");
-                        worksheet.Cells.AutoFitColumns();
-                        Log.Info("After AutoFitColumns");
-                    }
+                    //if (_isexcel)
+                    //{
+                    //    Log.Info("Before AutoFitColumns");
+                    //    worksheet.Cells.AutoFitColumns();
+                    //    Log.Info("After AutoFitColumns");
+                    //}
                     if (isTree)
                     {
                         var treecol = _dv.Columns.FirstOrDefault(e => e.IsTree == true);
