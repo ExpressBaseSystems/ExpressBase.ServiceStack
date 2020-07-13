@@ -1713,14 +1713,13 @@ namespace ExpressBase.ServiceStack
                             }
 
                             _formattedTable.Rows[i][col.Data] = _formattedData;
-                            if (_isexcel && isnotAdded && col.bVisible && !(col is DVApprovalColumn) && !(col is DVActionColumn))
-                            {
-                                worksheet.Cells[i + ExcelRowcount, ExcelColIndex].Value = _formattedData;
-                            }
-
                             if (i + 1 == count)
                             {
                                 SummaryCalcAverage(ref Summary, col, cults, count);
+                            }
+                            if (_isexcel && isnotAdded && col.bVisible && !(col is DVApprovalColumn) && !(col is DVActionColumn))
+                            {
+                                worksheet.Cells[i + ExcelRowcount, ExcelColIndex].Value = _formattedData;
                             }
 
                         }
@@ -1730,13 +1729,7 @@ namespace ExpressBase.ServiceStack
                             Log.Info("PreProcessing data from IntermediateDictionay datatable Exception........." + e.Message + "Column Name  ......" + col.Name);
                             this._Responsestatus.Message = e.Message;
                         }
-                    }
-                    if (_isexcel)
-                    {
-                        Log.Info("Before AutoFitColumns");
-                        worksheet.Cells.AutoFitColumns();
-                        Log.Info("After AutoFitColumns");
-                    }
+                    }                    
                     if (isTree)
                     {
                         var treecol = _dv.Columns.FirstOrDefault(e => e.IsTree == true);
