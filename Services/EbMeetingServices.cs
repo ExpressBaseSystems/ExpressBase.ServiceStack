@@ -1106,39 +1106,61 @@ B.participant_type , B.type_of_user from
         public ParticipantsListResponse Post(ParticipantsListRequest request)
         {
             ParticipantsListResponse Resp = new ParticipantsListResponse();
-            string qry_ = @"select id , fullname from eb_users;
-                    select id,role_name from eb_roles;
-                    select id , name from eb_usergroup;";
+            //string qry_ = @"select id , fullname from eb_users;
+            //        select id,role_name from eb_roles;
+            //        select id , name from eb_usergroup;";
+            string qry_ = "";
+            for (int i = 0; i < 2; i++)
+            {
+                if (request.MeetingConfig[i].MeetingConfig == UsersType.Role && request.MeetingConfig[0].MeetingRoles.Count != 0)
+                {
+                    string temp = String.Join(",", request.MeetingConfig[0].MeetingRoles);
+                    qry_ += $@"select id,role_name as name from eb_roles where id in({temp});";
+                }
+                else if (request.MeetingConfig[i].MeetingConfig == UsersType.UserGroup && request.MeetingConfig[0].MeetingRoles.Count != 0)
+                {
+                    string temp = String.Join(",", request.MeetingConfig[0].MeetingUserGroup);
+                    qry_ += $@"select id , name as name from eb_usergroup where id in({temp});";
+                }
+                else if (request.MeetingConfig[i].MeetingConfig == UsersType.Users && request.MeetingConfig[0].MeetingRoles.Count != 0)
+                {
+                    if (request.MeetingConfig[i].MeetingUsers.Code != "")
+                        qry_ += request.MeetingConfig[i].MeetingUsers.Code +";";
+                    else
+                        qry_ += $@"select id , fullname as name from eb_users;";
+                }
+            }
+
             try
             {
                 EbDataSet ds = this.EbConnectionFactory.DataDB.DoQueries(qry_);
                 for (int i = 0; i < ds.Tables[0].Rows.Count; i++)
                 {
-                    Resp.ParticipantsList.Add(new Participants()
+                    Resp.HostParticipantsList.Add(new Participants()
                     {
                         Id = Convert.ToInt32(ds.Tables[0].Rows[i]["id"]),
-                        Name = Convert.ToString(ds.Tables[0].Rows[i]["fullname"]) + " - USER",
-                        Type = UsersType.UserIds,
+                        Name = Convert.ToString(ds.Tables[0].Rows[i]["name"]),
+                        Type = request.MeetingConfig[0].MeetingConfig
                     });
-                 }
+                }
                 for (int i = 0; i < ds.Tables[1].Rows.Count; i++)
                 {
-                    Resp.ParticipantsList.Add(new Participants()
+                    Resp.AttendeeParticipantsList.Add(new Participants()
                     {
                         Id = Convert.ToInt32(ds.Tables[1].Rows[i]["id"]),
-                        Name = Convert.ToString(ds.Tables[1].Rows[i]["role_name"]) + " - ROLE",
-                        Type = UsersType.RoleId,
+                        Name = Convert.ToString(ds.Tables[1].Rows[i]["name"]),
+                        Type = request.MeetingConfig[1].MeetingConfig
                     });
-                 }
-                for (int i = 0; i < ds.Tables[2].Rows.Count; i++)
-                {
-                    Resp.ParticipantsList.Add(new Participants()
-                    {
-                        Id = Convert.ToInt32(ds.Tables[2].Rows[i]["id"]),
-                        Name = Convert.ToString(ds.Tables[2].Rows[i]["name"]) + " - GrOUP",
-                        Type = UsersType.UserGroupId,
-                    });
-                 }
+                }
+                //for (int i = 0; i < ds.Tables[2].Rows.Count; i++)
+                //{
+                //    Resp.ParticipantsList.Add(new Participants()
+                //    {
+                //        Id = Convert.ToInt32(ds.Tables[2].Rows[i]["id"]),
+                //        Name = Convert.ToString(ds.Tables[2].Rows[i]["name"]) + " - GrOUP",
+                //        Type = UsersType.UserGroupId,
+                //    });
+                //}
             }
             catch (Exception e)
             {
