@@ -81,6 +81,8 @@ namespace ExpressBase.ServiceStack
 
         List<TFilters> TableFilters = new List<TFilters>();
 
+        List<DVBaseColumn> ExcelColumns = new List<DVBaseColumn>();
+
         //[CompressResponse]
         //public DataSourceDataResponse Any(DataVisDataRequest request)
         //{
@@ -896,7 +898,8 @@ namespace ExpressBase.ServiceStack
             try
             {
                 var _array = Inpuparams.Select(para => para.Name).ToArray();
-                _dv.ParamsList = Parameters.FindAll(para => Array.IndexOf(_array, para.Name) > -1);
+                if(Parameters != null)
+                    _dv.ParamsList = Parameters.FindAll(para => Array.IndexOf(_array, para.Name) > -1);
                 var _user_culture = CultureHelper.GetSerializedCultureInfo(_user.Preference.Locale).GetCultureInfo();
 
                 var colCount = _dataset.Tables[0].Columns.Count;
@@ -1529,12 +1532,10 @@ namespace ExpressBase.ServiceStack
 
                 if ((_dv as EbTableVisualization) != null)
                 {
-                    int ExcelColIndex = -1;
                     foreach (DVBaseColumn col in dependencyTable)
                     {
                         isnotAdded = true;
-                        if (col.bVisible)
-                            ExcelColIndex = (_dv as EbTableVisualization).Columns.FindIndex(_col => _col.Name == col.Name) + 1;
+                        int ExcelColIndex = ExcelColumns.FindIndex(_col => _col.Name == col.Name)+1;
                         try
                         {
                             bool AllowLinkifNoData = true;
@@ -1720,9 +1721,17 @@ namespace ExpressBase.ServiceStack
                             {
                                 SummaryCalcAverage(ref Summary, col, cults, count);
                             }
-                            if (_isexcel && isnotAdded && col.bVisible && !(col is DVApprovalColumn) && !(col is DVActionColumn))
+                            if (_isexcel && isnotAdded && ExcelColIndex > 0 && !(col is DVApprovalColumn) && !(col is DVActionColumn))
                             {
                                 worksheet.Cells[i + ExcelRowcount, ExcelColIndex].Value = _formattedData;
+                                if (i + 1 == count)
+                                {
+                                    if (Summary.ContainsKey(col.Data))
+                                    {
+                                        worksheet.Cells[i + ExcelRowcount + 1, ExcelColIndex].Value = "Sum = "+ Summary[col.Data][0];//sum
+                                        worksheet.Cells[i + ExcelRowcount + 2, ExcelColIndex].Value = "Avg = " + Summary[col.Data][1];//avg
+                                    }
+                                }
                             }
 
                         }
@@ -1888,7 +1897,7 @@ namespace ExpressBase.ServiceStack
                         _formattedData = GetDataforPowerSelect(col, _formattedData);
                     }
                     IntermediateDic.Add(col.Data, _formattedData);
-                    if ((_dv as EbChartVisualization) != null || (_dv as Objects.EbGoogleMap) != null)
+                    if ((_dv as EbTableVisualization) == null )
                     {
                         _formattedTable.Rows[i][col.Data] = _formattedData;
                     }
@@ -3101,12 +3110,12 @@ namespace ExpressBase.ServiceStack
         public void PreExcelAddHeader(ref ExcelWorksheet worksheet, EbDataVisualization _dv)
         {
             ExcelRowcount = 1;
-            var Columns = _dv.Columns.FindAll(col => col.bVisible && !(col is DVApprovalColumn) && !(col is DVActionColumn)).ToList();
+            ExcelColumns = _dv.Columns.FindAll(col => col.bVisible && !(col is DVApprovalColumn) && !(col is DVActionColumn)).ToList();
             worksheet.Cells[1, 1].Value = _dv.DisplayName;
-            worksheet.Cells[1, 1, 1, Columns.Count].Merge = true;
-            worksheet.Cells[1, 1, 1, Columns.Count].Style.Font.Bold = true;
-            worksheet.Cells[1, 1, 1, Columns.Count].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-            worksheet.Cells[1, 1, 1, Columns.Count].Style.Font.Size = 15;
+            worksheet.Cells[1, 1, 1, ExcelColumns.Count].Merge = true;
+            worksheet.Cells[1, 1, 1, ExcelColumns.Count].Style.Font.Bold = true;
+            worksheet.Cells[1, 1, 1, ExcelColumns.Count].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+            worksheet.Cells[1, 1, 1, ExcelColumns.Count].Style.Font.Size = 15;
             for (var i = 1; i <= _dv.ParamsList.Count; i++)
             {
                 worksheet.Cells[i + 1, 1].Value = _dv.ParamsList[i - 1].Name + " = " + _dv.ParamsList[i - 1].Value;
@@ -3116,14 +3125,14 @@ namespace ExpressBase.ServiceStack
             for (var i = 1; i <= TableFilters.Count; i++)
             {
                 ExcelRowcount++;
-                var col = Columns.Find(_col => _col.Name == TableFilters[i - 1].Column);
+                var col = ExcelColumns.Find(_col => _col.Name == TableFilters[i - 1].Column);
                 worksheet.Cells[ExcelRowcount, 1].Value = col.sTitle + " " + TableFilters[i - 1].Operator + " " + TableFilters[i - 1].Value;
                 worksheet.Cells[ExcelRowcount, 1, ExcelRowcount, 2].Merge = true;
             }
             ExcelRowcount++;
-            for (var i = 0; i < Columns.Count; i++)
+            for (var i = 0; i < ExcelColumns.Count; i++)
             {
-                worksheet.Cells[ExcelRowcount, i + 1].Value = Columns[i].sTitle;
+                worksheet.Cells[ExcelRowcount, i + 1].Value = ExcelColumns[i].sTitle;
                 worksheet.Cells[ExcelRowcount, i + 1].Style.Font.Bold = true;
                 worksheet.Cells[ExcelRowcount, i + 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
                 worksheet.Cells[ExcelRowcount, i + 1].Style.Font.Size = 12;
