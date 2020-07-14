@@ -17,6 +17,7 @@ using System.Threading.Tasks;
 
 namespace ExpressBase.ServiceStack.Services
 {
+    [Authenticate]
     public class ApiConversionService : EbBaseService
     {
         private ResponseStatus _Responsestatus = new ResponseStatus();

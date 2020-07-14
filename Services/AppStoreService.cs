@@ -88,8 +88,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             return resp;
         }
-
-        [Authenticate]
+               
         public GetAllFromAppstoreResponse Get(GetAllFromAppStoreExternalRequest request)
         {
             GetAllFromAppstoreResponse resp = new GetAllFromAppstoreResponse();

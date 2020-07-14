@@ -20,6 +20,7 @@ namespace ExpressBase.ServiceStack.MQServices
     {
         public ExportToExcelService(IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_mqp, _mqc) { }
 
+        [Authenticate]
         public void Post(ExportToExcelMqRequest request)
         {
             MessageProducer3.Publish(new ExportToExcelServiceRequest()
@@ -30,11 +31,14 @@ namespace ExpressBase.ServiceStack.MQServices
                 RefId = request.RefId,
                 IsExcel = request.IsExcel,
                 Params = request.Params,
+                TFilters = request.TFilters,
                 UserId = request.UserId,
                 UserAuthId = request.UserAuthId,
                 SolnId = request.SolnId,
+                eb_solution = request.eb_Solution,
                 BToken = (!String.IsNullOrEmpty(this.Request.Authorization)) ? this.Request.Authorization.Replace("Bearer", string.Empty).Trim() : String.Empty,
-                RToken = (!String.IsNullOrEmpty(this.Request.Headers["rToken"])) ? this.Request.Headers["rToken"] : String.Empty
+                RToken = (!String.IsNullOrEmpty(this.Request.Headers["rToken"])) ? this.Request.Headers["rToken"] : String.Empty,
+                SubscriptionId = request.SubscriptionId
             });
         }
     }
@@ -59,19 +63,21 @@ namespace ExpressBase.ServiceStack.MQServices
                 _req.RefId = request.RefId;
                 _req.IsExcel = true;
                 _req.Params = request.Params;
+                _req.TFilters = request.TFilters;
                 _req.Token = request.BToken;
                 _req.rToken = request.RToken;
+                _req.eb_Solution = request.eb_solution;
                 res = (DataSourceDataResponse)dataservice.Any(_req);
                 byte[] compressedData = Compress(res.excel_file);
-                this.Redis.Set("excel" + (request.EbDataVisualization.RefId + request.UserInfo.UserId), compressedData);
+                this.Redis.Set("excel" + (request.EbDataVisualization.RefId + request.UserInfo.UserId), compressedData, DateTime.Now.AddHours(5));
                 this.ServerEventClient.BearerToken = request.BToken;
                 this.ServerEventClient.RefreshToken = request.RToken;
                 this.ServerEventClient.RefreshTokenUri = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GET_ACCESS_TOKEN_URL);
-                this.ServerEventClient.Post<NotifyResponse>(new NotifyUserIdRequest
+                this.ServerEventClient.Post<NotifyResponse>(new NotifySubscriptionRequest
                 {
                     Msg = "../DV/GetExcel?refid=" + (request.EbDataVisualization.RefId + request.UserInfo.UserId) + "&filename=" + request.EbDataVisualization.DisplayName + ".xlsx",
                     Selector = StaticFileConstants.EXPORTTOEXCELSUCCESS,
-                    ToUserAuthId = request.UserAuthId,
+                    ToSubscriptionId = request.SubscriptionId
                 });
             }
             catch (Exception e)

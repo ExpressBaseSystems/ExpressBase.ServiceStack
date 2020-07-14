@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 
 namespace ExpressBase.ServiceStack.Services
 {
+    [Authenticate]
     public class Test : EbBaseService
     {
         public Test(IEbConnectionFactory _dbf, IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_dbf, _mqp, _mqc) { }
@@ -39,13 +40,7 @@ namespace ExpressBase.ServiceStack.Services
             }
 
             return null;
-        }
-
-
-
-
-
-
+        } 
     }
 
     //[Authenticate]
