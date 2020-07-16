@@ -77,7 +77,7 @@ namespace ExpressBase.ServiceStack
 
         int ExcelRowcount = 1;
 
-        List<Param> Inpuparams = null;
+        List<Param> Inpuparams = new List<Param>();
 
         List<TFilters> TableFilters = new List<TFilters>();
 
