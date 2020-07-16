@@ -1117,17 +1117,24 @@ B.participant_type , B.type_of_user from
                     string temp = String.Join(",", request.MeetingConfig[0].MeetingRoles);
                     qry_ += $@"select id,role_name as name from eb_roles where id in({temp});";
                 }
-                else if (request.MeetingConfig[i].MeetingConfig == UsersType.UserGroup && request.MeetingConfig[0].MeetingRoles.Count != 0)
+                else if (request.MeetingConfig[i].MeetingConfig == UsersType.UserGroup)
                 {
                     string temp = String.Join(",", request.MeetingConfig[0].MeetingUserGroup);
                     qry_ += $@"select id , name as name from eb_usergroup where id in({temp});";
                 }
-                else if (request.MeetingConfig[i].MeetingConfig == UsersType.Users && request.MeetingConfig[0].MeetingRoles.Count != 0)
+                else if (request.MeetingConfig[i].MeetingConfig == UsersType.Users)
                 {
                     if (request.MeetingConfig[i].MeetingUsers.Code != "")
                         qry_ += request.MeetingConfig[i].MeetingUsers.Code +";";
                     else
                         qry_ += $@"select id , fullname as name from eb_users;";
+                }
+                else if (request.MeetingConfig[i].MeetingConfig == UsersType.Contact )
+                {
+                    if (request.MeetingConfig[i].Contacts.Code != "")
+                        qry_ += request.MeetingConfig[i].MeetingUsers.Code +";";
+                    else if(request.MeetingConfig[i].ContactFilter != "")
+                        qry_ += $@"select name,id from eb_contacts where form_refid ='{request.MeetingConfig[i].ContactFilter}';";
                 }
             }
 
@@ -1164,7 +1171,7 @@ B.participant_type , B.type_of_user from
             }
             catch (Exception e)
             {
-
+                Console.WriteLine(e.Message, e.StackTrace);
             }
             return Resp;
         }
