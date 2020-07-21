@@ -1175,5 +1175,18 @@ B.participant_type , B.type_of_user from
             }
             return Resp;
         }
+
+        public ParticipantsListAjaxResponse Post(ParticipantsListAjaxRequest request)
+        {
+            string query = $@"select u.id, u.fullname from eb_users u where not exists (select A.id,A.user_id,B.meeting_date,B.time_from,B.time_to from
+            (select id,user_id,approved_slot_id from eb_meeting_slot_participants)A
+            left join 
+            (select id,meeting_date,time_from,time_to from eb_meeting_slots) B
+            ON B.id = A.approved_slot_id and B.time_from BETWEEN '09:30:00' and '09:59:00' AND B.time_to BETWEEN '09:30:00' and '09:59:00'
+            and meeting_date ='2020-05-07'
+            where B.time_from is not null and u.id = user_id );";
+            
+            return new ParticipantsListAjaxResponse();
+        }
     }
 }
