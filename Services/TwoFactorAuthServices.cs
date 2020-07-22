@@ -95,7 +95,7 @@ namespace ExpressBase.ServiceStack.Services
                 if (dt != null && dt.Rows.Count > 0)
                 {
                     Eb_Solution sol_Obj = GetSolutionObject(request.SolutionId);
-                    string UserAuthId = string.Format(TokenConstants.SUB_FORMAT, request.SolutionId, dt.Rows[0]["email"], TokenConstants.UC);
+                    string UserAuthId = string.Format(TokenConstants.SUB_FORMAT, request.SolutionId, dt.Rows[0]["email"],(!string.IsNullOrEmpty(request.WhichConsole))?(request.WhichConsole):( TokenConstants.UC));
                     string otp = GenerateOTP();
                     User _usr = SetUserObjForSigninOtp(otp, UserAuthId);
                     AuthResponse.TwoFAToken = GenerateToken(UserAuthId);
