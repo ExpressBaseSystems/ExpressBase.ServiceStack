@@ -1118,7 +1118,7 @@ B.participant_type , B.type_of_user from
                 else if (request.MeetingConfig[i].MeetingConfig == UsersType.Contact)
                 {
                     if (request.MeetingConfig[i].Contacts.Code != "")
-                        qry_ += request.MeetingConfig[i].MeetingUsers.Code + ";";
+                        qry_ += request.MeetingConfig[i].Contacts.Code + ";";
                     else if (request.MeetingConfig[i].ContactFilter != "")
                         qry_ += $@"select name,id from eb_contacts where form_refid ='{request.MeetingConfig[i].ContactFilter}';";
                 }
