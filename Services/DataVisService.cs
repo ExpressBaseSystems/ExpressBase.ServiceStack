@@ -525,7 +525,7 @@ namespace ExpressBase.ServiceStack
                                 }
                                 else
                                 {
-                                    if (!sql1.ToLower().Contains(":limit"))
+                                    if ( !sql1.ToLower().Contains(":limit") && request.Length > 0 )
                                         sql1 = sql1 + " LIMIT :limit OFFSET :offset;";
                                 }
                                 _sql = sql1 + tempsql;
