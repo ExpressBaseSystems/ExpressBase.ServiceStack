@@ -200,14 +200,7 @@ namespace ExpressBase.ServiceStack
 
 		private EbWebForm GetWebFormObject(string RefId)
 		{
-			EbWebForm _form = this.Redis.Get<EbWebForm>(RefId);
-			if (_form == null)
-			{
-				EbObjectService myService = base.ResolveService<EbObjectService>();
-				EbObjectParticularVersionResponse formObj = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = RefId });
-				_form = EbSerializers.Json_Deserialize(formObj.Data[0].Json);
-				this.Redis.Set<EbWebForm>(RefId, _form);
-			}
+			EbWebForm _form = EbFormHelper.GetEbObject<EbWebForm>(RefId, null, this.Redis, this);			
 			_form.AfterRedisGet(this);
 			return _form;
 		}
