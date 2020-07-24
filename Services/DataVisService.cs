@@ -508,7 +508,7 @@ namespace ExpressBase.ServiceStack
                             _ds.Sql = _ds.Sql.ReplaceAll(";", string.Empty);
                             _sql = _ds.Sql.Replace(":and_search", _c).Replace("@and_search", _c) + ";";
                             //}
-                            if (request.Ispaging)
+                            if (request.Ispaging || request.Length > 0)
                             {
                                 var matches = Regex.Matches(_sql, @"\;\s*SELECT\s*COUNT\(\*\)\s*FROM");
                                 if (matches.Count == 0)
@@ -525,7 +525,7 @@ namespace ExpressBase.ServiceStack
                                 }
                                 else
                                 {
-                                    if ( !sql1.ToLower().Contains(":limit") && request.Length > 0 )
+                                    if ( !sql1.ToLower().Contains(":limit"))
                                         sql1 = sql1 + " LIMIT :limit OFFSET :offset;";
                                 }
                                 _sql = sql1 + tempsql;
