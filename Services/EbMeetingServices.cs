@@ -938,7 +938,7 @@ namespace ExpressBase.ServiceStack.Services
 				C.meeting_date ,C.venue,C.integration,C.title,
 				D.user_id , D.type_of_user,D.participant_type,E.fullname,E.email
 			        FROM
-					(select id , eb_meeting_slots_id from eb_meetings where id= 18 and eb_del = 'F' )A
+					(select id , eb_meeting_slots_id from eb_meetings where id= {request.MeetingId} and eb_del = 'F' )A
 						LEFT JOIN
 							 (SELECT id , eb_meeting_schedule_id,time_from,time_to FROM  eb_meeting_slots)B
 							 ON B.id = A.eb_meeting_slots_id		
@@ -956,7 +956,7 @@ namespace ExpressBase.ServiceStack.Services
 				C.meeting_date ,C.venue,C.integration,C.title,
 				D.user_id , D.type_of_user,D.participant_type,E.name,E.email,E.form_refid,E.form_data_id
 			        FROM
-					(select id , eb_meeting_slots_id from eb_meetings where id= 18 and eb_del = 'F' )A
+					(select id , eb_meeting_slots_id from eb_meetings where id= {request.MeetingId} and eb_del = 'F' )A
 						LEFT JOIN
 							 (SELECT id , eb_meeting_schedule_id,time_from,time_to FROM  eb_meeting_slots)B
 							 ON B.id = A.eb_meeting_slots_id		
