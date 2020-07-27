@@ -331,13 +331,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             else
             {
-                dv = Redis.Get<EbTableVisualization>(AutogenId);
-                if (dv == null)
-                {
-                    var result = this.Gateway.Send<EbObjectParticularVersionResponse>(new EbObjectParticularVersionRequest { RefId = AutogenId });
-                    dv = EbSerializers.Json_Deserialize(result.Data[0].Json);
-                    Redis.Set<EbTableVisualization>(AutogenId, dv);
-                }
+                dv = EbFormHelper.GetEbObject<EbTableVisualization>(AutogenId, null, Redis, this);
                 UpdateDataReader(request, cols, dv, AutogenId);
                 UpdateDataVisualization(request, listNamesAndTypes, dv, AutogenId);
             }

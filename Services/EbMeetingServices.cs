@@ -290,96 +290,223 @@ namespace ExpressBase.ServiceStack.Services
         public GetMeetingsDetailsResponse Post(GetMeetingsDetailsRequest request)
         {
             GetMeetingsDetailsResponse Resp = new GetMeetingsDetailsResponse();
-            string _qry = $@"
-            SELECT id,COALESCE (eb_meeting_schedule_id, 0)as meeting_schedule_id,eb_meeting_slots_id FROM  eb_my_actions 
-	                     WHERE  eb_del = 'F' and id ={request.MyActionId} and is_completed ='F';
-                 SELECT 
-	            A.id,A.is_completed, B.id as slot_id,C.id as meeting_schedule_id,C.description,B.time_from,B.time_to,
-				C.meeting_date ,C.venue,C.integration,C.title,
-				D.user_id , D.type_of_user,D.participant_type,E.fullname
-			        FROM
-				   (SELECT
-						id, eb_meeting_slots_id,is_completed FROM  eb_my_actions 
-	                     WHERE  eb_del = 'F' and id ={request.MyActionId} )A
-						LEFT JOIN
-							 (SELECT id , eb_meeting_schedule_id,time_from,time_to FROM  eb_meeting_slots)B
-							 ON B.id = A.eb_meeting_slots_id		
-							 LEFT JOIN	
-							 (SELECT id ,title, meeting_date,venue,integration,description FROM  eb_meeting_schedule )C
-							 ON C.id = B.eb_meeting_schedule_id	
-							 LEFT JOIN	
-							 (SELECT id , approved_slot_id, eb_meeting_schedule_id , user_id ,type_of_user,participant_type FROM  eb_meeting_slot_participants )D
-							 ON D.approved_slot_id = B.id
-							 LEFT JOIN	
-							 (select id, fullname from eb_users where eb_del = 'F')E
-							 ON E.id = D.user_id;
-
-                SELECT 
-	            A.id,A.eb_meeting_schedule_id,B.id as slot_id,B.time_from,B.time_to,B.is_approved,
-				C.title,C.description,C.meeting_date,C.venue,C.integration
-			        FROM
-				   (SELECT id ,eb_meeting_schedule_id,eb_meeting_slots_id FROM  eb_my_actions 
-	                     WHERE  eb_del = 'F' and id ={request.MyActionId} and is_completed ='F' )A
-						LEFT JOIN
-							 (select eb_meeting_schedule_id,id,meeting_date,time_from,time_to,is_approved 
-							  from eb_meeting_slots  where eb_del ='F')B
-							 ON B.eb_meeting_schedule_id = A.eb_meeting_schedule_id		
-							 LEFT JOIN
-							 (select id,title,description,meeting_date,venue,integration from eb_meeting_schedule 
-							  where  eb_del ='F')C
-							  ON C.id = A.eb_meeting_schedule_id
-							 where A.eb_meeting_schedule_id is not null
-";
-
+            string _qry1 = $@"
+            SELECT id,COALESCE (eb_meeting_schedule_id, 0)as meeting_schedule_id,COALESCE (eb_meeting_slots_id, 0)as eb_meeting_slots_id FROM  eb_my_actions 
+	                     WHERE  eb_del = 'F' and id ={request.MyActionId} and is_completed ='F';";
+            EbDataSet SdTest = this.EbConnectionFactory.DataDB.DoQueries(_qry1);
+            int MeetingSlotId = Convert.ToInt32(SdTest.Tables[0].Rows[0]["eb_meeting_slots_id"]);
+            int MeetingScheduleId = Convert.ToInt32(SdTest.Tables[0].Rows[0]["meeting_schedule_id"]);
+            string qry_ = "";
             try
             {
-                EbDataSet ds = this.EbConnectionFactory.DataDB.DoQueries(_qry);
-
-                Resp.MyActionDetails.Id = Convert.ToInt32(ds.Tables[0].Rows[0]["id"]);
-                Resp.MyActionDetails.MeetingScheduleId = Convert.ToInt32(ds.Tables[0].Rows[0]["meeting_schedule_id"]);
-                Resp.MyActionDetails.SlotId = Convert.ToInt32(ds.Tables[0].Rows[0]["eb_meeting_slots_id"]);
-                for (int i = 0; i < ds.Tables[1].Rows.Count; i++)
+                if (MeetingSlotId != 0)
                 {
-                    Resp.MeetingRequest.Add(
-                        new MeetingRequest()
-                        {
-                            MaId = Convert.ToInt32(ds.Tables[1].Rows[i]["id"]),
-                            Slotid = Convert.ToInt32(ds.Tables[1].Rows[i]["slot_id"]),
-                            MaIsCompleted = Convert.ToString(ds.Tables[1].Rows[i]["is_completed"]),
-                            MeetingScheduleid = Convert.ToInt32(ds.Tables[1].Rows[i]["meeting_schedule_id"]),
-                            Description = Convert.ToString(ds.Tables[1].Rows[i]["description"]),
-                            TimeFrom = Convert.ToString(ds.Tables[1].Rows[i]["time_from"]),
-                            TimeTo = Convert.ToString(ds.Tables[1].Rows[i]["time_to"]),
-                            Title = Convert.ToString(ds.Tables[1].Rows[i]["title"]),
-                            MeetingDate = Convert.ToString(ds.Tables[1].Rows[i]["meeting_date"]),
-                            Venue = Convert.ToString(ds.Tables[1].Rows[i]["venue"]),
-                            Integration = Convert.ToString(ds.Tables[1].Rows[i]["integration"]),
-                            fullname = Convert.ToString(ds.Tables[1].Rows[i]["fullname"]),
-                            UserId = Convert.ToInt32(ds.Tables[1].Rows[i]["user_id"]),
-                            TypeofUser = Convert.ToInt32(ds.Tables[1].Rows[i]["type_of_user"]),
-                            ParticipantType = Convert.ToInt32(ds.Tables[1].Rows[i]["participant_type"]),
-                        });
-                }
-                for (int i = 0; i < ds.Tables[2].Rows.Count; i++)
-                {
-                    Resp.SlotsRequest.Add(
-                        new SlotsRequest()
-                        {
-                            MyActionId = Convert.ToInt32(ds.Tables[2].Rows[i]["id"]),
-                            MeetingScheduleId = Convert.ToInt32(ds.Tables[2].Rows[i]["eb_meeting_schedule_id"]),
-                            SlotId = Convert.ToInt32(ds.Tables[2].Rows[i]["slot_id"]),
-                            TimeFrom = Convert.ToString(ds.Tables[2].Rows[i]["time_from"]),
-                            TimeTo = Convert.ToString(ds.Tables[2].Rows[i]["time_to"]),
-                            IsApproved = Convert.ToString(ds.Tables[2].Rows[i]["is_approved"]),
-                            Title = Convert.ToString(ds.Tables[2].Rows[i]["title"]),
-                            Description = Convert.ToString(ds.Tables[2].Rows[i]["description"]),
-                            Venue = Convert.ToString(ds.Tables[2].Rows[i]["venue"]),
-                            Integration = Convert.ToString(ds.Tables[2].Rows[i]["integration"]),
-                            MeetingDate = Convert.ToString(ds.Tables[2].Rows[i]["meeting_date"]),
-                        });
-                }
+                    qry_ += $@"
+                  SELECT B.id,B.title,B.description,B.meeting_date,B.time_from,B.time_to,B.venue,B.integration FROM
+				   (SELECT id, eb_meeting_schedule_id FROM eb_meeting_slots
+							 where id = {MeetingSlotId} )A
+							 LEFT JOIN
+							 (SELECT id,title,description, meeting_date,time_from,time_to,venue,integration 
+							 from eb_meeting_schedule )B
+							 on B.id = A.eb_meeting_schedule_id;
+                select id,meeting_date,time_from,time_to,eb_meeting_schedule_id,is_approved from eb_meeting_slots where id = {MeetingSlotId} and eb_del='F';
+                SELECT A.id,A.approved_slot_id,A.eb_meeting_schedule_id,A.user_id,A.type_of_user,A.participant_type,A.confirmation,
+                 B.fullname,B.email FROM
+				   (SELECT id , approved_slot_id, eb_meeting_schedule_id , user_id ,type_of_user,participant_type,confirmation FROM  eb_meeting_slot_participants
+							 where approved_slot_id = {MeetingSlotId} and participant_type = 1)A
+							 LEFT JOIN	
+							 (select id, fullname ,email from eb_users where eb_del = 'F')B
+							 ON B.id = A.user_id;
+                 SELECT A.id,A.approved_slot_id,A.eb_meeting_schedule_id,A.user_id,A.type_of_user,A.participant_type,A.confirmation,
+                 B.name,B.email,B.form_refid,B.form_data_id
+			                        FROM
+				                   (SELECT id , approved_slot_id, eb_meeting_schedule_id , user_id ,type_of_user,participant_type,confirmation FROM  
+                                    eb_meeting_slot_participants where approved_slot_id = {MeetingSlotId} and participant_type = 2)A
+							                 LEFT JOIN	
+							                 (select id, name ,email,form_refid,form_data_id from eb_contacts where eb_del = 'F')B
+							                 ON B.id = A.user_id;
+                                ";
+                    EbDataSet ds = this.EbConnectionFactory.DataDB.DoQueries(qry_);
+                    Resp.MeetingScheduleDetails.MeetingScheduleId = Convert.ToInt32(ds.Tables[0].Rows[0]["id"]);
+                    Resp.MeetingScheduleDetails.Title = Convert.ToString(ds.Tables[0].Rows[0]["title"]);
+                    Resp.MeetingScheduleDetails.Description = Convert.ToString(ds.Tables[0].Rows[0]["description"]);
+                    Resp.MeetingScheduleDetails.Date = Convert.ToString(ds.Tables[0].Rows[0]["meeting_date"]);
+                    Resp.MeetingScheduleDetails.TimeFrom = Convert.ToString(ds.Tables[0].Rows[0]["time_from"]);
+                    Resp.MeetingScheduleDetails.TimeTo = Convert.ToString(ds.Tables[0].Rows[0]["time_to"]);
+                    Resp.MeetingScheduleDetails.Location = Convert.ToString(ds.Tables[0].Rows[0]["venue"]);
+                    Resp.MeetingScheduleDetails.Integration = Convert.ToString(ds.Tables[0].Rows[0]["integration"]);
+                    for (int i = 0; i < ds.Tables[1].Rows.Count; i++)
+                    {
+                        Resp.SlotList.Add(
+                            new SlotTable()
+                            {
+                                SlotId = Convert.ToInt32(ds.Tables[1].Rows[i]["id"]),
+                                Date = Convert.ToString(ds.Tables[1].Rows[i]["meeting_date"]),
+                                TimeFrom = Convert.ToString(ds.Tables[1].Rows[i]["time_from"]),
+                                TimeTo = Convert.ToString(ds.Tables[1].Rows[i]["time_to"]),
+                                MeetingScheduleId = Convert.ToInt32(ds.Tables[1].Rows[i]["eb_meeting_schedule_id"]),
+                                IsApproved = Convert.ToString(ds.Tables[1].Rows[i]["is_approved"]),
+                            });
+                    }
+                    for (int i = 0; i < ds.Tables[2].Rows.Count; i++)
+                    {
+                        Resp.ParticipantList.Add(
+                            new MeetingParticipants()
+                            {
+                                MeetingScheduleId = Convert.ToInt32(ds.Tables[2].Rows[i]["eb_meeting_schedule_id"]),
+                                ApprovedSlotId = Convert.ToInt32(ds.Tables[2].Rows[i]["approved_slot_id"]),
+                                Id = Convert.ToInt32(ds.Tables[2].Rows[i]["id"]),
+                                UserId = Convert.ToInt32(ds.Tables[2].Rows[i]["user_id"]),
+                                TypeOfUser = Convert.ToInt32(ds.Tables[2].Rows[i]["type_of_user"]),
+                                ParticipantType = Convert.ToInt32(ds.Tables[2].Rows[i]["participant_type"]),
+                                Confirmation = Convert.ToInt32(ds.Tables[2].Rows[i]["confirmation"]),
+                                Name = Convert.ToString(ds.Tables[2].Rows[i]["fullname"]),
+                                Email = Convert.ToString(ds.Tables[2].Rows[i]["email"]),
 
+                            });
+                    }
+                    for (int i = 0; i < ds.Tables[3].Rows.Count; i++)
+                    {
+                        Resp.ParticipantList.Add(
+                            new MeetingParticipants()
+                            {
+                                MeetingScheduleId = Convert.ToInt32(ds.Tables[3].Rows[i]["eb_meeting_schedule_id"]),
+                                ApprovedSlotId = Convert.ToInt32(ds.Tables[3].Rows[i]["approved_slot_id"]),
+                                Id = Convert.ToInt32(ds.Tables[3].Rows[i]["id"]),
+                                UserId = Convert.ToInt32(ds.Tables[3].Rows[i]["user_id"]),
+                                TypeOfUser = Convert.ToInt32(ds.Tables[3].Rows[i]["type_of_user"]),
+                                ParticipantType = Convert.ToInt32(ds.Tables[3].Rows[i]["participant_type"]),
+                                Confirmation = Convert.ToInt32(ds.Tables[1].Rows[i]["confirmation"]),
+                                Name = Convert.ToString(ds.Tables[3].Rows[i]["name"]),
+                                Email = Convert.ToString(ds.Tables[3].Rows[i]["email"]),
+                                FormDataId = Convert.ToInt32(ds.Tables[3].Rows[i]["form_data_id"]),
+                                FormRefid = Convert.ToString(ds.Tables[3].Rows[i]["form_refid"]),
+                            });
+                    }
+                    Resp.IsDirectMeeting = true;
+                }
+                else if (MeetingScheduleId != 0)
+                {
+                    qry_ += $@"
+            SELECT id,title,description, meeting_date,time_from,time_to,venue,integration from eb_meeting_schedule where id ={MeetingScheduleId} and eb_del ='F';
+            select id,meeting_date,time_from,time_to,eb_meeting_schedule_id,is_approved from eb_meeting_slots where eb_meeting_schedule_id = {MeetingScheduleId} and eb_del='F'
+
+            ";
+                    EbDataSet ds = this.EbConnectionFactory.DataDB.DoQueries(qry_);
+                    Resp.MeetingScheduleDetails.MeetingScheduleId = Convert.ToInt32(ds.Tables[0].Rows[0]["id"]);
+                    Resp.MeetingScheduleDetails.Title = Convert.ToString(ds.Tables[0].Rows[0]["title"]);
+                    Resp.MeetingScheduleDetails.Description = Convert.ToString(ds.Tables[0].Rows[0]["description"]);
+                    Resp.MeetingScheduleDetails.Date = Convert.ToString(ds.Tables[0].Rows[0]["meeting_date"]);
+                    Resp.MeetingScheduleDetails.TimeFrom = Convert.ToString(ds.Tables[0].Rows[0]["time_from"]);
+                    Resp.MeetingScheduleDetails.TimeTo = Convert.ToString(ds.Tables[0].Rows[0]["time_to"]);
+                    Resp.MeetingScheduleDetails.Location = Convert.ToString(ds.Tables[0].Rows[0]["venue"]);
+                    Resp.MeetingScheduleDetails.Integration = Convert.ToString(ds.Tables[0].Rows[0]["integration"]);
+                    for (int i = 0; i < ds.Tables[1].Rows.Count; i++)
+                    {
+                        Resp.SlotList.Add(
+                            new SlotTable()
+                            {
+                                SlotId = Convert.ToInt32(ds.Tables[1].Rows[i]["id"]),
+                                Date = Convert.ToString(ds.Tables[1].Rows[i]["meeting_date"]),
+                                TimeFrom = Convert.ToString(ds.Tables[1].Rows[i]["time_from"]),
+                                TimeTo = Convert.ToString(ds.Tables[1].Rows[i]["time_to"]),
+                                MeetingScheduleId = Convert.ToInt32(ds.Tables[1].Rows[i]["eb_meeting_schedule_id"]),
+                                IsApproved = Convert.ToString(ds.Tables[1].Rows[i]["is_approved"]),
+                            });
+                    }
+                    Resp.IsDirectMeeting = false;
+                }
             }
+            //            string _qry = $@"
+            //            SELECT id,COALESCE (eb_meeting_schedule_id, 0)as meeting_schedule_id, COALESCE (eb_meeting_slots_id, 0)as eb_meeting_slots_id FROM  eb_my_actions 
+            //	                     WHERE  eb_del = 'F' and id ={request.MyActionId} and is_completed ='F';
+            //                 SELECT 
+            //	            A.id,A.is_completed, B.id as slot_id,C.id as meeting_schedule_id,C.description,B.time_from,B.time_to,
+            //				C.meeting_date ,C.venue,C.integration,C.title,
+            //				D.user_id , D.type_of_user,D.participant_type,E.fullname
+            //			        FROM
+            //				   (SELECT
+            //						id, eb_meeting_slots_id,is_completed FROM  eb_my_actions 
+            //	                     WHERE  eb_del = 'F' and id ={request.MyActionId} )A
+            //						LEFT JOIN
+            //							 (SELECT id , eb_meeting_schedule_id,time_from,time_to FROM  eb_meeting_slots)B
+            //							 ON B.id = A.eb_meeting_slots_id		
+            //							 LEFT JOIN	
+            //							 (SELECT id ,title, meeting_date,venue,integration,description FROM  eb_meeting_schedule )C
+            //							 ON C.id = B.eb_meeting_schedule_id	
+            //							 LEFT JOIN	
+            //							 (SELECT id , approved_slot_id, eb_meeting_schedule_id , user_id ,type_of_user,participant_type FROM  eb_meeting_slot_participants )D
+            //							 ON D.approved_slot_id = B.id and participant_type = 1
+            //							 LEFT JOIN	
+            //							 (select id, fullname from eb_users where eb_del = 'F')E
+            //							 ON E.id = D.user_id;
+
+            //                SELECT 
+            //	            A.id,A.eb_meeting_schedule_id,B.id as slot_id,B.time_from,B.time_to,B.is_approved,
+            //				C.title,C.description,C.meeting_date,C.venue,C.integration
+            //			        FROM
+            //				   (SELECT id ,eb_meeting_schedule_id,eb_meeting_slots_id FROM  eb_my_actions 
+            //	                     WHERE  eb_del = 'F' and id ={request.MyActionId} and is_completed ='F' )A
+            //						LEFT JOIN
+            //							 (select eb_meeting_schedule_id,id,meeting_date,time_from,time_to,is_approved 
+            //							  from eb_meeting_slots  where eb_del ='F')B
+            //							 ON B.eb_meeting_schedule_id = A.eb_meeting_schedule_id		
+            //							 LEFT JOIN
+            //							 (select id,title,description,meeting_date,venue,integration from eb_meeting_schedule 
+            //							  where  eb_del ='F')C
+            //							  ON C.id = A.eb_meeting_schedule_id
+            //							 where A.eb_meeting_schedule_id is not null
+            //";
+
+            //            try
+            //            {
+            //                EbDataSet ds = this.EbConnectionFactory.DataDB.DoQueries(_qry);
+
+            //                Resp.MyActionDetails.Id = Convert.ToInt32(ds.Tables[0].Rows[0]["id"]);
+            //                Resp.MyActionDetails.MeetingScheduleId = Convert.ToInt32(ds.Tables[0].Rows[0]["meeting_schedule_id"]);
+            //                Resp.MyActionDetails.SlotId = Convert.ToInt32(ds.Tables[0].Rows[0]["eb_meeting_slots_id"]);
+            //                for (int i = 0; i < ds.Tables[1].Rows.Count; i++)
+            //                {
+            //                    Resp.MeetingRequest.Add(
+            //                        new MeetingRequest()
+            //                        {
+            //                            MaId = Convert.ToInt32(ds.Tables[1].Rows[i]["id"]),
+            //                            Slotid = Convert.ToInt32(ds.Tables[1].Rows[i]["slot_id"]),
+            //                            MaIsCompleted = Convert.ToString(ds.Tables[1].Rows[i]["is_completed"]),
+            //                            MeetingScheduleid = Convert.ToInt32(ds.Tables[1].Rows[i]["meeting_schedule_id"]),
+            //                            Description = Convert.ToString(ds.Tables[1].Rows[i]["description"]),
+            //                            TimeFrom = Convert.ToString(ds.Tables[1].Rows[i]["time_from"]),
+            //                            TimeTo = Convert.ToString(ds.Tables[1].Rows[i]["time_to"]),
+            //                            Title = Convert.ToString(ds.Tables[1].Rows[i]["title"]),
+            //                            MeetingDate = Convert.ToString(ds.Tables[1].Rows[i]["meeting_date"]),
+            //                            Venue = Convert.ToString(ds.Tables[1].Rows[i]["venue"]),
+            //                            Integration = Convert.ToString(ds.Tables[1].Rows[i]["integration"]),
+            //                            fullname = Convert.ToString(ds.Tables[1].Rows[i]["fullname"]),
+            //                            UserId = Convert.ToInt32(ds.Tables[1].Rows[i]["user_id"]),
+            //                            TypeofUser = Convert.ToInt32(ds.Tables[1].Rows[i]["type_of_user"]),
+            //                            ParticipantType = Convert.ToInt32(ds.Tables[1].Rows[i]["participant_type"]),
+            //                        });
+            //                }
+            //                for (int i = 0; i < ds.Tables[2].Rows.Count; i++)
+            //                {
+            //                    Resp.SlotsRequest.Add(
+            //                        new SlotsRequest()
+            //                        {
+            //                            MyActionId = Convert.ToInt32(ds.Tables[2].Rows[i]["id"]),
+            //                            MeetingScheduleId = Convert.ToInt32(ds.Tables[2].Rows[i]["eb_meeting_schedule_id"]),
+            //                            SlotId = Convert.ToInt32(ds.Tables[2].Rows[i]["slot_id"]),
+            //                            TimeFrom = Convert.ToString(ds.Tables[2].Rows[i]["time_from"]),
+            //                            TimeTo = Convert.ToString(ds.Tables[2].Rows[i]["time_to"]),
+            //                            IsApproved = Convert.ToString(ds.Tables[2].Rows[i]["is_approved"]),
+            //                            Title = Convert.ToString(ds.Tables[2].Rows[i]["title"]),
+            //                            Description = Convert.ToString(ds.Tables[2].Rows[i]["description"]),
+            //                            Venue = Convert.ToString(ds.Tables[2].Rows[i]["venue"]),
+            //                            Integration = Convert.ToString(ds.Tables[2].Rows[i]["integration"]),
+            //                            MeetingDate = Convert.ToString(ds.Tables[2].Rows[i]["meeting_date"]),
+            //                        });
+            //                }
+
+            //            }
             catch (Exception e)
             {
                 Console.WriteLine(e.StackTrace, e.Message);
@@ -523,7 +650,7 @@ namespace ExpressBase.ServiceStack.Services
                     CurrentUser.ParticipantType = SPL[i].ParticipantType;
                     CurrentUser.SlotId = SPL[i].SlotId;
                     CurrentUser.MeetingScheduleId = SPL[i].MeetingScheduleId;
-                   // IsDirectMeeting = true;
+                    // IsDirectMeeting = true;
                 }
             }
             if (Type == MeetingOptions.F_H_F_A)
@@ -531,7 +658,7 @@ namespace ExpressBase.ServiceStack.Services
             else if (Type == MeetingOptions.F_H_E_A)
                 qry_ += F_H_E_A(MyActionObj, MSD, SPL, CurrentUser, SPC, request);
             else if (Type == MeetingOptions.E_H_F_A)
-                qry_ +=  E_H_F_A(MyActionObj, MSD, SPL, CurrentUser, SPC, request);
+                qry_ += E_H_F_A(MyActionObj, MSD, SPL, CurrentUser, SPC, request);
             try
             {
                 int a = this.EbConnectionFactory.DataDB.DoNonQuery(qry_);
@@ -809,9 +936,9 @@ namespace ExpressBase.ServiceStack.Services
                  SELECT 
 	           A.id, A.eb_meeting_slots_id, B.id as slot_id,C.id as meeting_schedule_id,C.description,B.time_from,B.time_to,
 				C.meeting_date ,C.venue,C.integration,C.title,
-				D.user_id , D.type_of_user,D.participant_type,E.fullname
+				D.user_id , D.type_of_user,D.participant_type,E.fullname,E.email
 			        FROM
-					(select id , eb_meeting_slots_id from eb_meetings where id= {request.MeetingId} and eb_del = 'F' )A
+					(select id , eb_meeting_slots_id from eb_meetings where id= 18 and eb_del = 'F' )A
 						LEFT JOIN
 							 (SELECT id , eb_meeting_schedule_id,time_from,time_to FROM  eb_meeting_slots)B
 							 ON B.id = A.eb_meeting_slots_id		
@@ -819,35 +946,79 @@ namespace ExpressBase.ServiceStack.Services
 							 (SELECT id ,title, meeting_date,venue,integration,description FROM  eb_meeting_schedule )C
 							 ON C.id = B.eb_meeting_schedule_id	
 							 LEFT JOIN	
-							 (SELECT id , approved_slot_id, eb_meeting_schedule_id , user_id ,type_of_user,participant_type FROM  eb_meeting_slot_participants )D
-							 ON D.approved_slot_id = B.id
+							 (SELECT id , approved_slot_id, eb_meeting_schedule_id , user_id ,type_of_user,participant_type  FROM  eb_meeting_slot_participants )D
+							 ON D.approved_slot_id = B.id and D.participant_type = 1
 							 LEFT JOIN	
-							 (select id, fullname from eb_users where eb_del = 'F')E
-							 ON E.id = D.user_id";
+							 (select id, fullname,email from eb_users where eb_del = 'F')E
+							 ON E.id = D.user_id;   
+                SELECT 
+	           A.id, A.eb_meeting_slots_id, B.id as slot_id,C.id as meeting_schedule_id,C.description,B.time_from,B.time_to,
+				C.meeting_date ,C.venue,C.integration,C.title,
+				D.user_id , D.type_of_user,D.participant_type,E.name,E.email,E.form_refid,E.form_data_id
+			        FROM
+					(select id , eb_meeting_slots_id from eb_meetings where id= 18 and eb_del = 'F' )A
+						LEFT JOIN
+							 (SELECT id , eb_meeting_schedule_id,time_from,time_to FROM  eb_meeting_slots)B
+							 ON B.id = A.eb_meeting_slots_id		
+							 LEFT JOIN	
+							 (SELECT id ,title, meeting_date,venue,integration,description FROM  eb_meeting_schedule )C
+							 ON C.id = B.eb_meeting_schedule_id	
+							 LEFT JOIN	
+							 (SELECT id , approved_slot_id, eb_meeting_schedule_id , user_id ,type_of_user,participant_type  FROM  eb_meeting_slot_participants )D
+							 ON D.approved_slot_id = B.id and D.participant_type = 2
+							 LEFT JOIN	
+							 (select id, name ,email,form_refid,form_data_id  from eb_contacts where eb_del = 'F')E
+							 ON E.id = D.user_id;
+";
 
             try
             {
-                EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(_qry);
-                int capacity1 = dt.Rows.Count;
-                for (int i = 0; i < capacity1; i++)
+                EbDataSet ds = this.EbConnectionFactory.DataDB.DoQueries(_qry);
+                int capacity1 = ds.Tables[0].Rows.Count;
+                for (int i = 0; i < ds.Tables[0].Rows.Count; i++)
                 {
                     Resp.MeetingRequest.Add(
                         new MeetingRequest()
                         {
-                            MeetingId = Convert.ToInt32(dt.Rows[i]["id"]),
-                            Slotid = Convert.ToInt32(dt.Rows[i]["slot_id"]),
-                            MeetingScheduleid = Convert.ToInt32(dt.Rows[i]["meeting_schedule_id"]),
-                            Description = Convert.ToString(dt.Rows[i]["description"]),
-                            TimeFrom = Convert.ToString(dt.Rows[i]["time_from"]),
-                            TimeTo = Convert.ToString(dt.Rows[i]["time_to"]),
-                            Title = Convert.ToString(dt.Rows[i]["title"]),
-                            MeetingDate = Convert.ToString(dt.Rows[0]["meeting_date"]),
-                            Venue = Convert.ToString(dt.Rows[i]["venue"]),
-                            Integration = Convert.ToString(dt.Rows[i]["integration"]),
-                            fullname = Convert.ToString(dt.Rows[i]["fullname"]),
-                            UserId = Convert.ToInt32(dt.Rows[i]["user_id"]),
-                            TypeofUser = Convert.ToInt32(dt.Rows[i]["type_of_user"]),
-                            ParticipantType = Convert.ToInt32(dt.Rows[i]["participant_type"]),
+                            MeetingId = Convert.ToInt32(ds.Tables[0].Rows[i]["id"]),
+                            Slotid = Convert.ToInt32(ds.Tables[0].Rows[i]["slot_id"]),
+                            MeetingScheduleid = Convert.ToInt32(ds.Tables[0].Rows[i]["meeting_schedule_id"]),
+                            Description = Convert.ToString(ds.Tables[0].Rows[i]["description"]),
+                            TimeFrom = Convert.ToString(ds.Tables[0].Rows[i]["time_from"]),
+                            TimeTo = Convert.ToString(ds.Tables[0].Rows[i]["time_to"]),
+                            Title = Convert.ToString(ds.Tables[0].Rows[i]["title"]),
+                            MeetingDate = Convert.ToString(ds.Tables[0].Rows[0]["meeting_date"]),
+                            Venue = Convert.ToString(ds.Tables[0].Rows[i]["venue"]),
+                            Integration = Convert.ToString(ds.Tables[0].Rows[i]["integration"]),
+                            Fullname = Convert.ToString(ds.Tables[0].Rows[i]["fullname"]),
+                            UserId = Convert.ToInt32(ds.Tables[0].Rows[i]["user_id"]),
+                            TypeofUser = Convert.ToInt32(ds.Tables[0].Rows[i]["type_of_user"]),
+                            ParticipantType = Convert.ToInt32(ds.Tables[0].Rows[i]["participant_type"]),
+                            Email = Convert.ToString(ds.Tables[0].Rows[i]["email"]),
+                        });
+                }
+                for (int i = 0; i < ds.Tables[1].Rows.Count; i++)
+                {
+                    Resp.MeetingRequest.Add(
+                        new MeetingRequest()
+                        {
+                            MeetingId = Convert.ToInt32(ds.Tables[1].Rows[i]["id"]),
+                            Slotid = Convert.ToInt32(ds.Tables[1].Rows[i]["slot_id"]),
+                            MeetingScheduleid = Convert.ToInt32(ds.Tables[1].Rows[i]["meeting_schedule_id"]),
+                            Description = Convert.ToString(ds.Tables[1].Rows[i]["description"]),
+                            TimeFrom = Convert.ToString(ds.Tables[1].Rows[i]["time_from"]),
+                            TimeTo = Convert.ToString(ds.Tables[1].Rows[i]["time_to"]),
+                            Title = Convert.ToString(ds.Tables[1].Rows[i]["title"]),
+                            MeetingDate = Convert.ToString(ds.Tables[1].Rows[0]["meeting_date"]),
+                            Venue = Convert.ToString(ds.Tables[1].Rows[i]["venue"]),
+                            Integration = Convert.ToString(ds.Tables[1].Rows[i]["integration"]),
+                            Fullname = Convert.ToString(ds.Tables[1].Rows[i]["name"]),
+                            UserId = Convert.ToInt32(ds.Tables[1].Rows[i]["user_id"]),
+                            TypeofUser = Convert.ToInt32(ds.Tables[1].Rows[i]["type_of_user"]),
+                            ParticipantType = Convert.ToInt32(ds.Tables[1].Rows[i]["participant_type"]),
+                            Email = Convert.ToString(ds.Tables[1].Rows[i]["email"]),
+                            FormDataId = Convert.ToInt32(ds.Tables[1].Rows[i]["form_data_id"]),
+                            FormRefid = Convert.ToString(ds.Tables[1].Rows[i]["form_refid"]),
                         });
                 }
             }
@@ -1117,9 +1288,9 @@ B.participant_type , B.type_of_user from
                 }
                 else if (request.MeetingConfig[i].MeetingConfig == UsersType.Contact)
                 {
-                    if (request.MeetingConfig[i].Contacts.Code != "")
-                        qry_ += request.MeetingConfig[i].MeetingUsers.Code + ";";
-                    else if (request.MeetingConfig[i].ContactFilter != "")
+                    //if (request.MeetingConfig[i].Contacts.Code != "")
+                    //    qry_ += request.MeetingConfig[i].Contacts.Code + ";";
+                    if (request.MeetingConfig[i].ContactFilter != "")
                         qry_ += $@"select name,id from eb_contacts where form_refid ='{request.MeetingConfig[i].ContactFilter}';";
                 }
             }
