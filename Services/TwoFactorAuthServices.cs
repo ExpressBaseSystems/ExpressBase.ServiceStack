@@ -235,8 +235,16 @@ namespace ExpressBase.ServiceStack.Services
         private User SetUserObjForSigninOtp(string otp, string UserAuthId)
         {
             User u = this.Redis.Get<User>(UserAuthId);
-            u.Otp = otp;
-            this.Redis.Set<IUserAuth>(UserAuthId, u);// must set as IUserAuth
+            if (u != null)
+            {
+                Console.WriteLine("otp : " + otp);
+                u.Otp = otp;
+                this.Redis.Set<IUserAuth>(UserAuthId, u);// must set as IUserAuth
+            }
+            else
+            {
+                Console.WriteLine("Userobj is null :" + UserAuthId);
+            }
             return u;
         }
 
