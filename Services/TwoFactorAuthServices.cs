@@ -86,34 +86,45 @@ namespace ExpressBase.ServiceStack.Services
         public Authenticate2FAResponse Post(SendSignInOtpRequest request)
         {
             AuthResponse = new Authenticate2FAResponse();
-            string authColumn = (request.SignInOtpType == SignInOtpType.Email) ? "email" : "phnoprimary";
-            string query = String.Format("SELECT * FROM eb_users WHERE {0} = '{1}'", authColumn, request.UName);
-            this.EbConnectionFactory = new EbConnectionFactory(request.SolutionId, this.Redis);
-            if (EbConnectionFactory != null)
+            try
             {
-                EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(query);
-                if (dt != null && dt.Rows.Count > 0)
+                string authColumn = (request.SignInOtpType == SignInOtpType.Email) ? "email" : "phnoprimary";
+                string query = String.Format("SELECT * FROM eb_users WHERE {0} = '{1}'", authColumn, request.UName);
+                this.EbConnectionFactory = new EbConnectionFactory(request.SolutionId, this.Redis);
+                if (EbConnectionFactory != null)
                 {
-                    Eb_Solution sol_Obj = GetSolutionObject(request.SolutionId);
-                    string UserAuthId = string.Format(TokenConstants.SUB_FORMAT, request.SolutionId, dt.Rows[0]["email"],(!string.IsNullOrEmpty(request.WhichConsole))?(request.WhichConsole):( TokenConstants.UC));
-                    string otp = GenerateOTP();
-                    User _usr = SetUserObjForSigninOtp(otp, UserAuthId);
-                    AuthResponse.TwoFAToken = GenerateToken(UserAuthId);
-                    SendOtp(sol_Obj, _usr, request.SignInOtpType);
-                    AuthResponse.AuthStatus = true;
-                    AuthResponse.UserAuthId = UserAuthId;
+                    EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(query);
+                    if (dt != null && dt.Rows.Count > 0)
+                    {
+                        Eb_Solution sol_Obj = GetSolutionObject(request.SolutionId);
+                        string UserAuthId = string.Format(TokenConstants.SUB_FORMAT, request.SolutionId, dt.Rows[0]["email"], (!string.IsNullOrEmpty(request.WhichConsole)) ? (request.WhichConsole) : (TokenConstants.UC));
+                        string otp = GenerateOTP();
+                        User _usr = SetUserObjForSigninOtp(otp, UserAuthId);
+                        Console.WriteLine("SetUserObjForSigninOtp : " + UserAuthId + "," + otp);
+
+                        AuthResponse.TwoFAToken = GenerateToken(UserAuthId);
+                        SendOtp(sol_Obj, _usr, request.SignInOtpType);
+                        Console.WriteLine("Sent otp : " + UserAuthId + "," + otp);
+                        AuthResponse.AuthStatus = true;
+                        AuthResponse.UserAuthId = UserAuthId;
+                    }
+                    else
+                    {
+                        AuthResponse.AuthStatus = false;
+                        AuthResponse.ErrorMessage = "Invalid User";
+                    }
                 }
-                else
-                {
-                    AuthResponse.AuthStatus = false;
-                    AuthResponse.ErrorMessage = "Invalid User";
-                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message + e.StackTrace);
             }
             return AuthResponse;
         }
 
-        public void ResendOtpInner(string Token, string UserAuthId,string SolnId) {
-            AuthResponse.AuthStatus = ValidateToken( Token, UserAuthId);
+        public void ResendOtpInner(string Token, string UserAuthId, string SolnId)
+        {
+            AuthResponse.AuthStatus = ValidateToken(Token, UserAuthId);
             if (AuthResponse.AuthStatus)
             {
                 Eb_Solution sol_Obj = GetSolutionObject(SolnId);
@@ -224,8 +235,16 @@ namespace ExpressBase.ServiceStack.Services
         private User SetUserObjForSigninOtp(string otp, string UserAuthId)
         {
             User u = this.Redis.Get<User>(UserAuthId);
-            u.Otp = otp;
-            this.Redis.Set<IUserAuth>(UserAuthId, u);// must set as IUserAuth
+            if (u != null)
+            {
+                Console.WriteLine("otp : " + otp);
+                u.Otp = otp;
+                this.Redis.Set<IUserAuth>(UserAuthId, u);// must set as IUserAuth
+            }
+            else
+            {
+                Console.WriteLine("Userobj is null :" + UserAuthId);
+            }
             return u;
         }
 
