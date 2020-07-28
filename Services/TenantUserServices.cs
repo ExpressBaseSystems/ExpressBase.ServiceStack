@@ -227,6 +227,7 @@ namespace ExpressBase.ServiceStack.Services
                 if (factory != null && factory.DataDB != null)
                 {
                     user = User.GetUserObject(factory.DataDB, request.UserId, request.WC, request.UserIp, request.DeviceId);
+                    user.AuthId = request.UserAuthId;
                     this.Redis.Set<IUserAuth>(request.UserAuthId, user);
                     Console.ForegroundColor = ConsoleColor.Blue;
                     Console.WriteLine("User Object Updated : " + request.UserAuthId);
