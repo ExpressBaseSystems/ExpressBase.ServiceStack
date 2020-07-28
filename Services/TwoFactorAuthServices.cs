@@ -156,13 +156,14 @@ namespace ExpressBase.ServiceStack.Services
                 var token = tokenHandler.ReadJwtToken(authToken);
                 string value = "";
                 ((List<Claim>)token.Claims).ForEach(a => { if (a.Type == "AuthId") value = a.Value; });
+                Console.WriteLine("Value in ValidateToken" + value + " - " + userAuthId);
                 if (value != userAuthId)
                     throw new Exception();
                 status = true;
             }
-            catch
+            catch (Exception e)
             {
-                Console.WriteLine("Token validation failed :: invalid token");
+                Console.WriteLine("Token validation failed :: invalid token" + e.Message + e.StackTrace);
             }
             return status;
         }
