@@ -5,16 +5,13 @@ using ExpressBase.Common.LocationNSolution;
 using ExpressBase.Common.Structures;
 using ExpressBase.Objects;
 using ExpressBase.Objects.ServiceStack_Artifacts;
-using ExpressBase.Security.Core;
+using ExpressBase.Security;
 using Newtonsoft.Json;
-using Npgsql;
 using ServiceStack;
+using ServiceStack.Auth;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -221,6 +218,30 @@ namespace ExpressBase.ServiceStack.Services
             return new UpdateSolutionObjectResponse { };
         }
 
+        public UpdateUserObjectResponse Post(UpdateUserObjectRequest request)
+        {
+            try
+            {
+                User user = null;
+                IEbConnectionFactory factory = new EbConnectionFactory(request.SolnId, Redis);
+                if (factory != null && factory.DataDB != null)
+                {
+                    user = User.GetUserObject(factory.DataDB, request.UserId, request.WC, request.UserIp, request.DeviceId);
+                    this.Redis.Set<IUserAuth>(request.UserAuthId, user);
+                    Console.ForegroundColor = ConsoleColor.Blue;
+                    Console.WriteLine("User Object Updated : " + request.UserAuthId);
+                    Console.ForegroundColor = ConsoleColor.White;
+                }
+                else { Console.WriteLine("Connectionfactory not available frm redis" + request.SolnId); }
+
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Error UpdateUserObjectRequest: " + e.Message + e.StackTrace);
+            }
+            return new UpdateUserObjectResponse { };
+        }
+
         public EbSolutionUsers GetUserInfo(string solnId)
         {
             EbSolutionUsers SolutionUsers = new EbSolutionUsers();
@@ -318,18 +339,18 @@ namespace ExpressBase.ServiceStack.Services
                         });
                         if (r[10].ToString() == string.Empty)
                         {
-                            Console.WriteLine("Location: "+ r[2].ToString()+" , Location Type Not Set");
+                            Console.WriteLine("Location: " + r[2].ToString() + " , Location Type Not Set");
                         }
                     }
 
                 }
 
                 var tree = dt.Tables[1].Enumerate().ToTree(row => true,
-                        (parent, child) => Convert.ToInt32(parent["id"]) == Convert.ToInt32(child["parent_id"]),"is_group");
+                        (parent, child) => Convert.ToInt32(parent["id"]) == Convert.ToInt32(child["parent_id"]), "is_group");
                 foreach (Node<EbDataRow> Nodedr in tree.Tree)
                 {
                     loctree.Add(Convert.ToInt32(Nodedr.Item["id"]), CreateLocationObject(Nodedr.Item));
-                    if(Nodedr.Children.Count >0)
+                    if (Nodedr.Children.Count > 0)
                         RecursivelyGetChildren(loctree, Nodedr);
                 }
 
@@ -339,7 +360,7 @@ namespace ExpressBase.ServiceStack.Services
                 Console.WriteLine("Erron in Getting location info" + e.Message + e.StackTrace);
             }
 
-            return new LocationInfoTenantResponse { Locations = locs, Config = Conf , LocationTree= loctree };
+            return new LocationInfoTenantResponse { Locations = locs, Config = Conf, LocationTree = loctree };
         }
 
         [Authenticate]
@@ -1055,7 +1076,7 @@ namespace ExpressBase.ServiceStack.Services
 
         public void RecursivelyGetChildren(Dictionary<int, EbLocation> LocationTree, Node<EbDataRow> node)
         {
-            foreach(Node<EbDataRow> Nodedr in node.Children)
+            foreach (Node<EbDataRow> Nodedr in node.Children)
             {
                 RecursivelyfindKey(LocationTree, Nodedr);
                 if (Nodedr.Children.Count > 0)
@@ -1068,7 +1089,7 @@ namespace ExpressBase.ServiceStack.Services
             int targetkey = Convert.ToInt32(Nodedr.Item["parent_id"]);
             foreach (var item in Items)
             {
-                if(item.Key == targetkey)
+                if (item.Key == targetkey)
                 {
                     Items[item.Key].Children.Add(Convert.ToInt32(Nodedr.Item["id"]), CreateLocationObject(Nodedr.Item));
                 }

@@ -127,6 +127,7 @@ namespace ExpressBase.ServiceStack.Services
             AuthResponse.AuthStatus = ValidateToken(Token, UserAuthId);
             if (AuthResponse.AuthStatus)
             {
+                Console.WriteLine("Otp token valid");
                 Eb_Solution sol_Obj = GetSolutionObject(SolnId);
                 User _usr = this.Redis.Get<User>(UserAuthId);
                 string[] _otpmethod = sol_Obj.OtpDelivery.Split(",");
@@ -224,7 +225,7 @@ namespace ExpressBase.ServiceStack.Services
 
         private User SetUserObjFor2FA(string otp)
         {
-            User u = this.Redis.Get<User>(this.MyAuthenticateResponse.User.AuthId);
+            User u = GetUserObject(this.MyAuthenticateResponse.User.AuthId);
             u.Otp = otp;
             u.BearerToken = this.MyAuthenticateResponse.BearerToken;
             u.RefreshToken = this.MyAuthenticateResponse.RefreshToken;
@@ -234,7 +235,7 @@ namespace ExpressBase.ServiceStack.Services
 
         private User SetUserObjForSigninOtp(string otp, string UserAuthId)
         {
-            User u = this.Redis.Get<User>(UserAuthId);
+            User u = GetUserObject(UserAuthId);
             if (u != null)
             {
                 Console.WriteLine("otp : " + otp);
