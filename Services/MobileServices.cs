@@ -30,7 +30,7 @@ namespace ExpressBase.ServiceStack.Services
             string msg = string.Empty;
             try
             {
-                EbMobileForm mobileForm = (request.MobilePage.Container as EbMobileForm);
+                EbMobileForm mobileForm = (EbMobileForm)request.MobilePage.Container;
                 IVendorDbTypes vDbTypes = this.EbConnectionFactory.DataDB.VendorDbTypes;
                 var tableMetaDict = mobileForm.GetTableMetaCollection(vDbTypes);
 
@@ -120,7 +120,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 if (string.IsNullOrEmpty(autgenref))
                 {
-                    EbMobileForm mobileform = (request.MobilePage.Container as EbMobileForm);
+                    EbMobileForm mobileform = (EbMobileForm)request.MobilePage.Container;
 
                     EbWebForm webform = new EbWebForm
                     {

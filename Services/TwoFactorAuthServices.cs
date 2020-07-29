@@ -40,15 +40,18 @@ namespace ExpressBase.ServiceStack.Services
             AuthResponse.TwoFAToken = GenerateToken(MyAuthenticateResponse.User.AuthId);
             if (sol_Obj.OtpDelivery != null)
             {
+                SignInOtpType SignInOtpType = 0;
                 string[] _otpmethod = sol_Obj.OtpDelivery.Split(",");
                 if (_otpmethod[0] == "email")
                 {
-                    SendOtp(sol_Obj, _usr, SignInOtpType.Email);
+                    SignInOtpType = SignInOtpType.Email;
                 }
                 else if (_otpmethod[0] == "sms")
                 {
-                    SendOtp(sol_Obj, _usr, SignInOtpType.Sms);
+                    SignInOtpType = SignInOtpType.Sms;
                 }
+
+                SendOtp(sol_Obj, _usr, SignInOtpType);
             }
             else
             {
@@ -127,17 +130,21 @@ namespace ExpressBase.ServiceStack.Services
             AuthResponse.AuthStatus = ValidateToken(Token, UserAuthId);
             if (AuthResponse.AuthStatus)
             {
+                Console.WriteLine("Otp token valid");
                 Eb_Solution sol_Obj = GetSolutionObject(SolnId);
                 User _usr = this.Redis.Get<User>(UserAuthId);
                 string[] _otpmethod = sol_Obj.OtpDelivery.Split(",");
+                SignInOtpType SignInOtpType = 0;
                 if (_otpmethod[0] == "email")
                 {
-                    SendOtp(sol_Obj, _usr, SignInOtpType.Email);
+                    SignInOtpType = SignInOtpType.Email;
                 }
                 else if (_otpmethod[0] == "sms")
                 {
-                    SendOtp(sol_Obj, _usr, SignInOtpType.Sms);
+                    SignInOtpType = SignInOtpType.Sms;
                 }
+
+                SendOtp(sol_Obj, _usr, SignInOtpType);
             }
             else
             {
@@ -155,13 +162,14 @@ namespace ExpressBase.ServiceStack.Services
                 var token = tokenHandler.ReadJwtToken(authToken);
                 string value = "";
                 ((List<Claim>)token.Claims).ForEach(a => { if (a.Type == "AuthId") value = a.Value; });
+                Console.WriteLine("Value in ValidateToken" + value + " - " + userAuthId);
                 if (value != userAuthId)
                     throw new Exception();
                 status = true;
             }
-            catch
+            catch (Exception e)
             {
-                Console.WriteLine("Token validation failed :: invalid token");
+                Console.WriteLine("Token validation failed :: invalid token" + e.Message + e.StackTrace);
             }
             return status;
         }
@@ -224,7 +232,7 @@ namespace ExpressBase.ServiceStack.Services
 
         private User SetUserObjFor2FA(string otp)
         {
-            User u = this.Redis.Get<User>(this.MyAuthenticateResponse.User.AuthId);
+            User u = GetUserObject(this.MyAuthenticateResponse.User.AuthId);
             u.Otp = otp;
             u.BearerToken = this.MyAuthenticateResponse.BearerToken;
             u.RefreshToken = this.MyAuthenticateResponse.RefreshToken;
@@ -234,7 +242,7 @@ namespace ExpressBase.ServiceStack.Services
 
         private User SetUserObjForSigninOtp(string otp, string UserAuthId)
         {
-            User u = this.Redis.Get<User>(UserAuthId);
+            User u = GetUserObject(UserAuthId);
             if (u != null)
             {
                 Console.WriteLine("otp : " + otp);
@@ -266,6 +274,14 @@ namespace ExpressBase.ServiceStack.Services
                             string final = _usr.Email.Replace(name, newString);
                             AuthResponse.OtpTo = final;
                         }
+                        if (!string.IsNullOrEmpty(_usr.PhoneNumber))
+                        {
+                            SendOtpSms(_usr, sol_Obj);
+                        }
+                        else
+                        {
+                            AuthResponse.ErrorMessage += "Phone number not set for the user. Please contact your admin";
+                        }
                     }
                     else
                     {
@@ -280,6 +296,14 @@ namespace ExpressBase.ServiceStack.Services
                         string lastDigit = _usr.PhoneNumber.Substring((_usr.PhoneNumber.Length - 4), 4);
                         SendOtpSms(_usr, sol_Obj);
                         AuthResponse.OtpTo = "******" + lastDigit;
+                        if (!string.IsNullOrEmpty(_usr.Email))
+                        {
+                            SendOtpEmail(_usr, sol_Obj);
+                        }
+                        else
+                        {
+                            AuthResponse.ErrorMessage += " Email id not set for the user. Please contact your admin";
+                        }
                     }
                     else
                     {
