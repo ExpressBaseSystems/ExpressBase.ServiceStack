@@ -246,7 +246,7 @@ namespace ExpressBase.ServiceStack.Services
                                         AND
 	                                        EA.application_type = 2;";
 
-            User UserObject = this.Redis.Get<User>(request.UserAuthId);
+            User UserObject = GetUserObject(request.UserAuthId);
             bool isAdmin = UserObject.IsAdmin();
             string sql;
             EbDataTable dt;
@@ -528,7 +528,7 @@ namespace ExpressBase.ServiceStack.Services
             GetMyActionsResponse response = new GetMyActionsResponse();
             try
             {
-                User UserObject = this.Redis.Get<User>(request.UserAuthId);
+                User UserObject = GetUserObject(request.UserAuthId);
 
                 string query = EbConnectionFactory.ObjectsDB.EB_GET_MYACTIONS;
 
@@ -567,7 +567,7 @@ namespace ExpressBase.ServiceStack.Services
             GetMyActionInfoResponse response = new GetMyActionInfoResponse();
             try
             {
-                User UserObject = this.Redis.Get<User>(request.UserAuthId);
+                User UserObject = GetUserObject(request.UserAuthId);
                 string query = @"SELECT 
 	                                ES.stage_name,ES.stage_unique_id,ESA.action_unique_id,ESA.action_name
                                 FROM 

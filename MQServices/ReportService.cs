@@ -168,7 +168,7 @@ namespace ExpressBase.ServiceStack.MQServices
 
             foreach (KeyValuePair<int, string> u in MailIds)
             {
-                User usr = this.Redis.Get<User>(string.Format(TokenConstants.SUB_FORMAT, JobArgs.SolnId, u.Value, "uc"));
+                User usr = GetUserObject(string.Format(TokenConstants.SUB_FORMAT, JobArgs.SolnId, u.Key, "uc"));
                 if (usr != null)
                 {
                     if (Locales.ContainsKey(usr.Preference.Locale))

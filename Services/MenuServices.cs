@@ -42,7 +42,7 @@ namespace ExpressBase.ServiceStack.Services
             List<ObjWrap> _fav = new List<ObjWrap>();
             List<int> _favids = new List<int>();
 
-            this.UserObject = this.Redis.Get<User>(request.UserAuthId);
+            this.UserObject = GetUserObject(request.UserAuthId);
 
             DbParameter[] parameters = {
                 this.EbConnectionFactory.ObjectsDB.GetNewParameter("user_id",EbDbTypes.Int32,request.UserId)

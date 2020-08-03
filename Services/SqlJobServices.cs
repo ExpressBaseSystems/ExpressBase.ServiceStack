@@ -297,7 +297,7 @@ namespace ExpressBase.ServiceStack.Services
                     }
                 }
 
-                User _user = this.Redis.Get<User>(request.UserAuthId);
+                User _user = GetUserObject(request.UserAuthId);
                 DVColumnCollection DVColumnCollection = GetColumnsForSqlJob(dtNew.Columns);
                 List<GroupingDetails> _levels = new List<GroupingDetails>();
                 EbDataVisualization Visualization = new EbTableVisualization { Columns = DVColumnCollection, AutoGen = false };
@@ -364,7 +364,7 @@ namespace ExpressBase.ServiceStack.Services
                     if (dt.Rows.Count > 0)
                     {
                         WebFormServices webFormServices = base.ResolveService<WebFormServices>();
-                        User User = this.Redis.Get<User>(request.UserAuthId);
+                        User User = GetUserObject(request.UserAuthId);
                         string _pusherRefid = string.Empty;
 
                         foreach (EbDataRow dr in dt.Rows)
@@ -875,7 +875,7 @@ namespace ExpressBase.ServiceStack.Services
             InsertOrUpdateFormDataResp resp = new InsertOrUpdateFormDataResp();
             try
             {
-                User User = this.Redis.Get<User>(UserAuthId);
+                User User = GetUserObject(UserAuthId);
                 int LocId = 1;
                 if (this.GlobalParams.ContainsKey(EB_LOC_ID))
                 {

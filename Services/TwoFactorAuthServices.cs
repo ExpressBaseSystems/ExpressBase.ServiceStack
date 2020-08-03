@@ -92,7 +92,7 @@ namespace ExpressBase.ServiceStack.Services
             try
             {
                 string authColumn = (request.SignInOtpType == SignInOtpType.Email) ? "email" : "phnoprimary";
-                string query = String.Format("SELECT * FROM eb_users WHERE {0} = '{1}'", authColumn, request.UName);
+                string query = String.Format("SELECT id FROM eb_users WHERE {0} = '{1}'", authColumn, request.UName);
                 this.EbConnectionFactory = new EbConnectionFactory(request.SolutionId, this.Redis);
                 if (EbConnectionFactory != null)
                 {
@@ -100,7 +100,7 @@ namespace ExpressBase.ServiceStack.Services
                     if (dt != null && dt.Rows.Count > 0)
                     {
                         Eb_Solution sol_Obj = GetSolutionObject(request.SolutionId);
-                        string UserAuthId = string.Format(TokenConstants.SUB_FORMAT, request.SolutionId, dt.Rows[0]["email"], (!string.IsNullOrEmpty(request.WhichConsole)) ? (request.WhichConsole) : (TokenConstants.UC));
+                        string UserAuthId = string.Format(TokenConstants.SUB_FORMAT, request.SolutionId, dt.Rows[0][0], (!string.IsNullOrEmpty(request.WhichConsole)) ? (request.WhichConsole) : (TokenConstants.UC));
                         string otp = GenerateOTP();
                         User _usr = SetUserObjForSigninOtp(otp, UserAuthId);
                         Console.WriteLine("SetUserObjForSigninOtp : " + UserAuthId + "," + otp);
@@ -132,7 +132,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 Console.WriteLine("Otp token valid");
                 Eb_Solution sol_Obj = GetSolutionObject(SolnId);
-                User _usr = this.Redis.Get<User>(UserAuthId);
+                User _usr = GetUserObject(UserAuthId);
                 string[] _otpmethod = sol_Obj.OtpDelivery.Split(",");
                 SignInOtpType SignInOtpType = 0;
                 if (_otpmethod[0] == "email")

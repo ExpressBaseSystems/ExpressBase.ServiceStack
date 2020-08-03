@@ -1106,7 +1106,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             _form.RefId = RefId;
             if (UserAuthId != null)
-                _form.UserObj = this.Redis.Get<User>(UserAuthId);
+                _form.UserObj = GetUserObject(UserAuthId);
             if (SolnId != null)
                 _form.SolutionObj = this.GetSolutionObject(SolnId);
             _form.AfterRedisGet(this);
@@ -1648,7 +1648,7 @@ namespace ExpressBase.ServiceStack.Services
             string msg = $"Start* UpdateAllFormTables {DateTime.Now}\n\n";
             try
             {
-                User u = this.Redis.Get<User>(request.UserAuthId);
+                User u = GetUserObject(request.UserAuthId);
                 if (u.Roles.Contains(SystemRoles.SolutionOwner.ToString()))
                 {
                     string Qry = @"SELECT refid,display_name,obj_json FROM (

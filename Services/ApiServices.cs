@@ -67,7 +67,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 this.SolutionId = request.SolnId;
                 this.GlobalParams = this.Proc(request.Data);
-                this.UserObject = this.Redis.Get<User>(request.UserAuthId);
+                this.UserObject = GetUserObject(request.UserAuthId);
 
                 //fill default param
                 this.GlobalParams["eb_currentuser_id"] = request.UserId;

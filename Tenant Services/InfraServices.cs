@@ -26,6 +26,7 @@ using ExpressBase.ServiceStack.MQServices;
 using Newtonsoft.Json;
 using ExpressBase.Security;
 using ExpressBase.Common.LocationNSolution;
+using ServiceStack.Auth;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -192,9 +193,9 @@ namespace ExpressBase.ServiceStack.Services
                     {
                         resp.SolId = response.Id;
                         resp.Status = true;
-                        User user = this.Redis.Get<User>(request.UserAuthId);
+                        User user = GetUserObject(request.UserAuthId);
                         user.Permissions.Add(response.SolURL + "-" + (int)SystemRoles.SolutionOwner);
-                        this.Redis.Set<User>(request.UserAuthId, user);
+                        this.Redis.Set<IUserAuth>(request.UserAuthId, user);
                     }
                 }
                 else
