@@ -31,13 +31,15 @@ namespace ExpressBase.ServiceStack.Services
 							SELECT DISTINCT INITCAP(TRIM(subcategory)) AS subcategory FROM customers WHERE LENGTH(subcategory) > 2 ORDER BY subcategory;
 							SELECT status,nextstatus FROM lead_status WHERE eb_del='F' ORDER BY status;
 							SELECT service FROM lead_service WHERE eb_del='F' ORDER BY order_id;
-							SELECT id, name FROM hoc_staff WHERE type='nurse' AND eb_del='F' ORDER BY name;";
+							SELECT id, name FROM hoc_staff WHERE type='nurse' AND eb_del='F' ORDER BY name;
+							SELECT id, category FROM customer_category WHERE eb_del='F';";
 			List<DbParameter> paramList = new List<DbParameter>();
 			Dictionary<int, string> CostCenter = new Dictionary<int, string>();
 			Dictionary<string, int> DocDict = new Dictionary<string, int>();
 			Dictionary<string, int> StaffDict = new Dictionary<string, int>();
 			Dictionary<string, int> NurseDict = new Dictionary<string, int>();
 			Dictionary<string, string> CustomerData = new Dictionary<string, string>();
+			Dictionary<int, string> customercategoryDict = new Dictionary<int, string>();
 			List<string> clcityList = new List<string>();
 			List<string> clcountryList = new List<string>();
 			List<string> cityList = new List<string>();
@@ -56,7 +58,7 @@ namespace ExpressBase.ServiceStack.Services
 			{
 				SqlQry += @"SELECT id, eb_loc_id, trdate, genurl, name, dob, genphoffice, profession, genemail, customertype, clcity, clcountry, city,
 								typeofcustomer, sourcecategory, subcategory, consultation, picsrcvd, dprefid, sex, district, leadowner,
-                                baldnessgrade, diffusepattern, hfcurrently, htpreviously, country_code, watsapp_phno
+                                baldnessgrade, diffusepattern, hfcurrently, htpreviously, country_code, watsapp_phno, cust_category 
 								FROM customers WHERE id = :accountid AND eb_del='F';
 							SELECT id,trdate,status,followupdate,narration, eb_createdby, eb_createddt,isnotpickedup FROM leaddetails
 								WHERE customers_id=:accountid ORDER BY eb_createddt DESC;
@@ -94,6 +96,9 @@ namespace ExpressBase.ServiceStack.Services
 			foreach (var dr in ds.Tables[11].Rows)
 				if (!NurseDict.ContainsKey(dr[1].ToString()))
 					NurseDict.Add(dr[1].ToString(), Convert.ToInt32(dr[0]));
+			foreach (var dr in ds.Tables[12].Rows)
+				if (!customercategoryDict.ContainsKey(Convert.ToInt32(dr[0])))
+					customercategoryDict.Add(Convert.ToInt32(dr[0]), dr[1].ToString());
 
 			foreach (var dr in ds.Tables[3].Rows)
 				clcityList.Add(dr[0].ToString());
@@ -114,7 +119,7 @@ namespace ExpressBase.ServiceStack.Services
 			foreach (var dr in ds.Tables[10].Rows)
 				serviceList.Add(dr[0].ToString());
 
-			int Qcnt = 12;//Query count first part
+			int Qcnt = 13;//Query count first part
 			if (ds.Tables.Count > Qcnt && ds.Tables[Qcnt].Rows.Count > 0)
 			{
 				Mode = 1;
@@ -148,6 +153,7 @@ namespace ExpressBase.ServiceStack.Services
 				CustomerData.Add("htpreviously", dr[25].ToString().ToLower());
 				CustomerData.Add("country_code", dr[26].ToString());
 				CustomerData.Add("watsapp_phno", dr[27].ToString());
+				CustomerData.Add("cust_category", dr[28].ToString());
 				
 				if (ds.Tables[Qcnt + 4].Rows.Count > 0)
 				{
@@ -244,7 +250,8 @@ namespace ExpressBase.ServiceStack.Services
 				//ImageIdList = ImgIds,
 				StatusDict = statusDict,
 				ServiceList = serviceList,
-				NurseDict = NurseDict
+				NurseDict = NurseDict,
+				CustomerCategoryDict = customercategoryDict
 			};
 		}
 
@@ -480,6 +487,13 @@ namespace ExpressBase.ServiceStack.Services
 				cols += "leadowner,";
 				vals += ":leadowner,";
 				upcolsvals += "leadowner=:leadowner,";
+			}
+			if (dict.TryGetValue("cust_category", out found))
+			{
+				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Int32, Convert.ToInt32(found.Value)));
+				cols += "cust_category,";
+				vals += ":cust_category,";
+				upcolsvals += "cust_category=:cust_category,";
 			}
             if (dict.TryGetValue("baldnessgrade", out found))
             {
