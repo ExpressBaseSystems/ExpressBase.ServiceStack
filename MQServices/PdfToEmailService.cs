@@ -33,6 +33,7 @@ namespace ExpressBase.ServiceStack.MQServices
                 SolnId = request.SolnId,
                 RefId = request.RefId
             });
+            Console.WriteLine("EmailTemplateWithAttachment publish complete");
         }
     }
 
@@ -44,59 +45,75 @@ namespace ExpressBase.ServiceStack.MQServices
 
         public void Post(EmailAttachmentRequest request)
         {
-            string mailTo = string.Empty;
-            EbConnectionFactory ebConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
-            EbObjectService objservice = base.ResolveService<EbObjectService>();
-            DataSourceService dataservice = base.ResolveService<DataSourceService>();
-            ReportService reportservice = base.ResolveService<ReportService>();
-            reportservice.EbConnectionFactory = objservice.EbConnectionFactory = dataservice.EbConnectionFactory = ebConnectionFactory;
-            ReportRenderResponse RepRes = new ReportRenderResponse();
-            EbEmailTemplate EmailTemplate = new EbEmailTemplate();
+            try
+            {
+                Console.WriteLine("EmailTemplateWithAttachment mq internal started");
+                string mailTo = string.Empty;
+                EbConnectionFactory ebConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
+                EbObjectService objservice = base.ResolveService<EbObjectService>();
+                DataSourceService dataservice = base.ResolveService<DataSourceService>();
+                ReportService reportservice = base.ResolveService<ReportService>();
+                reportservice.EbConnectionFactory = objservice.EbConnectionFactory = dataservice.EbConnectionFactory = ebConnectionFactory;
+                ReportRenderResponse RepRes = new ReportRenderResponse();
+                EbEmailTemplate EmailTemplate = new EbEmailTemplate();
 
-            if (request.ObjId > 0)
-            {
-                EbObjectFetchLiveVersionResponse template_res = (EbObjectFetchLiveVersionResponse)objservice.Get(new EbObjectFetchLiveVersionRequest() { Id = request.ObjId });
-                if (template_res != null && template_res.Data.Count > 0)
+                if (request.ObjId > 0)
                 {
-                    EmailTemplate = EbSerializers.Json_Deserialize(template_res.Data[0].Json);
-                }
-            }
-            else if (request.RefId != string.Empty)
-            {
-                EbObjectParticularVersionResponse template_res = (EbObjectParticularVersionResponse)objservice.Get(new EbObjectParticularVersionRequest() { RefId = request.RefId });
-                if (template_res != null && template_res.Data.Count > 0)
-                {
-                    EmailTemplate = EbSerializers.Json_Deserialize(template_res.Data[0].Json);
-                }
-            }
-
-            if (EmailTemplate != null)
-            {
-                if (EmailTemplate.DataSourceRefId != string.Empty && EmailTemplate.To != string.Empty)
-                {
-                    EbObjectParticularVersionResponse mailDs = (EbObjectParticularVersionResponse)objservice.Get(new EbObjectParticularVersionRequest() { RefId = EmailTemplate.DataSourceRefId });
-                    if (mailDs.Data.Count > 0)
+                    EbObjectFetchLiveVersionResponse template_res = (EbObjectFetchLiveVersionResponse)objservice.Get(new EbObjectFetchLiveVersionRequest() { Id = request.ObjId });
+                    if (template_res != null && template_res.Data.Count > 0)
                     {
-                        EbDataReader dr = EbSerializers.Json_Deserialize(mailDs.Data[0].Json);
-                        IEnumerable<DbParameter> parameters = DataHelper.GetParams(ebConnectionFactory, false, request.Params, 0, 0);
-                        EbDataSet ds = ebConnectionFactory.ObjectsDB.DoQueries(dr.Sql, parameters.ToArray());
-                        string pattern = @"\{{(.*?)\}}";
-                        IEnumerable<string> matches = Regex.Matches(EmailTemplate.Body, pattern).OfType<Match>()
-                         .Select(m => m.Groups[0].Value)
-                         .Distinct();
-                        foreach (string _col in matches)
-                        {
-                            string str = _col.Replace("{{", "").Replace("}}", "");
+                        EmailTemplate = EbSerializers.Json_Deserialize(template_res.Data[0].Json);
+                    }
+                }
+                else if (request.RefId != string.Empty)
+                {
+                    EbObjectParticularVersionResponse template_res = (EbObjectParticularVersionResponse)objservice.Get(new EbObjectParticularVersionRequest() { RefId = request.RefId });
+                    if (template_res != null && template_res.Data.Count > 0)
+                    {
+                        EmailTemplate = EbSerializers.Json_Deserialize(template_res.Data[0].Json);
+                    }
+                }
 
+                if (EmailTemplate != null)
+                {
+                    if (EmailTemplate.DataSourceRefId != string.Empty && EmailTemplate.To != string.Empty)
+                    {
+                        EbObjectParticularVersionResponse mailDs = (EbObjectParticularVersionResponse)objservice.Get(new EbObjectParticularVersionRequest() { RefId = EmailTemplate.DataSourceRefId });
+                        if (mailDs.Data.Count > 0)
+                        {
+                            EbDataReader dr = EbSerializers.Json_Deserialize(mailDs.Data[0].Json);
+                            IEnumerable<DbParameter> parameters = DataHelper.GetParams(ebConnectionFactory, false, request.Params, 0, 0);
+                            EbDataSet ds = ebConnectionFactory.ObjectsDB.DoQueries(dr.Sql, parameters.ToArray());
+                            string pattern = @"\{{(.*?)\}}";
+                            string p = "Dear&nbsp;USER,;  Greetings from EXPRESSbase!</div><div><br></div><div></div><div>Your&nbsp; project '{{Table1.project}}' was just modified by&nbsp;{{Table1.eb_lastmodified_by}}&nbsp;on&nbsp;{{Table1.eb_lastmodified_at}}.&nbsp;We request you to make sure it was an authorized modification.</div><div><br></div><div><br></div><div></div><div>Thank You!&nbsp;</div><div><br></div><div>Regards,</div><div>EXPRESSbase Support</div></div>";
+                            IEnumerable<string> matches = Regex.Matches(/*EmailTemplate.Body*/p, pattern).OfType<Match>()
+                             .Select(m => m.Groups[0].Value)
+                             .Distinct();
+                            Console.WriteLine("EmailTemplateWithAttachment.matches =" + matches.Count());
+
+                            foreach (string _col in matches)
+                            {
+                                try
+                                {
+                                    string str = _col.Replace("{{", "").Replace("}}", "");
+
+                                    foreach (EbDataTable dt in ds.Tables)
+                                    {
+                                        string colval = dt.Rows[0][str.Split('.')[1]].ToString();
+                                        EmailTemplate.Body = EmailTemplate.Body.Replace(_col, colval);
+                                    }
+                                }
+                                catch (Exception e) {
+                                    Console.WriteLine("EmailTemplateWithAttachment.matches fill Exception, col:" + _col);
+                                    Console.WriteLine(e.Message + e.StackTrace);
+                                }
+                            }
+                            Console.WriteLine("EmailTemplateWithAttachment.matches filled");
                             foreach (EbDataTable dt in ds.Tables)
                             {
-                                string colval = dt.Rows[0][str.Split('.')[1]].ToString();
-                                EmailTemplate.Body = EmailTemplate.Body.Replace(_col, colval);
+                                mailTo = dt.Rows[0][EmailTemplate.To.Split('.')[1]].ToString();
                             }
-                        }
-                        foreach (EbDataTable dt in ds.Tables)
-                        {
-                            mailTo = dt.Rows[0][EmailTemplate.To.Split('.')[1]].ToString();
+                            Console.WriteLine("EmailTemplateWithAttachment.mailTo = " + mailTo);
                         }
                     }
                 }
@@ -129,14 +146,18 @@ namespace ExpressBase.ServiceStack.MQServices
                             RepRes.StreamWrapper.Memorystream.Position = 0;
                             request1.AttachmentReport = RepRes.ReportBytea;
                             request1.AttachmentName = RepRes.ReportName + ".pdf";
+                            Console.WriteLine("EmailTemplateWithAttachment.Attachment Added");
                         }
                     }
-
                     MessageProducer3.Publish(request1);
+                    Console.WriteLine("EmailTemplateWithAttachment.Published to Email send");
                 }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message + e.StackTrace);
             }
         }
     }
-
 }
 
