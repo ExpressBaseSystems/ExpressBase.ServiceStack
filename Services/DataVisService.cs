@@ -1571,7 +1571,7 @@ namespace ExpressBase.ServiceStack
                                         var _height = (col as DVStringColumn).ImageHeight == 0 ? "auto" : (col as DVStringColumn).ImageHeight + "px";
                                         var _width = (col as DVStringColumn).ImageWidth == 0 ? "auto" : (col as DVStringColumn).ImageWidth + "px";
                                         var _quality = (col as DVStringColumn).ImageQuality.ToString().ToLower();
-                                        if (_unformattedData.ToString() != "")
+                                        if (_unformattedData.ToString().Trim() != string.Empty)
                                         {
                                             _formattedData = $"<img class='img-thumbnail columnimage' src='/images/{_quality}/{_unformattedData}.jpg' style='height:{_height};width:{_width};'/>";
                                             _ImageList.Add(new FileMetaInfo
