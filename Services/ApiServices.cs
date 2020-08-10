@@ -7,7 +7,6 @@ using ExpressBase.Common.Structures;
 using ExpressBase.Objects;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ExpressBase.ServiceStack.MQServices;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using ServiceStack.Redis;
 using System;
@@ -134,6 +133,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 if (e is ExplicitExitException)
                 {
+                    this.ApiResponse.Message.Status = ApiConstants.SUCCESS;
                     this.ApiResponse.Message.Description = e.Message;
                     this.ApiResponse.Message.ErrorCode = ApiErrorCode.ExplicitExit;
                 }
@@ -146,11 +146,10 @@ namespace ExpressBase.ServiceStack.Services
         //execute eb sql datareader object
         private object ExcDataReader(EbSqlReader sqlreader, int step_c)
         {
-            ObjWrapperInt ObjectWrapper = null;
             EbDataSet dt;
             try
             {
-                ObjectWrapper = this.GetObjectByVer(sqlreader.Reference);
+                ObjWrapperInt ObjectWrapper = this.GetObjectByVer(sqlreader.Reference);
                 if (ObjectWrapper.EbObj == null)
                 {
                     this.ApiResponse.Message.Description = "DataReader not found";
@@ -169,7 +168,7 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception ex)
             {
                 Console.WriteLine(ex.Message);
-                this.ApiResponse.Message.Description = string.Format(ApiConstants.DESCRPT_ERR, step_c, "DataReader", ObjectWrapper.EbObj.Name);
+                this.ApiResponse.Message.Description = $"{ex.Message}. Error at DataReader, Resource position {step_c + 1}";
                 throw new ApiException("Excecution Failed");
             }
             return dt;
@@ -178,11 +177,10 @@ namespace ExpressBase.ServiceStack.Services
         //execute eb datawriter object
         private object ExcDataWriter(EbSqlWriter writer, int step)
         {
-            ObjWrapperInt ObjectWrapper = null;
             List<DbParameter> p = new List<DbParameter>();
             try
             {
-                ObjectWrapper = this.GetObjectByVer(writer.Reference);
+                ObjWrapperInt ObjectWrapper = this.GetObjectByVer(writer.Reference);
                 if (ObjectWrapper.EbObj == null)
                 {
                     this.ApiResponse.Message.Description = "DataWriter not found";
@@ -208,10 +206,10 @@ namespace ExpressBase.ServiceStack.Services
                     return false;
                 }
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
-                this.ApiResponse.Message.Description = string.Format(ApiConstants.DESCRPT_ERR, step, " DataWriter", ObjectWrapper.EbObj.Name);
-                Console.WriteLine(e.Message);
+                this.ApiResponse.Message.Description = $"{ex.Message}. Error at DataReader, Resource position {step + 1}";
+                Console.WriteLine(ex.Message);
                 throw new ApiException("Excecution Failed");
             }
         }
@@ -220,8 +218,8 @@ namespace ExpressBase.ServiceStack.Services
         private object ExcSqlFunction(EbSqlFunc sqlfunction, int step)
         {
             var DSService = base.ResolveService<DataSourceService>();
-            ObjWrapperInt ObjectWrapper = null;
-            List<Param> InputParams = null;
+            ObjWrapperInt ObjectWrapper;
+            List<Param> InputParams;
             try
             {
                 ObjectWrapper = this.GetObjectByVer(sqlfunction.Reference);
@@ -234,9 +232,9 @@ namespace ExpressBase.ServiceStack.Services
 
                 this.FillParams(InputParams, step);//fill parameter value from prev component
             }
-            catch
+            catch (Exception ex)
             {
-                this.ApiResponse.Message.Description = string.Format(ApiConstants.DESCRPT_ERR, step, " SqlFunction", ObjectWrapper.EbObj.Name);
+                this.ApiResponse.Message.Description = $"{ex.Message}. Error at SqlFunction, Resource position {step + 1}";
                 throw new ApiException("Execution Failed:");
             }
             return DSService.Post(new SqlFuncTestRequest { FunctionName = (ObjectWrapper.EbObj as EbSqlFunction).Name, Parameters = InputParams });
@@ -246,11 +244,10 @@ namespace ExpressBase.ServiceStack.Services
         private bool ExcEmail(EbEmailNode template, int step)
         {
             var EmailService = base.ResolveService<EmailTemplateSendService>();
-            ObjWrapperInt ObjectWrapper = null;
             bool stat;
             try
             {
-                ObjectWrapper = this.GetObjectByVer(template.Reference);
+                ObjWrapperInt ObjectWrapper = this.GetObjectByVer(template.Reference);
                 if (ObjectWrapper.EbObj == null)
                 {
                     this.ApiResponse.Message.Description = "EmailTemplate not found";
@@ -273,10 +270,10 @@ namespace ExpressBase.ServiceStack.Services
                                                         (ObjectWrapper.EbObj as EbEmailTemplate).Subject,
                                                         (ObjectWrapper.EbObj as EbEmailTemplate).Cc);
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
-                this.ApiResponse.Message.Description = string.Format(ApiConstants.DESCRPT_ERR, step, "Mail", ObjectWrapper.EbObj.Name);
-                throw new ApiException(e.Message);
+                this.ApiResponse.Message.Description = $"{ex.Message}. Error at Email, Resource position {step + 1}";
+                throw new ApiException(ex.Message);
             }
             return stat;
         }
@@ -317,10 +314,10 @@ namespace ExpressBase.ServiceStack.Services
                         this.ApiResponse.Message.Description = ApiConstants.EXE_SUCCESS;
                 }
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
-                this.ApiResponse.Message.Description = string.Format(ApiConstants.DESCRPT_ERR, c_api.RouteIndex, "Api", c_api.RefName);
-                throw new ApiException(e.Message);
+                this.ApiResponse.Message.Description = $"{ex.Message}. Error at EbApi, Resource position {step + 1}";
+                throw new ApiException(ex.Message);
             }
             return resp;
         }
@@ -333,7 +330,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception ex)
             {
-                this.ApiResponse.Message.Description = string.Format(ApiConstants.DESCRPT_ERR, formResource.RouteIndex, "Form", formResource.RefName);
+                this.ApiResponse.Message.Description = $"{ex.Message}. Error at Form, Resource position {step + 1}";
                 throw new ApiException(ex.Message);
             }
             return null;
@@ -368,34 +365,69 @@ namespace ExpressBase.ServiceStack.Services
                 if (step != 0 && this.Api.Resources[step - 1].Result != null)
                 {
                     List<Param> OutParams = this.Api.Resources[step - 1].GetOutParams(InputParam);
+
                     this.TempParams = OutParams.Select(i => new { prop = i.Name, val = i.ValueTo })
                             .ToDictionary(x => x.prop, x => x.val as object);
                 }
 
                 foreach (Param p in InputParam)
                 {
-                    if (this.TempParams != null && this.TempParams.ContainsKey(p.Name))
-                        p.Value = this.TempParams[p.Name].ToString();
-                    else if (this.GlobalParams.ContainsKey(p.Name))
-                        p.Value = this.GlobalParams[p.Name].ToString();
+                    object value = this.GetParameterValue(p.Name);
+
+                    if (IsRequired(p.Name))
+                    {
+                        if (value == null || string.IsNullOrEmpty(value.ToString()))
+                        {
+                            this.ApiResponse.Message.Status = $"Parameter Error";
+                            throw new ApiException($"parameter '{p.Name}' is required type and it must be set");
+                        }
+                        else p.Value = value.ToString();
+                    }
                     else
                     {
-                        this.ApiResponse.Message.Status = $"Parameter not found";
-                        throw new ApiException($"Parameter {p.Name} not found!");
-                    } 
-
-                    if (string.IsNullOrEmpty(p.Value))
-                    {
-                        this.ApiResponse.Message.Status = string.Format(ApiConstants.UNSET_PARAM, p.Name);
-                        throw new ApiException(((int)ApiErrorCode.Failed).ToString());
+                        if (value == null || string.IsNullOrEmpty(value.ToString()))
+                            p.Value = null;
+                        else
+                            p.Value = value.ToString();
                     }
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 this.ApiResponse.Message.Description = ex.Message;
                 throw new ApiException(ex.Message);
             }
+        }
+
+        private bool IsRequired(string name)
+        {
+            if (this.Api.Request == null)
+                return true;
+
+            Param p = this.Api.Request.GetParam(name);
+
+            return p == null || p.Required;
+        }
+
+        private object GetParameterValue(string name)
+        {
+            try
+            {
+                if (this.TempParams != null && this.TempParams.ContainsKey(name))
+                {
+                    return this.TempParams[name];
+                }
+                else if (this.GlobalParams.ContainsKey(name))
+                {
+                    return this.GlobalParams[name];
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("API GetParameterValue method exception");
+                Console.WriteLine(ex.Message + "\n" + ex.StackTrace);
+            }
+            return null;
         }
 
         //api single meta info
@@ -411,8 +443,9 @@ namespace ExpressBase.ServiceStack.Services
             });
 
             List<Param> p = new List<Param>();
-            resp.Api.Request.Custom.ForEach(n => p.Add(n));
-            resp.Api.Request.Default.ForEach(n => p.Add(n));
+
+            p.AddRange(resp.Api.Request.Custom);
+            p.AddRange(resp.Api.Request.Default);
 
             return new ApiMetaResponse { Params = p, Name = request.Name, Version = request.Version };
         }
@@ -441,7 +474,7 @@ namespace ExpressBase.ServiceStack.Services
 
             return resp;
         }
-        
+
         //request json service
         [Authenticate]
         public ApiReqJsonResponse Get(ApiReqJsonRequest request)
@@ -505,8 +538,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
-                this.ApiResponse.Message.Status = "Error";
-                this.ApiResponse.Message.Description = e.Message;
+                Console.WriteLine(e.Message);
                 this.ApiResponse.Result = null;
             }
             return this.ApiResponse;
@@ -551,98 +583,6 @@ namespace ExpressBase.ServiceStack.Services
                 ObjectType = resp.Data[0].EbObjectType,
                 EbObj = EbSerializers.Json_Deserialize(resp.Data[0].Json)
             };
-        }
-
-        //public FormDataJsonResponse Post(FormDataJsonRequest request)
-        //{
-        //    int _name_c = 1;
-        //    UniqueObjectNameCheckResponse uniqnameresp;
-        //    EbObjectService _studio_serv = base.ResolveService<EbObjectService>();
-        //    WebFormSchema schema = JsonConvert.DeserializeObject<WebFormSchema>(request.JsonData);
-        //    EbSqlFunction obj = new EbSqlFunction(schema, this.EbConnectionFactory);
-        //    string _json = EbSerializers.Json_Serialize(obj);
-
-        //    do
-        //    {
-        //        uniqnameresp = _studio_serv.Get(new UniqueObjectNameCheckRequest { ObjName = obj.Name });
-        //        if (!uniqnameresp.IsUnique)
-        //        {
-        //            obj.Name = obj.Name.Remove(obj.Name.Length - 1) + _name_c++;
-        //            obj.DisplayName = obj.Name;
-        //        }
-        //    }
-        //    while (uniqnameresp.IsUnique);
-
-        //    EbObject_Create_New_ObjectRequest ds = new EbObject_Create_New_ObjectRequest
-        //    {
-        //        Name = obj.Name,
-        //        Description = obj.Description,
-        //        Json = _json,
-        //        Status = ObjectLifeCycleStatus.Live,
-        //        Relations = null,
-        //        IsSave = true,
-        //        Tags = null,
-        //        Apps = string.Empty,
-        //        SourceSolutionId = request.SolnId,
-        //        SourceObjId = "0",
-        //        SourceVerID = "0",
-        //        DisplayName = obj.DisplayName,
-        //        SolnId = request.SolnId,
-        //        UserId = request.UserId
-        //    };
-
-        //    EbObject_Create_New_ObjectResponse res = _studio_serv.Post(ds);
-
-        //    return new FormDataJsonResponse { RefId = res.RefId };
-        //}
-
-        //generate insert obj and update object
-        private void GenJsonColumns(WebformData data)
-        {
-            FormSqlData sqlData = new FormSqlData();
-
-            foreach (KeyValuePair<string, SingleTable> kp in data.MultipleTables)
-            {
-                List<JsonColVal> insertcols = new List<JsonColVal>();
-                List<JsonColVal> updatecols = new List<JsonColVal>();
-
-                foreach (SingleRow _row in kp.Value)
-                {
-                    JsonColVal jsoncols_ins = new JsonColVal();
-                    JsonColVal jsoncols_upd = new JsonColVal();
-
-                    if (_row.IsUpdate)
-                        updatecols.Add(this.GetCols(jsoncols_upd, _row));
-                    else
-                        insertcols.Add(this.GetCols(jsoncols_ins, _row));
-                }
-                if (insertcols.Count > 0)
-                {
-                    sqlData.JsonColoumsInsert.Add(new JsonTable
-                    {
-                        TableName = kp.Key,
-                        Rows = insertcols
-                    });
-                }
-                if (updatecols.Count > 0)
-                {
-                    sqlData.JsonColoumsUpdate.Add(new JsonTable
-                    {
-                        TableName = kp.Key,
-                        Rows = updatecols
-                    });
-                }
-            }
-        }
-
-        //generate insert obj and update object
-        private JsonColVal GetCols(JsonColVal col, SingleRow row)
-        {
-            foreach (SingleColumn _cols in row.Columns)
-            {
-                col.Add(_cols.Name, _cols.Value);
-            }
-            return col;
         }
     }
 }
