@@ -111,6 +111,7 @@ namespace ExpressBase.ServiceStack.MQServices
                             Console.WriteLine("EmailTemplateWithAttachment.matches filled");
                             foreach (EbDataTable dt in ds.Tables)
                             {
+                                EmailTemplate.To.Replace("{{", "").Replace("}}", "");
                                 Console.WriteLine("EmailTemplateWithAttachment.ToColumnName:" + EmailTemplate.To);
                                 mailTo = dt.Rows[0][EmailTemplate.To.Split('.')[1]].ToString();
                             }
