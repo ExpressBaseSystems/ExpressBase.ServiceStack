@@ -1671,6 +1671,8 @@ namespace ExpressBase.ServiceStack
                                     info += "</table>";
 
                                     _formattedData = _formattedData.ToString().Truncate(col.AllowedCharacterLength);
+                                    if(!string.IsNullOrEmpty(col.LinkRefId) && _formattedData.ToString() == string.Empty)
+                                        _formattedData = "...";
                                     _formattedData = "<span class='columntooltip' data-toggle='popover' data-contents='" + info.ToBase64() + "'>" + _formattedData + "</span>";
                                 }
 
