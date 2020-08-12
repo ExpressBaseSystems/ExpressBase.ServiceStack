@@ -2543,7 +2543,15 @@ namespace ExpressBase.ServiceStack.Services
             string res = string.Empty;
             Regex regex = new Regex(@"([a-zA-Z]+(?:_[a-zA-Z0-9]+)*)");
             MatchCollection matches = regex.Matches(str);
-            return matches[4].Value.ToString();
+            if (matches.Count > 4)
+            {
+                res = matches[4].Value.ToString();
+            }
+            else
+            {
+                Console.WriteLine("MYSQLGetFunctionName.matches.string:");
+            }
+            return res;
         }
 
         string MYSQLGetProcedureName(string str)
@@ -2722,7 +2730,7 @@ namespace ExpressBase.ServiceStack.Services
 
         [Authenticate]
         public void Post(LastSolnAccessRequest request)
-        { 
+        {
             EbDataTable solutionlist = SelectSolutionsFromDB();
             List<LastDbAccess> LastDbAccessList = new List<LastDbAccess>();
             for (int i = 0; i < solutionlist.Rows.Count; i++)
@@ -2810,7 +2818,7 @@ namespace ExpressBase.ServiceStack.Services
                     Console.WriteLine(e.Message + e.StackTrace);
                     continue;
                 }
-            } 
+            }
             string csv = LastDbAccessList.ToCsv();
             byte[] b = Encoding.ASCII.GetBytes(csv);
             MessageProducer3.Publish(new EmailServicesRequest()
@@ -2826,8 +2834,8 @@ namespace ExpressBase.ServiceStack.Services
                 SolnId = request.SolnId
 
             });
-        } 
+        }
     }
 
-    
+
 }
