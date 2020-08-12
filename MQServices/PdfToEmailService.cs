@@ -85,8 +85,7 @@ namespace ExpressBase.ServiceStack.MQServices
                             IEnumerable<DbParameter> parameters = DataHelper.GetParams(ebConnectionFactory, false, request.Params, 0, 0);
                             EbDataSet ds = ebConnectionFactory.ObjectsDB.DoQueries(dr.Sql, parameters.ToArray());
                             string pattern = @"\{{(.*?)\}}";
-                            string p = "Dear&nbsp;USER,;  Greetings from EXPRESSbase!</div><div><br></div><div></div><div>Your&nbsp; project '{{Table1.project}}' was just modified by&nbsp;{{Table1.eb_lastmodified_by}}&nbsp;on&nbsp;{{Table1.eb_lastmodified_at}}.&nbsp;We request you to make sure it was an authorized modification.</div><div><br></div><div><br></div><div></div><div>Thank You!&nbsp;</div><div><br></div><div>Regards,</div><div>EXPRESSbase Support</div></div>";
-                            IEnumerable<string> matches = Regex.Matches(/*EmailTemplate.Body*/p, pattern).OfType<Match>()
+                            IEnumerable<string> matches = Regex.Matches(EmailTemplate.Body, pattern).OfType<Match>()
                              .Select(m => m.Groups[0].Value)
                              .Distinct();
                             Console.WriteLine("EmailTemplateWithAttachment.matches =" + matches.Count());
