@@ -65,6 +65,9 @@ namespace ExpressBase.ServiceStack.Services
                             workSheet.Cells[1, colIndex].Value = _col.Control.Label;
                         else
                             workSheet.Cells[1, colIndex].Value = _col.Control.Name;
+                        var headerCells = workSheet.Cells[1, 1, 1, workSheet.Dimension.End.Column];
+                        var headerFont = headerCells.Style.Font;
+                        headerFont.Bold = true;
                         string comment = JsonConvert.SerializeObject(new ColumnsInfo { Name = _col.Control.Name, Label = _col.Control.Label, DbType = _col.Control.EbDbType, TableName = _tblName });
                         workSheet.Cells[1, colIndex].AddComment(comment, "ExpressBase");
                         var range = ExcelRange.GetAddress(2, colIndex, ExcelPackage.MaxRows, colIndex);
