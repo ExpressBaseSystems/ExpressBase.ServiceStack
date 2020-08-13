@@ -1058,10 +1058,10 @@ namespace ExpressBase.ServiceStack
                 for (int i = 0; i < MasterRows.Count; i++)
                 {
                     object keydata = MasterRows[i][PrimaryColumn.OIndex];
-                    List<EbDataRow> customRows = LinesRows.FindAll(row => row[ForeignColumn.OIndex].Equals(keydata));
+                    List<EbDataRow> customRows = LinesRows.FindAll(row => Convert.ToInt32(row[ForeignColumn.OIndex]).Equals(keydata));
                     _formattedTable.Rows.Add(_formattedTable.NewDataRow2());
                     _formattedTable.Rows[i][_formattedTable.Columns.Count - 1] = i + 1;//serial
-
+                    
                     DataTable2FormatedTable4Calendar(MasterRows[i], customRows, _dv, _user_culture, _user, ref _formattedTable, ref globals, i, _hourCount, DateColumn);
                 }
                 return new PrePrcessorReturn { FormattedTable = _formattedTable, rows = MasterRows };
@@ -1671,6 +1671,8 @@ namespace ExpressBase.ServiceStack
                                     info += "</table>";
 
                                     _formattedData = _formattedData.ToString().Truncate(col.AllowedCharacterLength);
+                                    if(!string.IsNullOrEmpty(col.LinkRefId) && _formattedData.ToString() == string.Empty)
+                                        _formattedData = "...";
                                     _formattedData = "<span class='columntooltip' data-toggle='popover' data-contents='" + info.ToBase64() + "'>" + _formattedData + "</span>";
                                 }
 
