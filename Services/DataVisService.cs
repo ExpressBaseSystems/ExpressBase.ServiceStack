@@ -1058,7 +1058,7 @@ namespace ExpressBase.ServiceStack
                 for (int i = 0; i < MasterRows.Count; i++)
                 {
                     object keydata = MasterRows[i][PrimaryColumn.OIndex];
-                    List<EbDataRow> customRows = LinesRows.FindAll(row => Convert.ToInt32(row[ForeignColumn.OIndex]).Equals(keydata));
+                    List<EbDataRow> customRows = LinesRows.FindAll(row => Convert.ToInt32(row[ForeignColumn.OIndex]).Equals(keydata));//not complete(int)
                     _formattedTable.Rows.Add(_formattedTable.NewDataRow2());
                     _formattedTable.Rows[i][_formattedTable.Columns.Count - 1] = i + 1;//serial
                     
