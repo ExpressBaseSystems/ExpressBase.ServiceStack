@@ -197,7 +197,7 @@ namespace ExpressBase.ServiceStack
                         TableName = _ctrl.TableName,
                         Controls = gridCtrls,
                         Height = 200,
-                        LeftFixedColumnCount = 1,
+                        LFxdColCount = 1,
                         IsShowSerialNumber = true,
                         IsColumnsResizable = true,
                         IsAddable = true,
