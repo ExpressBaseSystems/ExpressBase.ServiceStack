@@ -14,6 +14,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
+using System.Web;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -31,8 +32,11 @@ namespace ExpressBase.ServiceStack.Services
 
         public HttpResponseMessage Execute(ApiConversionRequest request)
         {
-            List<Param> param = GetParams(request.Parameters);
-            var uri = new Uri(request.Url);
+            List<Param> param = (request.Parameters != null) ? request.Parameters :new List<Param>();
+            string Url = request.Url;
+            if (request.Method == ApiMethods.GET && param.Count >0)
+                Url = ModifyUrl(Url, param);
+            var uri = new Uri(Url);
             HttpResponseMessage response = null;
             try
             {
@@ -66,6 +70,18 @@ namespace ExpressBase.ServiceStack.Services
             return response;
         }
 
+        private string ModifyUrl(string longurl, List<Param> param)
+        {
+            var uriBuilder = new UriBuilder(longurl);
+            var query = HttpUtility.ParseQueryString(uriBuilder.Query);
+            foreach(Param i in param)
+                query[i.Name] = i.Value;
+            //query["action"] = "login1";
+            uriBuilder.Query = query.ToString();
+            longurl = uriBuilder.ToString();
+            return longurl;
+        }
+        
         private List<Param> GetParams(List<ApiRequestParam>  Parameters)
         {
             return Parameters.Select(i => new Param { Name = i.ParamName, Type = i.Type.ToString(), Value = i.Value })
