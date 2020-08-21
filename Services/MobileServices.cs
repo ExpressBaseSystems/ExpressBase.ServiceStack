@@ -395,7 +395,7 @@ namespace ExpressBase.ServiceStack.Services
                 EbDataReader _ds = this.Redis.Get<EbDataReader>(request.DataSourceRefId);
                 if (_ds == null)
                 {
-                    var obj = this.Gateway.Send<EbObjectParticularVersionResponse>(new EbObjectParticularVersionRequest
+                    EbObjectParticularVersionResponse obj = this.Gateway.Send<EbObjectParticularVersionResponse>(new EbObjectParticularVersionRequest
                     {
                         RefId = request.DataSourceRefId
                     });
@@ -427,13 +427,16 @@ namespace ExpressBase.ServiceStack.Services
         private string WrapQuery(string sql, bool has_limit, bool is_powerselect, List<Param> parameters, List<SortColumn> sort_order)
         {
             string wraped = string.Empty;
+
+            const string EBPARAM_LOCID = "eb_loc_id";
+
             try
             {
                 sql = sql.Trim().TrimEnd(CharConstants.SEMI_COLON);
 
                 if (is_powerselect && parameters.Any())
                 {
-                    var p = parameters[0];
+                    Param p = parameters[0];
                     wraped += $"SELECT * FROM ({sql}) AS PWWRP WHERE LOWER(PWWRP.{p.Name}) LIKE '%{p.Value.ToLower()}%'";
                 }
                 else
@@ -444,7 +447,9 @@ namespace ExpressBase.ServiceStack.Services
                     wraped += $"SELECT * FROM ({sql}) AS PWWRP ";
                     foreach (Param param in parameters)
                     {
-                        var p = sqlP.Find(item => item.Name == param.Name);
+                        if (param.Name == EBPARAM_LOCID) continue;
+
+                        Param p = sqlP.Find(item => item.Name == param.Name);
                         if (p == null)
                             filterList.Add($"PWWRP.{param.Name} = :{param.Name}");
                     }

@@ -665,7 +665,7 @@ namespace ExpressBase.ServiceStack
         private EbDataSet GetDatafromUrl()
         {
             var _service = base.ResolveService<ApiConversionService>();
-            var result = (ApiConversionResponse)_service.Any(new ApiConversionRequest() { Url = _dV.Url, Method = _dV.Method, Parameters = _dV.Parameters, Headers = _dV.Headers });
+            var result = (ApiConversionResponse)_service.Any(new ApiConversionRequest() { Url = _dV.Url, Method = _dV.Method, Parameters = _dV.ParamsList, Headers = _dV.Headers });
             return result.dataset;
         }
 
