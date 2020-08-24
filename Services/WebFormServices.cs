@@ -1047,19 +1047,19 @@ namespace ExpressBase.ServiceStack.Services
             {
                 Console.WriteLine("Start ImportFormData");
                 EbWebForm form = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId);
-                //if (request.Type == ImportDataType.PowerSelect)
-                //{
-                //    WebformData _FormData = JsonConvert.DeserializeObject<WebformData>(request.WebFormData);
-                //    if (!(_FormData?.MultipleTables?.ContainsKey(form.FormSchema.MasterTable) == true &&
-                //        _FormData.MultipleTables[form.FormSchema.MasterTable].Count > 0))
-                //        throw new FormException("Bad request", (int)HttpStatusCode.BadRequest, "WebFormData in request does not contains master table.", "WebFormService->GetImportDataRequest");
-                //    form.FormDataBackup = _FormData;
-                //    form.PsImportData(EbConnectionFactory.DataDB, this, request.Trigger);
-                //}
-                //else
-                //{
+                if (request.Type == ImportDataType.PowerSelect)
+                {
+                    WebformData _FormData = JsonConvert.DeserializeObject<WebformData>(request.WebFormData);
+                    if (!(_FormData?.MultipleTables?.ContainsKey(form.FormSchema.MasterTable) == true &&
+                        _FormData.MultipleTables[form.FormSchema.MasterTable].Count > 0))
+                        throw new FormException("Bad request", (int)HttpStatusCode.BadRequest, "WebFormData in request does not contains master table.", "WebFormService->GetImportDataRequest");
+                    form.FormDataBackup = _FormData;
+                    form.PsImportData(EbConnectionFactory.DataDB, this, request.Trigger);
+                }
+                else
+                {
                     form.ImportData(EbConnectionFactory.DataDB, this, request.Params, request.Trigger, request.RowId);
-                //}
+                }
                 data = new WebformDataWrapper { FormData = form.FormData, Status = (int)HttpStatusCode.OK, Message = "Success" };
                 Console.WriteLine("End ImportFormData : Success");
             }
