@@ -22,6 +22,7 @@ namespace ExpressBase.ServiceStack.Services
     public class ApiConversionService : EbBaseService
     {
         private ResponseStatus _Responsestatus = new ResponseStatus();
+        EbDataSet ds = new EbDataSet();
 
         public ApiConversionResponse Any(ApiConversionRequest request)
         {
@@ -32,9 +33,9 @@ namespace ExpressBase.ServiceStack.Services
 
         public HttpResponseMessage Execute(ApiConversionRequest request)
         {
-            List<Param> param = (request.Parameters != null) ? request.Parameters :new List<Param>();
+            List<Param> param = (request.Parameters != null) ? request.Parameters : new List<Param>();
             string Url = request.Url;
-            if (request.Method == ApiMethods.GET && param.Count >0)
+            if (request.Method == ApiMethods.GET && param.Count > 0)
                 Url = ModifyUrl(Url, param);
             var uri = new Uri(Url);
             HttpResponseMessage response = null;
@@ -63,7 +64,7 @@ namespace ExpressBase.ServiceStack.Services
                     }
                 }
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 throw e;
             }
@@ -74,15 +75,15 @@ namespace ExpressBase.ServiceStack.Services
         {
             var uriBuilder = new UriBuilder(longurl);
             var query = HttpUtility.ParseQueryString(uriBuilder.Query);
-            foreach(Param i in param)
+            foreach (Param i in param)
                 query[i.Name] = i.Value;
             //query["action"] = "login1";
             uriBuilder.Query = query.ToString();
             longurl = uriBuilder.ToString();
             return longurl;
         }
-        
-        private List<Param> GetParams(List<ApiRequestParam>  Parameters)
+
+        private List<Param> GetParams(List<ApiRequestParam> Parameters)
         {
             return Parameters.Select(i => new Param { Name = i.ParamName, Type = i.Type.ToString(), Value = i.Value })
                     .ToList();
@@ -92,39 +93,13 @@ namespace ExpressBase.ServiceStack.Services
         {
             ApiConversionResponse resp = new ApiConversionResponse();
             HttpResponseMessage response = null;
-            EbDataSet ds = new EbDataSet();
             try
             {
                 response = Execute(request);
-                var jsonObject = JObject.Parse(response.Content.ReadAsStringAsync().Result);
-                int i = -1;
-                foreach (var item in jsonObject)
-                {
-                    if (item.Value.Type == JTokenType.Array)
-                    {
-                        i++;int k = 0;
-                        ds.Tables.Add(new EbDataTable());
-                        foreach (var children in item.Value.Children())
-                        {
-                            foreach (var prop in children.Children<JProperty>().ToArray())
-                            {
-                                ds.Tables[i].Columns.Add(new EbDataColumn { ColumnIndex = k++, ColumnName = prop.Name, Type = ConvertToEbdbType(prop.Value.Type) });
-                            }
-                            break;
-                        }
-                        int j = 0;
-                        foreach (var children in item.Value.Children())
-                        {
-                            ds.Tables[i].Rows.Add(ds.Tables[i].NewDataRow2());
-                            k = 0;
-                            foreach (var prop in children.Children<JProperty>().ToArray())
-                            {
-                                ds.Tables[i].Rows[j][k++] = ConvertValueToEbdbType( prop.Value.Type, prop.Value);
-                            }
-                            j++;
-                        }
-                    }
-                }
+                JObject jsonObject = JObject.Parse(response.Content.ReadAsStringAsync().Result);
+                List<JProperty> Jproperty = jsonObject.Properties().Where(pp => pp.Value.Type == JTokenType.Array).ToList();
+                foreach (JProperty property in Jproperty)
+                    GetRecursive(property);
             }
             catch (Exception e)
             {
@@ -133,7 +108,7 @@ namespace ExpressBase.ServiceStack.Services
                 this._Responsestatus.Message = e.Message;
             }
             resp.dataset = ds;
-            if(response != null)
+            if (response != null)
                 resp.statusCode = (int)response.StatusCode;
             return resp;
         }
@@ -148,7 +123,7 @@ namespace ExpressBase.ServiceStack.Services
                 return EbDbTypes.Decimal;
             else if (_type == JTokenType.Date)
                 return EbDbTypes.DateTime;
-            else 
+            else
                 return EbDbTypes.String;
         }
 
@@ -164,6 +139,39 @@ namespace ExpressBase.ServiceStack.Services
                 return Convert.ToDateTime(value);
             else
                 return value.ToString();
+        }
+
+        private void GetRecursive(JProperty property)
+        {
+            int k = 0;int i = 0;
+            ds.Tables.Add(new EbDataTable(property.Name));
+            foreach (var children in property.Value.Children())
+            {
+                if (i == 0)
+                {
+                    ds.Tables[property.Name].Rows.Add(new EbDataRow());
+                    foreach (var prop in children.Children<JProperty>().ToArray())
+                    {
+                        if (prop.Value.Type == JTokenType.Array)
+                            GetRecursive(prop);
+                        else
+                        {
+                            ds.Tables[property.Name].Columns.Add(new EbDataColumn { ColumnIndex = k, ColumnName = prop.Name.ReplaceAll(" ","_"), Type = ConvertToEbdbType(prop.Value.Type) });
+                            ds.Tables[property.Name].Rows[i][k++] = ConvertValueToEbdbType(prop.Value.Type, prop.Value);
+                        }
+                    }
+                }
+                else
+                {
+                    ds.Tables[property.Name].Rows.Add(ds.Tables[property.Name].NewDataRow2());
+                    k = 0;
+                    foreach (var prop in children.Children<JProperty>().ToArray())
+                    {
+                        ds.Tables[property.Name].Rows[i][k++] = ConvertValueToEbdbType(prop.Value.Type, prop.Value);
+                    }
+                }
+                i++;
+            }
         }
 
         //public string ApiErrorHandling(int )
