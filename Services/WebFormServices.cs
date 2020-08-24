@@ -971,17 +971,32 @@ namespace ExpressBase.ServiceStack.Services
                 EbWebForm sourceForm = this.GetWebFormObject(request.SourceRefId, request.UserAuthId, request.SolnId);
                 sourceForm.TableRowId = request.SourceRowId;
 
-                EbWebForm destForm = sourceForm;
-                if (request.SourceRefId != request.DestRefId)
+                EbWebForm destForm;
+                if (request.SourceRefId == request.DestRefId)
+                {
+                    destForm = sourceForm;
+                    if (request.SourceRowId > 0)
+                    {
+                        sourceForm.RefreshFormData(EbConnectionFactory.DataDB, this);
+                        destForm.FormData = EbFormHelper.GetFilledNewFormData(sourceForm);
+                    }
+                    else
+                        destForm.GetEmptyModel();
+                }
+                else
                 {
                     destForm = this.GetWebFormObject(request.DestRefId, null, null);
                     destForm.UserObj = sourceForm.UserObj;
                     destForm.SolutionObj = sourceForm.SolutionObj;
+                    if (request.SourceRowId > 0)
+                    {
+                        sourceForm.RefreshFormData(EbConnectionFactory.DataDB, this);
+                        sourceForm.FormatImportData(EbConnectionFactory.DataDB, this, destForm);
+                    }
+                    else
+                        destForm.GetEmptyModel();
                 }
-                if (request.SourceRowId > 0)
-                    sourceForm.GetImportData(EbConnectionFactory.DataDB, this, destForm);
-                else
-                    destForm.GetEmptyModel();
+
                 _dataset.FormDataWrap = JsonConvert.SerializeObject(new WebformDataWrapper { FormData = destForm.FormData, Status = (int)HttpStatusCode.OK, Message = "Success" });
                 Console.WriteLine("End GetExportFormData : Success");
             }
@@ -1032,7 +1047,19 @@ namespace ExpressBase.ServiceStack.Services
             {
                 Console.WriteLine("Start ImportFormData");
                 EbWebForm form = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId);
-                form.ImportData(EbConnectionFactory.DataDB, this, request.Params, request.Trigger, request.RowId);
+                //if (request.Type == ImportDataType.PowerSelect)
+                //{
+                //    WebformData _FormData = JsonConvert.DeserializeObject<WebformData>(request.WebFormData);
+                //    if (!(_FormData?.MultipleTables?.ContainsKey(form.FormSchema.MasterTable) == true &&
+                //        _FormData.MultipleTables[form.FormSchema.MasterTable].Count > 0))
+                //        throw new FormException("Bad request", (int)HttpStatusCode.BadRequest, "WebFormData in request does not contains master table.", "WebFormService->GetImportDataRequest");
+                //    form.FormDataBackup = _FormData;
+                //    form.PsImportData(EbConnectionFactory.DataDB, this, request.Trigger);
+                //}
+                //else
+                //{
+                    form.ImportData(EbConnectionFactory.DataDB, this, request.Params, request.Trigger, request.RowId);
+                //}
                 data = new WebformDataWrapper { FormData = form.FormData, Status = (int)HttpStatusCode.OK, Message = "Success" };
                 Console.WriteLine("End ImportFormData : Success");
             }
