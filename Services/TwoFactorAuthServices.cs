@@ -15,6 +15,7 @@ using ExpressBase.Common.Constants;
 using ExpressBase.ServiceStack.MQServices;
 using System.Security.Principal;
 using ServiceStack;
+using ExpressBase.Common.Security;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -37,21 +38,23 @@ namespace ExpressBase.ServiceStack.Services
             Eb_Solution sol_Obj = GetSolutionObject(request.SolnId);
             string otp = GenerateOTP();
             User _usr = SetUserObjFor2FA(otp); // updating otp and tokens in redis userobj
-            AuthResponse.TwoFAToken = GenerateToken(MyAuthenticateResponse.User.AuthId);
+            Console.WriteLine("SetUserObjFor2FA : " + MyAuthenticateResponse.User.AuthId + "," + otp);
+            AuthResponse.TwoFAToken = EbTokenGenerator.GenerateToken(MyAuthenticateResponse.User.AuthId);
             if (sol_Obj.OtpDelivery != null)
             {
-                SignInOtpType SignInOtpType = 0;
+                OtpType OtpType = 0;
                 string[] _otpmethod = sol_Obj.OtpDelivery.Split(",");
                 if (_otpmethod[0] == "email")
                 {
-                    SignInOtpType = SignInOtpType.Email;
+                    OtpType = OtpType.Email;
                 }
                 else if (_otpmethod[0] == "sms")
                 {
-                    SignInOtpType = SignInOtpType.Sms;
+                    OtpType = OtpType.Sms;
                 }
 
-                SendOtp(sol_Obj, _usr, SignInOtpType);
+                SendOtp(sol_Obj, _usr, OtpType);
+                Console.WriteLine("Sent otp : " + MyAuthenticateResponse.User.AuthId + "," + otp);
             }
             else
             {
@@ -61,10 +64,10 @@ namespace ExpressBase.ServiceStack.Services
             return AuthResponse;
         }
 
-        public Authenticate2FAResponse Post(ValidateOtpRequest request)
+        public Authenticate2FAResponse Post(ValidateTokenRequest request)
         {
             AuthResponse = new Authenticate2FAResponse();
-            AuthResponse.AuthStatus = ValidateToken(request.Token, request.UserAuthId);
+            AuthResponse.AuthStatus = EbTokenGenerator.ValidateToken(request.Token, request.UserAuthId);
             if (!AuthResponse.AuthStatus)
             {
                 AuthResponse.ErrorMessage = "Something went wrong with token";
@@ -91,7 +94,7 @@ namespace ExpressBase.ServiceStack.Services
             AuthResponse = new Authenticate2FAResponse();
             try
             {
-                string authColumn = (request.SignInOtpType == SignInOtpType.Email) ? "email" : "phnoprimary";
+                string authColumn = (request.SignInOtpType == OtpType.Email) ? "email" : "phnoprimary";
                 string query = String.Format("SELECT id FROM eb_users WHERE {0} = '{1}'", authColumn, request.UName);
                 this.EbConnectionFactory = new EbConnectionFactory(request.SolutionId, this.Redis);
                 if (EbConnectionFactory != null)
@@ -105,7 +108,7 @@ namespace ExpressBase.ServiceStack.Services
                         User _usr = SetUserObjForSigninOtp(otp, UserAuthId);
                         Console.WriteLine("SetUserObjForSigninOtp : " + UserAuthId + "," + otp);
 
-                        AuthResponse.TwoFAToken = GenerateToken(UserAuthId);
+                        AuthResponse.TwoFAToken = EbTokenGenerator.GenerateToken(UserAuthId);
                         SendOtp(sol_Obj, _usr, request.SignInOtpType);
                         Console.WriteLine("Sent otp : " + UserAuthId + "," + otp);
                         AuthResponse.AuthStatus = true;
@@ -125,23 +128,23 @@ namespace ExpressBase.ServiceStack.Services
             return AuthResponse;
         }
 
-        public void ResendOtpInner(string Token, string UserAuthId, string SolnId)
+        private void ResendOtpInner(string Token, string UserAuthId, string SolnId)
         {
-            AuthResponse.AuthStatus = ValidateToken(Token, UserAuthId);
+            AuthResponse.AuthStatus = EbTokenGenerator.ValidateToken(Token, UserAuthId);
             if (AuthResponse.AuthStatus)
             {
                 Console.WriteLine("Otp token valid");
                 Eb_Solution sol_Obj = GetSolutionObject(SolnId);
                 User _usr = GetUserObject(UserAuthId);
                 string[] _otpmethod = sol_Obj.OtpDelivery.Split(",");
-                SignInOtpType SignInOtpType = 0;
+                OtpType SignInOtpType = 0;
                 if (_otpmethod[0] == "email")
                 {
-                    SignInOtpType = SignInOtpType.Email;
+                    SignInOtpType = OtpType.Email;
                 }
                 else if (_otpmethod[0] == "sms")
                 {
-                    SignInOtpType = SignInOtpType.Sms;
+                    SignInOtpType = OtpType.Sms;
                 }
 
                 SendOtp(sol_Obj, _usr, SignInOtpType);
@@ -151,43 +154,8 @@ namespace ExpressBase.ServiceStack.Services
                 AuthResponse.ErrorMessage = "Something went wrong with token";
             }
         }
-        public bool ValidateToken(string authToken, string userAuthId)
-        {
-            bool status = false;
-            JwtSecurityTokenHandler tokenHandler = new JwtSecurityTokenHandler();
-            TokenValidationParameters validationParameters = GetValidationParameters();
-            try
-            {
-                IPrincipal principal = tokenHandler.ValidateToken(authToken, validationParameters, out SecurityToken validatedToken);
-                var token = tokenHandler.ReadJwtToken(authToken);
-                string value = "";
-                ((List<Claim>)token.Claims).ForEach(a => { if (a.Type == "AuthId") value = a.Value; });
-                Console.WriteLine("Value in ValidateToken" + value + " - " + userAuthId);
-                if (value != userAuthId)
-                    throw new Exception();
-                status = true;
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("Token validation failed :: invalid token" + e.Message + e.StackTrace);
-            }
-            return status;
-        }
 
-        private TokenValidationParameters GetValidationParameters()
-        {
-            return new TokenValidationParameters()
-            {
-                ValidateIssuerSigningKey = true,
-                ValidateAudience = false,
-                ValidateActor = false,
-                ValidateIssuer = false,
-                ValidateLifetime = true,
-                ClockSkew = TimeSpan.Zero,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Environment.GetEnvironmentVariable(EnvironmentConstants.EB_JWT_PRIVATE_KEY_XML))) // The same key as the one that generate the token
-            };
-        }
-
+      
         private string GenerateOTP()
         {
             string sOTP = String.Empty;
@@ -204,33 +172,8 @@ namespace ExpressBase.ServiceStack.Services
             return sOTP;
         }
 
-        public string GenerateToken(string AuthId)
-        {
-            try
-            {
-                JwtSecurityTokenHandler tokenHandler = new JwtSecurityTokenHandler();
-                byte[] key = Encoding.ASCII.GetBytes(Environment.GetEnvironmentVariable(EnvironmentConstants.EB_JWT_PRIVATE_KEY_XML));
-                SecurityTokenDescriptor tokenDescriptor = new SecurityTokenDescriptor
-                {
-                    Subject = new System.Security.Claims.ClaimsIdentity(
-                        new Claim[] {
-                        new Claim("AuthId", AuthId),
-                        }),
-                    Expires = DateTime.UtcNow.AddMinutes(10),
-                    SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature),
-                };
-                SecurityToken token = tokenHandler.CreateToken(tokenDescriptor);
-                return tokenHandler.WriteToken(token);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.Message);
-                Console.WriteLine(ex.StackTrace);
-            }
-            return null;
-        }
 
-        private User SetUserObjFor2FA(string otp)
+        internal User SetUserObjFor2FA(string otp = null)
         {
             User u = GetUserObject(this.MyAuthenticateResponse.User.AuthId);
             u.Otp = otp;
@@ -242,7 +185,7 @@ namespace ExpressBase.ServiceStack.Services
 
         private User SetUserObjForSigninOtp(string otp, string UserAuthId)
         {
-            User u = GetUserObject(UserAuthId);
+            User u = GetUserObject(UserAuthId, true);
             if (u != null)
             {
                 Console.WriteLine("otp : " + otp);
@@ -256,11 +199,11 @@ namespace ExpressBase.ServiceStack.Services
             return u;
         }
 
-        public void SendOtp(Eb_Solution sol_Obj, User _usr, SignInOtpType OtpType)
+        private void SendOtp(Eb_Solution sol_Obj, User _usr, OtpType OtpType)
         {
             try
             {
-                if (OtpType == SignInOtpType.Email)
+                if (OtpType == OtpType.Email)
                 {
                     if (!string.IsNullOrEmpty(_usr.Email))
                     {
@@ -289,7 +232,7 @@ namespace ExpressBase.ServiceStack.Services
                         AuthResponse.ErrorMessage = "Email id not set for the user. Please contact your admin";
                     }
                 }
-                else if (OtpType == SignInOtpType.Sms)
+                else if (OtpType == OtpType.Sms)
                 {
                     if (!string.IsNullOrEmpty(_usr.PhoneNumber))
                     {
@@ -319,7 +262,7 @@ namespace ExpressBase.ServiceStack.Services
             }
         }
 
-        public void SendOtpEmail(User _usr, Eb_Solution soln)
+        private void SendOtpEmail(User _usr, Eb_Solution soln)
         {
             string message = string.Format(OtpMessage, soln.ExtSolutionID, _usr.Otp);
             EmailService emailService = base.ResolveService<EmailService>();
@@ -335,7 +278,7 @@ namespace ExpressBase.ServiceStack.Services
             });
         }
 
-        public void SendOtpSms(User _usr, Eb_Solution soln)
+        private void SendOtpSms(User _usr, Eb_Solution soln)
         {
             string message = string.Format(OtpMessage, soln.ExtSolutionID, _usr.Otp);
             SmsCreateService smsCreateService = base.ResolveService<SmsCreateService>();
