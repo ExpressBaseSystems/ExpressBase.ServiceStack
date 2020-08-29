@@ -35,6 +35,7 @@ namespace ExpressBase.ServiceStack.MQServices
                 RetryOf = request.Retryof,
                 RefId = request.RefId
             });
+            Console.WriteLine("SmsDirectRequest published");
         }
         public void Post(SMSInitialRequest request)
         {
