@@ -61,82 +61,120 @@ namespace ExpressBase.ServiceStack.Services
                     string _tblName = _tbl.TableName;
                     foreach (var _col in _tbl.Columns)
                     {
-                        if(_col.Control.Label != null && _col.Control.Label != string.Empty)
-                            workSheet.Cells[1, colIndex].Value = _col.Control.Label;
-                        else
-                            workSheet.Cells[1, colIndex].Value = _col.Control.Name;
-                        var headerCells = workSheet.Cells[1, 1, 1, workSheet.Dimension.End.Column];
-                        var headerFont = headerCells.Style.Font;
-                        headerFont.Bold = true;
-                        string comment = JsonConvert.SerializeObject(new ColumnsInfo { Name = _col.Control.Name, Label = _col.Control.Label, DbType = _col.Control.EbDbType, TableName = _tblName });
-                        workSheet.Cells[1, colIndex].AddComment(comment, "ExpressBase");
-                        var range = ExcelRange.GetAddress(2, colIndex, ExcelPackage.MaxRows, colIndex);
-                        if (_col.Control.EbDbType.ToString() == "Decimal")
+                        if(_col.Control.ObjType != "ProvisionUser")
                         {
-                            IExcelDataValidationDecimal validate = workSheet.DataValidations.AddDecimalValidation(range);
-                            validate.ErrorStyle = ExcelDataValidationWarningStyle.stop;
-                            validate.PromptTitle = "Enter a integer value here";
-                            validate.Prompt = "Decimal only allowed";
-                            validate.ShowInputMessage = true;
-                            validate.ErrorTitle = "Invalid Value entered";
-                            validate.Error = "This cell must be a valid positive number.";
-                            validate.ShowErrorMessage = true;
-                            validate.Operator = ExcelDataValidationOperator.greaterThanOrEqual;
-                            validate.Formula.Value = 0D;
-                            workSheet.Column(colIndex).Style.Numberformat.Format = "0";
-                            validate.AllowBlank = true;
-                        }
+                            if (_col.Control.Label != null && _col.Control.Label != string.Empty)
+                                workSheet.Cells[1, colIndex].Value = _col.Control.Label;
+                            else
+                                workSheet.Cells[1, colIndex].Value = _col.Control.Name;
+                            var headerCells = workSheet.Cells[1, 1, 1, workSheet.Dimension.End.Column];
+                            var headerFont = headerCells.Style.Font;
+                            headerFont.Bold = true;
+                            string comment = JsonConvert.SerializeObject(new ColumnsInfo { Name = _col.Control.Name, Label = _col.Control.Label, DbType = _col.Control.EbDbType, TableName = _tblName });
+                            workSheet.Cells[1, colIndex].AddComment(comment, "ExpressBase");
+                            var range = ExcelRange.GetAddress(2, colIndex, ExcelPackage.MaxRows, colIndex);
+                            if (_col.Control.EbDbType.ToString() == "Decimal")
+                            {
+                                IExcelDataValidationDecimal validate = workSheet.DataValidations.AddDecimalValidation(range);
+                                validate.ErrorStyle = ExcelDataValidationWarningStyle.stop;
+                                validate.PromptTitle = "Enter a integer value here";
+                                validate.Prompt = "Decimal only allowed";
+                                validate.ShowInputMessage = true;
+                                validate.ErrorTitle = "Invalid Value entered";
+                                validate.Error = "This cell must be a valid positive number.";
+                                validate.ShowErrorMessage = true;
+                                validate.Operator = ExcelDataValidationOperator.greaterThanOrEqual;
+                                validate.Formula.Value = 0D;
+                                workSheet.Column(colIndex).Style.Numberformat.Format = "0";
+                                validate.AllowBlank = true;
+                            }
 
-                        else if (_col.Control.EbDbType.ToString() == "Date")
-                        {
-                            IExcelDataValidationDateTime validate = workSheet.DataValidations.AddDateTimeValidation(range);
-                            validate.ErrorStyle = ExcelDataValidationWarningStyle.stop;
-                            validate.PromptTitle = "Enter valid date here";
-                            validate.Prompt = "YYYY-MM-DD format allowed";
-                            validate.ShowInputMessage = true;
-                            validate.ErrorTitle = "Invalid Date entered";
-                            validate.Error = "This cell must be a date in YYYY-MM-DD format";
-                            validate.ShowErrorMessage = true;
-                            validate.Operator = ExcelDataValidationOperator.greaterThanOrEqual;
-                            validate.Formula.Value = new DateTime(1800, 01, 01);
-                            workSheet.Column(colIndex).Style.Numberformat.Format = "YYYY-MM-DD";
-                            validate.AllowBlank = true;
-                        }
+                            else if (_col.Control.EbDbType.ToString() == "Date")
+                            {
+                                IExcelDataValidationDateTime validate = workSheet.DataValidations.AddDateTimeValidation(range);
+                                validate.ErrorStyle = ExcelDataValidationWarningStyle.stop;
+                                validate.PromptTitle = "Enter valid date here";
+                                validate.Prompt = "YYYY-MM-DD format allowed";
+                                validate.ShowInputMessage = true;
+                                validate.ErrorTitle = "Invalid Date entered";
+                                validate.Error = "This cell must be a date in YYYY-MM-DD format";
+                                validate.ShowErrorMessage = true;
+                                validate.Operator = ExcelDataValidationOperator.greaterThanOrEqual;
+                                validate.Formula.Value = new DateTime(1800, 01, 01);
+                                workSheet.Column(colIndex).Style.Numberformat.Format = "YYYY-MM-DD";
+                                validate.AllowBlank = true;
+                            }
 
-                        else if (_col.Control.EbDbType.ToString() == "DateTime")
-                        {
-                            IExcelDataValidationDateTime validate = workSheet.DataValidations.AddDateTimeValidation(range);
-                            validate.ErrorStyle = ExcelDataValidationWarningStyle.stop;
-                            validate.PromptTitle = "Enter valid Date Time";
-                            validate.Prompt = "yyyy-MM-dd HH:mm:ss";
-                            validate.ShowInputMessage = true;
-                            validate.ErrorTitle = "Invalid Date Time entered";
-                            validate.Error = "This cell must be a Date Time in yyyy-MM-dd HH:mm:ss format";
-                            validate.ShowErrorMessage = true;
-                            validate.Operator = ExcelDataValidationOperator.greaterThanOrEqual;
-                            validate.Formula.Value = new DateTime(1800, 01, 01);
-                            workSheet.Column(colIndex).Style.Numberformat.Format = "yyyy-MM-dd HH:mm:ss";
-                            validate.AllowBlank = true;
-                        }
+                            else if (_col.Control.EbDbType.ToString() == "DateTime")
+                            {
+                                IExcelDataValidationDateTime validate = workSheet.DataValidations.AddDateTimeValidation(range);
+                                validate.ErrorStyle = ExcelDataValidationWarningStyle.stop;
+                                validate.PromptTitle = "Enter valid Date Time";
+                                validate.Prompt = "yyyy-MM-dd HH:mm:ss";
+                                validate.ShowInputMessage = true;
+                                validate.ErrorTitle = "Invalid Date Time entered";
+                                validate.Error = "This cell must be a Date Time in yyyy-MM-dd HH:mm:ss format";
+                                validate.ShowErrorMessage = true;
+                                validate.Operator = ExcelDataValidationOperator.greaterThanOrEqual;
+                                validate.Formula.Value = new DateTime(1800, 01, 01);
+                                workSheet.Column(colIndex).Style.Numberformat.Format = "yyyy-MM-dd HH:mm:ss";
+                                validate.AllowBlank = true;
+                            }
 
-                        else if (_col.Control.EbDbType.ToString() == "Boolean")
-                        {
-                            IExcelDataValidationList validate = workSheet.DataValidations.AddListValidation(range);
-                            validate.ErrorStyle = ExcelDataValidationWarningStyle.stop;
-                            validate.PromptTitle = "Enter Yes/No";
-                            validate.Prompt = "Yes/No";
-                            validate.ShowInputMessage = true;
-                            validate.ErrorTitle = "Invalid formate";
-                            validate.Error = "This cell must be in Yes/No format";
-                            validate.ShowErrorMessage = true;
-                            validate.Formula.Values.Add("Yes");
-                            validate.Formula.Values.Add("No");
-                            validate.AllowBlank = false;
+                            else if (_col.Control.EbDbType.ToString() == "BooleanOriginal")
+                            {
+                                IExcelDataValidationList validate = workSheet.DataValidations.AddListValidation(range);
+                                validate.ErrorStyle = ExcelDataValidationWarningStyle.stop;
+                                validate.PromptTitle = "Enter Yes/No";
+                                validate.Prompt = "Yes/No";
+                                validate.ShowInputMessage = true;
+                                validate.ErrorTitle = "Invalid formate";
+                                validate.Error = "This cell must be in Yes/No format";
+                                validate.ShowErrorMessage = true;
+                                validate.Formula.Values.Add("Yes");
+                                validate.Formula.Values.Add("No");
+                                validate.AllowBlank = false;
 
+                            }
+
+                            else if (_col.Control.ObjType == "RadioButton")
+                            {
+
+                                if (_col.Control.EbDbType.ToString() == "Int32")
+                                {
+                                    EbRadioButton _control = _col.Control as EbRadioButton;
+                                    IExcelDataValidationList validate = workSheet.DataValidations.AddListValidation(range);
+                                    validate.ErrorStyle = ExcelDataValidationWarningStyle.stop;
+                                    validate.PromptTitle = "Enter boolean";
+                                    validate.Prompt = "Choose bool from list";
+                                    validate.ShowInputMessage = true;
+                                    validate.ErrorTitle = "Invalid formate";
+                                    validate.Error = "Invalid bool val";
+                                    validate.ShowErrorMessage = true;
+                                    validate.Formula.Values.Add(_control.TrueValue_I.ToString());
+                                    validate.Formula.Values.Add(_control.FalseValue_I.ToString());
+                                    validate.AllowBlank = false;
+                                }
+                                else if (_col.Control.EbDbType.ToString() == "String" || _col.Control.EbDbType.ToString() == "Boolean")
+                                {
+                                    IExcelDataValidationList validate = workSheet.DataValidations.AddListValidation(range);
+                                    validate.ErrorStyle = ExcelDataValidationWarningStyle.stop;
+                                    validate.PromptTitle = "Enter Yes/No";
+                                    validate.Prompt = "Yes/No";
+                                    validate.ShowInputMessage = true;
+                                    validate.ErrorTitle = "Invalid formate";
+                                    validate.Error = "This cell must be in Yes/No format";
+                                    validate.ShowErrorMessage = true;
+                                    validate.Formula.Values.Add("Yes");
+                                    validate.Formula.Values.Add("No");
+                                    validate.AllowBlank = false;
+
+                                }
+                            }
+                            else { }
+                            //workSheet.Column(colIndex).AutoFit();
+                            colIndex++;
                         }
-                        else { }
-                        //workSheet.Column(colIndex).AutoFit();
-                        colIndex++;
                     }
                 }
                 workSheet.Cells.AutoFitColumns();
