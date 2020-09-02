@@ -1703,7 +1703,7 @@ namespace ExpressBase.ServiceStack
                                 {
                                     if (_formattedData.ToString() == string.Empty)
                                         _formattedData = "...";
-                                    _formattedData = "<a href='#' class ='tablelinkfromcolumn" + this.TableId + "' data-link='" + row[col.RefidColumn.Data] + "' data-id='" + row[col.IdColumn.Data] + "'>" + _formattedData + "</a>";
+                                    _formattedData = "<a href='#' class ='tablelinkfromcolumn" + this.TableId + "' data-link='" + row[col.RefidColumn.Data] + "' data-colindex='" + col.Data + "' data-column='" + col.Name + "' data-linkfromcolumn='true'>" + _formattedData + "</a>";
                                 }
 
                                 if (col is DVStringColumn && col.RenderType == EbDbTypes.String && (col as DVStringColumn).RenderAs == StringRenderType.Link && col.LinkType == LinkTypeEnum.Tab && (_isexcel == false))/////////////////
