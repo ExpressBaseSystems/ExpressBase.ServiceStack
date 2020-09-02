@@ -167,7 +167,7 @@ namespace ExpressBase.ServiceStack.Services
             string sql = this.EbConnectionFactory.DataDB.EB_MANAGEUSER_FIRST_QUERY;
             if (request.Id > 1)
             {
-                sql += @"SELECT fullname,nickname,email,alternateemail,dob,sex,phnoprimary,phnosecondary,landline,phextension,fbid,fbname,statusid,hide,preferencesjson,dprefid,eb_user_types_id
+                sql += @"SELECT fullname, nickname, email, alternateemail, dob, sex, phnoprimary, phnosecondary, landline, phextension, fbid, fbname, statusid, hide, preferencesjson, dprefid, eb_user_types_id, forcepwreset
 						FROM eb_users WHERE id = @id AND (statusid = 0 OR statusid = 1 OR statusid = 2) AND id > 1 AND eb_del = 'F';
 						SELECT role_id FROM eb_role2user WHERE user_id = @id AND eb_del = 'F';
 						SELECT groupid FROM eb_user2usergroup WHERE userid = @id AND eb_del = 'F';";
@@ -248,6 +248,7 @@ namespace ExpressBase.ServiceStack.Services
                     resp.UserData.Add("preference", dr[14].ToString());
                     resp.UserData.Add("dprefid", dr[15].ToString());
                     resp.UserData.Add("eb_user_types_id", dr[16].ToString());
+                    resp.UserData.Add("forcepwreset", dr[17].ToString());
                 }
 
                 resp.UserRoles = new List<int>();
@@ -299,10 +300,11 @@ namespace ExpressBase.ServiceStack.Services
 
         public ResetUserPasswordResponse Any(ResetUserPasswordRequest request)
         {
-            string sql = "UPDATE eb_users SET pwd = @newpwd WHERE id = @userid;";
+            string sql = "UPDATE eb_users SET pwd = @newpwd, pw = @newpw WHERE id = @userid;";
             DbParameter[] parameters = new DbParameter[] {
                 this.EbConnectionFactory.DataDB.GetNewParameter("userid", EbDbTypes.Int32, request.Id),
-                this.EbConnectionFactory.DataDB.GetNewParameter("newpwd", EbDbTypes.String, (request.NewPwd + request.Email).ToMD5Hash())
+                this.EbConnectionFactory.DataDB.GetNewParameter("newpwd", EbDbTypes.String, (request.NewPwd + request.Email).ToMD5Hash()),
+                this.EbConnectionFactory.DataDB.GetNewParameter("newpw", EbDbTypes.String, (request.NewPwd.ToMD5Hash() + request.UserId.ToString() + request.SolnId).ToMD5Hash()),
             };
             return new ResetUserPasswordResponse()
             {
@@ -322,14 +324,14 @@ namespace ExpressBase.ServiceStack.Services
                 request.LocationAdd = consObj.GetDataAsString();
             }
 
-            string password = (request.Password + request.EmailPrimary).ToMD5Hash();
+            //string password = (request.Password + request.EmailPrimary).ToMD5Hash();
             List<DbParameter> parameters = new List<DbParameter> {
                 this.EbConnectionFactory.DataDB.GetNewParameter("_userid", EbDbTypes.Int32, request.UserId),
                 this.EbConnectionFactory.DataDB.GetNewParameter("_id", EbDbTypes.Int32, request.Id),
                 this.EbConnectionFactory.DataDB.GetNewParameter("_fullname", EbDbTypes.String, request.FullName),
                 this.EbConnectionFactory.DataDB.GetNewParameter("_nickname", EbDbTypes.String, request.NickName),
                 this.EbConnectionFactory.DataDB.GetNewParameter("_email", EbDbTypes.String, request.EmailPrimary),
-                this.EbConnectionFactory.DataDB.GetNewParameter("_pwd", EbDbTypes.String,password),
+                this.EbConnectionFactory.DataDB.GetNewParameter("_pwd", EbDbTypes.String, request.Password),
                 this.EbConnectionFactory.DataDB.GetNewParameter("_dob", EbDbTypes.Date, Convert.ToDateTime(DateTime.ParseExact(request.DateOfBirth, "yyyy-MM-dd", CultureInfo.InvariantCulture))),
                 this.EbConnectionFactory.DataDB.GetNewParameter("_sex", EbDbTypes.String, request.Sex),
                 this.EbConnectionFactory.DataDB.GetNewParameter("_alternateemail", EbDbTypes.String, request.EmailSecondary),
@@ -347,7 +349,9 @@ namespace ExpressBase.ServiceStack.Services
                 this.EbConnectionFactory.DataDB.GetNewParameter("_preferences", EbDbTypes.String, request.Preference),
                 this.EbConnectionFactory.DataDB.GetNewParameter("_usertype", EbDbTypes.Int32, request.UserType),
                 this.EbConnectionFactory.DataDB.GetNewParameter("_consadd", EbDbTypes.String, request.LocationAdd),
-                this.EbConnectionFactory.DataDB.GetNewParameter("_consdel", EbDbTypes.String, request.LocationDelete)
+                this.EbConnectionFactory.DataDB.GetNewParameter("_consdel", EbDbTypes.String, request.LocationDelete),
+                this.EbConnectionFactory.DataDB.GetNewParameter("_forcepwreset", EbDbTypes.String, request.ForceResetPassword),
+                this.EbConnectionFactory.DataDB.GetNewParameter("_isolution_id", EbDbTypes.String, request.SolnId)
             };
 
             if (EbConnectionFactory.DataDB.Vendor == DatabaseVendors.MYSQL)
@@ -926,7 +930,7 @@ namespace ExpressBase.ServiceStack.Services
             //    sDtConstr = _sDtTitle.Substring(0, _sDtTitle.Length - 1) + "$$" + _sDtDesc.Substring(0, _sDtDesc.Length - 1) + "$$" + _sDtType.Substring(0, _sDtType.Length - 1) + "$$" + _sDtStart.Substring(0, _sDtStart.Length - 1) + "$$" + _sDtEnd.Substring(0, _sDtEnd.Length - 1) + "$$" + _sDtDays.Substring(0, _sDtDays.Length - 1);
             //}
 
-            EbDataTable d = this.EbConnectionFactory.DataDB.DoQuery($"SELECT id FROM eb_usergroup WHERE LOWER(name) LIKE LOWER(@ugname) {(request.Id > 0 ? "AND id <> "+ request.Id : "")};",
+            EbDataTable d = this.EbConnectionFactory.DataDB.DoQuery($"SELECT id FROM eb_usergroup WHERE LOWER(name) LIKE LOWER(@ugname) {(request.Id > 0 ? "AND id <> " + request.Id : "")};",
                 new DbParameter[] { this.EbConnectionFactory.DataDB.GetNewParameter("ugname", EbDbTypes.String, request.Name) });
             if (d.Rows.Count > 0)
             {
@@ -938,7 +942,7 @@ namespace ExpressBase.ServiceStack.Services
             EbConstraints consObj = new EbConstraints();
             consObj.SetConstraintObject(IpConstr);
             request.IpConstraintNw = consObj.GetDataAsString();
-                        
+
             List<DbParameter> parameters = new List<DbParameter>
                 {
                     this.EbConnectionFactory.DataDB.GetNewParameter("userid", EbDbTypes.Int32, request.UserId),
@@ -961,7 +965,7 @@ namespace ExpressBase.ServiceStack.Services
                 EbDataSet dt = this.EbConnectionFactory.DataDB.DoQueries(this.EbConnectionFactory.DataDB.EB_SAVEUSERGROUP_QUERY, parameters.ToArray());
                 resp.id = Convert.ToInt32(dt.Tables[0].Rows[0][0]);
             }
-            
+
             return resp;
         }
 
@@ -1077,7 +1081,7 @@ namespace ExpressBase.ServiceStack.Services
         {
             SaveRoleResponse resp = new SaveRoleResponse() { id = 0 };
             int role_id = Convert.ToInt32(request.Colvalues["roleid"]);
-            EbDataTable d = this.EbConnectionFactory.DataDB.DoQuery($"SELECT id FROM eb_roles WHERE LOWER(role_name) LIKE LOWER(@roleName) {(role_id > 0 ? "AND id <> "+ role_id : "")};",
+            EbDataTable d = this.EbConnectionFactory.DataDB.DoQuery($"SELECT id FROM eb_roles WHERE LOWER(role_name) LIKE LOWER(@roleName) {(role_id > 0 ? "AND id <> " + role_id : "")};",
                 new DbParameter[] { this.EbConnectionFactory.DataDB.GetNewParameter("roleName", EbDbTypes.String, request.Colvalues["role_name"]) });
             if (d.Rows.Count > 0)
             {

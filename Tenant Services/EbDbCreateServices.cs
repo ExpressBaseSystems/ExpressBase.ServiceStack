@@ -396,13 +396,10 @@ namespace ExpressBase.ServiceStack.Services
 
                 //..............insert into client tbl eb_users............ to SOLUTION
                 string sql2 = @"INSERT INTO eb_users(email,pwd,statusid) VALUES ('anonymous@anonym.com','294de3557d9d00b3d2d8a1e6aab028cf',0); 
+                                INSERT INTO eb_user_types(name,eb_del ) VALUES ('default','F');
                                 INSERT INTO eb_locations(shortname, longname, eb_location_types_id, parent_id, is_group) VALUES ('default', 'default', 1, 0, 'T');
                                 INSERT INTO eb_location_types(type) VALUES ('default');
-                                INSERT INTO eb_languages(language) VALUES ('English (en-US)');
-                                INSERT INTO eb_meeting_schedule (title,description,meeting_date,time_from,time_to,duration,venue,integration,max_hosts,max_attendees,
-								no_of_attendee,no_of_hosts,form_ref_id,form_data_id,eb_created_by)
-								VALUES ('test meeting','test meeting','2020-04-30','09:00:00','18:00:00',30,'kakkanad','',1,14,1,1,'',11,2);
-                                ";
+                                INSERT INTO eb_languages(language) VALUES ('English (en-US)');";
 
                 string sql3 = string.Empty;
                 foreach (var role in Enum.GetValues(typeof(SystemRoles)))
