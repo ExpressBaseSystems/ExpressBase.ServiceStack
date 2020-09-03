@@ -535,34 +535,46 @@ namespace ExpressBase.ServiceStack.Services
             {
                 User UserObject = GetUserObject(request.UserAuthId);
 
-                string query = EbConnectionFactory.ObjectsDB.EB_GET_MYACTIONS;
-
-                List<DbParameter> parameters = new List<DbParameter> {
-                    this.EbConnectionFactory.ObjectsDB.GetNewParameter("userid", EbDbTypes.Int32, request.UserId),
+                DbParameter[] parameters = {
+                    this.EbConnectionFactory.ObjectsDB.GetNewParameter("userid", EbDbTypes.String, request.UserId.ToString()),
                     this.EbConnectionFactory.ObjectsDB.GetNewParameter("roleids", EbDbTypes.String, UserObject.RoleIds.Join(",")),
                     this.EbConnectionFactory.ObjectsDB.GetNewParameter("usergroupids", EbDbTypes.String, UserObject.UserGroupIds.Join(","))
                 };
 
-                EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(query, parameters.ToArray()) ?? new EbDataTable();
+                EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(EbConnectionFactory.ObjectsDB.EB_GET_MYACTIONS, parameters);
 
-                foreach (EbDataRow row in dt.Rows)
+                if (dt != null)
                 {
-                    response.Actions.Add(new EbMyActionsMobile
+                    foreach (EbDataRow row in dt.Rows)
                     {
-                        Id = Convert.ToInt32(row["id"]),
-                        StartDate = Convert.ToDateTime(row["from_datetime"]),
-                        EndDate = Convert.ToDateTime(row["completed_at"]),
-                        StageId = Convert.ToInt32(row["eb_stages_id"]),
-                        WebFormRefId = row["form_ref_id"].ToString(),
-                        WebFormDataId = Convert.ToInt32(row["form_data_id"]),
-                        ApprovalLinesId = Convert.ToInt32(row["eb_approval_lines_id"]),
-                        Description = row["description"].ToString()
-                    });
+                        EbMyActionsMobile action = new EbMyActionsMobile
+                        {
+                            Id = Convert.ToInt32(row["id"]),
+                            StartDate = Convert.ToDateTime(row["from_datetime"]),
+                            StageId = Convert.ToInt32(row["eb_stages_id"]),
+                            WebFormRefId = row["form_ref_id"]?.ToString(),
+                            WebFormDataId = Convert.ToInt32(row["form_data_id"]),
+                            ApprovalLinesId = Convert.ToInt32(row["eb_approval_lines_id"]),
+                            Description = row["description"]?.ToString()
+                        };
+                        response.Actions.Add(action);
+
+                        try
+                        {
+                            action.ActionType = row["my_action_type"].ToString().ToEnum<MyActionTypes>();
+                        }
+                        catch
+                        {
+                            Console.WriteLine("Parse error");
+                            Console.WriteLine("Failed to parse my_action_type to enum");
+                        }
+                    }
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Exception at GetMyActionsRequest ::" + ex.Message);
+                Console.WriteLine("Exception at GetMyActionsRequest");
+                Console.WriteLine(ex.Message);
             }
             return response;
         }
@@ -630,6 +642,49 @@ namespace ExpressBase.ServiceStack.Services
                 Console.WriteLine(ex.Message);
             }
             return response;
+        }
+
+        public EbDeviceRegistration Post(EbDeviceRegistrationRequest request)
+        {
+            EbDeviceRegistration registration = new EbDeviceRegistration();
+
+            try
+            {
+                var actionResp = this.Get(new GetMyActionsRequest
+                {
+                    UserAuthId = request.UserAuthId,
+                    UserId = request.UserId
+                });
+                registration.ActionsCount = actionResp.Actions.Count;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Get actions error inside eb device reg request");
+                Console.WriteLine(ex.Message);
+            }
+
+            string query = @"SELECT * FROM eb_notifications WHERE user_id = :userid AND message_seen ='F' ORDER BY created_at DESC;";
+
+            DbParameter[] parameters = {
+                this.EbConnectionFactory.ObjectsDB.GetNewParameter("userid", EbDbTypes.Int32, request.UserId),
+            };
+
+            try
+            {
+                var dt = this.EbConnectionFactory.DataDB.DoQuery(query, parameters);
+
+                if (dt != null)
+                {
+
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Get notification query error");
+                Console.WriteLine(ex.Message);
+            }
+
+            return registration;
         }
     }
 }
