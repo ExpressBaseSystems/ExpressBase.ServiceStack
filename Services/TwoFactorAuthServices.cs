@@ -264,7 +264,7 @@ namespace ExpressBase.ServiceStack.Services
 
         private void SendOtpEmail(User _usr, Eb_Solution soln)
         {
-            string message = string.Format(OtpMessage, soln.ExtSolutionID, _usr.Otp);
+            string message = string.Format(OtpMessage, soln.SolutionName, _usr.Otp);
             EmailService emailService = base.ResolveService<EmailService>();
             emailService.Post(new EmailDirectRequest
             {
@@ -280,7 +280,7 @@ namespace ExpressBase.ServiceStack.Services
 
         private void SendOtpSms(User _usr, Eb_Solution soln)
         {
-            string message = string.Format(OtpMessage, soln.ExtSolutionID, _usr.Otp);
+            string message = string.Format(OtpMessage, soln.SolutionName, _usr.Otp);
             SmsCreateService smsCreateService = base.ResolveService<SmsCreateService>();
             smsCreateService.Post(new SmsDirectRequest
             {
