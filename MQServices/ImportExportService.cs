@@ -146,41 +146,44 @@ namespace ExpressBase.ServiceStack.MQServices
                     List<EbObject> ObjectCollection = AppObj.ObjCollection;
                     if (ObjectCollection.Count > 0)
                     {
-                        int c = 0;
-                        string _appname = AppObj.IsPublic ? AppObj.Title : AppObj.Name;
+                        int c = 1;
+                        string ApplicationName= AppObj.IsPublic ? AppObj.Title : AppObj.Name;
+                        string _appname = ApplicationName;
                         UniqueApplicationNameCheckResponse uniq_appnameresp;
                         do
-                        {
-                            c++;
+                        {                            
                             uniq_appnameresp = devservice.Get(new UniqueApplicationNameCheckRequest { AppName = _appname });
-                            if (!uniq_appnameresp.IsUnique)
-                                _appname = _appname + "(" + c + ")";
+                            if (uniq_appnameresp.IsUnique)
+                                ApplicationName = _appname;
+                            else
+                                _appname = ApplicationName + "(" + c++ + ")";
                         }
                         while (!uniq_appnameresp.IsUnique);
 
                         CreateApplicationResponse appres = devservice.Post(new CreateApplicationRequest
                         {
-                            AppName = _appname,
+                            AppName = ApplicationName,
                             AppType = AppObj.AppType,
                             Description = AppObj.Description,
                             AppIcon = AppObj.Icon
                         });
-                        Console.WriteLine("Created application : " + _appname);
+                        Console.WriteLine("Created application : " + ApplicationName);
                         bool _isVersionedSolution = IsVersioned(request.SelectedSolutionId, request.UserId);
                         for (int i = ObjectCollection.Count - 1; i >= 0; i--)
                         {
                             UniqueObjectNameCheckResponse uniqnameresp;
                             EbObject obj = ObjectCollection[i];
-                            int o = 0;
+                            int o = 1;
+                            string dispname = obj.DisplayName;
                             do
-                            {
-                                o++;
-                                uniqnameresp = objservice.Get(new UniqueObjectNameCheckRequest { ObjName = obj.Name });
-                                if (!uniqnameresp.IsUnique)
-                                    obj.Name = obj.Name + "(" + o + ")";
+                            { 
+                                uniqnameresp = objservice.Get(new UniqueObjectNameCheckRequest { ObjName = dispname });
+                                if (uniqnameresp.IsUnique)
+                                    obj.DisplayName = dispname;
+                                else 
+                                    dispname = obj.DisplayName + "(" + o++ + ")";
                             }
                             while (!uniqnameresp.IsUnique);
-
                             ObjectLifeCycleStatus _status;
                             if (request.IsDemoApp || !_isVersionedSolution)
                                 _status = ObjectLifeCycleStatus.Live;

@@ -25,8 +25,15 @@ namespace ExpressBase.ServiceStack.Services
         public GetOneFromAppstoreResponse Get(GetOneFromAppStoreRequest request)
         {
             DbParameter[] Parameters = { this.InfraConnectionFactory.ObjectsDB.GetNewParameter(":id", EbDbTypes.Int32, request.Id) };
-            EbDataTable dt = InfraConnectionFactory.ObjectsDB.DoQuery(@"SELECT title, json, status FROM eb_appstore s , eb_appstore_detailed d
-                                                                        WHERE s.id = :id and s.id = d.app_store_id", Parameters);
+            EbDataTable dt = InfraConnectionFactory.ObjectsDB.DoQuery(@"SELECT 
+                                                                            title, json, status 
+                                                                        FROM 
+                                                                            eb_appstore s
+                                                                        LEFT JOIN
+                                                                            eb_appstore_detailed d
+                                                                        ON
+                                                                            s.id = d.app_store_id
+                                                                        WHERE s.id = :id", Parameters);
             AppWrapper _wrapper = null;
             if (dt.Rows.Count > 0)
             {
@@ -88,7 +95,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             return resp;
         }
-               
+
         public GetAllFromAppstoreResponse Get(GetAllFromAppStoreExternalRequest request)
         {
             GetAllFromAppstoreResponse resp = new GetAllFromAppstoreResponse();
@@ -339,13 +346,15 @@ namespace ExpressBase.ServiceStack.Services
                         IsolutionId = _row["isolution_id"].ToString()
                     });
                 }
-
-                resp.AppData.Title = dt.Tables[1].Rows[0]["title"].ToString();
-                resp.AppData.AppType = Convert.ToInt32(dt.Tables[1].Rows[0]["app_type"]);
-                resp.AppData.ShortDesc = dt.Tables[1].Rows[0]["short_desc"].ToString();
-                resp.AppData.Tags = dt.Tables[1].Rows[0]["tags"].ToString();
-                resp.AppData.IsFree = dt.Tables[1].Rows[0]["is_free"].ToString();
-                resp.AppData.Cost = Convert.ToDecimal(dt.Tables[1].Rows[0]["cost"]);
+                if (dt.Tables[1].Rows.Count > 0)
+                {
+                    resp.AppData.Title = dt.Tables[1].Rows[0]["title"].ToString();
+                    resp.AppData.AppType = Convert.ToInt32(dt.Tables[1].Rows[0]["app_type"]);
+                    resp.AppData.ShortDesc = dt.Tables[1].Rows[0]["short_desc"].ToString();
+                    resp.AppData.Tags = dt.Tables[1].Rows[0]["tags"].ToString();
+                    resp.AppData.IsFree = dt.Tables[1].Rows[0]["is_free"].ToString();
+                    resp.AppData.Cost = Convert.ToDecimal(dt.Tables[1].Rows[0]["cost"]);
+                }
             }
             catch (Exception e)
             {
