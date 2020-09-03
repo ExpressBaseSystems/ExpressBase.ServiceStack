@@ -147,11 +147,11 @@ namespace ExpressBase.ServiceStack.MQServices
                     if (ObjectCollection.Count > 0)
                     {
                         int c = 1;
-                        string ApplicationName= AppObj.IsPublic ? AppObj.Title : AppObj.Name;
+                        string ApplicationName = AppObj.IsPublic ? AppObj.Title : AppObj.Name;
                         string _appname = ApplicationName;
                         UniqueApplicationNameCheckResponse uniq_appnameresp;
                         do
-                        {                            
+                        {
                             uniq_appnameresp = devservice.Get(new UniqueApplicationNameCheckRequest { AppName = _appname });
                             if (uniq_appnameresp.IsUnique)
                                 ApplicationName = _appname;
@@ -176,11 +176,11 @@ namespace ExpressBase.ServiceStack.MQServices
                             int o = 1;
                             string dispname = obj.DisplayName;
                             do
-                            { 
+                            {
                                 uniqnameresp = objservice.Get(new UniqueObjectNameCheckRequest { ObjName = dispname });
                                 if (uniqnameresp.IsUnique)
                                     obj.DisplayName = dispname;
-                                else 
+                                else
                                     dispname = obj.DisplayName + "(" + o++ + ")";
                             }
                             while (!uniqnameresp.IsUnique);
@@ -283,9 +283,13 @@ namespace ExpressBase.ServiceStack.MQServices
             EbConnectionFactory ebConnectionFactory = new EbConnectionFactory(solid, this.Redis);
             EbObjectService objservice = base.ResolveService<EbObjectService>();
             objservice.EbConnectionFactory = ebConnectionFactory;
+            EbObject obj = null;
             EbObjectParticularVersionResponse res = (EbObjectParticularVersionResponse)objservice.Get(new EbObjectParticularVersionRequest { RefId = _refid });
-            EbObject obj = EbSerializers.Json_Deserialize(res.Data[0].Json);
-            obj.RefId = _refid;
+            if (res.Data.Count > 0)
+            {
+                obj = EbSerializers.Json_Deserialize(res.Data[0].Json);
+                obj.RefId = _refid;
+            }  
             return obj;
         }
         public bool IsVersioned(string selectedSolnId, int uid)
