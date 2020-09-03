@@ -643,5 +643,48 @@ namespace ExpressBase.ServiceStack.Services
             }
             return response;
         }
+
+        public EbDeviceRegistration Post(EbDeviceRegistrationRequest request)
+        {
+            EbDeviceRegistration registration = new EbDeviceRegistration();
+
+            try
+            {
+                var actionResp = this.Get(new GetMyActionsRequest
+                {
+                    UserAuthId = request.UserAuthId,
+                    UserId = request.UserId
+                });
+                registration.ActionsCount = actionResp.Actions.Count;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Get actions error inside eb device reg request");
+                Console.WriteLine(ex.Message);
+            }
+
+            string query = @"SELECT * FROM eb_notifications WHERE user_id = :userid AND message_seen ='F' ORDER BY created_at DESC;";
+
+            DbParameter[] parameters = {
+                this.EbConnectionFactory.ObjectsDB.GetNewParameter("userid", EbDbTypes.Int32, request.UserId),
+            };
+
+            try
+            {
+                var dt = this.EbConnectionFactory.DataDB.DoQuery(query, parameters);
+
+                if (dt != null)
+                {
+
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Get notification query error");
+                Console.WriteLine(ex.Message);
+            }
+
+            return registration;
+        }
     }
 }
