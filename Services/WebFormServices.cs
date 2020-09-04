@@ -1352,7 +1352,7 @@ namespace ExpressBase.ServiceStack.Services
                         this.EbConnectionFactory.DataDB.GetNewParameter("eb_created_by", EbDbTypes.Int32, request.UserId)
                     };
                     EbDataSet ds = this.EbConnectionFactory.DataDB.DoQueries(Qry, parameters);
-                    Draft_id = Convert.ToInt32(ds.Tables[1].Rows[0][0]);
+                    Draft_id = Convert.ToInt32(ds.Tables[0].Rows[0][0]);
                     if (Draft_id == 0)
                         throw new FormException("Something went wrong in our end.", (int)HttpStatusCode.InternalServerError, $"SELECT eb_currval('eb_form_drafts_id_seq') returned 0", "SaveFormDraftRequest -> New");
                 }
