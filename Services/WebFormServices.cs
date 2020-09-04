@@ -1435,7 +1435,7 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.DraftId),
                     this.EbConnectionFactory.DataDB.GetNewParameter("form_ref_id", EbDbTypes.String, FormObj.RefId),
-                    this.EbConnectionFactory.DataDB.GetNewParameter("eb_created_by", EbDbTypes.String, request.UserId)
+                    this.EbConnectionFactory.DataDB.GetNewParameter("eb_created_by", EbDbTypes.Int32, request.UserId)
                 };
                 EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(Qry, parameters);
                 if (dt.Rows.Count == 0)
@@ -1443,17 +1443,21 @@ namespace ExpressBase.ServiceStack.Services
                 else
                     Json = Convert.ToString(dt.Rows[0][0]);
                 Console.WriteLine("GetFormDraftRequest returning");
-                return new GetFormDraftResponse() { Status = (int)HttpStatusCode.OK, Message = "success", Data = Json };
+
+                WebformDataWrapper dataWrapper = new WebformDataWrapper { Status = (int)HttpStatusCode.OK, Message = "success", FormData = new WebformData() };
+
+                return new GetFormDraftResponse() { DataWrapper = JsonConvert.SerializeObject(dataWrapper), FormDatajson = Json };
             }
             catch (FormException ex)
             {
-                Console.WriteLine("FormException in GetFormDraftRequest\nMessage : " + ex.Message + "\nMessageInternal : " + ex.MessageInternal + "\nStackTraceInternal : " + ex.StackTraceInternal + "\nStackTrace : " + ex.StackTrace);
-                return new GetFormDraftResponse() { Status = ex.ExceptionCode, Message = ex.Message };
+                Console.WriteLine("FormException in GetFormDraftRequest\nMessage : " + ex.Message + "\nMessageInternal : " + ex.MessageInternal + "\nStackTraceInternal : " + ex.StackTraceInternal + "\nStackTrace : " + ex.StackTrace);              
+
+                return new GetFormDraftResponse() { DataWrapper = JsonConvert.SerializeObject(new WebformDataWrapper { Status = ex.ExceptionCode, Message = ex.Message }) };
             }
             catch (Exception ex)
             {
                 Console.WriteLine("Exception in GetFormDraftRequest\nMessage" + ex.Message + "\nStackTrace" + ex.StackTrace);
-                return new GetFormDraftResponse() { Status = (int)HttpStatusCode.InternalServerError, Message = ex.Message };
+                return new GetFormDraftResponse() { DataWrapper = JsonConvert.SerializeObject(new WebformDataWrapper { Status = (int)HttpStatusCode.InternalServerError, Message = ex.Message }) };
             }
         }
 
