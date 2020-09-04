@@ -1422,6 +1422,41 @@ namespace ExpressBase.ServiceStack.Services
             }
         }
 
+        public GetFormDraftResponse Any(GetFormDraftRequest request)
+        {
+            try
+            {
+                Console.WriteLine("GetFormDraftRequest Service start");
+                EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId);////////
+                string Json = string.Empty;
+                string Qry = $@"SELECT form_data_json FROM eb_form_drafts
+                                    WHERE id = @id AND form_ref_id = @form_ref_id AND eb_created_by = @eb_created_by AND is_submitted = 'F' AND eb_del = 'F';";
+                DbParameter[] parameters = new DbParameter[]
+                {
+                    this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.DraftId),
+                    this.EbConnectionFactory.DataDB.GetNewParameter("form_ref_id", EbDbTypes.String, FormObj.RefId),
+                    this.EbConnectionFactory.DataDB.GetNewParameter("eb_created_by", EbDbTypes.String, request.UserId)
+                };
+                EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(Qry, parameters);
+                if (dt.Rows.Count == 0)
+                    throw new FormException("Not Found.", (int)HttpStatusCode.NotFound, $"Record not found", "SaveFormDraftRequest -> Edit");
+                else
+                    Json = Convert.ToString(dt.Rows[0][0]);
+                Console.WriteLine("GetFormDraftRequest returning");
+                return new GetFormDraftResponse() { Status = (int)HttpStatusCode.OK, Message = "success", Data = Json };
+            }
+            catch (FormException ex)
+            {
+                Console.WriteLine("FormException in GetFormDraftRequest\nMessage : " + ex.Message + "\nMessageInternal : " + ex.MessageInternal + "\nStackTraceInternal : " + ex.StackTraceInternal + "\nStackTrace : " + ex.StackTrace);
+                return new GetFormDraftResponse() { Status = ex.ExceptionCode, Message = ex.Message };
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Exception in GetFormDraftRequest\nMessage" + ex.Message + "\nStackTrace" + ex.StackTrace);
+                return new GetFormDraftResponse() { Status = (int)HttpStatusCode.InternalServerError, Message = ex.Message };
+            }
+        }
+
 
         //================================= FORMULA AND VALIDATION =================================================
 
