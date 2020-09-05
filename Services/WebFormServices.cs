@@ -1341,8 +1341,8 @@ namespace ExpressBase.ServiceStack.Services
                 request.Title = string.IsNullOrEmpty(request.Title) ? FormObj.DisplayName : request.Title;
                 if (request.DraftId <= 0)//new
                 {
-                    string Qry = $@"INSERT INTO eb_form_drafts (title, form_data_json, form_ref_id, is_submitted, eb_loc_id, eb_created_by, eb_created_at, eb_del)
-                                    VALUES (@title, @form_data_json, @form_ref_id, 'F', @eb_loc_id, @eb_created_by, {this.EbConnectionFactory.DataDB.EB_CURRENT_TIMESTAMP}, 'F'); 
+                    string Qry = $@"INSERT INTO eb_form_drafts (title, form_data_json, form_ref_id, is_submitted, eb_loc_id, eb_created_by, eb_created_at, eb_lastmodified_at, eb_del)
+                                    VALUES (@title, @form_data_json, @form_ref_id, 'F', @eb_loc_id, @eb_created_by, {this.EbConnectionFactory.DataDB.EB_CURRENT_TIMESTAMP}, {this.EbConnectionFactory.DataDB.EB_CURRENT_TIMESTAMP}, 'F'); 
                                     SELECT eb_currval('eb_form_drafts_id_seq');";
                     DbParameter[] parameters = new DbParameter[]
                     {
