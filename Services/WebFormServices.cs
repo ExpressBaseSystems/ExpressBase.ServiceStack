@@ -1207,6 +1207,7 @@ namespace ExpressBase.ServiceStack.Services
                 FormObj.TableRowId = request.RowId;
                 FormObj.FormData = request.FormData;
                 FormObj.LocationId = request.CurrentLoc;
+                FormObj.DraftId = request.DraftId;
 
                 //string Operation = OperationConstants.NEW;
                 //if (request.RowId > 0)
