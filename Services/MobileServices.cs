@@ -389,9 +389,9 @@ namespace ExpressBase.ServiceStack.Services
             return DataSet;
         }
 
-        public GetMobileVisDataResponse Get(MobileVisDataRequest request)
+        public MobileVisDataResponse Get(MobileVisDataRequest request)
         {
-            GetMobileVisDataResponse resp = new GetMobileVisDataResponse();
+            MobileVisDataResponse resp = new MobileVisDataResponse();
             try
             {
                 EbDataReader _ds = this.Redis.Get<EbDataReader>(request.DataSourceRefId);
@@ -553,9 +553,9 @@ namespace ExpressBase.ServiceStack.Services
             return query;
         }
 
-        public GetMobileFormDataResponse Get(GetMobileFormDataRequest request)
+        public MobileFormDataResponse Get(MobileFormDataRequest request)
         {
-            GetMobileFormDataResponse response = new GetMobileFormDataResponse();
+            MobileFormDataResponse response = new MobileFormDataResponse();
             try
             {
                 EbMobilePage mPage = this.Redis.Get<EbMobilePage>(request.MobilePageRefId);
