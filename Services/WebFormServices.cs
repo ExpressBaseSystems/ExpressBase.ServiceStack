@@ -1207,6 +1207,7 @@ namespace ExpressBase.ServiceStack.Services
                 FormObj.TableRowId = request.RowId;
                 FormObj.FormData = request.FormData;
                 FormObj.LocationId = request.CurrentLoc;
+                FormObj.DraftId = request.DraftId;
 
                 //string Operation = OperationConstants.NEW;
                 //if (request.RowId > 0)
@@ -1320,17 +1321,146 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (FormException ex)
             {
-                Console.WriteLine("FormException in InsertOrUpdateFormDataRqst\nMessage : " + ex.Message + "\nMessageInternal : " + ex.MessageInternal + "\nStackTraceInternal : " + ex.StackTraceInternal + "\nStackTrace : " + ex.StackTrace);
+                Console.WriteLine("FormException in InsertBatchDataRequest\nMessage : " + ex.Message + "\nMessageInternal : " + ex.MessageInternal + "\nStackTraceInternal : " + ex.StackTraceInternal + "\nStackTrace : " + ex.StackTrace);
                 return new InsertBatchDataResponse() { Status = ex.ExceptionCode, Message = ex.Message };
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Exception in InsertOrUpdateFormDataRqst\nMessage" + ex.Message + "\nStackTrace" + ex.StackTrace);
+                Console.WriteLine("Exception in InsertBatchDataRequest\nMessage" + ex.Message + "\nStackTrace" + ex.StackTrace);
                 return new InsertBatchDataResponse() { Status = (int)HttpStatusCode.InternalServerError, Message = ex.Message };
             }
         }
 
+        public SaveFormDraftResponse Any(SaveFormDraftRequest request)
+        {
+            try
+            {
+                Console.WriteLine("SaveFormDraftRequest Service start");
+                int Draft_id = 0;
+                EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId);
+                request.Title = string.IsNullOrEmpty(request.Title) ? FormObj.DisplayName : request.Title;
+                if (request.DraftId <= 0)//new
+                {
+                    string Qry = $@"INSERT INTO eb_form_drafts (title, form_data_json, form_ref_id, is_submitted, eb_loc_id, eb_created_by, eb_created_at, eb_lastmodified_at, eb_del)
+                                    VALUES (@title, @form_data_json, @form_ref_id, 'F', @eb_loc_id, @eb_created_by, {this.EbConnectionFactory.DataDB.EB_CURRENT_TIMESTAMP}, {this.EbConnectionFactory.DataDB.EB_CURRENT_TIMESTAMP}, 'F'); 
+                                    SELECT eb_currval('eb_form_drafts_id_seq');";
+                    DbParameter[] parameters = new DbParameter[]
+                    {
+                        this.EbConnectionFactory.DataDB.GetNewParameter("title", EbDbTypes.String, request.Title),
+                        this.EbConnectionFactory.DataDB.GetNewParameter("form_data_json", EbDbTypes.String, request.Data),
+                        this.EbConnectionFactory.DataDB.GetNewParameter("form_ref_id", EbDbTypes.String, FormObj.RefId),
+                        this.EbConnectionFactory.DataDB.GetNewParameter("eb_loc_id", EbDbTypes.Int32, request.LocId),
+                        this.EbConnectionFactory.DataDB.GetNewParameter("eb_created_by", EbDbTypes.Int32, request.UserId)
+                    };
+                    EbDataSet ds = this.EbConnectionFactory.DataDB.DoQueries(Qry, parameters);
+                    Draft_id = Convert.ToInt32(ds.Tables[0].Rows[0][0]);
+                    if (Draft_id == 0)
+                        throw new FormException("Something went wrong in our end.", (int)HttpStatusCode.InternalServerError, $"SELECT eb_currval('eb_form_drafts_id_seq') returned 0", "SaveFormDraftRequest -> New");
+                }
+                else
+                {
+                    string Qry = $@"UPDATE eb_form_drafts SET title = @title, form_data_json = @form_data_json, eb_loc_id = @eb_loc_id, eb_lastmodified_at = {this.EbConnectionFactory.DataDB.EB_CURRENT_TIMESTAMP}
+                                    WHERE id = @id AND form_ref_id = @form_ref_id AND eb_created_by = @eb_created_by AND is_submitted = 'F' AND eb_del = 'F';";
+                    DbParameter[] parameters = new DbParameter[]
+                    {
+                        this.EbConnectionFactory.DataDB.GetNewParameter("title", EbDbTypes.String, request.Title),
+                        this.EbConnectionFactory.DataDB.GetNewParameter("form_data_json", EbDbTypes.String, request.Data),
+                        this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.DraftId),
+                        this.EbConnectionFactory.DataDB.GetNewParameter("form_ref_id", EbDbTypes.String, FormObj.RefId),
+                        this.EbConnectionFactory.DataDB.GetNewParameter("eb_loc_id", EbDbTypes.Int32, request.LocId),
+                        this.EbConnectionFactory.DataDB.GetNewParameter("eb_created_by", EbDbTypes.Int32, request.UserId)
+                    };
+                    int status = this.EbConnectionFactory.DataDB.DoNonQuery(Qry, parameters);
+                    if (status == 0)
+                        throw new FormException("Not Found.", (int)HttpStatusCode.NotFound, $"No row affected", "SaveFormDraftRequest -> Edit");
+                    Draft_id = request.DraftId;
+                }
+                Console.WriteLine("SaveFormDraftRequest returning");
+                return new SaveFormDraftResponse() { Status = (int)HttpStatusCode.OK, Message = "success", DraftId = Draft_id };
+            }
+            catch (FormException ex)
+            {
+                Console.WriteLine("FormException in SaveFormDraftRequest\nMessage : " + ex.Message + "\nMessageInternal : " + ex.MessageInternal + "\nStackTraceInternal : " + ex.StackTraceInternal + "\nStackTrace : " + ex.StackTrace);
+                return new SaveFormDraftResponse() { Status = ex.ExceptionCode, Message = ex.Message };
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Exception in SaveFormDraftRequest\nMessage" + ex.Message + "\nStackTrace" + ex.StackTrace);
+                return new SaveFormDraftResponse() { Status = (int)HttpStatusCode.InternalServerError, Message = ex.Message };
+            }
+        }
 
+        public DiscardFormDraftResponse Any(DiscardFormDraftRequest request)
+        {
+            try
+            {
+                Console.WriteLine("DiscardFormDraftRequest Service start");
+                EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId);////////
+
+                string Qry = $@"UPDATE eb_form_drafts SET eb_del = 'T', eb_lastmodified_at = {this.EbConnectionFactory.DataDB.EB_CURRENT_TIMESTAMP}
+                                    WHERE id = @id AND form_ref_id = @form_ref_id AND eb_created_by = @eb_created_by AND is_submitted = 'F' AND eb_del = 'F';";
+                DbParameter[] parameters = new DbParameter[]
+                {
+                    this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.DraftId),
+                    this.EbConnectionFactory.DataDB.GetNewParameter("form_ref_id", EbDbTypes.String, FormObj.RefId),
+                    this.EbConnectionFactory.DataDB.GetNewParameter("eb_created_by", EbDbTypes.String, request.UserId)
+                };
+                int status = this.EbConnectionFactory.DataDB.DoNonQuery(Qry, parameters);
+                if (status == 0)
+                    throw new FormException("Not Found.", (int)HttpStatusCode.NotFound, $"No row affected", "SaveFormDraftRequest -> Edit");
+                Console.WriteLine("SaveFormDraftRequest returning");
+                return new DiscardFormDraftResponse() { Status = (int)HttpStatusCode.OK, Message = "success" };
+            }
+            catch (FormException ex)
+            {
+                Console.WriteLine("FormException in DiscardFormDraft\nMessage : " + ex.Message + "\nMessageInternal : " + ex.MessageInternal + "\nStackTraceInternal : " + ex.StackTraceInternal + "\nStackTrace : " + ex.StackTrace);
+                return new DiscardFormDraftResponse() { Status = ex.ExceptionCode, Message = ex.Message };
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Exception in DiscardFormDraft\nMessage" + ex.Message + "\nStackTrace" + ex.StackTrace);
+                return new DiscardFormDraftResponse() { Status = (int)HttpStatusCode.InternalServerError, Message = ex.Message };
+            }
+        }
+
+        public GetFormDraftResponse Any(GetFormDraftRequest request)
+        {
+            try
+            {
+                Console.WriteLine("GetFormDraftRequest Service start");
+                EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId);////////
+                string Json = string.Empty;
+                string Qry = $@"SELECT form_data_json FROM eb_form_drafts
+                                    WHERE id = @id AND form_ref_id = @form_ref_id AND eb_created_by = @eb_created_by AND is_submitted = 'F' AND eb_del = 'F';";
+                DbParameter[] parameters = new DbParameter[]
+                {
+                    this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.DraftId),
+                    this.EbConnectionFactory.DataDB.GetNewParameter("form_ref_id", EbDbTypes.String, FormObj.RefId),
+                    this.EbConnectionFactory.DataDB.GetNewParameter("eb_created_by", EbDbTypes.Int32, request.UserId)
+                };
+                EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(Qry, parameters);
+                if (dt.Rows.Count == 0)
+                    throw new FormException("Not Found.", (int)HttpStatusCode.NotFound, $"Record not found", "SaveFormDraftRequest -> Edit");
+                else
+                    Json = Convert.ToString(dt.Rows[0][0]);
+                Console.WriteLine("GetFormDraftRequest returning");
+
+                WebformDataWrapper dataWrapper = new WebformDataWrapper { Status = (int)HttpStatusCode.OK, Message = "success", FormData = new WebformData() };
+
+                return new GetFormDraftResponse() { DataWrapper = JsonConvert.SerializeObject(dataWrapper), FormDatajson = Json };
+            }
+            catch (FormException ex)
+            {
+                Console.WriteLine("FormException in GetFormDraftRequest\nMessage : " + ex.Message + "\nMessageInternal : " + ex.MessageInternal + "\nStackTraceInternal : " + ex.StackTraceInternal + "\nStackTrace : " + ex.StackTrace);              
+
+                return new GetFormDraftResponse() { DataWrapper = JsonConvert.SerializeObject(new WebformDataWrapper { Status = ex.ExceptionCode, Message = ex.Message }) };
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Exception in GetFormDraftRequest\nMessage" + ex.Message + "\nStackTrace" + ex.StackTrace);
+                return new GetFormDraftResponse() { DataWrapper = JsonConvert.SerializeObject(new WebformDataWrapper { Status = (int)HttpStatusCode.InternalServerError, Message = ex.Message }) };
+            }
+        }
 
 
         //================================= FORMULA AND VALIDATION =================================================

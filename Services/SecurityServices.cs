@@ -972,6 +972,8 @@ namespace ExpressBase.ServiceStack.Services
         //----MANAGE ROLES START---------------------------------------
         public GetManageRolesResponse Any(GetManageRolesRequest request)
         {
+	GetManageRolesResponse resp = null;
+	try{
             string query = null;
 
             //old query
@@ -1056,7 +1058,9 @@ namespace ExpressBase.ServiceStack.Services
                     temp_locs += dr[0].ToString() + ",";
                 RoleInfo.Add("LocationIds", string.IsNullOrEmpty(temp_locs) ? "" : temp_locs.Substring(0, temp_locs.Length - 1));
             }
-            return new GetManageRolesResponse() { ApplicationCollection = _applicationCollection, SelectedRoleInfo = RoleInfo, PermissionList = Permission, RoleList = _roleList, Role2RoleList = _r2rList, UsersList = _usersList, LocationList = _location };
+	    resp = new GetManageRolesResponse() { ApplicationCollection = _applicationCollection, SelectedRoleInfo = RoleInfo, PermissionList = Permission, RoleList = _roleList, Role2RoleList = _r2rList, UsersList = _usersList, LocationList = _location };
+	    }catch(Exception e) { Console.WriteLine("ManageRolesRequest___999 " + e.ToString()); }
+            return resp;
         }
 
         public GetUserDetailsResponse Any(GetUserDetailsRequest request)

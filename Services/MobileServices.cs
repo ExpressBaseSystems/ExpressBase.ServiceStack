@@ -22,6 +22,8 @@ namespace ExpressBase.ServiceStack.Services
     [Authenticate]
     public class MobileServices : EbBaseService
     {
+        const string EBPARAM_LOCID = "eb_loc_id";
+
         public MobileServices(IEbConnectionFactory _dbf, IMessageProducer _mqp) : base(_dbf, _mqp) { }
 
         public CreateMobileFormTableResponse Post(CreateMobileFormTableRequest request)
@@ -387,11 +389,13 @@ namespace ExpressBase.ServiceStack.Services
             return DataSet;
         }
 
-        public GetMobileVisDataResponse Get(GetMobileVisDataRequest request)
+        public MobileVisDataResponse Get(MobileVisDataRequest request)
         {
-            GetMobileVisDataResponse resp = new GetMobileVisDataResponse();
+            MobileVisDataResponse resp = new MobileVisDataResponse();
             try
             {
+                request.InitCollections();
+
                 EbDataReader _ds = this.Redis.Get<EbDataReader>(request.DataSourceRefId);
                 if (_ds == null)
                 {
@@ -412,7 +416,7 @@ namespace ExpressBase.ServiceStack.Services
                     parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("offset", EbDbTypes.Int32, request.Offset));
                 }
 
-                string wraped = WrapQuery(_ds.Sql, request.Limit > 0, request.IsPowerSelect, request.Params, request.SortOrder);
+                string wraped = this.WrapQuery(_ds.Sql, request, parameters);
 
                 resp.Data = this.EbConnectionFactory.DataDB.DoQueries(wraped, parameters.ToArray());
             }
@@ -424,47 +428,44 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
-        private string WrapQuery(string sql, bool has_limit, bool is_powerselect, List<Param> parameters, List<SortColumn> sort_order)
+        private string WrapQuery(string sql, MobileVisDataRequest request, List<DbParameter> parameters)
         {
             string wraped = string.Empty;
-
-            const string EBPARAM_LOCID = "eb_loc_id";
-
+            bool has_limit = request.Limit > 0;
             try
             {
                 sql = sql.Trim().TrimEnd(CharConstants.SEMI_COLON);
 
-                if (is_powerselect && parameters.Any())
+                if (request.IsPowerSelect && request.Params.Any())
                 {
-                    Param p = parameters[0];
+                    Param p = request.Params[0];
                     wraped += $"SELECT * FROM ({sql}) AS PWWRP WHERE LOWER(PWWRP.{p.Name}) LIKE '%{p.Value.ToLower()}%'";
                 }
                 else
                 {
-                    List<Param> sqlP = SqlHelper.GetSqlParams(sql, (int)EbObjectTypes.DataReader);
-                    List<string> filterList = new List<string>();
-
                     wraped += $"SELECT * FROM ({sql}) AS PWWRP ";
-                    foreach (Param param in parameters)
-                    {
-                        if (param.Name == EBPARAM_LOCID) continue;
 
-                        Param p = sqlP.Find(item => item.Name == param.Name);
-                        if (p == null)
-                            filterList.Add($"PWWRP.{param.Name} = :{param.Name}");
+                    bool hasWhere = false;
+
+                    if (request.Params.Any())
+                    {
+                        string query = this.GetFilterQuery(sql, request.Params);
+                        hasWhere = query.Contains("WHERE");
+                        wraped += query;
                     }
 
-                    if (filterList.Any())
+                    if (request.SearchColumns.Any())
                     {
-                        wraped = wraped + " WHERE " + filterList.Join(" AND ");
+                        if (!hasWhere)
+                            wraped += " WHERE ";
+                        else
+                            wraped += " AND ";
+
+                        wraped += this.GetSearchQuery(request.SearchColumns, parameters);
                     }
 
-                    if (sort_order.Any())
-                    {
-                        List<string> sort = new List<string>();
-                        sort_order.ForEach(item => sort.Add($"{item.Name} {item.GetString()}"));
-                        wraped = wraped + " ORDER BY " + sort.Join($" {CharConstants.COMMA} ");
-                    }
+                    if (request.SortOrder.Any())
+                        wraped += this.GetSortQuery(request.SortOrder);
                 }
 
                 wraped = $"SELECT COUNT(*) FROM ({wraped}) AS COUNT_STAR;" + wraped;
@@ -482,9 +483,81 @@ namespace ExpressBase.ServiceStack.Services
             return wraped;
         }
 
-        public GetMobileFormDataResponse Get(GetMobileFormDataRequest request)
+        private string GetFilterQuery(string sql, List<Param> filters)
         {
-            GetMobileFormDataResponse response = new GetMobileFormDataResponse();
+            string query = string.Empty;
+
+            List<string> filterParams = new List<string>();
+
+            List<Param> queryParams = SqlHelper.GetSqlParams(sql, (int)EbObjectTypes.DataReader);
+
+            foreach (Param param in filters)
+            {
+                if (param.Name == EBPARAM_LOCID)
+                    continue;
+
+                Param pmatch = queryParams.Find(item => item.Name == param.Name);
+                if (pmatch == null)
+                {
+                    filterParams.Add($"PWWRP.{param.Name} = :{param.Name}");
+                }
+            }
+
+            if (filterParams.Any())
+            {
+                query = query + " WHERE " + filterParams.Join(" AND ");
+            }
+
+            return query;
+        }
+
+        private string GetSearchQuery(List<Param> searchColumns, List<DbParameter> parameters)
+        {
+            string query = string.Empty;
+
+            List<string> searchParams = new List<string>();
+
+            foreach (Param search in searchColumns)
+            {
+                try
+                {
+                    string pname = $"{search.Name}_srchcol";
+                    string value = string.Format("%{0}%", search.Value.ToLower());
+
+                    searchParams.Add($"LOWER(PWWRP.{search.Name}) LIKE :{pname}");
+
+                    parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(pname, EbDbTypes.String, value));
+                }
+                catch
+                {
+                    //handle exceptions
+                }
+            }
+
+            query = query + "(" + searchParams.Join(" OR ") + ")";
+
+            return query;
+        }
+
+        private string GetSortQuery(List<SortColumn> sortOrder)
+        {
+            string query = string.Empty;
+
+            List<string> sort = new List<string>();
+
+            foreach (var order in sortOrder)
+            {
+                sort.Add($"{order.Name} {order.GetString()}");
+            }
+
+            query = query + " ORDER BY " + sort.Join($" {CharConstants.COMMA} ");
+
+            return query;
+        }
+
+        public MobileFormDataResponse Get(MobileFormDataRequest request)
+        {
+            MobileFormDataResponse response = new MobileFormDataResponse();
             try
             {
                 EbMobilePage mPage = this.Redis.Get<EbMobilePage>(request.MobilePageRefId);

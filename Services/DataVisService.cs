@@ -83,6 +83,8 @@ namespace ExpressBase.ServiceStack
 
         List<DVBaseColumn> ExcelColumns = new List<DVBaseColumn>();
 
+        bool showCheckboxColumn = false;
+
         //[CompressResponse]
         //public DataSourceDataResponse Any(DataVisDataRequest request)
         //{
@@ -298,6 +300,7 @@ namespace ExpressBase.ServiceStack
         {
             try
             {
+                this.showCheckboxColumn = request.showCheckboxColumn;
                 this.FileClient.BearerToken = request.Token;
                 this.FileClient.RefreshToken = request.rToken;
                 _ebSolution = request.eb_Solution;
@@ -2882,6 +2885,7 @@ namespace ExpressBase.ServiceStack
                         rowGrouping[footerKey].IsMultiLevel = IsMultiLevelGrouping;
                         rowGrouping[headerKey].IsAutoGen = IsAutoGendv;
                         rowGrouping[footerKey].IsAutoGen = IsAutoGendv;
+                        rowGrouping[footerKey].ShowCheckbox = this.showCheckboxColumn;
                     }
                 }
                 (rowGrouping[HeaderPrefix + TempKey[TotalLevels - 1]] as HeaderGroupingDetails).SetSortIndex(CurSortIndex);
@@ -2902,6 +2906,7 @@ namespace ExpressBase.ServiceStack
                     (rowGrouping[footerKey] as FooterGroupingDetails).SetSortIndex(++CurSortIndex);
                     rowGrouping[headerKey].IsAutoGen = IsAutoGendv;
                     rowGrouping[footerKey].IsAutoGen = IsAutoGendv;
+                    rowGrouping[footerKey].ShowCheckbox = this.showCheckboxColumn;
                 }
             }
         }
