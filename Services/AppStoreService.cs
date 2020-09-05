@@ -24,6 +24,7 @@ namespace ExpressBase.ServiceStack.Services
         [Authenticate]
         public GetOneFromAppstoreResponse Get(GetOneFromAppStoreRequest request)
         {
+            GetOneFromAppstoreResponse response = new GetOneFromAppstoreResponse();
             DbParameter[] Parameters = { this.InfraConnectionFactory.ObjectsDB.GetNewParameter(":id", EbDbTypes.Int32, request.Id) };
             EbDataTable dt = InfraConnectionFactory.ObjectsDB.DoQuery(@"SELECT 
                                                                             title, json, status 
@@ -34,19 +35,17 @@ namespace ExpressBase.ServiceStack.Services
                                                                         ON
                                                                             s.id = d.app_store_id
                                                                         WHERE s.id = :id", Parameters);
-            AppWrapper _wrapper = null;
+
             if (dt.Rows.Count > 0)
             {
-                _wrapper = EbSerializers.Json_Deserialize<AppWrapper>(dt.Rows[0]["json"].ToString());
-                _wrapper.Title = dt.Rows[0]["title"].ToString();
-                _wrapper.IsPublic = (((int)dt.Rows[0]["status"]) == 2) ? true : false;
+                response.Package = EbSerializers.Json_Deserialize<ExportPackage>(dt.Rows[0]["json"].ToString());
+                response.Title = dt.Rows[0]["title"].ToString();
+                response.IsPublic = (((int)dt.Rows[0]["status"]) == 2) ? true : false;
             }
             else
                 Console.WriteLine("Could't retrieve app from table eb_appstore. app id:" + request.Id);
-            return new GetOneFromAppstoreResponse
-            {
-                Wrapper = _wrapper
-            };
+
+            return response;
         }
 
         public GetAppStoreDetailedResponse Get(GetAppStoreDetailedRequest request)

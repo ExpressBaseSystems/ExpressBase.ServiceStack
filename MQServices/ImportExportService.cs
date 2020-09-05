@@ -32,8 +32,10 @@ namespace ExpressBase.ServiceStack.MQServices
             ExportApplicationResponse resp = new ExportApplicationResponse();
             MessageProducer3.Publish(new ExportApplicationRequest
             {
-                AppId = request.AppId,
-                Refids = request.Refids,
+                AppCollection = request.AppCollection,
+                PackageName = request.PackageName,
+                PackageDescription = request.PackageDescription,
+                PackageIcon = request.PackageIcon,
                 BToken = this.ServerEventClient.BearerToken,
                 RToken = this.ServerEventClient.RefreshToken,
                 SolnId = request.SolnId,
@@ -72,6 +74,7 @@ namespace ExpressBase.ServiceStack.MQServices
         public string Post(ExportApplicationRequest request)
         {
             Log.Info("ExportApplicationRequest inside Mq");
+            ExportPackage package = new ExportPackage();
             OrderedDictionary ObjDictionary = new OrderedDictionary();
             try
             {
@@ -80,29 +83,38 @@ namespace ExpressBase.ServiceStack.MQServices
                 devservice.EbConnectionFactory = ebConnectionFactory;
                 var appstoreService = base.ResolveService<AppStoreService>();
                 appstoreService.EbConnectionFactory = ebConnectionFactory;
-                AppWrapper AppObj = devservice.Get(new GetApplicationRequest { Id = request.AppId }).AppInfo;
-                AppObj.ObjCollection = new List<EbObject>();
 
-                string[] refs = request.Refids.Split(",");
-                foreach (string _refid in refs)
-                    GetRelated(_refid, ObjDictionary, request.SolnId);
+                foreach (KeyValuePair<int, string> _app in request.AppCollection)
+                {
+                    AppWrapper Appwrp = devservice.Get(new GetApplicationRequest { Id = _app.Key }).AppInfo;
+                    Appwrp.ObjCollection = new List<EbObject>();
 
-                ICollection ObjectList = ObjDictionary.Values;
-                foreach (object item in ObjectList)
-                    AppObj.ObjCollection.Add(item as EbObject);
-                string appobj_s = EbSerializers.Json_Serialize4AppWraper(AppObj);
+                    string[] refs = _app.Value.Split(",");
+                    foreach (string _refid in refs)
+                        GetRelated(_refid, ObjDictionary, request.SolnId);
+
+                    ICollection ObjectList = ObjDictionary.Values;
+                    foreach (object item in ObjectList)
+                        Appwrp.ObjCollection.Add(item as EbObject);
+                    package.Apps.Add(Appwrp);
+                }
+                Log.Info("Calling FillExportData");
+                FillExportData(package.DataSet);
+
+                string packageJson = EbSerializers.Json_Serialize4AppWraper(package);
+                Log.Info("Serialized packageJson. Saving to appstore");
                 SaveToAppStoreResponse p = appstoreService.Post(new SaveToAppStoreRequest
                 {
                     Store = new AppStore
                     {
-                        Name = AppObj.Name,
+                        Name = request.PackageName,
                         Cost = 10.00m,
                         Currency = "USD",
-                        Json = appobj_s,
+                        Json = packageJson,
                         Status = 1,
                         AppType = 1,
-                        Description = AppObj.Description,
-                        Icon = AppObj.Icon
+                        Description = request.PackageDescription,
+                        Icon = request.PackageIcon
                     },
                     SolnId = request.SolnId,
                     UserId = request.UserId,
@@ -133,118 +145,125 @@ namespace ExpressBase.ServiceStack.MQServices
                 var objservice = base.ResolveService<EbObjectService>();
                 objservice.EbConnectionFactory = _ebConnectionFactory;
 
-                AppWrapper AppObj = appstoreService.Get(new GetOneFromAppStoreRequest
+                GetOneFromAppstoreResponse response = appstoreService.Get(new GetOneFromAppStoreRequest
                 {
                     Id = request.Id,
                     SolnId = request.SelectedSolutionId,
                     UserAuthId = request.UserAuthId,
                     UserId = request.UserId,
-                    WhichConsole = request.WhichConsole,
-                }).Wrapper;
-                if (AppObj != null)
+                    WhichConsole = request.WhichConsole
+                });
+                ExportPackage Package = response.Package;
+                if (Package != null && Package.Apps != null && Package.DataSet != null)
                 {
-                    List<EbObject> ObjectCollection = AppObj.ObjCollection;
-                    if (ObjectCollection.Count > 0)
+                    foreach (AppWrapper AppObj in Package.Apps)
                     {
-                        int c = 1;
-                        string ApplicationName = AppObj.IsPublic ? AppObj.Title : AppObj.Name;
-                        string _appname = ApplicationName;
-                        UniqueApplicationNameCheckResponse uniq_appnameresp;
-                        do
+                        List<EbObject> ObjectCollection = AppObj.ObjCollection;
+                        if (ObjectCollection.Count > 0)
                         {
-                            uniq_appnameresp = devservice.Get(new UniqueApplicationNameCheckRequest { AppName = _appname });
-                            if (uniq_appnameresp.IsUnique)
-                                ApplicationName = _appname;
-                            else
-                                _appname = ApplicationName + "(" + c++ + ")";
-                        }
-                        while (!uniq_appnameresp.IsUnique);
-
-                        CreateApplicationResponse appres = devservice.Post(new CreateApplicationRequest
-                        {
-                            AppName = ApplicationName,
-                            AppType = AppObj.AppType,
-                            Description = AppObj.Description,
-                            AppIcon = AppObj.Icon
-                        });
-                        Console.WriteLine("Created application : " + ApplicationName);
-                        bool _isVersionedSolution = IsVersioned(request.SelectedSolutionId, request.UserId);
-                        for (int i = ObjectCollection.Count - 1; i >= 0; i--)
-                        {
-                            UniqueObjectNameCheckResponse uniqnameresp;
-                            EbObject obj = ObjectCollection[i];
-                            int o = 1;
-                            string dispname = obj.DisplayName;
+                            int c = 1;
+                            string ApplicationName = response.IsPublic ? response.Title : AppObj.Name;
+                            string _appname = ApplicationName;
+                            UniqueApplicationNameCheckResponse uniq_appnameresp;
                             do
                             {
-                                uniqnameresp = objservice.Get(new UniqueObjectNameCheckRequest { ObjName = dispname });
-                                if (uniqnameresp.IsUnique)
-                                    obj.DisplayName = dispname;
+                                uniq_appnameresp = devservice.Get(new UniqueApplicationNameCheckRequest { AppName = _appname });
+                                if (uniq_appnameresp.IsUnique)
+                                    ApplicationName = _appname;
                                 else
-                                    dispname = obj.DisplayName + "(" + o++ + ")";
+                                    _appname = ApplicationName + "(" + c++ + ")";
                             }
-                            while (!uniqnameresp.IsUnique);
-                            ObjectLifeCycleStatus _status;
-                            if (request.IsDemoApp || !_isVersionedSolution)
-                                _status = ObjectLifeCycleStatus.Live;
-                            else
-                                _status = ObjectLifeCycleStatus.Dev;
+                            while (!uniq_appnameresp.IsUnique);
 
-                            EbObject_Create_New_ObjectRequest ds = new EbObject_Create_New_ObjectRequest
+                            CreateApplicationResponse appres = devservice.Post(new CreateApplicationRequest
                             {
-                                Name = obj.Name,
-                                DisplayName = obj.DisplayName,
-                                Description = obj.Description,
-                                Json = EbSerializers.Json_Serialize(obj),
-                                Status = _status,
-                                Relations = "_rel_obj",
-                                IsSave = false,
-                                Tags = "_tags",
-                                Apps = appres.Id.ToString(),
-                                SourceSolutionId = (obj.RefId.Split("-"))[0],
-                                SourceObjId = (obj.RefId.Split("-"))[3],
-                                SourceVerID = (obj.RefId.Split("-"))[4],
-                                SolnId = request.SelectedSolutionId,
-                                UserId = request.UserId,
-                                UserAuthId = request.UserAuthId,
-                                WhichConsole = request.WhichConsole,
-                                IsImport = true
-                            };
-                            EbObject_Create_New_ObjectResponse res = objservice.Post(ds);
-                            RefidMap[obj.RefId] = res.RefId;
+                                AppName = ApplicationName,
+                                AppType = AppObj.AppType,
+                                Description = AppObj.Description,
+                                AppIcon = AppObj.Icon
+                            });
+                            Console.WriteLine("Created application : " + ApplicationName);
+                            bool _isVersionedSolution = IsVersioned(request.SelectedSolutionId, request.UserId);
+                            for (int i = ObjectCollection.Count - 1; i >= 0; i--)
+                            {
+                                UniqueObjectNameCheckResponse uniqnameresp;
+                                EbObject obj = ObjectCollection[i];
+                                int o = 1;
+                                string dispname = obj.DisplayName;
+                                do
+                                {
+                                    uniqnameresp = objservice.Get(new UniqueObjectNameCheckRequest { ObjName = dispname });
+                                    if (uniqnameresp.IsUnique)
+                                        obj.DisplayName = dispname;
+                                    else
+                                        dispname = obj.DisplayName + "(" + o++ + ")";
+                                }
+                                while (!uniqnameresp.IsUnique);
+                                ObjectLifeCycleStatus _status;
+                                if (request.IsDemoApp || !_isVersionedSolution)
+                                    _status = ObjectLifeCycleStatus.Live;
+                                else
+                                    _status = ObjectLifeCycleStatus.Dev;
 
-                            // obj.ReplaceRefid(RefidMap);
+                                EbObject_Create_New_ObjectRequest ds = new EbObject_Create_New_ObjectRequest
+                                {
+                                    Name = obj.Name,
+                                    DisplayName = obj.DisplayName,
+                                    Description = obj.Description,
+                                    Json = EbSerializers.Json_Serialize(obj),
+                                    Status = _status,
+                                    Relations = "_rel_obj",
+                                    IsSave = false,
+                                    Tags = "_tags",
+                                    Apps = appres.Id.ToString(),
+                                    SourceSolutionId = (obj.RefId.Split("-"))[0],
+                                    SourceObjId = (obj.RefId.Split("-"))[3],
+                                    SourceVerID = (obj.RefId.Split("-"))[4],
+                                    SolnId = request.SelectedSolutionId,
+                                    UserId = request.UserId,
+                                    UserAuthId = request.UserAuthId,
+                                    WhichConsole = request.WhichConsole,
+                                    IsImport = true
+                                };
+                                EbObject_Create_New_ObjectResponse res = objservice.Post(ds);
+                                RefidMap[obj.RefId] = res.RefId;
+
+                                // obj.ReplaceRefid(RefidMap);
+                            }
+                            for (int i = ObjectCollection.Count - 1; i >= 0; i--)
+                            {
+                                EbObject obj = ObjectCollection[i];
+                                string _mapRefid = obj.RefId;
+                                obj.RefId = RefidMap[obj.RefId];
+                                obj.ReplaceRefid(RefidMap);
+                                EbObject_SaveRequest ss = new EbObject_SaveRequest
+                                {
+                                    RefId = RefidMap[_mapRefid],
+                                    Name = obj.Name,
+                                    DisplayName = obj.DisplayName,
+                                    Description = obj.Description,
+                                    Json = EbSerializers.Json_Serialize(obj),
+                                    Apps = appres.Id.ToString(),
+                                    SolnId = request.SelectedSolutionId,
+                                    UserId = request.UserId,
+                                    UserAuthId = request.UserAuthId,
+                                    WhichConsole = request.WhichConsole,
+                                    Relations = "_rel_obj",
+                                    Tags = "_tags",
+                                    IsImport = true
+                                };
+                                EbObject_SaveResponse saveRes = objservice.Post(ss);
+                            }
+                            Console.WriteLine("App & Object Creation Success.");
                         }
-                        for (int i = ObjectCollection.Count - 1; i >= 0; i--)
+                        else
                         {
-                            EbObject obj = ObjectCollection[i];
-                            string _mapRefid = obj.RefId;
-                            obj.RefId = RefidMap[obj.RefId];
-                            obj.ReplaceRefid(RefidMap);
-                            EbObject_SaveRequest ss = new EbObject_SaveRequest
-                            {
-                                RefId = RefidMap[_mapRefid],
-                                Name = obj.Name,
-                                DisplayName = obj.DisplayName,
-                                Description = obj.Description,
-                                Json = EbSerializers.Json_Serialize(obj),
-                                Apps = appres.Id.ToString(),
-                                SolnId = request.SelectedSolutionId,
-                                UserId = request.UserId,
-                                UserAuthId = request.UserAuthId,
-                                WhichConsole = request.WhichConsole,
-                                Relations = "_rel_obj",
-                                Tags = "_tags",
-                                IsImport = true
-                            };
-                            EbObject_SaveResponse saveRes = objservice.Post(ss);
+                            Console.WriteLine("Import - ObjectCollection is null. appid: " + request.Id);
                         }
-                        Console.WriteLine("ImportApplication success");
                     }
-                    else
-                    {
-                        Console.WriteLine("Import - ObjectCollection is null. appid: " + request.Id);
-                    }
+                    ExportTables(Package.DataSet);
+
+                    Console.WriteLine("ImportApplication success.");
                 }
                 else
                 {
@@ -257,6 +276,7 @@ namespace ExpressBase.ServiceStack.MQServices
             }
             return null;
         }
+
         public void GetRelated(string _refid, OrderedDictionary ObjDictionary, string solid)
         {
             EbObject obj = null;
@@ -278,6 +298,7 @@ namespace ExpressBase.ServiceStack.MQServices
                         GetRelated(_ref, ObjDictionary, solid);
             }
         }
+
         public EbObject GetObjfromDB(string _refid, string solid)
         {
             EbConnectionFactory ebConnectionFactory = new EbConnectionFactory(solid, this.Redis);
@@ -289,9 +310,10 @@ namespace ExpressBase.ServiceStack.MQServices
             {
                 obj = EbSerializers.Json_Deserialize(res.Data[0].Json);
                 obj.RefId = _refid;
-            }  
+            }
             return obj;
         }
+
         public bool IsVersioned(string selectedSolnId, int uid)
         {
             Eb_Solution soln = this.Redis.Get<Eb_Solution>(String.Format("solution_{0}", selectedSolnId));
@@ -301,6 +323,80 @@ namespace ExpressBase.ServiceStack.MQServices
                 soln = this.Redis.Get<Eb_Solution>(String.Format("solution_{0}", selectedSolnId));
             }
             return soln.IsVersioningEnabled;
+        }
+
+        public void FillExportData(EbDataSet Tables)
+        {
+            try
+            {
+                string query = @"SELECT id,name FROM eb_user_types  WHERE eb_del ='F' ORDER BY id;
+                            SELECT id, role_name, applicationid, description, is_anonymous FROM eb_roles WHERE eb_del ='F' ORDER BY id;
+                            SELECT id, role1_id, role2_id FROM eb_role2role WHERE eb_del ='F' ORDER BY id;
+                            SELECT id, type FROM eb_location_types WHERE eb_del ='F' ORDER BY id;
+                            SELECT id, name, description FROM eb_usergroup WHERE eb_del ='F' ORDER BY id;";
+                Tables = this.EbConnectionFactory.DataDB.DoQueries(query);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Error in ExportInternalservice.FillExportData : " + e.Message + e.StackTrace);
+            }
+        }
+        public void ExportTables(EbDataSet dataSet)
+        {
+            try
+            {
+                string query = string.Empty;
+                EbDataTable T0 = dataSet.Tables[0];
+                if (T0.Rows.Count > 0)
+                {
+                    foreach (EbDataRow dr in T0.Rows)
+                    {
+                        query += string.Format(@"INSERT INTO eb_user_types(id, name, eb_created_by, eb_created_at, eb_del) VALUES
+                                ({0}, '{1}', 1, NOW(), 'F')", dr[0], dr[1]);
+                    }
+                }
+                EbDataTable T1 = dataSet.Tables[1];
+                if (T1.Rows.Count > 0)
+                {
+                    foreach (EbDataRow dr in T1.Rows)
+                    {
+                        query += string.Format(@"INSERT INTO eb_roles(id, role_name, applicationid, description, is_anonymous, eb_del) VALUES
+                                ({0}, '{1}', {2}, '{3}', '{4}', 'F')", dr[0], dr[1], dr[2], dr[3], dr[4]);
+                    }
+                }
+                EbDataTable T2 = dataSet.Tables[2];
+                if (T2.Rows.Count > 0)
+                {
+                    foreach (EbDataRow dr in T2.Rows)
+                    {
+                        query += string.Format(@"INSERT INTO eb_user_types(id, role1_id, role2_id, createdby, createdat, eb_del) VALUES
+                                ({0}, {1}, {2}, 1, NOW(), 'F')", dr[0], dr[1], dr[2]);
+                    }
+                }
+                EbDataTable T3 = dataSet.Tables[3];
+                if (T3.Rows.Count > 0)
+                {
+                    foreach (EbDataRow dr in T3.Rows)
+                    {
+                        query += string.Format(@"INSERT INTO eb_location_types(id, type, eb_created_by, eb_created_at, eb_del) VALUES
+                                ({0}, '{1}', 1, NOW(), 'F')", dr[0], dr[1]);
+                    }
+                }
+                EbDataTable T4 = dataSet.Tables[4];
+                if (T4.Rows.Count > 0)
+                {
+                    foreach (EbDataRow dr in T4.Rows)
+                    {
+                        query += string.Format(@"INSERT INTO eb_usergroup(id, name, description, eb_del) VALUES
+                                ({0}, '{1}', '{2}', 'F')", dr[0], dr[1], dr[2]);
+                    }
+                }
+                this.EbConnectionFactory.DataDB.DoQueries(query);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message + e.StackTrace);
+            }
         }
     }
 }
