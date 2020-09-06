@@ -394,8 +394,6 @@ namespace ExpressBase.ServiceStack.Services
             MobileVisDataResponse resp = new MobileVisDataResponse();
             try
             {
-                request.InitCollections();
-
                 EbDataReader _ds = this.Redis.Get<EbDataReader>(request.DataSourceRefId);
                 if (_ds == null)
                 {
