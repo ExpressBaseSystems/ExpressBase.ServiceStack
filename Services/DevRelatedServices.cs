@@ -217,6 +217,7 @@ namespace ExpressBase.ServiceStack
                 parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("apptype", EbDbTypes.Int32, request.AppType));
                 parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("description", EbDbTypes.String, request.Description));
                 parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("appicon", EbDbTypes.String, request.AppIcon));
+                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("appSettings", EbDbTypes.String, request.AppSettings));
 
                 if (request.AppId <= 0)//new mode
                 {
@@ -232,16 +233,16 @@ namespace ExpressBase.ServiceStack
                         resp.Id = request.AppId;
                     }
                 }
-				if (resp.Id > 0)
-				{
-					if (request.AppType==3)
-					{
-						EbBotSettings botstng = new EbBotSettings() { Name = request.AppName, Description = request.Description,AppIcon= request.AppIcon };
-						string settings = JsonConvert.SerializeObject(botstng);
-						SaveAppSettingsResponse appresponse = this.Any(new SaveAppSettingsRequest { AppId = resp.Id, AppType = request.AppType, Settings = settings });
+                if (resp.Id > 0)
+                {
+                    if (request.AppType == 3)
+                    {
+                        EbBotSettings botstng = new EbBotSettings() { Name = request.AppName, Description = request.Description, AppIcon = request.AppIcon };
+                        string settings = JsonConvert.SerializeObject(botstng);
+                        SaveAppSettingsResponse appresponse = this.Any(new SaveAppSettingsRequest { AppId = resp.Id, AppType = request.AppType, Settings = settings });
 
-					}
-				}
+                    }
+                }
             }
             catch (Exception e)
             {
@@ -295,8 +296,14 @@ namespace ExpressBase.ServiceStack
         {
             DbParameter[] parameters = { this.EbConnectionFactory.ObjectsDB.GetNewParameter("name", EbDbTypes.String, request.AppName) };
             EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery(EbConnectionFactory.ObjectsDB.EB_UNIQUE_APPLICATION_NAME_CHECK, parameters);
-            bool _isunique = (dt.Rows.Count > 0) ? false : true;
-            return new UniqueApplicationNameCheckResponse { IsUnique = _isunique };
+            bool _isunique = true;
+            int appid = 0;
+            if (dt.Rows.Count > 0)
+            {
+                _isunique = false;
+                appid = Convert.ToInt32(dt.Rows[0][0]);
+            }
+            return new UniqueApplicationNameCheckResponse { IsUnique = _isunique, AppId = appid };
         }
 
         public string Get(GetDefaultMapApiKeyFromConnectionRequest request)

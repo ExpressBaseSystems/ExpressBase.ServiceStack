@@ -162,26 +162,28 @@ namespace ExpressBase.ServiceStack.MQServices
                         if (ObjectCollection.Count > 0)
                         {
                             int c = 1;
+                            int appId = 0;
                             string ApplicationName = response.IsPublic ? response.Title : AppObj.Name;
-                            string _appname = ApplicationName;
-                            UniqueApplicationNameCheckResponse uniq_appnameresp;
-                            do
-                            {
-                                uniq_appnameresp = devservice.Get(new UniqueApplicationNameCheckRequest { AppName = _appname });
-                                if (uniq_appnameresp.IsUnique)
-                                    ApplicationName = _appname;
-                                else
-                                    _appname = ApplicationName + "(" + c++ + ")";
-                            }
-                            while (!uniq_appnameresp.IsUnique);
 
-                            CreateApplicationResponse appres = devservice.Post(new CreateApplicationRequest
+                            UniqueApplicationNameCheckResponse uniq_appnameresp;
+
+                            uniq_appnameresp = devservice.Get(new UniqueApplicationNameCheckRequest { AppName = ApplicationName });
+                            if (uniq_appnameresp.IsUnique)
                             {
-                                AppName = ApplicationName,
-                                AppType = AppObj.AppType,
-                                Description = AppObj.Description,
-                                AppIcon = AppObj.Icon
-                            });
+                                CreateApplicationResponse appres = devservice.Post(new CreateApplicationRequest
+                                {
+                                    AppName = ApplicationName,
+                                    AppType = AppObj.AppType,
+                                    Description = AppObj.Description,
+                                    AppIcon = AppObj.Icon,
+                                    AppSettings = AppObj.AppSettings,
+                                });
+                                appId = appres.Id;
+                            }
+                            else
+                            {
+                                appId = uniq_appnameresp.AppId;
+                            }
                             Console.WriteLine("Created application : " + ApplicationName);
                             bool _isVersionedSolution = IsVersioned(request.SelectedSolutionId, request.UserId);
                             for (int i = ObjectCollection.Count - 1; i >= 0; i--)
@@ -192,7 +194,10 @@ namespace ExpressBase.ServiceStack.MQServices
                                 string dispname = obj.DisplayName;
                                 do
                                 {
-                                    uniqnameresp = objservice.Get(new UniqueObjectNameCheckRequest { ObjName = dispname });
+                                    uniqnameresp = objservice.Get(new UniqueObjectNameCheckRequest
+                                    {
+                                        ObjName = dispname
+                                    });
                                     if (uniqnameresp.IsUnique)
                                         obj.DisplayName = dispname;
                                     else
@@ -215,7 +220,7 @@ namespace ExpressBase.ServiceStack.MQServices
                                     Relations = "_rel_obj",
                                     IsSave = false,
                                     Tags = "_tags",
-                                    Apps = appres.Id.ToString(),
+                                    Apps = appId.ToString(),
                                     SourceSolutionId = (obj.RefId.Split("-"))[0],
                                     SourceObjId = (obj.RefId.Split("-"))[3],
                                     SourceVerID = (obj.RefId.Split("-"))[4],
@@ -243,7 +248,7 @@ namespace ExpressBase.ServiceStack.MQServices
                                     DisplayName = obj.DisplayName,
                                     Description = obj.Description,
                                     Json = EbSerializers.Json_Serialize(obj),
-                                    Apps = appres.Id.ToString(),
+                                    Apps = appId.ToString(),
                                     SolnId = request.SelectedSolutionId,
                                     UserId = request.UserId,
                                     UserAuthId = request.UserAuthId,
