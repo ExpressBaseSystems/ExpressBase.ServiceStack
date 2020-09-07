@@ -217,7 +217,7 @@ namespace ExpressBase.ServiceStack
                 parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("apptype", EbDbTypes.Int32, request.AppType));
                 parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("description", EbDbTypes.String, request.Description));
                 parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("appicon", EbDbTypes.String, request.AppIcon));
-                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("appSettings", EbDbTypes.String, request.AppSettings));
+                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("appSettings", EbDbTypes.String, (request.AppSettings == null) ? string.Empty : request.AppSettings));
 
                 if (request.AppId <= 0)//new mode
                 {
