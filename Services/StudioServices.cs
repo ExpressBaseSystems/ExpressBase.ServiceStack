@@ -417,17 +417,17 @@ namespace ExpressBase.ServiceStack
             }
             foreach (EbDataRow dr in tbl.Rows)
             {
-                string _nameKey = dr[1].ToString();
-                if (!f_dict.ContainsKey(_nameKey))
+                string _Key = dr[0].ToString();
+                if (!f_dict.ContainsKey(_Key))
                 {
                     wrap_list = new List<EbObjectWrapper>();
-                    f_dict.Add(_nameKey, wrap_list);
+                    f_dict.Add(_Key, wrap_list);
                 }
 
                 wrap_list.Add(new EbObjectWrapper
                 {
                     Id = Convert.ToInt32(dr[0]),
-                    Name = dr[1].ToString(),
+                    DisplayName = dr[1].ToString(),
                     EbObjectType = ((EbObjectType)Convert.ToInt32(dr[3])).IntCode,
                     Status = Enum.GetName(typeof(ObjectLifeCycleStatus), Convert.ToInt32(dr[3])),
                     VersionNumber = dr[7].ToString(),

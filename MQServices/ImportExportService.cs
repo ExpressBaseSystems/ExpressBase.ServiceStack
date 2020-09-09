@@ -75,7 +75,6 @@ namespace ExpressBase.ServiceStack.MQServices
         {
             Log.Info("ExportApplicationRequest inside Mq");
             ExportPackage package = new ExportPackage();
-            OrderedDictionary ObjDictionary = new OrderedDictionary();
             try
             {
                 EbConnectionFactory ebConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
@@ -86,6 +85,7 @@ namespace ExpressBase.ServiceStack.MQServices
 
                 foreach (KeyValuePair<int, string> _app in request.AppCollection)
                 {
+                    OrderedDictionary ObjDictionary = new OrderedDictionary();
                     AppWrapper Appwrp = devservice.Get(new GetApplicationRequest { Id = _app.Key }).AppInfo;
                     Appwrp.ObjCollection = new List<EbObject>();
 
@@ -99,7 +99,7 @@ namespace ExpressBase.ServiceStack.MQServices
                     package.Apps.Add(Appwrp);
                 }
                 Log.Info("Calling FillExportData");
-                FillExportData(package.DataSet);
+                package.DataSet = ExportTablesToPkg(request.SolnId);
 
                 string packageJson = EbSerializers.Json_Serialize4AppWraper(package);
                 Log.Info("Serialized packageJson. Saving to appstore");
@@ -266,7 +266,7 @@ namespace ExpressBase.ServiceStack.MQServices
                             Console.WriteLine("Import - ObjectCollection is null. appid: " + request.Id);
                         }
                     }
-                    ExportTables(Package.DataSet);
+                    ImportTablesFromPkg(Package.DataSet, request.SelectedSolutionId);
 
                     Console.WriteLine("ImportApplication success.");
                 }
@@ -330,8 +330,9 @@ namespace ExpressBase.ServiceStack.MQServices
             return soln.IsVersioningEnabled;
         }
 
-        public void FillExportData(EbDataSet Tables)
+        public EbDataSet ExportTablesToPkg(string solnId)
         {
+            EbDataSet Tables = null;
             try
             {
                 string query = @"SELECT id,name FROM eb_user_types  WHERE eb_del ='F' ORDER BY id;
@@ -339,14 +340,16 @@ namespace ExpressBase.ServiceStack.MQServices
                             SELECT id, role1_id, role2_id FROM eb_role2role WHERE eb_del ='F' ORDER BY id;
                             SELECT id, type FROM eb_location_types WHERE eb_del ='F' ORDER BY id;
                             SELECT id, name, description FROM eb_usergroup WHERE eb_del ='F' ORDER BY id;";
+                this.EbConnectionFactory = new EbConnectionFactory(solnId, this.Redis);
                 Tables = this.EbConnectionFactory.DataDB.DoQueries(query);
             }
             catch (Exception e)
             {
                 Console.WriteLine("Error in ExportInternalservice.FillExportData : " + e.Message + e.StackTrace);
             }
+            return Tables;
         }
-        public void ExportTables(EbDataSet dataSet)
+        public void ImportTablesFromPkg(EbDataSet dataSet, string solnId)
         {
             try
             {
@@ -357,7 +360,7 @@ namespace ExpressBase.ServiceStack.MQServices
                     foreach (EbDataRow dr in T0.Rows)
                     {
                         query += string.Format(@"INSERT INTO eb_user_types(id, name, eb_created_by, eb_created_at, eb_del) VALUES
-                                ({0}, '{1}', 1, NOW(), 'F')", dr[0], dr[1]);
+                                ({0}, '{1}', 1, NOW(), 'F');", dr[0], dr[1]);
                     }
                 }
                 EbDataTable T1 = dataSet.Tables[1];
@@ -366,7 +369,7 @@ namespace ExpressBase.ServiceStack.MQServices
                     foreach (EbDataRow dr in T1.Rows)
                     {
                         query += string.Format(@"INSERT INTO eb_roles(id, role_name, applicationid, description, is_anonymous, eb_del) VALUES
-                                ({0}, '{1}', {2}, '{3}', '{4}', 'F')", dr[0], dr[1], dr[2], dr[3], dr[4]);
+                                ({0}, '{1}', {2}, '{3}', '{4}', 'F');", dr[0], dr[1], dr[2], dr[3], dr[4]);
                     }
                 }
                 EbDataTable T2 = dataSet.Tables[2];
@@ -374,8 +377,8 @@ namespace ExpressBase.ServiceStack.MQServices
                 {
                     foreach (EbDataRow dr in T2.Rows)
                     {
-                        query += string.Format(@"INSERT INTO eb_user_types(id, role1_id, role2_id, createdby, createdat, eb_del) VALUES
-                                ({0}, {1}, {2}, 1, NOW(), 'F')", dr[0], dr[1], dr[2]);
+                        query += string.Format(@"INSERT INTO eb_role2role(id, role1_id, role2_id, createdby, createdat, eb_del) VALUES
+                                ({0}, {1}, {2}, 1, NOW(), 'F');", dr[0], dr[1], dr[2]);
                     }
                 }
                 EbDataTable T3 = dataSet.Tables[3];
@@ -384,7 +387,7 @@ namespace ExpressBase.ServiceStack.MQServices
                     foreach (EbDataRow dr in T3.Rows)
                     {
                         query += string.Format(@"INSERT INTO eb_location_types(id, type, eb_created_by, eb_created_at, eb_del) VALUES
-                                ({0}, '{1}', 1, NOW(), 'F')", dr[0], dr[1]);
+                                ({0}, '{1}', 1, NOW(), 'F');", dr[0], dr[1]);
                     }
                 }
                 EbDataTable T4 = dataSet.Tables[4];
@@ -393,9 +396,10 @@ namespace ExpressBase.ServiceStack.MQServices
                     foreach (EbDataRow dr in T4.Rows)
                     {
                         query += string.Format(@"INSERT INTO eb_usergroup(id, name, description, eb_del) VALUES
-                                ({0}, '{1}', '{2}', 'F')", dr[0], dr[1], dr[2]);
+                                ({0}, '{1}', '{2}', 'F');", dr[0], dr[1], dr[2]);
                     }
                 }
+                this.EbConnectionFactory = new EbConnectionFactory(solnId, this.Redis);
                 this.EbConnectionFactory.DataDB.DoQueries(query);
             }
             catch (Exception e)
