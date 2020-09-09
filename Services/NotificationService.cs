@@ -86,7 +86,7 @@ namespace ExpressBase.ServiceStack.Services
             NotifyByUserRoleResponse res = new NotifyByUserRoleResponse();
             Notifications n = new Notifications();
             List<NotificationInfo> Notification = new List<NotificationInfo>();
-            Dictionary<int,string> user_details = new Dictionary<int, string>();
+            Dictionary<int, string> user_details = new Dictionary<int, string>();
             try
             {
                 if (request.Link != null && request.Title != null)
@@ -127,7 +127,7 @@ namespace ExpressBase.ServiceStack.Services
                     throw new Exception("Notification Title or Link Empty");
                 }
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 throw e;
             }
@@ -142,7 +142,7 @@ namespace ExpressBase.ServiceStack.Services
             Dictionary<int, string> user_details = new Dictionary<int, string>();
             try
             {
-                if(request.Link != null && request.Title != null)
+                if (request.Link != null && request.Title != null)
                 {
                     string notification_id = GenerateNotificationId();
                     Notification.Add(new NotificationInfo
@@ -179,7 +179,7 @@ namespace ExpressBase.ServiceStack.Services
                     throw new Exception("Notification Title or Link Empty");
                 }
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 throw e;
             }
@@ -189,7 +189,7 @@ namespace ExpressBase.ServiceStack.Services
         public GetNotificationFromDbResponse Post(GetNotificationFromDbRequest request)
         {
             GetNotificationFromDbResponse res = new GetNotificationFromDbResponse();
-            List <NotificationInfo> n = new List<NotificationInfo>();
+            List<NotificationInfo> n = new List<NotificationInfo>();
             this.EbConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
             using (DbConnection con = this.EbConnectionFactory.DataDB.GetNewConnection())
             {
@@ -207,7 +207,7 @@ namespace ExpressBase.ServiceStack.Services
 
             EbDataTable dt = EbConnectionFactory.DataDB.DoQuery(str1);
 
-            for(int i=0; i<dt.Rows.Count;i++)
+            for (int i = 0; i < dt.Rows.Count; i++)
             {
                 string notif = dt.Rows[i]["notification"].ToString();
                 Notifications list = JsonConvert.DeserializeObject<Notifications>(notif);
@@ -239,12 +239,12 @@ namespace ExpressBase.ServiceStack.Services
             {
                 builder.Append(value);
             }
-            builder.Append( DateTime.Now.ToString("yyyyMMddHHmmssffff"));
+            builder.Append(DateTime.Now.ToString("yyyyMMddHHmmssffff"));
             notify_id = builder.ToString();
             return notify_id;
         }
 
-        public static string GenerateStr( Random random)
+        public static string GenerateStr(Random random)
         {
             string characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
             StringBuilder result = new StringBuilder(2);
@@ -271,9 +271,13 @@ namespace ExpressBase.ServiceStack.Services
                                                 AND message_seen ='F'
                                                 ORDER BY created_at DESC;", request.UserId);
 
-                var _roles = string.Join(",", request.user.RoleIds.ToArray());
+                string _roles = string.Empty;
+                if (request.user.RoleIds != null)
+                {
+                    _roles = string.Join(",", request.user.RoleIds.ToArray());
+                }
 
-                 str += string.Format(@"SELECT *
+                str += string.Format(@"SELECT *
                     FROM eb_my_actions
                     WHERE ('{0}' = any(string_to_array(user_ids, ',')) OR
                      (string_to_array(role_ids,',')) && (string_to_array('{1}',',')))
@@ -372,7 +376,7 @@ namespace ExpressBase.ServiceStack.Services
                         CreatedDate = _date.ConvertFromUtc(request.user.Preference.TimeZone).ToString(request.user.Preference.GetShortDatePattern() + " " + request.user.Preference.GetShortTimePattern()),
                         DateInString = _time,
                         ActionType = dt.Rows[i]["my_action_type"].ToString(),
-                        MyActionId = Convert.ToInt32( dt.Rows[i]["id"])
+                        MyActionId = Convert.ToInt32(dt.Rows[i]["id"])
                     });
                 }
                 dt = ds.Tables[2];
@@ -399,13 +403,13 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
-                Console.WriteLine("Pending Action -----"+e.Message);
+                Console.WriteLine("Pending Action -----" + e.Message);
                 Console.WriteLine("Pending Action -----" + e.StackTrace);
             }
             return res;
         }
 
-        public  string TimeAgo(DateTime dateTime)
+        public string TimeAgo(DateTime dateTime)
         {
             string result = string.Empty;
             var timeSpan = DateTime.UtcNow.Subtract(dateTime);
