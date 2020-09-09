@@ -1872,7 +1872,7 @@ namespace ExpressBase.ServiceStack
                     object _unformattedData = row[col.Data];
                     object _formattedData = _unformattedData;
 
-                    if (col.RenderType == EbDbTypes.Date || col.RenderType == EbDbTypes.DateTime)
+                    if (col.RenderType == EbDbTypes.Date || col.RenderType == EbDbTypes.DateTime || col.RenderType == EbDbTypes.Time)
                     {
                         DateTimeformat(_unformattedData, ref _formattedData, ref row, col, cults, _user);
                     }
@@ -2637,6 +2637,21 @@ namespace ExpressBase.ServiceStack
                         _formattedData = (((DateTime)_unformattedData).Date != DateTime.MinValue) ? Convert.ToDateTime(_unformattedData).ToString(cults.DateTimeFormat.ShortDatePattern + " " + cults.DateTimeFormat.ShortTimePattern) : string.Empty;
                     if (col.Data < row.Count)
                         row[col.Data] = Convert.ToDateTime(_unformattedData).ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
+                }
+                else if ((col as DVDateTimeColumn).Format == DateFormat.Time)
+                {
+                    DateTime dt ;
+                    if (col.Type == EbDbTypes.Time)
+                        dt = DateTime.MinValue + (TimeSpan)_unformattedData;
+                    else
+                        dt = Convert.ToDateTime(_unformattedData);
+                    
+                    if ((col as DVDateTimeColumn).ConvretToUsersTimeZone)
+                        _formattedData = dt.ConvertFromUtc(_user.Preference.TimeZone).ToString(cults.DateTimeFormat.ShortTimePattern);
+                    else
+                        _formattedData = dt.ToString(cults.DateTimeFormat.ShortTimePattern);
+                    if (col.Data < row.Count)
+                        row[col.Data] = dt.ToString("HH:mm:ss", CultureInfo.InvariantCulture);
                 }
             }
             catch (Exception e)
