@@ -1352,8 +1352,9 @@ namespace ExpressBase.ServiceStack
                 {
                     obj = EbSerializers.Json_Deserialize(res.Data[0].Json);
                 }
-                int o = 1;
+                int o = 0;
                 string dispname = obj.DisplayName + "_copy";
+                string name = obj.Name + "_copy";
                 do
                 {
                     uniqnameresp = this.Get(new UniqueObjectNameCheckRequest
@@ -1361,15 +1362,18 @@ namespace ExpressBase.ServiceStack
                         ObjName = dispname
                     });
                     if (uniqnameresp.IsUnique)
+                    {
                         obj.DisplayName = dispname;
+                        obj.Name = name + "(" + o + ")";
+                    }
                     else
-                        dispname = obj.DisplayName + "_copy(" + o++ + ")";
+                        dispname = obj.DisplayName + "_copy(" + ++o + ")";
                 }
                 while (!uniqnameresp.IsUnique);
 
                 EbObject_Create_New_ObjectRequest ds = new EbObject_Create_New_ObjectRequest
                 {
-                    Name = obj.Name + "_copy",
+                    Name = obj.Name,
                     DisplayName = obj.DisplayName,
                     Description = obj.Description,
                     Json = EbSerializers.Json_Serialize(obj),
