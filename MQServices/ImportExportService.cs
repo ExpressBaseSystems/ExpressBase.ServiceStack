@@ -83,14 +83,14 @@ namespace ExpressBase.ServiceStack.MQServices
                 var appstoreService = base.ResolveService<AppStoreService>();
                 appstoreService.EbConnectionFactory = ebConnectionFactory;
 
-                foreach (KeyValuePair<int, string> _app in request.AppCollection)
+                foreach (KeyValuePair<int, List<string>> _app in request.AppCollection)
                 {
                     OrderedDictionary ObjDictionary = new OrderedDictionary();
                     AppWrapper Appwrp = devservice.Get(new GetApplicationRequest { Id = _app.Key }).AppInfo;
                     Appwrp.ObjCollection = new List<EbObject>();
 
-                    string[] refs = _app.Value.Split(",");
-                    foreach (string _refid in refs)
+                     
+                    foreach (string _refid in _app.Value)
                         GetRelated(_refid, ObjDictionary, request.SolnId);
 
                     ICollection ObjectList = ObjDictionary.Values;
