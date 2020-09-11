@@ -1331,13 +1331,79 @@ namespace ExpressBase.ServiceStack
             return new EbObjectChangeStatusResponse { Response = res, ResponseStatus = new ResponseStatus { Message = message } };
         }
 
-        public DeleteObjectResponse Post(DeleteEbObjectRequest request)
+        public DeleteEbObjectResponse Post(DeleteEbObjectRequest request)
         {
             string sql = EbConnectionFactory.ObjectsDB.EB_DELETE_OBJECT;
 
             DbParameter[] p = { EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, request.ObjId) };
             int _rows = EbConnectionFactory.ObjectsDB.DoNonQuery(sql, p);
-            return new DeleteObjectResponse { RowsDeleted = _rows };
+            return new DeleteEbObjectResponse { RowsDeleted = _rows };
+        }
+
+        public CloneEbObjectResponse Post(CloneEbObjectRequest request)
+        {
+            CloneEbObjectResponse cloneResp = new CloneEbObjectResponse();
+            try
+            {
+                EbObject obj = null;
+                UniqueObjectNameCheckResponse uniqnameresp;
+                EbObjectParticularVersionResponse res = (EbObjectParticularVersionResponse)Get(new EbObjectParticularVersionRequest { RefId = request.RefId });
+                if (res.Data.Count > 0)
+                {
+                    obj = EbSerializers.Json_Deserialize(res.Data[0].Json);
+                }
+                int o = 0;
+                string dispname = obj.DisplayName + "_copy";
+                string name = obj.Name + "_copy";
+                do
+                {
+                    uniqnameresp = this.Get(new UniqueObjectNameCheckRequest
+                    {
+                        ObjName = dispname
+                    });
+                    if (uniqnameresp.IsUnique)
+                    {
+                        obj.DisplayName = dispname;
+                        obj.Name = name + "(" + o + ")";
+                    }
+                    else
+                        dispname = obj.DisplayName + "_copy(" + ++o + ")";
+                }
+                while (!uniqnameresp.IsUnique);
+
+                EbObject_Create_New_ObjectRequest ds = new EbObject_Create_New_ObjectRequest
+                {
+                    Name = obj.Name,
+                    DisplayName = obj.DisplayName,
+                    Description = obj.Description,
+                    Json = EbSerializers.Json_Serialize(obj),
+                    Apps = request.Apps,
+                    Status = ObjectLifeCycleStatus.Dev,
+                    Relations = "_rel_obj",
+                    IsSave = false,
+                    Tags = "_tags",
+                    SourceSolutionId = request.SolnId,
+                    SourceObjId = (obj.RefId.Split("-"))[3],
+                    SourceVerID = (obj.RefId.Split("-"))[4],
+                    SolnId = request.SolnId,
+                    UserId = request.UserId,
+                    UserAuthId = request.UserAuthId,
+                    WhichConsole = request.WhichConsole,
+                    IsImport = true
+                };
+                EbObject_Create_New_ObjectResponse Create_resp = this.Post(ds);
+                cloneResp.ClonedRefid = Create_resp.RefId;
+                cloneResp.Message = Create_resp.Message;
+                cloneResp.Status = true;
+            }
+            catch (Exception e)
+            {
+                cloneResp.Status = false;
+                cloneResp.Message = e.Message;
+                Console.WriteLine(e.Message + e.StackTrace);
+            }
+
+            return cloneResp;
         }
 
         public ChangeObjectAccessResponse Post(ChangeObjectAccessRequest request)
