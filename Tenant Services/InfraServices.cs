@@ -244,7 +244,10 @@ namespace ExpressBase.ServiceStack.Services
                 int rowaffcted = this.InfraConnectionFactory.DataDB.DoNonQuery(q, parameters);
                 if (rowaffcted > 0)
                 {
-                    this.Redis.RenameKey(string.Format(CoreConstants.SOLUTION_ID_MAP, request.OldESolutionId), string.Format(CoreConstants.SOLUTION_ID_MAP, request.NewESolutionId));
+                    if (request.OldESolutionId == isid)
+                        this.Redis.Set<string>(string.Format(CoreConstants.SOLUTION_ID_MAP, request.NewESolutionId), isid); 
+                    else
+                        this.Redis.RenameKey(string.Format(CoreConstants.SOLUTION_ID_MAP, request.OldESolutionId), string.Format(CoreConstants.SOLUTION_ID_MAP, request.NewESolutionId));
                     resp.Status = true;
                     TenantUserServices _tenantUserService = base.ResolveService<TenantUserServices>();
                     _tenantUserService.Post(new UpdateSolutionObjectRequest
@@ -1939,7 +1942,10 @@ namespace ExpressBase.ServiceStack.Services
                         if (string.IsNullOrEmpty(esid) || string.IsNullOrEmpty(isid))
                             continue;
                         else
+                        { 
                             this.Redis.Set<string>(string.Format(CoreConstants.SOLUTION_ID_MAP, esid), isid);
+                            this.Redis.Set<string>(string.Format(CoreConstants.SOLUTION_ID_MAP, isid), isid);
+                        }
                     }
             }
             catch (Exception e)
