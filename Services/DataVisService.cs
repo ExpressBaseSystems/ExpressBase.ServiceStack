@@ -587,6 +587,7 @@ namespace ExpressBase.ServiceStack
                         Log.Info("Datviz Qurey Exception........." + e.StackTrace);
                         Log.Info("Datviz Qurey Exception........." + e.Message);
                         this._Responsestatus.Message = e.Message;
+                        return new DataSourceDataResponse { error = "Qurey Exception : " + e.Message};
                     }
                     Console.WriteLine("................................................dataviz datarequest end " + DateTime.Now);
                     var dtstop = DateTime.Now;
@@ -595,8 +596,7 @@ namespace ExpressBase.ServiceStack
                     {
                         TimeSpan T = _dataset.EndTime - _dataset.StartTime;
                         InsertExecutionLog(_dataset.RowNumbers, T, _dataset.StartTime, request.UserId, request.Params, request.RefId);
-                    }
-                    //-- 
+                    } 
                     Console.WriteLine(DateTime.Now);
                     var dtEnd = DateTime.Now;
                     var ts = (dtEnd - dtStart).TotalMilliseconds;
@@ -661,8 +661,8 @@ namespace ExpressBase.ServiceStack
                 Log.Info("Datviz service Exception........." + e.StackTrace);
                 Log.Info("Datviz service Exception........." + e.Message);
                 this._Responsestatus.Message = e.Message;
+                return new DataSourceDataResponse { error = e.Message };
             }
-            return null;
         }
 
         private EbDataSet GetDatafromUrl()
