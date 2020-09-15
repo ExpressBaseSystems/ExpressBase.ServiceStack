@@ -602,59 +602,67 @@ namespace ExpressBase.ServiceStack
                     var ts = (dtEnd - dtStart).TotalMilliseconds;
                     Console.WriteLine("final:::" + ts);
                 }
-                int _recordsTotal = 0, _recordsFiltered = 0;
-                if (_isPaged)
+                if (_dataset != null && _dataset.Tables.Count > 0)
                 {
-                    Int32.TryParse(_dataset.Tables[_dataset.Tables.Count - 1].Rows[0][0].ToString(), out _recordsTotal);
-                    Int32.TryParse(_dataset.Tables[_dataset.Tables.Count - 1].Rows[0][0].ToString(), out _recordsFiltered);
-                }
-                _recordsTotal = (_recordsTotal > 0) ? _recordsTotal : _dataset.Tables[_dataset.Tables.Count - 1].Rows.Count;
-                _recordsFiltered = (_recordsFiltered > 0) ? _recordsFiltered : _dataset.Tables[_dataset.Tables.Count - 1].Rows.Count;
-                //-- 
-
-                PrePrcessorReturn ReturnObj = null;
-                List<GroupingDetails> _levels = new List<GroupingDetails>();
-                if (_dataset.Tables.Count > 0 && _dV != null)
-                {
-                    try
+                    int _recordsTotal = 0, _recordsFiltered = 0;
+                    if (_isPaged)
                     {
-                        if (_dV is EbCalendarView)
-                            ReturnObj = PreProcessingCalendarView(ref _dataset, request.Params, ref _dV, request.UserInfo);
-                        else
-                            ReturnObj = PreProcessing(ref _dataset, request.Params, _dV, request.UserInfo, ref _levels, request.IsExcel);
+                        Int32.TryParse(_dataset.Tables[_dataset.Tables.Count - 1].Rows[0][0].ToString(), out _recordsTotal);
+                        Int32.TryParse(_dataset.Tables[_dataset.Tables.Count - 1].Rows[0][0].ToString(), out _recordsFiltered);
                     }
-                    catch (Exception e)
-                    {
-                        Log.Info("Call to PreProcessing ----" + e.StackTrace);
-                        Log.Info("Call to PreProcessing ----" + e.Message);
-                        this._Responsestatus.Message = e.Message;
-                    }
-                }
+                    _recordsTotal = (_recordsTotal > 0) ? _recordsTotal : _dataset.Tables[_dataset.Tables.Count - 1].Rows.Count;
+                    _recordsFiltered = (_recordsFiltered > 0) ? _recordsFiltered : _dataset.Tables[_dataset.Tables.Count - 1].Rows.Count;
+                    //-- 
 
-                List<string> _permission = new List<string>();
-                if (request.dvRefId != null)
-                    _permission = PermissionCheck(request.UserInfo, request.dvRefId);
-                dsresponse = new DataSourceDataResponse
+                    PrePrcessorReturn ReturnObj = null;
+                    List<GroupingDetails> _levels = new List<GroupingDetails>();
+                    if (_dataset.Tables.Count > 0 && _dV != null)
+                    {
+                        try
+                        {
+                            if (_dV is EbCalendarView)
+                                ReturnObj = PreProcessingCalendarView(ref _dataset, request.Params, ref _dV, request.UserInfo);
+                            else
+                                ReturnObj = PreProcessing(ref _dataset, request.Params, _dV, request.UserInfo, ref _levels, request.IsExcel);
+                        }
+                        catch (Exception e)
+                        {
+                            Log.Info("Call to PreProcessing ----" + e.StackTrace);
+                            Log.Info("Call to PreProcessing ----" + e.Message);
+                            this._Responsestatus.Message = e.Message;
+                        }
+                    }
+
+                    List<string> _permission = new List<string>();
+                    if (request.dvRefId != null)
+                        _permission = PermissionCheck(request.UserInfo, request.dvRefId);
+                    dsresponse = new DataSourceDataResponse
+                    {
+                        Draw = request.Draw,
+                        Data = (ReturnObj?.rows != null) ? ReturnObj.rows : _dataset.Tables[0].Rows,
+                        FormattedData = (ReturnObj?.FormattedTable != null) ? ReturnObj.FormattedTable.Rows : null,
+                        RecordsTotal = _recordsTotal,
+                        RecordsFiltered = _recordsFiltered,
+                        Ispaged = _isPaged,
+                        Levels = _levels,
+                        Permission = _permission,
+                        Summary = ReturnObj?.Summary,
+                        excel_file = ReturnObj?.excel_file,
+                        TableName = _dataset.Tables[0].TableName,
+                        Tree = ReturnObj?.tree,
+                        ResponseStatus = this._Responsestatus,
+                        ReturnObjString = (_dV is EbCalendarView) ? EbSerializers.Json_Serialize((_dV as EbCalendarView)) : null,
+                        ImageList = JsonConvert.SerializeObject(_ImageList)
+                    };
+                    this.Log.Info(" dataviz dataresponse*****" + dsresponse.Data);
+                    EbSerializers.Json_Serialize(dsresponse);
+                    return dsresponse;
+                }
+                else
                 {
-                    Draw = request.Draw,
-                    Data = (ReturnObj?.rows != null) ? ReturnObj.rows : _dataset.Tables[0].Rows,
-                    FormattedData = (ReturnObj?.FormattedTable != null) ? ReturnObj.FormattedTable.Rows : null,
-                    RecordsTotal = _recordsTotal,
-                    RecordsFiltered = _recordsFiltered,
-                    Ispaged = _isPaged,
-                    Levels = _levels,
-                    Permission = _permission,
-                    Summary = ReturnObj?.Summary,
-                    excel_file = ReturnObj?.excel_file,
-                    TableName = _dataset.Tables[0].TableName,
-                    Tree = ReturnObj?.tree,
-                    ResponseStatus = this._Responsestatus,
-                    ReturnObjString = (_dV is EbCalendarView) ? EbSerializers.Json_Serialize((_dV as EbCalendarView)) : null,
-                    ImageList = JsonConvert.SerializeObject(_ImageList)
-                };
-                this.Log.Info(" dataviz dataresponse*****" + dsresponse.Data);
-                EbSerializers.Json_Serialize(dsresponse);
-                return dsresponse;
+                    Log.Info("Datviz Dataset Empty .........");
+                    return new DataSourceDataResponse { error = "Datviz Dataset Empty........." };
+                }
             }
             catch (Exception e)
             {
@@ -1538,7 +1546,6 @@ namespace ExpressBase.ServiceStack
                 _formattedTable.Rows.Add(_formattedTable.NewDataRow2());
                 _formattedTable.Rows[i][_formattedTable.Columns.Count - 1] = i + 1;//serial
                 CreateIntermediateDict(row, _dv, _user_culture, _user, ref _formattedTable, ref globals, _isexcel, i);
-
                 if ((_dv as EbTableVisualization) != null)
                 {
                     foreach (DVBaseColumn col in dependencyTable)
