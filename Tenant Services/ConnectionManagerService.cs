@@ -488,7 +488,21 @@ namespace ExpressBase.ServiceStack.Services
                 Console.WriteLine("Add Fail : " + e.ToString() + e.StackTrace.ToString());
             }
             return res;
-        }
+        } 
+        //public AddOpenStreetMapResponse Post(AddOpenStreetMapRequest request)
+        //{
+        //    AddOpenStreetMapResponse res = new AddOpenStreetMapResponse();
+        //    try
+        //    {
+        //        request.Config.PersistIntegrationConf(request.SolnId, this.InfraConnectionFactory, request.UserId);
+        //    }
+        //    catch (Exception e)
+        //    {
+        //        res.ResponseStatus.Message = e.Message;
+        //        Console.WriteLine("Add Fail : " + e.ToString() + e.StackTrace.ToString());
+        //    }
+        //    return res;
+        //}
 
         [Authenticate]
         public AddSendGridResponse Post(AddSendGridRequest request)
