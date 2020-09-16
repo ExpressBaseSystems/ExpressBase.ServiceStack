@@ -250,6 +250,7 @@ namespace ExpressBase.ServiceStack.Services
                             Console.WriteLine("Import - ObjectCollection is null. appid: " + request.Id);
                         }
                     }
+
                     try
                     {
                         ImportFullTablesFromPkg(Package.DataSet.FullExportTables, request.SelectedSolutionId);
@@ -258,8 +259,22 @@ namespace ExpressBase.ServiceStack.Services
                     {
                         Console.WriteLine("Error at Import.ImportFullTablesFromPkg " + e.Message + e.StackTrace);
                     }
-                    ImportConditionalTablesFromPkg(Package.DataSet.ConditionalExportTables, request.SelectedSolutionId, AppIdMAp, ObjectIdMAp, request.UserId);
-
+                    try
+                    {
+                        ImportConditionalTablesFromPkg(Package.DataSet.ConditionalExportTables, request.SelectedSolutionId, AppIdMAp, ObjectIdMAp, request.UserId);
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine("Error at Import.ImportConditionalTablesFromPkg " + e.Message + e.StackTrace);
+                    }
+                    try
+                    {
+                        UpdateSequencetoMax();
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine("Error at Import.UpdateSequencetoMax " + e.Message + e.StackTrace);
+                    }
                     Console.WriteLine("ImportApplication success.");
                 }
                 else
@@ -454,8 +469,9 @@ namespace ExpressBase.ServiceStack.Services
             {
                 ExportRole exp_role = role.Value;
                 string query = string.Format(@"INSERT INTO eb_roles(id, role_name) VALUES
-                                ({0},'{1}');", exp_role.Role.Id,exp_role.Role.Name);
+                                ({0},'{1}');", exp_role.Role.Id, exp_role.Role.Name);
                 int c = this.EbConnectionFactory.DataDB.DoNonQuery(query);
+
                 if (c > 0)
                 {
                     Dictionary<string, object> Dict = new Dictionary<string, object>();
@@ -475,7 +491,7 @@ namespace ExpressBase.ServiceStack.Services
                         }
                         Dict["permission"] = string.Join(',', permissionString);
                     }
-                    if(exp_role.DependantRoles != null)
+                    if (exp_role.DependantRoles != null)
                     {
 
                     }
@@ -485,6 +501,15 @@ namespace ExpressBase.ServiceStack.Services
                     SaveRoleResponse res = (SaveRoleResponse)SecurityServices.Post(new SaveRoleRequest { Colvalues = Dict, UserId = userid, SolnId = solnId });//if res.id  = 0 success
                 }
             }
+        }
+
+        public void UpdateSequencetoMax()
+        {
+            string sequenceUpdateQ = @"SELECT setval('eb_roles_id_seq', (SELECT MAX(id) FROM eb_roles)+1);
+                                           SELECT setval('eb_location_types_id_seq', (SELECT MAX(id) FROM eb_location_types)+1);
+                                           SELECT setval('eb_user_types_id_seq', (SELECT MAX(id) FROM eb_user_types)+1);
+                                           SELECT setval('eb_usergroup_id_seq', (SELECT MAX(id) FROM eb_usergroup)+1);";
+            this.EbConnectionFactory.DataDB.DoQueries(sequenceUpdateQ);
         }
 
         public int CreateOrGetAppId(string ApplicationName, AppWrapper AppObj)
