@@ -16,6 +16,7 @@ using System.Data.Common;
 using System.Text.RegularExpressions;
 using ExpressBase.Common.Constants;
 using ExpressBase.Objects.Objects.DVRelated;
+using ExpressBase.ServiceStack.Services;
 
 namespace ExpressBase.ServiceStack
 {

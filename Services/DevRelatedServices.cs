@@ -16,7 +16,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ExpressBase.ServiceStack
+namespace ExpressBase.ServiceStack.Services
 {
     [Authenticate]
     public class DevRelatedServices : EbBaseService

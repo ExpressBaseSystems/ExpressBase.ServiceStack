@@ -17,7 +17,7 @@ using ExpressBase.Objects.Objects.SmsRelated;
 using ExpressBase.Common.SqlProfiler;
 using System.Data;
 
-namespace ExpressBase.ServiceStack
+namespace ExpressBase.ServiceStack.Services
 {
     [ClientCanSwapTemplates]
     [DefaultView("Form")]
