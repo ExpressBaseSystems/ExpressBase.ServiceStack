@@ -290,7 +290,6 @@ namespace ExpressBase.ServiceStack.Services
             return data;
         }
 
-
         private void GetMobilePagesByAppliation(EbMobileSolutionData data, User user, bool isAdmin, bool export)
         {
             string idcheck = EbConnectionFactory.ObjectsDB.EB_GET_MOBILE_PAGES;
