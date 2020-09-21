@@ -192,33 +192,36 @@ namespace ExpressBase.ServiceStack.Services
                             for (int i = Application.ObjCollection.Count - 1; i >= 0; i--)
                             {
                                 EbObject obj = Application.ObjCollection[i];
-                                obj.DisplayName = GetUniqDisplayName(obj.DisplayName);
-
-                                ObjectLifeCycleStatus _status = (request.IsDemoApp || !IsVersioned(request.SelectedSolutionId, request.UserId)) ? ObjectLifeCycleStatus.Live : ObjectLifeCycleStatus.Dev;
-
-                                EbObject_Create_New_ObjectRequest ds = new EbObject_Create_New_ObjectRequest
+                                if (!RefidMap.ContainsKey(obj.RefId))
                                 {
-                                    Name = obj.Name,
-                                    DisplayName = obj.DisplayName,
-                                    Description = obj.Description,
-                                    Json = EbSerializers.Json_Serialize(obj),
-                                    Status = _status,
-                                    Relations = "_rel_obj",
-                                    IsSave = false,
-                                    Tags = "_tags",
-                                    Apps = _currentAppId.ToString(),
-                                    SourceSolutionId = (obj.RefId.Split("-"))[0],
-                                    SourceObjId = (obj.RefId.Split("-"))[3],
-                                    SourceVerID = (obj.RefId.Split("-"))[4],
-                                    SolnId = request.SelectedSolutionId,
-                                    UserId = request.UserId,
-                                    UserAuthId = request.UserAuthId,
-                                    WhichConsole = request.WhichConsole,
-                                    IsImport = true
-                                };
-                                EbObject_Create_New_ObjectResponse res = Objservice.Post(ds);
-                                RefidMap[obj.RefId] = res.RefId;
-                                ObjectIdMAp.Add(Convert.ToInt32(obj.RefId.Split("-")[3]), new KeyValuePair<int, int>(Convert.ToInt32(res.RefId.Split("-")[3]), Convert.ToInt32(res.RefId.Split("-")[2])));
+                                    obj.DisplayName = GetUniqDisplayName(obj.DisplayName);
+
+                                    ObjectLifeCycleStatus _status = (request.IsDemoApp || !IsVersioned(request.SelectedSolutionId, request.UserId)) ? ObjectLifeCycleStatus.Live : ObjectLifeCycleStatus.Dev;
+
+                                    EbObject_Create_New_ObjectRequest ds = new EbObject_Create_New_ObjectRequest
+                                    {
+                                        Name = obj.Name,
+                                        DisplayName = obj.DisplayName,
+                                        Description = obj.Description,
+                                        Json = EbSerializers.Json_Serialize(obj),
+                                        Status = _status,
+                                        Relations = "_rel_obj",
+                                        IsSave = false,
+                                        Tags = "_tags",
+                                        Apps = _currentAppId.ToString(),
+                                        SourceSolutionId = (obj.RefId.Split("-"))[0],
+                                        SourceObjId = (obj.RefId.Split("-"))[3],
+                                        SourceVerID = (obj.RefId.Split("-"))[4],
+                                        SolnId = request.SelectedSolutionId,
+                                        UserId = request.UserId,
+                                        UserAuthId = request.UserAuthId,
+                                        WhichConsole = request.WhichConsole,
+                                        IsImport = true
+                                    };
+                                    EbObject_Create_New_ObjectResponse res = Objservice.Post(ds);
+                                    RefidMap[obj.RefId] = res.RefId;
+                                    ObjectIdMAp.Add(Convert.ToInt32(obj.RefId.Split("-")[3]), new KeyValuePair<int, int>(Convert.ToInt32(res.RefId.Split("-")[3]), Convert.ToInt32(res.RefId.Split("-")[2])));
+                                }
                             }
 
                             //Updating Refid
