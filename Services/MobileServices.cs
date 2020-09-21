@@ -37,6 +37,7 @@ namespace ExpressBase.ServiceStack.Services
                 var tableMetaDict = mobileForm.GetTableMetaCollection(vDbTypes);
 
                 WebFormServices webservices = base.ResolveService<WebFormServices>();
+                webservices.EbConnectionFactory = this.EbConnectionFactory;
 
                 int status = 0;
                 foreach (var pair in tableMetaDict)
@@ -694,7 +695,7 @@ namespace ExpressBase.ServiceStack.Services
                         response.ActionInfo = actionInfo;
 
                     }
-                    catch(Exception ex)
+                    catch (Exception ex)
                     {
                         Console.WriteLine("Parse error");
                         Console.WriteLine(ex.Message);
