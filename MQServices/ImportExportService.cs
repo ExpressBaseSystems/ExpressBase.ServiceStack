@@ -184,7 +184,10 @@ namespace ExpressBase.ServiceStack.Services
                         {
                             string ApplicationName = packageresponse.IsPublic ? packageresponse.Title : Application.Name;
                             int _currentAppId = CreateOrGetAppId(ApplicationName, Application);
-                            AppIdMAp.Add(Application.Id, _currentAppId);
+                            if (!AppIdMAp.ContainsKey(Application.Id))
+                                AppIdMAp.Add(Application.Id, _currentAppId);
+                            else
+                                Console.WriteLine("Duplication of appid in packge" + Application.Id + " - " + _currentAppId);
 
                             for (int i = Application.ObjCollection.Count - 1; i >= 0; i--)
                             {
