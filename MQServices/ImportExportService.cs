@@ -301,11 +301,16 @@ namespace ExpressBase.ServiceStack.Services
             if (!ObjDictionary.Contains(_refid))
             {
                 obj = GetObjfromDB(_refid, solid);
-                ObjDictionary.Add(_refid, obj);
-                List<string> _refCollection = obj.DiscoverRelatedRefids();
-                foreach (string _ref in _refCollection)
-                    if (_ref.Trim() != string.Empty)
-                        GetRelated(_ref, ObjDictionary, solid);
+                if (obj == null)
+                    Console.WriteLine("Object not in db : reference error " + _refid);
+                else
+                {
+                    ObjDictionary.Add(_refid, obj);
+                    List<string> _refCollection = obj.DiscoverRelatedRefids();
+                    foreach (string _ref in _refCollection)
+                        if (_ref.Trim() != string.Empty)
+                            GetRelated(_ref, ObjDictionary, solid);
+                }
             }
         }
 
