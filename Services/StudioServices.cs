@@ -843,6 +843,7 @@ namespace ExpressBase.ServiceStack.Services
                         if ((obj as EbMobilePage).Container is EbMobileForm)
                         {
                             MobileServices mobservice = base.ResolveService<MobileServices>();
+                            mobservice.EbConnectionFactory = this.EbConnectionFactory;
                             CreateMobileFormTableResponse res = mobservice.Post(new CreateMobileFormTableRequest
                             {
                                 MobilePage = obj as EbMobilePage,
@@ -947,6 +948,7 @@ namespace ExpressBase.ServiceStack.Services
                         if ((obj as EbMobilePage).Container is EbMobileForm)
                         {
                             MobileServices mobservice = base.ResolveService<MobileServices>();
+                            mobservice.EbConnectionFactory = this.EbConnectionFactory;
                             CreateMobileFormTableResponse res = mobservice.Post(new CreateMobileFormTableRequest
                             {
                                 MobilePage = obj as EbMobilePage,
@@ -1065,6 +1067,7 @@ namespace ExpressBase.ServiceStack.Services
                         if ((obj as EbMobilePage).Container is EbMobileForm)
                         {
                             MobileServices mobservice = base.ResolveService<MobileServices>();
+                            mobservice.EbConnectionFactory = this.EbConnectionFactory;
                             CreateMobileFormTableResponse res = mobservice.Post(new CreateMobileFormTableRequest
                             {
                                 MobilePage = obj as EbMobilePage,

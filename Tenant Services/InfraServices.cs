@@ -161,16 +161,19 @@ namespace ExpressBase.ServiceStack.Services
         {
             CreateSolutionFurtherResponse resp = new CreateSolutionFurtherResponse();
             int _solcount = 0;
+            int _totalsolcount = 0;
             try
             {
-                string sql = @"SELECT COUNT(*) FROM eb_solutions WHERE tenant_id = :tid AND pricing_tier = :pricing_tier AND type = 1";
+                string sql = @"SELECT COUNT(*) FROM eb_solutions WHERE tenant_id = :tid AND pricing_tier = :pricing_tier AND type = 1;
+                              SELECT COUNT(*) FROM eb_solutions WHERE tenant_id = :tid AND pricing_tier = :pricing_tier;";
                 DbParameter[] parameters =
                 {
                 this.InfraConnectionFactory.DataDB.GetNewParameter("tid",EbDbTypes.Int32, request.UserId),
                 this.InfraConnectionFactory.DataDB.GetNewParameter("pricing_tier",EbDbTypes.Int32, Convert.ToInt32(PricingTiers.FREE))
                 };
-                EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(sql, parameters);
-                _solcount = Convert.ToInt32(dt.Rows[0][0]);
+                EbDataSet ds = this.InfraConnectionFactory.DataDB.DoQueries(sql, parameters);
+                _solcount = Convert.ToInt32(ds.Tables[0].Rows[0][0]);
+                _totalsolcount = Convert.ToInt32(ds.Tables[1].Rows[0][0]);
             }
             catch (Exception e)
             {
@@ -183,8 +186,8 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     CreateSolutionResponse response = this.Post(new CreateSolutionRequest
                     {
-                        SolutionName = "My Solution " + (_solcount + 1),
-                        Description = "My solution " + (_solcount + 1),
+                        SolutionName = "My Solution " + (_totalsolcount + 1),
+                        Description = "My solution " + (_totalsolcount + 1),
                         DeployDB = true,
                         UserId = request.UserId,
                         IsFurther = true,
@@ -410,7 +413,7 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     Sol_id_autogen = request.SolnUrl;
                 }
-
+                int sol_type = (request.PrimarySId != string.Empty && request.PrimarySId != null & request.PackageId > 0) ? 3 : 1;
                 string sql = @" INSERT INTO eb_solutions (solution_name, tenant_id, date_created, description, solution_id, esolution_id, isolution_id, pricing_tier, type, primary_solution)
                                     VALUES(:sname, :tenant_id, now(), :descript, :solnid, :solnid, :solnid, 0 , :type, :primary) RETURNING id;	
 
@@ -423,7 +426,7 @@ namespace ExpressBase.ServiceStack.Services
                     InfraConnectionFactory.DataDB.GetNewParameter("tenant_id", EbDbTypes.Int32, request.UserId),
                     InfraConnectionFactory.DataDB.GetNewParameter("descript", EbDbTypes.String, request.Description),
                     InfraConnectionFactory.DataDB.GetNewParameter("solnid", EbDbTypes.String, Sol_id_autogen),
-                    InfraConnectionFactory.DataDB.GetNewParameter("type", EbDbTypes.Int32, (request.PrimarySId != string.Empty && request.PrimarySId !=null& request.PackageId > 0)?3:1),
+                    InfraConnectionFactory.DataDB.GetNewParameter("type", EbDbTypes.Int32,sol_type),
                     InfraConnectionFactory.DataDB.GetNewParameter("primary", EbDbTypes.String, (request.PrimarySId != null )? request.PrimarySId : string.Empty)
                 };
 
@@ -444,8 +447,8 @@ namespace ExpressBase.ServiceStack.Services
                             SolnId = request.SolnId,
                             UserId = request.UserId,
                             IsChange = false,
-                            IsFurther = request.IsFurther
-
+                            IsFurther = request.IsFurther,
+                            SolutionType = (SolutionType)sol_type
                         });
 
                         if (response.DeploymentCompled)
@@ -504,7 +507,7 @@ namespace ExpressBase.ServiceStack.Services
             List<AppStore> MasterApps = new List<AppStore>();
             string sql = string.Format(@"SELECT * FROM eb_solutions WHERE tenant_id={0} AND eb_del=false; 
                                         SELECT * FROM eb_solutions WHERE tenant_id = {0} AND type = 2;
-                                        SELECT id, app_name FROM eb_appstore WHERE user_solution_id IN(SELECT isolution_id FROM eb_solutions WHERE tenant_id = {0} AND type = 2) AND is_master = true;", request.UserId);
+                                        SELECT id, app_name, user_solution_id FROM eb_appstore WHERE user_solution_id IN(SELECT isolution_id FROM eb_solutions WHERE tenant_id = {0} AND type = 2) AND is_master = true;", request.UserId);
             GetSolutionResponse resp = new GetSolutionResponse();
             try
             {
