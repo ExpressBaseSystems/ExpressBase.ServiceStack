@@ -1197,6 +1197,7 @@ namespace ExpressBase.ServiceStack.Services
 
         //======================================= INSERT OR UPDATE OR DELETE RECORD =============================================
 
+        //Normal save
         public InsertDataFromWebformResponse Any(InsertDataFromWebformRequest request)
         {
             try
@@ -1281,6 +1282,7 @@ namespace ExpressBase.ServiceStack.Services
             };
         }
 
+        //form data submission using PushJson and FormGlobals - SQL Job, Excel Import save
         public InsertOrUpdateFormDataResp Any(InsertOrUpdateFormDataRqst request)
         {
             try

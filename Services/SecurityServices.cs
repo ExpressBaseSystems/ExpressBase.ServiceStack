@@ -271,31 +271,53 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
+        //public UniqueCheckResponse Any(UniqueCheckRequest request)
+        //{
+        //    string sql = string.Empty;
+        //    DbParameter[] parameters = new DbParameter[] { };
+
+        //    if (!string.IsNullOrEmpty(request.email))
+        //    {
+        //        sql = "SELECT id FROM eb_users WHERE LOWER(email) LIKE LOWER(@email) AND eb_del = 'F' AND (statusid = 0 OR statusid = 1 OR statusid = 2);";
+        //        parameters = new DbParameter[] { this.EbConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, string.IsNullOrEmpty(request.email) ? "" : request.email) };
+        //    }
+        //    else if (!string.IsNullOrEmpty(request.roleName))
+        //    {
+        //        sql = "SELECT id FROM eb_roles WHERE LOWER(role_name) LIKE LOWER(@roleName)";
+        //        parameters = new DbParameter[] { this.EbConnectionFactory.DataDB.GetNewParameter("roleName", EbDbTypes.String, string.IsNullOrEmpty(request.roleName) ? "" : request.roleName) };
+        //    }
+        //    var dt = this.EbConnectionFactory.DataDB.DoQuery(sql, parameters);
+        //    if (dt.Rows.Count > 0)
+        //    {
+        //        return new UniqueCheckResponse { unrespose = true };
+        //    }
+        //    else
+        //    {
+        //        return new UniqueCheckResponse { unrespose = false };
+        //    }
+        //}
+
         public UniqueCheckResponse Any(UniqueCheckRequest request)
         {
-            string sql = string.Empty;
-            DbParameter[] parameters = new DbParameter[] { };
+            string Qry = string.Empty;
+            DbParameter[] Params = new DbParameter[] 
+            {
+                this.EbConnectionFactory.DataDB.GetNewParameter("val", EbDbTypes.String, request.Value),
+                this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.Id)
+            };
 
-            if (!string.IsNullOrEmpty(request.email))
-            {
-                sql = "SELECT id FROM eb_users WHERE LOWER(email) LIKE LOWER(@email) AND eb_del = 'F' AND (statusid = 0 OR statusid = 1 OR statusid = 2);";
-                parameters = new DbParameter[] { this.EbConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, string.IsNullOrEmpty(request.email) ? "" : request.email) };
-            }
+            if (request.QryId == UniqueCheckQueryId.eb_users__email)
+                Qry = "SELECT id FROM eb_users WHERE LOWER(email) LIKE LOWER(@val) AND COALESCE(eb_del, 'F') = 'F' AND id <> @id;";
+            else if (request.QryId == UniqueCheckQueryId.eb_users__phnoprimary)
+                Qry = "SELECT id FROM eb_users WHERE LOWER(phnoprimary) LIKE LOWER(@val) AND COALESCE(eb_del, 'F') = 'F' AND id <> @id;";
+            else if (request.QryId == UniqueCheckQueryId.eb_roles__role_name)
+                Qry = "SELECT id FROM eb_roles WHERE LOWER(role_name) LIKE LOWER(@val) AND COALESCE(eb_del, 'F') = 'F' AND id <> @id";
 
-            if (!string.IsNullOrEmpty(request.roleName))
-            {
-                sql = "SELECT id FROM eb_roles WHERE LOWER(role_name) LIKE LOWER(@roleName)";
-                parameters = new DbParameter[] { this.EbConnectionFactory.DataDB.GetNewParameter("roleName", EbDbTypes.String, string.IsNullOrEmpty(request.roleName) ? "" : request.roleName) };
-            }
-            var dt = this.EbConnectionFactory.DataDB.DoQuery(sql, parameters);
-            if (dt.Rows.Count > 0)
-            {
+            EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(Qry, Params);
+            if (dt.Rows.Count == 0)
                 return new UniqueCheckResponse { unrespose = true };
-            }
             else
-            {
                 return new UniqueCheckResponse { unrespose = false };
-            }
         }
 
         public ResetUserPasswordResponse Any(ResetUserPasswordRequest request)
@@ -1085,8 +1107,12 @@ namespace ExpressBase.ServiceStack.Services
         {
             SaveRoleResponse resp = new SaveRoleResponse() { id = 0 };
             int role_id = Convert.ToInt32(request.Colvalues["roleid"]);
-            EbDataTable d = this.EbConnectionFactory.DataDB.DoQuery($"SELECT id FROM eb_roles WHERE LOWER(role_name) LIKE LOWER(@roleName) {(role_id > 0 ? "AND id <> " + role_id : "")};",
-                new DbParameter[] { this.EbConnectionFactory.DataDB.GetNewParameter("roleName", EbDbTypes.String, request.Colvalues["role_name"]) });
+            EbDataTable d = this.EbConnectionFactory.DataDB.DoQuery($"SELECT id FROM eb_roles WHERE LOWER(role_name) LIKE LOWER(@roleName) AND id <> @id;",
+                new DbParameter[] 
+                { 
+                    this.EbConnectionFactory.DataDB.GetNewParameter("roleName", EbDbTypes.String, request.Colvalues["role_name"]),
+                    this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, role_id) 
+                });
             if (d.Rows.Count > 0)
             {
                 resp.id = -1;
