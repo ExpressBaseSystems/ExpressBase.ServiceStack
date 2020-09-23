@@ -488,7 +488,7 @@ namespace ExpressBase.ServiceStack.Services
                 Console.WriteLine("Add Fail : " + e.ToString() + e.StackTrace.ToString());
             }
             return res;
-        } 
+        }
         //public AddOpenStreetMapResponse Post(AddOpenStreetMapRequest request)
         //{
         //    AddOpenStreetMapResponse res = new AddOpenStreetMapResponse();
@@ -572,6 +572,20 @@ namespace ExpressBase.ServiceStack.Services
         public AddDropBoxResponse Post(AddDropBoxRequest request)
         {
             AddDropBoxResponse res = new AddDropBoxResponse();
+            try
+            {
+                request.Config.PersistIntegrationConf(request.SolnId, this.InfraConnectionFactory, request.UserId);
+            }
+            catch (Exception e)
+            {
+                res.ResponseStatus.Message = e.Message;
+                Console.WriteLine("Add Fail : " + e.Message.ToString() + e.StackTrace.ToString());
+            }
+            return res;
+        }
+        public MobileConfigResponse Post(MobileConfigRequest request)
+        {
+            MobileConfigResponse res = new MobileConfigResponse();
             try
             {
                 request.Config.PersistIntegrationConf(request.SolnId, this.InfraConnectionFactory, request.UserId);
