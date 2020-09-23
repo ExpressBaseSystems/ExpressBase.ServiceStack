@@ -488,7 +488,7 @@ namespace ExpressBase.ServiceStack.Services
                 Console.WriteLine("Add Fail : " + e.ToString() + e.StackTrace.ToString());
             }
             return res;
-        } 
+        }
         //public AddOpenStreetMapResponse Post(AddOpenStreetMapRequest request)
         //{
         //    AddOpenStreetMapResponse res = new AddOpenStreetMapResponse();
@@ -572,6 +572,20 @@ namespace ExpressBase.ServiceStack.Services
         public AddDropBoxResponse Post(AddDropBoxRequest request)
         {
             AddDropBoxResponse res = new AddDropBoxResponse();
+            try
+            {
+                request.Config.PersistIntegrationConf(request.SolnId, this.InfraConnectionFactory, request.UserId);
+            }
+            catch (Exception e)
+            {
+                res.ResponseStatus.Message = e.Message;
+                Console.WriteLine("Add Fail : " + e.Message.ToString() + e.StackTrace.ToString());
+            }
+            return res;
+        }
+        public MobileConfigResponse Post(MobileConfigRequest request)
+        {
+            MobileConfigResponse res = new MobileConfigResponse();
             try
             {
                 request.Config.PersistIntegrationConf(request.SolnId, this.InfraConnectionFactory, request.UserId);
@@ -886,8 +900,8 @@ namespace ExpressBase.ServiceStack.Services
             GetSolutioInfoResponses resp = new GetSolutioInfoResponses();
 
             string sql = string.Format(@"SELECT * FROM eb_solutions WHERE isolution_id='{0}';
-                SELECT * FROM eb_integration_configs WHERE solution_id = '{0}' AND eb_del = 'F';
-                  SELECT * ,  EI.type as itype FROM
+                SELECT id,solution_id,nickname,type,created_at FROM eb_integration_configs WHERE solution_id = '{0}' AND eb_del = 'F';
+                SELECT EI.id,EI.eb_integration_conf_id as confid,EI.type as itype,EI.preference,EC.nickname,EC.type as ctype,EC.created_at FROM
                     eb_integration_configs EC,
                     eb_integrations EI 
                 where 
