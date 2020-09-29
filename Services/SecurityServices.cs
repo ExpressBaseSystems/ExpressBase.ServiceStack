@@ -300,7 +300,7 @@ namespace ExpressBase.ServiceStack.Services
         public UniqueCheckResponse Any(UniqueCheckRequest request)
         {
             string Qry = string.Empty;
-            DbParameter[] Params = new DbParameter[] 
+            DbParameter[] Params = new DbParameter[]
             {
                 this.EbConnectionFactory.DataDB.GetNewParameter("val", EbDbTypes.String, request.Value),
                 this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.Id)
@@ -779,77 +779,100 @@ namespace ExpressBase.ServiceStack.Services
 
         public GetManageUserGroupResponse Any(GetManageUserGroupRequest request)
         {
-            List<DbParameter> parameters = new List<DbParameter>();
             List<Eb_Users> _usersList = new List<Eb_Users>();
             List<Eb_Constraints1> _ipConsList = new List<Eb_Constraints1>();
             List<Eb_Constraints1> _dtConsList = new List<Eb_Constraints1>();
             Dictionary<string, object> _userGroupInfo = new Dictionary<string, object>();
+            List<Eb_Users> _usersListAll = new List<Eb_Users>();
+
+            string Qry = @"SELECT id, fullname, email, phnoprimary FROM eb_users WHERE COALESCE(eb_del, 'F') = 'F' ORDER BY fullname, email, phnoprimary;";
             if (request.id > 0)
             {
-                string query = @"	SELECT id,name,description 
-										FROM eb_usergroup 
-										WHERE id = @id;
-									SELECT U.id,U.fullname,U.email 
-										FROM eb_users U, eb_user2usergroup G 
-										WHERE G.groupid = @id AND U.id=G.userid 
-										AND G.eb_del = 'F' AND U.eb_del = 'F';";
+                Qry += @"SELECT id,name,description FROM eb_usergroup WHERE id = @id;
+						SELECT U.id,U.fullname,U.email FROM eb_users U, eb_user2usergroup G 
+							WHERE G.groupid = @id AND U.id=G.userid AND COALESCE(G.eb_del, 'F') = 'F' AND COALESCE(U.eb_del, 'F') = 'F';";
 
-                query += EbConstraints.GetSelectQuery(EbConstraintKeyTypes.UserGroup, EbConnectionFactory.DataDB);
+                Qry += EbConstraints.GetSelectQuery(EbConstraintKeyTypes.UserGroup, EbConnectionFactory.DataDB);
+            }
+            EbDataSet ds = this.EbConnectionFactory.DataDB.DoQueries(Qry, new DbParameter[] 
+            {
+                this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.id)
+            });
 
-                parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.id));
-                var ds = this.EbConnectionFactory.DataDB.DoQueries(query, parameters.ToArray());
-                if (ds.Tables.Count > 0)
+            foreach (EbDataRow dr in ds.Tables[0].Rows)
+            {
+                _usersListAll.Add(new Eb_Users()
                 {
-                    _userGroupInfo.Add("id", Convert.ToInt32(ds.Tables[0].Rows[0][0]));
-                    _userGroupInfo.Add("name", ds.Tables[0].Rows[0][1].ToString());
-                    _userGroupInfo.Add("description", ds.Tables[0].Rows[0][2].ToString());
-                    foreach (EbDataRow dr in ds.Tables[1].Rows)
+                    Id = Convert.ToInt32(dr[0]),
+                    Name = Convert.ToString(dr[1]),
+                    Email = Convert.ToString(dr[2]),
+                    Phone = Convert.ToString(dr[3])
+                });
+            }
+            if (request.id > 0)
+            {
+                if (ds.Tables[1].Rows.Count > 0)
+                {
+                    _userGroupInfo.Add("id", Convert.ToInt32(ds.Tables[1].Rows[0][0]));
+                    _userGroupInfo.Add("name", ds.Tables[1].Rows[0][1].ToString());
+                    _userGroupInfo.Add("description", ds.Tables[1].Rows[0][2].ToString());
+                    foreach (EbDataRow dr in ds.Tables[2].Rows)
                     {
                         _usersList.Add(new Eb_Users() { Id = Convert.ToInt32(dr[0]), Name = dr[1].ToString(), Email = dr[2].ToString() });
                     }
 
-                    EbConstraints con = new EbConstraints(ds.Tables[2]);
+                    EbConstraints con = new EbConstraints(ds.Tables[3]);
                     foreach (var c in con.UgConstraints)
                     {
                         if (c.Value.Values.ElementAt(0).Value.Type == EbConstraintTypes.UserGroup_Ip)
                             _ipConsList.Add(new Eb_Constraints1 { Id = c.Key, Title = c.Value.Values.ElementAt(0).Value.GetValue(), Description = c.Value.Description });
                     }
-
-                    //foreach (EbDataRow dr in ds.Tables[2].Rows)
-                    //{
-                    //    _ipConsList.Add(new Eb_Constraints1 { Id = Convert.ToInt32(dr["id"]), Title = dr["ip"].ToString(), Description = dr["description"].ToString() });
-                    //}
-                    //string[] days = { "Sun ", "Mon ", "Tue ", "Wed ", "Thu ", "Fri ", "Sat " };
-                    //foreach (EbDataRow dr in ds.Tables[3].Rows)
-                    //{
-                    //    int _type = Convert.ToInt32(dr["type"]);
-                    //    DateTime _start = Convert.ToDateTime(dr["start_datetime"]).ConvertFromUtc(request.Timezone);
-                    //    DateTime _end = Convert.ToDateTime(dr["end_datetime"]).ConvertFromUtc(request.Timezone);
-                    //    int _days = Convert.ToInt32(dr["days_coded"]);
-                    //    if (_type == 1)
-                    //    {
-                    //        string temp = "One Time - " + _start.ToString("dd-MM-yyyy HH:mm") + " to " + _end.ToString("dd-MM-yyyy HH:mm");
-                    //        _dtConsList.Add(new Eb_Constraints1 { Id = Convert.ToInt32(dr["id"]), Title = dr["title"].ToString(), Description = temp });
-                    //    }
-                    //    else if (_type == 2)
-                    //    {
-                    //        string temp = "Recurring - " + _start.ToString("HH:mm") + " to " + _end.ToString("HH:mm") + "<br>";
-                    //        for (int i = 0; i < 7; i++)
-                    //        {
-                    //            if ((Convert.ToInt32(Math.Pow(2, i)) & _days) > 0)
-                    //            {
-                    //                temp += days[i];
-                    //            }
-                    //        }
-                    //        _dtConsList.Add(new Eb_Constraints1 { Id = Convert.ToInt32(dr["id"]), Title = dr["title"].ToString(), Description = temp });
-                    //    }
-                    //}
                 }
+                else
+                    _userGroupInfo.Add("id", 0);
             }
             else
                 _userGroupInfo.Add("id", 0);
 
-            return new GetManageUserGroupResponse() { SelectedUserGroupInfo = _userGroupInfo, UsersList = _usersList, IpConsList = _ipConsList, DtConsList = _dtConsList };
+            return new GetManageUserGroupResponse() 
+            {
+                SelectedUserGroupInfo = _userGroupInfo, 
+                UsersList = _usersList,
+                IpConsList = _ipConsList, 
+                DtConsList = _dtConsList,
+                UsersListAll = _usersListAll
+            };
+
+            //foreach (EbDataRow dr in ds.Tables[2].Rows)
+            //{
+            //    _ipConsList.Add(new Eb_Constraints1 { Id = Convert.ToInt32(dr["id"]), Title = dr["ip"].ToString(), Description = dr["description"].ToString() });
+            //}
+            //string[] days = { "Sun ", "Mon ", "Tue ", "Wed ", "Thu ", "Fri ", "Sat " };
+            //foreach (EbDataRow dr in ds.Tables[3].Rows)
+            //{
+            //    int _type = Convert.ToInt32(dr["type"]);
+            //    DateTime _start = Convert.ToDateTime(dr["start_datetime"]).ConvertFromUtc(request.Timezone);
+            //    DateTime _end = Convert.ToDateTime(dr["end_datetime"]).ConvertFromUtc(request.Timezone);
+            //    int _days = Convert.ToInt32(dr["days_coded"]);
+            //    if (_type == 1)
+            //    {
+            //        string temp = "One Time - " + _start.ToString("dd-MM-yyyy HH:mm") + " to " + _end.ToString("dd-MM-yyyy HH:mm");
+            //        _dtConsList.Add(new Eb_Constraints1 { Id = Convert.ToInt32(dr["id"]), Title = dr["title"].ToString(), Description = temp });
+            //    }
+            //    else if (_type == 2)
+            //    {
+            //        string temp = "Recurring - " + _start.ToString("HH:mm") + " to " + _end.ToString("HH:mm") + "<br>";
+            //        for (int i = 0; i < 7; i++)
+            //        {
+            //            if ((Convert.ToInt32(Math.Pow(2, i)) & _days) > 0)
+            //            {
+            //                temp += days[i];
+            //            }
+            //        }
+            //        _dtConsList.Add(new Eb_Constraints1 { Id = Convert.ToInt32(dr["id"]), Title = dr["title"].ToString(), Description = temp });
+            //    }
+            //}
+
             //using (var con = this.TenantDbFactory.DataDB.GetNewConnection())
             //{
             //	con.Open();
@@ -994,124 +1017,146 @@ namespace ExpressBase.ServiceStack.Services
         //----MANAGE ROLES START---------------------------------------
         public GetManageRolesResponse Any(GetManageRolesRequest request)
         {
-	GetManageRolesResponse resp = null;
-	try{
-            string query = null;
-
-            //old query
-            //SELECT DISTINCT EO.id, EO.obj_name, EO.obj_type, EO.applicationid
-            //FROM eb_objects EO, eb_objects_ver EOV, eb_objects_status EOS
-            //WHERE EO.id = EOV.eb_objects_id AND EOV.id = EOS.eb_obj_ver_id AND EOS.status = 3 AND EO.applicationid > 0;
-            query = this.EbConnectionFactory.DataDB.EB_GETMANAGEROLESRESPONSE_QUERY;
-            if (request.id > 0)
+            GetManageRolesResponse resp = null;
+            try
             {
-                query += this.EbConnectionFactory.DataDB.EB_GETMANAGEROLESRESPONSE_QUERY_EXTENDED;
-            }
-            DbParameter[] parameters = { this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.id) };
-            var ds = this.EbConnectionFactory.DataDB.DoQueries(query, parameters);
-            ApplicationCollection _applicationCollection = null;
-            List<Eb_RoleObject> _roleList = new List<Eb_RoleObject>();
-            List<Eb_RoleToRole> _r2rList = new List<Eb_RoleToRole>();
-            List<Eb_Location> _location = new List<Eb_Location>();
+                string query = this.EbConnectionFactory.DataDB.EB_GETMANAGEROLESRESPONSE_QUERY;
+                int Set1_QryCount = 6;// Number of queries in EB_GETMANAGEROLESRESPONSE_QUERY
+                if (request.id > 0)
+                    query += this.EbConnectionFactory.DataDB.EB_GETMANAGEROLESRESPONSE_QUERY_EXTENDED;
 
-            if (ds.Tables.Count > 0)
+                DbParameter[] parameters = { this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.id) };
+                var ds = this.EbConnectionFactory.DataDB.DoQueries(query, parameters);
+                ApplicationCollection _applicationCollection = null;
+                List<Eb_RoleObject> _roleList = new List<Eb_RoleObject>();
+                List<Eb_RoleToRole> _r2rList = new List<Eb_RoleToRole>();
+                List<Eb_Location> _location = new List<Eb_Location>();
+                List<Eb_Users> _usersListAll = new List<Eb_Users>();
+
+                if (ds.Tables.Count > 0)
+                {
+                    //PROCESSED RESULT
+                    _applicationCollection = new ApplicationCollection(ds.Tables[0], ds.Tables[1]);
+                    //---------------
+                    foreach (EbDataRow dr in ds.Tables[2].Rows)
+                    {
+                        _roleList.Add(new Eb_RoleObject()
+                        {
+                            Id = Convert.ToInt32(dr[0]),
+                            Name = dr[1].ToString(),
+                            Description = dr[2].ToString(),
+                            App_Id = Convert.ToInt32(dr[3]),
+                            Is_Anonymous = (dr[4].ToString() == "T") ? true : false,
+                            Is_System = false
+                        });
+                    }
+                    foreach (EbDataRow dr in ds.Tables[3].Rows)
+                    {
+                        _r2rList.Add(new Eb_RoleToRole()
+                        {
+                            Id = Convert.ToInt32(dr[0]),
+                            Dominant = Convert.ToInt32(dr[1]),
+                            Dependent = Convert.ToInt32(dr[2])
+                        });
+                    }
+                    foreach (EbDataRow dr in ds.Tables[4].Rows)
+                    {
+                        _location.Add(new Eb_Location()
+                        {
+                            Id = Convert.ToInt32(dr[0]),
+                            LongName = dr[1].ToString(),
+                            ShortName = dr[2].ToString()
+                        });
+                    }
+                    foreach (EbDataRow dr in ds.Tables[5].Rows)
+                    {
+                        _usersListAll.Add(new Eb_Users()
+                        {
+                            Id = Convert.ToInt32(dr[0]),
+                            Name = Convert.ToString(dr[1]),
+                            Email = Convert.ToString(dr[2]),
+                            Phone = Convert.ToString(dr[3])
+                        });
+                    }
+                }
+                Dictionary<string, object> RoleInfo = new Dictionary<string, object>();
+                List<string> Permission = new List<string>();
+                List<Eb_Users> _usersList = new List<Eb_Users>();
+
+                if (ds.Tables.Count > Set1_QryCount)
+                {
+                    if (ds.Tables[Set1_QryCount].Rows.Count == 0)
+                        throw new Exception("Role not found");
+                    RoleInfo.Add("RoleName", ds.Tables[Set1_QryCount].Rows[0][0].ToString());
+                    RoleInfo.Add("RoleDescription", ds.Tables[Set1_QryCount].Rows[0][2].ToString());
+                    RoleInfo.Add("IsAnonymous", (ds.Tables[Set1_QryCount].Rows[0][3].ToString() == "T") ? true : false);
+                    RoleInfo.Add("AppId", Convert.ToInt32(ds.Tables[Set1_QryCount].Rows[0][4]));
+                    RoleInfo.Add("AppName", ds.Tables[Set1_QryCount].Rows[0][5].ToString());
+                    RoleInfo.Add("AppDescription", ds.Tables[Set1_QryCount].Rows[0][6].ToString());
+                    foreach (var dr in ds.Tables[Set1_QryCount + 1].Rows)
+                        Permission.Add(dr[0].ToString());
+                    foreach (EbDataRow dr in ds.Tables[Set1_QryCount + 2].Rows)
+                    {
+                        _usersList.Add(new Eb_Users()
+                        {
+                            Id = Convert.ToInt32(dr[0]),
+                            Name = Convert.ToString(dr[1]),
+                            Email = Convert.ToString(dr[2]),
+                            Phone = Convert.ToString(dr[3]),
+                            Role2User_Id = Convert.ToInt32(dr[4])
+                        });
+                    }
+                    string temp_locs = string.Empty;
+                    foreach (var dr in ds.Tables[Set1_QryCount + 3].Rows)
+                        temp_locs += dr[0].ToString() + ",";
+                    RoleInfo.Add("LocationIds", string.IsNullOrEmpty(temp_locs) ? "" : temp_locs.Substring(0, temp_locs.Length - 1));
+                }
+                resp = new GetManageRolesResponse() 
+                { 
+                    ApplicationCollection = _applicationCollection,
+                    SelectedRoleInfo = RoleInfo, 
+                    PermissionList = Permission, 
+                    RoleList = _roleList,
+                    Role2RoleList = _r2rList,
+                    UsersList = _usersList,
+                    LocationList = _location,
+                    UsersListAll = _usersListAll
+                };
+            }
+            catch (Exception e) 
             {
-                //PROCESSED RESULT
-                _applicationCollection = new ApplicationCollection(ds.Tables[0], ds.Tables[1]);
-                //---------------
-                foreach (EbDataRow dr in ds.Tables[2].Rows)
-                {
-                    _roleList.Add(new Eb_RoleObject()
-                    {
-                        Id = Convert.ToInt32(dr[0]),
-                        Name = dr[1].ToString(),
-                        Description = dr[2].ToString(),
-                        App_Id = Convert.ToInt32(dr[3]),
-                        Is_Anonymous = (dr[4].ToString() == "T") ? true : false,
-                        Is_System = false
-                    });
-                }
-                foreach (EbDataRow dr in ds.Tables[3].Rows)
-                {
-                    _r2rList.Add(new Eb_RoleToRole()
-                    {
-                        Id = Convert.ToInt32(dr[0]),
-                        Dominant = Convert.ToInt32(dr[1]),
-                        Dependent = Convert.ToInt32(dr[2])
-                    });
-                }
-                foreach (EbDataRow dr in ds.Tables[4].Rows)
-                {
-                    _location.Add(new Eb_Location()
-                    {
-                        Id = Convert.ToInt32(dr[0]),
-                        LongName = dr[1].ToString(),
-                        ShortName = dr[2].ToString()
-                    });
-                }
-
+                Console.WriteLine("ManageRolesRequest___999 " + e.ToString()); 
             }
-            Dictionary<string, object> RoleInfo = new Dictionary<string, object>();
-            List<string> Permission = new List<string>();
-            List<Eb_Users> _usersList = new List<Eb_Users>();
-
-            if (ds.Tables.Count > 5)
-            {
-                RoleInfo.Add("RoleName", ds.Tables[5].Rows[0][0].ToString());
-                RoleInfo.Add("AppId", Convert.ToInt32(ds.Tables[5].Rows[0][1]));
-                RoleInfo.Add("RoleDescription", ds.Tables[5].Rows[0][2].ToString());
-                RoleInfo.Add("IsAnonymous", (ds.Tables[5].Rows[0][3].ToString() == "T") ? true : false);
-                RoleInfo.Add("AppName", ds.Tables[7].Rows[0][0].ToString());
-                RoleInfo.Add("AppDescription", ds.Tables[7].Rows[0][1].ToString());
-                foreach (var dr in ds.Tables[6].Rows)
-                    Permission.Add(dr[0].ToString());
-                foreach (EbDataRow dr in ds.Tables[8].Rows)
-                {
-                    _usersList.Add(new Eb_Users()
-                    {
-                        Id = Convert.ToInt32(dr[0]),
-                        Name = dr[1].ToString(),
-                        Email = dr[2].ToString(),
-                        Role2User_Id = Convert.ToInt32(dr[3])
-                    });
-                }
-                string temp_locs = string.Empty;
-                foreach (var dr in ds.Tables[9].Rows)
-                    temp_locs += dr[0].ToString() + ",";
-                RoleInfo.Add("LocationIds", string.IsNullOrEmpty(temp_locs) ? "" : temp_locs.Substring(0, temp_locs.Length - 1));
-            }
-	    resp = new GetManageRolesResponse() { ApplicationCollection = _applicationCollection, SelectedRoleInfo = RoleInfo, PermissionList = Permission, RoleList = _roleList, Role2RoleList = _r2rList, UsersList = _usersList, LocationList = _location };
-	    }catch(Exception e) { Console.WriteLine("ManageRolesRequest___999 " + e.ToString()); }
             return resp;
         }
 
-        public GetUserDetailsResponse Any(GetUserDetailsRequest request)
-        {
-            string query = null;
-            query = EbConnectionFactory.DataDB.EB_GETUSERDETAILS;
-            DbParameter[] parameters = { this.EbConnectionFactory.DataDB.GetNewParameter("searchtext", EbDbTypes.String, request.SearchText) };
+        //public GetUserDetailsResponse Any(GetUserDetailsRequest request)
+        //{
+        //    string query = null;
+        //    query = EbConnectionFactory.DataDB.EB_GETUSERDETAILS;
+        //    DbParameter[] parameters = { this.EbConnectionFactory.DataDB.GetNewParameter("searchtext", EbDbTypes.String, request.SearchText) };
 
-            var ds = this.EbConnectionFactory.DataDB.DoQueries(query, parameters);
-            List<Eb_Users> _usersList = new List<Eb_Users>();
-            if (ds.Tables.Count > 0)
-            {
-                foreach (EbDataRow dr in ds.Tables[0].Rows)
-                {
-                    _usersList.Add(new Eb_Users() { Id = Convert.ToInt32(dr[0]), Name = dr[1].ToString(), Email = dr[2].ToString() });
-                }
-            }
-            return new GetUserDetailsResponse() { UserList = _usersList };
-        }
+        //    var ds = this.EbConnectionFactory.DataDB.DoQueries(query, parameters);
+        //    List<Eb_Users> _usersList = new List<Eb_Users>();
+        //    if (ds.Tables.Count > 0)
+        //    {
+        //        foreach (EbDataRow dr in ds.Tables[0].Rows)
+        //        {
+        //            _usersList.Add(new Eb_Users() { Id = Convert.ToInt32(dr[0]), Name = dr[1].ToString(), Email = dr[2].ToString() });
+        //        }
+        //    }
+        //    return new GetUserDetailsResponse() { UserList = _usersList };
+        //}
 
         public SaveRoleResponse Post(SaveRoleRequest request)
         {
             SaveRoleResponse resp = new SaveRoleResponse() { id = 0 };
             int role_id = Convert.ToInt32(request.Colvalues["roleid"]);
             EbDataTable d = this.EbConnectionFactory.DataDB.DoQuery($"SELECT id FROM eb_roles WHERE LOWER(role_name) LIKE LOWER(@roleName) AND id <> @id;",
-                new DbParameter[] 
-                { 
+                new DbParameter[]
+                {
                     this.EbConnectionFactory.DataDB.GetNewParameter("roleName", EbDbTypes.String, request.Colvalues["role_name"]),
-                    this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, role_id) 
+                    this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, role_id)
                 });
             if (d.Rows.Count > 0)
             {
