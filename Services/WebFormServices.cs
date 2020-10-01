@@ -1122,17 +1122,7 @@ namespace ExpressBase.ServiceStack.Services
 
         private EbWebForm GetWebFormObject(string RefId, string UserAuthId, string SolnId)
         {
-            EbWebForm _form = this.Redis.Get<EbWebForm>(RefId);
-            if (_form == null)
-            {
-                var myService = base.ResolveService<EbObjectService>();
-                EbObjectParticularVersionResponse formObj = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = RefId });
-                if (formObj.Data == null || formObj.Data.Count == 0)
-                    throw new FormException("Bad request.", (int)HttpStatusCode.BadRequest, "WebForm not found with refId: " + RefId, "WebFormSevice -> GetWebFormObject");
-                _form = EbSerializers.Json_Deserialize(formObj.Data[0].Json);
-                this.Redis.Set<EbWebForm>(RefId, _form);
-            }
-            _form.RefId = RefId;
+            EbWebForm _form = EbFormHelper.GetEbObject<EbWebForm>(RefId, null, this.Redis, this);
             if (UserAuthId != null)
                 _form.UserObj = GetUserObject(UserAuthId);
             if (SolnId != null)
