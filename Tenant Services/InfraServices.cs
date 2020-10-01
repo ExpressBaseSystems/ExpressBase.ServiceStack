@@ -504,7 +504,8 @@ namespace ExpressBase.ServiceStack.Services
         {
             List<EbSolutionsWrapper> AllSolns = new List<EbSolutionsWrapper>();
             List<EbSolutionsWrapper> PrimarySolns = new List<EbSolutionsWrapper>();
-            List<AppStore> MasterApps = new List<AppStore>();
+
+            Dictionary<string, List<AppStore>> MasterApps = new Dictionary<string, List<AppStore>>();
             string sql = string.Format(@"SELECT * FROM eb_solutions WHERE tenant_id={0} AND eb_del=false; 
                                         SELECT * FROM eb_solutions WHERE tenant_id = {0} AND type = 2;
                                         SELECT id, app_name, user_solution_id FROM eb_appstore WHERE user_solution_id IN(SELECT isolution_id FROM eb_solutions WHERE tenant_id = {0} AND type = 2) AND is_master = true;", request.UserId);
@@ -542,12 +543,17 @@ namespace ExpressBase.ServiceStack.Services
 
                 foreach (EbDataRow dr in ds.Tables[2].Rows)
                 {
+                    if (!MasterApps.ContainsKey(dr[2].ToString()))
+                    {
+                        MasterApps.Add(dr[2].ToString(), new List<AppStore>());
+                    }
+
                     AppStore _app = new AppStore
                     {
                         Id = Convert.ToInt32(dr[0]),
                         Name = dr[1].ToString()
                     };
-                    MasterApps.Add(_app);
+                    MasterApps[dr[2].ToString()].Add(_app);
                 }
 
                 resp.AllSolutions = AllSolns;
