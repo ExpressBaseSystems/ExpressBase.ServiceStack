@@ -1254,7 +1254,8 @@ namespace ExpressBase.ServiceStack.Services
             foreach (int _rowId in request.RowId)
             {
                 FormObj.TableRowId = _rowId;
-                FormObj.Delete(EbConnectionFactory.DataDB);
+                int temp1 = FormObj.Delete(EbConnectionFactory.DataDB);
+                Console.WriteLine($"Record deleted. RowId: {_rowId}  RowsAffected: {temp1}");
             }
             return new DeleteDataFromWebformResponse
             {
@@ -1266,10 +1267,10 @@ namespace ExpressBase.ServiceStack.Services
         {
             EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, null);
             FormObj.TableRowId = request.RowId;
-            return new CancelDataFromWebformResponse
-            {
-                RowAffected = FormObj.Cancel(EbConnectionFactory.DataDB)
-            };
+            int RowAffected = FormObj.Cancel(EbConnectionFactory.DataDB);
+            Console.WriteLine($"Record cancelled. RowId: {request.RowId}  RowsAffected: {RowAffected}");
+
+            return new CancelDataFromWebformResponse { RowAffected = RowAffected };
         }
 
         //form data submission using PushJson and FormGlobals - SQL Job, Excel Import save
