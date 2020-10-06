@@ -37,10 +37,20 @@ using System.Dynamic;
 using ExpressBase.ServiceStack.Services;
 using ExpressBase.Common.EbServiceStack.ReqNRes;
 using System.Drawing;
-using OfficeOpenXml.Drawing;
 using ExpressBase.Common.ServiceClients;
-using OfficeOpenXml.Style;
 using ExpressBase.Objects.Helpers;
+using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml;
+using DocumentFormat.OpenXml.Drawing;
+using DocumentFormat.OpenXml.Spreadsheet;
+using A = DocumentFormat.OpenXml.Drawing;
+using Xdr = DocumentFormat.OpenXml.Drawing.Spreadsheet;
+using A14 = DocumentFormat.OpenXml.Office2010.Drawing;
+using System.Drawing.Imaging;
+using Font = DocumentFormat.OpenXml.Spreadsheet.Font;
+using Fonts = DocumentFormat.OpenXml.Spreadsheet.Fonts;
+using Fill = DocumentFormat.OpenXml.Spreadsheet.Fill;
+using Color = DocumentFormat.OpenXml.Spreadsheet.Color;
 
 namespace ExpressBase.ServiceStack
 {
@@ -84,6 +94,14 @@ namespace ExpressBase.ServiceStack
         List<DVBaseColumn> ExcelColumns = new List<DVBaseColumn>();
 
         bool showCheckboxColumn = false;
+
+        SheetData partSheetData = new SheetData();
+
+        WorksheetPart worksheetPart1 = null;
+
+        WorkbookPart workbookPart1 = null;
+
+        MergeCells mergeCells = null;
 
         //[CompressResponse]
         //public DataSourceDataResponse Any(DataVisDataRequest request)
@@ -950,8 +968,9 @@ namespace ExpressBase.ServiceStack
                 int SerialCount = 0;
                 bool isTree = false;
                 FileInfo file = null;
-                ExcelPackage package = null;
-                ExcelWorksheet worksheet = null;
+                SpreadsheetDocument package = null;
+                //ExcelWorksheet worksheet = null;
+                MemoryStream ms = new MemoryStream();
                 byte[] bytes = null;
 
                 TreeData<EbDataRow> tree = new TreeData<EbDataRow>();
@@ -981,10 +1000,11 @@ namespace ExpressBase.ServiceStack
 
                     if (_isexcel)
                     {
-                        file = PreExcelCalculation(sFileName);
-                        package = new ExcelPackage(file);
-                        worksheet = package.Workbook.Worksheets.Add("Report");
-                        PreExcelAddHeader(ref worksheet, _dv);
+                        //file = PreExcelCalculation(sFileName);
+                        package = SpreadsheetDocument.Create(ms, DocumentFormat.OpenXml.SpreadsheetDocumentType.Workbook);
+                        CreatePartsForExcel(package);
+                        //worksheet = package.Workbook.Worksheets.Add("Report");
+                        //PreExcelAddHeader(ref worksheet, _dv);
                     }
 
                     var Treecol = this.Check4Tree((_dv as EbTableVisualization));
@@ -996,10 +1016,10 @@ namespace ExpressBase.ServiceStack
                         int i = 0;
                         foreach (Node<EbDataRow> Nodedr in tree.Tree)
                         {
-                            DataTable2FormatedTable(Nodedr.Item, _dv, _user_culture, _user, ref _formattedTable, ref globals, bObfuscute, _isexcel, ref Summary, ref worksheet, i, rows.Count, Nodedr.IsGroup, Nodedr.Level, isTree);
+                            DataTable2FormatedTable(Nodedr.Item, _dv, _user_culture, _user, ref _formattedTable, ref globals, bObfuscute, _isexcel, ref Summary, i, rows.Count, Nodedr.IsGroup, Nodedr.Level, isTree);
                             if (Nodedr.Children.Count > 0)
                             {
-                                RecursiveGetTreeChilds(Nodedr, _dv, _user_culture, _user, ref _formattedTable, ref globals, bObfuscute, _isexcel, ref Summary, ref worksheet, ref i, rows.Count, isTree);
+                                RecursiveGetTreeChilds(Nodedr, _dv, _user_culture, _user, ref _formattedTable, ref globals, bObfuscute, _isexcel, ref Summary, ref i, rows.Count, isTree);
                             }
                             i++;
                         }
@@ -1008,7 +1028,7 @@ namespace ExpressBase.ServiceStack
                     {
                         for (int i = 0; i < rows.Count; i++)
                         {
-                            DataTable2FormatedTable(rows[i], _dv, _user_culture, _user, ref _formattedTable, ref globals, bObfuscute, _isexcel, ref Summary, ref worksheet, i, rows.Count);
+                            DataTable2FormatedTable(rows[i], _dv, _user_culture, _user, ref _formattedTable, ref globals, bObfuscute, _isexcel, ref Summary, i, rows.Count);
                             if (isRowgrouping)
                                 DoRowGroupingCommon(rows[i], _dv, _user_culture, _user, ref _formattedTable, IsMultiLevelRowGrouping, ref RowGrouping, ref PreviousGroupingText, ref CurSortIndex, ref SerialCount, i, dvColCount, TotalLevels, ref AggregateColumnIndexes, ref RowGroupingColumns, rows.Count);
                         }
@@ -1019,15 +1039,18 @@ namespace ExpressBase.ServiceStack
                     _levels = SortedGroupings;
                     if (_isexcel)
                     {
-                        worksheet.Cells.AutoFitColumns();
-                        bytes = package.GetAsByteArray();
+                        worksheetPart1.Worksheet.InsertAfter(mergeCells, worksheetPart1.Worksheet.Elements<SheetData>().First());
+                        worksheetPart1.Worksheet.Save();
+                        workbookPart1.Workbook.Save();
+                        package.Close();
+                        bytes = ms.ToArray();
                     }
                 }
                 else
                 {
                     for (int i = 0; i < rows.Count; i++)
                     {
-                        DataTable2FormatedTable(rows[i], _dv, _user_culture, _user, ref _formattedTable, ref globals, bObfuscute, _isexcel, ref Summary, ref worksheet, i, rows.Count);
+                        DataTable2FormatedTable(rows[i], _dv, _user_culture, _user, ref _formattedTable, ref globals, bObfuscute, _isexcel, ref Summary, i, rows.Count);
 
                     }
                 }
@@ -1042,6 +1065,214 @@ namespace ExpressBase.ServiceStack
             return null;
         }
 
+        private void CreatePartsForExcel(SpreadsheetDocument document)
+        {
+            //partSheetData = GenerateSheetdataForDetails();
+            workbookPart1 = document.AddWorkbookPart();
+            workbookPart1.Workbook = new Workbook();
+            AddStyleSheet();
+            worksheetPart1 = workbookPart1.AddNewPart<WorksheetPart>("rId1");
+            worksheetPart1.Worksheet = new Worksheet();
+            //ff
+            CreateHeaderRowForExcel();
+            createcolumns();
+            worksheetPart1.Worksheet.Append(partSheetData);
+            //GenerateWorksheetPartContent();
+            GenerateWorkbookPartContent(document);
+        }
+
+        private void GenerateWorkbookPartContent(SpreadsheetDocument document)
+        {
+            Sheets sheets1 = new Sheets();
+            Sheet sheet1 = new Sheet() { Name = "Sheet1", SheetId = (UInt32Value)1U, Id = document.WorkbookPart.GetIdOfPart(worksheetPart1) };
+            sheets1.Append(sheet1);
+            workbookPart1.Workbook.Append(sheets1);
+        }
+
+        //private void GenerateWorksheetPartContent()
+        //{
+        //    Worksheet worksheet1 = worksheetPart1.Worksheet;
+        //    worksheet1.Append(partSheetData);
+        //    worksheetPart1.Worksheet = worksheet1;
+        //}
+
+        public void createcolumns()
+        {
+            Columns columns = new Columns();
+            for (var i = 1; i <= ExcelColumns.Count; i++)
+                columns.Append(new Column() { Min = Convert.ToUInt32(i), Max = Convert.ToUInt32(i),Width=25, CustomWidth = true });
+            worksheetPart1.Worksheet.Append(columns);
+        }
+
+        public void CreateHeaderRowForExcel()
+        {
+            ExcelRowcount = 1;
+            ExcelColumns = _dV.Columns.FindAll(col => col.bVisible && !(col is DVApprovalColumn) && !(col is DVActionColumn)).ToList();
+            Row workRow = new Row();
+            workRow.Append(CreateCell(_dV.DisplayName,1U));
+            partSheetData.Append(workRow);
+            var char1 = GetExcelColumnName(ExcelColumns.Count);
+            mergeCells = new MergeCells();
+            mergeCells.Append(new MergeCell() { Reference = new StringValue($"A1:{char1}1") });
+            for (var i = 1; i <= _dV.ParamsList.Count; i++)
+            {
+                workRow = new Row();
+                workRow.Append(CreateCell( _dV.ParamsList[i - 1].Name + " = " + _dV.ParamsList[i - 1].Value,3U));
+                mergeCells.Append(new MergeCell() { Reference = new StringValue($"A{i+1}:B{i+1}") });
+                ExcelRowcount++;
+                partSheetData.Append(workRow);
+            }
+            for (var i = 1; i <= TableFilters.Count; i++)
+            {
+                ExcelRowcount++;
+                var col = ExcelColumns.Find(_col => _col.Name == TableFilters[i - 1].Column);
+                workRow = new Row();
+                workRow.Append(CreateCell(col.sTitle + " " + TableFilters[i - 1].Operator + " " + TableFilters[i - 1].Value,3U));
+                mergeCells.Append(new MergeCell() { Reference = new StringValue($"A{ExcelRowcount}:B{ExcelRowcount}") });
+                partSheetData.Append(workRow);
+            }
+            ExcelRowcount++;
+            workRow = new Row();
+            for (var i = 0; i < ExcelColumns.Count; i++)
+            {
+                workRow.Append(CreateCell(ExcelColumns[i].sTitle,2U));
+            }
+            partSheetData.Append(workRow);
+            ExcelRowcount++;
+        }
+
+        private string GetExcelColumnName(int columnNumber)
+        {
+            int dividend = columnNumber;
+            string columnName = String.Empty;
+            int modulo;
+
+            while (dividend > 0)
+            {
+                modulo = (dividend - 1) % 26;
+                columnName = Convert.ToChar(65 + modulo).ToString() + columnName;
+                dividend = (int)((dividend - modulo) / 26);
+            }
+
+            return columnName;
+        }
+
+        private Cell CreateCell(string cellreference, string text)
+        {
+            Cell cell = new Cell { CellReference = cellreference };
+            cell.StyleIndex = 3U;
+            //cell.DataType = ResolveCellDataTypeOnValue(text);
+            //cell.CellValue = new CellValue(text);
+            return cell;
+        }
+
+        private Cell CreateCell(string text, uint styleIndex)
+        {
+            Cell cell = new Cell();
+            cell.StyleIndex = styleIndex;
+            cell.DataType = ResolveCellDataTypeOnValue(text);
+            cell.CellValue = new CellValue(text);
+            return cell;
+        }
+
+        private Cell CreateCellWithFormula(string cellreference, string  _formula)
+        {
+            Cell cell = new Cell { CellReference = cellreference };
+            CellFormula cellformula = new CellFormula();
+            cellformula.Text = _formula;
+            cell.StyleIndex = 3U;
+            cell.Append(cellformula);
+            return cell;
+        }
+
+        private EnumValue<CellValues> ResolveCellDataTypeOnValue(string text)
+        {
+            int intVal;
+            double doubleVal;
+            if (int.TryParse(text, out intVal) || double.TryParse(text, out doubleVal))
+            {
+                return CellValues.Number;
+            }
+            else
+            {
+                return CellValues.String;
+            }
+        }
+
+        private WorkbookStylesPart AddStyleSheet()
+        {
+            WorkbookStylesPart stylesheet = workbookPart1.AddNewPart<WorkbookStylesPart>();
+
+            Stylesheet workbookstylesheet = new Stylesheet();
+
+            Font font0 = new Font();         // Default font
+
+            Font font1 = new Font();  
+            font1.Append(new Bold()); 
+            font1.Append(new FontSize() { Val = 15D });
+            font1.Append(new FontName() { Val = "Calibri" });
+
+            Font font2 = new Font();
+            font2.Append(new Bold());
+            font2.Append(new FontSize() { Val = 12D });
+            font2.Append(new FontName() { Val = "Calibri" });
+
+            Font font3 = new Font();
+            font3.Append(new FontSize() { Val = 11D });
+            font3.Append(new FontName() { Val = "Calibri" });
+
+
+
+            Fonts fonts = new Fonts();      // <APENDING Fonts>
+            fonts.Append(font0);
+            fonts.Append(font1);
+            fonts.Append(font2);
+            fonts.Append(font3);
+
+            Fills fills = new Fills();
+            fills.Append(new Fill());
+
+            Borders borders = new Borders();
+            borders.Append(new Border());
+
+            Alignment alignment = new Alignment()
+            {
+                Horizontal = HorizontalAlignmentValues.Center,
+                Vertical = VerticalAlignmentValues.Center
+            };
+
+            Alignment alignment1 = new Alignment()
+            {
+                Horizontal = HorizontalAlignmentValues.Center,
+                Vertical = VerticalAlignmentValues.Center
+            };
+
+            // <CellFormats>
+            CellFormat cellformat0 = new CellFormat() { FontId = 0, FillId=0, BorderId=0 }; // Default style : Mandatory | Style ID =0
+            CellFormat cellformat1 = new CellFormat() { FontId = 1, Alignment = alignment };  // Style with Bold text ; Style ID = 1
+            CellFormat cellformat2 = new CellFormat() { FontId = 2, Alignment = alignment1 };  // Style with Bold text ; Style ID = 1
+            CellFormat cellformat3 = new CellFormat() { FontId = 3 };  // Style with Bold text ; Style ID = 1
+
+            // <APENDING CellFormats>
+            CellFormats cellformats = new CellFormats();
+            cellformats.Append(cellformat0);
+            cellformats.Append(cellformat1);
+            cellformats.Append(cellformat2);
+            cellformats.Append(cellformat3);
+
+
+            // Append FONTS, FILLS , BORDERS & CellFormats to stylesheet <Preserve the ORDER>
+            workbookstylesheet.Append(fonts);
+            workbookstylesheet.Append(fills);
+            workbookstylesheet.Append(borders);
+            workbookstylesheet.Append(cellformats);
+
+            // Finalize
+            stylesheet.Stylesheet = workbookstylesheet;
+            stylesheet.Stylesheet.Save();
+
+            return stylesheet;
+        }
 
         public PrePrcessorReturn PreProcessingCalendarView(ref EbDataSet _dataset, List<Param> Parameters, ref EbDataVisualization _dv, User _user)
         {
@@ -1522,26 +1753,35 @@ namespace ExpressBase.ServiceStack
 
         }
 
-        public void RecursiveGetTreeChilds(Node<EbDataRow> Nodedr, EbDataVisualization _dv, CultureInfo _user_culture, User _user, ref EbDataTable _formattedTable, ref Globals globals, bool bObfuscute, bool _isexcel, ref Dictionary<int, List<object>> Summary, ref ExcelWorksheet worksheet, ref int i, int count, bool isTree)
+        public void RecursiveGetTreeChilds(Node<EbDataRow> Nodedr, EbDataVisualization _dv, CultureInfo _user_culture, User _user, ref EbDataTable _formattedTable, ref Globals globals, bool bObfuscute, bool _isexcel, ref Dictionary<int, List<object>> Summary, ref int i, int count, bool isTree)
         {
             foreach (Node<EbDataRow> dr in Nodedr.Children)
             {
                 i++;
-                DataTable2FormatedTable(dr.Item, _dv, _user_culture, _user, ref _formattedTable, ref globals, bObfuscute, _isexcel, ref Summary, ref worksheet, i, count, dr.IsGroup, dr.Level, isTree);
+                DataTable2FormatedTable(dr.Item, _dv, _user_culture, _user, ref _formattedTable, ref globals, bObfuscute, _isexcel, ref Summary, i, count, dr.IsGroup, dr.Level, isTree);
                 if (dr.Children.Count > 0)
                 {
-                    RecursiveGetTreeChilds(dr, _dv, _user_culture, _user, ref _formattedTable, ref globals, bObfuscute, _isexcel, ref Summary, ref worksheet, ref i, count, isTree);
+                    RecursiveGetTreeChilds(dr, _dv, _user_culture, _user, ref _formattedTable, ref globals, bObfuscute, _isexcel, ref Summary, ref i, count, isTree);
                 }
 
             }
 
         }
 
-        public void DataTable2FormatedTable(EbDataRow row, EbDataVisualization _dv, CultureInfo _user_culture, User _user, ref EbDataTable _formattedTable, ref Globals globals, bool bObfuscute, bool _isexcel, ref Dictionary<int, List<object>> Summary, ref ExcelWorksheet worksheet, int i, int count, bool isgroup = false, int level = 0, bool isTree = false)
+        public void DataTable2FormatedTable(EbDataRow row, EbDataVisualization _dv, CultureInfo _user_culture, User _user, ref EbDataTable _formattedTable, ref Globals globals, bool bObfuscute, bool _isexcel, ref Dictionary<int, List<object>> Summary, int i, int count, bool isgroup = false, int level = 0, bool isTree = false)
         {
             bool isnotAdded = true;
             try
             {
+                Row workRow = new Row();
+                if (_isexcel)
+                {
+                    for(int k=1;k<=ExcelColumns.Count; k++)
+                    {
+                        string cellReference = GetExcelColumnName(k) + (i + ExcelRowcount);
+                        workRow.Append(CreateCell(cellReference, string.Empty));
+                    }
+                }
                 IntermediateDic = new Dictionary<int, object>();
                 _formattedTable.Rows.Add(_formattedTable.NewDataRow2());
                 _formattedTable.Rows[i][_formattedTable.Columns.Count - 1] = i + 1;//serial
@@ -1559,6 +1799,7 @@ namespace ExpressBase.ServiceStack
                             object _unformattedData = row[col.Data] == null ? "" : row[col.Data];//(_dv.AutoGen && col.Name == "eb_action") ? "<i class='fa fa-edit'></i>" :
                             object _formattedData = IntermediateDic[col.Data] == null ? "" : IntermediateDic[col.Data];
                             object ActualFormatteddata = IntermediateDic[col.Data] == null ? "" : IntermediateDic[col.Data];
+                            object ExcelData = _formattedData;
 
                             if (col.RenderType == EbDbTypes.Decimal || col.RenderType == EbDbTypes.Int32 || col.RenderType == EbDbTypes.Int64)
                             {
@@ -1568,6 +1809,7 @@ namespace ExpressBase.ServiceStack
                                     _formattedData = GetDataforRating((col as DVNumericColumn), _formattedData);
 
                                 SummaryCalc(ref Summary, col, _unformattedData, cults);
+                                ExcelData = _unformattedData;
                             }
                             else if (col.RenderType == EbDbTypes.String && (_isexcel == false))
                             {
@@ -1624,39 +1866,46 @@ namespace ExpressBase.ServiceStack
                                     //var src = "/images/{_quality}/{_unformattedData}.jpg"; 
                                     int rowIndex = i + ExcelRowcount;
                                     int imgid = Convert.ToInt32(_unformattedData);
+                                    workRow.Height = _height;
+                                    workRow.CustomHeight = true;
                                     if (imgid > 0)
                                     {
                                         Log.Info("dprefid----" + imgid);
-                                        byte[] bytea = GetImage(imgid);
-                                        if (bytea.Length > 0)
-                                        {
-                                            MemoryStream ms = new MemoryStream(bytea);
-                                            Log.Info("MemoryStream ok-----" + imgid);
-                                            // Image img = Image.FromStream(ms);
-                                            Log.Info("Drawings.Image ok-----" + imgid);
-                                            //string sFilePath = string.Format("../StaticFiles/{0}/{1}", this._ebSolution.SolutionID, imgid);
-                                            //using (FileStream file = new FileStream(sFilePath, FileMode.Create, System.IO.FileAccess.Write))
-                                            //{
-                                            //    file.Write(bytea, 0, bytea.Length);
-                                            //}
-                                            //FileInfo fileInfo = new FileInfo(sFilePath);
-                                            Bitmap img = new Bitmap(ms);
-                                            if (img.HorizontalResolution == 0 || img.VerticalResolution == 0)
-                                                img.SetResolution(96, 96);
+                                        //byte[] bytea = GetImage(imgid);
+                                        Stream imageStream = GetImageStream(imgid);
+                                        if (imageStream != null)
+                                            InsertImage(worksheetPart1, rowIndex-1, ExcelColIndex-1, imageStream);
+                                        //if (bytea.Length > 0)
+                                        //{
+                                        //    MemoryStream ms = new MemoryStream(bytea);
+                                        //    Log.Info("MemoryStream ok-----" + imgid);
+                                        //    // Image img = Image.FromStream(ms);
+                                        //    Log.Info("Drawings.Image ok-----" + imgid);
+                                        //    //string sFilePath = string.Format("../StaticFiles/{0}/{1}", this._ebSolution.SolutionID, imgid);
+                                        //    //using (FileStream file = new FileStream(sFilePath, FileMode.Create, System.IO.FileAccess.Write))
+                                        //    //{
+                                        //    //    file.Write(bytea, 0, bytea.Length);
+                                        //    //}
+                                        //    //FileInfo fileInfo = new FileInfo(sFilePath);
+                                        //    Bitmap img = new Bitmap(ms);
+                                        //    if (img.HorizontalResolution == 0 || img.VerticalResolution == 0)
+                                        //        img.SetResolution(96, 96);
 
-                                            ExcelPicture pic = worksheet.Drawings.AddPicture(_unformattedData + ".jpg", img);
-                                            Log.Info("ExcelPicture ok-----" + imgid);
-                                            pic.SetPosition(rowIndex - 1, 0, ExcelColIndex - 1, 0);
-                                            pic.SetSize(_height, _width);
-                                            //pic.From.Column = colIndex;
-                                            //pic.From.Row = rowIndex;
-                                            //pic.SetSize(100, 100);
-                                            // 2x2 px space for better alignment
-                                            Log.Info("Image added in excel-----");
-                                        }
+                                        //    //ExcelPicture pic = worksheet.Drawings.AddPicture(_unformattedData + ".jpg", img);
+                                        //    Log.Info("ExcelPicture ok-----" + imgid);
+                                        //    //pic.SetPosition(rowIndex - 1, 0, ExcelColIndex - 1, 0);
+                                        //    //pic.SetSize(_height, _width);
+                                        //    //pic.From.Column = colIndex;
+                                        //    //pic.From.Row = rowIndex;
+                                        //    //pic.SetSize(100, 100);
+                                        //    // 2x2 px space for better alignment
+                                        //    Log.Info("Image added in excel-----");
+                                        //}
+
+
                                     }
-                                    worksheet.Column(ExcelColIndex).Width = _width;
-                                    worksheet.Row(rowIndex).Height = _height;
+                                    //worksheet.Column(ExcelColIndex).Width = _width;
+                                    //worksheet.Row(rowIndex).Height = _height;
                                 }
                             }
 
@@ -1739,17 +1988,13 @@ namespace ExpressBase.ServiceStack
                             {
                                 SummaryCalcAverage(ref Summary, col, cults, count);
                             }
-                            if (_isexcel && isnotAdded && ExcelColIndex > 0 && !(col is DVApprovalColumn) && !(col is DVActionColumn))
+                            if (_isexcel && isnotAdded && ExcelColIndex > 0 )
                             {
-                                worksheet.Cells[i + ExcelRowcount, ExcelColIndex].Value = _formattedData;
-                                if (i + 1 == count)
-                                {
-                                    if (Summary.ContainsKey(col.Data))
-                                    {
-                                        worksheet.Cells[i + ExcelRowcount + 1, ExcelColIndex].Value = "Sum = "+ Summary[col.Data][0];//sum
-                                        worksheet.Cells[i + ExcelRowcount + 2, ExcelColIndex].Value = "Avg = " + Summary[col.Data][1];//avg
-                                    }
-                                }
+                                string cellReference = GetExcelColumnName(ExcelColIndex) + (i + ExcelRowcount);
+                                Cell cell =  workRow.Elements<Cell>().Where(c => c.CellReference.Value == cellReference).First();
+                                cell.CellValue = new CellValue(ExcelData.ToString());
+                                cell.DataType = ResolveCellDataTypeOnValue(ExcelData.ToString());
+                                //workRow.Append(CreateCell(cellReference, ExcelData.ToString()));
                             }
 
                         }
@@ -1765,6 +2010,27 @@ namespace ExpressBase.ServiceStack
                         var treecol = _dv.Columns.FirstOrDefault(e => e.IsTree == true);
                         _formattedTable.Rows[i][treecol.Data] = GetTreeHtml(_formattedTable.Rows[i][treecol.Data], isgroup, level);
                     }
+                    if (_isexcel)
+                    {
+                        partSheetData.Append(workRow);
+                        if (i + 1 == count)
+                        {
+                            Row workRow1 = new Row();
+                            Row workRow2 = new Row();
+                            foreach (var _key in Summary.Keys)
+                            {
+                                int ExcelColIndex = ExcelColumns.FindIndex(_col => _col.Data == _key) + 1;
+                                var cellReference = GetExcelColumnName(ExcelColIndex) + (i + ExcelRowcount + 1);
+                                var _formula = $"SUM({GetExcelColumnName(ExcelColIndex)}{ExcelRowcount}:{GetExcelColumnName(ExcelColIndex)}{i + ExcelRowcount})";
+                                workRow1.Append(CreateCellWithFormula(cellReference, _formula));
+                                cellReference = GetExcelColumnName(ExcelColIndex) + (i + ExcelRowcount + 2);
+                                _formula = $"AVERAGE({GetExcelColumnName(ExcelColIndex)}{ExcelRowcount}:{GetExcelColumnName(ExcelColIndex)}{i + ExcelRowcount})";
+                                workRow2.Append(CreateCellWithFormula(cellReference, _formula));
+                            }
+                            partSheetData.Append(workRow1);
+                            partSheetData.Append(workRow2);
+                        }
+                    }
                 }
             }
             catch (Exception e)
@@ -1775,6 +2041,518 @@ namespace ExpressBase.ServiceStack
             }
 
         }
+
+        /// <summary>
+        /// Inserts the image at the specified location
+        /// </summary>
+        /// <param name="sheet1">The WorksheetPart where image to be inserted</param>
+        /// <param name="startRowIndex">The starting Row Index</param>
+        /// <param name="startColumnIndex">The starting column index</param>
+        /// <param name="endRowIndex">The ending row index</param>
+        /// <param name="endColumnIndex">The ending column index</param>
+        /// <param name="imageStream">Stream which contains the image data</param>
+        private void InsertImage(WorksheetPart sheet1, int startRowIndex, int startColumnIndex, Stream imageStream)
+        {
+            ImagePartType ipt = ImagePartType.Jpeg;
+            DrawingsPart drawingsPart1;
+            ImagePart imagePart1;
+            Xdr.WorksheetDrawing worksheetDrawing1;
+            if (sheet1.DrawingsPart == null)
+            {
+                drawingsPart1 = sheet1.AddNewPart<DrawingsPart>();
+                imagePart1 = drawingsPart1.AddImagePart(ipt, sheet1.GetIdOfPart(drawingsPart1));
+                worksheetDrawing1 = new Xdr.WorksheetDrawing();
+            }
+            else
+            {
+                drawingsPart1 = sheet1.DrawingsPart;
+                imagePart1 = drawingsPart1.AddImagePart(ipt);
+                drawingsPart1.CreateRelationshipToPart(imagePart1);
+                worksheetDrawing1 = drawingsPart1.WorksheetDrawing;
+            }
+
+            int imageNumber = drawingsPart1.ImageParts.Count<ImagePart>();
+            if (imageNumber == 1)
+            {
+                Drawing drawing = new Drawing();
+                drawing.Id = drawingsPart1.GetIdOfPart(imagePart1);
+                sheet1.Worksheet.Append(drawing);
+            }
+            imagePart1.FeedData(imageStream);
+
+            Xdr.TwoCellAnchor twoCellAnchor1 = new Xdr.TwoCellAnchor() { EditAs = Xdr.EditAsValues.OneCell };
+
+            Xdr.FromMarker fromMarker1 = new Xdr.FromMarker();
+            Xdr.ColumnId columnId1 = new Xdr.ColumnId();
+            columnId1.Text = startColumnIndex.ToString();
+            Xdr.ColumnOffset columnOffset1 = new Xdr.ColumnOffset();
+            columnOffset1.Text = "0";
+            Xdr.RowId rowId1 = new Xdr.RowId();
+            rowId1.Text = startRowIndex.ToString();
+            Xdr.RowOffset rowOffset1 = new Xdr.RowOffset();
+            rowOffset1.Text = "0";
+
+            fromMarker1.Append(columnId1);
+            fromMarker1.Append(columnOffset1);
+            fromMarker1.Append(rowId1);
+            fromMarker1.Append(rowOffset1);
+
+            Xdr.ToMarker toMarker1 = new Xdr.ToMarker();
+            Xdr.ColumnId columnId2 = new Xdr.ColumnId();
+            columnId2.Text = startColumnIndex.ToString();
+            Xdr.ColumnOffset columnOffset2 = new Xdr.ColumnOffset();
+            columnOffset2.Text = "700000";
+            Xdr.RowId rowId2 = new Xdr.RowId();
+            rowId2.Text = startRowIndex.ToString();
+            Xdr.RowOffset rowOffset2 = new Xdr.RowOffset();
+            rowOffset2.Text = "501925";
+
+            toMarker1.Append(columnId2);
+            toMarker1.Append(columnOffset2);
+            toMarker1.Append(rowId2);
+            toMarker1.Append(rowOffset2);
+
+            Xdr.Picture picture1 = new Xdr.Picture();
+
+            Xdr.NonVisualPictureProperties nonVisualPictureProperties1 = new Xdr.NonVisualPictureProperties();
+            Xdr.NonVisualDrawingProperties nonVisualDrawingProperties1 = new Xdr.NonVisualDrawingProperties() { Id = new UInt32Value((uint)(1024 + imageNumber)), Name = "Picture " + imageNumber.ToString() };
+
+            Xdr.NonVisualPictureDrawingProperties nonVisualPictureDrawingProperties1 = new Xdr.NonVisualPictureDrawingProperties();
+            A.PictureLocks pictureLocks1 = new A.PictureLocks() { NoChangeAspect = true };
+
+            nonVisualPictureDrawingProperties1.Append(pictureLocks1);
+
+            nonVisualPictureProperties1.Append(nonVisualDrawingProperties1);
+            nonVisualPictureProperties1.Append(nonVisualPictureDrawingProperties1);
+
+            Xdr.BlipFill blipFill1 = new Xdr.BlipFill();
+
+            A.Blip blip1 = new A.Blip() { Embed = drawingsPart1.GetIdOfPart(imagePart1), CompressionState = A.BlipCompressionValues.Print };
+            blip1.AddNamespaceDeclaration("r", "http://schemas.openxmlformats.org/officeDocument/2006/relationships");
+
+            A.BlipExtensionList blipExtensionList1 = new A.BlipExtensionList();
+
+            A.BlipExtension blipExtension1 = new A.BlipExtension() { Uri = "{28A0092B-C50C-407E-A947-70E740481C1C}" };
+
+            A14.UseLocalDpi useLocalDpi1 = new A14.UseLocalDpi() { Val = false };
+            useLocalDpi1.AddNamespaceDeclaration("a14", "http://schemas.microsoft.com/office/drawing/2010/main");
+
+            blipExtension1.Append(useLocalDpi1);
+
+            blipExtensionList1.Append(blipExtension1);
+
+            blip1.Append(blipExtensionList1);
+
+            A.Stretch stretch1 = new A.Stretch();
+            A.FillRectangle fillRectangle1 = new A.FillRectangle();
+
+            stretch1.Append(fillRectangle1);
+
+            blipFill1.Append(blip1);
+            blipFill1.Append(stretch1);
+
+            Xdr.ShapeProperties shapeProperties1 = new Xdr.ShapeProperties();
+
+            A.Transform2D transform2D1 = new A.Transform2D();
+            A.Offset offset1 = new A.Offset() { X = 1257300L, Y = 762000L };
+            A.Extents extents1 = new A.Extents() { Cx = 2943225L, Cy = 2257425L };
+
+            transform2D1.Append(offset1);
+            transform2D1.Append(extents1);
+
+            A.PresetGeometry presetGeometry1 = new A.PresetGeometry() { Preset = A.ShapeTypeValues.Rectangle };
+            A.AdjustValueList adjustValueList1 = new A.AdjustValueList();
+
+            presetGeometry1.Append(adjustValueList1);
+
+            shapeProperties1.Append(transform2D1);
+            shapeProperties1.Append(presetGeometry1);
+
+            picture1.Append(nonVisualPictureProperties1);
+            picture1.Append(blipFill1);
+            picture1.Append(shapeProperties1);
+            Xdr.ClientData clientData1 = new Xdr.ClientData();
+
+            twoCellAnchor1.Append(fromMarker1);
+            twoCellAnchor1.Append(toMarker1);
+            twoCellAnchor1.Append(picture1);
+            twoCellAnchor1.Append(clientData1);
+
+            worksheetDrawing1.Append(twoCellAnchor1);
+
+            if (imageNumber == 1)
+                drawingsPart1.WorksheetDrawing = worksheetDrawing1;
+        }
+
+        //private void InsertImage(Stream imageStream, Row row, DVBaseColumn col, int rowIndex, int colIndex)
+        //{
+        //    //Inserting a drawing element in worksheet
+        //    //Make sure that the relationship id is same for drawing element in worksheet and its relationship part
+        //    int drawingPartId = GetNextRelationShipID();
+        //    Drawing drawing1 = new Drawing() { Id = "rId" + rowIndex.ToString() };
+
+        //    //Check whether the WorksheetPart contains VmlDrawingParts (LegacyDrawing element)
+        //    if (worksheetPart1.VmlDrawingParts == null)
+        //    {
+        //        //if there is no VMLDrawing part (LegacyDrawing element) exists, just append the drawing part to the sheet
+        //        worksheetPart1.Worksheet.Append(drawing1);
+        //    }
+        //    else
+        //    {
+        //        //if VmlDrawingPart (LegacyDrawing element) exists, then find the index of legacy drawing in the sheet and inserts the new drawing element before VMLDrawing part
+        //        int legacyDrawingIndex = GetIndexofLegacyDrawing();
+        //        if (legacyDrawingIndex != -1)
+        //            worksheetPart1.Worksheet.InsertAt<OpenXmlElement>(drawing1, legacyDrawingIndex);
+        //        else
+        //            worksheetPart1.Worksheet.Append(drawing1);
+        //    }
+        //    //Adding the drawings.xml part
+        //    DrawingsPart drawingsPart1 = null;
+        //    if (worksheetPart1.DrawingsPart == null)
+        //        drawingsPart1 = worksheetPart1.AddNewPart<DrawingsPart>("rId" + rowIndex.ToString());
+        //    else
+        //        drawingsPart1 = worksheetPart1.DrawingsPart;
+        //    GenerateDrawingsPart1Content(drawingsPart1, rowIndex, colIndex, rowIndex+1, colIndex+1);
+        //    //Adding the image
+        //    ImagePart imagePart1 = drawingsPart1.AddNewPart<ImagePart>("image/jpeg", "rId" + rowIndex.ToString());
+        //    imagePart1.FeedData(imageStream);
+        //}
+
+        ///// <summary>
+        ///// Get the index of legacy drawing element in the specified WorksheetPart
+        ///// </summary>
+        ///// <param name="sheet1">The worksheetPart</param>
+        ///// <returns>Index of legacy drawing</returns>
+        //private int GetIndexofLegacyDrawing()
+        //{
+        //    for (int i = 0; i < worksheetPart1.Worksheet.ChildElements.Count; i++)
+        //    {
+        //        OpenXmlElement element = worksheetPart1.Worksheet.ChildElements[i];
+        //        if (element is LegacyDrawing)
+        //            return i;
+        //    }
+        //    return -1;
+        //}
+
+        //private static void GenerateDrawingsPart1Content(DrawingsPart drawingsPart1, int startRowIndex, int startColumnIndex, int endRowIndex, int endColumnIndex)
+        //{
+        //    Xdr.WorksheetDrawing worksheetDrawing1 = new Xdr.WorksheetDrawing();
+        //    worksheetDrawing1.AddNamespaceDeclaration("xdr", "http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing");
+        //    worksheetDrawing1.AddNamespaceDeclaration("a", "http://schemas.openxmlformats.org/drawingml/2006/main");
+
+        //    Xdr.TwoCellAnchor twoCellAnchor1 = new Xdr.TwoCellAnchor() { EditAs = Xdr.EditAsValues.OneCell };
+
+        //    Xdr.FromMarker fromMarker1 = new Xdr.FromMarker();
+        //    Xdr.ColumnId columnId1 = new Xdr.ColumnId();
+        //    columnId1.Text = startColumnIndex.ToString();
+        //    Xdr.ColumnOffset columnOffset1 = new Xdr.ColumnOffset();
+        //    columnOffset1.Text = "38100";
+        //    Xdr.RowId rowId1 = new Xdr.RowId();
+        //    rowId1.Text = startRowIndex.ToString();
+        //    Xdr.RowOffset rowOffset1 = new Xdr.RowOffset();
+        //    rowOffset1.Text = "0";
+
+        //    fromMarker1.Append(columnId1);
+        //    fromMarker1.Append(columnOffset1);
+        //    fromMarker1.Append(rowId1);
+        //    fromMarker1.Append(rowOffset1);
+
+        //    Xdr.ToMarker toMarker1 = new Xdr.ToMarker();
+        //    Xdr.ColumnId columnId2 = new Xdr.ColumnId();
+        //    columnId2.Text = endColumnIndex.ToString();
+        //    Xdr.ColumnOffset columnOffset2 = new Xdr.ColumnOffset();
+        //    columnOffset2.Text = "542925";
+        //    Xdr.RowId rowId2 = new Xdr.RowId();
+        //    rowId2.Text = endRowIndex.ToString();
+        //    Xdr.RowOffset rowOffset2 = new Xdr.RowOffset();
+        //    rowOffset2.Text = "161925";
+
+        //    toMarker1.Append(columnId2);
+        //    toMarker1.Append(columnOffset2);
+        //    toMarker1.Append(rowId2);
+        //    toMarker1.Append(rowOffset2);
+
+        //    Xdr.Picture picture1 = new Xdr.Picture();
+
+        //    Xdr.NonVisualPictureProperties nonVisualPictureProperties1 = new Xdr.NonVisualPictureProperties();
+        //    Xdr.NonVisualDrawingProperties nonVisualDrawingProperties1 = new Xdr.NonVisualDrawingProperties() { Id = (UInt32Value)2U, Name = "Picture 1" };
+
+        //    Xdr.NonVisualPictureDrawingProperties nonVisualPictureDrawingProperties1 = new Xdr.NonVisualPictureDrawingProperties();
+        //    A.PictureLocks pictureLocks1 = new A.PictureLocks() { NoChangeAspect = true };
+
+        //    nonVisualPictureDrawingProperties1.Append(pictureLocks1);
+
+        //    nonVisualPictureProperties1.Append(nonVisualDrawingProperties1);
+        //    nonVisualPictureProperties1.Append(nonVisualPictureDrawingProperties1);
+
+        //    Xdr.BlipFill blipFill1 = new Xdr.BlipFill();
+
+        //    A.Blip blip1 = new A.Blip() { Embed = "rId"+ startRowIndex, CompressionState = A.BlipCompressionValues.Print };
+        //    blip1.AddNamespaceDeclaration("r", "http://schemas.openxmlformats.org/officeDocument/2006/relationships");
+
+        //    A.BlipExtensionList blipExtensionList1 = new A.BlipExtensionList();
+
+        //    A.BlipExtension blipExtension1 = new A.BlipExtension() { Uri = "{28A0092B-C50C-407E-A947-70E740481C1C}" };
+
+        //    A14.UseLocalDpi useLocalDpi1 = new A14.UseLocalDpi() { Val = false };
+        //    useLocalDpi1.AddNamespaceDeclaration("a14", "http://schemas.microsoft.com/office/drawing/2010/main");
+
+        //    blipExtension1.Append(useLocalDpi1);
+
+        //    blipExtensionList1.Append(blipExtension1);
+
+        //    blip1.Append(blipExtensionList1);
+
+        //    A.Stretch stretch1 = new A.Stretch();
+        //    A.FillRectangle fillRectangle1 = new A.FillRectangle();
+
+        //    stretch1.Append(fillRectangle1);
+
+        //    blipFill1.Append(blip1);
+        //    blipFill1.Append(stretch1);
+
+        //    Xdr.ShapeProperties shapeProperties1 = new Xdr.ShapeProperties();
+
+        //    A.Transform2D transform2D1 = new A.Transform2D();
+        //    A.Offset offset1 = new A.Offset() { X = 1257300L, Y = 762000L };
+        //    A.Extents extents1 = new A.Extents() { Cx = 2943225L, Cy = 2257425L };
+
+        //    transform2D1.Append(offset1);
+        //    transform2D1.Append(extents1);
+
+        //    A.PresetGeometry presetGeometry1 = new A.PresetGeometry() { Preset = A.ShapeTypeValues.Rectangle };
+        //    A.AdjustValueList adjustValueList1 = new A.AdjustValueList();
+
+        //    presetGeometry1.Append(adjustValueList1);
+
+        //    shapeProperties1.Append(transform2D1);
+        //    shapeProperties1.Append(presetGeometry1);
+
+        //    picture1.Append(nonVisualPictureProperties1);
+        //    picture1.Append(blipFill1);
+        //    picture1.Append(shapeProperties1);
+        //    Xdr.ClientData clientData1 = new Xdr.ClientData();
+
+        //    twoCellAnchor1.Append(fromMarker1);
+        //    twoCellAnchor1.Append(toMarker1);
+        //    twoCellAnchor1.Append(picture1);
+        //    twoCellAnchor1.Append(clientData1);
+
+        //    worksheetDrawing1.Append(twoCellAnchor1);
+
+        //    drawingsPart1.WorksheetDrawing = worksheetDrawing1;
+        //}
+
+        //private void InsertImage(Stream imageStream, Row row,DVBaseColumn col, int rowIndex, int colIndex)
+        //{
+        //    //Calculate & sets the column width & Row height based on the image size
+        //    var data = GetImageFromFile(imageId);
+        //    Size imageSize = (data as Image).Size;
+        //    row.Height = imageSize.Height;
+        //    row.CustomHeight = true;
+        //    //Column column = (columns.ChildElements[colIndex] as Column);
+        //    //DoubleValue currentImageWidth = GetExcelCellWidth(imageSize.Width);
+        //    //if (column.Width != null)
+        //    //    column.Width = column.Width >
+        //    //    currentImageWidth ? column.Width : currentImageWidth;
+        //    //else
+        //    //    column.Width = currentImageWidth;
+        //    //column.Min = UInt32Value.FromUInt32((uint)colIndex + 1);
+        //    //column.Max = UInt32Value.FromUInt32((uint)colIndex + 2);
+
+        //    //if the data is Image, we need to serailize 
+        //    //its characteristics information in the drawing part
+        //    //and then raw image need to be added as Image part within file or package
+        //    int drawingrID = GetNextRelationShipID();
+        //    DrawingsPart drawingsPart = null;
+        //    Xdr.WorksheetDrawing worksheetDrawing = null;
+
+        //    if (worksheetPart1.DrawingsPart == null)
+        //    {
+        //        drawingsPart = worksheetPart1.AddNewPart<DrawingsPart>(drawingrID.ToString());
+        //        worksheetDrawing = new Xdr.WorksheetDrawing();
+        //        drawingsPart.WorksheetDrawing = worksheetDrawing;
+        //    }
+        //    else if (worksheetPart1.DrawingsPart != null && worksheetPart1.DrawingsPart.WorksheetDrawing != null)
+        //    {
+        //        drawingsPart = worksheetPart1.DrawingsPart;
+        //        worksheetDrawing = worksheetPart1.DrawingsPart.WorksheetDrawing;
+        //    }
+        //    int imagerId = GetNextRelationShipID();
+        //    Xdr.TwoCellAnchor cellAnchor = AddTwoCellAnchor(rowIndex, colIndex, rowIndex + 1, colIndex + 1, imagerId.ToString());
+        //    worksheetDrawing.Append(cellAnchor);
+        //    ImagePart imagePart =
+        //    drawingsPart.AddNewPart<ImagePart>("image/png", imagerId.ToString());
+        //    GenerateImagePartContent(imagePart, data as Image);
+        //}
+
+        /// <summary>
+        /// Represents the bounds of the image, 
+        /// reference to image part and other characteristics using TwoCellAnchor class
+        /// </summary>
+        /// <param name="startRow">Starting row of the image</param>
+        /// <param name="startColumn">starting column of the image</param>
+        /// <param name="endRow">Ending row of the image</param>
+        /// <param name="endColumn">ending column of the image</param>
+        /// <param name="imagerId">Image's relationship id</param>
+        /// <returns></returns>
+        //private Xdr.TwoCellAnchor AddTwoCellAnchor(int startRow, int startColumn, int endRow, int endColumn, string imagerId)
+        //{
+        //    Xdr.TwoCellAnchor twoCellAnchor1 = new Xdr.TwoCellAnchor() { EditAs = Xdr.EditAsValues.OneCell };
+
+        //    Xdr.FromMarker fromMarker1 = new Xdr.FromMarker();
+        //    Xdr.ColumnId columnId1 = new Xdr.ColumnId();
+        //    columnId1.Text = startColumn.ToString();
+        //    Xdr.ColumnOffset columnOffset1 = new Xdr.ColumnOffset();
+        //    columnOffset1.Text = "0";
+        //    Xdr.RowId rowId1 = new Xdr.RowId();
+        //    rowId1.Text = startRow.ToString();
+        //    Xdr.RowOffset rowOffset1 = new Xdr.RowOffset();
+        //    rowOffset1.Text = "0";
+
+        //    fromMarker1.Append(columnId1);
+        //    fromMarker1.Append(columnOffset1);
+        //    fromMarker1.Append(rowId1);
+        //    fromMarker1.Append(rowOffset1);
+
+        //    Xdr.ToMarker toMarker1 = new Xdr.ToMarker();
+        //    Xdr.ColumnId columnId2 = new Xdr.ColumnId();
+        //    columnId2.Text = endColumn.ToString();
+        //    Xdr.ColumnOffset columnOffset2 = new Xdr.ColumnOffset();
+        //    columnOffset2.Text = "0";// "152381";
+        //    Xdr.RowId rowId2 = new Xdr.RowId();
+        //    rowId2.Text = endRow.ToString();
+        //    Xdr.RowOffset rowOffset2 = new Xdr.RowOffset();
+        //    rowOffset2.Text = "0";//"152381";
+
+        //    toMarker1.Append(columnId2);
+        //    toMarker1.Append(columnOffset2);
+        //    toMarker1.Append(rowId2);
+        //    toMarker1.Append(rowOffset2);
+
+        //    Xdr.Picture picture1 = new Xdr.Picture();
+
+        //    Xdr.NonVisualPictureProperties nonVisualPictureProperties1 = new Xdr.NonVisualPictureProperties();
+        //    Xdr.NonVisualDrawingProperties nonVisualDrawingProperties1 =
+        //        new Xdr.NonVisualDrawingProperties() { Id = (UInt32Value)2U, Name = "Picture 1" };
+
+        //    Xdr.NonVisualPictureDrawingProperties nonVisualPictureDrawingProperties1 =
+        //        new Xdr.NonVisualPictureDrawingProperties();
+        //    A.PictureLocks pictureLocks1 = new A.PictureLocks() { NoChangeAspect = true };
+
+        //    nonVisualPictureDrawingProperties1.Append(pictureLocks1);
+
+        //    nonVisualPictureProperties1.Append(nonVisualDrawingProperties1);
+        //    nonVisualPictureProperties1.Append(nonVisualPictureDrawingProperties1);
+
+        //    Xdr.BlipFill blipFill1 = new Xdr.BlipFill();
+
+        //    A.Blip blip1 = new A.Blip() { Embed = imagerId };
+        //    blip1.AddNamespaceDeclaration("r",
+        //        "http://schemas.openxmlformats.org/officeDocument/2006/relationships");
+
+        //    A.BlipExtensionList blipExtensionList1 = new A.BlipExtensionList();
+
+        //    A.BlipExtension blipExtension1 = new A.BlipExtension()
+        //    { Uri = "{28A0092B-C50C-407E-A947-70E740481C1C}" };
+
+        //    A14.UseLocalDpi useLocalDpi1 = new A14.UseLocalDpi() { Val = false };
+        //    useLocalDpi1.AddNamespaceDeclaration("a14",
+        //        "http://schemas.microsoft.com/office/drawing/2010/main");
+
+        //    blipExtension1.Append(useLocalDpi1);
+
+        //    blipExtensionList1.Append(blipExtension1);
+
+        //    blip1.Append(blipExtensionList1);
+
+        //    A.Stretch stretch1 = new A.Stretch();
+        //    A.FillRectangle fillRectangle1 = new A.FillRectangle();
+
+        //    stretch1.Append(fillRectangle1);
+
+        //    blipFill1.Append(blip1);
+        //    blipFill1.Append(stretch1);
+
+        //    Xdr.ShapeProperties shapeProperties1 = new Xdr.ShapeProperties();
+
+        //    A.Transform2D transform2D1 = new A.Transform2D();
+        //    A.Offset offset1 = new A.Offset() { X = 0L, Y = 0L };
+        //    A.Extents extents1 = new A.Extents() { Cx = 152381L, Cy = 152381L };
+
+        //    transform2D1.Append(offset1);
+        //    transform2D1.Append(extents1);
+
+        //    A.PresetGeometry presetGeometry1 = new A.PresetGeometry() { Preset = A.ShapeTypeValues.Rectangle };
+        //    A.AdjustValueList adjustValueList1 = new A.AdjustValueList();
+
+        //    presetGeometry1.Append(adjustValueList1);
+
+        //    shapeProperties1.Append(transform2D1);
+        //    shapeProperties1.Append(presetGeometry1);
+
+        //    picture1.Append(nonVisualPictureProperties1);
+        //    picture1.Append(blipFill1);
+        //    picture1.Append(shapeProperties1);
+        //    Xdr.ClientData clientData1 = new Xdr.ClientData();
+
+        //    twoCellAnchor1.Append(fromMarker1);
+        //    twoCellAnchor1.Append(toMarker1);
+        //    twoCellAnchor1.Append(picture1);
+        //    twoCellAnchor1.Append(clientData1);
+
+        //    return twoCellAnchor1;
+        //}
+
+        /// <summary>
+        /// Generates the image part
+        /// </summary>
+        /// <param name="imagePart">Instance of the image part</param>
+        /// <param name="image">Instance of the 
+        /// image which need to be added into the package
+        /// </param>
+        //private void GenerateImagePartContent(ImagePart imagePart, Image image)
+        //{
+        //    MemoryStream memStream = new MemoryStream();
+        //    image.Save(memStream, ImageFormat.Png);
+        //    memStream.Position = 0;
+        //    imagePart.FeedData(memStream);
+        //    memStream.Close();
+        //}
+
+        /// <summary>
+        /// Returns the next relationship id for the specified WorksheetPart
+        /// </summary>
+        /// <param name="sheet1">The worksheetPart</param>
+        /// <returns>Returns the next relationship id </returns>
+        private int GetNextRelationShipID()
+        {
+            int nextId = 0;
+            List<int> ids = new List<int>();
+            foreach (IdPartPair part in worksheetPart1.Parts)
+            {
+                ids.Add(int.Parse(part.RelationshipId.Replace("rId", string.Empty)));
+            }
+            if (ids.Count > 0)
+                nextId = ids.Max() + 1;
+            else
+                nextId = 1;
+            return nextId;
+        }
+
+
+        //private Image GetImageFromFile(int fileName)
+        //{
+        //    string path = $"../images/medium/{fileName}.jpg";
+        //    //check the existence of the file in disc
+        //    if (File.Exists(path))
+        //    {
+        //        Image image = Image.FromFile(path);
+        //        return image;
+        //    }
+        //    else
+        //        return null;
+        //}
 
         private byte[] GetImage(int refId)
         {
@@ -1797,6 +2575,29 @@ namespace ExpressBase.ServiceStack
             }
 
             return fileByte;
+        }
+
+        private Stream GetImageStream(int refId)
+        {
+            DownloadFileResponse dfs = null;
+
+            byte[] fileByte = new byte[0];
+            dfs = FileClient.Get
+                 (new DownloadImageByIdRequest
+                 {
+                     ImageInfo = new ImageMeta
+                     {
+                         FileRefId = refId,
+                         FileCategory = Common.Enums.EbFileCategory.Images
+                     }
+                 });
+            if (dfs.StreamWrapper != null)
+            {
+                dfs.StreamWrapper.Memorystream.Position = 0;
+                return dfs.StreamWrapper.Memorystream;
+            }
+
+            return null;
         }
 
         private object GetTaggedData(DVStringColumn dVStringColumn, object _formattedData)
@@ -3138,42 +3939,10 @@ namespace ExpressBase.ServiceStack
         public FileInfo PreExcelCalculation(string sFileName)
         {
             MemoryStream stream = new MemoryStream();
-            FileInfo file = new FileInfo(Path.Combine(sFileName));
+            FileInfo file = new FileInfo(System.IO.Path.Combine(sFileName));
             return file;
         }
 
-        public void PreExcelAddHeader(ref ExcelWorksheet worksheet, EbDataVisualization _dv)
-        {
-            ExcelRowcount = 1;
-            ExcelColumns = _dv.Columns.FindAll(col => col.bVisible && !(col is DVApprovalColumn) && !(col is DVActionColumn)).ToList();
-            worksheet.Cells[1, 1].Value = _dv.DisplayName;
-            worksheet.Cells[1, 1, 1, ExcelColumns.Count].Merge = true;
-            worksheet.Cells[1, 1, 1, ExcelColumns.Count].Style.Font.Bold = true;
-            worksheet.Cells[1, 1, 1, ExcelColumns.Count].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-            worksheet.Cells[1, 1, 1, ExcelColumns.Count].Style.Font.Size = 15;
-            for (var i = 1; i <= _dv.ParamsList.Count; i++)
-            {
-                worksheet.Cells[i + 1, 1].Value = _dv.ParamsList[i - 1].Name + " = " + _dv.ParamsList[i - 1].Value;
-                worksheet.Cells[i + 1, 1, i + 1, 2].Merge = true;
-                ExcelRowcount++;
-            }
-            for (var i = 1; i <= TableFilters.Count; i++)
-            {
-                ExcelRowcount++;
-                var col = ExcelColumns.Find(_col => _col.Name == TableFilters[i - 1].Column);
-                worksheet.Cells[ExcelRowcount, 1].Value = col.sTitle + " " + TableFilters[i - 1].Operator + " " + TableFilters[i - 1].Value;
-                worksheet.Cells[ExcelRowcount, 1, ExcelRowcount, 2].Merge = true;
-            }
-            ExcelRowcount++;
-            for (var i = 0; i < ExcelColumns.Count; i++)
-            {
-                worksheet.Cells[ExcelRowcount, i + 1].Value = ExcelColumns[i].sTitle;
-                worksheet.Cells[ExcelRowcount, i + 1].Style.Font.Bold = true;
-                worksheet.Cells[ExcelRowcount, i + 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-                worksheet.Cells[ExcelRowcount, i + 1].Style.Font.Size = 12;
-            }
-            ExcelRowcount++;
-        }
 
     }
 
