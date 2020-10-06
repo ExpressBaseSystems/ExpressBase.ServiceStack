@@ -37,6 +37,7 @@ namespace ExpressBase.ServiceStack.Services
                 var tableMetaDict = mobileForm.GetTableMetaCollection(vDbTypes);
 
                 WebFormServices webservices = base.ResolveService<WebFormServices>();
+                webservices.EbConnectionFactory = this.EbConnectionFactory;
 
                 int status = 0;
                 foreach (var pair in tableMetaDict)
@@ -289,7 +290,6 @@ namespace ExpressBase.ServiceStack.Services
 
             return data;
         }
-
 
         private void GetMobilePagesByAppliation(EbMobileSolutionData data, User user, bool isAdmin, bool export)
         {
@@ -599,9 +599,9 @@ namespace ExpressBase.ServiceStack.Services
             return response;
         }
 
-        public GetMyActionsResponse Get(GetMyActionsRequest request)
+        public MyActionsResponse Get(MyActionsRequest request)
         {
-            GetMyActionsResponse response = new GetMyActionsResponse();
+            MyActionsResponse response = new MyActionsResponse();
             try
             {
                 User UserObject = GetUserObject(request.UserAuthId);
@@ -650,9 +650,69 @@ namespace ExpressBase.ServiceStack.Services
             return response;
         }
 
-        public GetMyActionInfoResponse Get(GetMyActionInfoRequest request)
+        public ParticularActionResponse Get(ParticularActionsRequest request)
         {
-            GetMyActionInfoResponse response = new GetMyActionInfoResponse();
+            ParticularActionResponse response = new ParticularActionResponse();
+            try
+            {
+                string query = @"SELECT * FROM eb_my_actions WHERE id = :actionid AND COALESCE(is_completed, 'F') = 'F'";
+
+                DbParameter[] parameters = {
+                    this.EbConnectionFactory.ObjectsDB.GetNewParameter("actionid", EbDbTypes.Int32, request.ActionId),
+                };
+
+                EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(query, parameters);
+
+                if (dt != null && dt.Rows.Any())
+                {
+                    EbDataRow row = dt.Rows.FirstOrDefault();
+
+                    EbMyActionsMobile action = new EbMyActionsMobile
+                    {
+                        Id = request.ActionId,
+                        StartDate = Convert.ToDateTime(row["from_datetime"]),
+                        StageId = Convert.ToInt32(row["eb_stages_id"]),
+                        WebFormRefId = row["form_ref_id"]?.ToString(),
+                        WebFormDataId = Convert.ToInt32(row["form_data_id"]),
+                        ApprovalLinesId = Convert.ToInt32(row["eb_approval_lines_id"]),
+                        Description = row["description"]?.ToString()
+                    };
+                    response.Action = action;
+
+                    try
+                    {
+                        action.ActionType = row["my_action_type"].ToString().ToEnum<MyActionTypes>();
+
+                        var actionInfo = this.Get(new MyActionInfoRequest
+                        {
+                            UserAuthId = request.UserAuthId,
+                            UserId = request.UserId,
+                            SolnId = request.SolnId,
+                            StageId = action.StageId,
+                            WebFormDataId = action.WebFormDataId,
+                            WebFormRefId = action.WebFormRefId
+                        });
+                        response.ActionInfo = actionInfo;
+
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine("Parse error");
+                        Console.WriteLine(ex.Message);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Exception at GetMyActionsRequest");
+                Console.WriteLine(ex.Message);
+            }
+            return response;
+        }
+
+        public MyActionInfoResponse Get(MyActionInfoRequest request)
+        {
+            MyActionInfoResponse response = new MyActionInfoResponse();
             try
             {
                 User UserObject = GetUserObject(request.UserAuthId);
@@ -721,7 +781,7 @@ namespace ExpressBase.ServiceStack.Services
 
             try
             {
-                var actionResp = this.Get(new GetMyActionsRequest
+                var actionResp = this.Get(new MyActionsRequest
                 {
                     UserAuthId = request.UserAuthId,
                     UserId = request.UserId

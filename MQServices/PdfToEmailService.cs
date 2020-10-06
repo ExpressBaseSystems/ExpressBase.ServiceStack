@@ -6,6 +6,7 @@ using ExpressBase.Objects;
 using ExpressBase.Objects.Services;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ExpressBase.Security;
+using ExpressBase.ServiceStack.Services;
 using ServiceStack;
 using ServiceStack.Messaging;
 using System;

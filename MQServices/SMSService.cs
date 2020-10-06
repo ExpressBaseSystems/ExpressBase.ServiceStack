@@ -14,6 +14,7 @@ using ExpressBase.Common;
 using System.Text.RegularExpressions;
 using ExpressBase.Objects.Services;
 using ExpressBase.Common.Constants;
+using ExpressBase.ServiceStack.Services;
 
 namespace ExpressBase.ServiceStack.MQServices
 {

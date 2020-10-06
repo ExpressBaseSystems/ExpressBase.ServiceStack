@@ -161,16 +161,19 @@ namespace ExpressBase.ServiceStack.Services
         {
             CreateSolutionFurtherResponse resp = new CreateSolutionFurtherResponse();
             int _solcount = 0;
+            int _totalsolcount = 0;
             try
             {
-                string sql = @"SELECT COUNT(*) FROM eb_solutions WHERE tenant_id = :tid AND pricing_tier = :pricing_tier";
+                string sql = @"SELECT COUNT(*) FROM eb_solutions WHERE tenant_id = :tid AND pricing_tier = :pricing_tier AND type = 1;
+                              SELECT COUNT(*) FROM eb_solutions WHERE tenant_id = :tid AND pricing_tier = :pricing_tier;";
                 DbParameter[] parameters =
                 {
-                this.InfraConnectionFactory.DataDB.GetNewParameter("tid",EbDbTypes.Int32,request.UserId),
-                this.InfraConnectionFactory.DataDB.GetNewParameter("pricing_tier",EbDbTypes.Int32,Convert.ToInt32(PricingTiers.FREE))
+                this.InfraConnectionFactory.DataDB.GetNewParameter("tid",EbDbTypes.Int32, request.UserId),
+                this.InfraConnectionFactory.DataDB.GetNewParameter("pricing_tier",EbDbTypes.Int32, Convert.ToInt32(PricingTiers.FREE))
                 };
-                EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(sql, parameters);
-                _solcount = Convert.ToInt32(dt.Rows[0][0]);
+                EbDataSet ds = this.InfraConnectionFactory.DataDB.DoQueries(sql, parameters);
+                _solcount = Convert.ToInt32(ds.Tables[0].Rows[0][0]);
+                _totalsolcount = Convert.ToInt32(ds.Tables[1].Rows[0][0]);
             }
             catch (Exception e)
             {
@@ -183,11 +186,13 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     CreateSolutionResponse response = this.Post(new CreateSolutionRequest
                     {
-                        SolutionName = "My Solution " + (_solcount + 1),
-                        Description = "My solution " + (_solcount + 1),
+                        SolutionName = "My Solution " + (_totalsolcount + 1),
+                        Description = "My solution " + (_totalsolcount + 1),
                         DeployDB = true,
                         UserId = request.UserId,
-                        IsFurther = true
+                        IsFurther = true,
+                        PrimarySId = request.PrimarySId,
+                        PackageId = request.PackageId
                     });
                     if (response.Id > 0)
                     {
@@ -245,7 +250,7 @@ namespace ExpressBase.ServiceStack.Services
                 if (rowaffcted > 0)
                 {
                     if (request.OldESolutionId == isid)
-                        this.Redis.Set<string>(string.Format(CoreConstants.SOLUTION_ID_MAP, request.NewESolutionId), isid); 
+                        this.Redis.Set<string>(string.Format(CoreConstants.SOLUTION_ID_MAP, request.NewESolutionId), isid);
                     else
                         this.Redis.RenameKey(string.Format(CoreConstants.SOLUTION_ID_MAP, request.OldESolutionId), string.Format(CoreConstants.SOLUTION_ID_MAP, request.NewESolutionId));
                     resp.Status = true;
@@ -408,51 +413,21 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     Sol_id_autogen = request.SolnUrl;
                 }
+                int sol_type = (request.PrimarySId != string.Empty && request.PrimarySId != null & request.PackageId > 0) ? 3 : 1;
+                string sql = @" INSERT INTO eb_solutions (solution_name, tenant_id, date_created, description, solution_id, esolution_id, isolution_id, pricing_tier, type, primary_solution)
+                                    VALUES(:sname, :tenant_id, now(), :descript, :solnid, :solnid, :solnid, 0 , :type, :primary) RETURNING id;	
 
-                string sql = @"INSERT INTO eb_solutions
-                                            (
-                                                solution_name,
-                                                tenant_id,
-                                                date_created,
-                                                description,
-                                                solution_id,
-                                                esolution_id,
-                                                isolution_id,
-                                                pricing_tier
-                                            )
-                                            VALUES(
-                                                :sname,
-                                                :tenant_id,
-                                                now(),
-                                                :descript,
-                                                :solnid,
-                                                :solnid,
-                                                :solnid,
-                                                0
-                                            ) RETURNING id;	
-                                INSERT INTO eb_role2tenant
-                                            (
-                                                tenant_id,
-                                                solution_id,
-                                                sys_role_id,
-                                                eb_createdat,
-                                                eb_createdby
-                                            )
-                                            VALUES
-                                            (
-                                                :tenant_id,
-                                                :solnid,
-                                                0,
-                                                NOW(),
-                                                :tenant_id
-                                            )RETURNING id;";
+                                INSERT INTO eb_role2tenant (tenant_id, solution_id, sys_role_id, eb_createdat, eb_createdby )
+                                    VALUES (:tenant_id, :solnid, 0, NOW(), :tenant_id )RETURNING id;";
 
                 DbParameter[] parameters = new DbParameter[]
                 {
                     InfraConnectionFactory.DataDB.GetNewParameter("sname", EbDbTypes.String, request.SolutionName),
                     InfraConnectionFactory.DataDB.GetNewParameter("tenant_id", EbDbTypes.Int32, request.UserId),
                     InfraConnectionFactory.DataDB.GetNewParameter("descript", EbDbTypes.String, request.Description),
-                    InfraConnectionFactory.DataDB.GetNewParameter("solnid", EbDbTypes.String,Sol_id_autogen)
+                    InfraConnectionFactory.DataDB.GetNewParameter("solnid", EbDbTypes.String, Sol_id_autogen),
+                    InfraConnectionFactory.DataDB.GetNewParameter("type", EbDbTypes.Int32,sol_type),
+                    InfraConnectionFactory.DataDB.GetNewParameter("primary", EbDbTypes.String, (request.PrimarySId != null )? request.PrimarySId : string.Empty)
                 };
 
                 EbDataSet _ds = this.InfraConnectionFactory.DataDB.DoQueries(sql, parameters);
@@ -472,8 +447,8 @@ namespace ExpressBase.ServiceStack.Services
                             SolnId = request.SolnId,
                             UserId = request.UserId,
                             IsChange = false,
-                            IsFurther = request.IsFurther
-
+                            IsFurther = request.IsFurther,
+                            SolutionType = (SolutionType)sol_type
                         });
 
                         if (response.DeploymentCompled)
@@ -491,7 +466,7 @@ namespace ExpressBase.ServiceStack.Services
                                 SolnId = Sol_id_autogen,
                                 UserId = request.UserId
                             });
-                            if (!request.IsFurther)
+                            if (!request.IsFurther || request.PackageId > 0)
                             {
                                 ImportrExportService service = base.ResolveService<ImportrExportService>();
                                 int demoAppId;
@@ -501,6 +476,8 @@ namespace ExpressBase.ServiceStack.Services
                                     demoAppId = 4;
                                 else
                                     demoAppId = 13;
+                                if (request.PackageId > 0)
+                                    demoAppId = request.PackageId;
                                 ImportApplicationResponse _response = service.Get(new ImportApplicationMqRequest
                                 {
                                     Id = demoAppId,
@@ -525,15 +502,20 @@ namespace ExpressBase.ServiceStack.Services
 
         public GetSolutionResponse Get(GetSolutionRequest request)
         {
-            List<EbSolutionsWrapper> temp = new List<EbSolutionsWrapper>();
-            string sql = string.Format("SELECT * FROM eb_solutions WHERE tenant_id={0} AND eb_del=false;", request.UserId);
+            List<EbSolutionsWrapper> AllSolns = new List<EbSolutionsWrapper>();
+            List<EbSolutionsWrapper> PrimarySolns = new List<EbSolutionsWrapper>();
+
+            Dictionary<string, List<AppStore>> MasterApps = new Dictionary<string, List<AppStore>>();
+            string sql = string.Format(@"SELECT * FROM eb_solutions WHERE tenant_id={0} AND eb_del=false; 
+                                        SELECT * FROM eb_solutions WHERE tenant_id = {0} AND type = 2;
+                                        SELECT id, app_name, user_solution_id FROM eb_appstore WHERE user_solution_id IN(SELECT isolution_id FROM eb_solutions WHERE tenant_id = {0} AND type = 2) AND is_master = true;", request.UserId);
             GetSolutionResponse resp = new GetSolutionResponse();
             try
             {
-                EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(sql);
-                foreach (EbDataRow dr in dt.Rows)
+                EbDataSet ds = this.InfraConnectionFactory.DataDB.DoQueries(sql);
+                foreach (EbDataRow dr in ds.Tables[0].Rows)
                 {
-                    EbSolutionsWrapper _ebSolutions = (new EbSolutionsWrapper
+                    EbSolutionsWrapper _ebSolutions = new EbSolutionsWrapper
                     {
                         SolutionName = dr[6].ToString(),
                         Description = dr[2].ToString(),
@@ -541,10 +523,42 @@ namespace ExpressBase.ServiceStack.Services
                         IsolutionId = dr[4].ToString(),
                         EsolutionId = dr[5].ToString(),
                         PricingTier = (PricingTiers)Convert.ToInt32(dr["pricing_tier"])
-                    });
-                    temp.Add(_ebSolutions);
+                    };
+                    AllSolns.Add(_ebSolutions);
                 }
-                resp.Data = temp;
+
+                foreach (EbDataRow dr in ds.Tables[1].Rows)
+                {
+                    EbSolutionsWrapper _ebSolutions = new EbSolutionsWrapper
+                    {
+                        SolutionName = dr[6].ToString(),
+                        Description = dr[2].ToString(),
+                        DateCreated = Convert.ToDateTime(dr[1]).ToString("g", DateTimeFormatInfo.InvariantInfo),
+                        IsolutionId = dr[4].ToString(),
+                        EsolutionId = dr[5].ToString(),
+                        PricingTier = (PricingTiers)Convert.ToInt32(dr["pricing_tier"])
+                    };
+                    PrimarySolns.Add(_ebSolutions);
+                }
+
+                foreach (EbDataRow dr in ds.Tables[2].Rows)
+                {
+                    if (!MasterApps.ContainsKey(dr[2].ToString()))
+                    {
+                        MasterApps.Add(dr[2].ToString(), new List<AppStore>());
+                    }
+
+                    AppStore _app = new AppStore
+                    {
+                        Id = Convert.ToInt32(dr[0]),
+                        Name = dr[1].ToString()
+                    };
+                    MasterApps[dr[2].ToString()].Add(_app);
+                }
+
+                resp.AllSolutions = AllSolns;
+                resp.PrimarySolutions = PrimarySolns;
+                resp.MasterPackages = MasterApps;
             }
             catch (Exception e)
             {
@@ -560,7 +574,8 @@ namespace ExpressBase.ServiceStack.Services
             {
                 Console.WriteLine("GetSolutioInfoRequest started - " + request.IsolutionId);
                 ConnectionManager _conService = base.ResolveService<ConnectionManager>();
-                string sql = string.Format("SELECT solution_name, description, date_created, esolution_id, pricing_tier, versioning, solution_settings, is2fa, otp_delivery FROM eb_solutions WHERE isolution_id='{0}'", request.IsolutionId);
+                string sql = string.Format(@"SELECT solution_name, description, date_created, esolution_id, pricing_tier, versioning, solution_settings, is2fa,
+                                            otp_delivery, type, primary_solution FROM eb_solutions WHERE isolution_id='{0}'", request.IsolutionId);
                 EbDataTable dt = (new EbConnectionFactory(CoreConstants.EXPRESSBASE, this.Redis)).DataDB.DoQuery(sql);
                 if (dt.Rows.Count > 0)
                 {
@@ -576,6 +591,8 @@ namespace ExpressBase.ServiceStack.Services
                         SolutionSettings = JsonConvert.DeserializeObject<SolutionSettings>(dt.Rows[0][6].ToString()),
                         Is2faEnabled = (dt.Rows[0][7] == null || dt.Rows[0][7].ToString() == "") ? false : (bool)dt.Rows[0][7],
                         OtpDelivery = dt.Rows[0][8].ToString(),
+                        SolutionType = (SolutionType)Convert.ToInt32(dt.Rows[0][9]),
+                        PrimarySolution = dt.Rows[0][10].ToString(),
                     };
                     resp = new GetSolutioInfoResponse() { Data = _ebSolutions };
                     if (resp.Data != null)
@@ -1942,7 +1959,7 @@ namespace ExpressBase.ServiceStack.Services
                         if (string.IsNullOrEmpty(esid) || string.IsNullOrEmpty(isid))
                             continue;
                         else
-                        { 
+                        {
                             this.Redis.Set<string>(string.Format(CoreConstants.SOLUTION_ID_MAP, esid), isid);
                             this.Redis.Set<string>(string.Format(CoreConstants.SOLUTION_ID_MAP, isid), isid);
                         }

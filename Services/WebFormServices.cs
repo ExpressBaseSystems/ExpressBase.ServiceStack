@@ -1122,17 +1122,7 @@ namespace ExpressBase.ServiceStack.Services
 
         private EbWebForm GetWebFormObject(string RefId, string UserAuthId, string SolnId)
         {
-            EbWebForm _form = this.Redis.Get<EbWebForm>(RefId);
-            if (_form == null)
-            {
-                var myService = base.ResolveService<EbObjectService>();
-                EbObjectParticularVersionResponse formObj = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = RefId });
-                if (formObj.Data == null || formObj.Data.Count == 0)
-                    throw new FormException("Bad request.", (int)HttpStatusCode.BadRequest, "WebForm not found with refId: " + RefId, "WebFormSevice -> GetWebFormObject");
-                _form = EbSerializers.Json_Deserialize(formObj.Data[0].Json);
-                this.Redis.Set<EbWebForm>(RefId, _form);
-            }
-            _form.RefId = RefId;
+            EbWebForm _form = EbFormHelper.GetEbObject<EbWebForm>(RefId, null, this.Redis, this);
             if (UserAuthId != null)
                 _form.UserObj = GetUserObject(UserAuthId);
             if (SolnId != null)
@@ -1197,6 +1187,7 @@ namespace ExpressBase.ServiceStack.Services
 
         //======================================= INSERT OR UPDATE OR DELETE RECORD =============================================
 
+        //Normal save
         public InsertDataFromWebformResponse Any(InsertDataFromWebformRequest request)
         {
             try
@@ -1218,7 +1209,7 @@ namespace ExpressBase.ServiceStack.Services
                 Console.WriteLine("Insert/Update WebFormData : MergeFormData start - " + DateTime.Now);
                 FormObj.MergeFormData();
                 Console.WriteLine("Insert/Update WebFormData : Save start - " + DateTime.Now);
-                string r = FormObj.Save(EbConnectionFactory.DataDB, this);
+                string r = FormObj.Save(EbConnectionFactory, this);
                 //Console.WriteLine("Insert/Update WebFormData : AfterExecutionIfUserCreated start - " + DateTime.Now);
                 //FormObj.AfterExecutionIfUserCreated(this, this.EbConnectionFactory.EmailConnection, MessageProducer3);
                 Console.WriteLine("Insert/Update WebFormData end : Execution Time = " + (DateTime.Now - startdt).TotalMilliseconds);
@@ -1281,6 +1272,7 @@ namespace ExpressBase.ServiceStack.Services
             };
         }
 
+        //form data submission using PushJson and FormGlobals - SQL Job, Excel Import save
         public InsertOrUpdateFormDataResp Any(InsertOrUpdateFormDataRqst request)
         {
             try
