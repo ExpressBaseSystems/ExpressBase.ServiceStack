@@ -903,7 +903,7 @@ namespace ExpressBase.ServiceStack.Services
                         if (form.SolutionObj.Locations.ContainsKey(request.CurrentLoc))
                             form.UserObj.Preference.DefaultLocation = request.CurrentLoc;
                     }
-                    form.GetEmptyModel();
+                    form.FormData = form.GetEmptyModel();
                 }
                 if (form.SolutionObj.SolutionSettings != null && form.SolutionObj.SolutionSettings.SignupFormRefid != string.Empty && form.SolutionObj.SolutionSettings.SignupFormRefid == form.RefId)
                 {
@@ -981,7 +981,7 @@ namespace ExpressBase.ServiceStack.Services
                         destForm.FormData = EbFormHelper.GetFilledNewFormData(sourceForm);
                     }
                     else
-                        destForm.GetEmptyModel();
+                        destForm.FormData = destForm.GetEmptyModel();
                 }
                 else
                 {
@@ -994,7 +994,7 @@ namespace ExpressBase.ServiceStack.Services
                         sourceForm.FormatImportData(EbConnectionFactory.DataDB, this, destForm);
                     }
                     else
-                        destForm.GetEmptyModel();
+                        destForm.FormData = destForm.GetEmptyModel();
                 }
 
                 _dataset.FormDataWrap = JsonConvert.SerializeObject(new WebformDataWrapper { FormData = destForm.FormData, Status = (int)HttpStatusCode.OK, Message = "Success" });
