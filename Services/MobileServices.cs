@@ -101,7 +101,6 @@ namespace ExpressBase.ServiceStack.Services
                 _vis.DataLayout.CellCollection[0].Width = 60;
                 _vis.DataLayout.CellCollection[0].ControlCollection.Add(new EbMobileDataColumn
                 {
-                    TableIndex = 0,
                     ColumnIndex = 0,
                     ColumnName = _list.ToArray()[0].Name,
                     Type = _list.ToArray()[0].Type.EbDbType
