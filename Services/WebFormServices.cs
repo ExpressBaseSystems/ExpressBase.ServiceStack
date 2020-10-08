@@ -903,7 +903,7 @@ namespace ExpressBase.ServiceStack.Services
                         if (form.SolutionObj.Locations.ContainsKey(request.CurrentLoc))
                             form.UserObj.Preference.DefaultLocation = request.CurrentLoc;
                     }
-                    form.GetEmptyModel();
+                    form.FormData = form.GetEmptyModel();
                 }
                 if (form.SolutionObj.SolutionSettings != null && form.SolutionObj.SolutionSettings.SignupFormRefid != string.Empty && form.SolutionObj.SolutionSettings.SignupFormRefid == form.RefId)
                 {
@@ -981,7 +981,7 @@ namespace ExpressBase.ServiceStack.Services
                         destForm.FormData = EbFormHelper.GetFilledNewFormData(sourceForm);
                     }
                     else
-                        destForm.GetEmptyModel();
+                        destForm.FormData = destForm.GetEmptyModel();
                 }
                 else
                 {
@@ -994,7 +994,7 @@ namespace ExpressBase.ServiceStack.Services
                         sourceForm.FormatImportData(EbConnectionFactory.DataDB, this, destForm);
                     }
                     else
-                        destForm.GetEmptyModel();
+                        destForm.FormData = destForm.GetEmptyModel();
                 }
 
                 _dataset.FormDataWrap = JsonConvert.SerializeObject(new WebformDataWrapper { FormData = destForm.FormData, Status = (int)HttpStatusCode.OK, Message = "Success" });
@@ -1254,7 +1254,8 @@ namespace ExpressBase.ServiceStack.Services
             foreach (int _rowId in request.RowId)
             {
                 FormObj.TableRowId = _rowId;
-                FormObj.Delete(EbConnectionFactory.DataDB);
+                int temp1 = FormObj.Delete(EbConnectionFactory.DataDB);
+                Console.WriteLine($"Record deleted. RowId: {_rowId}  RowsAffected: {temp1}");
             }
             return new DeleteDataFromWebformResponse
             {
@@ -1266,10 +1267,10 @@ namespace ExpressBase.ServiceStack.Services
         {
             EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, null);
             FormObj.TableRowId = request.RowId;
-            return new CancelDataFromWebformResponse
-            {
-                RowAffected = FormObj.Cancel(EbConnectionFactory.DataDB)
-            };
+            int RowAffected = FormObj.Cancel(EbConnectionFactory.DataDB);
+            Console.WriteLine($"Record cancelled. RowId: {request.RowId}  RowsAffected: {RowAffected}");
+
+            return new CancelDataFromWebformResponse { RowAffected = RowAffected };
         }
 
         //form data submission using PushJson and FormGlobals - SQL Job, Excel Import save

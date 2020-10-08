@@ -1,5 +1,6 @@
 ﻿using ExpressBase.Common;
 using ExpressBase.Common.Data;
+using ExpressBase.Common.Enums;
 using ExpressBase.Common.Structures;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using Newtonsoft.Json;
@@ -51,7 +52,7 @@ namespace ExpressBase.ServiceStack.Services
 			List<FeedbackEntry> Flist = new List<FeedbackEntry>();
 			List<BillingEntry> Blist = new List<BillingEntry>();
 			List<SurgeryEntry> Slist = new List<SurgeryEntry>();
-			//List<string> ImgIds = new List<string>();
+			string attachImgInfo = "[]", prpImgInfo = "[]";
 			
 			int Mode = 0;
 			if (request.RequestMode == 1)//edit mode 
@@ -59,7 +60,7 @@ namespace ExpressBase.ServiceStack.Services
 				SqlQry += @"SELECT id, eb_loc_id, trdate, genurl, name, dob, genphoffice, profession, genemail, customertype, clcity, clcountry, city,
 								typeofcustomer, sourcecategory, subcategory, consultation, picsrcvd, dprefid, sex, district, leadowner,
                                 baldnessgrade, diffusepattern, hfcurrently, htpreviously, country_code, watsapp_phno, cust_category 
-								FROM customers WHERE id = :accountid AND eb_del='F';
+								FROM customers WHERE id = :accountid AND COALESCE(eb_del, 'F')='F';
 							SELECT id,trdate,status,followupdate,narration, eb_createdby, eb_createddt,isnotpickedup FROM leaddetails
 								WHERE customers_id=:accountid ORDER BY eb_createddt DESC;
 							SELECT id,trdate,totalamount,advanceamount,balanceamount,cashreceived,paymentmode,bank,createddt,narration,createdby 
@@ -69,6 +70,17 @@ namespace ExpressBase.ServiceStack.Services
 								FROM leadsurgerystaffdetails WHERE customers_id=:accountid ORDER BY createddt DESC;
 							SELECT noofgrafts,totalrate,prpsessions,consulted,consultingfeepaid,consultingdoctor,eb_closing,LOWER(TRIM(nature)),consdate,probmonth
 								FROM leadratedetails WHERE customers_id=:accountid;";
+
+				SqlQry += $@"SELECT B.id, B.filename, B.tags, B.uploadts, B.filecategory
+								FROM eb_files_ref B LEFT JOIN customer_files A 
+								ON A.eb_files_ref_id = B.id				
+								WHERE ((A.customer_id = :accountid AND COALESCE(A.eb_del, false) = false) OR B.context_sec = 'CustomerId:{request.AccId}')
+								AND COALESCE(B.eb_del, 'F') = 'F' AND B.context <> 'prp';
+							
+					SELECT B.id, B.filename, B.tags, B.uploadts, B.filecategory
+						FROM customer_files A, eb_files_ref B
+						WHERE A.eb_files_ref_id = B.id AND A.customer_id = :accountid 
+						AND COALESCE(A.eb_del, false) = false AND COALESCE(B.eb_del, 'F') = 'F' AND B.context = 'prp';";
 
                 //SELECT eb_files_ref_id
                 //    FROM customer_files WHERE customer_id = :accountid AND eb_del = false;
@@ -170,8 +182,39 @@ namespace ExpressBase.ServiceStack.Services
 					CustomerData.Add("probmonth", (string.IsNullOrEmpty(getStringValue(dr[9])) ? string.Empty: getStringValue(dr[9]).Substring(3).Replace("-", "/")));
 				}
 
-				//foreach (var i in ds.Tables[Qcnt + 5].Rows)
-				//	ImgIds.Add(i[0].ToString());
+				List<FileMetaInfo> _list = new List<FileMetaInfo>();
+				foreach (EbDataRow dRow in ds.Tables[Qcnt + 5].Rows)
+				{
+					FileMetaInfo info = new FileMetaInfo
+					{
+						FileRefId = Convert.ToInt32(dRow[0]),
+						FileName = Convert.ToString(dRow[1]),
+						Meta = JsonConvert.DeserializeObject<Dictionary<string, List<string>>>(Convert.ToString(dRow[2])),
+						UploadTime = getStringValue(dRow[3], true, true),
+						FileCategory = (EbFileCategory)Convert.ToInt32(dRow[4])
+					};
+
+					if (!_list.Contains(info))
+						_list.Add(info);
+				}
+				attachImgInfo = JsonConvert.SerializeObject(_list);
+
+				_list = new List<FileMetaInfo>();
+				foreach (EbDataRow dRow in ds.Tables[Qcnt + 6].Rows)
+				{
+					FileMetaInfo info = new FileMetaInfo
+					{
+						FileRefId = Convert.ToInt32(dRow[0]),
+						FileName = Convert.ToString(dRow[1]),
+						Meta = JsonConvert.DeserializeObject<Dictionary<string, List<string>>>(Convert.ToString(dRow[2])),
+						UploadTime = getStringValue(dRow[3], true, true),
+						FileCategory = (EbFileCategory)Convert.ToInt32(dRow[4])
+					};
+
+					if (!_list.Contains(info))
+						_list.Add(info);
+				}
+				prpImgInfo = JsonConvert.SerializeObject(_list);
 
 				//followup details
 				foreach (var i in ds.Tables[Qcnt + 1].Rows)
@@ -247,59 +290,60 @@ namespace ExpressBase.ServiceStack.Services
 				DistrictList = districtList,
 				SourceCategoryList = sourcecategoryList,
 				SubCategoryList = subcategoryList,
-				//ImageIdList = ImgIds,
 				StatusDict = statusDict,
 				ServiceList = serviceList,
 				NurseDict = NurseDict,
-				CustomerCategoryDict = customercategoryDict
+				CustomerCategoryDict = customercategoryDict,
+				AttachImgInfo = attachImgInfo,
+				PrpImgInfo = prpImgInfo
 			};
 		}
 
-        public GetImageInfoResponse Any(GetImageInfoRequest request)
-        {
+   //     public GetImageInfoResponse Any(GetImageInfoRequest request)///
+   //     {
 
-			//            string Qry = $@"
-			//SELECT 
-			//	B.id, B.filename, B.tags, B.uploadts
-			//FROM
-			//	customer_files A,
-			//	eb_files_ref B
-			//WHERE
-			//	(A.eb_files_ref_id = B.id AND
-			//	A.customer_id = :accountid AND A.eb_del = false) OR B.context_sec = 'CustomersId:{request.CustomerId}';";
-			string Qry = $@"
-			SELECT B.id, B.filename, B.tags, B.uploadts
-				FROM eb_files_ref B LEFT JOIN customer_files A 
-				ON A.eb_files_ref_id = B.id				
-			WHERE ((A.customer_id = :accountid AND A.eb_del = false) OR B.context_sec = 'CustomerId:{request.CustomerId}')
-				AND COALESCE(B.eb_del, 'F') = 'F';";
+			////            string Qry = $@"
+			////SELECT 
+			////	B.id, B.filename, B.tags, B.uploadts
+			////FROM
+			////	customer_files A,
+			////	eb_files_ref B
+			////WHERE
+			////	(A.eb_files_ref_id = B.id AND
+			////	A.customer_id = :accountid AND A.eb_del = false) OR B.context_sec = 'CustomersId:{request.CustomerId}';";
+			//string Qry = $@"
+			//SELECT B.id, B.filename, B.tags, B.uploadts
+			//	FROM eb_files_ref B LEFT JOIN customer_files A 
+			//	ON A.eb_files_ref_id = B.id				
+			//WHERE ((A.customer_id = :accountid AND A.eb_del = false) OR B.context_sec = 'CustomerId:{request.CustomerId}')
+			//	AND COALESCE(B.eb_del, 'F') = 'F';";
 
-			List<FileMetaInfo> _list = new List<FileMetaInfo>();
+			//List<FileMetaInfo> _list = new List<FileMetaInfo>();
 
-            DbParameter[] param = new DbParameter[]
-            {
-                this.EbConnectionFactory.DataDB.GetNewParameter("accountid", EbDbTypes.Int32, request.CustomerId)
-            };
+   //         DbParameter[] param = new DbParameter[]
+   //         {
+   //             this.EbConnectionFactory.DataDB.GetNewParameter("accountid", EbDbTypes.Int32, request.CustomerId)
+   //         };
 
-            var dt = this.EbConnectionFactory.DataDB.DoQuery(Qry, param);
+   //         var dt = this.EbConnectionFactory.DataDB.DoQuery(Qry, param);
 
-            foreach(EbDataRow dr in dt.Rows)
-            {
-	    	string tags = string.IsNullOrEmpty(dr["tags"] as string) ? "{}" : (dr["tags"] as string);
-                FileMetaInfo info = new FileMetaInfo
-                {
-                    FileRefId = Convert.ToInt32(dr["id"]),
-                    FileName = dr["filename"] as string,
-                    Meta = JsonConvert.DeserializeObject<Dictionary<string, List<string>>>(tags),
-                    UploadTime = Convert.ToDateTime(dr["uploadts"]).ToString("dd-MM-yyyy hh:mm tt")
-                };
+   //         foreach(EbDataRow dr in dt.Rows)
+   //         {
+	  //  	string tags = string.IsNullOrEmpty(dr["tags"] as string) ? "{}" : (dr["tags"] as string);
+   //             FileMetaInfo info = new FileMetaInfo
+   //             {
+   //                 FileRefId = Convert.ToInt32(dr["id"]),
+   //                 FileName = dr["filename"] as string,
+   //                 Meta = JsonConvert.DeserializeObject<Dictionary<string, List<string>>>(tags),
+   //                 UploadTime = Convert.ToDateTime(dr["uploadts"]).ToString("dd-MM-yyyy hh:mm tt")
+   //             };
 
-                if (!_list.Contains(info))
-                    _list.Add(info);
-            }
+   //             if (!_list.Contains(info))
+   //                 _list.Add(info);
+   //         }
 
-            return new GetImageInfoResponse { Data = _list };
-        }
+   //         return new GetImageInfoResponse { Data = _list };
+   //     }
 
 		private string getStringValue(object obj)
 		{
@@ -319,6 +363,32 @@ namespace ExpressBase.ServiceStack.Services
 			
 			return (((DateTime)obj).Date != DateTime.MinValue) ? Convert.ToDateTime(obj).Add(timeSpan).ToString(format) : string.Empty;
 		}
+
+		private void GetParameter(Dictionary<string, KeyValueType_Field> dict, string key, EbDbTypes ebDbTypes, List<DbParameter> parameters, ref string cols, ref string vals, ref string upcolsvals)
+        {
+			if (dict.ContainsKey(key))
+            {
+				object value;
+				if (ebDbTypes == EbDbTypes.Int32)
+					value = Convert.ToInt32(dict[key].Value);
+				else if (ebDbTypes == EbDbTypes.BooleanOriginal)
+					value = Convert.ToBoolean(dict[key].Value);
+				else if (ebDbTypes == EbDbTypes.Date)
+				{
+					if (key == "probmonth")
+						value = Convert.ToDateTime(DateTime.ParseExact(dict[key].Value.ToString(), "MM/yyyy", CultureInfo.InvariantCulture));
+					else
+						value = Convert.ToDateTime(DateTime.ParseExact(dict[key].Value.ToString(), "dd-MM-yyyy", CultureInfo.InvariantCulture));
+				}
+				else
+					value = dict[key].Value;
+
+				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(key, ebDbTypes, value));
+				cols += $"{key},";
+				vals += $":{key},";
+				upcolsvals += $"{key}=:{key},";
+			}
+        }
 		
 		public SaveCustomerResponse Any(SaveCustomerRequest request)
 		{
@@ -332,289 +402,54 @@ namespace ExpressBase.ServiceStack.Services
 			string upcolsvals = string.Empty;
 			string upcolsvals2 = string.Empty;
 
-			if (dict.TryGetValue("eb_loc_id", out found))
-			{
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Int32, Convert.ToInt32(found.Value)));
-				cols += "eb_loc_id,";
-				vals += ":eb_loc_id,";
-				upcolsvals += "eb_loc_id=:eb_loc_id,";
-			}
-			if (dict.TryGetValue("trdate", out found))
-			{
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Date, Convert.ToDateTime(DateTime.ParseExact(found.Value.ToString(), "dd-MM-yyyy", CultureInfo.InvariantCulture))));
-				cols += "trdate,";
-				vals += ":trdate,";
-				upcolsvals += "trdate=:trdate,";
-			}
-			if (dict.TryGetValue("genurl", out found))
-			{
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
-				cols += "genurl,";
-				vals += ":genurl,";
-				upcolsvals += "genurl=:genurl,";
-			}
-			if (dict.TryGetValue("name", out found))
-			{
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
-				cols += "name,";
-				vals += ":name,";
-				upcolsvals += "name=:name,";
-			}
-			if (dict.TryGetValue("dob", out found))
-			{
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Date, Convert.ToDateTime(DateTime.ParseExact(found.Value.ToString(), "dd-MM-yyyy", CultureInfo.InvariantCulture))));
-				cols += "dob,";
-				vals += ":dob,";
-				upcolsvals += "dob=:dob,";
-			}
-			//if (dict.TryGetValue("age", out found))
-			//	parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
-			if (dict.TryGetValue("genphoffice", out found))
-			{
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
-				cols += "genphoffice,";
-				vals += ":genphoffice,";
-				upcolsvals += "genphoffice=:genphoffice,";
-			}
-			if (dict.TryGetValue("watsapp_phno", out found))
-			{
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
-				cols += "watsapp_phno,";
-				vals += ":watsapp_phno,";
-				upcolsvals += "watsapp_phno=:watsapp_phno,";
-			}
-			if (dict.TryGetValue("profession", out found))
-			{
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
-				cols += "profession,";
-				vals += ":profession,";
-				upcolsvals += "profession=:profession,";
-			}
-			if (dict.TryGetValue("genemail", out found))
-			{
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
-				cols += "genemail,";
-				vals += ":genemail,";
-				upcolsvals += "genemail=:genemail,";
-			}
-			if (dict.TryGetValue("customertype", out found))
-			{
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Int32, Convert.ToInt32(found.Value)));
-				cols += "customertype,";
-				vals += ":customertype,";
-				upcolsvals += "customertype=:customertype,";
-			}
-			if (dict.TryGetValue("clcity", out found))
-			{
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
-				cols += "clcity,";
-				vals += ":clcity,";
-				upcolsvals += "clcity=:clcity,";
-			}
-			if (dict.TryGetValue("clcountry", out found))
-			{
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
-				cols += "clcountry,";
-				vals += ":clcountry,";
-				upcolsvals += "clcountry=:clcountry,";
-			}
-			if (dict.TryGetValue("city", out found))
-			{
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
-				cols += "city,";
-				vals += ":city,";
-				upcolsvals += "city=:city,";
-			}
-			if (dict.TryGetValue("typeofcustomer", out found))
-			{
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
-				cols += "typeofcustomer,";
-				vals += ":typeofcustomer,";
-				upcolsvals += "typeofcustomer=:typeofcustomer,";
-			}
-			if (dict.TryGetValue("sourcecategory", out found))
-			{
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
-				cols += "sourcecategory,";
-				vals += ":sourcecategory,";
-				upcolsvals += "sourcecategory=:sourcecategory,";
-			}
-			if (dict.TryGetValue("subcategory", out found))
-			{
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
-				cols += "subcategory,";
-				vals += ":subcategory,";
-				upcolsvals += "subcategory=:subcategory,";
-			}
-			if (dict.TryGetValue("consultation", out found))
-			{
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.BooleanOriginal, Convert.ToBoolean(found.Value)));
-				cols += "consultation,";
-				vals += ":consultation,";
-				upcolsvals += "consultation=:consultation,";
-			}
-			if (dict.TryGetValue("picsrcvd", out found))
-			{
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.BooleanOriginal, Convert.ToBoolean(found.Value)));
-				cols += "picsrcvd,";
-				vals += ":picsrcvd,";
-				upcolsvals += "picsrcvd=:picsrcvd,";
-			}
-			if (dict.TryGetValue("dprefid", out found))
-			{
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Int32, Convert.ToInt32(found.Value)));
-				cols += "dprefid,";
-				vals += ":dprefid,";
-				upcolsvals += "dprefid=:dprefid,";
-			}
-			if (dict.TryGetValue("sex", out found))
-			{
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
-				cols += "sex,";
-				vals += ":sex,";
-				upcolsvals += "sex=:sex,";
-			}
-			if (dict.TryGetValue("district", out found))
-			{
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
-				cols += "district,";
-				vals += ":district,";
-				upcolsvals += "district=:district,";
-			}
-			if (dict.TryGetValue("leadowner", out found))
-			{
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Int32, Convert.ToInt32(found.Value)));
-				cols += "leadowner,";
-				vals += ":leadowner,";
-				upcolsvals += "leadowner=:leadowner,";
-			}
-			if (dict.TryGetValue("cust_category", out found))
-			{
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Int32, Convert.ToInt32(found.Value)));
-				cols += "cust_category,";
-				vals += ":cust_category,";
-				upcolsvals += "cust_category=:cust_category,";
-			}
-            if (dict.TryGetValue("baldnessgrade", out found))
-            {
-                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Int32, Convert.ToInt32(found.Value)));
-                cols += "baldnessgrade,";
-                vals += ":baldnessgrade,";
-                upcolsvals += "baldnessgrade=:baldnessgrade,";
-            }
-            if (dict.TryGetValue("diffusepattern", out found))
-            {
-                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.BooleanOriginal, Convert.ToBoolean(found.Value)));
-                cols += "diffusepattern,";
-                vals += ":diffusepattern,";
-                upcolsvals += "diffusepattern=:diffusepattern,";
-            }
-            if (dict.TryGetValue("hfcurrently", out found))
-            {
-                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.BooleanOriginal, Convert.ToBoolean(found.Value)));
-                cols += "hfcurrently,";
-                vals += ":hfcurrently,";
-                upcolsvals += "hfcurrently=:hfcurrently,";
-            }
-			if (dict.TryGetValue("htpreviously", out found))
-            {
-                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.BooleanOriginal, Convert.ToBoolean(found.Value)));
-                cols += "htpreviously,";
-                vals += ":htpreviously,";
-                upcolsvals += "htpreviously=:htpreviously,";
-			}
-			if (dict.TryGetValue("country_code", out found))
-			{
-				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
-				cols += "country_code,";
-				vals += ":country_code,";
-				upcolsvals += "country_code=:country_code,";
-			}
+			GetParameter(dict, "eb_loc_id", EbDbTypes.Int32, parameters, ref cols, ref vals, ref upcolsvals);
+			GetParameter(dict, "trdate", EbDbTypes.Date, parameters, ref cols, ref vals, ref upcolsvals);
+			GetParameter(dict, "genurl", EbDbTypes.String, parameters, ref cols, ref vals, ref upcolsvals);
+			GetParameter(dict, "name", EbDbTypes.String, parameters, ref cols, ref vals, ref upcolsvals);
+			GetParameter(dict, "dob", EbDbTypes.Date, parameters, ref cols, ref vals, ref upcolsvals);
+			GetParameter(dict, "genphoffice", EbDbTypes.String, parameters, ref cols, ref vals, ref upcolsvals);
+			GetParameter(dict, "watsapp_phno", EbDbTypes.String, parameters, ref cols, ref vals, ref upcolsvals);
+			GetParameter(dict, "profession", EbDbTypes.String, parameters, ref cols, ref vals, ref upcolsvals);
+			GetParameter(dict, "genemail", EbDbTypes.String, parameters, ref cols, ref vals, ref upcolsvals);
+			GetParameter(dict, "customertype", EbDbTypes.Int32, parameters, ref cols, ref vals, ref upcolsvals);
+			GetParameter(dict, "clcity", EbDbTypes.String, parameters, ref cols, ref vals, ref upcolsvals);
+			GetParameter(dict, "clcountry", EbDbTypes.String, parameters, ref cols, ref vals, ref upcolsvals);
+			GetParameter(dict, "city", EbDbTypes.String, parameters, ref cols, ref vals, ref upcolsvals);
+			GetParameter(dict, "typeofcustomer", EbDbTypes.String, parameters, ref cols, ref vals, ref upcolsvals);
+			GetParameter(dict, "sourcecategory", EbDbTypes.String, parameters, ref cols, ref vals, ref upcolsvals);
+			GetParameter(dict, "subcategory", EbDbTypes.String, parameters, ref cols, ref vals, ref upcolsvals);
+			GetParameter(dict, "consultation", EbDbTypes.BooleanOriginal, parameters, ref cols, ref vals, ref upcolsvals);
+			GetParameter(dict, "picsrcvd", EbDbTypes.BooleanOriginal, parameters, ref cols, ref vals, ref upcolsvals);
+			GetParameter(dict, "dprefid", EbDbTypes.Int32, parameters, ref cols, ref vals, ref upcolsvals);
+			GetParameter(dict, "sex", EbDbTypes.String, parameters, ref cols, ref vals, ref upcolsvals);
+			GetParameter(dict, "district", EbDbTypes.String, parameters, ref cols, ref vals, ref upcolsvals);
+			GetParameter(dict, "leadowner", EbDbTypes.Int32, parameters, ref cols, ref vals, ref upcolsvals);
+			GetParameter(dict, "cust_category", EbDbTypes.Int32, parameters, ref cols, ref vals, ref upcolsvals);
+			GetParameter(dict, "baldnessgrade", EbDbTypes.Int32, parameters, ref cols, ref vals, ref upcolsvals);
+			GetParameter(dict, "diffusepattern", EbDbTypes.BooleanOriginal, parameters, ref cols, ref vals, ref upcolsvals);
+			GetParameter(dict, "hfcurrently", EbDbTypes.BooleanOriginal, parameters, ref cols, ref vals, ref upcolsvals);
+			GetParameter(dict, "htpreviously", EbDbTypes.BooleanOriginal, parameters, ref cols, ref vals, ref upcolsvals);
+			GetParameter(dict, "country_code", EbDbTypes.String, parameters, ref cols, ref vals, ref upcolsvals);
 			//------------------------------------------------------
-			if (dict.TryGetValue("consdate", out found))
-			{
-				parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Date, Convert.ToDateTime(DateTime.ParseExact(found.Value.ToString(), "dd-MM-yyyy", CultureInfo.InvariantCulture))));
-				cols2 += "consdate,";
-				vals2 += ":consdate,";
-				upcolsvals2 += "consdate=:consdate,";
-			}
-			if (dict.TryGetValue("consultingdoctor", out found))
-			{
-				parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Int32, Convert.ToInt32(found.Value)));
-				cols2 += "consultingdoctor,";
-				vals2 += ":consultingdoctor,";
-				upcolsvals2 += "consultingdoctor=:consultingdoctor,";
-			}
-			if (dict.TryGetValue("noofgrafts", out found))
-			{
-				parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Int32, Convert.ToInt32(found.Value)));
-				cols2 += "noofgrafts,";
-				vals2 += ":noofgrafts,";
-				upcolsvals2 += "noofgrafts=:noofgrafts,";
-			}
-			if (dict.TryGetValue("totalrate", out found))
-			{
-				parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Int32, Convert.ToInt32(found.Value)));
-				cols2 += "totalrate,";
-				vals2 += ":totalrate,";
-				upcolsvals2 += "totalrate=:totalrate,";
-			}
-			if (dict.TryGetValue("prpsessions", out found))
-			{
-				parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Int32, Convert.ToInt32(found.Value)));
-				cols2 += "prpsessions,";
-				vals2 += ":prpsessions,";
-				upcolsvals2 += "prpsessions=:prpsessions,";
-			}
-			if (dict.TryGetValue("consultingfeepaid", out found))
-			{
-				parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.BooleanOriginal, Convert.ToBoolean(found.Value)));
-				cols2 += "consultingfeepaid,";
-				vals2 += ":consultingfeepaid,";
-				upcolsvals2 += "consultingfeepaid=:consultingfeepaid,";
-			}
-			if (dict.TryGetValue("closing", out found))
-			{
-				parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Int32, Convert.ToInt32(found.Value)));
-				cols2 += "eb_closing,";
-				vals2 += ":closing,";
-				upcolsvals2 += "eb_closing=:closing,";
-			}
-			if (dict.TryGetValue("nature", out found))
-			{
-				parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.String, found.Value));
-				cols2 += "nature,";
-				vals2 += ":nature,";
-				upcolsvals2 += "nature=:nature,";
-			}
-			if (dict.TryGetValue("probmonth", out found))
-			{
-				parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(found.Key, EbDbTypes.Date, Convert.ToDateTime(DateTime.ParseExact(found.Value.ToString(), "MM/yyyy", CultureInfo.InvariantCulture))));
-				cols2 += "probmonth,";
-				vals2 += ":probmonth,";
-				upcolsvals2 += "probmonth=:probmonth,";
-			}
-
-			//var CrntDateTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("India Standard Time"));
-
+			GetParameter(dict, "consdate", EbDbTypes.Date, parameters2, ref cols2, ref vals2, ref upcolsvals2);
+			GetParameter(dict, "consultingdoctor", EbDbTypes.Int32, parameters2, ref cols2, ref vals2, ref upcolsvals2);
+			GetParameter(dict, "noofgrafts", EbDbTypes.Int32, parameters2, ref cols2, ref vals2, ref upcolsvals2);
+			GetParameter(dict, "totalrate", EbDbTypes.Int32, parameters2, ref cols2, ref vals2, ref upcolsvals2);
+			GetParameter(dict, "prpsessions", EbDbTypes.Int32, parameters2, ref cols2, ref vals2, ref upcolsvals2);
+			GetParameter(dict, "consultingfeepaid", EbDbTypes.BooleanOriginal, parameters2, ref cols2, ref vals2, ref upcolsvals2);
+			GetParameter(dict, "closing", EbDbTypes.Int32, parameters2, ref cols2, ref vals2, ref upcolsvals2);
+			GetParameter(dict, "nature", EbDbTypes.String, parameters2, ref cols2, ref vals2, ref upcolsvals2);
+			GetParameter(dict, "probmonth", EbDbTypes.Date, parameters2, ref cols2, ref vals2, ref upcolsvals2);
+			  
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("prehead", EbDbTypes.Int32, 50));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("accountcode", EbDbTypes.String, Fields.Find(i => i.Key == "genurl").Value));
-
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_createdby", EbDbTypes.Int32, request.UserId));
-			//parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_createdat", EbDbTypes.DateTime, CrntDateTime));
 			parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_modifiedby", EbDbTypes.Int32, request.UserId));
-			//parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_modifiedat", EbDbTypes.DateTime, CrntDateTime));
 
 			parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("createdby", EbDbTypes.String, request.UserName));
-			//parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("createddt", EbDbTypes.DateTime, CrntDateTime));
 			parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("modifiedby", EbDbTypes.String, request.UserName));
-			//parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("modifieddt", EbDbTypes.DateTime, CrntDateTime));
-
 			parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_createdby", EbDbTypes.Int32, request.UserId));
-			//parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_createdat", EbDbTypes.DateTime, CrntDateTime));
 			parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_modifiedby", EbDbTypes.Int32, request.UserId));
-			//parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_modifiedat", EbDbTypes.DateTime, CrntDateTime));
-			
 
 			int accid = 0;
 			int rstatus = 0;
@@ -664,29 +499,67 @@ namespace ExpressBase.ServiceStack.Services
 						rstatus += this.EbConnectionFactory.ObjectsDB.InsertTable(Qry2, parameters2.ToArray()) * 10;
 					}
 				}				
-			}
-			List<int> ImgRefId = JsonConvert.DeserializeObject<List<int>>(request.ImgRefId);
-			rstatus += Update_Table_Customer_Files(accid, ImgRefId) * 100;
+			}			
+			rstatus += Update_Table_Customer_Files(accid, request.ImgRefId, request.UserId) * 100;
 
 			return new SaveCustomerResponse { Status = (request.RequestMode == 0)? accid :rstatus };
 		}
 
-        private int Update_Table_Customer_Files(int accountid, List<int> imagerefid)
+        private int Update_Table_Customer_Files(int accountid, string imagerefid, int userid)
         {
-            string query = @"INSERT INTO customer_files(customer_id, eb_files_ref_id) VALUES";
-            List<DbParameter> parameters = new List<DbParameter>();
-            int i = 0, rstatus = 0;
-            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("customer_id", EbDbTypes.Int32, accountid));
-            for (i = 0; i < imagerefid.Count; i++)
+			int rstatus = 0;
+			Dictionary<string, List<int>> ImgRefId = JsonConvert.DeserializeObject<Dictionary<string, List<int>>>(imagerefid);
+            string selQry = $@"
+				SELECT B.id
+				FROM eb_files_ref B LEFT JOIN customer_files A 
+				ON A.eb_files_ref_id = B.id				
+				WHERE ((A.customer_id = @customer_id AND COALESCE(A.eb_del, false) = false) OR B.context_sec = 'CustomerId:{accountid}')
+				AND COALESCE(B.eb_del, 'F') = 'F';";
+
+			EbDataTable dt = EbConnectionFactory.DataDB.DoQuery(selQry, new DbParameter[] { EbConnectionFactory.ObjectsDB.GetNewParameter("customer_id", EbDbTypes.Int32, accountid) });
+			List<int> oldIdsAll = new List<int>();
+			foreach (EbDataRow dr in dt.Rows)
+				oldIdsAll.Add(Convert.ToInt32(dr[0])); 
+
+			IEnumerable<int> delIds = oldIdsAll.Except(ImgRefId["attachImg"]).Except(ImgRefId["prpImg"]);
+			IEnumerable<int> insIdsAll = ImgRefId["attachImg"].Concat(ImgRefId["prpImg"]).Except(oldIdsAll);
+			IEnumerable<int> insIdsPrp = ImgRefId["prpImg"].Except(oldIdsAll);
+
+			string updateQry = string.Empty;
+			List<DbParameter> parameters = new List<DbParameter>();
+			if (delIds.Count() > 0)
             {
-                query += "(:customer_id, :eb_files_ref_id" + i + "),";
-                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("eb_files_ref_id" + i, EbDbTypes.Int32, imagerefid[i]));
-            }
-            if (i > 0)
+				updateQry = @"
+					UPDATE customer_files SET eb_del = true 
+					WHERE 
+						customer_id = @customer_id AND 
+						COALESCE(eb_del, false) = false AND 
+						eb_files_ref_id = ANY(STRING_TO_ARRAY(@del_ids, ',')::INT[]);
+
+					UPDATE eb_files_ref SET eb_del = 'T'
+					WHERE id = ANY(STRING_TO_ARRAY(@del_ids, ',')::INT[]) AND COALESCE(eb_del, 'F') = 'F';";//B.context_sec = 'CustomerId:{request.CustomerId}
+
+				parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("del_ids", EbDbTypes.String, delIds.Join(",")));
+			}
+			if (insIdsAll.Count() > 0)
             {
-                query = query.Substring(0, query.Length - 1) + ";";
-                rstatus = this.EbConnectionFactory.ObjectsDB.InsertTable(query, parameters.ToArray());
-            }
+				updateQry += @"INSERT INTO customer_files(customer_id, eb_files_ref_id)
+								SELECT @customer_id, ref_id FROM UNNEST(STRING_TO_ARRAY(@ins_ids, ',')::INT[]) AS ref_id;";
+				parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("ins_ids", EbDbTypes.String, insIdsAll.Join(",")));
+			}
+			if (insIdsPrp.Count() > 0)
+            {
+				updateQry += @"UPDATE eb_files_ref SET context = 'prp'                                        
+								WHERE id = ANY(STRING_TO_ARRAY(@prp_ids, ',')::INT[]) AND COALESCE(eb_del, 'F') = 'F' AND userid = @eb_created_by;";
+				parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("prp_ids", EbDbTypes.String, insIdsPrp.Join(",")));
+				parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("eb_created_by", EbDbTypes.Int32, userid));
+			}
+
+			if (updateQry != string.Empty)
+			{
+				parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("customer_id", EbDbTypes.Int32, accountid));
+				rstatus = EbConnectionFactory.DataDB.DoNonQuery(updateQry, parameters.ToArray());
+			}
             return rstatus;
         }
 
@@ -849,28 +722,28 @@ namespace ExpressBase.ServiceStack.Services
 			return new LmUniqueCheckResponse { Status = rstatus };
 		}
 
-        public LmDeleteImageResponse Any(LmDeleteImageRequest request)
-        {
-            string query = @"
-UPDATE customer_files SET eb_del = true 
-WHERE 
-    customer_id = :customer_id AND 
-    eb_del = false AND 
-    eb_files_ref_id = ANY(STRING_TO_ARRAY(:ids, ',')::INT[]);
+//        public LmDeleteImageResponse Any(LmDeleteImageRequest request)
+//        {
+//            string query = @"
+//UPDATE customer_files SET eb_del = true 
+//WHERE 
+//    customer_id = :customer_id AND 
+//    eb_del = false AND 
+//    eb_files_ref_id = ANY(STRING_TO_ARRAY(:ids, ',')::INT[]);
 
-UPDATE eb_files_ref SET eb_del = 'T'
-WHERE id = ANY(STRING_TO_ARRAY(:ids, ',')::INT[]) AND COALESCE(eb_del, 'F') = 'F';";//B.context_sec = 'CustomerId:{request.CustomerId}
+//UPDATE eb_files_ref SET eb_del = 'T'
+//WHERE id = ANY(STRING_TO_ARRAY(:ids, ',')::INT[]) AND COALESCE(eb_del, 'F') = 'F';";//B.context_sec = 'CustomerId:{request.CustomerId}
 
-			int[] refIds = JsonConvert.DeserializeObject<int[]>(request.ImgRefIds);
-            DbParameter[] parameters = new DbParameter[] {
-                this.EbConnectionFactory.ObjectsDB.GetNewParameter("customer_id", EbDbTypes.Int32, request.CustId),
-                this.EbConnectionFactory.ObjectsDB.GetNewParameter("ids", EbDbTypes.String, refIds.Join(","))
-            };
+//			int[] refIds = JsonConvert.DeserializeObject<int[]>(request.ImgRefIds);
+//            DbParameter[] parameters = new DbParameter[] {
+//                this.EbConnectionFactory.ObjectsDB.GetNewParameter("customer_id", EbDbTypes.Int32, request.CustId),
+//                this.EbConnectionFactory.ObjectsDB.GetNewParameter("ids", EbDbTypes.String, refIds.Join(","))
+//            };
 
-            int rstatus = this.EbConnectionFactory.DataDB.DoNonQuery(query, parameters);
+//            int rstatus = this.EbConnectionFactory.DataDB.DoNonQuery(query, parameters);
 
-            return new LmDeleteImageResponse { RowsAffected = rstatus};
-        }
+//            return new LmDeleteImageResponse { RowsAffected = rstatus};
+//        }
 
         public LmDeleteCustomerResponse Any(LmDeleteCustomerRequest request)
         {
