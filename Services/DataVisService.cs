@@ -546,7 +546,7 @@ namespace ExpressBase.ServiceStack
                                 }
                                 else
                                 {
-                                    if ( !sql1.ToLower().Contains(":limit"))
+                                    if (!sql1.ToLower().Contains(":limit"))
                                         sql1 = sql1 + " LIMIT :limit OFFSET :offset;";
                                 }
                                 _sql = sql1 + tempsql;
@@ -579,7 +579,7 @@ namespace ExpressBase.ServiceStack
                                 if (Treecol.NeedAlphabeticOrder)
                                     _columnorder = ", " + Treecol.Name;
                                 _sql = $"SELECT * FROM ({_sql.ReplaceAll(";", string.Empty)}) data ORDER BY {Treecol.ParentColumn[0].Name} {_columnorder}";
-                            }                           
+                            }
 
                         }
                     }
@@ -605,7 +605,7 @@ namespace ExpressBase.ServiceStack
                         Log.Info("Datviz Qurey Exception........." + e.StackTrace);
                         Log.Info("Datviz Qurey Exception........." + e.Message);
                         this._Responsestatus.Message = e.Message;
-                        return new DataSourceDataResponse { error = "Qurey Exception : " + e.Message};
+                        return new DataSourceDataResponse { error = "Qurey Exception : " + e.Message };
                     }
                     Console.WriteLine("................................................dataviz datarequest end " + DateTime.Now);
                     var dtstop = DateTime.Now;
@@ -614,7 +614,7 @@ namespace ExpressBase.ServiceStack
                     {
                         TimeSpan T = _dataset.EndTime - _dataset.StartTime;
                         InsertExecutionLog(_dataset.RowNumbers, T, _dataset.StartTime, request.UserId, request.Params, request.RefId);
-                    } 
+                    }
                     Console.WriteLine(DateTime.Now);
                     var dtEnd = DateTime.Now;
                     var ts = (dtEnd - dtStart).TotalMilliseconds;
@@ -933,7 +933,7 @@ namespace ExpressBase.ServiceStack
             try
             {
                 var _array = Inpuparams.Select(para => para.Name).ToArray();
-                if(Parameters != null)
+                if (Parameters != null)
                     _dv.ParamsList = Parameters.FindAll(para => Array.IndexOf(_array, para.Name) > -1);
                 var _user_culture = CultureHelper.GetSerializedCultureInfo(_user.Preference.Locale).GetCultureInfo();
 
@@ -1100,7 +1100,7 @@ namespace ExpressBase.ServiceStack
         {
             Columns columns = new Columns();
             for (var i = 1; i <= ExcelColumns.Count; i++)
-                columns.Append(new Column() { Min = Convert.ToUInt32(i), Max = Convert.ToUInt32(i),Width=25, CustomWidth = true });
+                columns.Append(new Column() { Min = Convert.ToUInt32(i), Max = Convert.ToUInt32(i), Width = 25, CustomWidth = true });
             worksheetPart1.Worksheet.Append(columns);
         }
 
@@ -1109,7 +1109,7 @@ namespace ExpressBase.ServiceStack
             ExcelRowcount = 1;
             ExcelColumns = _dV.Columns.FindAll(col => col.bVisible && !(col is DVApprovalColumn) && !(col is DVActionColumn)).ToList();
             Row workRow = new Row();
-            workRow.Append(CreateCell(_dV.DisplayName,1U));
+            workRow.Append(CreateCell(_dV.DisplayName, 1U));
             partSheetData.Append(workRow);
             var char1 = GetExcelColumnName(ExcelColumns.Count);
             mergeCells = new MergeCells();
@@ -1117,8 +1117,8 @@ namespace ExpressBase.ServiceStack
             for (var i = 1; i <= _dV.ParamsList.Count; i++)
             {
                 workRow = new Row();
-                workRow.Append(CreateCell( _dV.ParamsList[i - 1].Name + " = " + _dV.ParamsList[i - 1].Value,3U));
-                mergeCells.Append(new MergeCell() { Reference = new StringValue($"A{i+1}:B{i+1}") });
+                workRow.Append(CreateCell(_dV.ParamsList[i - 1].Name + " = " + _dV.ParamsList[i - 1].Value, 3U));
+                mergeCells.Append(new MergeCell() { Reference = new StringValue($"A{i + 1}:B{i + 1}") });
                 ExcelRowcount++;
                 partSheetData.Append(workRow);
             }
@@ -1127,7 +1127,7 @@ namespace ExpressBase.ServiceStack
                 ExcelRowcount++;
                 var col = ExcelColumns.Find(_col => _col.Name == TableFilters[i - 1].Column);
                 workRow = new Row();
-                workRow.Append(CreateCell(col.sTitle + " " + TableFilters[i - 1].Operator + " " + TableFilters[i - 1].Value,3U));
+                workRow.Append(CreateCell(col.sTitle + " " + TableFilters[i - 1].Operator + " " + TableFilters[i - 1].Value, 3U));
                 mergeCells.Append(new MergeCell() { Reference = new StringValue($"A{ExcelRowcount}:B{ExcelRowcount}") });
                 partSheetData.Append(workRow);
             }
@@ -1135,7 +1135,7 @@ namespace ExpressBase.ServiceStack
             workRow = new Row();
             for (var i = 0; i < ExcelColumns.Count; i++)
             {
-                workRow.Append(CreateCell(ExcelColumns[i].sTitle,2U));
+                workRow.Append(CreateCell(ExcelColumns[i].sTitle, 2U));
             }
             partSheetData.Append(workRow);
             ExcelRowcount++;
@@ -1175,7 +1175,7 @@ namespace ExpressBase.ServiceStack
             return cell;
         }
 
-        private Cell CreateCellWithFormula(string cellreference, string  _formula)
+        private Cell CreateCellWithFormula(string cellreference, string _formula)
         {
             Cell cell = new Cell { CellReference = cellreference };
             CellFormula cellformula = new CellFormula();
@@ -1207,8 +1207,8 @@ namespace ExpressBase.ServiceStack
 
             Font font0 = new Font();         // Default font
 
-            Font font1 = new Font();  
-            font1.Append(new Bold()); 
+            Font font1 = new Font();
+            font1.Append(new Bold());
             font1.Append(new FontSize() { Val = 15D });
             font1.Append(new FontName() { Val = "Calibri" });
 
@@ -1248,7 +1248,7 @@ namespace ExpressBase.ServiceStack
             };
 
             // <CellFormats>
-            CellFormat cellformat0 = new CellFormat() { FontId = 0, FillId=0, BorderId=0 }; // Default style : Mandatory | Style ID =0
+            CellFormat cellformat0 = new CellFormat() { FontId = 0, FillId = 0, BorderId = 0 }; // Default style : Mandatory | Style ID =0
             CellFormat cellformat1 = new CellFormat() { FontId = 1, Alignment = alignment };  // Style with Bold text ; Style ID = 1
             CellFormat cellformat2 = new CellFormat() { FontId = 2, Alignment = alignment1 };  // Style with Bold text ; Style ID = 1
             CellFormat cellformat3 = new CellFormat() { FontId = 3 };  // Style with Bold text ; Style ID = 1
@@ -1303,7 +1303,7 @@ namespace ExpressBase.ServiceStack
                     List<EbDataRow> customRows = LinesRows.FindAll(row => Convert.ToInt32(row[ForeignColumn.OIndex]).Equals(keydata));//not complete(int)
                     _formattedTable.Rows.Add(_formattedTable.NewDataRow2());
                     _formattedTable.Rows[i][_formattedTable.Columns.Count - 1] = i + 1;//serial
-                    
+
                     DataTable2FormatedTable4Calendar(MasterRows[i], customRows, _dv, _user_culture, _user, ref _formattedTable, ref globals, i, _hourCount, DateColumn);
                 }
                 return new PrePrcessorReturn { FormattedTable = _formattedTable, rows = MasterRows };
@@ -1776,7 +1776,7 @@ namespace ExpressBase.ServiceStack
                 Row workRow = new Row();
                 if (_isexcel)
                 {
-                    for(int k=1;k<=ExcelColumns.Count; k++)
+                    for (int k = 1; k <= ExcelColumns.Count; k++)
                     {
                         string cellReference = GetExcelColumnName(k) + (i + ExcelRowcount);
                         workRow.Append(CreateCell(cellReference, string.Empty));
@@ -1791,7 +1791,7 @@ namespace ExpressBase.ServiceStack
                     foreach (DVBaseColumn col in dependencyTable)
                     {
                         isnotAdded = true;
-                        int ExcelColIndex = ExcelColumns.FindIndex(_col => _col.Name == col.Name)+1;
+                        int ExcelColIndex = ExcelColumns.FindIndex(_col => _col.Name == col.Name) + 1;
                         try
                         {
                             bool AllowLinkifNoData = true;
@@ -1874,7 +1874,7 @@ namespace ExpressBase.ServiceStack
                                         //byte[] bytea = GetImage(imgid);
                                         Stream imageStream = GetImageStream(imgid);
                                         if (imageStream != null)
-                                            InsertImage(worksheetPart1, rowIndex-1, ExcelColIndex-1, imageStream);
+                                            InsertImage(worksheetPart1, rowIndex - 1, ExcelColIndex - 1, imageStream);
                                         //if (bytea.Length > 0)
                                         //{
                                         //    MemoryStream ms = new MemoryStream(bytea);
@@ -1930,7 +1930,7 @@ namespace ExpressBase.ServiceStack
                                     info += "</table>";
 
                                     _formattedData = _formattedData.ToString().Truncate(col.AllowedCharacterLength);
-                                    if(!string.IsNullOrEmpty(col.LinkRefId) && _formattedData.ToString() == string.Empty)
+                                    if (!string.IsNullOrEmpty(col.LinkRefId) && _formattedData.ToString() == string.Empty)
                                         _formattedData = "...";
                                     _formattedData = "<span class='columntooltip' data-toggle='popover' data-contents='" + info.ToBase64() + "'>" + _formattedData + "</span>";
                                 }
@@ -1988,10 +1988,10 @@ namespace ExpressBase.ServiceStack
                             {
                                 SummaryCalcAverage(ref Summary, col, cults, count);
                             }
-                            if (_isexcel && isnotAdded && ExcelColIndex > 0 )
+                            if (_isexcel && isnotAdded && ExcelColIndex > 0)
                             {
                                 string cellReference = GetExcelColumnName(ExcelColIndex) + (i + ExcelRowcount);
-                                Cell cell =  workRow.Elements<Cell>().Where(c => c.CellReference.Value == cellReference).First();
+                                Cell cell = workRow.Elements<Cell>().Where(c => c.CellReference.Value == cellReference).First();
                                 cell.CellValue = new CellValue(ExcelData.ToString());
                                 cell.DataType = ResolveCellDataTypeOnValue(ExcelData.ToString());
                                 //workRow.Append(CreateCell(cellReference, ExcelData.ToString()));
@@ -2004,7 +2004,7 @@ namespace ExpressBase.ServiceStack
                             Log.Info("PreProcessing data from IntermediateDictionay datatable Exception........." + e.Message + "Column Name  ......" + col.Name);
                             this._Responsestatus.Message = e.Message;
                         }
-                    }                    
+                    }
                     if (isTree)
                     {
                         var treecol = _dv.Columns.FirstOrDefault(e => e.IsTree == true);
@@ -2716,7 +2716,7 @@ namespace ExpressBase.ServiceStack
                         _formattedData = GetDataforPowerSelect(col, _formattedData);
                     }
                     IntermediateDic.Add(col.Data, _formattedData);
-                    if ((_dv as EbTableVisualization) == null )
+                    if ((_dv as EbTableVisualization) == null)
                     {
                         _formattedTable.Rows[i][col.Data] = _formattedData;
                     }
@@ -3448,18 +3448,21 @@ namespace ExpressBase.ServiceStack
                 }
                 else if ((col as DVDateTimeColumn).Format == DateFormat.Time)
                 {
-                    DateTime dt ;
-                    if (col.Type == EbDbTypes.Time)
-                        dt = DateTime.MinValue + (TimeSpan)_unformattedData;
-                    else
-                        dt = Convert.ToDateTime(_unformattedData);
-                    
-                    if ((col as DVDateTimeColumn).ConvretToUsersTimeZone)
-                        _formattedData = dt.ConvertFromUtc(_user.Preference.TimeZone).ToString(cults.DateTimeFormat.ShortTimePattern);
-                    else
-                        _formattedData = dt.ToString(cults.DateTimeFormat.ShortTimePattern);
-                    if (col.Data < row.Count)
-                        row[col.Data] = dt.ToString("HH:mm:ss", CultureInfo.InvariantCulture);
+                    DateTime dt;
+                    if (!DateTime.MinValue.Equals(_unformattedData))
+                    {
+                        if (col.Type == EbDbTypes.Time)
+                            dt = DateTime.MinValue + (TimeSpan)_unformattedData;
+                        else
+                            dt = Convert.ToDateTime(_unformattedData);
+
+                        if ((col as DVDateTimeColumn).ConvretToUsersTimeZone)
+                            _formattedData = dt.ConvertFromUtc(_user.Preference.TimeZone).ToString(cults.DateTimeFormat.ShortTimePattern);
+                        else
+                            _formattedData = dt.ToString(cults.DateTimeFormat.ShortTimePattern);
+                        if (col.Data < row.Count)
+                            row[col.Data] = dt.ToString("HH:mm:ss", CultureInfo.InvariantCulture);
+                    }
                 }
             }
             catch (Exception e)

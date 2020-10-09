@@ -140,12 +140,40 @@ namespace ExpressBase.ServiceStack.Services
                             dataValidation.Operator = DataValidationOperatorValues.GreaterThanOrEqual;
                         }
 
+                        else if (_col.Control.EbDbType.ToString() == "Time")
+                        {
+                            dataValidation.Type = DataValidationValues.Time;
+                            //cell.DataType = CellValues.Date;
+                            dataValidation.Prompt = "Time only allowed";
+                            dataValidation.PromptTitle = "Enter valid Time here";
+                            dataValidation.ErrorTitle = "Invalid Time  entered";
+                            dataValidation.Error = "This cell must be a Time ";
+                        }
+
                         else if (_col.Control.EbDbType.ToString() == "BooleanOriginal")
                         {
                             dataValidation.Type = DataValidationValues.List;
                             string vals = "Yes,No";
                             dataValidation.Formula1 = new Formula1("\"" + vals + "\"");
+                            //cell.DataType = CellValues.InlineString;
                         }
+                        else if (_col.Control.ObjType == "RadioButton")
+                        {
+                            if (_col.Control.EbDbType.ToString() == "String" || _col.Control.EbDbType.ToString() == "Boolean")
+                            {
+                                dataValidation.Type = DataValidationValues.List;
+                                string vals = "Yes,No";
+                                dataValidation.Formula1 = new Formula1("\"" + vals + "\"");
+                            }
+                            else if (_col.Control.EbDbType.ToString() == "Int32")
+                            {
+                                EbRadioButton _control = _col.Control as EbRadioButton;
+                                string vals = _control.TrueValue_I.ToString() + "," + _control.FalseValue_I.ToString();
+                                dataValidation.Type = DataValidationValues.List;
+                                dataValidation.Formula1 = new Formula1("\"" + vals + "\"");
+                            }
+                        }
+
                         colIndex++;
                         row.Append(cell);
                         newDVs.Append(dataValidation);
