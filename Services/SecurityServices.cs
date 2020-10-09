@@ -32,9 +32,10 @@ namespace ExpressBase.ServiceStack.Services
             GetUsersResponse1 resp = new GetUsersResponse1();
             string show = string.Empty;
             if (request.Show != "all")
-                show = " AND hide = 'no'";
+                show = " AND u.hide = 'no'";
 
-            string sql = "SELECT id,fullname,email,nickname,sex,phnoprimary,statusid FROM eb_users WHERE (statusid = 0 OR statusid = 1 OR statusid = 2) AND eb_del = 'F' AND id > 1" + show + ";";
+            string sql = @"SELECT u.id, u.fullname, u.email, u.nickname, u.sex, u.phnoprimary, u.statusid, ut.name FROM eb_users u LEFT JOIN eb_user_types ut 
+            ON u.eb_user_types_id = ut.id WHERE u.statusid >= 0 AND u.statusid <= 2 AND COALESCE(u.eb_del, 'F') = 'F' AND COALESCE(ut.eb_del, 'F') = 'F' AND u.id > 1" + show + ";";
 
             DbParameter[] parameters = { };
 
@@ -51,7 +52,8 @@ namespace ExpressBase.ServiceStack.Services
                     Nick_Name = dr[3].ToString(),
                     Sex = dr[4].ToString(),
                     Phone_Number = dr[5].ToString(),
-                    Status = (((EbUserStatus)Convert.ToInt32(dr[6])).ToString())
+                    Status = ((EbUserStatus)Convert.ToInt32(dr[6])).ToString(),
+                    User_Type = dr[7].ToString()
                 });
             }
             resp.Data = returndata;
