@@ -176,7 +176,7 @@ namespace ExpressBase.ServiceStack.Services
 					//CustomerData.Add("consulted", dr[3].ToString().ToLower());
 					CustomerData.Add("consultingfeepaid", dr[4].ToString().ToLower());
 					CustomerData.Add("consultingdoctor", dr[5].ToString());
-					CustomerData.Add("closing", dr[6].ToString());
+					CustomerData.Add("eb_closing", dr[6].ToString());
 					CustomerData.Add("nature", dr[7].ToString());
 					CustomerData.Add("consdate", getStringValue(dr[8]));
 					CustomerData.Add("probmonth", (string.IsNullOrEmpty(getStringValue(dr[9])) ? string.Empty: getStringValue(dr[9]).Substring(3).Replace("-", "/")));
@@ -437,7 +437,7 @@ namespace ExpressBase.ServiceStack.Services
 			GetParameter(dict, "totalrate", EbDbTypes.Int32, parameters2, ref cols2, ref vals2, ref upcolsvals2);
 			GetParameter(dict, "prpsessions", EbDbTypes.Int32, parameters2, ref cols2, ref vals2, ref upcolsvals2);
 			GetParameter(dict, "consultingfeepaid", EbDbTypes.BooleanOriginal, parameters2, ref cols2, ref vals2, ref upcolsvals2);
-			GetParameter(dict, "closing", EbDbTypes.Int32, parameters2, ref cols2, ref vals2, ref upcolsvals2);
+			GetParameter(dict, "eb_closing", EbDbTypes.Int32, parameters2, ref cols2, ref vals2, ref upcolsvals2);
 			GetParameter(dict, "nature", EbDbTypes.String, parameters2, ref cols2, ref vals2, ref upcolsvals2);
 			GetParameter(dict, "probmonth", EbDbTypes.Date, parameters2, ref cols2, ref vals2, ref upcolsvals2);
 			  
