@@ -3449,13 +3449,16 @@ namespace ExpressBase.ServiceStack
                 else if ((col as DVDateTimeColumn).Format == DateFormat.Time)
                 {
                     DateTime dt;
-                    if (!DateTime.MinValue.Equals(_unformattedData))
-                    {
-                        if (col.Type == EbDbTypes.Time)
+                    if (col.RenderType == EbDbTypes.Time) {
+                        if (!DateTime.MinValue.Equals(_unformattedData))
                             dt = DateTime.MinValue + (TimeSpan)_unformattedData;
                         else
                             dt = Convert.ToDateTime(_unformattedData);
-
+                    }
+                    else
+                        dt = Convert.ToDateTime(_unformattedData);
+                    if (!DateTime.MinValue.Equals(dt) && dt.TimeOfDay != TimeSpan.Zero)
+                    {
                         if ((col as DVDateTimeColumn).ConvretToUsersTimeZone)
                             _formattedData = dt.ConvertFromUtc(_user.Preference.TimeZone).ToString(cults.DateTimeFormat.ShortTimePattern);
                         else
@@ -3463,6 +3466,8 @@ namespace ExpressBase.ServiceStack
                         if (col.Data < row.Count)
                             row[col.Data] = dt.ToString("HH:mm:ss", CultureInfo.InvariantCulture);
                     }
+                    else
+                        _formattedData = string.Empty;
                 }
             }
             catch (Exception e)

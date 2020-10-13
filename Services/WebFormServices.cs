@@ -580,6 +580,7 @@ namespace ExpressBase.ServiceStack.Services
                             RenderType = _RenderType
                         };
                     else if (_RenderType == EbDbTypes.DateTime || _RenderType == EbDbTypes.Date || _RenderType == EbDbTypes.Time)
+                    {
                         _col = new DVDateTimeColumn
                         {
                             Data = index,
@@ -593,6 +594,9 @@ namespace ExpressBase.ServiceStack.Services
                             AllowedCharacterLength = charlength,
                             RenderType = _RenderType
                         };
+                        if (_RenderType == EbDbTypes.Time)
+                            (_col as DVDateTimeColumn).Format = DateFormat.Time;
+                    }
 
                     Columns.Add(_col);
                 }
@@ -724,6 +728,7 @@ namespace ExpressBase.ServiceStack.Services
                             RenderType = _RenderType
                         };
                     else if (_RenderType == EbDbTypes.DateTime || _RenderType == EbDbTypes.Date || _RenderType == EbDbTypes.Time)
+                    {
                         _col = new DVDateTimeColumn
                         {
                             Data = index,
@@ -737,6 +742,9 @@ namespace ExpressBase.ServiceStack.Services
                             AllowedCharacterLength = charlength,
                             RenderType = _RenderType
                         };
+                        if (_RenderType == EbDbTypes.Time)
+                            (_col as DVDateTimeColumn).Format = DateFormat.Time;
+                    }
 
                     Columns.Add(_col);
                 }
@@ -754,7 +762,12 @@ namespace ExpressBase.ServiceStack.Services
                             _col.RenderType = EbDbTypes.String;
                         }
                         else
+                        {
+                            if(_col.RenderType == EbDbTypes.Time)
+                                (_col as DVDateTimeColumn).Format = DateFormat.Time;
                             _col.RenderType = column.Type.EbDbType;
+                            _col.Type = column.Type.EbDbType;
+                        }
 
                         if (column.Control is EbPowerSelect)
                         {
