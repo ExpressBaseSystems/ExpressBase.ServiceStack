@@ -224,8 +224,18 @@ namespace ExpressBase.ServiceStack.Services
                 resp.Status = false;
                 return resp;
             }
-
-            string q = @"UPDATE 
+            string q;
+            if (request.IsDelete)
+                q = @"UPDATE 
+                            eb_solutions 
+                        SET 
+                            esolution_id = :esid 
+                        WHERE 
+                            isolution_id = :isid 
+                        AND 
+                            tenant_id = :userid;";
+            else
+                q = @"UPDATE 
                             eb_solutions 
                         SET 
                             esolution_id = :esid,
@@ -271,6 +281,44 @@ namespace ExpressBase.ServiceStack.Services
                 Console.WriteLine(e.StackTrace);
             }
             return resp;
+        }
+
+        public DeleteSolutionResponse Post(DeleteSolutionRequset request)
+        {
+            DeleteSolutionResponse res = new DeleteSolutionResponse();
+            try
+            {
+                EditSolutionResponse resp = this.Post(new EditSolutionRequest
+                {
+                    OldESolutionId = request.ESolutionId,
+                    NewESolutionId = request.ESolutionId + "_Deleted",
+                    IsDelete = true,
+                    Description = "",
+                    SolutionName = "",
+                    UserId = request.UserId
+                });
+                if (resp.Status)
+                {
+                    string q = "UPDATE eb_solutions SET eb_del = true WHERE isolution_id = :isolution_id";
+
+                    DbParameter[] parameters = new DbParameter[]
+                    {
+                    this.InfraConnectionFactory.DataDB.GetNewParameter("isolution_id",EbDbTypes.String,request.ISolutionId)
+                    };
+                    int st = this.InfraConnectionFactory.DataDB.DoNonQuery(q, parameters);
+                    if (st > 0)
+                        res.Status = true;
+                    else
+                        res.Status = false;
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.StackTrace);
+                Console.WriteLine(e.Message);
+                res.Status = false;
+            }
+            return res;
         }
 
         public CheckSolutionOwnerResp Get(CheckSolutionOwnerReq request)
