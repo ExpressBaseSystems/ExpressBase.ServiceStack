@@ -185,7 +185,8 @@ namespace ExpressBase.ServiceStack.Services
                     {
                         if (_schema.ExtendedControls.Find(e => e is EbReview) != null)
                             _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_approval", Label = "Approval" });
-                        CreateOrUpdateDsAndDv(request, _listNamesAndTypes);
+                        if(!request.IsImport)
+                            CreateOrUpdateDsAndDv(request, _listNamesAndTypes);
                     }
                 }
             }
