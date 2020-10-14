@@ -596,6 +596,8 @@ namespace ExpressBase.ServiceStack.Services
                         };
                         if (_RenderType == EbDbTypes.Time)
                             (_col as DVDateTimeColumn).Format = DateFormat.Time;
+                        else if (_RenderType == EbDbTypes.DateTime)
+                            (_col as DVDateTimeColumn).Format = DateFormat.DateTime;
                     }
 
                     Columns.Add(_col);
@@ -744,6 +746,8 @@ namespace ExpressBase.ServiceStack.Services
                         };
                         if (_RenderType == EbDbTypes.Time)
                             (_col as DVDateTimeColumn).Format = DateFormat.Time;
+                        else if (_RenderType == EbDbTypes.DateTime)
+                            (_col as DVDateTimeColumn).Format = DateFormat.DateTime;
                     }
 
                     Columns.Add(_col);
@@ -765,6 +769,8 @@ namespace ExpressBase.ServiceStack.Services
                         {
                             if(_col.RenderType == EbDbTypes.Time)
                                 (_col as DVDateTimeColumn).Format = DateFormat.Time;
+                            else if (_col.RenderType == EbDbTypes.DateTime)
+                                (_col as DVDateTimeColumn).Format = DateFormat.DateTime;
                             _col.RenderType = column.Type.EbDbType;
                             _col.Type = column.Type.EbDbType;
                         }
