@@ -21,9 +21,11 @@ namespace ExpressBase.ServiceStack.Services
 
 		public GetManageLeadResponse Any(GetManageLeadRequest request)
 		{
-			string SqlQry = @"SELECT id, longname FROM eb_locations WHERE id > 0;
+			string SqlQry = $@"SELECT id, longname FROM eb_locations WHERE id > 0;
 							  SELECT id, name FROM hoc_staff WHERE type='doctor' AND eb_del='F' ORDER BY name;
-							  SELECT id, INITCAP(TRIM(fullname)) FROM eb_users WHERE id > 1 ORDER BY fullname;
+							  SELECT id, INITCAP(TRIM(fullname)) FROM eb_users WHERE (id > 1 AND statusid = 0) 
+								{(request.RequestMode == 1 ? " OR id = (SELECT leadowner FROM customers WHERE id = :accountid) OR id = (SELECT eb_closing FROM leadratedetails WHERE customers_id = :accountid LIMIT 1) " : "")} 
+								ORDER BY fullname;
 							SELECT DISTINCT INITCAP(TRIM(clcity)) AS clcity FROM customers WHERE LENGTH(clcity) > 2 ORDER BY clcity;
 							SELECT DISTINCT INITCAP(TRIM(clcountry)) AS clcountry FROM customers WHERE LENGTH(clcountry) > 2 ORDER BY clcountry;
 							SELECT DISTINCT INITCAP(TRIM(city)) AS city FROM customers WHERE LENGTH(city) > 2 ORDER BY city;
