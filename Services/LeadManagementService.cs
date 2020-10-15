@@ -77,10 +77,11 @@ namespace ExpressBase.ServiceStack.Services
 								WHERE ((A.customer_id = :accountid AND COALESCE(A.eb_del, false) = false) OR B.context_sec = 'CustomerId:{request.AccId}')
 								AND COALESCE(B.eb_del, 'F') = 'F' AND B.context <> 'prp';
 							
-					SELECT B.id, B.filename, B.tags, B.uploadts, B.filecategory
-						FROM customer_files A, eb_files_ref B
-						WHERE A.eb_files_ref_id = B.id AND A.customer_id = :accountid 
-						AND COALESCE(A.eb_del, false) = false AND COALESCE(B.eb_del, 'F') = 'F' AND B.context = 'prp';";
+							SELECT B.id, B.filename, B.tags, B.uploadts, B.filecategory
+								FROM eb_files_ref B LEFT JOIN customer_files A 
+								ON A.eb_files_ref_id = B.id				
+								WHERE ((A.customer_id = :accountid AND COALESCE(A.eb_del, false) = false) OR B.context_sec = 'Prp_CustomerId:{request.AccId}')
+								AND COALESCE(B.eb_del, 'F') = 'F' AND B.context = 'prp';";
 
                 //SELECT eb_files_ref_id
                 //    FROM customer_files WHERE customer_id = :accountid AND eb_del = false;
@@ -513,7 +514,7 @@ namespace ExpressBase.ServiceStack.Services
 				SELECT B.id
 				FROM eb_files_ref B LEFT JOIN customer_files A 
 				ON A.eb_files_ref_id = B.id				
-				WHERE ((A.customer_id = @customer_id AND COALESCE(A.eb_del, false) = false) OR B.context_sec = 'CustomerId:{accountid}')
+				WHERE ((A.customer_id = @customer_id AND COALESCE(A.eb_del, false) = false) OR B.context_sec = 'CustomerId:{accountid}' OR B.context_sec = 'Prp_CustomerId:{accountid}')
 				AND COALESCE(B.eb_del, 'F') = 'F';";
 
 			EbDataTable dt = EbConnectionFactory.DataDB.DoQuery(selQry, new DbParameter[] { EbConnectionFactory.ObjectsDB.GetNewParameter("customer_id", EbDbTypes.Int32, accountid) });
