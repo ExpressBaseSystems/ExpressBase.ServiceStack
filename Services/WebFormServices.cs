@@ -1230,8 +1230,8 @@ namespace ExpressBase.ServiceStack.Services
                 FormObj.MergeFormData();
                 Console.WriteLine("Insert/Update WebFormData : Save start - " + DateTime.Now);
                 string r = FormObj.Save(EbConnectionFactory, this);
-                //Console.WriteLine("Insert/Update WebFormData : AfterExecutionIfUserCreated start - " + DateTime.Now);
-                //FormObj.AfterExecutionIfUserCreated(this, this.EbConnectionFactory.EmailConnection, MessageProducer3);
+                Console.WriteLine("Insert/Update WebFormData : AfterExecutionIfUserCreated start - " + DateTime.Now);
+                FormObj.AfterExecutionIfUserCreated(this, this.EbConnectionFactory.EmailConnection, MessageProducer3);
                 Console.WriteLine("Insert/Update WebFormData end : Execution Time = " + (DateTime.Now - startdt).TotalMilliseconds);
 
                 return new InsertDataFromWebformResponse()
