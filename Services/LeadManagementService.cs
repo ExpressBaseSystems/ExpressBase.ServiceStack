@@ -23,9 +23,7 @@ namespace ExpressBase.ServiceStack.Services
 		{
 			string SqlQry = $@"SELECT id, longname FROM eb_locations WHERE id > 0;
 							  SELECT id, name FROM hoc_staff WHERE type='doctor' AND eb_del='F' ORDER BY name;
-							  SELECT id, INITCAP(TRIM(fullname)) FROM eb_users WHERE (id > 1 AND statusid = 0) 
-								{(request.RequestMode == 1 ? " OR id = (SELECT leadowner FROM customers WHERE id = :accountid) OR id = (SELECT eb_closing FROM leadratedetails WHERE customers_id = :accountid LIMIT 1) " : "")} 
-								ORDER BY fullname;
+							  SELECT id, INITCAP(TRIM(fullname)), statusid FROM eb_users WHERE id > 1 ORDER BY fullname;
 							SELECT DISTINCT INITCAP(TRIM(clcity)) AS clcity FROM customers WHERE LENGTH(clcity) > 2 ORDER BY clcity;
 							SELECT DISTINCT INITCAP(TRIM(clcountry)) AS clcountry FROM customers WHERE LENGTH(clcountry) > 2 ORDER BY clcountry;
 							SELECT DISTINCT INITCAP(TRIM(city)) AS city FROM customers WHERE LENGTH(city) > 2 ORDER BY city;
@@ -39,6 +37,7 @@ namespace ExpressBase.ServiceStack.Services
 			List<DbParameter> paramList = new List<DbParameter>();
 			Dictionary<int, string> CostCenter = new Dictionary<int, string>();
 			Dictionary<string, int> DocDict = new Dictionary<string, int>();
+			List<StaffInfo> StaffInfoAll = new List<StaffInfo>();
 			Dictionary<string, int> StaffDict = new Dictionary<string, int>();
 			Dictionary<string, int> NurseDict = new Dictionary<string, int>();
 			Dictionary<string, string> CustomerData = new Dictionary<string, string>();
@@ -106,8 +105,20 @@ namespace ExpressBase.ServiceStack.Services
 				if(!DocDict.ContainsKey(dr[1].ToString()))
 					DocDict.Add(dr[1].ToString(), Convert.ToInt32(dr[0]));
 			foreach (var dr in ds.Tables[2].Rows)
-				if(!StaffDict.ContainsKey(dr[1].ToString()))
-					StaffDict.Add(dr[1].ToString(), Convert.ToInt32(dr[0]));
+			{
+				StaffInfo item = new StaffInfo() 
+				{ 
+					id = Convert.ToInt32(dr[0]),
+					name = dr[1].ToString(),
+					status = Convert.ToInt32(dr[2])
+				};
+				StaffInfoAll.Add(item);
+				if (item.status == 0)
+				{
+					if (!StaffDict.ContainsKey(item.name))
+						StaffDict.Add(item.name, item.id);
+				}
+			}
 			foreach (var dr in ds.Tables[11].Rows)
 				if (!NurseDict.ContainsKey(dr[1].ToString()))
 					NurseDict.Add(dr[1].ToString(), Convert.ToInt32(dr[0]));
@@ -162,6 +173,7 @@ namespace ExpressBase.ServiceStack.Services
 				CustomerData.Add("sex", dr[19].ToString());
 				CustomerData.Add("district", dr[20].ToString());
 				CustomerData.Add("leadowner", dr[21].ToString());
+				TryInsert(dr[21].ToString(), StaffDict, StaffInfoAll);
 				CustomerData.Add("baldnessgrade", dr[22].ToString());
 				CustomerData.Add("diffusepattern", dr[23].ToString().ToLower());
 				CustomerData.Add("hfcurrently", dr[24].ToString().ToLower());
@@ -180,6 +192,7 @@ namespace ExpressBase.ServiceStack.Services
 					CustomerData.Add("consultingfeepaid", dr[4].ToString().ToLower());
 					CustomerData.Add("consultingdoctor", dr[5].ToString());
 					CustomerData.Add("eb_closing", dr[6].ToString());
+					TryInsert(dr[6].ToString(), StaffDict, StaffInfoAll);
 					CustomerData.Add("nature", dr[7].ToString());
 					CustomerData.Add("consdate", getStringValue(dr[8]));
 					CustomerData.Add("probmonth", (string.IsNullOrEmpty(getStringValue(dr[9])) ? string.Empty: getStringValue(dr[9]).Substring(3).Replace("-", "/")));
@@ -222,6 +235,8 @@ namespace ExpressBase.ServiceStack.Services
 				//followup details
 				foreach (var i in ds.Tables[Qcnt + 1].Rows)
 				{
+					int uid = Convert.ToInt32(i[5]);
+					StaffInfo sinfo = StaffInfoAll.Find(e => e.id == uid);
 					Flist.Add(new FeedbackEntry
 					{
 						Id = Convert.ToInt32(i[0]),
@@ -229,7 +244,7 @@ namespace ExpressBase.ServiceStack.Services
 						Status = i[2].ToString(),
 						Fup_Date = getStringValue(i[3]),						
 						Comments = i[4].ToString(),
-						Created_By = StaffDict.ContainsValue(Convert.ToInt32(i[5]))? StaffDict.FirstOrDefault(x => x.Value == Convert.ToInt32(i[5])).Key : string.Empty,
+						Created_By = sinfo == null ? string.Empty : sinfo.name,
 						Created_Date = getStringValue(i[6], true, true),
                         Is_Picked_Up = Convert.ToBoolean(i[7])? "No": "Yes"
 					});
@@ -301,6 +316,27 @@ namespace ExpressBase.ServiceStack.Services
 				PrpImgInfo = prpImgInfo
 			};
 		}
+
+		private void TryInsert(string val, Dictionary<string, int> StaffDict, List<StaffInfo> StaffInfoAll)
+        {
+			int.TryParse(val, out int uid);
+			if (!StaffDict.ContainsValue(uid))
+			{
+				StaffInfo sinfo = StaffInfoAll.Find(e => e.id == uid);
+				if (sinfo != null)
+				{
+					if (!StaffDict.ContainsKey(sinfo.name))
+						StaffDict.Add(sinfo.name, sinfo.id);
+				}
+			}
+		}
+
+		private class StaffInfo
+        {
+			public int id { get; set; }
+			public string name { get; set; }
+			public int status { get; set; }
+        }
 
    //     public GetImageInfoResponse Any(GetImageInfoRequest request)///
    //     {
