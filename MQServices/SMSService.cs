@@ -105,7 +105,7 @@ namespace ExpressBase.ServiceStack.MQServices
                     {
                         EbDataReader reader = new EbDataReader();
                         reader = EbSerializers.Json_Deserialize(myDsres.Data[0].Json);
-                        IEnumerable<DbParameter> parameters = DataHelper.GetParams(ebConnectionFactory, false, request.Params, 0, 0);
+                        IEnumerable<DbParameter> parameters = DataHelper.GetParams(ebConnectionFactory.ObjectsDB, false, request.Params, 0, 0);
                         EbDataSet ds = ebConnectionFactory.ObjectsDB.DoQueries(reader.Sql, parameters.ToArray());
                         string pattern = @"\{{(.*?)\}}";
                         IEnumerable<string> matches = Regex.Matches(SmsTemplate.Body, pattern).OfType<Match>()
