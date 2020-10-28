@@ -82,7 +82,7 @@ namespace ExpressBase.ServiceStack.Services
                     string _c = string.Empty;
                     _sql = _ds.Sql;
                 }
-                var parameters = DataHelper.GetParams(this.EbConnectionFactory, _isPaged, request.Params,0, 0);
+                var parameters = DataHelper.GetParams(this.EbConnectionFactory.ObjectsDB, _isPaged, request.Params,0, 0);
                 EbDataSet _dataset = null;
                 try
                 {
