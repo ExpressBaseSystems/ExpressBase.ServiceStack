@@ -96,7 +96,11 @@ namespace ExpressBase.ServiceStack.Services
 						this.InfraConnectionFactory.DataDB.GetNewParameter("tkt", EbDbTypes.String,sbgf)
 					};
 					int dt2 = this.InfraConnectionFactory.DataDB.DoNonQuery(k, param);
-
+					//for sending email to expressbase
+					if (dt2>0)
+					{
+						SendAlertEmail(sbreq, sbgf);
+					}
 					//for history
 					string sql6 = @"INSERT INTO  support_ticket_history(
 																	ticket_id,
@@ -186,7 +190,24 @@ namespace ExpressBase.ServiceStack.Services
 			return sb;
 		}
 
-
+		// for sending alert email to expressbase mail id
+		public void SendAlertEmail(SaveBugRequest sbreq,string TktId)
+		{
+			string msg = string.Format(@"A bug/feature request is raised by user {0} in solution {1} details are as below <br>
+Ticket id: {2},<br>
+Title: {3},<br>
+Description: {4},<br>
+Priority: {5},<br>
+Type: {6}", sbreq.fullname, sbreq.solutionid, TktId, sbreq.title, sbreq.description, sbreq.priority, sbreq.type_b_f);
+			EmailService emailService = base.ResolveService<EmailService>();
+			emailService.Post(new EmailDirectRequest
+			{
+				To = "support@expressbase.com",
+				Subject = "Bug/Feature request",
+				Message = msg,
+				SolnId = sbreq.solutionid
+			});
+		}
 
 		//to fetch solution id,name from tenant table  to show in dropdown
 
