@@ -36,7 +36,7 @@ namespace ExpressBase.ServiceStack
                 dbConId = (obj as EbDataSourceMain).DataStore;
             if (this.EbConnectionFactory.DataDB.ConId == dbConId)
                 db = this.EbConnectionFactory.DataDB;
-            else if (this.EbConnectionFactory.SupportingDataDB.ContainsKey(dbConId))
+            else if (this.EbConnectionFactory.SupportingDataDB != null && this.EbConnectionFactory.SupportingDataDB.ContainsKey(dbConId))
                 db = this.EbConnectionFactory.SupportingDataDB[dbConId];
             else if (dbConId == 0)
                 db = this.EbConnectionFactory.DataDB;
@@ -299,7 +299,7 @@ namespace ExpressBase.ServiceStack
                 if (result != null && result.Data != null && result.Data.Count > 0)
                 {
                     _ds = EbSerializers.Json_Deserialize<EbDataReader>(result.Data[0].Json);
-                    Redis.Set<EbDataReader>(request.RefId, _ds); 
+                    Redis.Set<EbDataReader>(request.RefId, _ds);
                     if (_ds != null)
                     {
                         IDatabase MyDataStore = GetDatastore(_ds);
