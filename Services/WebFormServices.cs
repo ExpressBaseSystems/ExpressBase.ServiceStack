@@ -185,7 +185,8 @@ namespace ExpressBase.ServiceStack.Services
                     {
                         if (_schema.ExtendedControls.Find(e => e is EbReview) != null)
                             _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_approval", Label = "Approval" });
-                        CreateOrUpdateDsAndDv(request, _listNamesAndTypes);
+                        if(!request.IsImport)
+                            CreateOrUpdateDsAndDv(request, _listNamesAndTypes);
                     }
                 }
             }
@@ -579,6 +580,7 @@ namespace ExpressBase.ServiceStack.Services
                             RenderType = _RenderType
                         };
                     else if (_RenderType == EbDbTypes.DateTime || _RenderType == EbDbTypes.Date || _RenderType == EbDbTypes.Time)
+                    {
                         _col = new DVDateTimeColumn
                         {
                             Data = index,
@@ -592,6 +594,11 @@ namespace ExpressBase.ServiceStack.Services
                             AllowedCharacterLength = charlength,
                             RenderType = _RenderType
                         };
+                        if (_RenderType == EbDbTypes.Time)
+                            (_col as DVDateTimeColumn).Format = DateFormat.Time;
+                        else if (_RenderType == EbDbTypes.DateTime)
+                            (_col as DVDateTimeColumn).Format = DateFormat.DateTime;
+                    }
 
                     Columns.Add(_col);
                 }
@@ -723,6 +730,7 @@ namespace ExpressBase.ServiceStack.Services
                             RenderType = _RenderType
                         };
                     else if (_RenderType == EbDbTypes.DateTime || _RenderType == EbDbTypes.Date || _RenderType == EbDbTypes.Time)
+                    {
                         _col = new DVDateTimeColumn
                         {
                             Data = index,
@@ -736,6 +744,11 @@ namespace ExpressBase.ServiceStack.Services
                             AllowedCharacterLength = charlength,
                             RenderType = _RenderType
                         };
+                        if (_RenderType == EbDbTypes.Time)
+                            (_col as DVDateTimeColumn).Format = DateFormat.Time;
+                        else if (_RenderType == EbDbTypes.DateTime)
+                            (_col as DVDateTimeColumn).Format = DateFormat.DateTime;
+                    }
 
                     Columns.Add(_col);
                 }
@@ -753,7 +766,14 @@ namespace ExpressBase.ServiceStack.Services
                             _col.RenderType = EbDbTypes.String;
                         }
                         else
+                        {
+                            if(_col.RenderType == EbDbTypes.Time)
+                                (_col as DVDateTimeColumn).Format = DateFormat.Time;
+                            else if (_col.RenderType == EbDbTypes.DateTime)
+                                (_col as DVDateTimeColumn).Format = DateFormat.DateTime;
                             _col.RenderType = column.Type.EbDbType;
+                            _col.Type = column.Type.EbDbType;
+                        }
 
                         if (column.Control is EbPowerSelect)
                         {
@@ -1210,8 +1230,8 @@ namespace ExpressBase.ServiceStack.Services
                 FormObj.MergeFormData();
                 Console.WriteLine("Insert/Update WebFormData : Save start - " + DateTime.Now);
                 string r = FormObj.Save(EbConnectionFactory, this);
-                //Console.WriteLine("Insert/Update WebFormData : AfterExecutionIfUserCreated start - " + DateTime.Now);
-                //FormObj.AfterExecutionIfUserCreated(this, this.EbConnectionFactory.EmailConnection, MessageProducer3);
+                Console.WriteLine("Insert/Update WebFormData : AfterExecutionIfUserCreated start - " + DateTime.Now);
+                FormObj.AfterExecutionIfUserCreated(this, this.EbConnectionFactory.EmailConnection, MessageProducer3);
                 Console.WriteLine("Insert/Update WebFormData end : Execution Time = " + (DateTime.Now - startdt).TotalMilliseconds);
 
                 return new InsertDataFromWebformResponse()
@@ -1455,6 +1475,132 @@ namespace ExpressBase.ServiceStack.Services
             }
         }
 
+        public CheckEmailAndPhoneResponse Any(CheckEmailAndPhoneRequest request)
+        {
+            Dictionary<string, ChkEmailPhoneReqData> _data = JsonConvert.DeserializeObject<Dictionary<string, ChkEmailPhoneReqData>>(request.Data);
+            string _selQry = "SELECT id, fullname, email, phnoprimary FROM eb_users WHERE LOWER($) LIKE LOWER(@#) AND COALESCE(eb_del, 'F') = 'F' AND ((statusid >= 0 AND statusid <= 2) OR statusid = 4); ";
+            string _selQryDummy = "SELECT 1 WHERE 1 = 0; ";
+            IDatabase DataDB = this.EbConnectionFactory.DataDB;
+            string Qry = string.Empty;
+            List<DbParameter> parameters = new List<DbParameter>();
+            foreach (string ctrlName in _data.Keys)
+            {
+                if (!string.IsNullOrEmpty(_data[ctrlName].email))
+                {
+                    Qry += _selQry.Replace("#", ctrlName + "_em").Replace("$", "email");
+                    parameters.Add(DataDB.GetNewParameter(ctrlName + "_em", EbDbTypes.String, _data[ctrlName].email));
+                }
+                else
+                    Qry += _selQryDummy;
+
+                if (!string.IsNullOrEmpty(_data[ctrlName].phprimary))
+                {
+                    Qry += _selQry.Replace("#", ctrlName + "_ph").Replace("$", "phnoprimary");
+                    parameters.Add(DataDB.GetNewParameter(ctrlName + "_ph", EbDbTypes.String, _data[ctrlName].phprimary));
+                }
+                else
+                    Qry += _selQryDummy;
+
+                if (_data[ctrlName].id > 1)
+                {
+                    Qry += $"SELECT id, fullname, email, phnoprimary FROM eb_users WHERE id = @{ctrlName}_id; ";
+                    parameters.Add(DataDB.GetNewParameter(ctrlName + "_id", EbDbTypes.Int32, _data[ctrlName].id));
+                }
+            }
+            Dictionary<string, ChkEmailPhoneRespData> Resp = new Dictionary<string, ChkEmailPhoneRespData>();
+            if (Qry != string.Empty)
+            {
+                EbDataSet ds = DataDB.DoQueries(Qry, parameters.ToArray());
+                int index = 0;
+                RowColletion dr;
+                foreach (string ctrlName in _data.Keys)
+                {
+                    Resp.Add(ctrlName, new ChkEmailPhoneRespData());
+                    dr = ds.Tables[index++].Rows;
+                    if (dr.Count > 0)
+                    {
+                        Resp[ctrlName].emailData = new ChkEmailPhoneReqData()
+                        {
+                            id = Convert.ToInt32(dr[0][0]),
+                            fullname = Convert.ToString(dr[0][1]),
+                            email = Convert.ToString(dr[0][2]),
+                            phprimary = Convert.ToString(dr[0][3]),
+                        };
+                    }
+                    dr = ds.Tables[index++].Rows;
+                    if (dr.Count > 0)
+                    {
+                        Resp[ctrlName].phoneData = new ChkEmailPhoneReqData()
+                        {
+                            id = Convert.ToInt32(dr[0][0]),
+                            fullname = Convert.ToString(dr[0][1]),
+                            email = Convert.ToString(dr[0][2]),
+                            phprimary = Convert.ToString(dr[0][3]),
+                        };
+                    }
+                    if (_data[ctrlName].id > 1)
+                    {
+                        dr = ds.Tables[index++].Rows;
+                        Resp[ctrlName].curData = new ChkEmailPhoneReqData()
+                        {
+                            id = Convert.ToInt32(dr[0][0]),
+                            fullname = Convert.ToString(dr[0][1]),
+                            email = Convert.ToString(dr[0][2]),
+                            phprimary = Convert.ToString(dr[0][3]),
+                        };
+                    }
+                }
+            }
+            return new CheckEmailAndPhoneResponse() { Data = JsonConvert.SerializeObject(Resp) };
+        }
+
+        private class ChkEmailPhoneReqData
+        {
+            public int id { get; set; }
+            public string fullname { get; set; }
+            public string email { get; set; }
+            public string phprimary { get; set; }
+        }
+        private class ChkEmailPhoneRespData
+        {
+            public string status { get; set; }
+            public ChkEmailPhoneReqData emailData { get; set; }
+            public ChkEmailPhoneReqData phoneData { get; set; }
+            public ChkEmailPhoneReqData curData { get; set; }
+        }
+
+        private enum EmailPhoneStatus
+        {
+            CancelOperation = 0,
+            Insert = 1,
+            Update = 2,
+            Created = 4,
+            Linked = 8,
+            NothingUnique = 16,
+            EmailNotUnique = 32,
+            PhoneNotUnique = 64,
+            EmailUnique = 128,
+            PhoneUnique = 256,
+            EmailPhoneUnique = 512,
+        }
+
+        public GetProvUserListResponse Any(GetProvUserListRequest request)
+        {
+            string Qry = @"SELECT id, fullname, email, phnoprimary FROM eb_users WHERE COALESCE(eb_del, 'F') = 'F' AND id > 1 AND statusid >= 0 AND statusid <= 2 ORDER BY fullname, email, phnoprimary;";
+            EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(Qry);
+            List<Eb_Users> _usersListAll = new List<Eb_Users>();
+            foreach (EbDataRow dr in dt.Rows)
+            {
+                _usersListAll.Add(new Eb_Users()
+                {
+                    Id = Convert.ToInt32(dr[0]),
+                    Name = Convert.ToString(dr[1]),
+                    Email = Convert.ToString(dr[2]),
+                    Phone = Convert.ToString(dr[3])
+                });
+            }
+            return new GetProvUserListResponse() { Data = JsonConvert.SerializeObject(_usersListAll) };
+        }
 
         //================================= FORMULA AND VALIDATION =================================================
 

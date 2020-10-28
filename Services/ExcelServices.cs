@@ -159,19 +159,14 @@ namespace ExpressBase.ServiceStack.Services
                         }
                         else if (_col.Control.ObjType == "RadioButton")
                         {
-                            if (_col.Control.EbDbType.ToString() == "String" || _col.Control.EbDbType.ToString() == "Boolean")
-                            {
-                                dataValidation.Type = DataValidationValues.List;
-                                string vals = "Yes,No";
-                                dataValidation.Formula1 = new Formula1("\"" + vals + "\"");
-                            }
+                            EbRadioButton _control = _col.Control as EbRadioButton;
+                            dataValidation.Type = DataValidationValues.List;
+                            string vals = "Yes,No";//Boolean
+                            if(_col.Control.EbDbType.ToString() == "String")
+                                vals = _control.TrueValue_S.ToString() + "," + _control.FalseValue_S.ToString();
                             else if (_col.Control.EbDbType.ToString() == "Int32")
-                            {
-                                EbRadioButton _control = _col.Control as EbRadioButton;
-                                string vals = _control.TrueValue_I.ToString() + "," + _control.FalseValue_I.ToString();
-                                dataValidation.Type = DataValidationValues.List;
-                                dataValidation.Formula1 = new Formula1("\"" + vals + "\"");
-                            }
+                                vals = _control.TrueValue_I.ToString() + "," + _control.FalseValue_I.ToString();
+                            dataValidation.Formula1 = new Formula1("\"" + vals + "\"");
                         }
 
                         colIndex++;
