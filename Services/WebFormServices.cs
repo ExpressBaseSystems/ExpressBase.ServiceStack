@@ -912,25 +912,25 @@ namespace ExpressBase.ServiceStack.Services
             try
             {
                 Console.WriteLine("Requesting for WebFormData( Refid : " + request.RefId + ", Rowid : " + request.RowId + " ).................");
-                EbWebForm form = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId);
+                EbWebForm form = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId, request.CurrentLoc);
                 form.TableRowId = request.RowId;
                 if (form.TableRowId > 0)
                     form.RefreshFormData(EbConnectionFactory.DataDB, this);
                 else
                 {
-                    if (form.UserObj.LocationIds.Contains(-1) || form.UserObj.LocationIds.Contains(request.CurrentLoc))
-                    {
-                        if (form.SolutionObj.Locations.ContainsKey(request.CurrentLoc))
-                            form.UserObj.Preference.DefaultLocation = request.CurrentLoc;
-                    }
+                    //if (form.UserObj.LocationIds.Contains(-1) || form.UserObj.LocationIds.Contains(request.CurrentLoc))
+                    //{
+                    //    if (form.SolutionObj.Locations.ContainsKey(request.CurrentLoc))
+                    //        form.UserObj.Preference.DefaultLocation = request.CurrentLoc;
+                    //}
                     form.FormData = form.GetEmptyModel();
                 }
-                if (form.SolutionObj.SolutionSettings != null && form.SolutionObj.SolutionSettings.SignupFormRefid != string.Empty && form.SolutionObj.SolutionSettings.SignupFormRefid == form.RefId)
-                {
-                }
-                else if (form.SolutionObj.SolutionSettings != null && form.SolutionObj.SolutionSettings.UserTypeForms != null && form.SolutionObj.SolutionSettings.UserTypeForms.Any(x => x.RefId == form.RefId))
-                {
-                }
+                //if (form.SolutionObj.SolutionSettings != null && form.SolutionObj.SolutionSettings.SignupFormRefid != string.Empty && form.SolutionObj.SolutionSettings.SignupFormRefid == form.RefId)
+                //{
+                //}
+                //else if (form.SolutionObj.SolutionSettings != null && form.SolutionObj.SolutionSettings.UserTypeForms != null && form.SolutionObj.SolutionSettings.UserTypeForms.Any(x => x.RefId == form.RefId))
+                //{
+                //}
                 //bot c
                 //else if (!(form.HasPermission(OperationConstants.VIEW, request.CurrentLoc) || form.HasPermission(OperationConstants.NEW, request.CurrentLoc) || form.HasPermission(OperationConstants.EDIT, request.CurrentLoc)))
                 //{
@@ -963,7 +963,7 @@ namespace ExpressBase.ServiceStack.Services
             GetPrefillDataResponse _dataset = new GetPrefillDataResponse();
             try
             {
-                EbWebForm form = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId);
+                EbWebForm form = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId, request.CurrentLoc);
                 form.TableRowId = 0;
                 form.RefreshFormData(EbConnectionFactory.DataDB, this, request.Params);
                 _dataset.FormDataWrap = JsonConvert.SerializeObject(new WebformDataWrapper { FormData = form.FormData, Status = (int)HttpStatusCode.OK, Message = "Success" });
@@ -988,7 +988,7 @@ namespace ExpressBase.ServiceStack.Services
             GetExportFormDataResponse _dataset = new GetExportFormDataResponse();
             try
             {
-                EbWebForm sourceForm = this.GetWebFormObject(request.SourceRefId, request.UserAuthId, request.SolnId);
+                EbWebForm sourceForm = this.GetWebFormObject(request.SourceRefId, request.UserAuthId, request.SolnId, request.CurrentLoc);
                 sourceForm.TableRowId = request.SourceRowId;
 
                 EbWebForm destForm;
@@ -1005,7 +1005,7 @@ namespace ExpressBase.ServiceStack.Services
                 }
                 else
                 {
-                    destForm = this.GetWebFormObject(request.DestRefId, null, null);
+                    destForm = this.GetWebFormObject(request.DestRefId, null, null, request.CurrentLoc);
                     destForm.UserObj = sourceForm.UserObj;
                     destForm.SolutionObj = sourceForm.SolutionObj;
                     if (request.SourceRowId > 0)
@@ -1140,13 +1140,24 @@ namespace ExpressBase.ServiceStack.Services
         }
 
 
-        private EbWebForm GetWebFormObject(string RefId, string UserAuthId, string SolnId)
+        private EbWebForm GetWebFormObject(string RefId, string UserAuthId, string SolnId, int CurrrentLocation = 0)
         {
             EbWebForm _form = EbFormHelper.GetEbObject<EbWebForm>(RefId, null, this.Redis, this);
+            _form.LocationId = CurrrentLocation;
             if (UserAuthId != null)
+            {
                 _form.UserObj = GetUserObject(UserAuthId);
+                if (_form.UserObj == null)
+                    throw new Exception("User Object is null. AuthId: " + UserAuthId);
+                if (_form.UserObj.Preference != null)
+                    _form.UserObj.Preference.CurrrentLocation = CurrrentLocation;
+            }
             if (SolnId != null)
+            {
                 _form.SolutionObj = this.GetSolutionObject(SolnId);
+                if (_form.SolutionObj == null)
+                    throw new Exception("Solution Object is null. SolnId: " + SolnId);
+            }
             _form.AfterRedisGet(this);
             return _form;
         }
@@ -1214,17 +1225,10 @@ namespace ExpressBase.ServiceStack.Services
             {
                 DateTime startdt = DateTime.Now;
                 Console.WriteLine("Insert/Update WebFormData : start - " + startdt);
-                EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId);
+                EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId, request.CurrentLoc);
                 FormObj.TableRowId = request.RowId;
                 FormObj.FormData = request.FormData;
-                FormObj.LocationId = request.CurrentLoc;
                 FormObj.DraftId = request.DraftId;
-
-                //string Operation = OperationConstants.NEW;
-                //if (request.RowId > 0)
-                //    Operation = OperationConstants.EDIT;
-                //if (!FormObj.HasPermission(Operation, request.CurrentLoc))////bot c
-                //    return new InsertDataFromWebformResponse { Status = (int)HttpStatusCodes.FORBIDDEN, Message = "Access denied to save this data entry!", MessageInt = "Access denied" };
 
                 Console.WriteLine("Insert/Update WebFormData : MergeFormData start - " + DateTime.Now);
                 FormObj.MergeFormData();
@@ -1299,9 +1303,8 @@ namespace ExpressBase.ServiceStack.Services
             try
             {
                 Console.WriteLine("InsertOrUpdateFormDataRqst Service start");
-                EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId);
+                EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId, request.LocId);
                 FormObj.TableRowId = request.RecordId;
-                FormObj.LocationId = request.LocId;
                 Console.WriteLine("InsertOrUpdateFormDataRqst PrepareWebFormData start : " + DateTime.Now);
                 FormObj.PrepareWebFormData(this.EbConnectionFactory.DataDB, this, request.PushJson, request.FormGlobals);
                 Console.WriteLine("InsertOrUpdateFormDataRqst Save start : " + DateTime.Now);
@@ -1326,8 +1329,7 @@ namespace ExpressBase.ServiceStack.Services
             try
             {
                 Console.WriteLine("InsertBatchDataRequest Service start");
-                EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId);
-                FormObj.LocationId = request.LocId;
+                EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId, request.LocId);
                 List<int> Ids = FormObj.ProcessBatchRequest(request.Data, this.EbConnectionFactory.DataDB, this, request.TransactionConnection);
                 Console.WriteLine("InsertBatchDataRequest returning");
                 return new InsertBatchDataResponse() { Status = (int)HttpStatusCode.OK, Message = "success", RecordIds = Ids };
@@ -1350,7 +1352,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 Console.WriteLine("SaveFormDraftRequest Service start");
                 int Draft_id = 0;
-                EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId);
+                EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId, request.LocId);
                 request.Title = string.IsNullOrEmpty(request.Title) ? FormObj.DisplayName : request.Title;
                 if (request.DraftId <= 0)//new
                 {
