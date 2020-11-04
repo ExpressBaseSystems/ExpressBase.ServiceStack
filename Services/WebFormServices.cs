@@ -1861,7 +1861,7 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception ex)
             {
                 Console.WriteLine("Exception in GetAuditTrail Service\nMessage : " + ex.Message + "\nStackTrace : " + ex.StackTrace);
-                throw new FormException("Terminated GetAuditTrail. Check servicestack log for stack trace.");
+                throw new FormException(ex.Message);
             }
         }
 
