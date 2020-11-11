@@ -558,11 +558,11 @@ namespace ExpressBase.ServiceStack.Services
 			EbDataTable dt = EbConnectionFactory.DataDB.DoQuery(selQry, new DbParameter[] { EbConnectionFactory.ObjectsDB.GetNewParameter("customer_id", EbDbTypes.Int32, accountid) });
 			List<int> oldIdsAll = new List<int>();
 			foreach (EbDataRow dr in dt.Rows)
-				oldIdsAll.Add(Convert.ToInt32(dr[0])); 
+				oldIdsAll.Add(Convert.ToInt32(dr[0]));
 
-			IEnumerable<int> delIds = oldIdsAll.Except(ImgRefId["attachImg"]).Except(ImgRefId["prpImg"]);
-			IEnumerable<int> insIdsAll = ImgRefId["attachImg"].Concat(ImgRefId["prpImg"]).Except(oldIdsAll);
-			IEnumerable<int> insIdsPrp = ImgRefId["prpImg"].Except(oldIdsAll);
+			IEnumerable<int> delIds = oldIdsAll.Intersect(ImgRefId["attachImg_del"].Concat(ImgRefId["prpImg_del"]));
+			IEnumerable<int> insIdsAll = ImgRefId["attachImg_add"].Concat(ImgRefId["prpImg_add"]).Except(oldIdsAll);
+			IEnumerable<int> insIdsPrp = ImgRefId["prpImg_add"].Except(oldIdsAll);
 
 			string updateQry = string.Empty;
 			List<DbParameter> parameters = new List<DbParameter>();
