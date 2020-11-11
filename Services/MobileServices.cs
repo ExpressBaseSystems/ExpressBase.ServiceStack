@@ -261,7 +261,6 @@ namespace ExpressBase.ServiceStack.Services
             return ebObject;
         }
 
-        //get solution data
         public EbMobileSolutionData Get(MobileSolutionDataRequest request)
         {
             EbMobileSolutionData data = new EbMobileSolutionData();
