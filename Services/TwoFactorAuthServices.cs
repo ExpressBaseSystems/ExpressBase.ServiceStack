@@ -139,10 +139,9 @@ namespace ExpressBase.ServiceStack.Services
                 Eb_Solution sol_Obj = GetSolutionObject(request.SolnId);
                 if (sol_Obj != null)
                 {
-                    string subject = "OTP Verification";
+                    string subject = "Verification";
                     if (!string.IsNullOrEmpty(u.Email))
                     {
-
                         SendEmailVerificationCode(subject, u, sol_Obj);
                     }
                     if (!string.IsNullOrEmpty(u.PhoneNumber))
@@ -174,14 +173,15 @@ namespace ExpressBase.ServiceStack.Services
                 if (request.VerificationCode == u.EmailVerifCode)
                 {
                     AuthResponse.AuthStatus = true;
+                    User.UpdateVerificationStatus(this.EbConnectionFactory.DataDB, u.Id, true, false);
                 }
             }
             else if (request.OtpType == OtpType.Sms)
             {
                 if (request.VerificationCode == u.MobileVerifCode)
                 {
-
                     AuthResponse.AuthStatus = true;
+                    User.UpdateVerificationStatus(this.EbConnectionFactory.DataDB, u.Id, false, true);
                 }
             }
             return AuthResponse;
@@ -258,7 +258,7 @@ namespace ExpressBase.ServiceStack.Services
 
         private User SetUserObjForMobileVerifCode(string otp, string UserAuthId)
         {
-            User u = GetUserObject(UserAuthId, true);
+            User u = GetUserObject(UserAuthId);
             if (u != null)
             {
                 Console.WriteLine("otp : " + otp);
@@ -274,7 +274,7 @@ namespace ExpressBase.ServiceStack.Services
 
         private User SetUserObjForEmailVerifCode(string otp, string UserAuthId)
         {
-            User u = GetUserObject(UserAuthId, true);
+            User u = GetUserObject(UserAuthId);
             if (u != null)
             {
                 Console.WriteLine("otp : " + otp);
@@ -310,7 +310,7 @@ namespace ExpressBase.ServiceStack.Services
                         }
                         if (!string.IsNullOrEmpty(_usr.PhoneNumber))
                         {
-                            SendOtpSms(_usr, sol_Obj.SolutionID, message, subject);
+                            SendOtpSms(_usr, sol_Obj.SolutionID, message);
                         }
                         else
                         {
@@ -328,7 +328,7 @@ namespace ExpressBase.ServiceStack.Services
                     if (!string.IsNullOrEmpty(_usr.PhoneNumber))
                     {
                         string lastDigit = _usr.PhoneNumber.Substring((_usr.PhoneNumber.Length - 4), 4);
-                        SendOtpSms(_usr, sol_Obj.SolutionID, message, subject);
+                        SendOtpSms(_usr, sol_Obj.SolutionID, message);
                         AuthResponse.OtpTo = "******" + lastDigit;
                         if (!string.IsNullOrEmpty(_usr.Email))
                         {
@@ -368,7 +368,7 @@ namespace ExpressBase.ServiceStack.Services
             });
         }
 
-        private void SendOtpSms(User _usr, string solnId, string message, string subject)
+        private void SendOtpSms(User _usr, string solnId, string message)
         {
             SmsCreateService smsCreateService = base.ResolveService<SmsCreateService>();
             smsCreateService.Post(new SmsDirectRequest
@@ -395,7 +395,7 @@ namespace ExpressBase.ServiceStack.Services
             string Verifcode = GenerateOTP();
             SetUserObjForMobileVerifCode(Verifcode, usr.AuthId);
             string message = string.Format(VerificationMessage, soln.SolutionName, Verifcode);
-            SendOtpEmail(usr, soln.SolutionID, message, subject);
+            SendOtpSms(usr, soln.SolutionID, message);
         }
     }
 }
