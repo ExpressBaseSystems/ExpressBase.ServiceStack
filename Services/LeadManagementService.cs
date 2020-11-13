@@ -59,7 +59,7 @@ namespace ExpressBase.ServiceStack.Services
 			if (request.RequestMode == 1)//edit mode 
 			{
 				SqlQry += @"SELECT id, eb_loc_id, trdate, genurl, name, dob, genphoffice, profession, genemail, customertype, clcity, clcountry, city,
-								typeofcustomer, sourcecategory, subcategory, consultation, picsrcvd, dprefid, sex, district, leadowner,
+								typeofcustomer, sourcecategory, subcategory, consultation, online_consultation, picsrcvd, dprefid, sex, district, leadowner,
                                 baldnessgrade, diffusepattern, hfcurrently, htpreviously, country_code, watsapp_phno, cust_category 
 								FROM customers WHERE id = :accountid AND COALESCE(eb_del, 'F')='F';
 							SELECT id,trdate,status,followupdate,narration, eb_createdby, eb_createddt,isnotpickedup FROM leaddetails
@@ -168,19 +168,20 @@ namespace ExpressBase.ServiceStack.Services
 				CustomerData.Add("sourcecategory", dr[14].ToString());
 				CustomerData.Add("subcategory", dr[15].ToString());
 				CustomerData.Add("consultation", dr[16].ToString().ToLower());
-				CustomerData.Add("picsrcvd", dr[17].ToString().ToLower());
-				CustomerData.Add("dprefid", dr[18].ToString());
-				CustomerData.Add("sex", dr[19].ToString());
-				CustomerData.Add("district", dr[20].ToString());
-				CustomerData.Add("leadowner", dr[21].ToString());
-				TryInsert(dr[21].ToString(), StaffDict, StaffInfoAll);
-				CustomerData.Add("baldnessgrade", dr[22].ToString());
-				CustomerData.Add("diffusepattern", dr[23].ToString().ToLower());
-				CustomerData.Add("hfcurrently", dr[24].ToString().ToLower());
-				CustomerData.Add("htpreviously", dr[25].ToString().ToLower());
-				CustomerData.Add("country_code", dr[26].ToString());
-				CustomerData.Add("watsapp_phno", dr[27].ToString());
-				CustomerData.Add("cust_category", dr[28].ToString());
+				CustomerData.Add("online_consultation", dr[17].ToString().ToLower());
+				CustomerData.Add("picsrcvd", dr[18].ToString().ToLower());
+				CustomerData.Add("dprefid", dr[19].ToString());
+				CustomerData.Add("sex", dr[20].ToString());
+				CustomerData.Add("district", dr[21].ToString());
+				CustomerData.Add("leadowner", dr[22].ToString());
+				TryInsert(dr[22].ToString(), StaffDict, StaffInfoAll);
+				CustomerData.Add("baldnessgrade", dr[23].ToString());
+				CustomerData.Add("diffusepattern", dr[24].ToString().ToLower());
+				CustomerData.Add("hfcurrently", dr[25].ToString().ToLower());
+				CustomerData.Add("htpreviously", dr[26].ToString().ToLower());
+				CustomerData.Add("country_code", dr[27].ToString());
+				CustomerData.Add("watsapp_phno", dr[28].ToString());
+				CustomerData.Add("cust_category", dr[29].ToString());
 				
 				if (ds.Tables[Qcnt + 4].Rows.Count > 0)
 				{
@@ -458,6 +459,7 @@ namespace ExpressBase.ServiceStack.Services
 			GetParameter(dict, "sourcecategory", EbDbTypes.String, parameters, ref cols, ref vals, ref upcolsvals);
 			GetParameter(dict, "subcategory", EbDbTypes.String, parameters, ref cols, ref vals, ref upcolsvals);
 			GetParameter(dict, "consultation", EbDbTypes.BooleanOriginal, parameters, ref cols, ref vals, ref upcolsvals);
+			GetParameter(dict, "online_consultation", EbDbTypes.BooleanOriginal, parameters, ref cols, ref vals, ref upcolsvals);
 			GetParameter(dict, "picsrcvd", EbDbTypes.BooleanOriginal, parameters, ref cols, ref vals, ref upcolsvals);
 			GetParameter(dict, "dprefid", EbDbTypes.Int32, parameters, ref cols, ref vals, ref upcolsvals);
 			GetParameter(dict, "sex", EbDbTypes.String, parameters, ref cols, ref vals, ref upcolsvals);
