@@ -1247,7 +1247,7 @@ namespace ExpressBase.ServiceStack.Services
                     RowAffected = 1,
                     AffectedEntries = r,
                     Status = (int)HttpStatusCode.OK,
-                    MetaData = JsonConvert.SerializeObject(MetaData)
+                    MetaData = MetaData
                 };
             }
             catch (FormException ex)
