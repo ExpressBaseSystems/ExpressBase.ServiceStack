@@ -60,7 +60,7 @@ namespace ExpressBase.ServiceStack.Services
 			{
 				SqlQry += @"SELECT id, eb_loc_id, trdate, genurl, name, dob, genphoffice, profession, genemail, customertype, clcity, clcountry, city,
 								typeofcustomer, sourcecategory, subcategory, consultation, online_consultation, picsrcvd, dprefid, sex, district, leadowner,
-                                baldnessgrade, diffusepattern, hfcurrently, htpreviously, country_code, watsapp_phno, cust_category 
+                                baldnessgrade, diffusepattern, hfcurrently, htpreviously, country_code, watsapp_phno, cust_category, eb_modifiedby 
 								FROM customers WHERE id = :accountid AND COALESCE(eb_del, 'F')='F';
 							SELECT id,trdate,status,followupdate,narration, eb_createdby, eb_createddt,isnotpickedup FROM leaddetails
 								WHERE customers_id=:accountid ORDER BY eb_createddt DESC;
@@ -182,6 +182,9 @@ namespace ExpressBase.ServiceStack.Services
 				CustomerData.Add("country_code", dr[27].ToString());
 				CustomerData.Add("watsapp_phno", dr[28].ToString());
 				CustomerData.Add("cust_category", dr[29].ToString());
+				int uid = Convert.ToInt32(dr[30]);
+				StaffInfo sinfo = StaffInfoAll.Find(e => e.id == uid);
+				CustomerData.Add("eb_modifiedby", sinfo == null ? string.Empty : sinfo.name);
 				
 				if (ds.Tables[Qcnt + 4].Rows.Count > 0)
 				{
@@ -236,8 +239,8 @@ namespace ExpressBase.ServiceStack.Services
 				//followup details
 				foreach (var i in ds.Tables[Qcnt + 1].Rows)
 				{
-					int uid = Convert.ToInt32(i[5]);
-					StaffInfo sinfo = StaffInfoAll.Find(e => e.id == uid);
+					uid = Convert.ToInt32(i[5]);
+					sinfo = StaffInfoAll.Find(e => e.id == uid);
 					Flist.Add(new FeedbackEntry
 					{
 						Id = Convert.ToInt32(i[0]),
