@@ -73,6 +73,7 @@ namespace ExpressBase.ServiceStack.MQServices
                 this.ServerEventClient.BearerToken = request.BToken;
                 this.ServerEventClient.RefreshToken = request.RToken;
                 this.ServerEventClient.RefreshTokenUri = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GET_ACCESS_TOKEN_URL);
+                Console.WriteLine("Calling NotifySubscriptionRequest to subsc.id :" + request.SubscriptionId);
                 this.ServerEventClient.Post<NotifyResponse>(new NotifySubscriptionRequest
                 {
                     Msg = "../DV/GetExcel?refid=" + (request.EbDataVisualization.RefId + request.UserInfo.UserId) + "&filename=" + request.EbDataVisualization.DisplayName + ".xlsx",
@@ -82,7 +83,7 @@ namespace ExpressBase.ServiceStack.MQServices
             }
             catch (Exception e)
             {
-                Console.WriteLine("Exception: " + e.ToString());
+                Console.WriteLine("Exception: " + e.Message + e.StackTrace);
             }
 
         }
