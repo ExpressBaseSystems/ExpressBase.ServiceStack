@@ -16,6 +16,7 @@ using ExpressBase.Common.Application;
 using Newtonsoft.Json;
 using ServiceStack;
 using ExpressBase.Objects.Helpers;
+using ExpressBase.Common.LocationNSolution;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -266,24 +267,23 @@ namespace ExpressBase.ServiceStack.Services
             EbMobileSolutionData data = new EbMobileSolutionData();
 
             string idcheck = EbConnectionFactory.DataDB.EB_GET_MOB_MENU_OBJ_IDS;
-            const string acquery = @"SELECT 
-	                                        EA.id, EA.applicationname,EA.app_icon,EA.application_type,EA.app_settings
-                                        FROM 
-	                                        eb_applications EA
-                                        WHERE
-	                                        EXISTS (SELECT * FROM eb_objects2application EOA WHERE EOA.app_id = EA.id AND EOA.eb_del = 'F' {0})
-                                        AND
-	                                        EA.eb_del = 'F'
-                                        AND
-	                                        EA.application_type = 2;";
+            const string acquery = @"SELECT EA.id, EA.applicationname,EA.app_icon,EA.application_type,EA.app_settings
+                                    FROM 
+	                                    eb_applications EA
+                                    WHERE
+	                                    EXISTS (SELECT * FROM eb_objects2application EOA WHERE EOA.app_id = EA.id AND EOA.eb_del = 'F' {0})
+                                    AND EA.eb_del = 'F' AND EA.application_type = 2;";
 
             User UserObject = GetUserObject(request.UserAuthId);
             bool isAdmin = UserObject.IsAdmin();
+            Eb_Solution solutionObject = GetSolutionObject(request.SolnId);
             string sql;
             EbDataTable dt;
 
             try
             {
+                if (solutionObject != null) data.Locations = solutionObject.GetLocationsByUser(UserObject);
+
                 if (isAdmin)
                 {
                     sql = string.Format(acquery, string.Empty);
@@ -315,6 +315,7 @@ namespace ExpressBase.ServiceStack.Services
             }
 
             GetMobilePagesByAppliation(data, UserObject, isAdmin, request.Export);
+            SetProfilePages(data, solutionObject);
 
             return data;
         }
@@ -417,20 +418,44 @@ namespace ExpressBase.ServiceStack.Services
             return DataSet;
         }
 
+        private void SetProfilePages(EbMobileSolutionData data, Eb_Solution solutionObject)
+        {
+            if (solutionObject.GetMobileSettings(out var appSettings) && appSettings.UserTypeForms != null)
+            {
+                List<MobilePagesWraper> profilePages = new List<MobilePagesWraper>();
+
+                foreach (EbProfileUserType userType in appSettings.UserTypeForms)
+                {
+                    if (string.IsNullOrEmpty(userType.RefId))
+                        continue;
+                    try
+                    {
+                        EbMobilePage page = this.GetEbObject<EbMobilePage>(userType.RefId);
+
+                        profilePages.Add(new MobilePagesWraper
+                        {
+                            Name = page.Name,
+                            DisplayName = page.DisplayName,
+                            Json = EbSerializers.Json_Serialize(page),
+                            RefId = userType.RefId,
+                            Version = page.VersionNumber
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine(ex.Message);
+                    }
+                }
+                data.ProfilePages = profilePages;
+            }
+        }
+
         public MobileVisDataResponse Get(MobileVisDataRequest request)
         {
             MobileVisDataResponse resp = new MobileVisDataResponse();
             try
             {
-                EbDataReader _ds = this.Redis.Get<EbDataReader>(request.DataSourceRefId);
-                if (_ds == null)
-                {
-                    EbObjectParticularVersionResponse obj = this.Gateway.Send<EbObjectParticularVersionResponse>(new EbObjectParticularVersionRequest
-                    {
-                        RefId = request.DataSourceRefId
-                    });
-                    _ds = EbSerializers.Json_Deserialize<EbDataReader>(obj.Data[0].Json);
-                }
+                EbDataReader dataReader = this.GetEbObject<EbDataReader>(request.DataSourceRefId);
 
                 List<DbParameter> parameters = request.Params.ParamsToDbParameters(this.EbConnectionFactory);
 
@@ -442,7 +467,7 @@ namespace ExpressBase.ServiceStack.Services
                     parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("offset", EbDbTypes.Int32, request.Offset));
                 }
 
-                string wraped = this.WrapQuery(_ds.Sql, request, parameters);
+                string wraped = this.WrapQuery(dataReader.Sql, request, parameters);
 
                 resp.Data = this.EbConnectionFactory.DataDB.DoQueries(wraped, parameters.ToArray());
             }
@@ -586,17 +611,10 @@ namespace ExpressBase.ServiceStack.Services
             MobileFormDataResponse response = new MobileFormDataResponse();
             try
             {
-                EbMobilePage mPage = this.Redis.Get<EbMobilePage>(request.MobilePageRefId);
-                if (mPage == null)
-                {
-                    var obj = this.Gateway.Send<EbObjectParticularVersionResponse>(new EbObjectParticularVersionRequest
-                    {
-                        RefId = request.MobilePageRefId
-                    });
-                    mPage = EbSerializers.Json_Deserialize<EbMobilePage>(obj.Data[0].Json);
-                }
+                EbMobilePage mobilePage = this.GetEbObject<EbMobilePage>(request.MobilePageRefId);
 
-                EbMobileForm formContainer = mPage.Container as EbMobileForm;
+                EbMobileForm formContainer = (EbMobileForm)mobilePage.Container;
+
                 if (!string.IsNullOrEmpty(formContainer.WebFormRefId))
                 {
                     if (request.RowId != 0)
@@ -801,49 +819,6 @@ namespace ExpressBase.ServiceStack.Services
                 Console.WriteLine(ex.Message);
             }
             return response;
-        }
-
-        public EbDeviceRegistration Post(EbDeviceRegistrationRequest request)
-        {
-            EbDeviceRegistration registration = new EbDeviceRegistration();
-
-            try
-            {
-                var actionResp = this.Get(new MyActionsRequest
-                {
-                    UserAuthId = request.UserAuthId,
-                    UserId = request.UserId
-                });
-                registration.ActionsCount = actionResp.Actions.Count;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Get actions error inside eb device reg request");
-                Console.WriteLine(ex.Message);
-            }
-
-            string query = @"SELECT * FROM eb_notifications WHERE user_id = :userid AND message_seen ='F' ORDER BY created_at DESC;";
-
-            DbParameter[] parameters = {
-                this.EbConnectionFactory.ObjectsDB.GetNewParameter("userid", EbDbTypes.Int32, request.UserId),
-            };
-
-            try
-            {
-                var dt = this.EbConnectionFactory.DataDB.DoQuery(query, parameters);
-
-                if (dt != null)
-                {
-
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Get notification query error");
-                Console.WriteLine(ex.Message);
-            }
-
-            return registration;
         }
     }
 }
