@@ -1542,7 +1542,7 @@ namespace ExpressBase.ServiceStack.Services
                             phprimary = Convert.ToString(dr[0][3]),
                         };
                     }
-                    if (_data[ctrlName].id > 1)
+                    if (_data[ctrlName].id > 1 && dr.Count > 0)
                     {
                         dr = ds.Tables[index++].Rows;
                         Resp[ctrlName].curData = new ChkEmailPhoneReqData()
