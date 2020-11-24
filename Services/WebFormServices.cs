@@ -1606,6 +1606,13 @@ namespace ExpressBase.ServiceStack.Services
             return new GetProvUserListResponse() { Data = JsonConvert.SerializeObject(_usersListAll) };
         }
 
+        public GetGlobalSrchRsltsResp Any(GetGlobalSrchRsltsReq request)
+        {
+            Eb_Solution SlnObj = this.GetSolutionObject(request.SolnId);
+            string Json = SearchHelper.GetSearchResults(this.EbConnectionFactory.DataDB, SlnObj, request.SrchText);
+            return new GetGlobalSrchRsltsResp() { Data = Json };
+        }
+
         //================================= FORMULA AND VALIDATION =================================================
 
         public WebformData CalcFormula(WebformData _formData, EbWebForm _formObj)
