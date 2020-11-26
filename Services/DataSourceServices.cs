@@ -27,6 +27,23 @@ namespace ExpressBase.ServiceStack
     {
         public DataSourceService(IEbConnectionFactory _dbf) : base(_dbf) { }
 
+        public IDatabase GetDatastore(EbObject obj)
+        {
+            int dbConId = 0;
+            IDatabase db = null;
+
+            if (obj != null && obj is EbDataSourceMain)
+                dbConId = (obj as EbDataSourceMain).DataStore;
+            if (this.EbConnectionFactory.DataDB.ConId == dbConId)
+                db = this.EbConnectionFactory.DataDB;
+            else if (this.EbConnectionFactory.SupportingDataDB != null && this.EbConnectionFactory.SupportingDataDB.ContainsKey(dbConId))
+                db = this.EbConnectionFactory.SupportingDataDB[dbConId];
+            else if (dbConId == 0)
+                db = this.EbConnectionFactory.DataDB;
+            return db;
+        }
+
+
         [CompressResponse]
         public DataSourceDataResponse Any(DataSourceDataRequest request)
         {
@@ -57,6 +74,7 @@ namespace ExpressBase.ServiceStack
                         request.Params = _dsf.GetDefaultParams();
                 }
 
+                IDatabase MyDataStore = GetDatastore(_ds);
                 bool _isPaged = false;
                 if (_ds != null)
                 {
@@ -107,7 +125,7 @@ namespace ExpressBase.ServiceStack
                             }
 
                             string sql1 = curSql.ReplaceAll(";", string.Empty);
-                            if (this.EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.ORACLE)
+                            if (MyDataStore.Vendor == DatabaseVendors.ORACLE)
                             {
                                 sql1 = "SELECT * FROM ( SELECT a.*,ROWNUM rnum FROM (" + sql1 + ")a WHERE ROWNUM <= :limit+:offset) WHERE rnum > :offset;";
                                 //sql1 += "ALTER TABLE T1 DROP COLUMN rnum;SELECT * FROM T1;";
@@ -145,14 +163,14 @@ namespace ExpressBase.ServiceStack
                         }
                     }
                 }
-                IEnumerable<DbParameter> parameters = DataHelper.GetParams(this.EbConnectionFactory, _isPaged, request.Params, request.Length, request.Start);
+                IEnumerable<DbParameter> parameters = DataHelper.GetParams(MyDataStore, _isPaged, request.Params, request.Length, request.Start);
                 Console.WriteLine("Before :  " + DateTime.Now);
                 DateTime dtStart = DateTime.Now;
                 Console.WriteLine("................................................datasourceDSrequeststart " + DateTime.Now);
                 EbDataSet _dataset = new EbDataSet();
                 try
                 {
-                    _dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray<System.Data.Common.DbParameter>());
+                    _dataset = MyDataStore.DoQueries(_sql, parameters.ToArray<System.Data.Common.DbParameter>());
                 }
                 catch (Exception e)
                 {
@@ -210,6 +228,8 @@ namespace ExpressBase.ServiceStack
                     _ds = EbSerializers.Json_Deserialize(result.Data[0].Json);
                     Redis.Set<EbDataReader>(request.RefId, _ds);
 
+                    IDatabase MyDataStore = GetDatastore(_ds);
+
                     if (_ds != null)
                     {
                         string _sql = string.Empty;
@@ -231,19 +251,19 @@ namespace ExpressBase.ServiceStack
                         if (request.Params == null)
                             _sql = _sql.Replace(":id", "0");
                         // }
-                        IEnumerable<DbParameter> parameters = DataHelper.GetParams(this.EbConnectionFactory, _isPaged, request.Params, 0, 0);
+                        IEnumerable<DbParameter> parameters = DataHelper.GetParams(MyDataStore, _isPaged, request.Params, 0, 0);
 
 
-                        Console.WriteLine("................................................datasourcecolumnrequeststart " + System.DateTime.Now);
+                        Console.WriteLine("................................................datasourcecolumnrequeststart " + DateTime.Now);
                         try
                         {
-                            _dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray<System.Data.Common.DbParameter>());
+                            _dataset = MyDataStore.DoQueries(_sql, parameters.ToArray());
                         }
                         catch (Exception e)
                         {
                             resp.ResponseStatus = new ResponseStatus { Message = e.Message };
                         }
-                        Console.WriteLine("................................................datasourcecolumnrequestfinish " + System.DateTime.Now);
+                        Console.WriteLine("................................................datasourcecolumnrequestfinish " + DateTime.Now);
 
                         foreach (EbDataTable dt in _dataset.Tables)
                             resp.Columns.Add(dt.Columns);
@@ -282,6 +302,7 @@ namespace ExpressBase.ServiceStack
                     Redis.Set<EbDataReader>(request.RefId, _ds);
                     if (_ds != null)
                     {
+                        IDatabase MyDataStore = GetDatastore(_ds);
                         string sql = string.Empty;
                         string subjectString = _ds.Sql.ToString();
                         string resultList = string.Empty;
@@ -313,19 +334,22 @@ namespace ExpressBase.ServiceStack
                         sql = sql.Replace(":and_search", string.Empty).Replace(":orderby", "1");
                         bool _isPaged = true;
 
-                        IEnumerable<DbParameter> parameters = DataHelper.GetParams(this.EbConnectionFactory, _isPaged, request.Params, 0, 0);
+                        IEnumerable<DbParameter> parameters = DataHelper.GetParams(MyDataStore, _isPaged, request.Params, 0, 0);
                         try
                         {
-                            _dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(sql, parameters.ToArray<System.Data.Common.DbParameter>());
+                            _dataset = MyDataStore.DoQueries(sql, parameters.ToArray<System.Data.Common.DbParameter>());
                         }
                         catch (Exception e)
                         {
                             resp.ResponseStatus = new ResponseStatus { Message = e.Message };
                         }
-                        foreach (EbDataTable dt in _dataset.Tables)
-                            resp.Columns.Add(dt.Columns);
+                        if (_dataset != null)
+                        {
+                            foreach (EbDataTable dt in _dataset.Tables)
+                                resp.Columns.Add(dt.Columns);
 
-                        this.Redis.Set<DataSourceColumnsResponse>(_dsRedisKey, resp);
+                            this.Redis.Set<DataSourceColumnsResponse>(_dsRedisKey, resp);
+                        }
                     }
                 }
             }
@@ -353,6 +377,7 @@ namespace ExpressBase.ServiceStack
                     _ds = EbSerializers.Json_Deserialize(result.Data[0].Json);
                     Redis.Set<EbDataReader>(request.RefId, _ds);
                 }
+                IDatabase MyDataStore = GetDatastore(_ds);
                 if (_ds != null && _ds.FilterDialogRefId != string.Empty)
                 {
                     EbFilterDialog _dsf = this.Redis.Get<EbFilterDialog>(_ds.FilterDialogRefId);
@@ -432,7 +457,7 @@ namespace ExpressBase.ServiceStack
                                         }
                                         else
                                         {
-                                            if (this.EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.ORACLE)
+                                            if (MyDataStore.Vendor == DatabaseVendors.ORACLE)
                                             {
                                                 if (type == EbDbTypes.Date)
                                                     _cond += string.Format(" {0} {1} date '{2}' OR", col, op, array[i].Trim());
@@ -466,7 +491,7 @@ namespace ExpressBase.ServiceStack
                     }
 
                     firstsql = firstsql.ReplaceAll(";", string.Empty);
-                    if (this.EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.ORACLE)
+                    if (MyDataStore.Vendor == DatabaseVendors.ORACLE)
                     {
                         firstsql = "SELECT * FROM ( SELECT a.*,ROWNUM rnum FROM (" + firstsql + ")a WHERE ROWNUM <= :limit+:offset) WHERE rnum > :offset;";
                         //sql1 += "ALTER TABLE T1 DROP COLUMN rnum;SELECT * FROM T1;";
@@ -489,10 +514,10 @@ namespace ExpressBase.ServiceStack
                 else
                     sql = sql.Replace(":orderby", __order);
                 bool _isPaged = true;
-                IEnumerable<DbParameter> parameters = DataHelper.GetParams(this.EbConnectionFactory, _isPaged, request.Params, request.Length, request.Start);
+                IEnumerable<DbParameter> parameters = DataHelper.GetParams(MyDataStore, _isPaged, request.Params, request.Length, request.Start);
                 try
                 {
-                    _dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(sql, parameters.ToArray<System.Data.Common.DbParameter>());
+                    _dataset = MyDataStore.DoQueries(sql, parameters.ToArray<System.Data.Common.DbParameter>());
                 }
                 catch (Exception e)
                 {
@@ -563,6 +588,9 @@ namespace ExpressBase.ServiceStack
                     if (request.Params == null)
                         request.Params = _dsf.GetDefaultParams();
                 }
+
+                IDatabase MyDataStore = GetDatastore(_ds);
+
                 if (_ds != null)
                 {
                     string _c = string.Empty;
@@ -575,8 +603,8 @@ namespace ExpressBase.ServiceStack
                 //}
                 try
                 {
-                    IEnumerable<DbParameter> parameters = DataHelper.GetParams(this.EbConnectionFactory, false, request.Params, 0, 0);
-                    resp.DataSet = this.EbConnectionFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray<System.Data.Common.DbParameter>());
+                    IEnumerable<DbParameter> parameters = DataHelper.GetParams(MyDataStore, false, request.Params, 0, 0);
+                    resp.DataSet = MyDataStore.DoQueries(_sql, parameters.ToArray<System.Data.Common.DbParameter>());
 
                     foreach (EbDataTable dt in resp.DataSet.Tables)
                         resp.Columns.Add(dt.Columns);
@@ -590,8 +618,8 @@ namespace ExpressBase.ServiceStack
                 catch (Exception e)
                 {
                     resp.ResponseStatus = new ResponseStatus { Message = e.Message };
-                    Console.WriteLine("DataSourceDataSetResponse------"+e.StackTrace);
-                    Console.WriteLine("DataSourceDataSetResponse------"+e.Message);
+                    Console.WriteLine("DataSourceDataSetResponse------" + e.StackTrace);
+                    Console.WriteLine("DataSourceDataSetResponse------" + e.Message);
                 }
             }
             catch (Exception e)

@@ -205,7 +205,7 @@ namespace ExpressBase.ServiceStack.Services
                                         Description = obj.Description,
                                         Json = EbSerializers.Json_Serialize(obj),
                                         Status = _status,
-                                        Relations = "_rel_obj",
+                                        Relations = "import",
                                         IsSave = false,
                                         Tags = "_tags",
                                         Apps = _currentAppId.ToString(),
@@ -231,6 +231,10 @@ namespace ExpressBase.ServiceStack.Services
                                 string _mapRefid = obj.RefId;
                                 obj.RefId = RefidMap[obj.RefId];
                                 obj.ReplaceRefid(RefidMap);
+                                string _rel_obj_tmp = string.Empty;
+                                var temp = obj.DiscoverRelatedRefids();
+                                if (temp != null && temp.Count > 0)
+                                    _rel_obj_tmp = string.Join(",", temp);
                                 EbObject_SaveRequest ss = new EbObject_SaveRequest
                                 {
                                     RefId = RefidMap[_mapRefid],
@@ -243,7 +247,7 @@ namespace ExpressBase.ServiceStack.Services
                                     UserId = request.UserId,
                                     UserAuthId = request.UserAuthId,
                                     WhichConsole = request.WhichConsole,
-                                    Relations = "_rel_obj",
+                                    Relations = _rel_obj_tmp,
                                     Tags = "_tags",
                                     IsImport = true
                                 };

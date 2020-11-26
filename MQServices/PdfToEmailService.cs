@@ -83,7 +83,7 @@ namespace ExpressBase.ServiceStack.MQServices
                         if (mailDs.Data.Count > 0)
                         {
                             EbDataReader dr = EbSerializers.Json_Deserialize(mailDs.Data[0].Json);
-                            IEnumerable<DbParameter> parameters = DataHelper.GetParams(ebConnectionFactory, false, request.Params, 0, 0);
+                            IEnumerable<DbParameter> parameters = DataHelper.GetParams(ebConnectionFactory.ObjectsDB, false, request.Params, 0, 0);
                             EbDataSet ds = ebConnectionFactory.ObjectsDB.DoQueries(dr.Sql, parameters.ToArray());
                             string pattern = @"\{{(.*?)\}}";
                             IEnumerable<string> matches = Regex.Matches(EmailTemplate.Body, pattern).OfType<Match>()

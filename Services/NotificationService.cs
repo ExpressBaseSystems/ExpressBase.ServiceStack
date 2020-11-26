@@ -62,7 +62,7 @@ namespace ExpressBase.ServiceStack.Services
                         {
                             Msg = JsonConvert.SerializeObject(n),
                             Selector = "cmd.onNotification",
-                            ToUserAuthId = user_auth_id,
+                            ToUserAuthId = request.User_AuthId,
                             NotificationId = notification_id,
                             NotifyUserId = request.UsersID
                         });
@@ -258,7 +258,7 @@ namespace ExpressBase.ServiceStack.Services
         public GetNotificationsResponse Post(GetNotificationsRequest request)
         {
             GetNotificationsResponse res = new GetNotificationsResponse();
-            res.Notifications = new List<NotificationInfo>();
+            res.Notification = new List<NotificationInfo>();
             res.PendingActions = new List<PendingActionAndMeetingInfo>();
             res.MyMeetings = new List<PendingActionAndMeetingInfo>();
             this.EbConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
@@ -354,7 +354,7 @@ namespace ExpressBase.ServiceStack.Services
                     DateTime created_dtime = Convert.ToDateTime(dt.Rows[i]["created_at"]);
                     var duration = TimeAgo(created_dtime);
                     var _date = created_dtime.ConvertFromUtc(request.user.Preference.TimeZone).ToString(request.user.Preference.GetShortDatePattern() + " " + request.user.Preference.GetShortTimePattern());
-                    res.Notifications.Add(new NotificationInfo
+                    res.Notification.Add(new NotificationInfo
                     {
                         Link = list.Notification[0].Link,
                         NotificationId = list.Notification[0].NotificationId,

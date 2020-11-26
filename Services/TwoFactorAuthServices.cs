@@ -16,6 +16,7 @@ using ExpressBase.ServiceStack.MQServices;
 using System.Security.Principal;
 using ServiceStack;
 using ExpressBase.Common.Security;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -24,7 +25,8 @@ namespace ExpressBase.ServiceStack.Services
     {
         public TwoFactorAuthServices(IEbConnectionFactory _dbf) : base(_dbf) { }
 
-        public const string OtpMessage = "One-Time Password for log in to {0} is {1}. Do not share with anyone. This OTP is valid for 3 minutes.";
+        public const string LoginOtpMessage = "One-Time Password for log in to {0} is {1}. Do not share with anyone. This OTP is valid for 3 minutes.";
+        public const string VerificationMessage = "Your verification code for {0} is {1}";
         public MyAuthenticateResponse MyAuthenticateResponse { get; set; }
 
         public Authenticate2FAResponse AuthResponse { get; set; }
@@ -128,6 +130,77 @@ namespace ExpressBase.ServiceStack.Services
             return AuthResponse;
         }
 
+        public Authenticate2FAResponse Post(SendUserVerifCodeRequest request)
+        {
+            AuthResponse = new Authenticate2FAResponse();
+            try
+            {
+                string uAuthId = request.SolnId + ":" + request.UserId + ":" + request.WC;
+                User u = GetUserObject(uAuthId);
+                if (u != null)
+                {
+                    Eb_Solution sol_Obj = GetSolutionObject(request.SolnId);
+                    if (sol_Obj != null)
+                    {
+                        string subject = "Verification";
+                        try
+                        {
+                            if (!string.IsNullOrEmpty(u.Email))
+                            {
+                                AuthResponse.EmailVerifCode = SendEmailVerificationCode(subject, u, sol_Obj);
+                            }
+                            if (!string.IsNullOrEmpty(u.PhoneNumber))
+                            {
+                                AuthResponse.MobileVerifCode = SendMobileVerificationCode(subject, u, sol_Obj);
+                            }
+                            AuthResponse.AuthStatus = true;
+                        }
+                        catch (Exception e)
+                        {
+                            AuthResponse.AuthStatus = false;
+                            throw e;
+                        }
+                    }
+                    else
+                    {
+                        AuthResponse.AuthStatus = false;
+                        AuthResponse.ErrorMessage = "SolutionObject Is Null";
+                    }
+                }
+                else
+                {
+                    AuthResponse.AuthStatus = false;
+                    AuthResponse.ErrorMessage = "UserObject Is Null";
+                }
+            }
+            catch (Exception e)
+            {
+                AuthResponse.AuthStatus = false;
+                AuthResponse.ErrorMessage += e.Message;
+                Console.WriteLine(e.Message + e.StackTrace);
+            }
+            return AuthResponse;
+        }
+
+        public Authenticate2FAResponse Post(VerifyUserConfirmationRequest request)
+        {
+            AuthResponse = new Authenticate2FAResponse();
+            User u = GetUserObject(request.UserAuthId);
+            if (request.VerificationCode == u.EmailVerifCode)
+            {
+                AuthResponse.AuthStatus = true;
+                AuthResponse.Message = "Email verification success";
+                User.UpdateVerificationStatus(this.EbConnectionFactory.DataDB, u.Id, true, false);
+            }
+            else if (request.VerificationCode == u.MobileVerifCode)
+            {
+                AuthResponse.AuthStatus = true;
+                AuthResponse.Message = "Mobile verification success";
+                User.UpdateVerificationStatus(this.EbConnectionFactory.DataDB, u.Id, false, true);
+            }
+            return AuthResponse;
+        }
+
         private void ResendOtpInner(string Token, string UserAuthId, string SolnId)
         {
             AuthResponse.AuthStatus = EbTokenGenerator.ValidateToken(Token, UserAuthId);
@@ -155,7 +228,6 @@ namespace ExpressBase.ServiceStack.Services
             }
         }
 
-      
         private string GenerateOTP()
         {
             string sOTP = String.Empty;
@@ -171,7 +243,6 @@ namespace ExpressBase.ServiceStack.Services
             }
             return sOTP;
         }
-
 
         internal User SetUserObjFor2FA(string otp = null)
         {
@@ -199,15 +270,49 @@ namespace ExpressBase.ServiceStack.Services
             return u;
         }
 
-        private void SendOtp(Eb_Solution sol_Obj, User _usr, OtpType OtpType)
+        private User SetUserObjForMobileVerifCode(string otp, string UserAuthId)
+        {
+            User u = GetUserObject(UserAuthId);
+            if (u != null)
+            {
+                Console.WriteLine("otp : " + otp);
+                u.MobileVerifCode = otp;
+                this.Redis.Set<IUserAuth>(UserAuthId, u);// must set as IUserAuth
+            }
+            else
+            {
+                Console.WriteLine("Userobj is null :" + UserAuthId);
+            }
+            return u;
+        }
+
+        private User SetUserObjForEmailVerifCode(string otp, string UserAuthId)
+        {
+            User u = GetUserObject(UserAuthId);
+            if (u != null)
+            {
+                Console.WriteLine("otp : " + otp);
+                u.EmailVerifCode = otp;
+                this.Redis.Set<IUserAuth>(UserAuthId, u);// must set as IUserAuth
+            }
+            else
+            {
+                Console.WriteLine("Userobj is null :" + UserAuthId);
+            }
+            return u;
+        }
+
+        private void SendOtp(Eb_Solution sol_Obj, User _usr, OtpType OtpType)//same otp to email and phone, signil like purpose
         {
             try
             {
+                string subject = "OTP Verification";
+                string message = string.Format(LoginOtpMessage, sol_Obj.SolutionName, _usr.Otp);
                 if (OtpType == OtpType.Email)
                 {
                     if (!string.IsNullOrEmpty(_usr.Email))
                     {
-                        SendOtpEmail(_usr, sol_Obj);
+                        SendOtpEmail(_usr, sol_Obj.SolutionID, message, subject);
 
                         int end = _usr.Email.IndexOf('@');
                         if (end > 0)
@@ -219,7 +324,7 @@ namespace ExpressBase.ServiceStack.Services
                         }
                         if (!string.IsNullOrEmpty(_usr.PhoneNumber))
                         {
-                            SendOtpSms(_usr, sol_Obj);
+                            SendOtpSms(_usr, sol_Obj.SolutionID, message);
                         }
                         else
                         {
@@ -237,11 +342,11 @@ namespace ExpressBase.ServiceStack.Services
                     if (!string.IsNullOrEmpty(_usr.PhoneNumber))
                     {
                         string lastDigit = _usr.PhoneNumber.Substring((_usr.PhoneNumber.Length - 4), 4);
-                        SendOtpSms(_usr, sol_Obj);
+                        SendOtpSms(_usr, sol_Obj.SolutionID, message);
                         AuthResponse.OtpTo = "******" + lastDigit;
                         if (!string.IsNullOrEmpty(_usr.Email))
                         {
-                            SendOtpEmail(_usr, sol_Obj);
+                            SendOtpEmail(_usr, sol_Obj.SolutionID, message, subject);
                         }
                         else
                         {
@@ -262,35 +367,75 @@ namespace ExpressBase.ServiceStack.Services
             }
         }
 
-        private void SendOtpEmail(User _usr, Eb_Solution soln)
+        private void SendOtpEmail(User _usr, string solnId, string message, string subject)
         {
-            string message = string.Format(OtpMessage, soln.SolutionName, _usr.Otp);
             EmailService emailService = base.ResolveService<EmailService>();
             emailService.Post(new EmailDirectRequest
             {
                 To = _usr.Email,
-                Subject = "OTP Verification",
+                Subject = subject,
                 Message = message,
-                SolnId = soln.SolutionID,
+                SolnId = solnId,
                 UserId = _usr.UserId,
                 WhichConsole = TokenConstants.UC,
                 UserAuthId = _usr.AuthId
             });
         }
 
-        private void SendOtpSms(User _usr, Eb_Solution soln)
+        private void SendOtpSms(User _usr, string solnId, string message)
         {
-            string message = string.Format(OtpMessage, soln.SolutionName, _usr.Otp);
             SmsCreateService smsCreateService = base.ResolveService<SmsCreateService>();
             smsCreateService.Post(new SmsDirectRequest
             {
                 To = _usr.PhoneNumber,
                 Body = message,
-                SolnId = soln.SolutionID,
+                SolnId = solnId,
                 UserId = _usr.UserId,
                 WhichConsole = TokenConstants.UC,
                 UserAuthId = _usr.AuthId
             });
+        }
+
+        private Authenticate2FAResponse SendEmailVerificationCode(string subject, User usr, Eb_Solution soln)
+        {
+            Authenticate2FAResponse response = new Authenticate2FAResponse();
+            try
+            {
+                string Verifcode = GenerateOTP();
+                SetUserObjForEmailVerifCode(Verifcode, usr.AuthId);
+                string message = string.Format(VerificationMessage, soln.SolutionName, Verifcode);
+                SendOtpEmail(usr, soln.SolutionID, message, subject);
+                response.AuthStatus = true;
+                response.Message = "Email verification code sent";
+            }
+            catch (Exception e)
+            {
+                response.AuthStatus = false;
+                response.ErrorMessage = e.Message;
+                Console.WriteLine(e.Message + e.StackTrace);
+            }
+            return response;
+        }
+
+        private Authenticate2FAResponse SendMobileVerificationCode(string subject, User usr, Eb_Solution soln)
+        {
+            Authenticate2FAResponse response = new Authenticate2FAResponse();
+            try
+            {
+                string Verifcode = GenerateOTP();
+                SetUserObjForMobileVerifCode(Verifcode, usr.AuthId);
+                string message = string.Format(VerificationMessage, soln.SolutionName, Verifcode);
+                SendOtpSms(usr, soln.SolutionID, message);
+                response.AuthStatus = true;
+                response.Message = "Mobile verification code sent";
+            }
+            catch (Exception e)
+            {
+                response.AuthStatus = false;
+                response.ErrorMessage = e.Message;
+                Console.WriteLine(e.Message + e.StackTrace);
+            }
+            return response;
         }
     }
 }

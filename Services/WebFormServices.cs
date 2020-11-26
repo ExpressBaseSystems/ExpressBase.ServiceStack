@@ -185,7 +185,7 @@ namespace ExpressBase.ServiceStack.Services
                     {
                         if (_schema.ExtendedControls.Find(e => e is EbReview) != null)
                             _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_approval", Label = "Approval" });
-                        if(!request.IsImport)
+                        if (!request.IsImport)
                             CreateOrUpdateDsAndDv(request, _listNamesAndTypes);
                     }
                 }
@@ -767,7 +767,7 @@ namespace ExpressBase.ServiceStack.Services
                         }
                         else
                         {
-                            if(_col.RenderType == EbDbTypes.Time)
+                            if (_col.RenderType == EbDbTypes.Time)
                                 (_col as DVDateTimeColumn).Format = DateFormat.Time;
                             else if (_col.RenderType == EbDbTypes.DateTime)
                                 (_col as DVDateTimeColumn).Format = DateFormat.DateTime;
@@ -912,25 +912,25 @@ namespace ExpressBase.ServiceStack.Services
             try
             {
                 Console.WriteLine("Requesting for WebFormData( Refid : " + request.RefId + ", Rowid : " + request.RowId + " ).................");
-                EbWebForm form = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId);
+                EbWebForm form = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId, request.CurrentLoc);
                 form.TableRowId = request.RowId;
                 if (form.TableRowId > 0)
                     form.RefreshFormData(EbConnectionFactory.DataDB, this);
                 else
                 {
-                    if (form.UserObj.LocationIds.Contains(-1) || form.UserObj.LocationIds.Contains(request.CurrentLoc))
-                    {
-                        if (form.SolutionObj.Locations.ContainsKey(request.CurrentLoc))
-                            form.UserObj.Preference.DefaultLocation = request.CurrentLoc;
-                    }
+                    //if (form.UserObj.LocationIds.Contains(-1) || form.UserObj.LocationIds.Contains(request.CurrentLoc))
+                    //{
+                    //    if (form.SolutionObj.Locations.ContainsKey(request.CurrentLoc))
+                    //        form.UserObj.Preference.DefaultLocation = request.CurrentLoc;
+                    //}
                     form.FormData = form.GetEmptyModel();
                 }
-                if (form.SolutionObj.SolutionSettings != null && form.SolutionObj.SolutionSettings.SignupFormRefid != string.Empty && form.SolutionObj.SolutionSettings.SignupFormRefid == form.RefId)
-                {
-                }
-                else if (form.SolutionObj.SolutionSettings != null && form.SolutionObj.SolutionSettings.UserTypeForms != null && form.SolutionObj.SolutionSettings.UserTypeForms.Any(x => x.RefId == form.RefId))
-                {
-                }
+                //if (form.SolutionObj.SolutionSettings != null && form.SolutionObj.SolutionSettings.SignupFormRefid != string.Empty && form.SolutionObj.SolutionSettings.SignupFormRefid == form.RefId)
+                //{
+                //}
+                //else if (form.SolutionObj.SolutionSettings != null && form.SolutionObj.SolutionSettings.UserTypeForms != null && form.SolutionObj.SolutionSettings.UserTypeForms.Any(x => x.RefId == form.RefId))
+                //{
+                //}
                 //bot c
                 //else if (!(form.HasPermission(OperationConstants.VIEW, request.CurrentLoc) || form.HasPermission(OperationConstants.NEW, request.CurrentLoc) || form.HasPermission(OperationConstants.EDIT, request.CurrentLoc)))
                 //{
@@ -963,7 +963,7 @@ namespace ExpressBase.ServiceStack.Services
             GetPrefillDataResponse _dataset = new GetPrefillDataResponse();
             try
             {
-                EbWebForm form = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId);
+                EbWebForm form = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId, request.CurrentLoc);
                 form.TableRowId = 0;
                 form.RefreshFormData(EbConnectionFactory.DataDB, this, request.Params);
                 _dataset.FormDataWrap = JsonConvert.SerializeObject(new WebformDataWrapper { FormData = form.FormData, Status = (int)HttpStatusCode.OK, Message = "Success" });
@@ -988,7 +988,7 @@ namespace ExpressBase.ServiceStack.Services
             GetExportFormDataResponse _dataset = new GetExportFormDataResponse();
             try
             {
-                EbWebForm sourceForm = this.GetWebFormObject(request.SourceRefId, request.UserAuthId, request.SolnId);
+                EbWebForm sourceForm = this.GetWebFormObject(request.SourceRefId, request.UserAuthId, request.SolnId, request.CurrentLoc);
                 sourceForm.TableRowId = request.SourceRowId;
 
                 EbWebForm destForm;
@@ -1005,7 +1005,7 @@ namespace ExpressBase.ServiceStack.Services
                 }
                 else
                 {
-                    destForm = this.GetWebFormObject(request.DestRefId, null, null);
+                    destForm = this.GetWebFormObject(request.DestRefId, null, null, request.CurrentLoc);
                     destForm.UserObj = sourceForm.UserObj;
                     destForm.SolutionObj = sourceForm.SolutionObj;
                     if (request.SourceRowId > 0)
@@ -1140,13 +1140,24 @@ namespace ExpressBase.ServiceStack.Services
         }
 
 
-        private EbWebForm GetWebFormObject(string RefId, string UserAuthId, string SolnId)
+        private EbWebForm GetWebFormObject(string RefId, string UserAuthId, string SolnId, int CurrrentLocation = 0)
         {
             EbWebForm _form = EbFormHelper.GetEbObject<EbWebForm>(RefId, null, this.Redis, this);
+            _form.LocationId = CurrrentLocation;
             if (UserAuthId != null)
+            {
                 _form.UserObj = GetUserObject(UserAuthId);
+                if (_form.UserObj == null)
+                    throw new Exception("User Object is null. AuthId: " + UserAuthId);
+                if (_form.UserObj.Preference != null)
+                    _form.UserObj.Preference.CurrrentLocation = CurrrentLocation;
+            }
             if (SolnId != null)
+            {
                 _form.SolutionObj = this.GetSolutionObject(SolnId);
+                if (_form.SolutionObj == null)
+                    throw new Exception("Solution Object is null. SolnId: " + SolnId);
+            }
             _form.AfterRedisGet(this);
             return _form;
         }
@@ -1212,26 +1223,20 @@ namespace ExpressBase.ServiceStack.Services
         {
             try
             {
+                Dictionary<string, string> MetaData = new Dictionary<string, string>();
                 DateTime startdt = DateTime.Now;
                 Console.WriteLine("Insert/Update WebFormData : start - " + startdt);
-                EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId);
+                EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId, request.CurrentLoc);
                 FormObj.TableRowId = request.RowId;
                 FormObj.FormData = request.FormData;
-                FormObj.LocationId = request.CurrentLoc;
                 FormObj.DraftId = request.DraftId;
-
-                //string Operation = OperationConstants.NEW;
-                //if (request.RowId > 0)
-                //    Operation = OperationConstants.EDIT;
-                //if (!FormObj.HasPermission(Operation, request.CurrentLoc))////bot c
-                //    return new InsertDataFromWebformResponse { Status = (int)HttpStatusCodes.FORBIDDEN, Message = "Access denied to save this data entry!", MessageInt = "Access denied" };
 
                 Console.WriteLine("Insert/Update WebFormData : MergeFormData start - " + DateTime.Now);
                 FormObj.MergeFormData();
                 Console.WriteLine("Insert/Update WebFormData : Save start - " + DateTime.Now);
                 string r = FormObj.Save(EbConnectionFactory, this);
-                //Console.WriteLine("Insert/Update WebFormData : AfterExecutionIfUserCreated start - " + DateTime.Now);
-                //FormObj.AfterExecutionIfUserCreated(this, this.EbConnectionFactory.EmailConnection, MessageProducer3);
+                Console.WriteLine("Insert/Update WebFormData : AfterExecutionIfUserCreated start - " + DateTime.Now);                
+                FormObj.AfterExecutionIfUserCreated(this, this.EbConnectionFactory.EmailConnection, MessageProducer3, request.WhichConsole, MetaData);
                 Console.WriteLine("Insert/Update WebFormData end : Execution Time = " + (DateTime.Now - startdt).TotalMilliseconds);
 
                 return new InsertDataFromWebformResponse()
@@ -1242,6 +1247,7 @@ namespace ExpressBase.ServiceStack.Services
                     RowAffected = 1,
                     AffectedEntries = r,
                     Status = (int)HttpStatusCode.OK,
+                    MetaData = MetaData
                 };
             }
             catch (FormException ex)
@@ -1299,9 +1305,8 @@ namespace ExpressBase.ServiceStack.Services
             try
             {
                 Console.WriteLine("InsertOrUpdateFormDataRqst Service start");
-                EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId);
+                EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId, request.LocId);
                 FormObj.TableRowId = request.RecordId;
-                FormObj.LocationId = request.LocId;
                 Console.WriteLine("InsertOrUpdateFormDataRqst PrepareWebFormData start : " + DateTime.Now);
                 FormObj.PrepareWebFormData(this.EbConnectionFactory.DataDB, this, request.PushJson, request.FormGlobals);
                 Console.WriteLine("InsertOrUpdateFormDataRqst Save start : " + DateTime.Now);
@@ -1326,8 +1331,7 @@ namespace ExpressBase.ServiceStack.Services
             try
             {
                 Console.WriteLine("InsertBatchDataRequest Service start");
-                EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId);
-                FormObj.LocationId = request.LocId;
+                EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId, request.LocId);
                 List<int> Ids = FormObj.ProcessBatchRequest(request.Data, this.EbConnectionFactory.DataDB, this, request.TransactionConnection);
                 Console.WriteLine("InsertBatchDataRequest returning");
                 return new InsertBatchDataResponse() { Status = (int)HttpStatusCode.OK, Message = "success", RecordIds = Ids };
@@ -1350,7 +1354,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 Console.WriteLine("SaveFormDraftRequest Service start");
                 int Draft_id = 0;
-                EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId);
+                EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId, request.LocId);
                 request.Title = string.IsNullOrEmpty(request.Title) ? FormObj.DisplayName : request.Title;
                 if (request.DraftId <= 0)//new
                 {
@@ -1464,7 +1468,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (FormException ex)
             {
-                Console.WriteLine("FormException in GetFormDraftRequest\nMessage : " + ex.Message + "\nMessageInternal : " + ex.MessageInternal + "\nStackTraceInternal : " + ex.StackTraceInternal + "\nStackTrace : " + ex.StackTrace);              
+                Console.WriteLine("FormException in GetFormDraftRequest\nMessage : " + ex.Message + "\nMessageInternal : " + ex.MessageInternal + "\nStackTraceInternal : " + ex.StackTraceInternal + "\nStackTrace : " + ex.StackTrace);
 
                 return new GetFormDraftResponse() { DataWrapper = JsonConvert.SerializeObject(new WebformDataWrapper { Status = ex.ExceptionCode, Message = ex.Message }) };
             }
@@ -1475,6 +1479,139 @@ namespace ExpressBase.ServiceStack.Services
             }
         }
 
+        public CheckEmailAndPhoneResponse Any(CheckEmailAndPhoneRequest request)
+        {
+            Dictionary<string, ChkEmailPhoneReqData> _data = JsonConvert.DeserializeObject<Dictionary<string, ChkEmailPhoneReqData>>(request.Data);
+            string _selQry = "SELECT id, fullname, email, phnoprimary FROM eb_users WHERE LOWER($) LIKE LOWER(@#) AND COALESCE(eb_del, 'F') = 'F' AND ((statusid >= 0 AND statusid <= 2) OR statusid = 4); ";
+            string _selQryDummy = "SELECT 1 WHERE 1 = 0; ";
+            IDatabase DataDB = this.EbConnectionFactory.DataDB;
+            string Qry = string.Empty;
+            List<DbParameter> parameters = new List<DbParameter>();
+            foreach (string ctrlName in _data.Keys)
+            {
+                if (!string.IsNullOrEmpty(_data[ctrlName].email))
+                {
+                    Qry += _selQry.Replace("#", ctrlName + "_em").Replace("$", "email");
+                    parameters.Add(DataDB.GetNewParameter(ctrlName + "_em", EbDbTypes.String, _data[ctrlName].email));
+                }
+                else
+                    Qry += _selQryDummy;
+
+                if (!string.IsNullOrEmpty(_data[ctrlName].phprimary))
+                {
+                    Qry += _selQry.Replace("#", ctrlName + "_ph").Replace("$", "phnoprimary");
+                    parameters.Add(DataDB.GetNewParameter(ctrlName + "_ph", EbDbTypes.String, _data[ctrlName].phprimary));
+                }
+                else
+                    Qry += _selQryDummy;
+
+                if (_data[ctrlName].id > 1)
+                {
+                    Qry += $"SELECT id, fullname, email, phnoprimary FROM eb_users WHERE id = @{ctrlName}_id; ";
+                    parameters.Add(DataDB.GetNewParameter(ctrlName + "_id", EbDbTypes.Int32, _data[ctrlName].id));
+                }
+            }
+            Dictionary<string, ChkEmailPhoneRespData> Resp = new Dictionary<string, ChkEmailPhoneRespData>();
+            if (Qry != string.Empty)
+            {
+                EbDataSet ds = DataDB.DoQueries(Qry, parameters.ToArray());
+                int index = 0;
+                RowColletion dr;
+                foreach (string ctrlName in _data.Keys)
+                {
+                    Resp.Add(ctrlName, new ChkEmailPhoneRespData());
+                    dr = ds.Tables[index++].Rows;
+                    if (dr.Count > 0)
+                    {
+                        Resp[ctrlName].emailData = new ChkEmailPhoneReqData()
+                        {
+                            id = Convert.ToInt32(dr[0][0]),
+                            fullname = Convert.ToString(dr[0][1]),
+                            email = Convert.ToString(dr[0][2]),
+                            phprimary = Convert.ToString(dr[0][3]),
+                        };
+                    }
+                    dr = ds.Tables[index++].Rows;
+                    if (dr.Count > 0)
+                    {
+                        Resp[ctrlName].phoneData = new ChkEmailPhoneReqData()
+                        {
+                            id = Convert.ToInt32(dr[0][0]),
+                            fullname = Convert.ToString(dr[0][1]),
+                            email = Convert.ToString(dr[0][2]),
+                            phprimary = Convert.ToString(dr[0][3]),
+                        };
+                    }
+                    if (_data[ctrlName].id > 1 && dr.Count > 0)
+                    {
+                        dr = ds.Tables[index++].Rows;
+                        Resp[ctrlName].curData = new ChkEmailPhoneReqData()
+                        {
+                            id = Convert.ToInt32(dr[0][0]),
+                            fullname = Convert.ToString(dr[0][1]),
+                            email = Convert.ToString(dr[0][2]),
+                            phprimary = Convert.ToString(dr[0][3]),
+                        };
+                    }
+                }
+            }
+            return new CheckEmailAndPhoneResponse() { Data = JsonConvert.SerializeObject(Resp) };
+        }
+
+        private class ChkEmailPhoneReqData
+        {
+            public int id { get; set; }
+            public string fullname { get; set; }
+            public string email { get; set; }
+            public string phprimary { get; set; }
+        }
+        private class ChkEmailPhoneRespData
+        {
+            public string status { get; set; }
+            public ChkEmailPhoneReqData emailData { get; set; }
+            public ChkEmailPhoneReqData phoneData { get; set; }
+            public ChkEmailPhoneReqData curData { get; set; }
+        }
+
+        private enum EmailPhoneStatus
+        {
+            CancelOperation = 0,
+            Insert = 1,
+            Update = 2,
+            Created = 4,
+            Linked = 8,
+            NothingUnique = 16,
+            EmailNotUnique = 32,
+            PhoneNotUnique = 64,
+            EmailUnique = 128,
+            PhoneUnique = 256,
+            EmailPhoneUnique = 512,
+        }
+
+        public GetProvUserListResponse Any(GetProvUserListRequest request)
+        {
+            string Qry = @"SELECT id, fullname, email, phnoprimary FROM eb_users WHERE COALESCE(eb_del, 'F') = 'F' AND id > 1 AND statusid >= 0 AND statusid <= 2 ORDER BY fullname, email, phnoprimary;";
+            EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(Qry);
+            List<Eb_Users> _usersListAll = new List<Eb_Users>();
+            foreach (EbDataRow dr in dt.Rows)
+            {
+                _usersListAll.Add(new Eb_Users()
+                {
+                    Id = Convert.ToInt32(dr[0]),
+                    Name = Convert.ToString(dr[1]),
+                    Email = Convert.ToString(dr[2]),
+                    Phone = Convert.ToString(dr[3])
+                });
+            }
+            return new GetProvUserListResponse() { Data = JsonConvert.SerializeObject(_usersListAll) };
+        }
+
+        public GetGlobalSrchRsltsResp Any(GetGlobalSrchRsltsReq request)
+        {
+            Eb_Solution SlnObj = this.GetSolutionObject(request.SolnId);
+            string Json = SearchHelper.GetSearchResults(this.EbConnectionFactory.DataDB, SlnObj, request.SrchText);
+            return new GetGlobalSrchRsltsResp() { Data = Json };
+        }
 
         //================================= FORMULA AND VALIDATION =================================================
 
@@ -1733,7 +1870,7 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception ex)
             {
                 Console.WriteLine("Exception in GetAuditTrail Service\nMessage : " + ex.Message + "\nStackTrace : " + ex.StackTrace);
-                throw new FormException("Terminated GetAuditTrail. Check servicestack log for stack trace.");
+                throw new FormException(ex.Message);
             }
         }
 

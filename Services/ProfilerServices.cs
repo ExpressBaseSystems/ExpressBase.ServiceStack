@@ -108,7 +108,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 sql = " EXPLAIN FORMAT=JSON " + query + ";";              
             }
-            var parameters = DataHelper.GetParams(this.EbConnectionFactory, false, request.Params, 0, 0);
+            var parameters = DataHelper.GetParams(this.EbConnectionFactory.ObjectsDB, false, request.Params, 0, 0);
             EbDataTable _explain = EbConnectionFactory.ObjectsDB.DoQuery(sql, parameters.ToArray<System.Data.Common.DbParameter>());
             
             Dictionary<string, string> _d = new Dictionary<string, string>();

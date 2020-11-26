@@ -113,7 +113,7 @@ namespace ExpressBase.ServiceStack.Services
                 if (request.Params == null)
                     _sql = _sql.Replace(":id", "0");
             }
-            var parameters = DataHelper.GetParams(this.EbConnectionFactory, _isPaged, request.Params, request.Length, request.Start);
+            var parameters = DataHelper.GetParams(this.EbConnectionFactory.ObjectsDB, _isPaged, request.Params, request.Length, request.Start);
             Console.WriteLine("Before :  " + DateTime.Now);
             var dtStart = DateTime.Now;
             Console.WriteLine("................................................datasourceDSrequeststart " + DateTime.Now);
