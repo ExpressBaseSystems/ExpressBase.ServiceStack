@@ -428,7 +428,7 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     Id = Convert.ToInt32(dr[0]),
                     DisplayName = dr[1].ToString(),
-                    EbObjectType = ((EbObjectType)Convert.ToInt32(dr[3])).IntCode,
+                    EbObjectType = ((EbObjectType)Convert.ToInt32(dr[2])).IntCode,
                     Status = Enum.GetName(typeof(ObjectLifeCycleStatus), Convert.ToInt32(dr[3])),
                     VersionNumber = dr[7].ToString(),
                     RefId = dr[11].ToString(),

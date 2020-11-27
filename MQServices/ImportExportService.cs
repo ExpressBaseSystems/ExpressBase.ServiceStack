@@ -43,7 +43,8 @@ namespace ExpressBase.ServiceStack.Services
                 SolnId = request.SolnId,
                 UserId = request.UserId,
                 UserAuthId = request.UserAuthId,
-                WhichConsole = request.WhichConsole
+                WhichConsole = request.WhichConsole,
+                MasterSoln = request.MasterSoln
             });
             Log.Info("ExportApplicationRequest published to Mq");
             return resp;
@@ -141,7 +142,8 @@ namespace ExpressBase.ServiceStack.Services
                         Status = 1,
                         AppType = 1,
                         Description = request.PackageDescription,
-                        Icon = request.PackageIcon
+                        Icon = request.PackageIcon,
+                        MasterSoln = request.MasterSoln
                     },
                     SolnId = request.SolnId,
                     UserId = request.UserId,
