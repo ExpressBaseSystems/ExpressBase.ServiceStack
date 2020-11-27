@@ -23,6 +23,7 @@ using System.Text.RegularExpressions;
 using DocumentFormat.OpenXml;
 using System.Xml;
 using System.Text;
+using System.Reflection;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -50,142 +51,228 @@ namespace ExpressBase.ServiceStack.Services
             //List<ColumnsInfo> _cols = new List<ColumnsInfo>();
             //MemoryStream ms = new MemoryStream();
             byte[] bytes = null;
-            string _worksheetName = string.IsNullOrEmpty(_form.DisplayName.Trim()) ? _form.Name.Trim() : _form.DisplayName.Trim();
+            string _worksheetName = string.IsNullOrEmpty(_form.DisplayName.Trim()) ? _form.Name.Trim().Replace(" ", "") : _form.DisplayName.Trim().Replace(" ", "");
             MemoryStream ms = new MemoryStream();
+
             var document = SpreadsheetDocument.Create(ms, DocumentFormat.OpenXml.SpreadsheetDocumentType.Workbook);
             WorkbookPart workbookPart = document.AddWorkbookPart();
             workbookPart.Workbook = new Workbook();
+
             WorksheetPart worksheetPart = workbookPart.AddNewPart<WorksheetPart>("rId1");
             worksheetPart.Worksheet = new Worksheet();
             Sheets sheets1 = new Sheets();
-            Sheet sheet1 = new Sheet() { Name = "Sheet1", SheetId = (UInt32Value)1U, Id = document.WorkbookPart.GetIdOfPart(worksheetPart) };
+            Sheet sheet1 = new Sheet() { Name = _worksheetName, SheetId = (UInt32Value)1U, Id = document.WorkbookPart.GetIdOfPart(worksheetPart) };
             sheets1.Append(sheet1);
-            workbookPart.Workbook.Append(sheets1);
             SheetData sheetData = new SheetData();
+            worksheetPart.Worksheet.Append(sheetData);
+            worksheetPart.Worksheet.Save();
             Dictionary<string, string> commentsdict = new Dictionary<string, string>();
             DataValidations newDVs = new DataValidations();
-
-
             WorkbookStylesPart stylesheet = workbookPart.AddNewPart<WorkbookStylesPart>();
             stylesheet.Stylesheet = GenerateStylesheet();
             stylesheet.Stylesheet.Save();
+            var type = typeof(IEbPlaceHolderControl);
+            var types = AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(s => s.GetTypes())
+                .Where(p => type.IsAssignableFrom(p)).ToList();
+            types.Remove(type);
+            var NonExcelcontrol = types.Map(ss => Activator.CreateInstance(ss)).ToList();
+            List<object> NonExcelcontrollist = new List<object>();
+            NonExcelcontrollist.Add(new EbFileUploader());
+            NonExcelcontrollist.Add(new EbDataGrid());
+            NonExcelcontrollist.Add(new EbSimpleFileUploader());
+            NonExcelcontrollist.Add(new EbDisplayPicture());
             foreach (var _tbl in _form.FormSchema.Tables)
             {
                 Row row = new Row();
+                if (sheetData.Elements<Row>().Count() == 0 && _tbl.Columns.Count > 0)
+                    sheetData.Append(row);
                 int colIndex = 1;
                 Columns columns = new Columns();
                 string _tblName = _tbl.TableName;
-                foreach (var _col in _tbl.Columns)
+                bool isPowerselectAdded = false;
+                int powerselectCount = 0;
+                var ExcelControl = _tbl.Columns.Select(ff => ff.Control).Where(xx => !NonExcelcontrol.Select(pp => (pp as EbControl).ObjType).ToList().Contains(xx.ObjType));
+                ExcelControl = ExcelControl.Where(control => !NonExcelcontrollist.Select(pp => (pp as EbControl).ObjType).ToList().Contains(control.ObjType));
+                int ColumnCount = ExcelControl.Count();
+                foreach (var _col in ExcelControl)
                 {
-                    if (_col.Control.ObjType != "ProvisionUser")
+                    EbControl control = _col as EbControl;
+                    columns.InsertAt(new Column() { Min = Convert.ToUInt32(colIndex), Max = Convert.ToUInt32(colIndex), Width = 25, CustomWidth = true }, colIndex - 1);
+                    Cell cell = new Cell();
+                    cell.StyleIndex = 0;
+                    cell.DataType = CellValues.String;
+                    if (!string.IsNullOrEmpty(control.Label))
+                        cell.CellValue = new CellValue(control.Label);
+                    else
+                        cell.CellValue = new CellValue(control.Name);
+                    string comment = JsonConvert.SerializeObject(new ColumnsInfo { Name = control.Name, Label = control.Label, DbType = control.EbDbType, TableName = _tblName, ControlType = control.ObjType });
+                    //workSheet.Cells[1, colIndex].AddComment(comment, "ExpressBase");
+                    var cellref = GetExcelColumnName(colIndex) + 1;
+                    cell.CellReference = cellref;
+                    commentsdict.Add(cellref, comment);
+                    DataValidation dataValidation = new DataValidation
                     {
-                        columns.Append(new Column() { Min = Convert.ToUInt32(colIndex), Max = Convert.ToUInt32(colIndex), Width = 25, CustomWidth = true });
-                        Cell cell = new Cell();
-                        cell.StyleIndex = 0;
-                        cell.DataType = CellValues.String;
-                        if (!string.IsNullOrEmpty(_col.Control.Label))
-                            cell.CellValue = new CellValue(_col.Control.Label);
-                        else
-                            cell.CellValue = new CellValue(_col.Control.Name);
-                        string comment = JsonConvert.SerializeObject(new ColumnsInfo { Name = _col.Control.Name, Label = _col.Control.Label, DbType = _col.Control.EbDbType, TableName = _tblName });
-                        //workSheet.Cells[1, colIndex].AddComment(comment, "ExpressBase");
-                        var cellref = GetExcelColumnName(colIndex) + 1;
-                        commentsdict.Add(cellref, comment);
-                        DataValidation dataValidation = new DataValidation
-                        {
-                            AllowBlank = true,
-                            SequenceOfReferences = new ListValue<StringValue>() { InnerText = $"{GetExcelColumnName(colIndex)}2:{GetExcelColumnName(colIndex)}1048576" },
-                            Type = DataValidationValues.Custom,
-                            ShowErrorMessage = true,
-                            ShowInputMessage = true,
-                            ErrorStyle = DataValidationErrorStyleValues.Stop,
-                            Prompt = "Valid Item only allowed",
-                            PromptTitle = "Enter a valid value here",
-                            ErrorTitle = "Invalid Value entered",
-                            Error = "This cell must be a valid value."
-                        };
-                        if (_col.Control.EbDbType.ToString() == "Decimal")
-                        {
-                            cell.StyleIndex = 3;
-                            dataValidation.Type = DataValidationValues.Decimal;
-                            //cell.DataType = CellValues.Number;
-                            dataValidation.Prompt = "Decimal only allowed";
-                            dataValidation.PromptTitle = "Enter a integer value here";
-                            dataValidation.ErrorTitle = "Invalid Value entered";
-                            dataValidation.Error = "This cell must be a valid number.";
-                        }
+                        AllowBlank = true,
+                        SequenceOfReferences = new ListValue<StringValue>() { InnerText = $"{GetExcelColumnName(colIndex)}2:{GetExcelColumnName(colIndex)}1048576" },
+                        Type = DataValidationValues.Custom,
+                        ShowErrorMessage = true,
+                        ShowInputMessage = true,
+                        ErrorStyle = DataValidationErrorStyleValues.Stop,
+                        Prompt = "Valid Item only allowed",
+                        PromptTitle = "Enter a valid value here",
+                        ErrorTitle = "Invalid Value entered",
+                        Error = "This cell must be a valid value."
+                    };
 
-                        else if (_col.Control.EbDbType.ToString() == "Date")
+                    if (control.ObjType == "PowerSelect" || control.ObjType == "SimpleSelect")
+                    {
+                        if (control.ObjType == "PowerSelect")
                         {
-                            cell.StyleIndex = 2;
-                            dataValidation.Type = DataValidationValues.Date;
-                            //cell.DataType = CellValues.Date;
-                            dataValidation.Prompt = "Date only allowed";
-                            dataValidation.PromptTitle = "Enter valid date here";
-                            dataValidation.ErrorTitle = "Invalid Date  entered";
-                            dataValidation.Error = "This cell must be a date ";
-                            //dataValidation.Formula1 = new Formula1(new DateTime(1800, 01, 01).ToString());
-                            dataValidation.Operator = DataValidationOperatorValues.GreaterThanOrEqual;
+                            if ((control as EbPowerSelect).ParamsList != null && (control as EbPowerSelect).ParamsList.Count > 0)
+                            {
+                                colIndex++;
+                                continue;
+                            }
                         }
-
-                        else if (_col.Control.EbDbType.ToString() == "DateTime")
-                        {
-                            cell.StyleIndex = 1;
-                            dataValidation.Type = DataValidationValues.Date;
-                            //cell.DataType = CellValues.Date;
-                            dataValidation.Prompt = "Date only allowed";
-                            dataValidation.PromptTitle = "Enter valid date here";
-                            dataValidation.ErrorTitle = "Invalid Date  entered";
-                            dataValidation.Error = "This cell must be a date ";
-                            dataValidation.Operator = DataValidationOperatorValues.GreaterThanOrEqual;
-                        }
-
-                        else if (_col.Control.EbDbType.ToString() == "Time")
-                        {
-                            dataValidation.Type = DataValidationValues.Time;
-                            //cell.DataType = CellValues.Date;
-                            dataValidation.Prompt = "Time only allowed";
-                            dataValidation.PromptTitle = "Enter valid Time here";
-                            dataValidation.ErrorTitle = "Invalid Time  entered";
-                            dataValidation.Error = "This cell must be a Time ";
-                        }
-
-                        else if (_col.Control.EbDbType.ToString() == "BooleanOriginal")
-                        {
-                            dataValidation.Type = DataValidationValues.List;
-                            string vals = "Yes,No";
-                            dataValidation.Formula1 = new Formula1("\"" + vals + "\"");
-                            //cell.DataType = CellValues.InlineString;
-                        }
-                        else if (_col.Control.ObjType == "RadioButton")
-                        {
-                            EbRadioButton _control = _col.Control as EbRadioButton;
-                            dataValidation.Type = DataValidationValues.List;
-                            string vals = "Yes,No";//Boolean
-                            if(_col.Control.EbDbType.ToString() == "String")
-                                vals = _control.TrueValue_S.ToString() + "," + _control.FalseValue_S.ToString();
-                            else if (_col.Control.EbDbType.ToString() == "Int32")
-                                vals = _control.TrueValue_I.ToString() + "," + _control.FalseValue_I.ToString();
-                            dataValidation.Formula1 = new Formula1("\"" + vals + "\"");
-                        }
-
-                        colIndex++;
+                        powerselectCount++;
+                        WorksheetPart worksheetPart2 = workbookPart.AddNewPart<WorksheetPart>("rId" + powerselectCount + 1);
+                        worksheetPart2.Worksheet = new Worksheet();
+                        uint sid = (uint)(1 + powerselectCount);
+                        Sheet sheet2 = new Sheet() { Name = cell.CellValue.InnerText.Trim().Replace(" ", ""), SheetId = sid, Id = document.WorkbookPart.GetIdOfPart(worksheetPart2) };
+                        sheets1.Append(sheet2);
+                        SheetData sheetData2 = new SheetData();
+                        worksheetPart2.Worksheet.Append(sheetData2);
+                        CreateWorksheet4Ps(sheetData2, control);
+                        //worksheetPart2.Worksheet.Save();  
+                        dataValidation.Type = DataValidationValues.List;
+                        dataValidation.Append(
+                        new Formula1(string.Format("'{0}'!$A$2:$A${1}", sheet2.Name, sheetData2.ChildElements.Count + 1))
+                        );
                         row.Append(cell);
                         newDVs.Append(dataValidation);
-                        newDVs.Count = (newDVs.Count == null) ? 1 : newDVs.Count + 1;
+                        ColumnCount++;
+                        string lokkRange = $"{_worksheetName}!${GetExcelColumnName(colIndex)}$2:${GetExcelColumnName(colIndex)}$1048576";
+                        string array = $"{sheet2.Name}!$A$2:$B${sheetData2.ChildElements.Count + 1}";
+                        //row.Append(cell1);
+                        for (int j = 2; j < 1000; j++)
+                        {
+                            Row rr = new Row();
+                            if (isPowerselectAdded)
+                                rr = sheetData.Elements<Row>().ElementAt(j - 1);
+                            else
+                                sheetData.Append(rr);
+                            Cell cell2 = new Cell();
+                            cell2.StyleIndex = 0;
+                            cell2.DataType = CellValues.String;
+                            //cell2.CellValue = new CellValue("0");
+                            cell2.CellReference = GetExcelColumnName(ColumnCount) + j;
+                            CellFormula cellformula = new CellFormula();
+                            cellformula.Text = $"=IFERROR(VLOOKUP({lokkRange},{array},2,FALSE),\"\")";
+                            cell2.Append(cellformula);
+                            rr.Append(cell2);
+                        }
+                        isPowerselectAdded = true;
                     }
+
+                    else if (control.EbDbType.ToString() == "Decimal")
+                    {
+                        cell.StyleIndex = 3;
+                        dataValidation.Type = DataValidationValues.Decimal;
+                        //cell.DataType = CellValues.Number;
+                        dataValidation.Prompt = "Decimal only allowed";
+                        dataValidation.PromptTitle = "Enter a integer value here";
+                        dataValidation.ErrorTitle = "Invalid Value entered";
+                        dataValidation.Error = "This cell must be a valid number.";
+                        row.Append(cell);
+                        newDVs.Append(dataValidation);
+                    }
+
+                    else if (control.EbDbType.ToString() == "Date")
+                    {
+                        cell.StyleIndex = 2;
+                        dataValidation.Type = DataValidationValues.Date;
+                        //cell.DataType = CellValues.Date;
+                        dataValidation.Prompt = "Date only allowed";
+                        dataValidation.PromptTitle = "Enter valid date here";
+                        dataValidation.ErrorTitle = "Invalid Date  entered";
+                        dataValidation.Error = "This cell must be a date ";
+                        //dataValidation.Formula1 = new Formula1(new DateTime(1800, 01, 01).ToString());
+                        dataValidation.Operator = DataValidationOperatorValues.GreaterThanOrEqual;
+                        row.Append(cell);
+                        newDVs.Append(dataValidation);
+                    }
+
+                    else if (control.EbDbType.ToString() == "DateTime")
+                    {
+                        cell.StyleIndex = 1;
+                        dataValidation.Type = DataValidationValues.Date;
+                        //cell.DataType = CellValues.Date;
+                        dataValidation.Prompt = "Date only allowed";
+                        dataValidation.PromptTitle = "Enter valid date here";
+                        dataValidation.ErrorTitle = "Invalid Date  entered";
+                        dataValidation.Error = "This cell must be a date ";
+                        dataValidation.Operator = DataValidationOperatorValues.GreaterThanOrEqual;
+                        row.Append(cell);
+                        newDVs.Append(dataValidation);
+                    }
+
+                    else if (control.EbDbType.ToString() == "Time")
+                    {
+                        dataValidation.Type = DataValidationValues.Time;
+                        //cell.DataType = CellValues.Date;
+                        dataValidation.Prompt = "Time only allowed";
+                        dataValidation.PromptTitle = "Enter valid Time here";
+                        dataValidation.ErrorTitle = "Invalid Time  entered";
+                        dataValidation.Error = "This cell must be a Time ";
+                        row.Append(cell);
+                        newDVs.Append(dataValidation);
+                    }
+
+                    else if (control.EbDbType.ToString() == "BooleanOriginal")
+                    {
+                        dataValidation.Type = DataValidationValues.List;
+                        string vals = "Yes,No";
+                        dataValidation.Formula1 = new Formula1("\"" + vals + "\"");
+                        //cell.DataType = CellValues.InlineString;
+                        row.Append(cell);
+                        newDVs.Append(dataValidation);
+                    }
+
+                    else if (control.ObjType == "RadioButton")
+                    {
+                        EbRadioButton _control = control as EbRadioButton;
+                        dataValidation.Type = DataValidationValues.List;
+                        string vals = "Yes,No";//Boolean
+                        if (control.EbDbType.ToString() == "String")
+                            vals = _control.TrueValue_S.ToString() + "," + _control.FalseValue_S.ToString();
+                        else if (control.EbDbType.ToString() == "Int32")
+                            vals = _control.TrueValue_I.ToString() + "," + _control.FalseValue_I.ToString();
+                        dataValidation.Formula1 = new Formula1("\"" + vals + "\"");
+                        row.Append(cell);
+                        newDVs.Append(dataValidation);
+                    }
+                    else
+                    {
+                        row.Append(cell);
+                        newDVs.Append(dataValidation);
+                    }
+
+                    colIndex++;
+                    newDVs.Count = (newDVs.Count == null) ? 1 : newDVs.Count + 1;
                 }
                 if (_tbl.Columns.Count > 0)
                 {
-                    sheetData.Append(row);
-                    worksheetPart.Worksheet.Append(columns);
+                    for (int i = _tbl.Columns.Count + 1; i <= ColumnCount; i++)
+                        columns.Append(new Column() { Min = Convert.ToUInt32(i), Max = Convert.ToUInt32(i), Hidden = true });
+                    worksheetPart.Worksheet.InsertBefore<Columns>(columns, sheetData);
                     break;
                 }
             }
-            worksheetPart.Worksheet.Append(sheetData);
+            workbookPart.Workbook.Append(sheets1);
             worksheetPart.Worksheet.Append(newDVs);
             InsertComments(worksheetPart, commentsdict);
-            worksheetPart.Worksheet.Save();
+            //worksheetPart.Worksheet.Save();
             workbookPart.Workbook.Save();
             document.Close();
             //workSheet.Cells.AutoFitColumns();
@@ -194,8 +281,40 @@ namespace ExpressBase.ServiceStack.Services
             //excel.SaveAs(ms);
             ms.Position = 0;
             bytes = ms.ToArray();
-            return new ExcelDownloadResponse { stream = bytes, fileName = _worksheetName + ".xlsx" };
+            return new ExcelDownloadResponse { stream = bytes, fileName = _worksheetName};
             //return response;
+        }
+
+        private void CreateWorksheet4Ps(SheetData sheetdata, EbControl _col)
+        {
+            string dis_name = string.Empty;
+            string val_name = string.Empty;
+            Dictionary<int, string> dict = new Dictionary<int, string>();
+            if (_col.ObjType == "SimpleSelect")
+            {
+                dis_name = (_col as EbSimpleSelect).DisplayMember.Name;
+                val_name = (_col as EbSimpleSelect).ValueMember.Name;
+                dict = this.EbConnectionFactory.ObjectsDB.GetDictionary((_col as EbSimpleSelect).GetSql(this), dis_name, val_name);
+            }
+            else
+            {
+                dis_name = (_col as EbPowerSelect).DisplayMembers[0].Name;
+                val_name = (_col as EbPowerSelect).ValueMember.Name;
+                dict = this.EbConnectionFactory.ObjectsDB.GetDictionary((_col as EbPowerSelect).GetSql(this), dis_name, val_name);
+            }
+            
+
+            Row headerrow = new Row();
+            headerrow.Append(CreateCell(dis_name));
+            headerrow.Append(CreateCell(val_name));
+            sheetdata.Append(headerrow);
+            foreach (KeyValuePair<int, string> keyValue in dict)
+            {
+                Row innerrow = new Row();
+                innerrow.Append(CreateCell(keyValue.Value));
+                innerrow.Append(CreateCell(keyValue.Key.ToString()));
+                sheetdata.Append(innerrow);
+            }
         }
 
         private static Stylesheet GenerateStylesheet()
@@ -330,7 +449,6 @@ namespace ExpressBase.ServiceStack.Services
 
             return ss;
         }
-
 
         private string GetExcelColumnName(int columnNumber)
         {
@@ -598,13 +716,27 @@ namespace ExpressBase.ServiceStack.Services
             return columnNumber + 1;
         }
 
-        private Cell CreateCell(string text, uint styleIndex)
+        private Cell CreateCell(string text)
         {
             Cell cell = new Cell();
-            cell.StyleIndex = styleIndex;
-            cell.DataType = CellValues.String;
+            cell.StyleIndex = 0;
+            cell.DataType = ResolveCellDataTypeOnValue(text);
             cell.CellValue = new CellValue(text);
             return cell;
+        }
+
+        private EnumValue<CellValues> ResolveCellDataTypeOnValue(string text)
+        {
+            int intVal;
+            double doubleVal;
+            if (int.TryParse(text, out intVal) || double.TryParse(text, out doubleVal))
+            {
+                return CellValues.Number;
+            }
+            else
+            {
+                return CellValues.String;
+            }
         }
 
         //public void GetWorksheet(ExcelWorksheet ws, ColumnSchema _col)
