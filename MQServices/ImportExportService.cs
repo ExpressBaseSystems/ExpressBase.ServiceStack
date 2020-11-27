@@ -2,6 +2,7 @@
 using ExpressBase.Common.Data;
 using ExpressBase.Common.LocationNSolution;
 using ExpressBase.Common.Objects;
+using ExpressBase.Common.ServerEvents_Artifacts;
 using ExpressBase.Common.ServiceClients;
 using ExpressBase.Objects;
 using ExpressBase.Objects.Services;
@@ -44,8 +45,9 @@ namespace ExpressBase.ServiceStack.Services
                 UserId = request.UserId,
                 UserAuthId = request.UserAuthId,
                 WhichConsole = request.WhichConsole,
-                MasterSoln = request.MasterSoln
-            });
+                MasterSoln = request.MasterSoln,
+                SubscriptionId = (!String.IsNullOrEmpty(this.ServerEventClient.Headers[Common.Constants.TokenConstants.SSE_SUBSCRIP_ID])) ? this.ServerEventClient.Headers[Common.Constants.TokenConstants.SSE_SUBSCRIP_ID] : String.Empty
+		});
             Log.Info("ExportApplicationRequest published to Mq");
             return resp;
         }
@@ -55,15 +57,16 @@ namespace ExpressBase.ServiceStack.Services
             this.MessageProducer3.Publish(new ImportApplicationRequest
             {
                 Id = request.Id,
-                //BToken = this.ServerEventClient.BearerToken,
-                //RToken = this.ServerEventClient.RefreshToken,
+                BToken = this.ServerEventClient.BearerToken,
+                RToken = this.ServerEventClient.RefreshToken,
                 SolnId = request.SolnId,
                 UserId = request.UserId,
                 UserAuthId = request.UserAuthId,
                 WhichConsole = request.WhichConsole,
                 IsDemoApp = request.IsDemoApp,
-                SelectedSolutionId = request.SelectedSolutionId
-            });
+                SelectedSolutionId = request.SelectedSolutionId,
+				SubscriptionId = (!String.IsNullOrEmpty(this.ServerEventClient.Headers[Common.Constants.TokenConstants.SSE_SUBSCRIP_ID])) ? this.ServerEventClient.Headers[Common.Constants.TokenConstants.SSE_SUBSCRIP_ID] : String.Empty
+			});
             Log.Info("ImportApplicationRequest published to Mq");
             return resp;
         }
@@ -72,7 +75,8 @@ namespace ExpressBase.ServiceStack.Services
     [Restrict(InternalOnly = true)]
     public class ImportExportInternalService : EbMqBaseService
     {
-        public DevRelatedServices Devservice;
+		
+		public DevRelatedServices Devservice;
 
         public AppStoreService AppstoreService;
 
@@ -80,12 +84,16 @@ namespace ExpressBase.ServiceStack.Services
 
         public SecurityServices SecurityServices;
 
-        public ImportExportInternalService() : base()
+        public NotificationService NotificationService;
+
+
+		public ImportExportInternalService( IEbServerEventClient _sec) : base( _sec)
         {
             Devservice = base.ResolveService<DevRelatedServices>();
             AppstoreService = base.ResolveService<AppStoreService>();
             Objservice = base.ResolveService<EbObjectService>();
             SecurityServices = base.ResolveService<SecurityServices>();
+			NotificationService = base.ResolveService<NotificationService>();
         }
         public void SetConnectionFactory(string solutionId, IRedisClient redis)
         {
@@ -95,6 +103,7 @@ namespace ExpressBase.ServiceStack.Services
             Devservice.EbConnectionFactory = _ebConnectionFactory;
             Objservice.EbConnectionFactory = _ebConnectionFactory;
             SecurityServices.EbConnectionFactory = _ebConnectionFactory;
+			NotificationService.EbConnectionFactory = _ebConnectionFactory;
         }
 
 
@@ -150,7 +159,31 @@ namespace ExpressBase.ServiceStack.Services
                     UserAuthId = request.UserAuthId,
                     WhichConsole = request.WhichConsole
                 });
-                Console.WriteLine("ExportApplication success");
+				this.ServerEventClient.BearerToken = request.BToken;
+				this.ServerEventClient.RefreshToken = request.RToken;
+				this.ServerEventClient.RefreshTokenUri = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GET_ACCESS_TOKEN_URL);
+				this.ServerEventClient.Post<NotifyResponse>(new NotifySingleSubscriptionRequest
+					{
+						//ToChannel = new string[] {"file-upload" },
+						Msg = "ExportApplication success",
+						Selector = "cmd.exportApplication",
+						ToSubscriptionId = request.SubscriptionId
+					});
+				try
+				{
+					NotifyByUserIDResponse NF=NotificationService.Post(new NotifyByUserIDRequest
+					{
+						Link = "/AppStore",
+						Title = $"Your application({request.PackageName}) was successful",
+						UsersID = request.UserId,
+						User_AuthId = request.UserAuthId
+					});
+				}
+				catch (Exception ex)
+				{
+					Console.WriteLine("ExportApplication send notification" + ex.Message + ex.StackTrace);
+				}
+				Console.WriteLine("ExportApplication success");
             }
             catch (Exception e)
             {
@@ -254,8 +287,8 @@ namespace ExpressBase.ServiceStack.Services
                                     IsImport = true
                                 };
                                 EbObject_SaveResponse saveRes = Objservice.Post(ss);
-                            }
-                            Console.WriteLine("App & Object Creation Success.");
+                            }							
+							Console.WriteLine("App & Object Creation Success.");
                         }
                         else
                         {
@@ -287,7 +320,33 @@ namespace ExpressBase.ServiceStack.Services
                     {
                         Console.WriteLine("Error at Import.UpdateSequencetoMax " + e.Message + e.StackTrace);
                     }
-                    Console.WriteLine("ImportApplication success.");
+					this.ServerEventClient.BearerToken = request.BToken;
+					this.ServerEventClient.RefreshToken = request.RToken;
+					this.ServerEventClient.RefreshTokenUri = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GET_ACCESS_TOKEN_URL);
+					this.ServerEventClient.Post<NotifyResponse>(new NotifySingleSubscriptionRequest
+					{
+						//ToChannel = new string[] {"file-upload" },
+						Msg = "ImportApplication success",
+						Selector = "cmd.importApplication",
+						ToSubscriptionId = request.SubscriptionId
+					});
+					//try
+					//{
+					//	NotifyByUserIDResponse NF = NotificationService.Post(new NotifyByUserIDRequest
+					//	{
+					//		Link = "/MySolutions",
+					//		Title = "ImportApplication success",
+					//		UsersID = request.UserId,
+					//		User_AuthId = request.UserAuthId
+					//	});
+					//}
+					//catch (Exception ex)
+					//{
+					//	Console.WriteLine("ImportApplication send notification" + ex.Message + ex.StackTrace);
+					//}
+
+
+					Console.WriteLine("ImportApplication success.");
                 }
                 else
                 {
