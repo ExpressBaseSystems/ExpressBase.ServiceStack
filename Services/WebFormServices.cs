@@ -1281,6 +1281,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 FormObj.TableRowId = _rowId;
                 int temp1 = FormObj.Delete(EbConnectionFactory.DataDB);
+                SearchHelper.Delete(EbConnectionFactory.DataDB, FormObj);
                 Console.WriteLine($"Record deleted. RowId: {_rowId}  RowsAffected: {temp1}");
             }
             return new DeleteDataFromWebformResponse
@@ -1609,8 +1610,24 @@ namespace ExpressBase.ServiceStack.Services
         public GetGlobalSrchRsltsResp Any(GetGlobalSrchRsltsReq request)
         {
             Eb_Solution SlnObj = this.GetSolutionObject(request.SolnId);
-            string Json = SearchHelper.GetSearchResults(this.EbConnectionFactory.DataDB, SlnObj, request.SrchText);
+            User UsrObj = GetUserObject(request.UserAuthId);
+            string Json = SearchHelper.GetSearchResults(this.EbConnectionFactory.DataDB, SlnObj, UsrObj, request.SrchText);
             return new GetGlobalSrchRsltsResp() { Data = Json };
+        }
+
+        public UpdateIndexesRespone Any(UpdateIndexesRequest request)
+        {
+            string msg;
+            try
+            {
+                EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId);
+                msg = SearchHelper.UpdateIndexes(this.EbConnectionFactory.DataDB, FormObj);
+            }
+            catch(Exception e)
+            {
+                msg = "Exception: " + e.Message + "\n" + e.StackTrace;
+            }
+            return new UpdateIndexesRespone() { Message = msg };
         }
 
         //================================= FORMULA AND VALIDATION =================================================
