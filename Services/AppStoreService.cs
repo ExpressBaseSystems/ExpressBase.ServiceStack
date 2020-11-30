@@ -52,8 +52,8 @@ namespace ExpressBase.ServiceStack.Services
         {
             GetAppStoreDetailedResponse resp = new GetAppStoreDetailedResponse();
             string query = @"SELECT 
-	                            EAS.app_name,EAS.cost,EAS.created_by,EAS.created_at,EAS.currency,EAS.app_type,
-	                            EAS.icon,EASD.*
+	                            EAS.app_name, EAS.cost, EAS.created_by, EAS.created_at, EAS.currency, EAS.app_type,
+	                            EAS.icon, EASD.*
                             FROM 
 	                            eb_appstore EAS 
                             INNER JOIN 
@@ -99,8 +99,8 @@ namespace ExpressBase.ServiceStack.Services
         {
             GetAllFromAppstoreResponse resp = new GetAllFromAppstoreResponse();
             string query = @"SELECT
-	                            EAS.id, EAD.title,cost, created_by, created_at, currency, app_type,EAS.description, icon, 
-	                            EAD.images,EAD.detailed_desc, is_free, short_desc,tags, title
+	                            EAS.id, EAD.title, cost, created_by, created_at, currency, app_type,EAS.description, icon, 
+	                            EAD.images ,EAD.detailed_desc, is_free, short_desc, tags, title
                             FROM 
 	                            eb_appstore EAS, eb_appstore_detailed EAD
                             WHERE 
@@ -148,7 +148,7 @@ namespace ExpressBase.ServiceStack.Services
                 if (request.WhichConsole == RoutingConstants.TC)
                 {
                     q = @"SELECT 
-	                    id,app_name,user_solution_id,created_by, created_at,description,app_type,icon,status
+	                    id, app_name, user_solution_id, created_by, created_at, description, app_type, icon, status
                     FROM
 	                    eb_appstore
                     WHERE
@@ -159,7 +159,7 @@ namespace ExpressBase.ServiceStack.Services
                 else
                 {
                     q = @"SELECT 
-	                    id,app_name,user_solution_id,created_by, created_at,description,app_type,icon,status
+	                    id, app_name, user_solution_id, created_by, created_at, description, app_type, icon, status
                     FROM
 	                    eb_appstore
                     WHERE
@@ -216,8 +216,8 @@ namespace ExpressBase.ServiceStack.Services
             using (DbConnection con = this.InfraConnectionFactory.ObjectsDB.GetNewConnection())
             {
                 con.Open();
-                string sql = @"INSERT INTO eb_appstore (app_name, status, user_solution_id, cost, created_by, created_at, json, currency, app_type, description, icon)
-                                                VALUES (:app_name, :status, :user_solution_id, :cost, :created_by, Now(), :json, :currency, :app_type, :description, :icon);";
+                string sql = @"INSERT INTO eb_appstore (app_name, status, user_solution_id, cost, created_by, created_at, json, currency, app_type, description, icon, mastersolution)
+                                                VALUES (:app_name, :status, :user_solution_id, :cost, :created_by, Now(), :json, :currency, :app_type, :description, :icon, :mastersolution);";
                 DbCommand cmd = InfraConnectionFactory.ObjectsDB.GetNewCommand(con, sql);
                 cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":app_name", EbDbTypes.String, request.Store.Name));
                 cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":status", EbDbTypes.Int32, request.Store.Status));
@@ -229,6 +229,7 @@ namespace ExpressBase.ServiceStack.Services
                 cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":app_type", EbDbTypes.Int32, request.Store.AppType));
                 cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":description", EbDbTypes.String, request.Store.Description));
                 cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":icon", EbDbTypes.String, request.Store.Icon));
+                cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":mastersolution", EbDbTypes.String, request.Store.MasterSoln));
                 object x = cmd.ExecuteScalar();
                 return new SaveToAppStoreResponse { };
             }
@@ -303,7 +304,8 @@ namespace ExpressBase.ServiceStack.Services
                     VideoLinks = _row[9].ToString(),
                     Images = _row[10].ToString(),
                     PricingDesc = _row[11].ToString(),
-                    Cost = Math.Round(Convert.ToDecimal(_row[17]), 2)
+                    Cost = Math.Round(Convert.ToDecimal(_row[17]), 2),
+                    MasterSoln = _row["mastersolution"].ToString()
                 };
                 _storeCollection.Add(app_detail);
             }
