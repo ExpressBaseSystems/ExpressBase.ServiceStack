@@ -1620,8 +1620,15 @@ namespace ExpressBase.ServiceStack.Services
             string msg;
             try
             {
-                EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId);
-                msg = SearchHelper.UpdateIndexes(this.EbConnectionFactory.DataDB, FormObj);
+                if (request.RefId == "leadmanagement")
+                {
+                    msg = SearchHelper.UpdateIndexes_LM(this.EbConnectionFactory.DataDB);
+                }
+                else
+                {
+                    EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId);
+                    msg = SearchHelper.UpdateIndexes(this.EbConnectionFactory.DataDB, FormObj);
+                }
             }
             catch(Exception e)
             {

@@ -3,6 +3,7 @@ using ExpressBase.Common.Data;
 using ExpressBase.Common.Enums;
 using ExpressBase.Common.Structures;
 using ExpressBase.Objects.ServiceStack_Artifacts;
+using ExpressBase.Objects.WebFormRelated;
 using Newtonsoft.Json;
 using ServiceStack;
 using System;
@@ -432,7 +433,7 @@ namespace ExpressBase.ServiceStack.Services
 				upcolsvals += $"{key}=:{key},";
 			}
         }
-		
+				
 		public SaveCustomerResponse Any(SaveCustomerRequest request)
 		{
 			List<KeyValueType_Field> Fields = JsonConvert.DeserializeObject<List<KeyValueType_Field>>(request.CustomerData);
@@ -545,8 +546,25 @@ namespace ExpressBase.ServiceStack.Services
 				}				
 			}			
 			rstatus += Update_Table_Customer_Files(accid, request.ImgRefId, request.UserId) * 100;
+			Task.Run(() => UpdateIndexedData(this.EbConnectionFactory.DataDB, dict, accid, request.UserId));
 
 			return new SaveCustomerResponse { Status = (request.RequestMode == 0)? accid :rstatus };
+		}
+
+		private void AddData(Dictionary<string, string> SearchData, Dictionary<string, KeyValueType_Field> dict, string label, string key)
+		{
+			SearchData.Add(label, dict.ContainsKey(key) ? Convert.ToString(dict[key].Value) : string.Empty);
+		}
+
+		private void UpdateIndexedData(IDatabase DataDB, Dictionary<string, KeyValueType_Field> dict, int DataId, int UserId) 
+		{
+			Dictionary<string, string> SearchData = new Dictionary<string, string>();
+			AddData(SearchData, dict, "Name", "name");
+			AddData(SearchData, dict, "Mobile", "genurl");
+			AddData(SearchData, dict, "Phone", "genphoffice");
+			AddData(SearchData, dict, "WhatsApp", "watsapp_phno");
+			string JsonData = JsonConvert.SerializeObject(SearchData);
+			SearchHelper.InsertOrUpdate_LM(DataDB, JsonData, DataId, UserId);
 		}
 
         private int Update_Table_Customer_Files(int accountid, string imagerefid, int userid)
@@ -804,7 +822,9 @@ update leadsurgerystaffdetails set eb_del='T' where customers_id=:id;";
 
             int rstatus = this.EbConnectionFactory.DataDB.UpdateTable(query, parameters);
 
-            return new LmDeleteCustomerResponse { Status = rstatus > 0 };
+			Task.Run(() => SearchHelper.Delete_LM(this.EbConnectionFactory.DataDB, request.CustId));
+
+			return new LmDeleteCustomerResponse { Status = rstatus > 0 };
         }
 
 
