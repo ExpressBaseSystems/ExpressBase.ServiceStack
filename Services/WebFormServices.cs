@@ -1235,7 +1235,7 @@ namespace ExpressBase.ServiceStack.Services
                 FormObj.MergeFormData();
                 Console.WriteLine("Insert/Update WebFormData : Save start - " + DateTime.Now);
                 string r = FormObj.Save(EbConnectionFactory, this, request.WhichConsole);
-                Console.WriteLine("Insert/Update WebFormData : AfterExecutionIfUserCreated start - " + DateTime.Now);                
+                Console.WriteLine("Insert/Update WebFormData : AfterExecutionIfUserCreated start - " + DateTime.Now);
                 FormObj.AfterExecutionIfUserCreated(this, this.EbConnectionFactory.EmailConnection, MessageProducer3, request.WhichConsole, MetaData);
                 Console.WriteLine("Insert/Update WebFormData end : Execution Time = " + (DateTime.Now - startdt).TotalMilliseconds);
 
@@ -1281,7 +1281,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 FormObj.TableRowId = _rowId;
                 int temp1 = FormObj.Delete(EbConnectionFactory.DataDB);
-                SearchHelper.Delete(EbConnectionFactory.DataDB, FormObj);
+                SearchHelper.Delete(EbConnectionFactory.DataDB, request.RefId, _rowId);
                 Console.WriteLine($"Record deleted. RowId: {_rowId}  RowsAffected: {temp1}");
             }
             return new DeleteDataFromWebformResponse
@@ -1630,7 +1630,7 @@ namespace ExpressBase.ServiceStack.Services
                     msg = SearchHelper.UpdateIndexes(this.EbConnectionFactory.DataDB, FormObj);
                 }
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 msg = "Exception: " + e.Message + "\n" + e.StackTrace;
             }
