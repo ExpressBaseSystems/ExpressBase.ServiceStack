@@ -12,10 +12,7 @@ using ExpressBase.Common.Data;
 using System.Text.RegularExpressions;
 using ExpressBase.Common.Structures;
 using ExpressBase.Objects.Objects;
-using ExpressBase.ServiceStack.Services;
 using ExpressBase.Objects.Objects.SmsRelated;
-using ExpressBase.Common.SqlProfiler;
-using System.Data;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -846,6 +843,7 @@ namespace ExpressBase.ServiceStack.Services
                             mobservice.EbConnectionFactory = this.EbConnectionFactory;
                             CreateMobileFormTableResponse res = mobservice.Post(new CreateMobileFormTableRequest
                             {
+                                Apps = request.Apps,
                                 MobilePage = obj as EbMobilePage,
                                 SolnId = request.SolnId,
                                 UserId = request.UserId,
