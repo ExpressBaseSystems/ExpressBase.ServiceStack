@@ -103,7 +103,7 @@ namespace ExpressBase.ServiceStack.Auth0
                     b = JsonConvert.SerializeObject(sco_signup);
                     
                     string sociallink1 = "localhost:";
-                    string sociallink2 = "eb-test.cloud";
+                    string sociallink2 = "eb-test.site";
                     string sociallink3 = "expressbase.com";
                     Console.WriteLine("ReferrerUrl= " + session.ReferrerUrl);
                     if (urllink.Contains(sociallink1, StringComparison.OrdinalIgnoreCase))
@@ -115,8 +115,8 @@ namespace ExpressBase.ServiceStack.Auth0
 
                     if (urllink.Contains(sociallink2, StringComparison.OrdinalIgnoreCase))
                     {
-                        Console.WriteLine("reached  redirect to myaccount.eb-test.cloud");
-                        return authService.Redirect(SuccessRedirectUrlFilter(this, string.Format("https://myaccount.eb-test.cloud/social_oauth?scosignup={0}", b)));
+                        Console.WriteLine("reached  redirect to myaccount.eb-test.site");
+                        return authService.Redirect(SuccessRedirectUrlFilter(this, string.Format("https://myaccount.eb-test.site/social_oauth?scosignup={0}", b)));
                     }
 
                     if (urllink.Contains(sociallink3, StringComparison.OrdinalIgnoreCase))
