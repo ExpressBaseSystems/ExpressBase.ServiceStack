@@ -1235,7 +1235,7 @@ namespace ExpressBase.ServiceStack.Services
                 FormObj.MergeFormData();
                 Console.WriteLine("Insert/Update WebFormData : Save start - " + DateTime.Now);
                 string r = FormObj.Save(EbConnectionFactory, this);
-                Console.WriteLine("Insert/Update WebFormData : AfterExecutionIfUserCreated start - " + DateTime.Now);                
+                Console.WriteLine("Insert/Update WebFormData : AfterExecutionIfUserCreated start - " + DateTime.Now);
                 FormObj.AfterExecutionIfUserCreated(this, this.EbConnectionFactory.EmailConnection, MessageProducer3, request.WhichConsole, MetaData);
                 Console.WriteLine("Insert/Update WebFormData end : Execution Time = " + (DateTime.Now - startdt).TotalMilliseconds);
 
@@ -2034,13 +2034,34 @@ namespace ExpressBase.ServiceStack.Services
 
         public GetMyProfileEntryResponse Get(GetMyProfileEntryRequest request)
         {
-            int id = 0;
-            String _query = string.Format("SELECT id from {0} where eb_users_id = {1};", request.TableName, request.UserId);
-            EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(_query);
-            if (dt.Rows.Count > 0)
-                id = Convert.ToInt32(dt.Rows[0][0]);
-
-            return new GetMyProfileEntryResponse { RowId = id };
+            int id = 0, type_id = 0;
+            EbProfileUserType t = new EbProfileUserType();
+            string q1 = String.Format("SELECT eb_user_types_id FROM eb_users WHERE id =:id;", request.UserId);
+            EbDataTable dt1 = this.EbConnectionFactory.DataDB.DoQuery(q1);
+            if (dt1.Rows.Count > 0)
+                type_id = Convert.ToInt32(dt1.Rows[0][0]);
+            Eb_Solution s = GetSolutionObject(request.SolnId);
+            if (s != null && s.SolutionSettings != null && s.SolutionSettings.UserTypeForms != null)
+            {
+                t = s.SolutionSettings.UserTypeForms.Single(a => a.Id == type_id);
+                if (t != null && t.RefId != string.Empty)
+                {
+                    var myService = base.ResolveService<EbObjectService>();
+                    EbObjectParticularVersionResponse resp = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = t.RefId });
+                    if (resp != null)
+                    {
+                        EbWebForm form = EbSerializers.Json_Deserialize<EbWebForm>(resp.Data[0].Json);
+                        if (form != null)
+                        {
+                            String q2 = string.Format("SELECT id from {0} where eb_users_id = {1};", form.TableName, request.UserId);
+                            EbDataTable dt2 = this.EbConnectionFactory.DataDB.DoQuery(q2);
+                            if (dt2.Rows.Count > 0)
+                                id = Convert.ToInt32(dt2.Rows[0][0]);
+                        }
+                    }
+                }
+            }
+            return new GetMyProfileEntryResponse { RowId = id, Refid = t.RefId };
         }
     }
 }
