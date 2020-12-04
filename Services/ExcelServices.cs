@@ -51,7 +51,9 @@ namespace ExpressBase.ServiceStack.Services
             //List<ColumnsInfo> _cols = new List<ColumnsInfo>();
             //MemoryStream ms = new MemoryStream();
             byte[] bytes = null;
-            string _worksheetName = string.IsNullOrEmpty(_form.DisplayName.Trim()) ? _form.Name.Trim().Replace(" ", "") : _form.DisplayName.Trim().Replace(" ", "");
+            var matches = Regex.Matches(_form.DisplayName.Trim(), @"[^\u0000-\u007F]+");
+            string _worksheetName = string.IsNullOrEmpty(_form.DisplayName.Trim()) || matches.Count > 0 ? _form.Name.Trim().Replace(" ", "") : _form.DisplayName.Trim().Replace(" ", "");
+
             MemoryStream ms = new MemoryStream();
 
             var document = SpreadsheetDocument.Create(ms, DocumentFormat.OpenXml.SpreadsheetDocumentType.Workbook);
@@ -82,6 +84,8 @@ namespace ExpressBase.ServiceStack.Services
             NonExcelcontrollist.Add(new EbDataGrid());
             NonExcelcontrollist.Add(new EbSimpleFileUploader());
             NonExcelcontrollist.Add(new EbDisplayPicture());
+            bool isPowerselectAdded = false;
+            int powerselectCount = 0;
             foreach (var _tbl in _form.FormSchema.Tables)
             {
                 Row row = new Row();
@@ -90,8 +94,6 @@ namespace ExpressBase.ServiceStack.Services
                 int colIndex = 1;
                 Columns columns = new Columns();
                 string _tblName = _tbl.TableName;
-                bool isPowerselectAdded = false;
-                int powerselectCount = 0;
                 var ExcelControl = _tbl.Columns.Select(ff => ff.Control).Where(xx => !NonExcelcontrol.Select(pp => (pp as EbControl).ObjType).ToList().Contains(xx.ObjType));
                 ExcelControl = ExcelControl.Where(control => !NonExcelcontrollist.Select(pp => (pp as EbControl).ObjType).ToList().Contains(control.ObjType));
                 int ColumnCount = ExcelControl.Count();
@@ -268,6 +270,17 @@ namespace ExpressBase.ServiceStack.Services
                     worksheetPart.Worksheet.InsertBefore<Columns>(columns, sheetData);
                     break;
                 }
+            }
+            if (isPowerselectAdded)
+            {
+                powerselectCount++;
+                WorksheetPart worksheetPart2 = workbookPart.AddNewPart<WorksheetPart>("rId" + powerselectCount + 1);
+                worksheetPart2.Worksheet = new Worksheet();
+                uint sid = (uint)(1 + powerselectCount);
+                Sheet sheet2 = new Sheet() { Name = "Help", SheetId = sid, Id = document.WorkbookPart.GetIdOfPart(worksheetPart2) };
+                sheets1.Append(sheet2);
+                SheetData sheetData2 = new SheetData();
+                worksheetPart2.Worksheet.Append(sheetData2);
             }
             workbookPart.Workbook.Append(sheets1);
             worksheetPart.Worksheet.Append(newDVs);
