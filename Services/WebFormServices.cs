@@ -2060,14 +2060,18 @@ namespace ExpressBase.ServiceStack.Services
         {
             int id = 0, type_id = 0;
             EbProfileUserType t = new EbProfileUserType();
-            string q1 = String.Format("SELECT eb_user_types_id FROM eb_users WHERE id =:id;", request.UserId);
+            string q1 = String.Format("SELECT eb_user_types_id FROM eb_users WHERE id ={0};", request.UserId);
             EbDataTable dt1 = this.EbConnectionFactory.DataDB.DoQuery(q1);
             if (dt1.Rows.Count > 0)
                 type_id = Convert.ToInt32(dt1.Rows[0][0]);
             Eb_Solution s = GetSolutionObject(request.SolnId);
-            if (s != null && s.SolutionSettings != null && s.SolutionSettings.UserTypeForms != null)
+            if (s != null && s.SolutionSettings != null)
             {
-                t = s.SolutionSettings.UserTypeForms.Single(a => a.Id == type_id);
+                if (request.WhichConsole == RoutingConstants.MC && s.SolutionSettings.MobileAppSettings != null && s.SolutionSettings.MobileAppSettings.UserTypeForms != null)
+                    t = s.SolutionSettings.MobileAppSettings.UserTypeForms.Single(a => a.Id == type_id);
+                else if (s.SolutionSettings.UserTypeForms != null)
+                    t = s.SolutionSettings.UserTypeForms.Single(a => a.Id == type_id);
+
                 if (t != null && t.RefId != string.Empty)
                 {
                     var myService = base.ResolveService<EbObjectService>();
