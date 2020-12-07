@@ -532,36 +532,7 @@ namespace ExpressBase.ServiceStack.Services
                 Console.WriteLine(ex.Message);
             }
             return wraped;
-        }
-
-        public MobileVisDataResponse Get(MobileQueryDataRequest request)
-        {
-            MobileVisDataResponse resp = new MobileVisDataResponse();
-
-            try
-            {
-                List<DbParameter> parameters = request.Params.ParamsToDbParameters(this.EbConnectionFactory);
-
-                parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_currentuser_id", EbDbTypes.Int32, request.UserId));
-
-                if (request.Limit != 0)
-                {
-                    parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("limit", EbDbTypes.Int32, request.Limit));
-                    parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("offset", EbDbTypes.Int32, request.Offset));
-                }
-
-                string wraped = this.WrapQuery(request.Query, request, parameters);
-
-                resp.Data = this.EbConnectionFactory.DataDB.DoQueries(wraped, parameters.ToArray());
-            }
-            catch (Exception ex)
-            {
-                resp.Message = "No Data";
-                Console.WriteLine("Exception at object list for user mobile req ::" + ex.Message);
-            }
-
-            return resp;
-        }
+        }       
 
         private string GetFilterQuery(string sql, List<Param> filters)
         {
