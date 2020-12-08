@@ -60,18 +60,35 @@ namespace ExpressBase.ServiceStack.Services
 
         public CreateMyProfileTableResponse Any(CreateMyProfileTableRequest request)
         {
-            foreach (EbProfileUserType eput in request.UserTypeForms)
+            List<TableColumnMeta> listNamesAndTypes = new List<TableColumnMeta>
             {
-                if (eput.RefId != string.Empty)
+                new TableColumnMeta { Name = "eb_users_id", Type = this.EbConnectionFactory.DataDB.VendorDbTypes.Int32 }
+            };
+            if (request.UserTypeForms != null)
+            {
+                foreach (EbProfileUserType eput in request.UserTypeForms)
                 {
-                    EbWebForm form = this.GetWebFormObject(eput.RefId, null, null);
-                    TableSchema _table = form.FormSchema.Tables.Find(e => e.TableName.Equals(form.FormSchema.MasterTable));
-                    if (_table != null)
-                    {
-                        form.AutoDeployTV = false;
-                        _table.Columns.Add(new ColumnSchema { ColumnName = "eb_users_id", EbDbType = (int)EbDbTypes.Int32, Control = new EbNumeric { Name = "eb_users_id", Label = "User Id" } });
-                        CreateWebFormTables(form.FormSchema, new CreateWebFormTableRequest { WebObj = form, DontThrowException = true });
-                    }
+                    if (string.IsNullOrEmpty(eput.RefId))
+                        continue;
+                    EbWebForm _form = EbFormHelper.GetEbObject<EbWebForm>(eput.RefId, null, this.Redis, this);
+                    string Msg = string.Empty;
+                    CreateOrAlterTable(_form.TableName, listNamesAndTypes, ref Msg);
+                    Console.WriteLine("CreateMyProfileTableRequest - WebForm Resp msg: " + Msg);                   
+                }
+            }
+            if (request.UserTypeMobPages != null)
+            {
+                foreach (EbProfileUserType eput in request.UserTypeMobPages)
+                {
+                    if (string.IsNullOrEmpty(eput.RefId))
+                        continue;
+
+                    EbMobilePage _mobPage = EbFormHelper.GetEbObject<EbMobilePage>(eput.RefId, null, this.Redis, this);
+                    if (!(_mobPage.Container is EbMobileForm))
+                        continue;
+                    string Msg = string.Empty;
+                    CreateOrAlterTable((_mobPage.Container as EbMobileForm).TableName, listNamesAndTypes, ref Msg);
+                    Console.WriteLine("CreateMyProfileTableRequest - MobileForm Resp msg: " + Msg);
                 }
             }
             return new CreateMyProfileTableResponse { };
@@ -1230,6 +1247,7 @@ namespace ExpressBase.ServiceStack.Services
                 FormObj.TableRowId = request.RowId;
                 FormObj.FormData = request.FormData;
                 FormObj.DraftId = request.DraftId;
+                CheckForMyProfileForms(FormObj, request.WhichConsole, request.MobilePageRefId);
 
                 Console.WriteLine("Insert/Update WebFormData : MergeFormData start - " + DateTime.Now);
                 FormObj.MergeFormData();
@@ -1271,6 +1289,50 @@ namespace ExpressBase.ServiceStack.Services
                     MessageInt = ex.Message,
                     StackTraceInt = ex.StackTrace
                 };
+            }
+        }
+
+        private void CheckForMyProfileForms(EbWebForm FormObj, string WC, string MobilePageRefId)
+        {
+            if (WC == TokenConstants.UC)
+            {
+                if (FormObj.SolutionObj?.SolutionSettings?.UserTypeForms == null)
+                    return;
+                CheckForMyProfileForms(FormObj, FormObj.SolutionObj.SolutionSettings.UserTypeForms, FormObj.RefId);
+            }
+            else if (WC == TokenConstants.MC && !string.IsNullOrEmpty(MobilePageRefId))
+            {
+                if (FormObj.SolutionObj?.SolutionSettings?.MobileAppSettings?.UserTypeForms == null)
+                    return;
+                CheckForMyProfileForms(FormObj, FormObj.SolutionObj.SolutionSettings.MobileAppSettings.UserTypeForms, MobilePageRefId);
+            }
+        }
+
+        private void CheckForMyProfileForms(EbWebForm FormObj, List<EbProfileUserType> UserTypeForms, string RefId)
+        {
+            foreach (EbProfileUserType eput in UserTypeForms)
+            {
+                if (eput.RefId == RefId)
+                {
+                    //update eb_users_id
+
+                    if (!FormObj.FormSchema.Tables[0].Columns.Exists(e => e.ColumnName == "eb_users_id"))
+                    {
+                        EbNumeric _numCtrl = new EbNumeric { Name = "eb_users_id", Label = "User Id" };
+                        FormObj.Controls.Add(_numCtrl);
+                        FormObj.FormSchema.Tables[0].Columns.Add(new ColumnSchema { ColumnName = "eb_users_id", EbDbType = (int)EbDbTypes.Int32, Control = _numCtrl });
+                    }
+
+                    if (FormObj.FormData.MultipleTables.ContainsKey(FormObj.FormSchema.MasterTable) && FormObj.FormData.MultipleTables[FormObj.FormSchema.MasterTable].Count > 0)
+                    {
+                        SingleColumn Column = FormObj.FormData.MultipleTables[FormObj.FormSchema.MasterTable][0].Columns.Find(e => e.Name == "eb_users_id");
+                        if (Column == null)
+                            FormObj.FormData.MultipleTables[FormObj.FormSchema.MasterTable][0].Columns.Add(new SingleColumn() { Name = "eb_users_id", Type = (int)EbDbTypes.Int32, Value = FormObj.UserObj.UserId });
+                        else
+                            Column.Value = FormObj.UserObj.UserId;
+                    }
+                    return;
+                }
             }
         }
 
@@ -1632,7 +1694,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
-                msg = "Exception: " + e.Message + "\n" + e.StackTrace;
+                msg = "ERROR : " + e.Message;
             }
             return new UpdateIndexesRespone() { Message = msg };
         }
@@ -2060,14 +2122,18 @@ namespace ExpressBase.ServiceStack.Services
         {
             int id = 0, type_id = 0;
             EbProfileUserType t = new EbProfileUserType();
-            string q1 = String.Format("SELECT eb_user_types_id FROM eb_users WHERE id =:id;", request.UserId);
+            string q1 = String.Format("SELECT eb_user_types_id FROM eb_users WHERE id ={0};", request.UserId);
             EbDataTable dt1 = this.EbConnectionFactory.DataDB.DoQuery(q1);
             if (dt1.Rows.Count > 0)
                 type_id = Convert.ToInt32(dt1.Rows[0][0]);
             Eb_Solution s = GetSolutionObject(request.SolnId);
-            if (s != null && s.SolutionSettings != null && s.SolutionSettings.UserTypeForms != null)
+            if (s != null && s.SolutionSettings != null)
             {
-                t = s.SolutionSettings.UserTypeForms.Single(a => a.Id == type_id);
+                if (request.WhichConsole == RoutingConstants.MC && s.SolutionSettings.MobileAppSettings != null && s.SolutionSettings.MobileAppSettings.UserTypeForms != null)
+                    t = s.SolutionSettings.MobileAppSettings.UserTypeForms.Single(a => a.Id == type_id);
+                else if (s.SolutionSettings.UserTypeForms != null)
+                    t = s.SolutionSettings.UserTypeForms.Single(a => a.Id == type_id);
+
                 if (t != null && t.RefId != string.Empty)
                 {
                     var myService = base.ResolveService<EbObjectService>();
