@@ -73,7 +73,7 @@ namespace ExpressBase.ServiceStack.Services
                     EbWebForm _form = EbFormHelper.GetEbObject<EbWebForm>(eput.RefId, null, this.Redis, this);
                     string Msg = string.Empty;
                     CreateOrAlterTable(_form.TableName, listNamesAndTypes, ref Msg);
-                    Console.WriteLine("CreateMyProfileTableRequest - WebForm Resp msg: " + Msg);                   
+                    Console.WriteLine("CreateMyProfileTableRequest - WebForm Resp msg: " + Msg);
                 }
             }
             if (request.UserTypeMobPages != null)
@@ -2134,16 +2134,21 @@ namespace ExpressBase.ServiceStack.Services
                 else if (s.SolutionSettings.UserTypeForms != null)
                     t = s.SolutionSettings.UserTypeForms.Single(a => a.Id == type_id);
 
-                if (t != null && t.RefId != string.Empty)
+                if (t != null && !string.IsNullOrEmpty(t.RefId))
                 {
                     var myService = base.ResolveService<EbObjectService>();
                     EbObjectParticularVersionResponse resp = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = t.RefId });
                     if (resp != null)
                     {
-                        EbWebForm form = EbSerializers.Json_Deserialize<EbWebForm>(resp.Data[0].Json);
+                        EbObject form = EbSerializers.Json_Deserialize<EbObject>(resp.Data[0].Json);
                         if (form != null)
                         {
-                            String q2 = string.Format("SELECT id from {0} where eb_users_id = {1};", form.TableName, request.UserId);
+                            string tablename = string.Empty;
+                            if (form is EbMobilePage && (form as EbMobilePage).Container != null)
+                                tablename = ((form as EbMobilePage).Container as EbMobileForm).TableName;
+                            else if (form is EbWebForm)
+                                tablename = (form as EbWebForm).TableName;
+                            String q2 = string.Format("SELECT id from {0} where eb_users_id = {1};", tablename, request.UserId);
                             EbDataTable dt2 = this.EbConnectionFactory.DataDB.DoQuery(q2);
                             if (dt2.Rows.Count > 0)
                                 id = Convert.ToInt32(dt2.Rows[0][0]);
