@@ -2120,62 +2120,73 @@ namespace ExpressBase.ServiceStack.Services
 
         public GetMyProfileEntryResponse Get(GetMyProfileEntryRequest request)
         {
-            int id = 0;
-            int type_id = 0;
-            string message = string.Empty;
-            EbProfileUserType t = new EbProfileUserType();
+            EbProfileUserType userType = new EbProfileUserType();
+            GetMyProfileEntryResponse response = new GetMyProfileEntryResponse();
             try
             {
-                string q1 = String.Format("SELECT eb_user_types_id FROM eb_users WHERE id ={0};", request.UserId);
+                string q1 = $"SELECT eb_user_types_id FROM eb_users WHERE id = {request.UserId} ;";
                 EbDataTable dt1 = this.EbConnectionFactory.DataDB.DoQuery(q1);
                 if (dt1.Rows.Count > 0)
                 {
-                    type_id = Convert.ToInt32(dt1.Rows[0][0]);
-                    Eb_Solution s = GetSolutionObject(request.SolnId);
-                    if (s != null && s.SolutionSettings != null)
+                    int type_id = Convert.ToInt32(dt1.Rows[0][0]);
+                    Eb_Solution solutionObj = GetSolutionObject(request.SolnId);
+                    if (solutionObj?.SolutionSettings != null)
                     {
-                        if (request.WhichConsole == RoutingConstants.MC && s.SolutionSettings.MobileAppSettings != null && s.SolutionSettings.MobileAppSettings.UserTypeForms != null)
-                            t = s.SolutionSettings.MobileAppSettings.UserTypeForms.Single(a => a.Id == type_id);
-                        else if (s.SolutionSettings.UserTypeForms != null)
-                            t = s.SolutionSettings.UserTypeForms.Single(a => a.Id == type_id);
+                        if (request.WhichConsole == RoutingConstants.MC)
+                            userType = solutionObj.SolutionSettings.MobileAppSettings?.UserTypeForms?.Single(a => a.Id == type_id);
+                        else
+                            userType = solutionObj.SolutionSettings.UserTypeForms?.Single(a => a.Id == type_id);
 
-                        if (t != null && !string.IsNullOrEmpty(t.RefId))
+                        if (!string.IsNullOrEmpty(userType?.RefId))
                         {
-                            var myService = base.ResolveService<EbObjectService>();
-                            EbObjectParticularVersionResponse resp = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = t.RefId });
+                            response.Refid = userType.RefId;
+
+                            EbObjectService myService = base.ResolveService<EbObjectService>();
+                            EbObjectParticularVersionResponse resp = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = userType.RefId });
                             if (resp != null)
                             {
-                                EbObject form = EbSerializers.Json_Deserialize<EbObject>(resp.Data[0].Json);
-                                if (form != null)
+                                EbObject ebObj = EbSerializers.Json_Deserialize<EbObject>(resp.Data[0].Json);
+                                if (ebObj != null)
                                 {
                                     string tablename = string.Empty;
-                                    if (form is EbMobilePage && (form as EbMobilePage).Container != null)
-                                        tablename = ((form as EbMobilePage).Container as EbMobileForm).TableName;
-                                    else if (form is EbWebForm)
-                                        tablename = (form as EbWebForm).TableName;
-                                    String q2 = string.Format("SELECT id from {0} where eb_users_id = {1};", tablename, request.UserId);
-                                    EbDataTable dt2 = this.EbConnectionFactory.DataDB.DoQuery(q2);
-                                    if (dt2.Rows.Count > 0)
-                                        id = Convert.ToInt32(dt2.Rows[0][0]);
+                                    if (ebObj is EbMobilePage page && page.Container is EbMobileForm mobileForm)
+                                        tablename = mobileForm.TableName;
+                                    else if (ebObj is EbWebForm webForm)
+                                        tablename = webForm.TableName;
+                                    try
+                                    {
+                                        string q2 = string.Format("SELECT id from {0} where eb_users_id = {1};", tablename, request.UserId);
+                                        EbDataTable dt2 = this.EbConnectionFactory.DataDB.DoQuery(q2);
+
+                                        if (dt2.Rows.Count > 0)
+                                        {
+                                            response.RowId = Convert.ToInt32(dt2.Rows[0][0]);
+                                            response.ProfileExist = true;
+                                        }
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        Console.WriteLine($"failed to fetch profile id from table '{tablename}' for user [{request.UserId}], " + ex.Message);
+                                    }
                                 }
                                 else
-                                    message += "Form" + t.RefId + " is unavailable";
+                                    response.ErrorMessage += $"Form '{userType.RefId}' is unavailable";
                             }
                         }
                         else
-                            message += "User type form is empty";
+                            response.ErrorMessage += "User type form is empty";
                     }
                     else
-                        message += "Solution is unavailable or Solution settings is empty";
+                        response.ErrorMessage += "Solution is unavailable or Solution settings is empty";
                 }
                 else
-                    message += "User type is not set for this user";
+                    response.ErrorMessage += "User type is not set for this user";
             }
             catch (Exception e)
             {
                 Console.WriteLine(e.Message + e.StackTrace);
             }
-            return new GetMyProfileEntryResponse { RowId = id, Refid = t.RefId, ErrorMessage = message };
+            return response;
         }
     }
 }
