@@ -3717,6 +3717,8 @@ namespace ExpressBase.ServiceStack
                         rowGrouping[headerKey].IsAutoGen = IsAutoGendv;
                         rowGrouping[footerKey].IsAutoGen = IsAutoGendv;
                         rowGrouping[footerKey].ShowCheckbox = this.showCheckboxColumn;
+                        rowGrouping[headerKey].ShowCheckbox = this.showCheckboxColumn;
+                        rowGrouping[headerKey].TableId = this.TableId;
                     }
                 }
                 (rowGrouping[HeaderPrefix + TempKey[TotalLevels - 1]] as HeaderGroupingDetails).SetSortIndex(CurSortIndex);
@@ -3738,6 +3740,8 @@ namespace ExpressBase.ServiceStack
                     rowGrouping[headerKey].IsAutoGen = IsAutoGendv;
                     rowGrouping[footerKey].IsAutoGen = IsAutoGendv;
                     rowGrouping[footerKey].ShowCheckbox = this.showCheckboxColumn;
+                    rowGrouping[headerKey].ShowCheckbox = this.showCheckboxColumn;
+                    rowGrouping[headerKey].TableId = this.TableId;
                 }
             }
         }
