@@ -23,9 +23,9 @@ using System.Threading.Tasks;
 namespace ExpressBase.ServiceStack.Services
 {
     [Authenticate]
-    public class ImportrExportService : EbMqBaseService
+    public class ImportExportService : EbMqBaseService
     {
-        public ImportrExportService(IMessageProducer _mqp, IMessageQueueClient _mqc, IEbServerEventClient _sec) : base(_mqp, _mqc, _sec)
+        public ImportExportService(IMessageProducer _mqp, IMessageQueueClient _mqc, IEbServerEventClient _sec) : base(_mqp, _mqc, _sec)
         {
         }
 

@@ -58,6 +58,11 @@ namespace ExpressBase.ServiceStack.Services
                     if (dt.Rows.Count > 0)
                     {
                         string user_auth_id = request.SolnId + ":" + dt.Rows[0][0].ToString() + ":uc";
+						if (this.ServerEventClient.BearerToken == null|| this.ServerEventClient.RefreshToken==null)
+						{
+							this.ServerEventClient.BearerToken = request.BToken;
+							this.ServerEventClient.RefreshToken = request.RToken;
+						}
                         this.ServerEventClient.Post<NotifyResponse>(new NotifyUserIdRequest
                         {
                             Msg = JsonConvert.SerializeObject(n),

@@ -516,7 +516,7 @@ namespace ExpressBase.ServiceStack.Services
                             });
                             if (!request.IsFurther || request.PackageId > 0)
                             {
-                                ImportrExportService service = base.ResolveService<ImportrExportService>();
+                                ImportExportService service = base.ResolveService<ImportExportService>();
                                 int demoAppId;
                                 string env = Environment.GetEnvironmentVariable(EnvironmentConstants.ASPNETCORE_ENVIRONMENT);
                                 Console.WriteLine("Environment : " + env);
@@ -615,6 +615,36 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
+        public GetPrimarySolutionsResponse Get(GetPrimarySolutionsRequest request)
+        {
+            GetPrimarySolutionsResponse resp = new GetPrimarySolutionsResponse();
+            List<EbSolutionsWrapper> PrimarySolns = new List<EbSolutionsWrapper>();
+            string sql = string.Format(@"SELECT * FROM eb_solutions WHERE tenant_id = (SELECT tenant_id from eb_solutions where isolution_id = '{0}') AND type = 2;",
+                request.SolnId);
+            try
+            {
+                EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(sql);
+                    foreach (EbDataRow dr in dt.Rows)
+                {
+                    EbSolutionsWrapper _ebSolutions = new EbSolutionsWrapper
+                    {
+                        SolutionName = dr[6].ToString(),
+                        Description = dr[2].ToString(),
+                        DateCreated = Convert.ToDateTime(dr[1]).ToString("g", DateTimeFormatInfo.InvariantInfo),
+                        IsolutionId = dr[4].ToString(),
+                        EsolutionId = dr[5].ToString(),
+                        PricingTier = (PricingTiers)Convert.ToInt32(dr["pricing_tier"])
+                    };
+                    PrimarySolns.Add(_ebSolutions);
+                }
+                resp.PrimarySolutions = PrimarySolns;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Exception:" + e.Message + e.StackTrace);
+            }
+            return resp;
+        }
         public GetSolutioInfoResponse Get(GetSolutioInfoRequest request)
         {
             GetSolutioInfoResponse resp = null;

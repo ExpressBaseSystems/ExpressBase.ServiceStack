@@ -274,15 +274,15 @@ namespace ExpressBase.ServiceStack.Services
 	                                    EXISTS (SELECT * FROM eb_objects2application EOA WHERE EOA.app_id = EA.id AND EOA.eb_del = 'F' {0})
                                     AND EA.eb_del = 'F' AND EA.application_type = 2;";
 
-            User UserObject = GetUserObject(request.UserAuthId);
-            bool isAdmin = UserObject.IsAdmin();
-            Eb_Solution solutionObject = GetSolutionObject(request.SolnId);
+            data.CurrentUser = this.GetUserObject(request.UserAuthId);
+            bool isAdmin = data.CurrentUser.IsAdmin();
+            data.CurrentSolution = this.GetSolutionObject(request.SolnId);
             string sql;
             EbDataTable dt;
 
             try
             {
-                if (solutionObject != null) data.Locations = solutionObject.GetLocationsByUser(UserObject);
+                if (data.CurrentSolution != null) data.Locations = data.CurrentSolution.GetLocationsByUser(data.CurrentUser);
 
                 if (isAdmin)
                 {
@@ -291,7 +291,7 @@ namespace ExpressBase.ServiceStack.Services
                 }
                 else
                 {
-                    string[] Ids = UserObject.GetAccessIds();
+                    string[] Ids = data.CurrentUser.GetAccessIds();
                     sql = string.Format(acquery, idcheck);
                     DbParameter[] parameters = { this.EbConnectionFactory.DataDB.GetNewParameter("ids", EbDbTypes.String, String.Join(",", Ids)) };
                     dt = this.EbConnectionFactory.ObjectsDB.DoQuery(sql, parameters);
@@ -314,13 +314,13 @@ namespace ExpressBase.ServiceStack.Services
                 });
             }
 
-            GetMobilePagesByAppliation(data, UserObject, isAdmin, request.Export);
-            SetProfilePages(data, solutionObject);
+            this.GetMobilePagesByAppliation(data, isAdmin, request.Export);
+            this.SetProfilePages(data);
 
             return data;
         }
 
-        private void GetMobilePagesByAppliation(EbMobileSolutionData data, User user, bool isAdmin, bool export)
+        private void GetMobilePagesByAppliation(EbMobileSolutionData data, bool isAdmin, bool export)
         {
             string idcheck = EbConnectionFactory.ObjectsDB.EB_GET_MOBILE_PAGES;
             string Sql = EbConnectionFactory.ObjectsDB.EB_GET_MOBILE_PAGES_OBJS;
@@ -343,7 +343,7 @@ namespace ExpressBase.ServiceStack.Services
                     query = string.Format(Sql, string.Empty);
                 else
                 {
-                    string[] objids = user.GetAccessIds();
+                    string[] objids = data.CurrentUser.GetAccessIds();
                     parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("objids", EbDbTypes.String, objids.Join(",")));
                     query = string.Format(Sql, idcheck);
                 }
@@ -418,9 +418,9 @@ namespace ExpressBase.ServiceStack.Services
             return DataSet;
         }
 
-        private void SetProfilePages(EbMobileSolutionData data, Eb_Solution solutionObject)
+        private void SetProfilePages(EbMobileSolutionData data)
         {
-            if (solutionObject.GetMobileSettings(out var appSettings) && appSettings.UserTypeForms != null)
+            if (data.CurrentSolution.GetMobileSettings(out var appSettings) && appSettings.UserTypeForms != null)
             {
                 List<MobilePagesWraper> profilePages = new List<MobilePagesWraper>();
 
