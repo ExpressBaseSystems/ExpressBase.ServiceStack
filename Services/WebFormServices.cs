@@ -40,10 +40,12 @@ namespace ExpressBase.ServiceStack.Services
             {
                 EbWebForm Form = request.WebObj as EbWebForm;
                 Form.AfterRedisGet(this);
-                if (Form.ExeDataPusher)
+                if (Form.FormDataPusherCount > 0)
                 {
                     foreach (EbDataPusher pusher in Form.DataPushers)
                     {
+                        if (pusher is EbApiDataPusher)
+                            continue;
                         EbWebForm _form = this.GetWebFormObject(pusher.FormRefId, null, null);
                         TableSchema _table = _form.FormSchema.Tables.Find(e => e.TableName.Equals(_form.FormSchema.MasterTable));
                         //_table.Columns.Add(new ColumnSchema { ColumnName = "eb_push_id", EbDbType = (int)EbDbTypes.String, Control = new EbTextBox { Name = "eb_push_id", Label = "Push Id" } });// multi push id
