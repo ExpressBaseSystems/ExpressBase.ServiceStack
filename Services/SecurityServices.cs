@@ -1173,8 +1173,53 @@ namespace ExpressBase.ServiceStack.Services
 
 		public SaveRoleResponse Post(SaveRoleRequest request)
 		{
+
+			List<string> OldPermission = new List<string>();
+			List<string> OldUsers = new List<string>();
 			SaveRoleResponse resp = new SaveRoleResponse() { id = 0 };
 			int role_id = Convert.ToInt32(request.Colvalues["roleid"]);
+			////get previous permission and user list for comparission
+			try
+			{
+				EbDataTable edp = this.EbConnectionFactory.DataDB.DoQuery($"SELECT permissionname FROM eb_role2permission WHERE role_id = :id AND COALESCE(eb_del, 'F') = 'F';",
+							new DbParameter[]
+							{
+				this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, role_id)
+							});
+				
+				if (edp.Rows.Count > 0)
+				{
+					foreach (EbDataRow dr in edp.Rows)
+					{
+						OldPermission.Add(dr[0].ToString());
+					}
+				}
+				
+			}
+			catch(Exception e)
+			{
+				Console.WriteLine("fetch permission" + e.Message + e.StackTrace);
+			}
+			try
+			{
+				EbDataTable edu = this.EbConnectionFactory.DataDB.DoQuery($"SELECT A.id FROM eb_users A, eb_role2user B WHERE A.id = B.user_id AND COALESCE(A.eb_del, 'F') = 'F' AND COALESCE(B.eb_del, 'F') = 'F' AND B.role_id = :id;",
+							new DbParameter[]{
+				this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, role_id)
+							});
+				if (edu.Rows.Count > 0)
+				{
+					foreach (EbDataRow dr in edu.Rows)
+					{
+						OldUsers.Add(dr[0].ToString());
+					}
+				}
+
+			}
+			catch (Exception e1)
+			{
+				Console.WriteLine("fetch user" + e1.Message + e1.StackTrace);
+			}
+
 			EbDataTable d = this.EbConnectionFactory.DataDB.DoQuery($"SELECT id FROM eb_roles WHERE LOWER(role_name) LIKE LOWER(@roleName) AND id <> @id;",
 				new DbParameter[]
 				{
@@ -1213,25 +1258,31 @@ namespace ExpressBase.ServiceStack.Services
 				EbDataTable ds = this.EbConnectionFactory.DataDB.DoQuery(this.EbConnectionFactory.DataDB.EB_SAVEROLES_QUERY, parameters.ToArray());
 				resp.id = Convert.ToInt32(ds.Rows[0][0]);
 			}
-			try
-			{
-				this.MessageProducer3.Publish(new SaveRoleMqRequest
+			
+				try
 				{
-					BToken = this.ServerEventClient.BearerToken,
-					RToken = this.ServerEventClient.RefreshToken,
-					SolnId = request.SolnId,
-					UserId = request.UserId,
-					UserAuthId = request.UserAuthId,
-					WhichConsole = request.WhichConsole,
-					ColUserIds = request.Colvalues["users"].ToString() 
-					
-				});
+					this.MessageProducer3.Publish(new SaveRoleMqRequest
+					{
+						BToken = this.ServerEventClient.BearerToken,
+						RToken = this.ServerEventClient.RefreshToken,
+						SolnId = request.SolnId,
+						UserId = request.UserId,
+						UserAuthId = request.UserAuthId,
+						WhichConsole = request.WhichConsole,
+						NewUserIds = request.Colvalues["users"].ToString(),
+						New_Permission = request.Colvalues["permission"].ToString(),
+						Old_Permission=OldPermission,
+						OldUserIds= OldUsers
 
-			}
-			catch (Exception ex)
-			{
-				Console.WriteLine("user role changes-called message queue" + ex.Message + ex.StackTrace);
-			}
+
+					});
+
+				}
+				catch (Exception ex)
+				{
+					Console.WriteLine("user role changes-called message queue" + ex.Message + ex.StackTrace);
+				}
+						
 			return resp;
 		}
 
