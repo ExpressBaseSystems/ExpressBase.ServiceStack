@@ -1128,7 +1128,7 @@ B.participant_type , B.type_of_user from
 
                 SPC.SlotAttendeeCount = Convert.ToInt32(ds.Tables[1].Rows[0]["slot_attendee_count"]);
                 SPC.SlotHostCount = Convert.ToInt32(ds.Tables[2].Rows[0]["slot_host_count"]);
-                for (int i = 0; i < ds.Tables[4].Rows.Count; i++)
+                for (int i = 0; i < ds.Tables[3].Rows.Count; i++)
                 {
                     MyActionObj.Add(new MyAction()
                     {
