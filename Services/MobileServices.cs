@@ -450,9 +450,9 @@ namespace ExpressBase.ServiceStack.Services
             }
         }
 
-        public MobileVisDataResponse Get(MobileVisDataRequest request)
+        public MobileDataResponse Get(MobileVisDataRequest request)
         {
-            MobileVisDataResponse resp = new MobileVisDataResponse();
+            MobileDataResponse resp = new MobileDataResponse();
             try
             {
                 EbDataReader dataReader = this.GetEbObject<EbDataReader>(request.DataSourceRefId);
@@ -604,6 +604,28 @@ namespace ExpressBase.ServiceStack.Services
             query = query + " ORDER BY " + sort.Join($" {CharConstants.COMMA} ");
 
             return query;
+        }
+
+        public MobileDataResponse Get(MobileDataRequest request)
+        {
+            MobileDataResponse resp = new MobileDataResponse();
+            try
+            {
+                EbDataReader dataReader = this.GetEbObject<EbDataReader>(request.DataSourceRefId);
+
+                List<DbParameter> parameters = new List<DbParameter>
+                {
+                    this.EbConnectionFactory.DataDB.GetNewParameter("eb_currentuser_id", EbDbTypes.Int32, request.UserId)
+                };
+
+                resp.Data = this.EbConnectionFactory.DataDB.DoQueries(dataReader.Sql, parameters.ToArray());
+            }
+            catch (Exception ex)
+            {
+                resp.Message = "No Data";
+                Console.WriteLine("Exception at object list for user mobile req ::" + ex.Message);
+            }
+            return resp;
         }
 
         public MobileFormDataResponse Get(MobileFormDataRequest request)
