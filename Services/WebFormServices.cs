@@ -1686,7 +1686,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 if (request.RefId == "leadmanagement")
                 {
-                    msg = SearchHelper.UpdateIndexes_LM(this.EbConnectionFactory.DataDB);
+                    msg = SearchHelper.UpdateIndexes_LM(this.EbConnectionFactory.DataDB, request.Limit, request.Offset);
                 }
                 else
                 {
