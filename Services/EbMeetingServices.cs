@@ -291,12 +291,14 @@ namespace ExpressBase.ServiceStack.Services
         {
             GetMeetingsDetailsResponse Resp = new GetMeetingsDetailsResponse();
             string _qry1 = $@"
-            SELECT id,COALESCE (eb_meeting_schedule_id, 0)as meeting_schedule_id,COALESCE (eb_meeting_slots_id, 0)as eb_meeting_slots_id FROM  eb_my_actions 
+            SELECT id,COALESCE (eb_meeting_schedule_id, 0)as meeting_schedule_id,COALESCE (eb_meeting_slots_id, 0)as eb_meeting_slots_id , form_ref_id FROM  eb_my_actions 
 	                     WHERE  eb_del = 'F' and id ={request.MyActionId} and is_completed ='F';";
             EbDataSet SdTest = this.EbConnectionFactory.DataDB.DoQueries(_qry1);
+            
             string qry_ = "";
             try
             {
+                Resp.FormRefid = Convert.ToString(SdTest.Tables[0].Rows[0]["form_ref_id"]);
                 int MeetingSlotId = Convert.ToInt32(SdTest.Tables[0].Rows[0]["eb_meeting_slots_id"]);
                 int MeetingScheduleId = Convert.ToInt32(SdTest.Tables[0].Rows[0]["meeting_schedule_id"]);
                 if (MeetingSlotId != 0)
@@ -514,6 +516,32 @@ namespace ExpressBase.ServiceStack.Services
                 Resp.ResponseStatus = false;
             }
             return Resp;
+        }
+
+        public GetScheduleUserDetailsResponse Post(GetScheduleUserDetailsRequest request)
+        {
+            GetScheduleUserDetailsResponse obj = new GetScheduleUserDetailsResponse();
+            string _qry = $@"select participant_type from (SELECT id,COALESCE (eb_meeting_schedule_id, 0)as meeting_schedule_id,COALESCE (eb_meeting_slots_id, 0)as eb_meeting_slots_id , form_ref_id,
+			   COALESCE(user_ids, '')as user_ids,COALESCE(role_ids, '')as role_ids,COALESCE(usergroup_id, 0)as user_group_id
+			   FROM  eb_my_actions 
+	                     WHERE  eb_del = 'F' and id ={request.MyActionId} and is_completed ='F' ) A 
+	left join (select COALESCE (eb_meeting_schedule_id, 0)as meeting_schedule_id,participant_type,
+			   COALESCE(user_ids, '')as user_ids,COALESCE(role_ids, '')as role_ids,COALESCE(user_group_id, 0)as user_group_id 
+			   from eb_meeting_scheduled_participants) B on 
+	B.meeting_schedule_id = A.meeting_schedule_id and B.user_ids = A.user_ids and B.role_ids = A.role_ids and B.user_group_id = A.user_group_id";
+            EbDataSet SdTest = this.EbConnectionFactory.DataDB.DoQueries(_qry);
+            try
+            {
+                if(Convert.ToInt32(SdTest.Tables[0].Rows[0]["participant_type"]) == 1)
+                {
+                    obj.ParticipantType = ParticipantType.Host;
+                }
+            }
+            catch(Exception e)
+            {
+                Console.WriteLine(e.StackTrace, e.Message);
+            }
+            return obj;
         }
 
         public MeetingUpdateByUsersResponse Post(MeetingUpdateByUsersRequest request)
