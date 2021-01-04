@@ -842,5 +842,130 @@ namespace ExpressBase.ServiceStack.Services
             }
             return response;
         }
+
+        //v2 data request
+
+        public MobileDataResponse Get(EbMobileDataRequest request)
+        {
+            MobileDataResponse resp = new MobileDataResponse();
+            try
+            {
+                EbMobileVisualization visualization = GetEbObject<EbMobileVisualization>(request.RefId);
+
+                List<EbMobileApprovalButton> approvalButtons = visualization.GetControlsByType<EbMobileApprovalButton>();
+
+                bool hasApprovalBtn = approvalButtons.Count > 0;
+
+                if (hasApprovalBtn)
+                {
+                    User user = GetUserObject(request.UserAuthId);
+                    GetApprovalData(user, approvalButtons);
+                }
+
+                MobileDataResponse dataResponse = this.Get(new MobileVisDataRequest
+                {
+                    DataSourceRefId = visualization.DataSourceRefId,
+                    Limit = request.Limit,
+                    Offset = request.Offset,
+                    Params = request.Parameters,
+                    SearchColumns = request.SearchColumns,
+                    SortOrder = request.SortColumns
+                });
+
+                if (!hasApprovalBtn) return dataResponse;
+                else
+                {
+                    if (dataResponse.Data != null && dataResponse.Data.Tables.Count >= 2)
+                    {
+                        ProcessApprovalData(dataResponse.Data.Tables[1], approvalButtons);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                resp.Message = "No Data";
+                Console.WriteLine("Exception at object list for user mobile req ::" + ex.Message);
+            }
+            return resp;
+        }
+
+        private void GetApprovalData(User user, List<EbMobileApprovalButton> buttons)
+        {
+            try
+            {
+                foreach (EbMobileApprovalButton _button in buttons)
+                {
+                    if (string.IsNullOrEmpty(_button.FormRefid)) continue;
+
+                    string _roles = string.Join(CharConstants.COMMA, user.RoleIds.ToArray());
+
+                    string verid = _button.FormRefid.Split(CharConstants.DASH)[4];
+
+                    string str = string.Empty;
+
+                    if (user.IsAdmin())
+                    {
+                        str = string.Format(@"
+                                SELECT Q1.*,act.action_name,act.action_unique_id
+                                FROM(
+	                                SELECT my.id, st.stage_name,st.id as stage_id,my.form_ref_id,my.form_data_id,st.stage_unique_id, my.from_datetime
+	                                FROM eb_my_actions my, eb_stages st
+	                                WHERE  my.form_ref_id ='{0}'
+			                                AND my.is_completed='F' AND my.eb_del='F'
+			                                AND st.id=my.eb_stages_id AND st.eb_del='F' 
+	                                ) Q1
+                                LEFT JOIN
+	                                eb_stage_actions act
+                                ON
+	                                Q1.stage_id=act.eb_stages_id AND act.eb_del='F' ;", _button.FormRefid);
+                    }
+                    else
+                    {
+                        str = string.Format(@"
+                                SELECT Q1.*,act.action_name,act.action_unique_id
+                                FROM(
+	                                SELECT my.id, st.stage_name,st.id as stage_id,my.form_ref_id,my.form_data_id,st.stage_unique_id, my.from_datetime
+	                                FROM eb_my_actions my, eb_stages st
+	                                WHERE ('{0}' = any(string_to_array(user_ids, ',')) OR
+	 		                                (string_to_array(role_ids,',')) && (string_to_array('{1}',',')))
+                                            AND my.form_ref_id ='{2}'
+			                                AND my.is_completed='F' AND my.eb_del='F'
+			                                AND st.id=my.eb_stages_id AND st.eb_del='F' 
+	                                ) Q1
+                                LEFT JOIN
+	                                eb_stage_actions act
+                                ON
+	                                Q1.stage_id=act.eb_stages_id AND act.eb_del='F' ;", user.UserId, _roles, _button.FormRefid);
+                    }
+                    str += string.Format(@"
+	                    SELECT app.review_status,app.eb_src_id,my.id,st.stage_name,app.eb_lastmodified_at, app.eb_created_at
+	                    FROM eb_approval app,eb_my_actions my, eb_stages st
+	                    WHERE  app.eb_ver_id ='{0}' AND app.eb_del='F'
+			                    AND my.id=app.eb_my_actions_id
+			                    AND st.id = my.eb_stages_id;", verid);
+                    str += string.Format(@"SELECT app.id,usr.fullname,app.comments,app.eb_created_by,app.eb_created_at,
+	 	                                app.eb_src_id,st.stage_name,act.action_name
+	                                FROM eb_approval_lines app,eb_users usr,eb_stages st,eb_stage_actions act
+	                                WHERE  app.eb_ver_id ='{0}' AND app.eb_created_by = usr.id  AND st.stage_unique_id=app.stage_unique_id
+	 		                                AND st.form_ref_id='{1}'
+	 		                                AND act.action_unique_id=app.action_unique_id AND act.eb_stages_id = st.id
+	 		                                AND act.eb_del='F' ORDER BY app.eb_created_at DESC;", verid, _button.FormRefid);
+
+                    _button.ApprovalData = this.EbConnectionFactory.DataDB.DoQueries(str);
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
+        }
+
+        private void ProcessApprovalData(EbDataTable dataSourceData, List<EbMobileApprovalButton> approvalButtons)
+        {
+            foreach (EbDataRow row in dataSourceData.Rows)
+            {
+
+            }
+        }
     }
 }
