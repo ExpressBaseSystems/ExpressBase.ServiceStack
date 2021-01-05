@@ -864,6 +864,10 @@ namespace ExpressBase.ServiceStack.Services
 
                 resp = this.Get(new MobileVisDataRequest
                 {
+                    UserId = request.UserId,
+                    UserAuthId = request.UserAuthId,
+                    SolnId = request.SolnId,
+                    WhichConsole = request.WhichConsole,
                     DataSourceRefId = visualization.DataSourceRefId,
                     Limit = request.Limit,
                     Offset = request.Offset,
