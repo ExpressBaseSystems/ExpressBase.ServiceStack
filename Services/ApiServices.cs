@@ -42,20 +42,30 @@ namespace ExpressBase.ServiceStack.Services
 
         public Dictionary<string, object> ProcessGlobalDictionary(Dictionary<string, object> data)
         {
-            Dictionary<string, object> gp = new Dictionary<string, object>();
+            Dictionary<string, object> globalParams = new Dictionary<string, object>();
 
             foreach (KeyValuePair<string, object> kp in data)
             {
-                if ((kp.Value as string).StartsWith("{") && (kp.Value as string).EndsWith("}") ||
-                    (kp.Value as string).StartsWith("[") && (kp.Value as string).EndsWith("]"))
+                if (kp.Value == null) continue;
+
+                if (kp.Value is string parsed)
                 {
-                    string formated = (kp.Value as string).Replace(@"\", string.Empty);
-                    gp.Add(kp.Key, JObject.Parse(formated));
+                    parsed = parsed.Trim();
+
+                    if ((parsed.StartsWith("{") && parsed.EndsWith("}")) || (parsed.StartsWith("[") && parsed.EndsWith("]")))
+                    {
+                        string formated = parsed.Replace(@"\", string.Empty);
+                        globalParams.Add(kp.Key, JObject.Parse(formated));
+                    }
+                    else
+                        globalParams.Add(kp.Key, kp.Value);
                 }
                 else
-                    gp.Add(kp.Key, kp.Value);
+                {
+                    globalParams.Add(kp.Key, kp.Value);
+                }
             }
-            return gp;
+            return globalParams;
         }
 
         [Authenticate]
