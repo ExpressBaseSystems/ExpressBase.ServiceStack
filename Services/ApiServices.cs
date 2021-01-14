@@ -115,7 +115,7 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception e)
             {
                 Console.WriteLine("---API SERVICE END POINT EX CATCH---");
-                Console.WriteLine(e.Message);
+                Console.WriteLine(e.Message + "\n" + e.StackTrace);
             }
             return this.ApiResponse;
         }
