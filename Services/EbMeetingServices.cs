@@ -959,6 +959,9 @@ namespace ExpressBase.ServiceStack.Services
 
             return new MeetingRejectByHostResponse();
         }
+
+
+        // Get meeting details from my action
         public GetMeetingDetailsResponse Post(GetMeetingDetailRequest request)
         {
             GetMeetingDetailsResponse Resp = new GetMeetingDetailsResponse();
@@ -981,10 +984,10 @@ namespace ExpressBase.ServiceStack.Services
 							 LEFT JOIN	
 							 (select id, fullname,email from eb_users where eb_del = 'F')E
 							 ON E.id = D.user_id;   
-                SELECT 
+                 SELECT 
 	           A.id, A.eb_meeting_slots_id, B.id as slot_id,C.id as meeting_schedule_id,C.description,B.time_from,B.time_to,
 				C.meeting_date ,C.venue,C.integration,C.title,
-				D.user_id , D.type_of_user,D.participant_type,E.name,E.email,E.form_refid,E.form_data_id
+				D.user_id , D.type_of_user,D.participant_type,E.fullname,E.email
 			        FROM
 					(select id , eb_meeting_slots_id from eb_meetings where id= {request.MeetingId} and eb_del = 'F' )A
 						LEFT JOIN
@@ -997,8 +1000,8 @@ namespace ExpressBase.ServiceStack.Services
 							 (SELECT id , approved_slot_id, eb_meeting_schedule_id , user_id ,type_of_user,participant_type  FROM  eb_meeting_slot_participants )D
 							 ON D.approved_slot_id = B.id and D.participant_type = 2
 							 LEFT JOIN	
-							 (select id, name ,email,form_refid,form_data_id  from eb_contacts where eb_del = 'F')E
-							 ON E.id = D.user_id;
+							 (select id, fullname,email from eb_users where eb_del = 'F')E
+							 ON E.id = D.user_id; 
 ";
 
             try
@@ -1042,7 +1045,7 @@ namespace ExpressBase.ServiceStack.Services
                             MeetingDate = Convert.ToString(ds.Tables[1].Rows[0]["meeting_date"]),
                             Venue = Convert.ToString(ds.Tables[1].Rows[i]["venue"]),
                             Integration = Convert.ToString(ds.Tables[1].Rows[i]["integration"]),
-                            Fullname = Convert.ToString(ds.Tables[1].Rows[i]["name"]),
+                            Fullname = Convert.ToString(ds.Tables[1].Rows[i]["fullname"]),
                             UserId = Convert.ToInt32(ds.Tables[1].Rows[i]["user_id"]),
                             TypeofUser = Convert.ToInt32(ds.Tables[1].Rows[i]["type_of_user"]),
                             ParticipantType = Convert.ToInt32(ds.Tables[1].Rows[i]["participant_type"]),
