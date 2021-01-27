@@ -882,6 +882,7 @@ namespace ExpressBase.ServiceStack.Services
                     {
                         ProcessApprovalData(resp.Data.Tables[1], approvalButtons);
                     }
+                    resp.Message = "Success";
                 }
             }
             catch (Exception ex)
@@ -904,22 +905,49 @@ namespace ExpressBase.ServiceStack.Services
 
                     string roles = string.Join(CharConstants.COMMA, user.RoleIds.ToArray());
 
-                    string query = string.Format(@"SELECT EMA.id as action_id, EMA.form_ref_id, EMA.form_data_id, EMA.eb_stages_id, ES.stage_name,ES.stage_unique_id
-	                                FROM
-		                                eb_my_actions EMA,eb_approval EA,eb_stages ES
-	                                WHERE
-		                                EA.eb_my_actions_id = EMA.id
-	                                AND
-		                                EMA.eb_stages_id = ES.id
-	                                AND
-		                                ('{0}' = any(string_to_array(EMA.user_ids, ',')) OR (string_to_array(EMA.role_ids,',')) && (string_to_array('{1}',',')))
-	                                AND 
-		                                EMA.form_ref_id ='{2}'
-	                                AND 
-		                                EMA.is_completed='F' 
-                                    AND 
-                                        EMA.eb_del='F';", user.UserId, roles, btn.FormRefid);
-
+                    string query = string.Format(@"SELECT 
+	                                                    TBL1.*, 
+	                                                    TBL2.prev_stage,
+	                                                    TBL2.action_name
+                                                    FROM (SELECT 
+		                                                    EMA.id as action_id,
+		                                                    EMA.form_ref_id, 
+		                                                    EMA.form_data_id, 
+		                                                    ES.stage_name,
+		                                                    EA.eb_approval_lines_id,
+		                                                    EMA.is_completed
+                                                        FROM
+	                                                        eb_approval EA, eb_my_actions EMA, eb_stages ES
+                                                        WHERE
+	                                                        EA.eb_my_actions_id = EMA.id
+                                                        AND
+	                                                        ES.id = EMA.eb_stages_id
+                                                        AND
+	                                                        ('{0}' = any(string_to_array(EMA.user_ids, ',')) OR (string_to_array(EMA.role_ids,',')) && (string_to_array('{1}',',')))
+                                                        AND 
+	                                                        EMA.form_ref_id ='{2}'
+                                                        AND
+	                                                        EMA.eb_del='F'
+                                                    ) TBL1 
+                                                    LEFT JOIN 
+                                                    (
+	                                                    SELECT distinct 
+		                                                    EAL.id as al_id,
+		                                                    ES.stage_name as prev_stage, 
+		                                                    ESA.action_name 
+	                                                    FROM 
+		                                                    eb_approval_lines EAL, eb_stages ES, eb_stage_actions ESA
+	                                                    WHERE 
+		                                                    EAL.stage_unique_id = ES.stage_unique_id 
+	                                                    AND 
+		                                                    EAL.action_unique_id = ESA.action_unique_id
+	                                                    AND 
+		                                                    ES.id = ESA.eb_stages_id 
+	                                                    AND 
+		                                                    ES.form_ref_id = '{2}'
+                                                    ) TBL2
+                                                    ON 
+	                                                    TBL1.eb_approval_lines_id = TBL2.al_id;", user.UserId, roles, btn.FormRefid);
 
                     btn.ApprovalData = this.EbConnectionFactory.DataDB.DoQuery(query);
                 }
@@ -940,19 +968,27 @@ namespace ExpressBase.ServiceStack.Services
                     {
                         button.StageNameIndex = dataSourceData.Columns.Count;
                         button.ActionIdIndex = button.StageNameIndex + 1;
+                        button.StatusIndex = button.ActionIdIndex + 1;
 
                         dataSourceData.Columns.Add(new EbDataColumn
                         {
-                            ColumnName = button.StageColumn == null ? $"{button.Name}_stage_name" : $"{button.StageColumn}_stage_name",
+                            ColumnName = $"{button.Name}_stage_name",
                             ColumnIndex = button.StageNameIndex,
                             Type = EbDbTypes.String
                         });
 
                         dataSourceData.Columns.Add(new EbDataColumn
                         {
-                            ColumnName = button.StageColumn == null ? $"{button.Name}_action_id" : $"{button.StageColumn}_action_id",
+                            ColumnName = $"{button.Name}_action_id",
                             ColumnIndex = button.ActionIdIndex,
                             Type = EbDbTypes.Int32
+                        });
+
+                        dataSourceData.Columns.Add(new EbDataColumn
+                        {
+                            ColumnName = $"{button.Name}_status",
+                            ColumnIndex = button.StatusIndex,
+                            Type = EbDbTypes.String
                         });
                     }
 
@@ -966,8 +1002,15 @@ namespace ExpressBase.ServiceStack.Services
 
                         if (dataRow != null)
                         {
-                            row[button.StageNameIndex] = dataRow["stage_name"];
-                            row[button.ActionIdIndex] = dataRow["action_id"];
+                            char isCompleted = Convert.ToChar(dataRow["is_completed"]);
+
+                            if (isCompleted == 'F')
+                            {
+                                row[button.StageNameIndex] = dataRow["stage_name"];
+                                row[button.ActionIdIndex] = dataRow["action_id"];
+                            }
+
+                            row[button.StatusIndex] = dataRow["action_name"];
                         }
                     }
                 }

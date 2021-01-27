@@ -23,18 +23,18 @@ namespace ExpressBase.ServiceStack.Services
         public GetManageLeadResponse Any(GetManageLeadRequest request)
         {
             string SqlQry = $@"SELECT id, longname FROM eb_locations WHERE id > 0;
-							  SELECT id, name FROM hoc_staff WHERE type='doctor' AND eb_del='F' ORDER BY name;
+							  SELECT id, name FROM hoc_staff WHERE type='doctor' AND COALESCE(eb_del, 'F')='F' ORDER BY name;
 							  SELECT id, INITCAP(TRIM(fullname)), statusid FROM eb_users WHERE id > 1 ORDER BY fullname;
 							SELECT DISTINCT INITCAP(TRIM(clcity)) AS clcity FROM customers WHERE LENGTH(clcity) > 2 ORDER BY clcity;
 							SELECT DISTINCT INITCAP(TRIM(clcountry)) AS clcountry FROM customers WHERE LENGTH(clcountry) > 2 ORDER BY clcountry;
 							SELECT DISTINCT INITCAP(TRIM(city)) AS city FROM customers WHERE LENGTH(city) > 2 ORDER BY city;
-							SELECT district FROM lead_district WHERE eb_del='F' ORDER BY district;
-							SELECT source FROM lead_source WHERE eb_del='F' ORDER BY source;
+							SELECT district FROM lead_district WHERE COALESCE(eb_del, 'F')='F' ORDER BY district;
+							SELECT source FROM lead_source WHERE COALESCE(eb_del, 'F')='F' ORDER BY source;
 							SELECT DISTINCT INITCAP(TRIM(subcategory)) AS subcategory FROM customers WHERE LENGTH(subcategory) > 2 ORDER BY subcategory;
-							SELECT status,nextstatus FROM lead_status WHERE eb_del='F' ORDER BY status;
-							SELECT service FROM lead_service WHERE eb_del='F' ORDER BY order_id;
-							SELECT id, name FROM hoc_staff WHERE type='nurse' AND eb_del='F' ORDER BY name;
-							SELECT id, category FROM customer_category WHERE eb_del='F';";
+							SELECT status,nextstatus FROM lead_status WHERE COALESCE(eb_del, 'F')='F' ORDER BY status;
+							SELECT service FROM lead_service WHERE COALESCE(eb_del, 'F')='F' ORDER BY order_id;
+							SELECT id, name FROM hoc_staff WHERE type='nurse' AND COALESCE(eb_del, 'F')='F' ORDER BY name;
+							SELECT id, category FROM customer_category WHERE COALESCE(eb_del, 'F')='F';";
             List<DbParameter> paramList = new List<DbParameter>();
             Dictionary<int, string> CostCenter = new Dictionary<int, string>();
             Dictionary<string, int> DocDict = new Dictionary<string, int>();
@@ -64,12 +64,12 @@ namespace ExpressBase.ServiceStack.Services
                                 baldnessgrade, diffusepattern, hfcurrently, htpreviously, country_code, watsapp_phno, cust_category, eb_modifiedby 
 								FROM customers WHERE id = :accountid AND COALESCE(eb_del, 'F')='F';
 							SELECT id,trdate,status,followupdate,narration, eb_createdby, eb_createddt,isnotpickedup FROM leaddetails
-								WHERE customers_id=:accountid ORDER BY eb_createddt DESC;
+								WHERE customers_id=:accountid AND COALESCE(eb_del, 'F')='F' ORDER BY eb_createddt DESC;
 							SELECT id,trdate,totalamount,advanceamount,balanceamount,cashreceived,paymentmode,bank,createddt,narration,createdby 
-								FROM leadpaymentdetails WHERE customers_id=:accountid ORDER BY balanceamount;
+								FROM leadpaymentdetails WHERE customers_id=:accountid AND COALESCE(eb_del, 'F')='F' ORDER BY balanceamount;
 							SELECT id,dateofsurgery,eb_loc_id,createdby,createddt, extractiondone_by,
 									implantation_by,consent_by,anaesthesia_by,post_briefing_by,nurses_id,complementry,method,narration
-								FROM leadsurgerystaffdetails WHERE customers_id=:accountid ORDER BY createddt DESC;
+								FROM leadsurgerystaffdetails WHERE customers_id=:accountid AND COALESCE(eb_del, 'F')='F' ORDER BY createddt DESC;
 							SELECT noofgrafts,totalrate,prpsessions,consulted,consultingfeepaid,consultingdoctor,eb_closing,LOWER(TRIM(nature)),consdate,probmonth
 								FROM leadratedetails WHERE customers_id=:accountid;";
 
@@ -103,8 +103,12 @@ namespace ExpressBase.ServiceStack.Services
             foreach (var dr in ds.Tables[0].Rows)
                 CostCenter.Add(Convert.ToInt32(dr[0]), dr[1].ToString());
             foreach (var dr in ds.Tables[1].Rows)
+            {
                 if (!DocDict.ContainsKey(dr[1].ToString()))
                     DocDict.Add(dr[1].ToString(), Convert.ToInt32(dr[0]));
+                else if (!DocDict.ContainsKey(dr[1].ToString() + "."))
+                    DocDict.Add(dr[1].ToString() + ".", Convert.ToInt32(dr[0]));
+            }
             foreach (var dr in ds.Tables[2].Rows)
             {
                 StaffInfo item = new StaffInfo()
@@ -121,8 +125,12 @@ namespace ExpressBase.ServiceStack.Services
                 }
             }
             foreach (var dr in ds.Tables[11].Rows)
+            {
                 if (!NurseDict.ContainsKey(dr[1].ToString()))
                     NurseDict.Add(dr[1].ToString(), Convert.ToInt32(dr[0]));
+                else if (!NurseDict.ContainsKey(dr[1].ToString() + "."))
+                    NurseDict.Add(dr[1].ToString() + ".", Convert.ToInt32(dr[0]));
+            }
             foreach (var dr in ds.Tables[12].Rows)
                 if (!customercategoryDict.ContainsKey(Convert.ToInt32(dr[0])))
                     customercategoryDict.Add(Convert.ToInt32(dr[0]), dr[1].ToString());
@@ -258,14 +266,15 @@ namespace ExpressBase.ServiceStack.Services
                 //Billing details
                 foreach (var i in ds.Tables[Qcnt + 2].Rows)
                 {
+                    int cash_paid = Convert.ToInt32(i[5]);
                     Blist.Add(new BillingEntry
                     {
                         Id = Convert.ToInt32(i[0]),
                         Date = getStringValue(i[1]),
                         Total_Amount = Convert.ToInt32(i[2]),
-                        Amount_Received = Convert.ToInt32(i[3]),
-                        Balance_Amount = Convert.ToInt32(i[4]),
-                        Cash_Paid = Convert.ToInt32(i[5]),
+                        Total_Received = Convert.ToInt32(i[3]) + cash_paid,
+                        Balance_Amount = Convert.ToInt32(i[4]) - cash_paid,
+                        Cash_Paid = cash_paid,
                         Payment_Mode = i[6].ToString(),
                         Bank = i[7].ToString(),
                         Clearence_Date = getStringValue(i[8]),
@@ -685,7 +694,7 @@ namespace ExpressBase.ServiceStack.Services
             parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("accountid", EbDbTypes.Int32, B_Obj.Account_Code));
             parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("trdate", EbDbTypes.Date, Convert.ToDateTime(DateTime.ParseExact(B_Obj.Date, "dd-MM-yyyy", CultureInfo.InvariantCulture))));
             parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("totalamount", EbDbTypes.Int32, B_Obj.Total_Amount));
-            parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("advanceamount", EbDbTypes.Int32, B_Obj.Amount_Received));
+            parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("advanceamount", EbDbTypes.Int32, B_Obj.Total_Received));
             parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("paymentmode", EbDbTypes.String, B_Obj.Payment_Mode));
             parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("bank", EbDbTypes.String, B_Obj.Bank));
             parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("pdc", EbDbTypes.BooleanOriginal, B_Obj.PDC));
