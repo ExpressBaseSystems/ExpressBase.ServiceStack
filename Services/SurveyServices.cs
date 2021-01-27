@@ -16,8 +16,8 @@ using System.Threading.Tasks;
 
 namespace ExpressBase.ServiceStack.Services
 {
-	[Authenticate]
-	public class SurveyServices : EbBaseService
+    [Authenticate]
+    public class SurveyServices : EbBaseService
     {
         public SurveyServices(IEbConnectionFactory _dbf) : base(_dbf) { }
 
@@ -64,34 +64,39 @@ namespace ExpressBase.ServiceStack.Services
 
         public GetSurveyQuestionsResponse Get(GetSurveyQuestionsRequest request)
         {
-            Dictionary<int, EbQuestion> dict = new Dictionary<int, EbQuestion>();
+            List<String> qsns = new List<String>();
 
             string sql = @"SELECT id,question FROM eb_question_bank WHERE eb_del = 'F';";
-
-            EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(sql);
-            foreach (EbDataRow dr in dt.Rows)
+            EbDataTable dt;
+            try
             {
-                int id = Convert.ToInt32(dr[0]);
-                if (!dict.ContainsKey(id))
+                dt = this.EbConnectionFactory.DataDB.DoQuery(sql);
+                foreach (EbDataRow dr in dt.Rows)
                 {
-                    EbQuestion question = JsonConvert.DeserializeObject<EbQuestion>(dr[1].ToString());
-                    dict.Add(id, question); ;
+                    qsns.Add(dr[1].ToString());
                 }
+                return new GetSurveyQuestionsResponse { Data = qsns };
             }
-            return new GetSurveyQuestionsResponse { Data = dict };
+            catch (Exception e)
+            {
+                ;
+            }
+            return new GetSurveyQuestionsResponse { };
         }
 
-        public SaveQuestionResponse Post(SaveQuestionRequest request) {
+        public SaveQuestionResponse Post(SaveQuestionRequest request)
+        {
             EbQuestion question = request.Query;
-            string question_s= JsonConvert.SerializeObject(request.Query);
+            string question_s = EbSerializers.Json_Serialize(request.Query);
             SaveQuestionResponse response = new SaveQuestionResponse();
             StringBuilder s = new StringBuilder();
             List<DbParameter> parameters = new List<DbParameter>();
             if (question.QId > 0)
             {
             }
-            else {
-                s.Append("INSERT INTO eb_question_bank(question) VALUES(:question) returning id");
+            else
+            {
+                s.Append("INSERT INTO eb_question_bank(question, eb_del) VALUES(:question, 'F') returning id");
                 parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("question", EbDbTypes.Json, question_s));
                 EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(s.ToString(), parameters.ToArray());
                 if (Convert.ToInt32(dt.Rows[0][0]) > 0)
