@@ -482,7 +482,7 @@ namespace ExpressBase.ServiceStack.Services
 			{
 				try
 				{
-					this.MessageProducer3.Publish(new SaveUserMqRequest33
+					this.MessageProducer3.Publish(new SaveUserMqRequest
 					{
 						BToken = this.ServerEventClient.BearerToken,
 						RToken = this.ServerEventClient.RefreshToken,
