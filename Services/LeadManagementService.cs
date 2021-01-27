@@ -64,12 +64,12 @@ namespace ExpressBase.ServiceStack.Services
                                 baldnessgrade, diffusepattern, hfcurrently, htpreviously, country_code, watsapp_phno, cust_category, eb_modifiedby 
 								FROM customers WHERE id = :accountid AND COALESCE(eb_del, 'F')='F';
 							SELECT id,trdate,status,followupdate,narration, eb_createdby, eb_createddt,isnotpickedup FROM leaddetails
-								WHERE customers_id=:accountid ORDER BY eb_createddt DESC;
+								WHERE customers_id=:accountid AND COALESCE(eb_del, 'F')='F' ORDER BY eb_createddt DESC;
 							SELECT id,trdate,totalamount,advanceamount,balanceamount,cashreceived,paymentmode,bank,createddt,narration,createdby 
-								FROM leadpaymentdetails WHERE customers_id=:accountid ORDER BY balanceamount;
+								FROM leadpaymentdetails WHERE customers_id=:accountid AND COALESCE(eb_del, 'F')='F' ORDER BY balanceamount;
 							SELECT id,dateofsurgery,eb_loc_id,createdby,createddt, extractiondone_by,
 									implantation_by,consent_by,anaesthesia_by,post_briefing_by,nurses_id,complementry,method,narration
-								FROM leadsurgerystaffdetails WHERE customers_id=:accountid ORDER BY createddt DESC;
+								FROM leadsurgerystaffdetails WHERE customers_id=:accountid AND COALESCE(eb_del, 'F')='F' ORDER BY createddt DESC;
 							SELECT noofgrafts,totalrate,prpsessions,consulted,consultingfeepaid,consultingdoctor,eb_closing,LOWER(TRIM(nature)),consdate,probmonth
 								FROM leadratedetails WHERE customers_id=:accountid;";
 
@@ -258,14 +258,15 @@ namespace ExpressBase.ServiceStack.Services
                 //Billing details
                 foreach (var i in ds.Tables[Qcnt + 2].Rows)
                 {
+                    int cash_paid = Convert.ToInt32(i[5]);
                     Blist.Add(new BillingEntry
                     {
                         Id = Convert.ToInt32(i[0]),
                         Date = getStringValue(i[1]),
                         Total_Amount = Convert.ToInt32(i[2]),
-                        Amount_Received = Convert.ToInt32(i[3]),
-                        Balance_Amount = Convert.ToInt32(i[4]),
-                        Cash_Paid = Convert.ToInt32(i[5]),
+                        Total_Received = Convert.ToInt32(i[3]) + cash_paid,
+                        Balance_Amount = Convert.ToInt32(i[4]) - cash_paid,
+                        Cash_Paid = cash_paid,
                         Payment_Mode = i[6].ToString(),
                         Bank = i[7].ToString(),
                         Clearence_Date = getStringValue(i[8]),
@@ -685,7 +686,7 @@ namespace ExpressBase.ServiceStack.Services
             parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("accountid", EbDbTypes.Int32, B_Obj.Account_Code));
             parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("trdate", EbDbTypes.Date, Convert.ToDateTime(DateTime.ParseExact(B_Obj.Date, "dd-MM-yyyy", CultureInfo.InvariantCulture))));
             parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("totalamount", EbDbTypes.Int32, B_Obj.Total_Amount));
-            parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("advanceamount", EbDbTypes.Int32, B_Obj.Amount_Received));
+            parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("advanceamount", EbDbTypes.Int32, B_Obj.Total_Received));
             parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("paymentmode", EbDbTypes.String, B_Obj.Payment_Mode));
             parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("bank", EbDbTypes.String, B_Obj.Bank));
             parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("pdc", EbDbTypes.BooleanOriginal, B_Obj.PDC));
