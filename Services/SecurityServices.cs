@@ -351,6 +351,49 @@ namespace ExpressBase.ServiceStack.Services
 				request.LocationAdd = consObj.GetDataAsString();
 			}
 
+			List<string> OldRole_Ids = new List<string>();
+			try
+			{
+				EbDataTable edu = this.EbConnectionFactory.DataDB.DoQuery($"SELECT role_id FROM  eb_role2user WHERE COALESCE(eb_del, 'F') = 'F' AND user_id = :id;",
+							new DbParameter[]{
+				this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.Id)
+							});
+				if (edu.Rows.Count > 0)
+				{
+					foreach (EbDataRow dr in edu.Rows)
+					{
+						OldRole_Ids.Add(dr[0].ToString());
+					}
+				}
+
+			}
+			catch (Exception e1)
+			{
+				Console.WriteLine("Error while fetch role_ids from eb_role2user " + e1.Message + e1.StackTrace);
+			}
+
+			List<string> OldUsrGrp_Ids = new List<string>();
+			try
+			{
+				EbDataTable edt = this.EbConnectionFactory.DataDB.DoQuery(@"SELECT groupid FROM eb_user2usergroup WHERE userid = @id AND eb_del = 'F';",
+							new DbParameter[]{
+				this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.Id)
+							});
+				if (edt.Rows.Count > 0)
+				{
+					foreach (EbDataRow dr in edt.Rows)
+					{
+						OldUsrGrp_Ids.Add(dr[0].ToString());
+					}
+				}
+
+			}
+			catch (Exception e1)
+			{
+				Console.WriteLine("Error while fetch user groupid from eb_user2usergroup " + e1.Message + e1.StackTrace);
+			}
+
+
 			//string password = (request.Password + request.EmailPrimary).ToMD5Hash();
 			List<DbParameter> parameters = new List<DbParameter> {
 				this.EbConnectionFactory.DataDB.GetNewParameter("_userid", EbDbTypes.Int32, request.UserId),
@@ -435,11 +478,36 @@ namespace ExpressBase.ServiceStack.Services
 				}
 			}
 			////server events
+			else
+			{
+				try
+				{
+					this.MessageProducer3.Publish(new SaveUserMqRequest33
+					{
+						BToken = this.ServerEventClient.BearerToken,
+						RToken = this.ServerEventClient.RefreshToken,
+						SolnId = request.SolnId,
+						UserId = request.Id,
+						LocationDelete=request.LocationDelete,
+						LocationAdd=request.LocationAdd,
+						NewRole_Ids= request.Roles.Split(",").ToList(),
+						OldRole_Ids = OldRole_Ids,
+						NewUserGroups= request.UserGroups.Split(",").ToList(),
+						OldUserGroups= OldUsrGrp_Ids,
+						WhichConsole = "uc"
+					});
+
+				}
+				catch (Exception ex)
+				{
+					Console.WriteLine("save user - message queue" + ex.Message + ex.StackTrace);
+				}
+			}
 			if (Convert.ToInt32(request.StatusId)==1|| Convert.ToInt32(request.StatusId) == 2 || Convert.ToInt32(request.StatusId) == 3)
 			{
 				try
 				{
-					this.MessageProducer3.Publish(new SaveUserMqRequest
+					this.MessageProducer3.Publish(new SuspendUserMqRequest
 					{
 						BToken = this.ServerEventClient.BearerToken,
 						RToken = this.ServerEventClient.RefreshToken,
@@ -450,7 +518,7 @@ namespace ExpressBase.ServiceStack.Services
 				}
 				catch (Exception ex)
 				{
-					Console.WriteLine("save user - message queue" + ex.Message + ex.StackTrace);
+					Console.WriteLine("suspand user - message queue" + ex.Message + ex.StackTrace);
 				}
 			}
 			return resp;
@@ -997,7 +1065,26 @@ namespace ExpressBase.ServiceStack.Services
 			//{
 			//    sDtConstr = _sDtTitle.Substring(0, _sDtTitle.Length - 1) + "$$" + _sDtDesc.Substring(0, _sDtDesc.Length - 1) + "$$" + _sDtType.Substring(0, _sDtType.Length - 1) + "$$" + _sDtStart.Substring(0, _sDtStart.Length - 1) + "$$" + _sDtEnd.Substring(0, _sDtEnd.Length - 1) + "$$" + _sDtDays.Substring(0, _sDtDays.Length - 1);
 			//}
+			List<string> OldUserIds = new List<string>();
+			try
+			{
+				EbDataTable edt = this.EbConnectionFactory.DataDB.DoQuery(@"SELECT userid  FROM eb_user2usergroup WHERE groupid = @uid AND eb_del = 'F';",
+							new DbParameter[]{
+				this.EbConnectionFactory.DataDB.GetNewParameter("uid", EbDbTypes.Int32, request.Id)
+							});
+				if (edt.Rows.Count > 0)
+				{
+					foreach (EbDataRow dr in edt.Rows)
+					{
+						OldUserIds.Add(dr[0].ToString());
+					}
+				}
 
+			}
+			catch (Exception e1)
+			{
+				Console.WriteLine("Error while fetch user groupid from eb_user2usergroup " + e1.Message + e1.StackTrace);
+			}
 			EbDataTable d = this.EbConnectionFactory.DataDB.DoQuery($"SELECT id FROM eb_usergroup WHERE LOWER(name) LIKE LOWER(@ugname) {(request.Id > 0 ? "AND id <> " + request.Id : "")};",
 				new DbParameter[] { this.EbConnectionFactory.DataDB.GetNewParameter("ugname", EbDbTypes.String, request.Name) });
 			if (d.Rows.Count > 0)
@@ -1033,7 +1120,24 @@ namespace ExpressBase.ServiceStack.Services
 				EbDataSet dt = this.EbConnectionFactory.DataDB.DoQueries(this.EbConnectionFactory.DataDB.EB_SAVEUSERGROUP_QUERY, parameters.ToArray());
 				resp.id = Convert.ToInt32(dt.Tables[0].Rows[0][0]);
 			}
+			try
+			{
+				this.MessageProducer3.Publish(new SaveUserGroupMqRequest
+				{
+					BToken = this.ServerEventClient.BearerToken,
+					RToken = this.ServerEventClient.RefreshToken,
+					SolnId = request.SolnId,
+					UserId = request.Id,
+					NewUserGroups = request.Users.Split(",").ToList(),
+					OldUserGroups = OldUserIds,
+					WhichConsole = "uc"
+				});
 
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine("save user - message queue" + ex.Message + ex.StackTrace);
+			}
 			return resp;
 		}
 
