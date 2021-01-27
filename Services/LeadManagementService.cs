@@ -23,18 +23,18 @@ namespace ExpressBase.ServiceStack.Services
         public GetManageLeadResponse Any(GetManageLeadRequest request)
         {
             string SqlQry = $@"SELECT id, longname FROM eb_locations WHERE id > 0;
-							  SELECT id, name FROM hoc_staff WHERE type='doctor' AND eb_del='F' ORDER BY name;
+							  SELECT id, name FROM hoc_staff WHERE type='doctor' AND COALESCE(eb_del, 'F')='F' ORDER BY name;
 							  SELECT id, INITCAP(TRIM(fullname)), statusid FROM eb_users WHERE id > 1 ORDER BY fullname;
 							SELECT DISTINCT INITCAP(TRIM(clcity)) AS clcity FROM customers WHERE LENGTH(clcity) > 2 ORDER BY clcity;
 							SELECT DISTINCT INITCAP(TRIM(clcountry)) AS clcountry FROM customers WHERE LENGTH(clcountry) > 2 ORDER BY clcountry;
 							SELECT DISTINCT INITCAP(TRIM(city)) AS city FROM customers WHERE LENGTH(city) > 2 ORDER BY city;
-							SELECT district FROM lead_district WHERE eb_del='F' ORDER BY district;
-							SELECT source FROM lead_source WHERE eb_del='F' ORDER BY source;
+							SELECT district FROM lead_district WHERE COALESCE(eb_del, 'F')='F' ORDER BY district;
+							SELECT source FROM lead_source WHERE COALESCE(eb_del, 'F')='F' ORDER BY source;
 							SELECT DISTINCT INITCAP(TRIM(subcategory)) AS subcategory FROM customers WHERE LENGTH(subcategory) > 2 ORDER BY subcategory;
-							SELECT status,nextstatus FROM lead_status WHERE eb_del='F' ORDER BY status;
-							SELECT service FROM lead_service WHERE eb_del='F' ORDER BY order_id;
-							SELECT id, name FROM hoc_staff WHERE type='nurse' AND eb_del='F' ORDER BY name;
-							SELECT id, category FROM customer_category WHERE eb_del='F';";
+							SELECT status,nextstatus FROM lead_status WHERE COALESCE(eb_del, 'F')='F' ORDER BY status;
+							SELECT service FROM lead_service WHERE COALESCE(eb_del, 'F')='F' ORDER BY order_id;
+							SELECT id, name FROM hoc_staff WHERE type='nurse' AND COALESCE(eb_del, 'F')='F' ORDER BY name;
+							SELECT id, category FROM customer_category WHERE COALESCE(eb_del, 'F')='F';";
             List<DbParameter> paramList = new List<DbParameter>();
             Dictionary<int, string> CostCenter = new Dictionary<int, string>();
             Dictionary<string, int> DocDict = new Dictionary<string, int>();
@@ -103,8 +103,12 @@ namespace ExpressBase.ServiceStack.Services
             foreach (var dr in ds.Tables[0].Rows)
                 CostCenter.Add(Convert.ToInt32(dr[0]), dr[1].ToString());
             foreach (var dr in ds.Tables[1].Rows)
+            {
                 if (!DocDict.ContainsKey(dr[1].ToString()))
                     DocDict.Add(dr[1].ToString(), Convert.ToInt32(dr[0]));
+                else if (!DocDict.ContainsKey(dr[1].ToString() + "."))
+                    DocDict.Add(dr[1].ToString() + ".", Convert.ToInt32(dr[0]));
+            }
             foreach (var dr in ds.Tables[2].Rows)
             {
                 StaffInfo item = new StaffInfo()
@@ -121,8 +125,12 @@ namespace ExpressBase.ServiceStack.Services
                 }
             }
             foreach (var dr in ds.Tables[11].Rows)
+            {
                 if (!NurseDict.ContainsKey(dr[1].ToString()))
                     NurseDict.Add(dr[1].ToString(), Convert.ToInt32(dr[0]));
+                else if (!NurseDict.ContainsKey(dr[1].ToString() + "."))
+                    NurseDict.Add(dr[1].ToString() + ".", Convert.ToInt32(dr[0]));
+            }
             foreach (var dr in ds.Tables[12].Rows)
                 if (!customercategoryDict.ContainsKey(Convert.ToInt32(dr[0])))
                     customercategoryDict.Add(Convert.ToInt32(dr[0]), dr[1].ToString());
