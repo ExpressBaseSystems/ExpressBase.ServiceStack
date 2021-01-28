@@ -22,7 +22,6 @@ using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
-using ExpressBase.ServiceStack.MQServices;
 using System.Net;
 
 namespace ExpressBase.ServiceStack.Services
@@ -168,7 +167,11 @@ namespace ExpressBase.ServiceStack.Services
                         else if (_column.Control.DoNotPersist || _column.Control.IsSysControl)
                             continue;
                         else
+                        {
                             _listNamesAndTypes.Add(new TableColumnMeta { Name = _column.ColumnName, Type = vDbTypes.GetVendorDbTypeStruct((EbDbTypes)_column.EbDbType), Label = _column.Control.Label, Control = _column.Control });
+                            if (_column.Control is EbPhone && (_column.Control as EbPhone).Sendotp)
+                                _listNamesAndTypes.Add(new TableColumnMeta { Name = _column.ColumnName + FormConstants._verified, Type = vDbTypes.Boolean, Default = "F", Label = _column.Control.Label + "_verified" });
+                        }
                     }
                     if (_table.TableName == _schema.MasterTable)
                     {
@@ -1163,6 +1166,7 @@ namespace ExpressBase.ServiceStack.Services
         {
             EbWebForm _form = EbFormHelper.GetEbObject<EbWebForm>(RefId, null, this.Redis, this);
             _form.LocationId = CurrrentLocation;
+            _form.SetRedisClient(this.Redis);
             if (UserAuthId != null)
             {
                 _form.UserObj = GetUserObject(UserAuthId);
