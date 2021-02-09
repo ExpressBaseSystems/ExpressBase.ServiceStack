@@ -83,7 +83,12 @@ namespace ExpressBase.ServiceStack.Services
 								FROM eb_files_ref B LEFT JOIN customer_files A 
 								ON A.eb_files_ref_id = B.id				
 								WHERE ((A.customer_id = :accountid AND COALESCE(A.eb_del, false) = false) OR B.context_sec = 'Prp_CustomerId:{request.AccId}')
-								AND COALESCE(B.eb_del, 'F') = 'F' AND B.context = 'prp';";
+								AND COALESCE(B.eb_del, 'F') = 'F' AND B.context = 'prp';
+
+                            SELECT B.id, B.filename, B.tags, B.uploadts, B.filecategory
+                                FROM customers A, eb_files_ref B 
+                                WHERE A.id = :accountid AND COALESCE(A.eb_del, 'F')='F' AND
+                                B.context_sec = 'CustomerPhNo:' || A.genurl AND COALESCE(B.eb_del, 'F') = 'F';";
 
                 //SELECT eb_files_ref_id
                 //    FROM customer_files WHERE customer_id = :accountid AND eb_del = false;
@@ -213,6 +218,20 @@ namespace ExpressBase.ServiceStack.Services
 
                 List<FileMetaInfo> _list = new List<FileMetaInfo>();
                 foreach (EbDataRow dRow in ds.Tables[Qcnt + 5].Rows)
+                {
+                    FileMetaInfo info = new FileMetaInfo
+                    {
+                        FileRefId = Convert.ToInt32(dRow[0]),
+                        FileName = Convert.ToString(dRow[1]),
+                        Meta = JsonConvert.DeserializeObject<Dictionary<string, List<string>>>(Convert.ToString(dRow[2])),
+                        UploadTime = getStringValue(dRow[3], true, true),
+                        FileCategory = (EbFileCategory)Convert.ToInt32(dRow[4])
+                    };
+
+                    if (!_list.Contains(info))
+                        _list.Add(info);
+                }
+                foreach (EbDataRow dRow in ds.Tables[Qcnt + 7].Rows)
                 {
                     FileMetaInfo info = new FileMetaInfo
                     {
@@ -555,7 +574,7 @@ namespace ExpressBase.ServiceStack.Services
                     }
                 }
             }
-            rstatus += Update_Table_Customer_Files(accid, request.ImgRefId, request.UserId) * 100;
+            rstatus += Update_Table_Customer_Files(accid, request.ImgRefId, request.UserId, dict) * 100;
             Task.Run(() => UpdateIndexedData(this.EbConnectionFactory.DataDB, dict, accid, request.UserId));
 
             return new SaveCustomerResponse { Status = (request.RequestMode == 0) ? accid : rstatus };
@@ -589,18 +608,26 @@ namespace ExpressBase.ServiceStack.Services
             }
         }
 
-        private int Update_Table_Customer_Files(int accountid, string imagerefid, int userid)
+        private int Update_Table_Customer_Files(int accountid, string imagerefid, int userid, Dictionary<string, KeyValueType_Field> dict)
         {
             int rstatus = 0;
-            Dictionary<string, List<int>> ImgRefId = JsonConvert.DeserializeObject<Dictionary<string, List<int>>>(imagerefid);
+            Dictionary<string, List<int>> ImgRefId = JsonConvert.DeserializeObject<Dictionary<string, List<int>>>(imagerefid);            
+            List<DbParameter> _param = new List<DbParameter>() { EbConnectionFactory.DataDB.GetNewParameter("customer_id", EbDbTypes.Int32, accountid) };
+            string st = string.Empty;
+            if (dict.TryGetValue("genurl", out KeyValueType_Field val))
+            {
+                _param.Add(EbConnectionFactory.DataDB.GetNewParameter("genurl", EbDbTypes.String, Convert.ToString(val.Value)));
+                st = "OR B.context_sec = 'CustomerPhNo:' || :genurl";
+            }
+
             string selQry = $@"
 				SELECT B.id
 				FROM eb_files_ref B LEFT JOIN customer_files A 
 				ON A.eb_files_ref_id = B.id				
-				WHERE ((A.customer_id = @customer_id AND COALESCE(A.eb_del, false) = false) OR B.context_sec = 'CustomerId:{accountid}' OR B.context_sec = 'Prp_CustomerId:{accountid}')
+				WHERE ((A.customer_id = @customer_id AND COALESCE(A.eb_del, false) = false) OR B.context_sec = 'CustomerId:{accountid}' OR B.context_sec = 'Prp_CustomerId:{accountid}' {st})
 				AND COALESCE(B.eb_del, 'F') = 'F';";
 
-            EbDataTable dt = EbConnectionFactory.DataDB.DoQuery(selQry, new DbParameter[] { EbConnectionFactory.DataDB.GetNewParameter("customer_id", EbDbTypes.Int32, accountid) });
+            EbDataTable dt = EbConnectionFactory.DataDB.DoQuery(selQry, _param.ToArray());
             List<int> oldIdsAll = new List<int>();
             foreach (EbDataRow dr in dt.Rows)
                 oldIdsAll.Add(Convert.ToInt32(dr[0]));
