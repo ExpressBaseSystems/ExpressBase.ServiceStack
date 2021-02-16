@@ -103,6 +103,8 @@ namespace ExpressBase.ServiceStack
 
         MergeCells mergeCells = null;
 
+        PivotConfig _pivotConfig = null;
+
         //[CompressResponse]
         //public DataSourceDataResponse Any(DataVisDataRequest request)
         //{
@@ -334,6 +336,7 @@ namespace ExpressBase.ServiceStack
                 //this._replaceEbColumns = request.ReplaceEbColumns;
                 EbDataReader _ds = null;
                 EbDataSet _dataset = null;
+                EbApi _api = null;
                 bool _isPaged = false;
                 if (_dV != null && _dV.IsDataFromApi)
                     _dataset = GetDatafromUrl();
@@ -343,6 +346,13 @@ namespace ExpressBase.ServiceStack
                 {
                     _ds = new EbDataReader { Sql = _dV.Sql };
                     request.Params.AddRange(_dV.ParamsList);
+                }
+                else if (_dV.ApiRefId != null && _dV.ApiRefId != string.Empty)
+                {
+                    _api = this.Redis.Get<EbApi>(_dV.ApiRefId);
+                    var dsrefid = _api.Resources.First(res => res is EbSqlReader).Reference;
+                    _pivotConfig = (_api.Resources.First(res => res is EbPivotTable) as EbPivotTable).Pivotconfig;
+                    _ds = this.Redis.Get<EbDataReader>(dsrefid);
                 }
 
                 if (!_dV.IsDataFromApi)
@@ -620,6 +630,7 @@ namespace ExpressBase.ServiceStack
                     var ts = (dtEnd - dtStart).TotalMilliseconds;
                     Console.WriteLine("final:::" + ts);
                 }
+
                 if (_dataset != null && _dataset.Tables.Count > 0)
                 {
                     int _recordsTotal = 0, _recordsFiltered = 0;
@@ -640,6 +651,8 @@ namespace ExpressBase.ServiceStack
                         {
                             if (_dV is EbCalendarView)
                                 ReturnObj = PreProcessingCalendarView(ref _dataset, request.Params, ref _dV, request.UserInfo);
+                            else if (_dV.ApiRefId != null && _dV.ApiRefId != string.Empty)
+                                ReturnObj = PreProcessingPivot(ref _dataset, request.Params, ref _dV, request.UserInfo);
                             else
                                 ReturnObj = PreProcessing(ref _dataset, request.Params, _dV, request.UserInfo, ref _levels, request.IsExcel);
                         }
@@ -669,7 +682,7 @@ namespace ExpressBase.ServiceStack
                         TableName = _dataset.Tables[0].TableName,
                         Tree = ReturnObj?.tree,
                         ResponseStatus = this._Responsestatus,
-                        ReturnObjString = (_dV is EbCalendarView) ? EbSerializers.Json_Serialize((_dV as EbCalendarView)) : null,
+                        ReturnObjString = EbSerializers.Json_Serialize(_dV),
                         ImageList = JsonConvert.SerializeObject(_ImageList)
                     };
                     this.Log.Info(" dataviz dataresponse*****" + dsresponse.Data);
@@ -3307,6 +3320,122 @@ namespace ExpressBase.ServiceStack
             }
         }
 
+        public PrePrcessorReturn PreProcessingPivot(ref EbDataSet _dataset, List<Param> Parameters, ref EbDataVisualization _dv, User _user)
+        {
+            try
+            {
+                var _user_culture = CultureHelper.GetSerializedCultureInfo(_user.Preference.Locale).GetCultureInfo();
+
+                var colCount = _dataset.Tables[0].Columns.Count;
+
+                dataset = _dataset;
+                EbDataSet tempdataset = new EbDataSet();
+                Globals globals = new Globals();
+                Dictionary<int, List<object>> summary = new Dictionary<int, List<object>>();
+                //this.CreateCustomcolumn4Pivot(_dataset, ref tempdataset, Parameters, ref _dv, ref _hourCount);
+                EbDataTable _formattedTable = new EbDataTable();
+                _dv.Columns = new DVColumnCollection();
+                var columnY = _pivotConfig.Rows[0].Name;
+                var columnX = _pivotConfig.Columns[0].Name;
+                var columnZ = _pivotConfig.Values[0].Name;
+                _dv.Columns.Add(new DVBaseColumn { Data = 0, Name = columnY, sTitle = columnY, Type = _pivotConfig.Rows[0].Type, bVisible = true });
+                _formattedTable.Columns.Add(_formattedTable.NewDataColumn(0, columnY, EbDbTypes.String));
+                int i = 1;
+                for (int j = 0; j < _dataset.Tables[0].Rows.Count; j++)
+                {
+                    string colname = _dataset.Tables[0].Rows[j][columnX].ToString();
+                    DVBaseColumn newcol = new DVBaseColumn { Data = i, Name = colname, sTitle = colname, Type = _pivotConfig.Columns[0].Type, bVisible = true };
+                    if (!_dv.Columns.Contains(colname))
+                    {
+                        _dv.Columns.Add(newcol);
+                        summary.Add(i, new List<object> { 0, 0 });
+                        _formattedTable.Columns.Add(_formattedTable.NewDataColumn(i++, colname, _pivotConfig.Columns[0].Type));
+                    }
+                }
+                _formattedTable.Columns.Add(_formattedTable.NewDataColumn(i, "Total", EbDbTypes.Int32));
+                _dv.Columns.Add(new DVBaseColumn { Data = i++, Name = "Total", sTitle = "Total", Type = EbDbTypes.Int32, bVisible = true });
+                _formattedTable.Columns.Add(_formattedTable.NewDataColumn(i, "serial", EbDbTypes.Int32));
+                List<string> columnYValues = new List<string>();
+                List<string> columnZValues = new List<string>();
+                //RowColletion rows = null;
+                int k = 0;
+                for (i = 0; i < _dataset.Tables[0].Rows.Count; i++)
+                {
+                    EbDataRow row = _dataset.Tables[0].Rows[i];
+                    string colYVal = row[columnY].ToString();
+                    if (!columnYValues.Contains(colYVal))
+                    {
+                        //EbDataRow[] rows = _dataset.Tables[0].Rows.Select(columnY + "='" + colYVal + "'");
+                        columnYValues.Add(colYVal);
+                        _formattedTable.Rows.Add(_formattedTable.NewDataRow2());
+                        _formattedTable.Rows[k][_formattedTable.Columns.Count - 1] = (k + 1);
+                        _formattedTable.Rows[k][0] = colYVal;
+                        columnZValues = new List<string>();
+                        foreach (DVBaseColumn col in _dv.Columns)
+                        {
+                            if (col.Name == row[columnX].ToString())
+                            {
+                                _formattedTable.Rows[k][col.Name] = row[columnZ].ToString();
+                                columnZValues.Add(row[columnZ].ToString());
+                                summary[col.Data][0] = Convert.ToInt32(summary[col.Data][0]) + Convert.ToInt32(row[columnZ]);
+                            }
+                        }
+                        _formattedTable.Rows[k][_formattedTable.Columns.Count - 2] = columnZValues.Sum(x => Convert.ToInt32(x));
+                        k++;
+                    }
+                }
+
+                _formattedTable.Rows.Add(_formattedTable.NewDataRow2());
+                _formattedTable.Rows[k][0] = "Total";
+                foreach (DVBaseColumn col in _dv.Columns)
+                {
+                    if(summary.Keys.Contains(col.Data))
+                        _formattedTable.Rows[k][col.Name] = summary[col.Data][0];
+                }
+                //DataTable2FormatedTable4Pivot(_dataset.Tables[0].Rows[i], ref _dv, ref _formattedTable);
+                return new PrePrcessorReturn { FormattedTable = _formattedTable, rows = _dataset.Tables[0].Rows };
+            }
+
+            catch (Exception e)
+            {
+                Log.Info("Before PreProcessing in PreProcessingPivot  Exception........." + e.StackTrace);
+                Log.Info("Before PreProcessing in PreProcessingPivot  Exception........." + e.Message);
+                this._Responsestatus.Message = e.Message;
+            }
+            return null;
+        }
+
+        private void DataTable2FormatedTable4Pivot(EbDataRow row, ref EbDataVisualization dv, ref EbDataTable formattedTable, int i)
+        {
+            IntermediateDic = new Dictionary<int, object>();
+            //formattedTable.Rows[i][formattedTable.Columns.Count - 1] = i + 1;//serial
+            //CreateIntermediateDict(row, dv, _user_culture, _user, ref formattedTable, ref globals, false, i);
+            var rowdata = string.Empty;
+            foreach (DVBaseColumn col in _pivotConfig.Rows)
+            {
+                if (row[col.Name] != null)
+                    formattedTable.Rows.Add(formattedTable.NewDataRow2());
+
+            }
+            var j = 0;
+            foreach (DVBaseColumn col in _pivotConfig.Rows)
+            {
+                object _unformattedData = row[col.Name] == null ? "" : row[col.Name];
+                object _formattedData = IntermediateDic[col.Data] == null ? "" : IntermediateDic[col.Data];
+                formattedTable.Rows[i + j++][0] = _formattedData;
+            }
+
+            foreach (DVBaseColumn col in dv.Columns)
+            {
+
+            }
+        }
+
+        public void CreateCustomcolumn4Pivot(EbDataSet dataset, ref EbDataSet tempdataset, List<Param> parameters, ref EbDataVisualization dv, ref Dictionary<string, DynamicObj> hourCount)
+        {
+            throw new NotImplementedException();
+        }
+
         public string GetKey(DateTime st, DateTime end)
         {
             return st.ToString("dd/MM/yyyy:HH:mm:ss") + end.ToString("dd/MM/yyyy:HH:mm:ss");
@@ -3449,7 +3578,8 @@ namespace ExpressBase.ServiceStack
                 else if ((col as DVDateTimeColumn).Format == DateFormat.Time)
                 {
                     DateTime dt;
-                    if (col.RenderType == EbDbTypes.Time) {
+                    if (col.RenderType == EbDbTypes.Time)
+                    {
                         if (!DateTime.MinValue.Equals(_unformattedData))
                             dt = DateTime.MinValue + (TimeSpan)_unformattedData;
                         else
@@ -3954,8 +4084,6 @@ namespace ExpressBase.ServiceStack
             FileInfo file = new FileInfo(System.IO.Path.Combine(sFileName));
             return file;
         }
-
-
     }
 
     public class PrePrcessorReturn
