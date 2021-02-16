@@ -22,7 +22,6 @@ using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
-using ExpressBase.ServiceStack.MQServices;
 using System.Net;
 
 namespace ExpressBase.ServiceStack.Services
@@ -40,10 +39,12 @@ namespace ExpressBase.ServiceStack.Services
             {
                 EbWebForm Form = request.WebObj as EbWebForm;
                 Form.AfterRedisGet(this);
-                if (Form.ExeDataPusher)
+                if (Form.FormDataPusherCount > 0)
                 {
                     foreach (EbDataPusher pusher in Form.DataPushers)
                     {
+                        if (pusher is EbApiDataPusher)
+                            continue;
                         EbWebForm _form = this.GetWebFormObject(pusher.FormRefId, null, null);
                         TableSchema _table = _form.FormSchema.Tables.Find(e => e.TableName.Equals(_form.FormSchema.MasterTable));
                         //_table.Columns.Add(new ColumnSchema { ColumnName = "eb_push_id", EbDbType = (int)EbDbTypes.String, Control = new EbTextBox { Name = "eb_push_id", Label = "Push Id" } });// multi push id
@@ -166,7 +167,11 @@ namespace ExpressBase.ServiceStack.Services
                         else if (_column.Control.DoNotPersist || _column.Control.IsSysControl)
                             continue;
                         else
+                        {
                             _listNamesAndTypes.Add(new TableColumnMeta { Name = _column.ColumnName, Type = vDbTypes.GetVendorDbTypeStruct((EbDbTypes)_column.EbDbType), Label = _column.Control.Label, Control = _column.Control });
+                            if (_column.Control is EbPhone && (_column.Control as EbPhone).Sendotp)
+                                _listNamesAndTypes.Add(new TableColumnMeta { Name = _column.ColumnName + FormConstants._verified, Type = vDbTypes.Boolean, Default = "F", Label = _column.Control.Label + "_verified" });
+                        }
                     }
                     if (_table.TableName == _schema.MasterTable)
                     {
@@ -1161,6 +1166,7 @@ namespace ExpressBase.ServiceStack.Services
         {
             EbWebForm _form = EbFormHelper.GetEbObject<EbWebForm>(RefId, null, this.Redis, this);
             _form.LocationId = CurrrentLocation;
+            _form.SetRedisClient(this.Redis);
             if (UserAuthId != null)
             {
                 _form.UserObj = GetUserObject(UserAuthId);
@@ -1684,7 +1690,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 if (request.RefId == "leadmanagement")
                 {
-                    msg = SearchHelper.UpdateIndexes_LM(this.EbConnectionFactory.DataDB);
+                    msg = SearchHelper.UpdateIndexes_LM(this.EbConnectionFactory.DataDB, request.Limit, request.Offset);
                 }
                 else
                 {

@@ -141,7 +141,7 @@ namespace ExpressBase.ServiceStack.MQServices
         {
             SmsCreateService SmsCreateService = base.ResolveService<SmsCreateService>();
             FilledSmsTemplate FilledSmsTemplate = SmsCreateService.FillSmsTemplate(request);
-            if (FilledSmsTemplate != null && FilledSmsTemplate.SmsTemplate != null && string.IsNullOrEmpty(FilledSmsTemplate.SmsTo))
+            if (FilledSmsTemplate != null && FilledSmsTemplate.SmsTemplate != null && !string.IsNullOrEmpty(FilledSmsTemplate.SmsTo))
                 try
                 {
                     this.MessageProducer3.Publish(new SMSSentRequest

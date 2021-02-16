@@ -450,9 +450,9 @@ namespace ExpressBase.ServiceStack.Services
             }
         }
 
-        public MobileVisDataResponse Get(MobileVisDataRequest request)
+        public MobileDataResponse Get(MobileVisDataRequest request)
         {
-            MobileVisDataResponse resp = new MobileVisDataResponse();
+            MobileDataResponse resp = new MobileDataResponse();
             try
             {
                 EbDataReader dataReader = this.GetEbObject<EbDataReader>(request.DataSourceRefId);
@@ -604,6 +604,28 @@ namespace ExpressBase.ServiceStack.Services
             query = query + " ORDER BY " + sort.Join($" {CharConstants.COMMA} ");
 
             return query;
+        }
+
+        public MobileDataResponse Get(MobileDataRequest request)
+        {
+            MobileDataResponse resp = new MobileDataResponse();
+            try
+            {
+                EbDataReader dataReader = this.GetEbObject<EbDataReader>(request.DataSourceRefId);
+
+                List<DbParameter> parameters = new List<DbParameter>
+                {
+                    this.EbConnectionFactory.DataDB.GetNewParameter("eb_currentuser_id", EbDbTypes.Int32, request.UserId)
+                };
+
+                resp.Data = this.EbConnectionFactory.DataDB.DoQueries(dataReader.Sql, parameters.ToArray());
+            }
+            catch (Exception ex)
+            {
+                resp.Message = "No Data";
+                Console.WriteLine("Exception at object list for user mobile req ::" + ex.Message);
+            }
+            return resp;
         }
 
         public MobileFormDataResponse Get(MobileFormDataRequest request)
@@ -819,6 +841,180 @@ namespace ExpressBase.ServiceStack.Services
                 Console.WriteLine(ex.Message);
             }
             return response;
+        }
+
+        //v2 data request
+
+        public MobileDataResponse Get(EbMobileDataRequest request)
+        {
+            MobileDataResponse resp = null;
+            try
+            {
+                EbMobileVisualization visualization = (EbMobileVisualization)GetEbObject<EbMobilePage>(request.RefId).Container;
+
+                List<EbMobileApprovalButton> approvalButtons = visualization.GetControlsByType<EbMobileApprovalButton>();
+
+                bool hasApprovalBtn = approvalButtons.Count > 0;
+
+                if (hasApprovalBtn)
+                {
+                    User user = GetUserObject(request.UserAuthId);
+                    GetApprovalData(user, approvalButtons);
+                }
+
+                resp = this.Get(new MobileVisDataRequest
+                {
+                    UserId = request.UserId,
+                    UserAuthId = request.UserAuthId,
+                    SolnId = request.SolnId,
+                    WhichConsole = request.WhichConsole,
+                    DataSourceRefId = visualization.DataSourceRefId,
+                    Limit = request.Limit,
+                    Offset = request.Offset,
+                    Params = request.Parameters,
+                    SearchColumns = request.SearchColumns,
+                    SortOrder = request.SortColumns
+                });
+
+                if (resp != null && hasApprovalBtn)
+                {
+                    if (resp.Data != null && resp.Data.Tables.Count >= 2)
+                    {
+                        ProcessApprovalData(resp.Data.Tables[1], approvalButtons);
+                    }
+                    resp.Message = "Success";
+                }
+            }
+            catch (Exception ex)
+            {
+                resp = resp ?? new MobileDataResponse();
+                resp.Message = ex.Message;
+
+                Console.WriteLine("Exception at object list for user mobile req ::" + ex.Message);
+            }
+            return resp;
+        }
+
+        private void GetApprovalData(User user, List<EbMobileApprovalButton> buttons)
+        {
+            try
+            {
+                foreach (EbMobileApprovalButton btn in buttons)
+                {
+                    if (string.IsNullOrEmpty(btn.FormRefid)) continue;
+
+                    string roles = string.Join(CharConstants.COMMA, user.RoleIds.ToArray());
+
+                    string query = string.Format(@"SELECT 
+	                                                    TBL1.*, 
+	                                                    TBL2.prev_stage,
+	                                                    TBL2.action_name
+                                                    FROM (SELECT 
+		                                                    EMA.id as action_id,
+		                                                    EMA.form_ref_id, 
+		                                                    EMA.form_data_id, 
+		                                                    ES.stage_name,
+		                                                    EA.eb_approval_lines_id,
+		                                                    EMA.is_completed
+                                                        FROM
+	                                                        eb_approval EA, eb_my_actions EMA, eb_stages ES
+                                                        WHERE
+	                                                        EA.eb_my_actions_id = EMA.id
+                                                        AND
+	                                                        ES.id = EMA.eb_stages_id
+                                                        AND
+	                                                        ('{0}' = any(string_to_array(EMA.user_ids, ',')) OR (string_to_array(EMA.role_ids,',')) && (string_to_array('{1}',',')))
+                                                        AND 
+	                                                        EMA.form_ref_id ='{2}'
+                                                        AND
+	                                                        EMA.eb_del='F'
+                                                    ) TBL1 
+                                                    LEFT JOIN 
+                                                    (
+	                                                    SELECT distinct 
+		                                                    EAL.id as al_id,
+		                                                    ES.stage_name as prev_stage, 
+		                                                    ESA.action_name 
+	                                                    FROM 
+		                                                    eb_approval_lines EAL, eb_stages ES, eb_stage_actions ESA
+	                                                    WHERE 
+		                                                    EAL.stage_unique_id = ES.stage_unique_id 
+	                                                    AND 
+		                                                    EAL.action_unique_id = ESA.action_unique_id
+	                                                    AND 
+		                                                    ES.id = ESA.eb_stages_id 
+	                                                    AND 
+		                                                    ES.form_ref_id = '{2}'
+                                                    ) TBL2
+                                                    ON 
+	                                                    TBL1.eb_approval_lines_id = TBL2.al_id;", user.UserId, roles, btn.FormRefid);
+
+                    btn.ApprovalData = this.EbConnectionFactory.DataDB.DoQuery(query);
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
+        }
+
+        private void ProcessApprovalData(EbDataTable dataSourceData, List<EbMobileApprovalButton> approvalButtons)
+        {
+            foreach (EbDataRow row in dataSourceData.Rows)
+            {
+                foreach (EbMobileApprovalButton button in approvalButtons)
+                {
+                    if (row == dataSourceData.Rows.First())
+                    {
+                        button.StageNameIndex = dataSourceData.Columns.Count;
+                        button.ActionIdIndex = button.StageNameIndex + 1;
+                        button.StatusIndex = button.ActionIdIndex + 1;
+
+                        dataSourceData.Columns.Add(new EbDataColumn
+                        {
+                            ColumnName = $"{button.Name}_stage_name",
+                            ColumnIndex = button.StageNameIndex,
+                            Type = EbDbTypes.String
+                        });
+
+                        dataSourceData.Columns.Add(new EbDataColumn
+                        {
+                            ColumnName = $"{button.Name}_action_id",
+                            ColumnIndex = button.ActionIdIndex,
+                            Type = EbDbTypes.Int32
+                        });
+
+                        dataSourceData.Columns.Add(new EbDataColumn
+                        {
+                            ColumnName = $"{button.Name}_status",
+                            ColumnIndex = button.StatusIndex,
+                            Type = EbDbTypes.String
+                        });
+                    }
+
+                    int dataId = Convert.ToInt32(row[button.FormId.ColumnName]);
+
+                    EbDataTable dt = button.ApprovalData;
+
+                    if (dt != null && dt.Rows.Any())
+                    {
+                        EbDataRow dataRow = dt.Rows.Find(r => Convert.ToInt32(r["form_data_id"]) == dataId);
+
+                        if (dataRow != null)
+                        {
+                            char isCompleted = Convert.ToChar(dataRow["is_completed"]);
+
+                            if (isCompleted == 'F')
+                            {
+                                row[button.StageNameIndex] = dataRow["stage_name"];
+                                row[button.ActionIdIndex] = dataRow["action_id"];
+                            }
+
+                            row[button.StatusIndex] = dataRow["action_name"];
+                        }
+                    }
+                }
+            }
         }
     }
 }

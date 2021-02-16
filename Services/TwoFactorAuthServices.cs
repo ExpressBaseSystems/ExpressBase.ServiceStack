@@ -437,5 +437,20 @@ namespace ExpressBase.ServiceStack.Services
             }
             return response;
         }
-    }
+
+		//for phone control
+		public GetOTPResponse Post( GetOTPRequest request)
+		{
+			GetOTPResponse res = new GetOTPResponse();
+			try
+			{
+				res.OTP = GenerateOTP();
+			}
+			catch (Exception e)
+			{
+				Console.WriteLine(e.Message + e.StackTrace);
+			}
+			return res;
+		}
+	}
 }

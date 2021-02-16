@@ -2,6 +2,7 @@
 using ExpressBase.Common.Application;
 using ExpressBase.Common.Data;
 using ExpressBase.Common.Structures;
+using ExpressBase.Objects;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using Newtonsoft.Json;
 using ServiceStack;
@@ -15,8 +16,8 @@ using System.Threading.Tasks;
 
 namespace ExpressBase.ServiceStack.Services
 {
-	[Authenticate]
-	public class SurveyServices : EbBaseService
+    [Authenticate]
+    public class SurveyServices : EbBaseService
     {
         public SurveyServices(IEbConnectionFactory _dbf) : base(_dbf) { }
 
@@ -61,6 +62,53 @@ namespace ExpressBase.ServiceStack.Services
             return new GetSurveyQueriesResponse { Data = dict };
         }
 
+        public GetSurveyQuestionsResponse Get(GetSurveyQuestionsRequest request)
+        {
+            List<String> qsns = new List<String>();
+
+            string sql = @"SELECT id,question FROM eb_question_bank WHERE eb_del = 'F';";
+            EbDataTable dt;
+            try
+            {
+                dt = this.EbConnectionFactory.DataDB.DoQuery(sql);
+                foreach (EbDataRow dr in dt.Rows)
+                {
+                    qsns.Add(dr[1].ToString());
+                }
+                return new GetSurveyQuestionsResponse { Data = qsns };
+            }
+            catch (Exception e)
+            {
+                ;
+            }
+            return new GetSurveyQuestionsResponse { };
+        }
+
+        public SaveQuestionResponse Post(SaveQuestionRequest request)
+        {
+            EbQuestion question = request.Query;
+            string question_s = EbSerializers.Json_Serialize(request.Query);
+            SaveQuestionResponse response = new SaveQuestionResponse();
+            StringBuilder s = new StringBuilder();
+            List<DbParameter> parameters = new List<DbParameter>();
+            if (question.QId > 0)
+            {
+            }
+            else
+            {
+                s.Append("INSERT INTO eb_question_bank(question, eb_del) VALUES(:question, 'F') returning id");
+                parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("question", EbDbTypes.Json, question_s));
+                EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(s.ToString(), parameters.ToArray());
+                if (Convert.ToInt32(dt.Rows[0][0]) > 0)
+                {
+                    response.Status = true;
+                    response.Quesid = Convert.ToInt32(dt.Rows[0][0]);
+                }
+                else
+                    response.Status = false;
+            }
+            return response;
+        }
         public SurveyQuesResponse Post(SurveyQuesRequest request)
         {
             EbSurveyQuery ques = request.Query;

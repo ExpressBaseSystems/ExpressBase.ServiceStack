@@ -427,6 +427,23 @@ namespace ExpressBase.ServiceStack.Services
         }
 
         [Authenticate]
+        public AddSBResponse Post(AddSBRequest request)
+        {
+            AddSBResponse res = new AddSBResponse();
+            try
+            {
+                request.Config.PersistIntegrationConf(request.SolnId, this.InfraConnectionFactory, request.UserId);
+            }
+            catch (Exception e)
+            {
+                res.ResponseStatus.Message = e.Message;
+                Console.WriteLine("Add Fail : " + e.ToString() + e.StackTrace.ToString());
+            }
+            return res;
+        }
+
+
+        [Authenticate]
         public AddMongoResponse Post(AddMongoRequest request)
         {
             AddMongoResponse res = new AddMongoResponse();
