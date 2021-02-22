@@ -53,7 +53,7 @@ namespace ExpressBase.ServiceStack.Services
                             Form.FormSchema.Tables.Add(_table);
                     }
                 }
-                CreateWebFormTables(Form.FormSchema, request);
+                CreateWebFormTables(Form, request);
                 InsertDataIfRequired(Form.FormSchema, Form.RefId);
             }
             return new CreateWebFormTableResponse { };
@@ -148,8 +148,11 @@ namespace ExpressBase.ServiceStack.Services
 
         }
 
-        private void CreateWebFormTables(WebFormSchema _schema, CreateWebFormTableRequest request)
+        private void CreateWebFormTables(EbWebForm Form, CreateWebFormTableRequest request)
         {
+            WebFormSchema _schema = Form.FormSchema;
+            Form.SolutionObj = this.GetSolutionObject(request.SolnId);
+            EbSystemColumns ebs = Form.SolutionObj.SolutionSettings?.SystemColumns ?? new EbSystemColumns(EbSysCols.Values);// Solu Obj is null
             IVendorDbTypes vDbTypes = this.EbConnectionFactory.DataDB.VendorDbTypes;
             string Msg = string.Empty;
             foreach (TableSchema _table in _schema.Tables)
@@ -175,31 +178,31 @@ namespace ExpressBase.ServiceStack.Services
                     }
                     if (_table.TableName == _schema.MasterTable)
                     {
-                        _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_ver_id", Type = vDbTypes.Decimal });// id refernce to the parent table will store in this column - foreignkey
-                        _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lock", Type = vDbTypes.Boolean, Default = "F", Label = "Lock ?" });// lock to prevent editing
-                        _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_push_id", Type = vDbTypes.String, Label = "Multi push id" });// multi push id - for data pushers
-                        _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_src_id", Type = vDbTypes.Decimal, Label = "Source id" });// source id - for data pushers
+                        _listNamesAndTypes.Add(new TableColumnMeta { Name = ebs[SystemColumns.eb_ver_id], Type = vDbTypes.Int32 });// id refernce to the parent table will store in this column - foreignkey
+                        _listNamesAndTypes.Add(new TableColumnMeta { Name = ebs[SystemColumns.eb_lock], Type = vDbTypes.GetVendorDbTypeStruct(ebs.GetDbType(SystemColumns.eb_lock)), Default = ebs.GetBoolFalse(SystemColumns.eb_lock, false), Label = "Lock ?" });// lock to prevent editing
+                        _listNamesAndTypes.Add(new TableColumnMeta { Name = ebs[SystemColumns.eb_push_id], Type = vDbTypes.String, Label = "Multi push id" });// multi push id - for data pushers
+                        _listNamesAndTypes.Add(new TableColumnMeta { Name = ebs[SystemColumns.eb_src_id], Type = vDbTypes.Int32, Label = "Source id" });// source id - for data pushers
                     }
                     else
-                        _listNamesAndTypes.Add(new TableColumnMeta { Name = _schema.MasterTable + "_id", Type = vDbTypes.Decimal });// id refernce to the parent table will store in this column - foreignkey
+                        _listNamesAndTypes.Add(new TableColumnMeta { Name = _schema.MasterTable + "_id", Type = vDbTypes.Int32 });// id refernce to the parent table will store in this column - foreignkey
                     if (_table.TableType == WebFormTableTypes.Grid)
                     {
-                        _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_row_num", Type = vDbTypes.Decimal });// data grid row number
+                        _listNamesAndTypes.Add(new TableColumnMeta { Name = ebs[SystemColumns.eb_row_num], Type = vDbTypes.Int32 });// data grid row number
                         if (_table.IsDynamic)// if data grid is in dynamic tab then adding column for source reference - foreignkey
                         {
                             foreach (TableSchema _t in _schema.Tables.FindAll(e => e.TableType == WebFormTableTypes.Grid && e != _table))
-                                _listNamesAndTypes.Add(new TableColumnMeta { Name = _t.TableName + "_id", Type = vDbTypes.Decimal });
+                                _listNamesAndTypes.Add(new TableColumnMeta { Name = _t.TableName + "_id", Type = vDbTypes.Int32 });
                         }
                     }
 
-                    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_by", Type = vDbTypes.Decimal, Label = "Created By" });
-                    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_created_at", Type = vDbTypes.DateTime, Label = "Created At" });
-                    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_by", Type = vDbTypes.Decimal, Label = "Last Modified By" });
-                    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_lastmodified_at", Type = vDbTypes.DateTime, Label = "Last Modified At" });
-                    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_del", Type = vDbTypes.Boolean, Default = "F" });// delete
-                    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_void", Type = vDbTypes.Boolean, Default = "F", Label = "Void ?" });// cancel //only ?
-                    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_loc_id", Type = vDbTypes.Int32, Label = "Location" });// location id //only ?
-                    _listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_signin_log_id", Type = vDbTypes.Int32, Label = "Log Id" });
+                    _listNamesAndTypes.Add(new TableColumnMeta { Name = ebs[SystemColumns.eb_created_by], Type = vDbTypes.Int32, Label = "Created By" });
+                    _listNamesAndTypes.Add(new TableColumnMeta { Name = ebs[SystemColumns.eb_created_at], Type = vDbTypes.DateTime, Label = "Created At" });
+                    _listNamesAndTypes.Add(new TableColumnMeta { Name = ebs[SystemColumns.eb_lastmodified_by], Type = vDbTypes.Int32, Label = "Last Modified By" });
+                    _listNamesAndTypes.Add(new TableColumnMeta { Name = ebs[SystemColumns.eb_lastmodified_at], Type = vDbTypes.DateTime, Label = "Last Modified At" });
+                    _listNamesAndTypes.Add(new TableColumnMeta { Name = ebs[SystemColumns.eb_del], Type = vDbTypes.GetVendorDbTypeStruct(ebs.GetDbType(SystemColumns.eb_del)), Default = ebs.GetBoolFalse(SystemColumns.eb_del, false) });// delete
+                    _listNamesAndTypes.Add(new TableColumnMeta { Name = ebs[SystemColumns.eb_void], Type = vDbTypes.GetVendorDbTypeStruct(ebs.GetDbType(SystemColumns.eb_void)), Default = ebs.GetBoolFalse(SystemColumns.eb_void, false), Label = "Void ?" });// cancel //only ?
+                    _listNamesAndTypes.Add(new TableColumnMeta { Name = ebs[SystemColumns.eb_loc_id], Type = vDbTypes.Int32, Label = "Location" });// location id //only ?
+                    _listNamesAndTypes.Add(new TableColumnMeta { Name = ebs[SystemColumns.eb_signin_log_id], Type = vDbTypes.Int32, Label = "Log Id" });
                     //_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_default", Type = vDbTypes.Boolean, Default = "F" });
 
                     int _rowaff = CreateOrAlterTable(_table.TableName, _listNamesAndTypes, ref Msg);
@@ -1180,6 +1183,10 @@ namespace ExpressBase.ServiceStack.Services
                 _form.SolutionObj = this.GetSolutionObject(SolnId);
                 if (_form.SolutionObj == null)
                     throw new Exception("Solution Object is null. SolnId: " + SolnId);
+                if (_form.SolutionObj.SolutionSettings == null)
+                    _form.SolutionObj.SolutionSettings = new SolutionSettings() { SystemColumns = new EbSystemColumns(EbSysCols.Values) };
+                else if (_form.SolutionObj.SolutionSettings.SystemColumns == null)
+                    _form.SolutionObj.SolutionSettings.SystemColumns = new EbSystemColumns(EbSysCols.Values);
             }
             _form.AfterRedisGet(this);
             return _form;
@@ -1344,12 +1351,13 @@ namespace ExpressBase.ServiceStack.Services
 
         public DeleteDataFromWebformResponse Any(DeleteDataFromWebformRequest request)
         {
-            EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, null);
+            EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId);
             foreach (int _rowId in request.RowId)
             {
                 FormObj.TableRowId = _rowId;
                 int temp1 = FormObj.Delete(EbConnectionFactory.DataDB);
-                SearchHelper.Delete(EbConnectionFactory.DataDB, request.RefId, _rowId);
+                if (SearchHelper.ExistsIndexControls(FormObj))
+                    SearchHelper.Delete(EbConnectionFactory.DataDB, request.RefId, _rowId);
                 Console.WriteLine($"Record deleted. RowId: {_rowId}  RowsAffected: {temp1}");
             }
             return new DeleteDataFromWebformResponse
@@ -1360,7 +1368,7 @@ namespace ExpressBase.ServiceStack.Services
 
         public CancelDataFromWebformResponse Any(CancelDataFromWebformRequest request)
         {
-            EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, null);
+            EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId);
             FormObj.TableRowId = request.RowId;
             int RowAffected = FormObj.Cancel(EbConnectionFactory.DataDB);
             Console.WriteLine($"Record cancelled. RowId: {request.RowId}  RowsAffected: {RowAffected}");
