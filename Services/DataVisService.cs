@@ -1301,9 +1301,20 @@ namespace ExpressBase.ServiceStack
                 Dictionary<string, DynamicObj> _hourCount = new Dictionary<string, DynamicObj>(); 
                 Dictionary<int, List<object>> summary = new Dictionary<int, List<object>>();
                 this.CreateCustomcolumn4Calendar(_dataset, ref tempdataset, Parameters, ref _dv, ref _hourCount, ref summary);
+                int _count = (_dv as EbCalendarView).DataColumns.FindAll(col => col.bVisible).Count;
+                List<object> _list = new List<object>();
+                for(int i=0; i< _count; i++)
+                {
+                    _list.Add(0);
+                    _list.Add(0);
+                }
+                foreach (var key in summary.Keys.ToList())
+                {
+                    summary[key] = new List<object>(_list);
+                }
                 EbDataTable _formattedTable = tempdataset.Tables[0].GetEmptyTable();
                 _formattedTable.Columns.Add(_formattedTable.NewDataColumn(_dv.Columns.Count, "Total", EbDbTypes.Int32));
-                summary.Add(_dv.Columns.Count, new List<object> { 0, 0, 0, 0 });
+                summary.Add(_dv.Columns.Count, new List<object>(_list));
                 _dv.Columns.Add(new DVBaseColumn { Data = _dv.Columns.Count, Name = "Total", sTitle = "Total", Type = EbDbTypes.Int32, RenderType = EbDbTypes.Int32, bVisible = true,AggregateFun = AggregateFun.Sum });
                 _formattedTable.Columns.Add(_formattedTable.NewDataColumn(_dv.Columns.Count, "serial", EbDbTypes.Int32));
                 RowColletion MasterRows = _dataset.Tables[0].Rows;
