@@ -1197,11 +1197,23 @@ namespace ExpressBase.ServiceStack.Services
             string fullQuery = string.Empty;
             List<DbParameter> Dbparams = new List<DbParameter>();
             Dictionary<string, bool> resp = new Dictionary<string, bool>();
+            Eb_Solution SoluObj = this.GetSolutionObject(Req.SolnId);
+            EbSystemColumns SysCols = SoluObj.SolutionSettings?.SystemColumns;
+            if (SysCols == null)
+                SysCols = new EbSystemColumns(EbSysCols.Values);
 
             for (int i = 0; i < Req.UniqCheckParam.Length; i++)
             {
-                fullQuery += string.Format("SELECT id FROM {0} WHERE {1} = :value_{2};", Req.UniqCheckParam[i].TableName, Req.UniqCheckParam[i].Field, i);
-                Dbparams.Add(this.EbConnectionFactory.DataDB.GetNewParameter("value_" + i, (EbDbTypes)Req.UniqCheckParam[i].TypeI, Req.UniqCheckParam[i].Value));
+                EbDbTypes _type = (EbDbTypes)Req.UniqCheckParam[i].TypeI;
+                fullQuery += string.Format("SELECT id FROM {0} WHERE {5}{1}{6} = {5}@value_{2}{6} AND COALESCE({3}, {4}) = {4};",
+                    Req.UniqCheckParam[i].TableName,
+                    Req.UniqCheckParam[i].Field,
+                    i,
+                    SysCols[SystemColumns.eb_del],
+                    SysCols.GetBoolFalse(SystemColumns.eb_del),
+                    _type == EbDbTypes.String ? "LOWER(TRIM(" : string.Empty,
+                    _type == EbDbTypes.String ? "))" : string.Empty);
+                Dbparams.Add(this.EbConnectionFactory.DataDB.GetNewParameter("value_" + i, _type, Req.UniqCheckParam[i].Value));
             }
 
             if (fullQuery != string.Empty)
