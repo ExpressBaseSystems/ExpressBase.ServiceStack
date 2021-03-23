@@ -17,6 +17,7 @@ using ExpressBase.Security;
 using ServiceStack;
 using RestSharp;
 using ExpressBase.Objects.Objects;
+using System.Net;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -456,13 +457,47 @@ namespace ExpressBase.ServiceStack.Services
         {
             try
             {
+                int RecordId = 0;
+                WebFormServices webFormServices = base.ResolveService<WebFormServices>();
+                NTVDict _params = new NTVDict();
+                foreach(KeyValuePair<string, object> p in this.GlobalParams)
+                {
+                    EbDbTypes _type;
+                    if (p.Value is int)
+                        _type = EbDbTypes.Int32;
+                    else //check other types here if required
+                        _type = EbDbTypes.String;
+                    _params.Add(p.Key, new NTV() { Name = p.Key, Type = _type, Value = p.Value });
+                }
 
+                if (!string.IsNullOrWhiteSpace(formResource.DataIdParam) && this.GlobalParams.ContainsKey(formResource.DataIdParam))
+                {
+                    int.TryParse(Convert.ToString(this.GlobalParams[formResource.DataIdParam]), out RecordId);
+                }
+
+                InsertOrUpdateFormDataResp resp = webFormServices.Any(new InsertOrUpdateFormDataRqst
+                {
+                    RefId = formResource.Reference,
+                    PushJson = formResource.PushJson,
+                    UserId = this.UserObject.UserId,
+                    UserAuthId = this.UserObject.AuthId,
+                    RecordId = RecordId,
+                    LocId = Convert.ToInt32(this.GlobalParams["eb_loc_id"]),
+                    SolnId = this.SolutionId,
+                    WhichConsole = "uc",
+                    FormGlobals = new FormGlobals { Params = _params },
+                    //TransactionConnection = TransactionConnection
+                });
+
+                if (resp.Status == (int)HttpStatusCode.OK)
+                    return resp.RecordId;
+                else
+                    throw new Exception(resp.Message);
             }
             catch (Exception ex)
             {
                 throw new ApiException("[ExecuteFormResource], " + ex.Message);
             }
-            return null;
         }
 
         private List<Param> GetEmailParams(EbEmailTemplate enode)
