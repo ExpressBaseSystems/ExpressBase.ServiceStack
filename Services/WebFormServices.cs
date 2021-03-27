@@ -2063,6 +2063,33 @@ namespace ExpressBase.ServiceStack.Services
 
         }
 
+        ///// for retriving row id and question name for questionnaire configuration control
+        public GetQuestionsBankResponse Get(GetQuestionsBankRequest request)
+        {
+            GetQuestionsBankResponse resp = new GetQuestionsBankResponse() { Questionlst = new Dictionary<int,string>() };
+            try
+            {
+                string Qry = @"SELECT id,question FROM eb_question_bank WHERE COALESCE(eb_del, 'F')='F';";
+                EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(Qry);
+                List<Eb_Users> _usersListAll = new List<Eb_Users>();
+				if (dt.Rows.Count>0)
+				{
+                    foreach (EbDataRow dr in dt.Rows)
+                    {
+                        resp.Questionlst.Add(Convert.ToInt32(dr[0]), Convert.ToString(dr[1]));
+                    }
+                }
+                
+
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("EXCEPTION: while getting questions from questionbank \nMessage: " + e.Message + "\nstacktrace:" + e.StackTrace);
+            }
+            return resp;
+
+        }
+
         public UpdateAllFormTablesResponse Post(UpdateAllFormTablesRequest request)
         {
             string msg = $"Start* UpdateAllFormTables {DateTime.Now}\n\n";
