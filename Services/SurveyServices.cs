@@ -402,5 +402,32 @@ namespace ExpressBase.ServiceStack.Services
         {
             return new GetSurveyEnqResponse { };
         }
+
+        public GetRenderQuestionResponse Get(GetRenderQuestionsRequest Request)
+        {
+
+            GetRenderQuestionResponse Resp = new GetRenderQuestionResponse();
+            string qry_ = $@"select * from (
+select id,form_refid , form_data_id, control_id,ques_id,ext_props from eb_ques_config) A
+left join
+(select id, question from eb_question_bank) B 
+ON B.id = A.ques_id AND B.id is not null";
+            EbDataSet ds = this.EbConnectionFactory.DataDB.DoQueries(qry_);
+            for (int i = 0; i < ds.Tables[0].Rows.Count; i++)
+            {
+                Resp.GetRenderQuestions.Add(
+                    new GetRenderQuestions()
+                    {
+                        id = Convert.ToInt32(ds.Tables[0].Rows[i]["id"]),
+                        FormDataId = Convert.ToString(ds.Tables[0].Rows[i]["form_data_id"]),
+                        FormRefid = Convert.ToString(ds.Tables[0].Rows[i]["form_refid"]),
+                        ControlId = Convert.ToString(ds.Tables[0].Rows[i]["control_id"]),
+                        ExtProps = Convert.ToString(ds.Tables[0].Rows[i]["ext_props"]),
+                        QuestionID = Convert.ToInt32(ds.Tables[0].Rows[i]["ques_id"]),
+                        Questions = Convert.ToString(ds.Tables[0].Rows[i]["question"]),
+                    });
+            }
+            return Resp;
+        }
     }
 }
