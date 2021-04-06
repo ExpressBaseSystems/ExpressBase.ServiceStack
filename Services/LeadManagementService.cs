@@ -859,14 +859,24 @@ namespace ExpressBase.ServiceStack.Services
         public LmDeleteCustomerResponse Any(LmDeleteCustomerRequest request)
         {
             string query = @"
-update customers set eb_del='T' where id=:id;
-update leaddetails set eb_del='T' where customers_id=:id;
-update leadratedetails set eb_del='T' where customers_id=:id;
-update leadsurgerydetails set eb_del='T' where customers_id=:id;
-update leadsurgerystaffdetails set eb_del='T' where customers_id=:id;";
+UPDATE customers SET eb_del = 'T', eb_modifiedby = @modifiedby, eb_modifiedat = NOW()
+WHERE id = @id AND COALESCE(eb_del, 'F') = 'F';
+
+UPDATE leaddetails SET eb_del = 'T', modifiedby = @modifiedby, modifieddt = NOW() 
+WHERE customers_id = @id AND COALESCE(eb_del, 'F') = 'F';
+
+UPDATE leadratedetails SET eb_del = 'T', modifiedby = @modifiedby, modifieddt = NOW()
+WHERE customers_id = @id AND COALESCE(eb_del, 'F') = 'F';
+
+UPDATE leadsurgerydetails SET eb_del = 'T', modifiedby = @modifiedby, modifieddt = NOW() 
+WHERE customers_id = @id AND COALESCE(eb_del, 'F') = 'F';
+
+UPDATE leadsurgerystaffdetails SET eb_del = 'T', modifiedby = @modifiedby, modifieddt = NOW()
+WHERE customers_id = @id AND COALESCE(eb_del, 'F') = 'F';";
 
             DbParameter[] parameters = new DbParameter[] {
-                this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.CustId)
+                this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.CustId),
+                this.EbConnectionFactory.DataDB.GetNewParameter("modifiedby", EbDbTypes.Int32, request.UserId)
             };
 
             int rstatus = this.EbConnectionFactory.DataDB.UpdateTable(query, parameters);
