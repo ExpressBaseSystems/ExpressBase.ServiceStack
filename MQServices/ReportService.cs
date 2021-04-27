@@ -19,7 +19,7 @@ namespace ExpressBase.ServiceStack.MQServices
     [Restrict(InternalOnly = true)]
     public class ReportInternalService : EbMqBaseService
     {
-        public ReportInternalService(IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_mqp, _mqc)
+        public ReportInternalService(IServiceClient _ssclient, IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_ssclient, _mqp, _mqc)
         {
             ObjectService = base.ResolveService<EbObjectService>();
             ReportService = base.ResolveService<ReportService>();
@@ -50,8 +50,6 @@ namespace ExpressBase.ServiceStack.MQServices
                 Console.WriteLine(" Reached Inside MQService/ReportServiceInternal in SS .. Before Report Render");
                 JobArgs = request.JobArgs;
                 EbConnectionFactory ebConnectionFactory = new EbConnectionFactory(JobArgs.SolnId, this.Redis);
-
-
                 ObjectService.EbConnectionFactory = ebConnectionFactory;
                 ReportService.EbConnectionFactory = ebConnectionFactory;
                 SchedulersService.EbConnectionFactory = ebConnectionFactory;
@@ -81,7 +79,7 @@ namespace ExpressBase.ServiceStack.MQServices
                         JobArgs.Message = MessageCollection.EmailMessage;
                         GetEmailUserDetails(JobArgs);
                         JobPush(res);
-                    } 
+                    }
                     if (UserCollection.SMSUser != "" || GroupCollection.SMSGroup != "")
                     {
                         JobArgs.DeliveryMechanisms = (DeliveryMechanisms)2;

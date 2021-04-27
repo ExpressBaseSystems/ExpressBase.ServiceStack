@@ -207,13 +207,12 @@ namespace ExpressBase.ServiceStack.Services
                     UserAuthId = request.UserAuthId,
                     UserId = request.UserId,
                     WhichConsole = request.WhichConsole
-                });
-                ExportPackage Package = packageresponse.Package;
-                if (Package != null && Package.Apps != null)
+                }); 
+                if (packageresponse.Package?.Apps != null)
                 {
                     Dictionary<int, int> AppIdMAp = new Dictionary<int, int>();
                     Dictionary<int, KeyValuePair<int, int>> ObjectIdMAp = new Dictionary<int, KeyValuePair<int, int>>();
-                    foreach (AppWrapper Application in Package.Apps)
+                    foreach (AppWrapper Application in packageresponse.Package.Apps)
                     {
                         if (Application.ObjCollection.Count > 0)
                         {
@@ -267,8 +266,8 @@ namespace ExpressBase.ServiceStack.Services
                                 obj.RefId = RefidMap[obj.RefId];
                                 obj.ReplaceRefid(RefidMap);
                                 string _rel_obj_tmp = string.Empty;
-                                var temp = obj.DiscoverRelatedRefids();
-                                if (temp != null && temp.Count > 0)
+                                List<string> temp = obj.DiscoverRelatedRefids();
+                                if (temp?.Count > 0)
                                     _rel_obj_tmp = string.Join(",", temp);
                                 EbObject_SaveRequest ss = new EbObject_SaveRequest
                                 {
@@ -290,15 +289,13 @@ namespace ExpressBase.ServiceStack.Services
                             }
                             Console.WriteLine("App & Object Creation Success.");
                         }
-                        else
-                        {
-                            Console.WriteLine("Import - ObjectCollection is null. appid: " + request.Id);
-                        }
+                        else 
+                            Console.WriteLine("Import - ObjectCollection is null. appid: " + request.Id); 
                     }
 
                     try
                     {
-                        ImportFullTablesFromPkg(Package.DataSet.FullExportTables, request.SelectedSolutionId);
+                        ImportFullTablesFromPkg(packageresponse.Package.DataSet.FullExportTables, request.SelectedSolutionId);
                     }
                     catch (Exception e)
                     {
@@ -306,7 +303,7 @@ namespace ExpressBase.ServiceStack.Services
                     }
                     try
                     {
-                        ImportConditionalTablesFromPkg(Package.DataSet.ConditionalExportTables, request.SelectedSolutionId, AppIdMAp, ObjectIdMAp, request.UserId);
+                        ImportConditionalTablesFromPkg(packageresponse.Package.DataSet.ConditionalExportTables, request.SelectedSolutionId, AppIdMAp, ObjectIdMAp, request.UserId);
                     }
                     catch (Exception e)
                     {
