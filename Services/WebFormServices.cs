@@ -1388,6 +1388,16 @@ namespace ExpressBase.ServiceStack.Services
             return new CancelDataFromWebformResponse { RowAffected = RowAffected };
         }
 
+        public LockUnlockWebFormDataResponse Any(LockUnlockWebFormDataRequest request)
+        {
+            EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId);
+            FormObj.TableRowId = request.RowId;
+            int status = FormObj.LockOrUnlock(this.EbConnectionFactory.DataDB, this, request.Lock);
+            Console.WriteLine($"Record Lock/Unlock request. RowId: {request.RowId}  Status: {status}");
+
+            return new LockUnlockWebFormDataResponse { Status = status };
+        }
+
         //form data submission using PushJson and FormGlobals - SQL Job, Excel Import save
         public InsertOrUpdateFormDataResp Any(InsertOrUpdateFormDataRqst request)
         {
