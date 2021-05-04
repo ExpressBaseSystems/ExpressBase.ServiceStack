@@ -1382,7 +1382,7 @@ namespace ExpressBase.ServiceStack.Services
         {
             EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId);
             FormObj.TableRowId = request.RowId;
-            int RowAffected = FormObj.Cancel(EbConnectionFactory.DataDB);
+            int RowAffected = FormObj.Cancel(EbConnectionFactory.DataDB, request.Cancel);
             Console.WriteLine($"Record cancelled. RowId: {request.RowId}  RowsAffected: {RowAffected}");
 
             return new CancelDataFromWebformResponse { RowAffected = RowAffected };
@@ -1392,7 +1392,7 @@ namespace ExpressBase.ServiceStack.Services
         {
             EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId);
             FormObj.TableRowId = request.RowId;
-            int status = FormObj.LockOrUnlock(this.EbConnectionFactory.DataDB, this, request.Lock);
+            int status = FormObj.LockOrUnlock(this.EbConnectionFactory.DataDB, request.Lock);
             Console.WriteLine($"Record Lock/Unlock request. RowId: {request.RowId}  Status: {status}");
 
             return new LockUnlockWebFormDataResponse { Status = status };
