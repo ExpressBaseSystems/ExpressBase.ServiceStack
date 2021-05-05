@@ -62,20 +62,16 @@ namespace ExpressBase.ServiceStack.Services
             GetVersioning resp = new GetVersioning();
             try
             {
+                string sql = null;
                 if (request.ChangeColumn == solutionChangeColumn.version)
-                {
-                    string sql = string.Format("UPDATE eb_solutions SET versioning = true WHERE isolution_id = '{0}';", request.solution_id);
-                    int r = this.InfraConnectionFactory.DataDB.DoNonQuery(sql);
-                    if (r > 0)
-                    {
-                        resp.res = true;
-                    }
-                }
+                    sql = string.Format("UPDATE eb_solutions SET versioning = true WHERE isolution_id = '{0}';", request.solution_id);
                 else if (request.ChangeColumn == solutionChangeColumn.TwoFa)
+                    sql = string.Format("UPDATE eb_solutions SET is2fa = {1}, otp_delivery_2fa = '{2}' WHERE isolution_id = '{0}';", request.solution_id, request.Value, request.DeliveryMethod);
+                else if (request.ChangeColumn == solutionChangeColumn.OtpSignin)
+                    sql = string.Format("UPDATE eb_solutions SET is_otp_signin = {1}, otp_delivery_signin = '{2}' WHERE isolution_id = '{0}';", request.solution_id, request.Value, request.DeliveryMethod);
+                if (sql != null)
                 {
-                    string sql = string.Format("UPDATE eb_solutions SET is2fa = {1}, otp_delivery = '{2}' WHERE isolution_id = '{0}';", request.solution_id, request.Value, request.DeliveryMethod);
                     int r = this.InfraConnectionFactory.DataDB.DoNonQuery(sql);
-
                     if (r > 0)
                     {
                         resp.res = true;
@@ -624,7 +620,7 @@ namespace ExpressBase.ServiceStack.Services
             try
             {
                 EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(sql);
-                    foreach (EbDataRow dr in dt.Rows)
+                foreach (EbDataRow dr in dt.Rows)
                 {
                     EbSolutionsWrapper _ebSolutions = new EbSolutionsWrapper
                     {
@@ -653,7 +649,7 @@ namespace ExpressBase.ServiceStack.Services
                 Console.WriteLine("GetSolutioInfoRequest started - " + request.IsolutionId);
                 ConnectionManager _conService = base.ResolveService<ConnectionManager>();
                 string sql = string.Format(@"SELECT solution_name, description, date_created, esolution_id, pricing_tier, versioning, solution_settings, is2fa,
-                                            otp_delivery, type, primary_solution FROM eb_solutions WHERE isolution_id='{0}'", request.IsolutionId);
+                                            otp_delivery_2fa, type, primary_solution, is_otp_signin, otp_delivery_signin FROM eb_solutions WHERE isolution_id='{0}'", request.IsolutionId);
                 EbDataTable dt = (new EbConnectionFactory(CoreConstants.EXPRESSBASE, this.Redis)).DataDB.DoQuery(sql);
                 if (dt.Rows.Count > 0)
                 {
@@ -668,9 +664,11 @@ namespace ExpressBase.ServiceStack.Services
                         IsolutionId = request.IsolutionId,
                         SolutionSettings = JsonConvert.DeserializeObject<SolutionSettings>(dt.Rows[0][6].ToString()),
                         Is2faEnabled = (dt.Rows[0][7] == null || dt.Rows[0][7].ToString() == "") ? false : (bool)dt.Rows[0][7],
-                        OtpDelivery = dt.Rows[0][8].ToString(),
+                        OtpDelivery2fa = dt.Rows[0][8].ToString(),
                         SolutionType = (SolutionType)Convert.ToInt32(dt.Rows[0][9]),
                         PrimarySolution = dt.Rows[0][10].ToString(),
+                        IsOtpSigninEnabled= (dt.Rows[0]["is_otp_signin"] == null || dt.Rows[0]["is_otp_signin"].ToString() == "") ? false : (bool)dt.Rows[0]["is_otp_signin"],
+                        OtpDeliverySignin = dt.Rows[0]["otp_delivery_signin"].ToString(),
                     };
                     resp = new GetSolutioInfoResponse() { Data = _ebSolutions };
                     if (resp.Data != null)

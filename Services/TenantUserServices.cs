@@ -202,7 +202,9 @@ namespace ExpressBase.ServiceStack.Services
                     SolutionSettings = wrap_sol.SolutionSettings,
                     ExtSolutionID = wrap_sol.EsolutionId,
                     Is2faEnabled = wrap_sol.Is2faEnabled,
-                    OtpDelivery = wrap_sol.OtpDelivery,
+                    OtpDelivery2fa = wrap_sol.OtpDelivery2fa,
+                    IsOtpSigninEnabled = wrap_sol.IsOtpSigninEnabled,
+                    OtpDeliverySignin = wrap_sol.OtpDeliverySignin,
                     SolutionType = wrap_sol.SolutionType,
                     PrimarySolution = wrap_sol.PrimarySolution
                     //LocationTree = Loc.LocationTree

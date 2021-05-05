@@ -42,10 +42,10 @@ namespace ExpressBase.ServiceStack.Services
             User _usr = SetUserObjFor2FA(otp); // updating otp and tokens in redis userobj
             Console.WriteLine("SetUserObjFor2FA : " + MyAuthenticateResponse.User.AuthId + "," + otp);
             AuthResponse.TwoFAToken = EbTokenGenerator.GenerateToken(MyAuthenticateResponse.User.AuthId);
-            if (sol_Obj.OtpDelivery != null)
+            if (sol_Obj.OtpDelivery2fa != null)
             {
                 OtpType OtpType = 0;
-                string[] _otpmethod = sol_Obj.OtpDelivery.Split(",");
+                string[] _otpmethod = sol_Obj.OtpDelivery2fa.Split(",");
                 if (_otpmethod[0] == "email")
                 {
                     OtpType = OtpType.Email;
@@ -209,7 +209,7 @@ namespace ExpressBase.ServiceStack.Services
                 Console.WriteLine("Otp token valid");
                 Eb_Solution sol_Obj = GetSolutionObject(SolnId);
                 User _usr = GetUserObject(UserAuthId);
-                string[] _otpmethod = sol_Obj.OtpDelivery.Split(",");
+                string[] _otpmethod = sol_Obj.OtpDelivery2fa.Split(",");
                 OtpType SignInOtpType = 0;
                 if (_otpmethod[0] == "email")
                 {
