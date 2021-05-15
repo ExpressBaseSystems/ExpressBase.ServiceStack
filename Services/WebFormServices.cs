@@ -481,7 +481,8 @@ namespace ExpressBase.ServiceStack.Services
                 Relations = _rel_obj_tmp,
                 Tags = "",
                 Apps = request.Apps,
-                DisplayName = obj.DisplayName
+                DisplayName = obj.DisplayName,
+                SolnId = request.SolnId
             };
             var myService = base.ResolveService<EbObjectService>();
             EbObject_SaveResponse res = myService.Post(ds);
