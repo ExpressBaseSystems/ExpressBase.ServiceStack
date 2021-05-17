@@ -481,7 +481,8 @@ namespace ExpressBase.ServiceStack.Services
                 Relations = _rel_obj_tmp,
                 Tags = "",
                 Apps = request.Apps,
-                DisplayName = obj.DisplayName
+                DisplayName = obj.DisplayName,
+                SolnId = request.SolnId
             };
             var myService = base.ResolveService<EbObjectService>();
             EbObject_SaveResponse res = myService.Post(ds);
@@ -1197,11 +1198,23 @@ namespace ExpressBase.ServiceStack.Services
             string fullQuery = string.Empty;
             List<DbParameter> Dbparams = new List<DbParameter>();
             Dictionary<string, bool> resp = new Dictionary<string, bool>();
+            Eb_Solution SoluObj = this.GetSolutionObject(Req.SolnId);
+            EbSystemColumns SysCols = SoluObj.SolutionSettings?.SystemColumns;
+            if (SysCols == null)
+                SysCols = new EbSystemColumns(EbSysCols.Values);
 
             for (int i = 0; i < Req.UniqCheckParam.Length; i++)
             {
-                fullQuery += string.Format("SELECT id FROM {0} WHERE {1} = :value_{2};", Req.UniqCheckParam[i].TableName, Req.UniqCheckParam[i].Field, i);
-                Dbparams.Add(this.EbConnectionFactory.DataDB.GetNewParameter("value_" + i, (EbDbTypes)Req.UniqCheckParam[i].TypeI, Req.UniqCheckParam[i].Value));
+                EbDbTypes _type = (EbDbTypes)Req.UniqCheckParam[i].TypeI;
+                fullQuery += string.Format("SELECT id FROM {0} WHERE {5}{1}{6} = {5}@value_{2}{6} AND COALESCE({3}, {4}) = {4};",
+                    Req.UniqCheckParam[i].TableName,
+                    Req.UniqCheckParam[i].Field,
+                    i,
+                    SysCols[SystemColumns.eb_del],
+                    SysCols.GetBoolFalse(SystemColumns.eb_del),
+                    _type == EbDbTypes.String ? "LOWER(TRIM(" : string.Empty,
+                    _type == EbDbTypes.String ? "))" : string.Empty);
+                Dbparams.Add(this.EbConnectionFactory.DataDB.GetNewParameter("value_" + i, _type, Req.UniqCheckParam[i].Value));
             }
 
             if (fullQuery != string.Empty)
@@ -1370,10 +1383,20 @@ namespace ExpressBase.ServiceStack.Services
         {
             EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId);
             FormObj.TableRowId = request.RowId;
-            int RowAffected = FormObj.Cancel(EbConnectionFactory.DataDB);
+            int RowAffected = FormObj.Cancel(EbConnectionFactory.DataDB, request.Cancel);
             Console.WriteLine($"Record cancelled. RowId: {request.RowId}  RowsAffected: {RowAffected}");
 
             return new CancelDataFromWebformResponse { RowAffected = RowAffected };
+        }
+
+        public LockUnlockWebFormDataResponse Any(LockUnlockWebFormDataRequest request)
+        {
+            EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId);
+            FormObj.TableRowId = request.RowId;
+            int status = FormObj.LockOrUnlock(this.EbConnectionFactory.DataDB, request.Lock);
+            Console.WriteLine($"Record Lock/Unlock request. RowId: {request.RowId}  Status: {status}");
+
+            return new LockUnlockWebFormDataResponse { Status = status };
         }
 
         //form data submission using PushJson and FormGlobals - SQL Job, Excel Import save
@@ -2046,6 +2069,33 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception e)
             {
                 Console.WriteLine("EXCEPTION: Get suggestions for EbTextBox(AutoSuggestion)\nMessage: " + e.Message);
+            }
+            return resp;
+
+        }
+
+        ///// for retriving row id and question name for questionnaire configuration control
+        public GetQuestionsBankResponse Get(GetQuestionsBankRequest request)
+        {
+            GetQuestionsBankResponse resp = new GetQuestionsBankResponse() { Questionlst = new Dictionary<int,string>() };
+            try
+            {
+                string Qry = @"SELECT id,question FROM eb_question_bank WHERE COALESCE(eb_del, 'F')='F';";
+                EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(Qry);
+                List<Eb_Users> _usersListAll = new List<Eb_Users>();
+				if (dt.Rows.Count>0)
+				{
+                    foreach (EbDataRow dr in dt.Rows)
+                    {
+                        resp.Questionlst.Add(Convert.ToInt32(dr[0]), Convert.ToString(dr[1]));
+                    }
+                }
+                
+
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("EXCEPTION: while getting questions from questionbank \nMessage: " + e.Message + "\nstacktrace:" + e.StackTrace);
             }
             return resp;
 
