@@ -97,10 +97,10 @@ namespace ExpressBase.ServiceStack.Services
             try
             {
                 string authColumn = (request.SignInOtpType == OtpType.Email) ? "email" : "phnoprimary";
-                string query = String.Format("SELECT id FROM eb_users WHERE {0} = '{1}'", authColumn, request.UName);
                 this.EbConnectionFactory = new EbConnectionFactory(request.SolutionId, this.Redis);
                 if (EbConnectionFactory != null)
                 {
+                    string query = String.Format("SELECT id FROM eb_users WHERE {0} = '{1}'", authColumn, request.UName);
                     EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(query);
                     if (dt != null && dt.Rows.Count > 0)
                     {
@@ -108,11 +108,47 @@ namespace ExpressBase.ServiceStack.Services
                         string UserAuthId = string.Format(TokenConstants.SUB_FORMAT, request.SolutionId, dt.Rows[0][0], (!string.IsNullOrEmpty(request.WhichConsole)) ? (request.WhichConsole) : (TokenConstants.UC));
                         string otp = GenerateOTP();
                         User _usr = SetUserObjForSigninOtp(otp, UserAuthId);
-                        Console.WriteLine("SetUserObjForSigninOtp : " + UserAuthId + "," + otp);
 
                         AuthResponse.TwoFAToken = EbTokenGenerator.GenerateToken(UserAuthId);
                         SendOtp(sol_Obj, _usr, request.SignInOtpType);
                         Console.WriteLine("Sent otp : " + UserAuthId + "," + otp);
+
+                        AuthResponse.AuthStatus = true;
+                        AuthResponse.UserAuthId = UserAuthId;
+                    }
+                    else
+                    {
+                        AuthResponse.AuthStatus = false;
+                        AuthResponse.ErrorMessage = "Invalid User";
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message + e.StackTrace);
+            }
+            return AuthResponse;
+        }
+
+        public Authenticate2FAResponse Post(SetForgotPWInRedisRequest request)
+        {
+            AuthResponse = new Authenticate2FAResponse();
+            try
+            {
+                this.EbConnectionFactory = new EbConnectionFactory(request.SolutionId, this.Redis);
+                if (EbConnectionFactory != null)
+                {
+                    string query = String.Format("SELECT id FROM eb_users WHERE email = '{0}' OR phnoprimary = '{0}' ", request.UName);
+                    EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(query);
+                    if (dt != null && dt.Rows.Count > 0)
+                    {
+                        Eb_Solution sol_Obj = GetSolutionObject(request.SolutionId);
+                        string UserAuthId = string.Format(TokenConstants.SUB_FORMAT, request.SolutionId, dt.Rows[0][0], (!string.IsNullOrEmpty(request.WhichConsole)) ? (request.WhichConsole) : (TokenConstants.UC));
+
+                        string q2 = String.Format("UPDATE eb_users SET forcepwreset = 'T' WHERE id = {0}", dt.Rows[0][0]);
+                        EbDataTable dt2 = this.EbConnectionFactory.DataDB.DoQuery(q2);
+                        this.Redis.Set<bool>("Fpw_" + UserAuthId, true, new TimeSpan(1, 0, 0));
+
                         AuthResponse.AuthStatus = true;
                         AuthResponse.UserAuthId = UserAuthId;
                     }
@@ -438,19 +474,19 @@ namespace ExpressBase.ServiceStack.Services
             return response;
         }
 
-		//for phone control
-		public GetOTPResponse Post( GetOTPRequest request)
-		{
-			GetOTPResponse res = new GetOTPResponse();
-			try
-			{
-				res.OTP = GenerateOTP();
-			}
-			catch (Exception e)
-			{
-				Console.WriteLine(e.Message + e.StackTrace);
-			}
-			return res;
-		}
-	}
+        //for phone control
+        public GetOTPResponse Post(GetOTPRequest request)
+        {
+            GetOTPResponse res = new GetOTPResponse();
+            try
+            {
+                res.OTP = GenerateOTP();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message + e.StackTrace);
+            }
+            return res;
+        }
+    }
 }

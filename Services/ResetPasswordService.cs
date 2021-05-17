@@ -53,9 +53,9 @@ namespace ExpressBase.ServiceStack.Services
                 string currentPwd_db = this.EbConnectionFactory.DataDB.ExecuteScalar<string>(checkQ);
                 string currentPwdOldFormat = (request.PwDetails.CurrentPassword + request.Email).ToMD5Hash();
                 string NewPwdoldformat = (request.PwDetails.NewPassword + request.Email).ToMD5Hash();
-                if (currentPwd_db == currentPwdOldFormat)
+                if (currentPwd_db == currentPwdOldFormat || request.PwDetails.IsForgotPw)
                 {
-                    if (currentPwd_db != NewPwdoldformat)
+                    if (currentPwd_db != NewPwdoldformat || request.PwDetails.IsForgotPw)
                     {
                         string NewPwdnewformat = (request.PwDetails.NewPassword.ToMD5Hash() + request.UserId.ToString() + request.SolnId).ToMD5Hash();
                         string updateQ = "UPDATE eb_users SET pwd = @oldformat , pw = @newformat , forcepwreset = 'F' WHERE id = @userid;";
