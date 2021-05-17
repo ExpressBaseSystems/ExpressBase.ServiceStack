@@ -378,10 +378,12 @@ namespace ExpressBase.ServiceStack.Services
             SaveSolutionSettingsResponse response = new SaveSolutionSettingsResponse();
             try
             {
-                string query = "UPDATE eb_solutions SET solution_settings = :solutionSettings WHERE isolution_id = :solutionId";
+                string query = "UPDATE eb_solutions SET solution_settings = :solutionSettings, cleanup_queries = :queries WHERE isolution_id = :solutionId";
                 DbParameter[] parameters = new DbParameter[] {
-           this.InfraConnectionFactory.DataDB.GetNewParameter("solutionSettings", EbDbTypes.Json, request.SolutionSettings),
-           this.InfraConnectionFactory.DataDB.GetNewParameter("solutionId", EbDbTypes.String, request.SolnId) };
+                       this.InfraConnectionFactory.DataDB.GetNewParameter("solutionSettings", EbDbTypes.Json, request.SolutionSettings),
+                       this.InfraConnectionFactory.DataDB.GetNewParameter("solutionId", EbDbTypes.String, request.SolnId),
+                       this.InfraConnectionFactory.DataDB.GetNewParameter("queries", EbDbTypes.String,( request.CleanupQueries == null)? String.Empty:request.CleanupQueries)
+                };
                 int c = this.InfraConnectionFactory.DataDB.DoNonQuery(query, parameters);
                 base.ResolveService<TenantUserServices>().Post(new UpdateSolutionObjectRequest { SolnId = request.SolnId, UserId = request.UserId });
                 response.Message = "Saved Successfully";
@@ -389,6 +391,25 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception e)
             {
                 response.Message = "Something went wrong..!";
+                Console.WriteLine(e.Message + e.StackTrace);
+            }
+            return response;
+        }
+        public GetCleanupQueryResponse Post(GetCleanupQueryRequest request)
+        {
+            GetCleanupQueryResponse response = new GetCleanupQueryResponse();
+            try
+            {
+                string query = "SELECT cleanup_queries FROM eb_solutions WHERE isolution_id = :solutionId";
+                DbParameter[] parameters = new DbParameter[] {
+                       this.InfraConnectionFactory.DataDB.GetNewParameter("solutionId", EbDbTypes.String, request.SolnId)
+                };
+                EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(query, parameters);
+                if (dt.Rows.Count > 0)
+                    response.CleanupQueries = dt.Rows[0][0].ToString();
+            }
+            catch (Exception e)
+            {
                 Console.WriteLine(e.Message + e.StackTrace);
             }
             return response;

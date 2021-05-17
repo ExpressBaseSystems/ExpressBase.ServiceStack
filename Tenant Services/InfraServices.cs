@@ -317,6 +317,39 @@ namespace ExpressBase.ServiceStack.Services
             return res;
         }
 
+        public CleanupSolutionResponse Post(CleanupSolutionRequset request)
+        {
+            CleanupSolutionResponse res = new CleanupSolutionResponse();
+            try
+            {
+                DevRelatedServices service = base.ResolveService<DevRelatedServices>();
+                GetCleanupQueryResponse response = service.Post(new GetCleanupQueryRequest { SolnId = request.ISolutionId });
+                Eb_Solution soln = GetSolutionObject(request.ISolutionId);
+                if (response.CleanupQueries == string.Empty && soln.SolutionType == SolutionType.REPLICA)
+                {
+                    response = service.Post(new GetCleanupQueryRequest { SolnId = soln.PrimarySolution });
+                }
+                if (response.CleanupQueries != string.Empty)
+                {
+                    byte[] data = Convert.FromBase64String(response.CleanupQueries);
+                    string query = Encoding.UTF8.GetString(data);
+                    int st = this.InfraConnectionFactory.DataDB.DoNonQuery(query);
+                    if (st > 0)
+                        res.Status = true;
+                    else
+                        res.Status = false;
+
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.StackTrace);
+                Console.WriteLine(e.Message);
+                res.Status = false;
+            }
+            return res;
+        }
+
         public CheckSolutionOwnerResp Get(CheckSolutionOwnerReq request)
         {
             CheckSolutionOwnerResp resp = new CheckSolutionOwnerResp();
@@ -641,6 +674,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             return resp;
         }
+
         public GetSolutioInfoResponse Get(GetSolutioInfoRequest request)
         {
             GetSolutioInfoResponse resp = null;
@@ -667,7 +701,7 @@ namespace ExpressBase.ServiceStack.Services
                         OtpDelivery2fa = dt.Rows[0][8].ToString(),
                         SolutionType = (SolutionType)Convert.ToInt32(dt.Rows[0][9]),
                         PrimarySolution = dt.Rows[0][10].ToString(),
-                        IsOtpSigninEnabled= (dt.Rows[0]["is_otp_signin"] == null || dt.Rows[0]["is_otp_signin"].ToString() == "") ? false : (bool)dt.Rows[0]["is_otp_signin"],
+                        IsOtpSigninEnabled = (dt.Rows[0]["is_otp_signin"] == null || dt.Rows[0]["is_otp_signin"].ToString() == "") ? false : (bool)dt.Rows[0]["is_otp_signin"],
                         OtpDeliverySignin = dt.Rows[0]["otp_delivery_signin"].ToString(),
                     };
                     resp = new GetSolutioInfoResponse() { Data = _ebSolutions };
