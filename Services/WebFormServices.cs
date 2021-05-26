@@ -1271,7 +1271,7 @@ namespace ExpressBase.ServiceStack.Services
                 Console.WriteLine("Insert/Update WebFormData : start - " + startdt);
                 EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId, request.CurrentLoc);
                 FormObj.TableRowId = request.RowId;
-                FormObj.FormData = request.FormData;
+                FormObj.FormData = JsonConvert.DeserializeObject<WebformData>(request.FormData);
                 FormObj.DraftId = request.DraftId;
                 CheckForMyProfileForms(FormObj, request.WhichConsole, request.MobilePageRefId);
 
