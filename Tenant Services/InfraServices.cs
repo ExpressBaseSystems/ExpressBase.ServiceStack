@@ -679,7 +679,7 @@ namespace ExpressBase.ServiceStack.Services
                 Console.WriteLine("GetSolutioInfoRequest started - " + request.IsolutionId);
                 ConnectionManager _conService = base.ResolveService<ConnectionManager>();
                 string sql = string.Format(@"SELECT solution_name, description, date_created, esolution_id, pricing_tier, versioning, solution_settings, is2fa,
-                                            otp_delivery_2fa, type, primary_solution, is_otp_signin, otp_delivery_signin FROM eb_solutions WHERE isolution_id='{0}'", request.IsolutionId);
+                                            otp_delivery_2fa, type, primary_solution, is_otp_signin, otp_delivery_signin FROM eb_solutions WHERE isolution_id='{0}' AND eb_del = false", request.IsolutionId);
                 EbDataTable dt = (new EbConnectionFactory(CoreConstants.EXPRESSBASE, this.Redis)).DataDB.DoQuery(sql);
                 if (dt.Rows.Count > 0)
                 {
