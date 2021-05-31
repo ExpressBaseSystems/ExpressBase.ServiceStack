@@ -2126,7 +2126,7 @@ namespace ExpressBase.ServiceStack.Services
 					                        EOS.id = ANY( Select MAX(id) from eb_objects_status EOS Where EOS.eb_obj_ver_id = EOV.id)
 				                        ) OD 
                                     LEFT JOIN eb_objects2application EO2A ON (EO2A.obj_id = OD.id)
-	                                    WHERE COALESCE(EO2A.eb_del, 'F') = 'F' LIMIT 500;";
+	                                    WHERE COALESCE(EO2A.eb_del, 'F') = 'F' LIMIT 1000;";
 
                     EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(Qry);
                     msg += $"Form Objects Count : {dt.Rows.Count} \n";
@@ -2150,7 +2150,7 @@ namespace ExpressBase.ServiceStack.Services
                                 F.AutoDeployTV = false;
                                 try
                                 {
-                                    this.Any(new CreateWebFormTableRequest { WebObj = F });
+                                    this.Any(new CreateWebFormTableRequest { WebObj = F, SolnId = request.SolnId });
                                     msg += $"\n\nSuccess   RefId : {dr[0].ToString()}, Name : {dr[1].ToString()} ";
                                 }
                                 catch (Exception e)
