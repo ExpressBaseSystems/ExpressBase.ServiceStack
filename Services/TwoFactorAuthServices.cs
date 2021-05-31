@@ -344,7 +344,8 @@ namespace ExpressBase.ServiceStack.Services
             {
                 string subject = "OTP Verification";
                 string message = string.Format(LoginOtpMessage, sol_Obj.SolutionName, _usr.Otp);
-                if (OtpType == OtpType.Email)
+
+                if (sol_Obj.IsEmailIntegrated)
                 {
                     if (!string.IsNullOrEmpty(_usr.Email))
                     {
@@ -355,16 +356,8 @@ namespace ExpressBase.ServiceStack.Services
                         {
                             string name = _usr.Email.Substring(3, end - 3);
                             string newString = new string('*', name.Length);
-                            string final = _usr.Email.Replace(name, newString);
-                            AuthResponse.OtpTo = final;
-                        }
-                        if (!string.IsNullOrEmpty(_usr.PhoneNumber))
-                        {
-                            SendOtpSms(_usr, sol_Obj.SolutionID, message);
-                        }
-                        else
-                        {
-                            AuthResponse.ErrorMessage += "Phone number not set for the user. Please contact your admin";
+                            string final = _usr.Email.Replace(name, " " + newString);
+                            AuthResponse.OtpTo += final;
                         }
                     }
                     else
@@ -373,21 +366,13 @@ namespace ExpressBase.ServiceStack.Services
                         AuthResponse.ErrorMessage = "Email id not set for the user. Please contact your admin";
                     }
                 }
-                else if (OtpType == OtpType.Sms)
+                if (sol_Obj.IsSmsIntegrated)
                 {
                     if (!string.IsNullOrEmpty(_usr.PhoneNumber))
                     {
                         string lastDigit = _usr.PhoneNumber.Substring((_usr.PhoneNumber.Length - 4), 4);
                         SendOtpSms(_usr, sol_Obj.SolutionID, message);
-                        AuthResponse.OtpTo = "******" + lastDigit;
-                        if (!string.IsNullOrEmpty(_usr.Email))
-                        {
-                            SendOtpEmail(_usr, sol_Obj.SolutionID, message, subject);
-                        }
-                        else
-                        {
-                            AuthResponse.ErrorMessage += " Email id not set for the user. Please contact your admin";
-                        }
+                        AuthResponse.OtpTo += ", ******" + lastDigit;
                     }
                     else
                     {

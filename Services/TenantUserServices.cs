@@ -210,6 +210,12 @@ namespace ExpressBase.ServiceStack.Services
                     //LocationTree = Loc.LocationTree
                 };
 
+                EbConnectionFactory _ebConnectionFactory = new EbConnectionFactory(req.SolnId, Redis);
+                if (_ebConnectionFactory?.EmailConnection?.Primary != null)
+                    sol_Obj.IsEmailIntegrated = true;
+                if (_ebConnectionFactory?.SMSConnection?.Primary != null)
+                    sol_Obj.IsSmsIntegrated = true;
+
                 this.Redis.Set<Eb_Solution>(String.Format("solution_{0}", req.SolnId), sol_Obj);
                 Console.ForegroundColor = ConsoleColor.Green;
                 Console.WriteLine("sol_Obj Updated : " + sol_Obj.ToString());
