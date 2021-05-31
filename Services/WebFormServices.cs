@@ -182,6 +182,8 @@ namespace ExpressBase.ServiceStack.Services
                         _listNamesAndTypes.Add(new TableColumnMeta { Name = ebs[SystemColumns.eb_lock], Type = vDbTypes.GetVendorDbTypeStruct(ebs.GetDbType(SystemColumns.eb_lock)), Default = ebs.GetBoolFalse(SystemColumns.eb_lock, false), Label = "Lock ?" });// lock to prevent editing
                         _listNamesAndTypes.Add(new TableColumnMeta { Name = ebs[SystemColumns.eb_push_id], Type = vDbTypes.String, Label = "Multi push id" });// multi push id - for data pushers
                         _listNamesAndTypes.Add(new TableColumnMeta { Name = ebs[SystemColumns.eb_src_id], Type = vDbTypes.Int32, Label = "Source id" });// source id - for data pushers
+                        _listNamesAndTypes.Add(new TableColumnMeta { Name = ebs[SystemColumns.eb_src_ver_id], Type = vDbTypes.Int32, Label = "Source version id" });// source version id - for data pushers
+                        _listNamesAndTypes.Add(new TableColumnMeta { Name = ebs[SystemColumns.eb_ro], Type = vDbTypes.GetVendorDbTypeStruct(ebs.GetDbType(SystemColumns.eb_ro)), Default = ebs.GetBoolFalse(SystemColumns.eb_ro, false), Label = "Read Only?" });// Readonly
                     }
                     else
                         _listNamesAndTypes.Add(new TableColumnMeta { Name = _schema.MasterTable + "_id", Type = vDbTypes.Int32 });// id refernce to the parent table will store in this column - foreignkey
