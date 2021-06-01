@@ -151,7 +151,7 @@ namespace ExpressBase.ServiceStack.Services
         private void CreateWebFormTables(EbWebForm Form, CreateWebFormTableRequest request)
         {
             WebFormSchema _schema = Form.FormSchema;
-            Form.SolutionObj = this.GetSolutionObject(request.SolnId);
+            Form.SolutionObj = request.SoluObj ?? this.GetSolutionObject(request.SolnId);
             EbSystemColumns ebs = Form.SolutionObj.SolutionSettings?.SystemColumns ?? new EbSystemColumns(EbSysCols.Values);// Solu Obj is null
             IVendorDbTypes vDbTypes = this.EbConnectionFactory.DataDB.VendorDbTypes;
             string Msg = string.Empty;
@@ -2130,6 +2130,7 @@ namespace ExpressBase.ServiceStack.Services
 
                     EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(Qry);
                     msg += $"Form Objects Count : {dt.Rows.Count} \n";
+                    Eb_Solution SolutionObj = this.GetSolutionObject(request.SolnId);
                     foreach (EbDataRow dr in dt.Rows)
                     {
                         if (dr.IsDBNull(2))
@@ -2150,7 +2151,7 @@ namespace ExpressBase.ServiceStack.Services
                                 F.AutoDeployTV = false;
                                 try
                                 {
-                                    this.Any(new CreateWebFormTableRequest { WebObj = F, SolnId = request.SolnId });
+                                    this.Any(new CreateWebFormTableRequest { WebObj = F, SolnId = request.SolnId, SoluObj = SolutionObj });
                                     msg += $"\n\nSuccess   RefId : {dr[0].ToString()}, Name : {dr[1].ToString()} ";
                                 }
                                 catch (Exception e)
