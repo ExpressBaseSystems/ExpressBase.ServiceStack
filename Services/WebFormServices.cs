@@ -50,7 +50,22 @@ namespace ExpressBase.ServiceStack.Services
                         //_table.Columns.Add(new ColumnSchema { ColumnName = "eb_push_id", EbDbType = (int)EbDbTypes.String, Control = new EbTextBox { Name = "eb_push_id", Label = "Push Id" } });// multi push id
                         //_table.Columns.Add(new ColumnSchema { ColumnName = "eb_src_id", EbDbType = (int)EbDbTypes.Decimal, Control = new EbNumeric { Name = "eb_src_id", Label = "Source Id" } });// source master table id
                         if (_table != null)
+                        {
+                            if (pusher is EbBatchFormDataPusher batchDp)
+                            {
+                                TableSchema __tbl = Form.FormSchema.Tables.Find(e => e.ContainerName == batchDp.SourceDG);
+                                if (__tbl != null)
+                                    _table.Columns.Add(new ColumnSchema 
+                                    { 
+                                        ColumnName = __tbl.TableName + FormConstants._id,
+                                        EbDbType = (int)EbDbTypes.Int32, 
+                                        Control = new EbNumeric { Name = __tbl.TableName + FormConstants._id } 
+                                    });
+
+                            }
+
                             Form.FormSchema.Tables.Add(_table);
+                        }
                     }
                 }
                 CreateWebFormTables(Form, request);
