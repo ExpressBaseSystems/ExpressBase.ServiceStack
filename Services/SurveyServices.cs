@@ -64,7 +64,7 @@ namespace ExpressBase.ServiceStack.Services
 
         public GetSurveyQuestionsResponse Get(GetSurveyQuestionsRequest request)
         {
-            List<String> qsns = new List<String>();
+            Dictionary<int, String> qsns = new Dictionary<int, String>();
 
             string sql = @"SELECT id,question FROM eb_question_bank WHERE eb_del = 'F';";
             EbDataTable dt;
@@ -73,7 +73,7 @@ namespace ExpressBase.ServiceStack.Services
                 dt = this.EbConnectionFactory.DataDB.DoQuery(sql);
                 foreach (EbDataRow dr in dt.Rows)
                 {
-                    qsns.Add(dr[1].ToString());
+                    qsns.Add(Convert.ToInt32(dr[0]), (dr[1].ToString()));
                 }
                 return new GetSurveyQuestionsResponse { Data = qsns };
             }
@@ -93,6 +93,23 @@ namespace ExpressBase.ServiceStack.Services
             List<DbParameter> parameters = new List<DbParameter>();
             if (question.QId > 0)
             {
+
+                s.Append("UPDATE eb_question_bank SET question=:question WHERE id=:id;");
+
+
+                parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("question", EbDbTypes.Json, question_s));
+                parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, question.QId));
+
+                EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(s.ToString(), parameters.ToArray());
+                //if (Convert.ToInt32(dt.Rows[0][0]) > 0)
+                //{
+                //    response.Status = true;
+                //    response.Quesid = Convert.ToInt32(dt.Rows[0][0]);
+                //}
+                //else
+                //    response.Status = false;
+
+                response.Status = true;
             }
             else
             {
