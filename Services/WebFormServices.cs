@@ -39,7 +39,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 EbWebForm Form = request.WebObj as EbWebForm;
                 Form.AfterRedisGet(this);
-                if (Form.FormDataPusherCount > 0)
+                if (Form.DataPushers.Count > 0)
                 {
                     foreach (EbDataPusher pusher in Form.DataPushers)
                     {
@@ -55,11 +55,11 @@ namespace ExpressBase.ServiceStack.Services
                             {
                                 TableSchema __tbl = Form.FormSchema.Tables.Find(e => e.ContainerName == batchDp.SourceDG);
                                 if (__tbl != null)
-                                    _table.Columns.Add(new ColumnSchema 
-                                    { 
+                                    _table.Columns.Add(new ColumnSchema
+                                    {
                                         ColumnName = __tbl.TableName + FormConstants._id,
-                                        EbDbType = (int)EbDbTypes.Int32, 
-                                        Control = new EbNumeric { Name = __tbl.TableName + FormConstants._id } 
+                                        EbDbType = (int)EbDbTypes.Int32,
+                                        Control = new EbNumeric { Name = __tbl.TableName + FormConstants._id }
                                     });
 
                             }
@@ -2094,20 +2094,20 @@ namespace ExpressBase.ServiceStack.Services
         ///// for retriving row id and question name for questionnaire configuration control
         public GetQuestionsBankResponse Get(GetQuestionsBankRequest request)
         {
-            GetQuestionsBankResponse resp = new GetQuestionsBankResponse() { Questionlst = new Dictionary<int,string>() };
+            GetQuestionsBankResponse resp = new GetQuestionsBankResponse() { Questionlst = new Dictionary<int, string>() };
             try
             {
                 string Qry = @"SELECT id,question FROM eb_question_bank WHERE COALESCE(eb_del, 'F')='F';";
                 EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(Qry);
                 List<Eb_Users> _usersListAll = new List<Eb_Users>();
-				if (dt.Rows.Count>0)
-				{
+                if (dt.Rows.Count > 0)
+                {
                     foreach (EbDataRow dr in dt.Rows)
                     {
                         resp.Questionlst.Add(Convert.ToInt32(dr[0]), Convert.ToString(dr[1]));
                     }
                 }
-                
+
 
             }
             catch (Exception e)
