@@ -779,7 +779,8 @@ namespace ExpressBase.ServiceStack.Services
                     EbConnectionFactory.ObjectsDB.GetNewParameter("relations", EbDbTypes.String, (request.Relations != null) ? request.Relations : string.Empty),
                     EbConnectionFactory.ObjectsDB.GetNewParameter("tags", EbDbTypes.String, (!string.IsNullOrEmpty(request.Tags)) ? request.Tags : string.Empty),
                     EbConnectionFactory.ObjectsDB.GetNewParameter("app_id", EbDbTypes.String, SetAppId(request.Apps)),
-                    EbConnectionFactory.ObjectsDB.GetNewParameter("disp_name", EbDbTypes.String, request.DisplayName)
+                    EbConnectionFactory.ObjectsDB.GetNewParameter("disp_name", EbDbTypes.String, request.DisplayName),
+                    EbConnectionFactory.ObjectsDB.GetNewParameter("hide_in_menu", EbDbTypes.String, (request.HideInMenu) ? 'T' : 'F')
                     };
 
                     if (EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.PGSQL)
@@ -886,7 +887,8 @@ namespace ExpressBase.ServiceStack.Services
                     EbConnectionFactory.ObjectsDB.GetNewParameter("relations", EbDbTypes.String, (request.Relations != null) ? request.Relations : string.Empty),
                     EbConnectionFactory.ObjectsDB.GetNewParameter("tags", EbDbTypes.String, (!string.IsNullOrEmpty(request.Tags)) ? request.Tags : string.Empty),
                     EbConnectionFactory.ObjectsDB.GetNewParameter("app_id", EbDbTypes.String, SetAppId(request.Apps)),
-                    EbConnectionFactory.ObjectsDB.GetNewParameter("disp_name", EbDbTypes.String, request.DisplayName)
+                    EbConnectionFactory.ObjectsDB.GetNewParameter("disp_name", EbDbTypes.String, request.DisplayName),
+                    EbConnectionFactory.ObjectsDB.GetNewParameter("hide_in_menu", EbDbTypes.String, (request.HideInMenu) ? 'T' : 'F')
                 };
                     if (EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.PGSQL)
                     {
@@ -997,12 +999,13 @@ namespace ExpressBase.ServiceStack.Services
                             EbConnectionFactory.ObjectsDB.GetNewParameter("src_pid", EbDbTypes.String, request.SourceSolutionId),
                             EbConnectionFactory.ObjectsDB.GetNewParameter("cur_pid", EbDbTypes.String, request.SolnId),
                             EbConnectionFactory.ObjectsDB.GetNewParameter("relations", EbDbTypes.String, (request.Relations != null) ? request.Relations : string.Empty),
-                            EbConnectionFactory.ObjectsDB.GetNewParameter("issave", EbDbTypes.String, (request.IsSave == true) ? 'T' : 'F'),
+                            EbConnectionFactory.ObjectsDB.GetNewParameter("issave", EbDbTypes.String, (request.IsSave)? 'T' : 'F'),
                             EbConnectionFactory.ObjectsDB.GetNewParameter("tags", EbDbTypes.String, (!string.IsNullOrEmpty(request.Tags)) ? request.Tags : string.Empty),
                             EbConnectionFactory.ObjectsDB.GetNewParameter("app_id", EbDbTypes.String, SetAppId(request.Apps)),
                             EbConnectionFactory.ObjectsDB.GetNewParameter("s_obj_id", EbDbTypes.String, request.SourceObjId),
                             EbConnectionFactory.ObjectsDB.GetNewParameter("s_ver_id", EbDbTypes.String, request.SourceVerID),
                             EbConnectionFactory.ObjectsDB.GetNewParameter("disp_name", EbDbTypes.String, request.DisplayName),
+                            EbConnectionFactory.ObjectsDB.GetNewParameter("hide_in_menu", EbDbTypes.String, (request.HideInMenu) ? 'T' : 'F')
                         };
                         if (EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.PGSQL)
                         {
