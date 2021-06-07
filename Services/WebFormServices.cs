@@ -50,7 +50,22 @@ namespace ExpressBase.ServiceStack.Services
                         //_table.Columns.Add(new ColumnSchema { ColumnName = "eb_push_id", EbDbType = (int)EbDbTypes.String, Control = new EbTextBox { Name = "eb_push_id", Label = "Push Id" } });// multi push id
                         //_table.Columns.Add(new ColumnSchema { ColumnName = "eb_src_id", EbDbType = (int)EbDbTypes.Decimal, Control = new EbNumeric { Name = "eb_src_id", Label = "Source Id" } });// source master table id
                         if (_table != null)
+                        {
+                            if (pusher is EbBatchFormDataPusher batchDp)
+                            {
+                                TableSchema __tbl = Form.FormSchema.Tables.Find(e => e.ContainerName == batchDp.SourceDG);
+                                if (__tbl != null)
+                                    _table.Columns.Add(new ColumnSchema 
+                                    { 
+                                        ColumnName = __tbl.TableName + FormConstants._id,
+                                        EbDbType = (int)EbDbTypes.Int32, 
+                                        Control = new EbNumeric { Name = __tbl.TableName + FormConstants._id } 
+                                    });
+
+                            }
+
                             Form.FormSchema.Tables.Add(_table);
+                        }
                     }
                 }
                 CreateWebFormTables(Form, request);
@@ -151,7 +166,7 @@ namespace ExpressBase.ServiceStack.Services
         private void CreateWebFormTables(EbWebForm Form, CreateWebFormTableRequest request)
         {
             WebFormSchema _schema = Form.FormSchema;
-            Form.SolutionObj = this.GetSolutionObject(request.SolnId);
+            Form.SolutionObj = request.SoluObj ?? this.GetSolutionObject(request.SolnId);
             EbSystemColumns ebs = Form.SolutionObj.SolutionSettings?.SystemColumns ?? new EbSystemColumns(EbSysCols.Values);// Solu Obj is null
             IVendorDbTypes vDbTypes = this.EbConnectionFactory.DataDB.VendorDbTypes;
             string Msg = string.Empty;
@@ -2130,6 +2145,7 @@ namespace ExpressBase.ServiceStack.Services
 
                     EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(Qry);
                     msg += $"Form Objects Count : {dt.Rows.Count} \n";
+                    Eb_Solution SolutionObj = this.GetSolutionObject(request.SolnId);
                     foreach (EbDataRow dr in dt.Rows)
                     {
                         if (dr.IsDBNull(2))
@@ -2150,7 +2166,7 @@ namespace ExpressBase.ServiceStack.Services
                                 F.AutoDeployTV = false;
                                 try
                                 {
-                                    this.Any(new CreateWebFormTableRequest { WebObj = F, SolnId = request.SolnId });
+                                    this.Any(new CreateWebFormTableRequest { WebObj = F, SolnId = request.SolnId, SoluObj = SolutionObj });
                                     msg += $"\n\nSuccess   RefId : {dr[0].ToString()}, Name : {dr[1].ToString()} ";
                                 }
                                 catch (Exception e)
