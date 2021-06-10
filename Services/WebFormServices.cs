@@ -1416,6 +1416,53 @@ namespace ExpressBase.ServiceStack.Services
             return new LockUnlockWebFormDataResponse { Status = status };
         }
 
+        public GetPushedDataInfoResponse Any(GetPushedDataInfoRequest request)
+        {
+            try
+            {
+                Console.WriteLine($"GetPushedDataInfoRequest. RowId: {request.RowId} ");
+                EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId);
+                EbSystemColumns ebs = FormObj.SolutionObj.SolutionSettings.SystemColumns;
+                List<EbDataPusher> FormDp = FormObj.DataPushers.FindAll(e => e is EbFormDataPusher);
+
+                foreach (EbBatchFormDataPusher batchDp in FormObj.DataPushers.FindAll(e => e is EbBatchFormDataPusher))
+                {
+                    EbWebForm _form = EbFormHelper.GetEbObject<EbWebForm>(batchDp.FormRefId, null, this.Redis, this);
+                    _form.RefId = batchDp.FormRefId;
+                    _form.AfterRedisGet(this);
+                    batchDp.WebForm = _form;
+                    FormDp.Add(batchDp);
+                }
+                string Qry = string.Empty;
+                foreach (EbDataPusher dp in FormDp)
+                {
+                    string autoIdCol = string.Empty;
+                    if (dp.WebForm.AutoId?.TableName == dp.WebForm.TableName)
+                        autoIdCol = ", " + dp.WebForm.AutoId.Name;
+                    Qry += $"SELECT id{autoIdCol} FROM {dp.WebForm.TableName} WHERE {FormObj.TableName}_id = {request.RowId} AND COALESCE({ebs[SystemColumns.eb_del]}, {ebs.GetBoolFalse(SystemColumns.eb_del)}) = {ebs.GetBoolFalse(SystemColumns.eb_del)}; ";
+                }
+                EbDataSet ds = this.EbConnectionFactory.DataDB.DoQueries(Qry);
+                Dictionary<string, string> resDict = new Dictionary<string, string>();
+                for (int i = 0; i < FormDp.Count; i++)
+                {
+                    string autoIdCol = FormDp[i].WebForm.AutoId?.TableName == FormDp[i].WebForm.TableName ? FormDp[i].WebForm.AutoId.Name : null;
+                    for (int j = 0; j < ds.Tables[i].Rows.Count; j++)
+                    {
+                        string _p = JsonConvert.SerializeObject(new List<Param>() { { new Param { Name = "id", Type = "11", Value = Convert.ToString(ds.Tables[i].Rows[j][0]) } } });
+                        string link = $"/WebForm/Index?_r={FormDp[i].WebForm.RefId}&_p={_p.ToBase64()}&_m=1";
+                        string autoIdVal = autoIdCol == null ? string.Empty : $" ({Convert.ToString(ds.Tables[i].Rows[j][1])})";
+                        resDict.Add($"{FormDp[i].WebForm.DisplayName}{autoIdVal}", link);
+                    }
+                }
+                return new GetPushedDataInfoResponse { Result = JsonConvert.SerializeObject(resDict) };
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Exception in GetPushedDataInfoRequest: " + e.Message);
+                return new GetPushedDataInfoResponse { Result = $"Error Message: {e.Message}\n{e.StackTrace}" };
+            }
+        }
+
         //form data submission using PushJson and FormGlobals - SQL Job, Excel Import save
         public InsertOrUpdateFormDataResp Any(InsertOrUpdateFormDataRqst request)
         {
