@@ -1790,7 +1790,7 @@ namespace ExpressBase.ServiceStack.Services
                 else
                 {
                     EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId);
-                    msg = SearchHelper.UpdateIndexes(this.EbConnectionFactory.DataDB, FormObj);
+                    msg = SearchHelper.UpdateIndexes(this.EbConnectionFactory.DataDB, FormObj, request.Limit);
                 }
             }
             catch (Exception e)
