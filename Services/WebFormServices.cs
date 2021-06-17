@@ -1168,9 +1168,9 @@ namespace ExpressBase.ServiceStack.Services
         {
             Console.WriteLine("Start ExecuteSqlValueExpr");
             EbWebForm form = this.GetWebFormObject(request.RefId, null, null);
-            string val = form.ExecuteSqlValueExpression(EbConnectionFactory.DataDB, this, request.Params, request.Trigger);
+            object val = form.ExecuteSqlValueExpression(EbConnectionFactory.DataDB, this, request.Params, request.Trigger, request.ExprType);
             Console.WriteLine("End ExecuteSqlValueExpr");
-            return new ExecuteSqlValueExprResponse() { Data = val };
+            return new ExecuteSqlValueExprResponse() { Result = val };
         }
 
         public GetDataPusherJsonResponse Any(GetDataPusherJsonRequest request)
