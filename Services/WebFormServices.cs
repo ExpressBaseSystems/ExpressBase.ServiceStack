@@ -175,6 +175,7 @@ namespace ExpressBase.ServiceStack.Services
                 List<TableColumnMeta> _listNamesAndTypes = new List<TableColumnMeta>();
                 if (_table.Columns.Count > 0 && _table.TableType != WebFormTableTypes.Review)
                 {
+                    bool CurrencyCtrlFound = false;
                     foreach (ColumnSchema _column in _table.Columns)
                     {
                         if (_column.Control is EbAutoId)
@@ -189,6 +190,10 @@ namespace ExpressBase.ServiceStack.Services
                             _listNamesAndTypes.Add(new TableColumnMeta { Name = _column.ColumnName, Type = vDbTypes.GetVendorDbTypeStruct((EbDbTypes)_column.EbDbType), Label = _column.Control.Label, Control = _column.Control });
                             if (_column.Control is EbPhone && (_column.Control as EbPhone).Sendotp)
                                 _listNamesAndTypes.Add(new TableColumnMeta { Name = _column.ColumnName + FormConstants._verified, Type = vDbTypes.Boolean, Default = "F", Label = _column.Control.Label + "_verified" });
+
+                            if ((_column.Control is EbNumeric numCtrl && numCtrl.InputMode == NumInpMode.Currency) ||
+                                (_column.Control is EbDGNumericColumn numCol && numCol.InputMode == NumInpMode.Currency))
+                                CurrencyCtrlFound = true;
                         }
                     }
                     if (_table.TableName == _schema.MasterTable)
@@ -221,6 +226,14 @@ namespace ExpressBase.ServiceStack.Services
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = ebs[SystemColumns.eb_loc_id], Type = vDbTypes.Int32, Label = "Location" });// location id //only ?
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = ebs[SystemColumns.eb_signin_log_id], Type = vDbTypes.Int32, Label = "Log Id" });
                     //_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_default", Type = vDbTypes.Boolean, Default = "F" });
+
+                    if (CurrencyCtrlFound)
+                    {
+                        _listNamesAndTypes.Add(new TableColumnMeta { Name = ebs[SystemColumns.eb_currency_id], Type = vDbTypes.Int32, Label = "Currency Id" });
+                        _listNamesAndTypes.Add(new TableColumnMeta { Name = ebs[SystemColumns.eb_currency_xid], Type = vDbTypes.String, Label = "Currency Xid" });
+                        _listNamesAndTypes.Add(new TableColumnMeta { Name = ebs[SystemColumns.eb_xrate1], Type = vDbTypes.Decimal, Label = "Xrate1" });
+                        _listNamesAndTypes.Add(new TableColumnMeta { Name = ebs[SystemColumns.eb_xrate2], Type = vDbTypes.Decimal, Label = "Xrate1" });
+                    }
 
                     int _rowaff = CreateOrAlterTable(_table.TableName, _listNamesAndTypes, ref Msg);
                     if (_table.TableName == _schema.MasterTable && !request.IsImport && (request.WebObj as EbWebForm).AutoDeployTV)
