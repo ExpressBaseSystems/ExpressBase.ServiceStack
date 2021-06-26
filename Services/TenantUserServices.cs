@@ -12,6 +12,7 @@ using ServiceStack.Auth;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.Globalization;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -206,7 +207,8 @@ namespace ExpressBase.ServiceStack.Services
                     IsOtpSigninEnabled = wrap_sol.IsOtpSigninEnabled,
                     OtpDeliverySignin = wrap_sol.OtpDeliverySignin,
                     SolutionType = wrap_sol.SolutionType,
-                    PrimarySolution = wrap_sol.PrimarySolution
+                    PrimarySolution = wrap_sol.PrimarySolution,
+                    FinancialYears = GetFinancialYears(req.SolnId)
                     //LocationTree = Loc.LocationTree
                 };
 
@@ -288,6 +290,43 @@ namespace ExpressBase.ServiceStack.Services
                 throw e;
             }
             return SolutionUsers;
+        }
+
+        private EbFinancialYears GetFinancialYears(string solnId)
+        {
+            EbFinancialYears FinYears = new EbFinancialYears();
+            try
+            {
+                EbConnectionFactory _ebConFactory = new EbConnectionFactory(solnId, this.Redis);
+                string sql = @"SELECT id, fy_start, fy_end, active_start, active_end, eb_lock FROM eb_fin_years WHERE COALESCE(eb_del, 'F') = 'F' ORDER BY active_start DESC;";
+                EbDataTable dt = _ebConFactory.DataDB.DoQuery(sql);
+                for (int i = 0; i < dt.Rows.Count; i++)
+                {
+                    EbFinancialYear FinY = new EbFinancialYear()
+                    {
+                        Id = Convert.ToInt32(dt.Rows[i][0]),
+                        FyStart = Convert.ToDateTime(dt.Rows[i][1]),
+                        FyEnd = Convert.ToDateTime(dt.Rows[i][2]),
+                        ActStart = Convert.ToDateTime(dt.Rows[i][3]),
+                        ActEnd = Convert.ToDateTime(dt.Rows[i][4]),
+                        Locked = Convert.ToString(dt.Rows[i][5]) == "T",
+                        LocIds = new List<int> { -1 }
+                    };
+                    FinYears.List.Add(FinY);
+                }
+                if (dt.Rows.Count > 0)
+                    FinYears.Current = Convert.ToInt32(dt.Rows[0][0]);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Error in GetFinancialYears: {e.Message}\n{e.StackTrace}");
+            }
+            return FinYears;
+        }
+
+        private string GetDateString(object date)
+        {
+            return Convert.ToDateTime(date).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
         }
 
         [Authenticate]
