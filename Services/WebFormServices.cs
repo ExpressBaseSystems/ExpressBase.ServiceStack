@@ -1464,7 +1464,7 @@ namespace ExpressBase.ServiceStack.Services
                         string _p = JsonConvert.SerializeObject(new List<Param>() { { new Param { Name = "id", Type = "11", Value = Convert.ToString(ds.Tables[i].Rows[j][0]) } } });
                         string link = $"/WebForm/Index?_r={FormDp[i].WebForm.RefId}&_p={_p.ToBase64()}&_m=1";
                         string autoIdVal = autoIdCol == null ? string.Empty : $" ({Convert.ToString(ds.Tables[i].Rows[j][1])})";
-                        resDict.Add($"{FormDp[i].WebForm.DisplayName}{autoIdVal}", link);
+                        resDict.Add($"{j + 1}. {FormDp[i].WebForm.DisplayName}{autoIdVal}", link);
                     }
                 }
                 return new GetPushedDataInfoResponse { Result = JsonConvert.SerializeObject(resDict) };
