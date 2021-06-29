@@ -98,11 +98,11 @@ namespace ExpressBase.ServiceStack
                 if (Report.DataSet == null)
                     Console.WriteLine("Dataset is null, refid " + Report.DataSourceRefId);
 
-                float _width = Report.WidthPt - Report.Margin.Left - Report.Margin.Right;
+                float _width = Report.WidthPt - Report.Margin.Left;// - Report.Margin.Right;
                 float _height = Report.HeightPt - Report.Margin.Top - Report.Margin.Bottom;
                 Report.HeightPt = _height;
                 //iTextSharp.text.Rectangle rec =new iTextSharp.text.Rectangle(Report.WidthPt, Report.HeightPt);
-                iTextSharp.text.Rectangle rec = new iTextSharp.text.Rectangle(_width, _height);
+                iTextSharp.text.Rectangle rec = new iTextSharp.text.Rectangle(_width, _height);   
                 Report.Doc = new Document(rec);
                 Report.Doc.SetMargins(Report.Margin.Left, Report.Margin.Right, Report.Margin.Top, Report.Margin.Bottom);
                 Report.Writer = PdfWriter.GetInstance(Report.Doc, Report.Ms1);
