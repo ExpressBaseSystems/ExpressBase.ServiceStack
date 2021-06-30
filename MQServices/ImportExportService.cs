@@ -136,7 +136,9 @@ namespace ExpressBase.ServiceStack.Services
                 }
 
                 Log.Info("Calling FillExportData");
-                package.DataSet = ExportTablesToPkg(request.SolnId, ObjectIdCollection, AppIdCollection);
+                SolutionType s_type = this.Redis.Get<Eb_Solution>(String.Format("solution_{0}", request.SolnId)).SolutionType;
+                if (s_type == SolutionType.REPLICA)
+                    package.DataSet = ExportTablesToPkg(request.SolnId, ObjectIdCollection, AppIdCollection);
 
                 string packageJson = EbSerializers.Json_Serialize4AppWraper(package);
                 Log.Info("Serialized packageJson. Saving to appstore");
@@ -207,7 +209,7 @@ namespace ExpressBase.ServiceStack.Services
                     UserAuthId = request.UserAuthId,
                     UserId = request.UserId,
                     WhichConsole = request.WhichConsole
-                }); 
+                });
                 if (packageresponse.Package?.Apps != null)
                 {
                     Dictionary<int, int> AppIdMAp = new Dictionary<int, int>();
@@ -289,33 +291,36 @@ namespace ExpressBase.ServiceStack.Services
                             }
                             Console.WriteLine("App & Object Creation Success.");
                         }
-                        else 
-                            Console.WriteLine("Import - ObjectCollection is null. appid: " + request.Id); 
+                        else
+                            Console.WriteLine("Import - ObjectCollection is null. appid: " + request.Id);
                     }
-
-                    try
+                    SolutionType s_type = this.Redis.Get<Eb_Solution>(String.Format("solution_{0}", request.SolnId)).SolutionType;
+                    if (s_type == SolutionType.REPLICA)
                     {
-                        ImportFullTablesFromPkg(packageresponse.Package.DataSet.FullExportTables, request.SelectedSolutionId);
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine("Error at Import.ImportFullTablesFromPkg " + e.Message + e.StackTrace);
-                    }
-                    try
-                    {
-                        ImportConditionalTablesFromPkg(packageresponse.Package.DataSet.ConditionalExportTables, request.SelectedSolutionId, AppIdMAp, ObjectIdMAp, request.UserId);
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine("Error at Import.ImportConditionalTablesFromPkg " + e.Message + e.StackTrace);
-                    }
-                    try
-                    {
-                        UpdateSequencetoMax();
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine("Error at Import.UpdateSequencetoMax " + e.Message + e.StackTrace);
+                        try
+                        {
+                            ImportFullTablesFromPkg(packageresponse.Package.DataSet.FullExportTables, request.SelectedSolutionId);
+                        }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine("Error at Import.ImportFullTablesFromPkg " + e.Message + e.StackTrace);
+                        }
+                        try
+                        {
+                            ImportConditionalTablesFromPkg(packageresponse.Package.DataSet.ConditionalExportTables, request.SelectedSolutionId, AppIdMAp, ObjectIdMAp, request.UserId);
+                        }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine("Error at Import.ImportConditionalTablesFromPkg " + e.Message + e.StackTrace);
+                        }
+                        try
+                        {
+                            UpdateSequencetoMax();
+                        }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine("Error at Import.UpdateSequencetoMax " + e.Message + e.StackTrace);
+                        }
                     }
                     this.ServerEventClient.BearerToken = request.BToken;
                     this.ServerEventClient.RefreshToken = request.RToken;
