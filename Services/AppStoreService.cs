@@ -227,9 +227,9 @@ namespace ExpressBase.ServiceStack.Services
                 cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":json", EbDbTypes.Json, request.Store.Json));
                 cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":currency", EbDbTypes.String, request.Store.Currency));
                 cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":app_type", EbDbTypes.Int32, request.Store.AppType));
-                cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":description", EbDbTypes.String, request.Store.Description));
+                cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":description", EbDbTypes.String, request.Store.Description ?? string.Empty));
                 cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":icon", EbDbTypes.String, request.Store.Icon));
-                cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":mastersolution", EbDbTypes.String, request.Store.MasterSoln));
+                cmd.Parameters.Add(InfraConnectionFactory.ObjectsDB.GetNewParameter(":mastersolution", EbDbTypes.String, request.Store.MasterSoln ?? string.Empty));
                 object x = cmd.ExecuteScalar();
                 return new SaveToAppStoreResponse { };
             }
