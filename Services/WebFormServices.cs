@@ -1464,7 +1464,7 @@ namespace ExpressBase.ServiceStack.Services
                         string _p = JsonConvert.SerializeObject(new List<Param>() { { new Param { Name = "id", Type = "11", Value = Convert.ToString(ds.Tables[i].Rows[j][0]) } } });
                         string link = $"/WebForm/Index?_r={FormDp[i].WebForm.RefId}&_p={_p.ToBase64()}&_m=1";
                         string autoIdVal = autoIdCol == null ? string.Empty : $" ({Convert.ToString(ds.Tables[i].Rows[j][1])})";
-                        resDict.Add($"{j + 1}. {FormDp[i].WebForm.DisplayName}{autoIdVal}", link);
+                        AddInDict_TryRec(resDict, FormDp[i].WebForm.DisplayName + autoIdVal, link, 1);
                     }
                 }
                 return new GetPushedDataInfoResponse { Result = JsonConvert.SerializeObject(resDict) };
@@ -1474,6 +1474,19 @@ namespace ExpressBase.ServiceStack.Services
                 Console.WriteLine("Exception in GetPushedDataInfoRequest: " + e.Message);
                 return new GetPushedDataInfoResponse { Result = $"Error Message: {e.Message}\n{e.StackTrace}" };
             }
+        }
+
+        private void AddInDict_TryRec(Dictionary<string, string> Dict, string Key, string Val, int I)
+        {
+            if (Dict.ContainsKey(Key))
+            {
+                if (Dict.ContainsKey($"{Key}({I})"))
+                    AddInDict_TryRec(Dict, Key, Val, ++I);
+                else
+                    Dict.Add($"{Key}({I})", Val);
+            }
+            else
+                Dict.Add(Key, Val);
         }
 
         //form data submission using PushJson and FormGlobals - SQL Job, Excel Import save
