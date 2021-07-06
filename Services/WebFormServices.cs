@@ -38,7 +38,7 @@ namespace ExpressBase.ServiceStack.Services
             if (request.WebObj is EbWebForm)
             {
                 EbWebForm Form = request.WebObj as EbWebForm;
-                Form.AfterRedisGet(this);
+                Form.AfterRedisGet_All(this);
                 if (Form.DataPushers.Count > 0)
                 {
                     foreach (EbDataPusher pusher in Form.DataPushers)
@@ -1219,7 +1219,7 @@ namespace ExpressBase.ServiceStack.Services
                 else if (_form.SolutionObj.SolutionSettings.SystemColumns == null)
                     _form.SolutionObj.SolutionSettings.SystemColumns = new EbSystemColumns(EbSysCols.Values);
             }
-            _form.AfterRedisGet(this);
+            _form.AfterRedisGet_All(this);
             return _form;
         }
 
@@ -1300,6 +1300,7 @@ namespace ExpressBase.ServiceStack.Services
                 DateTime startdt = DateTime.Now;
                 Console.WriteLine("Insert/Update WebFormData : start - " + startdt);
                 EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId, request.CurrentLoc);
+                CheckDataPusherCompatibility(FormObj);
                 FormObj.TableRowId = request.RowId;
                 FormObj.FormData = JsonConvert.DeserializeObject<WebformData>(request.FormData);
                 FormObj.DraftId = request.DraftId;
@@ -1346,6 +1347,12 @@ namespace ExpressBase.ServiceStack.Services
                     StackTraceInt = ex.StackTrace
                 };
             }
+        }
+
+        private void CheckDataPusherCompatibility(EbWebForm FormObj)
+        {
+            if (FormObj.DataPushers != null && FormObj.DataPushers.Exists(e => !(e is EbFormDataPusher || e is EbApiDataPusher || e is EbBatchFormDataPusher)))
+                throw new FormException("DataPusher config is invalid! Contact Admin.", (int)HttpStatusCode.InternalServerError, "Check the type of all DataPushers. [Save the form in dev side]", "WebFormService -> CheckDataPusherCompatibility");
         }
 
         private void CheckForMyProfileForms(EbWebForm FormObj, string WC, string MobilePageRefId)
@@ -1395,6 +1402,7 @@ namespace ExpressBase.ServiceStack.Services
         public DeleteDataFromWebformResponse Any(DeleteDataFromWebformRequest request)
         {
             EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId);
+            CheckDataPusherCompatibility(FormObj);
             foreach (int _rowId in request.RowId)
             {
                 FormObj.TableRowId = _rowId;
@@ -1412,6 +1420,7 @@ namespace ExpressBase.ServiceStack.Services
         public CancelDataFromWebformResponse Any(CancelDataFromWebformRequest request)
         {
             EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId);
+            CheckDataPusherCompatibility(FormObj);
             FormObj.TableRowId = request.RowId;
             int RowAffected = FormObj.Cancel(EbConnectionFactory.DataDB, request.Cancel);
             Console.WriteLine($"Record cancelled. RowId: {request.RowId}  RowsAffected: {RowAffected}");
@@ -1442,7 +1451,7 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     EbWebForm _form = EbFormHelper.GetEbObject<EbWebForm>(batchDp.FormRefId, null, this.Redis, this);
                     _form.RefId = batchDp.FormRefId;
-                    _form.AfterRedisGet(this);
+                    _form.AfterRedisGet_All(this);
                     batchDp.WebForm = _form;
                     FormDp.Add(batchDp);
                 }

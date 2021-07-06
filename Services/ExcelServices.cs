@@ -46,7 +46,7 @@ namespace ExpressBase.ServiceStack.Services
                 _form = EbSerializers.Json_Deserialize(formObj.Data[0].Json);
                 this.Redis.Set<EbWebForm>(request._refid, _form);
             }
-            _form.AfterRedisGet(this);
+            _form.AfterRedisGet_All(this);
 
             //List<ColumnsInfo> _cols = new List<ColumnsInfo>();
             //MemoryStream ms = new MemoryStream();

@@ -215,7 +215,7 @@ namespace ExpressBase.ServiceStack
         private EbWebForm GetWebFormObject(string RefId)
         {
             EbWebForm _form = EbFormHelper.GetEbObject<EbWebForm>(RefId, null, this.Redis, this);
-            _form.AfterRedisGet(this);
+            _form.AfterRedisGet_All(this);
             return _form;
         }
 
