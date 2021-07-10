@@ -994,7 +994,9 @@ namespace ExpressBase.ServiceStack
                 {
                     List<DVBaseColumn> ApprovalColumns = GetApprovalColumn(_dv as EbTableVisualization);
                     if (ApprovalColumns.Count > 0)
-                        GetApprovalData(_user, ApprovalColumns);
+                    {
+                        GetApprovalData(_user, ApprovalColumns, rows);
+                    }
                     if ((_dv as EbTableVisualization).RowGroupCollection.Count > 0 && (_dv as EbTableVisualization).CurrentRowGroup.RowGrouping.Count > 0 && !(_dv as EbTableVisualization).DisableRowGrouping)
                     {
                         isRowgrouping = true;
@@ -2769,13 +2771,16 @@ namespace ExpressBase.ServiceStack
             return ebTableVisualization.Columns.FindAll(e => e is DVApprovalColumn);
         }
 
-        private void GetApprovalData(User _user, List<DVBaseColumn> cols)
+        private void GetApprovalData(User _user, List<DVBaseColumn> cols, RowColletion rows)
         {
             try
             {
                 foreach (DVBaseColumn _col in cols)
                 {
                     DVApprovalColumn col = _col as DVApprovalColumn;
+
+                    int[] eb_src_ids = rows.Select(e => Convert.ToInt32(e[col.FormDataId[0].Data])).ToArray();
+
                     var _roles = string.Join(",", _user.RoleIds.ToArray());
                     var verid = col.FormRefid.Split("-")[4];
                     string str = string.Empty;
@@ -2789,11 +2794,12 @@ namespace ExpressBase.ServiceStack
 	                    WHERE  my.form_ref_id ='{0}'
 			                    AND my.is_completed='F' AND my.eb_del='F'
 			                    AND st.id=my.eb_stages_id AND st.eb_del='F' 
+                                AND my.form_data_id = ANY (ARRAY[{1}]::INT[])
 	                    ) Q1
                     LEFT JOIN
 	                    eb_stage_actions act
                     ON
-	                    Q1.stage_id=act.eb_stages_id AND act.eb_del='F' ;", col.FormRefid);
+	                    Q1.stage_id=act.eb_stages_id AND act.eb_del='F';", col.FormRefid, eb_src_ids.Join(","));
                     }
                     else
                     {
@@ -2807,25 +2813,29 @@ namespace ExpressBase.ServiceStack
                                 AND my.form_ref_id ='{2}'
 			                    AND my.is_completed='F' AND my.eb_del='F'
 			                    AND st.id=my.eb_stages_id AND st.eb_del='F' 
+                                AND my.form_data_id = ANY (ARRAY[{3}]::INT[])
 	                    ) Q1
                     LEFT JOIN
 	                    eb_stage_actions act
                     ON
-	                    Q1.stage_id=act.eb_stages_id AND act.eb_del='F' ;", _user.UserId, _roles, col.FormRefid);
+	                    Q1.stage_id=act.eb_stages_id AND act.eb_del='F' ;", _user.UserId, _roles, col.FormRefid, eb_src_ids.Join(","));
                     }
                     str += string.Format(@"
 	                    SELECT app.review_status,app.eb_src_id,my.id,st.stage_name,app.eb_lastmodified_at, app.eb_created_at
 	                    FROM eb_approval app,eb_my_actions my, eb_stages st
 	                    WHERE  app.eb_ver_id ='{0}' AND app.eb_del='F'
 			                    AND my.id=app.eb_my_actions_id
-			                    AND st.id = my.eb_stages_id;", verid);
+			                    AND st.id = my.eb_stages_id
+                                AND my.form_data_id = ANY (ARRAY[{1}]::INT[]);", verid, eb_src_ids.Join(","));
                     str += string.Format(@"SELECT app.id,usr.fullname,app.comments,app.eb_created_by,app.eb_created_at,
 	 	                                app.eb_src_id,st.stage_name,act.action_name
 	                                FROM eb_approval_lines app,eb_users usr,eb_stages st,eb_stage_actions act
 	                                WHERE  app.eb_ver_id ='{0}' AND app.eb_created_by = usr.id  AND st.stage_unique_id=app.stage_unique_id
 	 		                                AND st.form_ref_id='{1}'
 	 		                                AND act.action_unique_id=app.action_unique_id AND act.eb_stages_id = st.id
-	 		                                AND act.eb_del='F' ORDER BY app.eb_created_at DESC;", verid, col.FormRefid);
+	 		                                AND act.eb_del='F' 
+                                            AND app.eb_src_id = ANY (ARRAY[{2}]::INT[])
+                                    ORDER BY app.eb_created_at DESC;", verid, col.FormRefid, eb_src_ids.Join(","));
                     col.ApprovalData = this.EbConnectionFactory.DataDB.DoQueries(str);
                 }
             }
@@ -2972,7 +2982,7 @@ namespace ExpressBase.ServiceStack
             _obj.Form_ref_id = rows[0]["form_ref_id"].ToString();
             _obj.Form_data_id = rows[0]["form_data_id"].ToString();
             var _date = Convert.ToDateTime(rows[0]["from_datetime"]);
-            var _time = _date.DateInNotification((_user.Preference.TimeZone));
+            var _time = _date.TimeAgo();
             var _tooltipdate = _date.ConvertFromUtc(_user.Preference.TimeZone).ToString(_user.Preference.GetShortDatePattern()) + " " + _date.ConvertFromUtc(_user.Preference.TimeZone).ToString(_user.Preference.GetShortTimePattern());
             foreach (EbDataRow _ebdatarow in rows)
             {
@@ -3042,7 +3052,7 @@ namespace ExpressBase.ServiceStack
                     _date = Convert.ToDateTime(rows[0]["eb_created_at"]);
                 _latestHistory = rows[0]["stage_name"].ToString();
             }
-            _time = _date.DateInNotification((_user.Preference.TimeZone));
+            _time = _date.TimeAgo();
             _tooltipdate = _date.ConvertFromUtc(_user.Preference.TimeZone).ToString(_user.Preference.GetShortDatePattern()) + " " + _date.ConvertFromUtc(_user.Preference.TimeZone).ToString(_user.Preference.GetShortTimePattern());
             if (rows != null && rows.Count == 1)
             {
@@ -3144,35 +3154,6 @@ namespace ExpressBase.ServiceStack
                 _history += " (" + rows[0]["action_name"].ToString() + ") ";
             }
             return _history;
-        }
-
-        private string GetDifferenceInTime(DateTime _date)
-        {
-            try
-            {
-                TimeSpan time = (DateTime.Now - _date);
-                return DateStringForNotification(time);
-            }
-            catch (Exception e)
-            {
-                Log.Info("Get Difference In Time Exception------------" + e.Message);
-                Log.Info(e.StackTrace);
-            }
-            return string.Empty;
-        }
-
-        public string DateStringForNotification(TimeSpan span)
-        {
-            string formatted = string.Empty;
-            if ((int)span.TotalMinutes < 5)
-                formatted = "Just Now";
-            else
-                formatted = string.Format("{0}{1}{2}",
-                span.Duration().Days > 0 ? string.Format("{0}d ", span.Days) : string.Empty,
-                span.Duration().Hours > 0 ? string.Format("{0}h ", span.Hours) : string.Empty,
-                span.Duration().Minutes > 0 ? string.Format("{0}m ", span.Minutes) : string.Empty);
-
-            return formatted;
         }
 
         private object GetDataforPowerSelect(DVBaseColumn col, object _formattedData)
