@@ -1439,6 +1439,14 @@ namespace ExpressBase.ServiceStack.Services
             return new EnableLogResponse { RowsDeleted = _rows };
         }
 
+        public GetRefIdByVerIdResponse Post(GetRefIdByVerIdRequest request)
+        {
+            string sql = "SELECT refid FROM eb_objects_ver WHERE id = @id";
+            DbParameter[] p = { EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, request.ObjVerId) };
+            EbDataTable _tbl = EbConnectionFactory.ObjectsDB.DoQuery(sql, p);
+            return new GetRefIdByVerIdResponse { RefId = _tbl.Rows.Count > 0 ? Convert.ToString(_tbl.Rows[0][0]) : "__not__found__" };
+        }
+
         public int GetObjectType(object obj)
         {
             if (obj is EbDataReader)
