@@ -51,6 +51,7 @@ using Font = DocumentFormat.OpenXml.Spreadsheet.Font;
 using Fonts = DocumentFormat.OpenXml.Spreadsheet.Fonts;
 using Fill = DocumentFormat.OpenXml.Spreadsheet.Fill;
 using Color = DocumentFormat.OpenXml.Spreadsheet.Color;
+using ExpressBase.Objects.WebFormRelated;
 
 namespace ExpressBase.ServiceStack
 {
@@ -1300,12 +1301,12 @@ namespace ExpressBase.ServiceStack
                 dataset = _dataset;
                 EbDataSet tempdataset = new EbDataSet();
                 Globals globals = new Globals();
-                Dictionary<string, DynamicObj> _hourCount = new Dictionary<string, DynamicObj>(); 
+                Dictionary<string, DynamicObj> _hourCount = new Dictionary<string, DynamicObj>();
                 Dictionary<int, List<object>> summary = new Dictionary<int, List<object>>();
                 this.CreateCustomcolumn4Calendar(_dataset, ref tempdataset, Parameters, ref _dv, ref _hourCount, ref summary);
                 int _count = (_dv as EbCalendarView).DataColumns.FindAll(col => col.bVisible).Count;
                 List<object> _list = new List<object>();
-                for(int i=0; i< _count; i++)
+                for (int i = 0; i < _count; i++)
                 {
                     _list.Add(0);
                     _list.Add(0);
@@ -1317,7 +1318,7 @@ namespace ExpressBase.ServiceStack
                 EbDataTable _formattedTable = tempdataset.Tables[0].GetEmptyTable();
                 _formattedTable.Columns.Add(_formattedTable.NewDataColumn(_dv.Columns.Count, "Total", EbDbTypes.Int32));
                 summary.Add(_dv.Columns.Count, new List<object>(_list));
-                _dv.Columns.Add(new DVBaseColumn { Data = _dv.Columns.Count, Name = "Total", sTitle = "Total", Type = EbDbTypes.Int32, RenderType = EbDbTypes.Int32, bVisible = true,AggregateFun = AggregateFun.Sum });
+                _dv.Columns.Add(new DVBaseColumn { Data = _dv.Columns.Count, Name = "Total", sTitle = "Total", Type = EbDbTypes.Int32, RenderType = EbDbTypes.Int32, bVisible = true, AggregateFun = AggregateFun.Sum });
                 _formattedTable.Columns.Add(_formattedTable.NewDataColumn(_dv.Columns.Count, "serial", EbDbTypes.Int32));
                 RowColletion MasterRows = _dataset.Tables[0].Rows;
                 RowColletion LinesRows = _dataset.Tables[1].Rows;
@@ -1336,7 +1337,7 @@ namespace ExpressBase.ServiceStack
 
                     DataTable2FormatedTable4Calendar(MasterRows[i], customRows, _dv, _user_culture, _user, ref _formattedTable, ref globals, i, _hourCount, DateColumn, ref summary);
                 }
-                return new PrePrcessorReturn { FormattedTable = _formattedTable, rows = MasterRows, Summary= summary };
+                return new PrePrcessorReturn { FormattedTable = _formattedTable, rows = MasterRows, Summary = summary };
             }
             catch (Exception e)
             {
@@ -1457,7 +1458,7 @@ namespace ExpressBase.ServiceStack
                     };
                     _dv.Columns.Add(col);
                     (_dv as EbCalendarView).DateColumns.Add(col);
-                    summary.Add(index, new List<object> { 0, 0,0,0 });
+                    summary.Add(index, new List<object> { 0, 0, 0, 0 });
                 }
                 index++;
                 if (!_hourCount.ContainsKey(key))
@@ -2827,15 +2828,44 @@ namespace ExpressBase.ServiceStack
 			                    AND my.id=app.eb_my_actions_id
 			                    AND st.id = my.eb_stages_id
                                 AND my.form_data_id = ANY (ARRAY[{1}]::INT[]);", verid, eb_src_ids.Join(","));
-                    str += string.Format(@"SELECT app.id,usr.fullname,app.comments,app.eb_created_by,app.eb_created_at,
-	 	                                app.eb_src_id,st.stage_name,act.action_name
-	                                FROM eb_approval_lines app,eb_users usr,eb_stages st,eb_stage_actions act
-	                                WHERE  app.eb_ver_id ='{0}' AND app.eb_created_by = usr.id  AND st.stage_unique_id=app.stage_unique_id
-	 		                                AND st.form_ref_id='{1}'
-	 		                                AND act.action_unique_id=app.action_unique_id AND act.eb_stages_id = st.id
-	 		                                AND act.eb_del='F' 
-                                            AND app.eb_src_id = ANY (ARRAY[{2}]::INT[])
-                                    ORDER BY app.eb_created_at DESC;", verid, col.FormRefid, eb_src_ids.Join(","));
+                    str += $@"
+SELECT * FROM
+(   
+    SELECT 
+        AL.id, USR.fullname, AL.comments, AL.eb_created_by, AL.eb_created_at, AL.eb_src_id,
+        S.stage_name, SA.action_name
+    FROM 
+        eb_approval_lines AL,
+        eb_users USR,
+        eb_stages S,
+        eb_stage_actions SA
+    WHERE  
+        AL.eb_ver_id ='{verid}' AND 
+        AL.eb_created_by = USR.id AND 
+        AL.stage_unique_id = S.stage_unique_id AND 
+        S.form_ref_id='{col.FormRefid}' AND 
+        AL.action_unique_id = SA.action_unique_id AND 
+        SA.eb_stages_id = S.id AND 
+        SA.eb_del='F' AND 
+        AL.eb_src_id = ANY (ARRAY[{eb_src_ids.Join(",")}]::INT[]) AND
+        COALESCE(AL.eb_del, 'F') = 'F'
+    UNION
+    SELECT 
+        AL.id, USR.fullname, AL.comments, AL.eb_created_by, AL.eb_created_at, AL.eb_src_id,
+        'System' AS stage_name, 'Reset' AS action_name
+    FROM 
+        eb_approval_lines AL,
+        eb_users USR
+    WHERE  
+        AL.eb_ver_id ='{verid}' AND 
+        AL.eb_created_by = USR.id AND 
+        AL.stage_unique_id = '{FormConstants.__control_stage}' AND 
+        AL.action_unique_id = '{FormConstants.__review_reset}' AND         
+        AL.eb_src_id = ANY (ARRAY[{eb_src_ids.Join(",")}]::INT[]) AND
+        COALESCE(AL.eb_del, 'F') = 'F'
+) AS xx
+ORDER BY 
+    xx.eb_created_at DESC; ";
                     col.ApprovalData = this.EbConnectionFactory.DataDB.DoQueries(str);
                 }
             }
@@ -2895,15 +2925,46 @@ namespace ExpressBase.ServiceStack
 	                    WHERE  app.eb_ver_id ='{0}' AND app.eb_del='F' AND app.eb_src_id={1}
 			                    AND my.id=app.eb_my_actions_id
 			                    AND st.id = my.eb_stages_id;", verid, request.RowId);
-                str += string.Format(@"SELECT app.id,usr.fullname,app.comments,app.eb_created_by,app.eb_created_at,
-	 	                        app.eb_src_id,st.stage_name,act.action_name
-	                        FROM eb_approval_lines app,eb_users usr,eb_stages st,eb_stage_actions act
-	                        WHERE  app.eb_ver_id ='{0}' AND app.eb_src_id ='{1}' AND app.eb_created_by = usr.id  AND st.stage_unique_id=app.stage_unique_id
-	 		                        AND st.form_ref_id='{2}'
-	 		                        AND act.action_unique_id=app.action_unique_id AND act.eb_stages_id = st.id
-	 		                        AND act.eb_del='F' ORDER BY app.eb_created_at DESC;", verid, request.RowId, request.RefId);
+                str += $@"
+SELECT * FROM
+(   
+    SELECT 
+        AL.id, USR.fullname, AL.comments, AL.eb_created_by, AL.eb_created_at, AL.eb_src_id,
+        S.stage_name, SA.action_name
+    FROM 
+        eb_approval_lines AL,
+        eb_users USR,
+        eb_stages S,
+        eb_stage_actions SA
+    WHERE  
+        AL.eb_ver_id ='{verid}' AND 
+        AL.eb_created_by = USR.id AND 
+        AL.stage_unique_id = S.stage_unique_id AND 
+        S.form_ref_id='{request.RefId}' AND 
+        AL.action_unique_id = SA.action_unique_id AND 
+        SA.eb_stages_id = S.id AND 
+        SA.eb_del='F' AND 
+        AL.eb_src_id = '{request.RowId}' AND
+        COALESCE(AL.eb_del, 'F') = 'F'
+    UNION
+    SELECT 
+        AL.id, USR.fullname, AL.comments, AL.eb_created_by, AL.eb_created_at, AL.eb_src_id,
+        'System' AS stage_name, 'Reset' AS action_name
+    FROM 
+        eb_approval_lines AL,
+        eb_users USR
+    WHERE  
+        AL.eb_ver_id ='{verid}' AND 
+        AL.eb_created_by = USR.id AND 
+        AL.stage_unique_id = '{FormConstants.__control_stage}' AND 
+        AL.action_unique_id = '{FormConstants.__review_reset}' AND         
+        AL.eb_src_id = '{request.RowId}' AND
+        COALESCE(AL.eb_del, 'F') = 'F'
+) AS xx
+ORDER BY 
+    xx.eb_created_at DESC; ";
                 _approvaldata = this.EbConnectionFactory.DataDB.DoQueries(str);
-                resp._data = ProcessParticularApprovalcolumn(request.UserObj);
+                resp._data = ProcessParticularApprovalcolumn(request.UserObj, request.RowId, request.RefId);
             }
             catch (Exception e)
             {
@@ -2912,18 +2973,18 @@ namespace ExpressBase.ServiceStack
             return resp;
         }
 
-        private string ProcessParticularApprovalcolumn(User _user)
+        private string ProcessParticularApprovalcolumn(User _user, int DataId, string FormRefId)
         {
             string _formattedData = string.Empty;
             var _rows = _approvaldata.Tables[0].Rows;
             if (_rows.Count > 0)
-                _formattedData = GetDataforPermissedApprovalColumn(_rows, _user, _approvaldata.Tables[2].Rows);
+                _formattedData = GetDataforPermissedApprovalColumn(_rows, _user, _approvaldata.Tables[2].Rows, null, null);
             else
             {
                 _rows = _approvaldata.Tables[1].Rows;
                 if (_rows.Count > 0)
                 {
-                    _formattedData = GetDataforNotPermissedApprovalColumn(_rows, _user, _approvaldata.Tables[2].Rows);
+                    _formattedData = GetDataforNotPermissedApprovalColumn(_rows, _user, _approvaldata.Tables[2].Rows, null, null, DataId, FormRefId);
                 }
                 else
                     _formattedData = string.Empty;
@@ -2939,12 +3000,12 @@ namespace ExpressBase.ServiceStack
                 var _rows = col.ApprovalData.Tables[0].Rows.FindAll(_row => Convert.ToInt32(_row["form_data_id"]) == Convert.ToInt32(row[(col as DVApprovalColumn).FormDataId[0].Data]));
                 var linesRows = col.ApprovalData.Tables[2].Rows.FindAll(_row => Convert.ToInt32(_row["eb_src_id"]) == Convert.ToInt32(row[(col as DVApprovalColumn).FormDataId[0].Data]));
                 if (_rows.Count > 0)
-                    _formattedData = GetDataforPermissedApprovalColumn(_rows, _user, linesRows, row);
+                    _formattedData = GetDataforPermissedApprovalColumn(_rows, _user, linesRows, row, col as DVApprovalColumn);
                 else
                 {
                     _rows = col.ApprovalData.Tables[1].Rows.FindAll(_row => Convert.ToInt32(_row["eb_src_id"]) == Convert.ToInt32(row[(col as DVApprovalColumn).FormDataId[0].Data]));
                     if (_rows.Count > 0)
-                        _formattedData = GetDataforNotPermissedApprovalColumn(_rows, _user, linesRows, row);
+                        _formattedData = GetDataforNotPermissedApprovalColumn(_rows, _user, linesRows, row, col as DVApprovalColumn, 0, null);
                     else
                     {
                         _formattedData = string.Empty;
@@ -2965,12 +3026,22 @@ namespace ExpressBase.ServiceStack
             row[col.Data] = _formattedData;
         }
 
-        private string GetDataforPermissedApprovalColumn(List<EbDataRow> rows, User _user, List<EbDataRow> linesRows, EbDataRow row = null)
+        private bool CheckReviewResetPermission(User _user, DVApprovalColumn col)
         {
-            string _data = @"<div class='nav-container'>
+            bool hasRoleMatch = _user.RoleIds.Contains((int)SystemRoles.SolutionOwner) || _user.RoleIds.Contains((int)SystemRoles.SolutionAdmin);
+            if (col?.ResetterRoles != null)
+                hasRoleMatch = hasRoleMatch || _user.RoleIds.Select(x => x).Intersect(col.ResetterRoles).Any();
+            return hasRoleMatch;
+        }
+
+        private string GetDataforPermissedApprovalColumn(List<EbDataRow> rows, User _user, List<EbDataRow> linesRows, EbDataRow row, DVApprovalColumn col)
+        {
+            bool enableReset = CheckReviewResetPermission(_user, col);
+            string _data = $@"<div class='nav-container'>
                           <ul class='nav nav-tabs'>
                             <li class='active'><a data-toggle='tab' href='#action'>Action</a></li>
                             <li><a data-toggle='tab' href='#history'>History</a></li>
+                            {(enableReset ? "<li><a data-toggle='tab' href='#resetstage'>Reset</a></li>" : "")}
                             </ul>";
             _data += @"<div class='tab-content'>
                                   <div class='tab-pane active' id='action'>";
@@ -2995,7 +3066,24 @@ namespace ExpressBase.ServiceStack
             _data += "</table></div>";
             _data += "<div class='tab-pane' id='history'>";
             _data += GetApprovalHistoryString(linesRows, _user);
-            _data += "</div></div></div>";
+            _data += "</div>";
+            if (enableReset)
+            {
+                _obj.Stage_unique_id = FormConstants.__control_stage;
+                _obj.Action_unique_id = FormConstants.__review_reset;
+                _obj.My_action_id = "0";
+
+                _data += $@"
+<div class='tab-pane' id='resetstage'>
+    <table class='action-table'>
+        <tr><td class='action-td'>Comments</td><td class='action-td'><textarea class='comment-text'></textarea></td></tr>
+        <tr><td class='action-td'></td><td class='action-td'>
+            <button class='btn stage-btn btn-action_reset' data-toggle='tooltip' title='Reset' data-json = '{Convert.ToBase64String(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(_obj)))}'>Reset</button>
+        </td></tr>
+    </table>
+</div>";
+            }
+            _data += "</div></div>";
             string _stage = "<div class='stage-div'>";
             var _latestHistory = GetLatestHistory(linesRows);
             if (!string.IsNullOrEmpty(_latestHistory))
@@ -3025,18 +3113,44 @@ namespace ExpressBase.ServiceStack
             return "<div class='stage_actions_cont'>" + _stage + _button + "</div>";
         }
 
-        private string GetDataforNotPermissedApprovalColumn(List<EbDataRow> rows, User _user, List<EbDataRow> linesRows, EbDataRow row = null)
+        private string GetDataforNotPermissedApprovalColumn(List<EbDataRow> rows, User _user, List<EbDataRow> linesRows, EbDataRow row, DVApprovalColumn col, int dataId, string formRefId)
         {
+            bool enableReset = CheckReviewResetPermission(_user, col);
             string _stage = "<div class='stage_actions_cont'>";
             string _stage_name = "<div class='stage-div'>";
-            string _history = @"<div class='nav-container'>
+            string _history = $@"<div class='nav-container'>
                           <ul class='nav nav-tabs'>
                             <li class='active'><a data-toggle='tab' href='#history'>History</a></li>
+                            {(enableReset ? "<li><a data-toggle='tab' href='#resetstage'>Reset</a></li>" : "")}
                             </ul>";
             _history += @"<div class='tab-content'>
                                   <div class='tab-pane active' id='history'>";
             _history += GetApprovalHistoryString(linesRows, _user);
-            _history += "</div></div></div> ";
+            _history += "</div>";
+
+            if (enableReset)
+            {
+                ApprovalData _obj = new ApprovalData
+                {
+                    Form_ref_id = col != null ? col.FormRefid : formRefId,
+                    Form_data_id = row != null ? Convert.ToString(row[col.FormDataId[0].Data]) : dataId.ToString(),
+                    Stage_unique_id = FormConstants.__control_stage,
+                    Action_unique_id = FormConstants.__review_reset,
+                    My_action_id = "0"
+                };
+
+                _history += $@"
+<div class='tab-pane' id='resetstage'>
+    <table class='action-table'>
+        <tr><td class='action-td'>Comments</td><td class='action-td'><textarea class='comment-text'></textarea></td></tr>
+        <tr><td class='action-td'></td><td class='action-td'>
+            <button class='btn stage-btn btn-action_reset' data-toggle='tooltip' title='Reset' data-json = '{Convert.ToBase64String(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(_obj)))}'>Reset</button>
+        </td></tr>
+    </table>
+</div>";
+            }
+
+            _history += "</div></div> ";
             var _time = string.Empty; var _tooltipdate = string.Empty;
             DateTime _date = DateTime.Now;
             var _latestHistory = string.Empty;
@@ -3227,7 +3341,7 @@ namespace ExpressBase.ServiceStack
 
         }
 
-        public void CalendarProcessing(Dictionary<string, DynamicObj> _hourCount, ref EbDataTable _formattedTable, List<EbDataRow> Customrows, DVBaseColumn DateColumn, 
+        public void CalendarProcessing(Dictionary<string, DynamicObj> _hourCount, ref EbDataTable _formattedTable, List<EbDataRow> Customrows, DVBaseColumn DateColumn,
             EbDataVisualization _dv, bool _islink, int i, CultureInfo _user_culture, User _user, ref Globals globals, ref Dictionary<int, List<object>> summary)
         {
             try
@@ -3263,7 +3377,7 @@ namespace ExpressBase.ServiceStack
                                         _hourCount[CalendarCol.Name].Row = System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(string.Join(",", dr.ToArray())));
 
                                     var _data = dr[datacol.OIndex];
-                                    summaryval =Convert.ToInt32( _data );
+                                    summaryval = Convert.ToInt32(_data);
 
                                     this.conditinallyformatColumn(datacol, ref _data, _data, dr, ref globals);
 
@@ -3306,7 +3420,7 @@ namespace ExpressBase.ServiceStack
                                     summaryval = Convert.ToInt32(_hourCount[CalendarCol.Name].Value);
                                 }
                             }
-                            
+
                             var ValueTo = this.formatColumn(datacol as CalendarDynamicColumn, _hourCount[col.Name].Value, _user_culture, _user, ref globals);
                             ValueTo = (ValueTo == null) ? "" : ValueTo;
 
@@ -3317,7 +3431,7 @@ namespace ExpressBase.ServiceStack
                             _formatteddata += $"<div class='dataclass { datacol.Name}_class'>{_span }</div>";
                             // for column aggregate
                             if (summary.ContainsKey(col.Data))
-                                summary[col.Data][2* DataColumnsincrementer] = Convert.ToInt32(summary[col.Data][2 * DataColumnsincrementer]) + summaryval;
+                                summary[col.Data][2 * DataColumnsincrementer] = Convert.ToInt32(summary[col.Data][2 * DataColumnsincrementer]) + summaryval;
                             // for row aggregate
                             if (!Rowsummaryval.ContainsKey(datacol.Name))
                                 Rowsummaryval.Add(datacol.Name, new List<object> { summaryval });
@@ -3343,7 +3457,7 @@ namespace ExpressBase.ServiceStack
                     formatteddata += $"<div class='dataclass { xx.Key}_class'>{_span }</div>";
                 }
                 tooltip += "</table>";
-                _formattedTable.Rows[i][_formattedTable.Columns.Count - 2] = formatteddata.ToString().Replace("@@tooltip@@", tooltip.ToBase64()); 
+                _formattedTable.Rows[i][_formattedTable.Columns.Count - 2] = formatteddata.ToString().Replace("@@tooltip@@", tooltip.ToBase64());
             }
             catch (Exception e)
             {
@@ -3422,7 +3536,7 @@ namespace ExpressBase.ServiceStack
                 _formattedTable.Rows[k][0] = "Total";
                 foreach (DVBaseColumn col in _dv.Columns)
                 {
-                    if(summary.Keys.Contains(col.Data))
+                    if (summary.Keys.Contains(col.Data))
                         _formattedTable.Rows[k][col.Name] = summary[col.Data][0];
                 }
                 //DataTable2FormatedTable4Pivot(_dataset.Tables[0].Rows[i], ref _dv, ref _formattedTable);
@@ -3471,7 +3585,7 @@ namespace ExpressBase.ServiceStack
 
         public string GetKey(DateTime st, DateTime end)
         {
-            string newstr =  st.ToString("dd/MM/yyyy:HH:mm:ss") + end.ToString("dd/MM/yyyy:HH:mm:ss");
+            string newstr = st.ToString("dd/MM/yyyy:HH:mm:ss") + end.ToString("dd/MM/yyyy:HH:mm:ss");
             return Regex.Replace(newstr, "[^a-zA-Z0-9_]+", "_");
         }
 

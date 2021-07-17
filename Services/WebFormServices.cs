@@ -1349,6 +1349,58 @@ namespace ExpressBase.ServiceStack.Services
             }
         }
 
+        public ExecuteReviewResponse Any(ExecuteReviewRequest request)
+        {
+            try
+            {
+                DateTime startdt = DateTime.Now;
+                Console.WriteLine("ExecuteReviewRequest : start - " + startdt);
+                EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId, request.CurrentLoc);
+                FormObj.TableRowId = request.RowId;
+                FormObj.FormData = JsonConvert.DeserializeObject<WebformData>(request.FormData);
+                FormObj.DraftId = request.DraftId;
+                FormObj.FormDataPusherCount = 0;// DataPusher exec blocker 
+                FormObj.FormCollection = new EbWebFormCollection(FormObj);
+                EbReviewHelper.CheckReviewCompatibility(FormObj);
+                Console.WriteLine("ExecuteReviewRequest : MergeFormData start - " + DateTime.Now);
+                FormObj.MergeFormData();
+                Console.WriteLine("ExecuteReviewRequest : Save start - " + DateTime.Now);
+                string r = FormObj.SaveReview(EbConnectionFactory, this, request.WhichConsole);
+                Console.WriteLine("ExecuteReviewRequest end : Execution Time = " + (DateTime.Now - startdt).TotalMilliseconds);
+
+                return new ExecuteReviewResponse()
+                {
+                    Message = "Success",
+                    RowId = FormObj.TableRowId,
+                    FormData = JsonConvert.SerializeObject(FormObj.FormData),
+                    RowAffected = 1,
+                    Status = (int)HttpStatusCode.OK
+                };
+            }
+            catch (FormException ex)
+            {
+                Console.WriteLine("FormException in ExecuteReview\nMessage : " + ex.Message + "\nMessageInternal : " + ex.MessageInternal + "\nStackTraceInternal : " + ex.StackTraceInternal + "\nStackTrace" + ex.StackTrace);
+                return new ExecuteReviewResponse()
+                {
+                    Message = ex.Message,
+                    Status = ex.ExceptionCode,
+                    MessageInt = ex.MessageInternal,
+                    StackTraceInt = ex.StackTraceInternal
+                };
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Exception in ExecuteReview\nMessage : " + ex.Message + "\nStackTrace : " + ex.StackTrace);
+                return new ExecuteReviewResponse()
+                {
+                    Message = "Something went wrong",
+                    Status = (int)HttpStatusCode.InternalServerError,
+                    MessageInt = ex.Message,
+                    StackTraceInt = ex.StackTrace
+                };
+            }
+        }
+
         private void CheckDataPusherCompatibility(EbWebForm FormObj)
         {
             if (FormObj.DataPushers != null && FormObj.DataPushers.Exists(e => !(e is EbFormDataPusher || e is EbApiDataPusher || e is EbBatchFormDataPusher)))
