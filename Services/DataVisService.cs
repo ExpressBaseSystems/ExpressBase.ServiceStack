@@ -2859,7 +2859,7 @@ SELECT * FROM
     WHERE  
         AL.eb_ver_id ='{verid}' AND 
         AL.eb_created_by = USR.id AND 
-        AL.stage_unique_id = '{FormConstants.__control_stage}' AND 
+        AL.stage_unique_id = '{FormConstants.__system_stage}' AND 
         AL.action_unique_id = '{FormConstants.__review_reset}' AND         
         AL.eb_src_id = ANY (ARRAY[{eb_src_ids.Join(",")}]::INT[]) AND
         COALESCE(AL.eb_del, 'F') = 'F'
@@ -2956,7 +2956,7 @@ SELECT * FROM
     WHERE  
         AL.eb_ver_id ='{verid}' AND 
         AL.eb_created_by = USR.id AND 
-        AL.stage_unique_id = '{FormConstants.__control_stage}' AND 
+        AL.stage_unique_id = '{FormConstants.__system_stage}' AND 
         AL.action_unique_id = '{FormConstants.__review_reset}' AND         
         AL.eb_src_id = '{request.RowId}' AND
         COALESCE(AL.eb_del, 'F') = 'F'
@@ -3069,7 +3069,7 @@ ORDER BY
             _data += "</div>";
             if (enableReset)
             {
-                _obj.Stage_unique_id = FormConstants.__control_stage;
+                _obj.Stage_unique_id = FormConstants.__system_stage;
                 _obj.Action_unique_id = FormConstants.__review_reset;
                 _obj.My_action_id = "0";
 
@@ -3134,7 +3134,7 @@ ORDER BY
                 {
                     Form_ref_id = col != null ? col.FormRefid : formRefId,
                     Form_data_id = row != null ? Convert.ToString(row[col.FormDataId[0].Data]) : dataId.ToString(),
-                    Stage_unique_id = FormConstants.__control_stage,
+                    Stage_unique_id = FormConstants.__system_stage,
                     Action_unique_id = FormConstants.__review_reset,
                     My_action_id = "0"
                 };
