@@ -3053,7 +3053,7 @@ ORDER BY
             _obj.Form_ref_id = rows[0]["form_ref_id"].ToString();
             _obj.Form_data_id = rows[0]["form_data_id"].ToString();
             var _date = Convert.ToDateTime(rows[0]["from_datetime"]);
-            var _time = _date.TimeAgo();
+            var _time = _date.TimeAgoShort();
             var _tooltipdate = _date.ConvertFromUtc(_user.Preference.TimeZone).ToString(_user.Preference.GetShortDatePattern()) + " " + _date.ConvertFromUtc(_user.Preference.TimeZone).ToString(_user.Preference.GetShortTimePattern());
             foreach (EbDataRow _ebdatarow in rows)
             {
@@ -3166,7 +3166,7 @@ ORDER BY
                     _date = Convert.ToDateTime(rows[0]["eb_created_at"]);
                 _latestHistory = rows[0]["stage_name"].ToString();
             }
-            _time = _date.TimeAgo();
+            _time = _date.TimeAgoShort();
             _tooltipdate = _date.ConvertFromUtc(_user.Preference.TimeZone).ToString(_user.Preference.GetShortDatePattern()) + " " + _date.ConvertFromUtc(_user.Preference.TimeZone).ToString(_user.Preference.GetShortTimePattern());
             if (rows != null && rows.Count == 1)
             {
