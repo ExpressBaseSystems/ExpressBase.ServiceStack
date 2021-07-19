@@ -115,16 +115,16 @@ namespace ExpressBase.ServiceStack
                             //{
                             //    curSql = "SELECT * FROM (" + curSql + ") data WHERE 1=1 :and_search order by :orderby";
                             //}
-                            //curSql = curSql.ReplaceAll(";", string.Empty);
+                            //curSql = curSql.Replace(";", string.Empty);
                             //curSql = curSql.Replace(":and_search", _c) + ";";
                             MatchCollection matches = Regex.Matches(curSql, @"\;\s*SELECT\s*COUNT\(\*\)\s*FROM");
                             if (matches.Count == 0)
                             {
-                                tempsql = curSql.ReplaceAll(";", string.Empty);
+                                tempsql = curSql.Replace(";", string.Empty);
                                 tempsql = "SELECT COUNT(*) FROM (" + tempsql + ") data" + i + ";";
                             }
 
-                            string sql1 = curSql.ReplaceAll(";", string.Empty);
+                            string sql1 = curSql.Replace(";", string.Empty);
                             if (MyDataStore.Vendor == DatabaseVendors.ORACLE)
                             {
                                 sql1 = "SELECT * FROM ( SELECT a.*,ROWNUM rnum FROM (" + sql1 + ")a WHERE ROWNUM <= :limit+:offset) WHERE rnum > :offset;";
@@ -480,17 +480,17 @@ namespace ExpressBase.ServiceStack
                     {
                         firstsql = "SELECT * FROM (" + firstsql + "\n ) data WHERE 1=1 :and_search order by :orderby";
                     }
-                    firstsql = firstsql.ReplaceAll(";", string.Empty);
+                    firstsql = firstsql.Replace(";", string.Empty);
                     firstsql = firstsql.Replace(":and_search", _c) + ";";
 
                     MatchCollection matches = Regex.Matches(firstsql, @"\;\s*SELECT\s*COUNT\(\*\)\s*FROM");
                     if (matches.Count == 0)
                     {
-                        countsql = firstsql.ReplaceAll(";", string.Empty);
+                        countsql = firstsql.Replace(";", string.Empty);
                         countsql = "SELECT COUNT(*) FROM (" + countsql + ") data1;";
                     }
 
-                    firstsql = firstsql.ReplaceAll(";", string.Empty);
+                    firstsql = firstsql.Replace(";", string.Empty);
                     if (MyDataStore.Vendor == DatabaseVendors.ORACLE)
                     {
                         firstsql = "SELECT * FROM ( SELECT a.*,ROWNUM rnum FROM (" + firstsql + ")a WHERE ROWNUM <= :limit+:offset) WHERE rnum > :offset;";

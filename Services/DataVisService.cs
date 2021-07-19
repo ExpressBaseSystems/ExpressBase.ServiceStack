@@ -537,7 +537,7 @@ namespace ExpressBase.ServiceStack
                             {
                                 _ds.Sql = "SELECT * FROM (" + _ds.Sql + "\n ) data WHERE 1=1 :and_search order by :orderby";
                             }
-                            _ds.Sql = _ds.Sql.ReplaceAll(";", string.Empty);
+                            _ds.Sql = _ds.Sql.Replace(";", string.Empty);
                             _sql = _ds.Sql.Replace(":and_search", _c).Replace("@and_search", _c) + ";";
                             //}
                             if (request.Ispaging || request.Length > 0)
@@ -545,11 +545,11 @@ namespace ExpressBase.ServiceStack
                                 var matches = Regex.Matches(_sql, @"\;\s*SELECT\s*COUNT\(\*\)\s*FROM");
                                 if (matches.Count == 0)
                                 {
-                                    tempsql = _sql.ReplaceAll(";", string.Empty);
+                                    tempsql = _sql.Replace(";", string.Empty);
                                     tempsql = "SELECT COUNT(*) FROM (" + tempsql + ") data1;";
                                 }
 
-                                var sql1 = _sql.ReplaceAll(";", string.Empty);
+                                var sql1 = _sql.Replace(";", string.Empty);
                                 if (this.EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.ORACLE)
                                 {
                                     sql1 = "SELECT * FROM ( SELECT a.*,ROWNUM rnum FROM (" + sql1 + ")a WHERE ROWNUM <= :limit+:offset) WHERE rnum > :offset;";
@@ -589,7 +589,7 @@ namespace ExpressBase.ServiceStack
                                 string _columnorder = string.Empty;
                                 if (Treecol.NeedAlphabeticOrder)
                                     _columnorder = ", " + Treecol.Name;
-                                _sql = $"SELECT * FROM ({_sql.ReplaceAll(";", string.Empty)}) data ORDER BY {Treecol.ParentColumn[0].Name} {_columnorder}";
+                                _sql = $"SELECT * FROM ({_sql.Replace(";", string.Empty)}) data ORDER BY {Treecol.ParentColumn[0].Name} {_columnorder}";
                             }
 
                         }

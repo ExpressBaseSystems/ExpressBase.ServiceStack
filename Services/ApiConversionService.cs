@@ -156,7 +156,7 @@ namespace ExpressBase.ServiceStack.Services
                             GetRecursive(prop);
                         else
                         {
-                            ds.Tables[property.Name].Columns.Add(new EbDataColumn { ColumnIndex = k, ColumnName = prop.Name.ReplaceAll(" ","_"), Type = ConvertToEbdbType(prop.Value.Type) });
+                            ds.Tables[property.Name].Columns.Add(new EbDataColumn { ColumnIndex = k, ColumnName = prop.Name.Replace(" ","_"), Type = ConvertToEbdbType(prop.Value.Type) });
                             ds.Tables[property.Name].Rows[i][k++] = ConvertValueToEbdbType(prop.Value.Type, prop.Value);
                         }
                     }
