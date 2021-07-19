@@ -286,7 +286,7 @@ namespace ExpressBase.ServiceStack.Services
                     FROM eb_my_actions
                     WHERE ('{0}' = any(string_to_array(user_ids, ',')) OR
                      (string_to_array(role_ids,',')) && (string_to_array('{1}',',')))
-                        AND is_completed='F' AND eb_del='F' ORDER BY from_datetime DESC;", request.UserId, _roles);
+                        AND is_completed = 'F' AND COALESCE(eb_del, 'F') = 'F' AND COALESCE(hide, 'F') = 'F' ORDER BY from_datetime DESC;", request.UserId, _roles);
 
                 str += string.Format(@"SELECT 
 	A.user_id,A.approved_slot_id,A.eb_meeting_schedule_id,B.meeting_date,B.time_from,B.time_to,
