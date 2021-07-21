@@ -265,7 +265,7 @@ namespace ExpressBase.ServiceStack
                         }
                         Console.WriteLine("................................................datasourcecolumnrequestfinish " + DateTime.Now);
 
-                        foreach (EbDataTable dt in _dataset.Tables)
+                        foreach (EbDataTable dt in _dataset?.Tables)
                             resp.Columns.Add(dt.Columns);
 
                         resp.IsPaged = _isPaged;

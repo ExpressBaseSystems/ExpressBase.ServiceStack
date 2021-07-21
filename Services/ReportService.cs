@@ -102,7 +102,7 @@ namespace ExpressBase.ServiceStack
                 float _height = Report.HeightPt - Report.Margin.Top - Report.Margin.Bottom;
                 Report.HeightPt = _height;
                 //iTextSharp.text.Rectangle rec =new iTextSharp.text.Rectangle(Report.WidthPt, Report.HeightPt);
-                iTextSharp.text.Rectangle rec = new iTextSharp.text.Rectangle(_width, _height);   
+                iTextSharp.text.Rectangle rec = new iTextSharp.text.Rectangle(_width, _height);
                 Report.Doc = new Document(rec);
                 Report.Doc.SetMargins(Report.Margin.Left, Report.Margin.Right, Report.Margin.Top, Report.Margin.Bottom);
                 Report.Writer = PdfWriter.GetInstance(Report.Doc, Report.Ms1);
@@ -208,6 +208,14 @@ namespace ExpressBase.ServiceStack
         {
             foreach (EbReportField field in fields)
             {
+                if (!String.IsNullOrEmpty(field.HideExpression?.Code))
+                {
+                    ExecuteHideExpression(Report, field);
+                }
+                if (!field.IsHidden && !String.IsNullOrEmpty(field.LayoutExpression?.Code))
+                {
+                    ExecuteLayoutExpression(Report, field);
+                }
                 if (field is EbDataField)
                 {
                     EbDataField field_org = field as EbDataField;
@@ -220,14 +228,14 @@ namespace ExpressBase.ServiceStack
                     if (field is IEbDataFieldSummary)
                         FillSummaryCollection(Report, field_org, section_typ);
 
-                    if (field is EbCalcField && !Report.ValueScriptCollection.ContainsKey(field.Name) && (field_org as EbCalcField).ValExpression != null && (field_org as EbCalcField).ValExpression.Code != "" && (field_org as EbCalcField).ValExpression.Code != null)
+                    if (field is EbCalcField && !Report.ValueScriptCollection.ContainsKey(field.Name) && !string.IsNullOrEmpty((field_org as EbCalcField).ValExpression?.Code))
                     {
                         Script valscript = CSharpScript.Create<dynamic>((field as EbCalcField).ValExpression.Code, ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System.Dynamic", "System", "System.Collections.Generic", "System.Diagnostics", "System.Linq"), globalsType: typeof(Globals));
                         valscript.Compile();
                         Report.ValueScriptCollection.Add(field.Name, valscript);
                     }
 
-                    if (!Report.AppearanceScriptCollection.ContainsKey(field.Name) && field_org.AppearExpression != null && field_org.AppearExpression.Code != "" && field_org.AppearExpression.Code != null)
+                    if (!field.IsHidden && !Report.AppearanceScriptCollection.ContainsKey(field.Name) && !string.IsNullOrEmpty(field_org.AppearExpression?.Code))
                     {
                         Script appearscript = CSharpScript.Create<dynamic>(field_org.AppearExpression.Code, ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System.Dynamic", "System", "System.Collections.Generic", "System.Diagnostics", "System.Linq"), globalsType: typeof(Globals));
                         appearscript.Compile();
@@ -236,6 +244,66 @@ namespace ExpressBase.ServiceStack
                 }
             }
         }
+        public void ExecuteLayoutExpression(EbReport Report, EbReportField field)
+        {
+            IEnumerable<string> matches = Regex.Matches(field.LayoutExpression.Code, @"T[0-9]{1}.\w+").OfType<Match>()
+                    .Select(m => m.Groups[0].Value)
+                    .Distinct();
+
+            string[] _dataFieldsUsed = new string[matches.Count()];
+            int i = 0;
+            foreach (string match in matches)
+                _dataFieldsUsed[i++] = match;
+
+            Globals globals = new Globals
+            {
+                CurrentField = field
+            };
+
+            Report.AddParamsNCalcsInGlobal(globals);
+            foreach (string calcfd in _dataFieldsUsed)
+            {
+                string TName = calcfd.Split('.')[0];
+                string fName = calcfd.Split('.')[1];
+                int tableindex = Convert.ToInt32(TName.Substring(1));
+                globals[TName].Add(fName, new NTV { Name = fName, Type = Report.DataSet.Tables[tableindex].Columns[fName].Type, Value = Report.DataSet.Tables[tableindex].Rows[0][fName] });
+            }
+            Script valscript = CSharpScript.Create<dynamic>(field.LayoutExpression.Code, ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System.Dynamic", "System", "System.Collections.Generic", "System.Diagnostics", "System.Linq"), globalsType: typeof(Globals));
+            valscript.Compile();
+            dynamic value = valscript.RunAsync(globals).Result.ReturnValue;
+        }
+
+        public void ExecuteHideExpression(EbReport Report, EbReportField field)
+        {
+            IEnumerable<string> matches = Regex.Matches(field.HideExpression.Code, @"T[0-9]{1}.\w+").OfType<Match>()
+                    .Select(m => m.Groups[0].Value)
+                    .Distinct();
+
+            string[] _dataFieldsUsed = new string[matches.Count()];
+            int i = 0;
+            foreach (string match in matches)
+                _dataFieldsUsed[i++] = match;
+
+            Globals globals = new Globals
+            {
+                CurrentField = field
+            };
+
+            Report.AddParamsNCalcsInGlobal(globals);
+            foreach (string calcfd in _dataFieldsUsed)
+            {
+                string TName = calcfd.Split('.')[0];
+                string fName = calcfd.Split('.')[1];
+                int tableindex = Convert.ToInt32(TName.Substring(1));
+                globals[TName].Add(fName, new NTV { Name = fName, Type = Report.DataSet.Tables[tableindex].Columns[fName].Type, Value = Report.DataSet.Tables[tableindex].Rows[0][fName] });
+            }
+            Script valscript = CSharpScript.Create<dynamic>(field.HideExpression.Code, ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System.Dynamic", "System", "System.Collections.Generic", "System.Diagnostics", "System.Linq"), globalsType: typeof(Globals));
+            valscript.Compile();
+            dynamic value = valscript.RunAsync(globals).Result?.ReturnValue;
+            if (value != null)
+                field.IsHidden = (bool)value;
+        }
+
         public void FindLargerDataTable(EbReport Report, EbDataField field)
         {
             Report.HasRows = true;
