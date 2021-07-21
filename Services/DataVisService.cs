@@ -2846,7 +2846,7 @@ SELECT * FROM
         S.form_ref_id='{col.FormRefid}' AND 
         AL.action_unique_id = SA.action_unique_id AND 
         SA.eb_stages_id = S.id AND 
-        SA.eb_del='F' AND 
+        COALESCE(SA.eb_del, 'F') = 'F' AND 
         AL.eb_src_id = ANY (ARRAY[{eb_src_ids.Join(",")}]::INT[]) AND
         COALESCE(AL.eb_del, 'F') = 'F'
     UNION
