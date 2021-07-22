@@ -1180,8 +1180,8 @@ namespace ExpressBase.ServiceStack.Services
         public ExecuteSqlValueExprResponse Any(ExecuteSqlValueExprRequest request)
         {
             Console.WriteLine("Start ExecuteSqlValueExpr");
-            EbWebForm form = this.GetWebFormObject(request.RefId, null, null);
-            object val = form.ExecuteSqlValueExpression(EbConnectionFactory.DataDB, this, request.Params, request.Trigger, request.ExprType);
+            EbWebForm form = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId);
+            string val = form.ExecuteSqlValueExpression(EbConnectionFactory.DataDB, this, request.Params, request.Trigger, request.ExprType);
             Console.WriteLine("End ExecuteSqlValueExpr");
             return new ExecuteSqlValueExprResponse() { Result = val };
         }
