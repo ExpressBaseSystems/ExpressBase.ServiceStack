@@ -83,9 +83,9 @@ namespace ExpressBase.ServiceStack
                 Report.FileClient = new EbStaticFileClient();
                 Report.FileClient = FileClient;
                 Report.Solution = GetSolutionObject(request.SolnId);
-                Report.ReadingUser = request.ReadingUser;
-                Report.RenderingUser = request.RenderingUser;
-                Report.CultureInfo = CultureInfo.GetCultureInfo(Report.ReadingUser.Preference.Locale);
+                 Report.ReadingUser = GetUserObject(request.ReadingUserAuthId);
+                Report.RenderingUser = GetUserObject(request.RenderingUserAuthId);
+                Report.CultureInfo = CultureInfo.GetCultureInfo(Report.ReadingUser?.Preference.Locale ?? "en-US");
                 Report.Parameters = request.Params;
                 Report.Ms1 = new MemoryStream();
                 //-- END REPORT object INIT
