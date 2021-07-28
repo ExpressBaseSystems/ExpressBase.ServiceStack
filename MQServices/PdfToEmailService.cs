@@ -139,8 +139,8 @@ namespace ExpressBase.ServiceStack.MQServices
                         RepRes = reportservice.Get(new ReportRenderRequest
                         {
                             Refid = EmailTemplate.AttachmentReportRefID,
-                            RenderingUser = new User { FullName = "Machine User" },
-                            ReadingUser = new User { Preference = new Preferences { Locale = "en-US", TimeZone = "(UTC) Coordinated Universal Time" } },
+                            //RenderingUser = new User { FullName = "Machine User" },
+                            //ReadingUser = new User { Preference = new Preferences { Locale = "en-US", TimeZone = "(UTC) Coordinated Universal Time" } },
                             Params = request.Params
                         });
                         if (RepRes != null && RepRes.StreamWrapper != null && RepRes.StreamWrapper.Memorystream != null)
