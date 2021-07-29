@@ -1,41 +1,27 @@
-﻿using ExpressBase.Common;
-using ExpressBase.Common.Data;
-using ExpressBase.Common.EbServiceStack.ReqNRes;
-using ExpressBase.Objects;
-using ExpressBase.Objects.ServiceStack_Artifacts;
+﻿
 using iTextSharp.text;
 using iTextSharp.text.pdf;
-using Microsoft.AspNetCore.Mvc;
-using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using System.Data;
 using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
-using QRCoder;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
-using System.Dynamic;
-using System.Text;
-using ExpressBase.ServiceStack.Services;
-using ExpressBase.Security;
-using System.DrawingCore.Text;
-using System.DrawingCore;
-using ExpressBase.Common.ServiceClients;
 using System.Text.RegularExpressions;
 using ServiceStack.Redis;
-using ExpressBase.Common.Structures;
-using ExpressBase.Common.LocationNSolution;
-using ExpressBase.Common.Objects;
-using ExpressBase.Objects.Objects;
-using System.Net.Mail;
-using System.Net;
 using ServiceStack.Messaging;
 using System.Globalization;
-using Rectangle = iTextSharp.text.Rectangle;
 using iTextSharp.text.html.simpleparser;
 using ServiceStack;
+using ExpressBase.Common;
+using ExpressBase.Common.Data;
+using ExpressBase.Common.ServiceClients;
+using ExpressBase.Common.Structures;
+using ExpressBase.Objects.Objects;
+using ExpressBase.Objects;
+using ExpressBase.Objects.ServiceStack_Artifacts;
+using ExpressBase.ServiceStack.Services;
+using ExpressBase.CoreBase.Globals;
 
 namespace ExpressBase.ServiceStack
 {
@@ -83,7 +69,7 @@ namespace ExpressBase.ServiceStack
                 Report.FileClient = new EbStaticFileClient();
                 Report.FileClient = FileClient;
                 Report.Solution = GetSolutionObject(request.SolnId);
-                 Report.ReadingUser = GetUserObject(request.ReadingUserAuthId);
+                Report.ReadingUser = GetUserObject(request.ReadingUserAuthId);
                 Report.RenderingUser = GetUserObject(request.RenderingUserAuthId);
                 Report.CultureInfo = CultureInfo.GetCultureInfo(Report.ReadingUser?.Preference.Locale ?? "en-US");
                 Report.Parameters = request.Params;
@@ -253,7 +239,7 @@ namespace ExpressBase.ServiceStack
             foreach (string match in matches)
                 _dataFieldsUsed[i++] = match;
 
-            Globals globals = new Globals
+            EbPdfGlobals globals = new EbPdfGlobals
             {
                 CurrentField = field
             };
@@ -264,7 +250,7 @@ namespace ExpressBase.ServiceStack
                 string TName = calcfd.Split('.')[0];
                 string fName = calcfd.Split('.')[1];
                 int tableindex = Convert.ToInt32(TName.Substring(1));
-                globals[TName].Add(fName, new NTV { Name = fName, Type = Report.DataSet.Tables[tableindex].Columns[fName].Type, Value = Report.DataSet.Tables[tableindex].Rows[0][fName] });
+                globals[TName].Add(fName, new PDF_NTV { Name = fName, Type = (PDF_EbDbTypes)(int)Report.DataSet.Tables[tableindex].Columns[fName].Type, Value = Report.DataSet.Tables[tableindex].Rows[0][fName] });
             }
             dynamic value = ExecuteScript(globals, field.HideExpression.Code);
         }
@@ -280,7 +266,7 @@ namespace ExpressBase.ServiceStack
             foreach (string match in matches)
                 _dataFieldsUsed[i++] = match;
 
-            Globals globals = new Globals
+            EbPdfGlobals globals = new EbPdfGlobals
             {
                 CurrentField = field
             };
@@ -291,7 +277,7 @@ namespace ExpressBase.ServiceStack
                 string TName = calcfd.Split('.')[0];
                 string fName = calcfd.Split('.')[1];
                 int tableindex = Convert.ToInt32(TName.Substring(1));
-                globals[TName].Add(fName, new NTV { Name = fName, Type = Report.DataSet.Tables[tableindex].Columns[fName].Type, Value = Report.DataSet.Tables[tableindex].Rows[0][fName] });
+                globals[TName].Add(fName, new PDF_NTV { Name = fName, Type = (PDF_EbDbTypes)(int)Report.DataSet.Tables[tableindex].Columns[fName].Type, Value = Report.DataSet.Tables[tableindex].Rows[0][fName] });
             }
 
             dynamic value = ExecuteScript(globals, field.HideExpression.Code);
@@ -301,11 +287,11 @@ namespace ExpressBase.ServiceStack
 
         public Script CompileScript(string code)
         {
-            Script valscript = CSharpScript.Create<dynamic>(code, ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System.Dynamic", "System", "System.Collections.Generic", "System.Diagnostics", "System.Linq"), globalsType: typeof(Globals));
+            Script valscript = CSharpScript.Create<dynamic>(code, ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System.Dynamic", "System", "System.Collections.Generic", "System.Diagnostics", "System.Linq"), globalsType: typeof(EbPdfGlobals));
             valscript.Compile();
             return valscript;
         }
-        public dynamic ExecuteScript(Globals globals, string code)
+        public dynamic ExecuteScript(EbPdfGlobals globals, string code)
         {
             Script valscript = CompileScript(code);
             return valscript.RunAsync(globals).Result?.ReturnValue;
@@ -443,7 +429,7 @@ namespace ExpressBase.ServiceStack
                 foreach (string match in matches)
                     _dataFieldsUsed[i++] = match;
 
-                Globals globals = new Globals();
+                EbPdfGlobals globals = new EbPdfGlobals();
                 {
                     foreach (string calcfd in _dataFieldsUsed)
                     {
@@ -484,13 +470,13 @@ namespace ExpressBase.ServiceStack
                                 _value = 0;
                                 break;
                         }
-                        globals[TName].Add(fName, new NTV { Name = fName, Type = typ, Value = _value as object });
+                        globals[TName].Add(fName, new PDF_NTV { Name = fName, Type = (PDF_EbDbTypes)(int)typ, Value = _value as object });
                     }
                     if (request.Parameters != null)
                     {
                         foreach (Param p in request.Parameters)
                         {
-                            globals["Params"].Add(p.Name, new NTV { Name = p.Name, Type = (EbDbTypes)Convert.ToInt32(p.Type), Value = p.Value });
+                            globals["Params"].Add(p.Name, new PDF_NTV { Name = p.Name, Type = (PDF_EbDbTypes)Convert.ToInt32(p.Type), Value = p.Value });
                         }
                     }
                     IEnumerable<string> matches2 = Regex.Matches(request.ValueExpression, @"Calc.\w+").OfType<Match>()
@@ -502,7 +488,7 @@ namespace ExpressBase.ServiceStack
                         _calcFieldsUsed[j++] = match.Replace("Calc.", string.Empty);
                     foreach (string calcfd in _calcFieldsUsed)
                     {
-                        globals["Calc"].Add(calcfd, new NTV { Name = calcfd, Type = (EbDbTypes)11, Value = 0 });
+                        globals["Calc"].Add(calcfd, new PDF_NTV { Name = calcfd, Type = (PDF_EbDbTypes)11, Value = 0 });
                     }
                     resultType = ExecuteScript(globals, request.ValueExpression)?.GetType();
 
