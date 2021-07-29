@@ -230,15 +230,13 @@ namespace ExpressBase.ServiceStack
 
                     if (field is EbCalcField && !Report.ValueScriptCollection.ContainsKey(field.Name) && !string.IsNullOrEmpty((field_org as EbCalcField).ValExpression?.Code))
                     {
-                        Script valscript = CSharpScript.Create<dynamic>((field as EbCalcField).ValExpression.Code, ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System.Dynamic", "System", "System.Collections.Generic", "System.Diagnostics", "System.Linq"), globalsType: typeof(Globals));
-                        valscript.Compile();
+                        Script valscript = CompileScript((field as EbCalcField).ValExpression.Code);
                         Report.ValueScriptCollection.Add(field.Name, valscript);
                     }
 
                     if (!field.IsHidden && !Report.AppearanceScriptCollection.ContainsKey(field.Name) && !string.IsNullOrEmpty(field_org.AppearExpression?.Code))
                     {
-                        Script appearscript = CSharpScript.Create<dynamic>(field_org.AppearExpression.Code, ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System.Dynamic", "System", "System.Collections.Generic", "System.Diagnostics", "System.Linq"), globalsType: typeof(Globals));
-                        appearscript.Compile();
+                        Script appearscript = CompileScript(field_org.AppearExpression.Code);
                         Report.AppearanceScriptCollection.Add(field.Name, appearscript);
                     }
                 }
@@ -268,9 +266,7 @@ namespace ExpressBase.ServiceStack
                 int tableindex = Convert.ToInt32(TName.Substring(1));
                 globals[TName].Add(fName, new NTV { Name = fName, Type = Report.DataSet.Tables[tableindex].Columns[fName].Type, Value = Report.DataSet.Tables[tableindex].Rows[0][fName] });
             }
-            Script valscript = CSharpScript.Create<dynamic>(field.LayoutExpression.Code, ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System.Dynamic", "System", "System.Collections.Generic", "System.Diagnostics", "System.Linq"), globalsType: typeof(Globals));
-            valscript.Compile();
-            dynamic value = valscript.RunAsync(globals).Result.ReturnValue;
+            dynamic value = ExecuteScript(globals, field.HideExpression.Code);
         }
 
         public void ExecuteHideExpression(EbReport Report, EbReportField field)
@@ -297,11 +293,22 @@ namespace ExpressBase.ServiceStack
                 int tableindex = Convert.ToInt32(TName.Substring(1));
                 globals[TName].Add(fName, new NTV { Name = fName, Type = Report.DataSet.Tables[tableindex].Columns[fName].Type, Value = Report.DataSet.Tables[tableindex].Rows[0][fName] });
             }
-            Script valscript = CSharpScript.Create<dynamic>(field.HideExpression.Code, ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System.Dynamic", "System", "System.Collections.Generic", "System.Diagnostics", "System.Linq"), globalsType: typeof(Globals));
-            valscript.Compile();
-            dynamic value = valscript.RunAsync(globals).Result?.ReturnValue;
+
+            dynamic value = ExecuteScript(globals, field.HideExpression.Code);
             if (value != null)
                 field.IsHidden = (bool)value;
+        }
+
+        public Script CompileScript(string code)
+        {
+            Script valscript = CSharpScript.Create<dynamic>(code, ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System.Dynamic", "System", "System.Collections.Generic", "System.Diagnostics", "System.Linq"), globalsType: typeof(Globals));
+            valscript.Compile();
+            return valscript;
+        }
+        public dynamic ExecuteScript(Globals globals, string code)
+        {
+            Script valscript = CompileScript(code);
+            return valscript.RunAsync(globals).Result?.ReturnValue;
         }
 
         public void FindLargerDataTable(EbReport Report, EbDataField field)
@@ -425,12 +432,10 @@ namespace ExpressBase.ServiceStack
                 cresp = myDataSourceservice.Any(new DataSourceColumnsRequest { RefId = request.DataSourceRefId, Params = (ds.FilterDialog != null) ? ds.FilterDialog.GetDefaultParams() : null });
                 Redis.Set(string.Format("{0}_columns", request.DataSourceRefId), cresp);
             }
-            Script valscript = CSharpScript.Create<dynamic>(request.ValueExpression, ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System.Dynamic", "System", "System.Collections.Generic", "System.Diagnostics", "System.Linq"), globalsType: typeof(Globals));
+
 
             try
             {
-                valscript.Compile();
-
                 IEnumerable<string> matches = Regex.Matches(request.ValueExpression, @"T[0-9]{1}.\w+").OfType<Match>().Select(m => m.Groups[0].Value).Distinct();
 
                 string[] _dataFieldsUsed = new string[matches.Count()];
@@ -499,8 +504,7 @@ namespace ExpressBase.ServiceStack
                     {
                         globals["Calc"].Add(calcfd, new NTV { Name = calcfd, Type = (EbDbTypes)11, Value = 0 });
                     }
-
-                    resultType = (valscript.RunAsync(globals)).Result.ReturnValue.GetType();
+                    resultType = ExecuteScript(globals, request.ValueExpression)?.GetType();
 
                     //return expression type
                     switch (resultType.FullName)
