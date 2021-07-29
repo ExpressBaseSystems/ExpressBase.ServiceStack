@@ -252,7 +252,7 @@ namespace ExpressBase.ServiceStack
                 int tableindex = Convert.ToInt32(TName.Substring(1));
                 globals[TName].Add(fName, new PDF_NTV { Name = fName, Type = (PDF_EbDbTypes)(int)Report.DataSet.Tables[tableindex].Columns[fName].Type, Value = Report.DataSet.Tables[tableindex].Rows[0][fName] });
             }
-            dynamic value = ExecuteScript(globals, field.HideExpression.Code);
+            dynamic value = ExecuteScript(globals, field.LayoutExpression.Code);
         }
 
         public void ExecuteHideExpression(EbReport Report, EbReportField field)
