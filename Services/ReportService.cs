@@ -241,7 +241,7 @@ namespace ExpressBase.ServiceStack
 
             EbPdfGlobals globals = new EbPdfGlobals
             {
-                CurrentField = new PdfGReportField(field.LeftPt, field.WidthPt, field.TopPt, field.HeightPt, field.BackColor, field.ForeColor, field.IsHidden, new PdfGEbFont())
+                CurrentField = new PdfGReportField(field.LeftPt, field.WidthPt, field.TopPt, field.HeightPt, field.BackColor, field.ForeColor, field.IsHidden, null)
             };
 
             Report.AddParamsNCalcsInGlobal(globals);
