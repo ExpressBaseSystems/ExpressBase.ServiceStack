@@ -329,7 +329,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 if (app.AppSettings != null && export)
                 {
-                    EbDataSet ds = PullAppConfiguredData(app.AppSettings);
+                    EbDataSet ds = PullAppConfiguredData(app.AppSettings, data.CurrentUser.UserId);
                     app.OfflineData.Tables.AddRange(ds.Tables);
                 }
 
@@ -387,7 +387,7 @@ namespace ExpressBase.ServiceStack.Services
             }
         }
 
-        private EbDataSet PullAppConfiguredData(EbMobileSettings Settings)
+        private EbDataSet PullAppConfiguredData(EbMobileSettings Settings, int userid)
         {
             EbDataSet DataSet = new EbDataSet();
 
@@ -396,11 +396,21 @@ namespace ExpressBase.ServiceStack.Services
                 foreach (DataImportMobile DI in Settings.DataImport)
                 {
                     int objtype = Convert.ToInt32(DI.RefId.Split(CharConstants.DASH)[2]);
+
                     if (objtype == (int)EbObjectTypes.DataReader)
                     {
-                        var resp = this.Gateway.Send<DataSourceDataSetResponse>(new DataSourceDataSetRequest
+                        DataSourceDataSetResponse resp = this.Gateway.Send<DataSourceDataSetResponse>(new DataSourceDataSetRequest
                         {
-                            RefId = DI.RefId
+                            RefId = DI.RefId,
+                            Params = new List<Param>
+                            {
+                                new Param
+                                {
+                                    Name = "eb_currentuser_id",
+                                    Type = ((int)EbDbTypes.Int32).ToString(),
+                                    Value = userid.ToString()
+                                }
+                            }
                         });
 
                         if (resp.DataSet.Tables.Any())
