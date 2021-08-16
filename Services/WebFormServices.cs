@@ -2260,9 +2260,9 @@ namespace ExpressBase.ServiceStack.Services
                 User u = GetUserObject(request.UserAuthId);
                 if (u.Roles.Contains(SystemRoles.SolutionOwner.ToString()))
                 {
-                    string Qry = @"SELECT refid,display_name,obj_json FROM (
+                    string Qry = @"SELECT refid, display_name, obj_json, eovid FROM (
 				                        SELECT 
-					                        EO.id, EOV.refid, EO.display_name, EOV.obj_json
+					                        EO.id, EOV.id AS eovid, EOV.refid, EO.display_name, EOV.obj_json
 				                        FROM
 					                        eb_objects EO
 				                        LEFT JOIN 
@@ -2297,15 +2297,42 @@ namespace ExpressBase.ServiceStack.Services
                             }
                             if (F != null)
                             {
-                                F.AutoDeployTV = false;
-                                try
+                                if (string.IsNullOrWhiteSpace(request.InMsg))
                                 {
-                                    this.Any(new CreateWebFormTableRequest { WebObj = F, SolnId = request.SolnId, SoluObj = SolutionObj });
-                                    msg += $"\n\nSuccess   RefId : {dr[0].ToString()}, Name : {dr[1].ToString()} ";
+                                    F.AutoDeployTV = false;
+                                    try
+                                    {
+                                        this.Any(new CreateWebFormTableRequest { WebObj = F, SolnId = request.SolnId, SoluObj = SolutionObj });
+                                        msg += $"\n\nSuccess   RefId : {dr[0].ToString()}, Name : {dr[1].ToString()} ";
+                                    }
+                                    catch (Exception e)
+                                    {
+                                        msg += $"\n\nWarning   RefId : {dr[0].ToString()}, Name : {dr[1].ToString()}, Message : {e.Message} ";
+                                    }
                                 }
-                                catch (Exception e)
+                                else if (request.InMsg == "save")
                                 {
-                                    msg += $"\n\nWarning   RefId : {dr[0].ToString()}, Name : {dr[1].ToString()}, Message : {e.Message} ";
+                                    try
+                                    {
+                                        F.BeforeSave(this);
+                                        string json = EbSerializers.Json_Serialize(F);
+                                        string _qry = $"UPDATE eb_objects_ver SET obj_json = @obj_jsonv WHERE id={dr[3]} AND refid='{dr[0]}';";
+                                        int i = this.EbConnectionFactory.DataDB.DoNonQuery(_qry, new DbParameter[]
+                                        {
+                                            this.EbConnectionFactory.DataDB.GetNewParameter("obj_jsonv", EbDbTypes.Json, json)
+                                        });
+                                        if (i == 1)
+                                        {
+                                            Redis.Set(dr[0].ToString(), F);
+                                            msg += $"\n\nSuccess[OBJ_SAVE]   RefId : {dr[0].ToString()}, Name : {dr[1].ToString()} ";
+                                        }
+                                        else
+                                            msg += $"\n\nWarning[OBJ_SAVE]   RefId : {dr[0].ToString()}, Name : {dr[1].ToString()}, Message : DoNonQuery returned {i}";
+                                    }
+                                    catch (Exception e)
+                                    {
+                                        msg += $"\n\nWarning[OBJ_SAVE]   RefId : {dr[0].ToString()}, Name : {dr[1].ToString()}, Message : {e.Message} ";
+                                    }
                                 }
                             }
                         }
