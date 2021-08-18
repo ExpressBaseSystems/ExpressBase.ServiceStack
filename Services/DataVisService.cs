@@ -1396,6 +1396,10 @@ namespace ExpressBase.ServiceStack
             {
                 HalfYearlyDateColumns(_dataset, ref tempdataset, Parameters, ref _dv, ref _hourCount, ref summary);
             }
+            else if ((_dv as EbCalendarView).CalendarType == AttendanceType.Yearly)
+            {
+                YearlyDateColumns(_dataset, ref tempdataset, Parameters, ref _dv, ref _hourCount, ref summary);
+            }
         }
 
         public void DayWiseDateColumns(EbDataSet _dataset, ref EbDataSet tempdataset, List<Param> Parameters, ref EbDataVisualization _dv, ref Dictionary<string, DynamicObj> _hourCount, ref Dictionary<int, List<object>> summary)
@@ -1566,63 +1570,165 @@ namespace ExpressBase.ServiceStack
         {
             int index = tempdataset.Tables[0].Columns.Count;
             int i = -1;
-            DateTime paramdate = Parameters[0].ValueTo;
-            for (var m = 1; m <= 12; m++)
+            DateTime datefrom = Parameters[0].ValueTo;
+            DateTime dateto = Parameters[1].ValueTo;
+            for (int m = 1; m <= 12; m++)
             {
-                var date = new DateTime(paramdate.Year, m, 1, 0, 0, 0);
-                var startDate = date;
-                date = startDate.AddMonths(1).AddDays(-1);
-                var endDate = new DateTime(paramdate.Year, m, date.Day, 23, 59, 59);
-                var key = GetKey(startDate, endDate);
-                var title = date.ToString("MMM");
-                string _tooltip = startDate.ToString("dd-MM-yyyy") + " to " + endDate.ToString("dd-MM-yyyy");
-                tempdataset.Tables[0].Columns.Add(new EbDataColumn { ColumnIndex = index, ColumnName = key, Type = EbDbTypes.String });
-                i++;
-                if (Modifydv)
+                for (int y = datefrom.Year; y <= dateto.Year; y++)
                 {
-                    CalendarDynamicColumn col = new CalendarDynamicColumn
+                    DateTime date = new DateTime(y, m, 1, 0, 0, 0);
+                    DateTime startDate = date;
+                    date = startDate.AddMonths(1).AddDays(-1);
+                    DateTime endDate = new DateTime(y, m, date.Day, 23, 59, 59);
+                    string key = GetKey(startDate, endDate);
+                    string title = date.ToString("MMM-yy");
+                    string _tooltip = startDate.ToString("dd-MM-yyyy") + " to " + endDate.ToString("dd-MM-yyyy");
+                    tempdataset.Tables[0].Columns.Add(new EbDataColumn { ColumnIndex = index, ColumnName = key, Type = EbDbTypes.String });
+                    i++;
+                    if (Modifydv)
                     {
-                        Data = index,
-                        OIndex = i,
-                        Name = key,
-                        sTitle = title,
-                        Type = EbDbTypes.String,
-                        RenderType = EbDbTypes.Int32,
-                        IsCustomColumn = true,
-                        bVisible = true,
-                        StartDT = startDate,
-                        EndDT = endDate,
-                        Align = Align.Center,
-                        HeaderTooltipText = _tooltip
-                    };
-                    _dv.Columns.Add(col);
-                    (_dv as EbCalendarView).DateColumns.Add(col);
-                    summary.Add(index, new List<object> { 0, 0, 0, 0 });
+                        CalendarDynamicColumn col = new CalendarDynamicColumn
+                        {
+                            Data = index,
+                            OIndex = i,
+                            Name = key,
+                            sTitle = title,
+                            Type = EbDbTypes.String,
+                            RenderType = EbDbTypes.Int32,
+                            IsCustomColumn = true,
+                            bVisible = true,
+                            StartDT = startDate,
+                            EndDT = endDate,
+                            Align = Align.Center,
+                            HeaderTooltipText = _tooltip
+                        };
+                        _dv.Columns.Add(col);
+                        (_dv as EbCalendarView).DateColumns.Add(col);
+                        summary.Add(index, new List<object> { 0, 0, 0, 0 });
+                    }
+                    index++;
+                    if (!_hourCount.ContainsKey(key))
+                        _hourCount.Add(key, new DynamicObj());
                 }
-                index++;
-                if (!_hourCount.ContainsKey(key))
-                    _hourCount.Add(key, new DynamicObj());
             }
         }
 
         public void QuarterlyDateColumns(EbDataSet _dataset, ref EbDataSet tempdataset, List<Param> Parameters, ref EbDataVisualization _dv, ref Dictionary<string, DynamicObj> _hourCount, ref Dictionary<int, List<object>> summary)
         {
             int index = tempdataset.Tables[0].Columns.Count;
-            int i = -1;
-            DateTime paramdate = Parameters[0].ValueTo;
-            for (var m = 1; m <= 12; m += 3)
+            int i = 0;
+            DateTime datefrom = Parameters[0].ValueTo;
+            DateTime dateto = Parameters[1].ValueTo;
+            for (int m = 1, j = 1; m <= 12; m += 3, j++)
             {
-                i++;
-                var month = DateTimeFormatInfo.CurrentInfo.GetMonthName(m);
-                var date = new DateTime(paramdate.Year, m, 1, 0, 0, 0);
-                var startDate = date;
-                date = startDate.AddMonths(3).AddDays(-1);
-                var endDate = new DateTime(date.Year, date.Month, date.Day, 23, 59, 59);
-                var key = GetKey(startDate, endDate);
-                var endmonth = DateTimeFormatInfo.CurrentInfo.GetMonthName(date.Month);
-                var title = "Quarter " + (i + 1);
-                string _tooltip = month + "-" + endmonth + "</br>" + startDate.ToString("dd-MM-yyyy") + " to " + endDate.ToString("dd-MM-yyyy");
+                for (int y = datefrom.Year; y <= dateto.Year; y++)
+                {
+                    string month = DateTimeFormatInfo.CurrentInfo.GetMonthName(m);
+                    DateTime date = new DateTime(y/*paramdate.Year*/, m, 1, 0, 0, 0);
+                    DateTime startDate = date;
+                    date = startDate.AddMonths(3).AddDays(-1);
+                    DateTime endDate = new DateTime(y/*date.Year*/, date.Month, date.Day, 23, 59, 59);
+                    string key = GetKey(startDate, endDate);
+                    string endmonth = DateTimeFormatInfo.CurrentInfo.GetMonthName(date.Month);
+                    string title = "Q" + j + " - '" + y.ToString().Substring(2, 2);
+                    string _tooltip = month + "-" + endmonth + "</br>" + startDate.ToString("dd-MM-yyyy") + " to " + endDate.ToString("dd-MM-yyyy");
+                    tempdataset.Tables[0].Columns.Add(new EbDataColumn { ColumnIndex = index, ColumnName = key, Type = EbDbTypes.String });
+                    i++;
+                    if (Modifydv)
+                    {
+                        CalendarDynamicColumn col = new CalendarDynamicColumn
+                        {
+                            Data = index,
+                            OIndex = i,
+                            Name = key,
+                            sTitle = title,
+                            Type = EbDbTypes.String,
+                            RenderType = EbDbTypes.Int32,
+                            IsCustomColumn = true,
+                            bVisible = true,
+                            StartDT = startDate,
+                            EndDT = endDate,
+                            Align = Align.Center,
+                            HeaderTooltipText = _tooltip
+                        };
+                        _dv.Columns.Add(col);
+                        (_dv as EbCalendarView).DateColumns.Add(col);
+                        summary.Add(index, new List<object> { 0, 0, 0, 0 });
+                    }
+                    index++;
+                    if (!_hourCount.ContainsKey(key))
+                        _hourCount.Add(key, new DynamicObj());
+                }
+            }
+        }
+
+        public void HalfYearlyDateColumns(EbDataSet _dataset, ref EbDataSet tempdataset, List<Param> Parameters, ref EbDataVisualization _dv, ref Dictionary<string, DynamicObj> _hourCount, ref Dictionary<int, List<object>> summary)
+        {
+            int index = tempdataset.Tables[0].Columns.Count;
+            int i = 0;
+            DateTime datefrom = Parameters[0].ValueTo;
+            DateTime dateto = Parameters[1].ValueTo;
+            for (int m = 1, j = 1; m <= 12; m += 6, j++)
+            {
+                for (int y = datefrom.Year; y <= dateto.Year; y++)
+                {
+                    string startmonth = DateTimeFormatInfo.CurrentInfo.GetMonthName(m);
+                    DateTime date = new DateTime(y, m, 1, 0, 0, 0);
+                    DateTime startDate = date;
+                    date = startDate.AddMonths(6).AddDays(-1);
+                    DateTime endDate = new DateTime(y, date.Month, date.Day, 23, 59, 59);
+                    string endmonth = DateTimeFormatInfo.CurrentInfo.GetMonthName(date.Month);
+                    string key = GetKey(startDate, endDate);
+                    string title = "HF " + j + " - '" + y.ToString().Substring(2, 2);
+                    string _tooltip = startmonth + "-" + endmonth + "</br>" + startDate.ToString("dd-MM-yyyy") + " to " + endDate.ToString("dd-MM-yyyy");
+                    tempdataset.Tables[0].Columns.Add(new EbDataColumn { ColumnIndex = index, ColumnName = key, Type = EbDbTypes.String });
+                    i++;
+                    if (Modifydv)
+                    {
+                        CalendarDynamicColumn col = new CalendarDynamicColumn
+                        {
+                            Data = index,
+                            OIndex = i,
+                            Name = key,
+                            sTitle = title,
+                            Type = EbDbTypes.String,
+                            RenderType = EbDbTypes.Int32,
+                            IsCustomColumn = true,
+                            bVisible = true,
+                            StartDT = startDate,
+                            EndDT = endDate,
+                            Align = Align.Center,
+                            HeaderTooltipText = _tooltip
+                        };
+                        _dv.Columns.Add(col);
+                        (_dv as EbCalendarView).DateColumns.Add(col);
+                        summary.Add(index, new List<object> { 0, 0, 0, 0 });
+                    }
+                    index++;
+                    if (!_hourCount.ContainsKey(key))
+                        _hourCount.Add(key, new DynamicObj());
+                }
+            }
+        }
+
+        public void YearlyDateColumns(EbDataSet _dataset, ref EbDataSet tempdataset, List<Param> Parameters, ref EbDataVisualization _dv, ref Dictionary<string, DynamicObj> _hourCount, ref Dictionary<int, List<object>> summary)
+        {
+            int index = tempdataset.Tables[0].Columns.Count;
+            int i = 0;
+            DateTime datefrom = Parameters[0].ValueTo;
+            DateTime dateto = Parameters[1].ValueTo;
+
+            for (int y = datefrom.Year; y <= dateto.Year; y++)
+            {
+                string startmonth = DateTimeFormatInfo.CurrentInfo.GetMonthName(1);
+                DateTime startDate = new DateTime(y, 1, 1, 0, 0, 0);
+                DateTime endDate = new DateTime(y, 12, 31, 23, 59, 59);
+                string endmonth = DateTimeFormatInfo.CurrentInfo.GetMonthName(12);
+                string key = GetKey(startDate, endDate);
+                string title = y.ToString();
+                string _tooltip = startmonth + "-" + endmonth + "</br>" + startDate.ToString("dd-MM-yyyy") + " to " + endDate.ToString("dd-MM-yyyy");
                 tempdataset.Tables[0].Columns.Add(new EbDataColumn { ColumnIndex = index, ColumnName = key, Type = EbDbTypes.String });
+                i++;
                 if (Modifydv)
                 {
                     CalendarDynamicColumn col = new CalendarDynamicColumn
@@ -1648,76 +1754,6 @@ namespace ExpressBase.ServiceStack
                 if (!_hourCount.ContainsKey(key))
                     _hourCount.Add(key, new DynamicObj());
             }
-        }
-
-        public void HalfYearlyDateColumns(EbDataSet _dataset, ref EbDataSet tempdataset, List<Param> Parameters, ref EbDataVisualization _dv, ref Dictionary<string, DynamicObj> _hourCount, ref Dictionary<int, List<object>> summary)
-        {
-            int index = tempdataset.Tables[0].Columns.Count;
-            DateTime paramdate = Parameters[0].ValueTo;
-
-            var month = DateTimeFormatInfo.CurrentInfo.GetMonthName(1);
-            var startDate = new DateTime(paramdate.Year, 1, 1, 0, 0, 0);
-            var endDate = new DateTime(paramdate.Year, 6, 30, 23, 59, 59);
-            var endmonth = DateTimeFormatInfo.CurrentInfo.GetMonthName(6);
-            var key = GetKey(startDate, endDate);
-            var title = "HF " + 1;
-            var _tooltip = month + "-" + endmonth + "</br>" + startDate.ToString("dd-MM-yyyy") + " to " + endDate.ToString("dd-MM-yyyy");
-            tempdataset.Tables[0].Columns.Add(new EbDataColumn { ColumnIndex = index, ColumnName = key, Type = EbDbTypes.String });
-            if (Modifydv)
-            {
-                CalendarDynamicColumn col = new CalendarDynamicColumn
-                {
-                    Data = index,
-                    OIndex = 0,
-                    Name = key,
-                    sTitle = title,
-                    Type = EbDbTypes.String,
-                    RenderType = EbDbTypes.Int32,
-                    IsCustomColumn = true,
-                    bVisible = true,
-                    StartDT = startDate,
-                    EndDT = endDate,
-                    Align = Align.Center,
-                    HeaderTooltipText = _tooltip
-                };
-                _dv.Columns.Add(col);
-                (_dv as EbCalendarView).DateColumns.Add(col);
-                summary.Add(index, new List<object> { 0, 0, 0, 0 });
-            }
-            if (!_hourCount.ContainsKey(key))
-                _hourCount.Add(key, new DynamicObj());
-            index++;
-            month = DateTimeFormatInfo.CurrentInfo.GetMonthName(7);
-            startDate = new DateTime(paramdate.Year, 7, 1, 0, 0, 0);
-            endDate = new DateTime(paramdate.Year, 12, 31, 23, 59, 59);
-            endmonth = DateTimeFormatInfo.CurrentInfo.GetMonthName(12);
-            key = GetKey(startDate, endDate);
-            title = "HF " + 2;
-            _tooltip = month + "-" + endmonth + "</br>" + startDate.ToString("dd-MM-yyyy") + " to " + endDate.ToString("dd-MM-yyyy");
-            tempdataset.Tables[0].Columns.Add(new EbDataColumn { ColumnIndex = index, ColumnName = key, Type = EbDbTypes.String });
-            if (Modifydv)
-            {
-                CalendarDynamicColumn col = new CalendarDynamicColumn
-                {
-                    Data = index,
-                    OIndex = 1,
-                    Name = key,
-                    sTitle = title,
-                    Type = EbDbTypes.String,
-                    RenderType = EbDbTypes.Int32,
-                    IsCustomColumn = true,
-                    bVisible = true,
-                    StartDT = startDate,
-                    EndDT = endDate,
-                    Align = Align.Center,
-                    HeaderTooltipText = _tooltip
-                };
-                _dv.Columns.Add(col);
-                (_dv as EbCalendarView).DateColumns.Add(col);
-                summary.Add(index, new List<object> { 0, 0, 0, 0 });
-            }
-            if (!_hourCount.ContainsKey(key))
-                _hourCount.Add(key, new DynamicObj());
         }
 
         public List<DVBaseColumn> CreateDependencyTable(EbDataVisualization _dv)
