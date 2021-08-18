@@ -1358,7 +1358,6 @@ namespace ExpressBase.ServiceStack.Services
                 }
                 int o = 0;
                 string dispname = obj.DisplayName + "_copy";
-                string name = obj.Name + "_copy";
                 do
                 {
                     uniqnameresp = this.Get(new UniqueObjectNameCheckRequest
@@ -1368,10 +1367,12 @@ namespace ExpressBase.ServiceStack.Services
                     if (uniqnameresp.IsUnique)
                     {
                         obj.DisplayName = dispname;
-                        obj.Name = name + "(" + o + ")";
+                        obj.Name += Guid.NewGuid().ToString().Substring(0, 5);
                     }
                     else
+                    {
                         dispname = obj.DisplayName + "_copy(" + ++o + ")";
+                    }
                 }
                 while (!uniqnameresp.IsUnique);
 
