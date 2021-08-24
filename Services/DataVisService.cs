@@ -651,7 +651,14 @@ namespace ExpressBase.ServiceStack
                         try
                         {
                             if (_dV is EbCalendarView)
-                                ReturnObj = PreProcessingCalendarView(ref _dataset, request.Params, ref _dV, request.UserInfo);
+                            {
+                                DateTime x = DateTime.Now;
+                                ReturnObj = PreProcessingCalendarViewNew(ref _dataset, request.Params, ref _dV, request.UserInfo);
+                                DateTime y = DateTime.Now;
+                                var diff = y - x;
+                                Console.WriteLine("new: " + diff);
+                               // ReturnObj = PreProcessingCalendarView(ref _dataset, request.Params, ref _dV, request.UserInfo);
+                            }
                             else if (_dV.ApiRefId != null && _dV.ApiRefId != string.Empty)
                                 ReturnObj = PreProcessingPivot(ref _dataset, request.Params, ref _dV, request.UserInfo);
                             else
@@ -1290,6 +1297,51 @@ namespace ExpressBase.ServiceStack
             return stylesheet;
         }
 
+        public PrePrcessorReturn PreProcessingCalendarViewNew(ref EbDataSet _dataset, List<Param> Parameters, ref EbDataVisualization _dv, User _user)
+        {
+            try
+            {
+                DataStruct4CalView CalendarData = new DataStruct4CalView(_dv as EbCalendarView);
+                EbDataSet tempdataset = new EbDataSet();
+                Dictionary<string, DynamicObj> _hourCount = new Dictionary<string, DynamicObj>();
+                Dictionary<int, List<object>> summary = new Dictionary<int, List<object>>();
+                int initial_columns_count = _dataset.Tables.Sum(x => x.Columns.Count);
+                this.CreateCustomcolumn4Calendar(_dataset, ref tempdataset, Parameters, ref _dv, ref _hourCount, ref summary);
+                int _count = (_dv as EbCalendarView).DataColumns.FindAll(col => col.bVisible).Count;
+                List<object> _list = new List<object>();
+                for (int i = 0; i < _count; i++)
+                {
+                    _list.Add(0L);
+                }
+                foreach (var key in summary.Keys.ToList())
+                {
+                    summary[key] = new List<object>(_list);
+                }
+                EbDataTable _formattedTable = tempdataset.Tables[0].GetEmptyTable();
+                _formattedTable.Columns.Add(_formattedTable.NewDataColumn(_dv.Columns.Count, "Total", EbDbTypes.Int32));
+                summary.Add(_dv.Columns.Count, new List<object>(_list));
+                _dv.Columns.Add(new DVBaseColumn { Data = _dv.Columns.Count, Name = "Total", sTitle = "Total", Type = EbDbTypes.Int32, RenderType = EbDbTypes.Int32, bVisible = true, AggregateFun = AggregateFun.Sum });
+                _formattedTable.Columns.Add(_formattedTable.NewDataColumn(_dv.Columns.Count, "serial", EbDbTypes.Int32));
+                for (int i = initial_columns_count; i < _dv.Columns.Count; i++)
+                {
+                    CalendarData.Columns.Add(_dv.Columns[i] as CalendarDynamicColumn);
+                }
+
+                RowColletion MasterRows = _dataset.Tables[0].Rows;
+                RowColletion LinesRows = _dataset.Tables[1].Rows;
+                for (int i = 0; i < LinesRows.Count; i++)
+                {
+                    CalendarData.Add(LinesRows[i]);
+                }
+                CalendarData.GetFormatedTable(ref _formattedTable, MasterRows,ref summary);
+                return new PrePrcessorReturn { FormattedTable = _formattedTable, rows = MasterRows, Summary = summary };
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("PreProcessing calView New - Exception: " + e.Message + e.StackTrace);
+            }
+            return null;
+        }
         public PrePrcessorReturn PreProcessingCalendarView(ref EbDataSet _dataset, List<Param> Parameters, ref EbDataVisualization _dv, User _user)
         {
             try
