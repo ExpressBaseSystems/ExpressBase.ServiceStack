@@ -389,8 +389,11 @@ namespace ExpressBase.ServiceStack
                     }
                     string _sql = string.Empty;
                     string tempsql = string.Empty;
-
-                    if (_ds != null && !(_dV is EbCalendarView))
+                    if (request.Source == "Calendar")
+                    {
+                        _sql = _ds.Sql.Split(';')[1];
+                    }
+                    else if (_ds != null && !(_dV is EbCalendarView))
                     {
                         string _c = string.Empty;
                         DVBaseColumn Treecol = null;
@@ -657,7 +660,7 @@ namespace ExpressBase.ServiceStack
                                 DateTime y = DateTime.Now;
                                 var diff = y - x;
                                 Console.WriteLine("new: " + diff);
-                               // ReturnObj = PreProcessingCalendarView(ref _dataset, request.Params, ref _dV, request.UserInfo);
+                                // ReturnObj = PreProcessingCalendarView(ref _dataset, request.Params, ref _dV, request.UserInfo);
                             }
                             else if (_dV.ApiRefId != null && _dV.ApiRefId != string.Empty)
                                 ReturnObj = PreProcessingPivot(ref _dataset, request.Params, ref _dV, request.UserInfo);
@@ -1319,7 +1322,7 @@ namespace ExpressBase.ServiceStack
                 }
                 EbDataTable _formattedTable = tempdataset.Tables[0].GetEmptyTable();
                 _formattedTable.Columns.Add(_formattedTable.NewDataColumn(_dv.Columns.Count, "Total", EbDbTypes.Int32));
-                summary.Add(_dv.Columns.Count, new List<object>(_list));
+                summary.Add(summary.Keys.Last() + 1, new List<object>(_list));
                 _dv.Columns.Add(new DVBaseColumn { Data = _dv.Columns.Count, Name = "Total", sTitle = "Total", Type = EbDbTypes.Int32, RenderType = EbDbTypes.Int32, bVisible = true, AggregateFun = AggregateFun.Sum });
                 _formattedTable.Columns.Add(_formattedTable.NewDataColumn(_dv.Columns.Count, "serial", EbDbTypes.Int32));
                 for (int i = initial_columns_count; i < _dv.Columns.Count; i++)
@@ -1333,7 +1336,7 @@ namespace ExpressBase.ServiceStack
                 {
                     CalendarData.Add(LinesRows[i]);
                 }
-                CalendarData.GetFormatedTable(ref _formattedTable, MasterRows,ref summary);
+                CalendarData.GetFormatedTable(ref _formattedTable, MasterRows, ref summary);
                 return new PrePrcessorReturn { FormattedTable = _formattedTable, rows = MasterRows, Summary = summary };
             }
             catch (Exception e)
@@ -1427,10 +1430,10 @@ namespace ExpressBase.ServiceStack
             {
                 DayWiseDateColumns(_dataset, ref tempdataset, Parameters, ref _dv, ref _hourCount, ref summary);
             }
-            else if ((_dv as EbCalendarView).CalendarType == AttendanceType.Hourly)
-            {
-                HourlyWiseDateColumns(_dataset, ref tempdataset, Parameters, ref _dv, ref _hourCount, ref summary);
-            }
+            //else if ((_dv as EbCalendarView).CalendarType == AttendanceType.Hourly)
+            //{
+            //    HourlyWiseDateColumns(_dataset, ref tempdataset, Parameters, ref _dv, ref _hourCount, ref summary);
+            //}
             else if ((_dv as EbCalendarView).CalendarType == AttendanceType.Weekely)
             {
                 WeekelyDateColumns(_dataset, ref tempdataset, Parameters, ref _dv, ref _hourCount, ref summary);
@@ -3514,7 +3517,8 @@ ORDER BY
 
                             _tooltip += $"<tr><td> {datacol.Name} &nbsp; : &nbsp; {ValueTo}</td></tr>";
 
-                            object _val = (_islink) ? "<a href = '#' oncontextmenu = 'return false' class ='tablelink4calendar'  data-column='" + col.Name + "'>" + ValueTo + "</a>" : ValueTo.ToString();
+                            object _val = (_islink) ? "<a href = '#' oncontextmenu = 'return false' class ='tablelink4calendar' data-popup='true' data-link='" + (_dv as EbCalendarView).ObjectLinks[0].ObjRefId + "' data-colindex='" + CalendarCol.Data + "'  data-column='" + col.Name + "'>" + ValueTo + "</a>" : ValueTo.ToString();
+
                             var _span = $"<span hidden-row={_hourCount[col.Name].Row} class='columntooltip' data-toggle='popover' data-contents='@@tooltip@@'>{_val}</span>";
                             _formatteddata += $"<div class='dataclass { datacol.Name}_class'>{_span }</div>";
                             // for column aggregate

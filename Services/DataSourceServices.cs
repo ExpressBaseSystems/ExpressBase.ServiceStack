@@ -542,8 +542,8 @@ namespace ExpressBase.ServiceStack
                         _recordsFiltered = _dataset.Tables[0].Rows.Count;
                     }
                 }
-                _recordsTotal = (_recordsTotal > 0) ? _recordsTotal : (_dataset.Tables.Count > 0) ? _dataset.Tables[1].Rows.Count : 0;
-                _recordsFiltered = (_recordsFiltered > 0) ? _recordsFiltered : (_dataset.Tables.Count > 0) ? _dataset.Tables[1].Rows.Count : 0;
+                _recordsTotal = (_recordsTotal > 0) ? _recordsTotal : (_dataset.Tables.Count > 1) ? _dataset.Tables[1].Rows.Count : 0;
+                _recordsFiltered = (_recordsFiltered > 0) ? _recordsFiltered : (_dataset.Tables.Count > 1) ? _dataset.Tables[1].Rows.Count : 0;
 
                 resp.Data = (request.QueryIndex == 0) ? _dataset.Tables[1].Rows : _dataset.Tables[0].Rows;
                 resp.Draw = request.Draw;
