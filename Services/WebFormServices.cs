@@ -1517,12 +1517,17 @@ namespace ExpressBase.ServiceStack.Services
                 }
                 EbDataSet ds = this.EbConnectionFactory.DataDB.DoQueries(Qry);
                 Dictionary<string, string> resDict = new Dictionary<string, string>();
+                List<string> Table_Id_s = new List<string>();
                 for (int i = 0; i < FormDp.Count; i++)
                 {
                     string autoIdCol = FormDp[i].WebForm.AutoId?.TableName == FormDp[i].WebForm.TableName ? FormDp[i].WebForm.AutoId.Name : null;
                     for (int j = 0; j < ds.Tables[i].Rows.Count; j++)
                     {
-                        string _p = JsonConvert.SerializeObject(new List<Param>() { { new Param { Name = "id", Type = "11", Value = Convert.ToString(ds.Tables[i].Rows[j][0]) } } });
+                        string id = Convert.ToString(ds.Tables[i].Rows[j][0]);
+                        if (Table_Id_s.Contains(FormDp[i].WebForm.TableName + id))
+                            continue;
+                        Table_Id_s.Add(FormDp[i].WebForm.TableName + id);
+                        string _p = JsonConvert.SerializeObject(new List<Param>() { { new Param { Name = "id", Type = "11", Value = id } } });
                         string link = $"/WebForm/Index?_r={FormDp[i].WebForm.RefId}&_p={_p.ToBase64()}&_m=1";
                         string autoIdVal = autoIdCol == null ? string.Empty : $" ({Convert.ToString(ds.Tables[i].Rows[j][1])})";
                         AddInDict_TryRec(resDict, FormDp[i].WebForm.DisplayName + autoIdVal, link, 1);
