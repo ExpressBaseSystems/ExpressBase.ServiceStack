@@ -317,6 +317,8 @@ namespace ExpressBase.ServiceStack.Services
 				Qry = "SELECT id FROM eb_users WHERE LOWER(phnoprimary) LIKE LOWER(@val) AND COALESCE(eb_del, 'F') = 'F' AND id <> @id;";
 			else if (request.QryId == UniqueCheckQueryId.eb_roles__role_name)
 				Qry = "SELECT id FROM eb_roles WHERE LOWER(role_name) LIKE LOWER(@val) AND COALESCE(eb_del, 'F') = 'F' AND id <> @id";
+			else if (request.QryId == UniqueCheckQueryId.eb_users__nickname)
+				Qry = "SELECT id FROM eb_users WHERE LOWER(nickname) LIKE LOWER(@val) AND COALESCE(eb_del, 'F') = 'F' AND id <> @id";
 
 			EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(Qry, Params);
 			if (dt.Rows.Count == 0)
