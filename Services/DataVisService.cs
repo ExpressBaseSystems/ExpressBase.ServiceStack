@@ -2871,6 +2871,10 @@ namespace ExpressBase.ServiceStack
                 {
                     DVApprovalColumn col = _col as DVApprovalColumn;
 
+                    EbWebForm Form = EbFormHelper.GetEbObject<EbWebForm>(col.FormRefid, null, this.Redis, this);
+                    EbControl[] Allctrls = Form.Controls.FlattenAllEbControls();
+                    col.ReviewCtrl = (Allctrls.FirstOrDefault(e => e is EbReview)) as EbReview;
+
                     int[] eb_src_ids = rows.Select(e => Convert.ToInt32(e[col.FormDataId[0].Data])).ToArray();
 
                     var _roles = string.Join(",", _user.RoleIds.ToArray());
@@ -3066,10 +3070,14 @@ ORDER BY
 
         private string ProcessParticularApprovalcolumn(User _user, int DataId, string FormRefId)
         {
+            EbWebForm Form = EbFormHelper.GetEbObject<EbWebForm>(FormRefId, null, this.Redis, this);
+            EbControl[] Allctrls = Form.Controls.FlattenAllEbControls();
+            EbReview ReviewCtrl = Allctrls.FirstOrDefault(e => e is EbReview) as EbReview;
+
             string _formattedData = string.Empty;
             var _rows = _approvaldata.Tables[0].Rows;
             if (_rows.Count > 0)
-                _formattedData = GetDataforPermissedApprovalColumn(_rows, _user, _approvaldata.Tables[2].Rows, null, null);
+                _formattedData = GetDataforPermissedApprovalColumn(_rows, _user, _approvaldata.Tables[2].Rows, null, null, ReviewCtrl);
             else
             {
                 _rows = _approvaldata.Tables[1].Rows;
@@ -3091,7 +3099,7 @@ ORDER BY
                 var _rows = col.ApprovalData.Tables[0].Rows.FindAll(_row => Convert.ToInt32(_row["form_data_id"]) == Convert.ToInt32(row[(col as DVApprovalColumn).FormDataId[0].Data]));
                 var linesRows = col.ApprovalData.Tables[2].Rows.FindAll(_row => Convert.ToInt32(_row["eb_src_id"]) == Convert.ToInt32(row[(col as DVApprovalColumn).FormDataId[0].Data]));
                 if (_rows.Count > 0)
-                    _formattedData = GetDataforPermissedApprovalColumn(_rows, _user, linesRows, row, col as DVApprovalColumn);
+                    _formattedData = GetDataforPermissedApprovalColumn(_rows, _user, linesRows, row, col as DVApprovalColumn, null);
                 else
                 {
                     _rows = col.ApprovalData.Tables[1].Rows.FindAll(_row => Convert.ToInt32(_row["eb_src_id"]) == Convert.ToInt32(row[(col as DVApprovalColumn).FormDataId[0].Data]));
@@ -3125,8 +3133,20 @@ ORDER BY
             return hasRoleMatch;
         }
 
-        private string GetDataforPermissedApprovalColumn(List<EbDataRow> rows, User _user, List<EbDataRow> linesRows, EbDataRow row, DVApprovalColumn col)
+        private string IsCommentsRequired(EbReview ReviewCtrl, string stage, string action)
         {
+            if (ReviewCtrl.FormStages.Find(e => e.EbSid == stage) is EbReviewStage currentStage)
+            {
+                if (currentStage.StageActions.Find(e => e.EbSid == action) is EbReviewAction currentAction && currentAction.CommentsRequired)
+                    return "req='y'";
+            }
+            return string.Empty;
+        }
+
+        private string GetDataforPermissedApprovalColumn(List<EbDataRow> rows, User _user, List<EbDataRow> linesRows, EbDataRow row, DVApprovalColumn col, EbReview ReviewCtrl)
+        {
+            if (col != null)
+                ReviewCtrl = col.ReviewCtrl;
             bool enableReset = CheckReviewResetPermission(_user, col);
             string _data = $@"<div class='nav-container'>
                           <ul class='nav nav-tabs'>
@@ -3149,7 +3169,7 @@ ORDER BY
             foreach (EbDataRow _ebdatarow in rows)
             {
                 _obj.Action_unique_id = _ebdatarow["action_unique_id"].ToString();
-                _data += "<option value='" + Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(_obj))) + "'>" + _ebdatarow["action_name"].ToString() + "</option>";
+                _data += "<option " + IsCommentsRequired(ReviewCtrl, _obj.Stage_unique_id, _obj.Action_unique_id) + " value='" + Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(_obj))) + "'>" + _ebdatarow["action_name"].ToString() + "</option>";
             }
             _data += "</select></td></tr>";
             _data += "<tr><td class='action-td'>Comments</td><td class='action-td'><textarea class='comment-text'></textarea></td></tr>";
