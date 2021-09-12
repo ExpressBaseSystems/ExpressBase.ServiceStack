@@ -3197,9 +3197,9 @@ ORDER BY
             _data += "</div></div>";
             string _stage = "<div class='stage-div'>";
             var _latestHistory = GetLatestHistory(linesRows);
-            if (!string.IsNullOrEmpty(_latestHistory))
-                _latestHistory += "<span><i class='fa fa-arrow-right size11' aria-hidden='true'></i></span> ";
-            _stage += "<div class='stage-div-inner stage-status-cont'><span class='stage-status'>" + _latestHistory + rows[0]["stage_name"].ToString() + "</span></div>";
+            if (string.IsNullOrWhiteSpace(_latestHistory))
+                _latestHistory = rows[0]["stage_name"].ToString();
+            _stage += "<div class='stage-div-inner stage-status-cont'><span class='stage-status'>" + _latestHistory + "</span></div>";
             _stage += $"<div class='stage-div-inner'><div class='icon-status-cont'>" +
                 $"<span class='status-icon'><i class='fa fa-commenting color-warning' aria-hidden='true'></i></span>" +
                 $"<span class='status-label label label-warning'>Review Required</span>" +
