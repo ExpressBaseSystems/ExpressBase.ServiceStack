@@ -1608,8 +1608,9 @@ namespace ExpressBase.ServiceStack
                         bVisible = true,
                         StartDT = startDate,
                         EndDT = endDate,
-                        Align = Align.Center,
-                        HeaderTooltipText = _tooltip
+                        Align = Align.Left,
+                        HeaderTooltipText = _tooltip,
+                        sWidth = "75px"
                     };
                     _dv.Columns.Add(col);
                     (_dv as EbCalendarView).DateColumns.Add(col);
@@ -1654,8 +1655,9 @@ namespace ExpressBase.ServiceStack
                             bVisible = true,
                             StartDT = startDate,
                             EndDT = endDate,
-                            Align = Align.Center,
-                            HeaderTooltipText = _tooltip
+                            Align = Align.Left,
+                            HeaderTooltipText = _tooltip,
+                            sWidth = "75px"
                         };
                         _dv.Columns.Add(col);
                         (_dv as EbCalendarView).DateColumns.Add(col);
@@ -1703,8 +1705,9 @@ namespace ExpressBase.ServiceStack
                             bVisible = true,
                             StartDT = startDate,
                             EndDT = endDate,
-                            Align = Align.Center,
-                            HeaderTooltipText = _tooltip
+                            Align = Align.Left,
+                            HeaderTooltipText = _tooltip,
+                            sWidth = "75px"
                         };
                         _dv.Columns.Add(col);
                         (_dv as EbCalendarView).DateColumns.Add(col);
@@ -1752,8 +1755,9 @@ namespace ExpressBase.ServiceStack
                             bVisible = true,
                             StartDT = startDate,
                             EndDT = endDate,
-                            Align = Align.Center,
-                            HeaderTooltipText = _tooltip
+                            Align = Align.Left,
+                            HeaderTooltipText = _tooltip,
+                            sWidth = "75px"
                         };
                         _dv.Columns.Add(col);
                         (_dv as EbCalendarView).DateColumns.Add(col);
@@ -1798,8 +1802,9 @@ namespace ExpressBase.ServiceStack
                         bVisible = true,
                         StartDT = startDate,
                         EndDT = endDate,
-                        Align = Align.Center,
-                        HeaderTooltipText = _tooltip
+                        Align = Align.Left,
+                        HeaderTooltipText = _tooltip,
+                        sWidth = "75px"
                     };
                     _dv.Columns.Add(col);
                     (_dv as EbCalendarView).DateColumns.Add(col);
