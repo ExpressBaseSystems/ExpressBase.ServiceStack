@@ -3333,7 +3333,7 @@ ORDER BY
                 _history += "</tbody></table>";
             }
             else
-                _history = "No Action Performed yet.";
+                _history = "<div>No Action Performed yet.</div>";
             return _history;
         }
 
