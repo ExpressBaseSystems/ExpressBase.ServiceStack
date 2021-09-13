@@ -139,7 +139,7 @@ namespace ExpressBase.ServiceStack
 
             if (env == "Staging")
             {
-                fburl = "https://ss.eb-test.site/auth/facebook";
+                fburl = "https://ss.eb-test.xyz/auth/facebook";
             }
             else if (env == "Production")
             {
