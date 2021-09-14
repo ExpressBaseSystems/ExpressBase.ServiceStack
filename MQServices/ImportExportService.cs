@@ -231,7 +231,7 @@ namespace ExpressBase.ServiceStack.Services
                                 if (!RefidMap.ContainsKey(obj.RefId))
                                 {
                                     obj.DisplayName = GetUniqDisplayName(obj.DisplayName);
-
+                                    obj.Name = obj.Name + Guid.NewGuid().ToString().Substring(0, 5);
                                     ObjectLifeCycleStatus _status = (request.IsDemoApp || !IsVersioned(request.SelectedSolutionId, request.UserId)) ? ObjectLifeCycleStatus.Live : ObjectLifeCycleStatus.Dev;
 
                                     EbObject_Create_New_ObjectRequest ds = new EbObject_Create_New_ObjectRequest
