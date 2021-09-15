@@ -64,6 +64,7 @@ namespace ExpressBase.ServiceStack.Services
                     EbObjectType = (dr[4] != DBNull.Value) ? Convert.ToInt32(dr[4]) : 0,
                     Status = Enum.GetName(typeof(ObjectLifeCycleStatus), Convert.ToInt32(dr[2])),
                     Tags = dr[3].ToString(),
+                    DisplayName = dr[5].ToString(),
                     RefId = request.RefId
                 });
                 wrap.Add(_ebObject);
