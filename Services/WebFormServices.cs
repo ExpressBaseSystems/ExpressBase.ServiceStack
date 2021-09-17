@@ -1054,7 +1054,7 @@ namespace ExpressBase.ServiceStack.Services
                     if (request.SourceRowId > 0)
                     {
                         sourceForm.RefreshFormData(EbConnectionFactory.DataDB, this);
-                        destForm.FormData = EbFormHelper.GetFilledNewFormData(sourceForm);
+                        destForm.FormData = EbFormHelper.GetFilledNewFormData(sourceForm, true);
                     }
                     else
                         destForm.FormData = destForm.GetEmptyModel();
