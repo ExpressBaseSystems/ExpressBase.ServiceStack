@@ -484,7 +484,7 @@ namespace ExpressBase.ServiceStack.Services
         [CompressResponse]
         public object Get(EbObjectExploreObjectRequest request)
         {
-            List<EbObjectWrapper> wrap = new List<EbObjectWrapper>();
+            EbObjectWrapper wrap = new EbObjectWrapper();
             EbDataTable dt;
             List<DbParameter> parameters = new List<DbParameter> { this.EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, request.Id) };
             if (EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.MYSQL)
@@ -534,61 +534,71 @@ namespace ExpressBase.ServiceStack.Services
             {
                 dt = this.EbConnectionFactory.ObjectsDB.DoQuery(EbConnectionFactory.ObjectsDB.EB_EXPLORE_OBJECT, parameters.ToArray());
             }
-            foreach (EbDataRow dr in dt.Rows)
+            try
             {
-                try
+                EbDataRow dr = dt.Rows[0];
+                EbObjectWrapper _ebObject = (new EbObjectWrapper
                 {
-                    EbObjectWrapper _ebObject = (new EbObjectWrapper
+                    Id = Convert.ToInt32(dr[0]),
+                    Name = dr[1].ToString(),
+                    EbObjectType = ((EbObjectType)Convert.ToInt32(dr[2])).IntCode,
+                    Status = Enum.GetName(typeof(ObjectLifeCycleStatus), Convert.ToInt32(dr[3])),
+                    Description = dr[4].ToString(),
+                    ChangeLog = dr[5].ToString(),
+                    CommitTs = Convert.ToDateTime((dr[6].ToString()) == "0" || (dr[6].ToString()) == "" ? DateTime.MinValue : dr[6]),
+                    CommitUname = dr[7].ToString(),
+                    RefId = dr[8].ToString(),
+                    VersionNumber = dr[9].ToString(),
+                    WorkingMode = (dr[10].ToString() == "T") ? true : false,
+                    Wc_All = (dr[11] as string == null) ? (dr[11] as string[]) : (dr[11] as string).Split(","),
+                    Json_wc = dr[12] as string,
+                    Json_lc = dr[13] as string,
+                    Tags = dr[17].ToString(),
+                    Apps = dr[18].ToString().Replace("\n", "").Replace("\t", "").Replace("\r", ""),
+                    Dashboard_Tiles = new EbObj_Dashboard
                     {
-                        Id = Convert.ToInt32(dr[0]),
-                        Name = dr[1].ToString(),
-                        EbObjectType = ((EbObjectType)Convert.ToInt32(dr[2])).IntCode,
-                        Status = Enum.GetName(typeof(ObjectLifeCycleStatus), Convert.ToInt32(dr[3])),
-                        Description = dr[4].ToString(),
-                        ChangeLog = dr[5].ToString(),
-                        CommitTs = Convert.ToDateTime((dr[6].ToString()) == "0" || (dr[6].ToString()) == "" ? DateTime.MinValue : dr[6]),
-                        CommitUname = dr[7].ToString(),
-                        RefId = dr[8].ToString(),
-                        VersionNumber = dr[9].ToString(),
-                        WorkingMode = (dr[10].ToString() == "T") ? true : false,
-                        Json_wc = dr[12] as string,
-                        Json_lc = dr[13] as string,
-                        Wc_All = (dr[11] as string == null) ? (dr[11] as string[]) : (dr[11] as string).Split(","),
-                        Tags = dr[17].ToString(),
-                        Apps = dr[18].ToString().Replace("\n", "").Replace("\t", "").Replace("\r", ""),
-                        Dashboard_Tiles = new EbObj_Dashboard
-                        {
-                            MajorVersionNumber = Convert.ToInt32(dr[14]),
-                            MinorVersionNumber = Convert.ToInt32(dr[15]),
-                            PatchVersionNumber = Convert.ToInt32(dr[16]),
-                            LastCommitedVersionRefid = dr[19].ToString(),
-                            LastCommitedVersionNumber = dr[20].ToString(),
-                            LastCommitedVersionCommit_ts = Convert.ToDateTime((dr[21].ToString()) == "0" || (dr[21].ToString()) == "" ? DateTime.MinValue : dr[21]),
-                            LastCommitedVersion_Status = Enum.GetName(typeof(ObjectLifeCycleStatus), Convert.ToInt32(dr[22])),
-                            LastCommitedby_Name = dr[23].ToString(),
-                            LastCommitedby_Id = Convert.ToInt32(dr[24]),
-                            LiveVersionRefid = dr[25].ToString(),
-                            LiveVersionNumber = dr[26].ToString(),
-                            LiveVersionCommit_ts = Convert.ToDateTime((dr[27].ToString()) == "0" || (dr[27].ToString()) == "" ? DateTime.MinValue : dr[27]),
-                            LiveVersion_Status = Enum.GetName(typeof(ObjectLifeCycleStatus), Convert.ToInt32(dr[28])),
-                            LiveVersionCommitby_Name = dr[29].ToString(),
-                            LiveVersionCommitby_Id = Convert.ToInt32(dr[30]),
-                            OwnerUid = Convert.ToInt32(dr[31]),
-                            OwnerTs = Convert.ToDateTime((dr[32].ToString()) == "0" || (dr[32].ToString()) == "" ? DateTime.MinValue : dr[32]),
-                            OwnerName = dr[33].ToString()
-                        },
-                        DisplayName = dr[34].ToString(),
-                        IsLogEnabled = (dr[35].ToString() == "F") ? false : true,
-                        IsPublic = (dr[36].ToString() == "T") ? true : false
-                    });
+                        MajorVersionNumber = Convert.ToInt32(dr[14]),
+                        MinorVersionNumber = Convert.ToInt32(dr[15]),
+                        PatchVersionNumber = Convert.ToInt32(dr[16]),
+                        LastCommitedVersionRefid = dr[19].ToString(),
+                        LastCommitedVersionNumber = dr[20].ToString(),
+                        LastCommitedVersionCommit_ts = Convert.ToDateTime((dr[21].ToString()) == "0" || (dr[21].ToString()) == "" ? DateTime.MinValue : dr[21]),
+                        LastCommitedVersion_Status = Enum.GetName(typeof(ObjectLifeCycleStatus), Convert.ToInt32(dr[22])),
+                        LastCommitedby_Name = dr[23].ToString(),
+                        LastCommitedby_Id = Convert.ToInt32(dr[24]),
+                        LiveVersionRefid = dr[25].ToString(),
+                        LiveVersionNumber = dr[26].ToString(),
+                        LiveVersionCommit_ts = Convert.ToDateTime((dr[27].ToString()) == "0" || (dr[27].ToString()) == "" ? DateTime.MinValue : dr[27]),
+                        LiveVersion_Status = Enum.GetName(typeof(ObjectLifeCycleStatus), Convert.ToInt32(dr[28])),
+                        LiveVersionCommitby_Name = dr[29].ToString(),
+                        LiveVersionCommitby_Id = Convert.ToInt32(dr[30]),
+                        OwnerUid = Convert.ToInt32(dr[31]),
+                        OwnerTs = Convert.ToDateTime((dr[32].ToString()) == "0" || (dr[32].ToString()) == "" ? DateTime.MinValue : dr[32]),
+                        OwnerName = dr[33].ToString()
+                    },
+                    DisplayName = dr[34].ToString(),
+                    IsLogEnabled = (dr[35].ToString() == "F") ? false : true,
+                    IsPublic = (dr[36].ToString() == "T") ? true : false
+                });
 
-                    wrap.Add(_ebObject);
-                }
-                catch (Exception e)
+                wrap = _ebObject;
+                _ebObject.Dashboard_Tiles.Dominants = new List<RelatedObject>();
+                _ebObject.Dashboard_Tiles.Dependants = new List<RelatedObject>();
+                List<DbParameter> p = new List<DbParameter> { this.EbConnectionFactory.ObjectsDB.GetNewParameter("refid", EbDbTypes.String, _ebObject.RefId) };
+                EbDataTable t = this.EbConnectionFactory.ObjectsDB.DoQuery(EbConnectionFactory.ObjectsDB.GET_RELATED_OBJECTS, p.ToArray());
+                // type 1 -> dominants, 2 -> dependants
+                foreach (EbDataRow r in t.Rows)
                 {
-                    Console.WriteLine("Exception: " + e.ToString());
+                    RelatedObject o = new RelatedObject { Refid = r[0].ToString(), DisplayName = r[1].ToString(), VersionNumber = r[2].ToString(), Type = (int)r[3] };
+                    if (o.Type == 1)
+                        _ebObject.Dashboard_Tiles.Dominants.Add(o);
+                    else
+                        _ebObject.Dashboard_Tiles.Dependants.Add(o);
                 }
-
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Exception: " + e.ToString());
             }
             return new EbObjectExploreObjectResponse { Data = wrap };
         }
@@ -597,7 +607,7 @@ namespace ExpressBase.ServiceStack.Services
         public object Get(EbObjectUpdateDashboardRequest request)
         {
 
-            List<EbObjectWrapper> wrap = new List<EbObjectWrapper>();
+            EbObjectWrapper wrap = new EbObjectWrapper();
             List<DbParameter> para = new List<DbParameter> { EbConnectionFactory.ObjectsDB.GetNewParameter("refid", EbDbTypes.String, request.Refid) };
             EbDataTable dt;
             if (EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.MYSQL)
@@ -636,49 +646,61 @@ namespace ExpressBase.ServiceStack.Services
             {
                 dt = EbConnectionFactory.ObjectsDB.DoQuery(EbConnectionFactory.ObjectsDB.EB_UPDATE_DASHBOARD, para.ToArray());
             }
-            foreach (EbDataRow dr in dt.Rows)
+
+            try
             {
-                try
+                EbDataRow dr = dt.Rows[0];
+                EbObjectWrapper _ebObject = (new EbObjectWrapper
                 {
-                    EbObjectWrapper _ebObject = (new EbObjectWrapper
+                    Name = dr[0].ToString(),
+                    Status = Enum.GetName(typeof(ObjectLifeCycleStatus), Convert.ToInt32(dr[1])),
+                    RefId = request.Refid,
+                    VersionNumber = dr[2].ToString(),
+                    WorkingMode = (dr[10].ToString() == "T") ? true : false,
+                    Wc_All = (dr[4] as string == null) ? (dr[4] as string[]) : (dr[4] as string).Split(","),
+                    Tags = dr[8].ToString(),
+                    Apps = dr[9].ToString().Replace("\n", "").Replace("\t", "").Replace("\r", ""),
+                    Dashboard_Tiles = new EbObj_Dashboard
                     {
-                        Name = dr[0].ToString(),
-                        Status = Enum.GetName(typeof(ObjectLifeCycleStatus), Convert.ToInt32(dr[1])),
-                        RefId = request.Refid,
-                        VersionNumber = dr[2].ToString(),
-                        WorkingMode = (dr[10].ToString() == "T") ? true : false,
-                        Wc_All = (dr[4] as string == null) ? (dr[4] as string[]) : (dr[4] as string).Split(","),
-                        Tags = dr[8].ToString(),
-                        Apps = dr[9].ToString().Replace("\n", "").Replace("\t", "").Replace("\r", ""),
-                        Dashboard_Tiles = new EbObj_Dashboard
-                        {
-                            MajorVersionNumber = Convert.ToInt32(dr[5]),
-                            MinorVersionNumber = Convert.ToInt32(dr[6]),
-                            PatchVersionNumber = Convert.ToInt32(dr[7]),
-                            LastCommitedVersionRefid = dr[10].ToString(),
-                            LastCommitedVersionNumber = dr[11].ToString(),
-                            LastCommitedVersionCommit_ts = Convert.ToDateTime((dr[12].ToString()) == "0" || (dr[12].ToString()) == "" ? DateTime.MinValue : dr[12]),
-                            LastCommitedVersion_Status = Enum.GetName(typeof(ObjectLifeCycleStatus), Convert.ToInt32(dr[13])),
-                            LastCommitedby_Name = dr[14].ToString(),
-                            LastCommitedby_Id = Convert.ToInt32(dr[15]),
-                            LiveVersionRefid = dr[16].ToString(),
-                            LiveVersionNumber = dr[17].ToString(),
-                            LiveVersionCommit_ts = Convert.ToDateTime((dr[18].ToString()) == "0" || (dr[18].ToString()) == "" ? DateTime.MinValue : dr[18]),
-                            LiveVersion_Status = Enum.GetName(typeof(ObjectLifeCycleStatus), Convert.ToInt32(dr[19])),
-                            LiveVersionCommitby_Name = dr[20].ToString(),
-                            LiveVersionCommitby_Id = Convert.ToInt32(dr[21]),
-                            OwnerUid = Convert.ToInt32(dr[22]),
-                            OwnerTs = Convert.ToDateTime((dr[23].ToString()) == "" || (dr[23].ToString()) == "" ? DateTime.MinValue : dr[23]),
-                            OwnerName = dr[24].ToString()
-                        },
-                        IsPublic = (dr[25].ToString() == "T") ? true : false
-                    });
-                    wrap.Add(_ebObject);
-                }
-                catch (Exception e)
+                        MajorVersionNumber = Convert.ToInt32(dr[5]),
+                        MinorVersionNumber = Convert.ToInt32(dr[6]),
+                        PatchVersionNumber = Convert.ToInt32(dr[7]),
+                        LastCommitedVersionRefid = dr[10].ToString(),
+                        LastCommitedVersionNumber = dr[11].ToString(),
+                        LastCommitedVersionCommit_ts = Convert.ToDateTime((dr[12].ToString()) == "0" || (dr[12].ToString()) == "" ? DateTime.MinValue : dr[12]),
+                        LastCommitedVersion_Status = Enum.GetName(typeof(ObjectLifeCycleStatus), Convert.ToInt32(dr[13])),
+                        LastCommitedby_Name = dr[14].ToString(),
+                        LastCommitedby_Id = Convert.ToInt32(dr[15]),
+                        LiveVersionRefid = dr[16].ToString(),
+                        LiveVersionNumber = dr[17].ToString(),
+                        LiveVersionCommit_ts = Convert.ToDateTime((dr[18].ToString()) == "0" || (dr[18].ToString()) == "" ? DateTime.MinValue : dr[18]),
+                        LiveVersion_Status = Enum.GetName(typeof(ObjectLifeCycleStatus), Convert.ToInt32(dr[19])),
+                        LiveVersionCommitby_Name = dr[20].ToString(),
+                        LiveVersionCommitby_Id = Convert.ToInt32(dr[21]),
+                        OwnerUid = Convert.ToInt32(dr[22]),
+                        OwnerTs = Convert.ToDateTime((dr[23].ToString()) == "" || (dr[23].ToString()) == "" ? DateTime.MinValue : dr[23]),
+                        OwnerName = dr[24].ToString()
+                    },
+                    IsPublic = (dr[25].ToString() == "T") ? true : false
+                });
+                wrap = _ebObject;
+                _ebObject.Dashboard_Tiles.Dominants = new List<RelatedObject>();
+                _ebObject.Dashboard_Tiles.Dependants = new List<RelatedObject>();
+                List<DbParameter> p = new List<DbParameter> { this.EbConnectionFactory.ObjectsDB.GetNewParameter("refid", EbDbTypes.String, _ebObject.RefId) };
+                EbDataTable t = this.EbConnectionFactory.ObjectsDB.DoQuery(EbConnectionFactory.ObjectsDB.GET_RELATED_OBJECTS, p.ToArray());
+                // type 1 -> dominants, 2 -> dependants
+                foreach (EbDataRow r in t.Rows)
                 {
-                    Console.WriteLine("Exception: " + e.ToString());
+                    RelatedObject o = new RelatedObject { Refid = r[0].ToString(), DisplayName = r[1].ToString(), VersionNumber = r[2].ToString(), Type = (int)r[3] };
+                    if (o.Type == 1)
+                        _ebObject.Dashboard_Tiles.Dominants.Add(o);
+                    else
+                        _ebObject.Dashboard_Tiles.Dependants.Add(o);
                 }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Exception: " + e.ToString());
             }
             return new EbObjectUpdateDashboardResponse { Data = wrap };
         }
