@@ -589,8 +589,8 @@ namespace ExpressBase.ServiceStack.Services
                 // type 1 -> dominants, 2 -> dependants
                 foreach (EbDataRow r in t.Rows)
                 {
-                    RelatedObject o = new RelatedObject { Refid = r[0].ToString(), DisplayName = r[1].ToString(), VersionNumber = r[2].ToString(), Type = (int)r[3] };
-                    if (o.Type == 1)
+                    RelatedObject o = new RelatedObject { Refid = r[0].ToString(), DisplayName = r[1].ToString(), VersionNumber = r[2].ToString(), RelationType = (int)r[3], ObjectType = (int)r[4] };
+                    if (o.RelationType == 1)
                         _ebObject.Dashboard_Tiles.Dominants.Add(o);
                     else
                         _ebObject.Dashboard_Tiles.Dependants.Add(o);
@@ -691,8 +691,8 @@ namespace ExpressBase.ServiceStack.Services
                 // type 1 -> dominants, 2 -> dependants
                 foreach (EbDataRow r in t.Rows)
                 {
-                    RelatedObject o = new RelatedObject { Refid = r[0].ToString(), DisplayName = r[1].ToString(), VersionNumber = r[2].ToString(), Type = (int)r[3] };
-                    if (o.Type == 1)
+                    RelatedObject o = new RelatedObject { Refid = r[0].ToString(), DisplayName = r[1].ToString(), VersionNumber = r[2].ToString(), RelationType = (int)r[3], ObjectType = (int)r[4] };
+                    if (o.RelationType == 1)
                         _ebObject.Dashboard_Tiles.Dominants.Add(o);
                     else
                         _ebObject.Dashboard_Tiles.Dependants.Add(o);
