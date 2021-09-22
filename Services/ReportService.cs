@@ -22,6 +22,7 @@ using ExpressBase.Objects;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ExpressBase.ServiceStack.Services;
 using ExpressBase.CoreBase.Globals;
+using ExpressBase.Common.Singletons;
 
 namespace ExpressBase.ServiceStack
 {
@@ -71,7 +72,7 @@ namespace ExpressBase.ServiceStack
                 Report.Solution = GetSolutionObject(request.SolnId);
                 Report.ReadingUser = GetUserObject(request.ReadingUserAuthId);
                 Report.RenderingUser = GetUserObject(request.RenderingUserAuthId);
-                Report.CultureInfo = CultureInfo.GetCultureInfo(Report.ReadingUser?.Preference.Locale ?? "en-US");
+                Report.CultureInfo = CultureHelper.GetSerializedCultureInfo(Report.ReadingUser?.Preference.Locale ?? "en-US").GetCultureInfo();
                 Report.Parameters = request.Params;
                 Report.Ms1 = new MemoryStream();
                 //-- END REPORT object INIT
