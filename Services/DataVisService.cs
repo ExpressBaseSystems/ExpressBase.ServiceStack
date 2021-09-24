@@ -1927,7 +1927,7 @@ namespace ExpressBase.ServiceStack
                             var cults = col.GetColumnCultureInfo(_user_culture);
                             object _unformattedData = row[col.Data] == null ? "" : row[col.Data];//(_dv.AutoGen && col.Name == "eb_action") ? "<i class='fa fa-edit'></i>" :
                             object _formattedData = IntermediateDic[col.Data] == null ? "" : IntermediateDic[col.Data];
-                            object ActualFormatteddata = IntermediateDic[col.Data] == null || col is DVActionColumn ? "" : IntermediateDic[col.Data];
+                            object ActualFormatteddata = IntermediateDic[col.Data] == null || col is DVActionColumn ? "" : Convert.ToString(IntermediateDic[col.Data]).Replace("<", "").Replace(">", "").Replace("'", "").Replace("\"", "");
                             object ExcelData = _formattedData;
 
                             if (col.RenderType == EbDbTypes.Decimal || col.RenderType == EbDbTypes.Int32 || col.RenderType == EbDbTypes.Int64)
