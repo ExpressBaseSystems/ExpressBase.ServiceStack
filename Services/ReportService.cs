@@ -155,23 +155,23 @@ namespace ExpressBase.ServiceStack
         public void FillingCollections(EbReport Report)
         {
             foreach (EbReportHeader r_header in Report.ReportHeaders)
-                Fill(Report, r_header.Fields, EbReportSectionType.ReportHeader);
+                Fill(Report, r_header.GetFields(), EbReportSectionType.ReportHeader);
 
             foreach (EbReportFooter r_footer in Report.ReportFooters)
-                Fill(Report, r_footer.Fields, EbReportSectionType.ReportFooter);
+                Fill(Report, r_footer.GetFields(), EbReportSectionType.ReportFooter);
 
             foreach (EbPageHeader p_header in Report.PageHeaders)
-                Fill(Report, p_header.Fields, EbReportSectionType.PageHeader);
+                Fill(Report, p_header.GetFields(), EbReportSectionType.PageHeader);
 
             foreach (EbReportDetail detail in Report.Detail)
-                Fill(Report, detail.Fields, EbReportSectionType.Detail);
+                Fill(Report, detail.GetFields(), EbReportSectionType.Detail);
 
             foreach (EbPageFooter p_footer in Report.PageFooters)
-                Fill(Report, p_footer.Fields, EbReportSectionType.PageFooter);
+                Fill(Report, p_footer.GetFields(), EbReportSectionType.PageFooter);
 
             foreach (EbReportGroup group in Report.ReportGroups)
             {
-                foreach (EbReportField field in group.GroupHeader.Fields)
+                foreach (EbReportField field in group.GroupHeader.GetFields())
                 {
 
                     if (field is EbDataField)
