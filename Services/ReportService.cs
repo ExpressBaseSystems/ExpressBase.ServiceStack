@@ -63,6 +63,7 @@ namespace ExpressBase.ServiceStack
                 Report.ValueScriptCollection = new Dictionary<string, Script>();
                 Report.AppearanceScriptCollection = new Dictionary<string, Script>();
                 Report.LinkCollection = new Dictionary<string, List<Common.Objects.EbControl>>();
+                Report.GroupSummaryFields = new Dictionary<string, List<EbDataField>>();
                 Report.PageSummaryFields = new Dictionary<string, List<EbDataField>>();
                 Report.ReportSummaryFields = new Dictionary<string, List<EbDataField>>();
                 Report.GroupFooters = new Dictionary<string, ReportGroupItem>();
@@ -171,9 +172,10 @@ namespace ExpressBase.ServiceStack
 
             foreach (EbReportGroup group in Report.ReportGroups)
             {
+                Fill(Report, group.GroupHeader.GetFields(), EbReportSectionType.ReportGroups);
+                Fill(Report, group.GroupFooter.GetFields(), EbReportSectionType.ReportGroups);
                 foreach (EbReportField field in group.GroupHeader.GetFields())
                 {
-
                     if (field is EbDataField)
                     {
                         Report.Groupheaders.Add((field as EbDataField).ColumnName, new ReportGroupItem
@@ -184,9 +186,18 @@ namespace ExpressBase.ServiceStack
                         });
                     }
                 }
-                // foreach (EbReportField field in group.GroupFooter.Fields)
-                // if (field is EbDataField)
-                // Report.GroupFooters.Add(field as EbDataField);
+                foreach (EbReportField field in group.GroupFooter.GetFields())
+                {
+                    if (field is EbDataField)
+                    {
+                        Report.GroupFooters.Add((field as EbDataField).Name, new ReportGroupItem
+                        {
+                            field = field as EbDataField,
+                            PreviousValue = string.Empty,
+                            order = group.GroupHeader.Order
+                        });
+                    }
+                }
             }
 
         }
@@ -300,13 +311,13 @@ namespace ExpressBase.ServiceStack
 
         public void FindLargerDataTable(EbReport Report, EbDataField field)
         {
-            Report.HasRows = true;
-            if (Report.DataSet != null)
+            if (!Report.HasRows || field.TableIndex != Report.DetailTableIndex)
             {
-                if (Report.DataSet.Tables.Count > 0)
+                if (Report.DataSet?.Tables.Count > 0)
                 {
                     if (Report.DataSet.Tables[field.TableIndex].Rows != null)
                     {
+                        Report.HasRows = true;
                         int r_count = Report.DataSet.Tables[field.TableIndex].Rows.Count;
                         Report.DetailTableIndex = (r_count > Report.MaxRowCount) ? field.TableIndex : Report.DetailTableIndex;
                         Report.MaxRowCount = (r_count > Report.MaxRowCount) ? r_count : Report.MaxRowCount;
@@ -320,10 +331,6 @@ namespace ExpressBase.ServiceStack
                 {
                     Console.WriteLine("Report.DataSet.Tables.Count is 0");
                 }
-            }
-            else
-            {
-                Console.WriteLine("Report.DataSet is null");
             }
         }
 
@@ -366,6 +373,17 @@ namespace ExpressBase.ServiceStack
 
         public void FillSummaryCollection(EbReport report, EbDataField field, EbReportSectionType section_typ)
         {
+            if (section_typ == EbReportSectionType.ReportGroups)
+            {
+                if (!report.GroupSummaryFields.ContainsKey(field.SummaryOf))
+                {
+                    report.GroupSummaryFields.Add(field.SummaryOf, new List<EbDataField> { field });
+                }
+                else
+                {
+                    report.GroupSummaryFields[field.SummaryOf].Add(field);
+                }
+            }
             if (section_typ == EbReportSectionType.PageFooter)
             {
                 if (!report.PageSummaryFields.ContainsKey(field.SummaryOf))
