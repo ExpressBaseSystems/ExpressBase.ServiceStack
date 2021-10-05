@@ -230,8 +230,10 @@ namespace ExpressBase.ServiceStack.Services
                                 EbObject obj = Application.ObjCollection[i];
                                 if (!RefidMap.ContainsKey(obj.RefId))
                                 {
-                                    obj.DisplayName = GetUniqDisplayName(obj.DisplayName);
-                                    obj.Name = obj.Name + Guid.NewGuid().ToString().Substring(0, 5);
+                                    obj.DisplayName = GetUniqDisplayName(obj.DisplayName);                                    
+                                    obj.Name = GetProcessedName(obj.Name);
+                                    if (obj is EbWebForm)
+                                        (obj as EbWebForm).EbSid = obj.Name;
                                     ObjectLifeCycleStatus _status = (request.IsDemoApp || !IsVersioned(request.SelectedSolutionId, request.UserId)) ? ObjectLifeCycleStatus.Live : ObjectLifeCycleStatus.Dev;
 
                                     EbObject_Create_New_ObjectRequest ds = new EbObject_Create_New_ObjectRequest
@@ -638,6 +640,19 @@ namespace ExpressBase.ServiceStack.Services
             }
             while (!uniqnameresp.IsUnique);
             return dispname;
+        }
+
+        public static string GetProcessedName(string name)
+        {
+            string oldts = string.Empty;
+            if (name.Contains('_'))
+                oldts = name.Substring(name.LastIndexOf('_'));
+            string newts = DateTime.UtcNow.ToString("MMMydHms").ToLower();
+            if (oldts != string.Empty)
+                name = name.Replace(oldts, "_" + newts);
+            else
+                name += "_" + newts;
+            return name;
         }
     }
     public class ExportRole
