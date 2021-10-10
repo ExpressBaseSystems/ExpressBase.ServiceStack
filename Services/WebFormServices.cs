@@ -46,14 +46,14 @@ namespace ExpressBase.ServiceStack.Services
                         if (pusher is EbApiDataPusher)
                             continue;
                         EbWebForm _form = this.GetWebFormObject(pusher.FormRefId, null, null);
-                        TableSchema _table = _form.FormSchema.Tables.Find(e => e.TableName.Equals(_form.FormSchema.MasterTable));
+                        ExpressBase.Common.TableSchema _table = _form.FormSchema.Tables.Find(e => e.TableName.Equals(_form.FormSchema.MasterTable));
                         //_table.Columns.Add(new ColumnSchema { ColumnName = "eb_push_id", EbDbType = (int)EbDbTypes.String, Control = new EbTextBox { Name = "eb_push_id", Label = "Push Id" } });// multi push id
                         //_table.Columns.Add(new ColumnSchema { ColumnName = "eb_src_id", EbDbType = (int)EbDbTypes.Decimal, Control = new EbNumeric { Name = "eb_src_id", Label = "Source Id" } });// source master table id
                         if (_table != null)
                         {
                             if (pusher is EbBatchFormDataPusher batchDp)
                             {
-                                TableSchema __tbl = Form.FormSchema.Tables.Find(e => e.ContainerName == batchDp.SourceDG);
+                                ExpressBase.Common.TableSchema __tbl = Form.FormSchema.Tables.Find(e => e.ContainerName == batchDp.SourceDG);
                                 if (__tbl != null)
                                     _table.Columns.Add(new ColumnSchema
                                     {
@@ -170,7 +170,7 @@ namespace ExpressBase.ServiceStack.Services
             EbSystemColumns ebs = Form.SolutionObj.SolutionSettings?.SystemColumns ?? new EbSystemColumns(EbSysCols.Values);// Solu Obj is null
             IVendorDbTypes vDbTypes = this.EbConnectionFactory.DataDB.VendorDbTypes;
             string Msg = string.Empty;
-            foreach (TableSchema _table in _schema.Tables)
+            foreach (ExpressBase.Common.TableSchema _table in _schema.Tables)
             {
                 List<TableColumnMeta> _listNamesAndTypes = new List<TableColumnMeta>();
                 if (_table.Columns.Count > 0 && _table.TableType != WebFormTableTypes.Review)
@@ -212,7 +212,7 @@ namespace ExpressBase.ServiceStack.Services
                         _listNamesAndTypes.Add(new TableColumnMeta { Name = ebs[SystemColumns.eb_row_num], Type = vDbTypes.Int32 });// data grid row number
                         if (_table.IsDynamic)// if data grid is in dynamic tab then adding column for source reference - foreignkey
                         {
-                            foreach (TableSchema _t in _schema.Tables.FindAll(e => e.TableType == WebFormTableTypes.Grid && e != _table))
+                            foreach (ExpressBase.Common.TableSchema _t in _schema.Tables.FindAll(e => e.TableType == WebFormTableTypes.Grid && e != _table))
                                 _listNamesAndTypes.Add(new TableColumnMeta { Name = _t.TableName + "_id", Type = vDbTypes.Int32 });
                         }
                     }

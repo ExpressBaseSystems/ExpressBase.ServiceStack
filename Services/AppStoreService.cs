@@ -4,7 +4,6 @@ using ExpressBase.Common.Objects;
 using ExpressBase.Common.Structures;
 using ExpressBase.Objects;
 using ExpressBase.Objects.ServiceStack_Artifacts;
-using Microsoft.Rest;
 using ServiceStack;
 using System;
 using System.Collections;

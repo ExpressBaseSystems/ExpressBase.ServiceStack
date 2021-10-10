@@ -5,7 +5,6 @@ using ExpressBase.Common.EbServiceStack.ReqNRes;
 using ExpressBase.Common.ServiceClients;
 using ExpressBase.Common.ServiceStack.Auth;
 using ExpressBase.Objects.ServiceStack_Artifacts;
-using ExpressBase.ServiceStack.Auth0;
 using Funq;
 using iTextSharp.text;
 using Microsoft.AspNetCore.Builder;
@@ -53,19 +52,6 @@ namespace ExpressBase.ServiceStack
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory)
         {
-            loggerFactory.AddConsole(Configuration.GetSection("Logging"));
-            loggerFactory.AddDebug();
-
-            if (env.IsDevelopment())
-            {
-                app.UseDeveloperExceptionPage();
-                app.UseBrowserLink();
-            }
-            else
-            {
-                app.UseExceptionHandler("/Home/Error");
-            }
-
             app.UseStaticFiles();
 
             app.UseServiceStack(new AppHost());
@@ -125,14 +111,6 @@ namespace ExpressBase.ServiceStack
                 }
             };
 
-            EbApiAuthProvider apiprovider = new EbApiAuthProvider(AppSettings)
-            {
-//#if (DEBUG)
-                RequireSecureConnection = false,
-                //EncryptPayload = true,
-//#endif
-            };
-
             string env = Environment.GetEnvironmentVariable(EnvironmentConstants.ASPNETCORE_ENVIRONMENT);
 
             string fburl = "";
@@ -173,43 +151,7 @@ namespace ExpressBase.ServiceStack
                 new CustomUserSession(),
                 new IAuthProvider[]
                 {
-                    new MyCredentialsAuthProvider(AppSettings) { PersistSession = true },
-                    jwtprovider,
-                    //fbauth,
-                    //apiprovider,
-                    new MyTwitterAuthProvider(AppSettings)
-                    {
-                        ConsumerKey = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_TWITTER_CONSUMER_KEY),
-                        ConsumerSecret = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_TWITTER_CONSUMER_SECRET),
-                        //Need to Change 
-                        CallbackUrl = "http://localhost:8000/auth/twitter",
-                        RequestTokenUrl= "https://api.twitter.com/oauth/authenticate",
-                    },
-					//new MyFacebookAuthProvider(AppSettings)
-					//{
-					//	//febin
-					//	//AppId = "149537802493867",
-					//	 //AppSecret = "55a9b5e0a88089465808bdc1d4f07e8e",
-						
-					//	  //unni
-					//	  //AppId = "628799957635144",
-					//	 // AppSecret = "abf6b5ad5f0f2b886ccaeddc72f209c2",
-
-					//	  AppId = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_FB_APP_ID),
-					//	  AppSecret = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_FB_APP_SECRET),
-					//	  Permissions = new string[] { "email, public_profile, user_hometown" },
-					//},
-
-					new MyGithubAuthProvider(AppSettings)
-                    {
-                        ClientId =Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GITHUB_CLIENT_ID),
-                        ClientSecret = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GITHUB_CLIENT_SECRET)
-
-							//ClientId ="de0c8eefca9c1871a521",
-							//ClientSecret = "805bf067aa1768e1d63bc4f540d0f79834a3955f"
-					}
-
-
+                    jwtprovider
                 }));
 
             this.ContentTypes.Register(MimeTypes.ProtoBuf, (reqCtx, res, stream) => ProtoBuf.Serializer.NonGeneric.Serialize(stream, res), ProtoBuf.Serializer.NonGeneric.Deserialize);
