@@ -1475,20 +1475,20 @@ namespace ExpressBase.ServiceStack.Services
             EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId);
             CheckDataPusherCompatibility(FormObj);
             FormObj.TableRowId = request.RowId;
-            int RowAffected = FormObj.Cancel(EbConnectionFactory.DataDB, request.Cancel);
+            (int RowAffected, string modifiedAt) = FormObj.Cancel(EbConnectionFactory.DataDB, request.Cancel);
             Console.WriteLine($"Record cancelled. RowId: {request.RowId}  RowsAffected: {RowAffected}");
 
-            return new CancelDataFromWebformResponse { RowAffected = RowAffected };
+            return new CancelDataFromWebformResponse { RowAffected = RowAffected, ModifiedAt = modifiedAt };
         }
 
         public LockUnlockWebFormDataResponse Any(LockUnlockWebFormDataRequest request)
         {
             EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId);
             FormObj.TableRowId = request.RowId;
-            int status = FormObj.LockOrUnlock(this.EbConnectionFactory.DataDB, request.Lock);
+            (int status, string modifiedAt) = FormObj.LockOrUnlock(this.EbConnectionFactory.DataDB, request.Lock);
             Console.WriteLine($"Record Lock/Unlock request. RowId: {request.RowId}  Status: {status}");
 
-            return new LockUnlockWebFormDataResponse { Status = status };
+            return new LockUnlockWebFormDataResponse { Status = status, ModifiedAt = modifiedAt };
         }
 
         public GetPushedDataInfoResponse Any(GetPushedDataInfoRequest request)
