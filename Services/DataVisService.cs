@@ -1336,7 +1336,7 @@ namespace ExpressBase.ServiceStack
                 {
                     CalendarData.Add(LinesRows[i]);
                 }
-                CalendarData.GetFormatedTable(ref _formattedTable, MasterRows, ref summary);
+                CalendarData.GetFormatedTable(ref _formattedTable, MasterRows, ref summary, _user);
                 return new PrePrcessorReturn { FormattedTable = _formattedTable, rows = MasterRows, Summary = summary };
             }
             catch (Exception e)
@@ -1513,7 +1513,7 @@ namespace ExpressBase.ServiceStack
                         HeaderTooltipText = _tooltip,
                         StartDT = startDate,
                         EndDT = endDate,
-                        Align = Align.Center
+                        Align = Align.Right
                     };
                     _dv.Columns.Add(col);
                     (_dv as EbCalendarView).DateColumns.Add(col);
@@ -1556,7 +1556,7 @@ namespace ExpressBase.ServiceStack
                         bVisible = true,
                         StartDT = startDate,
                         EndDT = endDate,
-                        Align = Align.Center,
+                        Align = Align.Right,
                         HeaderTooltipText = _tooltip
                     };
                     _dv.Columns.Add(col);
@@ -1608,7 +1608,7 @@ namespace ExpressBase.ServiceStack
                         bVisible = true,
                         StartDT = startDate,
                         EndDT = endDate,
-                        Align = Align.Left,
+                        Align = Align.Right,
                         HeaderTooltipText = _tooltip
                     };
                     _dv.Columns.Add(col);
@@ -1654,7 +1654,7 @@ namespace ExpressBase.ServiceStack
                             bVisible = true,
                             StartDT = startDate,
                             EndDT = endDate,
-                            Align = Align.Left,
+                            Align = Align.Right,
                             HeaderTooltipText = _tooltip,
                             //sWidth = "75px"
                         };
@@ -1704,7 +1704,7 @@ namespace ExpressBase.ServiceStack
                             bVisible = true,
                             StartDT = startDate,
                             EndDT = endDate,
-                            Align = Align.Left,
+                            Align = Align.Right,
                             HeaderTooltipText = _tooltip
                         };
                         _dv.Columns.Add(col);
@@ -1753,7 +1753,7 @@ namespace ExpressBase.ServiceStack
                             bVisible = true,
                             StartDT = startDate,
                             EndDT = endDate,
-                            Align = Align.Left,
+                            Align = Align.Right,
                             HeaderTooltipText = _tooltip
                         };
                         _dv.Columns.Add(col);
@@ -1799,7 +1799,7 @@ namespace ExpressBase.ServiceStack
                         bVisible = true,
                         StartDT = startDate,
                         EndDT = endDate,
-                        Align = Align.Left,
+                        Align = Align.Right,
                         HeaderTooltipText = _tooltip
                     };
                     _dv.Columns.Add(col);

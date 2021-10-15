@@ -23,6 +23,7 @@ using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
 using System.Net;
+using System.Globalization;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -1474,20 +1475,20 @@ namespace ExpressBase.ServiceStack.Services
             EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId);
             CheckDataPusherCompatibility(FormObj);
             FormObj.TableRowId = request.RowId;
-            int RowAffected = FormObj.Cancel(EbConnectionFactory.DataDB, request.Cancel);
+            (int RowAffected, string modifiedAt) = FormObj.Cancel(EbConnectionFactory.DataDB, request.Cancel);
             Console.WriteLine($"Record cancelled. RowId: {request.RowId}  RowsAffected: {RowAffected}");
 
-            return new CancelDataFromWebformResponse { RowAffected = RowAffected };
+            return new CancelDataFromWebformResponse { RowAffected = RowAffected, ModifiedAt = modifiedAt };
         }
 
         public LockUnlockWebFormDataResponse Any(LockUnlockWebFormDataRequest request)
         {
             EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId);
             FormObj.TableRowId = request.RowId;
-            int status = FormObj.LockOrUnlock(this.EbConnectionFactory.DataDB, request.Lock);
+            (int status, string modifiedAt) = FormObj.LockOrUnlock(this.EbConnectionFactory.DataDB, request.Lock);
             Console.WriteLine($"Record Lock/Unlock request. RowId: {request.RowId}  Status: {status}");
 
-            return new LockUnlockWebFormDataResponse { Status = status };
+            return new LockUnlockWebFormDataResponse { Status = status, ModifiedAt = modifiedAt };
         }
 
         public GetPushedDataInfoResponse Any(GetPushedDataInfoRequest request)
@@ -1676,7 +1677,7 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.DraftId),
                     this.EbConnectionFactory.DataDB.GetNewParameter("form_ref_id", EbDbTypes.String, FormObj.RefId),
-                    this.EbConnectionFactory.DataDB.GetNewParameter("eb_created_by", EbDbTypes.String, request.UserId)
+                    this.EbConnectionFactory.DataDB.GetNewParameter("eb_created_by", EbDbTypes.Int32, request.UserId)
                 };
                 int status = this.EbConnectionFactory.DataDB.DoNonQuery(Qry, parameters);
                 if (status == 0)
@@ -1703,7 +1704,7 @@ namespace ExpressBase.ServiceStack.Services
                 Console.WriteLine("GetFormDraftRequest Service start");
                 EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId);////////
                 string Json = string.Empty;
-                string Qry = $@"SELECT form_data_json FROM eb_form_drafts
+                string Qry = $@"SELECT id, form_data_json, eb_loc_id, eb_created_by, eb_created_at, eb_lastmodified_at FROM eb_form_drafts
                                     WHERE id = @id AND form_ref_id = @form_ref_id AND eb_created_by = @eb_created_by AND is_submitted = 'F' AND eb_del = 'F';";
                 DbParameter[] parameters = new DbParameter[]
                 {
@@ -1715,12 +1716,25 @@ namespace ExpressBase.ServiceStack.Services
                 if (dt.Rows.Count == 0)
                     throw new FormException("Not Found.", (int)HttpStatusCode.NotFound, $"Record not found", "SaveFormDraftRequest -> Edit");
                 else
-                    Json = Convert.ToString(dt.Rows[0][0]);
+                    Json = Convert.ToString(dt.Rows[0][1]);
                 Console.WriteLine("GetFormDraftRequest returning");
 
                 WebformDataWrapper dataWrapper = new WebformDataWrapper { Status = (int)HttpStatusCode.OK, Message = "success", FormData = new WebformData() };
-
-                return new GetFormDraftResponse() { DataWrapper = JsonConvert.SerializeObject(dataWrapper), FormDatajson = Json };
+                string p = FormObj.UserObj.Preference.GetShortDatePattern() + " " + FormObj.UserObj.Preference.GetLongTimePattern();
+                int locid = Convert.ToInt32(dt.Rows[0][2]), uid = Convert.ToInt32(dt.Rows[0][3]);
+                DateTime dt1 = Convert.ToDateTime(dt.Rows[0][4]).ConvertFromUtc(FormObj.UserObj.Preference.TimeZone);
+                DateTime dt2 = Convert.ToDateTime(dt.Rows[0][5]).ConvertFromUtc(FormObj.UserObj.Preference.TimeZone);
+                string temp = FormObj.SolutionObj.Users.ContainsKey(uid) ? FormObj.SolutionObj.Users[uid] : string.Empty;
+                WebformDataInfo Info = new WebformDataInfo()
+                {
+                    CreAt = dt1.ToString(p, CultureInfo.InvariantCulture),
+                    CreBy = temp,
+                    ModAt = dt2.ToString(p, CultureInfo.InvariantCulture),
+                    ModBy = temp,
+                    CreFrom = FormObj.SolutionObj.Locations.ContainsKey(locid) ? FormObj.SolutionObj.Locations[locid].ShortName : string.Empty
+                };
+                temp = JsonConvert.SerializeObject(Info);
+                return new GetFormDraftResponse() { DataWrapper = JsonConvert.SerializeObject(dataWrapper), FormDatajson = Json, DraftInfo = temp };
             }
             catch (FormException ex)
             {

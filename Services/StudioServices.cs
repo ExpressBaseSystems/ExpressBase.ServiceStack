@@ -1390,7 +1390,9 @@ namespace ExpressBase.ServiceStack.Services
                     if (uniqnameresp.IsUnique)
                     {
                         obj.DisplayName = dispname;
-                        obj.Name += Guid.NewGuid().ToString().Substring(0, 5);
+                        obj.Name = GetProcessedName(obj.Name);
+                        if (obj is EbWebForm)
+                            (obj as EbWebForm).EbSid = obj.Name;
                     }
                     else
                     {
@@ -1611,6 +1613,19 @@ namespace ExpressBase.ServiceStack.Services
             else
                 appids = appids.Substring(0, appids.Length - 1);
             return appids;
+        }
+
+        public string GetProcessedName(string name)
+        {
+            string oldts = string.Empty;
+            if (name.Contains('_'))
+                oldts = name.Substring(name.LastIndexOf('_'));
+            string newts = DateTime.UtcNow.ToString("MMMydHms").ToLower();
+            if (oldts != string.Empty)
+                name = name.Replace(oldts, "_" + newts);
+            else
+                name += "_" + newts;
+            return name;
         }
     }
 }
