@@ -331,7 +331,13 @@ namespace ExpressBase.ServiceStack
                 CurLocId = request.LocId;
                 if (request.TFilters != null)
                     TableFilters = request.TFilters;
-                _dV = request.EbDataVisualization;
+
+                //_dV = request.EbDataVisualization;
+                _dV = EbFormHelper.GetEbObject<EbDataVisualization>(request.dvRefId, null, this.Redis, this);
+                if (request.CurrentRowGroup != null && _dV is EbTableVisualization _tV)
+                    _tV.CurrentRowGroup = EbSerializers.Json_Deserialize<RowGroupParent>(request.CurrentRowGroup);
+
+                request.UserInfo = GetUserObject(request.UserAuthId);
 
                 DataSourceDataResponse dsresponse = null;
                 //this._replaceEbColumns = request.ReplaceEbColumns;
