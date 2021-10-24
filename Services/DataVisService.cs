@@ -333,7 +333,13 @@ namespace ExpressBase.ServiceStack
                     TableFilters = request.TFilters;
 
                 //_dV = request.EbDataVisualization;
-                _dV = EbFormHelper.GetEbObject<EbDataVisualization>(request.dvRefId, null, this.Redis, this);
+                if (!string.IsNullOrWhiteSpace(request.dvRefId))
+                    _dV = EbFormHelper.GetEbObject<EbDataVisualization>(request.dvRefId, null, this.Redis, this);
+                else if (request.DataVizObjString != null)
+                {
+                    _dV = EbSerializers.Json_Deserialize<EbDataVisualization>(request.DataVizObjString);
+                    request.DataVizObjString = null;
+                }
                 if (request.CurrentRowGroup != null && _dV is EbTableVisualization _tV)
                     _tV.CurrentRowGroup = EbSerializers.Json_Deserialize<RowGroupParent>(request.CurrentRowGroup);
 
