@@ -340,6 +340,8 @@ namespace ExpressBase.ServiceStack
                     _dV = EbSerializers.Json_Deserialize<EbDataVisualization>(request.DataVizObjString);
                     request.DataVizObjString = null;
                 }
+                else if (_dV is null)
+                    throw new Exception("Data Visualization object is null.");
                 if (request.CurrentRowGroup != null && _dV is EbTableVisualization _tV)
                     _tV.CurrentRowGroup = EbSerializers.Json_Deserialize<RowGroupParent>(request.CurrentRowGroup);
 
