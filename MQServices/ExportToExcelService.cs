@@ -67,6 +67,7 @@ namespace ExpressBase.ServiceStack.MQServices
                 _req.Token = request.BToken;
                 _req.rToken = request.RToken;
                 _req.eb_Solution = request.eb_solution;
+                _req.UserAuthId = request.UserAuthId;
                 res = (DataSourceDataResponse)dataservice.Any(_req);
                 byte[] compressedData = Compress(res.excel_file);
                 this.Redis.Set("excel" + (request.EbDataVisualization.RefId + request.UserInfo.UserId), compressedData, DateTime.Now.AddHours(5));
