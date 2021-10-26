@@ -331,7 +331,29 @@ namespace ExpressBase.ServiceStack
                 CurLocId = request.LocId;
                 if (request.TFilters != null)
                     TableFilters = request.TFilters;
-                _dV = request.EbDataVisualization;
+
+                //_dV = request.EbDataVisualization;
+                if (!string.IsNullOrWhiteSpace(request.dvRefId))
+                {
+                    _dV = EbFormHelper.GetEbObject<EbDataVisualization>(request.dvRefId, null, this.Redis, this);
+                }
+                else if (request.DataVizObjString != null)
+                {
+                    _dV = EbSerializers.Json_Deserialize<EbDataVisualization>(request.DataVizObjString);
+                    request.DataVizObjString = null;
+                }
+                else if (request.EbDataVisualization != null)
+                {
+                    _dV = request.EbDataVisualization;
+                }
+                else if (_dV is null)
+                {
+                    throw new Exception("Data Visualization object is null.");
+                }
+                if (request.CurrentRowGroup != null && _dV is EbTableVisualization _tV)
+                    _tV.CurrentRowGroup = EbSerializers.Json_Deserialize<RowGroupParent>(request.CurrentRowGroup);
+
+                request.UserInfo = GetUserObject(request.UserAuthId);
 
                 DataSourceDataResponse dsresponse = null;
                 //this._replaceEbColumns = request.ReplaceEbColumns;
