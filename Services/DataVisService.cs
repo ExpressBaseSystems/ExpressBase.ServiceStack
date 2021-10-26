@@ -3595,16 +3595,16 @@ ORDER BY
                 //this.CreateCustomcolumn4Pivot(_dataset, ref tempdataset, Parameters, ref _dv, ref _hourCount);
                 EbDataTable _formattedTable = new EbDataTable();
                 _dv.Columns = new DVColumnCollection();
-                var columnY = _pivotConfig.Rows[0].Name;
-                var columnX = _pivotConfig.Columns[0].Name;
-                var columnZ = _pivotConfig.Values[0].Name;
-                _dv.Columns.Add(new DVBaseColumn { Data = 0, Name = columnY, sTitle = columnY, Type = _pivotConfig.Rows[0].Type, bVisible = true });
+                string columnY = _pivotConfig.Rows[0].Name;
+                string columnX = _pivotConfig.Columns[0].Name;
+                string columnZ = _pivotConfig.Values[0].Name;
+                _dv.Columns.Add(new DVBaseColumn { Data = 0, Name = columnY, sTitle = columnY, Type = _pivotConfig.Rows[0].Type, bVisible = true, sWidth = "50px" });
                 _formattedTable.Columns.Add(_formattedTable.NewDataColumn(0, columnY, EbDbTypes.String));
                 int i = 1;
                 for (int j = 0; j < _dataset.Tables[0].Rows.Count; j++)
                 {
                     string colname = _dataset.Tables[0].Rows[j][columnX].ToString();
-                    DVBaseColumn newcol = new DVBaseColumn { Data = i, Name = colname, sTitle = colname, Type = _pivotConfig.Columns[0].Type, bVisible = true };
+                    DVBaseColumn newcol = new DVBaseColumn { Data = i, Name = colname, sTitle = colname, Type = _pivotConfig.Columns[0].Type, bVisible = true, sWidth = "50px" };
                     if (!_dv.Columns.Contains(colname))
                     {
                         _dv.Columns.Add(newcol);
@@ -3613,7 +3613,7 @@ ORDER BY
                     }
                 }
                 _formattedTable.Columns.Add(_formattedTable.NewDataColumn(i, "Total", EbDbTypes.Int32));
-                _dv.Columns.Add(new DVBaseColumn { Data = i++, Name = "Total", sTitle = "Total", Type = EbDbTypes.Int32, bVisible = true });
+                _dv.Columns.Add(new DVBaseColumn { Data = i++, Name = "Total", sTitle = "Total", Type = EbDbTypes.Int32, bVisible = true, sWidth = "50px" });
                 _formattedTable.Columns.Add(_formattedTable.NewDataColumn(i, "serial", EbDbTypes.Int32));
                 List<string> columnYValues = new List<string>();
                 List<string> columnZValues = new List<string>();
