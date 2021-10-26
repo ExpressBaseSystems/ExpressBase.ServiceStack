@@ -32,7 +32,9 @@ namespace ExpressBase.ServiceStack.MQServices
                 UserId = request.UserId,
                 UserAuthId = request.UserAuthId,
                 SolnId = request.SolnId,
-                RefId = request.RefId
+                RefId = request.RefId,
+                BToken = request.BToken,
+                RToken = request.RToken
             });
             Console.WriteLine("EmailTemplateWithAttachment publish complete");
         }
@@ -97,24 +99,27 @@ namespace ExpressBase.ServiceStack.MQServices
                                 {
                                     string str = _col.Replace("{{", "").Replace("}}", "");
 
-                                    foreach (EbDataTable dt in ds.Tables)
-                                    {
-                                        string colval = dt.Rows[0][str.Split('.')[1]].ToString();
-                                        EmailTemplate.Body = EmailTemplate.Body.Replace(_col, colval);
-                                    }
+                                    //foreach (EbDataTable dt in ds.Tables)
+                                    //{
+                                    int tbl = Convert.ToInt32(str.Split('.')[0].Replace("Table", ""));
+                                    string colval = ds.Tables[tbl - 1].Rows[0][str.Split('.')[1]].ToString();
+                                    EmailTemplate.Body = EmailTemplate.Body.Replace(_col, colval);
+                                    //}
                                 }
-                                catch (Exception e) {
+                                catch (Exception e)
+                                {
                                     Console.WriteLine("EmailTemplateWithAttachment.matches fill Exception, col:" + _col);
                                     Console.WriteLine(e.Message + e.StackTrace);
                                 }
                             }
                             Console.WriteLine("EmailTemplateWithAttachment.matches filled");
-                            foreach (EbDataTable dt in ds.Tables)
-                            {
-                                EmailTemplate.To.Replace("{{", "").Replace("}}", "");
-                                Console.WriteLine("EmailTemplateWithAttachment.ToColumnName:" + EmailTemplate.To);
-                                mailTo = dt.Rows[0][EmailTemplate.To.Split('.')[1]].ToString();
-                            }
+                            //foreach (EbDataTable dt in ds.Tables)
+                            //{
+                            EmailTemplate.To = EmailTemplate.To.Replace("{{", "").Replace("}}", "");
+                            Console.WriteLine("EmailTemplateWithAttachment.ToColumnName:" + EmailTemplate.To);
+                            int tbl1 = Convert.ToInt32(EmailTemplate.To.Split('.')[0].Replace("Table", ""));
+                            mailTo = ds.Tables[tbl1 - 1].Rows[0][EmailTemplate.To.Split('.')[1]].ToString();
+                            //}
                             Console.WriteLine("EmailTemplateWithAttachment.mailTo = " + mailTo);
                         }
                     }
@@ -141,7 +146,12 @@ namespace ExpressBase.ServiceStack.MQServices
                             Refid = EmailTemplate.AttachmentReportRefID,
                             //RenderingUser = new User { FullName = "Machine User" },
                             //ReadingUser = new User { Preference = new Preferences { Locale = "en-US", TimeZone = "(UTC) Coordinated Universal Time" } },
-                            Params = request.Params
+                            Params = request.Params,
+                            SolnId = request.SolnId,
+                            ReadingUserAuthId = request.UserAuthId,
+                            RenderingUserAuthId = request.UserAuthId,
+                            BToken = request.BToken,
+                            RToken = request.RToken
                         });
                         if (RepRes != null && RepRes.StreamWrapper != null && RepRes.StreamWrapper.Memorystream != null)
                         {

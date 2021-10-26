@@ -95,11 +95,18 @@ namespace ExpressBase.ServiceStack
                 else
                 {
                     base.EbConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
-                    Console.WriteLine("Inside EmailService/EmailServiceInternal in SS \n Before Email \n To: " + request.To + "\nEmail Connections - solution: " + EbConnectionFactory.EmailConnection.Capacity);
-                    this.EbConnectionFactory.EmailConnection.Send(request.To, request.Subject, request.Message, request.Cc, request.Bcc, request.AttachmentReport, request.AttachmentName);
+                    if (this.EbConnectionFactory.EmailConnection != null)
+                    {
+                        Console.WriteLine("Inside EmailService/EmailServiceInternal in SS \n Before Email \n To: " + request.To + "\nEmail Connections - solution: " + EbConnectionFactory.EmailConnection?.Capacity);
+                        this.EbConnectionFactory.EmailConnection?.Send(request.To, request.Subject, request.Message, request.Cc, request.Bcc, request.AttachmentReport, request.AttachmentName);
+                        Console.WriteLine("Inside EmailService/EmailServiceInternal in SS \n After Email \nSend To:" + request.To);
+                    }
+                    else
+                    {
+                        Console.WriteLine("Email Connection not set for " + request.SolnId);
+                    }
                 }
 
-                Console.WriteLine("Inside EmailService/EmailServiceInternal in SS \n After Email \nSend To:" + request.To);
             }
             catch (Exception e)
             {

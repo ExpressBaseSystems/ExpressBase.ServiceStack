@@ -69,6 +69,11 @@ namespace ExpressBase.ServiceStack
                 Report.GroupFooters = new Dictionary<string, ReportGroupItem>();
                 Report.Groupheaders = new Dictionary<string, ReportGroupItem>();
                 Report.FileClient = new EbStaticFileClient();
+                if (string.IsNullOrEmpty(FileClient.BearerToken) && !string.IsNullOrEmpty(request.BToken))
+                {
+                    FileClient.BearerToken = request.BToken;
+                    FileClient.RefreshToken = request.RToken;
+                }
                 Report.FileClient = FileClient;
                 Report.Solution = GetSolutionObject(request.SolnId);
                 Report.ReadingUser = GetUserObject(request.ReadingUserAuthId);
@@ -120,7 +125,7 @@ namespace ExpressBase.ServiceStack
             catch (Exception e)
             {
                 Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("Exception-reportService " + e.ToString());
+                Console.WriteLine("Exception-reportService " + e.Message + e.StackTrace);
                 Console.ForegroundColor = ConsoleColor.White;
             }
             return new ReportRenderResponse

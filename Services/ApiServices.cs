@@ -346,7 +346,10 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     SolnId = this.SolutionId,
                     Params = InputParams,
-                    ObjId = Convert.ToInt32(emailNode.Reference.Split(CharConstants.DASH)[3])
+                    ObjId = Convert.ToInt32(emailNode.Reference.Split(CharConstants.DASH)[3]),
+                    UserAuthId = this.UserObject.AuthId,
+                    BToken = (!String.IsNullOrEmpty(this.Request.Authorization)) ? this.Request.Authorization.Replace("Bearer", string.Empty).Trim() : String.Empty,
+                    RToken = (!String.IsNullOrEmpty(this.Request.Headers["rToken"])) ? this.Request.Headers["rToken"] : String.Empty,
                 });
 
                 status = true;
@@ -460,7 +463,7 @@ namespace ExpressBase.ServiceStack.Services
                 int RecordId = 0;
                 WebFormServices webFormServices = base.ResolveService<WebFormServices>();
                 NTVDict _params = new NTVDict();
-                foreach(KeyValuePair<string, object> p in this.GlobalParams)
+                foreach (KeyValuePair<string, object> p in this.GlobalParams)
                 {
                     EbDbTypes _type;
                     if (p.Value is int)
