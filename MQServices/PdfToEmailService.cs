@@ -98,13 +98,12 @@ namespace ExpressBase.ServiceStack.MQServices
                                 try
                                 {
                                     string str = _col.Replace("{{", "").Replace("}}", "");
-
-                                    //foreach (EbDataTable dt in ds.Tables)
-                                    //{
                                     int tbl = Convert.ToInt32(str.Split('.')[0].Replace("Table", ""));
-                                    string colval = ds.Tables[tbl - 1].Rows[0][str.Split('.')[1]].ToString();
+                                    string colval = string.Empty;
+                                    if (ds.Tables[tbl - 1].Rows.Count > 0)
+                                        colval = ds.Tables[tbl - 1].Rows[0][str.Split('.')[1]].ToString();
                                     EmailTemplate.Body = EmailTemplate.Body.Replace(_col, colval);
-                                    //}
+
                                 }
                                 catch (Exception e)
                                 {
@@ -113,13 +112,13 @@ namespace ExpressBase.ServiceStack.MQServices
                                 }
                             }
                             Console.WriteLine("EmailTemplateWithAttachment.matches filled");
-                            //foreach (EbDataTable dt in ds.Tables)
-                            //{
+
                             EmailTemplate.To = EmailTemplate.To.Replace("{{", "").Replace("}}", "");
                             Console.WriteLine("EmailTemplateWithAttachment.ToColumnName:" + EmailTemplate.To);
+
                             int tbl1 = Convert.ToInt32(EmailTemplate.To.Split('.')[0].Replace("Table", ""));
-                            mailTo = ds.Tables[tbl1 - 1].Rows[0][EmailTemplate.To.Split('.')[1]].ToString();
-                            //}
+                            if (ds.Tables[tbl1 - 1].Rows.Count > 0)
+                                mailTo = ds.Tables[tbl1 - 1].Rows[0][EmailTemplate.To.Split('.')[1]].ToString();
                             Console.WriteLine("EmailTemplateWithAttachment.mailTo = " + mailTo);
                         }
                     }
@@ -144,8 +143,6 @@ namespace ExpressBase.ServiceStack.MQServices
                         RepRes = reportservice.Get(new ReportRenderRequest
                         {
                             Refid = EmailTemplate.AttachmentReportRefID,
-                            //RenderingUser = new User { FullName = "Machine User" },
-                            //ReadingUser = new User { Preference = new Preferences { Locale = "en-US", TimeZone = "(UTC) Coordinated Universal Time" } },
                             Params = request.Params,
                             SolnId = request.SolnId,
                             ReadingUserAuthId = request.UserAuthId,
@@ -163,6 +160,10 @@ namespace ExpressBase.ServiceStack.MQServices
                     }
                     MessageProducer3.Publish(request1);
                     Console.WriteLine("EmailTemplateWithAttachment.Published to Email send");
+                }
+                else
+                {
+                    Console.WriteLine("Email.To is empty " + EmailTemplate.AttachmentReportRefID);
                 }
             }
             catch (Exception e)

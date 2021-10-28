@@ -88,9 +88,6 @@ namespace ExpressBase.ServiceStack
 
                     Report.DataSet = myDataSourceservice.Any(new DataSourceDataSetRequest { RefId = Report.DataSourceRefId, Params = Report.Parameters,/*Groupings= Groupings*/ }).DataSet;
                 }
-                if (Report.DataSet == null)
-                    Console.WriteLine("Dataset is null, refid " + Report.DataSourceRefId);
-
                 float _width = Report.WidthPt - Report.Margin.Left;// - Report.Margin.Right;
                 float _height = Report.HeightPt - Report.Margin.Top - Report.Margin.Bottom;
                 Report.HeightPt = _height;
@@ -109,25 +106,38 @@ namespace ExpressBase.ServiceStack
                 Report.GetWatermarkImages();
                 FillingCollections(Report);
                 Report.Doc.NewPage();
-                Report.DrawReportHeader();
-                Report.DrawDetail();
-                Report.DrawReportFooter();
-                Report.Doc.Close();
-                if (Report.UserPassword != string.Empty || Report.OwnerPassword != string.Empty)
-                    Report.SetPassword();
-                Report.Ms1.Position = 0;//important
-                if (Report.DataSourceRefId != string.Empty)
+                if (Report?.DataSet?.Tables[Report.DetailTableIndex]?.Rows.Count > 0)
                 {
-                    Report.DataSet.Tables.Clear();
-                    Report.DataSet = null;
+                    Report.DrawReportHeader();
+                    Report.DrawDetail();
+                    Report.DrawReportFooter();
                 }
+                else
+                    throw new Exception("Dataset is null, refid " + Report.DataSourceRefId);
             }
             catch (Exception e)
             {
                 Console.ForegroundColor = ConsoleColor.Red;
                 Console.WriteLine("Exception-reportService " + e.Message + e.StackTrace);
                 Console.ForegroundColor = ConsoleColor.White;
+
+                ColumnText ct = new ColumnText(Report.Canvas);
+                Phrase phrase = new Phrase("No Data available. Please check the parameters or contact admin");
+                phrase.Font.Size = 10;
+                ct.SetSimpleColumn(phrase, Report.LeftPt + 30, Report.HeightPt - 80, Report.WidthPt - 30, Report.HeightPt - 40, 15, Element.ALIGN_CENTER);
+                ct.Go();
             }
+
+            Report.Doc.Close();
+            if (Report.UserPassword != string.Empty || Report.OwnerPassword != string.Empty)
+                Report.SetPassword();
+            Report.Ms1.Position = 0;//important
+            if (Report.DataSourceRefId != string.Empty)
+            {
+                Report.DataSet.Tables.Clear();
+                Report.DataSet = null;
+            }
+
             return new ReportRenderResponse
             {
                 StreamWrapper = new MemorystreamWrapper(Report.Ms1),
@@ -584,7 +594,7 @@ namespace ExpressBase.ServiceStack
             //content.Rectangle(pageBorderRect.Left, pageBorderRect.Bottom, pageBorderRect.Width, pageBorderRect.Height);
             //content.Stroke();
 
-            if (!Report.FooterDrawn)
+            if (!Report.FooterDrawn && (Report?.DataSet?.Tables[Report.DetailTableIndex]?.Rows.Count > 0))
             {
                 Report.DrawPageHeader();
                 Report.DrawPageFooter();
