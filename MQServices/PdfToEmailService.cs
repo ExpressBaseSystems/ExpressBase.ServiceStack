@@ -103,7 +103,30 @@ namespace ExpressBase.ServiceStack.MQServices
                                     if (ds.Tables[tbl - 1].Rows.Count > 0)
                                         colval = ds.Tables[tbl - 1].Rows[0][str.Split('.')[1]].ToString();
                                     EmailTemplate.Body = EmailTemplate.Body.Replace(_col, colval);
+                                }
+                                catch (Exception e)
+                                {
+                                    Console.WriteLine("EmailTemplateWithAttachment.matches fill Exception, col:" + _col);
+                                    Console.WriteLine(e.Message + e.StackTrace);
+                                }
+                            }
 
+                            string pattern1 = @"\{{(.*?)\}}";
+                            IEnumerable<string> matches1 = Regex.Matches(EmailTemplate.Subject, pattern1).OfType<Match>()
+                             .Select(m => m.Groups[0].Value)
+                             .Distinct();
+                            Console.WriteLine("EmailTemplateWithAttachment.matches =" + matches1.Count());
+
+                            foreach (string _col in matches1)
+                            {
+                                try
+                                {
+                                    string str = _col.Replace("{{", "").Replace("}}", "");
+                                    int tbl = Convert.ToInt32(str.Split('.')[0].Replace("Table", ""));
+                                    string colval = string.Empty;
+                                    if (ds.Tables[tbl - 1].Rows.Count > 0)
+                                        colval = ds.Tables[tbl - 1].Rows[0][str.Split('.')[1]].ToString();
+                                    EmailTemplate.Subject = EmailTemplate.Subject.Replace(_col, colval);
                                 }
                                 catch (Exception e)
                                 {
