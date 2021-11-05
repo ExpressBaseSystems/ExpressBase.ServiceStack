@@ -27,7 +27,7 @@ namespace ExpressBase.ServiceStack.Services
             GetOneFromAppstoreResponse response = new GetOneFromAppstoreResponse();
             DbParameter[] Parameters = { this.InfraConnectionFactory.ObjectsDB.GetNewParameter(":id", EbDbTypes.Int32, request.Id) };
             EbDataTable dt = InfraConnectionFactory.ObjectsDB.DoQuery(@"SELECT 
-                                                                            title, json, status 
+                                                                            title, json, status, app_name
                                                                         FROM 
                                                                             eb_appstore s
                                                                         LEFT JOIN
@@ -41,6 +41,7 @@ namespace ExpressBase.ServiceStack.Services
                 response.Package = EbSerializers.Json_Deserialize<ExportPackage>(dt.Rows[0]["json"].ToString());
                 response.Title = dt.Rows[0]["title"].ToString();
                 response.IsPublic = (((int)dt.Rows[0]["status"]) == 2) ? true : false;
+                response.Package.Name = dt.Rows[0]["app_name"].ToString();
             }
             else
                 Console.WriteLine("Could't retrieve app from table eb_appstore. app id:" + request.Id);

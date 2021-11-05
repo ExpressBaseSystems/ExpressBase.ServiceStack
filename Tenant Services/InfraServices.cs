@@ -551,7 +551,7 @@ namespace ExpressBase.ServiceStack.Services
                                     demoAppId = 13;
                                 if (request.PackageId > 0)
                                     demoAppId = request.PackageId;
-                                ImportApplicationResponse _response = service.Get(new ImportApplicationMqRequest
+                                ImportApplicationResponse _response = service.Post(new ImportApplicationMqRequest
                                 {
                                     Id = demoAppId,
                                     SolnId = Sol_id_autogen,

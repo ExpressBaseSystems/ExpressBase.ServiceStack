@@ -17,7 +17,9 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace ExpressBase.ServiceStack.Services
@@ -51,12 +53,13 @@ namespace ExpressBase.ServiceStack.Services
             Log.Info("ExportApplicationRequest published to Mq");
             return resp;
         }
-        public ImportApplicationResponse Get(ImportApplicationMqRequest request)
+        public ImportApplicationResponse Post(ImportApplicationMqRequest request)
         {
             ImportApplicationResponse resp = new ImportApplicationResponse();
             this.MessageProducer3.Publish(new ImportApplicationRequest
             {
                 Id = request.Id,
+                Package = request.Package,
                 BToken = this.ServerEventClient.BearerToken,
                 RToken = this.ServerEventClient.RefreshToken,
                 SolnId = request.SolnId,
@@ -199,17 +202,25 @@ namespace ExpressBase.ServiceStack.Services
         {
             Log.Info("ImportApplicationRequest inside Mq");
             Dictionary<string, string> RefidMap = new Dictionary<string, string>();
+            GetOneFromAppstoreResponse packageresponse;
             try
             {
                 SetConnectionFactory(request.SelectedSolutionId, this.Redis);
-                GetOneFromAppstoreResponse packageresponse = AppstoreService.Get(new GetOneFromAppStoreRequest
+                if (request.Package is null)
                 {
-                    Id = request.Id,
-                    SolnId = request.SelectedSolutionId,
-                    UserAuthId = request.UserAuthId,
-                    UserId = request.UserId,
-                    WhichConsole = request.WhichConsole
-                });
+                    packageresponse = AppstoreService.Get(new GetOneFromAppStoreRequest
+                    {
+                        Id = request.Id,
+                        SolnId = request.SelectedSolutionId,
+                        UserAuthId = request.UserAuthId,
+                        UserId = request.UserId,
+                        WhichConsole = request.WhichConsole
+                    });
+                }
+                else
+                {
+                    packageresponse = new GetOneFromAppstoreResponse { IsPublic = false, Package =request.Package };
+                }
                 if (packageresponse.Package?.Apps != null)
                 {
                     Dictionary<int, int> AppIdMAp = new Dictionary<int, int>();
@@ -230,7 +241,7 @@ namespace ExpressBase.ServiceStack.Services
                                 EbObject obj = Application.ObjCollection[i];
                                 if (!RefidMap.ContainsKey(obj.RefId))
                                 {
-                                    obj.DisplayName = GetUniqDisplayName(obj.DisplayName);                                    
+                                    obj.DisplayName = GetUniqDisplayName(obj.DisplayName);
                                     obj.Name = GetProcessedName(obj.Name);
                                     if (obj is EbWebForm)
                                         (obj as EbWebForm).EbSid = obj.Name;
@@ -655,6 +666,7 @@ namespace ExpressBase.ServiceStack.Services
             return name;
         }
     }
+
     public class ExportRole
     {
         public EbRole Role { get; set; }
