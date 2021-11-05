@@ -46,126 +46,72 @@ namespace ExpressBase.ServiceStack.MQServices
     {
         public EmailTemplateSendInternalService(IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_mqp, _mqc) { }
 
+        EbEmailTemplate Template = new EbEmailTemplate();
+
+        EbDataSet DataSet;
+
         public void Post(EmailAttachmentRequest request)
         {
-            try
+            Console.WriteLine("EmailTemplateWithAttachment mq internal started");
+
+            EbConnectionFactory ebConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
+            EbObjectService objservice = base.ResolveService<EbObjectService>();
+            ReportService reportservice = base.ResolveService<ReportService>();
+            reportservice.EbConnectionFactory = objservice.EbConnectionFactory = ebConnectionFactory;
+
+            if (request.ObjId > 0)
             {
-                Console.WriteLine("EmailTemplateWithAttachment mq internal started");
-                string mailTo = string.Empty;
-                EbConnectionFactory ebConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
-                EbObjectService objservice = base.ResolveService<EbObjectService>();
-                DataSourceService dataservice = base.ResolveService<DataSourceService>();
-                ReportService reportservice = base.ResolveService<ReportService>();
-                reportservice.EbConnectionFactory = objservice.EbConnectionFactory = dataservice.EbConnectionFactory = ebConnectionFactory;
-                ReportRenderResponse RepRes = new ReportRenderResponse();
-                EbEmailTemplate EmailTemplate = new EbEmailTemplate();
-
-                if (request.ObjId > 0)
+                EbObjectFetchLiveVersionResponse template_res = (EbObjectFetchLiveVersionResponse)objservice.Get(new EbObjectFetchLiveVersionRequest() { Id = request.ObjId });
+                if (template_res?.Data.Count > 0)
                 {
-                    EbObjectFetchLiveVersionResponse template_res = (EbObjectFetchLiveVersionResponse)objservice.Get(new EbObjectFetchLiveVersionRequest() { Id = request.ObjId });
-                    if (template_res != null && template_res.Data.Count > 0)
+                    this.Template = EbSerializers.Json_Deserialize(template_res.Data[0].Json);
+                }
+            }
+            else if (request.RefId != string.Empty)
+            {
+                EbObjectParticularVersionResponse template_res = (EbObjectParticularVersionResponse)objservice.Get(new EbObjectParticularVersionRequest() { RefId = request.RefId });
+                if (template_res?.Data.Count > 0)
+                {
+                    this.Template = EbSerializers.Json_Deserialize(template_res.Data[0].Json);
+                }
+            }
+
+            if (this.Template != null)
+            {
+                if (this.Template.DataSourceRefId != string.Empty && this.Template.To != string.Empty)
+                {
+                    EbObjectParticularVersionResponse mailDs = (EbObjectParticularVersionResponse)objservice.Get(new EbObjectParticularVersionRequest() { RefId = this.Template.DataSourceRefId });
+                    if (mailDs.Data.Count > 0)
                     {
-                        EmailTemplate = EbSerializers.Json_Deserialize(template_res.Data[0].Json);
+                        EbDataReader dr = EbSerializers.Json_Deserialize(mailDs.Data[0].Json);
+                        IEnumerable<DbParameter> parameters = DataHelper.GetParams(ebConnectionFactory.ObjectsDB, false, request.Params, 0, 0);
+                        DataSet = ebConnectionFactory.ObjectsDB.DoQueries(dr?.Sql, parameters.ToArray());
+                        Fill();
                     }
                 }
-                else if (request.RefId != string.Empty)
-                {
-                    EbObjectParticularVersionResponse template_res = (EbObjectParticularVersionResponse)objservice.Get(new EbObjectParticularVersionRequest() { RefId = request.RefId });
-                    if (template_res != null && template_res.Data.Count > 0)
-                    {
-                        EmailTemplate = EbSerializers.Json_Deserialize(template_res.Data[0].Json);
-                    }
-                }
-
-                if (EmailTemplate != null)
-                {
-                    if (EmailTemplate.DataSourceRefId != string.Empty && EmailTemplate.To != string.Empty)
-                    {
-                        EbObjectParticularVersionResponse mailDs = (EbObjectParticularVersionResponse)objservice.Get(new EbObjectParticularVersionRequest() { RefId = EmailTemplate.DataSourceRefId });
-                        if (mailDs.Data.Count > 0)
-                        {
-                            EbDataReader dr = EbSerializers.Json_Deserialize(mailDs.Data[0].Json);
-                            IEnumerable<DbParameter> parameters = DataHelper.GetParams(ebConnectionFactory.ObjectsDB, false, request.Params, 0, 0);
-                            EbDataSet ds = ebConnectionFactory.ObjectsDB.DoQueries(dr.Sql, parameters.ToArray());
-                            string pattern = @"\{{(.*?)\}}";
-                            IEnumerable<string> matches = Regex.Matches(EmailTemplate.Body, pattern).OfType<Match>()
-                             .Select(m => m.Groups[0].Value)
-                             .Distinct();
-                            Console.WriteLine("EmailTemplateWithAttachment.matches =" + matches.Count());
-
-                            foreach (string _col in matches)
-                            {
-                                try
-                                {
-                                    string str = _col.Replace("{{", "").Replace("}}", "");
-                                    int tbl = Convert.ToInt32(str.Split('.')[0].Replace("Table", ""));
-                                    string colval = string.Empty;
-                                    if (ds.Tables[tbl - 1].Rows.Count > 0)
-                                        colval = ds.Tables[tbl - 1].Rows[0][str.Split('.')[1]].ToString();
-                                    EmailTemplate.Body = EmailTemplate.Body.Replace(_col, colval);
-                                }
-                                catch (Exception e)
-                                {
-                                    Console.WriteLine("EmailTemplateWithAttachment.matches fill Exception, col:" + _col);
-                                    Console.WriteLine(e.Message + e.StackTrace);
-                                }
-                            }
-
-                            string pattern1 = @"\{{(.*?)\}}";
-                            IEnumerable<string> matches1 = Regex.Matches(EmailTemplate.Subject, pattern1).OfType<Match>()
-                             .Select(m => m.Groups[0].Value)
-                             .Distinct();
-                            Console.WriteLine("EmailTemplateWithAttachment.matches =" + matches1.Count());
-
-                            foreach (string _col in matches1)
-                            {
-                                try
-                                {
-                                    string str = _col.Replace("{{", "").Replace("}}", "");
-                                    int tbl = Convert.ToInt32(str.Split('.')[0].Replace("Table", ""));
-                                    string colval = string.Empty;
-                                    if (ds.Tables[tbl - 1].Rows.Count > 0)
-                                        colval = ds.Tables[tbl - 1].Rows[0][str.Split('.')[1]].ToString();
-                                    EmailTemplate.Subject = EmailTemplate.Subject.Replace(_col, colval);
-                                }
-                                catch (Exception e)
-                                {
-                                    Console.WriteLine("EmailTemplateWithAttachment.matches fill Exception, col:" + _col);
-                                    Console.WriteLine(e.Message + e.StackTrace);
-                                }
-                            }
-                            Console.WriteLine("EmailTemplateWithAttachment.matches filled");
-
-                            EmailTemplate.To = EmailTemplate.To.Replace("{{", "").Replace("}}", "");
-                            Console.WriteLine("EmailTemplateWithAttachment.ToColumnName:" + EmailTemplate.To);
-
-                            int tbl1 = Convert.ToInt32(EmailTemplate.To.Split('.')[0].Replace("Table", ""));
-                            if (ds.Tables[tbl1 - 1].Rows.Count > 0)
-                                mailTo = ds.Tables[tbl1 - 1].Rows[0][EmailTemplate.To.Split('.')[1]].ToString();
-                            Console.WriteLine("EmailTemplateWithAttachment.mailTo = " + mailTo);
-                        }
-                    }
-                }
-                if (mailTo != string.Empty)
+                if (this.Template.To != string.Empty)
                 {
                     EmailServicesRequest request1 = new EmailServicesRequest()
                     {
-                        To = mailTo,
-                        Cc = EmailTemplate.Cc.Split(","),
-                        Bcc = EmailTemplate.Bcc.Split(","),
-                        Message = EmailTemplate.Body,
-                        Subject = EmailTemplate.Subject,
+                        To = this.Template.To,
+                        Cc = this.Template.Cc.Split(","),
+                        Bcc = this.Template.Bcc.Split(","),
+                        Message = this.Template.Body,
+                        Subject = this.Template.Subject,
                         UserId = request.UserId,
                         UserAuthId = request.UserAuthId,
                         SolnId = request.SolnId,
+                        ReplyTo = this.Template.ReplyTo,
+                        Params = request.Params,
+                        RefId = this.Template.RefId                        
                     };
 
                     //adding email attachment. type pdf
-                    if (EmailTemplate.AttachmentReportRefID != string.Empty)
+                    if (this.Template.AttachmentReportRefID != string.Empty)
                     {
-                        RepRes = reportservice.Get(new ReportRenderRequest
+                        ReportRenderResponse RepRes = reportservice.Get(new ReportRenderRequest
                         {
-                            Refid = EmailTemplate.AttachmentReportRefID,
+                            Refid = this.Template.AttachmentReportRefID,
                             Params = request.Params,
                             SolnId = request.SolnId,
                             ReadingUserAuthId = request.UserAuthId,
@@ -173,7 +119,7 @@ namespace ExpressBase.ServiceStack.MQServices
                             BToken = request.BToken,
                             RToken = request.RToken
                         });
-                        if (RepRes != null && RepRes.StreamWrapper != null && RepRes.StreamWrapper.Memorystream != null)
+                        if (RepRes?.StreamWrapper?.Memorystream != null)
                         {
                             RepRes.StreamWrapper.Memorystream.Position = 0;
                             request1.AttachmentReport = RepRes.ReportBytea;
@@ -182,17 +128,50 @@ namespace ExpressBase.ServiceStack.MQServices
                         }
                     }
                     MessageProducer3.Publish(request1);
-                    Console.WriteLine("EmailTemplateWithAttachment.Published to Email send");
+                    Console.WriteLine("Published to Email send");
                 }
                 else
                 {
-                    Console.WriteLine("Email.To is empty " + EmailTemplate.AttachmentReportRefID);
+                    throw new Exception("Email.To is empty " + this.Template.AttachmentReportRefID);
                 }
             }
-            catch (Exception e)
+            else
             {
-                Console.WriteLine(e.Message + e.StackTrace);
+                throw new Exception("Template is empty :" + Template.RefId);
             }
+        }
+
+        public void Fill()
+        {
+            this.Template.Body = ReplacePlaceholders(this.Template.Body);
+            this.Template.Subject = ReplacePlaceholders(this.Template.Subject);
+            this.Template.To = ReplacePlaceholders(this.Template.To);
+            this.Template.Cc = ReplacePlaceholders(this.Template.Cc);
+            this.Template.Bcc = ReplacePlaceholders(this.Template.Bcc);
+            this.Template.ReplyTo = ReplacePlaceholders(this.Template.ReplyTo);
+        }
+
+        public string ReplacePlaceholders(string text)
+        {
+            string pattern = @"\{{(.*?)\}}";
+            IEnumerable<string> matches = Regex.Matches(text, pattern).OfType<Match>().Select(m => m.Groups[0].Value).Distinct();
+            foreach (string _col in matches)
+            {
+                try
+                {
+                    string str = _col.Replace("{{", "").Replace("}}", "");
+                    int tbl = Convert.ToInt32(str.Split('.')[0].Replace("Table", ""));
+                    string colval = string.Empty;
+                    if (DataSet.Tables[tbl - 1].Rows.Count > 0)
+                        colval = DataSet.Tables[tbl - 1].Rows[0][str.Split('.')[1]].ToString();
+                    text = text.Replace(_col, colval);
+                }
+                catch (Exception e)
+                {
+                    throw new Exception("EmailTemplateWithAttachment.matches fill Exception, col:" + _col);
+                }
+            }
+            return text;
         }
     }
 }

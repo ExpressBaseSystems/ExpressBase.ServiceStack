@@ -40,7 +40,7 @@ namespace ExpressBase.ServiceStack
                     UserId = request.UserId,
                     UserAuthId = request.UserAuthId,
                     SolnId = request.SolnId,
-                    WhichConsole = request.WhichConsole
+                    WhichConsole = request.WhichConsole,
                 });
                 resp.Success = true;
             }
@@ -78,41 +78,41 @@ namespace ExpressBase.ServiceStack
         //}
     }
 
-    [Restrict(InternalOnly = true)]
-    public class EmailInternalService : EbMqBaseService
-    {
-        public EmailInternalService() : base() { }
+    //[Restrict(InternalOnly = true)]
+    //public class EmailInternalService : EbMqBaseService
+    //{
+    //    public EmailInternalService() : base() { }
 
-        public string Post(EmailServicesRequest request)
-        {
-            try
-            {
-                if (request.SolnId == CoreConstants.EXPRESSBASE)
-                {
-                    Console.WriteLine("Inside EmailService/EmailServiceInternal in SS \n Before Email \n To: " + request.To + "\nEmail Connections - infra: " + InfraConnectionFactory.EmailConnection.Capacity);
-                    this.InfraConnectionFactory.EmailConnection.Send(request.To, request.Subject, request.Message, request.Cc, request.Bcc, request.AttachmentReport, request.AttachmentName);
-                }
-                else
-                {
-                    base.EbConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
-                    if (this.EbConnectionFactory.EmailConnection != null)
-                    {
-                        Console.WriteLine("Inside EmailService/EmailServiceInternal in SS \n Before Email \n To: " + request.To + "\nEmail Connections - solution: " + EbConnectionFactory.EmailConnection?.Capacity);
-                        this.EbConnectionFactory.EmailConnection?.Send(request.To, request.Subject, request.Message, request.Cc, request.Bcc, request.AttachmentReport, request.AttachmentName);
-                        Console.WriteLine("Inside EmailService/EmailServiceInternal in SS \n After Email \nSend To:" + request.To);
-                    }
-                    else
-                    {
-                        Console.WriteLine("Email Connection not set for " + request.SolnId);
-                    }
-                }
+    //    public string Post(EmailServicesRequest request)
+    //    {
+    //        try
+    //        {
+    //            if (request.SolnId == CoreConstants.EXPRESSBASE)
+    //            {
+    //                Console.WriteLine("Inside EmailService/EmailServiceInternal in SS \n Before Email \n To: " + request.To + "\nEmail Connections - infra: " + InfraConnectionFactory.EmailConnection.Capacity);
+    //                this.InfraConnectionFactory.EmailConnection.Send(request.To, request.Subject, request.Message, request.Cc, request.Bcc, request.AttachmentReport, request.AttachmentName, request.ReplyTo);
+    //            }
+    //            else
+    //            {
+    //                base.EbConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
+    //                if (this.EbConnectionFactory.EmailConnection != null)
+    //                {
+    //                    Console.WriteLine("Inside EmailService/EmailServiceInternal in SS \n Before Email \n To: " + request.To + "\nEmail Connections - solution: " + EbConnectionFactory.EmailConnection?.Capacity);
+    //                    this.EbConnectionFactory.EmailConnection?.Send(request.To, request.Subject, request.Message, request.Cc, request.Bcc, request.AttachmentReport, request.AttachmentName, request.ReplyTo);
+    //                    Console.WriteLine("Inside EmailService/EmailServiceInternal in SS \n After Email \nSend To:" + request.To);
+    //                }
+    //                else
+    //                {
+    //                    Console.WriteLine("Email Connection not set for " + request.SolnId);
+    //                }
+    //            }
 
-            }
-            catch (Exception e)
-            {
-                return e.Message;
-            }
-            return null;
-        }
-    }
+    //        }
+    //        catch (Exception e)
+    //        {
+    //            return e.Message;
+    //        }
+    //        return null;
+    //    }
+    //}
 }
