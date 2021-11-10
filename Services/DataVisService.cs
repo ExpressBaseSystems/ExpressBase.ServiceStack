@@ -364,7 +364,7 @@ namespace ExpressBase.ServiceStack
                 if (_dV != null && _dV.IsDataFromApi)
                     _dataset = GetDatafromUrl();
                 else if (request.RefId != string.Empty && request.RefId != null)
-                    _ds = this.Redis.Get<EbDataReader>(request.RefId);
+                    _ds = EbFormHelper.GetEbObject<EbDataReader>(request.RefId, null, this.Redis, this);
                 else if (_dV.Sql != null && _dV.Sql != string.Empty)
                 {
                     _ds = new EbDataReader { Sql = _dV.Sql };
@@ -375,7 +375,7 @@ namespace ExpressBase.ServiceStack
                     _api = this.Redis.Get<EbApi>(_dV.ApiRefId);
                     var dsrefid = _api.Resources.First(res => res is EbSqlReader).Reference;
                     _pivotConfig = (_api.Resources.First(res => res is EbPivotTable) as EbPivotTable).Pivotconfig;
-                    _ds = this.Redis.Get<EbDataReader>(dsrefid);
+                    _ds = EbFormHelper.GetEbObject<EbDataReader>(dsrefid, null, this.Redis, this);
                 }
 
                 if (!_dV.IsDataFromApi)
@@ -385,6 +385,8 @@ namespace ExpressBase.ServiceStack
                         var myService = base.ResolveService<EbObjectService>();
                         var result = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = request.RefId });
                         _ds = EbSerializers.Json_Deserialize(result.Data[0].Json);
+                        if (_ds == null)
+                            throw new Exception("Data Reader is null. RefId: " + request.RefId);
                         Redis.Set<EbDataReader>(request.RefId, _ds);
                     }
                     if (_ds.FilterDialogRefId != string.Empty && _ds.FilterDialogRefId != null)
@@ -409,6 +411,7 @@ namespace ExpressBase.ServiceStack
                             }
                         }
                     }
+                    IDatabase db = _ds.GetDatastore(this.EbConnectionFactory);
                     string _sql = string.Empty;
                     string tempsql = string.Empty;
                     if (request.Source == "Calendar")
@@ -526,14 +529,14 @@ namespace ExpressBase.ServiceStack
                                         }
                                         else
                                         {
-                                            if (this.EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.ORACLE)
+                                            if (db.Vendor == DatabaseVendors.ORACLE)
                                             {
                                                 if (type == EbDbTypes.Date || type == EbDbTypes.DateTime)
                                                     _cond += string.Format(" {0} {1} date '{2}' OR", col, op, array[i].Trim());
                                                 else
                                                     _cond += string.Format(" {0} {1} '{2}' OR", col, op, array[i].Trim());
                                             }
-                                            else if (this.EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.MYSQL)
+                                            else if (db.Vendor == DatabaseVendors.MYSQL)
                                             {
                                                 if (type == EbDbTypes.Date || type == EbDbTypes.DateTime)
                                                     _cond += string.Format(" CAST({0} AS date) {1} '{2}' OR", col, op, array[i].Trim());
@@ -575,7 +578,7 @@ namespace ExpressBase.ServiceStack
                                 }
 
                                 var sql1 = _sql.Replace(";", string.Empty);
-                                if (this.EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.ORACLE)
+                                if (db.Vendor == DatabaseVendors.ORACLE)
                                 {
                                     sql1 = "SELECT * FROM ( SELECT a.*,ROWNUM rnum FROM (" + sql1 + ")a WHERE ROWNUM <= :limit+:offset) WHERE rnum > :offset;";
                                     //sql1 += "ALTER TABLE T1 DROP COLUMN rnum;SELECT * FROM T1;";
@@ -627,14 +630,14 @@ namespace ExpressBase.ServiceStack
                     if (request.Params == null)
                         _sql = _sql.Replace(":id", "0");
                     //}
-                    var parameters = DataHelper.GetParams(this.EbConnectionFactory.ObjectsDB, _isPaged, request.Params, request.Length, request.Start);
+                    var parameters = DataHelper.GetParams(db, _isPaged, request.Params, request.Length, request.Start);
                     Console.WriteLine("Before :  " + DateTime.Now);
                     var dtStart = DateTime.Now;
                     Console.WriteLine("................................................dataviz datarequest start " + DateTime.Now);
                     try
                     {
                         Inpuparams = SqlHelper.GetSqlParams(_sql, 2);
-                        _dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray<System.Data.Common.DbParameter>());
+                        _dataset = db.DoQueries(_sql, parameters.ToArray<System.Data.Common.DbParameter>());
                     }
                     catch (Exception e)
                     {
@@ -791,12 +794,13 @@ namespace ExpressBase.ServiceStack
                     if (request.Params == null)
                         _sql = _sql.Replace(":id", "0");
                     //}
-                    var parameters = DataHelper.GetParams(this.EbConnectionFactory.ObjectsDB, _isPaged, request.Params, 0, 0);
+                    IDatabase db = _ds.GetDatastore(this.EbConnectionFactory);
+                    var parameters = DataHelper.GetParams(db, _isPaged, request.Params, 0, 0);
 
                     try
                     {
                         Console.WriteLine("................................................datasourcecolumnrequeststart " + System.DateTime.Now);
-                        _dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray<System.Data.Common.DbParameter>());
+                        _dataset = db.DoQueries(_sql, parameters.ToArray<System.Data.Common.DbParameter>());
 
                         Console.WriteLine("................................................datasourcecolumnrequestfinish " + System.DateTime.Now);
 
@@ -920,11 +924,14 @@ namespace ExpressBase.ServiceStack
                         var myService = base.ResolveService<EbObjectService>();
                         EbObjectParticularVersionResponse result = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest { RefId = col.ColumnQueryMapping.DataSourceId });
                         dr = EbSerializers.Json_Deserialize(result.Data[0].Json);
+                        if (dr == null)
+                            throw new Exception("Data Reader is null. RefId: " + col.ColumnQueryMapping.DataSourceId);
                         Redis.Set<EbDataReader>(col.ColumnQueryMapping.DataSourceId, dr);
                     }
                     //string _name = string.Join(",", col.ColumnQueryMapping.DisplayMember.Select(obj => obj.Name));
                     string _name = col.ColumnQueryMapping.DisplayMember[0].Name;
-                    col.ColumnQueryMapping.Values = this.EbConnectionFactory.ObjectsDB.GetDictionary(dr.Sql, _name, col.ColumnQueryMapping.ValueMember.Name);
+                    IDatabase db = dr.GetDatastore(this.EbConnectionFactory);
+                    col.ColumnQueryMapping.Values = db.GetDictionary(dr.Sql, _name, col.ColumnQueryMapping.ValueMember.Name);
                 }
             }
             catch (Exception e)
@@ -960,9 +967,12 @@ namespace ExpressBase.ServiceStack
                         var myService = base.ResolveService<EbObjectService>();
                         EbObjectParticularVersionResponse result = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest { RefId = col.ColumnQueryMapping.DataSourceId });
                         dr = EbSerializers.Json_Deserialize(result.Data[0].Json);
+                        if (dr == null)
+                            throw new Exception("Data Reader is null. RefId: " + col.ColumnQueryMapping.DataSourceId);
                         Redis.Set<EbDataReader>(col.ColumnQueryMapping.DataSourceId, dr);
                     }
-                    return string.Join(",", this.EbConnectionFactory.ObjectsDB.GetAutoResolveValues(dr.Sql, col.ColumnQueryMapping.ValueMember.Name, cond).ToArray());
+                    IDatabase db = dr.GetDatastore(this.EbConnectionFactory);
+                    return string.Join(",", db.GetAutoResolveValues(dr.Sql, col.ColumnQueryMapping.ValueMember.Name, cond).ToArray());
                 }
             }
             catch (Exception e)
@@ -4291,6 +4301,8 @@ ORDER BY
                 var myService = base.ResolveService<EbObjectService>();
                 var result = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = request.RefId });
                 _ds = EbSerializers.Json_Deserialize(result.Data[0].Json);
+                if (_ds == null)
+                    throw new Exception("Data Reader is null. RefId: " + request.RefId);
                 Redis.Set<EbDataReader>(request.RefId, _ds);
             }
             if (_ds.FilterDialogRefId != string.Empty && _ds.FilterDialogRefId != null)
@@ -4314,11 +4326,12 @@ ORDER BY
                 string tempsql = string.Empty;
                 _sql = _ds.Sql;
             }
-            var parameters = DataHelper.GetParams(this.EbConnectionFactory.ObjectsDB, _isPaged, request.Params, request.Length, request.Start);
+            IDatabase db = _ds.GetDatastore(this.EbConnectionFactory);
+            var parameters = DataHelper.GetParams(db, _isPaged, request.Params, request.Length, request.Start);
             Console.WriteLine("Before :  " + DateTime.Now);
             var dtStart = DateTime.Now;
             Console.WriteLine("................................................datasourceDSrequeststart " + DateTime.Now);
-            var _dataset = this.EbConnectionFactory.ObjectsDB.DoQueries(_sql, parameters.ToArray<System.Data.Common.DbParameter>());
+            var _dataset = db.DoQueries(_sql, parameters.ToArray<System.Data.Common.DbParameter>());
             Console.WriteLine("................................................datasourceDSrequeststart " + DateTime.Now);
             var dtstop = DateTime.Now;
             Console.WriteLine("..................................totaltimeinSeconds" + dtstop.Subtract(dtStart).Seconds);
