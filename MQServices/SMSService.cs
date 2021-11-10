@@ -141,26 +141,34 @@ namespace ExpressBase.ServiceStack.MQServices
         {
             SmsCreateService SmsCreateService = base.ResolveService<SmsCreateService>();
             FilledSmsTemplate FilledSmsTemplate = SmsCreateService.FillSmsTemplate(request);
-            if (!(FilledSmsTemplate?.SmsTemplate is null) && FilledSmsTemplate?.SmsTo?.Length > 1)
-                try
+            if (!(FilledSmsTemplate?.SmsTemplate is null))
+                if (FilledSmsTemplate?.SmsTo?.Length > 5)
                 {
-                    this.MessageProducer3.Publish(new SMSSentRequest
-                    {
-                        To = FilledSmsTemplate.SmsTo,
-                        Body = FilledSmsTemplate.SmsTemplate.Body,
-                        SolnId = request.SolnId,
-                        UserId = request.UserId,
-                        WhichConsole = request.WhichConsole,
-                        UserAuthId = request.UserAuthId,
-                        RefId = request.RefId,
-                        Params = request.Params
-                    });
-                    //return true;
-                }
-                catch (Exception e)
-                {
-                    Log.Info("Exception in SMSSentRequest publish to " + FilledSmsTemplate.SmsTo + e.Message + e.StackTrace);
-                    //return false;
+                    string pattern = @"[1-9]";
+                    IEnumerable<string> matches = Regex.Matches(FilledSmsTemplate.SmsTo, pattern).OfType<Match>()
+                                 .Select(m => m.Groups[0].Value)
+                                 .Distinct();
+                    if (matches.Count() > 3)
+                        try
+                        {
+                            this.MessageProducer3.Publish(new SMSSentRequest
+                            {
+                                To = FilledSmsTemplate.SmsTo,
+                                Body = FilledSmsTemplate.SmsTemplate.Body,
+                                SolnId = request.SolnId,
+                                UserId = request.UserId,
+                                WhichConsole = request.WhichConsole,
+                                UserAuthId = request.UserAuthId,
+                                RefId = request.RefId,
+                                Params = request.Params
+                            });
+                            //return true;
+                        }
+                        catch (Exception e)
+                        {
+                            Log.Info("Exception in SMSSentRequest publish to " + FilledSmsTemplate.SmsTo + e.Message + e.StackTrace);
+                            //return false;
+                        }
                 }
         }
 

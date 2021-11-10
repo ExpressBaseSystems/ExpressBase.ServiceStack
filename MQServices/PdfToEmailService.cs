@@ -103,7 +103,7 @@ namespace ExpressBase.ServiceStack.MQServices
                         SolnId = request.SolnId,
                         ReplyTo = this.Template.ReplyTo,
                         Params = request.Params,
-                        RefId = this.Template.RefId                        
+                        RefId = this.Template.RefId
                     };
 
                     //adding email attachment. type pdf
@@ -132,7 +132,7 @@ namespace ExpressBase.ServiceStack.MQServices
                 }
                 else
                 {
-                    throw new Exception("Email.To is empty " + this.Template.AttachmentReportRefID);
+                    Console.WriteLine("Email.To is empty " + this.Template.AttachmentReportRefID);
                 }
             }
             else
@@ -153,22 +153,25 @@ namespace ExpressBase.ServiceStack.MQServices
 
         public string ReplacePlaceholders(string text)
         {
-            string pattern = @"\{{(.*?)\}}";
-            IEnumerable<string> matches = Regex.Matches(text, pattern).OfType<Match>().Select(m => m.Groups[0].Value).Distinct();
-            foreach (string _col in matches)
+            if (!String.IsNullOrEmpty(text))
             {
-                try
+                string pattern = @"\{{(.*?)\}}";
+                IEnumerable<string> matches = Regex.Matches(text, pattern).OfType<Match>().Select(m => m.Groups[0].Value).Distinct();
+                foreach (string _col in matches)
                 {
-                    string str = _col.Replace("{{", "").Replace("}}", "");
-                    int tbl = Convert.ToInt32(str.Split('.')[0].Replace("Table", ""));
-                    string colval = string.Empty;
-                    if (DataSet.Tables[tbl - 1].Rows.Count > 0)
-                        colval = DataSet.Tables[tbl - 1].Rows[0][str.Split('.')[1]].ToString();
-                    text = text.Replace(_col, colval);
-                }
-                catch (Exception e)
-                {
-                    throw new Exception("EmailTemplateWithAttachment.matches fill Exception, col:" + _col);
+                    try
+                    {
+                        string str = _col.Replace("{{", "").Replace("}}", "");
+                        int tbl = Convert.ToInt32(str.Split('.')[0].Replace("Table", ""));
+                        string colval = string.Empty;
+                        if (DataSet.Tables[tbl - 1].Rows.Count > 0)
+                            colval = DataSet.Tables[tbl - 1].Rows[0][str.Split('.')[1]].ToString();
+                        text = text.Replace(_col, colval);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new Exception("EmailTemplateWithAttachment.matches fill Exception, col:" + _col);
+                    }
                 }
             }
             return text;
