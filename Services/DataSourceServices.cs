@@ -27,22 +27,21 @@ namespace ExpressBase.ServiceStack
     {
         public DataSourceService(IEbConnectionFactory _dbf) : base(_dbf) { }
 
-        public IDatabase GetDatastore(EbObject obj)
-        {
-            int dbConId = 0;
-            IDatabase db = null;
+        //public IDatabase GetDatastore(EbObject obj)
+        //{
+        //    int dbConId = 0;
+        //    IDatabase db = null;
 
-            if (obj != null && obj is EbDataSourceMain)
-                dbConId = (obj as EbDataSourceMain).DataStore;
-            if (this.EbConnectionFactory.DataDB.ConId == dbConId)
-                db = this.EbConnectionFactory.DataDB;
-            else if (this.EbConnectionFactory.SupportingDataDB != null && this.EbConnectionFactory.SupportingDataDB.ContainsKey(dbConId))
-                db = this.EbConnectionFactory.SupportingDataDB[dbConId];
-            else if (dbConId == 0)
-                db = this.EbConnectionFactory.DataDB;
-            return db;
-        }
-
+        //    if (obj != null && obj is EbDataSourceMain)
+        //        dbConId = (obj as EbDataSourceMain).DataStore;
+        //    if (this.EbConnectionFactory.DataDB.ConId == dbConId)
+        //        db = this.EbConnectionFactory.DataDB;
+        //    else if (this.EbConnectionFactory.SupportingDataDB != null && this.EbConnectionFactory.SupportingDataDB.ContainsKey(dbConId))
+        //        db = this.EbConnectionFactory.SupportingDataDB[dbConId];
+        //    else if (dbConId == 0)
+        //        db = this.EbConnectionFactory.DataDB;
+        //    return db;
+        //}
 
         [CompressResponse]
         public DataSourceDataResponse Any(DataSourceDataRequest request)
@@ -59,6 +58,8 @@ namespace ExpressBase.ServiceStack
                 {
                     EbObjectParticularVersionResponse result = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = request.RefId });
                     _ds = EbSerializers.Json_Deserialize(result.Data[0].Json);
+                    if (_ds == null)
+                        throw new Exception("DataReader is null. RefId: " + request.RefId);
                     Redis.Set<EbDataReader>(request.RefId, _ds);
                 }
                 if (_ds != null && _ds.FilterDialogRefId != string.Empty)
@@ -74,7 +75,7 @@ namespace ExpressBase.ServiceStack
                         request.Params = _dsf.GetDefaultParams();
                 }
 
-                IDatabase MyDataStore = GetDatastore(_ds);
+                IDatabase MyDataStore = _ds.GetDatastore(this.EbConnectionFactory);
                 bool _isPaged = false;
                 if (_ds != null)
                 {
@@ -226,9 +227,11 @@ namespace ExpressBase.ServiceStack
                     EbObjectService myService = base.ResolveService<EbObjectService>();
                     EbObjectParticularVersionResponse result = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = request.RefId });
                     _ds = EbSerializers.Json_Deserialize(result.Data[0].Json);
+                    if (_ds == null)
+                        throw new Exception("DataReader is null.. RefId: " + request.RefId);
                     Redis.Set<EbDataReader>(request.RefId, _ds);
 
-                    IDatabase MyDataStore = GetDatastore(_ds);
+                    IDatabase MyDataStore = _ds.GetDatastore(this.EbConnectionFactory);
 
                     if (_ds != null)
                     {
@@ -302,7 +305,7 @@ namespace ExpressBase.ServiceStack
                     Redis.Set<EbDataReader>(request.RefId, _ds);
                     if (_ds != null)
                     {
-                        IDatabase MyDataStore = GetDatastore(_ds);
+                        IDatabase MyDataStore = _ds.GetDatastore(this.EbConnectionFactory);
                         string sql = string.Empty;
                         string subjectString = _ds.Sql.ToString();
                         string resultList = string.Empty;
@@ -375,9 +378,11 @@ namespace ExpressBase.ServiceStack
                 {
                     EbObjectParticularVersionResponse result = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = request.RefId });
                     _ds = EbSerializers.Json_Deserialize(result.Data[0].Json);
+                    if (_ds == null)
+                        throw new Exception("DataReader is null... RefId: " + request.RefId);
                     Redis.Set<EbDataReader>(request.RefId, _ds);
                 }
-                IDatabase MyDataStore = GetDatastore(_ds);
+                IDatabase MyDataStore = _ds.GetDatastore(this.EbConnectionFactory);
                 if (_ds != null && _ds.FilterDialogRefId != string.Empty)
                 {
                     EbFilterDialog _dsf = this.Redis.Get<EbFilterDialog>(_ds.FilterDialogRefId);
@@ -573,6 +578,11 @@ namespace ExpressBase.ServiceStack
                     EbObjectService myService = base.ResolveService<EbObjectService>();
                     EbObjectParticularVersionResponse result = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = request.RefId });
                     _ds = EbSerializers.Json_Deserialize(result.Data[0].Json);
+                    if (_ds == null)
+                    {
+                        resp.ResponseStatus = new ResponseStatus { Message = "DataReader is null.... RefId: " + request.RefId };
+                        return resp;
+                    }
                     Redis.Set<EbDataReader>(request.RefId, _ds);
                 }
                 if (_ds.FilterDialogRefId != string.Empty && _ds.FilterDialogRefId != null)
@@ -589,7 +599,7 @@ namespace ExpressBase.ServiceStack
                         request.Params = _dsf.GetDefaultParams();
                 }
 
-                IDatabase MyDataStore = GetDatastore(_ds);
+                IDatabase MyDataStore = _ds.GetDatastore(this.EbConnectionFactory);
 
                 if (_ds != null)
                 {
@@ -624,7 +634,7 @@ namespace ExpressBase.ServiceStack
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.StackTrace);
+                Console.WriteLine(e.Message + "\n" + e.StackTrace);
             }
             return resp;
         }
