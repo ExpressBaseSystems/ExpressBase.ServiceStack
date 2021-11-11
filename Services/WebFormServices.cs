@@ -1342,9 +1342,9 @@ namespace ExpressBase.ServiceStack.Services
                 Console.WriteLine("Exception in Insert/Update WebFormData\nMessage : " + ex.Message + "\nStackTrace : " + ex.StackTrace);
                 return new InsertDataFromWebformResponse()
                 {
-                    Message = "Something went wrong",
+                    Message = FormErrors.E0129 + ex.Message,
                     Status = (int)HttpStatusCode.InternalServerError,
-                    MessageInt = ex.Message,
+                    MessageInt = "Exception in InsertDataFromWebform[service]",
                     StackTraceInt = ex.StackTrace
                 };
             }
@@ -1405,7 +1405,7 @@ namespace ExpressBase.ServiceStack.Services
         private void CheckDataPusherCompatibility(EbWebForm FormObj)
         {
             if (FormObj.DataPushers != null && FormObj.DataPushers.Exists(e => !(e is EbFormDataPusher || e is EbApiDataPusher || e is EbBatchFormDataPusher)))
-                throw new FormException("DataPusher config is invalid! Contact Admin.", (int)HttpStatusCode.InternalServerError, "Check the type of all DataPushers. [Save the form in dev side]", "WebFormService -> CheckDataPusherCompatibility");
+                throw new FormException(FormErrors.E0131, (int)HttpStatusCode.InternalServerError, "Check the type of all DataPushers. [Save the form in dev side]", "WebFormService -> CheckDataPusherCompatibility");
         }
 
         private void CheckForMyProfileForms(EbWebForm FormObj, string WC, string MobilePageRefId)
