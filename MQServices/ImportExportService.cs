@@ -89,6 +89,7 @@ namespace ExpressBase.ServiceStack.Services
 
         public NotificationService NotificationService;
 
+        private int counter = 0;
 
         public ImportExportInternalService(IEbServerEventClient _sec) : base(_sec)
         {
@@ -219,7 +220,7 @@ namespace ExpressBase.ServiceStack.Services
                 }
                 else
                 {
-                    packageresponse = new GetOneFromAppstoreResponse { IsPublic = false, Package =request.Package };
+                    packageresponse = new GetOneFromAppstoreResponse { IsPublic = false, Package = request.Package };
                 }
                 if (packageresponse.Package?.Apps != null)
                 {
@@ -653,8 +654,9 @@ namespace ExpressBase.ServiceStack.Services
             return dispname;
         }
 
-        public static string GetProcessedName(string name)
+        public string GetProcessedName(string name)
         {
+            counter++;
             string oldts = string.Empty;
             if (name.Contains('_'))
                 oldts = name.Substring(name.LastIndexOf('_'));
@@ -663,7 +665,7 @@ namespace ExpressBase.ServiceStack.Services
                 name = name.Replace(oldts, "_" + newts);
             else
                 name += "_" + newts;
-            return name;
+            return name + counter.ToString();
         }
     }
 
