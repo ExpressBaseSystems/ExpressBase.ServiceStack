@@ -162,17 +162,21 @@ namespace ExpressBase.ServiceStack.Services
             List<EbObjectWrapper> wrap_list = null;
             foreach (EbDataRow dr in dt.Rows)
             {
-                string _nameKey = dr[1].ToString();
+                string _nameKey = dr[1].ToString() + dr[0].ToString();
                 if (!f_dict.ContainsKey(_nameKey))
                 {
                     wrap_list = new List<EbObjectWrapper>();
                     f_dict.Add(_nameKey, wrap_list);
                 }
+                else
+                {
+                    wrap_list = f_dict[_nameKey];
+                }
 
                 wrap_list.Add(new EbObjectWrapper
                 {
                     Id = Convert.ToInt32(dr[0]),
-                    Name = dr[1].ToString(),
+                    Name = dr[1].ToString() + dr[0].ToString(),
                     EbObjectType = ((EbObjectType)Convert.ToInt32(dr[2])).IntCode,
                     Status = Enum.GetName(typeof(ObjectLifeCycleStatus), Convert.ToInt32(dr[3])),
                     VersionNumber = dr[7].ToString(),
