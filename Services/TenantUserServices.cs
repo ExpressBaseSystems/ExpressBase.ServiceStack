@@ -140,12 +140,12 @@ namespace ExpressBase.ServiceStack.Services
             {
                 string query;
                 if (request.Location.LocId > 0)
-                    query = @"UPDATE eb_locations SET longname = @lname, shortname = @sname, image = @img, meta_json = @meta, parent_id = @parentid,
-                            is_group = @isgroup, eb_location_types_id = @type_id,  eb_lastmodified_by = @by, eb_lastmodified_at = now()
+                    query = $@"UPDATE eb_locations SET longname = @lname, shortname = @sname, image = @img, meta_json = @meta, parent_id = @parentid,
+                            is_group = @isgroup, eb_location_types_id = @type_id,  eb_lastmodified_by = @by, eb_lastmodified_at = { this.EbConnectionFactory.DataDB.EB_CURRENT_TIMESTAMP}
                             WHERE id = @lid RETURNING id;";
                 else
-                    query = @"INSERT INTO eb_locations(longname,shortname,image,meta_json, parent_id, is_group, eb_location_types_id, eb_created_by, eb_created_at) 
-                            VALUES(:lname, :sname, :img, :meta, :parentid, :isgroup, :type_id, :by, now()) RETURNING id;";
+                    query = $@"INSERT INTO eb_locations(longname,shortname,image,meta_json, parent_id, is_group, eb_location_types_id, eb_created_by, eb_created_at) 
+                            VALUES(:lname, :sname, :img, :meta, :parentid, :isgroup, :type_id, :by, { this.EbConnectionFactory.DataDB.EB_CURRENT_TIMESTAMP}) RETURNING id;";
                 DbParameter[] parameters = {
                 this.EbConnectionFactory.ObjectsDB.GetNewParameter("lname", EbDbTypes.String, request.Location.LongName),
                 this.EbConnectionFactory.ObjectsDB.GetNewParameter("sname", EbDbTypes.String, request.Location.ShortName),
@@ -1077,9 +1077,9 @@ namespace ExpressBase.ServiceStack.Services
             {
                 string query;
                 if (request.LocationType.Id > 0)
-                    query = "UPDATE eb_location_types SET type = @type , eb_lastmodified_by = @by, eb_lastmodified_at = now() WHERE id = @id  RETURNING id;";
+                    query = $"UPDATE eb_location_types SET type = @type , eb_lastmodified_by = @by, eb_lastmodified_at = {EbConnectionFactory.DataDB.EB_CURRENT_TIMESTAMP} WHERE id = @id  RETURNING id;";
                 else
-                    query = "INSERT INTO eb_location_types(type, eb_created_by, eb_created_at) VALUES(@type, @by, now()) RETURNING id";
+                    query = $"INSERT INTO eb_location_types(type, eb_created_by, eb_created_at) VALUES(@type, @by, {EbConnectionFactory.DataDB.EB_CURRENT_TIMESTAMP}) RETURNING id";
                 DbParameter[] parameters = { this.EbConnectionFactory.DataDB.GetNewParameter("type", EbDbTypes.String, request.LocationType.Type),
                     this.EbConnectionFactory.DataDB.GetNewParameter("by", EbDbTypes.Int32, request.UserId),
                     this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.LocationType.Id)

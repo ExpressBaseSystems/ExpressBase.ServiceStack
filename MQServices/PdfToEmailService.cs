@@ -94,20 +94,20 @@ namespace ExpressBase.ServiceStack.MQServices
                     EmailServicesRequest request1 = new EmailServicesRequest()
                     {
                         To = this.Template.To,
-                        Cc = this.Template.Cc.Split(","),
-                        Bcc = this.Template.Bcc.Split(","),
-                        Message = this.Template.Body,
-                        Subject = this.Template.Subject,
+                        Cc = this.Template?.Cc?.Split(","),
+                        Bcc = this.Template?.Bcc?.Split(","),
+                        Message = this.Template?.Body,
+                        Subject = this.Template?.Subject,
                         UserId = request.UserId,
                         UserAuthId = request.UserAuthId,
                         SolnId = request.SolnId,
-                        ReplyTo = this.Template.ReplyTo,
+                        ReplyTo = this.Template?.ReplyTo,
                         Params = request.Params,
-                        RefId = this.Template.RefId
+                        RefId = this.Template?.RefId
                     };
 
                     //adding email attachment. type pdf
-                    if (this.Template.AttachmentReportRefID != string.Empty)
+                    if (!string.IsNullOrEmpty(Template.AttachmentReportRefID))
                     {
                         ReportRenderResponse RepRes = reportservice.Get(new ReportRenderRequest
                         {

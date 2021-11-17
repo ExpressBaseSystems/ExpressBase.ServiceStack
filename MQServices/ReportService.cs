@@ -16,10 +16,11 @@ using System.Threading.Tasks;
 
 namespace ExpressBase.ServiceStack.MQServices
 {
-    [Restrict(InternalOnly = true)]
+    //[Restrict(InternalOnly = true)]
     public class ReportInternalService : EbMqBaseService
     {
-        public ReportInternalService(IServiceClient _ssclient, IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_ssclient, _mqp, _mqc)
+        //public ReportInternalService(IServiceClient _ssclient, IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_ssclient, _mqp, _mqc)
+        public ReportInternalService(IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_mqp, _mqc)
         {
             ObjectService = base.ResolveService<EbObjectService>();
             ReportService = base.ResolveService<ReportService>();
@@ -50,13 +51,7 @@ namespace ExpressBase.ServiceStack.MQServices
                 Console.WriteLine(" Reached Inside MQService/ReportServiceInternal in SS .. Before Report Render");
                 JobArgs = request.JobArgs;
                 EbConnectionFactory ebConnectionFactory = new EbConnectionFactory(JobArgs.SolnId, this.Redis);
-                ObjectService.EbConnectionFactory = ebConnectionFactory;
-                ReportService.EbConnectionFactory = ebConnectionFactory;
-                SchedulersService.EbConnectionFactory = ebConnectionFactory;
-
-                UserCollection = JsonConvert.DeserializeObject<AllUserCollection>(JobArgs.ToUserIds);
-                GroupCollection = JsonConvert.DeserializeObject<AllGroupCollection>(JobArgs.ToUserGroupIds);
-                MessageCollection = JsonConvert.DeserializeObject<AllDelMessagaeCollection>(JobArgs.Message);
+                ObjectService.EbConnectionFactory = ReportService.EbConnectionFactory = SchedulersService.EbConnectionFactory = ebConnectionFactory;
 
 
                 Dictionary<string, byte[]> LocaleReport = new Dictionary<string, byte[]>();
@@ -68,29 +63,31 @@ namespace ExpressBase.ServiceStack.MQServices
                 }));
 
 
-                if (res.Data != null && res.Data.Count > 0)
+                if (res.Data != null && res.Data.Count > 0 && JobArgs.ToUserIds != null)
                 {
 
-
-                    if (UserCollection.EmailUser != "" || GroupCollection.EmailGroup != "")
+                    UserCollection = JsonConvert.DeserializeObject<AllUserCollection>(JobArgs.ToUserIds);
+                    GroupCollection = JsonConvert.DeserializeObject<AllGroupCollection>(JobArgs.ToUserGroupIds);
+                    MessageCollection = JsonConvert.DeserializeObject<AllDelMessagaeCollection>(JobArgs.Message);
+                    if (UserCollection?.EmailUser != "" || GroupCollection?.EmailGroup != "")
                     {
                         Locales = new Dictionary<string, List<User>>();
                         JobArgs.DeliveryMechanisms = (DeliveryMechanisms)1;
-                        JobArgs.Message = MessageCollection.EmailMessage;
+                        JobArgs.Message = MessageCollection?.EmailMessage;
                         GetEmailUserDetails(JobArgs);
                         JobPush(res);
                     }
-                    if (UserCollection.SMSUser != "" || GroupCollection.SMSGroup != "")
+                    if (UserCollection?.SMSUser != "" || GroupCollection?.SMSGroup != "")
                     {
                         JobArgs.DeliveryMechanisms = (DeliveryMechanisms)2;
-                        JobArgs.Message = MessageCollection.SMSMessage;
+                        JobArgs.Message = MessageCollection?.SMSMessage;
                         JobPush(res);
                     }
-                    if (UserCollection.SlackUser != "" || GroupCollection.SlackGroup != "")
+                    if (UserCollection?.SlackUser != "" || GroupCollection?.SlackGroup != "")
                     {
                         Locales = new Dictionary<string, List<User>>();
                         JobArgs.DeliveryMechanisms = (DeliveryMechanisms)3;
-                        JobArgs.Message = MessageCollection.SlackMessage;
+                        JobArgs.Message = MessageCollection?.SlackMessage;
                         getSlackUser();
                         JobPush(res);
                     }
