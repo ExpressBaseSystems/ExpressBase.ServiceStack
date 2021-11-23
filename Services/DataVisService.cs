@@ -432,6 +432,8 @@ namespace ExpressBase.ServiceStack
                         {
                             foreach (TFilters _dic in request.TFilters)
                             {
+                                if (string.IsNullOrWhiteSpace(_dic.Value))
+                                    continue;
                                 string _cond = string.Empty;
                                 var op = _dic.Operator.Trim(); var col = _dic.Column; var val = _dic.Value; var type = _dic.Type;
                                 var array = _dic.Value.Split("|");
