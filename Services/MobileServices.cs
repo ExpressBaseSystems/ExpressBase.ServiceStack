@@ -492,7 +492,6 @@ namespace ExpressBase.ServiceStack.Services
         private string WrapQuery(string sql, MobileVisDataRequest request, List<DbParameter> parameters)
         {
             string wraped = string.Empty;
-            bool has_limit = request.Limit > 0;
             try
             {
                 sql = sql.Trim().TrimEnd(CharConstants.SEMI_COLON);
@@ -501,6 +500,10 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     Param p = request.Params[0];
                     wraped += $"SELECT * FROM ({sql}) AS PWWRP WHERE LOWER(PWWRP.{p.Name}) LIKE '%{p.Value.ToLower()}%'";
+                }
+                else if (request.NoWrap)
+                {
+                    wraped = sql;
                 }
                 else
                 {
@@ -531,7 +534,7 @@ namespace ExpressBase.ServiceStack.Services
 
                 wraped = $"SELECT COUNT(*) FROM ({wraped}) AS COUNT_STAR;" + wraped;
 
-                if (has_limit)
+                if (request.Limit > 0)
                     wraped += $" LIMIT :limit OFFSET :offset";
 
                 if (!wraped.EndsWith(CharConstants.SEMI_COLON))
