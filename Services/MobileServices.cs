@@ -480,10 +480,11 @@ namespace ExpressBase.ServiceStack.Services
                 string wraped = this.WrapQuery(dataReader.Sql, request, parameters);
 
                 resp.Data = this.EbConnectionFactory.DataDB.DoQueries(wraped, parameters.ToArray());
+                resp.Message = "Success";
             }
             catch (Exception ex)
             {
-                resp.Message = "No Data";
+                resp.Message = "GetData Exception: " + ex.Message;
                 Console.WriteLine("Exception at object list for user mobile req ::" + ex.Message);
             }
             return resp;
@@ -543,6 +544,7 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception ex)
             {
                 Console.WriteLine(ex.Message);
+                throw new Exception("WrapQuery Exception: " + ex.Message);
             }
             return wraped;
         }
@@ -617,6 +619,56 @@ namespace ExpressBase.ServiceStack.Services
             query = query + " ORDER BY " + sort.Join($" {CharConstants.COMMA} ");
 
             return query;
+        }
+
+        public MobileDataResponse Post(MobilePsDataRequest request)
+        {
+            MobileDataResponse resp = new MobileDataResponse();
+            try
+            {
+                EbDataReader dataReader = this.GetEbObject<EbDataReader>(request.DataSourceRefId);
+                List<DbParameter> parameters;
+                if (!string.IsNullOrWhiteSpace(request.Params))
+                {
+                    List<Param> Params = JsonConvert.DeserializeObject<List<Param>>(request.Params);
+                    parameters = Params.ParamsToDbParameters(this.EbConnectionFactory);
+                }
+                else
+                    parameters = new List<DbParameter>();
+
+                parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_currentuser_id", EbDbTypes.Int32, request.UserId));
+                if (request.Limit != 0)
+                {
+                    parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("limit", EbDbTypes.Int32, request.Limit));
+                    parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("offset", EbDbTypes.Int32, request.Offset));
+                }
+
+                string sql = dataReader.Sql.Trim().TrimEnd(CharConstants.SEMI_COLON);
+                string wraped;
+                if (!string.IsNullOrWhiteSpace(request.Search))
+                {
+                    List<Param> SrchParm = JsonConvert.DeserializeObject<List<Param>>(request.Search);
+                    wraped = $"SELECT * FROM ({sql}) AS PWWRP WHERE LOWER(PWWRP.{SrchParm[0].Name}) LIKE '%{SrchParm[0].Value.ToLower()}%'";
+                }
+                else
+                    wraped = dataReader.Sql;
+
+                wraped = $"SELECT COUNT(*) FROM ({wraped}) AS COUNT_STAR;" + wraped;
+
+                if (request.Limit > 0)
+                    wraped += $" LIMIT :limit OFFSET :offset";
+
+                wraped += CharConstants.SEMI_COLON;
+
+                resp.Data = this.EbConnectionFactory.DataDB.DoQueries(wraped, parameters.ToArray());
+                resp.Message = "Success";
+            }
+            catch (Exception ex)
+            {
+                resp.Message = "GetData Exception: " + ex.Message;
+                Console.WriteLine("Exception in GetDataPs request [mobile] ::" + ex.Message);
+            }
+            return resp;
         }
 
         public MobileDataResponse Get(MobileDataRequest request)

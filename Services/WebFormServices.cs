@@ -256,7 +256,7 @@ namespace ExpressBase.ServiceStack.Services
             int status = -1;
 
             //checking for space in column name, table name
-            if (tableName.Contains(CharConstants.SPACE))
+            if (string.IsNullOrWhiteSpace(tableName) || tableName.Contains(CharConstants.SPACE))
                 throw new FormException("Table creation failed - Invalid table name: " + tableName);
             foreach (TableColumnMeta entry in listNamesAndTypes)
                 if (entry.Name.Contains(CharConstants.SPACE))
