@@ -48,7 +48,6 @@ namespace ExpressBase.ServiceStack
                 EbReport Report = null;
                 try
                 {
-                    //List<string> Groupings = null;
                     EbObjectService myObjectservice = base.ResolveService<EbObjectService>();
                     myObjectservice.EbConnectionFactory = this.EbConnectionFactory;
                     DataSourceService myDataSourceservice = base.ResolveService<DataSourceService>();
@@ -70,6 +69,7 @@ namespace ExpressBase.ServiceStack
                     Report.ReportSummaryFields = new Dictionary<string, List<EbDataField>>();
                     Report.GroupFooters = new Dictionary<string, ReportGroupItem>();
                     Report.Groupheaders = new Dictionary<string, ReportGroupItem>();
+
                     Report.FileClient = new EbStaticFileClient();
                     if (string.IsNullOrEmpty(FileClient.BearerToken) && !string.IsNullOrEmpty(request.BToken))
                     {
@@ -77,6 +77,7 @@ namespace ExpressBase.ServiceStack
                         FileClient.RefreshToken = request.RToken;
                     }
                     Report.FileClient = FileClient;
+
                     Report.Solution = GetSolutionObject(request.SolnId);
                     Report.ReadingUser = GetUserObject(request.ReadingUserAuthId);
                     Report.RenderingUser = GetUserObject(request.RenderingUserAuthId);
@@ -86,21 +87,20 @@ namespace ExpressBase.ServiceStack
                     //-- END REPORT object INIT
                     if (Report.DataSourceRefId != string.Empty)
                     {
-                        //Groupings = new List<string>();
-
                         Report.DataSet = myDataSourceservice.Any(new DataSourceDataSetRequest { RefId = Report.DataSourceRefId, Params = Report.Parameters,/*Groupings= Groupings*/ }).DataSet;
                     }
+
                     float _width = Report.WidthPt - Report.Margin.Left;// - Report.Margin.Right;
                     float _height = Report.HeightPt - Report.Margin.Top - Report.Margin.Bottom;
                     Report.HeightPt = _height;
-                    //iTextSharp.text.Rectangle rec =new iTextSharp.text.Rectangle(Report.WidthPt, Report.HeightPt);
+
                     iTextSharp.text.Rectangle rec = new iTextSharp.text.Rectangle(_width, _height);
                     Report.Doc = new Document(rec);
                     Report.Doc.SetMargins(Report.Margin.Left, Report.Margin.Right, Report.Margin.Top, Report.Margin.Bottom);
                     Report.Writer = PdfWriter.GetInstance(Report.Doc, Report.Ms1);
                     Report.Writer.Open();
                     Report.Doc.Open();
-                    Report.Doc.AddTitle(Report.DisplayName);
+                    Report.Doc.AddTitle(Report.DocumentName);
                     Report.Writer.PageEvent = new HeaderFooter(Report);
                     Report.Writer.CloseStream = true;//important
                     Report.Canvas = Report.Writer.DirectContent;
@@ -108,25 +108,40 @@ namespace ExpressBase.ServiceStack
                     Report.GetWatermarkImages();
                     FillingCollections(Report);
                     Report.Doc.NewPage();
+                    Report.DrawReportHeader();
+
                     if (Report?.DataSet?.Tables[Report.DetailTableIndex]?.Rows.Count > 0)
                     {
-                        Report.DrawReportHeader();
                         Report.DrawDetail();
-                        Report.DrawReportFooter();
                     }
                     else
+                    {
+                        Report.DrawPageHeader();
+                        Report.detailEnd += 30;
+                        Report.DrawPageFooter();
+                        Report.DrawReportFooter();
                         throw new Exception("Dataset is null, refid " + Report.DataSourceRefId);
+                    }
+
+                    Report.DrawReportFooter();
                 }
                 catch (Exception e)
                 {
-                    Console.ForegroundColor = ConsoleColor.Red;
                     Console.WriteLine("Exception-reportService " + e.Message + e.StackTrace);
-                    Console.ForegroundColor = ConsoleColor.White;
 
                     ColumnText ct = new ColumnText(Report.Canvas);
-                    Phrase phrase = new Phrase("No Data available. Please check the parameters or contact admin");
+                    Phrase phrase;
+                    if (Report?.DataSet?.Tables[Report.DetailTableIndex]?.Rows.Count > 0)
+                    {
+                        phrase = new Phrase("Something went wrong. Please check the parameters or contact admin");
+                    }
+                    else
+                    {
+                        phrase = new Phrase("No Data available. Please check the parameters or contact admin");
+                    }
                     phrase.Font.Size = 10;
-                    ct.SetSimpleColumn(phrase, Report.LeftPt + 30, Report.HeightPt - 80, Report.WidthPt - 30, Report.HeightPt - 40, 15, Element.ALIGN_CENTER);
+                    float y = Report.HeightPt - (Report.ReportHeaderHeight + Report.Margin.Top + Report.PageHeaderHeight);
+                    ct.SetSimpleColumn(phrase, Report.LeftPt + 30, y - 30, Report.WidthPt - 30, y, 15, Element.ALIGN_CENTER);
                     ct.Go();
                 }
 
@@ -134,6 +149,9 @@ namespace ExpressBase.ServiceStack
                 if (Report.UserPassword != string.Empty || Report.OwnerPassword != string.Empty)
                     Report.SetPassword();
                 Report.Ms1.Position = 0;//important
+
+                string name = Report.DocumentName;
+
                 if (Report.DataSourceRefId != string.Empty)
                 {
                     Report.DataSet.Tables.Clear();
@@ -143,7 +161,7 @@ namespace ExpressBase.ServiceStack
                 return new ReportRenderResponse
                 {
                     StreamWrapper = new MemorystreamWrapper(Report.Ms1),
-                    ReportName = Report.DisplayName,
+                    ReportName = name,
                     ReportBytea = Report.Ms1.ToArray(),
                     CurrentTimestamp = Report.CurrentTimestamp
                 };
@@ -326,6 +344,7 @@ namespace ExpressBase.ServiceStack
             valscript.Compile();
             return valscript;
         }
+
         public dynamic ExecuteScript(EbPdfGlobals globals, string code)
         {
             Script valscript = CompileScript(code);
