@@ -434,6 +434,7 @@ namespace ExpressBase.ServiceStack
                             {
                                 if (string.IsNullOrWhiteSpace(_dic.Value))
                                     continue;
+                                _dic.Value = _dic.Value.Replace("'", string.Empty);
                                 string _cond = string.Empty;
                                 var op = _dic.Operator.Trim(); var col = _dic.Column; var val = _dic.Value; var type = _dic.Type;
                                 var array = _dic.Value.Split("|");
