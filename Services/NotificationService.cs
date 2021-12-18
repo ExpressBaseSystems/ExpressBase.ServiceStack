@@ -58,11 +58,11 @@ namespace ExpressBase.ServiceStack.Services
                     if (dt.Rows.Count > 0)
                     {
                         string user_auth_id = request.SolnId + ":" + dt.Rows[0][0].ToString() + ":uc";
-						if (this.ServerEventClient.BearerToken == null|| this.ServerEventClient.RefreshToken==null)
-						{
-							this.ServerEventClient.BearerToken = request.BToken;
-							this.ServerEventClient.RefreshToken = request.RToken;
-						}
+                        if (this.ServerEventClient.BearerToken == null || this.ServerEventClient.RefreshToken == null)
+                        {
+                            this.ServerEventClient.BearerToken = request.BToken;
+                            this.ServerEventClient.RefreshToken = request.RToken;
+                        }
                         this.ServerEventClient.Post<NotifyResponse>(new NotifyUserIdRequest
                         {
                             Msg = JsonConvert.SerializeObject(n),
@@ -84,6 +84,65 @@ namespace ExpressBase.ServiceStack.Services
                 throw e;
             }
             return res;
+        }
+
+        public NotifyByUserIDsResponse Post(NotifyByUserIDsRequest request)
+        {
+            string msg;
+            try
+            {
+                if (string.IsNullOrWhiteSpace(request.Link))
+                    throw new Exception("Link is empty");
+                if (string.IsNullOrWhiteSpace(request.Title))
+                    throw new Exception("Title is empty");
+                if (string.IsNullOrWhiteSpace(request.UserIDs))
+                    throw new Exception("User Id(s) is empty");
+
+                string[] arr = request.UserIDs.Split(',');
+                IEnumerable<int> iarr = arr.Select(e => { return int.TryParse(e, out int t) ? t : 0; }).Where(e => e > 0);
+                if (arr.Length == 0 || arr.Length != iarr.Count())
+                    throw new Exception("Bad request");
+
+
+                if (this.ServerEventClient.BearerToken == null || this.ServerEventClient.RefreshToken == null)
+                {
+                    this.ServerEventClient.BearerToken = request.BToken;
+                    this.ServerEventClient.RefreshToken = request.RToken;
+                }
+
+                foreach (string uid in arr)
+                {
+                    string notification_id = GenerateNotificationId();
+                    Notifications n = new Notifications()
+                    {
+                        Notification = new List<NotificationInfo>()
+                        {
+                            new NotificationInfo
+                            {
+                                Link = request.Link,
+                                Title = request.Title,
+                                NotificationId = notification_id,
+                                Duration = "Today"
+                            }
+                        }
+                    };
+                    this.ServerEventClient.Post<NotifyResponse>(new NotifyUserIdRequest
+                    {
+                        Msg = JsonConvert.SerializeObject(n),
+                        Selector = "cmd.onNotification",
+                        ToUserAuthId = request.SolnId + ":" + uid + ":uc",
+                        NotificationId = notification_id,
+                        NotifyUserId = request.UserId
+                    });
+                }
+                msg = "success";
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Exception in NotifyByUserIDsRequest. Message: {e.Message}\n Stack Trace: {e.StackTrace}");
+                msg = e.Message;
+            }
+            return new NotifyByUserIDsResponse() { Message = msg };
         }
 
         public NotifyByUserRoleResponse Post(NotifyByUserRoleRequest request)
