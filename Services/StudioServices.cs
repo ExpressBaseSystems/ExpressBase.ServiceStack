@@ -865,7 +865,7 @@ namespace ExpressBase.ServiceStack.Services
                     }
                     else if (obj is EbMobilePage)
                     {
-                        if ((obj as EbMobilePage).Container is EbMobileForm)
+                        if ((obj as EbMobilePage).Container is EbMobileForm MobForm && !MobForm.RenderAsFilterDialog)
                         {
                             MobileServices mobservice = base.ResolveService<MobileServices>();
                             mobservice.EbConnectionFactory = this.EbConnectionFactory;
@@ -972,7 +972,7 @@ namespace ExpressBase.ServiceStack.Services
                     }
                     else if (obj is EbMobilePage)
                     {
-                        if ((obj as EbMobilePage).Container is EbMobileForm)
+                        if ((obj as EbMobilePage).Container is EbMobileForm MobForm && !MobForm.RenderAsFilterDialog)
                         {
                             MobileServices mobservice = base.ResolveService<MobileServices>();
                             mobservice.EbConnectionFactory = this.EbConnectionFactory;
@@ -1092,7 +1092,7 @@ namespace ExpressBase.ServiceStack.Services
                     }
                     else if (obj is EbMobilePage)
                     {
-                        if ((obj as EbMobilePage).Container is EbMobileForm)
+                        if ((obj as EbMobilePage).Container is EbMobileForm MobForm && !MobForm.RenderAsFilterDialog)
                         {
                             MobileServices mobservice = base.ResolveService<MobileServices>();
                             mobservice.EbConnectionFactory = this.EbConnectionFactory;
