@@ -1261,7 +1261,7 @@ namespace ExpressBase.ServiceStack.Services
 
         public GetUserDetailsResponse Any(GetUserDetailsRequest request)
         {
-            string query = "SELECT id, fullname, email, phnoprimary FROM eb_users WHERE COALESCE(eb_del, 'F') = 'F' ORDER BY fullname, email, phnoprimary LIMIT 5000;";
+            string query = "SELECT id, fullname, email, phnoprimary FROM eb_users WHERE statusid = 0 AND COALESCE(eb_del, 'F') = 'F' AND id > 1 ORDER BY fullname, email, phnoprimary LIMIT 5000;";
             //DbParameter[] parameters = { this.EbConnectionFactory.DataDB.GetNewParameter("searchtext", EbDbTypes.String, request.SearchText) };
 
             EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(query);
