@@ -1202,6 +1202,7 @@ namespace ExpressBase.ServiceStack.Services
             EbWebForm _form = EbFormHelper.GetEbObject<EbWebForm>(RefId, null, this.Redis, this);
             _form.LocationId = CurrrentLocation;
             _form.SetRedisClient(this.Redis);
+            _form.SetConnectionFactory(this.EbConnectionFactory);
             if (UserAuthId != null)
             {
                 _form.UserObj = GetUserObject(UserAuthId);
