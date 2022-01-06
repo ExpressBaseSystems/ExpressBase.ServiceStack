@@ -460,6 +460,33 @@ namespace ExpressBase.ServiceStack.Services
             }
         }
 
+        public EbMobileAutoIdDataResponse Post(EbMobileAutoIdDataRequest request)
+        {
+            List<EbMobileAutoIdData> autoIdData = JsonConvert.DeserializeObject<List<EbMobileAutoIdData>>(request.AutoIdData);
+            string query = string.Empty;
+            foreach (EbMobileAutoIdData data in autoIdData)
+            {
+                query += $"SELECT MAX({data.Column}) FROM {data.Table} WHERE {data.Column} LIKE '{data.Prefix}%'; ";
+            }
+            EbDataSet ds = this.EbConnectionFactory.DataDB.DoQueries(query);
+            EbDataTable dt = new EbDataTable("eb_latest_autoid");
+            dt.Columns.Add(dt.NewDataColumn(0, "key", EbDbTypes.String));
+            dt.Columns.Add(dt.NewDataColumn(1, "val", EbDbTypes.String));
+            for (int i = 0; i < autoIdData.Count; i++)
+            {
+                EbMobileAutoIdData data = autoIdData[i];
+                if (ds.Tables[i].Rows.Count > 0)
+                {
+                    EbDataRow row = dt.NewDataRow();
+                    row.Add($"{data.Table}_{data.Column}");
+                    row.Add(ds.Tables[i].Rows[0][0]?.ToString());
+                    dt.Rows.Add(row);
+                }
+            }
+
+            return new EbMobileAutoIdDataResponse() { OfflineData = dt };
+        }
+
         public MobileDataResponse Get(MobileVisDataRequest request)
         {
             MobileDataResponse resp = new MobileDataResponse();
