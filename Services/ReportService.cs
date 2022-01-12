@@ -5,24 +5,22 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
 using System.Text.RegularExpressions;
 using ServiceStack.Redis;
 using ServiceStack.Messaging;
-using System.Globalization;
 using iTextSharp.text.html.simpleparser;
 using ServiceStack;
 using ExpressBase.Common;
 using ExpressBase.Common.Data;
 using ExpressBase.Common.ServiceClients;
 using ExpressBase.Common.Structures;
-using ExpressBase.Objects.Objects;
 using ExpressBase.Objects;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ExpressBase.ServiceStack.Services;
 using ExpressBase.CoreBase.Globals;
 using ExpressBase.Common.Singletons;
+using System.Diagnostics;
 
 namespace ExpressBase.ServiceStack
 {
@@ -61,8 +59,8 @@ namespace ExpressBase.ServiceStack
                     Report.IsLastpage = false;
                     Report.WatermarkImages = new Dictionary<int, byte[]>();
                     Report.WaterMarkList = new List<object>();
-                    Report.ValueScriptCollection = new Dictionary<string, Script>();
-                    Report.AppearanceScriptCollection = new Dictionary<string, Script>();
+                    Report.ValueScriptCollection = new Dictionary<string, object>();
+                    Report.AppearanceScriptCollection = new Dictionary<string, object>();
                     Report.LinkCollection = new Dictionary<string, List<Common.Objects.EbControl>>();
                     Report.GroupSummaryFields = new Dictionary<string, List<EbDataField>>();
                     Report.PageSummaryFields = new Dictionary<string, List<EbDataField>>();
@@ -89,7 +87,8 @@ namespace ExpressBase.ServiceStack
                     {
                         Report.DataSet = myDataSourceservice.Any(new DataSourceDataSetRequest { RefId = Report.DataSourceRefId, Params = Report.Parameters,/*Groupings= Groupings*/ }).DataSet;
                     }
-
+                    Stopwatch stopwatch = new Stopwatch();
+                    stopwatch.Start();
                     float _width = Report.WidthPt - Report.Margin.Left;// - Report.Margin.Right;
                     float _height = Report.HeightPt - Report.Margin.Top - Report.Margin.Bottom;
                     Report.HeightPt = _height;
@@ -124,6 +123,8 @@ namespace ExpressBase.ServiceStack
                     }
 
                     Report.DrawReportFooter();
+                    stopwatch.Stop();
+                    Console.WriteLine("time: " + stopwatch.ElapsedMilliseconds);
                 }
                 catch (Exception e)
                 {
@@ -249,11 +250,17 @@ namespace ExpressBase.ServiceStack
             {
                 if (!String.IsNullOrEmpty(field.HideExpression?.Code))
                 {
-                    ExecuteHideExpression(Report, field);
+                    if (Report.EvaluatorVersion == EvaluatorVersion.Version_1)
+                        Report.ExecuteHideExpressionV1(field);
+                    else
+                        Report.ExecuteHideExpressionV2(field);
                 }
                 if (!field.IsHidden && !String.IsNullOrEmpty(field.LayoutExpression?.Code))
                 {
-                    ExecuteLayoutExpression(Report, field);
+                    if (Report.EvaluatorVersion == EvaluatorVersion.Version_1)
+                        Report.ExecuteLayoutExpressionV1(field);
+                    else
+                        Report.ExecuteLayoutExpressionV2(field);
                 }
                 if (field is EbDataField)
                 {
@@ -269,86 +276,25 @@ namespace ExpressBase.ServiceStack
 
                     if (field is EbCalcField && !Report.ValueScriptCollection.ContainsKey(field.Name) && !string.IsNullOrEmpty((field_org as EbCalcField).ValExpression?.Code))
                     {
-                        Script valscript = CompileScript((field as EbCalcField).ValExpression.Code);
-                        Report.ValueScriptCollection.Add(field.Name, valscript);
+                        if (Report.EvaluatorVersion == EvaluatorVersion.Version_1)
+                        {
+                            Script valscript = Report.CompileScriptV1((field as EbCalcField).ValExpression.Code);
+                            Report.ValueScriptCollection.Add(field.Name, valscript);
+                        }
+                        else
+                        {
+                            string processedCode = Report.GetProcessedCodeForScriptCollectionV2((field as EbCalcField).ValExpression.Code);
+                            Report.ValueScriptCollection.Add(field.Name, processedCode);
+                        }
                     }
 
                     if (!field.IsHidden && !Report.AppearanceScriptCollection.ContainsKey(field.Name) && !string.IsNullOrEmpty(field_org.AppearExpression?.Code))
                     {
-                        Script appearscript = CompileScript(field_org.AppearExpression.Code);
+                        Script appearscript = Report.CompileScriptV1(field_org.AppearExpression.Code);
                         Report.AppearanceScriptCollection.Add(field.Name, appearscript);
                     }
                 }
             }
-        }
-        public void ExecuteLayoutExpression(EbReport Report, EbReportField field)
-        {
-            IEnumerable<string> matches = Regex.Matches(field.LayoutExpression.Code, @"T[0-9]{1}.\w+").OfType<Match>()
-                    .Select(m => m.Groups[0].Value)
-                    .Distinct();
-
-            string[] _dataFieldsUsed = new string[matches.Count()];
-            int i = 0;
-            foreach (string match in matches)
-                _dataFieldsUsed[i++] = match;
-
-            EbPdfGlobals globals = new EbPdfGlobals
-            {
-                CurrentField = new PdfGReportField(field.LeftPt, field.WidthPt, field.TopPt, field.HeightPt, field.BackColor, field.ForeColor, field.IsHidden, null)
-            };
-
-            Report.AddParamsNCalcsInGlobal(globals);
-            foreach (string calcfd in _dataFieldsUsed)
-            {
-                string TName = calcfd.Split('.')[0];
-                string fName = calcfd.Split('.')[1];
-                int tableindex = Convert.ToInt32(TName.Substring(1));
-                globals[TName].Add(fName, new PdfNTV { Name = fName, Type = (PdfEbDbTypes)(int)Report.DataSet.Tables[tableindex].Columns[fName].Type, Value = Report.DataSet.Tables[tableindex].Rows[0][fName] });
-            }
-            dynamic value = ExecuteScript(globals, field.LayoutExpression.Code);
-            field.SetValuesFromGlobals(globals.CurrentField);
-        }
-
-        public void ExecuteHideExpression(EbReport Report, EbReportField field)
-        {
-            IEnumerable<string> matches = Regex.Matches(field.HideExpression.Code, @"T[0-9]{1}.\w+").OfType<Match>()
-                    .Select(m => m.Groups[0].Value)
-                    .Distinct();
-
-            string[] _dataFieldsUsed = new string[matches.Count()];
-            int i = 0;
-            foreach (string match in matches)
-                _dataFieldsUsed[i++] = match;
-
-            EbPdfGlobals globals = new EbPdfGlobals();
-            Report.AddParamsNCalcsInGlobal(globals);
-
-            foreach (string calcfd in _dataFieldsUsed)
-            {
-                string TName = calcfd.Split('.')[0];
-                string fName = calcfd.Split('.')[1];
-                int tableindex = Convert.ToInt32(TName.Substring(1));
-                globals[TName].Add(fName, new PdfNTV { Name = fName, Type = (PdfEbDbTypes)(int)Report.DataSet.Tables[tableindex].Columns[fName].Type, Value = Report.DataSet.Tables[tableindex].Rows[0][fName] });
-            }
-
-            dynamic value = ExecuteScript(globals, field.HideExpression.Code);
-            if (value != null)
-                field.IsHidden = (bool)value;
-        }
-
-        public Script CompileScript(string code)
-        {
-            Script valscript = CSharpScript.Create<dynamic>(
-                code, ScriptOptions.Default.WithReferences("Microsoft.CSharp", "System.Core").WithImports("System", "System.Collections.Generic", "System.Linq"),
-                globalsType: typeof(EbPdfGlobals));
-            valscript.Compile();
-            return valscript;
-        }
-
-        public dynamic ExecuteScript(EbPdfGlobals globals, string code)
-        {
-            Script valscript = CompileScript(code);
-            return valscript.RunAsync(globals).Result?.ReturnValue;
         }
 
         public void FindLargerDataTable(EbReport Report, EbDataField field)
@@ -551,7 +497,8 @@ namespace ExpressBase.ServiceStack
                     {
                         globals["Calc"].Add(calcfd, new PdfNTV { Name = calcfd, Type = (PdfEbDbTypes)11, Value = 0 });
                     }
-                    resultType = ExecuteScript(globals, request.ValueExpression)?.GetType();
+                    EbReport R = new EbReport();
+                    resultType = R.ExecuteScriptV1(globals, R.CompileScriptV1(request.ValueExpression))?.GetType();
 
                     //return expression type
                     switch (resultType.FullName)
