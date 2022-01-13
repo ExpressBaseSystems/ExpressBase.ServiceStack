@@ -269,7 +269,7 @@ namespace ExpressBase.ServiceStack.Services
             string idcheck = "AND EO.id = ANY(string_to_array(:ids, ',')::int[])";
             string query = @"
 SELECT 
-	EO.id, EO.obj_name, EO.display_name, EO.obj_type, EOV.version_num, EOV.obj_json, EOV.refid,
+	EO.id, EO.obj_name, EO.display_name, EO.obj_type, EOV.version_num, EOV.refid,
     (CASE WHEN EOV.commit_ts <= :last_sync_ts THEN NULL ELSE EOV.obj_json END) AS obj_json,
 	EA.id AS app_id, EA.applicationname, EA.app_icon, EA.application_type, EA.app_settings
 FROM
