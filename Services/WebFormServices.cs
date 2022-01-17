@@ -1330,6 +1330,10 @@ namespace ExpressBase.ServiceStack.Services
             catch (FormException ex)
             {
                 Console.WriteLine("FormException in Insert/Update WebFormData\nMessage : " + ex.Message + "\nMessageInternal : " + ex.MessageInternal + "\nStackTraceInternal : " + ex.StackTraceInternal + "\nStackTrace" + ex.StackTrace);
+
+                if (request.WhichConsole == TokenConstants.MC && request.RowId <= 0)
+                    return SubmitErrorAndGetResponse(request, ex);
+
                 return new InsertDataFromWebformResponse()
                 {
                     Message = ex.Message,
@@ -1341,6 +1345,10 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception ex)
             {
                 Console.WriteLine("Exception in Insert/Update WebFormData\nMessage : " + ex.Message + "\nStackTrace : " + ex.StackTrace);
+
+                if (request.WhichConsole == TokenConstants.MC && request.RowId <= 0)
+                    return SubmitErrorAndGetResponse(request, ex);
+
                 return new InsertDataFromWebformResponse()
                 {
                     Message = FormErrors.E0129 + ex.Message,
@@ -1348,6 +1356,69 @@ namespace ExpressBase.ServiceStack.Services
                     MessageInt = "Exception in InsertDataFromWebform[service]",
                     StackTraceInt = ex.StackTrace
                 };
+            }
+        }
+
+        private InsertDataFromWebformResponse SubmitErrorAndGetResponse(InsertDataFromWebformRequest request, Exception ex)
+        {
+            try
+            {
+                Console.WriteLine("SaveErrorSubmission start");
+                Dictionary<string, string> MetaData = new Dictionary<string, string>();
+
+                EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId, request.CurrentLoc);
+                string Qry = $@"INSERT INTO eb_error_submissions (title, form_data_json, form_ref_id, error_message, error_stacktrace, is_submitted, eb_loc_id, eb_created_by, eb_created_at, eb_del)
+                                VALUES (@title, @form_data_json, @form_ref_id, @error_message, @error_stacktrace, 'F', @eb_loc_id, @eb_created_by, {this.EbConnectionFactory.DataDB.EB_CURRENT_TIMESTAMP}, 'F'); 
+                                SELECT eb_currval('eb_error_submissions_id_seq');";
+                DbParameter[] parameters = new DbParameter[]
+                {
+                    this.EbConnectionFactory.DataDB.GetNewParameter("title", EbDbTypes.String, FormObj.DisplayName),
+                    this.EbConnectionFactory.DataDB.GetNewParameter("form_data_json", EbDbTypes.String, request.FormData),
+                    this.EbConnectionFactory.DataDB.GetNewParameter("form_ref_id", EbDbTypes.String, FormObj.RefId),
+                    this.EbConnectionFactory.DataDB.GetNewParameter("error_message", EbDbTypes.String, ex.Message),
+                    this.EbConnectionFactory.DataDB.GetNewParameter("error_stacktrace", EbDbTypes.String, ex.StackTrace),
+                    this.EbConnectionFactory.DataDB.GetNewParameter("eb_loc_id", EbDbTypes.Int32, request.CurrentLoc),
+                    this.EbConnectionFactory.DataDB.GetNewParameter("eb_created_by", EbDbTypes.Int32, request.UserId)
+                };
+
+                EbDataSet ds = this.EbConnectionFactory.DataDB.DoQueries(Qry, parameters);
+                int _id = Convert.ToInt32(ds.Tables[0].Rows[0][0]);
+                Console.WriteLine("SaveErrorSubmission returning");
+
+                return new InsertDataFromWebformResponse()
+                {
+                    Message = "Error submission saved",
+                    RowId = -1,
+                    RowAffected = 1,
+                    AffectedEntries = "Error submission id: " + _id,
+                    Status = (int)HttpStatusCode.OK,
+                    MetaData = MetaData
+                };
+            }
+            catch (Exception _ex)
+            {
+                Console.WriteLine("Exception in SubmitErrorAndGetResponse\nMessage" + ex.Message + "\nStackTrace" + ex.StackTrace);
+
+                if (ex is FormException formEx)
+                {
+                    return new InsertDataFromWebformResponse()
+                    {
+                        Message = formEx.Message,
+                        Status = formEx.ExceptionCode,
+                        MessageInt = formEx.MessageInternal + ": " + _ex.Message,
+                        StackTraceInt = formEx.StackTraceInternal
+                    };
+                }
+                else
+                {
+                    return new InsertDataFromWebformResponse()
+                    {
+                        Message = FormErrors.E0132 + ex.Message,
+                        Status = (int)HttpStatusCode.InternalServerError,
+                        MessageInt = "Exception in SubmitErrorAndGetResponse[service]: " + _ex.Message,
+                        StackTraceInt = ex.StackTrace
+                    };
+                }
             }
         }
 
