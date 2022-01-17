@@ -477,13 +477,13 @@ namespace ExpressBase.ServiceStack
                                 _value = 0;
                                 break;
                         }
-                        globals[TName].Add(fName, new PdfNTV { Name = fName, Type = (PdfEbDbTypes)(int)typ, Value = _value as object });
+                        globals[TName].Add(fName, new GNTV { Name = fName, Type = (GlobalDbType)(int)typ, Value = _value as object });
                     }
                     if (request.Parameters != null)
                     {
                         foreach (Param p in request.Parameters)
                         {
-                            globals["Params"].Add(p.Name, new PdfNTV { Name = p.Name, Type = (PdfEbDbTypes)Convert.ToInt32(p.Type), Value = p.Value });
+                            globals["Params"].Add(p.Name, new GNTV { Name = p.Name, Type = (GlobalDbType)Convert.ToInt32(p.Type), Value = p.Value });
                         }
                     }
                     IEnumerable<string> matches2 = Regex.Matches(request.ValueExpression, @"Calc.\w+").OfType<Match>()
@@ -495,7 +495,7 @@ namespace ExpressBase.ServiceStack
                         _calcFieldsUsed[j++] = match.Replace("Calc.", string.Empty);
                     foreach (string calcfd in _calcFieldsUsed)
                     {
-                        globals["Calc"].Add(calcfd, new PdfNTV { Name = calcfd, Type = (PdfEbDbTypes)11, Value = 0 });
+                        globals["Calc"].Add(calcfd, new GNTV { Name = calcfd, Type = (GlobalDbType)11, Value = 0 });
                     }
                     EbReport R = new EbReport();
                     resultType = R.ExecuteScriptV1(globals, R.CompileScriptV1(request.ValueExpression))?.GetType();

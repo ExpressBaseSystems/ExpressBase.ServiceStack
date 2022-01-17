@@ -52,6 +52,7 @@ using Fonts = DocumentFormat.OpenXml.Spreadsheet.Fonts;
 using Fill = DocumentFormat.OpenXml.Spreadsheet.Fill;
 using Color = DocumentFormat.OpenXml.Spreadsheet.Color;
 using ExpressBase.Objects.WebFormRelated;
+using ExpressBase.CoreBase.Globals;
 
 namespace ExpressBase.ServiceStack
 {
@@ -829,7 +830,7 @@ namespace ExpressBase.ServiceStack
             return resp;
         }
 
-        public void PreCustomColumDoCalc(ref EbDataSet _dataset, List<Param> Parameters, EbDataVisualization _dv, Globals globals)
+        public void PreCustomColumDoCalc(ref EbDataSet _dataset, List<Param> Parameters, EbDataVisualization _dv, EbVisualizationGlobals globals)
         {
             foreach (DVBaseColumn col in _dv.Columns)
             {
@@ -843,12 +844,12 @@ namespace ExpressBase.ServiceStack
             {
                 foreach (Param p in Parameters)
                 {
-                    globals["Params"].Add(p.Name, new NTV { Name = p.Name, Type = (EbDbTypes)Convert.ToInt32(p.Type), Value = p.ValueTo });
+                    globals["Params"].Add(p.Name, new GNTV { Name = p.Name, Type = (GlobalDbType)Convert.ToInt32(p.Type), Value = p.ValueTo });
                 }
             }
         }
 
-        public void CustomColumDoCalc4Row(EbDataRow _datarow, EbDataVisualization _dv, Globals globals, DVBaseColumn customCol)
+        public void CustomColumDoCalc4Row(EbDataRow _datarow, EbDataVisualization _dv, EbVisualizationGlobals globals, DVBaseColumn customCol)
         {
             dynamic result = null;
 
@@ -865,7 +866,7 @@ namespace ExpressBase.ServiceStack
                         else
                             __value = _datarow[formulaPart.FieldName];
 
-                        globals[formulaPart.TableName].Add(formulaPart.FieldName, new NTV { Name = formulaPart.FieldName, Type = __partType, Value = __value });
+                        globals[formulaPart.TableName].Add(formulaPart.FieldName, new GNTV { Name = formulaPart.FieldName, Type = (GlobalDbType)__partType, Value = __value });
                     }
                     catch (Exception e)
                     {
@@ -884,14 +885,29 @@ namespace ExpressBase.ServiceStack
 
             try
             {
-                if (customCol is DVNumericColumn)
-                    result = Convert.ToDecimal(customCol.GetCodeAnalysisScript().RunAsync(globals).Result.ReturnValue);
-                else if (customCol is DVBooleanColumn)
-                    result = Convert.ToBoolean(customCol.GetCodeAnalysisScript().RunAsync(globals).Result.ReturnValue);
-                else if (customCol is DVDateTimeColumn)
-                    result = Convert.ToDateTime(customCol.GetCodeAnalysisScript().RunAsync(globals).Result.ReturnValue);
+                if (_dv.EvaluatorVersion == EvaluatorVersion.Version_1)
+                {
+                    if (customCol is DVNumericColumn)
+                        result = Convert.ToDecimal(customCol.GetCodeAnalysisScript().RunAsync(globals).Result.ReturnValue);
+                    else if (customCol is DVBooleanColumn)
+                        result = Convert.ToBoolean(customCol.GetCodeAnalysisScript().RunAsync(globals).Result.ReturnValue);
+                    else if (customCol is DVDateTimeColumn)
+                        result = Convert.ToDateTime(customCol.GetCodeAnalysisScript().RunAsync(globals).Result.ReturnValue);
+                    else
+                        result = customCol.GetCodeAnalysisScript().RunAsync(globals).Result.ReturnValue.ToString();
+                }
                 else
-                    result = customCol.GetCodeAnalysisScript().RunAsync(globals).Result.ReturnValue.ToString();
+                {
+                    if (customCol is DVNumericColumn)
+                        result = Convert.ToDecimal(customCol.ExecuteExpressionV2(globals, customCol.FormulaDataFieldsUsed));
+                    else if (customCol is DVBooleanColumn)
+                        result = Convert.ToBoolean(customCol.ExecuteExpressionV2(globals, customCol.FormulaDataFieldsUsed));
+                    else if (customCol is DVDateTimeColumn)
+                        result = Convert.ToDateTime(customCol.ExecuteExpressionV2(globals, customCol.FormulaDataFieldsUsed));
+                    else
+                        result = customCol.ExecuteExpressionV2(globals, customCol.FormulaDataFieldsUsed);
+
+                }
             }
             catch (Exception e)
             {
@@ -1006,7 +1022,7 @@ namespace ExpressBase.ServiceStack
                     }
                 }
 
-                Globals globals = new Globals();
+                EbVisualizationGlobals globals = new EbVisualizationGlobals();
                 this.PreCustomColumDoCalc(ref _dataset, Parameters, _dv, globals);
                 this.GetDictonaries4Columns(_dv);
                 EbDataTable _formattedTable = _dataset.Tables[0].GetEmptyTable();
@@ -1390,7 +1406,7 @@ namespace ExpressBase.ServiceStack
 
                 dataset = _dataset;
                 EbDataSet tempdataset = new EbDataSet();
-                Globals globals = new Globals();
+                EbVisualizationGlobals globals = new EbVisualizationGlobals();
                 Dictionary<string, DynamicObj> _hourCount = new Dictionary<string, DynamicObj>();
                 Dictionary<int, List<object>> summary = new Dictionary<int, List<object>>();
                 this.CreateCustomcolumn4Calendar(_dataset, ref tempdataset, Parameters, ref _dv, ref _hourCount, ref summary);
@@ -1917,7 +1933,7 @@ namespace ExpressBase.ServiceStack
 
         }
 
-        public void RecursiveGetTreeChilds(Node<EbDataRow> Nodedr, EbDataVisualization _dv, CultureInfo _user_culture, User _user, ref EbDataTable _formattedTable, ref Globals globals, bool bObfuscute, bool _isexcel, ref Dictionary<int, List<object>> Summary, ref int i, int count, bool isTree)
+        public void RecursiveGetTreeChilds(Node<EbDataRow> Nodedr, EbDataVisualization _dv, CultureInfo _user_culture, User _user, ref EbDataTable _formattedTable, ref EbVisualizationGlobals globals, bool bObfuscute, bool _isexcel, ref Dictionary<int, List<object>> Summary, ref int i, int count, bool isTree)
         {
             foreach (Node<EbDataRow> dr in Nodedr.Children)
             {
@@ -1932,7 +1948,7 @@ namespace ExpressBase.ServiceStack
 
         }
 
-        public void DataTable2FormatedTable(EbDataRow row, EbDataVisualization _dv, CultureInfo _user_culture, User _user, ref EbDataTable _formattedTable, ref Globals globals, bool bObfuscute, bool _isexcel, ref Dictionary<int, List<object>> Summary, int i, int count, bool isgroup = false, int level = 0, bool isTree = false)
+        public void DataTable2FormatedTable(EbDataRow row, EbDataVisualization _dv, CultureInfo _user_culture, User _user, ref EbDataTable _formattedTable, ref EbVisualizationGlobals globals, bool bObfuscute, bool _isexcel, ref Dictionary<int, List<object>> Summary, int i, int count, bool isgroup = false, int level = 0, bool isTree = false)
         {
             bool isnotAdded = true;
             try
@@ -2142,7 +2158,7 @@ namespace ExpressBase.ServiceStack
                                     }
                                 }
 
-                                this.conditinallyformatColumn(col, ref _formattedData, _unformattedData, row, ref globals);
+                                this.conditinallyformatColumn(col, ref _formattedData, _unformattedData, row, ref globals, _dv.EvaluatorVersion);
                                 if (col is DVPhoneColumn)
                                     this.ModifyPhonecolumn(col, ref _formattedData);
                             }
@@ -2819,7 +2835,7 @@ namespace ExpressBase.ServiceStack
             return "<span class='columntooltip' data-toggle='popover' data-contents='" + info.ToBase64() + "'>" + formatted + "</span>"; ;
         }
 
-        public void CreateIntermediateDict(EbDataRow row, EbDataVisualization _dv, CultureInfo _user_culture, User _user, ref EbDataTable _formattedTable, ref Globals globals, bool _isexcel, int i)
+        public void CreateIntermediateDict(EbDataRow row, EbDataVisualization _dv, CultureInfo _user_culture, User _user, ref EbDataTable _formattedTable, ref EbVisualizationGlobals globals, bool _isexcel, int i)
         {
             foreach (DVBaseColumn col in dependencyTable)
             {
@@ -2828,7 +2844,7 @@ namespace ExpressBase.ServiceStack
                     if (col.IsCustomColumn)
                     {
                         if (col is DVButtonColumn)
-                            ProcessButtoncolumn(row, globals, col);
+                            ProcessButtoncolumn(row, globals, col, _dv.EvaluatorVersion);
                         else if (col is DVApprovalColumn)
                             ProcessApprovalcolumn(col, row, _user);
                         else if (col is DVActionColumn)
@@ -3426,11 +3442,11 @@ ORDER BY
             return data.Substring(0, data.Length - 1);
         }
 
-        public void ProcessButtoncolumn(EbDataRow row, Globals globals, DVBaseColumn customCol)
+        public void ProcessButtoncolumn(EbDataRow row, EbVisualizationGlobals globals, DVBaseColumn customCol, EvaluatorVersion EvaluatorVersion)
         {
             if (customCol is DVButtonColumn)
             {
-                bool result = (customCol as DVButtonColumn).RenderCondition.EvaluateExpression(row, ref globals);
+                bool result = (customCol as DVButtonColumn).RenderCondition.EvaluateExpression(row, ref globals, EvaluatorVersion);
                 if ((customCol as DVButtonColumn).RenderCondition.RenderAS == AdvancedRenderType.Default)
                 {
                     if (result == (customCol as DVButtonColumn).RenderCondition.GetBoolValue())
@@ -3462,7 +3478,7 @@ ORDER BY
         }
 
         public void DataTable2FormatedTable4Calendar(EbDataRow row, List<EbDataRow> Customrows, EbDataVisualization _dv, CultureInfo _user_culture, User _user,
-            ref EbDataTable _formattedTable, ref Globals globals, int i, Dictionary<string, DynamicObj> _hourCount, DVBaseColumn DateColumn, ref Dictionary<int, List<object>> summary)
+            ref EbDataTable _formattedTable, ref EbVisualizationGlobals globals, int i, Dictionary<string, DynamicObj> _hourCount, DVBaseColumn DateColumn, ref Dictionary<int, List<object>> summary)
         {
             try
             {
@@ -3489,7 +3505,7 @@ ORDER BY
         }
 
         public void CalendarProcessing(Dictionary<string, DynamicObj> _hourCount, ref EbDataTable _formattedTable, List<EbDataRow> Customrows, DVBaseColumn DateColumn,
-            EbDataVisualization _dv, bool _islink, int i, CultureInfo _user_culture, User _user, ref Globals globals, ref Dictionary<int, List<object>> summary)
+            EbDataVisualization _dv, bool _islink, int i, CultureInfo _user_culture, User _user, ref EbVisualizationGlobals globals, ref Dictionary<int, List<object>> summary)
         {
             try
             {
@@ -3526,7 +3542,7 @@ ORDER BY
                                     var _data = dr[datacol.OIndex];
                                     summaryval = Convert.ToInt32(_data);
 
-                                    this.conditinallyformatColumn(datacol, ref _data, _data, dr, ref globals);
+                                    this.conditinallyformatColumn(datacol, ref _data, _data, dr, ref globals, _dv.EvaluatorVersion);
 
                                     _hourCount[CalendarCol.Name].Value = _data;
                                 }
@@ -3737,7 +3753,7 @@ ORDER BY
             return Regex.Replace(newstr, "[^a-zA-Z0-9_]+", "_");
         }
 
-        public object formatColumn(CalendarDynamicColumn col, object _unformattedData, CultureInfo _user_culture, User _user, ref Globals globals)
+        public object formatColumn(CalendarDynamicColumn col, object _unformattedData, CultureInfo _user_culture, User _user, ref EbVisualizationGlobals globals)
         {
             try
             {
@@ -3904,7 +3920,7 @@ ORDER BY
             }
         }
 
-        public void conditinallyformatColumn(DVBaseColumn col, ref object _formattedData, object _unformattedData, EbDataRow row, ref Globals globals)
+        public void conditinallyformatColumn(DVBaseColumn col, ref object _formattedData, object _unformattedData, EbDataRow row, ref EbVisualizationGlobals globals, EvaluatorVersion EvaluatorVersion)
         {
             try
             {
@@ -3912,7 +3928,7 @@ ORDER BY
                 {
                     if (cond is AdvancedCondition)
                     {
-                        bool result = (cond as AdvancedCondition).EvaluateExpression(row, ref globals);
+                        bool result = (cond as AdvancedCondition).EvaluateExpression(row, ref globals, EvaluatorVersion);
                         if ((cond as AdvancedCondition).RenderAS == AdvancedRenderType.Default)
                         {
                             if (result == (cond as AdvancedCondition).GetBoolValue())
