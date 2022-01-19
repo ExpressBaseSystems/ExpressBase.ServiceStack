@@ -1717,10 +1717,11 @@ namespace ExpressBase.ServiceStack.Services
             try
             {
                 Console.WriteLine("GetFormDraftRequest Service start");
-                EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId);////////
+                EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId, request.CurrentLoc);////////
                 string Json = string.Empty;
                 string Qry = $@"SELECT id, form_data_json, eb_loc_id, eb_created_by, eb_created_at, eb_lastmodified_at FROM eb_form_drafts
-                                    WHERE id = @id AND form_ref_id = @form_ref_id AND eb_created_by = @eb_created_by AND is_submitted = 'F' AND eb_del = 'F';";
+                                    WHERE id = @id AND form_ref_id = @form_ref_id AND is_submitted = 'F' AND eb_del = 'F' AND
+                                        ((eb_created_by = @eb_created_by AND COALESCE(draft_type, 0)={(int)FormDraftTypes.NormalDraft}) OR draft_type = {(int)FormDraftTypes.ErrorBin}); ";
                 DbParameter[] parameters = new DbParameter[]
                 {
                     this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.DraftId),
@@ -1732,6 +1733,24 @@ namespace ExpressBase.ServiceStack.Services
                     throw new FormException("Not Found.", (int)HttpStatusCode.NotFound, $"Record not found", "SaveFormDraftRequest -> Edit");
                 else
                     Json = Convert.ToString(dt.Rows[0][1]);
+
+                try
+                {
+                    EbWebForm destForm = this.GetWebFormObject(request.RefId, null, null, request.CurrentLoc);
+                    destForm.UserObj = FormObj.UserObj;
+                    destForm.SolutionObj = FormObj.SolutionObj;
+                    WebformData data = JsonConvert.DeserializeObject<WebformData>(Json);
+                    data.MasterTable = FormObj.TableName;
+                    FormObj.FormData = data;
+                    FormObj.MergeFormData();
+                    FormObj.FormatImportData(EbConnectionFactory.DataDB, this, destForm);
+                    Json = JsonConvert.SerializeObject(destForm.FormData);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("GetFormDraftRequest (add DGsRowDataModel error): " + ex.Message);
+                }
+
                 Console.WriteLine("GetFormDraftRequest returning");
 
                 WebformDataWrapper dataWrapper = new WebformDataWrapper { Status = (int)HttpStatusCode.OK, Message = "success", FormData = new WebformData() };
