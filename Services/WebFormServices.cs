@@ -1315,12 +1315,13 @@ namespace ExpressBase.ServiceStack.Services
                 Console.WriteLine("Insert/Update WebFormData : AfterExecutionIfUserCreated start - " + DateTime.Now);
                 FormObj.AfterExecutionIfUserCreated(this, this.EbConnectionFactory.EmailConnection, MessageProducer3, request.WhichConsole, MetaData);
                 Console.WriteLine("Insert/Update WebFormData end : Execution Time = " + (DateTime.Now - startdt).TotalMilliseconds);
+                bool isMobInsert = request.WhichConsole == RoutingConstants.MC;
 
                 return new InsertDataFromWebformResponse()
                 {
                     Message = "Success",
                     RowId = FormObj.TableRowId,
-                    FormData = JsonConvert.SerializeObject(FormObj.FormData),
+                    FormData = isMobInsert ? null : JsonConvert.SerializeObject(FormObj.FormData),
                     RowAffected = 1,
                     AffectedEntries = r,
                     Status = (int)HttpStatusCode.OK,
