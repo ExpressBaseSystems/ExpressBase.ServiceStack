@@ -359,19 +359,20 @@ SELECT CURRENT_TIMESTAMP AT TIME ZONE 'UTC'; ";
                     }
                     else
                     {
+                        string json = row["obj_json"]?.ToString();
                         appData.WebObjects.Add(new WebObjectsWraper
                         {
                             Name = row["obj_name"]?.ToString(),
                             DisplayName = row["display_name"]?.ToString(),
                             Version = row["version_num"]?.ToString(),
-                            Json = row["obj_json"]?.ToString(),
+                            Json = json,
                             RefId = row["refid"]?.ToString(),
                             ObjectType = objType.IntCode
                         });
 
-                        if (objType.IntCode == EbObjectTypes.iReport)
+                        if (!string.IsNullOrEmpty(json) && objType.IntCode == EbObjectTypes.iReport)
                         {
-                            EbReport Report = EbSerializers.Json_Deserialize(row["obj_json"]?.ToString());
+                            EbReport Report = EbSerializers.Json_Deserialize(json);
 
                             foreach (EbReportHeader r_header in Report.ReportHeaders)
                                 FetchImages(r_header.GetFields());
