@@ -17,6 +17,8 @@ using Newtonsoft.Json;
 using ServiceStack;
 using ExpressBase.Objects.Helpers;
 using ExpressBase.Common.LocationNSolution;
+using ExpressBase.Common.ServiceClients;
+using ExpressBase.Common.EbServiceStack.ReqNRes;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -25,7 +27,7 @@ namespace ExpressBase.ServiceStack.Services
     {
         const string EBPARAM_LOCID = "eb_loc_id";
 
-        public MobileServices(IEbConnectionFactory _dbf, IMessageProducer _mqp) : base(_dbf, _mqp) { }
+        public MobileServices(IEbConnectionFactory _dbf, IEbStaticFileClient _sfc, IMessageProducer _mqp) : base(_dbf, _sfc, _mqp) { }
 
         public CreateMobileFormTableResponse Post(CreateMobileFormTableRequest request)
         {
@@ -365,6 +367,32 @@ SELECT CURRENT_TIMESTAMP AT TIME ZONE 'UTC'; ";
                             RefId = row["refid"]?.ToString(),
                             ObjectType = objType.IntCode
                         });
+
+                        if (objType.IntCode == EbObjectTypes.iReport)
+                        {
+                            EbReport Report = EbSerializers.Json_Deserialize(row["obj_json"]?.ToString());
+
+                            foreach (EbReportHeader r_header in Report.ReportHeaders)
+                                data.Images.AddRange(FetchImages(r_header.GetFields() ));                        
+
+                            foreach (EbReportFooter r_footer in Report.ReportFooters)
+                                data.Images.AddRange(FetchImages(r_footer.GetFields()));
+
+                            foreach (EbPageHeader p_header in Report.PageHeaders)
+                                data.Images.AddRange(FetchImages(p_header.GetFields()));
+
+                            foreach (EbReportDetail detail in Report.Detail)
+                                data.Images.AddRange(FetchImages(detail.GetFields()));
+
+                            foreach (EbPageFooter p_footer in Report.PageFooters)
+                                data.Images.AddRange(FetchImages(p_footer.GetFields()));
+
+                            foreach (EbReportGroup group in Report.ReportGroups)
+                            {
+                                data.Images.AddRange(FetchImages(group.GroupHeader.GetFields()));
+                                data.Images.AddRange(FetchImages(group.GroupFooter.GetFields()));                                
+                            }
+                        }
                     }
                 }
             }
@@ -373,6 +401,46 @@ SELECT CURRENT_TIMESTAMP AT TIME ZONE 'UTC'; ";
                 Console.WriteLine("exception at get all application [MobileSolutionDataRequestV2] ::" + ex.Message);
             }
             return data;
+        }
+
+        public List<byte[]> FetchImages(List<EbReportField> fields)
+        {
+            List<byte[]> Images = new List<byte[]>();
+
+            foreach (EbReportField f in fields)
+            {
+                if (f is EbImg)
+                {
+                    byte[] b = GetImage((f as EbImg).ImageRefId);
+                    if (!b.IsEmpty())
+                    {
+                        Images.Add(b);
+                    }
+                }
+            }
+            return Images;
+        }
+        public byte[] GetImage(int refId)
+        {
+            DownloadFileResponse dfs = null;
+
+            byte[] fileByte = new byte[0];
+            dfs = FileClient.Get
+                 (new DownloadImageByIdRequest
+                 {
+                     ImageInfo = new ImageMeta
+                     {
+                         FileRefId = refId,
+                         FileCategory = Common.Enums.EbFileCategory.Images
+                     }
+                 });
+            if (dfs.StreamWrapper != null)
+            {
+                dfs.StreamWrapper.Memorystream.Position = 0;
+                fileByte = dfs.StreamWrapper.Memorystream.ToBytes();
+            }
+
+            return fileByte;
         }
 
         public EbMobileSolutionData Get(MobileSolutionDataRequest request)
