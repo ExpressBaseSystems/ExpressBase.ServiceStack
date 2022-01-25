@@ -29,6 +29,7 @@ namespace ExpressBase.ServiceStack.Services
 
         public MobileServices(IEbConnectionFactory _dbf, IEbStaticFileClient _sfc, IMessageProducer _mqp) : base(_dbf, _sfc, _mqp) { }
 
+        Dictionary<int, byte[]> Images = new Dictionary<int, byte[]>();
         public CreateMobileFormTableResponse Post(CreateMobileFormTableRequest request)
         {
             CreateMobileFormTableResponse response = new CreateMobileFormTableResponse();
@@ -373,24 +374,24 @@ SELECT CURRENT_TIMESTAMP AT TIME ZONE 'UTC'; ";
                             EbReport Report = EbSerializers.Json_Deserialize(row["obj_json"]?.ToString());
 
                             foreach (EbReportHeader r_header in Report.ReportHeaders)
-                                data.Images.AddRange(FetchImages(r_header.GetFields() ));                        
+                                FetchImages(r_header.GetFields());
 
                             foreach (EbReportFooter r_footer in Report.ReportFooters)
-                                data.Images.AddRange(FetchImages(r_footer.GetFields()));
+                                FetchImages(r_footer.GetFields());
 
                             foreach (EbPageHeader p_header in Report.PageHeaders)
-                                data.Images.AddRange(FetchImages(p_header.GetFields()));
+                                FetchImages(p_header.GetFields());
 
                             foreach (EbReportDetail detail in Report.Detail)
-                                data.Images.AddRange(FetchImages(detail.GetFields()));
+                                FetchImages(detail.GetFields());
 
                             foreach (EbPageFooter p_footer in Report.PageFooters)
-                                data.Images.AddRange(FetchImages(p_footer.GetFields()));
+                                FetchImages(p_footer.GetFields());
 
                             foreach (EbReportGroup group in Report.ReportGroups)
                             {
-                                data.Images.AddRange(FetchImages(group.GroupHeader.GetFields()));
-                                data.Images.AddRange(FetchImages(group.GroupFooter.GetFields()));                                
+                                FetchImages(group.GroupHeader.GetFields());
+                                FetchImages(group.GroupFooter.GetFields());
                             }
                         }
                     }
@@ -400,13 +401,12 @@ SELECT CURRENT_TIMESTAMP AT TIME ZONE 'UTC'; ";
             {
                 Console.WriteLine("exception at get all application [MobileSolutionDataRequestV2] ::" + ex.Message);
             }
+            data.Images = this.Images;
             return data;
         }
 
-        public List<byte[]> FetchImages(List<EbReportField> fields)
+        public void FetchImages(List<EbReportField> fields)
         {
-            List<byte[]> Images = new List<byte[]>();
-
             foreach (EbReportField f in fields)
             {
                 if (f is EbImg)
@@ -414,11 +414,10 @@ SELECT CURRENT_TIMESTAMP AT TIME ZONE 'UTC'; ";
                     byte[] b = GetImage((f as EbImg).ImageRefId);
                     if (!b.IsEmpty())
                     {
-                        Images.Add(b);
+                        this.Images.Add((f as EbImg).ImageRefId, b);
                     }
                 }
             }
-            return Images;
         }
         public byte[] GetImage(int refId)
         {
