@@ -1278,58 +1278,32 @@ namespace ExpressBase.ServiceStack.Services
         {
 
             List<string> OldPermission = new List<string>();
-            List<string> OldUsers = new List<string>();
+            List<int> OldUsers = new List<int>();
             SaveRoleResponse resp = new SaveRoleResponse() { id = 0 };
             int role_id = Convert.ToInt32(request.Colvalues["roleid"]);
-            ////get previous permission and user list for comparission
-            try
-            {
-                EbDataTable edp = this.EbConnectionFactory.DataDB.DoQuery($"SELECT permissionname FROM eb_role2permission WHERE role_id = :id AND COALESCE(eb_del, 'F') = 'F';",
-                            new DbParameter[]
-                            {
-                this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, role_id)
-                            });
 
-                if (edp.Rows.Count > 0)
-                {
-                    foreach (EbDataRow dr in edp.Rows)
-                    {
-                        OldPermission.Add(dr[0].ToString());
-                    }
-                }
+            string query = "SELECT permissionname FROM eb_role2permission WHERE role_id = :id AND COALESCE(eb_del, 'F') = 'F'; " +
+                "SELECT A.id FROM eb_users A, eb_role2user B WHERE A.id = B.user_id AND COALESCE(A.eb_del, 'F') = 'F' AND COALESCE(B.eb_del, 'F') = 'F' AND B.role_id = :id; " +
+                "SELECT id FROM eb_roles WHERE LOWER(role_name) LIKE LOWER(@roleName) AND id <> @id; ";
 
-            }
-            catch (Exception e)
+            EbDataSet ds = this.EbConnectionFactory.DataDB.DoQueries(query, new DbParameter[]
             {
-                Console.WriteLine("fetch permission" + e.Message + e.StackTrace);
-            }
-            try
-            {
-                EbDataTable edu = this.EbConnectionFactory.DataDB.DoQuery($"SELECT A.id FROM eb_users A, eb_role2user B WHERE A.id = B.user_id AND COALESCE(A.eb_del, 'F') = 'F' AND COALESCE(B.eb_del, 'F') = 'F' AND B.role_id = :id;",
-                            new DbParameter[]{
-                this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, role_id)
-                            });
-                if (edu.Rows.Count > 0)
-                {
-                    foreach (EbDataRow dr in edu.Rows)
-                    {
-                        OldUsers.Add(dr[0].ToString());
-                    }
-                }
+                this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, role_id),
+                this.EbConnectionFactory.DataDB.GetNewParameter("roleName", EbDbTypes.String, request.Colvalues["role_name"])
+            });
 
-            }
-            catch (Exception e1)
+            foreach (EbDataRow dr in ds.Tables[0].Rows)
             {
-                Console.WriteLine("fetch user" + e1.Message + e1.StackTrace);
+                if (!OldPermission.Contains(dr[0].ToString()))
+                    OldPermission.Add(dr[0].ToString());
+            }
+            foreach (EbDataRow dr in ds.Tables[1].Rows)
+            {
+                if (int.TryParse(dr[0].ToString(), out int uid) && !OldUsers.Contains(uid))
+                    OldUsers.Add(uid);
             }
 
-            EbDataTable d = this.EbConnectionFactory.DataDB.DoQuery($"SELECT id FROM eb_roles WHERE LOWER(role_name) LIKE LOWER(@roleName) AND id <> @id;",
-                new DbParameter[]
-                {
-                    this.EbConnectionFactory.DataDB.GetNewParameter("roleName", EbDbTypes.String, request.Colvalues["role_name"]),
-                    this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, role_id)
-                });
-            if (d.Rows.Count > 0)
+            if (ds.Tables[2].Rows.Count > 0)
             {
                 resp.id = -1;
                 return resp;
@@ -1358,11 +1332,46 @@ namespace ExpressBase.ServiceStack.Services
             }
             else
             {
-                EbDataTable ds = this.EbConnectionFactory.DataDB.DoQuery(this.EbConnectionFactory.DataDB.EB_SAVEROLES_QUERY, parameters.ToArray());
-                resp.id = Convert.ToInt32(ds.Rows[0][0]);
+                EbDataTable ds2 = this.EbConnectionFactory.DataDB.DoQuery(this.EbConnectionFactory.DataDB.EB_SAVEROLES_QUERY, parameters.ToArray());
+                resp.id = Convert.ToInt32(ds2.Rows[0][0]);
             }
 
             try
+            {
+                UpdateUserIfPermissionChanged(request, OldPermission, OldUsers);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Exception in update user obj process/mq_call: " + ex.Message + ex.StackTrace);
+            }
+
+            return resp;
+        }
+
+        private void UpdateUserIfPermissionChanged(SaveRoleRequest request, List<string> OldPermission, List<int> OldUsers)
+        {
+            List<string> NewPermission = string.IsNullOrWhiteSpace(request.Colvalues["permission"]?.ToString()) ?
+                new List<string>() : request.Colvalues["permission"].ToString().Split(',').ToList();
+            List<int> NewUsers = string.IsNullOrWhiteSpace(request.Colvalues["users"]?.ToString()) ?
+                new List<int>() : request.Colvalues["users"].ToString().Split(',').Select(e => int.Parse(e)).ToList();
+
+            List<int> outUsers = new List<int>();
+
+            if (NewPermission.Except(OldPermission).Count() > 0 || OldPermission.Except(NewPermission).Count() > 0)
+            {
+                NewUsers.AddRange(OldUsers);
+                outUsers.AddRange(NewUsers.Distinct().ToList());
+            }
+            else
+            {
+                if (NewUsers.Except(OldUsers).Count() > 0)
+                    outUsers.AddRange(NewUsers.Except(OldUsers).ToList());
+
+                if (OldUsers.Except(NewUsers).Count() > 0)
+                    outUsers.AddRange(OldUsers.Except(NewUsers).ToList());
+            }
+
+            if (outUsers.Count > 0)
             {
                 this.MessageProducer3.Publish(new SaveRoleMqRequest
                 {
@@ -1372,21 +1381,9 @@ namespace ExpressBase.ServiceStack.Services
                     UserId = request.UserId,
                     UserAuthId = request.UserAuthId,
                     WhichConsole = request.WhichConsole,
-                    NewUserIds = request.Colvalues["users"].ToString(),
-                    New_Permission = request.Colvalues["permission"].ToString(),
-                    Old_Permission = OldPermission,
-                    OldUserIds = OldUsers
-
-
+                    UserIdsToUpdate = outUsers
                 });
-
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine("user role changes-called message queue" + ex.Message + ex.StackTrace);
-            }
-
-            return resp;
         }
 
         //--API KEY GENERATION
