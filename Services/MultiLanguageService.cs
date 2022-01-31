@@ -162,17 +162,17 @@ namespace ExpressBase.ServiceStack.Services
                 dt1 = this.EbConnectionFactory.ObjectsDB.DoNonQuery(query1.ToString(), parameters1.ToArray());
             if (list.Count() == 0)
                 return new MLUpdateKeyValueResponse { Data = dt1 };
-            StringBuilder sb = new StringBuilder();           
-            List<DbParameter> parameters2 = new List<DbParameter>();           
+            StringBuilder sb = new StringBuilder();
+            List<DbParameter> parameters2 = new List<DbParameter>();
             rcount = 0;
             foreach (MLKeyValue obj in list)
             {
                 string t = string.Format("UPDATE eb_keyvalue SET value=@{0} WHERE id=@{1};", "keyvalvalue_" + rcount, "keyvalid_" + rcount);
-                sb.Append(t);                
+                sb.Append(t);
                 parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("keyvalid_" + rcount, EbDbTypes.Int64, obj.KeyVal_Id));
                 parameters2.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("keyvalvalue_" + rcount, EbDbTypes.String, obj.KeyVal_Value));
                 rcount++;
-            }            
+            }
             var dt2 = this.EbConnectionFactory.ObjectsDB.DoNonQuery(sb.ToString(), parameters2.ToArray());
             return new MLUpdateKeyValueResponse { Data = dt1 + dt2 };
         }
@@ -182,29 +182,31 @@ namespace ExpressBase.ServiceStack.Services
             List<MLAddKey> list = request.Data;
 
             string query1 = EbConnectionFactory.ObjectsDB.EB_MLADDKEY;
-            var con = this.EbConnectionFactory.ObjectsDB.GetNewConnection();
-            con.Open();
-            DbCommand cmd = this.EbConnectionFactory.ObjectsDB.GetNewCommand(con, query1);
-            cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("KEY", EbDbTypes.String, request.Key));
-            var key_id = cmd.ExecuteScalar().ToString();
-
-            StringBuilder query2 = new StringBuilder();
-            query2.Append(@"INSERT INTO eb_keyvalue (key_id,lang_id,value) VALUES");
-            string kid = "@KEY_ID", lid = "@LANG_ID", kval = "@KEY_VALUE";
-            int i = 0;
-            List<DbParameter> parameters = new List<DbParameter>();
-            foreach (MLAddKey obj in request.Data)
+            using (var con = this.EbConnectionFactory.ObjectsDB.GetNewConnection())
             {
-                query2.Append("(" + (kid + i) + "," + (lid + i) + "," + (kval + i) + "),");
-                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter((kid + i), EbDbTypes.Int64, key_id));
-                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter((lid + i), EbDbTypes.Int32, obj.Lang_Id));
-                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter((kval + i), EbDbTypes.String, obj.Key_Value));
-                i++;
+                con.Open();
+                DbCommand cmd = this.EbConnectionFactory.ObjectsDB.GetNewCommand(con, query1);
+                cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("KEY", EbDbTypes.String, request.Key));
+                var key_id = cmd.ExecuteScalar().ToString();
+
+                StringBuilder query2 = new StringBuilder();
+                query2.Append(@"INSERT INTO eb_keyvalue (key_id,lang_id,value) VALUES");
+                string kid = "@KEY_ID", lid = "@LANG_ID", kval = "@KEY_VALUE";
+                int i = 0;
+                List<DbParameter> parameters = new List<DbParameter>();
+                foreach (MLAddKey obj in request.Data)
+                {
+                    query2.Append("(" + (kid + i) + "," + (lid + i) + "," + (kval + i) + "),");
+                    parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter((kid + i), EbDbTypes.Int64, key_id));
+                    parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter((lid + i), EbDbTypes.Int32, obj.Lang_Id));
+                    parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter((kval + i), EbDbTypes.String, obj.Key_Value));
+                    i++;
+                }
+                query2.Length = query2.Length - 1;
+                query2.Append(";");
+                var dt = this.EbConnectionFactory.ObjectsDB.DoNonQuery(query2.ToString(), parameters.ToArray());
+                return new MLAddKeyResponse { KeyId = Convert.ToInt32(key_id), RowAffected = dt };
             }
-            query2.Length = query2.Length - 1;
-            query2.Append(";");
-            var dt = this.EbConnectionFactory.ObjectsDB.DoNonQuery(query2.ToString(), parameters.ToArray());
-            return new MLAddKeyResponse { KeyId = Convert.ToInt32(key_id), RowAffected = dt };
         }
     }
 }

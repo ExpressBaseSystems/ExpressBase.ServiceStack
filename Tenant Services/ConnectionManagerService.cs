@@ -855,23 +855,25 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     string vendor = DataDB.Vendor.ToString();
                     string Urlstart = string.Format("ExpressBase.Common.sqlscripts.{0}.", vendor.ToLower());
-                    DbConnection con = DataDB.GetNewConnection();
-                    con.Open();
-                    var assembly = typeof(sqlscripts).Assembly;
-                    string result = null;
-                    Stream stream = assembly.GetManifestResourceStream(Urlstart + "filesdb.tablecreate.eb_files_bytea.sql");
-                    if (stream != null)
+                    using (DbConnection con = DataDB.GetNewConnection())
                     {
+                        con.Open();
+                        var assembly = typeof(sqlscripts).Assembly;
+                        string result = null;
+                        Stream stream = assembly.GetManifestResourceStream(Urlstart + "filesdb.tablecreate.eb_files_bytea.sql");
+                        if (stream != null)
+                        {
 
-                        StreamReader reader = new StreamReader(stream);
-                        result = reader.ReadToEnd();
+                            StreamReader reader = new StreamReader(stream);
+                            result = reader.ReadToEnd();
+                        }
+                        else
+                        {
+                            Console.WriteLine(" Reading reference - stream is null -" + Urlstart + "filesdb.tablecreate.eb_files_bytea.sql");
+                        }
+                        var cmdtxt1 = DataDB.GetNewCommand(con, result);
+                        cmdtxt1.ExecuteNonQuery();
                     }
-                    else
-                    {
-                        Console.WriteLine(" Reading reference - stream is null -" + Urlstart + "filesdb.tablecreate.eb_files_bytea.sql");
-                    }
-                    var cmdtxt1 = DataDB.GetNewCommand(con, result);
-                    cmdtxt1.ExecuteNonQuery();
                 }
             }
             catch (Exception e)
@@ -945,7 +947,7 @@ namespace ExpressBase.ServiceStack.Services
                         OtpDelivery2fa = _temp.Rows[0]["otp_delivery_2fa"].ToString(),
                         IsOtpSigninEnabled = Convert.ToBoolean(_temp.Rows[0]["is_otp_signin"]),
                         OtpDeliverySignin = _temp.Rows[0]["otp_delivery_signin"].ToString(),
-                        
+
                     };
 
                     _temp = dt.Tables[1];
@@ -968,7 +970,7 @@ namespace ExpressBase.ServiceStack.Services
                         _intgre[Type].Add(new EbIntegrationData(_row));
                     }
                     resp.Integrations = _intgre;
-                } 
+                }
                 EbConnectionFactory _ebConnectionFactory = new EbConnectionFactory(request.IsolutionId, Redis);
                 if (_ebConnectionFactory.EmailConnection != null && _ebConnectionFactory.EmailConnection.Primary != null)
                 {
