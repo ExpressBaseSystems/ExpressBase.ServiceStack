@@ -19,6 +19,7 @@ using ExpressBase.Objects.Helpers;
 using ExpressBase.Common.LocationNSolution;
 using ExpressBase.Common.ServiceClients;
 using ExpressBase.Common.EbServiceStack.ReqNRes;
+using ExpressBase.Objects.WebFormRelated;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -269,7 +270,7 @@ namespace ExpressBase.ServiceStack.Services
         {
             EbMobileSolutionData data = new EbMobileSolutionData();
 
-            string idcheck = "AND EO.id = ANY(string_to_array(:ids, ',')::int[])";
+            string idcheck = "AND EO.id = ANY(string_to_array(@ids, ',')::int[])";
             string query = @"
 SELECT 
 	EO.id, EO.obj_name, EO.display_name, EO.obj_type, EOV.version_num, EOV.refid,
@@ -292,7 +293,10 @@ WHERE
 ORDER BY 
 	display_name;
 
-SELECT CURRENT_TIMESTAMP AT TIME ZONE 'UTC'; ";
+SELECT CURRENT_TIMESTAMP AT TIME ZONE 'UTC'; 
+
+SELECT DISTINCT id FROM eb_form_drafts WHERE draft_type = @draft_type AND eb_created_by = @eb_created_by AND 
+    COALESCE(is_submitted, 'F') = 'F' AND COALESCE(eb_del, 'F') = 'F' AND id =  ANY(STRING_TO_ARRAY(@err_ids, ',')::INT[]); ";
 
             data.CurrentUser = this.GetUserObject(request.UserAuthId);
             data.CurrentSolution = this.GetSolutionObject(request.SolnId);
@@ -303,8 +307,15 @@ SELECT CURRENT_TIMESTAMP AT TIME ZONE 'UTC'; ";
 
                 Dictionary<string, object> metaData = JsonConvert.DeserializeObject<Dictionary<string, object>>(request.MetaData);
                 DateTime date = metaData.ContainsKey("last_sync_ts") ? Convert.ToDateTime(metaData["last_sync_ts"]) : DateTime.MinValue;
+                List<int> draft_ids = metaData.ContainsKey("draft_ids") ? (List<int>)metaData["draft_ids"] : new List<int>();
                 EbDataSet ds;
-                List<DbParameter> param = new List<DbParameter>() { this.EbConnectionFactory.DataDB.GetNewParameter("last_sync_ts", EbDbTypes.DateTime, date) };
+                List<DbParameter> param = new List<DbParameter>()
+                {
+                    this.EbConnectionFactory.DataDB.GetNewParameter("last_sync_ts", EbDbTypes.DateTime, date),
+                    this.EbConnectionFactory.DataDB.GetNewParameter("draft_type", EbDbTypes.Int32, (int)FormDraftTypes.ErrorBin),
+                    this.EbConnectionFactory.DataDB.GetNewParameter("draft_type", EbDbTypes.Int32, request.UserId),
+                    this.EbConnectionFactory.DataDB.GetNewParameter("err_ids", EbDbTypes.String, String.Join(",", draft_ids))
+                };
 
                 if (data.CurrentUser.IsAdmin())
                 {
@@ -320,6 +331,9 @@ SELECT CURRENT_TIMESTAMP AT TIME ZONE 'UTC'; ";
                 ds = this.EbConnectionFactory.ObjectsDB.DoQueries(query, param.ToArray());
 
                 data.last_sync_ts = Convert.ToDateTime(ds.Tables[1].Rows[0][0]);
+
+                foreach (EbDataRow dr in ds.Tables[2].Rows)
+                    data.DraftIds.Add(Convert.ToInt32(dr[0]));
 
                 foreach (EbDataRow row in ds.Tables[0].Rows)
                 {

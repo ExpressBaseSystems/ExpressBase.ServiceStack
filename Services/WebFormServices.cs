@@ -1296,12 +1296,13 @@ namespace ExpressBase.ServiceStack.Services
         //Normal save
         public InsertDataFromWebformResponse Any(InsertDataFromWebformRequest request)
         {
+            EbWebForm FormObj = null;
             try
             {
                 Dictionary<string, string> MetaData = new Dictionary<string, string>();
                 DateTime startdt = DateTime.Now;
                 Console.WriteLine("Insert/Update WebFormData : start - " + startdt);
-                EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId, request.CurrentLoc);
+                FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId, request.CurrentLoc);
                 CheckDataPusherCompatibility(FormObj);
                 FormObj.TableRowId = request.RowId;
                 FormObj.FormData = JsonConvert.DeserializeObject<WebformData>(request.FormData);
@@ -1332,8 +1333,8 @@ namespace ExpressBase.ServiceStack.Services
             {
                 Console.WriteLine("FormException in Insert/Update WebFormData\nMessage : " + ex.Message + "\nMessageInternal : " + ex.MessageInternal + "\nStackTraceInternal : " + ex.StackTraceInternal + "\nStackTrace" + ex.StackTrace);
 
-                if (request.WhichConsole == TokenConstants.MC && request.RowId <= 0)
-                    return SubmitErrorAndGetResponse(request, ex);
+                if (IsErrorDraftCandidate(request, FormObj))
+                    return FormDraftsHelper.SubmitErrorAndGetResponse(this.EbConnectionFactory.DataDB, FormObj, request, ex);
 
                 return new InsertDataFromWebformResponse()
                 {
@@ -1347,8 +1348,8 @@ namespace ExpressBase.ServiceStack.Services
             {
                 Console.WriteLine("Exception in Insert/Update WebFormData\nMessage : " + ex.Message + "\nStackTrace : " + ex.StackTrace);
 
-                if (request.WhichConsole == TokenConstants.MC && request.RowId <= 0)
-                    return SubmitErrorAndGetResponse(request, ex);
+                if (IsErrorDraftCandidate(request, FormObj))
+                    return FormDraftsHelper.SubmitErrorAndGetResponse(this.EbConnectionFactory.DataDB, FormObj, request, ex);
 
                 return new InsertDataFromWebformResponse()
                 {
@@ -1360,10 +1361,23 @@ namespace ExpressBase.ServiceStack.Services
             }
         }
 
-        private InsertDataFromWebformResponse SubmitErrorAndGetResponse(InsertDataFromWebformRequest request, Exception ex)
+        //if "eb_created_at_device" is present in WebFormData then it is treated as mobile offline submission
+        private bool IsErrorDraftCandidate(InsertDataFromWebformRequest request, EbWebForm FormObj)
         {
-            EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId, request.CurrentLoc);
-            return FormDraftsHelper.SubmitErrorAndGetResponse(this.EbConnectionFactory.DataDB, FormObj, request, ex);
+            if (request.WhichConsole == TokenConstants.MC && request.RowId <= 0)
+            {
+                if (FormObj?.FormData?.MultipleTables != null)
+                {
+                    if (FormObj.FormData.MultipleTables.TryGetValue(FormObj.TableName, out SingleTable MTable) &&
+                        MTable.Count > 0 && MTable[0].GetColumn("eb_created_at_device") != null)
+                    {
+                        SingleColumn Col = MTable[0].GetColumn("eb_retry_count");
+                        if (Col == null || (int.TryParse(Col.Value?.ToString(), out int count) && count == 0))
+                            return true;
+                    }
+                }
+            }
+            return false;
         }
 
         public ExecuteReviewResponse Any(ExecuteReviewRequest request)
@@ -1734,7 +1748,7 @@ namespace ExpressBase.ServiceStack.Services
                     throw new FormException("Not Found.", (int)HttpStatusCode.NotFound, $"Record not found", "SaveFormDraftRequest -> Edit");
                 else
                     Json = Convert.ToString(dt.Rows[0][1]);
-                               
+
                 try
                 {
                     int.TryParse(dt.Rows[0][6]?.ToString(), out int type);
