@@ -309,7 +309,7 @@ SELECT DISTINCT id FROM eb_form_drafts WHERE draft_type = @draft_type AND eb_cre
 
                 Dictionary<string, object> metaData = JsonConvert.DeserializeObject<Dictionary<string, object>>(request.MetaData);
                 DateTime date = metaData.ContainsKey("last_sync_ts") ? Convert.ToDateTime(metaData["last_sync_ts"]) : DateTime.MinValue;
-                List<int> draft_ids = metaData.ContainsKey("draft_ids") ? (List<int>)metaData["draft_ids"] : new List<int>();
+                List<int> draft_ids = metaData.ContainsKey("draft_ids") ? JsonConvert.DeserializeObject<List<int>>(Convert.ToString(metaData["draft_ids"])) : new List<int>();
                 EbDataSet ds;
                 List<DbParameter> param = new List<DbParameter>()
                 {
