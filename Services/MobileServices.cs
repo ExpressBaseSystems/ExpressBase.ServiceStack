@@ -269,6 +269,11 @@ namespace ExpressBase.ServiceStack.Services
         public EbMobileSolutionData Post(MobileSolutionDataRequestV2 request)
         {
             EbMobileSolutionData data = new EbMobileSolutionData();
+            data.CurrentUser = this.GetUserObject(request.UserAuthId);
+            data.CurrentSolution = this.GetSolutionObject(request.SolnId);
+
+            if (!data.CurrentUser.IsAdmin() && data.CurrentSolution?.SolutionSettings?.MobileAppSettings?.MaintenanceMode == true)
+                throw new Exception("Maintenace mode is activated! Please sync after sometime");
 
             string idcheck = "AND EO.id = ANY(string_to_array(@ids, ',')::int[])";
             string query = @"
@@ -297,9 +302,6 @@ SELECT CURRENT_TIMESTAMP AT TIME ZONE 'UTC';
 
 SELECT DISTINCT id FROM eb_form_drafts WHERE draft_type = @draft_type AND eb_created_by = @eb_created_by AND 
     COALESCE(is_submitted, 'F') = 'F' AND COALESCE(eb_del, 'F') = 'F' AND id =  ANY(STRING_TO_ARRAY(@err_ids, ',')::INT[]); ";
-
-            data.CurrentUser = this.GetUserObject(request.UserAuthId);
-            data.CurrentSolution = this.GetSolutionObject(request.SolnId);
 
             try
             {
