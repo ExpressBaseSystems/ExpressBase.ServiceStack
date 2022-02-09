@@ -1371,9 +1371,9 @@ namespace ExpressBase.ServiceStack.Services
                     if (FormObj.FormData.MultipleTables.TryGetValue(FormObj.TableName, out SingleTable MTable) &&
                         MTable.Count > 0 && MTable[0].GetColumn("eb_created_at_device") != null)
                     {
-                        SingleColumn Col = MTable[0].GetColumn("eb_retry_count");
-                        if (Col == null || (int.TryParse(Col.Value?.ToString(), out int count) && count == 0))
-                            return true;
+                        //SingleColumn Col = MTable[0].GetColumn("eb_retry_count");
+                        //if (Col == null || (int.TryParse(Col.Value?.ToString(), out int count) && count == 0))
+                        return true;
                     }
                 }
             }
