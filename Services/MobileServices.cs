@@ -587,34 +587,31 @@ SELECT DISTINCT id FROM eb_form_drafts WHERE draft_type = @draft_type AND eb_cre
         private EbDataSet PullAppConfiguredData(EbMobileSettings Settings, int userid)
         {
             EbDataSet DataSet = new EbDataSet();
-
             try
             {
+                string FullQry = string.Empty;
+                List<DbParameter> dbParam = new List<DbParameter>();
+                dbParam.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_currentuser_id", EbDbTypes.Int32, userid));
+
                 foreach (DataImportMobile DI in Settings.DataImport)
                 {
                     int objtype = Convert.ToInt32(DI.RefId.Split(CharConstants.DASH)[2]);
 
                     if (objtype == (int)EbObjectTypes.DataReader)
                     {
-                        DataSourceDataSetResponse resp = this.Gateway.Send<DataSourceDataSetResponse>(new DataSourceDataSetRequest
-                        {
-                            RefId = DI.RefId,
-                            Params = new List<Param>
-                            {
-                                new Param
-                                {
-                                    Name = "eb_currentuser_id",
-                                    Type = ((int)EbDbTypes.Int32).ToString(),
-                                    Value = userid.ToString()
-                                }
-                            }
-                        });
-
-                        if (resp.DataSet.Tables.Any())
-                        {
-                            resp.DataSet.Tables[0].TableName = DI.TableName;
-                            DataSet.Tables.Add(resp.DataSet.Tables[0]);
-                        }
+                        EbDataReader _ds = EbFormHelper.GetEbObject<EbDataReader>(DI.RefId, null, this.Redis, this);
+                        FullQry += _ds.Sql + "; ";
+                    }
+                }
+                if (FullQry != string.Empty)
+                {
+                    DataSet = this.EbConnectionFactory.DataDB.DoQueries(FullQry, dbParam.ToArray());
+                    int i = 0;
+                    foreach (DataImportMobile DI in Settings.DataImport)
+                    {
+                        int objtype = Convert.ToInt32(DI.RefId.Split(CharConstants.DASH)[2]);
+                        if (objtype == (int)EbObjectTypes.DataReader)
+                            DataSet.Tables[i++].TableName = DI.TableName;
                     }
                 }
             }
