@@ -260,8 +260,10 @@ namespace ExpressBase.ServiceStack.Services
                 con.Open();
                 string str = string.Format(@"UPDATE eb_notifications SET message_seen = 'T' WHERE notification_id = '{0}' AND user_id = '{1}';",
                     request.NotificationId, request.UserId);
-                DbCommand cmd = this.EbConnectionFactory.DataDB.GetNewCommand(con, str);
-                cmd.ExecuteNonQuery();
+                using (DbCommand cmd = this.EbConnectionFactory.DataDB.GetNewCommand(con, str))
+                {
+                    cmd.ExecuteNonQuery();
+                }
             }
             string str1 = string.Format(@"
                                                 SELECT notification_id, notification, created_at 

@@ -57,34 +57,36 @@ namespace ExpressBase.ServiceStack.Services
                     using (DbConnection con = DataDB.GetNewConnection())
                     {
                         con.Open();
-                        DbCommand cmd = DataDB.GetNewCommand(con, string.Format("CREATE DATABASE {0};", request.DBName));
-                        int id = cmd.ExecuteNonQuery();
-                        if (id > 0)
+                        using (DbCommand cmd = DataDB.GetNewCommand(con, string.Format("CREATE DATABASE {0};", request.DBName)))
                         {
-                            Console.WriteLine("...........Created Database " + request.DBName);
+                            int id = cmd.ExecuteNonQuery();
+                            if (id > 0)
+                            {
+                                Console.WriteLine("...........Created Database " + request.DBName);
+                            }
+                            //_solutionConnections.DataDbConfig.DatabaseName = request.DBName;
+                            //DataDB = new EbConnectionFactory(_solutionConnections, request.DBName).DataDB;
+                            string usersql = string.Format("SELECT * FROM eb_assignprivileges('{0}_admin','{0}_ro','{0}_rw');", request.DBName);
+                            // EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(usersql);
+                            EbDataTable dt = DataDB.DoQuery(usersql);
+                            string extension = "";
+                            if (_solutionConnections.DataDbConfig.UserName.Split('@').Length > 1)
+                                extension = "@" + _solutionConnections.DataDbConfig.UserName.Split('@')[1];
+                            ebdbusers = new EbDbUsers
+                            {
+                                AdminUserName = request.DBName + "_admin" + extension,
+                                AdminPassword = dt.Rows[0][0].ToString(),
+                                ReadOnlyUserName = request.DBName + "_ro" + extension,
+                                ReadOnlyPassword = dt.Rows[0][1].ToString(),
+                                ReadWriteUserName = request.DBName + "_rw" + extension,
+                                ReadWritePassword = dt.Rows[0][2].ToString(),
+                            };
+                            EbConnectionsConfig _dcConnections = EbConnectionsConfigProvider.GetDataCenterConnections();
+                            _dcConnections.DataDbConfig.DatabaseName = request.DBName;
+                            _dcConnections.DataDbConfig.UserName = ebdbusers.AdminUserName;
+                            _dcConnections.DataDbConfig.Password = ebdbusers.AdminPassword;
+                            DataDB = new EbConnectionFactory(_dcConnections, request.DBName).DataDB;
                         }
-                        //_solutionConnections.DataDbConfig.DatabaseName = request.DBName;
-                        //DataDB = new EbConnectionFactory(_solutionConnections, request.DBName).DataDB;
-                        string usersql = string.Format("SELECT * FROM eb_assignprivileges('{0}_admin','{0}_ro','{0}_rw');", request.DBName);
-                        // EbDataTable dt = InfraConnectionFactory.DataDB.DoQuery(usersql);
-                        EbDataTable dt = DataDB.DoQuery(usersql);
-                        string extension = "";
-                        if (_solutionConnections.DataDbConfig.UserName.Split('@').Length > 1)
-                            extension = "@" + _solutionConnections.DataDbConfig.UserName.Split('@')[1];
-                        ebdbusers = new EbDbUsers
-                        {
-                            AdminUserName = request.DBName + "_admin" + extension,
-                            AdminPassword = dt.Rows[0][0].ToString(),
-                            ReadOnlyUserName = request.DBName + "_ro" + extension,
-                            ReadOnlyPassword = dt.Rows[0][1].ToString(),
-                            ReadWriteUserName = request.DBName + "_rw" + extension,
-                            ReadWritePassword = dt.Rows[0][2].ToString(),
-                        };
-                        EbConnectionsConfig _dcConnections = EbConnectionsConfigProvider.GetDataCenterConnections();
-                        _dcConnections.DataDbConfig.DatabaseName = request.DBName;
-                        _dcConnections.DataDbConfig.UserName = ebdbusers.AdminUserName;
-                        _dcConnections.DataDbConfig.Password = ebdbusers.AdminPassword;
-                        DataDB = new EbConnectionFactory(_dcConnections, request.DBName).DataDB;
                     }
                 }
 
@@ -240,8 +242,10 @@ namespace ExpressBase.ServiceStack.Services
                                 Environment.GetEnvironmentVariable(EnvironmentConstants.EB_DATACENTRE_ADMIN_USER).Split('@')[0]
                                 );
 
-                    DbCommand cmdtxt = DataCenterDataDB.GetNewCommand(con_p, sql2);
-                    cmdtxt.ExecuteNonQuery();
+                    using (DbCommand cmdtxt = DataCenterDataDB.GetNewCommand(con_p, sql2))
+                    {
+                        cmdtxt.ExecuteNonQuery();
+                    }
                 }
                 return new EbDbCreateResponse
                 {
@@ -274,8 +278,10 @@ namespace ExpressBase.ServiceStack.Services
                         Console.WriteLine(" Reading reference - stream is null -" + path);
                         return true;
                     }
-                    var cmdtxt1 = DataDB.GetNewCommand(con, result);
-                    cmdtxt1.ExecuteNonQuery();
+                    using (var cmdtxt1 = DataDB.GetNewCommand(con, result))
+                    {
+                        cmdtxt1.ExecuteNonQuery();
+                    }
                 }
             }
             catch (Exception e)
@@ -315,14 +321,18 @@ namespace ExpressBase.ServiceStack.Services
                 if (DataDB.Vendor == DatabaseVendors.PGSQL)
                 {
                     sql2 += "INSERT INTO eb_users(email, pwd, fullname,fbid,statusid) VALUES (:email, :pwd, :fullname, :socialid, 0)";
-                    DbCommand cmdtxt3 = DataDB.GetNewCommand(con, sql2);
-                    cmdtxt3.Parameters.Add(DataDB.GetNewParameter("email", EbDbTypes.String, rslt.Rows[0][0]));
-                    cmdtxt3.Parameters.Add(DataDB.GetNewParameter("pwd", EbDbTypes.String, rslt.Rows[0][1]));
-                    cmdtxt3.Parameters.Add(DataDB.GetNewParameter("fullname", EbDbTypes.String, rslt.Rows[0][2]));
-                    cmdtxt3.Parameters.Add(DataDB.GetNewParameter("socialid", EbDbTypes.String, rslt.Rows[0][3]));
-                    cmdtxt3.ExecuteScalar();
-                    DbCommand cmdtxt5 = DataDB.GetNewCommand(con, sql3);
-                    cmdtxt5.ExecuteNonQuery();
+                    using (DbCommand cmdtxt3 = DataDB.GetNewCommand(con, sql2))
+                    {
+                        cmdtxt3.Parameters.Add(DataDB.GetNewParameter("email", EbDbTypes.String, rslt.Rows[0][0]));
+                        cmdtxt3.Parameters.Add(DataDB.GetNewParameter("pwd", EbDbTypes.String, rslt.Rows[0][1]));
+                        cmdtxt3.Parameters.Add(DataDB.GetNewParameter("fullname", EbDbTypes.String, rslt.Rows[0][2]));
+                        cmdtxt3.Parameters.Add(DataDB.GetNewParameter("socialid", EbDbTypes.String, rslt.Rows[0][3]));
+                        cmdtxt3.ExecuteScalar();
+                    }
+                    using (DbCommand cmdtxt5 = DataDB.GetNewCommand(con, sql3))
+                    {
+                        cmdtxt5.ExecuteNonQuery();
+                    }
                 }
                 else if (DataDB.Vendor == DatabaseVendors.ORACLE)
                 {
@@ -339,14 +349,18 @@ namespace ExpressBase.ServiceStack.Services
                 if (DataDB.Vendor == DatabaseVendors.MYSQL)
                 {
                     sql2 += "INSERT INTO eb_users(email, pwd, fullname,fbid,statusid) VALUES (@email, @pwd, @fullname, @socialid, 0);";
-                    DbCommand cmdtxt3 = DataDB.GetNewCommand(con, sql2);
-                    cmdtxt3.Parameters.Add(DataDB.GetNewParameter("email", EbDbTypes.String, rslt.Rows[0][0]));
-                    cmdtxt3.Parameters.Add(DataDB.GetNewParameter("pwd", EbDbTypes.String, rslt.Rows[0][1]));
-                    cmdtxt3.Parameters.Add(DataDB.GetNewParameter("fullname", EbDbTypes.String, rslt.Rows[0][2]));
-                    cmdtxt3.Parameters.Add(DataDB.GetNewParameter("socialid", EbDbTypes.String, rslt.Rows[0][3]));
-                    cmdtxt3.ExecuteScalar();
-                    DbCommand cmdtxt5 = DataDB.GetNewCommand(con, sql3);
-                    cmdtxt5.ExecuteNonQuery();
+                    using (DbCommand cmdtxt3 = DataDB.GetNewCommand(con, sql2))
+                    {
+                        cmdtxt3.Parameters.Add(DataDB.GetNewParameter("email", EbDbTypes.String, rslt.Rows[0][0]));
+                        cmdtxt3.Parameters.Add(DataDB.GetNewParameter("pwd", EbDbTypes.String, rslt.Rows[0][1]));
+                        cmdtxt3.Parameters.Add(DataDB.GetNewParameter("fullname", EbDbTypes.String, rslt.Rows[0][2]));
+                        cmdtxt3.Parameters.Add(DataDB.GetNewParameter("socialid", EbDbTypes.String, rslt.Rows[0][3]));
+                        cmdtxt3.ExecuteScalar();
+                    }
+                    using (DbCommand cmdtxt5 = DataDB.GetNewCommand(con, sql3))
+                    {
+                        cmdtxt5.ExecuteNonQuery();
+                    }
                 }
             }
             catch (Exception e)

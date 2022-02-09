@@ -1702,7 +1702,7 @@ namespace ExpressBase.ServiceStack.Services
                 EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId);////////
 
                 string Qry = $@"UPDATE eb_form_drafts SET eb_del = 'T', eb_lastmodified_at = {this.EbConnectionFactory.DataDB.EB_CURRENT_TIMESTAMP}
-                                    WHERE id = @id AND form_ref_id = @form_ref_id AND eb_created_by = @eb_created_by AND is_submitted = 'F' AND eb_del = 'F';";
+                                    WHERE id = @id AND form_ref_id = @form_ref_id AND (eb_created_by = @eb_created_by OR draft_type = {(int)FormDraftTypes.ErrorBin}) AND is_submitted = 'F' AND eb_del = 'F';";
                 DbParameter[] parameters = new DbParameter[]
                 {
                     this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.DraftId),
@@ -1711,7 +1711,7 @@ namespace ExpressBase.ServiceStack.Services
                 };
                 int status = this.EbConnectionFactory.DataDB.DoNonQuery(Qry, parameters);
                 if (status == 0)
-                    throw new FormException("Not Found.", (int)HttpStatusCode.NotFound, $"No row affected", "SaveFormDraftRequest -> Edit");
+                    throw new FormException("Unable to continue.", (int)HttpStatusCode.NotFound, $"No row affected", "SaveFormDraftRequest -> Edit");
                 Console.WriteLine("SaveFormDraftRequest returning");
                 return new DiscardFormDraftResponse() { Status = (int)HttpStatusCode.OK, Message = "success" };
             }

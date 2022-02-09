@@ -456,8 +456,10 @@ namespace ExpressBase.ServiceStack.Services
                             str += string.Format(@"update infra_dbstructure set eb_del = 'T' where id = {0};", change_id);
                         }
                     }
-                    DbCommand cmd = InfraConnectionFactory.DataDB.GetNewCommand(con, str);
-                    cmd.ExecuteNonQuery();
+                    using (DbCommand cmd = InfraConnectionFactory.DataDB.GetNewCommand(con, str))
+                    {
+                        cmd.ExecuteNonQuery();
+                    }
                 }
             }
         }
@@ -637,8 +639,10 @@ namespace ExpressBase.ServiceStack.Services
                     str += string.Format(@"INSERT INTO infra_dbmd5 (change_id, filename, contents, eb_del) VALUES ('{0}','{1}','{2}','F')",
                         change_id, file_name, md5_or_json);
 
-                    DbCommand cmd = InfraConnectionFactory.DataDB.GetNewCommand(con, str);
-                    cmd.ExecuteNonQuery();
+                    using (DbCommand cmd = InfraConnectionFactory.DataDB.GetNewCommand(con, str))
+                    {
+                        cmd.ExecuteNonQuery();
+                    }
                 }
             }
             catch (Exception e)
@@ -660,8 +664,10 @@ namespace ExpressBase.ServiceStack.Services
                     str += string.Format(@"INSERT INTO  infra_dbmd5 (change_id, filename, contents, eb_del) VALUES ((SELECT max(id) FROM infra_dbstructure WHERE filename = '{0}' AND vendor = '{1}' AND eb_del = 'F'),'{2}','{3}','F')",
                         file_name_shrt, vendor, file_name, content);
 
-                    DbCommand cmd = InfraConnectionFactory.DataDB.GetNewCommand(con, str);
-                    cmd.ExecuteNonQuery();
+                    using (DbCommand cmd = InfraConnectionFactory.DataDB.GetNewCommand(con, str))
+                    {
+                        cmd.ExecuteNonQuery();
+                    }
                 }
             }
             catch (Exception e)
@@ -1506,8 +1512,10 @@ namespace ExpressBase.ServiceStack.Services
                                               UPDATE infra_dbchangeslog 
                                               SET modified_at = NOW()
                                               WHERE solution_id = '{0}'", Solution);
-                    DbCommand cmd2 = InfraConnectionFactory.DataDB.GetNewCommand(con, str1);
-                    cmd2.ExecuteNonQuery();
+                    using (DbCommand cmd2 = InfraConnectionFactory.DataDB.GetNewCommand(con, str1))
+                    {
+                        cmd2.ExecuteNonQuery();
+                    }
                 }
             }
             catch (Exception e)
@@ -1572,8 +1580,10 @@ namespace ExpressBase.ServiceStack.Services
                                 query += func_or_proc_drop;
                             }
                             query += result;
-                            DbCommand cmd = _ebconfactoryDatadb.GetNewCommand(con, query);
-                            cmd.ExecuteNonQuery();
+                            using (DbCommand cmd = _ebconfactoryDatadb.GetNewCommand(con, query))
+                            {
+                                cmd.ExecuteNonQuery();
+                            }
                         }
                     }
                 }
@@ -2241,8 +2251,10 @@ namespace ExpressBase.ServiceStack.Services
                 using (DbConnection con = _ebconfactoryDatadb.GetNewConnection())
                 {
                     con.Open();
-                    DbCommand cmd = _ebconfactoryDatadb.GetNewCommand(con, Query);
-                    int x = cmd.ExecuteNonQuery();
+                    using (DbCommand cmd = _ebconfactoryDatadb.GetNewCommand(con, Query))
+                    {
+                        cmd.ExecuteNonQuery();
+                    }
                     con.Close();
                 }
                 using (DbConnection con1 = this.InfraConnectionFactory.DataDB.GetNewConnection())
@@ -2252,8 +2264,10 @@ namespace ExpressBase.ServiceStack.Services
                                               UPDATE infra_dbchangeslog 
                                               SET modified_at = NOW()
                                               WHERE solution_id = '{0}'", solution_id);
-                    DbCommand cmd1 = InfraConnectionFactory.DataDB.GetNewCommand(con1, str1);
-                    cmd1.ExecuteNonQuery();
+                    using (DbCommand cmd1 = InfraConnectionFactory.DataDB.GetNewCommand(con1, str1))
+                    {
+                        cmd1.ExecuteNonQuery();
+                    }
                     con1.Close();
                 }
             }

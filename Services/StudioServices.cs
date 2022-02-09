@@ -794,89 +794,91 @@ namespace ExpressBase.ServiceStack.Services
                     con.Open();
                     DbCommand cmd = null;
                     string sql = EbConnectionFactory.ObjectsDB.EB_COMMIT_OBJECT;
-                    cmd = EbConnectionFactory.ObjectsDB.GetNewCommand(con, sql);
-
-                    List<DbParameter> dbParameter = new List<DbParameter> {
-                    EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.String, request.RefId),
-                    EbConnectionFactory.ObjectsDB.GetNewParameter("obj_name", EbDbTypes.String, request.Name.Replace("\n", "").Replace("\t", "").Replace("\r", "")),
-                    EbConnectionFactory.ObjectsDB.GetNewParameter("obj_desc", EbDbTypes.String, (!string.IsNullOrEmpty(request.Description)) ? request.Description : string.Empty),
-                    EbConnectionFactory.ObjectsDB.GetNewParameter("obj_type", EbDbTypes.Int32, GetObjectType(obj)),
-                    EbConnectionFactory.ObjectsDB.GetNewParameter("obj_changelog", EbDbTypes.String, request.ChangeLog),
-                    EbConnectionFactory.ObjectsDB.GetNewParameter("commit_uid", EbDbTypes.Int32, request.UserId),
-                    EbConnectionFactory.ObjectsDB.GetNewParameter("relations", EbDbTypes.String, (request.Relations != null) ? request.Relations : string.Empty),
-                    EbConnectionFactory.ObjectsDB.GetNewParameter("tags", EbDbTypes.String, (!string.IsNullOrEmpty(request.Tags)) ? request.Tags : string.Empty),
-                    EbConnectionFactory.ObjectsDB.GetNewParameter("app_id", EbDbTypes.String, SetAppId(request.Apps)),
-                    EbConnectionFactory.ObjectsDB.GetNewParameter("disp_name", EbDbTypes.String, request.DisplayName),
-                    EbConnectionFactory.ObjectsDB.GetNewParameter("hide_in_menu", EbDbTypes.String, (request.HideInMenu) ? 'T' : 'F')
-                    };
-
-                    if (EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.PGSQL)
+                    using (cmd = EbConnectionFactory.ObjectsDB.GetNewCommand(con, sql))
                     {
-                        dbParameter.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("obj_json", EbDbTypes.Json, request.Json));
-                        cmd.Parameters.AddRange(dbParameter.ToArray());
-                        refId = cmd.ExecuteScalar().ToString();
-                    }
-                    else if (EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.ORACLE)
-                    {
-                        cmd.Parameters.AddRange(dbParameter.ToArray());
-                        refId = cmd.ExecuteScalar().ToString();
-                        string sql1 = "update eb_objects_ver set obj_json=:jsonobj where refid=:refid";
-
-                        NTV[] parms = new NTV[2];
-                        parms[0] = new NTV() { Name = ":jsonobj", Type = EbDbTypes.Json, Value = request.Json };
-                        parms[1] = new NTV { Name = ":refid", Type = EbDbTypes.String, Value = refId };
-                        Update_Json_Val(con, sql1, parms);
-                    }
-                    else if (EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.MYSQL)
-                    {
-                        dbParameter.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("obj_json", EbDbTypes.Json, request.Json));
-                        dbParameter.Add(EbConnectionFactory.ObjectsDB.GetNewOutParameter("out_committed_refidunique", EbDbTypes.String));
-                        EbDataTable ds = EbConnectionFactory.ObjectsDB.DoProcedure(EbConnectionFactory.ObjectsDB.EB_COMMIT_OBJECT, dbParameter.ToArray());
-                        if (ds.Rows.Count > 0)
+                        List<DbParameter> dbParameter = new List<DbParameter>
                         {
-                            refId = ds.Rows[0][0].ToString();
+                            EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.String, request.RefId),
+                            EbConnectionFactory.ObjectsDB.GetNewParameter("obj_name", EbDbTypes.String, request.Name.Replace("\n", "").Replace("\t", "").Replace("\r", "")),
+                            EbConnectionFactory.ObjectsDB.GetNewParameter("obj_desc", EbDbTypes.String, (!string.IsNullOrEmpty(request.Description)) ? request.Description : string.Empty),
+                            EbConnectionFactory.ObjectsDB.GetNewParameter("obj_type", EbDbTypes.Int32, GetObjectType(obj)),
+                            EbConnectionFactory.ObjectsDB.GetNewParameter("obj_changelog", EbDbTypes.String, request.ChangeLog),
+                            EbConnectionFactory.ObjectsDB.GetNewParameter("commit_uid", EbDbTypes.Int32, request.UserId),
+                            EbConnectionFactory.ObjectsDB.GetNewParameter("relations", EbDbTypes.String, (request.Relations != null) ? request.Relations : string.Empty),
+                            EbConnectionFactory.ObjectsDB.GetNewParameter("tags", EbDbTypes.String, (!string.IsNullOrEmpty(request.Tags)) ? request.Tags : string.Empty),
+                            EbConnectionFactory.ObjectsDB.GetNewParameter("app_id", EbDbTypes.String, SetAppId(request.Apps)),
+                            EbConnectionFactory.ObjectsDB.GetNewParameter("disp_name", EbDbTypes.String, request.DisplayName),
+                            EbConnectionFactory.ObjectsDB.GetNewParameter("hide_in_menu", EbDbTypes.String, (request.HideInMenu) ? 'T' : 'F')
+                        };
+
+                        if (EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.PGSQL)
+                        {
+                            dbParameter.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("obj_json", EbDbTypes.Json, request.Json));
+                            cmd.Parameters.AddRange(dbParameter.ToArray());
+                            refId = cmd.ExecuteScalar().ToString();
                         }
-                    }
-                    SetRedis(obj, refId);
+                        else if (EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.ORACLE)
+                        {
+                            cmd.Parameters.AddRange(dbParameter.ToArray());
+                            refId = cmd.ExecuteScalar().ToString();
+                            string sql1 = "update eb_objects_ver set obj_json=:jsonobj where refid=:refid";
 
-                    // need optimization
-                    if (obj is EbBotForm)
-                    {
-                        ChatbotServices myService = base.ResolveService<ChatbotServices>();
-                        myService.EbConnectionFactory = this.EbConnectionFactory;
-                        CreateBotFormTableResponse res = (CreateBotFormTableResponse)myService.Any(new CreateBotFormTableRequest() { BotObj = obj as EbBotForm, Apps = request.Apps, SolnId = request.SolnId, UserId = request.UserId, WhichConsole = request.WhichConsole });
-                    }
-                    else if (obj is EbWebForm)
-                    {
-                        WebFormServices myService = base.ResolveService<WebFormServices>();
-                        myService.EbConnectionFactory = this.EbConnectionFactory;
-                        CreateWebFormTableResponse res = (CreateWebFormTableResponse)myService.Any(new CreateWebFormTableRequest() { WebObj = obj as EbWebForm, Apps = request.Apps, SolnId = request.SolnId, UserId = request.UserId, WhichConsole = request.WhichConsole });
-                    }
-                    else if (obj is EbSqlFunction)
-                    {
-                        RunSqlFunctionResponse resp = this.Post(new RunSqlFunctionRequest
+                            NTV[] parms = new NTV[2];
+                            parms[0] = new NTV() { Name = ":jsonobj", Type = EbDbTypes.Json, Value = request.Json };
+                            parms[1] = new NTV { Name = ":refid", Type = EbDbTypes.String, Value = refId };
+                            Update_Json_Val(con, sql1, parms);
+                        }
+                        else if (EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.MYSQL)
                         {
-                            SolnId = request.SolnId,
-                            UserId = request.UserId,
-                            WhichConsole = request.WhichConsole,
-                            UserAuthId = request.UserAuthId,
-                            Json = request.Json
-                        });
-                    }
-                    else if (obj is EbMobilePage)
-                    {
-                        if ((obj as EbMobilePage).Container is EbMobileForm MobForm && !MobForm.RenderAsFilterDialog)
-                        {
-                            MobileServices mobservice = base.ResolveService<MobileServices>();
-                            mobservice.EbConnectionFactory = this.EbConnectionFactory;
-                            CreateMobileFormTableResponse res = mobservice.Post(new CreateMobileFormTableRequest
+                            dbParameter.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("obj_json", EbDbTypes.Json, request.Json));
+                            dbParameter.Add(EbConnectionFactory.ObjectsDB.GetNewOutParameter("out_committed_refidunique", EbDbTypes.String));
+                            EbDataTable ds = EbConnectionFactory.ObjectsDB.DoProcedure(EbConnectionFactory.ObjectsDB.EB_COMMIT_OBJECT, dbParameter.ToArray());
+                            if (ds.Rows.Count > 0)
                             {
-                                Apps = request.Apps,
-                                MobilePage = obj as EbMobilePage,
+                                refId = ds.Rows[0][0].ToString();
+                            }
+                        }
+                        SetRedis(obj, refId);
+
+                        // need optimization
+                        if (obj is EbBotForm)
+                        {
+                            ChatbotServices myService = base.ResolveService<ChatbotServices>();
+                            myService.EbConnectionFactory = this.EbConnectionFactory;
+                            CreateBotFormTableResponse res = (CreateBotFormTableResponse)myService.Any(new CreateBotFormTableRequest() { BotObj = obj as EbBotForm, Apps = request.Apps, SolnId = request.SolnId, UserId = request.UserId, WhichConsole = request.WhichConsole });
+                        }
+                        else if (obj is EbWebForm)
+                        {
+                            WebFormServices myService = base.ResolveService<WebFormServices>();
+                            myService.EbConnectionFactory = this.EbConnectionFactory;
+                            CreateWebFormTableResponse res = (CreateWebFormTableResponse)myService.Any(new CreateWebFormTableRequest() { WebObj = obj as EbWebForm, Apps = request.Apps, SolnId = request.SolnId, UserId = request.UserId, WhichConsole = request.WhichConsole });
+                        }
+                        else if (obj is EbSqlFunction)
+                        {
+                            RunSqlFunctionResponse resp = this.Post(new RunSqlFunctionRequest
+                            {
                                 SolnId = request.SolnId,
                                 UserId = request.UserId,
-                                WhichConsole = request.WhichConsole
+                                WhichConsole = request.WhichConsole,
+                                UserAuthId = request.UserAuthId,
+                                Json = request.Json
                             });
+                        }
+                        else if (obj is EbMobilePage)
+                        {
+                            if ((obj as EbMobilePage).Container is EbMobileForm MobForm && !MobForm.RenderAsFilterDialog)
+                            {
+                                MobileServices mobservice = base.ResolveService<MobileServices>();
+                                mobservice.EbConnectionFactory = this.EbConnectionFactory;
+                                CreateMobileFormTableResponse res = mobservice.Post(new CreateMobileFormTableRequest
+                                {
+                                    Apps = request.Apps,
+                                    MobilePage = obj as EbMobilePage,
+                                    SolnId = request.SolnId,
+                                    UserId = request.UserId,
+                                    WhichConsole = request.WhichConsole
+                                });
+                            }
                         }
                     }
                 }
@@ -903,87 +905,88 @@ namespace ExpressBase.ServiceStack.Services
                     con.Open();
                     DbCommand cmd = null;
                     string sql = EbConnectionFactory.ObjectsDB.EB_SAVE_OBJECT;
-                    cmd = EbConnectionFactory.ObjectsDB.GetNewCommand(con, sql);
-
-                    List<DbParameter> dbParameter = new List<DbParameter> {
-                        EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.String, request.RefId),
-                    EbConnectionFactory.ObjectsDB.GetNewParameter("obj_name", EbDbTypes.String, request.Name.Replace("\n", "").Replace("\t", "").Replace("\r", "")),
-                    EbConnectionFactory.ObjectsDB.GetNewParameter("obj_desc", EbDbTypes.String, (!string.IsNullOrEmpty(request.Description)) ? request.Description : string.Empty),
-                    EbConnectionFactory.ObjectsDB.GetNewParameter("obj_type", EbDbTypes.Int32, GetObjectType(obj)),
-                    EbConnectionFactory.ObjectsDB.GetNewParameter("commit_uid", EbDbTypes.Int32, request.UserId),
-                    EbConnectionFactory.ObjectsDB.GetNewParameter("relations", EbDbTypes.String, (request.Relations != null) ? request.Relations : string.Empty),
-                    EbConnectionFactory.ObjectsDB.GetNewParameter("tags", EbDbTypes.String, (!string.IsNullOrEmpty(request.Tags)) ? request.Tags : string.Empty),
-                    EbConnectionFactory.ObjectsDB.GetNewParameter("app_id", EbDbTypes.String, SetAppId(request.Apps)),
-                    EbConnectionFactory.ObjectsDB.GetNewParameter("disp_name", EbDbTypes.String, request.DisplayName),
-                    EbConnectionFactory.ObjectsDB.GetNewParameter("hide_in_menu", EbDbTypes.String, (request.HideInMenu) ? 'T' : 'F')
-                };
-                    if (EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.PGSQL)
+                    using (cmd = EbConnectionFactory.ObjectsDB.GetNewCommand(con, sql))
                     {
-                        dbParameter.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("obj_json", EbDbTypes.Json, request.Json));
-                        cmd.Parameters.AddRange(dbParameter.ToArray());
-                        refId = cmd.ExecuteScalar().ToString();
-                    }
-                    else if (EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.ORACLE)
-                    {
-                        cmd.Parameters.AddRange(dbParameter.ToArray());
-                        refId = cmd.ExecuteScalar().ToString();
-                        string sql1 = "UPDATE eb_objects_ver SET obj_json=:jsonobj WHERE refid=:refid";
-
-                        NTV[] parms = new NTV[2];
-                        parms[0] = new NTV() { Name = ":jsonobj", Type = EbDbTypes.Json, Value = request.Json };
-                        parms[1] = new NTV { Name = ":refid", Type = EbDbTypes.String, Value = refId };
-                        Update_Json_Val(con, sql1, parms);
-                    }
-                    else if (EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.MYSQL)
-                    {
-                        dbParameter.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("obj_json", EbDbTypes.Json, request.Json));
-                        dbParameter.Add(EbConnectionFactory.ObjectsDB.GetNewOutParameter("out_refidv", EbDbTypes.String));
-                        EbDataTable ds = EbConnectionFactory.ObjectsDB.DoProcedure(EbConnectionFactory.ObjectsDB.EB_SAVE_OBJECT, dbParameter.ToArray());
-
-                        if (ds.Rows.Count > 0)
+                        List<DbParameter> dbParameter = new List<DbParameter> {
+                            EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.String, request.RefId),
+                            EbConnectionFactory.ObjectsDB.GetNewParameter("obj_name", EbDbTypes.String, request.Name.Replace("\n", "").Replace("\t", "").Replace("\r", "")),
+                            EbConnectionFactory.ObjectsDB.GetNewParameter("obj_desc", EbDbTypes.String, (!string.IsNullOrEmpty(request.Description)) ? request.Description : string.Empty),
+                            EbConnectionFactory.ObjectsDB.GetNewParameter("obj_type", EbDbTypes.Int32, GetObjectType(obj)),
+                            EbConnectionFactory.ObjectsDB.GetNewParameter("commit_uid", EbDbTypes.Int32, request.UserId),
+                            EbConnectionFactory.ObjectsDB.GetNewParameter("relations", EbDbTypes.String, (request.Relations != null) ? request.Relations : string.Empty),
+                            EbConnectionFactory.ObjectsDB.GetNewParameter("tags", EbDbTypes.String, (!string.IsNullOrEmpty(request.Tags)) ? request.Tags : string.Empty),
+                            EbConnectionFactory.ObjectsDB.GetNewParameter("app_id", EbDbTypes.String, SetAppId(request.Apps)),
+                            EbConnectionFactory.ObjectsDB.GetNewParameter("disp_name", EbDbTypes.String, request.DisplayName),
+                            EbConnectionFactory.ObjectsDB.GetNewParameter("hide_in_menu", EbDbTypes.String, (request.HideInMenu) ? 'T' : 'F')
+                        };
+                        if (EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.PGSQL)
                         {
-                            refId = ds.Rows[0][0].ToString();
+                            dbParameter.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("obj_json", EbDbTypes.Json, request.Json));
+                            cmd.Parameters.AddRange(dbParameter.ToArray());
+                            refId = cmd.ExecuteScalar().ToString();
                         }
-                    }
+                        else if (EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.ORACLE)
+                        {
+                            cmd.Parameters.AddRange(dbParameter.ToArray());
+                            refId = cmd.ExecuteScalar().ToString();
+                            string sql1 = "UPDATE eb_objects_ver SET obj_json=:jsonobj WHERE refid=:refid";
 
-                    SetRedis(obj, refId);
-                    if (obj is EbBotForm)
-                    {
-                        ChatbotServices myService = base.ResolveService<ChatbotServices>();
-                        myService.EbConnectionFactory = this.EbConnectionFactory;
-                        CreateBotFormTableResponse res = (CreateBotFormTableResponse)myService.Any(new CreateBotFormTableRequest() { BotObj = obj as EbBotForm, Apps = request.Apps, SolnId = request.SolnId, UserId = request.UserId, WhichConsole = request.WhichConsole });
-                    }
-                    else if (obj is EbWebForm)
-                    {
-                        WebFormServices myService = base.ResolveService<WebFormServices>();
-                        myService.EbConnectionFactory = this.EbConnectionFactory;
-                        CreateWebFormTableResponse res = (CreateWebFormTableResponse)myService.Any(new CreateWebFormTableRequest() { WebObj = obj as EbWebForm, Apps = request.Apps, SolnId = request.SolnId, UserId = request.UserId, WhichConsole = request.WhichConsole, IsImport = request.IsImport });
-                    }
-                    else if (obj is EbSqlFunction)
-                    {
-                        RunSqlFunctionResponse resp = this.Post(new RunSqlFunctionRequest
+                            NTV[] parms = new NTV[2];
+                            parms[0] = new NTV() { Name = ":jsonobj", Type = EbDbTypes.Json, Value = request.Json };
+                            parms[1] = new NTV { Name = ":refid", Type = EbDbTypes.String, Value = refId };
+                            Update_Json_Val(con, sql1, parms);
+                        }
+                        else if (EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.MYSQL)
                         {
-                            SolnId = request.SolnId,
-                            UserId = request.UserId,
-                            WhichConsole = request.WhichConsole,
-                            UserAuthId = request.UserAuthId,
-                            Json = request.Json
-                        });
-                    }
-                    else if (obj is EbMobilePage)
-                    {
-                        if ((obj as EbMobilePage).Container is EbMobileForm MobForm && !MobForm.RenderAsFilterDialog)
-                        {
-                            MobileServices mobservice = base.ResolveService<MobileServices>();
-                            mobservice.EbConnectionFactory = this.EbConnectionFactory;
-                            CreateMobileFormTableResponse res = mobservice.Post(new CreateMobileFormTableRequest
+                            dbParameter.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("obj_json", EbDbTypes.Json, request.Json));
+                            dbParameter.Add(EbConnectionFactory.ObjectsDB.GetNewOutParameter("out_refidv", EbDbTypes.String));
+                            EbDataTable ds = EbConnectionFactory.ObjectsDB.DoProcedure(EbConnectionFactory.ObjectsDB.EB_SAVE_OBJECT, dbParameter.ToArray());
+
+                            if (ds.Rows.Count > 0)
                             {
-                                MobilePage = obj as EbMobilePage,
-                                Apps = request.Apps,
+                                refId = ds.Rows[0][0].ToString();
+                            }
+                        }
+
+                        SetRedis(obj, refId);
+                        if (obj is EbBotForm)
+                        {
+                            ChatbotServices myService = base.ResolveService<ChatbotServices>();
+                            myService.EbConnectionFactory = this.EbConnectionFactory;
+                            CreateBotFormTableResponse res = (CreateBotFormTableResponse)myService.Any(new CreateBotFormTableRequest() { BotObj = obj as EbBotForm, Apps = request.Apps, SolnId = request.SolnId, UserId = request.UserId, WhichConsole = request.WhichConsole });
+                        }
+                        else if (obj is EbWebForm)
+                        {
+                            WebFormServices myService = base.ResolveService<WebFormServices>();
+                            myService.EbConnectionFactory = this.EbConnectionFactory;
+                            CreateWebFormTableResponse res = (CreateWebFormTableResponse)myService.Any(new CreateWebFormTableRequest() { WebObj = obj as EbWebForm, Apps = request.Apps, SolnId = request.SolnId, UserId = request.UserId, WhichConsole = request.WhichConsole, IsImport = request.IsImport });
+                        }
+                        else if (obj is EbSqlFunction)
+                        {
+                            RunSqlFunctionResponse resp = this.Post(new RunSqlFunctionRequest
+                            {
                                 SolnId = request.SolnId,
                                 UserId = request.UserId,
-                                WhichConsole = request.WhichConsole
+                                WhichConsole = request.WhichConsole,
+                                UserAuthId = request.UserAuthId,
+                                Json = request.Json
                             });
+                        }
+                        else if (obj is EbMobilePage)
+                        {
+                            if ((obj as EbMobilePage).Container is EbMobileForm MobForm && !MobForm.RenderAsFilterDialog)
+                            {
+                                MobileServices mobservice = base.ResolveService<MobileServices>();
+                                mobservice.EbConnectionFactory = this.EbConnectionFactory;
+                                CreateMobileFormTableResponse res = mobservice.Post(new CreateMobileFormTableRequest
+                                {
+                                    MobilePage = obj as EbMobilePage,
+                                    Apps = request.Apps,
+                                    SolnId = request.SolnId,
+                                    UserId = request.UserId,
+                                    WhichConsole = request.WhichConsole
+                                });
+                            }
                         }
                     }
                 }
@@ -1008,16 +1011,16 @@ namespace ExpressBase.ServiceStack.Services
             {
                 using (DbConnection con = EbConnectionFactory.ObjectsDB.GetNewConnection())
                 {
+                    con.Open();
+                    DbCommand cmd = null;
+                    log.Info("Create new object -- started");
+                    string[] arr = { };
+
+                    String sql = EbConnectionFactory.ObjectsDB.EB_CREATE_NEW_OBJECT;
+                    using (cmd = EbConnectionFactory.ObjectsDB.GetNewCommand(con, sql))
                     {
-                        con.Open();
-                        DbCommand cmd = null;
-                        log.Info("Create new object -- started");
-                        string[] arr = { };
-
-                        String sql = EbConnectionFactory.ObjectsDB.EB_CREATE_NEW_OBJECT;
-                        cmd = EbConnectionFactory.ObjectsDB.GetNewCommand(con, sql);
-
-                        List<DbParameter> dbParameter = new List<DbParameter> {
+                        List<DbParameter> dbParameter = new List<DbParameter>
+                        {
                             EbConnectionFactory.ObjectsDB.GetNewParameter("obj_name", EbDbTypes.String, request.Name.Replace("\n", "").Replace("\t", "").Replace("\r", "")),
                             EbConnectionFactory.ObjectsDB.GetNewParameter("obj_desc", EbDbTypes.String, (!string.IsNullOrEmpty(request.Description)) ? request.Description : string.Empty),
                             EbConnectionFactory.ObjectsDB.GetNewParameter("obj_type", EbDbTypes.Int32, GetObjectType(obj)),
@@ -1140,34 +1143,34 @@ namespace ExpressBase.ServiceStack.Services
                     DbCommand cmd = null;
                     string[] arr = { };
                     string sql = EbConnectionFactory.ObjectsDB.EB_MAJOR_VERSION_OF_OBJECT;
-                    cmd = EbConnectionFactory.ObjectsDB.GetNewCommand(con, sql);
-
-                    List<DbParameter> dbParameter = new List<DbParameter>
+                    using (cmd = EbConnectionFactory.ObjectsDB.GetNewCommand(con, sql))
                     {
-                    EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.String, request.RefId),
-                    EbConnectionFactory.ObjectsDB.GetNewParameter("obj_type", EbDbTypes.Int32, (int)request.EbObjectType),
-                    EbConnectionFactory.ObjectsDB.GetNewParameter("commit_uid", EbDbTypes.Int32, request.UserId),
-                    EbConnectionFactory.ObjectsDB.GetNewParameter("src_pid", EbDbTypes.String, request.SolnId),
-                    EbConnectionFactory.ObjectsDB.GetNewParameter("cur_pid", EbDbTypes.String, request.SolnId),
-                    EbConnectionFactory.ObjectsDB.GetNewParameter("relations", EbDbTypes.String, (request.Relations != null) ? request.Relations : string.Empty)
-                    };
-
-                    if (EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.MYSQL)
-                    {
-                        dbParameter.Add(EbConnectionFactory.ObjectsDB.GetNewOutParameter("committed_refidunique", EbDbTypes.String));
-                        EbDataTable ds = EbConnectionFactory.ObjectsDB.DoProcedure(EbConnectionFactory.ObjectsDB.EB_MAJOR_VERSION_OF_OBJECT, dbParameter.ToArray());
-
-                        if (ds.Rows.Count > 0)
+                        List<DbParameter> dbParameter = new List<DbParameter>
                         {
-                            refId = ds.Rows[0][0].ToString();
+                            EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.String, request.RefId),
+                            EbConnectionFactory.ObjectsDB.GetNewParameter("obj_type", EbDbTypes.Int32, (int)request.EbObjectType),
+                            EbConnectionFactory.ObjectsDB.GetNewParameter("commit_uid", EbDbTypes.Int32, request.UserId),
+                            EbConnectionFactory.ObjectsDB.GetNewParameter("src_pid", EbDbTypes.String, request.SolnId),
+                            EbConnectionFactory.ObjectsDB.GetNewParameter("cur_pid", EbDbTypes.String, request.SolnId),
+                            EbConnectionFactory.ObjectsDB.GetNewParameter("relations", EbDbTypes.String, (request.Relations != null) ? request.Relations : string.Empty)
+                        };
+
+                        if (EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.MYSQL)
+                        {
+                            dbParameter.Add(EbConnectionFactory.ObjectsDB.GetNewOutParameter("committed_refidunique", EbDbTypes.String));
+                            EbDataTable ds = EbConnectionFactory.ObjectsDB.DoProcedure(EbConnectionFactory.ObjectsDB.EB_MAJOR_VERSION_OF_OBJECT, dbParameter.ToArray());
+
+                            if (ds.Rows.Count > 0)
+                            {
+                                refId = ds.Rows[0][0].ToString();
+                            }
+                        }
+                        else
+                        {
+                            cmd.Parameters.AddRange(dbParameter.ToArray());
+                            refId = cmd.ExecuteScalar().ToString();
                         }
                     }
-                    else
-                    {
-                        cmd.Parameters.AddRange(dbParameter.ToArray());
-                        refId = cmd.ExecuteScalar().ToString();
-                    }
-
                 }
             }
             catch (Exception e)
@@ -1191,33 +1194,33 @@ namespace ExpressBase.ServiceStack.Services
                     DbCommand cmd = null;
                     string[] arr = { };
                     string sql = EbConnectionFactory.ObjectsDB.EB_MINOR_VERSION_OF_OBJECT;
-                    cmd = EbConnectionFactory.ObjectsDB.GetNewCommand(con, sql);
-
-                    List<DbParameter> dbParameter = new List<DbParameter> {
-                    EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.String, request.RefId),
-                    EbConnectionFactory.ObjectsDB.GetNewParameter("obj_type", EbDbTypes.Int32, (int)request.EbObjectType),
-                    EbConnectionFactory.ObjectsDB.GetNewParameter("commit_uid", EbDbTypes.Int32, request.UserId),
-                    EbConnectionFactory.ObjectsDB.GetNewParameter("src_pid", EbDbTypes.String, request.SolnId),
-                    EbConnectionFactory.ObjectsDB.GetNewParameter("cur_pid", EbDbTypes.String, request.SolnId),
-                    EbConnectionFactory.ObjectsDB.GetNewParameter("relations", EbDbTypes.String, (request.Relations != null) ? request.Relations : string.Empty)
-                    };
-
-                    if (EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.MYSQL)
+                    using (cmd = EbConnectionFactory.ObjectsDB.GetNewCommand(con, sql))
                     {
-                        dbParameter.Add(EbConnectionFactory.ObjectsDB.GetNewOutParameter("committed_refidunique", EbDbTypes.String));
-                        EbDataTable ds = EbConnectionFactory.ObjectsDB.DoProcedure(EbConnectionFactory.ObjectsDB.EB_MINOR_VERSION_OF_OBJECT, dbParameter.ToArray());
-
-                        if (ds.Rows.Count > 0)
+                        List<DbParameter> dbParameter = new List<DbParameter>
                         {
-                            refId = ds.Rows[0][0].ToString();
+                            EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.String, request.RefId),
+                            EbConnectionFactory.ObjectsDB.GetNewParameter("obj_type", EbDbTypes.Int32, (int)request.EbObjectType),
+                            EbConnectionFactory.ObjectsDB.GetNewParameter("commit_uid", EbDbTypes.Int32, request.UserId),
+                            EbConnectionFactory.ObjectsDB.GetNewParameter("src_pid", EbDbTypes.String, request.SolnId),
+                            EbConnectionFactory.ObjectsDB.GetNewParameter("cur_pid", EbDbTypes.String, request.SolnId),
+                            EbConnectionFactory.ObjectsDB.GetNewParameter("relations", EbDbTypes.String, (request.Relations != null) ? request.Relations : string.Empty)
+                        };
+                        if (EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.MYSQL)
+                        {
+                            dbParameter.Add(EbConnectionFactory.ObjectsDB.GetNewOutParameter("committed_refidunique", EbDbTypes.String));
+                            EbDataTable ds = EbConnectionFactory.ObjectsDB.DoProcedure(EbConnectionFactory.ObjectsDB.EB_MINOR_VERSION_OF_OBJECT, dbParameter.ToArray());
+
+                            if (ds.Rows.Count > 0)
+                            {
+                                refId = ds.Rows[0][0].ToString();
+                            }
+                        }
+                        else
+                        {
+                            cmd.Parameters.AddRange(dbParameter.ToArray());
+                            refId = cmd.ExecuteScalar().ToString();
                         }
                     }
-                    else
-                    {
-                        cmd.Parameters.AddRange(dbParameter.ToArray());
-                        refId = cmd.ExecuteScalar().ToString();
-                    }
-
                 }
             }
             catch (Exception e)
@@ -1241,33 +1244,34 @@ namespace ExpressBase.ServiceStack.Services
                     string[] arr = { };
 
                     string sql = EbConnectionFactory.ObjectsDB.EB_PATCH_VERSION_OF_OBJECT;
-                    cmd = EbConnectionFactory.ObjectsDB.GetNewCommand(con, sql);
-
-                    List<DbParameter> dbParameter = new List<DbParameter> {
-                    EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.String, request.RefId),
-                    EbConnectionFactory.ObjectsDB.GetNewParameter("obj_type", EbDbTypes.Int32, (int)request.EbObjectType),
-                    EbConnectionFactory.ObjectsDB.GetNewParameter("commit_uid", EbDbTypes.Int32, request.UserId),
-                    EbConnectionFactory.ObjectsDB.GetNewParameter("src_pid", EbDbTypes.String, request.SolnId),
-                    EbConnectionFactory.ObjectsDB.GetNewParameter("cur_pid", EbDbTypes.String, request.SolnId),
-                    EbConnectionFactory.ObjectsDB.GetNewParameter("relations", EbDbTypes.String, (request.Relations != null) ? request.Relations : string.Empty)
-                    };
-
-                    if (EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.MYSQL)
+                    using (cmd = EbConnectionFactory.ObjectsDB.GetNewCommand(con, sql))
                     {
-                        dbParameter.Add(EbConnectionFactory.ObjectsDB.GetNewOutParameter("committed_refidunique", EbDbTypes.String));
-                        EbDataTable ds = EbConnectionFactory.ObjectsDB.DoProcedure(EbConnectionFactory.ObjectsDB.EB_PATCH_VERSION_OF_OBJECT, dbParameter.ToArray());
-
-                        if (ds.Rows.Count > 0)
+                        List<DbParameter> dbParameter = new List<DbParameter>
                         {
-                            refId = ds.Rows[0][0].ToString();
+                            EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.String, request.RefId),
+                            EbConnectionFactory.ObjectsDB.GetNewParameter("obj_type", EbDbTypes.Int32, (int)request.EbObjectType),
+                            EbConnectionFactory.ObjectsDB.GetNewParameter("commit_uid", EbDbTypes.Int32, request.UserId),
+                            EbConnectionFactory.ObjectsDB.GetNewParameter("src_pid", EbDbTypes.String, request.SolnId),
+                            EbConnectionFactory.ObjectsDB.GetNewParameter("cur_pid", EbDbTypes.String, request.SolnId),
+                            EbConnectionFactory.ObjectsDB.GetNewParameter("relations", EbDbTypes.String, (request.Relations != null) ? request.Relations : string.Empty)
+                        };
+
+                        if (EbConnectionFactory.ObjectsDB.Vendor == DatabaseVendors.MYSQL)
+                        {
+                            dbParameter.Add(EbConnectionFactory.ObjectsDB.GetNewOutParameter("committed_refidunique", EbDbTypes.String));
+                            EbDataTable ds = EbConnectionFactory.ObjectsDB.DoProcedure(EbConnectionFactory.ObjectsDB.EB_PATCH_VERSION_OF_OBJECT, dbParameter.ToArray());
+
+                            if (ds.Rows.Count > 0)
+                            {
+                                refId = ds.Rows[0][0].ToString();
+                            }
+                        }
+                        else
+                        {
+                            cmd.Parameters.AddRange(dbParameter.ToArray());
+                            refId = cmd.ExecuteScalar().ToString();
                         }
                     }
-                    else
-                    {
-                        cmd.Parameters.AddRange(dbParameter.ToArray());
-                        refId = cmd.ExecuteScalar().ToString();
-                    }
-
                 }
             }
             catch (Exception e)
@@ -1316,8 +1320,10 @@ namespace ExpressBase.ServiceStack.Services
                 try
                 {
                     string code = EbSerializers.Json_Deserialize<EbSqlFunction>(request.Json).Sql;
-                    cmd = EbConnectionFactory.ObjectsDB.GetNewCommand(con, code);
-                    status = cmd.ExecuteNonQuery();
+                    using (cmd = EbConnectionFactory.ObjectsDB.GetNewCommand(con, code))
+                    {
+                        status = cmd.ExecuteNonQuery();
+                    }
                 }
                 catch (Exception e)
                 {
@@ -1339,17 +1345,18 @@ namespace ExpressBase.ServiceStack.Services
                     con.Open();
                     DbCommand cmd = null;
                     string sql = EbConnectionFactory.ObjectsDB.EB_CHANGE_STATUS_OBJECT;
-                    cmd = EbConnectionFactory.ObjectsDB.GetNewCommand(con, sql);
-
-                    cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.String, request.RefId));
-                    cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("status", EbDbTypes.Int32, (int)request.Status));
-                    cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("commit_uid", EbDbTypes.Int32, request.UserId));
-                    cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("obj_changelog", EbDbTypes.String, request.ChangeLog));
-                    int result = (int)cmd.ExecuteScalar();
-                    if (result > 0)
+                    using (cmd = EbConnectionFactory.ObjectsDB.GetNewCommand(con, sql))
                     {
-                        res = false;
-                        message = "Only one Live version is allowed. A version already exist in Live status. Please change old one's status to proceed.";
+                        cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.String, request.RefId));
+                        cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("status", EbDbTypes.Int32, (int)request.Status));
+                        cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("commit_uid", EbDbTypes.Int32, request.UserId));
+                        cmd.Parameters.Add(EbConnectionFactory.ObjectsDB.GetNewParameter("obj_changelog", EbDbTypes.String, request.ChangeLog));
+                        int result = (int)cmd.ExecuteScalar();
+                        if (result > 0)
+                        {
+                            res = false;
+                            message = "Only one Live version is allowed. A version already exist in Live status. Please change old one's status to proceed.";
+                        }
                     }
                 }
             }

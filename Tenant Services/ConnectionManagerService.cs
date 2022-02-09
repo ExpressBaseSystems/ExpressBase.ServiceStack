@@ -871,8 +871,10 @@ namespace ExpressBase.ServiceStack.Services
                         {
                             Console.WriteLine(" Reading reference - stream is null -" + Urlstart + "filesdb.tablecreate.eb_files_bytea.sql");
                         }
-                        var cmdtxt1 = DataDB.GetNewCommand(con, result);
-                        cmdtxt1.ExecuteNonQuery();
+                        using (var cmdtxt1 = DataDB.GetNewCommand(con, result))
+                        {
+                            cmdtxt1.ExecuteNonQuery();
+                        }
                     }
                 }
             }
