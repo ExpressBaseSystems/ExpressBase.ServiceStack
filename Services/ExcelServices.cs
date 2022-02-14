@@ -320,15 +320,25 @@ namespace ExpressBase.ServiceStack.Services
             Dictionary<int, string> dict = new Dictionary<int, string>();
             if (_col.ObjType == "SimpleSelect")
             {
-                dis_name = (_col as EbSimpleSelect).DisplayMember.Name;
-                val_name = (_col as EbSimpleSelect).ValueMember.Name;
+                dis_name = (_col as EbSimpleSelect)?.DisplayMember?.Name;
+                val_name = (_col as EbSimpleSelect)?.ValueMember?.Name;
                 dict = this.EbConnectionFactory.ObjectsDB.GetDictionary((_col as EbSimpleSelect).GetSql(this), dis_name, val_name);
             }
             else
             {
-                dis_name = (_col as EbPowerSelect).DisplayMembers[0].Name;
-                val_name = (_col as EbPowerSelect).ValueMember.Name;
-                dict = this.EbConnectionFactory.ObjectsDB.GetDictionary((_col as EbPowerSelect).GetSql(this), dis_name, val_name);
+                if ((_col as EbPowerSelect).RenderAsSimpleSelect)
+                {
+                    dis_name = (_col as EbPowerSelect)?.DisplayMember?.Name;
+                    val_name = (_col as EbPowerSelect)?.ValueMember?.Name;
+                    dict = this.EbConnectionFactory.ObjectsDB.GetDictionary((_col as EbPowerSelect).GetSql(this), dis_name, val_name);
+                }
+                else if ((_col as EbPowerSelect)?.DisplayMembers.Count > 0)
+                {
+                    dis_name = (_col as EbPowerSelect)?.DisplayMembers[0]?.Name;
+                    val_name = (_col as EbPowerSelect)?.ValueMember?.Name;
+                    dict = this.EbConnectionFactory.ObjectsDB.GetDictionary((_col as EbPowerSelect).GetSql(this), dis_name, val_name);
+                }
+
             }
 
 
