@@ -626,7 +626,7 @@ namespace ExpressBase.ServiceStack.Services
                         Console.WriteLine(e.Message + e.StackTrace);
                     }
                 }
-                MasterResult.Add(new SqlJobResult { Message = "Loop execution Success with " + _rowcount +" iterations.", Type = ResourceType.Loop });
+                MasterResult.Add(new SqlJobResult { Message = "Loop execution Success with " + _rowcount + " iterations.", Type = ResourceType.Loop });
             }
             catch (Exception e)
             {
@@ -797,34 +797,35 @@ namespace ExpressBase.ServiceStack.Services
             {
                 TransactionConnection.Open();
 
-                DbTransaction trans = TransactionConnection.BeginTransaction();
-                try
+                using (DbTransaction trans = TransactionConnection.BeginTransaction())
                 {
-                    for (int counter = 0; counter < txn.InnerResources.Count; counter++)
-                        if (txn.InnerResources[counter] is EbSqlProcessor)
-                        {
-                            if (txn.InnerResources[counter - 1] is EbSqlJobReader)
-                                if (((txn.InnerResources[counter - 1] as EbSqlJobReader).Result as EbDataSet).Tables[0].Rows.Count > 0)
-                                    txn.InnerResources[counter].Result = this.GetResult(txn.InnerResources[counter], counter, step, 0);
-                                else
-                                {
-                                    message = "Datareader returned 0 rows";
-                                    Console.WriteLine("Datareader returned 0 rows : " + (txn.InnerResources[counter - 1] as EbSqlJobReader).Reference);
-                                    return true;
-                                }
-                        }
-                        else
-                            txn.InnerResources[counter].Result = this.GetResult(txn.InnerResources[counter], counter, step, 0);
-                    trans.Commit();
-                    message = "Transaction success";
+                    try
+                    {
+                        for (int counter = 0; counter < txn.InnerResources.Count; counter++)
+                            if (txn.InnerResources[counter] is EbSqlProcessor)
+                            {
+                                if (txn.InnerResources[counter - 1] is EbSqlJobReader)
+                                    if (((txn.InnerResources[counter - 1] as EbSqlJobReader).Result as EbDataSet).Tables[0].Rows.Count > 0)
+                                        txn.InnerResources[counter].Result = this.GetResult(txn.InnerResources[counter], counter, step, 0);
+                                    else
+                                    {
+                                        message = "Datareader returned 0 rows";
+                                        Console.WriteLine("Datareader returned 0 rows : " + (txn.InnerResources[counter - 1] as EbSqlJobReader).Reference);
+                                        return true;
+                                    }
+                            }
+                            else
+                                txn.InnerResources[counter].Result = this.GetResult(txn.InnerResources[counter], counter, step, 0);
+                        trans.Commit();
+                        message = "Transaction success";
+                    }
+                    catch (Exception e)
+                    {
+                        message = "Exception in Transaction";
+                        Console.WriteLine(e.Message + e.StackTrace);
+                        trans.Rollback();
+                    }
                 }
-                catch (Exception e)
-                {
-                    message = "Exception in Transaction";
-                    Console.WriteLine(e.Message + e.StackTrace);
-                    trans.Rollback();
-                }
-                TransactionConnection = null;
             }
             if (IsBeforeLoop)
                 MasterResult.Add(new SqlJobResult { Message = message, Type = ResourceType.Transaction });

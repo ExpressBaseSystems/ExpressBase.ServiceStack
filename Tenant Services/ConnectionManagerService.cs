@@ -855,22 +855,23 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     string vendor = DataDB.Vendor.ToString();
                     string Urlstart = string.Format("ExpressBase.Common.sqlscripts.{0}.", vendor.ToLower());
+
+                    var assembly = typeof(sqlscripts).Assembly;
+                    string result = null;
+                    Stream stream = assembly.GetManifestResourceStream(Urlstart + "filesdb.tablecreate.eb_files_bytea.sql");
+                    if (stream != null)
+                    {
+
+                        StreamReader reader = new StreamReader(stream);
+                        result = reader.ReadToEnd();
+                    }
+                    else
+                    {
+                        Console.WriteLine(" Reading reference - stream is null -" + Urlstart + "filesdb.tablecreate.eb_files_bytea.sql");
+                    }
                     using (DbConnection con = DataDB.GetNewConnection())
                     {
                         con.Open();
-                        var assembly = typeof(sqlscripts).Assembly;
-                        string result = null;
-                        Stream stream = assembly.GetManifestResourceStream(Urlstart + "filesdb.tablecreate.eb_files_bytea.sql");
-                        if (stream != null)
-                        {
-
-                            StreamReader reader = new StreamReader(stream);
-                            result = reader.ReadToEnd();
-                        }
-                        else
-                        {
-                            Console.WriteLine(" Reading reference - stream is null -" + Urlstart + "filesdb.tablecreate.eb_files_bytea.sql");
-                        }
                         using (var cmdtxt1 = DataDB.GetNewCommand(con, result))
                         {
                             cmdtxt1.ExecuteNonQuery();

@@ -67,95 +67,89 @@ namespace ExpressBase.ServiceStack.Services
         public GetAnonymousUserResponse Any(GetAnonymousUserRequest request)
         {
             GetAnonymousUserResponse resp = new GetAnonymousUserResponse();
-            using (var con = this.EbConnectionFactory.DataDB.GetNewConnection())
-            {
-                con.Open();
-                string sql = @"SELECT A.id, A.fullname, A.email, A.phoneno, A.socialid, A.firstvisit, A.lastvisit, A.totalvisits, B.applicationname 
+
+            string sql = @"SELECT A.id, A.fullname, A.email, A.phoneno, A.socialid, A.firstvisit, A.lastvisit, A.totalvisits, B.applicationname 
 								FROM eb_usersanonymous A 
 								LEFT JOIN 
 								eb_applications B
 								ON  A.appid = B.id AND A.ebuserid = 1;";
 
-                DbParameter[] parameters = { this.EbConnectionFactory.DataDB.GetNewParameter("searchtext", EbDbTypes.String, (request.Colvalues != null) ? request.Colvalues["searchtext"] : string.Empty) };
+            DbParameter[] parameters = { this.EbConnectionFactory.DataDB.GetNewParameter("searchtext", EbDbTypes.String, (request.Colvalues != null) ? request.Colvalues["searchtext"] : string.Empty) };
 
-                var dt = this.EbConnectionFactory.DataDB.DoQueries(sql, parameters);
+            var dt = this.EbConnectionFactory.DataDB.DoQueries(sql, parameters);
 
-                List<Eb_AnonymousUser_ForCommonList> returndata = new List<Eb_AnonymousUser_ForCommonList>();
-                foreach (EbDataRow dr in dt.Tables[0].Rows)
+            List<Eb_AnonymousUser_ForCommonList> returndata = new List<Eb_AnonymousUser_ForCommonList>();
+            foreach (EbDataRow dr in dt.Tables[0].Rows)
+            {
+                returndata.Add(new Eb_AnonymousUser_ForCommonList
                 {
-                    returndata.Add(new Eb_AnonymousUser_ForCommonList
-                    {
-                        Id = Convert.ToInt32(dr[0]),
-                        Full_Name = dr[1].ToString(),
-                        Email_Id = dr[2].ToString(),
-                        Phone_No = dr[3].ToString(),
-                        Social_Id = dr[4].ToString(),
-                        First_Visit = (dr[5].ToString() == DateTime.MinValue.ToString()) ? "" : dr[5].ToString(),
-                        Last_Visit = (dr[6].ToString() == DateTime.MinValue.ToString()) ? "" : dr[6].ToString(),
-                        Total_Visits = Convert.ToInt32(dr[7]),
-                        App_Name = dr[8].ToString()
-                    });
-                }
-                resp.Data = returndata;
+                    Id = Convert.ToInt32(dr[0]),
+                    Full_Name = dr[1].ToString(),
+                    Email_Id = dr[2].ToString(),
+                    Phone_No = dr[3].ToString(),
+                    Social_Id = dr[4].ToString(),
+                    First_Visit = (dr[5].ToString() == DateTime.MinValue.ToString()) ? "" : dr[5].ToString(),
+                    Last_Visit = (dr[6].ToString() == DateTime.MinValue.ToString()) ? "" : dr[6].ToString(),
+                    Total_Visits = Convert.ToInt32(dr[7]),
+                    App_Name = dr[8].ToString()
+                });
             }
+            resp.Data = returndata;
+
             return resp;
         }
 
         public GetUserGroupResponse1 Any(GetUserGroupRequest1 request)
         {
             GetUserGroupResponse1 resp = new GetUserGroupResponse1();
-            using (var con = this.EbConnectionFactory.DataDB.GetNewConnection())
+
+            EbDataSet dt;
+            DbParameter[] parameters = { this.EbConnectionFactory.DataDB.GetNewParameter("searchtext", EbDbTypes.String, (request.Colvalues != null) ? request.Colvalues["searchtext"] : string.Empty) };
+
+            if (EbConnectionFactory.DataDB.Vendor == DatabaseVendors.MYSQL && request.Colvalues == null)
             {
-                con.Open();
-                EbDataSet dt;
-                DbParameter[] parameters = { this.EbConnectionFactory.DataDB.GetNewParameter("searchtext", EbDbTypes.String, (request.Colvalues != null) ? request.Colvalues["searchtext"] : string.Empty) };
-
-                if (EbConnectionFactory.DataDB.Vendor == DatabaseVendors.MYSQL && request.Colvalues == null)
-                {
-                    dt = this.EbConnectionFactory.DataDB.DoQueries((this.EbConnectionFactory.DataDB as MySqlDB).EB_GETUSERGROUP_QUERY_WITHOUT_SEARCHTEXT, parameters);
-                }
-                else
-                {
-                    string sql = "SELECT id,name,description FROM eb_usergroup WHERE LOWER(name) LIKE LOWER('%' || :searchtext || '%') AND eb_del = 'F';";
-                    dt = this.EbConnectionFactory.DataDB.DoQueries(sql, parameters);
-                }
-
-                List<Eb_UserGroup_ForCommonList> returndata = new List<Eb_UserGroup_ForCommonList>();
-                foreach (EbDataRow dr in dt.Tables[0].Rows)
-                {
-                    returndata.Add(new Eb_UserGroup_ForCommonList { Id = Convert.ToInt32(dr[0]), Name = dr[1].ToString(), Description = dr[2].ToString() });
-                }
-                resp.Data = returndata;
+                dt = this.EbConnectionFactory.DataDB.DoQueries((this.EbConnectionFactory.DataDB as MySqlDB).EB_GETUSERGROUP_QUERY_WITHOUT_SEARCHTEXT, parameters);
             }
+            else
+            {
+                string sql = "SELECT id,name,description FROM eb_usergroup WHERE LOWER(name) LIKE LOWER('%' || :searchtext || '%') AND eb_del = 'F';";
+                dt = this.EbConnectionFactory.DataDB.DoQueries(sql, parameters);
+            }
+
+            List<Eb_UserGroup_ForCommonList> returndata = new List<Eb_UserGroup_ForCommonList>();
+            foreach (EbDataRow dr in dt.Tables[0].Rows)
+            {
+                returndata.Add(new Eb_UserGroup_ForCommonList { Id = Convert.ToInt32(dr[0]), Name = dr[1].ToString(), Description = dr[2].ToString() });
+            }
+            resp.Data = returndata;
+
             return resp;
         } //for usergroup search
 
         public GetRolesResponse1 Any(GetRolesRequest1 request)
         {
             GetRolesResponse1 resp = new GetRolesResponse1();
-            using (var con = this.EbConnectionFactory.DataDB.GetNewConnection())
-            {
-                con.Open();
-                EbDataSet dt;
-                //string sql = @"";
-                //string sql = "SELECT R.id,R.role_name,R.description,A.applicationname FROM eb_roles R, eb_applications A WHERE R.applicationid = A.id AND R.role_name ~* @searchtext";
 
-                DbParameter[] parameters = { this.EbConnectionFactory.DataDB.GetNewParameter("searchtext", EbDbTypes.String, (request.Colvalues != null) ? request.Colvalues["searchtext"] : string.Empty) };
-                if (EbConnectionFactory.DataDB.Vendor == DatabaseVendors.MYSQL && (request.Colvalues == null))
-                {
-                    dt = this.EbConnectionFactory.DataDB.DoQueries((this.EbConnectionFactory.DataDB as MySqlDB).EB_GETROLESRESPONSE_QUERY_WITHOUT_SEARCHTEXT, parameters);
-                }
-                else
-                {
-                    dt = this.EbConnectionFactory.DataDB.DoQueries(this.EbConnectionFactory.DataDB.EB_GETROLESRESPONSE_QUERY, parameters);
-                }
-                List<Eb_Roles_ForCommonList> returndata = new List<Eb_Roles_ForCommonList>();
-                foreach (EbDataRow dr in dt.Tables[0].Rows)
-                {
-                    returndata.Add(new Eb_Roles_ForCommonList { Id = Convert.ToInt32(dr[0]), Name = dr[1].ToString(), Description = dr[2].ToString(), Application_Name = dr[3].ToString(), SubRole_Count = Convert.ToInt32(dr[4]), User_Count = Convert.ToInt32(dr[5]), Permission_Count = Convert.ToInt32(dr[6]) });
-                }
-                resp.Data = returndata;
+            EbDataSet dt;
+            //string sql = @"";
+            //string sql = "SELECT R.id,R.role_name,R.description,A.applicationname FROM eb_roles R, eb_applications A WHERE R.applicationid = A.id AND R.role_name ~* @searchtext";
+
+            DbParameter[] parameters = { this.EbConnectionFactory.DataDB.GetNewParameter("searchtext", EbDbTypes.String, (request.Colvalues != null) ? request.Colvalues["searchtext"] : string.Empty) };
+            if (EbConnectionFactory.DataDB.Vendor == DatabaseVendors.MYSQL && (request.Colvalues == null))
+            {
+                dt = this.EbConnectionFactory.DataDB.DoQueries((this.EbConnectionFactory.DataDB as MySqlDB).EB_GETROLESRESPONSE_QUERY_WITHOUT_SEARCHTEXT, parameters);
             }
+            else
+            {
+                dt = this.EbConnectionFactory.DataDB.DoQueries(this.EbConnectionFactory.DataDB.EB_GETROLESRESPONSE_QUERY, parameters);
+            }
+            List<Eb_Roles_ForCommonList> returndata = new List<Eb_Roles_ForCommonList>();
+            foreach (EbDataRow dr in dt.Tables[0].Rows)
+            {
+                returndata.Add(new Eb_Roles_ForCommonList { Id = Convert.ToInt32(dr[0]), Name = dr[1].ToString(), Description = dr[2].ToString(), Application_Name = dr[3].ToString(), SubRole_Count = Convert.ToInt32(dr[4]), User_Count = Convert.ToInt32(dr[5]), Permission_Count = Convert.ToInt32(dr[6]) });
+            }
+            resp.Data = returndata;
+
             return resp;
         } //for roles search
 

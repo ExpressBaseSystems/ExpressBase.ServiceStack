@@ -75,61 +75,53 @@ namespace ExpressBase.ServiceStack.Services
         [Authenticate]
         public CreateLocationConfigResponse Post(CreateLocationConfigRequest request)
         {
-            using (var con = this.EbConnectionFactory.ObjectsDB.GetNewConnection())
+            EbLocationCustomField conf = request.Conf;
+            string query = EbConnectionFactory.ObjectsDB.EB_CREATELOCATIONCONFIG1Q;
+            string query2 = EbConnectionFactory.ObjectsDB.EB_CREATELOCATIONCONFIG2Q;
+            string exeq = "";
+
+            List<DbParameter> parameters = new List<DbParameter>();
+            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("keys", EbDbTypes.String, conf.DisplayName));
+            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("isrequired", EbDbTypes.Boolean, conf.IsRequired));
+            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("type", EbDbTypes.String, conf.Type));
+
+            if (conf.Id != null)
             {
-                con.Open();
-                EbLocationCustomField conf = request.Conf;
-                string query = EbConnectionFactory.ObjectsDB.EB_CREATELOCATIONCONFIG1Q;
-                string query2 = EbConnectionFactory.ObjectsDB.EB_CREATELOCATIONCONFIG2Q;
-                string exeq = "";
-
-                List<DbParameter> parameters = new List<DbParameter>();
-                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("keys", EbDbTypes.String, conf.DisplayName));
-                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("isrequired", EbDbTypes.Boolean, conf.IsRequired));
-                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("type", EbDbTypes.String, conf.Type));
-
-                if (conf.Id != null)
-                {
-                    exeq = query2;
-                    parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("keyid", EbDbTypes.String, conf.Id));
-                }
-                else
-                    exeq = query;
-
-                EbDataTable ds = this.EbConnectionFactory.ObjectsDB.DoQuery(exeq, parameters.ToArray());
-
-                return new CreateLocationConfigResponse { Id = Convert.ToInt32(ds.Rows[0][0]) };
+                exeq = query2;
+                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("keyid", EbDbTypes.String, conf.Id));
             }
+            else
+                exeq = query;
+
+            EbDataTable ds = this.EbConnectionFactory.ObjectsDB.DoQuery(exeq, parameters.ToArray());
+
+            return new CreateLocationConfigResponse { Id = Convert.ToInt32(ds.Rows[0][0]) };
         }
 
         [Authenticate]
         public SaveLocationMetaResponse Post(SaveLocationMetaRequest request)
         {
-            using (var con = this.EbConnectionFactory.ObjectsDB.GetNewConnection())
+            List<DbParameter> parameters = new List<DbParameter>();
+            int result = 0;
+            string query1 = EbConnectionFactory.ObjectsDB.EB_SAVELOCATION;
+            string query2 = EbConnectionFactory.ObjectsDB.EB_SAVE_LOCATION_2Q;
+            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("lname", EbDbTypes.String, request.Longname));
+            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("sname", EbDbTypes.String, request.Shortname));
+            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("img", EbDbTypes.String, request.Img));
+            parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("meta", EbDbTypes.String, request.ConfMeta));
+            if (request.Locid > 0)
             {
-                con.Open();
-                List<DbParameter> parameters = new List<DbParameter>();
-                int result = 0;
-                string query1 = EbConnectionFactory.ObjectsDB.EB_SAVELOCATION;
-                string query2 = EbConnectionFactory.ObjectsDB.EB_SAVE_LOCATION_2Q;
-                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("lname", EbDbTypes.String, request.Longname));
-                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("sname", EbDbTypes.String, request.Shortname));
-                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("img", EbDbTypes.String, request.Img));
-                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("meta", EbDbTypes.String, request.ConfMeta));
-                if (request.Locid > 0)
-                {
-                    parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("lid", EbDbTypes.Int32, request.Locid));
-                    int t = this.EbConnectionFactory.ObjectsDB.DoNonQuery(query2.ToString(), parameters.ToArray());
-                    result = t;
-                }
-                else
-                {
-                    EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery(query1.ToString(), parameters.ToArray());
-                    result = Convert.ToInt32(dt.Rows[0][0]);
-                }
-                this.Post(new UpdateSolutionObjectRequest() { SolnId = request.SolnId, UserId = request.UserId });
-                return new SaveLocationMetaResponse { Id = result };
+                parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("lid", EbDbTypes.Int32, request.Locid));
+                int t = this.EbConnectionFactory.ObjectsDB.DoNonQuery(query2.ToString(), parameters.ToArray());
+                result = t;
             }
+            else
+            {
+                EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery(query1.ToString(), parameters.ToArray());
+                result = Convert.ToInt32(dt.Rows[0][0]);
+            }
+            this.Post(new UpdateSolutionObjectRequest() { SolnId = request.SolnId, UserId = request.UserId });
+            return new SaveLocationMetaResponse { Id = result };
         }
 
         [Authenticate]
