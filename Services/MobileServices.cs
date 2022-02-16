@@ -272,8 +272,29 @@ namespace ExpressBase.ServiceStack.Services
             data.CurrentUser = this.GetUserObject(request.UserAuthId);
             data.CurrentSolution = this.GetSolutionObject(request.SolnId);
 
-            if (!data.CurrentUser.IsAdmin() && data.CurrentSolution?.SolutionSettings?.MobileAppSettings?.MaintenanceMode == true)
-                throw new Exception("Maintenace mode is activated! Please sync after sometime");
+            Dictionary<string, object> metaData = JsonConvert.DeserializeObject<Dictionary<string, object>>(request.MetaData);
+            DateTime date = metaData.ContainsKey("last_sync_ts") ? Convert.ToDateTime(metaData["last_sync_ts"]) : DateTime.MinValue;
+            List<int> draft_ids = metaData.ContainsKey("draft_ids") ? JsonConvert.DeserializeObject<List<int>>(Convert.ToString(metaData["draft_ids"])) : new List<int>();
+            string app_version = metaData.ContainsKey("app_version") ? Convert.ToString(metaData["app_version"]) : null; //app_version will not present in < 1.5.1 apps
+
+            MobileAppSettings appSettings = data.CurrentSolution?.SolutionSettings?.MobileAppSettings;
+
+            if (!data.CurrentUser.IsAdmin() && appSettings?.MaintenanceMode == true)
+            {
+                if (string.IsNullOrWhiteSpace(appSettings.MaintenanceMessage))
+                    appSettings.MaintenanceMessage = "Servers under maintenance. Please try after sometime.";
+                if (app_version == null)
+                    throw new Exception(appSettings.MaintenanceMessage);
+                else
+                {
+                    data.MetaData.Add("maintenance_msg", appSettings.MaintenanceMessage);
+                    data.last_sync_ts = DateTime.UtcNow;
+                    return data;
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(appSettings.LatestAppVersion))
+                data.MetaData.Add("app_version", appSettings.LatestAppVersion);
 
             string idcheck = "AND EO.id = ANY(string_to_array(@ids, ',')::int[])";
             string query = @"
@@ -307,9 +328,6 @@ SELECT DISTINCT id FROM eb_form_drafts WHERE draft_type = @draft_type AND eb_cre
             {
                 if (data.CurrentSolution != null) data.Locations = data.CurrentSolution.GetLocationsByUser(data.CurrentUser);
 
-                Dictionary<string, object> metaData = JsonConvert.DeserializeObject<Dictionary<string, object>>(request.MetaData);
-                DateTime date = metaData.ContainsKey("last_sync_ts") ? Convert.ToDateTime(metaData["last_sync_ts"]) : DateTime.MinValue;
-                List<int> draft_ids = metaData.ContainsKey("draft_ids") ? JsonConvert.DeserializeObject<List<int>>(Convert.ToString(metaData["draft_ids"])) : new List<int>();
                 EbDataSet ds;
                 List<DbParameter> param = new List<DbParameter>()
                 {
