@@ -60,7 +60,7 @@ namespace ExpressBase.ServiceStack.MQServices
         {
             try
             {
-                Console.WriteLine("Started ExportToExcelServiceRequest in MQ - " + request.RefId);
+                Console.WriteLine("Started ExportToExcelServiceRequest in MQ - " + request.RefId + " - " + DateTime.Now);
                 EbConnectionFactory ebConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
                 var dataservice = base.ResolveService<DataVisService>();
                 dataservice.EbConnectionFactory = ebConnectionFactory;
@@ -77,9 +77,21 @@ namespace ExpressBase.ServiceStack.MQServices
                 _req.rToken = request.RToken;
                 _req.eb_Solution = request.eb_solution;
                 _req.UserAuthId = request.UserAuthId;
+
+                Console.WriteLine("ExportToExcelServiceRequest  Starting TableDataRequest - " + request.RefId + " - " + DateTime.Now);
+
                 res = (DataSourceDataResponse)dataservice.Any(_req);
+
+                Console.WriteLine("ExportToExcelServiceRequest  After TableDataRequest, Starting Compress - " + request.RefId + " - " + DateTime.Now);
+
                 byte[] compressedData = Compress(res.excel_file);
+
+                Console.WriteLine("ExportToExcelServiceRequest  After Compress - " + request.RefId + " - " + DateTime.Now);
+
                 this.Redis.Set("excel" + (request.EbDataVisualization.RefId + request.UserInfo.UserId), compressedData, DateTime.Now.AddHours(5));
+
+                Console.WriteLine("ExportToExcelServiceRequest  After Redis Set - " + request.RefId + " - " + DateTime.Now);
+
                 this.ServerEventClient.BearerToken = request.BToken;
                 this.ServerEventClient.RefreshToken = request.RToken;
                 this.ServerEventClient.RefreshTokenUri = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GET_ACCESS_TOKEN_URL);
