@@ -23,23 +23,31 @@ namespace ExpressBase.ServiceStack.MQServices
         [Authenticate]
         public void Post(ExportToExcelMqRequest request)
         {
-            MessageProducer3.Publish(new ExportToExcelServiceRequest()
+            try
             {
-                EbDataVisualization = request.EbDataVisualization,
-                Ispaging = request.Ispaging,
-                UserInfo = request.UserInfo,
-                RefId = request.RefId,
-                IsExcel = request.IsExcel,
-                Params = request.Params,
-                TFilters = request.TFilters,
-                UserId = request.UserId,
-                UserAuthId = request.UserAuthId,
-                SolnId = request.SolnId,
-                eb_solution = request.eb_Solution,
-                BToken = (!String.IsNullOrEmpty(this.Request.Authorization)) ? this.Request.Authorization.Replace("Bearer", string.Empty).Trim() : String.Empty,
-                RToken = (!String.IsNullOrEmpty(this.Request.Headers["rToken"])) ? this.Request.Headers["rToken"] : String.Empty,
-                SubscriptionId = request.SubscriptionId
-            });
+                MessageProducer3.Publish(new ExportToExcelServiceRequest()
+                {
+                    EbDataVisualization = request.EbDataVisualization,
+                    Ispaging = request.Ispaging,
+                    UserInfo = request.UserInfo,
+                    RefId = request.RefId,
+                    IsExcel = request.IsExcel,
+                    Params = request.Params,
+                    TFilters = request.TFilters,
+                    UserId = request.UserId,
+                    UserAuthId = request.UserAuthId,
+                    SolnId = request.SolnId,
+                    eb_solution = request.eb_Solution,
+                    BToken = (!String.IsNullOrEmpty(this.Request.Authorization)) ? this.Request.Authorization.Replace("Bearer", string.Empty).Trim() : String.Empty,
+                    RToken = (!String.IsNullOrEmpty(this.Request.Headers["rToken"])) ? this.Request.Headers["rToken"] : String.Empty,
+                    SubscriptionId = request.SubscriptionId
+                });
+                Console.WriteLine("ExportToExcelServiceRequest pushed to MQ - " + request.RefId);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Exception in ExportToExcelMqRequest: " + e.Message + e.StackTrace);
+            }
         }
     }
 
@@ -52,6 +60,7 @@ namespace ExpressBase.ServiceStack.MQServices
         {
             try
             {
+                Console.WriteLine("Started ExportToExcelServiceRequest in MQ - " + request.RefId);
                 EbConnectionFactory ebConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
                 var dataservice = base.ResolveService<DataVisService>();
                 dataservice.EbConnectionFactory = ebConnectionFactory;
