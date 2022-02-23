@@ -1105,7 +1105,10 @@ namespace ExpressBase.ServiceStack
                     {
                         for (int i = 0; i < rows.Count; i++)
                         {
-                            DataTable2FormatedTable(rows[i], _dv, _user_culture, _user, ref _formattedTable, ref globals, bObfuscute, _isexcel, ref Summary, i, rows.Count);
+                            if (_isexcel)
+                                DataTable2FormatedTable4Excel(rows[i], _dv, _user_culture, _user, ref _formattedTable, ref globals, _isexcel, ref Summary, i, rows.Count);
+                            else
+                                DataTable2FormatedTable(rows[i], _dv, _user_culture, _user, ref _formattedTable, ref globals, bObfuscute, _isexcel, ref Summary, i, rows.Count);
                             if (isRowgrouping)
                                 DoRowGroupingCommon(rows[i], _dv, _user_culture, _user, ref _formattedTable, IsMultiLevelRowGrouping, ref RowGrouping, ref PreviousGroupingText, ref CurSortIndex, ref SerialCount, i, dvColCount, TotalLevels, ref AggregateColumnIndexes, ref RowGroupingColumns, rows.Count);
                         }
@@ -1188,7 +1191,7 @@ namespace ExpressBase.ServiceStack
             Row workRow = new Row();
             workRow.Append(CreateCell(_dV.DisplayName, 1U));
             partSheetData.Append(workRow);
-            var char1 = GetExcelColumnName(ExcelColumns.Count);
+            string char1 = GetExcelColumnName(ExcelColumns.Count);
             mergeCells = new MergeCells();
             mergeCells.Append(new MergeCell() { Reference = new StringValue($"A1:{char1}1") });
             for (var i = 1; i <= _dV.ParamsList.Count; i++)
@@ -1221,16 +1224,15 @@ namespace ExpressBase.ServiceStack
         private string GetExcelColumnName(int columnNumber)
         {
             int dividend = columnNumber;
-            string columnName = String.Empty;
+            string columnName = string.Empty;
             int modulo;
 
             while (dividend > 0)
             {
                 modulo = (dividend - 1) % 26;
-                columnName = Convert.ToChar(65 + modulo).ToString() + columnName;
-                dividend = (int)((dividend - modulo) / 26);
+                columnName = Convert.ToChar(65 + modulo) + columnName;
+                dividend = ((dividend - modulo) / 26);
             }
-
             return columnName;
         }
 
@@ -2221,16 +2223,114 @@ namespace ExpressBase.ServiceStack
             }
 
         }
+        public void DataTable2FormatedTable4Excel(EbDataRow row, EbDataVisualization _dv, CultureInfo _user_culture, User _user, ref EbDataTable _formattedTable,
+            ref EbVisualizationGlobals globals, bool _isexcel, ref Dictionary<int, List<object>> Summary, int i, int count)
+        {
+            bool isnotAdded = true;
+            try
+            {
+                Row workRow = new Row();
+                for (int k = 1; k <= ExcelColumns.Count; k++)
+                {
+                    string cellReference = GetExcelColumnName(k) + (i + ExcelRowcount);
+                    workRow.Append(CreateCell(cellReference, string.Empty));
+                }
+                IntermediateDic = new Dictionary<int, object>();
+                _formattedTable.Rows.Add(_formattedTable.NewDataRow2());
+                _formattedTable.Rows[i][_formattedTable.Columns.Count - 1] = i + 1;//serial
+                CreateIntermediateDict(row, _dv, _user_culture, _user, ref _formattedTable, ref globals, _isexcel, i);
+                if ((_dv as EbTableVisualization) != null)
+                {
+                    for (int m = 0; m < dependencyTable.Count; m++)
+                    {
+                        DVBaseColumn col = dependencyTable[m];
+                        isnotAdded = true;
+                        int ExcelColIndex = ExcelColumns.FindIndex(_col => _col.Name == col.Name) + 1;
+                        try
+                        {
+                            CultureInfo cults = col.GetColumnCultureInfo(_user_culture);
+                            object _unformattedData = row[col.Data] ?? "";
+                            object _formattedData = IntermediateDic[col.Data] ?? "";
+                            object ActualFormatteddata = IntermediateDic[col.Data] == null || col is DVActionColumn ? "" : Convert.ToString(IntermediateDic[col.Data]).Replace("<", "").Replace(">", "").Replace("'", "").Replace("\"", "");
+                            object ExcelData = _formattedData;
 
-        /// <summary>
-        /// Inserts the image at the specified location
-        /// </summary>
-        /// <param name="sheet1">The WorksheetPart where image to be inserted</param>
-        /// <param name="startRowIndex">The starting Row Index</param>
-        /// <param name="startColumnIndex">The starting column index</param>
-        /// <param name="endRowIndex">The ending row index</param>
-        /// <param name="endColumnIndex">The ending column index</param>
-        /// <param name="imageStream">Stream which contains the image data</param>
+                            if (col.RenderType == EbDbTypes.Decimal || col.RenderType == EbDbTypes.Int32 || col.RenderType == EbDbTypes.Int64)
+                            {
+                                SummaryCalc(ref Summary, col, _unformattedData, cults);
+                                ExcelData = _unformattedData;
+                            }
+                            else if (col.RenderType == EbDbTypes.String && col.bVisible)
+                            {
+                                if (col is DVStringColumn && (col as DVStringColumn).RenderAs == StringRenderType.Image)
+                                {
+                                    isnotAdded = false;
+                                    int _height = (col as DVStringColumn).ImageHeight == 0 ? 40 : (col as DVStringColumn).ImageHeight;
+                                    int _width = (col as DVStringColumn).ImageWidth == 0 ? 40 : (col as DVStringColumn).ImageWidth;
+                                    string _quality = (col as DVStringColumn).ImageQuality.ToString().ToLower();
+                                    int rowIndex = i + ExcelRowcount;
+                                    int imgid = Convert.ToInt32(_unformattedData);
+                                    workRow.Height = _height;
+                                    workRow.CustomHeight = true;
+                                    if (imgid > 0)
+                                    {
+                                        Stream imageStream = GetImageStream(imgid);
+                                        if (imageStream != null)
+                                            InsertImage(worksheetPart1, rowIndex - 1, ExcelColIndex - 1, imageStream);
+                                    }
+                                }
+                            }
+
+                            _formattedTable.Rows[i][col.Data] = _formattedData;
+                            if (i + 1 == count)
+                            {
+                                SummaryCalcAverage(ref Summary, col, cults, count);
+                            }
+                            if (isnotAdded && ExcelColIndex > 0)
+                            {
+                                string cellReference = GetExcelColumnName(ExcelColIndex) + (i + ExcelRowcount);
+                                Cell cell = workRow.Elements<Cell>().Where(c => c.CellReference.Value == cellReference).First();
+                                cell.CellValue = new CellValue(ExcelData.ToString());
+                                cell.DataType = ResolveCellDataTypeOnValue(ExcelData.ToString());
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            Log.Info("PreProcessing data from IntermediateDictionay datatable Exception........." + e.Message + e.StackTrace + "Column Name  ......" + col.Name);
+                            this._Responsestatus.Message = e.Message;
+                        }
+                    }
+                    partSheetData.Append(workRow);
+                    if (i + 1 == count)
+                    {
+                        string XlColName;
+                        string cellReference;
+                        string _formula;
+                        Row workRow1 = new Row();
+                        Row workRow2 = new Row();
+                        foreach (var _key in Summary.Keys)
+                        {
+                            XlColName = GetExcelColumnName(ExcelColumns.FindIndex(_col => _col.Data == _key) + 1);
+
+                            cellReference = XlColName + (i + ExcelRowcount + 1);
+                            _formula = "SUM(" + XlColName + ExcelRowcount + ":" + XlColName + (i + ExcelRowcount) + ")";
+                            workRow1.Append(CreateCellWithFormula(cellReference, _formula));
+
+                            cellReference = XlColName + (i + ExcelRowcount + 2);
+                            _formula = "AVERAGE(" + XlColName + ExcelRowcount + ":" + XlColName + (i + ExcelRowcount) + ")";
+                            workRow2.Append(CreateCellWithFormula(cellReference, _formula));
+                        }
+                        partSheetData.Append(workRow1);
+                        partSheetData.Append(workRow2);
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Log.Info("DataTable2FormatedTable4Excel Exception........." + e.Message + e.StackTrace);
+                this._Responsestatus.Message = e.Message;
+            }
+        }
+
         private void InsertImage(WorksheetPart sheet1, int startRowIndex, int startColumnIndex, Stream imageStream)
         {
             ImagePartType ipt = ImagePartType.Jpeg;
@@ -2364,350 +2464,9 @@ namespace ExpressBase.ServiceStack
                 drawingsPart1.WorksheetDrawing = worksheetDrawing1;
         }
 
-        //private void InsertImage(Stream imageStream, Row row, DVBaseColumn col, int rowIndex, int colIndex)
-        //{
-        //    //Inserting a drawing element in worksheet
-        //    //Make sure that the relationship id is same for drawing element in worksheet and its relationship part
-        //    int drawingPartId = GetNextRelationShipID();
-        //    Drawing drawing1 = new Drawing() { Id = "rId" + rowIndex.ToString() };
-
-        //    //Check whether the WorksheetPart contains VmlDrawingParts (LegacyDrawing element)
-        //    if (worksheetPart1.VmlDrawingParts == null)
-        //    {
-        //        //if there is no VMLDrawing part (LegacyDrawing element) exists, just append the drawing part to the sheet
-        //        worksheetPart1.Worksheet.Append(drawing1);
-        //    }
-        //    else
-        //    {
-        //        //if VmlDrawingPart (LegacyDrawing element) exists, then find the index of legacy drawing in the sheet and inserts the new drawing element before VMLDrawing part
-        //        int legacyDrawingIndex = GetIndexofLegacyDrawing();
-        //        if (legacyDrawingIndex != -1)
-        //            worksheetPart1.Worksheet.InsertAt<OpenXmlElement>(drawing1, legacyDrawingIndex);
-        //        else
-        //            worksheetPart1.Worksheet.Append(drawing1);
-        //    }
-        //    //Adding the drawings.xml part
-        //    DrawingsPart drawingsPart1 = null;
-        //    if (worksheetPart1.DrawingsPart == null)
-        //        drawingsPart1 = worksheetPart1.AddNewPart<DrawingsPart>("rId" + rowIndex.ToString());
-        //    else
-        //        drawingsPart1 = worksheetPart1.DrawingsPart;
-        //    GenerateDrawingsPart1Content(drawingsPart1, rowIndex, colIndex, rowIndex+1, colIndex+1);
-        //    //Adding the image
-        //    ImagePart imagePart1 = drawingsPart1.AddNewPart<ImagePart>("image/jpeg", "rId" + rowIndex.ToString());
-        //    imagePart1.FeedData(imageStream);
-        //}
-
-        ///// <summary>
-        ///// Get the index of legacy drawing element in the specified WorksheetPart
-        ///// </summary>
-        ///// <param name="sheet1">The worksheetPart</param>
-        ///// <returns>Index of legacy drawing</returns>
-        //private int GetIndexofLegacyDrawing()
-        //{
-        //    for (int i = 0; i < worksheetPart1.Worksheet.ChildElements.Count; i++)
-        //    {
-        //        OpenXmlElement element = worksheetPart1.Worksheet.ChildElements[i];
-        //        if (element is LegacyDrawing)
-        //            return i;
-        //    }
-        //    return -1;
-        //}
-
-        //private static void GenerateDrawingsPart1Content(DrawingsPart drawingsPart1, int startRowIndex, int startColumnIndex, int endRowIndex, int endColumnIndex)
-        //{
-        //    Xdr.WorksheetDrawing worksheetDrawing1 = new Xdr.WorksheetDrawing();
-        //    worksheetDrawing1.AddNamespaceDeclaration("xdr", "http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing");
-        //    worksheetDrawing1.AddNamespaceDeclaration("a", "http://schemas.openxmlformats.org/drawingml/2006/main");
-
-        //    Xdr.TwoCellAnchor twoCellAnchor1 = new Xdr.TwoCellAnchor() { EditAs = Xdr.EditAsValues.OneCell };
-
-        //    Xdr.FromMarker fromMarker1 = new Xdr.FromMarker();
-        //    Xdr.ColumnId columnId1 = new Xdr.ColumnId();
-        //    columnId1.Text = startColumnIndex.ToString();
-        //    Xdr.ColumnOffset columnOffset1 = new Xdr.ColumnOffset();
-        //    columnOffset1.Text = "38100";
-        //    Xdr.RowId rowId1 = new Xdr.RowId();
-        //    rowId1.Text = startRowIndex.ToString();
-        //    Xdr.RowOffset rowOffset1 = new Xdr.RowOffset();
-        //    rowOffset1.Text = "0";
-
-        //    fromMarker1.Append(columnId1);
-        //    fromMarker1.Append(columnOffset1);
-        //    fromMarker1.Append(rowId1);
-        //    fromMarker1.Append(rowOffset1);
-
-        //    Xdr.ToMarker toMarker1 = new Xdr.ToMarker();
-        //    Xdr.ColumnId columnId2 = new Xdr.ColumnId();
-        //    columnId2.Text = endColumnIndex.ToString();
-        //    Xdr.ColumnOffset columnOffset2 = new Xdr.ColumnOffset();
-        //    columnOffset2.Text = "542925";
-        //    Xdr.RowId rowId2 = new Xdr.RowId();
-        //    rowId2.Text = endRowIndex.ToString();
-        //    Xdr.RowOffset rowOffset2 = new Xdr.RowOffset();
-        //    rowOffset2.Text = "161925";
-
-        //    toMarker1.Append(columnId2);
-        //    toMarker1.Append(columnOffset2);
-        //    toMarker1.Append(rowId2);
-        //    toMarker1.Append(rowOffset2);
-
-        //    Xdr.Picture picture1 = new Xdr.Picture();
-
-        //    Xdr.NonVisualPictureProperties nonVisualPictureProperties1 = new Xdr.NonVisualPictureProperties();
-        //    Xdr.NonVisualDrawingProperties nonVisualDrawingProperties1 = new Xdr.NonVisualDrawingProperties() { Id = (UInt32Value)2U, Name = "Picture 1" };
-
-        //    Xdr.NonVisualPictureDrawingProperties nonVisualPictureDrawingProperties1 = new Xdr.NonVisualPictureDrawingProperties();
-        //    A.PictureLocks pictureLocks1 = new A.PictureLocks() { NoChangeAspect = true };
-
-        //    nonVisualPictureDrawingProperties1.Append(pictureLocks1);
-
-        //    nonVisualPictureProperties1.Append(nonVisualDrawingProperties1);
-        //    nonVisualPictureProperties1.Append(nonVisualPictureDrawingProperties1);
-
-        //    Xdr.BlipFill blipFill1 = new Xdr.BlipFill();
-
-        //    A.Blip blip1 = new A.Blip() { Embed = "rId"+ startRowIndex, CompressionState = A.BlipCompressionValues.Print };
-        //    blip1.AddNamespaceDeclaration("r", "http://schemas.openxmlformats.org/officeDocument/2006/relationships");
-
-        //    A.BlipExtensionList blipExtensionList1 = new A.BlipExtensionList();
-
-        //    A.BlipExtension blipExtension1 = new A.BlipExtension() { Uri = "{28A0092B-C50C-407E-A947-70E740481C1C}" };
-
-        //    A14.UseLocalDpi useLocalDpi1 = new A14.UseLocalDpi() { Val = false };
-        //    useLocalDpi1.AddNamespaceDeclaration("a14", "http://schemas.microsoft.com/office/drawing/2010/main");
-
-        //    blipExtension1.Append(useLocalDpi1);
-
-        //    blipExtensionList1.Append(blipExtension1);
-
-        //    blip1.Append(blipExtensionList1);
-
-        //    A.Stretch stretch1 = new A.Stretch();
-        //    A.FillRectangle fillRectangle1 = new A.FillRectangle();
-
-        //    stretch1.Append(fillRectangle1);
-
-        //    blipFill1.Append(blip1);
-        //    blipFill1.Append(stretch1);
-
-        //    Xdr.ShapeProperties shapeProperties1 = new Xdr.ShapeProperties();
-
-        //    A.Transform2D transform2D1 = new A.Transform2D();
-        //    A.Offset offset1 = new A.Offset() { X = 1257300L, Y = 762000L };
-        //    A.Extents extents1 = new A.Extents() { Cx = 2943225L, Cy = 2257425L };
-
-        //    transform2D1.Append(offset1);
-        //    transform2D1.Append(extents1);
-
-        //    A.PresetGeometry presetGeometry1 = new A.PresetGeometry() { Preset = A.ShapeTypeValues.Rectangle };
-        //    A.AdjustValueList adjustValueList1 = new A.AdjustValueList();
-
-        //    presetGeometry1.Append(adjustValueList1);
-
-        //    shapeProperties1.Append(transform2D1);
-        //    shapeProperties1.Append(presetGeometry1);
-
-        //    picture1.Append(nonVisualPictureProperties1);
-        //    picture1.Append(blipFill1);
-        //    picture1.Append(shapeProperties1);
-        //    Xdr.ClientData clientData1 = new Xdr.ClientData();
-
-        //    twoCellAnchor1.Append(fromMarker1);
-        //    twoCellAnchor1.Append(toMarker1);
-        //    twoCellAnchor1.Append(picture1);
-        //    twoCellAnchor1.Append(clientData1);
-
-        //    worksheetDrawing1.Append(twoCellAnchor1);
-
-        //    drawingsPart1.WorksheetDrawing = worksheetDrawing1;
-        //}
-
-        //private void InsertImage(Stream imageStream, Row row,DVBaseColumn col, int rowIndex, int colIndex)
-        //{
-        //    //Calculate & sets the column width & Row height based on the image size
-        //    var data = GetImageFromFile(imageId);
-        //    Size imageSize = (data as Image).Size;
-        //    row.Height = imageSize.Height;
-        //    row.CustomHeight = true;
-        //    //Column column = (columns.ChildElements[colIndex] as Column);
-        //    //DoubleValue currentImageWidth = GetExcelCellWidth(imageSize.Width);
-        //    //if (column.Width != null)
-        //    //    column.Width = column.Width >
-        //    //    currentImageWidth ? column.Width : currentImageWidth;
-        //    //else
-        //    //    column.Width = currentImageWidth;
-        //    //column.Min = UInt32Value.FromUInt32((uint)colIndex + 1);
-        //    //column.Max = UInt32Value.FromUInt32((uint)colIndex + 2);
-
-        //    //if the data is Image, we need to serailize 
-        //    //its characteristics information in the drawing part
-        //    //and then raw image need to be added as Image part within file or package
-        //    int drawingrID = GetNextRelationShipID();
-        //    DrawingsPart drawingsPart = null;
-        //    Xdr.WorksheetDrawing worksheetDrawing = null;
-
-        //    if (worksheetPart1.DrawingsPart == null)
-        //    {
-        //        drawingsPart = worksheetPart1.AddNewPart<DrawingsPart>(drawingrID.ToString());
-        //        worksheetDrawing = new Xdr.WorksheetDrawing();
-        //        drawingsPart.WorksheetDrawing = worksheetDrawing;
-        //    }
-        //    else if (worksheetPart1.DrawingsPart != null && worksheetPart1.DrawingsPart.WorksheetDrawing != null)
-        //    {
-        //        drawingsPart = worksheetPart1.DrawingsPart;
-        //        worksheetDrawing = worksheetPart1.DrawingsPart.WorksheetDrawing;
-        //    }
-        //    int imagerId = GetNextRelationShipID();
-        //    Xdr.TwoCellAnchor cellAnchor = AddTwoCellAnchor(rowIndex, colIndex, rowIndex + 1, colIndex + 1, imagerId.ToString());
-        //    worksheetDrawing.Append(cellAnchor);
-        //    ImagePart imagePart =
-        //    drawingsPart.AddNewPart<ImagePart>("image/png", imagerId.ToString());
-        //    GenerateImagePartContent(imagePart, data as Image);
-        //}
-
-        /// <summary>
-        /// Represents the bounds of the image, 
-        /// reference to image part and other characteristics using TwoCellAnchor class
-        /// </summary>
-        /// <param name="startRow">Starting row of the image</param>
-        /// <param name="startColumn">starting column of the image</param>
-        /// <param name="endRow">Ending row of the image</param>
-        /// <param name="endColumn">ending column of the image</param>
-        /// <param name="imagerId">Image's relationship id</param>
-        /// <returns></returns>
-        //private Xdr.TwoCellAnchor AddTwoCellAnchor(int startRow, int startColumn, int endRow, int endColumn, string imagerId)
-        //{
-        //    Xdr.TwoCellAnchor twoCellAnchor1 = new Xdr.TwoCellAnchor() { EditAs = Xdr.EditAsValues.OneCell };
-
-        //    Xdr.FromMarker fromMarker1 = new Xdr.FromMarker();
-        //    Xdr.ColumnId columnId1 = new Xdr.ColumnId();
-        //    columnId1.Text = startColumn.ToString();
-        //    Xdr.ColumnOffset columnOffset1 = new Xdr.ColumnOffset();
-        //    columnOffset1.Text = "0";
-        //    Xdr.RowId rowId1 = new Xdr.RowId();
-        //    rowId1.Text = startRow.ToString();
-        //    Xdr.RowOffset rowOffset1 = new Xdr.RowOffset();
-        //    rowOffset1.Text = "0";
-
-        //    fromMarker1.Append(columnId1);
-        //    fromMarker1.Append(columnOffset1);
-        //    fromMarker1.Append(rowId1);
-        //    fromMarker1.Append(rowOffset1);
-
-        //    Xdr.ToMarker toMarker1 = new Xdr.ToMarker();
-        //    Xdr.ColumnId columnId2 = new Xdr.ColumnId();
-        //    columnId2.Text = endColumn.ToString();
-        //    Xdr.ColumnOffset columnOffset2 = new Xdr.ColumnOffset();
-        //    columnOffset2.Text = "0";// "152381";
-        //    Xdr.RowId rowId2 = new Xdr.RowId();
-        //    rowId2.Text = endRow.ToString();
-        //    Xdr.RowOffset rowOffset2 = new Xdr.RowOffset();
-        //    rowOffset2.Text = "0";//"152381";
-
-        //    toMarker1.Append(columnId2);
-        //    toMarker1.Append(columnOffset2);
-        //    toMarker1.Append(rowId2);
-        //    toMarker1.Append(rowOffset2);
-
-        //    Xdr.Picture picture1 = new Xdr.Picture();
-
-        //    Xdr.NonVisualPictureProperties nonVisualPictureProperties1 = new Xdr.NonVisualPictureProperties();
-        //    Xdr.NonVisualDrawingProperties nonVisualDrawingProperties1 =
-        //        new Xdr.NonVisualDrawingProperties() { Id = (UInt32Value)2U, Name = "Picture 1" };
-
-        //    Xdr.NonVisualPictureDrawingProperties nonVisualPictureDrawingProperties1 =
-        //        new Xdr.NonVisualPictureDrawingProperties();
-        //    A.PictureLocks pictureLocks1 = new A.PictureLocks() { NoChangeAspect = true };
-
-        //    nonVisualPictureDrawingProperties1.Append(pictureLocks1);
-
-        //    nonVisualPictureProperties1.Append(nonVisualDrawingProperties1);
-        //    nonVisualPictureProperties1.Append(nonVisualPictureDrawingProperties1);
-
-        //    Xdr.BlipFill blipFill1 = new Xdr.BlipFill();
-
-        //    A.Blip blip1 = new A.Blip() { Embed = imagerId };
-        //    blip1.AddNamespaceDeclaration("r",
-        //        "http://schemas.openxmlformats.org/officeDocument/2006/relationships");
-
-        //    A.BlipExtensionList blipExtensionList1 = new A.BlipExtensionList();
-
-        //    A.BlipExtension blipExtension1 = new A.BlipExtension()
-        //    { Uri = "{28A0092B-C50C-407E-A947-70E740481C1C}" };
-
-        //    A14.UseLocalDpi useLocalDpi1 = new A14.UseLocalDpi() { Val = false };
-        //    useLocalDpi1.AddNamespaceDeclaration("a14",
-        //        "http://schemas.microsoft.com/office/drawing/2010/main");
-
-        //    blipExtension1.Append(useLocalDpi1);
-
-        //    blipExtensionList1.Append(blipExtension1);
-
-        //    blip1.Append(blipExtensionList1);
-
-        //    A.Stretch stretch1 = new A.Stretch();
-        //    A.FillRectangle fillRectangle1 = new A.FillRectangle();
-
-        //    stretch1.Append(fillRectangle1);
-
-        //    blipFill1.Append(blip1);
-        //    blipFill1.Append(stretch1);
-
-        //    Xdr.ShapeProperties shapeProperties1 = new Xdr.ShapeProperties();
-
-        //    A.Transform2D transform2D1 = new A.Transform2D();
-        //    A.Offset offset1 = new A.Offset() { X = 0L, Y = 0L };
-        //    A.Extents extents1 = new A.Extents() { Cx = 152381L, Cy = 152381L };
-
-        //    transform2D1.Append(offset1);
-        //    transform2D1.Append(extents1);
-
-        //    A.PresetGeometry presetGeometry1 = new A.PresetGeometry() { Preset = A.ShapeTypeValues.Rectangle };
-        //    A.AdjustValueList adjustValueList1 = new A.AdjustValueList();
-
-        //    presetGeometry1.Append(adjustValueList1);
-
-        //    shapeProperties1.Append(transform2D1);
-        //    shapeProperties1.Append(presetGeometry1);
-
-        //    picture1.Append(nonVisualPictureProperties1);
-        //    picture1.Append(blipFill1);
-        //    picture1.Append(shapeProperties1);
-        //    Xdr.ClientData clientData1 = new Xdr.ClientData();
-
-        //    twoCellAnchor1.Append(fromMarker1);
-        //    twoCellAnchor1.Append(toMarker1);
-        //    twoCellAnchor1.Append(picture1);
-        //    twoCellAnchor1.Append(clientData1);
-
-        //    return twoCellAnchor1;
-        //}
-
-        /// <summary>
-        /// Generates the image part
-        /// </summary>
-        /// <param name="imagePart">Instance of the image part</param>
-        /// <param name="image">Instance of the 
-        /// image which need to be added into the package
-        /// </param>
-        //private void GenerateImagePartContent(ImagePart imagePart, Image image)
-        //{
-        //    MemoryStream memStream = new MemoryStream();
-        //    image.Save(memStream, ImageFormat.Png);
-        //    memStream.Position = 0;
-        //    imagePart.FeedData(memStream);
-        //    memStream.Close();
-        //}
-
-        /// <summary>
-        /// Returns the next relationship id for the specified WorksheetPart
-        /// </summary>
-        /// <param name="sheet1">The worksheetPart</param>
-        /// <returns>Returns the next relationship id </returns>
         private int GetNextRelationShipID()
         {
-            int nextId = 0;
+            int nextId;
             List<int> ids = new List<int>();
             foreach (IdPartPair part in worksheetPart1.Parts)
             {
@@ -2720,23 +2479,9 @@ namespace ExpressBase.ServiceStack
             return nextId;
         }
 
-
-        //private Image GetImageFromFile(int fileName)
-        //{
-        //    string path = $"../images/medium/{fileName}.jpg";
-        //    //check the existence of the file in disc
-        //    if (File.Exists(path))
-        //    {
-        //        Image image = Image.FromFile(path);
-        //        return image;
-        //    }
-        //    else
-        //        return null;
-        //}
-
         private byte[] GetImage(int refId)
         {
-            DownloadFileResponse dfs = null;
+            DownloadFileResponse dfs;
 
             byte[] fileByte = new byte[0];
             dfs = FileClient.Get
@@ -2759,9 +2504,7 @@ namespace ExpressBase.ServiceStack
 
         private Stream GetImageStream(int refId)
         {
-            DownloadFileResponse dfs = null;
-
-            byte[] fileByte = new byte[0];
+            DownloadFileResponse dfs;
             dfs = FileClient.Get
                  (new DownloadImageByIdRequest
                  {
@@ -4005,15 +3748,9 @@ ORDER BY
         {
             if ((col as DVNumericColumn).Aggregate)
             {
-                if (Summary.Keys.Contains(col.Data))
-                {
-                    Summary[col.Data][0] = (Convert.ToDecimal(Summary[col.Data][0]) + Convert.ToDecimal(_unformattedData)).ToString("N", cults.NumberFormat);
-                }
-                else
-                {
+                if (!Summary.Keys.Contains(col.Data))
                     Summary.Add(col.Data, new List<object> { 0, 0 });
-                    Summary[col.Data][0] = (Convert.ToDecimal(Summary[col.Data][0]) + Convert.ToDecimal(_unformattedData)).ToString("N", cults.NumberFormat);
-                }
+                Summary[col.Data][0] = (Convert.ToDecimal(Summary[col.Data][0]) + Convert.ToDecimal(_unformattedData)).ToString("N", cults.NumberFormat);
             }
         }
 
