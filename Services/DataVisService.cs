@@ -1106,9 +1106,13 @@ namespace ExpressBase.ServiceStack
                         for (int i = 0; i < rows.Count; i++)
                         {
                             if (_isexcel)
-                                DataTable2FormatedTable4Excel(rows[i], _dv, _user_culture, _user, ref _formattedTable, ref globals, _isexcel, ref Summary, i, rows.Count);
+                            {
+                                Row workRow = GetWorkRow(i);
+                                DataTable2FormatedTable4Excel(rows[i], _dv, _user_culture, _user, ref _formattedTable, ref globals, _isexcel, ref Summary, i, rows.Count, workRow);
+                            }
                             else
                                 DataTable2FormatedTable(rows[i], _dv, _user_culture, _user, ref _formattedTable, ref globals, bObfuscute, _isexcel, ref Summary, i, rows.Count);
+
                             if (isRowgrouping)
                                 DoRowGroupingCommon(rows[i], _dv, _user_culture, _user, ref _formattedTable, IsMultiLevelRowGrouping, ref RowGrouping, ref PreviousGroupingText, ref CurSortIndex, ref SerialCount, i, dvColCount, TotalLevels, ref AggregateColumnIndexes, ref RowGroupingColumns, rows.Count);
                         }
@@ -2223,18 +2227,74 @@ namespace ExpressBase.ServiceStack
             }
 
         }
+
+        private Dictionary<string, int> _dictExcelColumns;
+        private Dictionary<string, int> DictExcelColumns
+        {
+            get
+            {
+                if (_dictExcelColumns == null)
+                {
+                    _dictExcelColumns = new Dictionary<string, int>();
+                    for (int i = 0; i < ExcelColumns.Count; i++)
+                    {
+                        _dictExcelColumns.Add(ExcelColumns[i].Name, i);
+                    }
+                }
+                return _dictExcelColumns;
+            }
+        }
+
+        private Dictionary<int, string> _dictExcelColumnNames;
+        private Dictionary<int, string> DictExcelColumnNames
+        {
+            get
+            {
+                if (_dictExcelColumnNames == null)
+                {
+                    _dictExcelColumnNames = new Dictionary<int, string>();
+                    for (int columnNumber = 1; columnNumber <= ExcelColumns.Count; columnNumber++)
+                    {
+                        int dividend = columnNumber;
+                        string columnName = string.Empty;
+                        int modulo;
+
+                        while (dividend > 0)
+                        {
+                            modulo = (dividend - 1) % 26;
+                            columnName = Convert.ToChar(65 + modulo) + columnName;
+                            dividend = ((dividend - modulo) / 26);
+                        }
+                        _dictExcelColumnNames.Add(columnNumber, columnName);
+                    }
+                }
+                return _dictExcelColumnNames;
+            }
+        }
+
+        private Row GetWorkRow(int i)
+        {
+            Row workRow = new Row();
+            for (int k = 1; k <= ExcelColumns.Count; k++)
+            {
+                string cellReference = DictExcelColumnNames[k] + (i + ExcelRowcount);
+                workRow.Append(CreateCell(cellReference, string.Empty));
+            }
+            return workRow;
+        }
+
         public void DataTable2FormatedTable4Excel(EbDataRow row, EbDataVisualization _dv, CultureInfo _user_culture, User _user, ref EbDataTable _formattedTable,
-            ref EbVisualizationGlobals globals, bool _isexcel, ref Dictionary<int, List<object>> Summary, int i, int count)
+            ref EbVisualizationGlobals globals, bool _isexcel, ref Dictionary<int, List<object>> Summary, int i, int count, Row workRow)
         {
             bool isnotAdded = true;
             try
             {
-                Row workRow = new Row();
-                for (int k = 1; k <= ExcelColumns.Count; k++)
-                {
-                    string cellReference = GetExcelColumnName(k) + (i + ExcelRowcount);
-                    workRow.Append(CreateCell(cellReference, string.Empty));
-                }
+                //Row workRow = new Row();
+                //for (int k = 1; k <= ExcelColumns.Count; k++)
+                //{
+                //    string cellReference = GetExcelColumnName(k) + (i + ExcelRowcount);
+                //    workRow.Append(CreateCell(cellReference, string.Empty));
+                //}
                 IntermediateDic = new Dictionary<int, object>();
                 _formattedTable.Rows.Add(_formattedTable.NewDataRow2());
                 _formattedTable.Rows[i][_formattedTable.Columns.Count - 1] = i + 1;//serial
@@ -2245,7 +2305,8 @@ namespace ExpressBase.ServiceStack
                     {
                         DVBaseColumn col = dependencyTable[m];
                         isnotAdded = true;
-                        int ExcelColIndex = ExcelColumns.FindIndex(_col => _col.Name == col.Name) + 1;
+                        //int ExcelColIndex = ExcelColumns.FindIndex(_col => _col.Name == col.Name) + 1;
+                         int ExcelColIndex = DictExcelColumns.ContainsKey(col.Name) ? DictExcelColumns[col.Name] + 1 : 0;
                         try
                         {
                             CultureInfo cults = col.GetColumnCultureInfo(_user_culture);
@@ -2287,7 +2348,7 @@ namespace ExpressBase.ServiceStack
                             }
                             if (isnotAdded && ExcelColIndex > 0)
                             {
-                                string cellReference = GetExcelColumnName(ExcelColIndex) + (i + ExcelRowcount);
+                                string cellReference = DictExcelColumnNames[ExcelColIndex] + (i + ExcelRowcount);
                                 Cell cell = workRow.Elements<Cell>().Where(c => c.CellReference.Value == cellReference).First();
                                 cell.CellValue = new CellValue(ExcelData.ToString());
                                 cell.DataType = ResolveCellDataTypeOnValue(ExcelData.ToString());
@@ -2309,7 +2370,7 @@ namespace ExpressBase.ServiceStack
                         Row workRow2 = new Row();
                         foreach (var _key in Summary.Keys)
                         {
-                            XlColName = GetExcelColumnName(ExcelColumns.FindIndex(_col => _col.Data == _key) + 1);
+                            XlColName = DictExcelColumnNames[_key + 1];
 
                             cellReference = XlColName + (i + ExcelRowcount + 1);
                             _formula = "SUM(" + XlColName + ExcelRowcount + ":" + XlColName + (i + ExcelRowcount) + ")";
