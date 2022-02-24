@@ -2743,7 +2743,7 @@ namespace ExpressBase.ServiceStack.Services
         }
 
         [Authenticate]
-        public void Post(LastSolnAccessRequest request)
+        public LastSolnAccessResponse Post(LastSolnAccessRequest request)
         {
             EbDataTable solutionlist = SelectSolutionsFromDB();
             List<LastDbAccess> LastDbAccessList = new List<LastDbAccess>();
@@ -2835,19 +2835,20 @@ namespace ExpressBase.ServiceStack.Services
             }
             string csv = LastDbAccessList.ToCsv();
             byte[] b = Encoding.ASCII.GetBytes(csv);
-            MessageProducer3.Publish(new EmailServicesRequest()
-            {
-                From = "request.from",
-                To = "donajose@expressbase.com",
-                Message = "Hi, PFA",
-                Subject = "DB Last Access Log",
-                UserId = request.UserId,
-                AttachmentReport = b,
-                AttachmentName = "Lastaccess" + ".csv",
-                //  UserAuthId = request.UserAuthId,
-                SolnId = request.SolnId
+            return new LastSolnAccessResponse { FileBytea = b };
+            //MessageProducer3.Publish(new EmailServicesRequest1()
+            //{
+            //    From = "request.from",
+            //    To = "donajose@expressbase.com",
+            //    Message = "Hi, PFA",
+            //    Subject = "DB Last Access Log",
+            //    UserId = request.UserId,
+            //    AttachmentReport = b,
+            //    AttachmentName = "Lastaccess" + ".csv",
+            //    //  UserAuthId = request.UserAuthId,
+            //    SolnId = request.SolnId
 
-            });
+            //});
         }
     }
 
