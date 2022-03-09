@@ -171,7 +171,7 @@ namespace ExpressBase.ServiceStack.Services
             EbSystemColumns ebs = Form.SolutionObj.SolutionSettings?.SystemColumns ?? new EbSystemColumns(EbSysCols.Values);// Solu Obj is null
             IVendorDbTypes vDbTypes = this.EbConnectionFactory.DataDB.VendorDbTypes;
             string Msg = string.Empty;
-            foreach (TableSchema _table in _schema.Tables)
+            foreach (TableSchema _table in _schema.Tables.FindAll(e => !e.DoNotPersist))
             {
                 List<TableColumnMeta> _listNamesAndTypes = new List<TableColumnMeta>();
                 if (_table.Columns.Count > 0 && _table.TableType != WebFormTableTypes.Review)

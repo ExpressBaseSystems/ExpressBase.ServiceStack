@@ -706,7 +706,7 @@ SELECT DISTINCT id FROM eb_form_drafts WHERE draft_type = @draft_type AND eb_cre
             {
                 EbDataReader dataReader = this.GetEbObject<EbDataReader>(request.DataSourceRefId);
 
-                List<DbParameter> parameters = request.Params.ParamsToDbParameters(this.EbConnectionFactory);
+                List<DbParameter> parameters = request.Params.ParamsToDbParameters(this.EbConnectionFactory.DataDB);
 
                 parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_currentuser_id", EbDbTypes.Int32, request.UserId));
 
@@ -866,20 +866,21 @@ SELECT DISTINCT id FROM eb_form_drafts WHERE draft_type = @draft_type AND eb_cre
             try
             {
                 EbDataReader dataReader = this.GetEbObject<EbDataReader>(request.DataSourceRefId);
+                IDatabase DataDB = dataReader.GetDatastore(this.EbConnectionFactory);
                 List<DbParameter> parameters;
                 if (!string.IsNullOrWhiteSpace(request.Params))
                 {
                     List<Param> Params = JsonConvert.DeserializeObject<List<Param>>(request.Params);
-                    parameters = Params.ParamsToDbParameters(this.EbConnectionFactory);
+                    parameters = Params.ParamsToDbParameters(DataDB);
                 }
                 else
                     parameters = new List<DbParameter>();
 
-                parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_currentuser_id", EbDbTypes.Int32, request.UserId));
+                parameters.Add(DataDB.GetNewParameter("eb_currentuser_id", EbDbTypes.Int32, request.UserId));
                 if (request.Limit != 0)
                 {
-                    parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("limit", EbDbTypes.Int32, request.Limit));
-                    parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("offset", EbDbTypes.Int32, request.Offset));
+                    parameters.Add(DataDB.GetNewParameter("limit", EbDbTypes.Int32, request.Limit));
+                    parameters.Add(DataDB.GetNewParameter("offset", EbDbTypes.Int32, request.Offset));
                 }
 
                 string sql = dataReader.Sql.Trim().TrimEnd(CharConstants.SEMI_COLON);
@@ -899,7 +900,7 @@ SELECT DISTINCT id FROM eb_form_drafts WHERE draft_type = @draft_type AND eb_cre
 
                 wraped += CharConstants.SEMI_COLON;
 
-                resp.Data = this.EbConnectionFactory.DataDB.DoQueries(wraped, parameters.ToArray());
+                resp.Data = DataDB.DoQueries(wraped, parameters.ToArray());
                 resp.Message = "Success";
             }
             catch (Exception ex)
