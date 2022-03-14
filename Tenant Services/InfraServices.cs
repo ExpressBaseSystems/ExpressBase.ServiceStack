@@ -1141,7 +1141,7 @@ namespace ExpressBase.ServiceStack.Services
             string q = @"SELECT esolution_id, isolution_id FROM eb_solutions WHERE eb_del = false";
             string esid = string.Empty;
             string isid = string.Empty;
-            if (request.ExtSolutionId != string.Empty)
+            if (!string.IsNullOrEmpty(request.ExtSolutionId))
             {
                 q += " AND esolution_id = '" + request.ExtSolutionId + "';";
             }

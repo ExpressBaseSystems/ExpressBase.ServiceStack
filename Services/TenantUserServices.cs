@@ -184,44 +184,47 @@ namespace ExpressBase.ServiceStack.Services
             {
                 var _infraService = base.ResolveService<InfraServices>();
                 GetSolutioInfoResponse res = (GetSolutioInfoResponse)_infraService.Get(new GetSolutioInfoRequest { IsolutionId = req.SolnId });
-                EbSolutionsWrapper wrap_sol = res.Data;
+                EbSolutionsWrapper wrap_sol = res?.Data;
                 LocationInfoTenantResponse Loc = this.Get(new LocationInfoTenantRequest { SolnId = req.SolnId, UserId = req.UserId });
                 EbSolutionUsers users = GetUserInfo(req.SolnId);
-                Eb_Solution sol_Obj = new Eb_Solution
+                if (!(wrap_sol is null))
                 {
-                    SolutionID = req.SolnId,
-                    DateCreated = wrap_sol.DateCreated.ToString(),
-                    Description = wrap_sol.Description.ToString(),
-                    Locations = Loc.Locations,
-                    NumberOfUsers = users.UserCount,
-                    SolutionName = wrap_sol.SolutionName.ToString(),
-                    LocationConfig = Loc.Config,
-                    PricingTier = wrap_sol.PricingTier,
-                    Users = users.UserList,
-                    IsVersioningEnabled = wrap_sol.IsVersioningEnabled,
-                    PlanUserCount = users.PlanUserCount,
-                    SolutionSettings = wrap_sol.SolutionSettings,
-                    ExtSolutionID = wrap_sol.EsolutionId,
-                    Is2faEnabled = wrap_sol.Is2faEnabled,
-                    OtpDelivery2fa = wrap_sol.OtpDelivery2fa,
-                    IsOtpSigninEnabled = wrap_sol.IsOtpSigninEnabled,
-                    OtpDeliverySignin = wrap_sol.OtpDeliverySignin,
-                    SolutionType = wrap_sol.SolutionType,
-                    PrimarySolution = wrap_sol.PrimarySolution,
-                    FinancialYears = GetFinancialYears(req.SolnId)
-                    //LocationTree = Loc.LocationTree
-                };
+                    Eb_Solution sol_Obj = new Eb_Solution
+                    {
+                        SolutionID = req.SolnId,
+                        DateCreated = wrap_sol.DateCreated.ToString(),
+                        Description = wrap_sol.Description.ToString(),
+                        Locations = Loc.Locations,
+                        NumberOfUsers = users.UserCount,
+                        SolutionName = wrap_sol.SolutionName.ToString(),
+                        LocationConfig = Loc.Config,
+                        PricingTier = wrap_sol.PricingTier,
+                        Users = users.UserList,
+                        IsVersioningEnabled = wrap_sol.IsVersioningEnabled,
+                        PlanUserCount = users.PlanUserCount,
+                        SolutionSettings = wrap_sol.SolutionSettings,
+                        ExtSolutionID = wrap_sol.EsolutionId,
+                        Is2faEnabled = wrap_sol.Is2faEnabled,
+                        OtpDelivery2fa = wrap_sol.OtpDelivery2fa,
+                        IsOtpSigninEnabled = wrap_sol.IsOtpSigninEnabled,
+                        OtpDeliverySignin = wrap_sol.OtpDeliverySignin,
+                        SolutionType = wrap_sol.SolutionType,
+                        PrimarySolution = wrap_sol.PrimarySolution,
+                        FinancialYears = GetFinancialYears(req.SolnId)
+                        //LocationTree = Loc.LocationTree
+                    };
 
-                EbConnectionFactory _ebConnectionFactory = new EbConnectionFactory(req.SolnId, Redis);
-                if (_ebConnectionFactory?.EmailConnection?.Primary != null)
-                    sol_Obj.IsEmailIntegrated = true;
-                if (_ebConnectionFactory?.SMSConnection?.Primary != null)
-                    sol_Obj.IsSmsIntegrated = true;
+                    EbConnectionFactory _ebConnectionFactory = new EbConnectionFactory(req.SolnId, Redis);
+                    if (_ebConnectionFactory?.EmailConnection?.Primary != null)
+                        sol_Obj.IsEmailIntegrated = true;
+                    if (_ebConnectionFactory?.SMSConnection?.Primary != null)
+                        sol_Obj.IsSmsIntegrated = true;
 
-                this.Redis.Set<Eb_Solution>(String.Format("solution_{0}", req.SolnId), sol_Obj);
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine("sol_Obj Updated : " + sol_Obj.ToString());
-                Console.ForegroundColor = ConsoleColor.White;
+                    this.Redis.Set<Eb_Solution>(String.Format("solution_{0}", req.SolnId), sol_Obj);
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.WriteLine("sol_Obj Updated : " + sol_Obj.ToString());
+                    Console.ForegroundColor = ConsoleColor.White;
+                }
             }
             catch (Exception e)
             {

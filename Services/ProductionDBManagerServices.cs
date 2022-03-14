@@ -2820,20 +2820,9 @@ namespace ExpressBase.ServiceStack.Services
                 }
             }
             string csv = LastDbAccessList.ToCsv();
-            byte[] b = Encoding.ASCII.GetBytes(csv);
-            MessageProducer3.Publish(new EmailServicesRequest()
-            {
-                From = "request.from",
-                To = "donajose@expressbase.com",
-                Message = "Hi, PFA",
-                Subject = "DB Last Access Log",
-                UserId = request.UserId,
-                AttachmentReport = b,
-                AttachmentName = "Lastaccess" + ".csv",
-                //  UserAuthId = request.UserAuthId,
-                SolnId = request.SolnId
-
-            });
+            string Q2 = "INSERT INTO eb_lastaccess_csv(csv, created_at) VALUES(:csv, NOW())";
+            DbParameter[] _params = { this.InfraConnectionFactory.DataDB.GetNewParameter("csv", Common.Structures.EbDbTypes.String, csv) };
+            this.InfraConnectionFactory.DataDB.DoNonQuery(Q2, _params);
         }
     }
 
