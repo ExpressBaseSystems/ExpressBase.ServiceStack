@@ -1197,7 +1197,7 @@ namespace ExpressBase.ServiceStack.Services
         }
 
 
-        private EbWebForm GetWebFormObject(string RefId, string UserAuthId, string SolnId, int CurrrentLocation = 0)
+        public EbWebForm GetWebFormObject(string RefId, string UserAuthId, string SolnId, int CurrrentLocation = 0)
         {
             EbWebForm _form = EbFormHelper.GetEbObject<EbWebForm>(RefId, null, this.Redis, this);
             _form.LocationId = CurrrentLocation;
