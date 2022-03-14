@@ -2831,16 +2831,19 @@ namespace ExpressBase.ServiceStack.Services
                     catch (Exception e)
                     {
 
-                    Console.WriteLine(e.Message + e.StackTrace);
-                    continue;
+                        Console.WriteLine(e.Message + e.StackTrace);
+                        continue;
+                    }
                 }
+                string csv = LastDbAccessList.ToCsv();
+                string Q2 = "INSERT INTO eb_lastaccess_csv(csv, created_at) VALUES(:csv, NOW())";
+                DbParameter[] _params = { this.InfraConnectionFactory.DataDB.GetNewParameter("csv", Common.Structures.EbDbTypes.String, csv) };
+                this.InfraConnectionFactory.DataDB.DoNonQuery(Q2, _params);
             }
-            string csv = LastDbAccessList.ToCsv();
-            string Q2 = "INSERT INTO eb_lastaccess_csv(csv, created_at) VALUES(:csv, NOW())";
-            DbParameter[] _params = { this.InfraConnectionFactory.DataDB.GetNewParameter("csv", Common.Structures.EbDbTypes.String, csv) };
-            this.InfraConnectionFactory.DataDB.DoNonQuery(Q2, _params);
+            catch (Exception e)
+            {
+                Console.WriteLine("Exception in LastSolnAccessRequest" + e.Message + e.StackTrace);
+            }
         }
     }
-
-
 }
