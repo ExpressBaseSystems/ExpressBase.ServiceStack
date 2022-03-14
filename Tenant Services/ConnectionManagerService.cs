@@ -465,7 +465,39 @@ namespace ExpressBase.ServiceStack.Services
             AddSmtpResponse res = new AddSmtpResponse();
             try
             {
-                request.Config.PersistIntegrationConf(request.SolnId, this.InfraConnectionFactory, request.UserId);
+                res.Id = request.Config.PersistIntegrationConf(request.SolnId, this.InfraConnectionFactory, request.UserId);
+            }
+            catch (Exception e)
+            {
+                res.ResponseStatus.Message = e.Message;
+                Console.WriteLine("Add Fail : " + e.ToString() + e.StackTrace.ToString());
+            }
+            return res;
+        }
+
+        [Authenticate]
+        public AddSmtpResponse Post(AddImapRequest request)
+        {
+            AddSmtpResponse res = new AddSmtpResponse();
+            try
+            {
+                res.Id = request.Config.PersistIntegrationConf(request.SolnId, this.InfraConnectionFactory, request.UserId);
+            }
+            catch (Exception e)
+            {
+                res.ResponseStatus.Message = e.Message;
+                Console.WriteLine("Add Fail : " + e.ToString() + e.StackTrace.ToString());
+            }
+            return res;
+        }
+
+        [Authenticate]
+        public AddSmtpResponse Post(AddPop3Request request)
+        {
+            AddSmtpResponse res = new AddSmtpResponse();
+            try
+            {
+                res.Id = request.Config.PersistIntegrationConf(request.SolnId, this.InfraConnectionFactory, request.UserId);
             }
             catch (Exception e)
             {
@@ -918,14 +950,15 @@ namespace ExpressBase.ServiceStack.Services
 
             string sql = string.Format(@"SELECT * FROM eb_solutions WHERE isolution_id='{0}';
                 SELECT id,solution_id,nickname,type,created_at FROM eb_integration_configs WHERE solution_id = '{0}' AND eb_del = 'F';
-                SELECT EI.id,EI.eb_integration_conf_id as confid,EI.type as itype,EI.preference,EC.nickname,EC.type as ctype,EC.created_at FROM
+                SELECT EI.id,EI.eb_integration_conf_id as confid, EI.type as itype,EI.preference,EC.nickname,EC.type as ctype,EC.created_at FROM
                     eb_integration_configs EC,
                     eb_integrations EI 
                 where 
                      EC.id = EI.eb_integration_conf_id AND 
                      EC.solution_id = '{0}' AND
                      EI.solution_id = '{0}' 
-                    AND EI.eb_del = 'F' AND EC.eb_del = 'F';", request.IsolutionId);
+                    AND EI.eb_del = 'F' AND EC.eb_del = 'F'
+                ORDER BY EC.type;", request.IsolutionId);
             try
             {
                 EbDataSet dt = this.InfraConnectionFactory.DataDB.DoQueries(sql);
@@ -945,7 +978,7 @@ namespace ExpressBase.ServiceStack.Services
                         OtpDelivery2fa = _temp.Rows[0]["otp_delivery_2fa"].ToString(),
                         IsOtpSigninEnabled = Convert.ToBoolean(_temp.Rows[0]["is_otp_signin"]),
                         OtpDeliverySignin = _temp.Rows[0]["otp_delivery_signin"].ToString(),
-                        
+
                     };
 
                     _temp = dt.Tables[1];
@@ -968,7 +1001,7 @@ namespace ExpressBase.ServiceStack.Services
                         _intgre[Type].Add(new EbIntegrationData(_row));
                     }
                     resp.Integrations = _intgre;
-                } 
+                }
                 EbConnectionFactory _ebConnectionFactory = new EbConnectionFactory(request.IsolutionId, Redis);
                 if (_ebConnectionFactory.EmailConnection != null && _ebConnectionFactory.EmailConnection.Primary != null)
                 {

@@ -1,6 +1,7 @@
 ﻿using ExpressBase.Common;
 using ExpressBase.Common.Data;
 using ExpressBase.Common.EbServiceStack.ReqNRes;
+using ExpressBase.Common.ServiceClients;
 using ExpressBase.Common.Structures;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using Newtonsoft.Json;
@@ -17,7 +18,7 @@ namespace ExpressBase.ServiceStack.Services
 {
     public class FileOperationServices : EbBaseService
     {
-        public FileOperationServices(IEbConnectionFactory _dbf, IMessageProducer _msp, IMessageQueueClient _mqc) : base(_dbf, _msp, _mqc)
+        public FileOperationServices(IEbConnectionFactory _dbf, IEbStaticFileClient _sfc, IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_dbf, _sfc, _mqp, _mqc)
         {
         }
 
@@ -74,6 +75,21 @@ namespace ExpressBase.ServiceStack.Services
             }
 
             return new FileCategoryChangeResponse { Status = (result > 0) ? true : false };
+        }
+
+        public FileUploadResponse Any(FileUploadInternalRequest request)
+        {
+            FileUploadResponse response=  this.FileClient.Post(new FileUploadRequest
+            {
+                FileByte = request.FileByte,
+                FileCategory = request.FileCategory,
+                FileDetails = request.FileDetails,
+                SolnId = request.SolnId,
+                UserAuthId = request.UserAuthId,
+                UserId = request.UserId,
+                WhichConsole = request.WhichConsole
+            });
+            return response;
         }
     }
 }

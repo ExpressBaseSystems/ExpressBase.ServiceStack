@@ -18,6 +18,8 @@ using ServiceStack;
 using RestSharp;
 using ExpressBase.Objects.Objects;
 using System.Net;
+using ExpressBase.Common.Messaging;
+using ExpressBase.Common.ServiceClients;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -35,7 +37,7 @@ namespace ExpressBase.ServiceStack.Services
 
         private string SolutionId { set; get; }
 
-        public ApiServices(IEbConnectionFactory _dbf) : base(_dbf)
+        public ApiServices(IEbConnectionFactory _dbf, IEbStaticFileClient _sfc) : base(_dbf, _sfc)
         {
             this.StudioServices = base.ResolveService<EbObjectService>();
             this.ApiResponse = new ApiResponse();
@@ -179,6 +181,9 @@ namespace ExpressBase.ServiceStack.Services
                         break;
                     case EbFormResource form:
                         res.Result = ExecuteFormResource(form);
+                        break;
+                    case EbEmailRetriever retriever:
+                        res.Result = ExecuteEmailRetriever(retriever);
                         break;
                     default:
                         res.Result = null;
@@ -501,6 +506,48 @@ namespace ExpressBase.ServiceStack.Services
             {
                 throw new ApiException("[ExecuteFormResource], " + ex.Message);
             }
+        }
+
+        private object ExecuteEmailRetriever(EbEmailRetriever retriever)
+        {
+            try
+            {
+                WebFormServices WebFormServices = base.ResolveService<WebFormServices>();
+                int mailcon = retriever.MailConnection;
+                RetrieverResponse retrieverResponse = this.EbConnectionFactory.EmailRetrieveConnection[mailcon]?.Retrieve(this);
+                foreach (RetrieverMessage _m in retrieverResponse?.RetrieverMessages)
+                {                    
+                    EbWebForm _form = WebFormServices.GetWebFormObject(retriever.Reference, null, null);
+                    WebformData data = _form.GetEmptyModel();
+                    data.MultipleTables[_form.TableName][0]["mail_subject"] = _m.Message.Subject;
+                    data.MultipleTables[_form.TableName][0]["mail_body"] = _m.Message.Body;
+                    data.MultipleTables[_form.TableName][0]["mail_from"] = _m.Message.From.Address;
+                    data.MultipleTables[_form.TableName][0]["mail_to"] = _m.Message.To.ToString();
+                    data.MultipleTables[_form.TableName][0]["mail_cc"] = _m.Message.CC.ToString();
+                    data.MultipleTables[_form.TableName][0]["mail_bcc"] = _m.Message.Bcc.ToString();
+                    for (int i = 0; i < _m.Attachemnts.Count; i++)
+                    {
+                        if (!data.ExtendedTables.ContainsKey("mail_attachments"))
+                            data.ExtendedTables.Add("mail_attachments", new SingleTable());
+                        SingleRow r = new SingleRow();
+                        r.Columns.Add(new SingleColumn { Value = _m.Attachemnts[i], Type = 7 });
+                        data.ExtendedTables["mail_attachments"].Add(r);
+                    }
+                    InsertDataFromWebformResponse response = WebFormServices.Any(new InsertDataFromWebformRequest
+                    {
+                        RefId = retriever.Reference,
+                        FormData = EbSerializers.Json_Serialize(data),
+                        SolnId = this.SolutionId,
+                        UserAuthId = this.UserObject?.AuthId,
+                        CurrentLoc = this.UserObject.Preference.DefaultLocation,
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                 throw new ApiException("[ExecuteEmailRetriever], " + ex.Message);
+            }
+            return 0;
         }
 
         private List<Param> GetEmailParams(EbEmailTemplate enode)
