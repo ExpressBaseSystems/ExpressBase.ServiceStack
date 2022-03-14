@@ -887,8 +887,7 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     string vendor = DataDB.Vendor.ToString();
                     string Urlstart = string.Format("ExpressBase.Common.sqlscripts.{0}.", vendor.ToLower());
-                    DbConnection con = DataDB.GetNewConnection();
-                    con.Open();
+
                     var assembly = typeof(sqlscripts).Assembly;
                     string result = null;
                     Stream stream = assembly.GetManifestResourceStream(Urlstart + "filesdb.tablecreate.eb_files_bytea.sql");
@@ -902,8 +901,14 @@ namespace ExpressBase.ServiceStack.Services
                     {
                         Console.WriteLine(" Reading reference - stream is null -" + Urlstart + "filesdb.tablecreate.eb_files_bytea.sql");
                     }
-                    var cmdtxt1 = DataDB.GetNewCommand(con, result);
-                    cmdtxt1.ExecuteNonQuery();
+                    using (DbConnection con = DataDB.GetNewConnection())
+                    {
+                        con.Open();
+                        using (var cmdtxt1 = DataDB.GetNewCommand(con, result))
+                        {
+                            cmdtxt1.ExecuteNonQuery();
+                        }
+                    }
                 }
             }
             catch (Exception e)

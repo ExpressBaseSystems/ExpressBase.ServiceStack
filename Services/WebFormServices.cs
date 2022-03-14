@@ -171,7 +171,7 @@ namespace ExpressBase.ServiceStack.Services
             EbSystemColumns ebs = Form.SolutionObj.SolutionSettings?.SystemColumns ?? new EbSystemColumns(EbSysCols.Values);// Solu Obj is null
             IVendorDbTypes vDbTypes = this.EbConnectionFactory.DataDB.VendorDbTypes;
             string Msg = string.Empty;
-            foreach (TableSchema _table in _schema.Tables)
+            foreach (TableSchema _table in _schema.Tables.FindAll(e => !e.DoNotPersist))
             {
                 List<TableColumnMeta> _listNamesAndTypes = new List<TableColumnMeta>();
                 if (_table.Columns.Count > 0 && _table.TableType != WebFormTableTypes.Review)
@@ -1296,12 +1296,13 @@ namespace ExpressBase.ServiceStack.Services
         //Normal save
         public InsertDataFromWebformResponse Any(InsertDataFromWebformRequest request)
         {
+            EbWebForm FormObj = null;
             try
             {
                 Dictionary<string, string> MetaData = new Dictionary<string, string>();
                 DateTime startdt = DateTime.Now;
                 Console.WriteLine("Insert/Update WebFormData : start - " + startdt);
-                EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId, request.CurrentLoc);
+                FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId, request.CurrentLoc);
                 CheckDataPusherCompatibility(FormObj);
                 FormObj.TableRowId = request.RowId;
                 FormObj.FormData = JsonConvert.DeserializeObject<WebformData>(request.FormData);
@@ -1311,7 +1312,7 @@ namespace ExpressBase.ServiceStack.Services
                 Console.WriteLine("Insert/Update WebFormData : MergeFormData start - " + DateTime.Now);
                 FormObj.MergeFormData();
                 Console.WriteLine("Insert/Update WebFormData : Save start - " + DateTime.Now);
-                string r = FormObj.Save(EbConnectionFactory, this, request.WhichConsole);
+                string r = FormObj.Save(EbConnectionFactory, this, request.WhichConsole, request.MobilePageRefId);
                 Console.WriteLine("Insert/Update WebFormData : AfterExecutionIfUserCreated start - " + DateTime.Now);
                 FormObj.AfterExecutionIfUserCreated(this, this.EbConnectionFactory.EmailConnection, MessageProducer3, request.WhichConsole, MetaData);
                 Console.WriteLine("Insert/Update WebFormData end : Execution Time = " + (DateTime.Now - startdt).TotalMilliseconds);
@@ -1332,8 +1333,8 @@ namespace ExpressBase.ServiceStack.Services
             {
                 Console.WriteLine("FormException in Insert/Update WebFormData\nMessage : " + ex.Message + "\nMessageInternal : " + ex.MessageInternal + "\nStackTraceInternal : " + ex.StackTraceInternal + "\nStackTrace" + ex.StackTrace);
 
-                if (request.WhichConsole == TokenConstants.MC && request.RowId <= 0)
-                    return SubmitErrorAndGetResponse(request, ex);
+                if (IsErrorDraftCandidate(request, FormObj))
+                    return FormDraftsHelper.SubmitErrorAndGetResponse(this.EbConnectionFactory.DataDB, FormObj, request, ex);
 
                 return new InsertDataFromWebformResponse()
                 {
@@ -1347,8 +1348,8 @@ namespace ExpressBase.ServiceStack.Services
             {
                 Console.WriteLine("Exception in Insert/Update WebFormData\nMessage : " + ex.Message + "\nStackTrace : " + ex.StackTrace);
 
-                if (request.WhichConsole == TokenConstants.MC && request.RowId <= 0)
-                    return SubmitErrorAndGetResponse(request, ex);
+                if (IsErrorDraftCandidate(request, FormObj))
+                    return FormDraftsHelper.SubmitErrorAndGetResponse(this.EbConnectionFactory.DataDB, FormObj, request, ex);
 
                 return new InsertDataFromWebformResponse()
                 {
@@ -1360,10 +1361,23 @@ namespace ExpressBase.ServiceStack.Services
             }
         }
 
-        private InsertDataFromWebformResponse SubmitErrorAndGetResponse(InsertDataFromWebformRequest request, Exception ex)
+        //if "eb_created_at_device" is present in WebFormData then it is treated as mobile offline submission
+        private bool IsErrorDraftCandidate(InsertDataFromWebformRequest request, EbWebForm FormObj)
         {
-            EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId, request.CurrentLoc);
-            return FormDraftsHelper.SubmitErrorAndGetResponse(this.EbConnectionFactory.DataDB, FormObj, request, ex);
+            if (request.WhichConsole == TokenConstants.MC && request.RowId <= 0)
+            {
+                if (FormObj?.FormData?.MultipleTables != null)
+                {
+                    if (FormObj.FormData.MultipleTables.TryGetValue(FormObj.TableName, out SingleTable MTable) &&
+                        MTable.Count > 0 && MTable[0].GetColumn("eb_created_at_device") != null)
+                    {
+                        //SingleColumn Col = MTable[0].GetColumn("eb_retry_count");
+                        //if (Col == null || (int.TryParse(Col.Value?.ToString(), out int count) && count == 0))
+                        return true;
+                    }
+                }
+            }
+            return false;
         }
 
         public ExecuteReviewResponse Any(ExecuteReviewRequest request)
@@ -1688,7 +1702,7 @@ namespace ExpressBase.ServiceStack.Services
                 EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId);////////
 
                 string Qry = $@"UPDATE eb_form_drafts SET eb_del = 'T', eb_lastmodified_at = {this.EbConnectionFactory.DataDB.EB_CURRENT_TIMESTAMP}
-                                    WHERE id = @id AND form_ref_id = @form_ref_id AND eb_created_by = @eb_created_by AND is_submitted = 'F' AND eb_del = 'F';";
+                                    WHERE id = @id AND form_ref_id = @form_ref_id AND (eb_created_by = @eb_created_by OR draft_type = {(int)FormDraftTypes.ErrorBin}) AND is_submitted = 'F' AND eb_del = 'F';";
                 DbParameter[] parameters = new DbParameter[]
                 {
                     this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, request.DraftId),
@@ -1697,7 +1711,7 @@ namespace ExpressBase.ServiceStack.Services
                 };
                 int status = this.EbConnectionFactory.DataDB.DoNonQuery(Qry, parameters);
                 if (status == 0)
-                    throw new FormException("Not Found.", (int)HttpStatusCode.NotFound, $"No row affected", "SaveFormDraftRequest -> Edit");
+                    throw new FormException("Unable to continue.", (int)HttpStatusCode.NotFound, $"No row affected", "SaveFormDraftRequest -> Edit");
                 Console.WriteLine("SaveFormDraftRequest returning");
                 return new DiscardFormDraftResponse() { Status = (int)HttpStatusCode.OK, Message = "success" };
             }
@@ -1720,7 +1734,7 @@ namespace ExpressBase.ServiceStack.Services
                 Console.WriteLine("GetFormDraftRequest Service start");
                 EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId, request.CurrentLoc);////////
                 string Json = string.Empty;
-                string Qry = $@"SELECT id, form_data_json, eb_loc_id, eb_created_by, eb_created_at, eb_lastmodified_at FROM eb_form_drafts
+                string Qry = $@"SELECT id, form_data_json, eb_loc_id, eb_created_by, eb_created_at, eb_lastmodified_at, draft_type FROM eb_form_drafts
                                     WHERE id = @id AND form_ref_id = @form_ref_id AND is_submitted = 'F' AND eb_del = 'F' AND
                                         ((eb_created_by = @eb_created_by AND COALESCE(draft_type, 0)={(int)FormDraftTypes.NormalDraft}) OR draft_type = {(int)FormDraftTypes.ErrorBin}); ";
                 DbParameter[] parameters = new DbParameter[]
@@ -1737,15 +1751,20 @@ namespace ExpressBase.ServiceStack.Services
 
                 try
                 {
-                    EbWebForm destForm = this.GetWebFormObject(request.RefId, null, null, request.CurrentLoc);
-                    destForm.UserObj = FormObj.UserObj;
-                    destForm.SolutionObj = FormObj.SolutionObj;
-                    WebformData data = JsonConvert.DeserializeObject<WebformData>(Json);
-                    data.MasterTable = FormObj.TableName;
-                    FormObj.FormData = data;
-                    FormObj.MergeFormData();
-                    FormObj.FormatImportData(EbConnectionFactory.DataDB, this, destForm);
-                    Json = JsonConvert.SerializeObject(destForm.FormData);
+                    int.TryParse(dt.Rows[0][6]?.ToString(), out int type);
+
+                    if ((FormDraftTypes)type == FormDraftTypes.ErrorBin)
+                    {
+                        EbWebForm destForm = this.GetWebFormObject(request.RefId, null, null, request.CurrentLoc);
+                        destForm.UserObj = FormObj.UserObj;
+                        destForm.SolutionObj = FormObj.SolutionObj;
+                        WebformData data = JsonConvert.DeserializeObject<WebformData>(Json);
+                        data.MasterTable = FormObj.TableName;
+                        FormObj.FormData = data;
+                        FormObj.MergeFormData();
+                        FormObj.FormatImportData(EbConnectionFactory.DataDB, this, destForm, null, true);
+                        Json = JsonConvert.SerializeObject(destForm.FormData);
+                    }
                 }
                 catch (Exception ex)
                 {

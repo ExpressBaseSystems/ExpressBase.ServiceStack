@@ -1066,14 +1066,18 @@ namespace ExpressBase.ServiceStack.Services
                     result = reader.ReadToEnd();
                 }
 
-                var datacmd = dbf.DataDB.GetNewCommand(_con_d1, result);
-                datacmd.ExecuteNonQuery();
-                var cmd = dbf.DataDB.GetNewCommand(_con_d1, "INSERT INTO eb_users(email,pwd,fullname,phnoprimary) VALUES(@email,@pwd,@fullname,@phnoprimary); INSERT INTO eb_role2user(user_id,role_id) VALUES(1,3)");
-                cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, dt.Rows[0][0]));
-                cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("pwd", EbDbTypes.String, dt.Rows[0][3]));
-                cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("fullname", EbDbTypes.String, dt.Rows[0][1]));
-                cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("phnoprimary", EbDbTypes.String, dt.Rows[0][2]));
-                cmd.ExecuteScalar();
+                using (var datacmd = dbf.DataDB.GetNewCommand(_con_d1, result))
+                {
+                    datacmd.ExecuteNonQuery();
+                }
+                using (var cmd = dbf.DataDB.GetNewCommand(_con_d1, "INSERT INTO eb_users(email,pwd,fullname,phnoprimary) VALUES(@email,@pwd,@fullname,@phnoprimary); INSERT INTO eb_role2user(user_id,role_id) VALUES(1,3)"))
+                {
+                    cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, dt.Rows[0][0]));
+                    cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("pwd", EbDbTypes.String, dt.Rows[0][3]));
+                    cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("fullname", EbDbTypes.String, dt.Rows[0][1]));
+                    cmd.Parameters.Add(EbConnectionFactory.DataDB.GetNewParameter("phnoprimary", EbDbTypes.String, dt.Rows[0][2]));
+                    cmd.ExecuteScalar();
+                }
             }
 
         }
@@ -1088,8 +1092,10 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     result = reader.ReadToEnd();
                 }
-                var datacmd = dbf.ObjectsDB.GetNewCommand(_con_o1, result);
-                datacmd.ExecuteNonQuery();
+                using (var datacmd = dbf.ObjectsDB.GetNewCommand(_con_o1, result))
+                {
+                    datacmd.ExecuteNonQuery();
+                }
             }
 
         }

@@ -19,6 +19,7 @@ using ExpressBase.Objects.Helpers;
 using ExpressBase.Common.LocationNSolution;
 using ExpressBase.Common.ServiceClients;
 using ExpressBase.Common.EbServiceStack.ReqNRes;
+using ExpressBase.Objects.WebFormRelated;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -268,8 +269,34 @@ namespace ExpressBase.ServiceStack.Services
         public EbMobileSolutionData Post(MobileSolutionDataRequestV2 request)
         {
             EbMobileSolutionData data = new EbMobileSolutionData();
+            data.CurrentUser = this.GetUserObject(request.UserAuthId);
+            data.CurrentSolution = this.GetSolutionObject(request.SolnId);
 
-            string idcheck = "AND EO.id = ANY(string_to_array(:ids, ',')::int[])";
+            Dictionary<string, object> metaData = JsonConvert.DeserializeObject<Dictionary<string, object>>(request.MetaData);
+            DateTime date = metaData.ContainsKey("last_sync_ts") ? Convert.ToDateTime(metaData["last_sync_ts"]) : DateTime.MinValue;
+            List<int> draft_ids = metaData.ContainsKey("draft_ids") ? JsonConvert.DeserializeObject<List<int>>(Convert.ToString(metaData["draft_ids"])) : new List<int>();
+            string app_version = metaData.ContainsKey("app_version") ? Convert.ToString(metaData["app_version"]) : null; //app_version will not present in < 1.5.1 apps
+
+            MobileAppSettings appSettings = data.CurrentSolution?.SolutionSettings?.MobileAppSettings;
+
+            if (!data.CurrentUser.IsAdmin() && appSettings?.MaintenanceMode == true)
+            {
+                if (string.IsNullOrWhiteSpace(appSettings.MaintenanceMessage))
+                    appSettings.MaintenanceMessage = "Servers under maintenance. Please try after sometime.";
+                if (app_version == null)
+                    throw new Exception(appSettings.MaintenanceMessage);
+                else
+                {
+                    data.MetaData.Add("maintenance_msg", appSettings.MaintenanceMessage);
+                    data.last_sync_ts = DateTime.UtcNow;
+                    return data;
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(appSettings.LatestAppVersion))
+                data.MetaData.Add("app_version", appSettings.LatestAppVersion);
+
+            string idcheck = "AND EO.id = ANY(string_to_array(@ids, ',')::int[])";
             string query = @"
 SELECT 
 	EO.id, EO.obj_name, EO.display_name, EO.obj_type, EOV.version_num, EOV.refid,
@@ -292,19 +319,23 @@ WHERE
 ORDER BY 
 	display_name;
 
-SELECT CURRENT_TIMESTAMP AT TIME ZONE 'UTC'; ";
+SELECT CURRENT_TIMESTAMP AT TIME ZONE 'UTC'; 
 
-            data.CurrentUser = this.GetUserObject(request.UserAuthId);
-            data.CurrentSolution = this.GetSolutionObject(request.SolnId);
+SELECT DISTINCT id FROM eb_form_drafts WHERE draft_type = @draft_type AND eb_created_by = @eb_created_by AND 
+    COALESCE(is_submitted, 'F') = 'F' AND COALESCE(eb_del, 'F') = 'F' AND id =  ANY(STRING_TO_ARRAY(@err_ids, ',')::INT[]); ";
 
             try
             {
                 if (data.CurrentSolution != null) data.Locations = data.CurrentSolution.GetLocationsByUser(data.CurrentUser);
 
-                Dictionary<string, object> metaData = JsonConvert.DeserializeObject<Dictionary<string, object>>(request.MetaData);
-                DateTime date = metaData.ContainsKey("last_sync_ts") ? Convert.ToDateTime(metaData["last_sync_ts"]) : DateTime.MinValue;
                 EbDataSet ds;
-                List<DbParameter> param = new List<DbParameter>() { this.EbConnectionFactory.DataDB.GetNewParameter("last_sync_ts", EbDbTypes.DateTime, date) };
+                List<DbParameter> param = new List<DbParameter>()
+                {
+                    this.EbConnectionFactory.DataDB.GetNewParameter("last_sync_ts", EbDbTypes.DateTime, date),
+                    this.EbConnectionFactory.DataDB.GetNewParameter("draft_type", EbDbTypes.Int32, (int)FormDraftTypes.ErrorBin),
+                    this.EbConnectionFactory.DataDB.GetNewParameter("draft_type", EbDbTypes.Int32, request.UserId),
+                    this.EbConnectionFactory.DataDB.GetNewParameter("err_ids", EbDbTypes.String, String.Join(",", draft_ids))
+                };
 
                 if (data.CurrentUser.IsAdmin())
                 {
@@ -320,6 +351,9 @@ SELECT CURRENT_TIMESTAMP AT TIME ZONE 'UTC'; ";
                 ds = this.EbConnectionFactory.ObjectsDB.DoQueries(query, param.ToArray());
 
                 data.last_sync_ts = Convert.ToDateTime(ds.Tables[1].Rows[0][0]);
+
+                foreach (EbDataRow dr in ds.Tables[2].Rows)
+                    data.DraftIds.Add(Convert.ToInt32(dr[0]));
 
                 foreach (EbDataRow row in ds.Tables[0].Rows)
                 {
@@ -571,34 +605,31 @@ SELECT CURRENT_TIMESTAMP AT TIME ZONE 'UTC'; ";
         private EbDataSet PullAppConfiguredData(EbMobileSettings Settings, int userid)
         {
             EbDataSet DataSet = new EbDataSet();
-
             try
             {
+                string FullQry = string.Empty;
+                List<DbParameter> dbParam = new List<DbParameter>();
+                dbParam.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_currentuser_id", EbDbTypes.Int32, userid));
+
                 foreach (DataImportMobile DI in Settings.DataImport)
                 {
                     int objtype = Convert.ToInt32(DI.RefId.Split(CharConstants.DASH)[2]);
 
                     if (objtype == (int)EbObjectTypes.DataReader)
                     {
-                        DataSourceDataSetResponse resp = this.Gateway.Send<DataSourceDataSetResponse>(new DataSourceDataSetRequest
-                        {
-                            RefId = DI.RefId,
-                            Params = new List<Param>
-                            {
-                                new Param
-                                {
-                                    Name = "eb_currentuser_id",
-                                    Type = ((int)EbDbTypes.Int32).ToString(),
-                                    Value = userid.ToString()
-                                }
-                            }
-                        });
-
-                        if (resp.DataSet.Tables.Any())
-                        {
-                            resp.DataSet.Tables[0].TableName = DI.TableName;
-                            DataSet.Tables.Add(resp.DataSet.Tables[0]);
-                        }
+                        EbDataReader _ds = EbFormHelper.GetEbObject<EbDataReader>(DI.RefId, null, this.Redis, this);
+                        FullQry += _ds.Sql + "; ";
+                    }
+                }
+                if (FullQry != string.Empty)
+                {
+                    DataSet = this.EbConnectionFactory.DataDB.DoQueries(FullQry, dbParam.ToArray());
+                    int i = 0;
+                    foreach (DataImportMobile DI in Settings.DataImport)
+                    {
+                        int objtype = Convert.ToInt32(DI.RefId.Split(CharConstants.DASH)[2]);
+                        if (objtype == (int)EbObjectTypes.DataReader)
+                            DataSet.Tables[i++].TableName = DI.TableName;
                     }
                 }
             }
@@ -675,7 +706,7 @@ SELECT CURRENT_TIMESTAMP AT TIME ZONE 'UTC'; ";
             {
                 EbDataReader dataReader = this.GetEbObject<EbDataReader>(request.DataSourceRefId);
 
-                List<DbParameter> parameters = request.Params.ParamsToDbParameters(this.EbConnectionFactory);
+                List<DbParameter> parameters = request.Params.ParamsToDbParameters(this.EbConnectionFactory.DataDB);
 
                 parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_currentuser_id", EbDbTypes.Int32, request.UserId));
 
@@ -835,20 +866,21 @@ SELECT CURRENT_TIMESTAMP AT TIME ZONE 'UTC'; ";
             try
             {
                 EbDataReader dataReader = this.GetEbObject<EbDataReader>(request.DataSourceRefId);
+                IDatabase DataDB = dataReader.GetDatastore(this.EbConnectionFactory);
                 List<DbParameter> parameters;
                 if (!string.IsNullOrWhiteSpace(request.Params))
                 {
                     List<Param> Params = JsonConvert.DeserializeObject<List<Param>>(request.Params);
-                    parameters = Params.ParamsToDbParameters(this.EbConnectionFactory);
+                    parameters = Params.ParamsToDbParameters(DataDB);
                 }
                 else
                     parameters = new List<DbParameter>();
 
-                parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_currentuser_id", EbDbTypes.Int32, request.UserId));
+                parameters.Add(DataDB.GetNewParameter("eb_currentuser_id", EbDbTypes.Int32, request.UserId));
                 if (request.Limit != 0)
                 {
-                    parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("limit", EbDbTypes.Int32, request.Limit));
-                    parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("offset", EbDbTypes.Int32, request.Offset));
+                    parameters.Add(DataDB.GetNewParameter("limit", EbDbTypes.Int32, request.Limit));
+                    parameters.Add(DataDB.GetNewParameter("offset", EbDbTypes.Int32, request.Offset));
                 }
 
                 string sql = dataReader.Sql.Trim().TrimEnd(CharConstants.SEMI_COLON);
@@ -868,7 +900,7 @@ SELECT CURRENT_TIMESTAMP AT TIME ZONE 'UTC'; ";
 
                 wraped += CharConstants.SEMI_COLON;
 
-                resp.Data = this.EbConnectionFactory.DataDB.DoQueries(wraped, parameters.ToArray());
+                resp.Data = DataDB.DoQueries(wraped, parameters.ToArray());
                 resp.Message = "Success";
             }
             catch (Exception ex)

@@ -323,16 +323,18 @@ namespace ExpressBase.ServiceStack
                     con.Open();
                     DbCommand cmd = null;
                     string sql = EbConnectionFactory.ObjectsDB.EB_CREATEBOT;
-                    cmd = this.EbConnectionFactory.ObjectsDB.GetNewCommand(con, sql);
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("solid", EbDbTypes.String, request.SolutionId));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("name", EbDbTypes.String, request.BotName));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("fullname", EbDbTypes.String, request.FullName));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("url", EbDbTypes.String, request.WebURL));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("welcome_msg", EbDbTypes.String, request.WelcomeMsg));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("uid", EbDbTypes.Int32, request.UserId));
-                    cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("botid", EbDbTypes.Int32, (request.BotId != null) ? request.BotId : "0"));
+                    using (cmd = this.EbConnectionFactory.ObjectsDB.GetNewCommand(con, sql))
+                    {
+                        cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("solid", EbDbTypes.String, request.SolutionId));
+                        cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("name", EbDbTypes.String, request.BotName));
+                        cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("fullname", EbDbTypes.String, request.FullName));
+                        cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("url", EbDbTypes.String, request.WebURL));
+                        cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("welcome_msg", EbDbTypes.String, request.WelcomeMsg));
+                        cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("uid", EbDbTypes.Int32, request.UserId));
+                        cmd.Parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("botid", EbDbTypes.Int32, (request.BotId != null) ? request.BotId : "0"));
 
-                    botid = cmd.ExecuteScalar().ToString();
+                        botid = cmd.ExecuteScalar().ToString();
+                    }
                 }
             }
             catch (Exception e)

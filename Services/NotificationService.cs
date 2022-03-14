@@ -255,14 +255,11 @@ namespace ExpressBase.ServiceStack.Services
             GetNotificationFromDbResponse res = new GetNotificationFromDbResponse();
             List<NotificationInfo> n = new List<NotificationInfo>();
             this.EbConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
-            using (DbConnection con = this.EbConnectionFactory.DataDB.GetNewConnection())
-            {
-                con.Open();
-                string str = string.Format(@"UPDATE eb_notifications SET message_seen = 'T' WHERE notification_id = '{0}' AND user_id = '{1}';",
+
+            string str = string.Format(@"UPDATE eb_notifications SET message_seen = 'T' WHERE notification_id = '{0}' AND user_id = '{1}';",
                     request.NotificationId, request.UserId);
-                DbCommand cmd = this.EbConnectionFactory.DataDB.GetNewCommand(con, str);
-                cmd.ExecuteNonQuery();
-            }
+            this.EbConnectionFactory.DataDB.DoNonQuery(str, new DbParameter[] { });
+
             string str1 = string.Format(@"
                                                 SELECT notification_id, notification, created_at 
                                                 FROM eb_notifications 
