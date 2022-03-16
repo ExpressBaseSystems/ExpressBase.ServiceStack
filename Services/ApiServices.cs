@@ -314,8 +314,15 @@ namespace ExpressBase.ServiceStack.Services
                 return resourceValue;
             };
 
-            global.GoToHandler += (index) =>
+            global.GoToByIndexHandler += (index) =>
             {
+                this.Step = index;
+                this.Api.Resources[index].Result = this.GetResult(this.Api.Resources[index]);
+            };
+
+            global.GoToByNameHandler += (name) =>
+            {
+                int index = this.Api.Resources.GetIndex(name);
                 this.Step = index;
                 this.Api.Resources[index].Result = this.GetResult(this.Api.Resources[index]);
             };
