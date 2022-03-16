@@ -50,52 +50,56 @@ namespace ExpressBase.ServiceStack.MQServices
             {
                 Console.WriteLine(" Reached Inside MQService/ReportServiceInternal in SS .. Before Report Render");
                 JobArgs = request.JobArgs;
-                EbConnectionFactory ebConnectionFactory = new EbConnectionFactory(JobArgs.SolnId, this.Redis);
-                ObjectService.EbConnectionFactory = ReportService.EbConnectionFactory = SchedulersService.EbConnectionFactory = ebConnectionFactory;
 
-
-                Dictionary<string, byte[]> LocaleReport = new Dictionary<string, byte[]>();
-                Console.WriteLine(" Fetching Live version  " + JobArgs.ObjId);
-
-                EbObjectFetchLiveVersionResponse res = ((EbObjectFetchLiveVersionResponse)ObjectService.Get(new EbObjectFetchLiveVersionRequest()
+                if (JobArgs != null)
                 {
-                    Id = JobArgs.ObjId
-                }));
+                    EbConnectionFactory ebConnectionFactory = new EbConnectionFactory(JobArgs.SolnId, this.Redis);
+                    ObjectService.EbConnectionFactory = ReportService.EbConnectionFactory = SchedulersService.EbConnectionFactory = ebConnectionFactory;
 
 
-                if (res.Data != null && res.Data.Count > 0 && JobArgs.ToUserIds != null)
-                {
+                    Dictionary<string, byte[]> LocaleReport = new Dictionary<string, byte[]>();
+                    Console.WriteLine(" Fetching Live version  " + JobArgs.ObjId);
 
-                    UserCollection = JsonConvert.DeserializeObject<AllUserCollection>(JobArgs.ToUserIds);
-                    GroupCollection = JsonConvert.DeserializeObject<AllGroupCollection>(JobArgs.ToUserGroupIds);
-                    MessageCollection = JsonConvert.DeserializeObject<AllDelMessagaeCollection>(JobArgs.Message);
-                    if (UserCollection?.EmailUser != "" || GroupCollection?.EmailGroup != "")
+                    EbObjectFetchLiveVersionResponse res = ((EbObjectFetchLiveVersionResponse)ObjectService.Get(new EbObjectFetchLiveVersionRequest()
                     {
-                        Locales = new Dictionary<string, List<User>>();
-                        JobArgs.DeliveryMechanisms = (DeliveryMechanisms)1;
-                        JobArgs.Message = MessageCollection?.EmailMessage;
-                        GetEmailUserDetails(JobArgs);
-                        JobPush(res);
-                    }
-                    if (UserCollection?.SMSUser != "" || GroupCollection?.SMSGroup != "")
-                    {
-                        JobArgs.DeliveryMechanisms = (DeliveryMechanisms)2;
-                        JobArgs.Message = MessageCollection?.SMSMessage;
-                        JobPush(res);
-                    }
-                    if (UserCollection?.SlackUser != "" || GroupCollection?.SlackGroup != "")
-                    {
-                        Locales = new Dictionary<string, List<User>>();
-                        JobArgs.DeliveryMechanisms = (DeliveryMechanisms)3;
-                        JobArgs.Message = MessageCollection?.SlackMessage;
-                        getSlackUser();
-                        JobPush(res);
-                    }
+                        Id = JobArgs.ObjId
+                    }));
 
-                }
-                else
-                {
-                    Console.WriteLine("No Live version avaialble for :" + JobArgs.ObjId);
+
+                    if (res.Data != null && res.Data.Count > 0 && JobArgs.ToUserIds != null)
+                    {
+
+                        UserCollection = JsonConvert.DeserializeObject<AllUserCollection>(JobArgs.ToUserIds);
+                        GroupCollection = JsonConvert.DeserializeObject<AllGroupCollection>(JobArgs.ToUserGroupIds);
+                        MessageCollection = JsonConvert.DeserializeObject<AllDelMessagaeCollection>(JobArgs.Message);
+                        if (UserCollection?.EmailUser != "" || GroupCollection?.EmailGroup != "")
+                        {
+                            Locales = new Dictionary<string, List<User>>();
+                            JobArgs.DeliveryMechanisms = (DeliveryMechanisms)1;
+                            JobArgs.Message = MessageCollection?.EmailMessage;
+                            GetEmailUserDetails(JobArgs);
+                            JobPush(res);
+                        }
+                        if (UserCollection?.SMSUser != "" || GroupCollection?.SMSGroup != "")
+                        {
+                            JobArgs.DeliveryMechanisms = (DeliveryMechanisms)2;
+                            JobArgs.Message = MessageCollection?.SMSMessage;
+                            JobPush(res);
+                        }
+                        if (UserCollection?.SlackUser != "" || GroupCollection?.SlackGroup != "")
+                        {
+                            Locales = new Dictionary<string, List<User>>();
+                            JobArgs.DeliveryMechanisms = (DeliveryMechanisms)3;
+                            JobArgs.Message = MessageCollection?.SlackMessage;
+                            getSlackUser();
+                            JobPush(res);
+                        }
+
+                    }
+                    else
+                    {
+                        Console.WriteLine("No Live version avaialble for :" + JobArgs.ObjId);
+                    }
                 }
             }
             catch (Exception e)

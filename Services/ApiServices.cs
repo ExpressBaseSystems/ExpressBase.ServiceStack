@@ -20,6 +20,7 @@ using ExpressBase.Objects.Objects;
 using System.Net;
 using ExpressBase.Common.Messaging;
 using ExpressBase.Common.ServiceClients;
+using System.Text.RegularExpressions;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -36,6 +37,8 @@ namespace ExpressBase.ServiceStack.Services
         private User UserObject { set; get; }
 
         private string SolutionId { set; get; }
+
+        private int Step = 0;
 
         public ApiServices(IEbConnectionFactory _dbf, IEbStaticFileClient _sfc) : base(_dbf, _sfc)
         {
@@ -127,17 +130,15 @@ namespace ExpressBase.ServiceStack.Services
         {
             try
             {
-                int step = 0;
-
                 int r_count = this.Api.Resources.Count;
 
-                while (step < r_count)
+                while (Step < r_count)
                 {
-                    this.Api.Resources[step].Result = this.GetResult(this.Api.Resources[step], step);
-                    step++;
+                    this.Api.Resources[Step].Result = this.GetResult(this.Api.Resources[Step]);
+                    Step++;
                 }
 
-                this.ApiResponse.Result = this.Api.Resources[step - 1].GetResult();
+                this.ApiResponse.Result = this.Api.Resources[Step - 1].GetResult();
 
                 this.ApiResponse.Message.Status = "Success";
                 this.ApiResponse.Message.ErrorCode = ApiResponse.Result == null ? ApiErrorCode.SuccessWithNoReturn : ApiErrorCode.Success;
@@ -150,7 +151,7 @@ namespace ExpressBase.ServiceStack.Services
             }
         }
 
-        private object GetResult(ApiResources resource, int index)
+        private object GetResult(ApiResources resource)
         {
             ResultWrapper res = new ResultWrapper();
 
@@ -171,7 +172,7 @@ namespace ExpressBase.ServiceStack.Services
                         res.Result = ExecuteEmail(email);
                         break;
                     case EbProcessor processor:
-                        res.Result = ExecuteScript(processor, index);
+                        res.Result = ExecuteScript(processor);
                         break;
                     case EbConnectApi ebApi:
                         res.Result = ExecuteConnectApi(ebApi);
@@ -294,7 +295,7 @@ namespace ExpressBase.ServiceStack.Services
             return response;
         }
 
-        private object ExecuteScript(EbProcessor processor, int step)
+        private object ExecuteScript(EbProcessor processor)
         {
             ApiGlobals global = new ApiGlobals(this.GlobalParams);
 
@@ -313,7 +314,13 @@ namespace ExpressBase.ServiceStack.Services
                 return resourceValue;
             };
 
-            ApiResources lastResource = step == 0 ? null : this.Api.Resources[step - 1];
+            global.GoToHandler += (index) =>
+            {
+                this.Step = index;
+                this.Api.Resources[index].Result = this.GetResult(this.Api.Resources[index]);
+            };
+
+            ApiResources lastResource = this.Step == 0 ? null : this.Api.Resources[this.Step - 1];
 
             if (lastResource != null && lastResource.Result != null && lastResource.Result is EbDataSet dataSet)
             {
@@ -420,7 +427,7 @@ namespace ExpressBase.ServiceStack.Services
 
         private object ExecuteThirdPartyApi(EbThirdPartyApi thirdPartyResource)
         {
-            Uri uri = new Uri(thirdPartyResource.Url);
+            Uri uri = new Uri(ReplacePlaceholders(thirdPartyResource.Url));
 
             object result;
 
@@ -516,7 +523,7 @@ namespace ExpressBase.ServiceStack.Services
                 int mailcon = retriever.MailConnection;
                 RetrieverResponse retrieverResponse = this.EbConnectionFactory.EmailRetrieveConnection[mailcon]?.Retrieve(this);
                 foreach (RetrieverMessage _m in retrieverResponse?.RetrieverMessages)
-                {                    
+                {
                     EbWebForm _form = WebFormServices.GetWebFormObject(retriever.Reference, null, null);
                     WebformData data = _form.GetEmptyModel();
                     data.MultipleTables[_form.TableName][0]["mail_subject"] = _m.Message.Subject;
@@ -545,7 +552,7 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception ex)
             {
-                 throw new ApiException("[ExecuteEmailRetriever], " + ex.Message);
+                throw new ApiException("[ExecuteEmailRetriever], " + ex.Message);
             }
             return 0;
         }
@@ -606,6 +613,32 @@ namespace ExpressBase.ServiceStack.Services
             {
                 throw new ApiException("[Params], " + ex.Message);
             }
+        }
+
+        public string ReplacePlaceholders(string text)
+        {
+            if (!String.IsNullOrEmpty(text))
+            {
+                string pattern = @"\{{(.*?)\}}";
+                IEnumerable<string> matches = Regex.Matches(text, pattern).OfType<Match>().Select(m => m.Groups[0].Value).Distinct();
+                foreach (string _col in matches)
+                {
+                    try
+                    {
+                        string parameter_name = _col.Replace("{{", "").Replace("}}", "");
+                        if (this.GlobalParams.ContainsKey(parameter_name))
+                        {
+                            string value = this.GlobalParams[parameter_name].ToString();
+                            text = text.Replace(_col, value);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new ApiException("[Replace Placeholders in Url], parameter - " + _col + ". " + ex.Message);
+                    }
+                }
+            }
+            return text;
         }
 
         private bool IsRequired(string name)
