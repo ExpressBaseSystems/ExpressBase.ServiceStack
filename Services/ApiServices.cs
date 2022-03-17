@@ -21,6 +21,7 @@ using System.Net;
 using ExpressBase.Common.Messaging;
 using ExpressBase.Common.ServiceClients;
 using System.Text.RegularExpressions;
+using ExpressBase.CoreBase.Globals;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -137,8 +138,8 @@ namespace ExpressBase.ServiceStack.Services
                     this.Api.Resources[Step].Result = this.GetResult(this.Api.Resources[Step]);
                     Step++;
                 }
-
-                this.ApiResponse.Result = this.Api.Resources[Step - 1].GetResult();
+                if (this.ApiResponse.Result == null)
+                    this.ApiResponse.Result = this.Api.Resources[Step - 1].GetResult();
 
                 this.ApiResponse.Message.Status = "Success";
                 this.ApiResponse.Message.ErrorCode = ApiResponse.Result == null ? ApiErrorCode.SuccessWithNoReturn : ApiErrorCode.Success;
@@ -297,10 +298,32 @@ namespace ExpressBase.ServiceStack.Services
 
         private object ExecuteScript(EbProcessor processor)
         {
-            ApiGlobals global = new ApiGlobals(this.GlobalParams);
+            ApiGlobalParent global;
 
-            global.ResourceValueHandler += (index) =>
+            if (processor.EvaluatorVersion == EvaluatorVersion.Version_1)
+                global = new ApiGlobals(this.GlobalParams);
+            else
+                global = new ApiGlobalsCoreBase(this.GlobalParams);
+
+            global.ResourceValueByIndexHandler += (index) =>
             {
+                object resourceValue = this.Api.Resources[index].Result;
+
+                if (resourceValue != null && resourceValue is string converted)
+                {
+                    if (converted.StartsWith("{") && converted.EndsWith("}") || converted.StartsWith("[") && converted.EndsWith("]"))
+                    {
+                        string formated = converted.Replace(@"\", string.Empty);
+                        return JObject.Parse(formated);
+                    }
+                }
+                return resourceValue;
+            };
+
+            global.ResourceValueByNameHandler += (name) =>
+            {
+                int index = this.Api.Resources.GetIndex(name);
+
                 object resourceValue = this.Api.Resources[index].Result;
 
                 if (resourceValue != null && resourceValue is string converted)
@@ -327,11 +350,17 @@ namespace ExpressBase.ServiceStack.Services
                 this.Api.Resources[index].Result = this.GetResult(this.Api.Resources[index]);
             };
 
+            global.ExitResultHandler += (obj) =>
+              {
+                  this.ApiResponse.Result = obj;
+                  this.Step = this.Api.Resources.Count - 1;
+              };
+
             ApiResources lastResource = this.Step == 0 ? null : this.Api.Resources[this.Step - 1];
 
-            if (lastResource != null && lastResource.Result != null && lastResource.Result is EbDataSet dataSet)
+            if (processor.EvaluatorVersion == EvaluatorVersion.Version_1 && lastResource != null && lastResource.Result != null && lastResource.Result is EbDataSet dataSet)
             {
-                global.Tables = dataSet.Tables;
+                (global as ApiGlobals).Tables = dataSet.Tables;
             }
 
             ApiScript result;
@@ -481,7 +510,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 int RecordId = 0;
                 WebFormServices webFormServices = base.ResolveService<WebFormServices>();
-                NTVDict _params = new NTVDict();
+                Objects.Objects.NTVDict _params = new Objects.Objects.NTVDict();
                 foreach (KeyValuePair<string, object> p in this.GlobalParams)
                 {
                     EbDbTypes _type;
