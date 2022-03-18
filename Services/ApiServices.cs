@@ -352,10 +352,14 @@ namespace ExpressBase.ServiceStack.Services
             };
 
             global.ExitResultHandler += (obj) =>
-              {
-                  this.ApiResponse.Result = JsonConvert.SerializeObject(obj);
-                  this.Step = this.Api.Resources.Count - 1;
-              };
+            {
+                ApiScript script = new ApiScript
+                {
+                    Data = JsonConvert.SerializeObject(obj),
+                };
+                this.ApiResponse.Result = script;
+                this.Step = this.Api.Resources.Count - 1;
+            };
 
             ApiResources lastResource = this.Step == 0 ? null : this.Api.Resources[this.Step - 1];
 
