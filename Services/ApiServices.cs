@@ -22,6 +22,7 @@ using ExpressBase.Common.Messaging;
 using ExpressBase.Common.ServiceClients;
 using System.Text.RegularExpressions;
 using ExpressBase.CoreBase.Globals;
+using Newtonsoft.Json;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -352,7 +353,7 @@ namespace ExpressBase.ServiceStack.Services
 
             global.ExitResultHandler += (obj) =>
               {
-                  this.ApiResponse.Result = obj;
+                  this.ApiResponse.Result = JsonConvert.SerializeObject(obj);
                   this.Step = this.Api.Resources.Count - 1;
               };
 
