@@ -23,12 +23,16 @@ using ExpressBase.Common.ServiceClients;
 using System.Text.RegularExpressions;
 using ExpressBase.CoreBase.Globals;
 using Newtonsoft.Json;
+using ExpressBase.Objects.Helpers;
+using ExpressBase.Common.Helpers;
 
 namespace ExpressBase.ServiceStack.Services
 {
     public class ApiServices : EbBaseService
     {
         private EbObjectService StudioServices { set; get; }
+
+        private WebFormServices WebFormService { set; get; }
 
         private Dictionary<string, object> GlobalParams { set; get; }
 
@@ -45,6 +49,7 @@ namespace ExpressBase.ServiceStack.Services
         public ApiServices(IEbConnectionFactory _dbf, IEbStaticFileClient _sfc) : base(_dbf, _sfc)
         {
             this.StudioServices = base.ResolveService<EbObjectService>();
+            this.WebFormService = base.ResolveService<WebFormServices>();
             this.ApiResponse = new ApiResponse();
         }
 
@@ -560,35 +565,15 @@ namespace ExpressBase.ServiceStack.Services
         {
             try
             {
-                WebFormServices WebFormServices = base.ResolveService<WebFormServices>();
                 int mailcon = retriever.MailConnection;
-                RetrieverResponse retrieverResponse = this.EbConnectionFactory.EmailRetrieveConnection[mailcon]?.Retrieve(this);
+                RetrieverResponse retrieverResponse = this.EbConnectionFactory.EmailRetrieveConnection[mailcon]?.Retrieve(this, retriever.DefaultSyncDate, this.FileClient, this.SolutionId);
+
+                EbWebForm _form = this.WebFormService.GetWebFormObject(retriever.Reference, null, null);
+                WebformData data = _form.GetEmptyModel();
+
                 foreach (RetrieverMessage _m in retrieverResponse?.RetrieverMessages)
                 {
-                    EbWebForm _form = WebFormServices.GetWebFormObject(retriever.Reference, null, null);
-                    WebformData data = _form.GetEmptyModel();
-                    data.MultipleTables[_form.TableName][0]["mail_subject"] = _m.Message.Subject;
-                    data.MultipleTables[_form.TableName][0]["mail_body"] = _m.Message.Body;
-                    data.MultipleTables[_form.TableName][0]["mail_from"] = _m.Message.From.Address;
-                    data.MultipleTables[_form.TableName][0]["mail_to"] = _m.Message.To.ToString();
-                    data.MultipleTables[_form.TableName][0]["mail_cc"] = _m.Message.CC.ToString();
-                    data.MultipleTables[_form.TableName][0]["mail_bcc"] = _m.Message.Bcc.ToString();
-                    for (int i = 0; i < _m.Attachemnts.Count; i++)
-                    {
-                        if (!data.ExtendedTables.ContainsKey("mail_attachments"))
-                            data.ExtendedTables.Add("mail_attachments", new SingleTable());
-                        SingleRow r = new SingleRow();
-                        r.Columns.Add(new SingleColumn { Value = _m.Attachemnts[i], Type = 7 });
-                        data.ExtendedTables["mail_attachments"].Add(r);
-                    }
-                    InsertDataFromWebformResponse response = WebFormServices.Any(new InsertDataFromWebformRequest
-                    {
-                        RefId = retriever.Reference,
-                        FormData = EbSerializers.Json_Serialize(data),
-                        SolnId = this.SolutionId,
-                        UserAuthId = this.UserObject?.AuthId,
-                        CurrentLoc = this.UserObject.Preference.DefaultLocation,
-                    });
+                    InsertFormData(_form, data, _m, retriever.Reference);
                 }
             }
             catch (Exception ex)
@@ -596,6 +581,42 @@ namespace ExpressBase.ServiceStack.Services
                 throw new ApiException("[ExecuteEmailRetriever], " + ex.Message);
             }
             return 0;
+        }
+
+
+        public int InsertFormData(EbWebForm _form, WebformData data, RetrieverMessage _m, string refid)
+        {
+            data.MultipleTables[_form.TableName][0]["mail_subject"] = _m.Message.Subject;
+            data.MultipleTables[_form.TableName][0]["mail_body"] = _m.Message.Body;
+            data.MultipleTables[_form.TableName][0]["mail_from"] = _m.Message.From.Address;
+            data.MultipleTables[_form.TableName][0]["mail_to"] = _m.Message.To.ToString();
+            data.MultipleTables[_form.TableName][0]["mail_cc"] = _m.Message.CC.ToString();
+            data.MultipleTables[_form.TableName][0]["mail_bcc"] = _m.Message.Bcc.ToString();
+
+            foreach (int _att in _m.Attachemnts)
+            {
+                if (!data.ExtendedTables.ContainsKey("mail_attachments"))
+                    data.ExtendedTables.Add("mail_attachments", new SingleTable());
+
+                SingleRow r = new SingleRow();
+                r.Columns.Add(new SingleColumn
+                {
+                    Value = _att,
+                    Type = 7
+                });
+
+                data.ExtendedTables["mail_attachments"].Add(r);
+            }
+
+            InsertDataFromWebformResponse response = this.WebFormService.Any(new InsertDataFromWebformRequest
+            {
+                RefId = refid,
+                FormData = EbSerializers.Json_Serialize(data),
+                SolnId = this.SolutionId,
+                UserAuthId = this.UserObject?.AuthId,
+                CurrentLoc = this.UserObject.Preference.DefaultLocation,
+            });
+            return response.RowId;
         }
 
         private List<Param> GetEmailParams(EbEmailTemplate enode)
@@ -747,47 +768,7 @@ namespace ExpressBase.ServiceStack.Services
         [Authenticate]
         public ApiReqJsonResponse Get(ApiReqJsonRequest request)
         {
-            List<Param> parameters = new List<Param>();
-
-            foreach (ApiResources resource in request.Components)
-            {
-                if (resource is EbSqlReader || resource is EbSqlWriter || resource is EbSqlFunc)
-                {
-                    EbDataSourceMain dataSource = this.GetEbObject<EbDataSourceMain>(resource.Reference);
-
-                    if (dataSource.InputParams == null || dataSource.InputParams.Count <= 0)
-                        parameters.Merge(dataSource.GetParams(this.Redis as RedisClient));
-                    else
-                        parameters.Merge(dataSource.InputParams);
-                }
-                else if (resource is EbEmailNode)
-                {
-                    EbEmailTemplate emailTemplate = this.GetEbObject<EbEmailTemplate>(resource.Reference);
-
-                    parameters = parameters.Merge(this.GetEmailParams(emailTemplate));
-                }
-                else if (resource is EbConnectApi)
-                {
-                    EbApi ob = this.GetEbObject<EbApi>(resource.Reference);
-
-                    parameters = parameters.Merge(this.Get(new ApiReqJsonRequest { Components = ob.Resources }).Params);
-                }
-                else if (resource is EbThirdPartyApi thirdParty)
-                {
-                    if (thirdParty.Parameters != null && thirdParty.Parameters.Count > 0)
-                    {
-                        foreach (var param in thirdParty.Parameters)
-                        {
-                            parameters.Add(new Param
-                            {
-                                Name = param.Name,
-                                Type = param.Type.ToString(),
-                                Value = param.Value
-                            });
-                        }
-                    }
-                }
-            }
+            List<Param> parameters = EbApiHelper.GetReqJsonParameters(request.Components, this.Redis, this.EbConnectionFactory.ObjectsDB);
             return new ApiReqJsonResponse { Params = parameters };
         }
 
@@ -832,29 +813,7 @@ namespace ExpressBase.ServiceStack.Services
         [Authenticate]
         public ApiByNameResponse Get(ApiByNameRequest request)
         {
-            EbApi api_o = null;
-            string sql = EbConnectionFactory.ObjectsDB.EB_API_BY_NAME;
-
-            DbParameter[] parameter =
-            {
-                this.EbConnectionFactory.ObjectsDB.GetNewParameter("objname",EbDbTypes.String,request.Name),
-                this.EbConnectionFactory.ObjectsDB.GetNewParameter("version",EbDbTypes.String,request.Version)
-            };
-            EbDataTable dt = this.EbConnectionFactory.ObjectsDB.DoQuery(sql, parameter);
-            if (dt.Rows.Count > 0)
-            {
-                EbDataRow dr = dt.Rows[0];
-                EbObjectWrapper _ebObject = (new EbObjectWrapper
-                {
-                    Json = dr[0].ToString(),
-                    VersionNumber = dr[1].ToString(),
-                    EbObjectType = (dr[4] != DBNull.Value) ? Convert.ToInt32(dr[4]) : 0,
-                    Status = Enum.GetName(typeof(ObjectLifeCycleStatus), Convert.ToInt32(dr[2])),
-                    Tags = dr[3].ToString(),
-                    RefId = null,
-                });
-                api_o = EbSerializers.Json_Deserialize<EbApi>(_ebObject.Json);
-            }
+            EbApi api_o = EbApiHelper.GetApiByName(request.Name, request.Version, this.EbConnectionFactory.ObjectsDB);
             return new ApiByNameResponse { Api = api_o };
         }
 
