@@ -17,6 +17,7 @@ using System.Text.RegularExpressions;
 using ExpressBase.Common.Constants;
 using ExpressBase.Objects.Objects.DVRelated;
 using ExpressBase.ServiceStack.Services;
+using ExpressBase.Objects.Helpers;
 
 namespace ExpressBase.ServiceStack
 {
@@ -640,38 +641,20 @@ namespace ExpressBase.ServiceStack
         }
 
         public SqlFuncTestResponse Post(SqlFuncTestRequest request)
-        {
-            SqlFuncTestResponse resp = new SqlFuncTestResponse();
+        { 
             try
             {
-                List<DbParameter> parameter = new List<DbParameter>();
-                List<string> _params = new List<string>();
-                string sql = string.Empty;
-                if (request.Parameters.Count > 0)
-                {
-                    foreach (Param p in request.Parameters)
-                    {
-                        _params.Add(":" + p.Name);
-                        parameter.Add(this.EbConnectionFactory.DataDB.GetNewParameter(p.Name, (EbDbTypes)Convert.ToInt32(p.Type), p.Value));
-                    }
-                    sql = string.Format(@"SELECT * FROM {0}({1})", request.FunctionName, string.Join(",", _params));
-                    resp.Data = this.EbConnectionFactory.ObjectsDB.DoQuery(sql, parameter.ToArray());
-                    resp.Reponse = true;
-                }
-                else
-                {
-                    sql = string.Format(@"SELECT * FROM {0}()", request.FunctionName);
-                    resp.Data = this.EbConnectionFactory.ObjectsDB.DoQuery(sql);
-                    resp.Reponse = true;
-                }
+                return EbObjectsHelper.SqlFuncTest(request.Parameters, request.FunctionName, this.EbConnectionFactory.DataDB);
             }
             catch (Exception e)
             {
+                SqlFuncTestResponse resp = new SqlFuncTestResponse();
                 Console.WriteLine("Exception  at sql function execution::" + e.Message);
                 resp.Reponse = false;
                 resp.Data = new EbDataTable();
+                return resp;
             }
-            return resp;
+
         }
 
         public DatawriterResponse Post(DatawriterRequest request)

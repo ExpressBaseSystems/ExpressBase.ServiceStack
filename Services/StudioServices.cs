@@ -13,6 +13,7 @@ using System.Text.RegularExpressions;
 using ExpressBase.Common.Structures;
 using ExpressBase.Objects.Objects;
 using ExpressBase.Objects.Objects.SmsRelated;
+using ExpressBase.Objects.Helpers;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -50,25 +51,8 @@ namespace ExpressBase.ServiceStack.Services
 
         [CompressResponse]
         public object Get(EbObjectParticularVersionRequest request)// Fetch particular version with json of a particular Object
-        {
-            List<EbObjectWrapper> wrap = new List<EbObjectWrapper>();
-            DbParameter[] parameters = { EbConnectionFactory.ObjectsDB.GetNewParameter("refid", EbDbTypes.String, request.RefId) };
-            EbDataTable dt = EbConnectionFactory.ObjectsDB.DoQuery(EbConnectionFactory.ObjectsDB.EB_PARTICULAR_VERSION_OF_AN_OBJ, parameters);
-
-            foreach (EbDataRow dr in dt.Rows)
-            {
-                EbObjectWrapper _ebObject = (new EbObjectWrapper
-                {
-                    Json = dr[0].ToString(),
-                    VersionNumber = dr[1].ToString(),
-                    EbObjectType = (dr[4] != DBNull.Value) ? Convert.ToInt32(dr[4]) : 0,
-                    Status = Enum.GetName(typeof(ObjectLifeCycleStatus), Convert.ToInt32(dr[2])),
-                    Tags = dr[3].ToString(),
-                    DisplayName = dr[5].ToString(),
-                    RefId = request.RefId
-                });
-                wrap.Add(_ebObject);
-            }
+        { 
+            List<EbObjectWrapper> wrap = EbObjectsHelper.GetParticularVersion(EbConnectionFactory.ObjectsDB,request.RefId);
             return new EbObjectParticularVersionResponse { Data = wrap };
         }
 
