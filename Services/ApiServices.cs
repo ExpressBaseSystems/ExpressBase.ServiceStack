@@ -137,6 +137,10 @@ namespace ExpressBase.ServiceStack.Services
         {
             try
             {
+                this.Api.SolutionId = SolutionId;
+                this.Api.Redis = Redis;
+                this.Api.UserObject = this.UserObject;
+
                 int r_count = this.Api.Resources.Count;
 
                 while (Step < r_count)
@@ -191,7 +195,7 @@ namespace ExpressBase.ServiceStack.Services
                         res.Result = ExecuteFormResource(form);
                         break;
                     case EbEmailRetriever retriever:
-                        res.Result = ExecuteEmailRetriever(retriever);
+                        res.Result = (retriever as EbEmailRetriever).ExecuteEmailRetriever(this.Api, this, this.FileClient, false);
                         break;
                     default:
                         res.Result = null;
@@ -559,64 +563,6 @@ namespace ExpressBase.ServiceStack.Services
             {
                 throw new ApiException("[ExecuteFormResource], " + ex.Message);
             }
-        }
-
-        private object ExecuteEmailRetriever(EbEmailRetriever retriever)
-        {
-            try
-            {
-                int mailcon = retriever.MailConnection;
-                RetrieverResponse retrieverResponse = this.EbConnectionFactory.EmailRetrieveConnection[mailcon]?.Retrieve(this, retriever.DefaultSyncDate, this.FileClient, this.SolutionId);
-
-                EbWebForm _form = this.WebFormService.GetWebFormObject(retriever.Reference, null, null);
-                WebformData data = _form.GetEmptyModel();
-
-                foreach (RetrieverMessage _m in retrieverResponse?.RetrieverMessages)
-                {
-                    InsertFormData(_form, data, _m, retriever.Reference);
-                }
-            }
-            catch (Exception ex)
-            {
-                throw new ApiException("[ExecuteEmailRetriever], " + ex.Message);
-            }
-            return 0;
-        }
-
-
-        public int InsertFormData(EbWebForm _form, WebformData data, RetrieverMessage _m, string refid)
-        {
-            data.MultipleTables[_form.TableName][0]["mail_subject"] = _m.Message.Subject;
-            data.MultipleTables[_form.TableName][0]["mail_body"] = _m.Message.Body;
-            data.MultipleTables[_form.TableName][0]["mail_from"] = _m.Message.From.Address;
-            data.MultipleTables[_form.TableName][0]["mail_to"] = _m.Message.To.ToString();
-            data.MultipleTables[_form.TableName][0]["mail_cc"] = _m.Message.CC.ToString();
-            data.MultipleTables[_form.TableName][0]["mail_bcc"] = _m.Message.Bcc.ToString();
-
-            foreach (int _att in _m.Attachemnts)
-            {
-                if (!data.ExtendedTables.ContainsKey("mail_attachments"))
-                    data.ExtendedTables.Add("mail_attachments", new SingleTable());
-
-                SingleRow r = new SingleRow();
-                r.Columns.Add(new SingleColumn
-                {
-                    Value = _att,
-                    Type = 7
-                });
-
-                data.ExtendedTables["mail_attachments"].Add(r);
-            }
-
-            InsertDataFromWebformResponse response = this.WebFormService.Any(new InsertDataFromWebformRequest
-            {
-                RefId = refid,
-                FormData = EbSerializers.Json_Serialize(data),
-                SolnId = this.SolutionId,
-                UserAuthId = this.UserObject?.AuthId,
-                CurrentLoc = this.UserObject.Preference.DefaultLocation,
-            });
-            return response.RowId;
         }
 
         private List<Param> GetEmailParams(EbEmailTemplate enode)
