@@ -21,6 +21,7 @@ using ExpressBase.ServiceStack.Services;
 using ExpressBase.CoreBase.Globals;
 using ExpressBase.Common.Singletons;
 using System.Diagnostics;
+using Newtonsoft.Json;
 
 namespace ExpressBase.ServiceStack
 {
@@ -30,126 +31,170 @@ namespace ExpressBase.ServiceStack
         //private iTextSharp.text.Font f = FontFactory.GetFont(FontFactory.HELVETICA, 12);
         public ReportService(IEbConnectionFactory _dbf, IEbStaticFileClient _sfc, IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_dbf, _sfc, _mqp, _mqc) { }
 
+        public MemoryStream Ms1 = null;
+
+        public EbReport Report = null;
+
+        public PdfWriter Writer = null;
+
+        public Document Document = null;
+
+        public PdfContentByte Canvas = null;
+
+        public void GetReportObject(string Refid)
+        {
+            EbObjectService myObjectservice = base.ResolveService<EbObjectService>();
+            myObjectservice.EbConnectionFactory = this.EbConnectionFactory;
+
+            EbObjectParticularVersionResponse resultlist = myObjectservice.Get(new EbObjectParticularVersionRequest { RefId = Refid }) as EbObjectParticularVersionResponse;
+            Report = EbSerializers.Json_Deserialize<EbReport>(resultlist.Data[0].Json);
+        }
+
+        public void GetData4Pdf(List<Param> _params)
+        {
+            DataSourceService myDataSourceservice = base.ResolveService<DataSourceService>();
+            myDataSourceservice.EbConnectionFactory = this.EbConnectionFactory;
+            Report.Parameters = _params;
+            if (Report.DataSourceRefId != string.Empty)
+            {
+                Report.DataSet = myDataSourceservice.Any(new DataSourceDataSetRequest
+                {
+                    RefId = Report.DataSourceRefId,
+                    Params = Report.Parameters,
+                    /*Groupings= Groupings*/
+                }).DataSet;
+            }
+
+            FillingCollections(Report);
+
+        }
+
+        public void InitializeReportObects(string BToken, string RToken, string SolnId, string ReadingUserAuthId, string RenderingUserAuthId)
+        {
+            Report.ReportService = this;
+            Report.IsLastpage = false;
+            Report.WatermarkImages = new Dictionary<int, byte[]>();
+            Report.WaterMarkList = new List<object>();
+            Report.ValueScriptCollection = new Dictionary<string, object>();
+            Report.AppearanceScriptCollection = new Dictionary<string, object>();
+            Report.LinkCollection = new Dictionary<string, List<Common.Objects.EbControl>>();
+            Report.GroupSummaryFields = new Dictionary<string, List<EbDataField>>();
+            Report.PageSummaryFields = new Dictionary<string, List<EbDataField>>();
+            Report.ReportSummaryFields = new Dictionary<string, List<EbDataField>>();
+            Report.GroupFooters = new Dictionary<string, ReportGroupItem>();
+            Report.Groupheaders = new Dictionary<string, ReportGroupItem>();
+
+            if (string.IsNullOrEmpty(FileClient.BearerToken) && !string.IsNullOrEmpty(BToken))
+            {
+                FileClient.BearerToken = BToken;
+                FileClient.RefreshToken = RToken;
+            }
+            Report.FileClient = FileClient;
+
+            Report.Solution = GetSolutionObject(SolnId);
+            Report.ReadingUser = GetUserObject(ReadingUserAuthId);
+            Report.RenderingUser = GetUserObject(RenderingUserAuthId);
+            Report.CultureInfo = CultureHelper.GetSerializedCultureInfo(Report.ReadingUser?.Preference.Locale ?? "en-US").GetCultureInfo();
+
+            Report.GetWatermarkImages();
+        }
+
+        public void InitializePdfObjects()
+        {
+            float _width = Report.WidthPt - Report.Margin.Left;// - Report.Margin.Right;
+            float _height = Report.HeightPt - Report.Margin.Top - Report.Margin.Bottom;
+            Report.HeightPt = _height;
+
+            Rectangle rec = new Rectangle(_width, _height);
+            if (this.Document == null)
+            {
+                Report.Doc = new Document(rec);
+                Report.Doc.SetMargins(Report.Margin.Left, Report.Margin.Right, Report.Margin.Top, Report.Margin.Bottom);
+                Report.Writer = PdfWriter.GetInstance(Report.Doc, this.Ms1);
+                Report.Writer.Open();
+                Report.Doc.Open();
+                Report.Doc.AddTitle(Report.DocumentName);
+                Report.Writer.PageEvent = new HeaderFooter(Report);
+                Report.Writer.CloseStream = true;//important
+                Report.Canvas = Report.Writer.DirectContent;
+                Report.PageNumber = Report.Writer.PageNumber;
+                this.Document = Report.Doc;
+                this.Writer = Report.Writer;
+                this.Canvas = Report.Canvas;
+            }
+            else
+            {
+                Report.Doc = this.Document;
+                Report.Writer = this.Writer;
+                Report.Canvas = this.Canvas;
+                Report.PageNumber = 1/*Report.Writer.PageNumber*/;
+            }
+        }
+
+        public void Draw()
+        {
+            Report.DrawReportHeader();
+
+            if (Report?.DataSet?.Tables[Report.DetailTableIndex]?.Rows.Count > 0)
+            {
+                Report.DrawDetail();
+            }
+            else
+            {
+                Report.DrawPageHeader();
+                Report.detailEnd += 30;
+                Report.DrawPageFooter();
+                Report.DrawReportFooter();
+                throw new Exception("Dataset is null, refid " + Report.DataSourceRefId);
+            }
+
+            Report.DrawReportFooter();
+        }
+
+        public void HandleExceptionPdf()
+        {
+            ColumnText ct = new ColumnText(Report.Canvas);
+            Phrase phrase;
+            if (Report?.DataSet?.Tables[Report.DetailTableIndex]?.Rows.Count > 0)
+                phrase = new Phrase("Something went wrong. Please check the parameters or contact admin");
+            else
+                phrase = new Phrase("No Data available. Please check the parameters or contact admin");
+
+            phrase.Font.Size = 10;
+            float y = Report.HeightPt - (Report.ReportHeaderHeight + Report.Margin.Top + Report.PageHeaderHeight);
+
+            ct.SetSimpleColumn(phrase, Report.LeftPt + 30, y - 30, Report.WidthPt - 30, y, 15, Element.ALIGN_CENTER);
+            ct.Go();
+        }
+
         public ReportRenderResponse Get(ReportRenderRequest request)
         {
-            { //int count = iTextSharp.text.FontFactory.RegisterDirectory("E:\\ExpressBase.Core\\ExpressBase.Objects\\Fonts\\");
-              //using (InstalledFontCollection col = new InstalledFontCollection())
-              //{
-              //    foreach (FontFamily fa in col.Families)
-              //    {
-              //        Console.WriteLine(fa.Name);
-              //    }
-              //}
-            }
             if (!string.IsNullOrEmpty(request.Refid))
             {
-                EbReport Report = null;
+                this.Ms1 = new MemoryStream();
                 try
                 {
-                    EbObjectService myObjectservice = base.ResolveService<EbObjectService>();
-                    myObjectservice.EbConnectionFactory = this.EbConnectionFactory;
-                    DataSourceService myDataSourceservice = base.ResolveService<DataSourceService>();
-                    myDataSourceservice.EbConnectionFactory = this.EbConnectionFactory;
+                    GetReportObject(request.Refid);
 
-                    EbObjectParticularVersionResponse resultlist = myObjectservice.Get(new EbObjectParticularVersionRequest { RefId = request.Refid }) as EbObjectParticularVersionResponse;
-                    Report = EbSerializers.Json_Deserialize<EbReport>(resultlist.Data[0].Json);
+                    InitializeReportObects(request.BToken, request.RToken, request.SolnId, request.ReadingUserAuthId, request.RenderingUserAuthId);
 
-                    Report.ReportService = this;
-                    Report.SolutionId = request.SolnId;
-                    Report.IsLastpage = false;
-                    Report.WatermarkImages = new Dictionary<int, byte[]>();
-                    Report.WaterMarkList = new List<object>();
-                    Report.ValueScriptCollection = new Dictionary<string, object>();
-                    Report.AppearanceScriptCollection = new Dictionary<string, object>();
-                    Report.LinkCollection = new Dictionary<string, List<Common.Objects.EbControl>>();
-                    Report.GroupSummaryFields = new Dictionary<string, List<EbDataField>>();
-                    Report.PageSummaryFields = new Dictionary<string, List<EbDataField>>();
-                    Report.ReportSummaryFields = new Dictionary<string, List<EbDataField>>();
-                    Report.GroupFooters = new Dictionary<string, ReportGroupItem>();
-                    Report.Groupheaders = new Dictionary<string, ReportGroupItem>();
+                    InitializePdfObjects();
 
-                    Report.FileClient = new EbStaticFileClient();
-                    if (string.IsNullOrEmpty(FileClient.BearerToken) && !string.IsNullOrEmpty(request.BToken))
-                    {
-                        FileClient.BearerToken = request.BToken;
-                        FileClient.RefreshToken = request.RToken;
-                    }
-                    Report.FileClient = FileClient;
-
-                    Report.Solution = GetSolutionObject(request.SolnId);
-                    Report.ReadingUser = GetUserObject(request.ReadingUserAuthId);
-                    Report.RenderingUser = GetUserObject(request.RenderingUserAuthId);
-                    Report.CultureInfo = CultureHelper.GetSerializedCultureInfo(Report.ReadingUser?.Preference.Locale ?? "en-US").GetCultureInfo();
-                    Report.Parameters = request.Params;
-                    Report.Ms1 = new MemoryStream();
-                    //-- END REPORT object INIT
-                    if (Report.DataSourceRefId != string.Empty)
-                    {
-                        Report.DataSet = myDataSourceservice.Any(new DataSourceDataSetRequest { RefId = Report.DataSourceRefId, Params = Report.Parameters,/*Groupings= Groupings*/ }).DataSet;
-                    }
-                    Stopwatch stopwatch = new Stopwatch();
-                    stopwatch.Start();
-                    float _width = Report.WidthPt - Report.Margin.Left;// - Report.Margin.Right;
-                    float _height = Report.HeightPt - Report.Margin.Top - Report.Margin.Bottom;
-                    Report.HeightPt = _height;
-
-                    iTextSharp.text.Rectangle rec = new iTextSharp.text.Rectangle(_width, _height);
-                    Report.Doc = new Document(rec);
-                    Report.Doc.SetMargins(Report.Margin.Left, Report.Margin.Right, Report.Margin.Top, Report.Margin.Bottom);
-                    Report.Writer = PdfWriter.GetInstance(Report.Doc, Report.Ms1);
-                    Report.Writer.Open();
-                    Report.Doc.Open();
-                    Report.Doc.AddTitle(Report.DocumentName);
-                    Report.Writer.PageEvent = new HeaderFooter(Report);
-                    Report.Writer.CloseStream = true;//important
-                    Report.Canvas = Report.Writer.DirectContent;
-                    Report.PageNumber = Report.Writer.PageNumber;
-                    Report.GetWatermarkImages();
-                    FillingCollections(Report);
                     Report.Doc.NewPage();
-                    Report.DrawReportHeader();
 
-                    if (Report?.DataSet?.Tables[Report.DetailTableIndex]?.Rows.Count > 0)
-                    {
-                        Report.DrawDetail();
-                    }
-                    else
-                    {
-                        Report.DrawPageHeader();
-                        Report.detailEnd += 30;
-                        Report.DrawPageFooter();
-                        Report.DrawReportFooter();
-                        throw new Exception("Dataset is null, refid " + Report.DataSourceRefId);
-                    }
+                    GetData4Pdf(request.Params);
 
-                    Report.DrawReportFooter();
-                    stopwatch.Stop();
-                    Console.WriteLine("time: " + stopwatch.ElapsedMilliseconds);
+                    Draw();
                 }
                 catch (Exception e)
                 {
                     Console.WriteLine("Exception-reportService " + e.Message + e.StackTrace);
-
-                    ColumnText ct = new ColumnText(Report.Canvas);
-                    Phrase phrase;
-                    if (Report?.DataSet?.Tables[Report.DetailTableIndex]?.Rows.Count > 0)
-                    {
-                        phrase = new Phrase("Something went wrong. Please check the parameters or contact admin");
-                    }
-                    else
-                    {
-                        phrase = new Phrase("No Data available. Please check the parameters or contact admin");
-                    }
-                    phrase.Font.Size = 10;
-                    float y = Report.HeightPt - (Report.ReportHeaderHeight + Report.Margin.Top + Report.PageHeaderHeight);
-                    ct.SetSimpleColumn(phrase, Report.LeftPt + 30, y - 30, Report.WidthPt - 30, y, 15, Element.ALIGN_CENTER);
-                    ct.Go();
+                    HandleExceptionPdf();
                 }
 
                 Report.Doc.Close();
-                if (Report.UserPassword != string.Empty || Report.OwnerPassword != string.Empty)
-                    Report.SetPassword();
-                Report.Ms1.Position = 0;//important
+
+                Report.SetPassword(Ms1);
 
                 string name = Report.DocumentName;
 
@@ -159,11 +204,13 @@ namespace ExpressBase.ServiceStack
                     Report.DataSet = null;
                 }
 
+                this.Ms1.Position = 0;//important
+
                 return new ReportRenderResponse
                 {
-                    StreamWrapper = new MemorystreamWrapper(Report.Ms1),
+                    StreamWrapper = new MemorystreamWrapper(this.Ms1),
                     ReportName = name,
-                    ReportBytea = Report.Ms1.ToArray(),
+                    ReportBytea = this.Ms1.ToArray(),
                     CurrentTimestamp = Report.CurrentTimestamp
                 };
             }
@@ -173,6 +220,50 @@ namespace ExpressBase.ServiceStack
                 return null;
             }
         }
+
+        public ReportRenderResponse Get(ReportRenderMultipleRequest request)
+        {
+            this.Ms1 = new MemoryStream();
+            byte[] encodedDataAsBytes = System.Convert.FromBase64String(request.Params);
+            string returnValue = System.Text.ASCIIEncoding.ASCII.GetString(encodedDataAsBytes);
+
+
+
+            List<Param> _paramlist = (returnValue == null) ? null : JsonConvert.DeserializeObject<List<Param>>(returnValue);
+            if (_paramlist != null)
+            {
+                foreach (Param p in _paramlist)
+                {
+                    string[] values = p.Value.Split(',');
+                    foreach (string val in values)
+                    {
+                        List<Param> _newParamlist = new List<Param>();
+                        _newParamlist.Add(new Param { Name = "id", Value = val, Type = "7" });
+
+                        GetReportObject(request.Refid);
+
+                        InitializePdfObjects();
+
+                        InitializeReportObects(request.BToken, request.RToken, request.SolnId, request.ReadingUserAuthId, request.RenderingUserAuthId); 
+                        GetData4Pdf(_newParamlist);
+                        Report.Doc.NewPage();
+                        Draw();
+                    }
+                }
+            }
+            Report.Doc.Close();
+
+            Ms1.Position = 0;
+            return new ReportRenderResponse
+            {
+                StreamWrapper = new MemorystreamWrapper(Ms1),
+                ReportName = Report.DocumentName,
+                ReportBytea = Ms1.ToArray(),
+                CurrentTimestamp = Report.CurrentTimestamp
+            };
+
+        }
+
         private Paragraph CreateSimpleHtmlParagraph(String text)
         {
 
@@ -195,6 +286,7 @@ namespace ExpressBase.ServiceStack
             //Return the paragraph
             return p;
         }
+
         public void FillingCollections(EbReport Report)
         {
             foreach (EbReportHeader r_header in Report.ReportHeaders)
@@ -584,4 +676,16 @@ namespace ExpressBase.ServiceStack
             Report = _c;
         }
     }
+
+
+
+    //int count = iTextSharp.text.FontFactory.RegisterDirectory("E:\\ExpressBase.Core\\ExpressBase.Objects\\Fonts\\");
+    //using (InstalledFontCollection col = new InstalledFontCollection())
+    //{
+    //    foreach (FontFamily fa in col.Families)
+    //    {
+    //        Console.WriteLine(fa.Name);
+    //    }
+    //}
+
 }
