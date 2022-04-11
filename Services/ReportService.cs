@@ -64,8 +64,8 @@ namespace ExpressBase.ServiceStack
                     /*Groupings= Groupings*/
                 }).DataSet;
             }
-
-            FillingCollections(Report);
+            if (Report.DataSet != null)
+                FillingCollections(Report);
 
         }
 
@@ -181,10 +181,12 @@ namespace ExpressBase.ServiceStack
                     InitializePdfObjects();
 
                     Report.Doc.NewPage();
-
                     GetData4Pdf(request.Params);
 
-                    Draw();
+                    if (Report.DataSet != null)
+                        Draw();
+                    else
+                        throw new Exception();
                 }
                 catch (Exception e)
                 {
@@ -198,7 +200,7 @@ namespace ExpressBase.ServiceStack
 
                 string name = Report.DocumentName;
 
-                if (Report.DataSourceRefId != string.Empty)
+                if (Report.DataSourceRefId != string.Empty && Report.DataSet != null)
                 {
                     Report.DataSet.Tables.Clear();
                     Report.DataSet = null;
@@ -224,34 +226,53 @@ namespace ExpressBase.ServiceStack
         public ReportRenderResponse Get(ReportRenderMultipleRequest request)
         {
             this.Ms1 = new MemoryStream();
-            byte[] encodedDataAsBytes = System.Convert.FromBase64String(request.Params);
-            string returnValue = System.Text.ASCIIEncoding.ASCII.GetString(encodedDataAsBytes);
-
-
-
-            List<Param> _paramlist = (returnValue == null) ? null : JsonConvert.DeserializeObject<List<Param>>(returnValue);
-            if (_paramlist != null)
+            try
             {
-                foreach (Param p in _paramlist)
+                byte[] encodedDataAsBytes = System.Convert.FromBase64String(request.Params);
+                string returnValue = System.Text.ASCIIEncoding.ASCII.GetString(encodedDataAsBytes);
+
+                List<Param> _paramlist = (returnValue == null) ? null : JsonConvert.DeserializeObject<List<Param>>(returnValue);
+                if (_paramlist != null)
                 {
-                    string[] values = p.Value.Split(',');
-                    foreach (string val in values)
+                    foreach (Param p in _paramlist)
                     {
-                        List<Param> _newParamlist = new List<Param>();
-                        _newParamlist.Add(new Param { Name = "id", Value = val, Type = "7" });
+                        string[] values = p.Value.Split(',');
+                        foreach (string val in values)
+                        {
+                            List<Param> _newParamlist = new List<Param>();
+                            _newParamlist.Add(new Param { Name = "id", Value = val, Type = "7" });
 
-                        GetReportObject(request.Refid);
+                            GetReportObject(request.Refid);
 
-                        InitializePdfObjects();
+                            InitializePdfObjects();
 
-                        InitializeReportObects(request.BToken, request.RToken, request.SolnId, request.ReadingUserAuthId, request.RenderingUserAuthId); 
-                        GetData4Pdf(_newParamlist);
-                        Report.Doc.NewPage();
-                        Draw();
+                            InitializeReportObects(request.BToken, request.RToken, request.SolnId, request.ReadingUserAuthId, request.RenderingUserAuthId);
+
+                            Report.Doc.NewPage();
+
+                            GetData4Pdf(_newParamlist);
+
+                            if (Report.DataSet != null)
+                            {
+                                Draw();
+                            }
+                            else throw new Exception();
+                        }
                     }
                 }
             }
+            catch (Exception e)
+            {
+                Console.WriteLine("Exception-reportService " + e.Message + e.StackTrace);
+                HandleExceptionPdf();
+            }
             Report.Doc.Close();
+
+            if (Report.DataSourceRefId != string.Empty && Report.DataSet != null)
+            {
+                Report.DataSet.Tables.Clear();
+                Report.DataSet = null;
+            }
 
             Ms1.Position = 0;
             return new ReportRenderResponse
