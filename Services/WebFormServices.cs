@@ -1317,12 +1317,13 @@ namespace ExpressBase.ServiceStack.Services
                 FormObj.AfterExecutionIfUserCreated(this, this.EbConnectionFactory.EmailConnection, MessageProducer3, request.WhichConsole, MetaData);
                 Console.WriteLine("Insert/Update WebFormData end : Execution Time = " + (DateTime.Now - startdt).TotalMilliseconds);
                 bool isMobInsert = request.WhichConsole == RoutingConstants.MC;
+                bool isMobSignUp = isMobInsert && !string.IsNullOrWhiteSpace(request.MobilePageRefId) && request.MobilePageRefId == FormObj.SolutionObj?.SolutionSettings?.MobileAppSettings?.SignUpPageRefId;
 
                 return new InsertDataFromWebformResponse()
                 {
                     Message = "Success",
                     RowId = FormObj.TableRowId,
-                    FormData = isMobInsert ? null : JsonConvert.SerializeObject(FormObj.FormData),
+                    FormData = (isMobInsert && !isMobSignUp) ? null : JsonConvert.SerializeObject(FormObj.FormData),
                     RowAffected = 1,
                     AffectedEntries = r,
                     Status = (int)HttpStatusCode.OK,
