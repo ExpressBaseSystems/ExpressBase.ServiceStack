@@ -51,8 +51,8 @@ namespace ExpressBase.ServiceStack.Services
 
         [CompressResponse]
         public object Get(EbObjectParticularVersionRequest request)// Fetch particular version with json of a particular Object
-        { 
-            List<EbObjectWrapper> wrap = EbObjectsHelper.GetParticularVersion(EbConnectionFactory.ObjectsDB,request.RefId);
+        {
+            List<EbObjectWrapper> wrap = EbObjectsHelper.GetParticularVersion(EbConnectionFactory.ObjectsDB, request.RefId);
             return new EbObjectParticularVersionResponse { Data = wrap };
         }
 
@@ -1462,10 +1462,10 @@ namespace ExpressBase.ServiceStack.Services
 
         public GetRefIdByVerIdResponse Post(GetRefIdByVerIdRequest request)
         {
-            string sql = "SELECT refid FROM eb_objects_ver WHERE id = @id";
-            DbParameter[] p = { EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, request.ObjVerId) };
-            EbDataTable _tbl = EbConnectionFactory.ObjectsDB.DoQuery(sql, p);
-            return new GetRefIdByVerIdResponse { RefId = _tbl.Rows.Count > 0 ? Convert.ToString(_tbl.Rows[0][0]) : "__not__found__" };
+            return new GetRefIdByVerIdResponse
+            {
+                RefId = EbObjectsHelper.GetRefIdByVerId(EbConnectionFactory.ObjectsDB, request.ObjVerId) ?? "__not__found__"
+            };
         }
 
         public int GetObjectType(object obj)
