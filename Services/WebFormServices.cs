@@ -1467,7 +1467,7 @@ namespace ExpressBase.ServiceStack.Services
 
                 Obj[entry.Key] = array;
             }
-            return Obj.ToString().Replace("\"", "'");
+            return Obj.ToString();
         }
 
         //if "eb_created_at_device" is present in WebFormData then it is treated as mobile offline submission
