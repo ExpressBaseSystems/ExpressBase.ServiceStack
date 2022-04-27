@@ -24,6 +24,8 @@ using System.Data.Common;
 using System.Linq;
 using System.Net;
 using System.Globalization;
+using ExpressBase.Objects.Helpers;
+using Newtonsoft.Json.Linq;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -189,7 +191,9 @@ namespace ExpressBase.ServiceStack.Services
                         else
                         {
                             _listNamesAndTypes.Add(new TableColumnMeta { Name = _column.ColumnName, Type = vDbTypes.GetVendorDbTypeStruct((EbDbTypes)_column.EbDbType), Label = _column.Control.Label, Control = _column.Control });
-                            if (_column.Control is EbPhone && (_column.Control as EbPhone).Sendotp)
+                            if (_column.Control is EbPhone _ebPhCtrl && _ebPhCtrl.Sendotp)
+                                _listNamesAndTypes.Add(new TableColumnMeta { Name = _column.ColumnName + FormConstants._verified, Type = vDbTypes.Boolean, Default = "F", Label = _column.Control.Label + "_verified" });
+                            else if (_column.Control is EbEmailControl _ebEmCtrl && _ebEmCtrl.Sendotp)
                                 _listNamesAndTypes.Add(new TableColumnMeta { Name = _column.ColumnName + FormConstants._verified, Type = vDbTypes.Boolean, Default = "F", Label = _column.Control.Label + "_verified" });
 
                             if ((_column.Control is EbNumeric numCtrl && numCtrl.InputMode == NumInpMode.Currency) ||
@@ -1317,12 +1321,13 @@ namespace ExpressBase.ServiceStack.Services
                 FormObj.AfterExecutionIfUserCreated(this, this.EbConnectionFactory.EmailConnection, MessageProducer3, request.WhichConsole, MetaData);
                 Console.WriteLine("Insert/Update WebFormData end : Execution Time = " + (DateTime.Now - startdt).TotalMilliseconds);
                 bool isMobInsert = request.WhichConsole == RoutingConstants.MC;
+                bool isMobSignUp = isMobInsert && !string.IsNullOrWhiteSpace(request.MobilePageRefId) && request.MobilePageRefId == FormObj.SolutionObj?.SolutionSettings?.MobileAppSettings?.SignUpPageRefId;
 
                 return new InsertDataFromWebformResponse()
                 {
                     Message = "Success",
                     RowId = FormObj.TableRowId,
-                    FormData = isMobInsert ? null : JsonConvert.SerializeObject(FormObj.FormData),
+                    FormData = (isMobInsert && !isMobSignUp) ? null : JsonConvert.SerializeObject(FormObj.FormData),
                     RowAffected = 1,
                     AffectedEntries = r,
                     Status = (int)HttpStatusCode.OK,
@@ -1359,6 +1364,110 @@ namespace ExpressBase.ServiceStack.Services
                     StackTraceInt = ex.StackTrace
                 };
             }
+        }
+
+        //For api form_submission
+        public SubmitFormDataApiResponse Any(SubmitFormDataApiRequest request)
+        {
+            try
+            {
+                Dictionary<string, string> MetaData = new Dictionary<string, string>();
+                string RefId = EbObjectsHelper.GetRefIdByVerId(EbConnectionFactory.ObjectsDB, request.VerId);
+                EbWebForm FormObj = this.GetWebFormObject(RefId, request.UserAuthId, request.SolnId, request.CurrentLoc);
+                CheckDataPusherCompatibility(FormObj);
+                FormObj.FormData = GetWebFormDataFromRequestJson(FormObj, request.FormData);
+                FormObj.MergeFormData();
+                FormObj.Save(EbConnectionFactory, this, request.WhichConsole, null);
+                FormObj.AfterExecutionIfUserCreated(this, this.EbConnectionFactory.EmailConnection, MessageProducer3, request.WhichConsole, MetaData);
+                string Json = GetJsonFromWebFormData(FormObj.FormData);
+
+                return new SubmitFormDataApiResponse()
+                {
+                    Status = (int)HttpStatusCode.OK,
+                    Message = "Success",
+                    DataId = FormObj.TableRowId,
+                    FormData = Json
+                };
+            }
+            catch (FormException ex)
+            {
+                return new SubmitFormDataApiResponse()
+                {
+                    Message = ex.Message,
+                    Status = ex.ExceptionCode
+                };
+            }
+            catch (Exception ex)
+            {
+                return new SubmitFormDataApiResponse()
+                {
+                    Message = FormErrors.E0129 + ex.Message,
+                    Status = (int)HttpStatusCode.InternalServerError
+                };
+            }
+        }
+
+        private WebformData GetWebFormDataFromRequestJson(EbWebForm FormObj, string Json)
+        {
+            WebformData FormData = new WebformData() { MasterTable = FormObj.FormSchema.MasterTable };
+            SingleColumn Column;
+            object val, tempVal;
+            JObject JObj = JObject.Parse(Json);
+
+            foreach (TableSchema _table in FormObj.FormSchema.Tables)
+            {
+                if (JObj[_table.TableName] != null)
+                {
+                    SingleTable Table = new SingleTable();
+                    foreach (JToken jRow in JObj[_table.TableName])
+                    {
+                        int id = jRow["id"] != null && int.TryParse(jRow["id"].ToString(), out int _id) ? _id : 0;
+                        SingleRow Row = new SingleRow() { RowId = id };
+                        if (_table.TableName == FormObj.FormSchema.MasterTable)
+                            FormObj.TableRowId = id;
+                        foreach (ColumnSchema _column in _table.Columns)
+                        {
+                            val = jRow[_column.ColumnName];
+                            Column = _column.Control.GetSingleColumn(FormObj.UserObj, FormObj.SolutionObj, val, false);
+
+                            if ((_column.Control is EbPhone _mobCtrl && _mobCtrl.Sendotp) || (_column.Control is EbEmailControl _emCtrl && _emCtrl.Sendotp))
+                            {
+                                tempVal = jRow[_column.ColumnName + "_" + FormConstants.otp];
+                                if (tempVal != null)
+                                    Column.M = JsonConvert.SerializeObject(new Dictionary<string, string> { { FormConstants.otp, tempVal?.ToString() } });
+                            }
+
+                            Row.Columns.Add(Column);
+                        }
+                        Table.Add(Row);
+                    }
+                    FormData.MultipleTables.Add(_table.TableName, Table);
+                }
+            }
+
+            return FormData;
+        }
+
+        public string GetJsonFromWebFormData(WebformData FormData)
+        {
+            JObject Obj = new JObject();
+
+            foreach (KeyValuePair<string, SingleTable> entry in FormData.MultipleTables)
+            {
+                JArray array = new JArray();
+                foreach (SingleRow Row in entry.Value)
+                {
+                    JObject o = new JObject();
+                    foreach (SingleColumn Column in Row.Columns)
+                    {
+                        o[Column.Name] = JToken.FromObject(Column.Value);
+                    }
+                    array.Add(o);
+                }
+
+                Obj[entry.Key] = array;
+            }
+            return Obj.ToString();
         }
 
         //if "eb_created_at_device" is present in WebFormData then it is treated as mobile offline submission

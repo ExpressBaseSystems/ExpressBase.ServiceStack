@@ -705,20 +705,21 @@ SELECT DISTINCT id FROM eb_form_drafts WHERE draft_type = @draft_type AND eb_cre
             try
             {
                 EbDataReader dataReader = this.GetEbObject<EbDataReader>(request.DataSourceRefId);
+                IDatabase DataDB = dataReader.GetDatastore(this.EbConnectionFactory);
 
-                List<DbParameter> parameters = request.Params.ParamsToDbParameters(this.EbConnectionFactory.DataDB);
+                List<DbParameter> parameters = request.Params.ParamsToDbParameters(DataDB);
 
-                parameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_currentuser_id", EbDbTypes.Int32, request.UserId));
+                parameters.Add(DataDB.GetNewParameter("eb_currentuser_id", EbDbTypes.Int32, request.UserId));
 
                 if (request.Limit != 0)
                 {
-                    parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("limit", EbDbTypes.Int32, request.Limit));
-                    parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("offset", EbDbTypes.Int32, request.Offset));
+                    parameters.Add(DataDB.GetNewParameter("limit", EbDbTypes.Int32, request.Limit));
+                    parameters.Add(DataDB.GetNewParameter("offset", EbDbTypes.Int32, request.Offset));
                 }
 
-                string wraped = this.WrapQuery(dataReader.Sql, request, parameters);
+                string wraped = this.WrapQuery(dataReader.Sql, request, parameters, DataDB);
 
-                resp.Data = this.EbConnectionFactory.DataDB.DoQueries(wraped, parameters.ToArray());
+                resp.Data = DataDB.DoQueries(wraped, parameters.ToArray());
                 resp.Message = "Success";
             }
             catch (Exception ex)
@@ -729,7 +730,7 @@ SELECT DISTINCT id FROM eb_form_drafts WHERE draft_type = @draft_type AND eb_cre
             return resp;
         }
 
-        private string WrapQuery(string sql, MobileVisDataRequest request, List<DbParameter> parameters)
+        private string WrapQuery(string sql, MobileVisDataRequest request, List<DbParameter> parameters, IDatabase DataDB)
         {
             string wraped = string.Empty;
             try
@@ -765,7 +766,7 @@ SELECT DISTINCT id FROM eb_form_drafts WHERE draft_type = @draft_type AND eb_cre
                         else
                             wraped += " AND ";
 
-                        wraped += this.GetSearchQuery(request.SearchColumns, parameters);
+                        wraped += this.GetSearchQuery(request.SearchColumns, parameters, DataDB);
                     }
 
                     if (request.SortOrder.Any())
@@ -816,7 +817,7 @@ SELECT DISTINCT id FROM eb_form_drafts WHERE draft_type = @draft_type AND eb_cre
             return query;
         }
 
-        private string GetSearchQuery(List<Param> searchColumns, List<DbParameter> parameters)
+        private string GetSearchQuery(List<Param> searchColumns, List<DbParameter> parameters, IDatabase DataDB)
         {
             string query = string.Empty;
 
@@ -831,7 +832,7 @@ SELECT DISTINCT id FROM eb_form_drafts WHERE draft_type = @draft_type AND eb_cre
 
                     searchParams.Add($"LOWER(PWWRP.{search.Name}) LIKE :{pname}");
 
-                    parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter(pname, EbDbTypes.String, value));
+                    parameters.Add(DataDB.GetNewParameter(pname, EbDbTypes.String, value));
                 }
                 catch
                 {

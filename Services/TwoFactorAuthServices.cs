@@ -17,6 +17,7 @@ using System.Security.Principal;
 using ServiceStack;
 using ExpressBase.Common.Security;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using ExpressBase.Common.Extensions;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -164,6 +165,101 @@ namespace ExpressBase.ServiceStack.Services
                 Console.WriteLine(e.Message + e.StackTrace);
             }
             return AuthResponse;
+        }
+
+        public Authenticate2FAResponse Post(SendVerificationCodeRequest request)
+        {
+            Authenticate2FAResponse response = new Authenticate2FAResponse()
+            {
+                EmailVerifCode = new Authenticate2FAResponse(),
+                MobileVerifCode = new Authenticate2FAResponse()
+            };
+            string subject = "Verification";
+            Eb_Solution sol_Obj = GetSolutionObject(request.SolnId);
+            User usr = GetUserObject(request.UserAuthId);
+            if (sol_Obj == null)
+                response.Message = "Solution object is null";
+            else if (usr == null)
+                response.Message = "User object is null";
+            else
+            {
+                try
+                {
+                    if (!string.IsNullOrEmpty(request.Email))
+                    {
+                        string Verifcode = GenerateOTP();
+                        string message = string.Format(VerificationMessage, sol_Obj.SolutionName, Verifcode);
+                        usr.Email = request.Email;///
+                        SendOtpEmail(usr, sol_Obj.SolutionID, message, subject);
+                        response.EmailVerifCode.AuthStatus = true;
+                        response.EmailVerifCode.Message = "Email verification code sent";
+                        this.Redis.Set(request.Key + request.Email.RemoveSpecialCharacters(), Verifcode, new TimeSpan(0, 1, 0, 0));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    response.EmailVerifCode.Message = ex.Message;
+                }
+
+                try
+                {
+                    if (!string.IsNullOrEmpty(request.Mobile))
+                    {
+                        string Verifcode = GenerateOTP();
+                        string message = string.Format(VerificationMessage, sol_Obj.SolutionName, Verifcode);
+                        usr.PhoneNumber = request.Mobile;///
+                        SendOtpSms(usr, sol_Obj.SolutionID, message);
+                        response.MobileVerifCode.AuthStatus = true;
+                        response.MobileVerifCode.Message = "Mobile verification code sent";
+                        this.Redis.Set(request.Key + request.Mobile.RemoveSpecialCharacters(), Verifcode, new TimeSpan(0, 1, 0, 0));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    response.MobileVerifCode.Message = ex.Message;
+                }
+            }
+            return response;
+        }
+
+        public Authenticate2FAResponse Post(VerifyVerificationCodeRequest request)
+        {
+            Authenticate2FAResponse response = new Authenticate2FAResponse()
+            {
+                EmailVerifCode = new Authenticate2FAResponse(),
+                MobileVerifCode = new Authenticate2FAResponse(),
+                Message = "Success"
+            };
+            try
+            {
+                if (!string.IsNullOrEmpty(request.Email))
+                {
+                    string otpInRedis = this.Redis.Get<string>(request.Key + request.Email.RemoveSpecialCharacters());
+                    if (otpInRedis != null && otpInRedis == request.Otp)
+                    {
+                        response.EmailVerifCode.AuthStatus = true;
+                        response.Message = "| Correct email otp |";
+                    }
+                    else
+                        response.Message = "| Incorrect email otp |";
+                }
+                if (!string.IsNullOrEmpty(request.Mobile))
+                {
+                    string otpInRedis = this.Redis.Get<string>(request.Key + request.Mobile.RemoveSpecialCharacters());
+                    if (otpInRedis != null && otpInRedis == request.Otp)
+                    {
+                        response.MobileVerifCode.AuthStatus = true;
+                        response.Message += "| Correct Mobile otp |";
+                    }
+                    else
+                        response.Message += "| Incorrect Mobile otp |";
+                }
+            }
+            catch (Exception ex)
+            {
+                response.ErrorMessage = ex.Message;
+            }
+            return response;
         }
 
         public Authenticate2FAResponse Post(SendUserVerifCodeRequest request)
