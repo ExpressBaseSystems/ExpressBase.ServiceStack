@@ -33,24 +33,15 @@ namespace ExpressBase.ServiceStack.Services
         private EbObjectService StudioServices { set; get; }
 
         private WebFormServices WebFormService { set; get; }
-
-        private Dictionary<string, object> GlobalParams { set; get; }
-
-        private EbApi Api { set; get; }
-
-        private ApiResponse ApiResponse { set; get; }
-
-        private User UserObject { set; get; }
-
-        private string SolutionId { set; get; }
-
+          
+        private EbApi Api { set; get; } 
+         
         private int Step = 0;
 
         public ApiServices(IEbConnectionFactory _dbf, IEbStaticFileClient _sfc) : base(_dbf, _sfc)
         {
             this.StudioServices = base.ResolveService<EbObjectService>();
             this.WebFormService = base.ResolveService<WebFormServices>();
-            this.ApiResponse = new ApiResponse();
         }
 
         public Dictionary<string, object> ProcessGlobalDictionary(Dictionary<string, object> data)
@@ -85,18 +76,7 @@ namespace ExpressBase.ServiceStack.Services
         public ApiResponse Any(ApiRequest request)
         {
             try
-            {
-                this.SolutionId = request.SolnId;
-                this.GlobalParams = ProcessGlobalDictionary(request.Data);
-                this.UserObject = GetUserObject(request.UserAuthId);
-
-                this.GlobalParams["eb_currentuser_id"] = request.UserId;
-
-                if (!this.GlobalParams.ContainsKey("eb_loc_id"))
-                {
-                    this.GlobalParams["eb_loc_id"] = this.UserObject.Preference.DefaultLocation;
-                }
-
+            {               
                 if (request.HasRefId())
                 {
                     try
@@ -116,12 +96,30 @@ namespace ExpressBase.ServiceStack.Services
 
                 if (this.Api == null)
                 {
-                    this.ApiResponse.Message.ErrorCode = ApiErrorCode.ApiNotFound;
-                    this.ApiResponse.Message.Status = "Api does not exist";
-                    this.ApiResponse.Message.Description = $"Api '{request.Name}' does not exist!,";
+                    this.Api = new EbApi { ApiResponse = new ApiResponse() };
+                    this.Api.ApiResponse.Message.ErrorCode = ApiErrorCode.ApiNotFound;
+                    this.Api.ApiResponse.Message.Status = "Api does not exist";
+                    this.Api.ApiResponse.Message.Description = $"Api '{request.Name}' does not exist!,";
 
-                    throw new Exception(this.ApiResponse.Message.Description);
+                    throw new Exception(this.Api.ApiResponse.Message.Description);
                 }
+
+                this.Api.ApiResponse = new ApiResponse();
+                this.Api.Redis = Redis;
+
+                this.Api.SolutionId = request.SolnId;
+                this.Api.GlobalParams = ProcessGlobalDictionary(request.Data);
+                this.Api.UserObject = GetUserObject(request.UserAuthId);
+
+                this.Api.GlobalParams["eb_currentuser_id"] = request.UserId;
+
+                if (!this.Api.GlobalParams.ContainsKey("eb_loc_id"))
+                {
+                    this.Api.GlobalParams["eb_loc_id"] = this.Api.UserObject.Preference.DefaultLocation;
+                }
+
+                this.Api.DataDB = this.EbConnectionFactory.DataDB;
+                this.Api.ObjectsDB = this.EbConnectionFactory.ObjectsDB;
 
                 InitializeExecution();
             }
@@ -130,16 +128,13 @@ namespace ExpressBase.ServiceStack.Services
                 Console.WriteLine("---API SERVICE END POINT EX CATCH---");
                 Console.WriteLine(e.Message + "\n" + e.StackTrace);
             }
-            return this.ApiResponse;
+            return this.Api.ApiResponse;
         }
 
         private void InitializeExecution()
         {
             try
-            {
-                this.Api.SolutionId = SolutionId;
-                this.Api.Redis = Redis;
-                this.Api.UserObject = this.UserObject;
+            { 
 
                 int r_count = this.Api.Resources.Count;
 
@@ -148,12 +143,12 @@ namespace ExpressBase.ServiceStack.Services
                     this.Api.Resources[Step].Result = this.GetResult(this.Api.Resources[Step]);
                     Step++;
                 }
-                if (this.ApiResponse.Result == null)
-                    this.ApiResponse.Result = this.Api.Resources[Step - 1].GetResult();
+                if (this.Api.ApiResponse.Result == null)
+                    this.Api.ApiResponse.Result = this.Api.Resources[Step - 1].GetResult();
 
-                this.ApiResponse.Message.Status = "Success";
-                this.ApiResponse.Message.ErrorCode = ApiResponse.Result == null ? ApiErrorCode.SuccessWithNoReturn : ApiErrorCode.Success;
-                this.ApiResponse.Message.Description = $"Api execution completed, " + this.ApiResponse.Message.Description;
+                this.Api.ApiResponse.Message.Status = "Success";
+                this.Api.ApiResponse.Message.ErrorCode = this.Api.ApiResponse.Result == null ? ApiErrorCode.SuccessWithNoReturn : ApiErrorCode.Success;
+                this.Api.ApiResponse.Message.Description = $"Api execution completed, " + this.Api.ApiResponse.Message.Description;
             }
             catch (Exception ex)
             {
@@ -189,7 +184,7 @@ namespace ExpressBase.ServiceStack.Services
                         res.Result = ExecuteConnectApi(ebApi);
                         break;
                     case EbThirdPartyApi thirdParty:
-                        res.Result = ExecuteThirdPartyApi(thirdParty);
+                        res.Result =(thirdParty as EbThirdPartyApi).ExecuteThirdPartyApi(thirdParty, this.Api);
                         break;
                     case EbFormResource form:
                         res.Result = ExecuteFormResource(form);
@@ -197,6 +192,12 @@ namespace ExpressBase.ServiceStack.Services
                     case EbEmailRetriever retriever:
                         res.Result = (retriever as EbEmailRetriever).ExecuteEmailRetriever(this.Api, this, this.FileClient, false);
                         break;
+                    //case EbEncrypt encrypt:
+                    //    res.Result = (encrypt as EbEncrypt).ExecuteEncrypt(this.Api);
+                    //    break;
+                    //case EbDecrypt decrypt:
+                    //    res.Result = (decrypt as EbDecrypt).ExecuteDecrypt(this.Api);
+                    //    break;
                     default:
                         res.Result = null;
                         break;
@@ -208,14 +209,14 @@ namespace ExpressBase.ServiceStack.Services
             {
                 if (ex is ExplicitExitException)
                 {
-                    this.ApiResponse.Message.Status = "Success";
-                    this.ApiResponse.Message.Description = ex.Message;
-                    this.ApiResponse.Message.ErrorCode = ApiErrorCode.ExplicitExit;
+                    this.Api.ApiResponse.Message.Status = "Success";
+                    this.Api.ApiResponse.Message.Description = ex.Message;
+                    this.Api.ApiResponse.Message.ErrorCode = ApiErrorCode.ExplicitExit;
                 }
                 else
                 {
-                    this.ApiResponse.Message.Status = "Error";
-                    this.ApiResponse.Message.Description = $"Failed to execute Resource '{resource.Name}' " + ex.Message;
+                    this.Api.ApiResponse.Message.Status = "Error";
+                    this.Api.ApiResponse.Message.Description = $"Failed to execute Resource '{resource.Name}' " + ex.Message;
                 }
 
                 throw new ApiException("[GetResult] ," + ex.Message);
@@ -269,12 +270,12 @@ namespace ExpressBase.ServiceStack.Services
 
                 if (status > 0)
                 {
-                    this.ApiResponse.Message.Description = status + "row inserted";
+                    this.Api.ApiResponse.Message.Description = status + "row inserted";
                     return true;
                 }
                 else
                 {
-                    this.ApiResponse.Message.Description = status + "row inserted";
+                    this.Api.ApiResponse.Message.Description = status + "row inserted";
                     return false;
                 }
             }
@@ -311,9 +312,9 @@ namespace ExpressBase.ServiceStack.Services
             ApiGlobalParent global;
 
             if (processor.EvaluatorVersion == EvaluatorVersion.Version_1)
-                global = new ApiGlobals(this.GlobalParams);
+                global = new ApiGlobals(this.Api.GlobalParams);
             else
-                global = new ApiGlobalsCoreBase(this.GlobalParams);
+                global = new ApiGlobalsCoreBase(this.Api.GlobalParams);
 
             global.ResourceValueByIndexHandler += (index) =>
             {
@@ -366,7 +367,7 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     Data = JsonConvert.SerializeObject(obj),
                 };
-                this.ApiResponse.Result = script;
+                this.Api.ApiResponse.Result = script;
                 this.Step = this.Api.Resources.Count - 1;
             };
 
@@ -406,10 +407,10 @@ namespace ExpressBase.ServiceStack.Services
 
                 EmailService.Post(new EmailTemplateWithAttachmentMqRequest
                 {
-                    SolnId = this.SolutionId,
+                    SolnId = this.Api.SolutionId,
                     Params = InputParams,
                     ObjId = Convert.ToInt32(emailNode.Reference.Split(CharConstants.DASH)[3]),
-                    UserAuthId = this.UserObject.AuthId,
+                    UserAuthId = this.Api.UserObject.AuthId,
                     BToken = (!String.IsNullOrEmpty(this.Request.Authorization)) ? this.Request.Authorization.Replace("Bearer", string.Empty).Trim() : String.Empty,
                     RToken = (!String.IsNullOrEmpty(this.Request.Headers["rToken"])) ? this.Request.Headers["rToken"] : String.Empty,
                 });
@@ -418,7 +419,7 @@ namespace ExpressBase.ServiceStack.Services
 
                 string msg = $"The mail has been sent successfully to {emailTemplate.To} with subject {emailTemplate.Subject} and cc {emailTemplate.Cc}";
 
-                this.ApiResponse.Message.Description = msg;
+                this.Api.ApiResponse.Message.Description = msg;
             }
             catch (Exception ex)
             {
@@ -437,8 +438,8 @@ namespace ExpressBase.ServiceStack.Services
 
                 if (apiObject.Name.Equals(this.Api.Name))
                 {
-                    this.ApiResponse.Message.ErrorCode = ApiErrorCode.ResourceCircularRef;
-                    this.ApiResponse.Message.Description = "Calling Api from the same not allowed, terminated due to circular reference";
+                    this.Api.ApiResponse.Message.ErrorCode = ApiErrorCode.ResourceCircularRef;
+                    this.Api.ApiResponse.Message.Description = "Calling Api from the same not allowed, terminated due to circular reference";
 
                     throw new ApiException("[ExecuteConnectApi], Circular refernce");
                 }
@@ -461,8 +462,8 @@ namespace ExpressBase.ServiceStack.Services
 
                     if (resp.Message.ErrorCode == ApiErrorCode.NotFound)
                     {
-                        this.ApiResponse.Message.ErrorCode = ApiErrorCode.ResourceNotFound;
-                        this.ApiResponse.Message.Description = resp.Message.Description;
+                        this.Api.ApiResponse.Message.ErrorCode = ApiErrorCode.ResourceNotFound;
+                        this.Api.ApiResponse.Message.Description = resp.Message.Description;
 
                         throw new ApiException("[ExecuteConnectApi], resource api not found");
                     }
@@ -475,48 +476,56 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
-        private object ExecuteThirdPartyApi(EbThirdPartyApi thirdPartyResource)
-        {
-            Uri uri = new Uri(ReplacePlaceholders(thirdPartyResource.Url));
+        //private object ExecuteThirdPartyApi(EbThirdPartyApi thirdPartyResource)
+        //{
+        //    Uri uri = new Uri(ReplacePlaceholders(thirdPartyResource.Url));
 
-            object result;
+        //    object result;
 
-            try
-            {
-                RestClient client = new RestClient(uri.GetLeftPart(UriPartial.Authority));
+        //    try
+        //    {
+        //        RestClient client = new RestClient(uri.GetLeftPart(UriPartial.Authority));
 
-                RestRequest request = thirdPartyResource.CreateRequest(uri.PathAndQuery, GlobalParams);
+        //        RestRequest request = thirdPartyResource.CreateRequest(uri.PathAndQuery, GlobalParams);
 
-                List<Param> parameters = thirdPartyResource.GetParameters(this.GlobalParams) ?? new List<Param>();
+        //        List<Param> parameters = thirdPartyResource.GetParameters(this.GlobalParams) ?? new List<Param>();
 
-                if (thirdPartyResource.Method == ApiMethods.POST && thirdPartyResource.RequestFormat == ApiRequestFormat.Raw)
-                {
-                    if (parameters.Count > 0)
-                    {
-                        request.AddJsonBody(parameters[0].Value);
-                    }
-                }
-                else
-                {
-                    foreach (Param param in parameters)
-                    {
-                        request.AddParameter(param.Name, param.ValueTo);
-                    }
-                }
+        //        if (thirdPartyResource.Method == ApiMethods.POST && thirdPartyResource.RequestFormat == ApiRequestFormat.Raw)
+        //        {
+        //            if (_params.Count > 0)
+        //            {
+        //                if (!string.IsNullOrEmpty(this.Parameters[0].Value) && this.Parameters[0].EnableEncryption)
+        //                {
+        //                    string ciphertext = Encryption.ExecuteEncrypt(this.Parameters[0], _params[0].Value, Api);
+        //                    request.AddJsonBody(ciphertext);
+        //                }
+        //                else
+        //                {
+        //                    request.AddJsonBody(_params[0].Value);
+        //                }
+        //            }
+        //        }
+        //        else
+        //        {
+        //            foreach (Param param in parameters)
+        //            {
+        //                request.AddParameter(param.Name, param.ValueTo);
+        //            }
+        //        }
 
-                IRestResponse resp = client.Execute(request);
+        //        IRestResponse resp = client.Execute(request);
 
-                if (resp.IsSuccessful)
-                    result = resp.Content;
-                else
-                    throw new Exception($"Failed to execute api [{thirdPartyResource.Url}], {resp.ErrorMessage}, {resp.Content}");
-            }
-            catch (Exception ex)
-            {
-                throw new Exception("[ExecuteThirdPartyApi], " + ex.Message);
-            }
-            return result;
-        }
+        //        if (resp.IsSuccessful)
+        //            result = resp.Content;
+        //        else
+        //            throw new Exception($"Failed to execute api [{thirdPartyResource.Url}], {resp.ErrorMessage}, {resp.Content}");
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        throw new Exception("[ExecuteThirdPartyApi], " + ex.Message);
+        //    }
+        //    return result;
+        //}
 
         private object ExecuteFormResource(EbFormResource formResource)
         {
@@ -525,7 +534,7 @@ namespace ExpressBase.ServiceStack.Services
                 int RecordId = 0;
                 WebFormServices webFormServices = base.ResolveService<WebFormServices>();
                 Objects.Objects.NTVDict _params = new Objects.Objects.NTVDict();
-                foreach (KeyValuePair<string, object> p in this.GlobalParams)
+                foreach (KeyValuePair<string, object> p in this.Api.GlobalParams)
                 {
                     EbDbTypes _type;
                     if (p.Value is int)
@@ -535,20 +544,20 @@ namespace ExpressBase.ServiceStack.Services
                     _params.Add(p.Key, new NTV() { Name = p.Key, Type = _type, Value = p.Value });
                 }
 
-                if (!string.IsNullOrWhiteSpace(formResource.DataIdParam) && this.GlobalParams.ContainsKey(formResource.DataIdParam))
+                if (!string.IsNullOrWhiteSpace(formResource.DataIdParam) && this.Api.GlobalParams.ContainsKey(formResource.DataIdParam))
                 {
-                    int.TryParse(Convert.ToString(this.GlobalParams[formResource.DataIdParam]), out RecordId);
+                    int.TryParse(Convert.ToString(this.Api.GlobalParams[formResource.DataIdParam]), out RecordId);
                 }
 
                 InsertOrUpdateFormDataResp resp = webFormServices.Any(new InsertOrUpdateFormDataRqst
                 {
                     RefId = formResource.Reference,
                     PushJson = formResource.PushJson,
-                    UserId = this.UserObject.UserId,
-                    UserAuthId = this.UserObject.AuthId,
+                    UserId = this.Api.UserObject.UserId,
+                    UserAuthId = this.Api.UserObject.AuthId,
                     RecordId = RecordId,
-                    LocId = Convert.ToInt32(this.GlobalParams["eb_loc_id"]),
-                    SolnId = this.SolutionId,
+                    LocId = Convert.ToInt32(this.Api.GlobalParams["eb_loc_id"]),
+                    SolnId = this.Api.SolutionId,
                     WhichConsole = "uc",
                     FormGlobals = new FormGlobals { Params = _params },
                     //TransactionConnection = TransactionConnection
@@ -601,8 +610,8 @@ namespace ExpressBase.ServiceStack.Services
                     {
                         if (value == null || string.IsNullOrEmpty(value.ToString()))
                         {
-                            this.ApiResponse.Message.ErrorCode = ApiErrorCode.ParameterNotFound;
-                            this.ApiResponse.Message.Status = $"Parameter Error";
+                            this.Api.ApiResponse.Message.ErrorCode = ApiErrorCode.ParameterNotFound;
+                            this.Api.ApiResponse.Message.Status = $"Parameter Error";
 
                             throw new ApiException($"Parameter '{p.Name}' must be set");
                         }
@@ -634,9 +643,9 @@ namespace ExpressBase.ServiceStack.Services
                     try
                     {
                         string parameter_name = _col.Replace("{{", "").Replace("}}", "");
-                        if (this.GlobalParams.ContainsKey(parameter_name))
+                        if (this.Api.GlobalParams.ContainsKey(parameter_name))
                         {
-                            string value = this.GlobalParams[parameter_name].ToString();
+                            string value = this.Api.GlobalParams[parameter_name].ToString();
                             text = text.Replace(_col, value);
                         }
                     }
@@ -661,9 +670,9 @@ namespace ExpressBase.ServiceStack.Services
 
         private object GetParameterValue(string name)
         {
-            if (this.GlobalParams.ContainsKey(name))
+            if (this.Api.GlobalParams.ContainsKey(name))
             {
-                return this.GlobalParams[name];
+                return this.Api.GlobalParams[name];
             }
             return null;
         }
@@ -723,7 +732,7 @@ namespace ExpressBase.ServiceStack.Services
         {
             try
             {
-                this.GlobalParams = request.Params.Select(p => new { prop = p.Name, val = p.ValueTo })
+                this.Api.GlobalParams = request.Params.Select(p => new { prop = p.Name, val = p.ValueTo })
                     .ToDictionary(x => x.prop, x => x.val as object);
 
                 if (request.Component is EbSqlReader reader)
@@ -738,7 +747,7 @@ namespace ExpressBase.ServiceStack.Services
                     {
                         Name = ebApi.RefName,
                         Version = ebApi.Version,
-                        Data = this.GlobalParams
+                        Data = this.Api.GlobalParams
                     });
                 }
                 else if (request.Component is EbFormResource form)
@@ -746,14 +755,14 @@ namespace ExpressBase.ServiceStack.Services
                 else
                     request.Component.Result = null;
 
-                this.ApiResponse.Result = request.Component.GetResult();
+                this.Api.ApiResponse.Result = request.Component.GetResult();
             }
             catch (Exception e)
             {
                 Console.WriteLine(e.Message);
-                this.ApiResponse.Result = null;
+                this.Api.ApiResponse.Result = null;
             }
-            return this.ApiResponse;
+            return this.Api.ApiResponse;
         }
 
         [Authenticate]
@@ -779,7 +788,7 @@ namespace ExpressBase.ServiceStack.Services
             if (ebObject == null)
             {
                 string message = $"{typeof(T).Name} not found";
-                this.ApiResponse.Message.Description = message;
+                this.Api.ApiResponse.Message.Description = message;
 
                 throw new ApiException(message);
             }
