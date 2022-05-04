@@ -88,7 +88,7 @@ namespace ExpressBase.ServiceStack.MQServices
 
                 Console.WriteLine("ExportToExcelServiceRequest  After Compress - " + request.RefId + " - " + DateTime.Now);
 
-                this.Redis.Set("excel" + (request.EbDataVisualization.RefId + request.UserInfo.UserId), compressedData, DateTime.Now.AddHours(5));
+                this.Redis.Set("excel" + (request.EbDataVisualization.RefId + request.UserInfo.UserId), compressedData, DateTime.Now.AddMinutes(30));
 
                 Console.WriteLine("ExportToExcelServiceRequest  After Redis Set - " + request.RefId + " - " + DateTime.Now);
 
