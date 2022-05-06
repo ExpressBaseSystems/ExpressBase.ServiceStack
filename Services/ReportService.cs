@@ -99,7 +99,7 @@ namespace ExpressBase.ServiceStack
             return null;
         }
 
-        public bool Get(ReportRenderMultipleRequest request)
+        public ReportRenderResponse Get(ReportRenderMultipleRequest request)
         {
             this.MessageProducer3.Publish(new ReportRenderMultipleMQRequest
             {
@@ -116,7 +116,7 @@ namespace ExpressBase.ServiceStack
             });
 
             Console.WriteLine("ReportRenderMultipleMQRequest pushed to MQ Successfully.");
-            return true;
+            return new ReportRenderResponse { };
         }
 
         public ValidateCalcExpressionResponse Get(ValidateCalcExpressionRequest request)
