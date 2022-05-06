@@ -1460,7 +1460,7 @@ namespace ExpressBase.ServiceStack.Services
                     JObject o = new JObject();
                     foreach (SingleColumn Column in Row.Columns)
                     {
-                        o[Column.Name] = JToken.FromObject(Column.Value);
+                        o[Column.Name] = JToken.FromObject(Column.Value ?? string.Empty);
                     }
                     array.Add(o);
                 }

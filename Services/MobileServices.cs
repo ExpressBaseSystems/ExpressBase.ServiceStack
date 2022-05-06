@@ -431,6 +431,7 @@ SELECT DISTINCT id FROM eb_form_drafts WHERE draft_type = @draft_type AND eb_cre
                         }
                     }
                 }
+                this.SetProfilePages(data);
             }
             catch (Exception ex)
             {
