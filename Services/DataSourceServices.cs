@@ -563,85 +563,17 @@ namespace ExpressBase.ServiceStack
             return resp;
         }
 
+
         [CompressResponse]
         public DataSourceDataSetResponse Any(DataSourceDataSetRequest request)
         {
             this.Log.Info("data request");
-
-            DataSourceDataSetResponse resp = new DataSourceDataSetResponse();
-            resp.Columns = new List<ColumnColletion>();
-            string _sql = string.Empty;
-            try
-            {
-                EbDataReader _ds = this.Redis.Get<EbDataReader>(request.RefId);
-                if (_ds == null)
-                {
-                    EbObjectService myService = base.ResolveService<EbObjectService>();
-                    EbObjectParticularVersionResponse result = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = request.RefId });
-                    _ds = EbSerializers.Json_Deserialize(result.Data[0].Json);
-                    if (_ds == null)
-                    {
-                        resp.ResponseStatus = new ResponseStatus { Message = "DataReader is null.... RefId: " + request.RefId };
-                        return resp;
-                    }
-                    Redis.Set<EbDataReader>(request.RefId, _ds);
-                }
-                if (_ds.FilterDialogRefId != string.Empty && _ds.FilterDialogRefId != null)
-                {
-                    EbFilterDialog _dsf = this.Redis.Get<EbFilterDialog>(_ds.FilterDialogRefId);
-                    if (_dsf == null)
-                    {
-                        EbObjectService myService = base.ResolveService<EbObjectService>();
-                        EbObjectParticularVersionResponse result = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = _ds.FilterDialogRefId });
-                        _dsf = EbSerializers.Json_Deserialize(result.Data[0].Json);
-                        Redis.Set<EbFilterDialog>(_ds.FilterDialogRefId, _dsf);
-                    }
-                    if (request.Params == null)
-                        request.Params = _dsf.GetDefaultParams();
-                }
-
-                IDatabase MyDataStore = _ds.GetDatastore(this.EbConnectionFactory);
-
-                if (_ds != null)
-                {
-                    string _c = string.Empty;
-                    _sql = _ds.Sql;
-                }
-                //if (request.Groupings != null && request.Groupings.Count > 0)
-                //{
-                //    foreach 
-                //    _sql = "SELECT * FROM (" + _sql + "\n ) data  order by :orderby";
-                //}
-                try
-                {
-                    IEnumerable<DbParameter> parameters = DataHelper.GetParams(MyDataStore, false, request.Params, 0, 0);
-                    resp.DataSet = MyDataStore.DoQueries(_sql, parameters.ToArray<System.Data.Common.DbParameter>());
-
-                    foreach (EbDataTable dt in resp.DataSet.Tables)
-                        resp.Columns.Add(dt.Columns);
-
-                    if (GetLogEnabled(request.RefId))
-                    {
-                        TimeSpan T = resp.DataSet.EndTime - resp.DataSet.StartTime;
-                        InsertExecutionLog(resp.DataSet.RowNumbers, T, resp.DataSet.StartTime, request.UserId, request.Params, request.RefId);
-                    }
-                }
-                catch (Exception e)
-                {
-                    resp.ResponseStatus = new ResponseStatus { Message = e.Message };
-                    Console.WriteLine("DataSourceDataSetResponse------" + e.StackTrace);
-                    Console.WriteLine("DataSourceDataSetResponse------" + e.Message);
-                }
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e.Message + "\n" + e.StackTrace);
-            }
+            DataSourceDataSetResponse resp = EbObjectsHelper.ExecuteDataset(request.RefId, request.UserId, request.Params, this.EbConnectionFactory, this.Redis);
             return resp;
         }
 
         public SqlFuncTestResponse Post(SqlFuncTestRequest request)
-        { 
+        {
             try
             {
                 return EbObjectsHelper.SqlFuncTest(request.Parameters, request.FunctionName, this.EbConnectionFactory.DataDB);
