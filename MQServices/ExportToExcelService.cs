@@ -92,7 +92,7 @@ namespace ExpressBase.ServiceStack.MQServices
 
                 this.ServerEventClient.Post<NotifyResponse>(new NotifySubscriptionRequest
                 {
-                    Msg = "../DV/GetExcel?refid=" + (request.EbDataVisualization.RefId + request.UserInfo.UserId) + "&filename=" + request.EbDataVisualization.DisplayName + ".xlsx",
+                    Msg = "/DV/GetExcel?id=" + id,
                     Selector = StaticFileConstants.EXPORTTOEXCELSUCCESS,
                     ToSubscriptionId = request.SubscriptionId
                 });
