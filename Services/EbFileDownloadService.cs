@@ -15,6 +15,8 @@ using System.Linq;
 using System.Data.Common;
 using ExpressBase.Common.Structures;
 using ServiceStack.Messaging;
+using ExpressBase.Objects.Helpers;
+using static ExpressBase.Objects.Helpers.DownloadsPageHelper;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -111,6 +113,28 @@ namespace ExpressBase.ServiceStack.Services
                     }
                 }
             }
+        }
+
+        // Downloads page 
+        public GetDownloadFileResponse Get(GetDownloadFileRequest request)
+        {
+            GetDownloadFileResponse response = new GetDownloadFileResponse();
+
+            if (request.IsGetAll)
+            {
+                response.AllDownloadObjects = (new DownloadsPageHelper()).GetAllDownloadFiles(this.EbConnectionFactory.DataDB, request.UserId, GetUserObject(request.UserAuthId)?.Preference?.TimeZone);
+            }
+            else
+            {
+                response.FileDownloadObject = (new DownloadsPageHelper()).GetDownloadFile(this.EbConnectionFactory.DataDB, request.Id);
+
+                if (response.FileDownloadObject?.FileBytea != null)
+                {
+                    (new DownloadsPageHelper()).DeleteDownloadFile(this.EbConnectionFactory.DataDB, request.Id);
+                }
+            }
+
+            return response;
         }
     }
 }

@@ -3,6 +3,7 @@ using ExpressBase.Common.Constants;
 using ExpressBase.Common.Data;
 using ExpressBase.Common.ServerEvents_Artifacts;
 using ExpressBase.Common.ServiceClients;
+using ExpressBase.Objects.Helpers;
 using ExpressBase.Objects.Services;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ServiceStack;
@@ -60,42 +61,35 @@ namespace ExpressBase.ServiceStack.MQServices
         {
             try
             {
-                Console.WriteLine("Started ExportToExcelServiceRequest in MQ - " + request.RefId + " - " + DateTime.Now);
-                EbConnectionFactory ebConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
-                var dataservice = base.ResolveService<DataVisService>();
-                dataservice.EbConnectionFactory = ebConnectionFactory;
-                TableDataRequest _req = new TableDataRequest();
-                DataSourceDataResponse res = new DataSourceDataResponse();
-                _req.EbDataVisualization = request.EbDataVisualization;
-                _req.Ispaging = false;
-                _req.UserInfo = request.UserInfo;
-                _req.RefId = request.RefId;
-                _req.IsExcel = true;
-                _req.Params = request.Params;
-                _req.TFilters = request.TFilters;
-                _req.Token = request.BToken;
-                _req.rToken = request.RToken;
-                _req.eb_Solution = request.eb_solution;
-                _req.UserAuthId = request.UserAuthId;
+                DataVisService dataservice = base.ResolveService<DataVisService>();
+                dataservice.EbConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis); ;
 
-                Console.WriteLine("ExportToExcelServiceRequest  Starting TableDataRequest - " + request.RefId + " - " + DateTime.Now);
+                int id = new DownloadsPageHelper().InsertDownloadFileEntry(dataservice.EbConnectionFactory.DataDB, request.EbDataVisualization.DisplayName + ".xlsx", request.UserId);
 
-                res = (DataSourceDataResponse)dataservice.Any(_req);
-
-                Console.WriteLine("ExportToExcelServiceRequest  After TableDataRequest, Starting Compress - " + request.RefId + " - " + DateTime.Now);
+                DataSourceDataResponse res = (DataSourceDataResponse)dataservice.Any(new TableDataRequest
+                {
+                    EbDataVisualization = request.EbDataVisualization,
+                    Ispaging = false,
+                    UserInfo = request.UserInfo,
+                    RefId = request.RefId,
+                    IsExcel = true,
+                    Params = request.Params,
+                    TFilters = request.TFilters,
+                    Token = request.BToken,
+                    rToken = request.RToken,
+                    eb_Solution = request.eb_solution,
+                    UserAuthId = request.UserAuthId
+                });
 
                 byte[] compressedData = Compress(res.excel_file);
 
-                Console.WriteLine("ExportToExcelServiceRequest  After Compress - " + request.RefId + " - " + DateTime.Now);
-
-                this.Redis.Set("excel" + (request.EbDataVisualization.RefId + request.UserInfo.UserId), compressedData, DateTime.Now.AddMinutes(30));
-
-                Console.WriteLine("ExportToExcelServiceRequest  After Redis Set - " + request.RefId + " - " + DateTime.Now);
+                // this.Redis.Set("excel" + (request.EbDataVisualization.RefId + request.UserInfo.UserId), compressedData, DateTime.Now.AddMinutes(30)); 
+                new DownloadsPageHelper().SaveDownloadFileBytea(dataservice.EbConnectionFactory.DataDB, compressedData, id);
 
                 this.ServerEventClient.BearerToken = request.BToken;
                 this.ServerEventClient.RefreshToken = request.RToken;
                 this.ServerEventClient.RefreshTokenUri = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GET_ACCESS_TOKEN_URL);
-                Console.WriteLine("Calling NotifySubscriptionRequest to subsc.id :" + request.SubscriptionId);
+
                 this.ServerEventClient.Post<NotifyResponse>(new NotifySubscriptionRequest
                 {
                     Msg = "../DV/GetExcel?refid=" + (request.EbDataVisualization.RefId + request.UserInfo.UserId) + "&filename=" + request.EbDataVisualization.DisplayName + ".xlsx",
