@@ -122,7 +122,7 @@ namespace ExpressBase.ServiceStack.Services
 
             if (request.IsGetAll)
             {
-                response.AllDownloadObjects = (new DownloadsPageHelper()).GetAllDownloadFiles(this.EbConnectionFactory.DataDB, request.UserId, GetUserObject(request.UserAuthId)?.Preference?.TimeZone);
+                response.AllDownloadObjects = (new DownloadsPageHelper()).GetAllDownloadFiles(this.EbConnectionFactory.DataDB, request.UserId, GetUserObject(request.UserAuthId)?.Preference);
             }
             else
             {
