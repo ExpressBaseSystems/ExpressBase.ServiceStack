@@ -862,6 +862,49 @@ SELECT DISTINCT id FROM eb_form_drafts WHERE draft_type = @draft_type AND eb_cre
             return query;
         }
 
+        public MobileDataResponse Post(GetSqlExprRequest request)
+        {
+            MobileDataResponse resp = new MobileDataResponse();
+            try
+            {
+                EbMobilePage page = this.GetEbObject<EbMobilePage>(request.RefId);
+                if (page == null)
+                {
+                    resp.Message = "Page not found";
+                }
+                else if (page.Container is EbMobileForm mobileForm)
+                {
+                    EbMobileControl Ctrl = mobileForm.ChildControls.Find(e => e.Name == request.Control);
+                    if (Ctrl == null)
+                    {
+                        resp.Message = "Control not found";
+                    }
+                    else
+                    {
+                        EbScript ebScript = request.ExprType == 1 ? Ctrl.DefaultValueExpression : Ctrl.ValueExpr;
+                        if (string.IsNullOrWhiteSpace(ebScript?.Code) || ebScript.Lang != ScriptingLanguage.SQL)
+                        {
+                            resp.Message = "Sql script not found";
+                        }
+                        else
+                        {
+                            List<Param> Params = JsonConvert.DeserializeObject<List<Param>>(request.Params);
+                            List<DbParameter> parameters = Params.ParamsToDbParameters(this.EbConnectionFactory.DataDB);
+                            string wraped = "SELECT 1; " + ebScript.Code;
+                            resp.Data = this.EbConnectionFactory.DataDB.DoQueries(wraped, parameters.ToArray());
+                            resp.Message = "Success";
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                resp.Message = "GetData Exception: " + ex.Message;
+                Console.WriteLine("Exception in GetDataPs request [mobile] ::" + ex.Message);
+            }
+            return resp;
+        }
+
         public MobileDataResponse Post(MobilePsDataRequest request)
         {
             MobileDataResponse resp = new MobileDataResponse();
