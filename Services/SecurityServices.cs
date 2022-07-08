@@ -1213,9 +1213,10 @@ namespace ExpressBase.ServiceStack.Services
                     RoleInfo.Add("RoleName", ds.Tables[Set1_QryCount].Rows[0][0].ToString());
                     RoleInfo.Add("RoleDescription", ds.Tables[Set1_QryCount].Rows[0][2].ToString());
                     RoleInfo.Add("IsAnonymous", (ds.Tables[Set1_QryCount].Rows[0][3].ToString() == "T") ? true : false);
-                    RoleInfo.Add("AppId", Convert.ToInt32(ds.Tables[Set1_QryCount].Rows[0][4]));
-                    RoleInfo.Add("AppName", ds.Tables[Set1_QryCount].Rows[0][5].ToString());
-                    RoleInfo.Add("AppDescription", ds.Tables[Set1_QryCount].Rows[0][6].ToString());
+                    RoleInfo.Add("IsPrimary", (ds.Tables[Set1_QryCount].Rows[0][4].ToString() == "T") ? true : false);
+                    RoleInfo.Add("AppId", Convert.ToInt32(ds.Tables[Set1_QryCount].Rows[0][5]));
+                    RoleInfo.Add("AppName", ds.Tables[Set1_QryCount].Rows[0][6].ToString());
+                    RoleInfo.Add("AppDescription", ds.Tables[Set1_QryCount].Rows[0][7].ToString());
                     foreach (var dr in ds.Tables[Set1_QryCount + 1].Rows)
                         Permission.Add(dr[0].ToString());
                     foreach (EbDataRow dr in ds.Tables[Set1_QryCount + 2].Rows)
@@ -1311,6 +1312,7 @@ namespace ExpressBase.ServiceStack.Services
                 this.EbConnectionFactory.DataDB.GetNewParameter("role_name", EbDbTypes.String, request.Colvalues["role_name"]),
                 this.EbConnectionFactory.DataDB.GetNewParameter("description", EbDbTypes.String, request.Colvalues["Description"]),
                 this.EbConnectionFactory.DataDB.GetNewParameter("is_anonym", EbDbTypes.String, request.Colvalues["IsAnonymous"]),
+                this.EbConnectionFactory.DataDB.GetNewParameter("is_primary", EbDbTypes.String, request.Colvalues["IsPrimary"]),
                 this.EbConnectionFactory.DataDB.GetNewParameter("users", EbDbTypes.String, (request.Colvalues["users"].ToString() != string.Empty) ? request.Colvalues["users"] : string.Empty),
                 this.EbConnectionFactory.DataDB.GetNewParameter("dependants", EbDbTypes.String, (request.Colvalues["dependants"].ToString() != string.Empty) ? request.Colvalues["dependants"] : string.Empty),
                 this.EbConnectionFactory.DataDB.GetNewParameter("permission", EbDbTypes.String , (request.Colvalues["permission"].ToString() != string.Empty) ? request.Colvalues["permission"]: string.Empty),
