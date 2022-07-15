@@ -318,6 +318,7 @@ namespace ExpressBase.ServiceStack.Services
 
         public GetNotificationsResponse Post(GetNotificationsRequest request)
         {
+            request.user = GetUserObject(request.UserAuthId);
             GetNotificationsResponse res = new GetNotificationsResponse();
             res.Notification = new List<NotificationInfo>();
             res.PendingActions = new List<PendingActionAndMeetingInfo>();
@@ -328,7 +329,7 @@ namespace ExpressBase.ServiceStack.Services
                 string str = string.Format(@"
                                                 SELECT notification_id, notification, created_at  
                                                 FROM eb_notifications 
-                                                WHERE user_id = '{0}'
+                                                WHERE user_id = {0}
                                                 AND message_seen ='F'
                                                 ORDER BY created_at DESC;", request.UserId);
 
@@ -337,12 +338,26 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     _roles = string.Join(",", request.user.RoleIds.ToArray());
                 }
+                string loc_part = string.Empty;
+                if (!request.user.LocationIds.Contains(-1))
+                    loc_part = $"AND (COALESCE(APP.eb_loc_id, 0) = 0 OR COALESCE(APP.eb_loc_id, 0) = ANY(string_to_array('{request.user.LocationIds.Join(",")}', ',')::int[]))";
 
-                str += string.Format(@"SELECT *
-                    FROM eb_my_actions
-                    WHERE ('{0}' = any(string_to_array(user_ids, ',')) OR
-                     (string_to_array(role_ids,',')) && (string_to_array('{1}',',')))
-                        AND is_completed = 'F' AND COALESCE(eb_del, 'F') = 'F' AND COALESCE(hide, 'F') = 'F' ORDER BY from_datetime DESC;", request.UserId, _roles);
+                //if meeting related action is needed in notification list then update this query
+                str += string.Format(@"
+SELECT
+  ACT.*
+FROM
+  eb_my_actions ACT, eb_approval APP
+WHERE 
+  ACT.id = APP.eb_my_actions_id AND
+  COALESCE(APP.eb_del, 'F') = 'F' AND
+  ('{0}' = any(string_to_array(ACT.user_ids, ',')) OR (string_to_array(ACT.role_ids,',')) && (string_to_array('{1}',','))) AND 
+  COALESCE(ACT.is_completed, 'F') = 'F' AND 
+  COALESCE(ACT.eb_del, 'F') = 'F' AND 
+  COALESCE(ACT.hide, 'F') = 'F' 
+  {2}
+ORDER BY 
+  ACT.from_datetime DESC;", request.UserId, _roles, loc_part);
 
                 str += string.Format(@"SELECT 
 	A.user_id,A.approved_slot_id,A.eb_meeting_schedule_id,B.meeting_date,B.time_from,B.time_to,

@@ -1023,14 +1023,25 @@ SELECT DISTINCT id FROM eb_form_drafts WHERE draft_type = @draft_type AND eb_cre
             try
             {
                 User UserObject = GetUserObject(request.UserAuthId);
-
-                DbParameter[] parameters = {
+                string Qry = EbConnectionFactory.ObjectsDB.EB_GET_MYACTIONS;
+                List<int> locIds = UserObject.LocationIds;
+                List<DbParameter> parameters = new List<DbParameter> {
                     this.EbConnectionFactory.ObjectsDB.GetNewParameter("userid", EbDbTypes.String, request.UserId.ToString()),
                     this.EbConnectionFactory.ObjectsDB.GetNewParameter("roleids", EbDbTypes.String, UserObject.RoleIds.Join(",")),
                     this.EbConnectionFactory.ObjectsDB.GetNewParameter("usergroupids", EbDbTypes.String, UserObject.UserGroupIds.Join(","))
                 };
 
-                EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(EbConnectionFactory.ObjectsDB.EB_GET_MYACTIONS, parameters);
+                if (locIds.Contains(-1))
+                {
+                    Qry = string.Format(Qry, string.Empty);
+                }
+                else
+                {
+                    Qry = string.Format(Qry, EbConnectionFactory.ObjectsDB.EB_GET_MYACTIONS_LOC_PART);
+                    parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("locids", EbDbTypes.String, locIds.Join(",")));
+                }
+
+                EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(Qry, parameters.ToArray());
 
                 if (dt != null)
                 {
