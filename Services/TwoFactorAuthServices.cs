@@ -440,12 +440,14 @@ namespace ExpressBase.ServiceStack.Services
             {
                 string subject = "OTP Verification";
                 string message = string.Format(LoginOtpMessage, sol_Obj.SolutionName, _usr.Otp);
+                AuthResponse.AuthStatus = false;
 
                 if (sol_Obj.IsEmailIntegrated)
                 {
                     if (!string.IsNullOrEmpty(_usr.Email))
                     {
                         SendOtpEmail(_usr, sol_Obj.SolutionID, message, subject);
+                        AuthResponse.AuthStatus = true;
 
                         int end = _usr.Email.IndexOf('@');
                         if (end > 0)
@@ -458,7 +460,6 @@ namespace ExpressBase.ServiceStack.Services
                     }
                     else
                     {
-                        AuthResponse.AuthStatus = false;
                         AuthResponse.ErrorMessage = "Email id not set for the user. Please contact your admin";
                     }
                 }
@@ -468,11 +469,11 @@ namespace ExpressBase.ServiceStack.Services
                     {
                         string lastDigit = _usr.PhoneNumber.Substring((_usr.PhoneNumber.Length - 4), 4);
                         SendOtpSms(_usr, sol_Obj.SolutionID, message);
+                        AuthResponse.AuthStatus = true;
                         AuthResponse.OtpTo += ", ******" + lastDigit;
                     }
                     else
                     {
-                        AuthResponse.AuthStatus = false;
                         AuthResponse.ErrorMessage = "Phone number not set for the user. Please contact your admin";
                     }
                 }
