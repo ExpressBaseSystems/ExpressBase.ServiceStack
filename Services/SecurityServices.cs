@@ -38,7 +38,7 @@ namespace ExpressBase.ServiceStack.Services
                 show = " AND u.hide = 'no'";
 
             string sql = @"SELECT u.id, u.fullname, u.email, u.nickname, u.sex, u.phnoprimary, u.statusid, ut.name FROM eb_users u LEFT JOIN eb_user_types ut 
-            ON u.eb_user_types_id = ut.id WHERE u.statusid >= 0 AND u.statusid <= 2 AND COALESCE(u.eb_del, 'F') = 'F' AND COALESCE(ut.eb_del, 'F') = 'F' AND u.id > 1" + show + ";";
+            ON u.eb_user_types_id = ut.id WHERE u.statusid >= 0 AND u.statusid <= 2 AND COALESCE(u.eb_del, 'F') = 'F' AND COALESCE(ut.eb_del, 'F') = 'F' AND u.id > 1" + show + " ORDER BY u.fullname;";
 
             DbParameter[] parameters = { };
 
