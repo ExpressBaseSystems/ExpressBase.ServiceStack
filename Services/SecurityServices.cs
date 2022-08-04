@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ExpressBase.Common.Data;
 using System.Data.Common;
@@ -13,13 +12,11 @@ using System.Globalization;
 using ServiceStack;
 using Newtonsoft.Json;
 using ExpressBase.Security;
-using ExpressBase.Common.Singletons;
 using ServiceStack.Auth;
-using Newtonsoft.Json.Linq;
 using ExpressBase.Common.LocationNSolution;
 using ExpressBase.Common.ServiceClients;
-using ExpressBase.Common.ServerEvents_Artifacts;
 using ServiceStack.Messaging;
+using ExpressBase.Common.Constants;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -501,6 +498,19 @@ namespace ExpressBase.ServiceStack.Services
             }
             if (Convert.ToInt32(request.StatusId) == 1 || Convert.ToInt32(request.StatusId) == 2 || Convert.ToInt32(request.StatusId) == 3)
             {
+                try
+                {
+                    string authid = request.SolnId + CharConstants.COLON + request.Id + CharConstants.COLON + RoutingConstants.MC;
+                    IUserAuth usr = this.Redis.Get<IUserAuth>(authid);
+                    if (usr != null)
+                        this.Redis.Remove(authid);
+                    //code here to refresh mob app via push msg
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Exception while tried to remove mc context: " + ex.Message + ex.StackTrace);
+                }
+
                 try
                 {
                     this.MessageProducer3.Publish(new SuspendUserMqRequest
