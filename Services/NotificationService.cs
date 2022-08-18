@@ -2,9 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using ExpressBase.Common.ServerEvents_Artifacts;
-using ExpressBase.Common.Constants;
 using ExpressBase.Common.ServiceClients;
 using ExpressBase.Common.Data;
 using ServiceStack;
@@ -12,10 +10,9 @@ using System.Text;
 using System.Data.Common;
 using ExpressBase.Common;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using ExpressBase.Common.Singletons;
 using ExpressBase.Common.Extensions;
 using ExpressBase.Common.Helpers;
+using ExpressBase.Security;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -483,6 +480,95 @@ ORDER BY
                 Console.WriteLine("Pending Action -----" + e.StackTrace);
             }
             return res;
+        }
+
+        public GetAllActionsResponse Post(GetAllActionsRequest request)
+        {
+            User _user = GetUserObject(request.UserAuthId);
+            string _roles = string.Empty;
+            if (_user.RoleIds != null)
+            {
+                _roles = string.Join(",", _user.RoleIds.ToArray());
+            }
+            string loc_part = string.Empty;
+            if (!_user.LocationIds.Contains(-1))
+                loc_part = $"AND (COALESCE(APP.eb_loc_id, 0) = 0 OR COALESCE(APP.eb_loc_id, 0) = ANY(string_to_array('{_user.LocationIds.Join(",")}', ',')::int[]))";
+
+            string str = string.Format(@"
+SELECT
+  ACT.*, USR.fullname
+FROM
+  eb_my_actions ACT, eb_approval APP
+LEFT JOIN 
+  eb_users USR ON USR.id = COALESCE(APP.eb_lastmodified_by, APP.eb_created_by)
+WHERE 
+  ACT.id = APP.eb_my_actions_id AND
+  COALESCE(APP.eb_del, 'F') = 'F' AND
+  ('{0}' = any(string_to_array(ACT.user_ids, ',')) OR (string_to_array(ACT.role_ids,',')) && (string_to_array('{1}',','))) AND 
+  COALESCE(ACT.is_completed, 'F') = 'F' AND 
+  COALESCE(ACT.eb_del, 'F') = 'F' AND 
+  COALESCE(ACT.hide, 'F') = 'F' 
+  {2}
+ORDER BY 
+  ACT.from_datetime DESC;", _user.UserId, _roles, loc_part);
+
+            EbDataTable dt = EbConnectionFactory.DataDB.DoQuery(str);
+            List<PendingActionAndMeetingInfo> PendingActions = new List<PendingActionAndMeetingInfo>();
+
+            for (int i = 0; i < dt.Rows.Count; i++)
+            {
+                var _date = Convert.ToDateTime(dt.Rows[i]["from_datetime"]);
+                var _time = _date.TimeAgo();
+                PendingActions.Add(new PendingActionAndMeetingInfo
+                {
+                    Description = dt.Rows[i]["description"].ToString(),
+                    Link = dt.Rows[i]["form_ref_id"].ToString(),
+                    DataId = dt.Rows[i]["form_data_id"].ToString(),
+                    CreatedDate = _date.ConvertFromUtc(_user.Preference.TimeZone).ToString(_user.Preference.GetShortDatePattern() + " " + _user.Preference.GetShortTimePattern()),
+                    DateInString = _time,
+                    ActionType = dt.Rows[i]["my_action_type"].ToString(),
+                    MyActionId = Convert.ToInt32(dt.Rows[i]["id"]),
+                    CreatedBy = dt.Rows[i]["fullname"].ToString()
+                });
+            }
+            return new GetAllActionsResponse() { PendingActions = PendingActions };
+        }
+
+        public GetAllNotificationsResponse Post(GetAllNotificationsRequest request)
+        {
+            string str = string.Format(@"
+SELECT 
+  notification_id, notification, created_at  
+FROM 
+  eb_notifications 
+WHERE 
+  user_id = {0} AND 
+  message_seen ='F'
+ORDER BY 
+  created_at DESC;", request.UserId);
+
+            User _user = GetUserObject(request.UserAuthId);
+            List<NotificationInfo> Notifications = new List<NotificationInfo>();
+            EbDataTable dt = EbConnectionFactory.DataDB.DoQuery(str);
+
+            for (int i = 0; i < dt.Rows.Count; i++)
+            {
+                string notif = dt.Rows[i]["notification"].ToString();
+                Notifications list = JsonConvert.DeserializeObject<Notifications>(notif);
+                DateTime created_dtime = Convert.ToDateTime(dt.Rows[i]["created_at"]);
+                var duration = created_dtime.TimeAgo();
+                var _date = created_dtime.ConvertFromUtc(_user.Preference.TimeZone).ToString(_user.Preference.GetShortDatePattern() + " " + _user.Preference.GetShortTimePattern());
+                Notifications.Add(new NotificationInfo
+                {
+                    Link = list.Notification[0].Link,
+                    NotificationId = list.Notification[0].NotificationId,
+                    Title = list.Notification[0].Title,
+                    Duration = duration,
+                    CreatedDate = _date
+                });
+            }
+
+            return new GetAllNotificationsResponse() { Notification = Notifications };
         }
     }
 }
