@@ -20,6 +20,7 @@ using ExpressBase.Common.LocationNSolution;
 using ExpressBase.Common.ServiceClients;
 using ExpressBase.Common.EbServiceStack.ReqNRes;
 using ExpressBase.Objects.WebFormRelated;
+using System.Text.RegularExpressions;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -359,7 +360,7 @@ SELECT DISTINCT id FROM eb_form_drafts WHERE draft_type = @draft_type AND eb_cre
                 {
                     string appId_s = Convert.ToString(row["app_id"]).PadLeft(3, '0');
                     string objId_s = Convert.ToString(row["id"]).PadLeft(5, '0');
-                    bool App_Objecct_permission_exists = data.CurrentUser.Permissions.Exists(e => e.Matches($@"{appId_s}-\d+-{objId_s}-\d+:"));
+                    bool App_Objecct_permission_exists = data.CurrentUser.Permissions.Exists(e => Regex.IsMatch(e, $@"{appId_s}-\d+-{objId_s}-\d+:"));
                     if (!App_Objecct_permission_exists)
                         continue;
 
