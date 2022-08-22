@@ -357,6 +357,12 @@ SELECT DISTINCT id FROM eb_form_drafts WHERE draft_type = @draft_type AND eb_cre
 
                 foreach (EbDataRow row in ds.Tables[0].Rows)
                 {
+                    string appId_s = Convert.ToString(row["app_id"]).PadLeft(3, '0');
+                    string objId_s = Convert.ToString(row["id"]).PadLeft(5, '0');
+                    bool App_Objecct_permission_exists = data.CurrentUser.Permissions.Exists(e => e.Matches($@"{appId_s}-\d+-{objId_s}-\d+:"));
+                    if (!App_Objecct_permission_exists)
+                        continue;
+
                     int appId = Convert.ToInt32(row["app_id"]);
                     AppDataToMob appData = data.Applications.Find(e => e.AppId == appId);
 
