@@ -460,7 +460,8 @@ namespace ExpressBase.ServiceStack.Services
                         RoleID = new List<int>
                             {
                                 (int)SystemRoles.SolutionOwner,
-                                (int)SystemRoles.SolutionAdmin
+                                (int)SystemRoles.SolutionAdmin,
+                                (int)SystemRoles.SolutionPM
                             },
                         SolutionId = request.SolnId
                     });
