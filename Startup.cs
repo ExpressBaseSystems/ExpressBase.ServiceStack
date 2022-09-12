@@ -139,7 +139,7 @@ namespace ExpressBase.ServiceStack
 
             if (env == "Staging")
             {
-                fburl = "https://ss.eb-test.xyz/auth/facebook";
+                fburl = "https://ss.eb-test.shop/auth/facebook";
             }
             else if (env == "Production")
             {
@@ -264,7 +264,7 @@ namespace ExpressBase.ServiceStack
             rabitFactory.ConnectionFactory.VirtualHost = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_RABBIT_VHOST);
             var mqServer = new RabbitMqServer(rabitFactory);
 
-            mqServer.RetryCount = 1;            
+            mqServer.RetryCount = 1;
             mqServer.RegisterHandler<EmailAttachmentRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<ExportApplicationRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<ImportApplicationRequest>(base.ExecuteMessage);
