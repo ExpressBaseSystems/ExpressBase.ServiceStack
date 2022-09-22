@@ -2306,7 +2306,7 @@ namespace ExpressBase.ServiceStack
                         DVBaseColumn col = dependencyTable[m];
                         isnotAdded = true;
                         //int ExcelColIndex = ExcelColumns.FindIndex(_col => _col.Name == col.Name) + 1;
-                         int ExcelColIndex = DictExcelColumns.ContainsKey(col.Name) ? DictExcelColumns[col.Name] + 1 : 0;
+                        int ExcelColIndex = DictExcelColumns.ContainsKey(col.Name) ? DictExcelColumns[col.Name] + 1 : 0;
                         try
                         {
                             CultureInfo cults = col.GetColumnCultureInfo(_user_culture);
@@ -2736,7 +2736,11 @@ namespace ExpressBase.ServiceStack
                     var _roles = string.Join(",", _user.RoleIds.ToArray());
                     var verid = col.FormRefid.Split("-")[4];
                     string str = string.Empty;
-                    if (_user.Roles.Contains(SystemRoles.SolutionOwner.ToString()) || _user.Roles.Contains(SystemRoles.SolutionAdmin.ToString()))
+                    if (col.DisableExecuteReview)
+                    {
+                        str = "SELECT 0 WHERE false; ";
+                    }
+                    else if (_user.Roles.Contains(SystemRoles.SolutionOwner.ToString()) || _user.Roles.Contains(SystemRoles.SolutionAdmin.ToString()))
                     {
                         str = string.Format(@"
                     SELECT Q1.*,act.action_name,act.action_unique_id
