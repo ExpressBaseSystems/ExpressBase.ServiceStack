@@ -1593,7 +1593,7 @@ namespace ExpressBase.ServiceStack.Services
             foreach (int _rowId in request.RowId)
             {
                 FormObj.TableRowId = _rowId;
-                int temp1 = FormObj.Delete(EbConnectionFactory.DataDB);
+                int temp1 = FormObj.Delete(EbConnectionFactory.DataDB, this);
                 if (SearchHelper.ExistsIndexControls(FormObj))
                     SearchHelper.Delete(EbConnectionFactory.DataDB, request.RefId, _rowId);
                 Console.WriteLine($"Record deleted. RowId: {_rowId}  RowsAffected: {temp1}");
@@ -1609,7 +1609,7 @@ namespace ExpressBase.ServiceStack.Services
             EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId);
             CheckDataPusherCompatibility(FormObj);
             FormObj.TableRowId = request.RowId;
-            (int RowAffected, string modifiedAt) = FormObj.Cancel(EbConnectionFactory.DataDB, request.Cancel);
+            (int RowAffected, string modifiedAt) = FormObj.Cancel(EbConnectionFactory.DataDB, request.Cancel, this);
             Console.WriteLine($"Record cancelled. RowId: {request.RowId}  RowsAffected: {RowAffected}");
 
             return new CancelDataFromWebformResponse { RowAffected = RowAffected, ModifiedAt = modifiedAt };
