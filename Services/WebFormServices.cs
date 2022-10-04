@@ -49,25 +49,40 @@ namespace ExpressBase.ServiceStack.Services
                         if (pusher is EbApiDataPusher)
                             continue;
                         EbWebForm _form = this.GetWebFormObject(pusher.FormRefId, null, null);
-                        TableSchema _table = _form.FormSchema.Tables.Find(e => e.TableName.Equals(_form.FormSchema.MasterTable));
+                        TableSchema _tableDest = _form.FormSchema.Tables.Find(e => e.TableName.Equals(_form.FormSchema.MasterTable));
                         //_table.Columns.Add(new ColumnSchema { ColumnName = "eb_push_id", EbDbType = (int)EbDbTypes.String, Control = new EbTextBox { Name = "eb_push_id", Label = "Push Id" } });// multi push id
                         //_table.Columns.Add(new ColumnSchema { ColumnName = "eb_src_id", EbDbType = (int)EbDbTypes.Decimal, Control = new EbNumeric { Name = "eb_src_id", Label = "Source Id" } });// source master table id
-                        if (_table != null)
+                        if (_tableDest != null)
                         {
                             if (pusher is EbBatchFormDataPusher batchDp)
                             {
-                                TableSchema __tbl = Form.FormSchema.Tables.Find(e => e.ContainerName == batchDp.SourceDG);
-                                if (__tbl != null)
-                                    _table.Columns.Add(new ColumnSchema
+                                TableSchema _tableSrc = Form.FormSchema.Tables.Find(e => e.ContainerName == batchDp.SourceDG);
+                                if (_tableSrc != null)
+                                {
+                                    string cName = _tableSrc.TableName + FormConstants._id;
+                                    if (!_tableDest.Columns.Exists(e => e.ColumnName == cName))
                                     {
-                                        ColumnName = __tbl.TableName + FormConstants._id,
-                                        EbDbType = (int)EbDbTypes.Int32,
-                                        Control = new EbNumeric { Name = __tbl.TableName + FormConstants._id }
-                                    });
-
+                                        _tableDest.Columns.Add(new ColumnSchema
+                                        {
+                                            ColumnName = cName,
+                                            EbDbType = (int)EbDbTypes.Int32,
+                                            Control = new EbNumeric { Name = cName }
+                                        });
+                                    }
+                                    cName = _tableDest.TableName + FormConstants._id;
+                                    if (!_tableSrc.Columns.Exists(e => e.ColumnName == cName))
+                                    {
+                                        _tableSrc.Columns.Add(new ColumnSchema
+                                        {
+                                            ColumnName = cName,
+                                            EbDbType = (int)EbDbTypes.Int32,
+                                            Control = new EbNumeric { Name = cName }
+                                        });
+                                    }
+                                }
                             }
 
-                            Form.FormSchema.Tables.Add(_table);
+                            Form.FormSchema.Tables.Add(_tableDest);
                         }
                     }
                 }
