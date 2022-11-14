@@ -1082,7 +1082,7 @@ namespace ExpressBase.ServiceStack.Services
                     if (request.SourceRowId > 0)
                     {
                         sourceForm.RefreshFormData(EbConnectionFactory.DataDB, this);
-                        sourceForm.FormatImportData(EbConnectionFactory.DataDB, this, destForm);
+                        sourceForm.FormatImportData(EbConnectionFactory.DataDB, this, destForm, null, false, request.SourceCtrl);
                     }
                     else
                         destForm.FormData = destForm.GetEmptyModel();
