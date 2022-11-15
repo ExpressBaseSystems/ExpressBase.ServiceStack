@@ -101,7 +101,7 @@ namespace ExpressBase.ServiceStack.Services
                 this.EbConnectionFactory = new EbConnectionFactory(request.SolutionId, this.Redis);
                 if (EbConnectionFactory != null)
                 {
-                    string query = String.Format("SELECT id FROM eb_users WHERE {0} = '{1}'", authColumn, request.UName);
+                    string query = String.Format("SELECT id FROM eb_users WHERE {0} = '{1}' AND (statusid = 0 OR statusid = 4)", authColumn, request.UName);
                     EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(query);
                     if (dt != null && dt.Rows.Count > 0)
                     {
@@ -139,7 +139,7 @@ namespace ExpressBase.ServiceStack.Services
                 this.EbConnectionFactory = new EbConnectionFactory(request.SolutionId, this.Redis);
                 if (EbConnectionFactory != null)
                 {
-                    string query = String.Format("SELECT id FROM eb_users WHERE email = '{0}' OR phnoprimary = '{0}' ", request.UName);
+                    string query = String.Format("SELECT id FROM eb_users WHERE email = '{0}' OR phnoprimary = '{0}' AND (statusid = 0 OR statusid = 4) ", request.UName);
                     EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(query);
                     if (dt != null && dt.Rows.Count > 0)
                     {
