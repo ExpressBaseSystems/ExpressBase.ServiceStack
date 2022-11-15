@@ -199,6 +199,7 @@ namespace ExpressBase.ServiceStack.Services
                         Is2faEnabled = wrap_sol.Is2faEnabled,
                         OtpDelivery2fa = wrap_sol.OtpDelivery2fa,
                         IsOtpSigninEnabled = wrap_sol.IsOtpSigninEnabled,
+                        IsMultiLanguageEnabled = wrap_sol.IsMultiLanguageEnabled,
                         OtpDeliverySignin = wrap_sol.OtpDeliverySignin,
                         SolutionType = wrap_sol.SolutionType,
                         PrimarySolution = wrap_sol.PrimarySolution,
