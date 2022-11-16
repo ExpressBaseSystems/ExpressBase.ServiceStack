@@ -57,7 +57,8 @@ namespace ExpressBase.ServiceStack.Services
                 if (uri.GetLeftPart(System.UriPartial.Authority).Contains(RoutingConstants.LIVEHOSTADDRESS) ||
                     uri.GetLeftPart(System.UriPartial.Authority).Contains(RoutingConstants.STAGEHOSTADDRESS))
                 {
-                    rest_req.AddHeader("bToken", this.Request.Headers["Authorization"]);
+                    string _bt = this.Request.Headers["Authorization"];
+                    rest_req.AddHeader("bToken", _bt.Replace("Bearer ", ""));
                     rest_req.AddHeader("rToken", this.Request.Headers["rToken"]);
                 }
                 foreach (Param _param in param)
@@ -150,7 +151,7 @@ namespace ExpressBase.ServiceStack.Services
                 }
                 else
                     Jproperty = jsonObject.Properties().Where(pp => pp.Value.Type == JTokenType.Array).ToList();
-               
+
                 if (Jproperty != null)
                     foreach (JProperty property in Jproperty)
                         GetRecursive(property);
