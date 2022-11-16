@@ -145,14 +145,15 @@ namespace ExpressBase.ServiceStack.Services
                     catch (Exception e)
                     {
                         Console.WriteLine(e.Message + e.StackTrace);
-                        Console.WriteLine(response.IsSuccessful + "  " + response.StatusCode + "  " + response.ErrorMessage + "  " +response.ErrorException);
+                        Console.WriteLine(response.IsSuccessful + "  " + response.StatusCode + "  " + response.ErrorMessage + "  " + response.Content);
                     }
                 }
                 else
                     Jproperty = jsonObject.Properties().Where(pp => pp.Value.Type == JTokenType.Array).ToList();
-
-                foreach (JProperty property in Jproperty)
-                    GetRecursive(property);
+               
+                if (Jproperty != null)
+                    foreach (JProperty property in Jproperty)
+                        GetRecursive(property);
             }
             catch (Exception e)
             {
