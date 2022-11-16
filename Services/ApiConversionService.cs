@@ -131,15 +131,21 @@ namespace ExpressBase.ServiceStack.Services
                 response = Execute(request);
                 string rawResponse = response.Content;
                 JObject jsonObject = JObject.Parse(rawResponse);
-                List<JProperty> Jproperty;
+                List<JProperty> Jproperty = null;
                 Uri uri = new Uri(request.Url);
                 if (uri.GetLeftPart(System.UriPartial.Authority).Contains(RoutingConstants.LIVEHOSTADDRESS) ||
                     uri.GetLeftPart(System.UriPartial.Authority).Contains(RoutingConstants.STAGEHOSTADDRESS))
                 {
                     List<JProperty> Jproperty1 = jsonObject.Properties().Where(pp => pp.Name == "result").ToList();
-                    JObject data = JObject.Parse(Jproperty1[0].Value.ToString());
-                    Jproperty = data.Properties().Where(pp => pp.Name == "data").ToList();
-
+                    try
+                    {
+                        JObject data = JObject.Parse(Jproperty1[0].Value.ToString());
+                        Jproperty = data.Properties().Where(pp => pp.Name == "data").ToList();
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e.Message + e.StackTrace + JsonConvert.SerializeObject(response));
+                    }
                 }
                 else
                     Jproperty = jsonObject.Properties().Where(pp => pp.Value.Type == JTokenType.Array).ToList();
@@ -220,9 +226,9 @@ namespace ExpressBase.ServiceStack.Services
                 else
                 {
                     ds.Tables[property.Name].Rows.Add(ds.Tables[property.Name].NewDataRow2());
-                    k = 0; 
+                    k = 0;
                     foreach (var prop in children.Children<JProperty>().ToArray())
-                    {                        
+                    {
                         if (prop.Name == "id" && Int32.TryParse((string)prop.Value, out _))
                         {
                             _type = JTokenType.Integer;
