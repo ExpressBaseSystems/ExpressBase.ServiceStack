@@ -58,7 +58,9 @@ namespace ExpressBase.ServiceStack.Services
                     uri.GetLeftPart(System.UriPartial.Authority).Contains(RoutingConstants.STAGEHOSTADDRESS))
                 {
                     string _bt = this.Request.Headers["Authorization"];
-                    rest_req.AddHeader("bToken", _bt.Replace("Bearer ", ""));
+                    _bt = _bt.Replace("Bearer ", "");
+
+                    rest_req.AddHeader("bToken", _bt);
                     rest_req.AddHeader("rToken", this.Request.Headers["rToken"]);
                 }
                 foreach (Param _param in param)
