@@ -65,6 +65,37 @@ namespace ExpressBase.ServiceStack.Services
                     rest_req.AddParameter(_param.Name, _param.ValueTo);
                 }
                 response = client.Execute(rest_req);
+
+
+                //using (var client = new HttpClient())
+                //{
+                //    if (request.Headers != null && request.Headers.Any())
+                //    {
+                //        foreach (ApiRequestHeader header in request.Headers)
+                //        {
+                //            client.DefaultRequestHeaders.Add(header.HeaderName, header.Value);
+                //        }
+                //    }
+
+                //    client.BaseAddress = new Uri(uri.GetLeftPart(System.UriPartial.Authority));
+
+                //    if (uri.GetLeftPart(System.UriPartial.Authority).Contains(RoutingConstants.LIVEHOSTADDRESS) ||
+                //        uri.GetLeftPart(System.UriPartial.Authority).Contains(RoutingConstants.STAGEHOSTADDRESS))
+                //    {
+                //        client.BaseAddress.Add("bToken", this.Request.Headers["bToken"]);
+                //        client.DefaultRequestHeaders.Add("rToken", this.Request.Headers["rToken"]);
+                //    }
+                //    if (request.Method == ApiMethods.POST)
+                //    {
+                //        var parameters = param.Select(i => new { prop = i.Name, val = i.Value })
+                //                .ToDictionary(x => x.prop, x => x.val);
+                //        response = client.PostAsync(uri.PathAndQuery, new FormUrlEncodedContent(parameters)).Result;
+                //    }
+                //    else if (request.Method == ApiMethods.GET)
+                //    {
+                //        response = client.GetAsync(uri.PathAndQuery).Result;
+                //    }
+                //}
             }
             catch (Exception e)
             {
