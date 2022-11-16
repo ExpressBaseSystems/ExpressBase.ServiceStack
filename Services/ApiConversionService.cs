@@ -144,7 +144,8 @@ namespace ExpressBase.ServiceStack.Services
                     }
                     catch (Exception e)
                     {
-                        Console.WriteLine(e.Message + e.StackTrace + JsonConvert.SerializeObject(response));
+                        Console.WriteLine(e.Message + e.StackTrace);
+                        Console.WriteLine(response.IsSuccessful + "  " + response.StatusCode + "  " + response.ErrorMessage + "  " +response.ErrorException);
                     }
                 }
                 else
