@@ -1663,7 +1663,10 @@ namespace ExpressBase.ServiceStack.Services
                     string autoIdCol = string.Empty;
                     if (dp.WebForm.AutoId?.TableName == dp.WebForm.TableName)
                         autoIdCol = ", " + dp.WebForm.AutoId.Name;
-                    Qry += $"SELECT id{autoIdCol} FROM {dp.WebForm.TableName} WHERE {FormObj.TableName}_id = {request.RowId} AND COALESCE({ebs[SystemColumns.eb_del]}, {ebs.GetBoolFalse(SystemColumns.eb_del)}) = {ebs.GetBoolFalse(SystemColumns.eb_del)}; ";
+
+                    string _pshId = string.IsNullOrWhiteSpace(dp.WebForm.DataPusherConfig?.MultiPushId) ? string.Empty : $"AND {ebs[SystemColumns.eb_push_id]} = '{dp.WebForm.DataPusherConfig.MultiPushId}'";
+
+                    Qry += $"SELECT id{autoIdCol} FROM {dp.WebForm.TableName} WHERE {FormObj.TableName}_id = {request.RowId} AND COALESCE({ebs[SystemColumns.eb_del]}, {ebs.GetBoolFalse(SystemColumns.eb_del)}) = {ebs.GetBoolFalse(SystemColumns.eb_del)} {_pshId}; ";
                 }
                 EbDataSet ds = this.EbConnectionFactory.DataDB.DoQueries(Qry);
                 Dictionary<string, string> resDict = new Dictionary<string, string>();
