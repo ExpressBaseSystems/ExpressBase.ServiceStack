@@ -61,7 +61,7 @@ namespace ExpressBase.ServiceStack.Services
             {
                 SqlQry += @"SELECT id, eb_loc_id, trdate, genurl, name, dob, genphoffice, profession, genemail, customertype, clcity, clcountry, city,
 								typeofcustomer, sourcecategory, subcategory, consultation, online_consultation, picsrcvd, dprefid, sex, district, leadowner,
-                                baldnessgrade, diffusepattern, hfcurrently, htpreviously, country_code, watsapp_phno, cust_category, eb_modifiedby, google_review, stars, comment 
+                                baldnessgrade, diffusepattern, hfcurrently, htpreviously, country_code, watsapp_phno, cust_category, eb_modifiedby, google_review, stars, cust_language, comment 
 								FROM customers WHERE id = :accountid AND COALESCE(eb_del, 'F')='F';
 							SELECT id,trdate,status,followupdate,narration, eb_createdby, eb_createddt,isnotpickedup FROM leaddetails
 								WHERE customers_id=:accountid AND COALESCE(eb_del, 'F')='F' ORDER BY eb_createddt DESC;
@@ -198,7 +198,8 @@ namespace ExpressBase.ServiceStack.Services
                 CustomerData.Add("cust_category", dr[29].ToString());
                 CustomerData.Add("google_review", dr[31].ToString().ToLower());
                 CustomerData.Add("stars", dr[32].ToString());
-                CustomerData.Add("comment", dr[33].ToString());
+                CustomerData.Add("cust_language", dr[33].ToString());
+                CustomerData.Add("comment", dr[34].ToString());
                 int uid = Convert.ToInt32(dr[30]);
                 StaffInfo sinfo = StaffInfoAll.Find(e => e.id == uid);
                 CustomerData.Add("eb_modifiedby", sinfo == null ? string.Empty : sinfo.name);
@@ -509,6 +510,7 @@ namespace ExpressBase.ServiceStack.Services
             GetParameter(dict, "country_code", EbDbTypes.String, parameters, ref cols, ref vals, ref upcolsvals);
             GetParameter(dict, "google_review", EbDbTypes.BooleanOriginal, parameters, ref cols, ref vals, ref upcolsvals);
             GetParameter(dict, "stars", EbDbTypes.Int32, parameters, ref cols, ref vals, ref upcolsvals);
+            GetParameter(dict, "cust_language", EbDbTypes.Int32, parameters, ref cols, ref vals, ref upcolsvals);
             GetParameter(dict, "comment", EbDbTypes.String, parameters, ref cols, ref vals, ref upcolsvals);
             //------------------------------------------------------
             GetParameter(dict, "consdate", EbDbTypes.Date, parameters2, ref cols2, ref vals2, ref upcolsvals2);
