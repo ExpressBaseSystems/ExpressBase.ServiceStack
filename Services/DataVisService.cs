@@ -2818,6 +2818,20 @@ SELECT * FROM
         AL.action_unique_id = '{FormConstants.__review_reset}' AND         
         AL.eb_src_id = ANY (ARRAY[{eb_src_ids.Join(",")}]::INT[]) AND
         COALESCE(AL.eb_del, 'F') = 'F'
+    UNION
+    SELECT 
+        AL.id, USR.fullname, AL.comments, AL.eb_created_by, AL.eb_created_at, AL.eb_src_id,
+        'System' AS stage_name, 'Pull Back' AS action_name
+    FROM 
+        eb_approval_lines AL,
+        eb_users USR
+    WHERE  
+        AL.eb_ver_id ='{verid}' AND 
+        AL.eb_created_by = USR.id AND 
+        AL.stage_unique_id = '{FormConstants.__system_stage}' AND 
+        AL.action_unique_id = '{FormConstants.__stage_pullback}' AND         
+        AL.eb_src_id = ANY (ARRAY[{eb_src_ids.Join(",")}]::INT[]) AND
+        COALESCE(AL.eb_del, 'F') = 'F'
 ) AS xx
 ORDER BY 
     xx.eb_created_at DESC; ";
@@ -2913,6 +2927,20 @@ SELECT * FROM
         AL.eb_created_by = USR.id AND 
         AL.stage_unique_id = '{FormConstants.__system_stage}' AND 
         AL.action_unique_id = '{FormConstants.__review_reset}' AND         
+        AL.eb_src_id = '{request.RowId}' AND
+        COALESCE(AL.eb_del, 'F') = 'F'
+    UNION
+    SELECT 
+        AL.id, USR.fullname, AL.comments, AL.eb_created_by, AL.eb_created_at, AL.eb_src_id,
+        'System' AS stage_name, 'Pull Back' AS action_name
+    FROM 
+        eb_approval_lines AL,
+        eb_users USR
+    WHERE  
+        AL.eb_ver_id ='{verid}' AND 
+        AL.eb_created_by = USR.id AND 
+        AL.stage_unique_id = '{FormConstants.__system_stage}' AND 
+        AL.action_unique_id = '{FormConstants.__stage_pullback}' AND         
         AL.eb_src_id = '{request.RowId}' AND
         COALESCE(AL.eb_del, 'F') = 'F'
 ) AS xx
