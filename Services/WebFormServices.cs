@@ -1292,7 +1292,7 @@ namespace ExpressBase.ServiceStack.Services
             string temp = string.Empty;
             foreach (string t in request.Keys)
             {
-                temp += "'" + t + "',";
+                 temp += "'" + t.Replace("'", "''") + "',";
             }
             qry = string.Format(qry, temp.Substring(0, temp.Length - 1), request.Locale);
             EbDataTable datatbl = this.EbConnectionFactory.DataDB.DoQuery(qry, new DbParameter[] { });
