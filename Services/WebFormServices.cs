@@ -1276,31 +1276,9 @@ namespace ExpressBase.ServiceStack.Services
             }
             return new DoUniqueCheckResponse { Response = resp };
         }
-
         public GetDictionaryValueResponse Any(GetDictionaryValueRequest request)
         {
-            Dictionary<string, string> Dict = new Dictionary<string, string>();
-            string qry = @"SELECT k.key, v.value 
-                            FROM 
-	                            eb_keys k, eb_languages l, eb_keyvalue v
-                            WHERE
-	                            k.id = v.key_id AND
-	                            l.id = v.lang_id AND
-	                            k.key IN ({0})
-	                            AND l.language LIKE '%({1})';";
-
-            string temp = string.Empty;
-            foreach (string t in request.Keys)
-            {
-                temp += "'" + t + "',";
-            }
-            qry = string.Format(qry, temp.Substring(0, temp.Length - 1), request.Locale);
-            EbDataTable datatbl = this.EbConnectionFactory.DataDB.DoQuery(qry, new DbParameter[] { });
-
-            foreach (EbDataRow dr in datatbl.Rows)
-            {
-                Dict.Add(dr["key"].ToString(), dr["value"].ToString());
-            }
+            Dictionary<string, string> Dict = EbObjectsHelper.GetKeyValues(request, this.EbConnectionFactory.DataDB);             
 
             return new GetDictionaryValueResponse { Dict = Dict };
         }
