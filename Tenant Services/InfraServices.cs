@@ -907,97 +907,52 @@ namespace ExpressBase.ServiceStack.Services
             ForgotPasswordResponse re = new ForgotPasswordResponse();
             try
             {
-                string k = String.Format(@"UPDATE 
-										eb_tenants 
-										SET
-											resetpsw_code = :code
-										WHERE 
-											email=:mail
-                                            and eb_del='F'"
-                                            );
-                DbParameter[] parameters = {
+                string query;
+                EbDataSet ds;
+                if (reques.IsUser)
+                {
+                    query = String.Format(@"UPDATE eb_users 
+										    SET resetpsw_code = :code
+										    WHERE email = :mail AND eb_del='F';
+
+                                            SELECT fullname 
+                                            FROM eb_users 
+										    WHERE  email=:mail AND eb_del='F';");
+                    this.EbConnectionFactory = new EbConnectionFactory(reques.iSolutionId, Redis);
+                    DbParameter[] parameters = {
+                    this.EbConnectionFactory.DataDB.GetNewParameter("code", EbDbTypes.String, reques.Resetcode),
+                    this.EbConnectionFactory.DataDB.GetNewParameter("mail", EbDbTypes.String, reques.Email)
+                    };
+                    ds = this.EbConnectionFactory.DataDB.DoQueries(query, parameters);
+                }
+                else
+                {
+                    query = String.Format(@"UPDATE  eb_tenants 
+										    SET resetpsw_code = :code
+										    WHERE email = :mail AND eb_del='F';
+
+                                            SELECT fullname 
+                                            FROM eb_tenants 
+										    WHERE  email=:mail AND eb_del='F';");
+                    DbParameter[] parameters = {
                     this.InfraConnectionFactory.DataDB.GetNewParameter("code", EbDbTypes.String, reques.Resetcode),
                     this.InfraConnectionFactory.DataDB.GetNewParameter("mail", EbDbTypes.String, reques.Email)
                     };
-                int dt = this.InfraConnectionFactory.DataDB.DoNonQuery(k, parameters);
-
-                if (dt == 1)
+                    ds = this.InfraConnectionFactory.DataDB.DoQueries(query, parameters);
+                }
+                if (ds?.Tables[0]?.Rows?.Count > 0)
                 {
-                    string pq = String.Format(@"select fullname from
-										eb_tenants 
-										WHERE 
-											email=:mail
-                                            and eb_del='F'"
-                                            );
-                    DbParameter[] parameters11 = {
-                    this.InfraConnectionFactory.DataDB.GetNewParameter("mail", EbDbTypes.String, reques.Email)
-                    };
-                    EbDataTable dt11 = InfraConnectionFactory.DataDB.DoQuery(pq, parameters11);
-                    //uin=unique identification number
-                    //uic=unique identification code
+                    string fullname = (ds.Tables[0].Rows[0][0]).ToString();
                     string aq = "$" + reques.Email + "$" + reques.Resetcode + "$";
                     byte[] plaintxt = System.Text.Encoding.UTF8.GetBytes(aq);
                     string ai = System.Convert.ToBase64String(plaintxt);
                     string resetlink = string.Format("https://{0}/resetpassword?rep={1}", reques.PageUrl, ai);
 
-                    //using (StreamReader reader = new StreamReader("\\Ext\\EmailVerifyStructure.cshtml")) 
-                    //{
-                    //	body = reader.ReadToEnd();
-                    //}
-
-                    string body = @"</head>
-<body>
-    <div style='border: 1px solid #508bf9;padding:20px 40px 20px 40px; '>
-        <figure style='text-align: center;margin:0px;'>
-            <img src='https://expressbase.com/images/logos/EB_Logo.png' /><br />
-        </figure>
-        <br />
-        <h3 style='color:#508bf9;margin:0px'>Build Business Apps 10x faster!</h3> <br />
-        <div style='line-height: 1.4;'>
-            Dear {UserName},<br />
-            <br />
-			
-			You can use the following link to reset your password:
-        </div>
-        <br />
-        <table>
-            <tr>
-                <td class='btn-read-online' style='text-align: center; background-color: #508bf9; padding: 10px 15px; border-radius: 5px;'>
-                    <a href='{Url}' style='color: #fff; font-size: 16px; letter-spacing: 1px; text-decoration: none;  font-family: Montserrat,Arial, Helvetica, sans-serif;'>Reset password</a>
-                </td>
-            </tr>
-        </table>
-        <br />
-		If the previous button does not work, try to copy and paste the following URL in your browser’s address bar:<br />
-        <a href='{Url}'>{Url}</a> 
-		<br />
-		<br />
-        Need help? Please drop in a mail to <a href='{supporturl}'>support@expressbase.com</a>. We're right here for you.<br /><br />
-        Sincerely,<br />
-        Team EXPRESSbase<br />
-    </div>
-</body>
-</html>";
-                    string supporturl = "mailto:support@expressbase.com";
-                    body = body.Replace("{UserName}", (dt11.Rows[0][0]).ToString());
-                    body = body.Replace("{Url}", resetlink).Replace("{supporturl}", supporturl);
-
-
-                    //StringBuilder bodyMsg = new StringBuilder();
-                    //bodyMsg.Append( " <img src = "+ "https://expressbase.com/images/logos/EB_Logo.png" + " />");
-                    //bodyMsg.Append("<p style="+"color: red;"+"><b>Please follow this link to reset your password: <b></p>");
-                    //            bodyMsg.Append("<br />");
-                    //            bodyMsg.Append("next3");
-                    //            bodyMsg.Append("<a href=https://" + resetlink + ">Account</a>");
-                    //            bodyMsg.Append("<br />");
-                    //            bodyMsg.Append("next4");
-
                     MessageProducer3.Publish(new EmailServicesRequest
                     {
                         To = reques.Email,
                         Subject = "Reset password",
-                        Message = body,
-                        //Message = bodyMsg.ToString(),
+                        Message = GenerateMailBody(resetlink, fullname),
                         SolnId = CoreConstants.EXPRESSBASE,
 
                     });
@@ -1016,13 +971,75 @@ namespace ExpressBase.ServiceStack.Services
             return re;
         }
 
+        public string GenerateMailBody(string resetlink, string fullname)
+        {
+            string body = @"</head>
+                                    <body>
+                                        <div style='border: 1px solid #508bf9;padding:20px 40px 20px 40px; '>
+                                            <figure style='text-align: center;margin:0px;'>
+                                                <img src='https://expressbase.com/images/logos/EB_Logo.png' /><br />
+                                            </figure>
+                                            <br />
+                                            <h3 style='color:#508bf9;margin:0px'>Build Business Apps 10x faster!</h3> <br />
+                                            <div style='line-height: 1.4;'>
+                                                Dear {UserName},<br />
+                                                <br />
+			
+			                                    You can use the following link to reset your password:
+                                            </div>
+                                            <br />
+                                            <table>
+                                                <tr>
+                                                    <td class='btn-read-online' style='text-align: center; background-color: #508bf9; padding: 10px 15px; border-radius: 5px;'>
+                                                        <a href='{Url}' style='color: #fff; font-size: 16px; letter-spacing: 1px; text-decoration: none;  font-family: Montserrat,Arial, Helvetica, sans-serif;'>Reset password</a>
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                            <br />
+		                                    If the previous button does not work, try to copy and paste the following URL in your browser’s address bar:<br />
+                                            <a href='{Url}'>{Url}</a> 
+		                                    <br />
+		                                    <br />
+                                            Need help? Please drop in a mail to <a href='{supporturl}'>support@expressbase.com</a>. We're right here for you.<br /><br />
+                                            Sincerely,<br />
+                                            Team EXPRESSbase<br />
+                                        </div>
+                                    </body>
+                                    </html>";
+            body = body.Replace("{UserName}", fullname);
+            body = body.Replace("{Url}", resetlink).Replace("{supporturl}", RoutingConstants.SUPPORT_MAIL_ID);
+
+            return body;
+        }
+
         public ResetPasswordResponse Post(ResetPasswordRequest reqst)
         {
             ResetPasswordResponse rests = new ResetPasswordResponse();
             try
             {
+                string qur;
+                int dt = 0;
                 string hshpassword = (reqst.Password + reqst.Email).ToMD5Hash();
-                string qur = String.Format(@"UPDATE 
+                if (reqst.IsUser)
+                {
+                    qur = String.Format(@"UPDATE 
+										eb_users 
+										SET
+											pwd = :pswrd,
+											resetpsw_code = null 
+										WHERE 
+											email = :id AND
+											resetpsw_code = :codes");
+
+                    this.EbConnectionFactory = new EbConnectionFactory(reqst.iSolutionId, this.Redis);
+                    DbParameter[] parameters = { EbConnectionFactory.DataDB.GetNewParameter("pswrd",EbDbTypes.String,hshpassword),
+                    EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.String, reqst.Email),
+                    EbConnectionFactory.DataDB.GetNewParameter("codes", EbDbTypes.String, reqst.Resetcode) };
+                    dt = this.EbConnectionFactory.DataDB.DoNonQuery(qur, parameters);
+                }
+                else
+                {
+                    qur = String.Format(@"UPDATE 
 										eb_tenants 
 										SET
 											pwd = :pswrd,
@@ -1031,12 +1048,12 @@ namespace ExpressBase.ServiceStack.Services
 											email = :id AND
 											resetpsw_code = :codes");
 
-                DbParameter[] parameters = {
-                InfraConnectionFactory.ObjectsDB.GetNewParameter("pswrd",EbDbTypes.String,hshpassword),
-                    InfraConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.String, reqst.Email),
-                    InfraConnectionFactory.ObjectsDB.GetNewParameter("codes", EbDbTypes.String, reqst.Resetcode)
-            };
-                int dt = this.InfraConnectionFactory.DataDB.DoNonQuery(qur, parameters);
+                    DbParameter[] parameters = { InfraConnectionFactory.DataDB.GetNewParameter("pswrd",EbDbTypes.String,hshpassword),
+                    InfraConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.String, reqst.Email),
+                    InfraConnectionFactory.DataDB.GetNewParameter("codes", EbDbTypes.String, reqst.Resetcode) };
+                    dt = this.InfraConnectionFactory.DataDB.DoNonQuery(qur, parameters);
+                }
+
                 if (dt == 1)
                 {
 
@@ -1111,19 +1128,29 @@ namespace ExpressBase.ServiceStack.Services
         public UniqueRequestResponse Any(UniqueRequest request)
         {
             UniqueRequestResponse res = new UniqueRequestResponse();
-            ILog log = LogManager.GetLogger(GetType());
-            string sql = "SELECT id, pwd FROM eb_tenants WHERE email = @email and eb_del='F'";
-            DbParameter[] parameters = { this.InfraConnectionFactory.ObjectsDB.GetNewParameter("email", EbDbTypes.String, request.email) };
-            var dt = this.InfraConnectionFactory.ObjectsDB.DoQuery(sql, parameters);
+            string sql;
+            EbDataTable dt;
+            if (!request.IsUser)
+            {
+                sql = "SELECT id, pwd FROM eb_tenants WHERE email = @email and eb_del='F'";
+                DbParameter[] parameters = { this.InfraConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, request.Email) };
+                dt = this.InfraConnectionFactory.DataDB.DoQuery(sql, parameters);
+            }
+            else
+            {
+                sql = "SELECT id, pwd FROM eb_users WHERE email = @email and eb_del='F'";
+                this.EbConnectionFactory = new EbConnectionFactory(request.iSolutionId, this.Redis);
+                DbParameter[] parameters = { this.EbConnectionFactory.DataDB.GetNewParameter("email", EbDbTypes.String, request.Email) };
+                dt = this.EbConnectionFactory.DataDB.DoQuery(sql, parameters);
+            }
             if (dt?.Rows?.Count > 0)
             {
-                @res.Unique = false;
+                res.Unique = false;
                 res.Id = Convert.ToInt32(dt.Rows[0]["id"]);
-                res.HasPassword = (string.IsNullOrEmpty(dt.Rows[0]["pwd"].ToString())) ? false : true;
+                res.HasPassword = !string.IsNullOrEmpty(dt.Rows[0]["pwd"].ToString());
             }
             else
                 res.Unique = true;
-
             return res;
         }
 
