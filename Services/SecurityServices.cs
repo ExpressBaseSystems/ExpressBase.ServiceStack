@@ -32,10 +32,24 @@ namespace ExpressBase.ServiceStack.Services
             GetUsersResponse1 resp = new GetUsersResponse1();
             string show = string.Empty;
             if (request.Show != "all")
-                show = " AND u.statusid >= 0 AND u.statusid <= 2 AND u.hide = 'no'";
+                show = "AND u.statusid >= 0 AND u.statusid <= 2 AND u.hide = 'no'";
 
-            string sql = @"SELECT u.id, u.fullname, u.email, u.nickname, u.sex, u.phnoprimary, u.statusid, ut.name FROM eb_users u LEFT JOIN eb_user_types ut 
-            ON u.eb_user_types_id = ut.id WHERE COALESCE(u.eb_del, 'F') = 'F' AND COALESCE(ut.eb_del, 'F') = 'F' AND u.id > 1" + show + " ORDER BY u.fullname;";
+            string sql = $@"
+SELECT 
+  u.id, u.fullname, u.email, u.nickname, u.sex, u.phnoprimary, u.statusid, ut.name, 
+  COALESCE(CASE WHEN LENGTH(STRING_AGG(loc.shortname::TEXT, ', ')) > 12 THEN 
+  SUBSTRING(STRING_AGG(loc.shortname::TEXT, ', '), 1, 12) || '...' ELSE STRING_AGG(loc.shortname::TEXT, ', ') END, 'Global') AS locname 
+FROM 
+  eb_users u 
+LEFT JOIN eb_user_types ut ON u.eb_user_types_id = ut.id 
+LEFT JOIN 
+(   SELECT m.id, m.key_id, l.c_value
+    FROM eb_constraints_master m, eb_constraints_line l
+    WHERE m.id = l.master_id AND m.key_type = {(int)EbConstraintKeyTypes.User} AND 
+    l.c_type = {(int)EbConstraintTypes.User_Location} AND eb_del = 'F' ORDER BY m.id
+) cons ON u.id = cons.key_id
+LEFT JOIN eb_locations loc ON loc.id=cons.c_value::INT 
+WHERE COALESCE(u.eb_del, 'F') = 'F' AND COALESCE(ut.eb_del, 'F') = 'F' AND u.id > 1 {show}  GROUP BY u.id, ut.name ORDER BY u.fullname;";
 
             DbParameter[] parameters = { };
 
@@ -53,7 +67,8 @@ namespace ExpressBase.ServiceStack.Services
                     Sex = dr[4].ToString(),
                     Phone_Number = dr[5].ToString(),
                     Status = ((EbUserStatus)Convert.ToInt32(dr[6])).ToString(),
-                    User_Type = dr[7].ToString()
+                    User_Type = dr[7].ToString(),
+                    Location = dr[8].ToString()
                 });
             }
             resp.Data = returndata;
