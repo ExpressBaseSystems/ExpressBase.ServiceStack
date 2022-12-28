@@ -953,8 +953,7 @@ namespace ExpressBase.ServiceStack.Services
                         To = reques.Email,
                         Subject = "Reset password",
                         Message = GenerateMailBody(resetlink, fullname),
-                        SolnId = CoreConstants.EXPRESSBASE,
-
+                        SolnId = reques.iSolutionId
                     });
                     re.VerifyStatus = true;
                 }
