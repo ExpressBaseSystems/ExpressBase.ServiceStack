@@ -1063,7 +1063,7 @@ namespace ExpressBase.ServiceStack.Services
                 sourceForm.TableRowId = request.SourceRowId;
 
                 EbWebForm destForm;
-                if (request.SourceRefId == request.DestRefId)
+                if (request.SourceRefId == request.DestRefId && string.IsNullOrWhiteSpace(request.SourceCtrl))
                 {
                     destForm = sourceForm;
                     if (request.SourceRowId > 0)
@@ -1278,7 +1278,7 @@ namespace ExpressBase.ServiceStack.Services
         }
         public GetDictionaryValueResponse Any(GetDictionaryValueRequest request)
         {
-            Dictionary<string, string> Dict = EbObjectsHelper.GetKeyValues(request, this.EbConnectionFactory.DataDB);             
+            Dictionary<string, string> Dict = EbObjectsHelper.GetKeyValues(request, this.EbConnectionFactory.DataDB);
 
             return new GetDictionaryValueResponse { Dict = Dict };
         }
