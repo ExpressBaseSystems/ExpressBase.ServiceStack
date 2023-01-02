@@ -26,6 +26,9 @@ using System.Net;
 using System.Globalization;
 using ExpressBase.Objects.Helpers;
 using Newtonsoft.Json.Linq;
+using System.IO;
+using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Spreadsheet;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -1165,6 +1168,163 @@ namespace ExpressBase.ServiceStack.Services
                 data = new WebformDataWrapper { Status = (int)HttpStatusCode.InternalServerError, Message = "Exception in GetImportDataRequest", MessageInt = ex.Message, StackTraceInt = ex.StackTrace };
             }
             return new GetImportDataResponse() { FormDataWrap = JsonConvert.SerializeObject(data) };
+        }
+
+        public GetDgDataFromExcelResponse Any(GetDgDataFromExcelRequest request)
+        {
+            WebformDataWrapper data;
+            try
+            {
+                Console.WriteLine("Start GetDgDataFromExcel");
+                EbWebForm form = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId);
+                SingleTable Table = new SingleTable();
+                EbControl[] Allctrls = form.Controls.FlattenAllEbControls();
+                EbControl TriggerCtrl = Array.Find(Allctrls, c => c.Name == request.DgName);
+                if (TriggerCtrl == null || !(TriggerCtrl is EbDataGrid))
+                    throw new FormException("Bad request", (int)HttpStatusCode.BadRequest, "Trigger control(dg) not found: " + request.DgName, "");
+
+                EbDataGrid _dg = TriggerCtrl as EbDataGrid;
+                TableSchema _table = form.FormSchema.Tables.Find(e => e.TableName == _dg.TableName);
+                form.FormData = new WebformData();
+                form.FormData.MultipleTables.Add(_dg.TableName, Table);
+                if (_table != null)
+                {
+                    Stream stream = new MemoryStream(request.FileBytea);
+                    using (SpreadsheetDocument doc = SpreadsheetDocument.Open(stream, false))
+                    {
+                        WorkbookPart wbPart = doc.WorkbookPart;
+                        int worksheetcount = doc.WorkbookPart.Workbook.Sheets.Count();
+                        Sheet mysheet = (Sheet)doc.WorkbookPart.Workbook.Sheets.ChildElements.GetItem(0);
+                        Worksheet Worksheet = ((WorksheetPart)wbPart.GetPartById(mysheet.Id)).Worksheet;
+                        int wkschildno = 4;
+                        SheetData Rows = (SheetData)Worksheet.ChildElements.GetItem(wkschildno);
+                        EbDataTable dt = new EbDataTable();
+                        bool dtColSet = false;
+                        Row row = (Row)Rows.ChildElements.GetItem(0);
+                        for (int j = 0; j < row.ChildElements.Count; j++)
+                        {
+                            Cell cell = (Cell)row.ChildElements.GetItem(j);
+                            dt.Columns.Add(new EbDataColumn
+                            {
+                                ColumnName = GetCellValue(cell, wbPart),
+                                Type = EbDbTypes.String,
+                                ColumnIndex = j,
+                                TableName = _table.TableName
+                            });
+                        }
+
+                        for (int i = 1; i < Rows.ChildElements.Count; i++)
+                        {
+                            EbDataRow dr = dt.NewDataRow2();
+                            row = (Row)Rows.ChildElements.GetItem(i);
+                            for (int j = 0; j < row.ChildElements.Count; j++)
+                            {
+                                Cell cell = (Cell)row.ChildElements.GetItem(j);
+                                dr[j] = GetCellValue(cell, wbPart);
+                            }
+                            dt.Rows.Add(dr);
+                        }
+                        if (dt.Rows.Count > 1)
+                        {
+                            Dictionary<EbDGPowerSelectColumn, string> psDict = new Dictionary<EbDGPowerSelectColumn, string>();
+
+                            int rowCounter = -501;
+                            foreach (EbDataRow _row in dt.Rows)
+                            {
+                                SingleRow Row = new SingleRow();
+                                Row.RowId = rowCounter--;
+                                foreach (ColumnSchema _column in _table.Columns)
+                                {
+                                    EbDataColumn dc = dt.Columns[_column.ColumnName];
+                                    if (dc != null && !_row.IsDBNull(dc.ColumnIndex))
+                                    {
+                                        string _formattedData = Convert.ToString(_row[dc.ColumnIndex]);
+                                        if (_column.Control is EbDGPowerSelectColumn)
+                                        {
+                                            if (!string.IsNullOrEmpty(_formattedData))
+                                            {
+                                                if (!psDict.ContainsKey(_column.Control as EbDGPowerSelectColumn))
+                                                    psDict.Add(_column.Control as EbDGPowerSelectColumn, _formattedData);
+                                                else
+                                                    psDict[_column.Control as EbDGPowerSelectColumn] += CharConstants.COMMA + _formattedData;
+                                            }
+                                        }
+                                        Row.Columns.Add(_column.Control.GetSingleColumn(form.UserObj, form.SolutionObj, _formattedData, false));
+                                    }
+                                    else
+                                        Row.Columns.Add(_column.Control.GetSingleColumn(form.UserObj, form.SolutionObj, null, true));
+                                }
+                                Table.Add(Row);
+                            }
+
+                            Dictionary<string, string> QrsDict = new Dictionary<string, string>();
+                            List<DbParameter> param = new List<DbParameter>();
+                            IDatabase DataDB = this.EbConnectionFactory.DataDB;
+
+                            //foreach (Param _p in Param)
+                            //    param.Add(DataDB.GetNewParameter(_p.Name, (EbDbTypes)Convert.ToInt16(_p.Type), _p.Value));
+
+                            foreach (KeyValuePair<EbDGPowerSelectColumn, string> psItem in psDict)
+                            {
+                                string t = psItem.Key.GetSelectQuery(DataDB, this, psItem.Value);
+                                QrsDict.Add(psItem.Key.EbSid, t);
+                                foreach (Param _p in psItem.Key.ParamsList)
+                                {
+                                    if (!param.Exists(e => e.ParameterName == _p.Name))
+                                        param.Add(DataDB.GetNewParameter(_p.Name, (EbDbTypes)Convert.ToInt16(_p.Type), _p.Value));
+                                }
+                            }
+                            if (QrsDict.Count > 0)
+                            {
+                                EbFormHelper.AddExtraSqlParams(param, DataDB, form.TableName, 0, form.LocationId, form.UserObj.UserId);
+
+                                EbDataSet dataset = DataDB.DoQueries(string.Join(CharConstants.SPACE, QrsDict.Select(d => d.Value)), param.ToArray());
+                                int i = 0;
+                                foreach (KeyValuePair<string, string> item in QrsDict)
+                                {
+                                    SingleTable Tbl = new SingleTable();
+                                    form.GetFormattedData(dataset.Tables[i++], Tbl);
+                                    form.FormData.PsDm_Tables.Add(item.Key, Tbl);
+                                }
+                                form.PostFormatFormData(form.FormData);
+                            }
+                        }
+                    }
+                }
+
+                data = new WebformDataWrapper { FormData = form.FormData, Status = (int)HttpStatusCode.OK, Message = "Success" };
+                Console.WriteLine("End ImportFormData : Success");
+            }
+            catch (FormException ex)
+            {
+                Console.WriteLine("FormException in GetDgDataFromExcelRequest Service \nMessage : " + ex.Message + "\nMessageInternal : " + ex.MessageInternal + "\nStackTraceInternal : " + ex.StackTraceInternal + "\nStackTrace : " + ex.StackTrace);
+                data = new WebformDataWrapper { Status = ex.ExceptionCode, Message = ex.Message, MessageInt = ex.MessageInternal, StackTraceInt = ex.StackTraceInternal };
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Exception in GetDgDataFromExcelRequest Service \nMessage : " + ex.Message + "\nStackTrace" + ex.StackTrace);
+                data = new WebformDataWrapper { Status = (int)HttpStatusCode.InternalServerError, Message = "Exception in GetDgDataFromExcelRequest", MessageInt = ex.Message, StackTraceInt = ex.StackTrace };
+            }
+            return new GetDgDataFromExcelResponse() { FormDataWrap = JsonConvert.SerializeObject(data) };
+        }
+
+        private string GetCellValue(Cell cell, WorkbookPart wbPart)
+        {
+            string value = null;
+            if (cell.DataType != null && cell.DataType == CellValues.SharedString)
+            {
+                if (int.TryParse(cell.InnerText, out int id))
+                {
+                    SharedStringItem item = wbPart.SharedStringTablePart.SharedStringTable.Elements<SharedStringItem>().ElementAt(id);
+                    if (item.Text != null)
+                        value = item.Text.Text;
+                    else if (item.InnerText != null)
+                        value = item.InnerText;
+                    else if (item.InnerXml != null)
+                        value = item.InnerXml;
+                }
+            }
+            return value ?? cell.CellValue.Text ?? string.Empty;
         }
 
         //public GetDynamicGridDataResponse Any(GetDynamicGridDataRequest request)
