@@ -29,6 +29,7 @@ using Newtonsoft.Json.Linq;
 using System.IO;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
+using ServiceStack.Text;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -1184,6 +1185,10 @@ namespace ExpressBase.ServiceStack.Services
                     throw new FormException("Bad request", (int)HttpStatusCode.BadRequest, "Trigger control(dg) not found: " + request.DgName, "");
 
                 EbDataGrid _dg = TriggerCtrl as EbDataGrid;
+                Dictionary<string, string> title_name_dict = new Dictionary<string, string>();
+                foreach (EbControl ctrl in _dg.Controls)
+                    title_name_dict.Add(((ctrl as EbDGColumn).Title ?? ctrl.Name).Trim().ToLower(), ctrl.Name);
+
                 TableSchema _table = form.FormSchema.Tables.Find(e => e.TableName == _dg.TableName);
                 form.FormData = new WebformData();
                 form.FormData.MultipleTables.Add(_dg.TableName, Table);
@@ -1204,9 +1209,12 @@ namespace ExpressBase.ServiceStack.Services
                         for (int j = 0; j < row.ChildElements.Count; j++)
                         {
                             Cell cell = (Cell)row.ChildElements.GetItem(j);
+                            string col_name = GetCellValue(cell, wbPart).Trim().ToLower();
+                            if (title_name_dict.ContainsKey(col_name))
+                                col_name = title_name_dict[col_name];
                             dt.Columns.Add(new EbDataColumn
                             {
-                                ColumnName = GetCellValue(cell, wbPart),
+                                ColumnName = col_name,
                                 Type = EbDbTypes.String,
                                 ColumnIndex = j,
                                 TableName = _table.TableName
@@ -1324,7 +1332,41 @@ namespace ExpressBase.ServiceStack.Services
                         value = item.InnerXml;
                 }
             }
+            else if (cell.DataType == null && int.TryParse(Convert.ToString(cell.StyleIndex?.Value), out int styleIndex))// number & dates
+            {
+                CellFormat cellFormat = wbPart.WorkbookStylesPart.Stylesheet.CellFormats.ChildElements[int.Parse(cell.StyleIndex.InnerText)] as CellFormat;
+                uint formatId = cellFormat.NumberFormatId.Value;
+
+                if (formatId == (uint)Formats.DateShort || formatId == (uint)Formats.DateLong)
+                {
+                    double oaDate;
+                    if (double.TryParse(cell.InnerText, out oaDate))
+                    {
+                        value = DateTime.FromOADate(oaDate).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+                    }
+                }
+                else
+                {
+                    value = cell.InnerText;
+                }
+            }
             return value ?? cell.CellValue.Text ?? string.Empty;
+        }
+
+        private enum Formats
+        {
+            General = 0,
+            Number = 1,
+            Decimal = 2,
+            Currency = 164,
+            Accounting = 44,
+            DateShort = 14,
+            DateLong = 165,
+            Time = 166,
+            Percentage = 10,
+            Fraction = 12,
+            Scientific = 11,
+            Text = 49
         }
 
         //public GetDynamicGridDataResponse Any(GetDynamicGridDataRequest request)
