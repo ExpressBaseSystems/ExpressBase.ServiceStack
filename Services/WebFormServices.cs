@@ -1223,14 +1223,19 @@ namespace ExpressBase.ServiceStack.Services
 
                         for (int i = 1; i < Rows.ChildElements.Count; i++)
                         {
+                            bool IsEmptyRow = true;
                             EbDataRow dr = dt.NewDataRow2();
                             row = (Row)Rows.ChildElements.GetItem(i);
                             for (int j = 0; j < row.ChildElements.Count; j++)
                             {
                                 Cell cell = (Cell)row.ChildElements.GetItem(j);
-                                dr[j] = GetCellValue(cell, wbPart);
+                                string str = GetCellValue(cell, wbPart);
+                                dr[j] = str;
+                                if (!string.IsNullOrWhiteSpace(str))
+                                    IsEmptyRow = false;
                             }
-                            dt.Rows.Add(dr);
+                            if (!IsEmptyRow)
+                                dt.Rows.Add(dr);
                         }
                         if (dt.Rows.Count > 1)
                         {
@@ -1350,7 +1355,7 @@ namespace ExpressBase.ServiceStack.Services
                     value = cell.InnerText;
                 }
             }
-            return value ?? cell.CellValue.Text ?? string.Empty;
+            return value ?? cell.InnerText ?? string.Empty;
         }
 
         private enum Formats
