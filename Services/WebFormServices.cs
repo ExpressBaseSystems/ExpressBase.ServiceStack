@@ -1226,7 +1226,7 @@ namespace ExpressBase.ServiceStack.Services
                             bool IsEmptyRow = true;
                             EbDataRow dr = dt.NewDataRow2();
                             row = (Row)Rows.ChildElements.GetItem(i);
-                            for (int j = 0; j < row.ChildElements.Count; j++)
+                            for (int j = 0; j < dt.Columns.Count && j < row.ChildElements.Count; j++)
                             {
                                 Cell cell = (Cell)row.ChildElements.GetItem(j);
                                 string str = GetCellValue(cell, wbPart);
