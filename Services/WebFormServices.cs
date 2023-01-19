@@ -1185,9 +1185,11 @@ namespace ExpressBase.ServiceStack.Services
                     throw new FormException("Bad request", (int)HttpStatusCode.BadRequest, "Trigger control(dg) not found: " + request.DgName, "");
 
                 EbDataGrid _dg = TriggerCtrl as EbDataGrid;
-                Dictionary<string, string> title_name_dict = new Dictionary<string, string>();
+                Dictionary<string, string> dg_title_name_dict = new Dictionary<string, string>();
+                Dictionary<int, string> xl_idx_colName_dict = new Dictionary<int, string>();
+
                 foreach (EbControl ctrl in _dg.Controls)
-                    title_name_dict.Add(((ctrl as EbDGColumn).Title ?? ctrl.Name).Trim().ToLower(), ctrl.Name);
+                    dg_title_name_dict.Add(((ctrl as EbDGColumn).Title ?? ctrl.Name).Trim().ToLower(), ctrl.Name);
 
                 TableSchema _table = form.FormSchema.Tables.Find(e => e.TableName == _dg.TableName);
                 form.FormData = new WebformData();
@@ -1203,55 +1205,56 @@ namespace ExpressBase.ServiceStack.Services
                         Worksheet Worksheet = ((WorksheetPart)wbPart.GetPartById(mysheet.Id)).Worksheet;
                         int wkschildno = 4;
                         SheetData Rows = (SheetData)Worksheet.ChildElements.GetItem(wkschildno);
-                        EbDataTable dt = new EbDataTable();
                         bool dtColSet = false;
                         Row row = (Row)Rows.ChildElements.GetItem(0);
                         for (int j = 0; j < row.ChildElements.Count; j++)
                         {
                             Cell cell = (Cell)row.ChildElements.GetItem(j);
                             string col_name = GetCellValue(cell, wbPart).Trim().ToLower();
-                            if (title_name_dict.ContainsKey(col_name))
-                                col_name = title_name_dict[col_name];
-                            dt.Columns.Add(new EbDataColumn
-                            {
-                                ColumnName = col_name,
-                                Type = EbDbTypes.String,
-                                ColumnIndex = j,
-                                TableName = _table.TableName
-                            });
+                            if (dg_title_name_dict.ContainsKey(col_name) || dg_title_name_dict.ContainsValue(col_name))
+                                col_name = dg_title_name_dict[col_name];
+                            else
+                                continue;
+
+                            if (!xl_idx_colName_dict.ContainsValue(col_name))
+                                xl_idx_colName_dict.Add(j, col_name);
                         }
+
+                        int rowCounter = -501;
+                        Dictionary<EbDGPowerSelectColumn, string> psDict = new Dictionary<EbDGPowerSelectColumn, string>();
 
                         for (int i = 1; i < Rows.ChildElements.Count; i++)
                         {
                             bool IsEmptyRow = true;
-                            EbDataRow dr = dt.NewDataRow2();
                             row = (Row)Rows.ChildElements.GetItem(i);
-                            for (int j = 0; j < dt.Columns.Count && j < row.ChildElements.Count; j++)
+                            Dictionary<string, string> _Row = new Dictionary<string, string>();
+
+                            foreach (KeyValuePair<int, string> idxColName in xl_idx_colName_dict)
                             {
-                                Cell cell = (Cell)row.ChildElements.GetItem(j);
+                                if (idxColName.Key >= row.ChildElements.Count)
+                                {
+                                    if (IsEmptyRow)
+                                        continue;
+                                    else
+                                        throw new FormException($"Unable to process Row#{i + 1}: Column count is {row.ChildElements.Count} but required {xl_idx_colName_dict.Keys.Max() + 1}", (int)HttpStatusCode.InternalServerError, $"Column Name: {idxColName.Value}", "");
+                                }
+                                Cell cell = (Cell)row.ChildElements.GetItem(idxColName.Key);
                                 string str = GetCellValue(cell, wbPart);
-                                dr[j] = str;
+                                _Row.Add(idxColName.Value, str);
                                 if (!string.IsNullOrWhiteSpace(str))
                                     IsEmptyRow = false;
                             }
-                            if (!IsEmptyRow)
-                                dt.Rows.Add(dr);
-                        }
-                        if (dt.Rows.Count > 1)
-                        {
-                            Dictionary<EbDGPowerSelectColumn, string> psDict = new Dictionary<EbDGPowerSelectColumn, string>();
 
-                            int rowCounter = -501;
-                            foreach (EbDataRow _row in dt.Rows)
+                            if (!IsEmptyRow)
                             {
                                 SingleRow Row = new SingleRow();
                                 Row.RowId = rowCounter--;
+
                                 foreach (ColumnSchema _column in _table.Columns)
                                 {
-                                    EbDataColumn dc = dt.Columns[_column.ColumnName];
-                                    if (dc != null && !_row.IsDBNull(dc.ColumnIndex))
+                                    if (_Row.ContainsKey(_column.ColumnName))
                                     {
-                                        string _formattedData = Convert.ToString(_row[dc.ColumnIndex]);
+                                        string _formattedData = _Row[_column.ColumnName];
                                         if (_column.Control is EbDGPowerSelectColumn)
                                         {
                                             if (!string.IsNullOrEmpty(_formattedData))
@@ -1262,14 +1265,23 @@ namespace ExpressBase.ServiceStack.Services
                                                     psDict[_column.Control as EbDGPowerSelectColumn] += CharConstants.COMMA + _formattedData;
                                             }
                                         }
-                                        Row.Columns.Add(_column.Control.GetSingleColumn(form.UserObj, form.SolutionObj, _formattedData, false));
+                                        try
+                                        {
+                                            Row.Columns.Add(_column.Control.GetSingleColumn(form.UserObj, form.SolutionObj, _formattedData, false));
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                            throw new FormException($"Unable to Process Row#{i + 1}, ColumnName {_column.ColumnName}: {ex.Message}", (int)HttpStatusCode.InternalServerError, $"Column Name: {_column.ColumnName}", ex.StackTrace);
+                                        }
                                     }
                                     else
                                         Row.Columns.Add(_column.Control.GetSingleColumn(form.UserObj, form.SolutionObj, null, true));
                                 }
                                 Table.Add(Row);
                             }
-
+                        }
+                        if (Table.Count > 0)
+                        {
                             Dictionary<string, string> QrsDict = new Dictionary<string, string>();
                             List<DbParameter> param = new List<DbParameter>();
                             IDatabase DataDB = this.EbConnectionFactory.DataDB;
@@ -1316,7 +1328,7 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception ex)
             {
                 Console.WriteLine("Exception in GetDgDataFromExcelRequest Service \nMessage : " + ex.Message + "\nStackTrace" + ex.StackTrace);
-                data = new WebformDataWrapper { Status = (int)HttpStatusCode.InternalServerError, Message = "Exception in GetDgDataFromExcelRequest", MessageInt = ex.Message, StackTraceInt = ex.StackTrace };
+                data = new WebformDataWrapper { Status = (int)HttpStatusCode.InternalServerError, Message = ex.Message, MessageInt = "Exception in GetDgDataFromExcelRequest", StackTraceInt = ex.StackTrace };
             }
             return new GetDgDataFromExcelResponse() { FormDataWrap = JsonConvert.SerializeObject(data) };
         }
