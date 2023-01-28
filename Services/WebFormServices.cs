@@ -1233,10 +1233,11 @@ namespace ExpressBase.ServiceStack.Services
                             {
                                 if (idxColName.Key >= row.ChildElements.Count)
                                 {
-                                    if (IsEmptyRow)
-                                        continue;
-                                    else
-                                        throw new FormException($"Unable to process Row#{i + 1}: Column count is {row.ChildElements.Count} but required {xl_idx_colName_dict.Keys.Max() + 1}", (int)HttpStatusCode.InternalServerError, $"Column Name: {idxColName.Value}", "");
+                                    continue;
+                                    //if (IsEmptyRow)
+                                    //    continue;
+                                    //else
+                                    //    throw new FormException($"Unable to process Row#{i + 1}: Column count is {row.ChildElements.Count} but required {xl_idx_colName_dict.Keys.Max() + 1}", (int)HttpStatusCode.InternalServerError, $"Column Name: {idxColName.Value}", "");
                                 }
                                 Cell cell = (Cell)row.ChildElements.GetItem(idxColName.Key);
                                 string str = GetCellValue(cell, wbPart);
