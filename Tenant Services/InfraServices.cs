@@ -952,7 +952,7 @@ namespace ExpressBase.ServiceStack.Services
                     {
                         To = reques.Email,
                         Subject = "Reset password",
-                        Message = GenerateMailBody(resetlink, fullname),
+                        Message = GenerateMailBody(resetlink, fullname, reques.iSolutionId),
                         SolnId = reques.iSolutionId
                     });
                     re.VerifyStatus = true;
@@ -970,9 +970,49 @@ namespace ExpressBase.ServiceStack.Services
             return re;
         }
 
-        public string GenerateMailBody(string resetlink, string fullname)
+        public string GenerateMailBody(string resetlink, string fullname, string iSolutionId)
         {
-            string body = @"</head>
+            string body;
+            if (iSolutionId == "ebdbawg6osdxo920220727085204")
+            {
+                body = @"</head>
+                            <body>
+                                <div style='border: 1px solid #508bf9;padding:20px 40px 20px 40px; '>
+                                    <figure style='text-align: center;margin:0px;'>
+                                        <img src='https://oloi.kerala.gov.in/images/logo/ebdbawg6osdxo920220727085204.png' /><br />
+                                    </figure>
+                                    <br />
+                                    <h3 style='color:#508bf9;margin:0px'>Kerala Development and Innovation Strategic Council (K-DISC)</h3> <br />
+                                    <div style='line-height: 1.4;'>
+                                        Dear {UserName},<br />
+                                        <br />
+			
+			                            You can use the following link to reset your password:
+                                    </div>
+                                    <br />
+                                    <table>
+                                        <tr>
+                                            <td class='btn-read-online' style='text-align: center; background-color: #508bf9; padding: 10px 15px; border-radius: 5px;'>
+                                                <a href='{Url}' style='color: #fff; font-size: 16px; letter-spacing: 1px; text-decoration: none;  font-family: Montserrat,Arial, Helvetica, sans-serif;'>Reset password</a>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                    <br />
+		                            If the previous button does not work, try to copy and paste the following URL in your browser’s address bar:<br />
+                                    <a href='{Url}'>{Url}</a> 
+		                            <br />
+		                            <br />
+                                    Sincerely,<br />
+                                    Team K-DISC<br />
+                                </div>
+                            </body>
+                          </html>";
+                body = body.Replace("{UserName}", fullname);
+                body = body.Replace("{Url}", resetlink);
+            }
+            else
+            {
+                body = @"</head>
                                     <body>
                                         <div style='border: 1px solid #508bf9;padding:20px 40px 20px 40px; '>
                                             <figure style='text-align: center;margin:0px;'>
@@ -1005,8 +1045,9 @@ namespace ExpressBase.ServiceStack.Services
                                         </div>
                                     </body>
                                     </html>";
-            body = body.Replace("{UserName}", fullname);
-            body = body.Replace("{Url}", resetlink).Replace("{supporturl}", RoutingConstants.SUPPORT_MAIL_ID);
+                body = body.Replace("{UserName}", fullname);
+                body = body.Replace("{Url}", resetlink).Replace("{supporturl}", RoutingConstants.SUPPORT_MAIL_ID);
+            }
 
             return body;
         }
