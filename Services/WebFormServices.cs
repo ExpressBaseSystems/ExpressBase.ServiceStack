@@ -30,6 +30,7 @@ using System.IO;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
 using ServiceStack.Text;
+using System.Text;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -46,6 +47,13 @@ namespace ExpressBase.ServiceStack.Services
             {
                 EbWebForm Form = request.WebObj as EbWebForm;
                 Form.AfterRedisGet_All(this);
+
+                if (Form.EnableSqlRetriver)
+                {
+                    Form.SolutionObj = request.SoluObj ?? this.GetSolutionObject(request.SolnId);
+                    CreateFormDataSqlRetrival(Form);
+                }
+
                 if (Form.DataPushers.Count > 0)
                 {
                     foreach (EbDataPusher pusher in Form.DataPushers)
@@ -94,6 +102,72 @@ namespace ExpressBase.ServiceStack.Services
                 InsertDataIfRequired(Form.FormSchema, Form.RefId);
             }
             return new CreateWebFormTableResponse { };
+        }
+
+        private void CreateFormDataSqlRetrival(EbWebForm Form)
+        {
+            (string srcTableQuery, string destTableQuery) = Form.GetFormDataQuries(this.EbConnectionFactory.DataDB, this);
+            string[] ref_id_parts = Form.RefId.Split("-");
+            string[] queries4PriTable = srcTableQuery.Trim().TrimEnd(';').Split(';');
+            string[] queries4DataPushers = destTableQuery.Trim().Length > 0 ? destTableQuery.Trim().TrimEnd(';').Split(';') : new string[0];
+
+            string FnString = GetFunctionString_4_FormDataRetrieval(Form.DisplayName, Convert.ToInt32(ref_id_parts[3]), Convert.ToInt32(ref_id_parts[4]), Form.TableName, queries4PriTable, queries4DataPushers);
+
+            this.EbConnectionFactory.DataDB.DoNonQuery(FnString);
+        }
+
+        static string GetFunctionString_4_FormDataRetrieval(string form_displayname, int form_id, int form_ver_id, string primaryTableName,
+            string[] queries4PriTable, string[] queries4DataPushers)
+        {
+            StringBuilder stringBuilder = new StringBuilder();
+
+            stringBuilder.Append($@"
+CREATE OR REPLACE FUNCTION public.eb_udf_{form_displayname.ToLower().Replace(" ", "_")}_{form_id}_{form_ver_id}_get_form_data(id__in integer, include_datapusher__in boolean)
+RETURNS SETOF refcursor
+LANGUAGE plpgsql
+AS $$
+DECLARE");
+
+            for (int i = 0; i < queries4PriTable.Length; i++)
+                stringBuilder.Append($@"
+    ref{i} refcursor:= 'ref{i}';");
+
+
+            for (int i = queries4PriTable.Length; i < queries4PriTable.Length + queries4DataPushers.Length; i++)
+                stringBuilder.Append($@"
+    ref{i} refcursor:= 'ref{i}';");
+
+
+            stringBuilder.Append(@"
+BEGIN");
+
+            for (int i = 0; i < queries4PriTable.Length; i++)
+            {
+                stringBuilder.Append($@"
+    OPEN ref{i} FOR 
+    {queries4PriTable[i].Replace($"@{primaryTableName}_id", "id__in")};
+    RETURN NEXT ref{i};
+");
+            }
+
+
+            for (int i = queries4PriTable.Length; i < queries4PriTable.Length + queries4DataPushers.Length; i++)
+            {
+                stringBuilder.Append($@"
+
+    IF include_datapusher_in THEN
+        OPEN ref{i} FOR 
+        {queries4DataPushers[i - queries4PriTable.Length].Replace($"@{primaryTableName}_id", "id__in")};
+        RETURN NEXT ref{i};
+    END IF;
+");
+            }
+
+
+            stringBuilder.Append(@"
+END;
+$$");
+            return stringBuilder.ToString();
         }
 
         public CreateMyProfileTableResponse Any(CreateMyProfileTableRequest request)
