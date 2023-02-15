@@ -155,7 +155,7 @@ BEGIN");
             {
                 stringBuilder.Append($@"
 
-    IF include_datapusher_in THEN
+    IF include_datapusher__in THEN
         OPEN ref{i} FOR 
         {queries4DataPushers[i - queries4PriTable.Length].Replace($"@{primaryTableName}_id", "id__in")};
         RETURN NEXT ref{i};
