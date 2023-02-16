@@ -106,18 +106,19 @@ namespace ExpressBase.ServiceStack.Services
 
         private void CreateFormDataSqlRetrival(EbWebForm Form)
         {
-            (string srcTableQuery, string destTableQuery) = Form.GetFormDataQuries(this.EbConnectionFactory.DataDB, this);
+            (string srcTableQuery, string destTableQuery) = Form.GetFormDataQueries(this.EbConnectionFactory.DataDB, this);
             string[] ref_id_parts = Form.RefId.Split("-");
             string[] queries4PriTable = srcTableQuery.Trim().TrimEnd(';').Split(';');
             string[] queries4DataPushers = destTableQuery.Trim().Length > 0 ? destTableQuery.Trim().TrimEnd(';').Split(';') : new string[0];
+            string[] queries4PowSelect = Form.GetFormDataPsSelectQueries(this);
 
-            string FnString = GetFunctionString_4_FormDataRetrieval(Form.DisplayName, Convert.ToInt32(ref_id_parts[3]), Convert.ToInt32(ref_id_parts[4]), Form.TableName, queries4PriTable, queries4DataPushers);
+            string FnString = GetFunctionString_4_FormDataRetrieval(Form.DisplayName, Convert.ToInt32(ref_id_parts[3]), Convert.ToInt32(ref_id_parts[4]), Form.TableName, queries4PriTable, queries4DataPushers, queries4PowSelect);
 
             this.EbConnectionFactory.DataDB.DoNonQuery(FnString);
         }
 
         static string GetFunctionString_4_FormDataRetrieval(string form_displayname, int form_id, int form_ver_id, string primaryTableName,
-            string[] queries4PriTable, string[] queries4DataPushers)
+            string[] queries4PriTable, string[] queries4DataPushers, string[] queries4PowSelect)
         {
             StringBuilder stringBuilder = new StringBuilder();
 
@@ -132,8 +133,11 @@ DECLARE");
                 stringBuilder.Append($@"
     ref{i} refcursor:= 'ref{i}';");
 
+            for (int i = queries4PriTable.Length; i < queries4PriTable.Length + queries4PowSelect.Length; i++)
+                stringBuilder.Append($@"
+    ref{i} refcursor:= 'ref{i}';");
 
-            for (int i = queries4PriTable.Length; i < queries4PriTable.Length + queries4DataPushers.Length; i++)
+            for (int i = queries4PriTable.Length + queries4PowSelect.Length; i < queries4PriTable.Length + queries4PowSelect.Length + queries4DataPushers.Length; i++)
                 stringBuilder.Append($@"
     ref{i} refcursor:= 'ref{i}';");
 
@@ -150,14 +154,22 @@ BEGIN");
 ");
             }
 
+            for (int i = queries4PriTable.Length; i < queries4PriTable.Length + queries4PowSelect.Length; i++)
+            {
+                stringBuilder.Append($@"
+    OPEN ref{i} FOR 
+    {queries4PowSelect[i - queries4PriTable.Length]};
+    RETURN NEXT ref{i};
+");
+            }
 
-            for (int i = queries4PriTable.Length; i < queries4PriTable.Length + queries4DataPushers.Length; i++)
+            for (int i = queries4PriTable.Length + queries4PowSelect.Length; i < queries4PriTable.Length + queries4PowSelect.Length + queries4DataPushers.Length; i++)
             {
                 stringBuilder.Append($@"
 
     IF include_datapusher__in THEN
         OPEN ref{i} FOR 
-        {queries4DataPushers[i - queries4PriTable.Length].Replace($"@{primaryTableName}_id", "id__in")};
+        {queries4DataPushers[i - queries4PriTable.Length - queries4PowSelect.Length].Replace($"@{primaryTableName}_id", "id__in")};
         RETURN NEXT ref{i};
     END IF;
 ");
