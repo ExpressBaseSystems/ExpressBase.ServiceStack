@@ -123,7 +123,7 @@ namespace ExpressBase.ServiceStack.Services
             StringBuilder stringBuilder = new StringBuilder();
 
             stringBuilder.Append($@"
-CREATE OR REPLACE FUNCTION public.eb_udf_{form_displayname.ToLower().Replace(" ", "_")}_{form_id}_{form_ver_id}_get_form_data(id__in integer, include_datapusher__in boolean)
+CREATE OR REPLACE FUNCTION public.eb_udf_{form_displayname.ToLower().Replace(" ", "_").Replace("-", "_").Replace("&", "_")}_{form_id}_{form_ver_id}_get_form_data(id__in integer, include_datapusher__in boolean)
 RETURNS SETOF refcursor
 LANGUAGE plpgsql
 AS $$
