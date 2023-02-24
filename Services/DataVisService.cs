@@ -565,35 +565,60 @@ namespace ExpressBase.ServiceStack
                         _sql = _ds.Sql;
                         if (Treecol == null)
                         {
-                            if (!_ds.Sql.ToLower().Contains("@and_search") || !_ds.Sql.ToLower().Contains(":and_search"))
-                            {
-                                _ds.Sql = "SELECT * FROM (" + _ds.Sql + "\n ) data WHERE 1=1 :and_search order by :orderby";
-                            }
-                            _ds.Sql = _ds.Sql.Replace(";", string.Empty);
-                            _sql = _ds.Sql.Replace(":and_search", _c).Replace("@and_search", _c) + ";";
-                            //}
-                            if (request.Ispaging || request.Length > 0)
-                            {
-                                var matches = Regex.Matches(_sql, @"\;\s*SELECT\s*COUNT\(\*\)\s*FROM");
-                                if (matches.Count == 0)
-                                {
-                                    tempsql = _sql.Replace(";", string.Empty);
-                                    tempsql = "SELECT COUNT(*) FROM (" + tempsql + ") data1;";
-                                }
+                            ///////////
+                            string[] dsSQL_Parts = _ds.Sql.Trim().TrimEnd(';').Split(';');
 
-                                var sql1 = _sql.Replace(";", string.Empty);
-                                if (db.Vendor == DatabaseVendors.ORACLE)
+                            if (dsSQL_Parts.Length > 1 && dsSQL_Parts[1].ToLower().Contains("select count(*) from"))//Second query should return row count
+                            {
+                                if (!dsSQL_Parts[0].ToLower().Contains("@and_search") || !dsSQL_Parts[0].ToLower().Contains(":and_search"))
                                 {
-                                    sql1 = "SELECT * FROM ( SELECT a.*,ROWNUM rnum FROM (" + sql1 + ")a WHERE ROWNUM <= :limit+:offset) WHERE rnum > :offset;";
-                                    //sql1 += "ALTER TABLE T1 DROP COLUMN rnum;SELECT * FROM T1;";
+                                    dsSQL_Parts[0] = "SELECT * FROM (" + dsSQL_Parts[0] + "\n ) data WHERE 1=1 :and_search order by :orderby";
+                                }
+                                _sql = dsSQL_Parts[0].Replace(":and_search", _c).Replace("@and_search", _c);
+                                if (request.Ispaging || request.Length > 0)
+                                {
+                                    if (!_sql.ToLower().Contains(":limit"))
+                                        _sql = _sql + " LIMIT :limit OFFSET :offset;";
+                                    _sql += dsSQL_Parts[1] + ";";
                                 }
                                 else
                                 {
-                                    if (!sql1.ToLower().Contains(":limit"))
-                                        sql1 = sql1 + " LIMIT :limit OFFSET :offset;";
+                                    _sql += ";";
                                 }
-                                _sql = sql1 + tempsql;
                             }
+                            else
+                            {
+                                if (!_ds.Sql.ToLower().Contains("@and_search") || !_ds.Sql.ToLower().Contains(":and_search"))
+                                {
+                                    _ds.Sql = "SELECT * FROM (" + _ds.Sql + "\n ) data WHERE 1=1 :and_search order by :orderby";
+                                }
+                                _ds.Sql = _ds.Sql.Replace(";", string.Empty);
+                                _sql = _ds.Sql.Replace(":and_search", _c).Replace("@and_search", _c) + ";";
+                                //}
+                                if (request.Ispaging || request.Length > 0)
+                                {
+                                    var matches = Regex.Matches(_sql, @"\;\s*SELECT\s*COUNT\(\*\)\s*FROM");
+                                    if (matches.Count == 0)
+                                    {
+                                        tempsql = _sql.Replace(";", string.Empty);
+                                        tempsql = "SELECT COUNT(*) FROM (" + tempsql + ") data1;";
+                                    }
+
+                                    var sql1 = _sql.Replace(";", string.Empty);
+                                    if (db.Vendor == DatabaseVendors.ORACLE)
+                                    {
+                                        sql1 = "SELECT * FROM ( SELECT a.*,ROWNUM rnum FROM (" + sql1 + ")a WHERE ROWNUM <= :limit+:offset) WHERE rnum > :offset;";
+                                        //sql1 += "ALTER TABLE T1 DROP COLUMN rnum;SELECT * FROM T1;";
+                                    }
+                                    else
+                                    {
+                                        if (!sql1.ToLower().Contains(":limit"))
+                                            sql1 = sql1 + " LIMIT :limit OFFSET :offset;";
+                                    }
+                                    _sql = sql1 + tempsql;
+                                }
+                            }
+                            //////////////
 
                             string __order = string.Empty;
                             if (request.OrderBy != null && request.OrderBy.Count > 0)
@@ -3428,7 +3453,7 @@ ORDER BY
                             object _val = (_islink) ? "<a href = '#' oncontextmenu = 'return false' class ='tablelink4calendar' data-popup='true' data-link='" + (_dv as EbCalendarView).ObjectLinks[0].ObjRefId + "' data-colindex='" + CalendarCol.Data + "'  data-column='" + col.Name + "'>" + ValueTo + "</a>" : ValueTo.ToString();
 
                             var _span = $"<span hidden-row={_hourCount[col.Name].Row} class='columntooltip' data-toggle='popover' data-contents='@@tooltip@@'>{_val}</span>";
-                            _formatteddata += $"<div class='dataclass { datacol.Name}_class'>{_span }</div>";
+                            _formatteddata += $"<div class='dataclass {datacol.Name}_class'>{_span}</div>";
                             // for column aggregate
                             if (summary.ContainsKey(col.Data))
                                 summary[col.Data][2 * DataColumnsincrementer] = Convert.ToInt32(summary[col.Data][2 * DataColumnsincrementer]) + summaryval;
@@ -3454,7 +3479,7 @@ ORDER BY
                     tooltip += $"<tr><td> {xx.Key} &nbsp; : &nbsp; {xx.Value.Sum(x => Convert.ToInt32(x))}</td></tr>";
                     var _val = (xx.Value.Sum(x => Convert.ToInt32(x)) == 0) ? "" : xx.Value.Sum(x => Convert.ToInt32(x)).ToString();
                     var _span = $"<span class='columntooltip' data-toggle='popover' data-contents='@@tooltip@@'>{_val}</span>";
-                    formatteddata += $"<div class='dataclass { xx.Key}_class'>{_span }</div>";
+                    formatteddata += $"<div class='dataclass {xx.Key}_class'>{_span}</div>";
                 }
                 tooltip += "</table>";
                 _formattedTable.Rows[i][_formattedTable.Columns.Count - 2] = formatteddata.ToString().Replace("@@tooltip@@", tooltip.ToBase64());
