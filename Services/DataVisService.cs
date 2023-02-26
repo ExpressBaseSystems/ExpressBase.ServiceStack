@@ -2696,7 +2696,7 @@ namespace ExpressBase.ServiceStack
 
                     else if (col.RenderType == EbDbTypes.Decimal || col.RenderType == EbDbTypes.Int32 || col.RenderType == EbDbTypes.Int64)
                     {
-                        if (col.Name != "id")
+                        if (col.Name != "id" && !(col is DVNumericColumn numCol && numCol.DoNotFormat))
                         {
                             if ((col as DVNumericColumn).SuppresIfZero && (_isexcel == false))
                             {
