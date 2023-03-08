@@ -550,7 +550,16 @@ namespace ExpressBase.ServiceStack
                                             else
                                             {
                                                 if (type == EbDbTypes.Date || type == EbDbTypes.DateTime)
-                                                    _cond += string.Format(" {0}::date {1} '{2}' OR", col, op, array[i].Trim());
+                                                {
+                                                    if (op == "=")
+                                                        _cond += string.Format("({0} IN ('{1}', '{1}')) OR", col, array[i].Trim());
+                                                    else if (op == "<" || op == ">")
+                                                        _cond += string.Format(" {0} {1} '{2}' OR", col, op, array[i].Trim());
+                                                    else if (op == "<=")
+                                                        _cond += string.Format("({0} IN ('{1}', '{1}') OR {0} < '{1}') OR", col, array[i].Trim());
+                                                    else if (op == ">=")
+                                                        _cond += string.Format("({0} IN ('{1}', '{1}') OR {0} > '{1}') OR", col, array[i].Trim());
+                                                }
                                                 else
                                                     _cond += string.Format(" {0} {1} '{2}' OR", col, op, array[i].Trim());
                                             }
