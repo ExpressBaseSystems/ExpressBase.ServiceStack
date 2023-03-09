@@ -333,7 +333,7 @@ namespace ExpressBase.ServiceStack
                             if (_sql != string.Empty && !_sql.ToLower().Contains("limit") && !_sql.ToLower().Contains("offset"))
                                 sql += _sql + " LIMIT :limit OFFSET :offset;";
                             else
-                                sql += _sql;
+                                sql += _sql + ";";
                         }
                         sql = sql.Replace(":and_search", string.Empty).Replace(":orderby", "1");
                         bool _isPaged = true;

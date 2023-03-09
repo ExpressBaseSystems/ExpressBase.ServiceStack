@@ -586,26 +586,26 @@ namespace ExpressBase.ServiceStack
                             }
                             ///////////
                             string[] dsSQL_Parts = _ds.Sql.Trim().TrimEnd(';').Split(';');
-                            string _selQry = dsSQL_Parts[0].ToLower();
+                            string _selQry = dsSQL_Parts[0];
                             string _countQry = string.Empty;
                             if (dsSQL_Parts.Length > 1 && string.IsNullOrWhiteSpace(_c))
-                                _countQry = dsSQL_Parts[1].ToLower();
+                                _countQry = dsSQL_Parts[1];
 
                             if (!string.IsNullOrWhiteSpace(_c))
                             {
                                 _selQry = $"SELECT * FROM ({dsSQL_Parts[0]}) data WHERE true {_c} ";
                                 if (!string.IsNullOrWhiteSpace(__order))
                                 {
-                                    if (_selQry.Contains(":orderby"))
-                                        _selQry = _selQry.Replace(":orderby", __order);
+                                    if (_selQry.Contains(":orderby", StringComparison.OrdinalIgnoreCase))
+                                        _selQry = _selQry.Replace(":orderby", __order, StringComparison.OrdinalIgnoreCase);
                                     else
                                         _selQry += $"order by {__order}";
                                 }
                             }
                             else if (!string.IsNullOrWhiteSpace(__order))
                             {
-                                if (_selQry.Contains(":orderby"))
-                                    _selQry = _selQry.Replace(":orderby", __order);
+                                if (_selQry.Contains(":orderby", StringComparison.OrdinalIgnoreCase))
+                                    _selQry = _selQry.Replace(":orderby", __order, StringComparison.OrdinalIgnoreCase);
                                 else
                                     _selQry = $"SELECT * FROM ({dsSQL_Parts[0]}) data order by {__order}";
                             }
@@ -614,7 +614,7 @@ namespace ExpressBase.ServiceStack
                             {
                                 if (!string.IsNullOrWhiteSpace(_c))
                                 {
-                                    _selQry = _selQry.Replace(":offset", "0").Replace(":limit", Int32.MaxValue.ToString());
+                                    _selQry = _selQry.Replace(":offset", "0", StringComparison.OrdinalIgnoreCase).Replace(":limit", Int32.MaxValue.ToString(), StringComparison.OrdinalIgnoreCase);
                                     _countQry = "SELECT COUNT(*) FROM (" + _selQry + ") data1";
                                     _selQry = _selQry + " LIMIT :limit OFFSET :offset";
                                 }
@@ -622,15 +622,17 @@ namespace ExpressBase.ServiceStack
                                 {
                                     if (_countQry == string.Empty)
                                     {
-                                        _countQry = _selQry.Replace(":offset", "0").Replace(":limit", Int32.MaxValue.ToString());
+                                        _countQry = _selQry.Replace(":offset", "0", StringComparison.OrdinalIgnoreCase).Replace(":limit", Int32.MaxValue.ToString(), StringComparison.OrdinalIgnoreCase);
                                         _countQry = "SELECT COUNT(*) FROM (" + _countQry + ") data1";
                                     }
+                                    if (!_selQry.Contains(":offset", StringComparison.OrdinalIgnoreCase))
+                                        _selQry = _selQry + " LIMIT :limit OFFSET :offset";
                                 }
                             }
                             else
                             {
-                                if (_selQry.Contains(":offset"))
-                                    _selQry = _selQry.Replace(":offset", "0").Replace(":limit", Int32.MaxValue.ToString());
+                                if (_selQry.Contains(":offset", StringComparison.OrdinalIgnoreCase))
+                                    _selQry = _selQry.Replace(":offset", "0", StringComparison.OrdinalIgnoreCase).Replace(":limit", Int32.MaxValue.ToString(), StringComparison.OrdinalIgnoreCase);
                                 //if (_countQry == string.Empty)
                                 //    _countQry = "SELECT COUNT(*) FROM (" + _selQry + ") data1";
                             }
