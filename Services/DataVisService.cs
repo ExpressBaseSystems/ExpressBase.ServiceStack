@@ -552,13 +552,13 @@ namespace ExpressBase.ServiceStack
                                                 if (type == EbDbTypes.Date || type == EbDbTypes.DateTime)
                                                 {
                                                     if (op == "=")
-                                                        _cond += string.Format("({0} IN ('{1}', '{1}')) OR", col, array[i].Trim());
+                                                        _cond += string.Format("({0}::date IN ('{1}')) OR", col, array[i].Trim());
                                                     else if (op == "<" || op == ">")
-                                                        _cond += string.Format(" {0} {1} '{2}' OR", col, op, array[i].Trim());
+                                                        _cond += string.Format(" {0}::date {1} '{2}' OR", col, op, array[i].Trim());
                                                     else if (op == "<=")
-                                                        _cond += string.Format("({0} IN ('{1}', '{1}') OR {0} < '{1}') OR", col, array[i].Trim());
+                                                        _cond += string.Format("({0}::date IN ('{1}') OR {0}::date < '{1}') OR", col, array[i].Trim());
                                                     else if (op == ">=")
-                                                        _cond += string.Format("({0} IN ('{1}', '{1}') OR {0} > '{1}') OR", col, array[i].Trim());
+                                                        _cond += string.Format("({0}::date IN ('{1}') OR {0}::date > '{1}') OR", col, array[i].Trim());
                                                 }
                                                 else
                                                     _cond += string.Format(" {0} {1} '{2}' OR", col, op, array[i].Trim());
@@ -574,61 +574,6 @@ namespace ExpressBase.ServiceStack
                         _sql = _ds.Sql;
                         if (Treecol == null)
                         {
-                            ///////////
-                            string[] dsSQL_Parts = _ds.Sql.Trim().TrimEnd(';').Split(';');
-
-                            if (dsSQL_Parts.Length > 1 && dsSQL_Parts[1].ToLower().Contains("select count(*) from"))//Second query should return row count
-                            {
-                                if (!dsSQL_Parts[0].ToLower().Contains("@and_search") || !dsSQL_Parts[0].ToLower().Contains(":and_search"))
-                                {
-                                    dsSQL_Parts[0] = "SELECT * FROM (" + dsSQL_Parts[0] + "\n ) data WHERE 1=1 :and_search order by :orderby";
-                                }
-                                _sql = dsSQL_Parts[0].Replace(":and_search", _c).Replace("@and_search", _c);
-                                if (request.Ispaging || request.Length > 0)
-                                {
-                                    if (!_sql.ToLower().Contains(":limit"))
-                                        _sql = _sql + " LIMIT :limit OFFSET :offset;";
-                                    _sql += dsSQL_Parts[1] + ";";
-                                }
-                                else
-                                {
-                                    _sql += ";";
-                                }
-                            }
-                            else
-                            {
-                                if (!_ds.Sql.ToLower().Contains("@and_search") || !_ds.Sql.ToLower().Contains(":and_search"))
-                                {
-                                    _ds.Sql = "SELECT * FROM (" + _ds.Sql + "\n ) data WHERE 1=1 :and_search order by :orderby";
-                                }
-                                _ds.Sql = _ds.Sql.Replace(";", string.Empty);
-                                _sql = _ds.Sql.Replace(":and_search", _c).Replace("@and_search", _c) + ";";
-                                //}
-                                if (request.Ispaging || request.Length > 0)
-                                {
-                                    var matches = Regex.Matches(_sql, @"\;\s*SELECT\s*COUNT\(\*\)\s*FROM");
-                                    if (matches.Count == 0)
-                                    {
-                                        tempsql = _sql.Replace(";", string.Empty);
-                                        tempsql = "SELECT COUNT(*) FROM (" + tempsql + ") data1;";
-                                    }
-
-                                    var sql1 = _sql.Replace(";", string.Empty);
-                                    if (db.Vendor == DatabaseVendors.ORACLE)
-                                    {
-                                        sql1 = "SELECT * FROM ( SELECT a.*,ROWNUM rnum FROM (" + sql1 + ")a WHERE ROWNUM <= :limit+:offset) WHERE rnum > :offset;";
-                                        //sql1 += "ALTER TABLE T1 DROP COLUMN rnum;SELECT * FROM T1;";
-                                    }
-                                    else
-                                    {
-                                        if (!sql1.ToLower().Contains(":limit"))
-                                            sql1 = sql1 + " LIMIT :limit OFFSET :offset;";
-                                    }
-                                    _sql = sql1 + tempsql;
-                                }
-                            }
-                            //////////////
-
                             string __order = string.Empty;
                             if (request.OrderBy != null && request.OrderBy.Count > 0)
                             {
@@ -639,10 +584,125 @@ namespace ExpressBase.ServiceStack
                                 int indx = __order.LastIndexOf(",");
                                 __order = __order.Substring(0, indx);
                             }
-                            if (string.IsNullOrEmpty(__order))
-                                _sql = _sql.Replace("order by :orderby", string.Empty);
+                            ///////////
+                            string[] dsSQL_Parts = _ds.Sql.Trim().TrimEnd(';').Split(';');
+                            string _selQry = dsSQL_Parts[0].ToLower();
+                            string _countQry = string.Empty;
+                            if (dsSQL_Parts.Length > 1 && string.IsNullOrWhiteSpace(_c))
+                                _countQry = dsSQL_Parts[1].ToLower();
+
+                            if (!string.IsNullOrWhiteSpace(_c))
+                            {
+                                _selQry = $"SELECT * FROM ({dsSQL_Parts[0]}) data WHERE true {_c} ";
+                                if (!string.IsNullOrWhiteSpace(__order))
+                                {
+                                    if (_selQry.Contains(":orderby"))
+                                        _selQry = _selQry.Replace(":orderby", __order);
+                                    else
+                                        _selQry += $"order by {__order}";
+                                }
+                            }
+                            else if (!string.IsNullOrWhiteSpace(__order))
+                            {
+                                if (_selQry.Contains(":orderby"))
+                                    _selQry = _selQry.Replace(":orderby", __order);
+                                else
+                                    _selQry = $"SELECT * FROM ({dsSQL_Parts[0]}) data order by {__order}";
+                            }
+
+                            if (request.Ispaging || request.Length > 0)
+                            {
+                                if (!string.IsNullOrWhiteSpace(_c))
+                                {
+                                    _selQry = _selQry.Replace(":offset", "0").Replace(":limit", Int32.MaxValue.ToString());
+                                    _countQry = "SELECT COUNT(*) FROM (" + _selQry + ") data1";
+                                    _selQry = _selQry + " LIMIT :limit OFFSET :offset";
+                                }
+                                else
+                                {
+                                    if (_countQry == string.Empty)
+                                    {
+                                        _countQry = _selQry.Replace(":offset", "0").Replace(":limit", Int32.MaxValue.ToString());
+                                        _countQry = "SELECT COUNT(*) FROM (" + _countQry + ") data1";
+                                    }
+                                }
+                            }
                             else
-                                _sql = _sql.Replace(":orderby", __order);
+                            {
+                                if (_selQry.Contains(":offset"))
+                                    _selQry = _selQry.Replace(":offset", "0").Replace(":limit", Int32.MaxValue.ToString());
+                                //if (_countQry == string.Empty)
+                                //    _countQry = "SELECT COUNT(*) FROM (" + _selQry + ") data1";
+                            }
+
+                            _sql = _selQry + ";";
+                            if (_countQry != string.Empty)
+                                _sql += _countQry + ";";
+
+                            //if (dsSQL_Parts.Length > 1 && dsSQL_Parts[1].ToLower().Contains("select count(*) from") && string.IsNullOrWhiteSpace(_c))//Second query should return row count
+                            //{
+                            //    if ((!dsSQL_Parts[0].ToLower().Contains("@orderby") || !dsSQL_Parts[0].ToLower().Contains(":orderby")) && !string.IsNullOrWhiteSpace(__order))
+                            //    {
+                            //        dsSQL_Parts[0] = "SELECT * FROM (" + dsSQL_Parts[0] + "\n ) data order by :orderby";
+                            //    }
+                            //    //_sql = dsSQL_Parts[0].Replace(":and_search", _c).Replace("@and_search", _c);
+                            //    _sql = dsSQL_Parts[0];
+                            //    if (request.Ispaging || request.Length > 0)
+                            //    {
+                            //        if (!_sql.ToLower().Contains(":limit"))
+                            //            _sql = _sql + " LIMIT :limit OFFSET :offset;";
+                            //        _sql += dsSQL_Parts[1] + ";";
+                            //    }
+                            //    else
+                            //    {
+                            //        _sql += ";";
+                            //    }
+                            //}
+                            //else
+                            //{
+                            //    if ((!dsSQL_Parts[0].ToLower().Contains("@and_search") || !dsSQL_Parts[0].ToLower().Contains(":and_search")) && !string.IsNullOrWhiteSpace(_c))
+                            //    {
+                            //        dsSQL_Parts[0] = "SELECT * FROM (" + dsSQL_Parts[0] + "\n ) data WHERE 1=1 :and_search order by :orderby";
+                            //    }
+                            //    else if ((!dsSQL_Parts[0].ToLower().Contains("@orderby") || !dsSQL_Parts[0].ToLower().Contains(":orderby")) && !string.IsNullOrWhiteSpace(__order))
+                            //    {
+                            //        dsSQL_Parts[0] = "SELECT * FROM (" + dsSQL_Parts[0] + "\n ) data order by :orderby";
+                            //    }
+                            //    dsSQL_Parts[0] = dsSQL_Parts[0].Replace(";", string.Empty);
+                            //    _sql = dsSQL_Parts[0].Replace(":and_search", _c).Replace("@and_search", _c) + ";";
+                            //    //}
+                            //    if (request.Ispaging || request.Length > 0)
+                            //    {
+                            //        var matches = Regex.Matches(_sql, @"\;\s*SELECT\s*COUNT\(\*\)\s*FROM");
+                            //        if (matches.Count == 0)
+                            //        {
+                            //            tempsql = _sql.Replace(";", string.Empty);
+                            //            tempsql = "SELECT COUNT(*) FROM (" + tempsql + ") data1;";
+                            //        }
+
+                            //        var sql1 = _sql.Replace(";", string.Empty);
+                            //        if (db.Vendor == DatabaseVendors.ORACLE)
+                            //        {
+                            //            sql1 = "SELECT * FROM ( SELECT a.*,ROWNUM rnum FROM (" + sql1 + ")a WHERE ROWNUM <= :limit+:offset) WHERE rnum > :offset;";
+                            //            //sql1 += "ALTER TABLE T1 DROP COLUMN rnum;SELECT * FROM T1;";
+                            //        }
+                            //        else
+                            //        {
+                            //            if (!sql1.ToLower().Contains(":limit"))
+                            //                sql1 = sql1 + " LIMIT :limit OFFSET :offset;";
+                            //            else
+                            //                sql1 += ";";
+                            //        }
+                            //        _sql = sql1 + tempsql;
+                            //    }
+                            //}
+
+                            //if (string.IsNullOrEmpty(__order))
+                            //    _sql = _sql.Replace("order by :orderby", string.Empty);
+                            //else
+                            //    _sql = _sql.Replace(":orderby", __order);
+
+                            //////////////
 
                             _isPaged = (_sql.ToLower().Contains(":offset") && _sql.ToLower().Contains(":limit"));
                         }
