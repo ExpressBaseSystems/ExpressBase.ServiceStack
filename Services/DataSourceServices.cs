@@ -320,6 +320,15 @@ namespace ExpressBase.ServiceStack
                                 _ds.Sql = _ds.Sql.Replace(resultList.Trim(), string.Empty);
                                 matchResult = matchResult.NextMatch();
                             }
+
+                            Regex rx = new Regex(@"\$(.*?)\$");//Replace PlaceHolder. Eg: $AND PH(v.id, acmaster1_id)$
+                            Match match = rx.Match(subjectString);
+                            while (match.Success)
+                            {
+                                resultList = match.Value.ToString();
+                                _ds.Sql = _ds.Sql.Replace(resultList.Trim(), string.Empty);
+                                match = match.NextMatch();
+                            }
                         }
                         catch (ArgumentException ex)
                         {

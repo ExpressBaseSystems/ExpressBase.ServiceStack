@@ -433,9 +433,18 @@ namespace ExpressBase.ServiceStack
                         {
                             foreach (TFilters _dic in request.TFilters)
                             {
-                                if (string.IsNullOrWhiteSpace(_dic.Value))
+                                if (string.IsNullOrEmpty(_dic.Value))
                                     continue;
                                 _dic.Value = _dic.Value.Replace("'", string.Empty);
+                                _dic.Operator = _dic.Operator.Trim();
+                            }
+
+                            _ds.Sql = ReplacePlaceholders(_ds.Sql, request.TFilters);
+
+                            foreach (TFilters _dic in request.TFilters)
+                            {
+                                if (string.IsNullOrWhiteSpace(_dic.Value))
+                                    continue;
                                 string _cond = string.Empty;
                                 var op = _dic.Operator.Trim(); var col = _dic.Column; var val = _dic.Value; var type = _dic.Type;
                                 var array = _dic.Value.Split("|");
@@ -552,13 +561,13 @@ namespace ExpressBase.ServiceStack
                                                 if (type == EbDbTypes.Date || type == EbDbTypes.DateTime)
                                                 {
                                                     if (op == "=")
-                                                        _cond += string.Format("({0}::date IN ('{1}')) OR", col, array[i].Trim());
+                                                        _cond += string.Format(" (DATE_TRUNC('day', {0}) IN ('{1}')) OR", col, array[i].Trim());
                                                     else if (op == "<" || op == ">")
-                                                        _cond += string.Format(" {0}::date {1} '{2}' OR", col, op, array[i].Trim());
+                                                        _cond += string.Format(" (DATE_TRUNC('day', {0}) {1} '{2}' OR", col, op, array[i].Trim());
                                                     else if (op == "<=")
-                                                        _cond += string.Format("({0}::date IN ('{1}') OR {0}::date < '{1}') OR", col, array[i].Trim());
+                                                        _cond += string.Format(" ((DATE_TRUNC('day', {0}) IN ('{1}') OR {0} < '{1}') OR", col, array[i].Trim());
                                                     else if (op == ">=")
-                                                        _cond += string.Format("({0}::date IN ('{1}') OR {0}::date > '{1}') OR", col, array[i].Trim());
+                                                        _cond += string.Format(" ((DATE_TRUNC('day', {0}) IN ('{1}') OR {0} > '{1}') OR", col, array[i].Trim());
                                                 }
                                                 else
                                                     _cond += string.Format(" {0} {1} '{2}' OR", col, op, array[i].Trim());
@@ -571,75 +580,14 @@ namespace ExpressBase.ServiceStack
                                 _c += "AND (" + _cond + ")";
                             }
                         }
+                        else
+                        {
+                            _ds.Sql = ReplacePlaceholders(_ds.Sql, request.TFilters);
+                        }
                         _sql = _ds.Sql;
                         if (Treecol == null)
                         {
-                            string __order = string.Empty;
-                            if (request.OrderBy != null && request.OrderBy.Count > 0)
-                            {
-                                foreach (OrderBy order in request.OrderBy)
-                                {
-                                    __order += string.Format("{0} {1},", order.Column, (order.Direction == 1) ? "DESC" : "ASC");
-                                }
-                                int indx = __order.LastIndexOf(",");
-                                __order = __order.Substring(0, indx);
-                            }
-                            ///////////
-                            string[] dsSQL_Parts = _ds.Sql.Trim().TrimEnd(';').Split(';');
-                            string _selQry = dsSQL_Parts[0];
-                            string _countQry = string.Empty;
-                            if (dsSQL_Parts.Length > 1 && string.IsNullOrWhiteSpace(_c))
-                                _countQry = dsSQL_Parts[1];
-
-                            if (!string.IsNullOrWhiteSpace(_c))
-                            {
-                                _selQry = $"SELECT * FROM ({dsSQL_Parts[0]}) data WHERE true {_c} ";
-                                if (!string.IsNullOrWhiteSpace(__order))
-                                {
-                                    if (_selQry.Contains(":orderby", StringComparison.OrdinalIgnoreCase))
-                                        _selQry = _selQry.Replace(":orderby", __order, StringComparison.OrdinalIgnoreCase);
-                                    else
-                                        _selQry += $"order by {__order}";
-                                }
-                            }
-                            else if (!string.IsNullOrWhiteSpace(__order))
-                            {
-                                if (_selQry.Contains(":orderby", StringComparison.OrdinalIgnoreCase))
-                                    _selQry = _selQry.Replace(":orderby", __order, StringComparison.OrdinalIgnoreCase);
-                                else
-                                    _selQry = $"SELECT * FROM ({dsSQL_Parts[0]}) data order by {__order}";
-                            }
-
-                            if (request.Ispaging || request.Length > 0)
-                            {
-                                if (!string.IsNullOrWhiteSpace(_c))
-                                {
-                                    _selQry = _selQry.Replace(":offset", "0", StringComparison.OrdinalIgnoreCase).Replace(":limit", Int32.MaxValue.ToString(), StringComparison.OrdinalIgnoreCase);
-                                    _countQry = "SELECT COUNT(*) FROM (" + _selQry + ") data1";
-                                    _selQry = _selQry + " LIMIT :limit OFFSET :offset";
-                                }
-                                else
-                                {
-                                    if (_countQry == string.Empty)
-                                    {
-                                        _countQry = _selQry.Replace(":offset", "0", StringComparison.OrdinalIgnoreCase).Replace(":limit", Int32.MaxValue.ToString(), StringComparison.OrdinalIgnoreCase);
-                                        _countQry = "SELECT COUNT(*) FROM (" + _countQry + ") data1";
-                                    }
-                                    if (!_selQry.Contains(":offset", StringComparison.OrdinalIgnoreCase))
-                                        _selQry = _selQry + " LIMIT :limit OFFSET :offset";
-                                }
-                            }
-                            else
-                            {
-                                if (_selQry.Contains(":offset", StringComparison.OrdinalIgnoreCase))
-                                    _selQry = _selQry.Replace(":offset", "0", StringComparison.OrdinalIgnoreCase).Replace(":limit", Int32.MaxValue.ToString(), StringComparison.OrdinalIgnoreCase);
-                                //if (_countQry == string.Empty)
-                                //    _countQry = "SELECT COUNT(*) FROM (" + _selQry + ") data1";
-                            }
-
-                            _sql = _selQry + ";";
-                            if (_countQry != string.Empty)
-                                _sql += _countQry + ";";
+                            _sql = GetWrappedSqlQuery(request, _ds.Sql, _c);
 
                             //if (dsSQL_Parts.Length > 1 && dsSQL_Parts[1].ToLower().Contains("select count(*) from") && string.IsNullOrWhiteSpace(_c))//Second query should return row count
                             //{
@@ -838,6 +786,236 @@ namespace ExpressBase.ServiceStack
                 this._Responsestatus.Message = e.Message;
                 return new DataSourceDataResponse { error = e.Message };
             }
+        }
+
+        private string GetWrappedSqlQuery(TableDataRequest request, string sqlQry, string _c)
+        {
+            string __order = string.Empty;
+            if (request.OrderBy != null && request.OrderBy.Count > 0)
+            {
+                foreach (OrderBy order in request.OrderBy)
+                {
+                    __order += string.Format("{0} {1},", order.Column, (order.Direction == 1) ? "DESC" : "ASC");
+                }
+                int indx = __order.LastIndexOf(",");
+                __order = __order.Substring(0, indx);
+            }
+            ///////////
+            string[] dsSQL_Parts = sqlQry.Trim().TrimEnd(';').Split(';');
+            string _selQry = dsSQL_Parts[0];
+            string _countQry = string.Empty;
+            if (dsSQL_Parts.Length > 1 && string.IsNullOrWhiteSpace(_c))
+                _countQry = dsSQL_Parts[1];
+
+            if (!string.IsNullOrWhiteSpace(_c))
+            {
+                _selQry = $"SELECT * FROM ({dsSQL_Parts[0]}) data WHERE true {_c} ";
+                if (!string.IsNullOrWhiteSpace(__order))
+                {
+                    if (_selQry.Contains(":orderby", StringComparison.OrdinalIgnoreCase))
+                        _selQry = _selQry.Replace(":orderby", __order, StringComparison.OrdinalIgnoreCase);
+                    else
+                        _selQry += $"order by {__order}";
+                }
+            }
+            else if (!string.IsNullOrWhiteSpace(__order))
+            {
+                if (_selQry.Contains(":orderby", StringComparison.OrdinalIgnoreCase))
+                    _selQry = _selQry.Replace(":orderby", __order, StringComparison.OrdinalIgnoreCase);
+                else
+                    _selQry = $"SELECT * FROM ({dsSQL_Parts[0]}) data order by {__order}";
+            }
+
+            if (request.Ispaging || request.Length > 0)
+            {
+                if (!string.IsNullOrWhiteSpace(_c))
+                {
+                    _selQry = _selQry.Replace(":offset", "0", StringComparison.OrdinalIgnoreCase).Replace(":limit", Int32.MaxValue.ToString(), StringComparison.OrdinalIgnoreCase);
+                    _countQry = "SELECT COUNT(*) FROM (" + _selQry + ") data1";
+                    _selQry = _selQry + " LIMIT :limit OFFSET :offset";
+                }
+                else
+                {
+                    if (_countQry == string.Empty)
+                    {
+                        _countQry = _selQry.Replace(":offset", "0", StringComparison.OrdinalIgnoreCase).Replace(":limit", Int32.MaxValue.ToString(), StringComparison.OrdinalIgnoreCase);
+                        _countQry = "SELECT COUNT(*) FROM (" + _countQry + ") data1";
+                    }
+                    if (!_selQry.Contains(":offset", StringComparison.OrdinalIgnoreCase))
+                        _selQry = _selQry + " LIMIT :limit OFFSET :offset";
+                }
+            }
+            else
+            {
+                if (_selQry.Contains(":offset", StringComparison.OrdinalIgnoreCase))
+                    _selQry = _selQry.Replace(":offset", "0", StringComparison.OrdinalIgnoreCase).Replace(":limit", Int32.MaxValue.ToString(), StringComparison.OrdinalIgnoreCase);
+                //if (_countQry == string.Empty)
+                //    _countQry = "SELECT COUNT(*) FROM (" + _selQry + ") data1";
+            }
+
+            string _sql = _selQry + ";";
+            if (_countQry != string.Empty)
+                _sql += _countQry + ";";
+            return _sql;
+        }
+
+        private string ReplacePlaceholders(string Qry, List<TFilters> TFilters)
+        {
+            Regex rx = new Regex(@"\$(.*?)\$");//Replace PlaceHolder. Eg: $AND PH(v.id, acmaster1_id)$
+            string placeHolder, str;
+            Match match = rx.Match(Qry);
+            while (match.Success)
+            {
+                placeHolder = match.Value.ToString().Trim();
+                str = GetProcessedValueOfPH(placeHolder, TFilters);
+                Qry = Qry.Replace(placeHolder, str);
+                match = match.NextMatch();
+            }
+            return Qry;
+        }
+
+        private string GetProcessedValueOfPH(string placeHolder, List<TFilters> TFilters)
+        {
+            string ProcessedValue = string.Empty;
+            string LogicOp = string.Empty;
+            placeHolder = placeHolder.TrimStart('$').TrimEnd('$').Trim();
+
+            if (placeHolder.Substring(0, 3).ToUpper() == "AND")
+            {
+                LogicOp = "AND";
+                placeHolder = placeHolder.Substring(3).Trim();
+            }
+            else if (placeHolder.Substring(0, 2).ToUpper() == "OR")
+            {
+                LogicOp = "OR";
+                placeHolder = placeHolder.Substring(2).Trim();
+            }
+
+            if (TFilters == null || TFilters.Count == 0)
+            {
+                ProcessedValue = $" {LogicOp} TRUE";
+            }
+            else if (placeHolder.Substring(0, 2).ToUpper() == "PH")
+            {
+                placeHolder = placeHolder.Substring(2).Trim();
+                placeHolder = placeHolder.TrimStart('(').TrimEnd(')');
+                string[] parts = placeHolder.Split(',');
+                if (parts.Length == 2)
+                {
+                    parts[0] = parts[0].Trim();//PH key
+                    parts[1] = parts[1].Trim().ToLower();//PH value
+                    TFilters TFilter = TFilters.Find(e => e.Column == parts[1]);
+                    if (TFilter != null && !string.IsNullOrWhiteSpace(TFilter.Value))
+                    {
+                        ProcessedValue = GetProcessedValueOfPhKey(parts[0], TFilter);
+                        ProcessedValue = $" {LogicOp} {ProcessedValue}";
+                        TFilters.Remove(TFilter);
+                    }
+                    else
+                    {
+                        ProcessedValue = $" {LogicOp} TRUE";
+                    }
+                }
+                else
+                {
+                    ProcessedValue = $" {LogicOp} TRUE";
+                }
+            }
+            return ProcessedValue;
+        }
+
+        private string GetProcessedValueOfPhKey(string PhKey, TFilters TFilter)
+        {
+            string _cond = string.Empty;
+            string[] FltrValArr = TFilter.Value.Split("|");
+            string tempStr;
+
+            string finalValQry = string.Empty;
+
+            if (TFilter.Column == "eb_created_by" || TFilter.Column == "eb_lastmodified_by" || TFilter.Column == "eb_loc_id")
+            {
+                List<string> templist = new List<string>();
+                if (TFilter.Column == "eb_created_by" || TFilter.Column == "eb_lastmodified_by")
+                {
+                    if (this._ebSolution.Users != null)
+                    {
+                        for (int i = 0; i < FltrValArr.Length; i++)
+                        {
+                            tempStr = FltrValArr[i].Trim().ToLower();
+                            if (tempStr != "")
+                            {
+                                if (TFilter.Operator == "x*")
+                                    templist.AddRange(this._ebSolution.Users.Where(pair => pair.Value.ToLower().StartsWith(tempStr)).Select(pair => pair.Key.ToString()).ToList());
+                                else if (TFilter.Operator == "*x")
+                                    templist.AddRange(this._ebSolution.Users.Where(pair => pair.Value.ToLower().EndsWith(tempStr)).Select(pair => pair.Key.ToString()).ToList());
+                                else if (TFilter.Operator == "*x*")
+                                    templist.AddRange(this._ebSolution.Users.Where(pair => pair.Value.ToLower().Contains(tempStr)).Select(pair => pair.Key.ToString()).ToList());
+                                else if (TFilter.Operator == "=")
+                                    templist.AddRange(this._ebSolution.Users.Where(pair => pair.Value.ToLower() == tempStr).Select(pair => pair.Key.ToString()).ToList());
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    for (int i = 0; i < FltrValArr.Length; i++)
+                    {
+                        tempStr = FltrValArr[i].Trim().ToLower();
+                        if (tempStr != "")
+                        {
+                            if (TFilter.Operator == "x*")
+                                templist.AddRange(this._ebSolution.Locations.Where(pair => pair.Value.ShortName.ToLower().StartsWith(tempStr)).Select(pair => pair.Key.ToString()).ToList());
+                            else if (TFilter.Operator == "*x")
+                                templist.AddRange(this._ebSolution.Locations.Where(pair => pair.Value.ShortName.ToLower().EndsWith(tempStr)).Select(pair => pair.Key.ToString()).ToList());
+                            else if (TFilter.Operator == "*x*")
+                                templist.AddRange(this._ebSolution.Locations.Where(pair => pair.Value.ShortName.ToLower().Contains(tempStr)).Select(pair => pair.Key.ToString()).ToList());
+                            else if (TFilter.Operator == "=")
+                                templist.AddRange(this._ebSolution.Locations.Where(pair => pair.Value.ShortName.ToLower() == tempStr).Select(pair => pair.Key.ToString()).ToList());
+                        }
+                    }
+                }
+                FltrValArr = templist.ToArray();
+                if (FltrValArr.Length == 0)
+                    _cond += string.Format(" {0} = '{1}' OR", PhKey, 0);////?
+                TFilter.Operator = "=";
+            }
+            for (int i = 0; i < FltrValArr.Length; i++)
+            {
+                tempStr = FltrValArr[i].Trim().ToLower();
+                if (tempStr != "")
+                {
+                    if (TFilter.Type == EbDbTypes.String)
+                    {
+                        if (TFilter.Operator == "x*")
+                            _cond += string.Format(" LOWER({0}) LIKE LOWER('{1}%') OR", PhKey, tempStr);
+                        else if (TFilter.Operator == "*x")
+                            _cond += string.Format(" LOWER({0}) LIKE LOWER('%{1}') OR", PhKey, tempStr);
+                        else if (TFilter.Operator == "*x*")
+                            _cond += string.Format(" LOWER({0}) LIKE LOWER('%{1}%') OR", PhKey, tempStr);
+                        else if (TFilter.Operator == "=")
+                            _cond += string.Format(" LOWER({0}) = LOWER('{1}') OR", PhKey, tempStr);
+                    }
+                    else
+                    {
+                        if (TFilter.Type == EbDbTypes.Date || TFilter.Type == EbDbTypes.DateTime)
+                        {
+                            if (TFilter.Operator == "=")
+                                _cond += string.Format(" (DATE_TRUNC('day', {0}) IN ('{1}')) OR", PhKey, tempStr);
+                            else if (TFilter.Operator == "<" || TFilter.Operator == ">")
+                                _cond += string.Format(" (DATE_TRUNC('day', {0}) {1} '{2}' OR", PhKey, TFilter.Operator, tempStr);
+                            else if (TFilter.Operator == "<=")
+                                _cond += string.Format(" ((DATE_TRUNC('day', {0}) IN ('{1}') OR {0} < '{1}') OR", PhKey, tempStr);
+                            else if (TFilter.Operator == ">=")
+                                _cond += string.Format(" ((DATE_TRUNC('day', {0}) IN ('{1}') OR {0} > '{1}') OR", PhKey, tempStr);
+                        }
+                        else
+                            _cond += string.Format(" {0} {1} '{2}' OR", PhKey, TFilter.Operator, tempStr);
+                    }
+                }
+            }
+            int place = _cond.LastIndexOf("OR");
+            _cond = _cond.Substring(0, place);
+            return "(" + _cond + ")";
         }
 
         private EbDataSet GetDatafromUrl()
