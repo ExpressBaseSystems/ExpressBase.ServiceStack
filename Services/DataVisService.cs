@@ -563,11 +563,11 @@ namespace ExpressBase.ServiceStack
                                                     if (op == "=")
                                                         _cond += string.Format(" ({0} IN ('{1}')) OR", col, array[i].Trim());
                                                     else if (op == "<" || op == ">")
-                                                        _cond += string.Format(" ({0} {1} '{2}' OR", col, op, array[i].Trim());
+                                                        _cond += string.Format(" ({0} {1} '{2}') OR", col, op, array[i].Trim());
                                                     else if (op == "<=")
-                                                        _cond += string.Format(" (({0} IN ('{1}') OR {0} < '{1}') OR", col, array[i].Trim());
+                                                        _cond += string.Format(" ({0} IN ('{1}') OR {0} < '{1}') OR", col, array[i].Trim());
                                                     else if (op == ">=")
-                                                        _cond += string.Format(" (({0} IN ('{1}') OR {0} > '{1}') OR", col, array[i].Trim());
+                                                        _cond += string.Format(" ({0} IN ('{1}') OR {0} > '{1}') OR", col, array[i].Trim());
                                                 }
                                                 else
                                                     _cond += string.Format(" {0} {1} '{2}' OR", col, op, array[i].Trim());
@@ -1002,11 +1002,11 @@ namespace ExpressBase.ServiceStack
                             if (TFilter.Operator == "=")
                                 _cond += string.Format(" ({0} IN ('{1}')) OR", PhKey, tempStr);
                             else if (TFilter.Operator == "<" || TFilter.Operator == ">")
-                                _cond += string.Format(" ({0} {1} '{2}' OR", PhKey, TFilter.Operator, tempStr);
+                                _cond += string.Format(" ({0} {1} '{2}') OR", PhKey, TFilter.Operator, tempStr);
                             else if (TFilter.Operator == "<=")
-                                _cond += string.Format(" (({0} IN ('{1}') OR {0} < '{1}') OR", PhKey, tempStr);
+                                _cond += string.Format(" ({0} IN ('{1}') OR {0} < '{1}') OR", PhKey, tempStr);
                             else if (TFilter.Operator == ">=")
-                                _cond += string.Format(" (({0} IN ('{1}') OR {0} > '{1}') OR", PhKey, tempStr);
+                                _cond += string.Format(" ({0} IN ('{1}') OR {0} > '{1}') OR", PhKey, tempStr);
                         }
                         else
                             _cond += string.Format(" {0} {1} '{2}' OR", PhKey, TFilter.Operator, tempStr);
