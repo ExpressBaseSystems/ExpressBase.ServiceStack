@@ -4253,7 +4253,7 @@ ORDER BY
                     if (!rowGrouping.ContainsKey(headerKey))
                     {
                         rowGrouping.Add(headerKey, new HeaderGroupingDetails { CollectionKey = headerKey, RowGrouping = rowGrouping, RowGroupingColumns = _rowGroupingColumns });
-                        rowGrouping.Add(footerKey, new FooterGroupingDetails(TotalLevels, AggregateIndexes, VisualizationColumns, culture) { CollectionKey = footerKey, RowGrouping = rowGrouping });
+                        rowGrouping.Add(footerKey, new FooterGroupingDetails(TotalLevels, AggregateIndexes, VisualizationColumns, culture) { CollectionKey = footerKey, RowGrouping = rowGrouping, RowGroupingColumns = _rowGroupingColumns });
 
                         rowGrouping[headerKey].GroupingCount++;
                         rowGrouping[headerKey].ColumnCount = ColumnCount;
@@ -4279,7 +4279,7 @@ ORDER BY
                     string footerKey = FooterPrefix + TempKey.Last();
 
                     rowGrouping.Add(headerKey, new HeaderGroupingDetails { CollectionKey = headerKey, RowGrouping = rowGrouping, RowGroupingColumns = _rowGroupingColumns });
-                    rowGrouping.Add(footerKey, new FooterGroupingDetails(TotalLevels, AggregateIndexes, VisualizationColumns, culture) { CollectionKey = footerKey, RowGrouping = rowGrouping });
+                    rowGrouping.Add(footerKey, new FooterGroupingDetails(TotalLevels, AggregateIndexes, VisualizationColumns, culture) { CollectionKey = footerKey, RowGrouping = rowGrouping, RowGroupingColumns = _rowGroupingColumns });
                     (rowGrouping[headerKey] as HeaderGroupingDetails).ColumnCount = ColumnCount;
                     (rowGrouping[headerKey] as HeaderGroupingDetails).SetSortIndex(CurSortIndex);
                     (rowGrouping[footerKey] as FooterGroupingDetails).SetSortIndex(++CurSortIndex);
