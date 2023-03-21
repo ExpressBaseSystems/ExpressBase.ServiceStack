@@ -1600,6 +1600,7 @@ $$");
                 Dictionary<string, string> MetaData = new Dictionary<string, string>();
                 DateTime startdt = DateTime.Now;
                 Console.WriteLine("Insert/Update WebFormData : start - " + startdt);
+                EbFormHelper.SetFsSsReceivedCxtId(this.Redis, request.SolnId, request.RefId, request.UserId, request.FsCxtId, request.RowId);
                 FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId, request.CurrentLoc);
                 CheckDataPusherCompatibility(FormObj);
                 FormObj.TableRowId = request.RowId;
@@ -1616,6 +1617,7 @@ $$");
                 Console.WriteLine("Insert/Update WebFormData end : Execution Time = " + (DateTime.Now - startdt).TotalMilliseconds);
                 bool isMobInsert = request.WhichConsole == RoutingConstants.MC;
                 bool isMobSignUp = isMobInsert && !string.IsNullOrWhiteSpace(request.MobilePageRefId) && request.MobilePageRefId == FormObj.SolutionObj?.SolutionSettings?.MobileAppSettings?.SignUpPageRefId;
+                EbFormHelper.SetFsSsProcessedCxtId(this.Redis, request.SolnId, request.RefId, request.UserId, request.FsCxtId, request.RowId);
 
                 return new InsertDataFromWebformResponse()
                 {
@@ -1631,6 +1633,9 @@ $$");
             catch (FormException ex)
             {
                 Console.WriteLine("FormException in Insert/Update WebFormData\nMessage : " + ex.Message + "\nMessageInternal : " + ex.MessageInternal + "\nStackTraceInternal : " + ex.StackTraceInternal + "\nStackTrace" + ex.StackTrace);
+
+                if (ex.ExceptionCode != (int)HttpStatusCode.MethodNotAllowed)
+                    EbFormHelper.ReSetFormSubmissionCxtId(this.Redis, request.SolnId, request.RefId, request.UserId, request.FsCxtId, request.RowId);
 
                 if (IsErrorDraftCandidate(request, FormObj))
                     return FormDraftsHelper.SubmitErrorAndGetResponse(this.EbConnectionFactory.DataDB, FormObj, request, ex);
