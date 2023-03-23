@@ -1617,7 +1617,7 @@ $$");
                 Console.WriteLine("Insert/Update WebFormData end : Execution Time = " + (DateTime.Now - startdt).TotalMilliseconds);
                 bool isMobInsert = request.WhichConsole == RoutingConstants.MC;
                 bool isMobSignUp = isMobInsert && !string.IsNullOrWhiteSpace(request.MobilePageRefId) && request.MobilePageRefId == FormObj.SolutionObj?.SolutionSettings?.MobileAppSettings?.SignUpPageRefId;
-                EbFormHelper.SetFsSsProcessedCxtId(this.Redis, request.SolnId, request.RefId, request.UserId, request.FsCxtId, request.RowId);
+                EbFormHelper.SetFsSsProcessedCxtId(this.Redis, request.SolnId, request.RefId, request.UserId, request.FsCxtId, request.RowId, FormObj.TableRowId);
 
                 return new InsertDataFromWebformResponse()
                 {
@@ -1995,6 +1995,12 @@ $$");
             }
             else
                 Dict.Add(Key, Val);
+        }
+
+        public LogEbErrorResponse Any(LogEbErrorRequest request)
+        {
+            EbFormHelper.LogEbError(this.EbConnectionFactory.DataDB, request.Code, request.Title, request.Message, request.SourceId, request.SourceVerId, request.UserId);
+            return new LogEbErrorResponse();
         }
 
         //form data submission using PushJson and FormGlobals - SQL Job, Excel Import save
