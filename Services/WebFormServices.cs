@@ -1657,6 +1657,8 @@ $$");
             {
                 Console.WriteLine("Exception in Insert/Update WebFormData\nMessage : " + ex.Message + "\nStackTrace : " + ex.StackTrace);
 
+                EbFormHelper.ReSetFormSubmissionCxtId(this.Redis, request.SolnId, request.RefId, request.UserId, request.FsCxtId, request.RowId);
+
                 if (IsErrorDraftCandidate(request, FormObj))
                     return FormDraftsHelper.SubmitErrorAndGetResponse(this.EbConnectionFactory.DataDB, FormObj, request, ex);
 
