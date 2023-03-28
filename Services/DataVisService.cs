@@ -587,7 +587,7 @@ namespace ExpressBase.ServiceStack
                         _sql = _ds.Sql;
                         if (Treecol == null)
                         {
-                            _sql = GetWrappedSqlQuery(request, _ds.Sql, _c);
+                            _sql = GetWrappedSqlQuery(request, _ds, _c);
 
                             //if (dsSQL_Parts.Length > 1 && dsSQL_Parts[1].ToLower().Contains("select count(*) from") && string.IsNullOrWhiteSpace(_c))//Second query should return row count
                             //{
@@ -676,7 +676,7 @@ namespace ExpressBase.ServiceStack
                     }
 
                     if (request.Params == null)
-                        _sql = _sql.Replace(":id", "0");
+                        _sql = SqlHelper.ReplaceParamByValue(_sql, "id", "0");
                     //}
                     var parameters = DataHelper.GetParams(db, _isPaged, request.Params, request.Length, request.Start);
                     Console.WriteLine("Before :  " + DateTime.Now);
@@ -788,7 +788,7 @@ namespace ExpressBase.ServiceStack
             }
         }
 
-        private string GetWrappedSqlQuery(TableDataRequest request, string sqlQry, string _c)
+        private string GetWrappedSqlQuery(TableDataRequest request, EbDataReader dr, string _c)
         {
             string __order = string.Empty;
             if (request.OrderBy != null && request.OrderBy.Count > 0)
@@ -800,8 +800,23 @@ namespace ExpressBase.ServiceStack
                 int indx = __order.LastIndexOf(",");
                 __order = __order.Substring(0, indx);
             }
-            ///////////
-            string[] dsSQL_Parts = sqlQry.Trim().TrimEnd(';').Split(';');
+
+            string[] dsSQL_Parts = dr.Sql.Trim().TrimEnd(';').Split(';');
+            if (dr.EnableSqlFunction)
+            {
+                string fnArgs = string.Empty;
+                List<Param> ParamsList = dr.GetParams(this.Redis as RedisClient);
+                foreach (Param _p in ParamsList)
+                {
+                    if (SqlHelper.ContainsParameter(dsSQL_Parts[0], _p.Name))
+                        fnArgs += $":{_p.Name},";
+                }
+                if (fnArgs != string.Empty)
+                    fnArgs = fnArgs.TrimEnd(',');
+
+                string[] refidParts = dr.RefId.Split("-");
+                dsSQL_Parts[0] = $"SELECT * FROM eb_udf_{dr.DisplayName.ToLower().Replace(" ", "_").Replace("-", "_").Replace("&", "_")}_{refidParts[3]}_{refidParts[4]}_dr_as_fn({fnArgs})";
+            }
             string _selQry = dsSQL_Parts[0];
             string _countQry = string.Empty;
             if (dsSQL_Parts.Length > 1 && string.IsNullOrWhiteSpace(_c))

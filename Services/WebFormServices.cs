@@ -1441,12 +1441,17 @@ $$");
                 CellFormat cellFormat = wbPart.WorkbookStylesPart.Stylesheet.CellFormats.ChildElements[int.Parse(cell.StyleIndex.InnerText)] as CellFormat;
                 uint formatId = cellFormat.NumberFormatId.Value;
 
-                if (formatId == (uint)Formats.DateShort || formatId == (uint)Formats.DateLong)
+                if (formatId == (uint)Formats.DateShort || formatId == (uint)Formats.DateLong || formatId == (uint)Formats.Time)
                 {
                     double oaDate;
                     if (double.TryParse(cell.InnerText, out oaDate))
                     {
-                        value = DateTime.FromOADate(oaDate).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+                        if (formatId == (uint)Formats.DateShort)
+                            value = DateTime.FromOADate(oaDate).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+                        else if (formatId == (uint)Formats.DateLong)
+                            value = DateTime.FromOADate(oaDate).ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
+                        else if (formatId == (uint)Formats.Time)
+                            value = DateTime.FromOADate(oaDate).ToString("HH:mm:ss", CultureInfo.InvariantCulture);
                     }
                 }
                 else
