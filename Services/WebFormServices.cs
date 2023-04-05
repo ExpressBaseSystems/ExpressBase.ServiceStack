@@ -332,6 +332,9 @@ $$");
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = ebs[SystemColumns.eb_signin_log_id], Type = vDbTypes.Int32, Label = "Log Id" });
                     //_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_default", Type = vDbTypes.Boolean, Default = "F" });
 
+                    if (Form.CancelReason)
+                        _listNamesAndTypes.Add(new TableColumnMeta { Name = ebs[SystemColumns.eb_void_reason], Type = vDbTypes.String, Label = "Cancel Reason" });
+
                     if (CurrencyCtrlFound)
                     {
                         _listNamesAndTypes.Add(new TableColumnMeta { Name = ebs[SystemColumns.eb_currency_id], Type = vDbTypes.Int32, Label = "Currency Id" });
@@ -1920,7 +1923,7 @@ $$");
             EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId);
             CheckDataPusherCompatibility(FormObj);
             FormObj.TableRowId = request.RowId;
-            (int RowAffected, string modifiedAt) = FormObj.Cancel(EbConnectionFactory.DataDB, request.Cancel, this);
+            (int RowAffected, string modifiedAt) = FormObj.Cancel(EbConnectionFactory.DataDB, request.Cancel, this, request.Reason);
             Console.WriteLine($"Record cancelled. RowId: {request.RowId}  RowsAffected: {RowAffected}");
 
             return new CancelDataFromWebformResponse { RowAffected = RowAffected, ModifiedAt = modifiedAt };
