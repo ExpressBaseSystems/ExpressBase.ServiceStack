@@ -1355,6 +1355,11 @@ $$");
                                                     psDict[_column.Control as EbDGPowerSelectColumn] += CharConstants.COMMA + _formattedData;
                                             }
                                         }
+                                        else if (_column.Control is EbNumeric || _column.Control is EbDGNumericColumn)
+                                        {
+                                            if (string.IsNullOrWhiteSpace(_formattedData))
+                                                _formattedData = "0";
+                                        }
                                         try
                                         {
                                             Row.Columns.Add(_column.Control.GetSingleColumn(form.UserObj, form.SolutionObj, _formattedData, false));
