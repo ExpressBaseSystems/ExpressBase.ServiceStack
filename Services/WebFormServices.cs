@@ -332,6 +332,9 @@ $$");
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = ebs[SystemColumns.eb_signin_log_id], Type = vDbTypes.Int32, Label = "Log Id" });
                     //_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_default", Type = vDbTypes.Boolean, Default = "F" });
 
+                    if (Form.CancelReason)
+                        _listNamesAndTypes.Add(new TableColumnMeta { Name = ebs[SystemColumns.eb_void_reason], Type = vDbTypes.String, Label = "Cancel Reason" });
+
                     if (CurrencyCtrlFound)
                     {
                         _listNamesAndTypes.Add(new TableColumnMeta { Name = ebs[SystemColumns.eb_currency_id], Type = vDbTypes.Int32, Label = "Currency Id" });
@@ -1352,6 +1355,11 @@ $$");
                                                     psDict[_column.Control as EbDGPowerSelectColumn] += CharConstants.COMMA + _formattedData;
                                             }
                                         }
+                                        else if (_column.Control is EbNumeric || _column.Control is EbDGNumericColumn)
+                                        {
+                                            if (string.IsNullOrWhiteSpace(_formattedData))
+                                                _formattedData = "0";
+                                        }
                                         try
                                         {
                                             Row.Columns.Add(_column.Control.GetSingleColumn(form.UserObj, form.SolutionObj, _formattedData, false));
@@ -1441,12 +1449,17 @@ $$");
                 CellFormat cellFormat = wbPart.WorkbookStylesPart.Stylesheet.CellFormats.ChildElements[int.Parse(cell.StyleIndex.InnerText)] as CellFormat;
                 uint formatId = cellFormat.NumberFormatId.Value;
 
-                if (formatId == (uint)Formats.DateShort || formatId == (uint)Formats.DateLong)
+                if (formatId == (uint)Formats.DateShort || formatId == (uint)Formats.DateLong || formatId == (uint)Formats.Time)
                 {
                     double oaDate;
                     if (double.TryParse(cell.InnerText, out oaDate))
                     {
-                        value = DateTime.FromOADate(oaDate).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+                        if (formatId == (uint)Formats.DateShort)
+                            value = DateTime.FromOADate(oaDate).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+                        else if (formatId == (uint)Formats.DateLong)
+                            value = DateTime.FromOADate(oaDate).ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
+                        else if (formatId == (uint)Formats.Time)
+                            value = DateTime.FromOADate(oaDate).ToString("HH:mm:ss", CultureInfo.InvariantCulture);
                     }
                 }
                 else
@@ -1651,6 +1664,8 @@ $$");
             catch (Exception ex)
             {
                 Console.WriteLine("Exception in Insert/Update WebFormData\nMessage : " + ex.Message + "\nStackTrace : " + ex.StackTrace);
+
+                EbFormHelper.ReSetFormSubmissionCxtId(this.Redis, request.SolnId, request.RefId, request.UserId, request.FsCxtId, request.RowId);
 
                 if (IsErrorDraftCandidate(request, FormObj))
                     return FormDraftsHelper.SubmitErrorAndGetResponse(this.EbConnectionFactory.DataDB, FormObj, request, ex);
@@ -1913,7 +1928,7 @@ $$");
             EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId);
             CheckDataPusherCompatibility(FormObj);
             FormObj.TableRowId = request.RowId;
-            (int RowAffected, string modifiedAt) = FormObj.Cancel(EbConnectionFactory.DataDB, request.Cancel, this);
+            (int RowAffected, string modifiedAt) = FormObj.Cancel(EbConnectionFactory.DataDB, request.Cancel, this, request.Reason);
             Console.WriteLine($"Record cancelled. RowId: {request.RowId}  RowsAffected: {RowAffected}");
 
             return new CancelDataFromWebformResponse { RowAffected = RowAffected, ModifiedAt = modifiedAt };

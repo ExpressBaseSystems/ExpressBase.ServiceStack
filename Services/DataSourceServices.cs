@@ -18,6 +18,7 @@ using ExpressBase.Common.Constants;
 using ExpressBase.Objects.Objects.DVRelated;
 using ExpressBase.ServiceStack.Services;
 using ExpressBase.Objects.Helpers;
+using ServiceStack.Redis;
 
 namespace ExpressBase.ServiceStack
 {
@@ -362,6 +363,9 @@ namespace ExpressBase.ServiceStack
                                 resp.Columns.Add(dt.Columns);
 
                             this.Redis.Set<DataSourceColumnsResponse>(_dsRedisKey, resp);
+
+                            if (request.UpdateSqlFn)
+                                CreateOrReplaceSqlFunction(_ds);
                         }
                     }
                 }
@@ -372,6 +376,59 @@ namespace ExpressBase.ServiceStack
                 this.Redis.Remove(_dsRedisKey);
             }
             return resp;
+        }
+
+        private void CreateOrReplaceSqlFunction(EbDataReader DR)
+        {
+            if (!DR.EnableSqlFunction)
+                return;
+
+            List<Param> ParamsList = DR.GetParams(this.Redis as RedisClient);
+
+            string Qry = DR.Sql.Split(";")[0];
+            string Args = string.Empty;
+            string RetArgs = string.Empty;
+
+            IDatabase DataDB = DR.GetDatastore(this.EbConnectionFactory);
+            PGSQLEbDbTypes DbTypes = DataDB.VendorDbTypes as PGSQLEbDbTypes;
+
+            foreach (Param _p in ParamsList)
+            {
+                if (SqlHelper.ContainsParameter(Qry, _p.Name))
+                {
+                    Qry = SqlHelper.ReplaceParamByValue(Qry, _p.Name, _p.Name + "__in");
+                    Args += _p.Name + "__in ";
+                    Args += DbTypes.GetVendorDbText((EbDbTypes)Convert.ToInt16(_p.Type)) + ",";
+                }
+            }
+            if (Args != string.Empty)
+                Args = Args.TrimEnd(',');
+
+            string _dsRedisKey = string.Format("{0}_columns", DR.RefId);
+            DataSourceColumnsResponse ColResp = this.Redis.Get<DataSourceColumnsResponse>(_dsRedisKey);
+            foreach (EbDataColumn _Column in ColResp.Columns[0])
+            {
+                RetArgs += _Column.ColumnName + " " + _Column.DataTypeName + ",";
+            }
+            if (RetArgs != string.Empty)
+                RetArgs = RetArgs.TrimEnd(',');
+
+            string[] refidParts = DR.RefId.Split("-");
+            string fnName = $"public.eb_udf_{DR.DisplayName.ToLower().Replace(" ", "_").Replace("-", "_").Replace("&", "_")}_{refidParts[3]}_{refidParts[4]}_dr_as_fn";
+            string CreateQuery = $@"
+DROP FUNCTION IF EXISTS {fnName};
+
+CREATE OR REPLACE FUNCTION {fnName}({Args})
+  RETURNS TABLE({RetArgs})
+  LANGUAGE plpgsql
+  AS $$
+BEGIN
+  RETURN QUERY
+  {Qry};
+END
+  $$
+";
+            this.EbConnectionFactory.DataDB.DoNonQuery(CreateQuery);
         }
 
         [CompressResponse]

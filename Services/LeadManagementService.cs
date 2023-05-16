@@ -1,6 +1,7 @@
 ﻿using ExpressBase.Common;
 using ExpressBase.Common.Data;
 using ExpressBase.Common.Enums;
+using ExpressBase.Common.LocationNSolution;
 using ExpressBase.Common.Structures;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ExpressBase.Objects.WebFormRelated;
@@ -61,7 +62,8 @@ namespace ExpressBase.ServiceStack.Services
             {
                 SqlQry += @"SELECT id, eb_loc_id, trdate, genurl, name, dob, genphoffice, profession, genemail, customertype, clcity, clcountry, city,
 								typeofcustomer, sourcecategory, subcategory, consultation, online_consultation, picsrcvd, dprefid, sex, district, leadowner,
-                                baldnessgrade, diffusepattern, hfcurrently, htpreviously, country_code, watsapp_phno, cust_category, eb_modifiedby, google_review, stars, cust_language, procedure_date, comment 
+                                baldnessgrade, diffusepattern, hfcurrently, htpreviously, country_code, watsapp_phno, cust_category, eb_modifiedby, google_review, stars, cust_language, procedure_date, comment, eb_modifiedat,
+                                (SELECT id FROM patient_master WHERE patient_name_id = :accountid AND COALESCE(eb_del, 'F')='F') AS patient_master_id
 								FROM customers WHERE id = :accountid AND COALESCE(eb_del, 'F')='F';
 							SELECT id,trdate,status,followupdate,narration, eb_createdby, eb_createddt,isnotpickedup FROM leaddetails
 								WHERE customers_id=:accountid AND COALESCE(eb_del, 'F')='F' ORDER BY eb_createddt DESC;
@@ -201,6 +203,8 @@ namespace ExpressBase.ServiceStack.Services
                 CustomerData.Add("cust_language", dr[33].ToString());
                 CustomerData.Add("procedure_date", getStringValue(dr[34]));
                 CustomerData.Add("comment", dr[35].ToString());
+                CustomerData.Add("eb_modifiedat", getStringValue1(dr[36]));
+                CustomerData.Add("patient_master_id", dr[37].ToString());
                 int uid = Convert.ToInt32(dr[30]);
                 StaffInfo sinfo = StaffInfoAll.Find(e => e.id == uid);
                 CustomerData.Add("eb_modifiedby", sinfo == null ? string.Empty : sinfo.name);
@@ -442,6 +446,13 @@ namespace ExpressBase.ServiceStack.Services
             return (((DateTime)obj).Date != DateTime.MinValue) ? Convert.ToDateTime(obj).Add(timeSpan).ToString(format) : string.Empty;
         }
 
+        private string getStringValue1(object obj)
+        {
+            obj = (obj == DBNull.Value) ? DateTime.MinValue : obj;
+            string format = "dd-MM-yyyy hh:mm:ss tt";
+            return Convert.ToDateTime(obj).Add(new TimeSpan(5, 30, 0)).ToString(format);
+        }
+
         private void GetParameter(Dictionary<string, KeyValueType_Field> dict, string key, EbDbTypes ebDbTypes, List<DbParameter> parameters, ref string cols, ref string vals, ref string upcolsvals)
         {
             if (dict.ContainsKey(key))
@@ -560,6 +571,22 @@ namespace ExpressBase.ServiceStack.Services
                     parameters2.Add(this.EbConnectionFactory.DataDB.GetNewParameter(found.Key, EbDbTypes.Int32, Convert.ToInt32(found.Value)));
                     tempParam.Add(this.EbConnectionFactory.DataDB.GetNewParameter(found.Key, EbDbTypes.Int32, Convert.ToInt32(found.Value)));
                     accid = Convert.ToInt32(found.Value);
+
+                    string __qry = $"SELECT eb_modifiedat, eb_modifiedby FROM customers WHERE prehead = {50} AND id = {accid};";
+
+                    EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(__qry);
+                    string _d_temp = getStringValue1(dt.Rows[0][0]);
+                    DateTime d_latest = DateTime.ParseExact(_d_temp, "dd-MM-yyyy hh:mm:ss tt", CultureInfo.InvariantCulture);
+                    DateTime d_ = DateTime.ParseExact(dict["eb_modifiedat"].Value.ToString(), "dd-MM-yyyy hh:mm:ss tt", CultureInfo.InvariantCulture);
+                    if (d_latest > d_)
+                    {
+                        Eb_Solution SolutionObj = this.GetSolutionObject(request.SolnId);
+                        string modBy = SolutionObj.Users.ContainsKey(Convert.ToInt32(dt.Rows[0][1])) ? (" by " + SolutionObj.Users[Convert.ToInt32(dt.Rows[0][1])]) : string.Empty;
+
+                        string st = $"This form submission was modified{modBy} at {_d_temp}, while you were trying to edit it.  Please close and redo edit.";
+
+                        return new SaveCustomerResponse { Status = st };
+                    }
                 }
                 parameters2.Add(this.EbConnectionFactory.DataDB.GetNewParameter("prehead", EbDbTypes.Int32, 50));
 
@@ -587,7 +614,7 @@ namespace ExpressBase.ServiceStack.Services
             rstatus += Update_Table_Customer_Files(accid, request.ImgRefId, request.UserId, dict) * 100;
             Task.Run(() => UpdateIndexedData(this.EbConnectionFactory.DataDB, dict, accid, request.UserId));
 
-            return new SaveCustomerResponse { Status = (request.RequestMode == 0) ? accid : rstatus };
+            return new SaveCustomerResponse { Status = (request.RequestMode == 0) ? accid.ToString() : rstatus.ToString() };
         }
 
         private void AddData(Dictionary<string, string> SearchData, Dictionary<string, KeyValueType_Field> dict, string label, string key)
