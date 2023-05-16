@@ -519,6 +519,9 @@ namespace ExpressBase.ServiceStack
         {
             Dictionary<string, string> FontPaths = new Dictionary<string, string>();
             FontPaths.Add("Century Gothic", "07558_centurygothic.ttf");
+            FontPaths.Add("Meera", "Meera.ttf");
+            FontPaths.Add("Noto Serif Malayalam", "NotoSerifMalayalam-VariableFont_wght.ttf");
+            FontPaths.Add("Akshar Unicode", "AksharUnicode.ttf");
             foreach (KeyValuePair<string, string> _fonts in FontPaths)
             {
                 if (!FontFactory.IsRegistered(_fonts.Key))
