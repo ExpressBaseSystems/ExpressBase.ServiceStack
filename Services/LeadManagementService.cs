@@ -63,7 +63,8 @@ namespace ExpressBase.ServiceStack.Services
                 SqlQry += @"SELECT id, eb_loc_id, trdate, genurl, name, dob, genphoffice, profession, genemail, customertype, clcity, clcountry, city,
 								typeofcustomer, sourcecategory, subcategory, consultation, online_consultation, picsrcvd, dprefid, sex, district, leadowner,
                                 baldnessgrade, diffusepattern, hfcurrently, htpreviously, country_code, watsapp_phno, cust_category, eb_modifiedby, google_review, stars, cust_language, procedure_date, comment, eb_modifiedat,
-                                (SELECT id FROM patient_master WHERE patient_name_id = :accountid AND COALESCE(eb_del, 'F')='F') AS patient_master_id
+                                (SELECT id FROM patient_master WHERE patient_name_id = :accountid AND COALESCE(eb_del, 'F')='F') AS patient_master_id,
+                                (SELECT id FROM ht_evaluation WHERE patient_name_id = :accountid AND COALESCE(eb_del, 'F')='F') AS ht_evaluation_id
 								FROM customers WHERE id = :accountid AND COALESCE(eb_del, 'F')='F';
 							SELECT id,trdate,status,followupdate,narration, eb_createdby, eb_createddt,isnotpickedup FROM leaddetails
 								WHERE customers_id=:accountid AND COALESCE(eb_del, 'F')='F' ORDER BY eb_createddt DESC;
@@ -205,6 +206,7 @@ namespace ExpressBase.ServiceStack.Services
                 CustomerData.Add("comment", dr[35].ToString());
                 CustomerData.Add("eb_modifiedat", getStringValue1(dr[36]));
                 CustomerData.Add("patient_master_id", dr[37].ToString());
+                CustomerData.Add("ht_evaluation_id", dr[38].ToString());
                 int uid = Convert.ToInt32(dr[30]);
                 StaffInfo sinfo = StaffInfoAll.Find(e => e.id == uid);
                 CustomerData.Add("eb_modifiedby", sinfo == null ? string.Empty : sinfo.name);
