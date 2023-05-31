@@ -2936,6 +2936,45 @@ $$");
             }
             return response;
         }
+
+        public GetAttendanceDeviceListResponse Get(GetAttendanceDeviceListRequest request)
+        {
+            List<AttendanceDevice> deviceList = new List<AttendanceDevice>();
+
+            try
+            {
+                string query = $@"
+SELECT 
+    m.id, m.device_name, m.ip, m.port, m.comm_key, m.eb_loc_id, l.shortname
+FROM 
+    eb_zkteco_attendance_device_master m
+LEFT JOIN eb_locations l ON l.id=m.eb_loc_id
+WHERE 
+    m.eb_del='F' AND m.eb_void='F'; ";
+
+                EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(query);
+
+                foreach (EbDataRow dr in dt.Rows)
+                {
+                    deviceList.Add(new AttendanceDevice()
+                    {
+                        Id = Convert.ToInt32(dr[0]),
+                        DeviceName = dr[1].ToString(),
+                        Ip = dr[2].ToString(),
+                        Port = Convert.ToInt32(dr[3]),
+                        CommKey = dr[4].ToString(),
+                        LocationId = Convert.ToInt32(dr[5]),
+                        LocationShortName = dr[6].ToString()
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Exception in GetAttendanceDeviceList: " + ex.Message);
+            }
+
+            return new GetAttendanceDeviceListResponse() { DeviceList = deviceList };
+        }
     }
 }
 
