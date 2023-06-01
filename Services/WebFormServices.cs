@@ -2975,6 +2975,46 @@ WHERE
 
             return new GetAttendanceDeviceListResponse() { DeviceList = deviceList };
         }
+
+        public GetEmployeesListResponse Get(GetEmployeesListRequest request)
+        {
+            GetEmployeesListResponse resp = new GetEmployeesListResponse();
+
+            try
+            {
+                Eb_Solution SlnObj = this.GetSolutionObject(request.SolnId);
+                if (string.IsNullOrWhiteSpace(SlnObj?.SolutionSettings?.GetEmployeesDrRefid))
+                    throw new Exception("GetEmployeesDrRefid is not configured");
+
+                EbDataReader _dr = EbFormHelper.GetEbObject<EbDataReader>(SlnObj.SolutionSettings.GetEmployeesDrRefid, null, this.Redis, this);
+                EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(_dr.Sql, new DbParameter[] {
+                    this.EbConnectionFactory.DataDB.GetNewParameter("eb_loc_id", EbDbTypes.Int32, request.LocationId)
+                });
+
+                foreach (EbDataRow dr in dt.Rows)
+                {
+                    resp.Employees.Add(new EmployeesDetails()
+                    {
+                        Id = Convert.ToInt32(dr["id"]),
+                        Xid = dr["xid"].ToString(),
+                        Name = dr["name"].ToString(),
+                        Designation = dr["designation"].ToString(),
+                        Department = dr["department"].ToString(),
+                        PunchId1 = dr["punch_id1"].ToString(),
+                        PunchId2 = dr["punch_id2"].ToString(),
+                        ShiftStart = dr["shift_start"].ToString(),
+                        ShiftEnd = dr["shift_end"].ToString()
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Exception in GetAttendanceDeviceList: " + ex.Message);
+                resp.ErrorMessage = ex.Message;
+            }
+
+            return resp;
+        }
     }
 }
 
