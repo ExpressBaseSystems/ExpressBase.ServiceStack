@@ -2945,9 +2945,9 @@ $$");
             {
                 string query = $@"
 SELECT 
-    m.id, m.device_name, m.ip, m.port, m.comm_key, m.eb_loc_id, l.shortname
+    m.id, m.device_name, m.ip, m.port, m.comm_key, m.eb_loc_id, l.shortname, m.device_vendor, m.comm_key_type
 FROM 
-    eb_zkteco_attendance_device_master m
+    eb_att_device_master m
 LEFT JOIN eb_locations l ON l.id=m.eb_loc_id
 WHERE 
     m.eb_del='F' AND m.eb_void='F'; ";
@@ -2958,13 +2958,15 @@ WHERE
                 {
                     deviceList.Add(new AttendanceDevice()
                     {
-                        Id = Convert.ToInt32(dr[0]),
-                        DeviceName = dr[1].ToString(),
-                        Ip = dr[2].ToString(),
-                        Port = Convert.ToInt32(dr[3]),
-                        CommKey = dr[4].ToString(),
-                        LocationId = Convert.ToInt32(dr[5]),
-                        LocationShortName = dr[6].ToString()
+                        id = Convert.ToInt32(dr[0]),
+                        deviceName = dr[1].ToString(),
+                        ip = dr[2].ToString(),
+                        port = Convert.ToInt32(dr[3]),
+                        commKey = dr[4].ToString(),
+                        locationId = Convert.ToInt32(dr[5]),
+                        locationShortName = dr[6].ToString(),
+                        deviceVendor = dr[7].ToString(),
+                        commKeyType = dr[8].ToString()
                     });
                 }
             }
@@ -2973,7 +2975,7 @@ WHERE
                 Console.WriteLine("Exception in GetAttendanceDeviceList: " + ex.Message);
             }
 
-            return new GetAttendanceDeviceListResponse() { DeviceList = deviceList };
+            return new GetAttendanceDeviceListResponse() { deviceList = deviceList };
         }
 
         public GetEmployeesListResponse Get(GetEmployeesListRequest request)
@@ -2993,28 +2995,133 @@ WHERE
 
                 foreach (EbDataRow dr in dt.Rows)
                 {
-                    resp.Employees.Add(new EmployeesDetails()
+                    resp.employees.Add(new EmployeesDetails()
                     {
-                        Id = Convert.ToInt32(dr["id"]),
-                        Xid = dr["xid"].ToString(),
-                        Name = dr["name"].ToString(),
-                        Designation = dr["designation"].ToString(),
-                        Department = dr["department"].ToString(),
-                        PunchId1 = dr["punch_id1"].ToString(),
-                        PunchId2 = dr["punch_id2"].ToString(),
-                        ShiftStart = dr["shift_start"].ToString(),
-                        ShiftEnd = dr["shift_end"].ToString()
+                        id = Convert.ToInt32(dr["id"]),
+                        xid = dr["xid"].ToString(),
+                        name = dr["name"].ToString(),
+                        designation = dr["designation"].ToString(),
+                        department = dr["department"].ToString(),
+                        punchId1 = dr["punch_id1"].ToString(),
+                        punchId2 = dr["punch_id2"].ToString(),
+                        shiftStart = dr["shift_start"].ToString(),
+                        shiftEnd = dr["shift_end"].ToString()
                     });
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine("Exception in GetAttendanceDeviceList: " + ex.Message);
-                resp.ErrorMessage = ex.Message;
+                resp.errorMessage = ex.Message;
             }
 
             return resp;
         }
+
+        public AttDeviceBackUpUserInfoResponse Post(AttDeviceBackUpUserInfoRequest request)
+        {
+            AttDeviceBackUpUserInfoResponse resp = new AttDeviceBackUpUserInfoResponse();
+
+            try
+            {
+                string Qry = "SELECT id, user_id, name, user_role, palm, fingerprint, face, card_number, password, user_photo, access_control_role " +
+                    $"FROM eb_att_users WHERE device_id='{request.deviceId}' AND eb_del='F';";
+
+                EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(Qry);
+
+                StringBuilder fullQry = new StringBuilder();
+
+                foreach (EbDataRow dr in dt.Rows)
+                {
+                    AttDeviceUser att_usr_existing = new AttDeviceUser()
+                    {
+                        eb_att_users_id = Convert.ToInt32(dr[0]),
+                        userId = Convert.ToInt32(dr[1]),
+                        name = dr[2].ToString(),
+                        userRole = dr[3].ToString(),
+                        palm = dr[4].ToString(),
+                        fingerprint = dr[5].ToString(),
+                        face = dr[6].ToString(),
+                        cardNumber = dr[7].ToString(),
+                        password = dr[8].ToString(),
+                        userPhoto = dr[9].ToString(),
+                        accessControlRole = dr[10].ToString()
+                    };
+
+                    AttDeviceUser att_usr = request.userList.Find(e => e.userId == att_usr_existing.userId);
+
+                    if (att_usr != null)
+                    {
+                        if (att_usr.IsSame(att_usr_existing))
+                        {
+                            request.userList.Remove(att_usr);
+                        }
+                        else
+                        {
+                            att_usr.eb_att_users_id = att_usr_existing.eb_att_users_id;
+
+                            fullQry.Append($"UPDATE eb_att_users SET user_id={att_usr.userId}, name='{att_usr.name}', user_role='{att_usr.userRole}', palm='{att_usr.palm}', " +
+                                $"fingerprint='{att_usr.fingerprint}', face='{att_usr.face}', card_number='{att_usr.cardNumber}', password='{att_usr.password}', " +
+                                $"user_photo='{att_usr.userPhoto}', access_control_role='{att_usr.accessControlRole}', eb_lastmodified_by={request.UserId}, eb_lastmodified_at={this.EbConnectionFactory.DataDB.EB_CURRENT_TIMESTAMP} " +
+                                $"WHERE id={att_usr.eb_att_users_id}; ");
+                        }
+                    }
+                    else
+                    {
+                        fullQry.Append($"UPDATE eb_att_users SET eb_del='T', eb_lastmodified_by={request.UserId}, eb_lastmodified_at={this.EbConnectionFactory.DataDB.EB_CURRENT_TIMESTAMP} WHERE id={att_usr.eb_att_users_id}; ");
+                    }
+                }
+                foreach (AttDeviceUser att_usr in request.userList)
+                {
+                    if (att_usr.eb_att_users_id == 0)
+                    {
+                        fullQry.Append($"INSERT INTO eb_att_users (device_id, user_id, name, user_role, palm, fingerprint, face, card_number, password, user_photo, access_control_role, eb_loc_id, eb_created_by, eb_created_at) VALUES " +
+                                $"('{request.deviceId}', '{att_usr.userId}', '{att_usr.name}', '{att_usr.userRole}', '{att_usr.palm}', '{att_usr.fingerprint}', " +
+                                $"'{att_usr.face}', '{att_usr.cardNumber}', '{att_usr.password}', '{att_usr.userPhoto}', '{att_usr.accessControlRole}', {request.locationId}, " +
+                                $"{request.UserId}, {this.EbConnectionFactory.DataDB.EB_CURRENT_TIMESTAMP}); ");
+                    }
+                }
+
+                if (fullQry.Length > 0)
+                {
+                    resp.status = this.EbConnectionFactory.DataDB.DoNonQuery(fullQry.ToString());
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Exception in AttDeviceBackUpUserInfo: " + ex.Message);
+                resp.errorMessage = ex.Message;
+            }
+
+            return resp;
+        }
+
+        public AttDeviceSaveRawPunchRecordsResp Post(AttDeviceSaveRawPunchRecordsReq request)
+        {
+            AttDeviceSaveRawPunchRecordsResp resp = new AttDeviceSaveRawPunchRecordsResp();
+            try
+            {
+                StringBuilder sb = new StringBuilder();
+                sb.Append("INSERT INTO eb_att_punch_records (device_id, eb_loc_id, user_id, punch_time, verify_mode, inout_mode, work_code, eb_created_by, eb_created_at) VALUES ");
+                foreach (AttDeviceRawPunchRecord rec in request.punchRecords)
+                {
+                    string Qry = string.Format("('{0}', {1}, '{2}', '{3}', '{4}', '{5}', '{6}', {7}, {8}),",
+                        request.deviceId, request.locationId, rec.userId, rec.punchTime, rec.verifyMode, rec.inOutMode, rec.workCode, request.UserId, this.EbConnectionFactory.DataDB.EB_CURRENT_TIMESTAMP);
+
+                    sb.Append(Qry);
+                }
+                resp.status = this.EbConnectionFactory.DataDB.DoNonQuery(sb.Remove(sb.Length - 1, 1).ToString());
+                string _qry = $"SELECT * FROM eb_att_process_punch_records({request.deviceId});";
+                this.EbConnectionFactory.DataDB.DoQuery(_qry);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Exception in AttDeviceSaveRawPunchRecords: " + ex.Message);
+                resp.errorMessage = ex.Message;
+            }
+            return resp;
+        }
+
     }
 }
 
