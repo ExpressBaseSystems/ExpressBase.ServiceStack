@@ -3111,7 +3111,7 @@ WHERE
                     sb.Append(Qry);
                 }
                 resp.status = this.EbConnectionFactory.DataDB.DoNonQuery(sb.Remove(sb.Length - 1, 1).ToString());
-                string _qry = $"SELECT * FROM eb_att_process_punch_records({request.deviceId});";
+                string _qry = $"SELECT * FROM eb_att_process_punch_records('{request.deviceId}');";
                 this.EbConnectionFactory.DataDB.DoQuery(_qry);
             }
             catch (Exception ex)
