@@ -55,6 +55,7 @@ namespace ExpressBase.ServiceStack.Services
             List<FeedbackEntry> Flist = new List<FeedbackEntry>();
             List<BillingEntry> Blist = new List<BillingEntry>();
             List<SurgeryEntry> Slist = new List<SurgeryEntry>();
+            List<GfcPrpEntry> GPlist = new List<GfcPrpEntry>();
             string attachImgInfo = "[]", prpImgInfo = "[]";
 
             int Mode = 0;
@@ -73,6 +74,12 @@ namespace ExpressBase.ServiceStack.Services
 							SELECT id,dateofsurgery,eb_loc_id,createdby,createddt, extractiondone_by,
 									implantation_by,consent_by,anaesthesia_by,post_briefing_by,nurses_id,complementry,method,narration
 								FROM leadsurgerystaffdetails WHERE customers_id=:accountid AND COALESCE(eb_del, 'F')='F' ORDER BY createddt DESC;
+                            
+                            SELECT d.id,d.trndate,d.gfcprp,d.done_by,d.complementry,d.gfcprpsession,d.narration,d.eb_loc_id,u.fullname AS eb_created_by,d.eb_created_at
+                                FROM leadgfcprpdetails d
+                            LEFT JOIN eb_users u ON u.id=d.eb_created_by
+                            WHERE d.customers_id=:accountid AND COALESCE(d.eb_del, 'F')='F' ORDER BY d.eb_created_at DESC;
+                            
 							SELECT noofgrafts,totalrate,prpsessions,consulted,consultingfeepaid,consultingdoctor,eb_closing,LOWER(TRIM(nature)),consdate,probmonth
 								FROM leadratedetails WHERE customers_id=:accountid;";
 
@@ -211,9 +218,9 @@ namespace ExpressBase.ServiceStack.Services
                 StaffInfo sinfo = StaffInfoAll.Find(e => e.id == uid);
                 CustomerData.Add("eb_modifiedby", sinfo == null ? string.Empty : sinfo.name);
 
-                if (ds.Tables[Qcnt + 4].Rows.Count > 0)
+                if (ds.Tables[Qcnt + 5].Rows.Count > 0)
                 {
-                    dr = ds.Tables[Qcnt + 4].Rows[0];
+                    dr = ds.Tables[Qcnt + 5].Rows[0];
                     CustomerData.Add("noofgrafts", dr[0].ToString());
                     CustomerData.Add("totalrate", dr[1].ToString());
                     CustomerData.Add("prpsessions", dr[2].ToString());
@@ -228,7 +235,7 @@ namespace ExpressBase.ServiceStack.Services
                 }
 
                 List<FileMetaInfo> _list = new List<FileMetaInfo>();
-                foreach (EbDataRow dRow in ds.Tables[Qcnt + 5].Rows)
+                foreach (EbDataRow dRow in ds.Tables[Qcnt + 6].Rows)
                 {
                     FileMetaInfo info = new FileMetaInfo
                     {
@@ -242,7 +249,7 @@ namespace ExpressBase.ServiceStack.Services
                     if (!_list.Contains(info))
                         _list.Add(info);
                 }
-                foreach (EbDataRow dRow in ds.Tables[Qcnt + 7].Rows)
+                foreach (EbDataRow dRow in ds.Tables[Qcnt + 8].Rows)
                 {
                     FileMetaInfo info = new FileMetaInfo
                     {
@@ -259,7 +266,7 @@ namespace ExpressBase.ServiceStack.Services
                 attachImgInfo = JsonConvert.SerializeObject(_list);
 
                 _list = new List<FileMetaInfo>();
-                foreach (EbDataRow dRow in ds.Tables[Qcnt + 6].Rows)
+                foreach (EbDataRow dRow in ds.Tables[Qcnt + 7].Rows)
                 {
                     FileMetaInfo info = new FileMetaInfo
                     {
@@ -334,8 +341,25 @@ namespace ExpressBase.ServiceStack.Services
                         Comment = i[13].ToString()
                     });
                 }
-            }
 
+                //gfc prp details
+                foreach (var i in ds.Tables[Qcnt + 4].Rows)
+                {
+                    GPlist.Add(new GfcPrpEntry
+                    {
+                        Id = Convert.ToInt32(i[0]),
+                        Date = getStringValue(i[1]),
+                        GfcOrPrp = i[2].ToString(),
+                        Done_By = Convert.ToInt32(i[3]),
+                        Complimentary = i[4].ToString(),
+                        GfcPrpSession = Convert.ToInt32(i[5]),
+                        Comment = i[6].ToString(),
+                        Branch = CostCenter[Convert.ToInt32(i[7])],
+                        Created_By = i[8].ToString(),
+                        Created_Date = getStringValue(i[9])
+                    });
+                }
+            }
 
             return new GetManageLeadResponse
             {
@@ -347,6 +371,7 @@ namespace ExpressBase.ServiceStack.Services
                 FeedbackList = Flist,
                 BillingList = Blist,
                 SurgeryList = Slist,
+                GfcPrpList = GPlist,
                 CrntCityList = clcityList,
                 CrntCountryList = clcountryList,
                 CityList = cityList,
@@ -857,6 +882,46 @@ namespace ExpressBase.ServiceStack.Services
                 rstatus = this.EbConnectionFactory.DataDB.UpdateTable(Qry, parameters.ToArray());
             }
             return new SaveSurgeryDetailsResponse { Status = rstatus };
+        }
+
+        public SaveGfcPrpDetailsResponse Any(SaveGfcPrpDetailsRequest request)
+        {
+            int rstatus = 0;
+            GfcPrpEntry GP_Obj = JsonConvert.DeserializeObject<GfcPrpEntry>(request.Data);
+
+            List<DbParameter> parameters = new List<DbParameter>
+            {
+                this.EbConnectionFactory.DataDB.GetNewParameter("customers_id", EbDbTypes.Int32, GP_Obj.Account_Code),
+                this.EbConnectionFactory.DataDB.GetNewParameter("trndate", EbDbTypes.Date, Convert.ToDateTime(DateTime.ParseExact(GP_Obj.Date, "dd-MM-yyyy", CultureInfo.InvariantCulture))),
+                this.EbConnectionFactory.DataDB.GetNewParameter("eb_loc_id", EbDbTypes.Int32, GP_Obj.Branch),
+                this.EbConnectionFactory.DataDB.GetNewParameter("eb_created_by", EbDbTypes.Int32, request.UserId),
+                this.EbConnectionFactory.DataDB.GetNewParameter("gfcprp", EbDbTypes.String, GP_Obj.GfcOrPrp),
+                this.EbConnectionFactory.DataDB.GetNewParameter("done_by", EbDbTypes.Int32, GP_Obj.Done_By),
+                this.EbConnectionFactory.DataDB.GetNewParameter("complementry", EbDbTypes.String, GP_Obj.Complimentary),
+                this.EbConnectionFactory.DataDB.GetNewParameter("gfcprpsession", EbDbTypes.Int32, GP_Obj.GfcPrpSession),
+                this.EbConnectionFactory.DataDB.GetNewParameter("narration", EbDbTypes.String, GP_Obj.Comment),
+                this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, GP_Obj.Id)
+            };
+
+            if (GP_Obj.Id == 0)//new
+            {
+                string Qry = @"INSERT INTO
+ 									leadgfcprpdetails(customers_id, trndate, gfcprp, done_by, complementry, gfcprpsession, 
+                                        narration, eb_loc_id, eb_created_by, eb_created_at)
+								VALUES
+									(:customers_id, :trndate, :gfcprp, :done_by, :complementry, :gfcprpsession, 
+                                        :narration, :eb_loc_id, :eb_created_by, NOW());";
+                rstatus = this.EbConnectionFactory.DataDB.InsertTable(Qry, parameters.ToArray());
+            }
+            else if (request.Permission)//update
+            {
+                string Qry = @"UPDATE leadgfcprpdetails 
+								SET trndate=:trndate, gfcprp=:gfcprp, done_by=:done_by, complementry=:complementry, gfcprpsession=:gfcprpsession, 
+                                        narration=:narration, eb_loc_id=:eb_loc_id, eb_lastmodified_by=:eb_created_by, eb_lastmodified_at=NOW()
+								WHERE id = :id AND customers_id=:customers_id;";
+                rstatus = this.EbConnectionFactory.DataDB.UpdateTable(Qry, parameters.ToArray());
+            }
+            return new SaveGfcPrpDetailsResponse { Status = rstatus };
         }
 
         public LmUniqueCheckResponse Any(LmUniqueCheckRequest request)
