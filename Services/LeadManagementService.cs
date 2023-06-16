@@ -351,7 +351,7 @@ namespace ExpressBase.ServiceStack.Services
                         Date = getStringValue(i[1]),
                         GfcOrPrp = i[2].ToString(),
                         Done_By = Convert.ToInt32(i[3]),
-                        Complimentary = i[4].ToString(),
+                        Service_Type = i[4].ToString(),
                         GfcPrpSession = Convert.ToInt32(i[5]),
                         Comment = i[6].ToString(),
                         Branch = CostCenter[Convert.ToInt32(i[7])],
@@ -897,7 +897,7 @@ namespace ExpressBase.ServiceStack.Services
                 this.EbConnectionFactory.DataDB.GetNewParameter("eb_created_by", EbDbTypes.Int32, request.UserId),
                 this.EbConnectionFactory.DataDB.GetNewParameter("gfcprp", EbDbTypes.String, GP_Obj.GfcOrPrp),
                 this.EbConnectionFactory.DataDB.GetNewParameter("done_by", EbDbTypes.Int32, GP_Obj.Done_By),
-                this.EbConnectionFactory.DataDB.GetNewParameter("complementry", EbDbTypes.String, GP_Obj.Complimentary),
+                this.EbConnectionFactory.DataDB.GetNewParameter("complementry", EbDbTypes.String, GP_Obj.Service_Type),
                 this.EbConnectionFactory.DataDB.GetNewParameter("gfcprpsession", EbDbTypes.Int32, GP_Obj.GfcPrpSession),
                 this.EbConnectionFactory.DataDB.GetNewParameter("narration", EbDbTypes.String, GP_Obj.Comment),
                 this.EbConnectionFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, GP_Obj.Id)
