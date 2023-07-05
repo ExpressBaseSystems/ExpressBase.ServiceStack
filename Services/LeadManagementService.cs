@@ -92,8 +92,8 @@ namespace ExpressBase.ServiceStack.Services
 							SELECT B.id, B.filename, B.tags, B.uploadts, B.filecategory
 								FROM eb_files_ref B LEFT JOIN customer_files A 
 								ON A.eb_files_ref_id = B.id				
-								WHERE ((A.customer_id = :accountid AND COALESCE(A.eb_del, false) = false) OR B.context_sec = 'Prp_CustomerId:{request.AccId}')
-								AND COALESCE(B.eb_del, 'F') = 'F' AND B.context = 'prp';
+								WHERE ((A.customer_id = :accountid AND COALESCE(A.eb_del, false) = false AND B.context = 'prp') OR B.context_sec = 'Prp_CustomerId:{request.AccId}')
+								AND COALESCE(B.eb_del, 'F') = 'F';
 
                             SELECT B.id, B.filename, B.tags, B.uploadts, B.filecategory
                                 FROM customers A, eb_files_ref B 
