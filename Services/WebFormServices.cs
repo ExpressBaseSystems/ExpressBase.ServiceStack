@@ -1162,7 +1162,7 @@ $$");
                     if (request.SourceRowId > 0)
                     {
                         sourceForm.RefreshFormData(EbConnectionFactory.DataDB, this);
-                        destForm.FormData = EbFormHelper.GetFilledNewFormData(sourceForm, true);
+                        destForm.FormData = EbFormHelper.GetFilledNewFormData(sourceForm, true, request.IsClone);
                     }
                     else
                         destForm.FormData = destForm.GetEmptyModel();
