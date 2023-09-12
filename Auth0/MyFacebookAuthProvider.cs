@@ -203,7 +203,7 @@
 //							};
 //							b = JsonConvert.SerializeObject(sco_signup);
 //							string sociallink1 = "localhost:";
-//							string sociallink2 = "eb-test.shop";
+//							string sociallink2 = RoutingConstants.STAGEHOST;
 //							string sociallink3 = "expressbase.com";
 //							Console.WriteLine("ReferrerUrl= " + session.ReferrerUrl);
 //							if (urllink.Contains(sociallink1, StringComparison.OrdinalIgnoreCase))
@@ -215,8 +215,8 @@
 
 //							if (urllink.Contains(sociallink2, StringComparison.OrdinalIgnoreCase))
 //							{
-//								Console.WriteLine("reached  redirect to myaccount.eb-test.shop");
-//								return authService.Redirect(SuccessRedirectUrlFilter(this, string.Format("https://myaccount.eb-test.shop/social_oauth?scosignup={0}", b)));
+//								Console.WriteLine("reached  redirect to myaccount." + RoutingConstants.STAGEHOST);
+//								return authService.Redirect(SuccessRedirectUrlFilter(this, string.Format("https://myaccount.{1}/social_oauth?scosignup={0}", b, RoutingConstants.STAGEHOST)));
 //							}
 
 //							if (urllink.Contains(sociallink3, StringComparison.OrdinalIgnoreCase))

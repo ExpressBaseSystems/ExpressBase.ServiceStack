@@ -96,10 +96,10 @@ namespace ExpressBase.ServiceStack
                 HashAlgorithm = "RS256",
                 PrivateKeyXml = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_JWT_PRIVATE_KEY_XML),
                 PublicKeyXml = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_JWT_PUBLIC_KEY_XML),
-//#if (DEBUG)
+                //#if (DEBUG)
                 RequireSecureConnection = false,
                 //EncryptPayload = true,
-//#endif
+                //#endif
                 ExpireTokensIn = TimeSpan.FromSeconds(90),
                 ExpireRefreshTokensIn = TimeSpan.FromHours(24),
                 PersistSession = true,
@@ -127,10 +127,10 @@ namespace ExpressBase.ServiceStack
 
             EbApiAuthProvider apiprovider = new EbApiAuthProvider(AppSettings)
             {
-//#if (DEBUG)
+                //#if (DEBUG)
                 RequireSecureConnection = false,
                 //EncryptPayload = true,
-//#endif
+                //#endif
             };
 
             string env = Environment.GetEnvironmentVariable(EnvironmentConstants.ASPNETCORE_ENVIRONMENT);
@@ -139,7 +139,7 @@ namespace ExpressBase.ServiceStack
 
             if (env == "Staging")
             {
-                fburl = "https://ss.eb-test.shop/auth/facebook";
+                fburl = $"https://ss.{RoutingConstants.STAGEHOST}/auth/facebook";
             }
             else if (env == "Production")
             {
@@ -230,10 +230,10 @@ namespace ExpressBase.ServiceStack
             //}
             //else
             //{
-                var redisPassword = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_REDIS_PASSWORD);
-                var redisPort = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_REDIS_PORT);
-                var redisConnectionString = string.Format("redis://{0}@{1}:{2}", redisPassword, redisServer, redisPort);
-                container.Register<IRedisClientsManager>(c => new RedisManagerPool(redisConnectionString));
+            var redisPassword = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_REDIS_PASSWORD);
+            var redisPort = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_REDIS_PORT);
+            var redisConnectionString = string.Format("redis://{0}@{1}:{2}", redisPassword, redisServer, redisPort);
+            container.Register<IRedisClientsManager>(c => new RedisManagerPool(redisConnectionString));
 
             //}
             container.Register<IAuthRepository>(c => new MyRedisAuthRepository(c.Resolve<IRedisClientsManager>()));
