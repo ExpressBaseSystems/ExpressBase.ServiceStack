@@ -13,6 +13,8 @@ using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Globalization;
+using System.Linq;
+using System.Net;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -133,11 +135,11 @@ namespace ExpressBase.ServiceStack.Services
                 string query;
                 if (request.Location.LocId > 0)
                     query = $@"UPDATE eb_locations SET longname = @lname, shortname = @sname, image = @img, meta_json = @meta, parent_id = @parentid,
-                            is_group = @isgroup, eb_location_types_id = @type_id,  eb_lastmodified_by = @by, eb_lastmodified_at = { this.EbConnectionFactory.DataDB.EB_CURRENT_TIMESTAMP}
+                            is_group = @isgroup, eb_location_types_id = @type_id,  eb_lastmodified_by = @by, eb_lastmodified_at = {this.EbConnectionFactory.DataDB.EB_CURRENT_TIMESTAMP}
                             WHERE id = @lid RETURNING id;";
                 else
                     query = $@"INSERT INTO eb_locations(longname,shortname,image,meta_json, parent_id, is_group, eb_location_types_id, eb_created_by, eb_created_at) 
-                            VALUES(:lname, :sname, :img, :meta, :parentid, :isgroup, :type_id, :by, { this.EbConnectionFactory.DataDB.EB_CURRENT_TIMESTAMP}) RETURNING id;";
+                            VALUES(:lname, :sname, :img, :meta, :parentid, :isgroup, :type_id, :by, {this.EbConnectionFactory.DataDB.EB_CURRENT_TIMESTAMP}) RETURNING id;";
                 DbParameter[] parameters = {
                 this.EbConnectionFactory.ObjectsDB.GetNewParameter("lname", EbDbTypes.String, request.Location.LongName),
                 this.EbConnectionFactory.ObjectsDB.GetNewParameter("sname", EbDbTypes.String, request.Location.ShortName),
@@ -167,6 +169,216 @@ namespace ExpressBase.ServiceStack.Services
             parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("id", EbDbTypes.Int32, request.Id));
             int dt = this.EbConnectionFactory.ObjectsDB.DoNonQuery(query.ToString(), parameters.ToArray());
             return new DeleteLocResponse { id = (dt == 1) ? request.Id : 0 };
+        }
+
+        [Authenticate]
+        public LockUnlockFyResponse Post(LockUnlockFyRequest request)
+        {
+            try
+            {
+                LockUnlockFyRequestObject obj = JsonConvert.DeserializeObject<LockUnlockFyRequestObject>(request.ReqObject);
+                string query = $"SELECT * FROM eb_fin_years_lines WHERE id=ANY('{{{obj.FpIdList.Join()}}}') AND eb_del='F'";
+                EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(query);
+                bool IsAdd = obj.Action == "lock" || obj.Action == "partial_lock";
+                string ColName = obj.Action == "lock" || obj.Action == "unlock" ? "locked_ids" : "partially_locked_ids";
+
+                Eb_Solution sol_Obj = this.Redis.Get<Eb_Solution>(String.Format("solution_{0}", request.SolnId));
+                if (sol_Obj == null)
+                {
+                    return new LockUnlockFyResponse() { Status = (int)HttpStatusCode.InternalServerError, Message = "Soluiton object is null" };
+                }
+
+                List<int> locIds;
+                if (obj.CurrentLoc == -1)
+                {
+                    locIds = sol_Obj.Locations.Keys.ToList();
+                }
+                else
+                {
+                    locIds = new List<int> { obj.CurrentLoc };
+                }
+
+                int st = LockUnlockFy(dt, ColName, locIds, IsAdd, request.UserId);
+
+                if (st > 0)
+                {
+                    sol_Obj.FinancialYears = GetFinancialYears(request.SolnId);
+                    this.Redis.Set<Eb_Solution>(String.Format("solution_{0}", request.SolnId), sol_Obj);
+                    return new LockUnlockFyResponse() { Status = (int)HttpStatusCode.OK, Message = $"{obj.Action.ReplaceAll("_", " ").ToTitleCase()} operation is successfull" };
+                }
+
+                return new LockUnlockFyResponse { Status = (int)HttpStatusCode.BadRequest, Message = "Nothing updated" };
+            }
+            catch (Exception ex)
+            {
+                return new LockUnlockFyResponse() { Status = (int)HttpStatusCode.InternalServerError, Message = ex.Message };
+            }
+        }
+
+        private int LockUnlockFy(EbDataTable dt, string ColName, List<int> LocIds, bool IsAdd, int UserId)
+        {
+            int status = 0;
+            string query = string.Empty;
+            foreach (EbDataRow dr in dt.Rows)
+            {
+                string lids = dr[ColName].ToString();
+                List<int> lidsList = lids.Length > 0 ? lids.Split(',').Select(int.Parse).ToList() : new List<int>();
+                bool listChanged = false;
+                foreach (int lid in LocIds)
+                {
+                    if (IsAdd)
+                    {
+                        if (!lidsList.Contains(lid))
+                        {
+                            lidsList.Add(lid);
+                            listChanged = true;
+                        }
+                    }
+                    else
+                    {
+                        if (lidsList.Contains(lid))
+                        {
+                            lidsList.Remove(lid);
+                            listChanged = true;
+                        }
+                    }
+                }
+
+                if (listChanged)
+                {
+                    lidsList.Sort();
+                    query += $"UPDATE eb_fin_years_lines SET {ColName}='{lidsList.Join()}', eb_lastmodified_by={UserId}, eb_lastmodified_at={this.EbConnectionFactory.DataDB.EB_CURRENT_TIMESTAMP} WHERE id={dr["id"]};";
+                }
+            }
+            if (!string.IsNullOrWhiteSpace(query))
+            {
+                status = this.EbConnectionFactory.DataDB.DoNonQuery(query);
+            }
+            return status;
+        }
+
+        [Authenticate]
+        public CreateNewFyResponse Post(CreateNewFyRequest request)
+        {
+            try
+            {
+                Eb_Solution sol_Obj = this.Redis.Get<Eb_Solution>(String.Format("solution_{0}", request.SolnId));
+                if (sol_Obj == null)
+                {
+                    return new CreateNewFyResponse() { Status = (int)HttpStatusCode.InternalServerError, Message = "Soluiton object is null" };
+                }
+                string query, op;
+
+                if (Int32.TryParse(request.Id, out int fyId) && fyId > 0)
+                {
+                    query = GetUpdateFyQuery(request, fyId);
+                    op = "updation";
+                }
+                else
+                {
+                    query = GetInsertFyQuery(request);
+                    op = "creation";
+                }
+
+                int status = this.EbConnectionFactory.DataDB.DoNonQuery(query);
+
+                if (status > 0)
+                {
+                    sol_Obj.FinancialYears = GetFinancialYears(request.SolnId);
+                    this.Redis.Set<Eb_Solution>(String.Format("solution_{0}", request.SolnId), sol_Obj);
+                    return new CreateNewFyResponse() { Status = (int)HttpStatusCode.OK, Message = $"Financial Year {op} successfull" };
+                }
+                else
+                {
+                    return new CreateNewFyResponse() { Status = (int)HttpStatusCode.BadRequest, Message = $"Financial Year {op} failed. Please try again later." };
+                }
+            }
+            catch (Exception ex)
+            {
+                return new CreateNewFyResponse() { Status = (int)HttpStatusCode.InternalServerError, Message = ex.Message };
+            }
+        }
+
+        private string GetFinYearLinesInsertQry(string duration, DateTime nw_fy_start, DateTime nw_fy_end, int UserId, int FyId)
+        {
+            string query = string.Empty;
+            int Months = 12;
+            if (!string.IsNullOrWhiteSpace(duration))
+            {
+                duration = duration.Trim().Replace(" ", string.Empty).ToLower();
+                if (duration.ToLower() == "monthly")
+                    Months = 1;
+                else if (duration.ToLower() == "quarterly")
+                    Months = 3;
+                else if (duration.ToLower() == "halfyearly")
+                    Months = 6;
+            }
+            DateTime nw_fp_start = nw_fy_start, nw_fp_end = nw_fp_start.AddMonths(Months).AddDays(-1);
+
+            while (nw_fp_end <= nw_fy_end)
+            {
+                query += string.Format("INSERT INTO eb_fin_years_lines (active_start, active_end, eb_created_by, eb_created_at, eb_del, eb_fin_years_id) VALUES ('{0}', '{1}', {2}, {3}, 'F', {4});",
+                    nw_fp_start.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                    nw_fp_end.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                    UserId,
+                    this.EbConnectionFactory.DataDB.EB_CURRENT_TIMESTAMP,
+                    FyId > 0 ? FyId.ToString() : "(SELECT eb_currval('eb_fin_years_id_seq'))");
+                nw_fp_start = nw_fp_end.AddDays(1);
+                nw_fp_end = nw_fp_start.AddMonths(Months).AddDays(-1);
+            }
+            return query;
+        }
+
+        private string GetInsertFyQuery(CreateNewFyRequest request)
+        {
+            DateTime nw_fy_start, nw_fy_end;
+            string query = $"SELECT MAX(fy_end) FROM eb_fin_years WHERE COALESCE(eb_del,'F')='F';";
+            EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(query);
+            if (dt.Rows.Count > 0)
+            {
+                DateTime fy_end = Convert.ToDateTime(dt.Rows[0][0]);
+                nw_fy_start = fy_end.AddDays(1);
+            }
+            else
+            {
+                nw_fy_start = DateTime.ParseExact(request.Start, "yyyy-MM-dd", CultureInfo.InvariantCulture);
+            }
+
+            nw_fy_end = nw_fy_start.AddYears(1).AddDays(-1);
+
+            query = string.Format("INSERT INTO eb_fin_years (fy_start, fy_end, eb_created_by, eb_created_at, eb_del) VALUES ('{0}', '{1}', {2}, {3}, 'F');",
+                nw_fy_start.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                nw_fy_end.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                request.UserId,
+                this.EbConnectionFactory.DataDB.EB_CURRENT_TIMESTAMP);
+
+            query += GetFinYearLinesInsertQry(request.Duration, nw_fy_start, nw_fy_end, request.UserId, 0);
+
+            return query;
+        }
+
+        private string GetUpdateFyQuery(CreateNewFyRequest request, int fyId)
+        {
+            string query = $"SELECT fy_start FROM eb_fin_years WHERE id={fyId} AND COALESCE(eb_del,'F')='F';";
+            EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(query);
+            DateTime nw_fy_start, nw_fy_end;
+            if (dt.Rows.Count > 0)
+            {
+                nw_fy_start = Convert.ToDateTime(dt.Rows[0][0]);
+                nw_fy_end = nw_fy_start.AddYears(1).AddDays(-1);
+            }
+            else
+            {
+                throw new Exception("Financial Year update failed. Start date not found.");
+            }
+
+            query = string.Format("UPDATE eb_fin_years_lines SET eb_del='T', eb_lastmodified_by={0}, eb_lastmodified_at={1} WHERE eb_fin_years_id={2} AND eb_del='F';" +
+                "UPDATE eb_fin_years SET eb_lastmodified_by={0}, eb_lastmodified_at={1} WHERE id={2} AND eb_del='F';",
+                request.UserId, this.EbConnectionFactory.DataDB.EB_CURRENT_TIMESTAMP, fyId);
+
+            query += GetFinYearLinesInsertQry(request.Duration, nw_fy_start, nw_fy_end, request.UserId, fyId);
+
+            return query;
         }
 
         [Authenticate]
@@ -294,24 +506,53 @@ namespace ExpressBase.ServiceStack.Services
             try
             {
                 EbConnectionFactory _ebConFactory = new EbConnectionFactory(solnId, this.Redis);
-                string sql = @"SELECT id, fy_start, fy_end, active_start, active_end, eb_lock FROM eb_fin_years WHERE COALESCE(eb_del, 'F') = 'F' ORDER BY active_start DESC;";
+                string sql = @"
+SELECT 
+    y.id, y.fy_start, y.fy_end, yl.id AS eb_fin_years_lines_id, yl.active_start, yl.active_end, yl.locked_ids, yl.partially_locked_ids
+FROM 
+    eb_fin_years y, eb_fin_years_lines yl
+WHERE 
+    y.id = yl.eb_fin_years_id AND
+    y.eb_del = 'F' AND  yl.eb_del = 'F'
+ORDER BY 
+    y.fy_start, yl.active_start;";
+
                 EbDataTable dt = _ebConFactory.DataDB.DoQuery(sql);
+                List<int> _locIds;
+                List<int> _locIdsPartial;
+                int fyId;
+                EbFinancialYear FinY;
                 for (int i = 0; i < dt.Rows.Count; i++)
                 {
-                    EbFinancialYear FinY = new EbFinancialYear()
+                    fyId = Convert.ToInt32(dt.Rows[i][0]);
+                    FinY = FinYears.List.Find(e => e.Id == fyId);
+                    if (FinY == null)
                     {
-                        Id = Convert.ToInt32(dt.Rows[i][0]),
-                        FyStart = Convert.ToDateTime(dt.Rows[i][1]),
-                        FyEnd = Convert.ToDateTime(dt.Rows[i][2]),
-                        ActStart = Convert.ToDateTime(dt.Rows[i][3]),
-                        ActEnd = Convert.ToDateTime(dt.Rows[i][4]),
-                        Locked = Convert.ToString(dt.Rows[i][5]) == "T",
-                        LocIds = new List<int> { -1 }
-                    };
-                    FinYears.List.Add(FinY);
+                        FinY = new EbFinancialYear()
+                        {
+                            Id = fyId,
+                            FyStart = Convert.ToDateTime(dt.Rows[i][1]),
+                            FyEnd = Convert.ToDateTime(dt.Rows[i][2])
+                        };
+                        FinYears.List.Add(FinY);
+                    }
+
+                    _locIds = string.IsNullOrWhiteSpace(Convert.ToString(dt.Rows[i][6])) ? new List<int>() : Convert.ToString(dt.Rows[i][6]).Split(",").Select(Int32.Parse).ToList();
+                    _locIdsPartial = string.IsNullOrWhiteSpace(Convert.ToString(dt.Rows[i][7])) ? new List<int>() : Convert.ToString(dt.Rows[i][7]).Split(",").Select(Int32.Parse).ToList();
+
+                    FinY.List.Add(new EbFinancialPeriod()
+                    {
+                        Id = Convert.ToInt32(dt.Rows[i][3]),
+                        FyId = FinY.Id,
+                        ActStart = Convert.ToDateTime(dt.Rows[i][4]),
+                        ActEnd = Convert.ToDateTime(dt.Rows[i][5]),
+                        LockedIds = _locIds,
+                        PartiallyLockedIds = _locIdsPartial
+                    });
+
                 }
-                if (dt.Rows.Count > 0)
-                    FinYears.Current = Convert.ToInt32(dt.Rows[0][0]);
+                //if (dt.Rows.Count > 0)
+                //    FinYears.Current = Convert.ToInt32(dt.Rows[0][0]);
             }
             catch (Exception e)
             {
