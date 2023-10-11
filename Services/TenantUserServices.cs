@@ -415,7 +415,8 @@ namespace ExpressBase.ServiceStack.Services
                         OtpDeliverySignin = wrap_sol.OtpDeliverySignin,
                         SolutionType = wrap_sol.SolutionType,
                         PrimarySolution = wrap_sol.PrimarySolution,
-                        FinancialYears = GetFinancialYears(req.SolnId)
+                        FinancialYears = GetFinancialYears(req.SolnId),
+                        Languages = GetLanguages(req.SolnId)
                         //LocationTree = Loc.LocationTree
                     };
 
@@ -561,9 +562,40 @@ ORDER BY
             return FinYears;
         }
 
-        private string GetDateString(object date)
+        private List<EbLanguage> GetLanguages(string solnId)
         {
-            return Convert.ToDateTime(date).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+            List<EbLanguage> list = new List<EbLanguage>();
+            try
+            {
+                EbConnectionFactory _ebConFactory = new EbConnectionFactory(solnId, this.Redis);
+
+                string sql = @"
+SELECT 
+    l.id, l.code, l.name, l.display_name
+FROM 
+    eb_languages l
+WHERE 
+    COALESCE(l.eb_del, 'F') = 'F'
+ORDER BY 
+    l.eb_row_num;";
+
+                EbDataTable dt = _ebConFactory.DataDB.DoQuery(sql);
+                for (int i = 0; i < dt.Rows.Count; i++)
+                {
+                    list.Add(new EbLanguage()
+                    {
+                        Id = Convert.ToInt32(dt.Rows[i][0]),
+                        Code = Convert.ToString(dt.Rows[i][1]),
+                        Name = Convert.ToString(dt.Rows[i][2]),
+                        DisplayName = Convert.ToString(dt.Rows[i][3])
+                    });
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Error in GetLanguages: {e.Message}\n{e.StackTrace}");
+            }
+            return list;
         }
 
         [Authenticate]

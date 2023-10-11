@@ -107,7 +107,7 @@ namespace ExpressBase.ServiceStack.Services
 
         public object Get(MLLoadLangRequest request)
         {
-            string query = string.Format(@"SELECT id,language FROM eb_languages ORDER BY language ASC");
+            string query = string.Format(@"SELECT id,name FROM eb_languages ORDER BY name ASC");
             List<DbParameter> parameters = new List<DbParameter>();
             var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(query, parameters.ToArray());
             Dictionary<string, int> dict = new Dictionary<string, int>();
@@ -122,7 +122,7 @@ namespace ExpressBase.ServiceStack.Services
             string query = string.Format(@"SELECT C.id, A.key, A.id, B.id, C.value
 											FROM eb_keys A, eb_languages B, eb_keyvalue C
 											WHERE A.id=C.key_id AND B.id=C.lang_id AND LOWER(A.key) LIKE LOWER(@KEY) 
-											ORDER BY B.language ASC");
+											ORDER BY B.name ASC");
             List<DbParameter> parameters = new List<DbParameter>();
             parameters.Add(this.EbConnectionFactory.ObjectsDB.GetNewParameter("KEY", EbDbTypes.String, request.Key));
             var dt = this.EbConnectionFactory.ObjectsDB.DoQuery(query, parameters.ToArray());

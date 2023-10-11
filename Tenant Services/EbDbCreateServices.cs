@@ -306,7 +306,7 @@ namespace ExpressBase.ServiceStack.Services
                 //..............insert into client tbl eb_users............ to SOLUTION
                 string sql2 = @"INSERT INTO eb_users(email,pwd,statusid) VALUES ('anonymous@anonym.com','294de3557d9d00b3d2d8a1e6aab028cf',0); 
                                 INSERT INTO eb_locations(shortname, longname, eb_location_types_id, parent_id, is_group) VALUES ('default', 'default', 1, 0, 'T');
-                                INSERT INTO eb_languages(language) VALUES ('English (en-US)');";
+                                INSERT INTO eb_languages(code, name, display_name, eb_row_num, eb_del) VALUES ('en', 'English', 'ENG', 1, 'F');";
                 if (SolutionType != SolutionType.REPLICA)
                     sql2 += @" INSERT INTO eb_user_types(name,eb_del ) VALUES ('default','F');
                            INSERT INTO eb_location_types(type) VALUES ('default');";
