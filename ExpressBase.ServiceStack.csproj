@@ -8,6 +8,8 @@
   <ItemGroup>
     <None Remove="07558_centurygothic.ttf" />
     <None Remove="123_meera.ttf" />
+    <None Remove="AksharUnicode.ttf" />
+    <None Remove="NotoSerifMalayalam-VariableFont_wght.ttf" />
   </ItemGroup>
 
   <ItemGroup>
@@ -15,6 +17,12 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="123_meera.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="AksharUnicode.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="NotoSerifMalayalam-VariableFont_wght.ttf">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="robots.txt">
