@@ -1530,7 +1530,7 @@ $$");
         }
 
 
-        public EbWebForm GetWebFormObject(string RefId, string UserAuthId, string SolnId, int CurrrentLocation = 0)
+        public EbWebForm GetWebFormObject(string RefId, string UserAuthId, string SolnId, int CurrrentLocation = 0, string CurrentLanguage = null)
         {
             EbWebForm _form = EbFormHelper.GetEbObject<EbWebForm>(RefId, null, this.Redis, this);
             _form.LocationId = CurrrentLocation;
@@ -1553,6 +1553,10 @@ $$");
                     _form.SolutionObj.SolutionSettings = new SolutionSettings() { SystemColumns = new EbSystemColumns(EbSysCols.Values) };
                 else if (_form.SolutionObj.SolutionSettings.SystemColumns == null)
                     _form.SolutionObj.SolutionSettings.SystemColumns = new EbSystemColumns(EbSysCols.Values);
+                if (CurrentLanguage != null && _form.SolutionObj.Languages != null && _form.SolutionObj.Languages.Exists(e => e.Code == CurrentLanguage))
+                {
+                    _form.CurrentLanguageCode = CurrentLanguage;
+                }
             }
             _form.AfterRedisGet_All(this);
             return _form;
@@ -1614,7 +1618,7 @@ $$");
                 DateTime startdt = DateTime.Now;
                 Console.WriteLine("Insert/Update WebFormData : start - " + startdt);
                 EbFormHelper.SetFsSsReceivedCxtId(this.Redis, request.SolnId, request.RefId, request.UserId, request.FsCxtId, request.RowId);
-                FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId, request.CurrentLoc);
+                FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId, request.CurrentLoc, request.CurrentLang);
                 CheckDataPusherCompatibility(FormObj);
                 FormObj.TableRowId = request.RowId;
                 FormObj.FormData = JsonConvert.DeserializeObject<WebformData>(request.FormData);
