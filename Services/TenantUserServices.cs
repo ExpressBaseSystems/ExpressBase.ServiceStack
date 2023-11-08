@@ -334,7 +334,7 @@ namespace ExpressBase.ServiceStack.Services
             DateTime nw_fy_start, nw_fy_end;
             string query = $"SELECT MAX(fy_end) FROM eb_fin_years WHERE COALESCE(eb_del,'F')='F';";
             EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(query);
-            if (dt.Rows.Count > 0)
+            if (!dt.Rows[0].IsDBNull(0))
             {
                 DateTime fy_end = Convert.ToDateTime(dt.Rows[0][0]);
                 nw_fy_start = fy_end.AddDays(1);
