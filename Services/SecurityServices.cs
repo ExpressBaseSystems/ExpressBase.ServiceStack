@@ -178,7 +178,7 @@ WHERE COALESCE(u.eb_del, 'F') = 'F' AND COALESCE(ut.eb_del, 'F') = 'F' AND u.id 
             string sql = this.EbConnectionFactory.DataDB.EB_MANAGEUSER_FIRST_QUERY;
             if (request.Id > 1)
             {
-                sql += @"SELECT fullname, nickname, email, alternateemail, dob, sex, phnoprimary, phnosecondary, landline, phextension, fbid, fbname, statusid, hide, preferencesjson, dprefid, eb_user_types_id, forcepwreset
+                sql += @"SELECT fullname, nickname, email, alternateemail, dob, sex, phnoprimary, phnosecondary, landline, phextension, fbid, fbname, statusid, hide, preferencesjson, dprefid, eb_user_types_id, forcepwreset, eb_data_id, eb_ver_id, eb_is_mapped_user
 						FROM eb_users WHERE id = @id AND (statusid = 0 OR statusid = 1 OR statusid = 2) AND id > 1 AND eb_del = 'F';
 						SELECT role_id FROM eb_role2user WHERE user_id = @id AND eb_del = 'F';
 						SELECT groupid FROM eb_user2usergroup WHERE userid = @id AND eb_del = 'F';";
@@ -260,6 +260,10 @@ WHERE COALESCE(u.eb_del, 'F') = 'F' AND COALESCE(ut.eb_del, 'F') = 'F' AND u.id 
                     resp.UserData.Add("dprefid", dr[15].ToString());
                     resp.UserData.Add("eb_user_types_id", dr[16].ToString());
                     resp.UserData.Add("forcepwreset", dr[17].ToString());
+
+                    resp.UserData.Add("eb_data_id", dr[18].ToString());
+                    resp.UserData.Add("eb_ver_id", dr[19].ToString());
+                    resp.UserData.Add("eb_is_mapped_user", dr[20].ToString());
                 }
 
                 resp.UserRoles = new List<int>();

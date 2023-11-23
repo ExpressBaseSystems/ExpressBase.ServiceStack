@@ -2242,7 +2242,7 @@ $$");
         public CheckEmailAndPhoneResponse Any(CheckEmailAndPhoneRequest request)
         {
             Dictionary<string, ChkEmailPhoneReqData> _data = JsonConvert.DeserializeObject<Dictionary<string, ChkEmailPhoneReqData>>(request.Data);
-            string _selQry = "SELECT id, fullname, email, phnoprimary FROM eb_users WHERE LOWER($) LIKE LOWER(@#) AND COALESCE(eb_del, 'F') = 'F' AND ((statusid >= 0 AND statusid <= 2) OR statusid = 4); ";
+            string _selQry = "SELECT id, fullname, email, phnoprimary FROM eb_users WHERE LOWER($) LIKE LOWER(@#) AND COALESCE(eb_del, 'F') = 'F' AND ((statusid >= 0 AND statusid <= 2) OR statusid = 4) AND id > 1; ";
             string _selQryDummy = "SELECT 1 WHERE 1 = 0; ";
             IDatabase DataDB = this.EbConnectionFactory.DataDB;
             string Qry = string.Empty;
