@@ -336,7 +336,7 @@ namespace ExpressBase.ServiceStack.Services
             EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(query);
             if (!dt.Rows[0].IsDBNull(0))
             {
-                DateTime fy_end = Convert.ToDateTime(dt.Rows[0][0]);
+                DateTime fy_end = Convert.ToDateTime(dt.Rows[0][0]).Date;
                 nw_fy_start = fy_end.AddDays(1);
             }
             else
@@ -364,7 +364,7 @@ namespace ExpressBase.ServiceStack.Services
             DateTime nw_fy_start, nw_fy_end;
             if (dt.Rows.Count > 0)
             {
-                nw_fy_start = Convert.ToDateTime(dt.Rows[0][0]);
+                nw_fy_start = Convert.ToDateTime(dt.Rows[0][0]).Date;
                 nw_fy_end = nw_fy_start.AddYears(1).AddDays(-1);
             }
             else
@@ -532,8 +532,8 @@ ORDER BY
                         FinY = new EbFinancialYear()
                         {
                             Id = fyId,
-                            FyStart = Convert.ToDateTime(dt.Rows[i][1]),
-                            FyEnd = Convert.ToDateTime(dt.Rows[i][2])
+                            FyStart = Convert.ToDateTime(dt.Rows[i][1]).Date,
+                            FyEnd = Convert.ToDateTime(dt.Rows[i][2]).Date
                         };
                         FinYears.List.Add(FinY);
                     }
@@ -545,8 +545,8 @@ ORDER BY
                     {
                         Id = Convert.ToInt32(dt.Rows[i][3]),
                         FyId = FinY.Id,
-                        ActStart = Convert.ToDateTime(dt.Rows[i][4]),
-                        ActEnd = Convert.ToDateTime(dt.Rows[i][5]),
+                        ActStart = Convert.ToDateTime(dt.Rows[i][4]).Date,
+                        ActEnd = Convert.ToDateTime(dt.Rows[i][5]).Date,
                         LockedIds = _locIds,
                         PartiallyLockedIds = _locIdsPartial
                     });
