@@ -65,7 +65,7 @@ namespace ExpressBase.ServiceStack.Services
 								typeofcustomer, sourcecategory, subcategory, consultation, online_consultation, picsrcvd, dprefid, sex, district, leadowner,
                                 baldnessgrade, diffusepattern, hfcurrently, htpreviously, country_code, watsapp_phno, cust_category, eb_modifiedby, google_review, stars, cust_language, procedure_date, comment, eb_modifiedat,
                                 (SELECT id FROM patient_master WHERE patient_name_id = :accountid AND COALESCE(eb_del, 'F')='F') AS patient_master_id,
-                                (SELECT id FROM ht_evaluation WHERE patient_name_id = :accountid AND COALESCE(eb_del, 'F')='F') AS ht_evaluation_id, ht_done_date
+                                (SELECT id FROM ht_evaluation WHERE patient_name_id = :accountid AND COALESCE(eb_del, 'F')='F') AS ht_evaluation_id
 								FROM customers WHERE id = :accountid AND COALESCE(eb_del, 'F')='F';
 							SELECT id,trdate,status,followupdate,narration, eb_createdby, eb_createddt,isnotpickedup FROM leaddetails
 								WHERE customers_id=:accountid AND COALESCE(eb_del, 'F')='F' ORDER BY eb_createddt DESC;
@@ -214,7 +214,6 @@ namespace ExpressBase.ServiceStack.Services
                 CustomerData.Add("eb_modifiedat", getStringValue1(dr[36]));
                 CustomerData.Add("patient_master_id", dr[37].ToString());
                 CustomerData.Add("ht_evaluation_id", dr[38].ToString());
-                CustomerData.Add("ht_done_date", getStringValue(dr[39]));
                 int uid = Convert.ToInt32(dr[30]);
                 StaffInfo sinfo = StaffInfoAll.Find(e => e.id == uid);
                 CustomerData.Add("eb_modifiedby", sinfo == null ? string.Empty : sinfo.name);
@@ -552,7 +551,6 @@ namespace ExpressBase.ServiceStack.Services
             GetParameter(dict, "stars", EbDbTypes.Int32, parameters, ref cols, ref vals, ref upcolsvals);
             GetParameter(dict, "cust_language", EbDbTypes.Int32, parameters, ref cols, ref vals, ref upcolsvals);
             GetParameter(dict, "procedure_date", EbDbTypes.Date, parameters, ref cols, ref vals, ref upcolsvals);
-            GetParameter(dict, "ht_done_date", EbDbTypes.Date, parameters, ref cols, ref vals, ref upcolsvals);
             GetParameter(dict, "comment", EbDbTypes.String, parameters, ref cols, ref vals, ref upcolsvals);
             //------------------------------------------------------
             GetParameter(dict, "consdate", EbDbTypes.Date, parameters2, ref cols2, ref vals2, ref upcolsvals2);
