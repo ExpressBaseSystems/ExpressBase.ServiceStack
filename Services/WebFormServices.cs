@@ -3126,6 +3126,93 @@ WHERE
             return resp;
         }
 
+
+        public CalendarDataReaderResponse Any(CalendarDataReaderRequest request)
+        {
+            WebformDataWrapper data;
+            CalendarDataReaderResponse _resp = new CalendarDataReaderResponse();
+            try
+            {
+                Console.WriteLine("Start ImportFormData");
+                EbWebForm form = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId);
+
+                //form.PsImportData(EbConnectionFactory.DataDB, this, request.TriggeredCtrl);
+
+                EbControl[] Allctrls = form.Controls.FlattenAllEbControls();
+                EbControl TriggerCtrl = Array.Find(Allctrls, c => c.Name == request.TriggeredCtrl);
+
+                EbListView ctrl = (EbListView)TriggerCtrl;
+
+                if (TriggerCtrl == null)
+                    throw new FormException("Bad request", (int)HttpStatusCode.BadRequest, "Trigger control(dg) not found: " + request.TriggeredCtrl, "EbWebForm -> ImportData");
+
+                request.Params = new List<Param>();
+
+                DataSourceDataSetResponse data_reader_resp = this.Gateway.Send<DataSourceDataSetResponse>(new DataSourceDataSetRequest { RefId = ctrl.DataSourceId, Params = request.Params });
+
+                if (data_reader_resp.DataSet.Tables.Count > 0)
+                {
+                    CalendarDataColumn dc = new CalendarDataColumn();
+                    CalendarDataRow dr = new CalendarDataRow();
+                    foreach (EbDataRow _row in data_reader_resp.DataSet.Tables[0].Rows)
+                    {
+                        dr = new CalendarDataRow();
+                        foreach (EbDataColumn _col in data_reader_resp.DataSet.Tables[0].Columns)
+                        {
+                            //for list view control
+                            dc = new CalendarDataColumn();
+                            dc.ColumnName = _col.ColumnName;
+                            dc.ColumnType = _col.DataTypeName;
+                            switch (_col.DataTypeName)
+                            {
+                                case "integer":
+                                    dc.ColumnValue = Convert.ToInt32(_row[_col.ColumnName]);
+                                    break;
+                                case "timestamp":
+                                    dc.ColumnValue = Convert.ToDateTime(_row[_col.ColumnName]);
+                                    break;
+                                case "text":
+                                    dc.ColumnValue = _row[_col.ColumnName].ToString();
+                                    break;
+                            }
+                            dr.Datarow.Add(dc);
+
+                            //for calendar view control
+
+                        }
+                        _resp.DataList.Add(dr);
+                        _resp.EventList.Add(new CalendarEvent()
+                        {
+                            EventId = Convert.ToInt32(_row["id"]),
+                            EventName = _row["title"].ToString(),
+                            StartDate = Convert.ToDateTime(_row["start_date"]),
+                            EndDate = Convert.ToDateTime(_row["end_date"]),
+                            Color = _row["color"] == null ? "" : _row["color"].ToString(),
+                            EventDescription = _row["description"] == null ? "" : _row["description"].ToString()
+                        });
+
+                    }
+
+                }
+
+                Console.WriteLine("End ImportFormData : Success");
+            }
+            catch (FormException ex)
+            {
+                Console.WriteLine("FormException in GetImportDataRequest Service \nMessage : " + ex.Message + "\nMessageInternal : " + ex.MessageInternal + "\nStackTraceInternal : " + ex.StackTraceInternal + "\nStackTrace : " + ex.StackTrace);
+                data = new WebformDataWrapper { Status = ex.ExceptionCode, Message = ex.Message, MessageInt = ex.MessageInternal, StackTraceInt = ex.StackTraceInternal };
+                _resp.FormDataWrap = JsonConvert.SerializeObject(data);
+
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Exception in GetImportDataRequest Service \nMessage : " + ex.Message + "\nStackTrace" + ex.StackTrace);
+                data = new WebformDataWrapper { Status = (int)HttpStatusCode.InternalServerError, Message = "Exception in GetImportDataRequest", MessageInt = ex.Message, StackTraceInt = ex.StackTrace };
+                _resp.FormDataWrap = JsonConvert.SerializeObject(data);
+            }
+            return _resp;
+        }
+
     }
 }
 
