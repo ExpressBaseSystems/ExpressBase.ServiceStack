@@ -1079,7 +1079,7 @@ $$");
                 EbWebForm form = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId, request.CurrentLoc);
                 form.TableRowId = request.RowId;
                 if (form.TableRowId > 0)
-                    form.RefreshFormData(EbConnectionFactory.DataDB, this);
+                    form.RefreshFormData(EbConnectionFactory.DataDBRO, this);
                 else
                 {
                     //if (form.UserObj.LocationIds.Contains(-1) || form.UserObj.LocationIds.Contains(request.CurrentLoc))
@@ -1129,7 +1129,7 @@ $$");
             {
                 EbWebForm form = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId, request.CurrentLoc);
                 form.TableRowId = 0;
-                form.RefreshFormData(EbConnectionFactory.DataDB, this, request.Params);
+                form.RefreshFormData(EbConnectionFactory.DataDBRO, this, request.Params);
                 _dataset.FormDataWrap = JsonConvert.SerializeObject(new WebformDataWrapper { FormData = form.FormData, Status = (int)HttpStatusCode.OK, Message = "Success" });
                 Console.WriteLine("End GetPrefillData : Success");
             }
@@ -1161,7 +1161,7 @@ $$");
                     destForm = sourceForm;
                     if (request.SourceRowId > 0)
                     {
-                        sourceForm.RefreshFormData(EbConnectionFactory.DataDB, this);
+                        sourceForm.RefreshFormData(EbConnectionFactory.DataDBRO, this);
                         destForm.FormData = EbFormHelper.GetFilledNewFormData(sourceForm, true, request.IsClone);
                     }
                     else
@@ -1174,7 +1174,7 @@ $$");
                     destForm.SolutionObj = sourceForm.SolutionObj;
                     if (request.SourceRowId > 0)
                     {
-                        sourceForm.RefreshFormData(EbConnectionFactory.DataDB, this);
+                        sourceForm.RefreshFormData(EbConnectionFactory.DataDBRO, this);
                         sourceForm.FormatImportData(EbConnectionFactory.DataDB, this, destForm, null, false, request.SourceCtrl);
                     }
                     else
@@ -1207,7 +1207,7 @@ $$");
                 form.TableRowId = request.DataId;
                 List<Param> data = null;
                 if (form.TableRowId > 0)
-                    data = form.GetFormData4Mobile(EbConnectionFactory.DataDB, this);
+                    data = form.GetFormData4Mobile(EbConnectionFactory.DataDBRO, this);
                 resp = new GetFormData4MobileResponse() { Params = data, Status = (int)HttpStatusCode.OK, Message = "Success" };
                 Console.WriteLine("End GetFormData4Mobile : Success");
             }
@@ -1238,11 +1238,11 @@ $$");
                         _FormData.MultipleTables[form.FormSchema.MasterTable].Count > 0))
                         throw new FormException("Bad request", (int)HttpStatusCode.BadRequest, "WebFormData in request does not contains master table.", "WebFormService->GetImportDataRequest");
                     form.FormDataBackup = _FormData;
-                    form.PsImportData(EbConnectionFactory.DataDB, this, request.Trigger);
+                    form.PsImportData(EbConnectionFactory.DataDBRO, this, request.Trigger);
                 }
                 else
                 {
-                    form.ImportData(EbConnectionFactory.DataDB, this, request.Params, request.Trigger, request.RowId);
+                    form.ImportData(EbConnectionFactory.DataDBRO, this, request.Params, request.Trigger, request.RowId);
                 }
                 data = new WebformDataWrapper { FormData = form.FormData, Status = (int)HttpStatusCode.OK, Message = "Success" };
                 Console.WriteLine("End ImportFormData : Success");
@@ -1515,7 +1515,7 @@ $$");
         {
             Console.WriteLine("Start ExecuteSqlValueExpr");
             EbWebForm form = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId);
-            string val = form.ExecuteSqlValueExpression(EbConnectionFactory.DataDB, this, request.Params, request.Trigger, request.ExprType);
+            string val = form.ExecuteSqlValueExpression(EbConnectionFactory.DataDBRO, this, request.Params, request.Trigger, request.ExprType);
             Console.WriteLine("End ExecuteSqlValueExpr");
             return new ExecuteSqlValueExprResponse() { Result = val };
         }
@@ -2646,7 +2646,7 @@ $$");
                 Console.WriteLine("GetAuditTrail Service start. RefId : " + request.FormId + "\nDataId : " + request.RowId);
                 EbWebForm FormObj = this.GetWebFormObject(request.FormId, request.UserAuthId, request.SolnId);
                 FormObj.TableRowId = request.RowId;
-                string temp = FormObj.GetAuditTrail(EbConnectionFactory.DataDB, this);
+                string temp = FormObj.GetAuditTrail(EbConnectionFactory.DataDBRO, this);
                 Console.WriteLine("GetAuditTrail Service end");
                 return new GetAuditTrailResponse() { Json = temp };
             }
