@@ -232,7 +232,7 @@ namespace ExpressBase.ServiceStack
             //{
             var redisPassword = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_REDIS_PASSWORD);
             var redisPort = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_REDIS_PORT);
-            var redisConnectionString = string.Format("redis://{1}:{2}", redisPassword, redisServer, redisPort);
+            var redisConnectionString = string.Format("redis://{0}@{1}:{2}", redisPassword, redisServer, redisPort);
             container.Register<IRedisClientsManager>(c => new RedisManagerPool(redisConnectionString));
 
             var listRWRedis = new List<string>() { redisConnectionString }; var listRORedis = new List<string>() { redisConnectionString.Replace("-master", "-replicas") };
