@@ -195,7 +195,7 @@ $$");
                 {
                     if (string.IsNullOrEmpty(eput.RefId))
                         continue;
-                    EbWebForm _form = EbFormHelper.GetEbObject<EbWebForm>(eput.RefId, null, this.Redis, this, this.RedisReadOnly);
+                    EbWebForm _form = EbFormHelper.GetEbObject<EbWebForm>(eput.RefId, null, this.Redis, this, this.PooledRedisManager);
                     string Msg = string.Empty;
                     CreateOrAlterTable(_form.TableName, listNamesAndTypes, ref Msg);
                     Console.WriteLine("CreateMyProfileTableRequest - WebForm Resp msg: " + Msg);
@@ -208,7 +208,7 @@ $$");
                     if (string.IsNullOrEmpty(eput.RefId))
                         continue;
 
-                    EbMobilePage _mobPage = EbFormHelper.GetEbObject<EbMobilePage>(eput.RefId, null, this.Redis, this, this.RedisReadOnly);
+                    EbMobilePage _mobPage = EbFormHelper.GetEbObject<EbMobilePage>(eput.RefId, null, this.Redis, this, this.PooledRedisManager);
                     if (!(_mobPage.Container is EbMobileForm))
                         continue;
                     string Msg = string.Empty;
@@ -497,7 +497,7 @@ $$");
             }
             else
             {
-                dv = EbFormHelper.GetEbObject<EbTableVisualization>(AutogenId, null, Redis, this, this.RedisReadOnly);
+                dv = EbFormHelper.GetEbObject<EbTableVisualization>(AutogenId, null, Redis, this, this.PooledRedisManager);
                 UpdateDataReader(request, cols, dv, AutogenId);
                 UpdateDataVisualization(request, listNamesAndTypes, dv, AutogenId);
             }
@@ -1533,7 +1533,7 @@ $$");
 
         public EbWebForm GetWebFormObject(string RefId, string UserAuthId, string SolnId, int CurrrentLocation = 0, string CurrentLanguage = null)
         {
-            EbWebForm _form = EbFormHelper.GetEbObject<EbWebForm>(RefId, null, this.Redis, this, this.RedisReadOnly);
+            EbWebForm _form = EbFormHelper.GetEbObject<EbWebForm>(RefId, null, this.Redis, this, this.PooledRedisManager);
             _form.LocationId = CurrrentLocation;
             _form.SetRedisClient(this.Redis);
             _form.SetConnectionFactory(this.EbConnectionFactory);
@@ -1960,7 +1960,7 @@ $$");
 
                 foreach (EbBatchFormDataPusher batchDp in FormObj.DataPushers.FindAll(e => e is EbBatchFormDataPusher))
                 {
-                    EbWebForm _form = EbFormHelper.GetEbObject<EbWebForm>(batchDp.FormRefId, null, this.Redis, this, this.RedisReadOnly);
+                    EbWebForm _form = EbFormHelper.GetEbObject<EbWebForm>(batchDp.FormRefId, null, this.Redis, this, this.PooledRedisManager);
                     _form.RefId = batchDp.FormRefId;
                     _form.AfterRedisGet_All(this);
                     batchDp.WebForm = _form;
@@ -2993,7 +2993,7 @@ WHERE
                 if (string.IsNullOrWhiteSpace(SlnObj?.SolutionSettings?.GetEmployeesDrRefid))
                     throw new Exception("GetEmployeesDrRefid is not configured");
 
-                EbDataReader _dr = EbFormHelper.GetEbObject<EbDataReader>(SlnObj.SolutionSettings.GetEmployeesDrRefid, null, this.Redis, this, this.RedisReadOnly);
+                EbDataReader _dr = EbFormHelper.GetEbObject<EbDataReader>(SlnObj.SolutionSettings.GetEmployeesDrRefid, null, this.Redis, this, this.PooledRedisManager);
                 EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(_dr.Sql, new DbParameter[] {
                     this.EbConnectionFactory.DataDB.GetNewParameter("eb_loc_id", EbDbTypes.Int32, request.LocationId)
                 });
