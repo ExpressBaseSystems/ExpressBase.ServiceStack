@@ -27,7 +27,7 @@ namespace ExpressBase.ServiceStack
     [Authenticate]
     public class DataSourceService : EbBaseService
     {
-        public DataSourceService(IEbConnectionFactory _dbf) : base(_dbf) { }
+        public DataSourceService(IEbConnectionFactory _dbf, PooledRedisClientManager pooledRedisManager) : base(_dbf, pooledRedisManager) { }
 
         //public IDatabase GetDatastore(EbObject obj)
         //{
@@ -53,7 +53,9 @@ namespace ExpressBase.ServiceStack
             try
             {
                 EbObjectService myService = base.ResolveService<EbObjectService>();
-                EbDataReader _ds = this.Redis.Get<EbDataReader>(request.RefId);
+                EbDataReader _ds = null;
+                using (var redisReadOnly = this.PooledRedisManager.GetReadOnlyClient())
+                    _ds = redisReadOnly.Get<EbDataReader>(request.RefId);
                 string _sql = string.Empty;
 
                 if (_ds == null)
@@ -66,7 +68,9 @@ namespace ExpressBase.ServiceStack
                 }
                 if (_ds != null && _ds.FilterDialogRefId != string.Empty)
                 {
-                    EbFilterDialog _dsf = this.Redis.Get<EbFilterDialog>(_ds.FilterDialogRefId);
+                    EbFilterDialog _dsf = null;
+                    using (var redisReadOnly = this.PooledRedisManager.GetReadOnlyClient())
+                        _dsf = redisReadOnly.Get<EbFilterDialog>(_ds.FilterDialogRefId);
                     if (_dsf == null)
                     {
                         EbObjectParticularVersionResponse result = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = _ds.FilterDialogRefId });
@@ -383,7 +387,9 @@ namespace ExpressBase.ServiceStack
             if (!DR.EnableSqlFunction)
                 return;
 
-            List<Param> ParamsList = DR.GetParams(this.Redis as RedisClient);
+            List<Param> ParamsList = null;
+            using (var redisReadOnly = this.PooledRedisManager.GetReadOnlyClient())
+                ParamsList = DR.GetParams(redisReadOnly as RedisClient);
 
             string Qry = DR.Sql.Split(";")[0];
             string Args = string.Empty;
@@ -405,7 +411,9 @@ namespace ExpressBase.ServiceStack
                 Args = Args.TrimEnd(',');
 
             string _dsRedisKey = string.Format("{0}_columns", DR.RefId);
-            DataSourceColumnsResponse ColResp = this.Redis.Get<DataSourceColumnsResponse>(_dsRedisKey);
+            DataSourceColumnsResponse ColResp = null;
+            using (var redisReadOnly = this.PooledRedisManager.GetReadOnlyClient())
+                ColResp = redisReadOnly.Get<DataSourceColumnsResponse>(_dsRedisKey);
             foreach (EbDataColumn _Column in ColResp.Columns[0])
             {
                 RetArgs += _Column.ColumnName + " " + _Column.DataTypeName + ",";
@@ -438,7 +446,9 @@ END
 
             this.Log.Info("data request");
             DataSourceDataSetDataResponse resp = new DataSourceDataSetDataResponse();
-            EbDataReader _ds = this.Redis.Get<EbDataReader>(request.RefId);
+            EbDataReader _ds = null;
+            using (var redisReadOnly = this.PooledRedisManager.GetReadOnlyClient())
+                _ds = redisReadOnly.Get<EbDataReader>(request.RefId);
             try
             {
                 if (_ds == null)
@@ -452,7 +462,9 @@ END
                 IDatabase MyDataStore = _ds.GetDatastore(this.EbConnectionFactory);
                 if (_ds != null && _ds.FilterDialogRefId != string.Empty)
                 {
-                    EbFilterDialog _dsf = this.Redis.Get<EbFilterDialog>(_ds.FilterDialogRefId);
+                    EbFilterDialog _dsf = null;
+                    using (var redisReadOnly = this.PooledRedisManager.GetReadOnlyClient())
+                        _dsf = redisReadOnly.Get<EbFilterDialog>(_ds.FilterDialogRefId);
                     if (_dsf == null)
                     {
                         EbObjectParticularVersionResponse result = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = _ds.FilterDialogRefId });
@@ -634,7 +646,9 @@ END
         public DataSourceDataSetResponse Any(DataSourceDataSetRequest request)
         {
             this.Log.Info("data request");
-            DataSourceDataSetResponse resp = EbObjectsHelper.ExecuteDataset(request.RefId, request.UserId, request.Params, this.EbConnectionFactory, this.Redis);
+            DataSourceDataSetResponse resp = null;
+            using (var redisReadOnly = this.PooledRedisManager.GetReadOnlyClient())
+                resp = EbObjectsHelper.ExecuteDataset(request.RefId, request.UserId, request.Params, this.EbConnectionFactory, this.Redis, redisReadOnly);
             return resp;
         }
 

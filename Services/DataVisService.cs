@@ -69,7 +69,7 @@ namespace ExpressBase.ServiceStack
 
         private Dictionary<int, object> IntermediateDic = new Dictionary<int, object>();
 
-        public DataVisService(IEbConnectionFactory _dbf, IEbStaticFileClient _sfc) : base(_dbf, _sfc) { }
+        public DataVisService(IEbConnectionFactory _dbf, IEbStaticFileClient _sfc, PooledRedisClientManager pooledRedisManager) : base(_dbf, _sfc, pooledRedisManager) { }
 
         private string TableId = null;
 
@@ -270,19 +270,21 @@ namespace ExpressBase.ServiceStack
 
         public object Any(EbObjectWithRelatedDVRequest request)
         {
-            EbDataVisualization dsobj = null;
+            EbDataVisualization dsobj = EbFormHelper.GetEbObject<EbDataVisualization>(request.Refid, null, this.Redis, this, this.PooledRedisManager);
+
             var myService = base.ResolveService<EbObjectService>();
-            var res = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = request.Refid });
-            dsobj = EbSerializers.Json_Deserialize(res.Data[0].Json);
-            dsobj.Status = res.Data[0].Status;
-            dsobj.VersionNumber = res.Data[0].VersionNumber;
-            var _Tags = res.Data[0].Tags;
-            var arr = _Tags.Split(",");
-            foreach (var item in arr)
-                _Tags = "'" + item + "',";
-            _Tags = _Tags.Remove(_Tags.Length - 1);
-            _Tags = _Tags.Remove(_Tags.Length - 1);
-            _Tags = _Tags.Remove(0, 1);
+            //var res = (EbObjectParticularVersionResponse)myService.Get(new EbObjectParticularVersionRequest() { RefId = request.Refid });
+            //dsobj = EbSerializers.Json_Deserialize(res.Data[0].Json);
+            //dsobj.Status = res.Data[0].Status;
+            //dsobj.VersionNumber = res.Data[0].VersionNumber;
+            //var _Tags = res.Data[0].Tags;
+
+            //var arr = _Tags.Split(",");
+            //foreach (var item in arr)
+            //    _Tags = "'" + item + "',";
+            //_Tags = _Tags.Remove(_Tags.Length - 1);
+            //_Tags = _Tags.Remove(_Tags.Length - 1);
+            //_Tags = _Tags.Remove(0, 1);
 
             List<EbObjectWrapper> dvList = new List<EbObjectWrapper>();
             if (request.DsRefid != dsobj.DataSourceRefId)
@@ -300,19 +302,19 @@ namespace ExpressBase.ServiceStack
             }
 
             List<EbObjectWrapper> dvTaggedList = new List<EbObjectWrapper>();
-            if (request.Refid != null)
-            {
-                var resultlist = (EbObjectTaggedResponse)myService.Get(new EbObjectTaggedRequest { Tags = _Tags });
-                var rlist = resultlist.Data;
-                foreach (var element in rlist)
-                {
-                    if (element.EbObjectType == (int)EbObjectTypes.TableVisualization || element.EbObjectType == (int)EbObjectTypes.ChartVisualization)
-                    {
-                        dvTaggedList.Add(element);
-                    }
-                }
+            //if (request.Refid != null)
+            //{
+            //    var resultlist = (EbObjectTaggedResponse)myService.Get(new EbObjectTaggedRequest { Tags = _Tags });
+            //    var rlist = resultlist.Data;
+            //    foreach (var element in rlist)
+            //    {
+            //        if (element.EbObjectType == (int)EbObjectTypes.TableVisualization || element.EbObjectType == (int)EbObjectTypes.ChartVisualization)
+            //        {
+            //            dvTaggedList.Add(element);
+            //        }
+            //    }
 
-            }
+            //}
 
             return new EbObjectWithRelatedDVResponse { Dsobj = dsobj, DvList = dvList, DvTaggedList = dvTaggedList };
         }
@@ -373,7 +375,8 @@ namespace ExpressBase.ServiceStack
                 }
                 else if (_dV.ApiRefId != null && _dV.ApiRefId != string.Empty)
                 {
-                    _api = this.Redis.Get<EbApi>(_dV.ApiRefId);
+                    using (IRedisClient RedisReadOnly = PooledRedisManager.GetReadOnlyClient())
+                        _api = RedisReadOnly.Get<EbApi>(_dV.ApiRefId);
                     var dsrefid = _api.Resources.First(res => res is EbSqlReader).Reference;
                     _pivotConfig = (_api.Resources.First(res => res is EbPivotTable) as EbPivotTable).Pivotconfig;
                     _ds = EbFormHelper.GetEbObject<EbDataReader>(dsrefid, null, this.Redis, this);
@@ -392,7 +395,9 @@ namespace ExpressBase.ServiceStack
                     }
                     if (_ds.FilterDialogRefId != string.Empty && _ds.FilterDialogRefId != null)
                     {
-                        var _dsf = this.Redis.Get<EbFilterDialog>(_ds.FilterDialogRefId);
+                        EbFilterDialog _dsf = null;
+                        using (IRedisClient RedisReadOnly = PooledRedisManager.GetReadOnlyClient())
+                            _dsf = RedisReadOnly.Get<EbFilterDialog>(_ds.FilterDialogRefId);
                         if (_dsf == null)
                         {
                             var myService = base.ResolveService<EbObjectService>();
@@ -1053,8 +1058,9 @@ namespace ExpressBase.ServiceStack
             {
                 resp = new DataSourceColumnsResponse();
                 resp.Columns = new List<ColumnColletion>();
-                //EbDataSource _ds = null;
-                var _ds = this.Redis.Get<EbDataReader>(request.RefId);
+                EbDataReader _ds = null;
+                using (IRedisClient RedisReadOnly = PooledRedisManager.GetReadOnlyClient())
+                    _ds = RedisReadOnly.Get<EbDataReader>(request.RefId);
                 if (_ds == null)
                 {
                     var myService = base.ResolveService<EbObjectService>();
@@ -1064,7 +1070,9 @@ namespace ExpressBase.ServiceStack
                 }
                 if (_ds.FilterDialogRefId != string.Empty)
                 {
-                    var _dsf = this.Redis.Get<EbFilterDialog>(_ds.FilterDialogRefId);
+                    EbFilterDialog _dsf = null;
+                    using (IRedisClient RedisReadOnly = PooledRedisManager.GetReadOnlyClient())
+                        _dsf = RedisReadOnly.Get<EbFilterDialog>(_ds.FilterDialogRefId);
                     if (_dsf == null)
                     {
                         var myService = base.ResolveService<EbObjectService>();
@@ -1226,7 +1234,9 @@ namespace ExpressBase.ServiceStack
             {
                 if (col.AutoResolve && !col.ColumnQueryMapping.DataSourceId.IsNullOrEmpty())
                 {
-                    EbDataReader dr = this.Redis.Get<EbDataReader>(col.ColumnQueryMapping.DataSourceId);
+                    EbDataReader dr = null;
+                    using (IRedisClient RedisReadOnly = PooledRedisManager.GetReadOnlyClient())
+                        dr = RedisReadOnly.Get<EbDataReader>(col.ColumnQueryMapping.DataSourceId);
                     if (dr == null || dr.Sql == null || dr.Sql == string.Empty)
                     {
                         var myService = base.ResolveService<EbObjectService>();
@@ -1269,7 +1279,9 @@ namespace ExpressBase.ServiceStack
             {
                 if (col.AutoResolve && !col.ColumnQueryMapping.DataSourceId.IsNullOrEmpty())
                 {
-                    EbDataReader dr = this.Redis.Get<EbDataReader>(col.ColumnQueryMapping.DataSourceId);
+                    EbDataReader dr = null;
+                    using (IRedisClient RedisReadOnly = PooledRedisManager.GetReadOnlyClient())
+                        dr = RedisReadOnly.Get<EbDataReader>(col.ColumnQueryMapping.DataSourceId);
                     if (dr == null || dr.Sql == null || dr.Sql == string.Empty)
                     {
                         var myService = base.ResolveService<EbObjectService>();

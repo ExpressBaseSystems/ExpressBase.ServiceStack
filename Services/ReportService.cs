@@ -30,7 +30,7 @@ namespace ExpressBase.ServiceStack
     public class ReportService : EbBaseService
     {
         //private iTextSharp.text.Font f = FontFactory.GetFont(FontFactory.HELVETICA, 12);
-        public ReportService(IEbConnectionFactory _dbf, IEbStaticFileClient _sfc, IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_dbf, _sfc, _mqp, _mqc) { }
+        public ReportService(IEbConnectionFactory _dbf, IEbStaticFileClient _sfc, IMessageProducer _mqp, IMessageQueueClient _mqc, PooledRedisClientManager pooledRedisManager) : base(_dbf, _sfc, _mqp, _mqc, pooledRedisManager) { }
 
         public MemoryStream Ms1 = null;
 
@@ -48,14 +48,16 @@ namespace ExpressBase.ServiceStack
             if (!string.IsNullOrEmpty(request.Refid))
             {
                 this.Ms1 = new MemoryStream();
-                List<EbObjectWrapper> resultlist = EbObjectsHelper.GetParticularVersion(this.EbConnectionFactory.ObjectsDB, request.Refid);
-                Report = EbSerializers.Json_Deserialize<EbReport>(resultlist[0].Json);
+                Report = EbFormHelper.GetEbObject<EbReport>(request.Refid, null, this.Redis, this, this.PooledRedisManager);
+                //List<EbObjectWrapper> resultlist = EbObjectsHelper.GetParticularVersion(this.EbConnectionFactory.ObjectsDB, request.Refid);
+                //Report = EbSerializers.Json_Deserialize<EbReport>(resultlist[0].Json);
                 if (Report != null)
                 {
                     try
                     {
                         Report.ObjectsDB = this.EbConnectionFactory.ObjectsDB;
                         Report.Redis = this.Redis;
+                        Report.pooledRedisManager = this.PooledRedisManager;
                         Report.FileClient = this.FileClient;
                         Report.Solution = GetSolutionObject(request.SolnId);
                         Report.ReadingUser = GetUserObject(request.ReadingUserAuthId);
@@ -132,11 +134,13 @@ namespace ExpressBase.ServiceStack
             DataSourceService myDataSourceservice = base.ResolveService<DataSourceService>();
             myDataSourceservice.EbConnectionFactory = this.EbConnectionFactory;
 
-            DataSourceColumnsResponse cresp = new DataSourceColumnsResponse();
-            cresp = Redis.Get<DataSourceColumnsResponse>(string.Format("{0}_columns", request.DataSourceRefId));
+            DataSourceColumnsResponse cresp = null;
+            using (var redisReadOnly = this.PooledRedisManager.GetReadOnlyClient())
+                cresp = redisReadOnly.Get<DataSourceColumnsResponse>(string.Format("{0}_columns", request.DataSourceRefId));
             if (cresp == null || cresp.Columns.Count == 0)
             {
-                ds = Redis.Get<EbDataReader>(request.DataSourceRefId);
+                ds = EbFormHelper.GetEbObject<EbDataReader>(request.DataSourceRefId, null, this.Redis, this, this.PooledRedisManager);
+
                 if (ds == null)
                 {
                     EbObjectParticularVersionResponse dsresult = myObjectservice.Get(new EbObjectParticularVersionRequest { RefId = request.DataSourceRefId }) as EbObjectParticularVersionResponse;
@@ -144,7 +148,10 @@ namespace ExpressBase.ServiceStack
                     Redis.Set(request.DataSourceRefId, ds);
                 }
                 if (ds.FilterDialogRefId != string.Empty)
-                    ds.AfterRedisGet(Redis as RedisClient);
+                {
+                    using (var redisReadOnly = this.PooledRedisManager.GetReadOnlyClient())
+                        ds.AfterRedisGet(redisReadOnly as RedisClient);
+                }
                 cresp = myDataSourceservice.Any(new DataSourceColumnsRequest { RefId = request.DataSourceRefId, Params = (ds.FilterDialog != null) ? ds.FilterDialog.GetDefaultParams() : null });
                 Redis.Set(string.Format("{0}_columns", request.DataSourceRefId), cresp);
             }
