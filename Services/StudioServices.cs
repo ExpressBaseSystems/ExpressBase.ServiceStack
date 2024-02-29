@@ -14,6 +14,7 @@ using ExpressBase.Common.Structures;
 using ExpressBase.Objects.Objects;
 using ExpressBase.Objects.Objects.SmsRelated;
 using ExpressBase.Objects.Helpers;
+using ExpressBase.Common.Constants;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -836,6 +837,12 @@ namespace ExpressBase.ServiceStack.Services
                             WebFormServices myService = base.ResolveService<WebFormServices>();
                             myService.EbConnectionFactory = this.EbConnectionFactory;
                             CreateWebFormTableResponse res = (CreateWebFormTableResponse)myService.Any(new CreateWebFormTableRequest() { WebObj = obj as EbWebForm, Apps = request.Apps, SolnId = request.SolnId, UserId = request.UserId, WhichConsole = request.WhichConsole });
+
+                            if (!string.IsNullOrWhiteSpace(request.RefId))
+                            {
+                                this.Redis.RemoveByPattern(string.Format(RedisKeyPrefixConstants.EbWebformMd5, request.SolnId, request.RefId) + "*");
+                                this.Redis.RemoveByPattern(string.Format(RedisKeyPrefixConstants.EbWebformObj, request.SolnId, request.RefId) + "*");
+                            }
                         }
                         else if (obj is EbSqlFunction)
                         {
@@ -944,6 +951,12 @@ namespace ExpressBase.ServiceStack.Services
                             WebFormServices myService = base.ResolveService<WebFormServices>();
                             myService.EbConnectionFactory = this.EbConnectionFactory;
                             CreateWebFormTableResponse res = (CreateWebFormTableResponse)myService.Any(new CreateWebFormTableRequest() { WebObj = obj as EbWebForm, Apps = request.Apps, SolnId = request.SolnId, UserId = request.UserId, WhichConsole = request.WhichConsole, IsImport = request.IsImport });
+
+                            if (!string.IsNullOrWhiteSpace(request.RefId))
+                            {
+                                this.Redis.RemoveByPattern(string.Format(RedisKeyPrefixConstants.EbWebformMd5, request.SolnId, request.RefId) + "*");
+                                this.Redis.RemoveByPattern(string.Format(RedisKeyPrefixConstants.EbWebformObj, request.SolnId, request.RefId) + "*");
+                            }
                         }
                         else if (obj is EbSqlFunction)
                         {
@@ -1065,6 +1078,12 @@ namespace ExpressBase.ServiceStack.Services
                         WebFormServices myService = base.ResolveService<WebFormServices>();
                         myService.EbConnectionFactory = this.EbConnectionFactory;
                         CreateWebFormTableResponse res = (CreateWebFormTableResponse)myService.Any(new CreateWebFormTableRequest() { WebObj = obj, Apps = request.Apps, IsImport = request.IsImport, SolnId = request.SolnId, UserId = request.UserId, WhichConsole = request.WhichConsole });
+
+                        if (!string.IsNullOrWhiteSpace(request.RefId))
+                        {
+                            this.Redis.RemoveByPattern(string.Format(RedisKeyPrefixConstants.EbWebformMd5, request.SolnId, request.RefId) + "*");
+                            this.Redis.RemoveByPattern(string.Format(RedisKeyPrefixConstants.EbWebformObj, request.SolnId, request.RefId) + "*");
+                        }
                     }
                     else if (obj is EbSqlFunction)
                     {
