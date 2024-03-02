@@ -841,7 +841,7 @@ namespace ExpressBase.ServiceStack.Services
                             if (!string.IsNullOrWhiteSpace(request.RefId))
                             {
                                 this.Redis.RemoveByPattern(string.Format(RedisKeyPrefixConstants.EbWebformMd5, request.SolnId, request.RefId) + "*");
-                                this.Redis.RemoveByPattern(string.Format(RedisKeyPrefixConstants.EbWebformObj, request.SolnId, request.RefId) + "*");
+                                this.Redis.RemoveByPattern(string.Format(RedisKeyPrefixConstants.EbWebformObject, request.SolnId, request.RefId) + "*");
                             }
                         }
                         else if (obj is EbSqlFunction)
@@ -955,7 +955,7 @@ namespace ExpressBase.ServiceStack.Services
                             if (!string.IsNullOrWhiteSpace(request.RefId))
                             {
                                 this.Redis.RemoveByPattern(string.Format(RedisKeyPrefixConstants.EbWebformMd5, request.SolnId, request.RefId) + "*");
-                                this.Redis.RemoveByPattern(string.Format(RedisKeyPrefixConstants.EbWebformObj, request.SolnId, request.RefId) + "*");
+                                this.Redis.RemoveByPattern(string.Format(RedisKeyPrefixConstants.EbWebformObject, request.SolnId, request.RefId) + "*");
                             }
                         }
                         else if (obj is EbSqlFunction)
@@ -1082,7 +1082,7 @@ namespace ExpressBase.ServiceStack.Services
                         if (!string.IsNullOrWhiteSpace(request.RefId))
                         {
                             this.Redis.RemoveByPattern(string.Format(RedisKeyPrefixConstants.EbWebformMd5, request.SolnId, request.RefId) + "*");
-                            this.Redis.RemoveByPattern(string.Format(RedisKeyPrefixConstants.EbWebformObj, request.SolnId, request.RefId) + "*");
+                            this.Redis.RemoveByPattern(string.Format(RedisKeyPrefixConstants.EbWebformObject, request.SolnId, request.RefId) + "*");
                         }
                     }
                     else if (obj is EbSqlFunction)
