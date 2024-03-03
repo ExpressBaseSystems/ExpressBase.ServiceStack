@@ -361,6 +361,8 @@ namespace ExpressBase.ServiceStack.Services
                 }
             }
 
+            Eb_Solution SolutionObj = this.GetSolutionObject(request.SolnId);
+            
             return new GetManageLeadResponse
             {
                 RespMode = Mode,
@@ -383,7 +385,8 @@ namespace ExpressBase.ServiceStack.Services
                 NurseDict = NurseDict,
                 CustomerCategoryDict = customercategoryDict,
                 AttachImgInfo = attachImgInfo,
-                PrpImgInfo = prpImgInfo
+                PrpImgInfo = prpImgInfo,
+                DisbleSave = SolutionObj?.SolutionSettings?.DisbleLeadManagementSave == true
             };
         }
 
