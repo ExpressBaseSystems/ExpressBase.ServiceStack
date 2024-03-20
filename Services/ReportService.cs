@@ -23,6 +23,8 @@ using ExpressBase.Common.Singletons;
 using System.Diagnostics;
 using Newtonsoft.Json;
 using ExpressBase.Objects.Helpers;
+using System.IO.Compression;
+using HeaderFooter = ExpressBase.Objects.Helpers.HeaderFooter;
 
 namespace ExpressBase.ServiceStack
 {
@@ -119,6 +121,132 @@ namespace ExpressBase.ServiceStack
 
             Console.WriteLine("ReportRenderMultipleMQRequest pushed to MQ Successfully.");
             return new ReportRenderResponse { };
+        }
+
+        public ReportRenderMultipleSyncResponse Get(ReportRenderMultipleSyncRequest request)
+        {
+            try
+            {
+                this.Ms1 = new MemoryStream();
+
+                EbReport ReportObject = EbFormHelper.GetEbObject<EbReport>(request.Refid, null, this.Redis, this);
+
+                ReportObject.pooledRedisManager = this.PooledRedisManager;
+                ReportObject.ObjectsDB = this.EbConnectionFactory.ObjectsDB;
+                ReportObject.Redis = this.Redis;
+                ReportObject.FileClient = this.FileClient;
+                ReportObject.Solution = GetSolutionObject(request.SolnId);
+                ReportObject.ReadingUser = GetUserObject(request.RenderingUserAuthId);
+                ReportObject.RenderingUser = ReportObject.ReadingUser;
+
+                ReportObject.CultureInfo = CultureHelper.GetSerializedCultureInfo(ReportObject.ReadingUser?.Preference.Locale ?? "en-US").GetCultureInfo();
+                ReportObject.GetWatermarkImages();
+
+                try
+                {
+                    List<Param> _paramlist = request.Params;
+                    if (_paramlist != null)
+                    {
+                        for (int i = 0; i < _paramlist.Count; i++)
+                        {
+                            string[] values = _paramlist[i].Value.Split(',');
+
+                            for (int j = 0; j < values.Length; j++)
+                            {
+                                List<Param> _newParamlist = new List<Param>
+                            {
+                                new Param { Name = "id", Value = values[j], Type = "7" }
+                            };
+
+                                this.Report = ReportObject;
+
+                                if (Report != null)
+                                {
+                                    InitializePdfObjects();
+                                    Report.Doc.NewPage();
+                                    Report.GetData4Pdf(_newParamlist, EbConnectionFactory);
+
+                                    if (Report.DataSet != null)
+                                        Report.Draw();
+                                    else
+                                        throw new Exception();
+                                }
+                            }
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("Exception-reportService " + e.Message + e.StackTrace);
+                    Report.HandleExceptionPdf();
+                }
+
+                Report.Doc.Close();
+
+                if (Report.DataSourceRefId != string.Empty && Report.DataSet != null)
+                {
+                    Report.DataSet.Tables.Clear();
+                    Report.DataSet = null;
+                }
+
+                Ms1.Position = 0;
+
+                string Displayname = Regex.Replace(ReportObject.DisplayName, @"\s+", "");
+
+                byte[] compressedData = Compress(Ms1.ToArray());
+                (int, string) id = new DownloadsPageHelper().InsertDownloadFileEntry(this.EbConnectionFactory.DataDB, Displayname + ".pdf", request.UserId, compressedData, true);
+
+                return new ReportRenderMultipleSyncResponse() { Id = id.Item1, Message = id.Item2 };
+            }
+            catch (Exception ex)
+            {
+                return new ReportRenderMultipleSyncResponse() { Id = -1, Message = ex.Message };
+            }
+        }
+
+        public void InitializePdfObjects()
+        {
+            float _width = Report.WidthPt - Report.Margin.Left;// - Report.Margin.Right;
+            float _height = Report.HeightPt - Report.Margin.Top - Report.Margin.Bottom;
+            Report.HeightPt = _height;
+
+            Rectangle rec = new Rectangle(_width, _height);
+            if (this.Document == null)
+            {
+                Report.Doc = new Document(rec);
+                Report.Doc.SetMargins(Report.Margin.Left, Report.Margin.Right, Report.Margin.Top, Report.Margin.Bottom);
+                Report.Writer = PdfWriter.GetInstance(Report.Doc, this.Ms1);
+                Report.Writer.Open();
+                Report.Doc.Open();
+                Report.Doc.AddTitle(Report.DocumentName);
+                Report.Writer.PageEvent = new HeaderFooter(Report);
+                Report.Writer.CloseStream = true;//important
+                Report.Canvas = Report.Writer.DirectContent;
+                Report.PageNumber = Report.Writer.PageNumber;
+                this.Document = Report.Doc;
+                this.Writer = Report.Writer;
+                this.Canvas = Report.Canvas;
+            }
+            else
+            {
+                Report.Doc = this.Document;
+                Report.Writer = this.Writer;
+                Report.Canvas = this.Canvas;
+                Report.PageNumber = 1/*Report.Writer.PageNumber*/;
+            }
+        }
+
+        public static byte[] Compress(byte[] data)
+        {
+            using (MemoryStream memory = new MemoryStream())
+            {
+                using (GZipStream gzip = new GZipStream(memory,
+                    CompressionMode.Compress, true))
+                {
+                    gzip.Write(data, 0, data.Length);
+                }
+                return memory.ToArray();
+            }
         }
 
         public ValidateCalcExpressionResponse Get(ValidateCalcExpressionRequest request)

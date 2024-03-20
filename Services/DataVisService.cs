@@ -341,7 +341,7 @@ namespace ExpressBase.ServiceStack
                 };
                 DataSourceDataResponse res = Any(req2);
                 byte[] compressedData = ExportToExcelInternalService.Compress(res.excel_file);
-                (int, string) r = new DownloadsPageHelper().InsertDownloadFileEntry(this.EbConnectionFactory.DataDB, ebobject.DisplayName + ".xlsx", req.UserId, compressedData);
+                (int, string) r = new DownloadsPageHelper().InsertDownloadFileEntry(this.EbConnectionFactory.DataDB, ebobject.DisplayName + ".xlsx", req.UserId, compressedData, false);
                 return new ExportToExcelSyncResponse() { Id = r.Item1, Msg = r.Item2 };
             }
             catch (Exception ex)
