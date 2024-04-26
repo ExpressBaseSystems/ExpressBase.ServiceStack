@@ -1527,6 +1527,8 @@ namespace ExpressBase.ServiceStack.Services
                 return EbObjectTypes.SqlJob.IntCode;
             else if (obj is EbHtmlPage)
                 return EbObjectTypes.HtmlPage.IntCode;
+            else if (obj is EbMaterializedView)
+                return EbObjectTypes.MaterializedView.IntCode;
             else
                 return -1;
         }
@@ -1607,6 +1609,10 @@ namespace ExpressBase.ServiceStack.Services
             else if (obj is EbHtmlPage)
             {
                 Redis.Set(refId, (EbHtmlPage)obj);
+            }
+            else if (obj is EbMaterializedView)
+            {
+                Redis.Set(refId, (EbMaterializedView)obj);
             }
         }
 
