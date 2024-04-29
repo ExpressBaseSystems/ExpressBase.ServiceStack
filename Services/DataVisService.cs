@@ -53,6 +53,7 @@ using Fill = DocumentFormat.OpenXml.Spreadsheet.Fill;
 using Color = DocumentFormat.OpenXml.Spreadsheet.Color;
 using ExpressBase.Objects.WebFormRelated;
 using ExpressBase.CoreBase.Globals;
+using ExpressBase.ServiceStack.MQServices;
 
 namespace ExpressBase.ServiceStack
 {
@@ -317,6 +318,36 @@ namespace ExpressBase.ServiceStack
             //}
 
             return new EbObjectWithRelatedDVResponse { Dsobj = dsobj, DvList = dvList, DvTaggedList = dvTaggedList };
+        }
+
+        public ExportToExcelSyncResponse Any(ExportToExcelSyncRequest req)
+        {
+            try
+            {
+                Console.WriteLine("ExportToExcelSyncRequest received: " + req.UserAuthId);
+
+                EbDataVisualization ebobject = EbFormHelper.GetEbObject<EbDataVisualization>(req.dvRefId, null, this.Redis, this);
+
+                TableDataRequest req2 = new TableDataRequest
+                {
+                    EbDataVisualization = ebobject,
+                    Ispaging = false,
+                    RefId = ebobject.DataSourceRefId,
+                    IsExcel = true,
+                    Params = req.Params,
+                    TFilters = req.TFilters,
+                    eb_Solution = GetSolutionObject(req.SolnId),
+                    UserAuthId = req.UserAuthId
+                };
+                DataSourceDataResponse res = Any(req2);
+                byte[] compressedData = ExportToExcelInternalService.Compress(res.excel_file);
+                (int, string) r = new DownloadsPageHelper().InsertDownloadFileEntry(this.EbConnectionFactory.DataDB, ebobject.DisplayName + ".xlsx", req.UserId, compressedData, false);
+                return new ExportToExcelSyncResponse() { Id = r.Item1, Msg = r.Item2 };
+            }
+            catch (Exception ex)
+            {
+                return new ExportToExcelSyncResponse() { Id = -1, Msg = ex.Message };
+            }
         }
 
         [CompressResponse]
