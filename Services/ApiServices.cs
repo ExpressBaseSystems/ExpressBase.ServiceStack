@@ -25,6 +25,7 @@ using ExpressBase.CoreBase.Globals;
 using Newtonsoft.Json;
 using ExpressBase.Objects.Helpers;
 using ExpressBase.Common.Helpers;
+using MongoDB.Driver.Core.Connections;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -33,16 +34,43 @@ namespace ExpressBase.ServiceStack.Services
         private EbObjectService StudioServices { set; get; }
 
         private WebFormServices WebFormService { set; get; }
-          
-        private EbApi Api { set; get; } 
-         
+
+        private EbApi Api { set; get; }
+
         private int Step = 0;
+
+        public const string EB_LOC_ID = "eb_loc_id";
 
         public ApiServices(IEbConnectionFactory _dbf, IEbStaticFileClient _sfc) : base(_dbf, _sfc)
         {
             this.StudioServices = base.ResolveService<EbObjectService>();
             this.WebFormService = base.ResolveService<WebFormServices>();
         }
+
+        private Dictionary<string, TV> _keyValuePairs = null;
+
+        public Dictionary<string, TV> GetKeyvalueDict
+        {
+            get
+            {
+                if (_keyValuePairs == null)
+                {
+                    _keyValuePairs = new Dictionary<string, TV>();
+                    foreach (string key in this.Api.FirstReaderKeyColumns)
+                    {
+                        if (!_keyValuePairs.ContainsKey(key))
+                            _keyValuePairs.Add(key, new TV { });
+                    }
+                    foreach (string key in this.Api.ParameterKeyColumns)
+                    {
+                        if (!_keyValuePairs.ContainsKey(key))
+                            _keyValuePairs.Add(key, new TV { });
+                    }
+                }
+                return _keyValuePairs;
+            }
+        }
+
 
         public Dictionary<string, object> ProcessGlobalDictionary(Dictionary<string, object> data)
         {
@@ -76,7 +104,7 @@ namespace ExpressBase.ServiceStack.Services
         public ApiResponse Any(ApiRequest request)
         {
             try
-            {               
+            {
                 if (request.HasRefId())
                 {
                     try
@@ -134,7 +162,7 @@ namespace ExpressBase.ServiceStack.Services
         private void InitializeExecution()
         {
             try
-            { 
+            {
 
                 int r_count = this.Api.Resources.Count;
 
@@ -157,7 +185,7 @@ namespace ExpressBase.ServiceStack.Services
             }
         }
 
-        private object GetResult(ApiResources resource)
+        private object GetResult(ApiResources resource, int index = 0, int parentindex = 0)
         {
             ResultWrapper res = new ResultWrapper();
 
@@ -184,13 +212,19 @@ namespace ExpressBase.ServiceStack.Services
                         res.Result = ExecuteConnectApi(ebApi);
                         break;
                     case EbThirdPartyApi thirdParty:
-                        res.Result =(thirdParty as EbThirdPartyApi).ExecuteThirdPartyApi(thirdParty, this.Api);
+                        res.Result = (thirdParty as EbThirdPartyApi).ExecuteThirdPartyApi(thirdParty, this.Api);
                         break;
                     case EbFormResource form:
                         res.Result = ExecuteFormResource(form);
                         break;
                     case EbEmailRetriever retriever:
                         res.Result = (retriever as EbEmailRetriever).ExecuteEmailRetriever(this.Api, this, this.FileClient, false);
+                        break;
+                    case EbLoop loop:
+                        res.Result = DoLoop(resource as EbLoop, index, parentindex);
+                        break;
+                    case EbTransaction transaction:
+                        // res.Result = ExecuteTransaction(resource as EbTransaction1, index);
                         break;
                     //case EbEncrypt encrypt:
                     //    res.Result = (encrypt as EbEncrypt).ExecuteEncrypt(this.Api);
@@ -476,6 +510,99 @@ namespace ExpressBase.ServiceStack.Services
             return resp;
         }
 
+        public bool DoLoop(EbLoop loop, int step, int parentindex)
+        {
+            EbDataTable _table;
+            try
+            {
+                if (parentindex == 0 && step == 1)
+                    _table = (this.Api.Resources[step - 1].Result as EbDataSet).Tables[0];
+                else
+                    _table = (this.Api.Resources[parentindex - 1].Result as EbDataSet).Tables[0];
+
+                int _rowcount = _table.Rows.Count;
+                for (int i = 0; i < _rowcount; i++)
+                {
+                    try
+                    {
+                        EbDataColumn cl = _table.Columns[0];
+                        Param _outparam = new Param
+                        {
+                            Name = cl.ColumnName,
+                            Type = cl.Type.ToString(),
+                            Value = _table.Rows[i][cl.ColumnIndex].ToString()
+                        };
+                        this.Api.Resources[step].Result = _outparam;
+                        if (this.Api.GlobalParams.ContainsKey(_outparam.Name))
+                            this.Api.GlobalParams[_outparam.Name] = new TV { Type = _outparam.Type, Value = _outparam.Value };
+                        else
+                            this.Api.GlobalParams.Add(_outparam.Name, new TV { Type = _outparam.Type, Value = _outparam.Value });
+
+
+                        if (!this.Api.GlobalParams.ContainsKey(EB_LOC_ID))
+                        {
+                            if (_table.Columns[EB_LOC_ID] != null)
+                            {
+                                this.Api.GlobalParams.Add(EB_LOC_ID, new TV { Type = EbDbTypes.Int32.ToString(), Value = _table.Rows[i][EB_LOC_ID].ToString() });
+                            }
+                        }
+
+                        ExecuteLoop(loop, 0, step, parentindex, _table.Rows[i], null);
+                        //    message = "Loop Execution Success. counter " + i + " of " + _rowcount;
+                    }
+                    catch (Exception e)
+                    {
+                        // message = "Loop Failed to execute. counter " + i + " of " + _rowcount;
+                        Console.WriteLine(e.Message + e.StackTrace);
+                    }
+                }
+                // MasterResult.Add(new SqlJobResult { Message = "Loop execution Success with " + _rowcount + " iterations.", Type = ResourceType.Loop });
+            }
+            catch (Exception e)
+            {
+                // MasterResult.Add(new SqlJobResult { Message = "Loop execution Failed" + e.Message, Type = ResourceType.Loop });
+                Console.WriteLine(e.Message + e.StackTrace);
+            }
+            return true;
+        }
+
+        public void ExecuteLoop(EbLoop loop, int retryof, int step, int parentindex, EbDataRow dataRow, Dictionary<string, TV> keyvals)
+        {
+            try
+            {
+                int counter;
+                string _keyvalues = (dataRow is null) ? JsonConvert.SerializeObject(keyvals) : FillKeys(dataRow);
+                try
+                {
+                    for (counter = 0; counter < loop.InnerResources.Count; counter++)
+                    {
+                        if (loop.InnerResources[counter] is EbProcessor)
+                        {
+                            if (loop.InnerResources[counter - 1] is EbSqlReader)
+                                if (((loop.InnerResources[counter - 1] as EbSqlReader).Result as EbDataSet).Tables[0].Rows.Count > 0)
+                                    loop.InnerResources[counter].Result = this.GetResult(loop.InnerResources[counter], counter, step);
+                                else
+                                {
+                                    Console.WriteLine("Datareader returned 0 rows : " + (loop.InnerResources[counter - 1] as EbSqlReader).RefId + "\n" +
+                                        JsonConvert.SerializeObject(dataRow));
+                                    return;
+                                }
+                        }
+                        loop.InnerResources[counter].Result = this.GetResult(loop.InnerResources[counter], counter, step);
+                    }
+                }
+                catch (Exception e)
+                {
+                    throw e;
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Error at LoopExecution");
+                throw e;
+            }
+        }
+
         //private object ExecuteThirdPartyApi(EbThirdPartyApi thirdPartyResource)
         //{
         //    Uri uri = new Uri(ReplacePlaceholders(thirdPartyResource.Url));
@@ -572,6 +699,19 @@ namespace ExpressBase.ServiceStack.Services
             {
                 throw new ApiException("[ExecuteFormResource], " + ex.Message);
             }
+        }
+
+        public string FillKeys(EbDataRow dataRow)
+        {
+            foreach (var item in this.Api.GlobalParams)
+                if (GetKeyvalueDict.ContainsKey(item.Key))
+                    this.GetKeyvalueDict[item.Key] = null;// this.Api.GlobalParams[item.Key];
+            for (int i = 0; i < dataRow.Count; i++)
+            {
+                if (GetKeyvalueDict.ContainsKey(dataRow.Table.Columns[i].ColumnName))
+                    this.GetKeyvalueDict[dataRow.Table.Columns[i].ColumnName] = new TV { Value = dataRow[i].ToString(), Type = ((int)dataRow.Table.Columns[i].Type).ToString() };
+            }
+            return JsonConvert.SerializeObject(GetKeyvalueDict); ;
         }
 
         private List<Param> GetEmailParams(EbEmailTemplate enode)

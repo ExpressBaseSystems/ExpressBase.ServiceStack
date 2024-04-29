@@ -151,7 +151,7 @@ namespace ExpressBase.ServiceStack.Services
                         int step = 0;
                         while (step < this.SqlJob.Resources.Count)
                         {
-                            this.SqlJob.Resources[step].Result = GetResult(this.SqlJob.Resources[step], step, 0, 0);
+                            this.SqlJob.Resources[step].Result = GetResult(this.SqlJob.Resources[step], step, 0);
                             step++;
                         }
 
@@ -456,7 +456,7 @@ namespace ExpressBase.ServiceStack.Services
             return logline;
         }
 
-        public object GetResult(SqlJobResource resource, int index, int parentindex, int grandparent)
+        public object GetResult(SqlJobResource resource, int index, int parent)
         {
             ResultWrapper res = new ResultWrapper();
             try
@@ -465,19 +465,19 @@ namespace ExpressBase.ServiceStack.Services
                     res.Result = this.ExcDataReader(resource as EbSqlJobReader, index);
                 else if (resource is EbSqlJobWriter)
                     res.Result = this.ExcDataWriter(resource as EbSqlJobWriter, index);
-                else if (resource is EbLoop)
-                    res.Result = DoLoop(resource as EbLoop, index, parentindex);
-                else if (resource is EbTransaction)
-                    res.Result = ExecuteTransaction(resource as EbTransaction, index);
+                else if (resource is EbLoop1)
+                    res.Result = DoLoop(resource as EbLoop1, index, parent);
+                else if (resource is EbTransaction1)
+                    res.Result = ExecuteTransaction(resource as EbTransaction1, index);
                 else if (resource is EbSqlFormDataPusher)
                     res.Result = ExecuteDataPush(resource as EbSqlFormDataPusher, index);
                 else if (resource is EbSqlProcessor)
                 {
                     SqlJobResource _prev = null;
-                    if (this.SqlJob.Resources[index] is EbTransaction)
-                        _prev = (index != 0) ? (((this.SqlJob.Resources[index] as EbTransaction).InnerResources[parentindex] as EbLoop).InnerResources[index - 1]) : null;
-                    else if (this.SqlJob.Resources[index] is EbLoop)
-                        _prev = (index != 0) ? (((this.SqlJob.Resources[index] as EbLoop).InnerResources[parentindex] as EbTransaction).InnerResources[index - 1]) : null;
+                    if (this.SqlJob.Resources[index] is EbTransaction1)
+                        _prev = (index != 0) ? (((this.SqlJob.Resources[index] as EbTransaction1).InnerResources[parent] as EbLoop1).InnerResources[index - 1]) : null;
+                    else if (this.SqlJob.Resources[index] is EbLoop1)
+                        _prev = (index != 0) ? (((this.SqlJob.Resources[index] as EbLoop1).InnerResources[parent] as EbTransaction1).InnerResources[index - 1]) : null;
 
                     res.Result = EvaluateProcessor(resource as EbSqlProcessor, _prev, this.GlobalParams);
                 }
@@ -576,7 +576,7 @@ namespace ExpressBase.ServiceStack.Services
                 return false;
         }
 
-        public bool DoLoop(EbLoop loop, int step, int parentindex)
+        public bool DoLoop(EbLoop1 loop, int step, int parentindex)
         {
             // string message;
             EbDataTable _table = null;
@@ -636,7 +636,7 @@ namespace ExpressBase.ServiceStack.Services
             return true;
         }
 
-        public void ExecuteLoop(EbLoop loop, int retryof, int step, int parentindex, EbDataRow dataRow, Dictionary<string, TV> keyvals)
+        public void ExecuteLoop(EbLoop1 loop, int retryof, int step, int parentindex, EbDataRow dataRow, Dictionary<string, TV> keyvals)
         {
             try
             {
@@ -670,7 +670,7 @@ namespace ExpressBase.ServiceStack.Services
                         {
                             if (loop.InnerResources[counter - 1] is EbSqlJobReader)
                                 if (((loop.InnerResources[counter - 1] as EbSqlJobReader).Result as EbDataSet).Tables[0].Rows.Count > 0)
-                                    loop.InnerResources[counter].Result = this.GetResult(loop.InnerResources[counter], counter, step, parentindex);
+                                    loop.InnerResources[counter].Result = this.GetResult(loop.InnerResources[counter], counter, step);
                                 else
                                 {
                                     Console.WriteLine("Datareader returned 0 rows : " + (loop.InnerResources[counter - 1] as EbSqlJobReader).RefId + "\n" +
@@ -678,7 +678,7 @@ namespace ExpressBase.ServiceStack.Services
                                     return;
                                 }
                         }
-                        loop.InnerResources[counter].Result = this.GetResult(loop.InnerResources[counter], counter, step, parentindex);
+                        loop.InnerResources[counter].Result = this.GetResult(loop.InnerResources[counter], counter, step);
                     }
 
                     // LinesResult.Add(new SqlJobResult { Mess, Type = ResourceType.Loop }); 
@@ -790,7 +790,7 @@ namespace ExpressBase.ServiceStack.Services
             return JsonConvert.SerializeObject(GetKeyvalueDict); ;
         }
 
-        public bool ExecuteTransaction(EbTransaction txn, int step)
+        public bool ExecuteTransaction(EbTransaction1 txn, int step)
         {
             string message;
             using (TransactionConnection = this.EbConnectionFactory.DataDB.GetNewConnection())
@@ -806,7 +806,7 @@ namespace ExpressBase.ServiceStack.Services
                             {
                                 if (txn.InnerResources[counter - 1] is EbSqlJobReader)
                                     if (((txn.InnerResources[counter - 1] as EbSqlJobReader).Result as EbDataSet).Tables[0].Rows.Count > 0)
-                                        txn.InnerResources[counter].Result = this.GetResult(txn.InnerResources[counter], counter, step, 0);
+                                        txn.InnerResources[counter].Result = this.GetResult(txn.InnerResources[counter], counter, step);
                                     else
                                     {
                                         message = "Datareader returned 0 rows";
@@ -815,7 +815,7 @@ namespace ExpressBase.ServiceStack.Services
                                     }
                             }
                             else
-                                txn.InnerResources[counter].Result = this.GetResult(txn.InnerResources[counter], counter, step, 0);
+                                txn.InnerResources[counter].Result = this.GetResult(txn.InnerResources[counter], counter, step);
                         trans.Commit();
                         message = "Transaction success";
                     }
