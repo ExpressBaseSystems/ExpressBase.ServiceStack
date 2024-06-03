@@ -33,10 +33,8 @@ namespace ExpressBase.ServiceStack.Services
         private EbObjectService StudioServices { set; get; }
 
         private WebFormServices WebFormService { set; get; }
-          
-        private EbApi Api { set; get; } 
-         
-        private int Step = 0;
+
+        private EbApi Api { set; get; }
 
         public ApiServices(IEbConnectionFactory _dbf, IEbStaticFileClient _sfc) : base(_dbf, _sfc)
         {
@@ -76,7 +74,7 @@ namespace ExpressBase.ServiceStack.Services
         public ApiResponse Any(ApiRequest request)
         {
             try
-            {               
+            {
                 if (request.HasRefId())
                 {
                     try
@@ -134,17 +132,17 @@ namespace ExpressBase.ServiceStack.Services
         private void InitializeExecution()
         {
             try
-            { 
+            {
 
                 int r_count = this.Api.Resources.Count;
 
-                while (Step < r_count)
+                while (this.Api.Step < r_count)
                 {
-                    this.Api.Resources[Step].Result = this.GetResult(this.Api.Resources[Step]);
-                    Step++;
+                    this.Api.Resources[this.Api.Step].Result = this.GetResult(this.Api.Resources[this.Api.Step]);
+                    this.Api.Step++;
                 }
                 if (this.Api.ApiResponse.Result == null)
-                    this.Api.ApiResponse.Result = this.Api.Resources[Step - 1].GetResult();
+                    this.Api.ApiResponse.Result = this.Api.Resources[this.Api.Step - 1].GetResult();
 
                 this.Api.ApiResponse.Message.Status = "Success";
                 this.Api.ApiResponse.Message.ErrorCode = this.Api.ApiResponse.Result == null ? ApiErrorCode.SuccessWithNoReturn : ApiErrorCode.Success;
@@ -184,13 +182,19 @@ namespace ExpressBase.ServiceStack.Services
                         res.Result = ExecuteConnectApi(ebApi);
                         break;
                     case EbThirdPartyApi thirdParty:
-                        res.Result =(thirdParty as EbThirdPartyApi).ExecuteThirdPartyApi(thirdParty, this.Api);
+                        res.Result = (thirdParty as EbThirdPartyApi).ExecuteThirdPartyApi(thirdParty, this.Api);
                         break;
                     case EbFormResource form:
                         res.Result = ExecuteFormResource(form);
                         break;
                     case EbEmailRetriever retriever:
-                        res.Result = (retriever as EbEmailRetriever).ExecuteEmailRetriever(this.Api, this, this.FileClient, false);
+                        res.Result = (retriever as EbEmailRetriever).ExecuteEmailRetriever(this.Api, this, false);
+                        break;
+                    case EbFtpPuller puller:
+                        res.Result = (puller as EbFtpPuller).ExecuteFtpPuller();
+                        break;
+                    case EbCSVPusher pusher:
+                        res.Result = (pusher as EbCSVPusher).ExecuteCSVPusher(this.Api, this, this.FileClient, false);
                         break;
                     //case EbEncrypt encrypt:
                     //    res.Result = (encrypt as EbEncrypt).ExecuteEncrypt(this.Api);
@@ -350,14 +354,14 @@ namespace ExpressBase.ServiceStack.Services
 
             global.GoToByIndexHandler += (index) =>
             {
-                this.Step = index;
+                this.Api.Step = index;
                 this.Api.Resources[index].Result = this.GetResult(this.Api.Resources[index]);
             };
 
             global.GoToByNameHandler += (name) =>
             {
                 int index = this.Api.Resources.GetIndex(name);
-                this.Step = index;
+                this.Api.Step = index;
                 this.Api.Resources[index].Result = this.GetResult(this.Api.Resources[index]);
             };
 
@@ -368,10 +372,10 @@ namespace ExpressBase.ServiceStack.Services
                     Data = JsonConvert.SerializeObject(obj),
                 };
                 this.Api.ApiResponse.Result = script;
-                this.Step = this.Api.Resources.Count - 1;
+                this.Api.Step = this.Api.Resources.Count - 1;
             };
 
-            ApiResources lastResource = this.Step == 0 ? null : this.Api.Resources[this.Step - 1];
+            ApiResources lastResource = this.Api.Step == 0 ? null : this.Api.Resources[this.Api.Step - 1];
 
             if (processor.EvaluatorVersion == EvaluatorVersion.Version_1 && lastResource != null && lastResource.Result != null && lastResource.Result is EbDataSet dataSet)
             {
