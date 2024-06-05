@@ -36,7 +36,7 @@ namespace ExpressBase.ServiceStack.Services
         private WebFormServices WebFormService { set; get; }
 
         private EbApi Api { set; get; }
-
+        public const string EB_LOC_ID = "eb_loc_id";
         public ApiServices(IEbConnectionFactory _dbf, IEbStaticFileClient _sfc) : base(_dbf, _sfc)
         {
             this.StudioServices = base.ResolveService<EbObjectService>();
