@@ -280,6 +280,7 @@ namespace ExpressBase.ServiceStack
             mqServer.RegisterHandler<UpdateRedisConnectionsMqRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<SlackCreateRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<SqlJobInternalRequest>(base.ExecuteMessage);
+	    mqServer.RegisterHandler<ApiMqRequest>(base.ExecuteMessage);
 
             mqServer.Start();
 
