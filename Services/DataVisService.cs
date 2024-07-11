@@ -1530,10 +1530,13 @@ namespace ExpressBase.ServiceStack
             string char1 = GetExcelColumnName(ExcelColumns.Count);
             mergeCells = new MergeCells();
             mergeCells.Append(new MergeCell() { Reference = new StringValue($"A1:{char1}1") });
+            string st1, st2;
             for (var i = 1; i <= _dV.ParamsList.Count; i++)
             {
                 workRow = new Row();
-                workRow.Append(CreateCell(_dV.ParamsList[i - 1].Name + " = " + _dV.ParamsList[i - 1].Value, 3U));
+                st1 = string.IsNullOrWhiteSpace(_dV.ParamsList[i - 1].NameF) ? _dV.ParamsList[i - 1].Name : _dV.ParamsList[i - 1].NameF;
+                st2 = string.IsNullOrWhiteSpace(_dV.ParamsList[i - 1].ValueF) ? _dV.ParamsList[i - 1].Value : _dV.ParamsList[i - 1].ValueF;
+                workRow.Append(CreateCell(st1 + " = " + st2, 3U));
                 mergeCells.Append(new MergeCell() { Reference = new StringValue($"A{i + 1}:B{i + 1}") });
                 ExcelRowcount++;
                 partSheetData.Append(workRow);
