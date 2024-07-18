@@ -1701,7 +1701,7 @@ namespace ExpressBase.ServiceStack
                 Dictionary<string, DynamicObj> _hourCount = new Dictionary<string, DynamicObj>();
                 Dictionary<int, List<object>> summary = new Dictionary<int, List<object>>();
                 CalendarData.InitialColumnsCount = _dataset.Tables.Sum(x => x.Columns.Count);
-                this.CreateCustomcolumn4Calendar(_dataset, ref tempdataset, Parameters, ref _dv, ref _hourCount, ref summary);
+                this.CreateCustomcolumn4Calendar(_dataset, ref tempdataset, Parameters, ref _dv, ref _hourCount, ref summary, _user);
                 int _count = (_dv as EbCalendarView).DataColumns.FindAll(col => col.bVisible).Count;
                 List<object> _list = new List<object>();
                 for (int i = 0; i < _count; i++)
@@ -1750,7 +1750,7 @@ namespace ExpressBase.ServiceStack
                 EbVisualizationGlobals globals = new EbVisualizationGlobals();
                 Dictionary<string, DynamicObj> _hourCount = new Dictionary<string, DynamicObj>();
                 Dictionary<int, List<object>> summary = new Dictionary<int, List<object>>();
-                this.CreateCustomcolumn4Calendar(_dataset, ref tempdataset, Parameters, ref _dv, ref _hourCount, ref summary);
+                this.CreateCustomcolumn4Calendar(_dataset, ref tempdataset, Parameters, ref _dv, ref _hourCount, ref summary, _user);
                 int _count = (_dv as EbCalendarView).DataColumns.FindAll(col => col.bVisible).Count;
                 List<object> _list = new List<object>();
                 for (int i = 0; i < _count; i++)
@@ -1795,7 +1795,7 @@ namespace ExpressBase.ServiceStack
             return null;
         }
 
-        public void CreateCustomcolumn4Calendar(EbDataSet _dataset, ref EbDataSet tempdataset, List<Param> Parameters, ref EbDataVisualization _dv, ref Dictionary<string, DynamicObj> _hourCount, ref Dictionary<int, List<object>> summary)
+        public void CreateCustomcolumn4Calendar(EbDataSet _dataset, ref EbDataSet tempdataset, List<Param> Parameters, ref EbDataVisualization _dv, ref Dictionary<string, DynamicObj> _hourCount, ref Dictionary<int, List<object>> summary, User _user)
         {
             int i = 0;
             foreach (EbDataTable _table in _dataset.Tables)
@@ -1820,7 +1820,7 @@ namespace ExpressBase.ServiceStack
 
             if ((_dv as EbCalendarView).CalendarType == AttendanceType.DayWise)
             {
-                DayWiseDateColumns(_dataset, ref tempdataset, Parameters, ref _dv, ref _hourCount, ref summary);
+                DayWiseDateColumns(_dataset, ref tempdataset, Parameters, ref _dv, ref _hourCount, ref summary, _user);
             }
             //else if ((_dv as EbCalendarView).CalendarType == AttendanceType.Hourly)
             //{
@@ -1849,7 +1849,7 @@ namespace ExpressBase.ServiceStack
             }
         }
 
-        public void DayWiseDateColumns(EbDataSet _dataset, ref EbDataSet tempdataset, List<Param> Parameters, ref EbDataVisualization _dv, ref Dictionary<string, DynamicObj> _hourCount, ref Dictionary<int, List<object>> summary)
+        public void DayWiseDateColumns(EbDataSet _dataset, ref EbDataSet tempdataset, List<Param> Parameters, ref EbDataVisualization _dv, ref Dictionary<string, DynamicObj> _hourCount, ref Dictionary<int, List<object>> summary, User _user)
         {
             int index = tempdataset.Tables[0].Columns.Count;
             int i = -1;
@@ -1887,7 +1887,7 @@ namespace ExpressBase.ServiceStack
                             cls = "holiday_class week-holiday";
                         }
                     }
-                    if (DateTime.Now.Date.Equals(date))
+                    if (DateTime.UtcNow.ConvertFromUtc(_user.Preference.TimeZone).Date.Equals(date))
                     {
                         cls += "current_date_class";
                     }
