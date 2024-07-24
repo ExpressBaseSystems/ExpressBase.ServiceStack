@@ -1862,7 +1862,7 @@ namespace ExpressBase.ServiceStack
                 var endDate = new DateTime(date.Year, date.Month, date.Day, 23, 59, 59);
                 var key = GetKey(startDate, endDate);
                 string _tooltip = date.ToString("dd-MM-yyyy");
-                string _title = date.ToString("ddd")[0] + "</br>" + date.ToString("dd");
+                string _title = date.ToString("ddd") + "</br>" + date.ToString("dd MMM yyyy");
                 tempdataset.Tables[0].Columns.Add(new EbDataColumn { ColumnIndex = index, ColumnName = key, Type = EbDbTypes.String });
                 i++;
                 if (Modifydv)
@@ -1983,7 +1983,7 @@ namespace ExpressBase.ServiceStack
                 date = new DateTime(x.Item2.Year, x.Item2.Month, x.Item2.Day, 23, 59, 59);
                 var endDate = DateTimeHelper.EndOfDay(x.Item2);
                 var key = GetKey(startDate, endDate);
-                var _title = "week " + (i + 1);
+                var _title = "Week " + (i + 1) + "<br/>" + x.Item1.ToString("dd-") + x.Item2.ToString("dd MMM yyyy");
                 string _tooltip = x.Item1.ToString("dd-MM-yyyy") + " to " + x.Item2.ToString("dd-MM-yyyy");
                 tempdataset.Tables[0].Columns.Add(new EbDataColumn { ColumnIndex = index, ColumnName = key, Type = EbDbTypes.String });
                 if (Modifydv)
@@ -2028,7 +2028,7 @@ namespace ExpressBase.ServiceStack
                     date = startDate.AddMonths(1).AddDays(-1);
                     DateTime endDate = new DateTime(y, m, date.Day, 23, 59, 59);
                     string key = GetKey(startDate, endDate);
-                    string title = date.ToString("MMM-yy");
+                    string title = date.ToString("MMM yyyy");
                     string _tooltip = startDate.ToString("dd-MM-yyyy") + " to " + endDate.ToString("dd-MM-yyyy");
                     tempdataset.Tables[0].Columns.Add(new EbDataColumn { ColumnIndex = index, ColumnName = key, Type = EbDbTypes.String });
                     i++;
@@ -2078,7 +2078,7 @@ namespace ExpressBase.ServiceStack
                     DateTime endDate = new DateTime(y/*date.Year*/, date.Month, date.Day, 23, 59, 59);
                     string key = GetKey(startDate, endDate);
                     string endmonth = DateTimeFormatInfo.CurrentInfo.GetMonthName(date.Month);
-                    string title = "Q" + j + " - '" + y.ToString().Substring(2, 2);
+                    string title = "Q" + j + "<br/>" + startDate.ToString("MMM yyyy") + "-" + endDate.ToString("MMM yyyy");
                     string _tooltip = month + "-" + endmonth + "</br>" + startDate.ToString("dd-MM-yyyy") + " to " + endDate.ToString("dd-MM-yyyy");
                     tempdataset.Tables[0].Columns.Add(new EbDataColumn { ColumnIndex = index, ColumnName = key, Type = EbDbTypes.String });
                     i++;
@@ -2127,7 +2127,7 @@ namespace ExpressBase.ServiceStack
                     DateTime endDate = new DateTime(y, date.Month, date.Day, 23, 59, 59);
                     string endmonth = DateTimeFormatInfo.CurrentInfo.GetMonthName(date.Month);
                     string key = GetKey(startDate, endDate);
-                    string title = "HF " + j + " - '" + y.ToString().Substring(2, 2);
+                    string title = "HF " + j + "<br/>" + startDate.ToString("MMM yyyy") + "-" + endDate.ToString("MMM yyyy");
                     string _tooltip = startmonth + "-" + endmonth + "</br>" + startDate.ToString("dd-MM-yyyy") + " to " + endDate.ToString("dd-MM-yyyy");
                     tempdataset.Tables[0].Columns.Add(new EbDataColumn { ColumnIndex = index, ColumnName = key, Type = EbDbTypes.String });
                     i++;
