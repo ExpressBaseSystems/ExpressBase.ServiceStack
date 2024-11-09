@@ -1949,6 +1949,17 @@ $$");
             return new LockUnlockWebFormDataResponse { Status = status, ModifiedAt = modifiedAt };
         }
 
+        public ChangeLocationWebFormDataResponse Any(ChangeLocationWebFormDataRequest request)
+        {
+            EbWebForm FormObj = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId);
+            CheckDataPusherCompatibility(FormObj);
+            FormObj.TableRowId = request.RowId;
+            (int RowAffected, string Message) = FormObj.ChangeLocation(EbConnectionFactory.DataDB, this, request.NewLocId, request.ModifiedAt);
+            Console.WriteLine($"FormData location changed. RowId: {request.RowId}  RowsAffected: {RowAffected}");
+
+            return new ChangeLocationWebFormDataResponse { Status = RowAffected, Message = Message };
+        }
+
         public GetPushedDataInfoResponse Any(GetPushedDataInfoRequest request)
         {
             try
