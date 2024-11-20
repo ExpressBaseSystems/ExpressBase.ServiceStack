@@ -2483,7 +2483,16 @@ namespace ExpressBase.ServiceStack
                                 {
                                     if (_formattedData.ToString() == string.Empty)
                                         _formattedData = "...";
-                                    _formattedData = "<a href='#' class ='tablelinkfromcolumn" + this.TableId + "' data-link='" + row[col.RefidColumn.Data] + "' data-colindex='" + col.Data + "' data-column='" + col.Name + "' data-linkfromcolumn='true'>" + _formattedData + "</a>";
+                                    if (!string.IsNullOrWhiteSpace(Convert.ToString(row[col.RefidColumn.Data])) && int.TryParse(Convert.ToString(row[col.IdColumn.Data]), out int __id) && __id > 0)
+                                        _formattedData = "<a href='#' class ='tablelinkfromcolumn" + this.TableId + "' data-link='" + row[col.RefidColumn.Data] + "' data-colindex='" + col.Data + "' data-column='" + col.Name + "' data-linkfromcolumn='true'>" + _formattedData + "</a>";
+                                }
+
+                                if (col is DVStringColumn && col.RenderType == EbDbTypes.String && (col as DVStringColumn).RenderAs == StringRenderType.WebformLink && (_isexcel == false))
+                                {
+                                    if (_formattedData.ToString() == string.Empty)
+                                        _formattedData = "...";
+                                    if (int.TryParse(Convert.ToString(row[col.VersionIdColumn.Data]), out int __verid) && __verid > 0 && int.TryParse(Convert.ToString(row[col.DataIdColumn.Data]), out int __id) && __id > 0)
+                                        _formattedData = "<a href='#' class ='webformlink" + this.TableId + "' data-ver='" + __verid + "' data-colindex='" + col.Data + "' data-column='" + col.Name + "' data-id='" + __id + "'>" + _formattedData + "</a>";
                                 }
 
                                 if (col is DVStringColumn && col.RenderType == EbDbTypes.String && (col as DVStringColumn).RenderAs == StringRenderType.Link && col.LinkType == LinkTypeEnum.Tab && (_isexcel == false))/////////////////
