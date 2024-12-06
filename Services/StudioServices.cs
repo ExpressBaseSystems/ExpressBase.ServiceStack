@@ -1529,6 +1529,8 @@ namespace ExpressBase.ServiceStack.Services
                 return EbObjectTypes.HtmlPage.IntCode;
             else if (obj is EbMaterializedView)
                 return EbObjectTypes.MaterializedView.IntCode;
+            else if (obj is EbPosForm)
+                return EbObjectTypes.PosForm.IntCode;
             else
                 return -1;
         }
