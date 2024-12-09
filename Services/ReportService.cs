@@ -64,7 +64,7 @@ namespace ExpressBase.ServiceStack
                         Report.Solution = GetSolutionObject(request.SolnId);
                         Report.ReadingUser = GetUserObject(request.ReadingUserAuthId);
                         Report.RenderingUser = GetUserObject(request.RenderingUserAuthId);
-                        Report.ExecuteRendering(request.BToken, request.RToken, this.Document, this.Ms1, request.Params, this.EbConnectionFactory);
+                        Report.ExecuteRendering(request.BToken, request.RToken, this.Document, this.Ms1, request.Params, this.EbConnectionFactory, request.UseRwDb);
 
                     }
                     catch (Exception e)

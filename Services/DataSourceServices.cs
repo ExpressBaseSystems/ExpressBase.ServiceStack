@@ -648,7 +648,7 @@ END
             this.Log.Info("data request");
             DataSourceDataSetResponse resp = null;
             using (var redisReadOnly = this.PooledRedisManager.GetReadOnlyClient())
-                resp = EbObjectsHelper.ExecuteDataset(request.RefId, request.UserId, request.Params, this.EbConnectionFactory, this.Redis, redisReadOnly);
+                resp = EbObjectsHelper.ExecuteDataset(request.RefId, request.UserId, request.Params, this.EbConnectionFactory, this.Redis, redisReadOnly, false);
             return resp;
         }
 
