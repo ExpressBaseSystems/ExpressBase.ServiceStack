@@ -70,8 +70,10 @@ namespace ExpressBase.ServiceStack
                     catch (Exception e)
                     {
                         Console.WriteLine("Exception-reportService " + e.Message + e.StackTrace);
-                        Report.HandleExceptionPdf();
+                        Report.HandleExceptionPdf(e);
                     }
+
+                    Report.Doc.AddTitle(Report.DocumentName);
 
                     Report.Doc.Close();
 
@@ -178,9 +180,10 @@ namespace ExpressBase.ServiceStack
                 catch (Exception e)
                 {
                     Console.WriteLine("Exception-reportService " + e.Message + e.StackTrace);
-                    Report.HandleExceptionPdf();
+                    Report.HandleExceptionPdf(e);
                 }
 
+                Report.Doc.AddTitle(Report.DocumentName);
                 Report.Doc.Close();
 
                 if (Report.DataSourceRefId != string.Empty && Report.DataSet != null)
@@ -218,7 +221,6 @@ namespace ExpressBase.ServiceStack
                 Report.Writer = PdfWriter.GetInstance(Report.Doc, this.Ms1);
                 Report.Writer.Open();
                 Report.Doc.Open();
-                Report.Doc.AddTitle(Report.DocumentName);
                 Report.Writer.PageEvent = new HeaderFooter(Report);
                 Report.Writer.CloseStream = true;//important
                 Report.Canvas = Report.Writer.DirectContent;
