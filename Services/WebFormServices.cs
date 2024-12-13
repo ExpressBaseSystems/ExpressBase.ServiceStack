@@ -329,7 +329,7 @@ $$");
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = ebs[SystemColumns.eb_lastmodified_at], Type = vDbTypes.DateTime, Label = "Last Modified At" });
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = ebs[SystemColumns.eb_del], Type = vDbTypes.GetVendorDbTypeStruct(ebs.GetDbType(SystemColumns.eb_del)), Default = ebs.GetBoolFalse(SystemColumns.eb_del, false) });// delete
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = ebs[SystemColumns.eb_void], Type = vDbTypes.GetVendorDbTypeStruct(ebs.GetDbType(SystemColumns.eb_void)), Default = ebs.GetBoolFalse(SystemColumns.eb_void, false), Label = "Void ?" });// cancel //only ?
-                    _listNamesAndTypes.Add(new TableColumnMeta { Name = ebs[SystemColumns.eb_loc_id], Type = vDbTypes.Int32, Label = "Location" });// location id //only ?
+                    _listNamesAndTypes.Add(new TableColumnMeta { Name = ebs[SystemColumns.eb_loc_id], Type = vDbTypes.Int16, Label = "Location" });// location id //only ?
                     _listNamesAndTypes.Add(new TableColumnMeta { Name = ebs[SystemColumns.eb_signin_log_id], Type = vDbTypes.Int32, Label = "Log Id" });
                     //_listNamesAndTypes.Add(new TableColumnMeta { Name = "eb_default", Type = vDbTypes.Boolean, Default = "F" });
 
@@ -409,6 +409,7 @@ $$");
                                 (entry.Type.EbDbType.ToString().Equals("BooleanOriginal") && dr.Type.ToString().Equals("Boolean")) ||
                                 (entry.Type.EbDbType.ToString().Equals("Decimal") && (dr.Type.ToString().Equals("Int32") || dr.Type.ToString().Equals("Int64"))) ||
                                 (entry.Type.EbDbType.ToString().Equals("Int32") && dr.Type.ToString().Equals("Decimal")) ||
+                                (entry.Type.EbDbType.ToString().Equals("Int16") && dr.Type.ToString().Equals("Int32")) ||
                                 (entry.Type.EbDbType.ToString().Equals("DateTime") && dr.Type.ToString().Equals("Date")) ||
                                 (entry.Type.EbDbType.ToString().Equals("Date") && dr.Type.ToString().Equals("DateTime")) ||
                                 (entry.Type.EbDbType.ToString().Equals("Time") && dr.Type.ToString().Equals("DateTime"))
@@ -1576,7 +1577,7 @@ $$");
             for (int i = 0; i < Req.UniqCheckParam.Length; i++)
             {
                 EbDbTypes _type = (EbDbTypes)Req.UniqCheckParam[i].TypeI;
-                fullQuery += string.Format("SELECT id FROM {0} WHERE {5}{1}{6} = {5}@value_{2}{6} AND COALESCE({3}, {4}) = {4};",
+                fullQuery += string.Format("SELECT id FROM {0} WHERE {5}{1}{6} = {5}@value_{2}{6} AND {3} = {4};",
                     Req.UniqCheckParam[i].TableName,
                     Req.UniqCheckParam[i].Field,
                     i,
@@ -1584,12 +1585,12 @@ $$");
                     SysCols.GetBoolFalse(SystemColumns.eb_del),
                     _type == EbDbTypes.String ? "LOWER(TRIM(" : string.Empty,
                     _type == EbDbTypes.String ? "))" : string.Empty);
-                Dbparams.Add(this.EbConnectionFactory.DataDB.GetNewParameter("value_" + i, _type, Req.UniqCheckParam[i].Value));
+                Dbparams.Add(this.EbConnectionFactory.DataDBRO.GetNewParameter("value_" + i, _type, Req.UniqCheckParam[i].Value));
             }
 
             if (fullQuery != string.Empty)
             {
-                EbDataSet ds = this.EbConnectionFactory.DataDB.DoQueries(fullQuery, Dbparams.ToArray());
+                EbDataSet ds = this.EbConnectionFactory.DataDBRO.DoQueries(fullQuery, Dbparams.ToArray());
                 for (int i = 0; i < ds.Tables.Count; i++)
                 {
                     if (ds.Tables[i].Rows.Count > 0)
@@ -1602,7 +1603,7 @@ $$");
         }
         public GetDictionaryValueResponse Any(GetDictionaryValueRequest request)
         {
-            Dictionary<string, string> Dict = EbObjectsHelper.GetKeyValues(request, this.EbConnectionFactory.DataDB);
+            Dictionary<string, string> Dict = EbObjectsHelper.GetKeyValues(request, this.EbConnectionFactory.DataDBRO);
 
             return new GetDictionaryValueResponse { Dict = Dict };
         }
@@ -1988,7 +1989,7 @@ $$");
 
                     Qry += $"SELECT id{autoIdCol} FROM {dp.WebForm.TableName} WHERE {FormObj.TableName}_id = {request.RowId} AND COALESCE({ebs[SystemColumns.eb_del]}, {ebs.GetBoolFalse(SystemColumns.eb_del)}) = {ebs.GetBoolFalse(SystemColumns.eb_del)} {_pshId}; ";
                 }
-                EbDataSet ds = this.EbConnectionFactory.DataDB.DoQueries(Qry);
+                EbDataSet ds = this.EbConnectionFactory.DataDBRO.DoQueries(Qry);
                 Dictionary<string, string> resDict = new Dictionary<string, string>();
                 List<string> Table_Id_s = new List<string>();
                 for (int i = 0; i < FormDp.Count; i++)
@@ -2382,7 +2383,7 @@ $$");
         {
             Eb_Solution SlnObj = this.GetSolutionObject(request.SolnId);
             User UsrObj = GetUserObject(request.UserAuthId);
-            string Json = SearchHelper.GetSearchResults(this.EbConnectionFactory.DataDB, SlnObj, UsrObj, request.SrchText);
+            string Json = SearchHelper.GetSearchResults(this.EbConnectionFactory.DataDBRO, SlnObj, UsrObj, request.SrchText);
             return new GetGlobalSrchRsltsResp() { Data = Json };
         }
 
@@ -2729,7 +2730,7 @@ $$");
                 string query = EbConnectionFactory.DataDB.EB_GET_DISTINCT_VALUES
                 .Replace("@ColumName", request.ColumnName)
                 .Replace("@TableName", request.TableName);
-                EbDataTable table = EbConnectionFactory.DataDB.DoQuery(query);
+                EbDataTable table = EbConnectionFactory.DataDBRO.DoQuery(query);
 
                 int capacity = table.Rows.Count;
 
@@ -2872,7 +2873,7 @@ $$");
         public GetAllRolesResponse Get(GetAllRolesRequest Req)
         {
             string query = "SELECT id, role_name FROM eb_roles WHERE COALESCE(eb_del, 'F') = 'F';";
-            EbDataTable datatbl = this.EbConnectionFactory.DataDB.DoQuery(query);
+            EbDataTable datatbl = this.EbConnectionFactory.DataDBRO.DoQuery(query);
             Dictionary<int, string> t = new Dictionary<int, string>();
             foreach (var dr in datatbl.Rows)
             {
@@ -2889,7 +2890,7 @@ $$");
             try
             {
                 string q1 = $"SELECT eb_user_types_id FROM eb_users WHERE id = {request.UserId} ;";
-                EbDataTable dt1 = this.EbConnectionFactory.DataDB.DoQuery(q1);
+                EbDataTable dt1 = this.EbConnectionFactory.DataDBRO.DoQuery(q1);
                 if (dt1.Rows.Count > 0)
                 {
                     int type_id = Convert.ToInt32(dt1.Rows[0][0]);
@@ -2920,7 +2921,7 @@ $$");
                                     try
                                     {
                                         string q2 = string.Format("SELECT id from {0} where eb_users_id = {1};", tablename, request.UserId);
-                                        EbDataTable dt2 = this.EbConnectionFactory.DataDB.DoQuery(q2);
+                                        EbDataTable dt2 = this.EbConnectionFactory.DataDBRO.DoQuery(q2);
 
                                         if (dt2.Rows.Count > 0)
                                         {
@@ -2968,7 +2969,7 @@ LEFT JOIN eb_locations l ON l.id=m.eb_loc_id
 WHERE 
     m.eb_del='F' AND m.eb_void='F'; ";
 
-                EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(query);
+                EbDataTable dt = this.EbConnectionFactory.DataDBRO.DoQuery(query);
 
                 foreach (EbDataRow dr in dt.Rows)
                 {
@@ -3043,7 +3044,7 @@ WHERE
                 string Qry = "SELECT id, user_id, name, user_role, palm, fingerprint, face, card_number, password, user_photo, access_control_role " +
                     $"FROM eb_att_users WHERE device_id='{request.deviceId}' AND eb_del='F';";
 
-                EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(Qry);
+                EbDataTable dt = this.EbConnectionFactory.DataDBRO.DoQuery(Qry);
 
                 StringBuilder fullQry = new StringBuilder();
 
