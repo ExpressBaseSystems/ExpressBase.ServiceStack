@@ -1402,7 +1402,11 @@ SELECT DISTINCT id FROM eb_form_drafts WHERE draft_type = @draft_type AND eb_cre
             data.CurrentUser = this.GetUserObject(request.UserAuthId);
             data.CurrentSolution = this.GetSolutionObject(request.SolnId);
 
-            Dictionary<string, object> metaData = JsonConvert.DeserializeObject<Dictionary<string, object>>(request.MetaData);
+            Dictionary<string, object> metaData;
+            if (string.IsNullOrWhiteSpace(request.MetaData))
+                metaData = new Dictionary<string, object>();
+            else
+                metaData = JsonConvert.DeserializeObject<Dictionary<string, object>>(request.MetaData);
             DateTime date = metaData.ContainsKey("last_sync_ts") ? Convert.ToDateTime(metaData["last_sync_ts"]) : DateTime.MinValue;
 
             string idcheck = "AND EO.id = ANY(string_to_array(@ids, ',')::int[])";
