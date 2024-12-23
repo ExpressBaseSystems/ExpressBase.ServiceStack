@@ -382,7 +382,7 @@ SELECT DISTINCT id FROM eb_form_drafts WHERE draft_type = @draft_type AND eb_cre
 
                         if (appData.AppSettings != null)
                         {
-                            EbDataSet dataset = PullAppConfiguredData(appData.AppSettings, data.CurrentUser.UserId);
+                            EbDataSet dataset = PullAppConfiguredData(appData.AppSettings, data.CurrentUser.UserId, 0);
                             appData.OfflineData.Tables.AddRange(dataset.Tables);
                         }
                     }
@@ -554,7 +554,7 @@ SELECT DISTINCT id FROM eb_form_drafts WHERE draft_type = @draft_type AND eb_cre
             {
                 if (app.AppSettings != null && export)
                 {
-                    EbDataSet ds = PullAppConfiguredData(app.AppSettings, data.CurrentUser.UserId);
+                    EbDataSet ds = PullAppConfiguredData(app.AppSettings, data.CurrentUser.UserId, 0);
                     app.OfflineData.Tables.AddRange(ds.Tables);
                 }
 
@@ -612,7 +612,7 @@ SELECT DISTINCT id FROM eb_form_drafts WHERE draft_type = @draft_type AND eb_cre
             }
         }
 
-        private EbDataSet PullAppConfiguredData(EbAppSettings Settings, int userid)
+        private EbDataSet PullAppConfiguredData(EbAppSettings Settings, int userid, int locid)
         {
             List<DataImportMobile> _importDrList;
 
@@ -629,6 +629,7 @@ SELECT DISTINCT id FROM eb_form_drafts WHERE draft_type = @draft_type AND eb_cre
                 string FullQry = string.Empty;
                 List<DbParameter> dbParam = new List<DbParameter>();
                 dbParam.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_currentuser_id", EbDbTypes.Int32, userid));
+                dbParam.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_loc_id", EbDbTypes.Int32, locid));
 
                 foreach (DataImportMobile DI in _importDrList)
                 {
@@ -1436,7 +1437,11 @@ SELECT CURRENT_TIMESTAMP AT TIME ZONE 'UTC'; ";
 
             try
             {
-                if (data.CurrentSolution != null) data.Locations = data.CurrentSolution.GetLocationsByUser(data.CurrentUser);
+                if (data.CurrentSolution?.Locations != null && data.CurrentUser?.LocationIds?.Count > 0 &&
+                    data.CurrentSolution.Locations.ContainsKey(data.CurrentUser.LocationIds[0]))
+                {
+                    data.Location = data.CurrentSolution.Locations[data.CurrentUser.LocationIds[0]];
+                }
 
                 EbDataSet ds;
                 List<DbParameter> param = new List<DbParameter>()
@@ -1485,7 +1490,7 @@ SELECT CURRENT_TIMESTAMP AT TIME ZONE 'UTC'; ";
 
                         if (appData.AppSettings != null)
                         {
-                            EbDataSet dataset = PullAppConfiguredData(appData.AppSettings, data.CurrentUser.UserId);
+                            EbDataSet dataset = PullAppConfiguredData(appData.AppSettings, data.CurrentUser.UserId, data.Location != null ? data.Location.LocId : 0);
                             appData.OfflineData.Tables.AddRange(dataset.Tables);
                         }
                     }
