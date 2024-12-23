@@ -1437,10 +1437,12 @@ SELECT CURRENT_TIMESTAMP AT TIME ZONE 'UTC'; ";
 
             try
             {
-                if (data.CurrentSolution?.Locations != null && data.CurrentUser?.LocationIds?.Count > 0 &&
-                    data.CurrentSolution.Locations.ContainsKey(data.CurrentUser.LocationIds[0]))
+
+
+                if (data.CurrentSolution?.Locations != null && data.CurrentUser != null)
                 {
-                    data.Location = data.CurrentSolution.Locations[data.CurrentUser.LocationIds[0]];
+                    int loc_id = data.CurrentUser.GeFirstLocationIdFromPermission();
+                    data.Location = data.CurrentSolution.Locations.ContainsKey(loc_id) ? data.CurrentSolution.Locations[loc_id] : null;
                 }
 
                 EbDataSet ds;
