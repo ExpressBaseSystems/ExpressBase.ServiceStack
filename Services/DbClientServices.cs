@@ -84,7 +84,8 @@ namespace ExpressBase.ServiceStack.Services
                         ColumnName = Row[1].ToString(),
                         ColumnType = Row[2].ToString()
                     };
-                    Table.TableCollection[Row[0].ToString()].Columns.Add(col);
+                    if (Table.TableCollection.ContainsKey(Row[0].ToString()))
+                        Table.TableCollection[Row[0].ToString()].Columns.Add(col);
                 }
                 Data = dt.Tables[2];
                 foreach (var Row in Data.Rows)
