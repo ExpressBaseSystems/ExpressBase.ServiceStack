@@ -1634,7 +1634,7 @@ $$");
                 Console.WriteLine("Insert/Update WebFormData : AfterExecutionIfUserCreated start - " + DateTime.Now);
                 FormObj.AfterExecutionIfUserCreated(this, this.EbConnectionFactory.EmailConnection, MessageProducer3, request.WhichConsole, MetaData, request.CurrentLang);
                 Console.WriteLine("Insert/Update WebFormData end : Execution Time = " + (DateTime.Now - startdt).TotalMilliseconds);
-                bool isMobInsert = request.WhichConsole == RoutingConstants.MC;
+                bool isMobInsert = request.WhichConsole == RoutingConstants.MC || request.WhichConsole == RoutingConstants.PC;
                 bool isMobSignUp = isMobInsert && !string.IsNullOrWhiteSpace(request.MobilePageRefId) && request.MobilePageRefId == FormObj.SolutionObj?.SolutionSettings?.MobileAppSettings?.SignUpPageRefId;
                 EbFormHelper.SetFsSsProcessedCxtId(this.Redis, request.SolnId, request.RefId, request.UserId, request.FsCxtId, request.RowId, FormObj.TableRowId);
 
@@ -1798,7 +1798,7 @@ $$");
                 if (FormObj?.FormData?.MultipleTables != null)
                 {
                     if (FormObj.FormData.MultipleTables.TryGetValue(FormObj.TableName, out SingleTable MTable) &&
-                        MTable.Count > 0 && MTable[0].GetColumn("eb_created_at_device") != null)
+                        MTable.Count > 0 && MTable[0].GetColumn(SystemColumns.eb_created_at_device) != null)
                     {
                         //SingleColumn Col = MTable[0].GetColumn("eb_retry_count");
                         //if (Col == null || (int.TryParse(Col.Value?.ToString(), out int count) && count == 0))
