@@ -1523,8 +1523,8 @@ namespace ExpressBase.ServiceStack
                             FooterGroupingDetails det = (FooterGroupingDetails)RowGrouping[FooterPrefix + prevGroupingText];
                             foreach (KeyValuePair<int, NumericAggregates> ss in det.Aggregations)
                             {
-                                int ix = DictDataColIndexToExcelColIndex[ss.Key];
-                                string cellReference = DictExcelColumnNames[ix + 1] + (i + ExcelRowcount);
+                                int xelColIdx = DictDataColIndexToExcelColIndex[ss.Key];
+                                string cellReference = DictExcelColumnNames[xelColIdx] + (i + ExcelRowcount);
                                 Cell cell = workRow.Elements<Cell>().Where(c => c.CellReference.Value == cellReference).First();
                                 cell.CellValue = new CellValue(ss.Value.Sum.ToString());
                                 cell.DataType = ResolveCellDataTypeOnValue(ss.Value.Sum.ToString());
@@ -1557,12 +1557,12 @@ namespace ExpressBase.ServiceStack
                         CultureInfo cults = col.GetColumnCultureInfo(_user_culture);
                         object _unformattedData = row[col.Data] ?? "";
                         object _formattedData = IntermediateDic[col.Data] ?? "";
-                        object ActualFormatteddata = IntermediateDic[col.Data] == null || col is DVActionColumn ? "" : Convert.ToString(IntermediateDic[col.Data]).Replace("<", "").Replace(">", "").Replace("'", "").Replace("\"", "");
+                        //object ActualFormatteddata = IntermediateDic[col.Data] == null || col is DVActionColumn ? "" : Convert.ToString(IntermediateDic[col.Data]).Replace("<", "").Replace(">", "").Replace("'", "").Replace("\"", "");
                         object ExcelData = _formattedData;
 
                         if (col.RenderType == EbDbTypes.Decimal || col.RenderType == EbDbTypes.Int32 || col.RenderType == EbDbTypes.Int64)
                         {
-                            SummaryCalc(ref Summary, col, _unformattedData, cults, m);
+                            SummaryCalc(ref Summary, col, _unformattedData, cults, ExcelColIndex);
                             ExcelData = _unformattedData;
                         }
                         else if (col.RenderType == EbDbTypes.String && col.bVisible)
@@ -1589,7 +1589,7 @@ namespace ExpressBase.ServiceStack
                         _formattedTable.Rows[i][col.Data] = _formattedData;
                         if (i + 1 == count)
                         {
-                            SummaryCalcAverage(ref Summary, col, cults, count, m);
+                            SummaryCalcAverage(ref Summary, col, cults, count, ExcelColIndex);
                         }
                         if (isnotAdded && ExcelColIndex > 0)
                         {
@@ -1618,8 +1618,8 @@ namespace ExpressBase.ServiceStack
                                 workRow = GetWorkRow(i);
                                 foreach (KeyValuePair<int, NumericAggregates> ss in grpFoot.Aggregations)
                                 {
-                                    int ix = DictDataColIndexToExcelColIndex[ss.Key]; //dependencyTable.FindIndex(e => e.Data == ss.Key);                                
-                                    string cellReference = DictExcelColumnNames[ix + 1] + (i + ExcelRowcount);
+                                    int xelColIdx = DictDataColIndexToExcelColIndex[ss.Key]; //dependencyTable.FindIndex(e => e.Data == ss.Key);                                
+                                    string cellReference = DictExcelColumnNames[xelColIdx] + (i + ExcelRowcount);
                                     Cell cell = workRow.Elements<Cell>().Where(c => c.CellReference.Value == cellReference).First();
                                     cell.CellValue = new CellValue(ss.Value.Sum.ToString());
                                     cell.DataType = ResolveCellDataTypeOnValue(ss.Value.Sum.ToString());
@@ -1633,7 +1633,7 @@ namespace ExpressBase.ServiceStack
                     workRow = GetWorkRow(i);
                     foreach (var _key in Summary.Keys)
                     {
-                        string cellReference = DictExcelColumnNames[_key + 1] + (i + ExcelRowcount);
+                        string cellReference = DictExcelColumnNames[_key] + (i + ExcelRowcount);
                         Cell cell = workRow.Elements<Cell>().Where(c => c.CellReference.Value == cellReference).First();
                         cell.CellValue = new CellValue(Convert.ToDecimal(Summary[_key][0]).ToString());
                         cell.DataType = ResolveCellDataTypeOnValue(Convert.ToDecimal(Summary[_key][0]).ToString());
@@ -1691,7 +1691,7 @@ namespace ExpressBase.ServiceStack
         public void CreateHeaderRowForExcel()
         {
             ExcelRowcount = 1;
-            ExcelColumns = _dV.Columns.FindAll(col => col.bVisible && !(col is DVApprovalColumn) && !(col is DVActionColumn)).ToList();
+            ExcelColumns = _dV.Columns.FindAll(col => col.bVisible && col.Name != "id" && !(col is DVApprovalColumn) && !(col is DVActionColumn)).ToList();
             Row workRow = new Row();
             workRow.Append(CreateCell(_dV.DisplayName, 1U));
             partSheetData.Append(workRow);
@@ -2797,7 +2797,7 @@ namespace ExpressBase.ServiceStack
                     for (int i = 0; i < ExcelColumns.Count; i++)
                     {
                         if (!_dictDataColIndexToExcelColIndex.ContainsKey(ExcelColumns[i].Data))
-                            _dictDataColIndexToExcelColIndex.Add(ExcelColumns[i].Data, i);
+                            _dictDataColIndexToExcelColIndex.Add(ExcelColumns[i].Data, i + 1);
                     }
                 }
                 return _dictDataColIndexToExcelColIndex;
@@ -4421,7 +4421,7 @@ ORDER BY
             {
                 if (!Summary.Keys.Contains(indx))
                     Summary.Add(indx, new List<object> { 0, 0 });
-                Summary[indx][0] = (Convert.ToDecimal(Summary[indx][0]) + Convert.ToDecimal(_unformattedData)).ToString("N", cults.NumberFormat);
+                Summary[indx][0] = (Convert.ToDecimal(Summary[indx][0]) + Convert.ToDecimal(_unformattedData));
             }
         }
 
@@ -4429,7 +4429,7 @@ ORDER BY
         {
             if (Summary.Keys.Contains(indx))
             {
-                Summary[col.Data][1] = (Convert.ToDecimal(Summary[indx][0]) / count).ToString("N", cults.NumberFormat);
+                Summary[indx][1] = (Convert.ToDecimal(Summary[indx][0]) / count).ToString("N", cults.NumberFormat);
             }
         }
 
