@@ -76,10 +76,14 @@ namespace ExpressBase.ServiceStack.Services
                             {
                                 AdminUserName = request.DBName + "_admin" + extension,
                                 AdminPassword = dt.Rows[0][0].ToString(),
-                                ReadOnlyUserName = request.DBName + "_ro" + extension,
-                                ReadOnlyPassword = dt.Rows[0][1].ToString(),
-                                ReadWriteUserName = request.DBName + "_rw" + extension,
-                                ReadWritePassword = dt.Rows[0][2].ToString(),
+                                ReadOnlyUserName = request.DBName + "_admin" + extension,
+                                ReadOnlyPassword = dt.Rows[0][0].ToString(),
+                                ReadWriteUserName = request.DBName + "_admin" + extension,
+                                ReadWritePassword = dt.Rows[0][0].ToString(),
+                                //ReadOnlyUserName = request.DBName + "_ro" + extension,
+                                //ReadOnlyPassword = dt.Rows[0][1].ToString(),
+                                //ReadWriteUserName = request.DBName + "_rw" + extension,
+                                //ReadWritePassword = dt.Rows[0][2].ToString(),
                             };
                             EbConnectionsConfig _dcConnections = EbConnectionsConfigProvider.GetDataCenterConnections();
                             _dcConnections.DataDbConfig.DatabaseName = request.DBName;
@@ -198,17 +202,17 @@ namespace ExpressBase.ServiceStack.Services
 
                     con_p.Open();
                     string sql = string.Format(@"REVOKE connect ON DATABASE ""{0}"" FROM PUBLIC;
-                               GRANT ALL PRIVILEGES ON DATABASE ""{0}"" TO {1};                   
+                               GRANT ALL PRIVILEGES ON DATABASE ""{0}"" TO {1};
                                GRANT ALL PRIVILEGES ON DATABASE ""{0}"" TO {0}_admin;
                                GRANT CONNECT ON DATABASE ""{0}"" TO {1};
                                GRANT CONNECT ON DATABASE ""{0}"" TO {0}_admin;
-                               GRANT CONNECT ON DATABASE ""{0}"" TO {0}_ro;     
+                               GRANT CONNECT ON DATABASE ""{0}"" TO {0}_ro;
                                GRANT CONNECT ON DATABASE ""{0}"" TO {0}_rw;", _dbname,
                                    Environment.GetEnvironmentVariable(EnvironmentConstants.EB_DATACENTRE_ADMIN_USER).Split('@')[0]);
 
                     int grnt = DataCenterDataDB.DoNonQuery(sql);
 
-                    string sql2 = string.Format(@"GRANT ALL PRIVILEGES ON SCHEMA public TO {1};                           
+                    string sql2 = string.Format(@"GRANT ALL PRIVILEGES ON SCHEMA public TO {1};
                             GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO {1};
                             ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON TABLES TO {1};
                             ALTER DEFAULT PRIVILEGES FOR ROLE {1} IN SCHEMA public GRANT ALL ON TABLES TO {0}_admin;
@@ -218,24 +222,24 @@ namespace ExpressBase.ServiceStack.Services
                             GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public TO {1};
                             ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON FUNCTIONS TO {1};
                             ALTER DEFAULT PRIVILEGES FOR ROLE {1} IN SCHEMA public GRANT ALL ON FUNCTIONS TO {0}_admin;
-                      GRANT ALL PRIVILEGES ON SCHEMA public TO {0}_admin; 
+                      GRANT ALL PRIVILEGES ON SCHEMA public TO {0}_admin;
                             GRANT {0}_admin to {1};
-                            GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO {0}_admin;                            
-                            ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON TABLES TO {0}_admin;                            
+                            GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO {0}_admin;
+                            ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON TABLES TO {0}_admin;
                             ALTER DEFAULT PRIVILEGES FOR ROLE {0}_admin IN SCHEMA public GRANT ALL ON TABLES TO {1};
                             GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO {0}_admin;
                             ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON SEQUENCES TO {0}_admin;
                             ALTER DEFAULT PRIVILEGES FOR ROLE {0}_admin IN SCHEMA public GRANT ALL ON SEQUENCES TO {1};
                             GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public TO {0}_admin;
-                            ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON FUNCTIONS TO {0}_admin; 
-                            ALTER DEFAULT PRIVILEGES FOR ROLE {0}_admin IN SCHEMA public GRANT ALL ON FUNCTIONS TO {1};                            
+                            ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON FUNCTIONS TO {0}_admin;
+                            ALTER DEFAULT PRIVILEGES FOR ROLE {0}_admin IN SCHEMA public GRANT ALL ON FUNCTIONS TO {1};
                             REVOKE ALL ON SCHEMA public FROM public;
                             REVOKE ALL ON DATABASE {0} FROM PUBLIC;
                       REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM {0}_ro;
-                            REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM {0}_ro; 
-                            REVOKE ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public FROM {0}_ro; 
+                            REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM {0}_ro;
+                            REVOKE ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public FROM {0}_ro;
                             GRANT USAGE ON SCHEMA public TO {0}_ro;
-                            GRANT {0}_ro to {0}_admin;                            
+                            GRANT {0}_ro to {0}_admin;
                             GRANT SELECT ON ALL TABLES IN SCHEMA public TO {0}_ro;
                             ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO {0}_ro;
                             ALTER DEFAULT PRIVILEGES FOR ROLE {0}_admin IN SCHEMA public GRANT SELECT ON TABLES TO {0}_ro;
@@ -249,13 +253,13 @@ namespace ExpressBase.ServiceStack.Services
                             REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM {0}_rw;
                             REVOKE ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public FROM {0}_rw;
                             GRANT USAGE ON SCHEMA public TO {0}_rw;
-                            GRANT {0}_rw to {0}_admin;                            
+                            GRANT {0}_rw to {0}_admin;
                             GRANT SELECT,INSERT,UPDATE ON ALL TABLES IN SCHEMA public TO {0}_rw;
                             ALTER DEFAULT PRIVILEGES FOR ROLE {0}_admin IN SCHEMA public GRANT SELECT,INSERT,UPDATE ON TABLES TO {0}_rw;
                             ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT,INSERT,UPDATE ON TABLES TO {0}_rw;
                             GRANT SELECT,UPDATE,USAGE ON ALL SEQUENCES IN SCHEMA public TO {0}_rw;
                             ALTER DEFAULT PRIVILEGES FOR ROLE {0}_admin IN SCHEMA public GRANT SELECT,UPDATE,USAGE ON SEQUENCES TO {0}_rw;
-                            ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT,UPDATE,USAGE ON SEQUENCES TO {0}_rw;                            
+                            ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT,UPDATE,USAGE ON SEQUENCES TO {0}_rw;
                             GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO {0}_rw;
                             ALTER DEFAULT PRIVILEGES FOR ROLE {0}_admin IN SCHEMA public GRANT EXECUTE ON FUNCTIONS TO {0}_rw;
                             ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT EXECUTE ON FUNCTIONS TO {0}_rw;", _dbname,

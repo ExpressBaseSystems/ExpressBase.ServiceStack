@@ -178,7 +178,7 @@ namespace ExpressBase.ServiceStack.Services
 
             try
             {
-                if (_solcount <= 3)
+                if (_solcount < 3)
                 {
                     CreateSolutionResponse response = this.Post(new CreateSolutionRequest
                     {
