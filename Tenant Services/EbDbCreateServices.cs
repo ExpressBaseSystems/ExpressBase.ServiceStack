@@ -86,6 +86,7 @@ namespace ExpressBase.ServiceStack.Services
                             _dcConnections.DataDbConfig.UserName = ebdbusers.AdminUserName;
                             _dcConnections.DataDbConfig.Password = ebdbusers.AdminPassword;
                             DataDB = new EbConnectionFactory(_dcConnections, request.DBName).DataDB;
+                            GrandAccessToPublicSchema(request.DBName);
                         }
                     }
                 }
@@ -163,6 +164,25 @@ namespace ExpressBase.ServiceStack.Services
             }
 
             return null;
+        }
+
+        private void GrandAccessToPublicSchema(string _dbname)
+        {
+            try
+            {
+                EbConnectionsConfig _dcConnections = EbConnectionsConfigProvider.GetDataCenterConnections();
+                _dcConnections.DataDbConfig.DatabaseName = _dbname;
+                IDatabase DataCenterDataDB = new EbConnectionFactory(_dcConnections, _dbname).DataDB;
+                using (DbConnection con_p = DataCenterDataDB.GetNewConnection())
+                {
+                    con_p.Open();
+                    int grnt = DataCenterDataDB.DoNonQuery($"GRANT USAGE, CREATE ON SCHEMA public TO {_dbname}_admin;");
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(".............problem in GrandAccessToPublicSchema: " + e.ToString());
+            }
         }
 
         public EbDbCreateResponse AssignDBUserPrivileges(DbConnection con, string _dbname, IDatabase DataDB)
@@ -278,9 +298,12 @@ namespace ExpressBase.ServiceStack.Services
                         Console.WriteLine(" Reading reference - stream is null -" + path);
                         return true;
                     }
-                    using (var cmdtxt1 = DataDB.GetNewCommand(con, result))
+                    if (!string.IsNullOrWhiteSpace(result))
                     {
-                        cmdtxt1.ExecuteNonQuery();
+                        using (var cmdtxt1 = DataDB.GetNewCommand(con, result))
+                        {
+                            cmdtxt1.ExecuteNonQuery();
+                        }
                     }
                 }
             }

@@ -161,7 +161,7 @@ namespace ExpressBase.ServiceStack.Services
             try
             {
                 string sql = @"SELECT COUNT(*) FROM eb_solutions WHERE tenant_id = :tid AND pricing_tier = :pricing_tier AND type = 1;
-                              SELECT COUNT(*) FROM eb_solutions WHERE tenant_id = :tid AND pricing_tier = :pricing_tier;";
+                              SELECT COUNT(*) FROM eb_solutions WHERE tenant_id = :tid;";
                 DbParameter[] parameters =
                 {
                 this.InfraConnectionFactory.DataDB.GetNewParameter("tid",EbDbTypes.Int32, request.UserId),
