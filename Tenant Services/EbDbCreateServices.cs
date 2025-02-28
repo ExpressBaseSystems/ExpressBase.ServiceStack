@@ -100,13 +100,14 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception e)
             {
                 Console.WriteLine("Exception: " + e.Message + e.StackTrace);
-                return new EbDbCreateResponse { ResponseStatus = new ResponseStatus { Message = ErrorTexConstants.DB_ALREADY_EXISTS } };
+                return new EbDbCreateResponse { ResponseStatus = new ResponseStatus { Message = e.Message, StackTrace = e.StackTrace } };
             }
         }
 
         public EbDbCreateResponse DbOperations(EbDbCreateRequest request, EbDbUsers ebDbUsers, IDatabase DataDB)
         {
             Console.WriteLine("Reached DbOperations");
+            EbDbCreateResponse resp = new EbDbCreateResponse() { ResponseStatus = new ResponseStatus() };
 
             using (DbConnection con = DataDB.GetNewConnection())
             {
@@ -131,43 +132,47 @@ namespace ExpressBase.ServiceStack.Services
                         counter++;
                         Console.WriteLine(counter);
 
-                        IsCreateComplete = CreateOrAlter_Structure(con, Urlstart + path, DataDB);
+                        IsCreateComplete = CreateOrAlter_Structure(con, Urlstart + path, DataDB, resp);
                         if (!IsCreateComplete)
                             break;
                     }
                     if (IsCreateComplete)
                     {
-                        IsInsertComplete = InsertIntoTables(request, con, DataDB, request.SolutionType);
+                        IsInsertComplete = InsertIntoTables(request, con, DataDB, request.SolutionType, resp);
                     }
-
-                    EbDbCreateResponse _res = request.IsChange ? null : AssignDBUserPrivileges(con, request.DBName, DataDB);
+                    if (!request.IsChange)
+                        AssignDBUserPrivileges(con, request.DBName, DataDB, resp);
 
                     if (IsCreateComplete & IsInsertComplete)
                     {
                         Console.WriteLine(".............Reached Transaction Commit");
                         con_trans.Commit();
-                        EbDbCreateResponse success = request.IsChange ? new EbDbCreateResponse() { DeploymentCompled = true } : _res;
-                        success.DbUsers = ebDbUsers;
+                        resp.ResponseStatus.Message = "Transaction Committed";
+                        if (request.IsChange)
+                            resp.DeploymentCompled = true;
+                        resp.DbUsers = ebDbUsers;
                         if (!request.IsChange && !request.IsFurther)
                         {   //run northwind
                             RunNorthWindScript(request.DBName, ebDbUsers);
                             //import the application 129
                         }
-                        return success;
                     }
                     else
+                    {
                         con_trans.Rollback();
-
+                        resp.ResponseStatus.Message = "Rollback completed";
+                    }
                 }
                 catch (Exception e)
                 {
                     con_trans.Rollback();
-                    throw new Exception(e.Message);
+                    resp.ResponseStatus.Message = e.Message;
+                    resp.ResponseStatus.StackTrace = e.StackTrace;
                 }
 
             }
 
-            return null;
+            return resp;
         }
 
         private void GrandAccessToPublicSchema(string _dbname)
@@ -189,7 +194,7 @@ namespace ExpressBase.ServiceStack.Services
             }
         }
 
-        public EbDbCreateResponse AssignDBUserPrivileges(DbConnection con, string _dbname, IDatabase DataDB)
+        public EbDbCreateResponse AssignDBUserPrivileges(DbConnection con, string _dbname, IDatabase DataDB, EbDbCreateResponse resp)
         {
             try
             {
@@ -271,20 +276,19 @@ namespace ExpressBase.ServiceStack.Services
                         cmdtxt.ExecuteNonQuery();
                     }
                 }
-                return new EbDbCreateResponse
-                {
-                    DeploymentCompled = true,
-                    DbName = _dbname
-                };
+                resp.DeploymentCompled = true;
+                resp.DbName = _dbname;
             }
             catch (Exception e)
             {
                 Console.WriteLine(".............problem in AssignDBUserPrivileges: " + e.ToString());
-                throw e;
+                resp.ResponseStatus.Message = "Exception while trying to AssignDBUserPrivileges; Error message: " + e.Message;
+                resp.ResponseStatus.StackTrace = e.StackTrace;
             }
+            return resp;
         }
 
-        public bool CreateOrAlter_Structure(DbConnection con, string path, IDatabase DataDB)
+        public bool CreateOrAlter_Structure(DbConnection con, string path, IDatabase DataDB, EbDbCreateResponse resp = null)
         {
             try
             {
@@ -313,15 +317,19 @@ namespace ExpressBase.ServiceStack.Services
             }
             catch (Exception e)
             {
-                //return false;
                 Console.WriteLine("Exception: " + path + e.Message + e.StackTrace);
-                throw new Exception("Already Exists");
+                if (resp != null)
+                {
+                    resp.ResponseStatus.Message = $"Exception while trying to deploy '{path}'; Error message: {e.Message}";
+                    resp.ResponseStatus.StackTrace = e.StackTrace;
+                }
+                return false;
             }
 
             return true;
         }
 
-        public bool InsertIntoTables(EbDbCreateRequest request, DbConnection con, IDatabase DataDB, SolutionType SolutionType)
+        public bool InsertIntoTables(EbDbCreateRequest request, DbConnection con, IDatabase DataDB, SolutionType SolutionType, EbDbCreateResponse resp)
         {
             try
             {
@@ -394,6 +402,8 @@ namespace ExpressBase.ServiceStack.Services
             {
                 Console.WriteLine("Exception: " + e.ToString());
                 Console.WriteLine(".............problem in InsertIntoTables");
+                resp.ResponseStatus.Message = $"Exception while trying to InsertIntoTables; Error message: {e.Message}";
+                resp.ResponseStatus.StackTrace = e.StackTrace;
                 return false;
             }
             return true;
