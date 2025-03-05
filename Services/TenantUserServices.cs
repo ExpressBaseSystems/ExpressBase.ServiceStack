@@ -449,6 +449,13 @@ namespace ExpressBase.ServiceStack.Services
                 {
                     user = User.GetUserObject(factory.DataDB, request.UserId, request.WC, request.UserIp, request.DeviceId);
                     user.AuthId = request.UserAuthId;
+                    if (request.IsApiUser)
+                    {
+                        string sql = $"SELECT id FROM eb_user_api_keys WHERE eb_users_id={request.UserId} AND eb_del='F';";
+                        EbDataTable dt = factory.DataDB.DoQuery(sql);
+                        if (dt.Rows.Count > 0)
+                            user.ApiKeyId = Convert.ToInt32(dt.Rows[0][0]);
+                    }
                     this.Redis.Set<IUserAuth>(request.UserAuthId, user);
                     Console.ForegroundColor = ConsoleColor.Blue;
                     Console.WriteLine("User Object Updated : " + request.UserAuthId);

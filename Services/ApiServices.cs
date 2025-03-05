@@ -70,7 +70,7 @@ namespace ExpressBase.ServiceStack.Services
             return globalParams;
         }
 
-        [Authenticate]
+        //[Authenticate]
         public ApiResponse Any(ApiRequest request)
         {
             try
