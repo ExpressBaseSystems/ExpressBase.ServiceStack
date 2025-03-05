@@ -75,6 +75,9 @@ namespace ExpressBase.ServiceStack.Services
         {
             try
             {
+                this.EbConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
+                this.StudioServices.EbConnectionFactory = this.EbConnectionFactory;
+
                 if (request.HasRefId())
                 {
                     try
