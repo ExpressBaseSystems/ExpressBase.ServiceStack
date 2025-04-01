@@ -266,7 +266,8 @@ namespace ExpressBase.ServiceStack.Services
                                         UserId = request.UserId,
                                         UserAuthId = request.UserAuthId,
                                         WhichConsole = request.WhichConsole,
-                                        IsImport = true
+                                        IsImport = true,
+                                        HideInMenu = (obj as IEBRootObject).HideInMenu
                                     };
                                     EbObject_Create_New_ObjectResponse res = Objservice.Post(ds);
                                     RefidMap[obj.RefId] = res.RefId;
