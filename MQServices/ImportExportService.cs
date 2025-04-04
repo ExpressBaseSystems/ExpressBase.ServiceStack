@@ -300,7 +300,8 @@ namespace ExpressBase.ServiceStack.Services
                                     WhichConsole = request.WhichConsole,
                                     Relations = _rel_obj_tmp,
                                     Tags = "_tags",
-                                    IsImport = true
+                                    IsImport = true,
+                                    HideInMenu = (obj as IEBRootObject).HideInMenu
                                 };
                                 EbObject_SaveResponse saveRes = Objservice.Post(ss);
                             }
