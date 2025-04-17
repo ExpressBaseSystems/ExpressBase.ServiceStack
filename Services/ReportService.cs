@@ -74,7 +74,7 @@ namespace ExpressBase.ServiceStack
                     }
 
                     Report.Doc.AddTitle(Report.DocumentName);
-
+                    Report.Writer.Close();
                     Report.Doc.Close();
 
                     Report.SetPassword(Ms1);
