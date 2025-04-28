@@ -154,24 +154,24 @@ namespace ExpressBase.ServiceStack
                                 this.Report = reportObject;
 
                                 if (Report == null) continue;
-                                
+
+                                if (j > 0)
+                                {
+                                    reportObject.NextReport = true;
+                                    Report.AddNewPage();
+                                    Report.Reset();
+                                }
+
                                 Report.GetData4Pdf(_newParamlist, EbConnectionFactory);
                                 InitializePdfObjects();
 
                                 if (!MainDocument.IsOpen())
-                                    MainDocument.Open();
-
-                                if (j > 0)
-                                {
-                                    reportObject.NextReport = true; 
-                                    Report.AddNewPage();
-                                }
+                                    MainDocument.Open();                               
 
                                 if (Report.DataSet != null)
                                     Report.Draw();
                                 else
                                     throw new Exception();
-                                Report.Reset();
                             }
                         }
                     }
