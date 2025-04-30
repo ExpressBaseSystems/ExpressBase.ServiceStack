@@ -72,15 +72,12 @@ namespace ExpressBase.ServiceStack
                         Console.WriteLine("Exception-reportService " + e.Message + e.StackTrace);
                         Report.HandleExceptionPdf(e);
                     }
-
                     Report.Doc.AddTitle(Report.DocumentName);
-                    Report.Writer.Close();
                     Report.Doc.Close();
-
+                    Report.Writer.Close();
                     Report.SetPassword(Ms1);
 
                     string name = Report.DocumentName;
-                     
                     this.Ms1.Position = 0;//important
 
                     return new ReportRenderResponse
@@ -145,7 +142,7 @@ namespace ExpressBase.ServiceStack
                         for (int i = 0; i < request.Params.Count; i++)
                         {
                             string[] values = request.Params[i].Value.Split(',');
-                            reportObject.CurrentReportPageNumber = 1;                            
+                            reportObject.CurrentReportPageNumber = 1;
 
                             for (int j = 0; j < values.Length; j++)
                             {
@@ -167,7 +164,7 @@ namespace ExpressBase.ServiceStack
                                 InitializePdfObjects();
 
                                 if (!MainDocument.IsOpen())
-                                    MainDocument.Open();                               
+                                    MainDocument.Open();
 
                                 if (Report.DataSet != null)
                                     Report.Draw();
@@ -185,8 +182,8 @@ namespace ExpressBase.ServiceStack
 
                 Report.IsRenderingComplete = true;
                 Report.Doc.AddTitle(Report.DocumentName);
+                Report.Doc.Close();
                 Report.Writer.Close();
-                Report.Doc.Close(); 
 
                 Ms1.Position = 0;
 
@@ -228,7 +225,7 @@ namespace ExpressBase.ServiceStack
             {
                 Report.Doc = this.MainDocument;
                 Report.Writer = this.Writer;
-                Report.Canvas = this.Canvas; 
+                Report.Canvas = this.Canvas;
                 Report.SerialNumber = 0;
                 Report.DrawDetailCompleted = false;
             }
