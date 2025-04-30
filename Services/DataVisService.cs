@@ -918,18 +918,28 @@ namespace ExpressBase.ServiceStack
         {
             Regex rx = new Regex(@"\$(.*?)\$");//Replace PlaceHolder. Eg: $AND PH(v.id, acmaster1_id)$
             string placeHolder, str;
+            List<string> processedPH = new List<string>();
+            List<TFilters> ProcessedTFilters = new List<TFilters>();
             Match match = rx.Match(Qry);
             while (match.Success)
             {
                 placeHolder = match.Value.ToString().Trim();
-                str = GetProcessedValueOfPH(placeHolder, TFilters);
+                if (processedPH.Contains(placeHolder))
+                {
+                    match = match.NextMatch();
+                    continue;
+                }
+                processedPH.Add(placeHolder);
+                str = GetProcessedValueOfPH(placeHolder, TFilters, ProcessedTFilters);
                 Qry = Qry.Replace(placeHolder, str);
                 match = match.NextMatch();
             }
+            foreach (TFilters TFilter in ProcessedTFilters)
+                TFilters.Remove(TFilter);
             return Qry;
         }
 
-        private string GetProcessedValueOfPH(string placeHolder, List<TFilters> TFilters)
+        private string GetProcessedValueOfPH(string placeHolder, List<TFilters> TFilters, List<TFilters> ProcessedTFilters)
         {
             string ProcessedValue = string.Empty;
             string LogicOp = string.Empty;
@@ -948,7 +958,7 @@ namespace ExpressBase.ServiceStack
 
             if (TFilters == null || TFilters.Count == 0)
             {
-                ProcessedValue = $" {LogicOp} TRUE";
+                ProcessedValue = string.Empty;
             }
             else if (placeHolder.Substring(0, 2).ToUpper() == "PH")
             {
@@ -959,21 +969,24 @@ namespace ExpressBase.ServiceStack
                 {
                     parts[0] = parts[0].Trim();//PH key
                     parts[1] = parts[1].Trim().ToLower();//PH value
-                    TFilters TFilter = TFilters.Find(e => e.Column == parts[1]);
-                    if (TFilter != null && !string.IsNullOrWhiteSpace(TFilter.Value))
+                    List<TFilters> __TFilters = TFilters.FindAll(e => e.Column == parts[1]);
+                    foreach (TFilters TFilter in __TFilters)
                     {
-                        ProcessedValue = GetProcessedValueOfPhKey(parts[0], TFilter);
-                        ProcessedValue = $" {LogicOp} {ProcessedValue}";
-                        TFilters.Remove(TFilter);
-                    }
-                    else
-                    {
-                        ProcessedValue = $" {LogicOp} TRUE";
+                        if (TFilter != null && !string.IsNullOrWhiteSpace(TFilter.Value))
+                        {
+                            ProcessedValue += $" {LogicOp} {GetProcessedValueOfPhKey(parts[0], TFilter)}";
+                            if (!ProcessedTFilters.Contains(TFilter))
+                                ProcessedTFilters.Add(TFilter);
+                        }
+                        else
+                        {
+                            ProcessedValue += string.Empty;
+                        }
                     }
                 }
                 else
                 {
-                    ProcessedValue = $" {LogicOp} TRUE";
+                    ProcessedValue = string.Empty;
                 }
             }
             return ProcessedValue;
@@ -3191,7 +3204,7 @@ namespace ExpressBase.ServiceStack
                 formatted += trimmedString + "</br> ";
                 data = data.Remove(0, trimmedString.Length);
                 count++;
-            };
+            }
             if (data.Length > _length)
                 formatted = formatted.Substring(0, formatted.LastIndexOf("</br>")) + " ...";
             else
