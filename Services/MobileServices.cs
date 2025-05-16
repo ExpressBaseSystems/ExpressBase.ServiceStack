@@ -280,7 +280,8 @@ namespace ExpressBase.ServiceStack.Services
 
             MobileAppSettings appSettings = data.CurrentSolution?.SolutionSettings?.MobileAppSettings;
 
-            if (!data.CurrentUser.IsAdmin() && appSettings?.MaintenanceMode == true)
+            if (!data.CurrentUser.IsAdmin() && !data.CurrentUser.Roles.Contains(SystemRoles.SolutionTester.ToString()) &&
+                appSettings?.MaintenanceMode == true)
             {
                 if (string.IsNullOrWhiteSpace(appSettings.MaintenanceMessage))
                     appSettings.MaintenanceMessage = "Servers under maintenance. Please try after sometime.";
