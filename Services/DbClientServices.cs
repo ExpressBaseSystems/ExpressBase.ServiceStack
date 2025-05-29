@@ -16,6 +16,33 @@ namespace ExpressBase.ServiceStack.Services
     {
         public DbClientServices(IEbConnectionFactory _dbf, IEbMqClient _mq) : base(_dbf, _mq) { }
 
+        [Authenticate]
+        public EbConnectionFactory GetFactory(bool IsAdminOwn, string ClientSolnid)
+        {
+            EbConnectionFactory factory = null;
+            try
+            {
+                if (IsAdminOwn && ClientSolnid != null)
+                {
+                    RefreshSolutionConnectionsAsyncResponse resp = new RefreshSolutionConnectionsAsyncResponse();
+                    //EbConnectionsConfig conf = EbConnectionsConfigProvider.GetDataCenterConnections();
+                    //conf.DataDbConfig.DatabaseName = ClientSolnid;
+                    factory = new EbConnectionFactory(ClientSolnid, this.Redis);
+                    resp = this.MQClient.Post<RefreshSolutionConnectionsAsyncResponse>(new RefreshSolutionConnectionsBySolutionIdAsyncRequest()
+                    {
+                        SolutionId = ClientSolnid
+                    });
+                }
+                else
+                    factory = this.EbConnectionFactory;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message + e.StackTrace);
+            }
+            return factory;
+        }
+
         EbDbExplorerTablesDict Table = new EbDbExplorerTablesDict();
         List<object> Row = new List<object>();
         List<string> solutions = new List<string>();
@@ -114,6 +141,7 @@ namespace ExpressBase.ServiceStack.Services
                             if (obj.ColumnName.Equals(x))
                             {
                                 obj.ColumnKey = "Primary key";
+                                obj.ConstraintName = constName;  // <- add this
                             }
                         }
                     }
@@ -124,6 +152,7 @@ namespace ExpressBase.ServiceStack.Services
                             if (obj.ColumnName.Equals(x))
                             {
                                 obj.ColumnKey = "Foreign key";
+                                obj.ConstraintName = constName;  // <- add this
                                 string definition = Row[4].ToString();
                                 string[] df = definition.Split("REFERENCES ");
                                 df[1] = ":: " + df[1];
@@ -138,9 +167,11 @@ namespace ExpressBase.ServiceStack.Services
                             if (obj.ColumnName.Equals(x))
                             {
                                 obj.ColumnKey = "Unique key";
+                                obj.ConstraintName = constName;  // <- add this
                             }
                         }
                     }
+
                 }
                 Data = dt.Tables[3];
                 foreach (var Row in Data.Rows)
@@ -190,6 +221,82 @@ namespace ExpressBase.ServiceStack.Services
             }
             return new DbClientQueryResponse { Dataset = _dataset, Message = mess };
         }
+
+        [CompressResponse]
+        [Authenticate]
+        public DbClientIndexResponse Post(DbClientIndexRequest request)
+        {
+            int res = 0;
+            string mess = "SUCCESSFULLY CREATED INDEX";
+            try
+            {
+                EbConnectionFactory factory = GetFactory(request.IsAdminOwn, request.ClientSolnid);
+                string query = $"CREATE INDEX {request.IndexName} ON {request.TableName} ({request.IndexColumns})";
+                res = factory.DataDB.CreateIndex(query, new System.Data.Common.DbParameter[0]);
+            }
+            catch (Exception e)
+            {
+                mess = e.Message;
+            }
+            return new DbClientIndexResponse { Result = res, Type = DBOperations.CREATE_INDEX, Message = mess };
+        }
+
+
+
+        [CompressResponse]
+        [Authenticate]
+        public DbClientConstraintResponse Post(DbClientConstraintRequest request)
+        {
+            int res = 0;
+            string mess = "Constraint created successfully";
+            string query = "";
+
+            try
+            {
+                EbConnectionFactory factory = GetFactory(request.IsAdminOwn, request.ClientSolnid);
+
+                // Validate inputs
+                if (string.IsNullOrEmpty(request.TableName) || string.IsNullOrEmpty(request.ColumnName) || string.IsNullOrEmpty(request.ConstraintType) || string.IsNullOrEmpty(request.ConstraintName))
+                {
+                    throw new ArgumentException("Table name, column name, constraint type, and constraint name must be provided.");
+                }
+
+                // Determine the type of constraint to create
+                if (string.Equals(request.ConstraintType, "Primary Key", StringComparison.OrdinalIgnoreCase))
+                {
+                    query = $"ALTER TABLE \"{request.TableName}\" ADD CONSTRAINT \"{request.ConstraintName}\" PRIMARY KEY (\"{request.ColumnName}\")";
+                }
+                else if (string.Equals(request.ConstraintType, "Unique Key", StringComparison.OrdinalIgnoreCase))
+                {
+                    query = $"ALTER TABLE \"{request.TableName}\" ADD CONSTRAINT \"{request.ConstraintName}\" UNIQUE (\"{request.ColumnName}\")";
+                }
+                else
+                {
+                    throw new ArgumentException("Invalid constraint type specified.");
+                }
+
+                // Execute the query
+                res = factory.DataDB.CreateConstraint(query, new System.Data.Common.DbParameter[0]);
+            }
+            catch (Exception e)
+            {
+                res = -1;
+                mess = "Error: " + e.Message;
+                if (e.InnerException != null)
+                {
+                    mess += " | Inner Exception: " + e.InnerException.Message;
+                }
+            }
+
+            return new DbClientConstraintResponse
+            {
+                Result = res,
+                Type = DBOperations.CREATE_CONSTRAINT,
+                Message = mess
+            };
+        }
+
+
 
         [CompressResponse]
         [Authenticate]

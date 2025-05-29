@@ -1383,7 +1383,8 @@ Type: {6}", sbreq.fullname, sbreq.solutionid, TktId, sbreq.title, sbreq.descript
                             username,
                             field_id,
                             eb_created_at,
-                            solution_id
+                            solution_id,
+                            currentUserid
                         )
                         VALUES(
                             :tktid,
@@ -1393,7 +1394,8 @@ Type: {6}", sbreq.fullname, sbreq.solutionid, TktId, sbreq.title, sbreq.descript
                             :usrname,
                             :fldid,
                             NOW(),
-                            :slid
+                            :slid,
+                            :uid
                         ) RETURNING id;";
 
                 DbParameter[] parameters = {
@@ -1404,6 +1406,8 @@ Type: {6}", sbreq.fullname, sbreq.solutionid, TktId, sbreq.title, sbreq.descript
             this.InfraConnectionFactory.DataDB.GetNewParameter("fldid", EbDbTypes.Int32, SupportTicketFields.comment),
             this.InfraConnectionFactory.DataDB.GetNewParameter("usrname", EbDbTypes.String, Cmreq.UserName),
             this.InfraConnectionFactory.DataDB.GetNewParameter("slid", EbDbTypes.String, Cmreq.Solution_id),
+            this.InfraConnectionFactory.DataDB.GetNewParameter("uid", EbDbTypes.String, Cmreq.currentUserid),
+
         };
 
                 EbDataTable dt6 = this.InfraConnectionFactory.DataDB.DoQuery(sql, parameters);
@@ -1432,7 +1436,7 @@ Type: {6}", sbreq.fullname, sbreq.solutionid, TktId, sbreq.title, sbreq.descript
 
             try
             {
-                string sql = @"SELECT username, ""value"", eb_created_at 
+                string sql = @"SELECT username, ""value"", eb_created_at, currentUserid 
                        FROM support_ticket_history 
                        WHERE ticket_id = :tktid AND field = 'comment' AND eb_del = 'F'
                        ORDER BY eb_created_at ASC";
@@ -1448,6 +1452,8 @@ Type: {6}", sbreq.fullname, sbreq.solutionid, TktId, sbreq.title, sbreq.descript
                     string username = row["username"]?.ToString();
                     string commentText = row["value"]?.ToString();
                     string createdAtStr = row["eb_created_at"]?.ToString();
+                    string userId = row["currentUserid"]?.ToString();
+
 
                     // Debug print
                     Console.WriteLine($"username: {username}, value: {commentText}, eb_created_at: {createdAtStr}");
@@ -1456,8 +1462,11 @@ Type: {6}", sbreq.fullname, sbreq.solutionid, TktId, sbreq.title, sbreq.descript
                     {
                         UserName = username ?? "[Unknown]",
                         CommentText = commentText ?? "[No Comment]",
-                        CreatedAt = DateTime.TryParse(createdAtStr, out var parsedDate) ? parsedDate : DateTime.MinValue
+                        CreatedAt = DateTime.TryParse(createdAtStr, out var parsedDate) ? parsedDate : DateTime.MinValue,
+                         UserId = userId ?? ""
+
                     };
+
 
                     response.Comments.Add(comment);
                 }
